@@ -1,0 +1,429 @@
+"""Selected repairs keep ownership, recovery, and author concurrency intact."""
+
+import asyncio
+from uuid import uuid4
+
+import pytest
+from fastapi import HTTPException
+from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow_version.model import FlowVersion
+from langflow.services.database.models.user.model import User
+from langflow.services.deps import get_auth_service, get_settings_service, session_scope
+from langflow.services.flow_repair import service
+from langflow.services.flow_repair.planning import data_digest
+from langflow.services.flow_repair.retention import REPAIR_RETENTION_REASON
+from lfx.services.settings.feature_flags import FEATURE_FLAGS
+from sqlmodel import select
+
+from tests.unit.services.flow_repair.test_planning import graph, registry
+
+PREVIEW = "/api/v1/upgrade-repairs/preview"
+APPLY = "/api/v1/upgrade-repairs/apply"
+
+
+@pytest.fixture(autouse=True)
+def installed_target(monkeypatch):
+    async def load():
+        return registry()
+
+    monkeypatch.setattr(service, "target_registry", load)
+    monkeypatch.setattr(FEATURE_FLAGS, "instance_migration", False)
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "allow_custom_components", True)
+    monkeypatch.setattr(settings, "custom_component_admin_only", False)
+
+
+@pytest.fixture
+async def repair_admin(client):
+    credential = str(uuid4())
+    async with session_scope() as session:
+        user = User(
+            username=f"repair-admin-{uuid4()}",
+            password=get_auth_service().get_password_hash(credential),
+            is_active=True,
+            is_superuser=True,
+        )
+        session.add(user)
+        await session.flush()
+        user_id = user.id
+    response = await client.post("/api/v1/login", data={"username": user.username, "password": credential})
+    assert response.status_code == 200
+    client.cookies.clear()
+    return user_id, {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+
+async def _flow(owner_id, *, data=None, token=True, **kwargs):
+    async with session_scope() as session:
+        row = Flow(
+            name=f"repair-flow-{uuid4()}",
+            user_id=owner_id,
+            data=data if data is not None else graph(),
+            version_token=uuid4() if token else None,
+            **kwargs,
+        )
+        session.add(row)
+        await session.flush()
+        return row.id
+
+
+async def _read(flow_id):
+    async with session_scope() as session:
+        row = await session.get(Flow, flow_id)
+        versions = (await session.exec(select(FlowVersion).where(FlowVersion.flow_id == flow_id))).all()
+        return row.model_dump(), [entry.model_dump() for entry in versions]
+
+
+async def _preview(client, headers, flow_id):
+    response = await client.post(PREVIEW, json={"flow_ids": [str(flow_id)]}, headers=headers)
+    assert response.status_code == 200, response.text
+    body = response.json()
+    [result] = body["results"]
+    assert result["status"] == "ready", result
+    return {
+        "target_sha256": body["target_sha256"],
+        "flows": [{key: result[key] for key in ("flow_id", "version_token", "data_sha256")}],
+    }
+
+
+async def _freeze(client, headers):
+    response = await client.post("/api/v1/maintenance/on", json={"reason": "repair test"}, headers=headers)
+    assert response.status_code == 200, response.text
+
+
+async def test_repair_endpoints_require_verified_admin(client, logged_in_headers):
+    client.cookies.clear()
+    assert (await client.post(PREVIEW, json={"flow_ids": [str(uuid4())]})).status_code in {401, 403}
+    assert (await client.post(PREVIEW, json={"flow_ids": [str(uuid4())]}, headers=logged_in_headers)).status_code == 403
+
+
+@pytest.mark.parametrize("legacy_token", [False, True])
+async def test_selected_cross_user_repair_preserves_owner_and_protected_recovery(
+    client, active_user, logged_in_headers, repair_admin, legacy_token, monkeypatch
+):
+    actor_id, headers = repair_admin
+    selected = await _flow(active_user.id, token=not legacy_token)
+    unselected = await _flow(active_user.id)
+    before, _versions = await _read(selected)
+    other_before, _versions = await _read(unselected)
+    payload = await _preview(client, headers, selected)
+    await _freeze(client, headers)
+
+    response = await client.post(APPLY, json=payload, headers=headers)
+
+    assert response.status_code == 200, response.text
+    [result] = response.json()["results"]
+    assert result["status"] == "updated", result
+    saved, versions = await _read(selected)
+    assert saved["user_id"] == active_user.id
+    assert saved["last_modified_by"] == actor_id
+    assert saved["version_token"] is not None
+    assert saved["version_token"] != before["version_token"]
+    template = saved["data"]["nodes"][0]["data"]["node"]["template"]
+    assert template["code"]["value"] == "target source"
+    assert template["text"] == before["data"]["nodes"][0]["data"]["node"]["template"]["text"]
+    [recovery] = versions
+    assert recovery["data"] == before["data"]
+    assert recovery["user_id"] == active_user.id
+    assert recovery["retained"] is True
+    assert recovery["retained_reason"] == REPAIR_RETENTION_REASON
+    assert str(recovery["id"]) == result["recovery_version_id"]
+    assert (await _read(unselected))[0] == other_before
+    await client.post("/api/v1/maintenance/off", headers=headers)
+    owner_versions = await client.get(f"/api/v1/flows/{selected}/versions/", headers=logged_in_headers)
+    assert owner_versions.status_code == 200
+    assert result["recovery_version_id"] in {entry["id"] for entry in owner_versions.json()["entries"]}
+    monkeypatch.setattr(get_settings_service().settings, "max_flow_version_entries_per_flow", 1)
+    for _ in range(3):
+        snapshot = await client.post(f"/api/v1/flows/{selected}/versions/", json={}, headers=logged_in_headers)
+        assert snapshot.status_code == 201
+    assert any(entry["id"] == recovery["id"] for entry in (await _read(selected))[1])
+    deletion = await client.delete(f"/api/v1/flows/{selected}/versions/{recovery['id']}", headers=logged_in_headers)
+    assert deletion.status_code == 409
+
+
+async def test_apply_requires_freeze_and_rejects_request_code(client, active_user, repair_admin):
+    _actor, headers = repair_admin
+    flow_id = await _flow(active_user.id)
+    payload = await _preview(client, headers, flow_id)
+    assert (await client.post(APPLY, json=payload, headers=headers)).status_code == 409
+    await _freeze(client, headers)
+    assert (await client.post(APPLY, json={**payload, "code": "request source"}, headers=headers)).status_code == 422
+    assert not (await _read(flow_id))[1]
+
+
+@pytest.mark.parametrize("change", ["data", "target", "token"])
+async def test_stale_preview_is_refused_without_recovery(client, active_user, repair_admin, change):
+    _actor, headers = repair_admin
+    flow_id = await _flow(active_user.id)
+    payload = await _preview(client, headers, flow_id)
+    if change == "data":
+        payload["flows"][0]["data_sha256"] = data_digest({"stale": "graph"})
+    elif change == "token":
+        payload["flows"][0]["version_token"] = str(uuid4())
+    else:
+        payload["target_sha256"] = data_digest({"stale": "target"})
+    before, _versions = await _read(flow_id)
+    await _freeze(client, headers)
+
+    response = await client.post(APPLY, json=payload, headers=headers)
+
+    if change == "target":
+        assert response.status_code == 409
+    else:
+        assert response.status_code == 200
+        assert response.json()["results"][0]["status"] == "conflict"
+    assert (await _read(flow_id)) == (before, [])
+
+
+@pytest.mark.parametrize("missing", [True, False])
+async def test_stale_author_cannot_erase_repair_even_without_a_token(
+    client, active_user, logged_in_headers, repair_admin, missing
+):
+    _actor, headers = repair_admin
+    flow_id = await _flow(active_user.id, token=not missing)
+    before, _versions = await _read(flow_id)
+    payload = await _preview(client, headers, flow_id)
+    await _freeze(client, headers)
+    applied = await client.post(APPLY, json=payload, headers=headers)
+    assert applied.json()["results"][0]["status"] == "updated"
+    await client.post("/api/v1/maintenance/off", headers=headers)
+    stale_headers = logged_in_headers if missing else {**logged_in_headers, "If-Match": str(before["version_token"])}
+
+    stale = await client.patch(f"/api/v1/flows/{flow_id}", json={"data": before["data"]}, headers=stale_headers)
+
+    assert stale.status_code == (428 if missing else 409), stale.text
+    saved, _versions = await _read(flow_id)
+    assert saved["data"] != before["data"]
+    renamed = await client.patch(
+        f"/api/v1/flows/{flow_id}", json={"name": f"renamed-{uuid4()}"}, headers=logged_in_headers
+    )
+    assert renamed.status_code == 200, renamed.text
+    fresh = await client.patch(
+        f"/api/v1/flows/{flow_id}",
+        json={"data": before["data"]},
+        headers={**logged_in_headers, "If-Match": str(saved["version_token"])},
+    )
+    assert fresh.status_code == 200, fresh.text
+
+
+async def test_late_failure_rolls_back_graph_token_and_recovery(client, active_user, repair_admin, monkeypatch):
+    _actor, headers = repair_admin
+    flow_id = await _flow(active_user.id)
+    payload = await _preview(client, headers, flow_id)
+    before, _versions = await _read(flow_id)
+    original = service.set_flow_version_retained
+
+    async def fail_after_recovery(*args, **kwargs):
+        await original(*args, **kwargs)
+        msg = "injected failure after recovery creation"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(service, "set_flow_version_retained", fail_after_recovery)
+    await _freeze(client, headers)
+
+    response = await client.post(APPLY, json=payload, headers=headers)
+
+    assert response.status_code == 200
+    assert response.json()["results"][0]["status"] == "failed"
+    assert (await _read(flow_id)) == (before, [])
+
+
+async def test_simultaneous_repair_commits_exactly_one_recovery(client, active_user, repair_admin):
+    _actor, headers = repair_admin
+    flow_id = await _flow(active_user.id)
+    payload = await _preview(client, headers, flow_id)
+    await _freeze(client, headers)
+
+    responses = await asyncio.gather(*(client.post(APPLY, json=payload, headers=headers) for _ in range(3)))
+
+    assert all(response.status_code == 200 for response in responses)
+    statuses = [response.json()["results"][0]["status"] for response in responses]
+    assert statuses.count("updated") == 1, statuses
+    _saved, versions = await _read(flow_id)
+    assert len(versions) == 1
+    assert versions[0]["retained"] is True
+
+
+async def test_registered_authorization_can_deny_cross_user_repair(client, active_user, repair_admin, monkeypatch):
+    from langflow.services.flow_repair import policy
+
+    _actor, headers = repair_admin
+    flow_id = await _flow(active_user.id)
+    payload = await _preview(client, headers, flow_id)
+
+    async def deny(*_args, **_kwargs):
+        raise HTTPException(status_code=403, detail="Denied")
+
+    monkeypatch.setattr(policy, "ensure_flow_permission", deny)
+    await _freeze(client, headers)
+    before = await _read(flow_id)
+
+    response = await client.post(APPLY, json=payload, headers=headers)
+
+    assert response.status_code == 200
+    assert response.json()["results"][0]["status"] == "forbidden"
+    assert await _read(flow_id) == before
+
+
+@pytest.mark.parametrize("kind", ["locked", "file", "orphan", "unsafe", "malformed"])
+async def test_manual_cases_have_explicit_outcomes_and_never_write(client, active_user, repair_admin, kind):
+    _actor, headers = repair_admin
+    kwargs = {"locked": True} if kind == "locked" else {"fs_path": "/local/manual.json"} if kind == "file" else {}
+    data = graph()
+    if kind == "unsafe":
+        data["nodes"][0]["data"]["node"]["template"]["removed"] = {"type": "str", "value": "keep"}
+    elif kind == "malformed":
+        data["nodes"][0]["data"]["node"] = None
+    flow_id = await _flow(None if kind == "orphan" else active_user.id, data=data, **kwargs)
+    before = await _read(flow_id)
+
+    response = await client.post(PREVIEW, json={"flow_ids": [str(flow_id)]}, headers=headers)
+
+    assert response.status_code == 200
+    result = response.json()["results"][0]
+    assert result["status"] == "manual"
+    assert result["reason_codes"]
+    await _freeze(client, headers)
+    payload = {
+        "target_sha256": response.json()["target_sha256"],
+        "flows": [
+            {"flow_id": str(flow_id), "version_token": result["version_token"], "data_sha256": data_digest(data)}
+        ],
+    }
+    applied = await client.post(APPLY, json=payload, headers=headers)
+    assert applied.status_code == 200
+    assert applied.json()["results"][0]["status"] == "manual"
+    assert await _read(flow_id) == before
+
+
+async def test_owner_policy_uses_owner_project_and_workspace_without_admin_privilege(
+    client, active_user, repair_admin, monkeypatch
+):
+    from langflow.services.database.models.folder.model import Folder
+    from langflow.services.flow_repair import policy
+    from lfx.services.model_provider_policy import (
+        ModelProviderPolicyContext,
+        ModelProviderPolicySnapshot,
+        current_model_provider_policy_context,
+    )
+
+    _actor_id, headers = repair_admin
+    target = registry()
+    target["helpers"]["Example"]["metadata"] = {"model_provider_id": "openai"}
+
+    async def load():
+        return target
+
+    monkeypatch.setattr(service, "target_registry", load)
+    workspace_id = uuid4()
+    async with session_scope() as session:
+        folder = Folder(name=f"owner-project-{uuid4()}", user_id=active_user.id, workspace_id=workspace_id)
+        session.add(folder)
+        await session.flush()
+        folder_id = folder.id
+    flow_id = await _flow(active_user.id, folder_id=folder_id, workspace_id=workspace_id)
+    calls = []
+
+    async def deny_provider(*, user_id, providers, purpose):
+        context = current_model_provider_policy_context()
+        calls.append((user_id, dict(context.attributes)))
+        return ModelProviderPolicySnapshot(
+            context=ModelProviderPolicyContext(user_id=user_id, attributes=context.attributes),
+            purpose=purpose,
+            candidate_provider_ids=frozenset(providers),
+            allowed_provider_ids=frozenset(),
+        )
+
+    monkeypatch.setattr(policy, "aresolve_model_provider_policy", deny_provider)
+    before = await _read(flow_id)
+
+    response = await client.post(PREVIEW, json={"flow_ids": [str(flow_id)]}, headers=headers)
+
+    assert response.status_code == 200
+    result = response.json()["results"][0]
+    assert result["status"] == "manual"
+    assert result["reason_codes"] == ["owner_policy_denied"]
+    assert calls == [
+        (
+            active_user.id,
+            {
+                "is_superuser": False,
+                "project_id": folder_id,
+                "workspace_id": workspace_id,
+                "provider_scope_required": True,
+            },
+        )
+    ]
+    assert await _read(flow_id) == before
+
+
+async def test_file_migration_pause_still_blocks_admin_repair(client, active_user, repair_admin, monkeypatch, tmp_path):
+    import json
+
+    _actor, headers = repair_admin
+    flow_id = await _flow(active_user.id)
+    payload = await _preview(client, headers, flow_id)
+    await _freeze(client, headers)
+    before = await _read(flow_id)
+    monkeypatch.setattr(FEATURE_FLAGS, "instance_migration", True)
+    monkeypatch.setattr(get_settings_service().settings, "config_dir", str(tmp_path))
+    (tmp_path / "migrations").mkdir()
+    (tmp_path / "migrations" / "migration.json").write_text(
+        json.dumps({"pause": {"frozen_at": "2026-11-04T00:00:00Z"}})
+    )
+
+    response = await client.post(APPLY, json=payload, headers=headers)
+
+    assert response.status_code == 503
+    assert await _read(flow_id) == before
+
+
+@pytest.mark.parametrize("route", ["put", "activate"])
+async def test_other_graph_replacement_routes_require_review_after_repair(
+    client, active_user, logged_in_headers, repair_admin, route
+):
+    _actor, headers = repair_admin
+    flow_id = await _flow(active_user.id)
+    before, _versions = await _read(flow_id)
+    payload = await _preview(client, headers, flow_id)
+    await _freeze(client, headers)
+    repaired = await client.post(APPLY, json=payload, headers=headers)
+    result = repaired.json()["results"][0]
+    assert result["status"] == "updated"
+    await client.post("/api/v1/maintenance/off", headers=headers)
+    after = await _read(flow_id)
+
+    if route == "put":
+        response = await client.put(
+            f"/api/v1/flows/{flow_id}", json={"name": before["name"], "data": before["data"]}, headers=logged_in_headers
+        )
+    else:
+        response = await client.post(
+            f"/api/v1/flows/{flow_id}/versions/{result['recovery_version_id']}/activate", headers=logged_in_headers
+        )
+
+    assert response.status_code == 428, response.text
+    assert await _read(flow_id) == after
+
+
+async def test_null_token_cannot_bypass_protection_on_a_repaired_row(
+    client, active_user, logged_in_headers, repair_admin
+):
+    _actor, headers = repair_admin
+    flow_id = await _flow(active_user.id)
+    before, _versions = await _read(flow_id)
+    payload = await _preview(client, headers, flow_id)
+    await _freeze(client, headers)
+    response = await client.post(APPLY, json=payload, headers=headers)
+    assert response.json()["results"][0]["status"] == "updated"
+    async with session_scope() as session:
+        flow = await session.get(Flow, flow_id)
+        flow.version_token = None
+        session.add(flow)
+    await client.post("/api/v1/maintenance/off", headers=headers)
+    saved = await _read(flow_id)
+
+    response = await client.patch(f"/api/v1/flows/{flow_id}", json={"data": before["data"]}, headers=logged_in_headers)
+
+    assert response.status_code == 428
+    assert await _read(flow_id) == saved
