@@ -131,7 +131,6 @@ export default function ToolsTable({
       }
     });
 
-    agGrid.current.api.setGridOption("suppressRowClickSelection", false);
     setTimeout(() => {
       applyingSelection.current = false;
     }, 50);
@@ -373,6 +372,7 @@ export default function ToolsTable({
     // (that re-render would close the popover).
     const target = event.event?.target as HTMLElement | undefined;
     if (target?.closest("[data-hitl-cell]")) return;
+
     setFocusedRow(event.data);
     setSidebarOpen(true);
   };
