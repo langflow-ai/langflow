@@ -537,6 +537,15 @@ pub fn edge_changed(before: &AnyMap, after: &AnyMap) -> Result<bool> {
         .collect();
     for key in keys {
         let same = match (before.get(key), after.get(key)) {
+            // The same text is the same handle. When it spells the handle in
+            // `data`, it holds only finite numbers, so reading it cannot fail.
+            (Some(old), Some(new))
+                if HANDLE_KEYS.contains(&key)
+                    && old == new
+                    && spells_data_handle(before, key, old) =>
+            {
+                true
+            }
             (Some(old), Some(new)) if HANDLE_KEYS.contains(&key) => {
                 let (old, new) = (handle_value(old), handle_value(new));
                 values_equal(&old, &new)?
@@ -557,6 +566,20 @@ pub fn edge_changed(before: &AnyMap, after: &AnyMap) -> Result<bool> {
         }
     }
     Ok(false)
+}
+
+/// Whether `handle`, an edge's handle string at `key`, spells the handle
+/// object at `key` of the edge's `data` ([`handle_spells`]).
+fn spells_data_handle(edge: &AnyMap, key: &str, handle: &AnyValue) -> bool {
+    let object = edge
+        .get("data")
+        .and_then(AnyValue::as_object)
+        .and_then(|data| data.get(key))
+        .and_then(AnyValue::as_object);
+    match (handle.as_str(), object) {
+        (Some(text), Some(object)) => handle_spells(text, object),
+        _ => false,
+    }
 }
 
 /// A handle string compares by the object it encodes.

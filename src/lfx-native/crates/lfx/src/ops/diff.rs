@@ -40,7 +40,7 @@ use crate::value::{AnyMap, AnyValue};
 use indexmap::IndexMap;
 
 use crate::ops::apply::ApplyOptions;
-use crate::ops::canonical::{graphs_equal, is_row_position, values_equal};
+use crate::ops::canonical::{Proven, graphs_equal_given, is_row_position, values_equal};
 use crate::ops::edges::edge_changed;
 use crate::ops::error::{Error, Result};
 use crate::ops::ops::{
@@ -77,6 +77,16 @@ pub fn diff_flow_data(base: &AnyValue, target: &AnyValue) -> Result<Vec<Operatio
 
 /// [`diff_flow_data`] for graphs that have passed its checks.
 fn diff_checked(base: &AnyValue, target: &AnyValue) -> Result<Vec<Operation>> {
+    diff_proving(base, target, None)
+}
+
+/// [`diff_checked`], recording in `proven` each base node it finds equal
+/// to its target node.
+fn diff_proving(
+    base: &AnyValue,
+    target: &AnyValue,
+    mut proven: Option<&mut Proven>,
+) -> Result<Vec<Operation>> {
     let base_nodes = by_id(base, "nodes");
     let target_nodes = by_id(target, "nodes");
     let base_edges = by_id(base, "edges");
@@ -127,6 +137,12 @@ fn diff_checked(base: &AnyValue, target: &AnyValue) -> Result<Vec<Operation>> {
             // either: it fails only on a number that is not finite, which the
             // target's validation above refuses, or on a write.
             if before == node {
+                if let Some(proven) = proven.as_deref_mut() {
+                    proven.insert(
+                        before.entries_ptr(),
+                        (AnyMap::clone(before), node.entries_ptr()),
+                    );
+                }
                 continue;
             }
             NodeDiff {
@@ -173,15 +189,18 @@ pub fn derive_flow_operations(base: AnyValue, target: &AnyValue) -> Result<Deriv
 /// [`derive_flow_operations`] for graphs that have passed its checks: `base`
 /// structurally, and `target` fully.
 pub(crate) fn derive_checked(base: AnyValue, target: &AnyValue) -> Result<Derived> {
-    let operations = diff_checked(&base, target)?;
+    let mut proven = Proven::default();
+    let operations = diff_proving(&base, target, Some(&mut proven))?;
     let options = ApplyOptions {
         forward: true,
         ..ApplyOptions::default()
     };
-    let mut state = GraphState::new(base)?;
+    let mut state = GraphState::from_checked(base)?;
     let applied = state.apply(operations, options)?;
     let flow_data = state.into_value();
-    if !graphs_equal(&flow_data, target)? {
+    // A node the diff found equal to its target node, which the replay
+    // left shared with the base, is equal: the check reads only the rest.
+    if !graphs_equal_given(&flow_data, target, Some(&proven))? {
         return Err(Error::replay(
             "derived operations do not replay to the target graph",
         ));
