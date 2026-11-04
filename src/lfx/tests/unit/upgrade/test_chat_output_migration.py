@@ -3,16 +3,34 @@
 import copy
 import json
 from importlib.resources import files
+from pathlib import Path
 
 import pytest
-from lfx.custom.custom_component.component import Component
+from lfx.custom import Component
 from lfx.custom.utils import build_custom_component_template
+from lfx.template.field_migrations import can_migrate_chat_output_input
 from lfx.upgrade.applier import apply_safe_upgrades
 from lfx.upgrade.checker import build_registry_lookup, check_flow_compatibility
 
 from .test_component_compat import SOURCE_RELEASES, _require_tags, _show
 
 YOUTUBE_FLOW = "src/bundles/lfx-bundles/src/lfx_bundles/youtube/starter_projects/Youtube Analysis.json"
+MIGRATION_CASES = json.loads(
+    (Path(__file__).parents[2] / "data" / "component_compat" / "chat_output_migration_cases.json").read_text(
+        encoding="utf-8"
+    )
+)
+
+
+@pytest.mark.parametrize("case", MIGRATION_CASES["cases"], ids=[case["name"] for case in MIGRATION_CASES["cases"]])
+def test_shared_chat_output_migration_contract(case):
+    values = MIGRATION_CASES["defaults"] | case
+    assert (
+        can_migrate_chat_output_input(
+            values["component_class_name"], values["field_name"], values["current_field"], values["saved_field"]
+        )
+        is values["expected"]
+    )
 
 
 def _registry():
