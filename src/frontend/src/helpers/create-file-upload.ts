@@ -1,5 +1,12 @@
 import { DEFAULT_FILE_PICKER_TIMEOUT } from "@/constants/constants";
 
+// Firefox dispatches a file input's `change` event only after focus has
+// already returned to the window. A short focus-based cancel timer therefore
+// detaches the input before the selection can be read, silently dropping the
+// files. Allow the change event a grace period before treating the focus
+// return as a cancellation.
+const FOCUS_CANCEL_GRACE_MS = 1000;
+
 export function createFileUpload(props?: {
   accept?: string;
   multiple?: boolean;
@@ -113,7 +120,7 @@ export function createFileUpload(props?: {
           cleanup();
           resolve([]);
         }
-      }, 100);
+      }, FOCUS_CANCEL_GRACE_MS);
     };
 
     input.addEventListener("change", handleChange);
