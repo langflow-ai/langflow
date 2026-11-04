@@ -204,7 +204,8 @@ class TestWriteDocumentsRetry:
                 job_service=self._fresh_job_service(),
             )
 
-        assert written == 1
+        assert written.processed == 1
+        assert written.created == 1
         assert backend.add_documents.await_count == 2  # retried once, then succeeded
 
 

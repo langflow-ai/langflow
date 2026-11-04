@@ -64,6 +64,34 @@ class _OpenSearchReadError(Exception):
         self.error = error
 
 
+async def test_id_lookup_reads_current_documents_without_a_scan(tmp_path):
+    backend = _make_backend(tmp_path)
+    backend._vector_store = MagicMock()
+    backend._os_client = MagicMock()
+    backend._os_index = "test_index"
+    backend._os_text_field = "legacy_text"
+    backend._os_client.mget.return_value = {
+        "docs": [
+            {"_id": "one", "found": True, "_source": {"text": "stored", "metadata": {"job_id": "prior"}}},
+            {"_id": "missing", "found": False},
+        ]
+    }
+    documents = await backend.get_documents_by_ids(["one", "missing", "one"])
+    assert [(doc.id, doc.page_content, doc.metadata) for doc in documents] == [("one", "stored", {"job_id": "prior"})]
+    backend._os_client.mget.assert_called_once_with(index="test_index", body={"ids": ["one", "missing"]})
+    backend._os_client.search.assert_not_called()
+
+
+async def test_id_lookup_does_not_treat_a_partial_failure_as_missing(tmp_path):
+    backend = _make_backend(tmp_path)
+    backend._vector_store = MagicMock()
+    backend._os_client = MagicMock()
+    backend._os_index = "test_index"
+    backend._os_client.mget.return_value = {"docs": [{"_id": "one", "error": {"type": "unavailable"}}]}
+    with pytest.raises(RuntimeError, match="could not check"):
+        await backend.get_documents_by_ids(["one"])
+
+
 @pytest.mark.parametrize("operation", ["count", "iter_documents"])
 @pytest.mark.parametrize(
     "error",
