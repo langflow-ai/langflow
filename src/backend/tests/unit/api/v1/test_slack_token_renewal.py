@@ -18,11 +18,13 @@ pytestmark = pytest.mark.no_blockbuster
 
 @pytest.fixture(autouse=True)
 def manual_slack_context(monkeypatch):
+    """Exercise manual Slack credentials without an OAuth registration."""
     monkeypatch.setenv("LANGFLOW_CONNECTION_OAUTH_CONTEXT", "self_managed")
     monkeypatch.setenv("LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS", "{}")
 
 
 async def create_connection(client, headers, token):
+    """Create a pasted Slack connection with background consent."""
     response = await client.post(
         "/api/v1/connections",
         headers=headers,
@@ -42,6 +44,7 @@ async def create_connection(client, headers, token):
 @pytest.mark.parametrize("prefix", ["xapp-", "xoxb-"])
 @pytest.mark.parametrize("revoke_first", [False, True])
 async def test_manual_renewal_preserves_connection(client, logged_in_headers, respx_mock, prefix, revoke_first):
+    """Replace matching token kinds without changing the connection identity or consent."""
     if prefix == "xoxb-":
         respx_mock.post("https://slack.com/api/auth.test").respond(
             200, json={"ok": True}, headers={"x-oauth-scopes": "chat:write,channels:read"}
@@ -89,6 +92,7 @@ async def test_manual_renewal_preserves_connection(client, logged_in_headers, re
 
 
 async def test_rejected_renewal_keeps_existing_credential(client, logged_in_headers, respx_mock, monkeypatch):
+    """Keep the existing credential and pending consent when Slack rejects a replacement."""
     probe = respx_mock.post("https://slack.com/api/auth.test").respond(200, json={"ok": True})
     original = await create_connection(client, logged_in_headers, "xoxb-original-test-only")
     connection_id = UUID(original["id"])
@@ -116,6 +120,7 @@ async def test_rejected_renewal_keeps_existing_credential(client, logged_in_head
 
 
 async def test_hosted_cannot_renew_app_token(client, logged_in_headers, respx_mock, monkeypatch):
+    """Refuse hosted app-token renewal without altering the stored credential."""
     original = await create_connection(client, logged_in_headers, "xapp-original-test-only")
     monkeypatch.setenv("LANGFLOW_CONNECTION_OAUTH_CONTEXT", "hosted")
 
@@ -134,6 +139,7 @@ async def test_hosted_cannot_renew_app_token(client, logged_in_headers, respx_mo
 
 
 async def start_consent(client, headers, connection_id, monkeypatch):
+    """Start a real OAuth attempt and return its callback state."""
     fx.use_registrations(monkeypatch)
     started = await client.post(
         f"/api/v1/connections/{connection_id}/oauth/start",
@@ -146,6 +152,7 @@ async def start_consent(client, headers, connection_id, monkeypatch):
 
 @pytest.mark.parametrize("denied", [False, True])
 async def test_manual_renewal_supersedes_pending_oauth(client, logged_in_headers, respx_mock, monkeypatch, denied):
+    """Prevent older OAuth callbacks from overwriting a successful manual renewal."""
     respx_mock.post("https://slack.com/api/auth.test").respond(200, json={"ok": True})
     original = await create_connection(client, logged_in_headers, "xoxb-original-test-only")
     connection_id = UUID(original["id"])
@@ -174,3 +181,42 @@ async def test_manual_renewal_supersedes_pending_oauth(client, logged_in_headers
         secret = await session.get(ConnectionSecret, connection_id)
         assert _decrypt_credential_payload(secret.encrypted_payload)["access_token"] == replacement
         assert await session.get(ConnectionOAuth, connection_id) is None
+
+
+@pytest.mark.parametrize("prefix", ["xoxb-", "xoxp-"])
+@pytest.mark.parametrize("revoke_first", [False, True])
+async def test_app_token_renewal_rejects_web_token_without_changes(
+    client, logged_in_headers, respx_mock, monkeypatch, prefix, revoke_first
+):
+    """Reject a different token kind while retaining credentials, consent, and connection metadata."""
+    original = await create_connection(client, logged_in_headers, "xapp-original-test-only")
+    connection_id = UUID(original["id"])
+    if revoke_first:
+        respx_mock.post("https://slack.com/api/auth.revoke").respond(200, json={"ok": True, "revoked": True})
+        revoked = await client.post(f"/api/v1/connections/{connection_id}/revoke", headers=logged_in_headers)
+        assert revoked.status_code == 200, revoked.text
+    await start_consent(client, logged_in_headers, connection_id, monkeypatch)
+    async with session_scope() as session:
+        row_before = (await session.get(Connection, connection_id)).model_dump()
+        binding_before = (await session.get(ConnectionOAuth, connection_id)).model_dump()
+        secret = await session.get(ConnectionSecret, connection_id)
+        secret_before = secret.model_dump() if secret is not None else None
+    replacement = f"{prefix}replacement-test-only"
+    respx_mock.post("https://slack.com/api/auth.test").respond(
+        200, json={"ok": True}, headers={"x-oauth-scopes": "chat:write,channels:read"}
+    )
+
+    response = await client.post(
+        f"/api/v1/connections/{connection_id}/token",
+        headers=logged_in_headers,
+        json={"credentials": {"access_token": replacement}, "allow_non_interactive": False},
+    )
+
+    assert response.status_code == 422, response.text
+    assert "app-level token (xapp-)" in response.json()["detail"]
+    assert replacement not in response.text
+    async with session_scope() as session:
+        assert (await session.get(Connection, connection_id)).model_dump() == row_before
+        assert (await session.get(ConnectionOAuth, connection_id)).model_dump() == binding_before
+        secret = await session.get(ConnectionSecret, connection_id)
+        assert (secret.model_dump() if secret is not None else None) == secret_before

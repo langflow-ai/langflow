@@ -78,6 +78,7 @@ export interface AddConnectionDialogProps {
   deploymentContext?: DeploymentContext;
 }
 
+/** Create or reconnect a connection using OAuth consent or a supported pasted token. */
 export function AddConnectionDialog({
   open,
   onOpenChange,

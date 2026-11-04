@@ -16,6 +16,7 @@ pytestmark = pytest.mark.no_blockbuster
 async def test_reconnecting_app_token_resumes_same_trigger_and_dispatches_once(
     client, active_user, logged_in_headers, monkeypatch, respx_mock, slack, fake_background_service
 ):
+    """Resume the same trigger with a new app token and dispatch a redelivered message once."""
     monkeypatch.setenv("LANGFLOW_CONNECTION_OAUTH_CONTEXT", "self_managed")
     monkeypatch.setenv("LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS", "{}")
     created = await client.post(

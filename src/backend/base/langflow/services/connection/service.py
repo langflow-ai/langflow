@@ -48,6 +48,7 @@ from langflow.services.connection.oauth.config import OAuthError, deployment_con
 from langflow.services.connection.oauth.locking import lock_connection
 from langflow.services.connection.policy import provider_has_usable_action
 from langflow.services.connection.slack_credentials import (
+    APP_TOKEN_SCOPE,
     PROVIDER_SLACK,
     ManualCredentialError,
     check_slack_web_token,
@@ -521,6 +522,9 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
                 credentials=payload.credentials,
             )
         )
+        if is_app_token_connection(row) and APP_TOKEN_SCOPE not in validated.granted_scopes:
+            msg = "This connection holds a Slack app-level token. Renew it with an app-level token (xapp-)."
+            raise ManualCredentialError(msg)
         raw_credentials = _credential_payload(validated)
         if raw_credentials is None:
             msg = "The integration credential validator returned no token."
