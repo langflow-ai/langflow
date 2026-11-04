@@ -1,6 +1,6 @@
 [project]
 name = "lfx-nextplaid"
-version = "0.2.0"
+version = "0.2.2"
 description = "NextPlaid multi-vector vector store (+ vLLM multivector embeddings) as a standalone Langflow Extension Bundle."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -22,15 +22,17 @@ keywords = ["langflow", "lfx", "extension", "bundle", "nextplaid", "colbert", "p
 #   bundle keeps building if lfx drops it.
 #
 # lfx is floored at the current major.minor line (admitting the branch's own
-# ``X.Y.0.devN`` nightlies under PEP 440) and capped below the next lfx major;
+# ``X.Y.0.devN`` nightlies under PEP 440). This maintenance build excludes 1.14.
 # the floor is re-synced on ``make patch`` via
 # scripts/ci/sync_bundle_lfx_pin.py.  Fine-grained BUNDLE_API compatibility is
 # enforced via extension.json's "lfx": {"compat": [...]} contract.
 dependencies = [
-    "lfx>=1.13.0.dev0,<2.0.0",
+    "lfx>=1.13.0.dev0,<1.14.0.dev0",
     "langchain-plaid>=0.1.0,<1.0.0",
     "httpx>=0.28.1,<1.0.0",
-    "pillow>=12.3.0,<13.0.0",
+    # Pillow 13 dropped Python 3.10 support.
+    "pillow>=12.3.0,<13.0.0; python_version < '3.11'",
+    "pillow>=13.0.0,<14.0.0; python_version >= '3.11'",
 ]
 
 [project.urls]

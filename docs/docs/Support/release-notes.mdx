@@ -78,6 +78,12 @@ Highlights of this release include the following changes. For all changes, see t
     Use keyword patterns such as `case Point(x=x, y=y)`.
     This restriction also applies to builtin positional patterns such as `case int(n)`.
 
+- Repeated ingestion uses stable chunk IDs
+
+    In 1.13.2, repeated ingestion uses stable chunk IDs.
+    The first re-ingestion of data created before this fix can add one stable-ID copy per chunk.
+    Updating a document's content leaves its previous chunks in place.
+
 ### New features
 
 - Audit logging
