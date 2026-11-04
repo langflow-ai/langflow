@@ -451,10 +451,16 @@ async def _canonicalize_flow_destination(
     return workspace_id, folder_id
 
 
-def _validate_new_flow_id(flow_id: UUID | None) -> None:
-    """Keep saved flow IDs separate from deterministic public execution IDs."""
-    if flow_id is not None and is_virtual_flow_id(flow_id):
+async def _validate_new_flow_id(session: AsyncSession, flow_id: UUID | None) -> None:
+    """Keep new flow IDs out of public history and legacy user storage namespaces."""
+    if flow_id is None:
+        return
+    if is_virtual_flow_id(flow_id):
         raise HTTPException(status_code=400, detail="UUID5 flow IDs are reserved for public execution histories.")
+    from langflow.services.database.models.user.model import User
+
+    if await session.get(User, flow_id) is not None:
+        raise HTTPException(status_code=400, detail="Flow IDs must not collide with a user ID.")
 
 
 async def _new_flow(
@@ -494,7 +500,7 @@ async def _new_flow(
     """
     try:
         effective_id = flow_id if flow_id is not None else flow.id
-        _validate_new_flow_id(effective_id)
+        await _validate_new_flow_id(session, effective_id)
         # Ownership follows the destination project, so it has to be resolved
         # before anything keyed on the owner: the filesystem sandbox, the
         # ``(user_id, name)`` / ``(user_id, endpoint_name)`` de-duplication, and

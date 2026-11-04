@@ -13,6 +13,7 @@ from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from lfx.log.logger import logger
+from lfx.utils.file_path_security import user_storage_scope, user_storage_scope_for_path
 from sqlmodel import col, select
 
 from langflow.api.schemas import UploadFileResponse
@@ -198,6 +199,11 @@ async def fetch_file_object(file_id: uuid.UUID, current_user: CurrentActiveUser,
     return file
 
 
+def _user_file_namespace(path: str, owner_id: uuid.UUID) -> str:
+    """Use the recorded path's typed namespace, or its legacy raw user namespace."""
+    return user_storage_scope_for_path(path, owner_id)
+
+
 async def save_file_routine(
     file,
     storage_service,
@@ -206,6 +212,7 @@ async def save_file_routine(
     file_name=None,
     *,
     append: bool = False,
+    namespace: str | None = None,
 ):
     """Routine to save the file content to the storage service."""
     file_id = uuid.uuid4()
@@ -215,8 +222,12 @@ async def save_file_routine(
     if not file_name:
         file_name = file.filename
 
-    # Save the file using the storage service.
-    await storage_service.save_file(flow_id=str(current_user.id), file_name=file_name, data=file_content, append=append)
+    await storage_service.save_file(
+        flow_id=namespace or user_storage_scope(current_user.id),
+        file_name=file_name,
+        data=file_content,
+        append=append,
+    )
 
     return file_id, file_name
 
@@ -341,10 +352,19 @@ async def upload_user_file(
         # Read file content, save with unique filename, and compute file size in one routine
         try:
             file_id, stored_file_name = await save_file_routine(
-                file, storage_service, current_user, file_name=unique_filename, append=append
+                file,
+                storage_service,
+                current_user,
+                file_name=unique_filename,
+                append=append,
+                namespace=_user_file_namespace(existing_file.path, current_user.id) if existing_file else None,
             )
             file_size = await storage_service.get_file_size(
-                flow_id=str(current_user.id),
+                flow_id=(
+                    user_storage_scope(current_user.id)
+                    if not existing_file
+                    else _user_file_namespace(existing_file.path, current_user.id)
+                ),
                 file_name=stored_file_name,
             )
         except FileNotFoundError as e:
@@ -357,10 +377,15 @@ async def upload_user_file(
             # General error saving file or getting file size
             raise HTTPException(status_code=500, detail=f"Error accessing file: {e}") from e
 
+        storage_namespace = (
+            _user_file_namespace(existing_file.path, current_user.id)
+            if existing_file
+            else user_storage_scope(current_user.id)
+        )
         if ephemeral:
             # Ephemeral uploads: file is saved to storage (servable for chat history)
             # but no UserFile record is created (won't appear in "My Files")
-            file_path = f"{current_user.id}/{stored_file_name}"
+            file_path = f"{storage_namespace}/{stored_file_name}"
             return UploadFileResponse(id=file_id, name=root_filename, path=file_path, size=file_size)
 
         if append and existing_file:
@@ -375,7 +400,7 @@ async def upload_user_file(
                 id=file_id,
                 user_id=current_user.id,
                 name=root_filename,
-                path=f"{current_user.id}/{stored_file_name}",
+                path=f"{storage_namespace}/{stored_file_name}",
                 size=file_size,
             )
 
@@ -386,7 +411,7 @@ async def upload_user_file(
         except Exception as db_err:
             # Database insert failed - clean up the uploaded file to avoid orphaned files
             try:
-                await storage_service.delete_file(flow_id=str(current_user.id), file_name=stored_file_name)
+                await storage_service.delete_file(flow_id=storage_namespace, file_name=stored_file_name)
             except OSError as e:
                 #  If delete fails, just log the error
                 await logger.aerror(f"Failed to clean up uploaded file {stored_file_name}: {e}")
@@ -445,7 +470,7 @@ async def load_sample_files(current_user: CurrentActiveUser, session: DbSession,
             file_name=sample_file_name,
         )
         file_size = await storage_service.get_file_size(
-            flow_id=str(current_user.id),
+            flow_id=user_storage_scope(current_user.id),
             file_name=sample_file_name,
         )
         # Create a UserFile object for the sample file
@@ -453,7 +478,7 @@ async def load_sample_files(current_user: CurrentActiveUser, session: DbSession,
             id=file_id,
             user_id=current_user.id,
             name=root_filename,
-            path=sample_file_name,
+            path=f"{user_storage_scope(current_user.id)}/{sample_file_name}",
             size=file_size,
         )
 
@@ -556,7 +581,7 @@ async def delete_files_batch(
             # Extract just the filename from the path (strip user_id prefix).
             # The file lives under its owner's namespace.
             file_name = Path(file.path).name
-            owner_id = str(file.user_id)
+            owner_id = _user_file_namespace(file.path, file.user_id)
             storage_deleted = False
 
             try:
@@ -668,7 +693,9 @@ async def download_files_batch(
         used_names: set[str] = set()
         with zipfile.ZipFile(zip_stream, "w") as zip_file:
             for file in files:
-                file_content = await storage_service.get_file(flow_id=str(file.user_id), file_name=Path(file.path).name)
+                file_content = await storage_service.get_file(
+                    flow_id=_user_file_namespace(file.path, file.user_id), file_name=Path(file.path).name
+                )
 
                 # Get the file extension from the original filename
                 file_extension = Path(file.path).suffix
@@ -778,11 +805,10 @@ async def download_file(
         except HTTPException as exc:
             raise deny_to_404(exc, detail="File not found") from exc
 
-        # Get the basename of the file path. The file lives under the owner's
-        # storage namespace, not the actor's — for a shared-file read by a
-        # non-owner the bytes are at ``flow_id=str(file.user_id)``.
+        # Resolve the owner's typed or legacy namespace from the recorded path,
+        # never the actor's namespace when a file is shared.
         file_name = Path(file.path).name
-        owner_id = str(file.user_id)
+        owner_id = _user_file_namespace(file.path, file.user_id)
 
         # If return_content is True, read the file content and return it
         if return_content:
@@ -883,11 +909,10 @@ async def delete_file(
         except HTTPException as exc:
             raise deny_to_404(exc, detail="File not found") from exc
 
-        # Extract just the filename from the path (strip user_id prefix).
-        # The file lives under the owner's namespace; for shared-file deletes
-        # by a non-owner, we must point at ``file_to_delete.user_id``.
+        # Extract the filename and resolve the owner's typed or legacy namespace
+        # from the recorded path when a shared file is deleted by a non-owner.
         file_name = Path(file_to_delete.path).name
-        owner_id = str(file_to_delete.user_id)
+        owner_id = _user_file_namespace(file_to_delete.path, file_to_delete.user_id)
 
         # Delete the file from the storage service first
         storage_deleted = False
@@ -970,7 +995,9 @@ async def delete_all_files(
             storage_deleted = False
 
             try:
-                await storage_service.delete_file(flow_id=str(current_user.id), file_name=file_name)
+                await storage_service.delete_file(
+                    flow_id=_user_file_namespace(file.path, current_user.id), file_name=file_name
+                )
                 storage_deleted = True
             except OSError as err:
                 # Check if this is a "permanent" failure where file/storage is gone
