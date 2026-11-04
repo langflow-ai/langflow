@@ -100,6 +100,19 @@ describe("UseRequestProcessor.query retry policy", () => {
     expect(retry(0, pauseRefusal)).toBe(false);
   });
 
+  it("does not retry changes refused by database maintenance", () => {
+    const { retry } = setup();
+    expect(
+      retry(0, {
+        isAxiosError: true,
+        response: {
+          status: 503,
+          data: { detail: "This instance is in maintenance mode." },
+        },
+      }),
+    ).toBe(false);
+  });
+
   it("treats non-axios / unknown errors as transient (retries)", () => {
     const { retry } = setup();
     expect(retry(0, undefined)).toBe(true);

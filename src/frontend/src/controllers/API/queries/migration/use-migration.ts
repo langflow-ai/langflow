@@ -22,11 +22,11 @@ export const migrationKeys = {
 };
 
 /** Whether this instance refuses changes now. Any signed-in user may ask: every page says so while it does. */
-export const useMigrationPauseQuery = (enabled: boolean) =>
-  useQuery<{ paused: boolean }>({
+export const useMigrationPauseQuery = (enabled = true) =>
+  useQuery<{ paused: boolean; maintenance?: boolean; migration?: boolean }>({
     queryKey: migrationKeys.pause,
     queryFn: async () =>
-      (await api.get(getURL("MIGRATION", { path: "pause" }))).data,
+      (await api.get(getURL("MAINTENANCE", { path: "status" }))).data,
     enabled,
     // An admin can pause at any time, from another browser.
     refetchInterval: 30000,

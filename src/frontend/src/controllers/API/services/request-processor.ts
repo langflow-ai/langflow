@@ -33,7 +33,10 @@ export function isPauseRefusal(error: unknown): boolean {
   return (
     axios.isAxiosError(error) &&
     error.response?.status === 503 &&
-    error.response.data?.detail === "This instance is being migrated."
+    [
+      "This instance is being migrated.",
+      "This instance is in maintenance mode.",
+    ].includes(error.response.data?.detail)
   );
 }
 
