@@ -11,6 +11,7 @@ from alembic.operations import Operations
 from alembic.script import ScriptDirectory
 
 _MIGRATION = importlib.import_module("langflow.alembic.versions.a1e7b9c3d5f0_add_api_key_permissions")
+_MERGE_MIGRATION = importlib.import_module("langflow.alembic.versions.c4e6f8a0b2d9_merge_scoped_keys_and_release_heads")
 
 
 @pytest.fixture(params=["sqlite", "postgresql"])
@@ -40,7 +41,8 @@ def test_api_key_permission_migration_keeps_one_release_head():
     from pathlib import Path
 
     scripts = ScriptDirectory(str(Path(_MIGRATION.__file__).parents[1]))
-    assert scripts.get_heads() == [_MIGRATION.revision]
+    assert scripts.get_heads() == [_MERGE_MIGRATION.revision]
+    assert _MIGRATION.revision in _MERGE_MIGRATION.down_revision
 
 
 def test_api_key_permission_migration_preserves_legacy_and_roundtrips(monkeypatch, migration_connection):
