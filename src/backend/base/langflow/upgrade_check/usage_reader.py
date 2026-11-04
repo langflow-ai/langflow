@@ -12,6 +12,7 @@ import sqlalchemy as sa
 from langflow.upgrade_check.reader import read_only_connection
 from langflow.upgrade_check.source import identity_for_source
 from langflow.upgrade_check.usage import JobUsage, UsageCoverage
+from langflow.upgrade_check.usage_timestamps import normalize_usage_timestamp
 
 if TYPE_CHECKING:
     from langflow.upgrade_check.source import SourceIdentity
@@ -20,7 +21,6 @@ if TYPE_CHECKING:
 # A cancellation can occur before execution, so it provides no start evidence.
 _EXECUTED_STATUSES = frozenset({"in_progress", "completed", "failed", "timed_out", "suspended"})
 _ERROR_STATUSES = frozenset({"failed", "timed_out"})
-_MIN_TIMESTAMP_LENGTH = len("2026-10-01T12:00:00")
 _REQUIRED_COLUMNS = frozenset({"flow_id", "type", "status", "created_timestamp"})
 _HISTORY_LIMITATIONS = (
     "retained_jobs_only",
@@ -144,15 +144,12 @@ def _job_groups(connection: sa.Connection):
     status = sa.func.lower(sa.cast(job.c.status, sa.String))
     timestamp = job.c.created_timestamp
     if connection.dialect.name == "sqlite":
-        # SQLite timestamps may have different offsets. Normalize before MIN/MAX.
-        # Date-only or invalid values do not establish an execution time.
-        timestamp = sa.case(
-            (
-                sa.func.length(sa.cast(timestamp, sa.String)) >= _MIN_TIMESTAMP_LENGTH,
-                sa.func.strftime("%Y-%m-%dT%H:%M:%SZ", timestamp),
-            ),
-            else_=None,
+        # Validate original components before SQLite can repair an invalid date.
+        connection.connection.driver_connection.create_function(
+            "langflow_upgrade_job_timestamp", 1, normalize_usage_timestamp, deterministic=True
         )
+        timestamp = sa.func.langflow_upgrade_job_timestamp(timestamp)
+
     query = (
         sa.select(
             job.c.flow_id,
@@ -170,12 +167,10 @@ def _job_groups(connection: sa.Connection):
 
 
 def _timestamp(value: object) -> str | None:
-    if value is None:
-        return None
-    parsed = value if isinstance(value, datetime) else datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-    return (
-        parsed.replace(tzinfo=parsed.tzinfo or timezone.utc).astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
-    )
+    normalized = normalize_usage_timestamp(value)
+    if normalized is not None and normalized.endswith(".000000Z"):
+        return f"{normalized.removesuffix('.000000Z')}Z"
+    return normalized
 
 
 def _timestamp_key(value: str) -> datetime:

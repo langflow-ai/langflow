@@ -144,3 +144,72 @@ def test_unreadable_serving_does_not_leak_connection_credentials():
     assert usage.limitations == ["serving_source_unreadable"]
     assert "private" not in usage.model_dump_json()
     assert datetime.fromisoformat(usage.coverage.observed_at.replace("Z", "+00:00")).tzinfo == timezone.utc
+
+
+@pytest.mark.parametrize(
+    "stamp",
+    [
+        "2026-02-30T12:00:00Z",
+        "2026-02-29T12:00:00Z",
+        "2026-13-01T12:00:00Z",
+        "2026-10-01T24:00:00Z",
+        "2026-10-01T12:60:00Z",
+        "2026-10-01T12:00:60Z",
+        "2026-10-01T12:00:00+24:00",
+        "2026-10-01T12:00:00+00:99",
+        "2026-10-01T12:00:00-00:99",
+        "2026-10-01",
+        "0001-01-01T00:00:00+23:59",
+        "9999-12-31T23:59:59-23:59",
+        "NaN",
+        123,
+        float("nan"),
+        b"not a timestamp",
+        None,
+    ],
+)
+def test_invalid_original_timestamps_stay_unknown_before_sqlite_normalization(tmp_path, stamp):
+    path = _database(tmp_path)
+    flow_id = str(uuid4())
+    _insert(path, flow_id, "completed", when=stamp)
+    before = path.read_bytes()
+
+    usage = _read(path).for_flow(flow_id)
+
+    assert (usage.runs, usage.errors, usage.last_run_at) == (1, 0, None)
+    assert usage.coverage.oldest_retained_at is None
+    assert usage.coverage.newest_retained_at is None
+    assert "job_timestamps_invalid" in usage.limitations
+    assert path.read_bytes() == before
+
+
+def test_valid_offsets_and_subseconds_are_ordered_before_sqlite_aggregation(tmp_path):
+    path = _database(tmp_path)
+    flow_id = str(uuid4())
+    _insert(path, flow_id, "completed", when="2024-02-29T23:30:00.123456+02:00")
+    _insert(path, flow_id, "completed", when="2024-02-29T21:30:00Z")
+    _insert(path, flow_id, "failed", when="2024-02-29T21:30:00.2Z")
+    before = path.read_bytes()
+
+    usage = _read(path).for_flow(flow_id)
+
+    assert (usage.runs, usage.errors) == (3, 1)
+    assert usage.last_run_at == "2024-02-29T21:30:00.200000Z"
+    assert usage.coverage.oldest_retained_at == "2024-02-29T21:30:00Z"
+    assert usage.coverage.newest_retained_at == "2024-02-29T21:30:00.200000Z"
+    assert "job_timestamps_invalid" not in usage.limitations
+    assert path.read_bytes() == before
+
+
+def test_invalid_execution_time_does_not_claim_a_later_known_run(tmp_path):
+    path = _database(tmp_path)
+    flow_id = str(uuid4())
+    _insert(path, flow_id, "completed", when="2026-02-28 12:00:00.123456")
+    _insert(path, flow_id, "failed", when="2026-02-30T12:00:00Z")
+
+    usage = _read(path).for_flow(flow_id)
+
+    assert (usage.runs, usage.errors, usage.last_run_at) == (2, 1, None)
+    assert usage.coverage.oldest_retained_at == "2026-02-28T12:00:00.123456Z"
+    assert usage.coverage.newest_retained_at == "2026-02-28T12:00:00.123456Z"
+    assert "job_timestamps_invalid" in usage.limitations
