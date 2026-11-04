@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAddFlow from "@/hooks/flows/use-add-flow";
@@ -19,17 +19,28 @@ export function useStartNewFlow() {
   const navigate = useCustomNavigate();
   const { folderId } = useParams();
   const openWelcome = useFlowBuilderWelcomeStore((state) => state.open);
+  // The button gives no sign of the create until the canvas opens, so a slow
+  // answer invites a second click. That click would post another flow, and the
+  // mutation then reports only the later request: a spare flow, or a "Name must
+  // be unique" error while the first flow was created and never opened.
+  const creating = useRef(false);
 
   return useCallback(async () => {
-    const id = await addFlow();
-    // Open BEFORE navigating so the canvas mounts with the welcome flag
-    // already true — guarantees the overlay appears on the very first paint
-    // instead of flashing the empty canvas then animating in.
-    //
-    // Tag the welcome with this flow's id so the mount can auto-close it if
-    // the user navigates to a DIFFERENT flow (e.g. picks a template in the
-    // TemplatesModal which spins up its own new flow).
-    openWelcome(id);
-    navigate(`/flow/${id}${folderId ? `/folder/${folderId}` : ""}`);
+    if (creating.current) return;
+    creating.current = true;
+    try {
+      const id = await addFlow();
+      // Open BEFORE navigating so the canvas mounts with the welcome flag
+      // already true — guarantees the overlay appears on the very first paint
+      // instead of flashing the empty canvas then animating in.
+      //
+      // Tag the welcome with this flow's id so the mount can auto-close it if
+      // the user navigates to a DIFFERENT flow (e.g. picks a template in the
+      // TemplatesModal which spins up its own new flow).
+      openWelcome(id);
+      navigate(`/flow/${id}${folderId ? `/folder/${folderId}` : ""}`);
+    } finally {
+      creating.current = false;
+    }
   }, [addFlow, navigate, folderId, openWelcome]);
 }
