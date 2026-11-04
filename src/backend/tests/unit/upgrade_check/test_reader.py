@@ -131,6 +131,7 @@ def test_reads_a_database_each_release_saved(release, tmp_path):
     assert source.alembic_revisions == [revision]
     users = {user.username: user for user in source.users}
     assert set(users) == {"langflow", "fixture-user"}
+    assert (users["langflow"].is_superuser, users["fixture-user"].is_superuser) == (True, False)
     project = next(project for project in source.projects if project.name == "Fixture project")
     assert project.user_id == users["langflow"].id
 
@@ -380,7 +381,8 @@ def test_postgres_source_is_read_in_a_read_only_transaction():
         with writer.begin() as connection:
             for statement in (
                 "CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL)",
-                'CREATE TABLE "user" (id UUID PRIMARY KEY, username VARCHAR NOT NULL)',
+                'CREATE TABLE "user" (id UUID PRIMARY KEY, username VARCHAR NOT NULL, is_superuser BOOLEAN NOT NULL'
+                " DEFAULT false)",
                 "CREATE TABLE folder (id UUID PRIMARY KEY, name VARCHAR NOT NULL, user_id UUID)",
                 "CREATE TABLE flow (id UUID PRIMARY KEY, name VARCHAR, data JSON, user_id UUID, folder_id UUID,"
                 " is_component BOOLEAN, updated_at TIMESTAMP WITH TIME ZONE)",
