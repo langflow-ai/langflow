@@ -31,7 +31,7 @@ def _credential_context():
     clear_current_auth_context()
 
 
-async def _seed(active_user, monkeypatch):
+async def _seed(active_user, monkeypatch, *, restricted=True):
     async def enforce(*, context, act, obj, **_kwargs):
         policy = context.get("api_key_permissions")
         resource_type, _, resource_id = obj.partition(":")
@@ -50,30 +50,41 @@ async def _seed(active_user, monkeypatch):
     monkeypatch.setattr("langflow.services.authorization.guards.get_authorization_service", lambda: authorization)
     async with session_scope() as session:
         flow = Flow(name="Queued key test", user_id=active_user.id, data={"nodes": [], "edges": []})
-        key = ApiKey(name="Queued key", api_key="not-a-real-credential", user_id=active_user.id, permissions=_policy())
+        key = ApiKey(
+            name="Queued key",
+            api_key="not-a-real-credential",  # pragma: allowlist secret
+            user_id=active_user.id,
+            permissions=_policy() if restricted else None,
+        )
         session.add(flow)
         session.add(key)
         await session.flush()
         return flow.id, key.id
 
 
-def _authenticate(key_id):
+def _authenticate(key_id, *, restricted=True):
     set_current_auth_context(
         AuthCredentialContext(
             method="api_key",
             api_key_id=key_id,
             api_key_source="db",  # pragma: allowlist secret
-            api_key_restricted=True,
-            api_key_permissions=_policy(),
+            api_key_restricted=restricted,
+            api_key_permissions=_policy() if restricted else None,
         )
     )
 
 
-async def test_job_creation_stamps_provenance_atomically(active_user, monkeypatch):
-    flow_id, key_id = await _seed(active_user, monkeypatch)
-    _authenticate(key_id)
+@pytest.mark.parametrize("restricted", [True, False])
+@pytest.mark.parametrize("job_type", [JobType.WORKFLOW, JobType.EVALUATION])
+async def test_job_creation_stamps_provenance_atomically(active_user, monkeypatch, restricted, job_type):
+    flow_id, key_id = await _seed(active_user, monkeypatch, restricted=restricted)
+    _authenticate(key_id, restricted=restricted)
     job = await get_job_service().create_job(
-        uuid4(), flow_id, user_id=active_user.id, initial_metadata={"request": {"input_value": "hello"}}
+        uuid4(),
+        flow_id,
+        job_type=job_type,
+        user_id=active_user.id,
+        initial_metadata={"request": {"input_value": "hello"}},
     )
     origin = job.job_metadata[_PROVENANCE]
     assert origin["api_key_id"] == str(key_id)
@@ -83,7 +94,16 @@ async def test_job_creation_stamps_provenance_atomically(active_user, monkeypatc
     assert "api_key" not in origin
 
 
-async def test_untrusted_metadata_cannot_inject_provenance(active_user):
+@pytest.mark.parametrize(
+    "context",
+    [
+        None,
+        AuthCredentialContext(method="jwt"),
+        AuthCredentialContext(method="api_key", api_key_source="env"),  # pragma: allowlist secret
+    ],
+)
+async def test_untrusted_metadata_cannot_inject_provenance(active_user, context):
+    set_current_auth_context(context)
     job = await get_job_service().create_job(
         uuid4(),
         uuid4(),
@@ -91,6 +111,55 @@ async def test_untrusted_metadata_cannot_inject_provenance(active_user):
         initial_metadata={_PROVENANCE: {"api_key_id": "forged"}, "request": {}},
     )
     assert _PROVENANCE not in job.job_metadata
+
+
+@pytest.mark.parametrize(
+    ("source", "restricted"), [("db", True), (None, True), ("env", True), ("db", False), (None, False)]
+)
+async def test_missing_database_key_identity_cannot_admit_job(active_user, source, restricted):
+    set_current_auth_context(
+        AuthCredentialContext(method="api_key", api_key_source=source, api_key_restricted=restricted)
+    )
+    job_id = uuid4()
+    service = get_job_service()
+    with pytest.raises(PermissionError):
+        await service.create_job(job_id, uuid4(), user_id=active_user.id)
+    assert await service.get_job_by_job_id(job_id) is None
+
+
+@pytest.mark.parametrize("change", ["read_only", "revoked"])
+@pytest.mark.parametrize("boundary", ["start", "retry", "resume"])
+async def test_full_access_key_changes_block_job_lifecycle(active_user, monkeypatch, change, boundary):
+    flow_id, key_id = await _seed(active_user, monkeypatch, restricted=False)
+    _authenticate(key_id, restricted=False)
+    service = get_job_service()
+    job_id = uuid4()
+    original = await service.create_job(job_id, flow_id, user_id=active_user.id, initial_metadata={"attempt": 1})
+    assert original.job_metadata[_PROVENANCE]["api_key_id"] == str(key_id)
+    clear_current_auth_context()
+    if boundary == "retry":
+        await service.update_job_status(job_id, JobStatus.IN_PROGRESS)
+    elif boundary == "resume":
+        await service.suspend_job(job_id, {"pending_request_id": "pause"})
+    async with session_scope() as session:
+        key = await session.get(ApiKey, key_id)
+        if change == "read_only":
+            key.permissions = _policy(["read"])
+        else:
+            key.is_active = False
+    if boundary == "retry":
+        assert await service.retry_requeue_claim(job_id, expected_attempt=1)
+    elif boundary == "resume":
+        assert await service.claim_suspended_for_resume(job_id)
+    pending = await service.get_job_by_job_id(job_id)
+    assert pending.job_metadata[_PROVENANCE] == original.job_metadata[_PROVENANCE]
+    callback = AsyncMock(return_value="must not execute")
+    with pytest.raises(PermissionError):
+        await service.execute_with_status(job_id, callback, mark_in_progress=boundary != "resume")
+    callback.assert_not_awaited()
+    failed = await service.get_job_by_job_id(job_id)
+    assert failed.status == JobStatus.FAILED
+    assert failed.error == {"type": "authorization_denied", "detail": "Job authorization is no longer valid."}
 
 
 @pytest.mark.parametrize(
@@ -185,8 +254,9 @@ async def test_suspend_and_metadata_update_cannot_replace_origin(active_user, mo
 
 
 @pytest.mark.parametrize("asset_type", ["knowledge_base", "memory_base"])
-async def test_ingestion_rechecks_real_knowledge_base_target(active_user, monkeypatch, asset_type):
-    flow_id, key_id = await _seed(active_user, monkeypatch)
+@pytest.mark.parametrize("restricted", [True, False])
+async def test_ingestion_rechecks_real_knowledge_base_target(active_user, monkeypatch, asset_type, restricted):
+    flow_id, key_id = await _seed(active_user, monkeypatch, restricted=restricted)
     async with session_scope() as session:
         knowledge_base = KnowledgeBaseRecord(name=f"queued-{asset_type}", user_id=active_user.id)
         session.add(knowledge_base)
@@ -200,14 +270,22 @@ async def test_ingestion_rechecks_real_knowledge_base_target(active_user, monkey
             await session.flush()
             asset_id = memory_base.id
         key = await session.get(ApiKey, key_id)
-        key.permissions = {
-            "restrictions": [
-                *_policy()["restrictions"],
-                {"resource_type": "knowledge_base", "actions": ["ingest"], "resource_ids": [str(knowledge_base.id)]},
-            ]
-        }
+        key.permissions = (
+            {
+                "restrictions": [
+                    *_policy()["restrictions"],
+                    {
+                        "resource_type": "knowledge_base",
+                        "actions": ["ingest"],
+                        "resource_ids": [str(knowledge_base.id)],
+                    },
+                ]
+            }
+            if restricted
+            else None
+        )
         knowledge_base_id = knowledge_base.id
-    _authenticate(key_id)
+    _authenticate(key_id, restricted=restricted)
     service = get_job_service()
     job_id = uuid4()
     job = await service.create_job(

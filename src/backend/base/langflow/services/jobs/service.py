@@ -1476,7 +1476,7 @@ class JobService(Service):
             set_current_auth_context(previous_context)
 
     async def authorize_job_start(self, job_id: UUID, *, job: Job | None = None) -> AuthCredentialContext | None:
-        """Revalidate originating restricted credentials before starting queued work."""
+        """Revalidate originating database credentials before starting queued work."""
         from langflow.services.jobs.api_key_authorization import authorize_job_start
 
         return await authorize_job_start(self, job_id, job=job)

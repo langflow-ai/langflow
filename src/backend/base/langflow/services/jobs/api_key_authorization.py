@@ -1,4 +1,4 @@
-"""Retain restricted credential provenance across queued execution boundaries."""
+"""Retain database credential provenance across queued execution boundaries."""
 
 from __future__ import annotations
 
@@ -12,7 +12,6 @@ from sqlmodel import select
 from langflow.services.auth.context import (
     AUTH_METHOD_API_KEY,
     AuthCredentialContext,
-    current_auth_is_restricted_api_key,
     get_current_auth_context,
     set_current_auth_context,
 )
@@ -100,10 +99,13 @@ async def stamp_api_key_job_authorization(
 ) -> dict[str, Any]:
     """Overwrite untrusted provenance with the selected credential's server-owned identity."""
     result = {key: value for key, value in metadata.items() if key != API_KEY_AUTHORIZATION_METADATA}
-    if not current_auth_is_restricted_api_key():
-        return result
     context = get_current_auth_context()
-    if context is None or context.api_key_id is None:
+    if context is None or context.method != AUTH_METHOD_API_KEY:
+        return result
+    if context.api_key_source == "env" and not context.api_key_restricted:  # pragma: allowlist secret
+        return result
+    # Full-access database keys can be restricted or revoked while the job waits.
+    if context.api_key_id is None:
         raise JobAuthorizationError
     key = await session.get(ApiKey, context.api_key_id)
     if key is None:
