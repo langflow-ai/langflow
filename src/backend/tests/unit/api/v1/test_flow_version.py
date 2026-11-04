@@ -133,6 +133,54 @@ async def test_list_versions_returns_entries_newest_first(client: AsyncClient, l
     assert entries[2]["version_number"] == 1
 
 
+@pytest.mark.parametrize("with_provider", [False, True])
+async def test_list_versions_serializes_metadata_without_loading_data(
+    client: AsyncClient, logged_in_headers, active_user, monkeypatch, with_provider
+):
+    from uuid import UUID
+
+    from langflow.services.deps import get_db_service, session_scope
+    from sqlalchemy import event
+
+    _set_deployments_feature_flag(monkeypatch, enabled=True)
+    flow = await _create_flow(client, logged_in_headers)
+    snap = await _create_snapshot(client, logged_in_headers, flow["id"], description="metadata only")
+    await _set_retained(snap["id"], retained=True, reason="keep")
+    params = {}
+    if with_provider:
+        async with session_scope() as session:
+            provider = await _create_provider_account_row(session, user_id=UUID(snap["user_id"]))
+            params["deployment_provider_id"] = str(provider.id)
+
+    statements = []
+
+    def capture_statement(_conn, _cursor, statement, _parameters, _context, _executemany):
+        if statement.lstrip().upper().startswith("SELECT") and "flow_version" in statement:
+            statements.append(statement)
+
+    engine = get_db_service().engine.sync_engine
+    event.listen(engine, "before_cursor_execute", capture_statement)
+    try:
+        entries = await _list_versions(client, logged_in_headers, flow["id"], params=params)
+    finally:
+        event.remove(engine, "before_cursor_execute", capture_statement)
+
+    assert len(entries) == 1
+    entry = entries[0]
+    for key in ("id", "flow_id", "user_id", "version_number", "version_tag", "description", "created_at"):
+        assert entry[key] == snap[key]
+    assert entry["username"] == active_user.username
+    assert entry["retained"] is True
+    assert entry["retained_reason"] == "keep"
+    assert "data" not in entry
+    if with_provider:
+        assert entry["is_deployed"] is False
+    else:
+        assert "is_deployed" not in entry
+    assert statements
+    assert all("flow_version.data" not in statement for statement in statements)
+
+
 async def test_version_numbers_auto_increment(client: AsyncClient, logged_in_headers):
     flow = await _create_flow(client, logged_in_headers)
 
