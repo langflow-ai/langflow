@@ -843,6 +843,46 @@ mod tests {
     use super::*;
 
     #[test]
+    fn text_reads_and_writes_as_the_general_way_does() {
+        let general = |text: &str| {
+            let value: crate::value::FiniteAnyValue = serde_json::from_str(text).unwrap();
+            Operation::list_from_value(value.0)
+        };
+        for text in [
+            r#"[{"type":"add_nodes","nodes":[{"id":"a","data":{"node":{"template":{"t":{"value":"é 😀","n":1.5}}}}}]}]"#,
+            r#"[{"type":"update_nodes","updates":[{"op":"set_field","id":"a","path":["data","node","outputs",{"key":"out"}],"value":{"name":"out","size":1}},{"id":"a","path":["data","node","template","rows","value",{"key":"r"}],"op":"delete_field"}]}]"#,
+            r#"[{"type":"delete_nodes","ids":["a","b"]},{"type":"delete_edges","ids":["e"]}]"#,
+            r#"[{"type":"add_edges","edges":[{"id":"e","source":"a","target":"b","data":{"x":[1,2]}}]}]"#,
+            "[]",
+        ] {
+            assert_eq!(
+                operations_from_text(text),
+                Some(general(text).unwrap()),
+                "{text}"
+            );
+            for operation in general(text).unwrap() {
+                let mut written = Vec::new();
+                operation.write_json(&mut written, crate::json_out::Ascii::Escape);
+                let expected = crate::ops::api::json_text(&operation.to_value());
+                assert_eq!(String::from_utf8(written).unwrap(), expected);
+            }
+        }
+        // Other shapes, and text that breaks a rule, are left to the general reader.
+        for text in [
+            r#"[{"ids":["a"],"type":"delete_nodes"}]"#,
+            r#"[{"type":"delete_nodes","ids":["a"],"ids":["b"]}]"#,
+            r#"[{"type":"delete_nodes","ids":[1]}]"#,
+            r#"[{"type":"update_nodes","updates":[{"op":"set_field","id":"a","path":["id"],"value":"b"}]}]"#,
+            r#"[{"type":"update_nodes","updates":[{"op":"delete_field","id":"a","path":["x"],"value":1}]}]"#,
+            r#"[{"type":"add_nodes","nodes":[{"id":"a"},{"id":"a"}]}]"#,
+            r#"{"type":"delete_nodes","ids":["a"]}"#,
+            r#"[{"type":"delete_nodes","ids":["a"]}] x"#,
+        ] {
+            assert_eq!(operations_from_text(text), None, "{text}");
+        }
+    }
+
+    #[test]
     fn operations_round_trip() {
         for operation in [
             json!({"type": "add_nodes", "nodes": [{"id": "a", "data": {"node": {"template": {}}}}]}),
@@ -986,6 +1026,414 @@ mod tests {
         ] {
             let error = Operation::list_from_value(operations).unwrap_err();
             assert_eq!(error.message, message);
+        }
+    }
+}
+
+// --- Writing and reading operation text without a JSON value ---------------------------------
+
+impl Operation {
+    /// Write the operation as JSON text, as [`crate::json_out::write_value`]
+    /// writes [`Self::to_value`], without building that value.
+    pub(crate) fn write_json(&self, out: &mut Vec<u8>, ascii: crate::json_out::Ascii) {
+        use crate::json_out::{write_map, write_seq, write_str};
+        out.extend_from_slice(b"{\"type\":");
+        write_str(out, self.kind().as_str(), ascii);
+        match self {
+            Self::AddNodes(nodes) => {
+                out.extend_from_slice(b",\"nodes\":");
+                write_seq(out, nodes, |out, node| write_map(out, node.as_map(), ascii));
+            }
+            Self::UpdateNodes(updates) => {
+                out.extend_from_slice(b",\"updates\":");
+                write_seq(out, updates, |out, update| update.write_json(out, ascii));
+            }
+            Self::DeleteNodes(ids) | Self::DeleteEdges(ids) => {
+                out.extend_from_slice(b",\"ids\":");
+                write_seq(out, ids, |out, id| write_str(out, id, ascii));
+            }
+            Self::AddEdges(edges) => {
+                out.extend_from_slice(b",\"edges\":");
+                write_seq(out, edges, |out, edge| write_map(out, edge.as_map(), ascii));
+            }
+        }
+        out.push(b'}');
+    }
+}
+
+impl FieldUpdate {
+    fn write_json(&self, out: &mut Vec<u8>, ascii: crate::json_out::Ascii) {
+        use crate::json_out::{write_seq, write_str, write_value};
+        out.extend_from_slice(b"{\"id\":");
+        write_str(out, &self.id, ascii);
+        out.extend_from_slice(b",\"path\":");
+        write_seq(out, self.path.iter(), |out, segment| match segment {
+            Segment::Key(key) => write_str(out, key, ascii),
+            Segment::Item(key) => {
+                out.extend_from_slice(b"{\"key\":");
+                write_str(out, key, ascii);
+                out.push(b'}');
+            }
+        });
+        match &self.change {
+            Change::Set(value) => {
+                out.extend_from_slice(b",\"op\":\"set_field\",\"value\":");
+                write_value(out, value, ascii);
+            }
+            Change::Delete => out.extend_from_slice(b",\"op\":\"delete_field\""),
+        }
+        out.push(b'}');
+    }
+}
+
+/// Read operations from JSON text straight into their types, without a JSON
+/// value for the whole batch. It reads only text in the common shape: an
+/// operation with its `type` first, and no repeated key. For any other text,
+/// or text that breaks a rule, it returns `None`, and the caller reads the
+/// text the general way, which gives the same operations or the exact error.
+pub(crate) fn operations_from_text(text: &str) -> Option<Vec<Operation>> {
+    let mut builder = crate::value::Builder::<true>::default();
+    let mut deserializer = serde_json::Deserializer::from_str(text);
+    let operations =
+        serde::de::DeserializeSeed::deserialize(text::Operations(&mut builder), &mut deserializer)
+            .ok()?;
+    deserializer.end().ok()?;
+    Some(operations)
+}
+
+mod text {
+    use std::fmt;
+
+    use serde::de::{
+        self, DeserializeSeed, Deserializer, IgnoredAny, MapAccess, SeqAccess, Visitor,
+    };
+
+    use super::{
+        Change, Edge, FieldUpdate, Node, NodePath, Operation, OperationKind, Segment,
+        no_repeated_ids, no_repeated_paths,
+    };
+    use crate::ops::from_value::FromAnyValue;
+    use crate::value::{AnyValue, Builder, FiniteSeed};
+
+    /// Any failure: the caller reads the text the general way.
+    fn bail<E: de::Error>() -> E {
+        E::custom("not in the common shape")
+    }
+
+    /// A key of an operation or a field update, read without allocating.
+    #[derive(PartialEq, Eq)]
+    enum Key {
+        Type,
+        Nodes,
+        Updates,
+        Ids,
+        Edges,
+        Op,
+        Id,
+        Path,
+        Value,
+        Other,
+    }
+
+    struct KeySeed;
+    impl<'de> DeserializeSeed<'de> for KeySeed {
+        type Value = Key;
+        fn deserialize<D: Deserializer<'de>>(self, d: D) -> Result<Key, D::Error> {
+            d.deserialize_str(self)
+        }
+    }
+    impl Visitor<'_> for KeySeed {
+        type Value = Key;
+        fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.write_str("a key")
+        }
+        fn visit_str<E: de::Error>(self, key: &str) -> Result<Key, E> {
+            Ok(match key {
+                "type" => Key::Type,
+                "nodes" => Key::Nodes,
+                "updates" => Key::Updates,
+                "ids" => Key::Ids,
+                "edges" => Key::Edges,
+                "op" => Key::Op,
+                "id" => Key::Id,
+                "path" => Key::Path,
+                "value" => Key::Value,
+                _ => Key::Other,
+            })
+        }
+    }
+
+    /// A string, as an owned `String`.
+    struct Text;
+    impl<'de> DeserializeSeed<'de> for Text {
+        type Value = String;
+        fn deserialize<D: Deserializer<'de>>(self, d: D) -> Result<String, D::Error> {
+            d.deserialize_str(self)
+        }
+    }
+    impl Visitor<'_> for Text {
+        type Value = String;
+        fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.write_str("a string")
+        }
+        fn visit_str<E: de::Error>(self, text: &str) -> Result<String, E> {
+            Ok(text.to_owned())
+        }
+    }
+
+    /// A list, each item read by `item`.
+    struct List<F>(F);
+    impl<'de, T, F: FnMut(&mut dyn ItemReader<'de>) -> Option<T>> Visitor<'de> for List<F> {
+        type Value = Vec<T>;
+        fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.write_str("a list")
+        }
+        fn visit_seq<A: SeqAccess<'de>>(mut self, mut seq: A) -> Result<Vec<T>, A::Error> {
+            let mut items = Vec::with_capacity(seq.size_hint().unwrap_or(0));
+            loop {
+                let mut reader = Reader::<A> {
+                    seq: &mut seq,
+                    done: false,
+                    failed: false,
+                };
+                let item = (self.0)(&mut reader);
+                if reader.failed {
+                    return Err(bail());
+                }
+                if reader.done {
+                    return Ok(items);
+                }
+                items.push(item.ok_or_else(bail)?);
+            }
+        }
+    }
+
+    /// Reads the next item of a list with a seed, without naming the access type.
+    trait ItemReader<'de> {
+        fn ops(&mut self, builder: &mut Builder<true>) -> Option<Operation>;
+        fn value(&mut self, builder: &mut Builder<true>) -> Option<AnyValue>;
+        fn text(&mut self) -> Option<String>;
+        fn segment(&mut self) -> Option<Segment>;
+        fn update(&mut self, builder: &mut Builder<true>) -> Option<FieldUpdate>;
+    }
+
+    struct Reader<'s, A> {
+        seq: &'s mut A,
+        done: bool,
+        failed: bool,
+    }
+
+    impl<'de, A: SeqAccess<'de>> Reader<'_, A> {
+        fn next<S: DeserializeSeed<'de>>(&mut self, seed: S) -> Option<S::Value> {
+            match self.seq.next_element_seed(seed) {
+                Ok(Some(item)) => Some(item),
+                Ok(None) => {
+                    self.done = true;
+                    None
+                }
+                Err(_) => {
+                    self.failed = true;
+                    None
+                }
+            }
+        }
+    }
+
+    impl<'de, A: SeqAccess<'de>> ItemReader<'de> for Reader<'_, A> {
+        fn ops(&mut self, builder: &mut Builder<true>) -> Option<Operation> {
+            self.next(OperationSeed(builder))
+        }
+        fn value(&mut self, builder: &mut Builder<true>) -> Option<AnyValue> {
+            self.next(FiniteSeed(builder))
+        }
+        fn text(&mut self) -> Option<String> {
+            self.next(Text)
+        }
+        fn segment(&mut self) -> Option<Segment> {
+            self.next(SegmentSeed)
+        }
+        fn update(&mut self, builder: &mut Builder<true>) -> Option<FieldUpdate> {
+            self.next(UpdateSeed(builder))
+        }
+    }
+
+    /// The batch: a list of operations.
+    pub(super) struct Operations<'b>(pub(super) &'b mut Builder<true>);
+    impl<'de> DeserializeSeed<'de> for Operations<'_> {
+        type Value = Vec<Operation>;
+        fn deserialize<D: Deserializer<'de>>(self, d: D) -> Result<Vec<Operation>, D::Error> {
+            let builder = self.0;
+            d.deserialize_seq(List(|reader: &mut dyn ItemReader<'de>| reader.ops(builder)))
+        }
+    }
+
+    struct OperationSeed<'b>(&'b mut Builder<true>);
+    impl<'de> DeserializeSeed<'de> for OperationSeed<'_> {
+        type Value = Operation;
+        fn deserialize<D: Deserializer<'de>>(self, d: D) -> Result<Operation, D::Error> {
+            d.deserialize_map(self)
+        }
+    }
+    impl<'de> Visitor<'de> for OperationSeed<'_> {
+        type Value = Operation;
+        fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.write_str("an operation")
+        }
+        fn visit_map<M: MapAccess<'de>>(self, mut map: M) -> Result<Operation, M::Error> {
+            let builder = self.0;
+            if map.next_key_seed(KeySeed)? != Some(Key::Type) {
+                return Err(bail());
+            }
+            let kind: OperationKind = map.next_value_seed(Text)?.parse().map_err(|_| bail())?;
+            let expected = match kind {
+                OperationKind::AddNodes => Key::Nodes,
+                OperationKind::UpdateNodes => Key::Updates,
+                OperationKind::DeleteNodes | OperationKind::DeleteEdges => Key::Ids,
+                OperationKind::AddEdges => Key::Edges,
+            };
+            if map.next_key_seed(KeySeed)? != Some(expected) {
+                return Err(bail());
+            }
+            let operation = match kind {
+                OperationKind::AddNodes => {
+                    let values = map.next_value_seed(Values(builder))?;
+                    let nodes = values
+                        .into_iter()
+                        .map(Node::from_value)
+                        .collect::<Result<Vec<_>, _>>()
+                        .map_err(|_| bail())?;
+                    no_repeated_ids(nodes.iter().map(Node::id)).map_err(|_| bail())?;
+                    Operation::AddNodes(nodes)
+                }
+                OperationKind::AddEdges => {
+                    let values = map.next_value_seed(Values(builder))?;
+                    let edges = values
+                        .into_iter()
+                        .map(Edge::from_value)
+                        .collect::<Result<Vec<_>, _>>()
+                        .map_err(|_| bail())?;
+                    no_repeated_ids(edges.iter().map(Edge::id)).map_err(|_| bail())?;
+                    Operation::AddEdges(edges)
+                }
+                OperationKind::UpdateNodes => {
+                    let updates = map.next_value_seed(Updates(builder))?;
+                    no_repeated_paths(&updates).map_err(|_| bail())?;
+                    Operation::UpdateNodes(updates)
+                }
+                OperationKind::DeleteNodes => Operation::DeleteNodes(map.next_value_seed(Ids)?),
+                OperationKind::DeleteEdges => Operation::DeleteEdges(map.next_value_seed(Ids)?),
+            };
+            if map.next_key_seed(KeySeed)?.is_some() {
+                return Err(bail());
+            }
+            Ok(operation)
+        }
+    }
+
+    struct Values<'b>(&'b mut Builder<true>);
+    impl<'de> DeserializeSeed<'de> for Values<'_> {
+        type Value = Vec<AnyValue>;
+        fn deserialize<D: Deserializer<'de>>(self, d: D) -> Result<Vec<AnyValue>, D::Error> {
+            let builder = self.0;
+            d.deserialize_seq(List(|reader: &mut dyn ItemReader<'de>| {
+                reader.value(builder)
+            }))
+        }
+    }
+
+    struct Ids;
+    impl<'de> DeserializeSeed<'de> for Ids {
+        type Value = Vec<String>;
+        fn deserialize<D: Deserializer<'de>>(self, d: D) -> Result<Vec<String>, D::Error> {
+            d.deserialize_seq(List(|reader: &mut dyn ItemReader<'de>| reader.text()))
+        }
+    }
+
+    struct Updates<'b>(&'b mut Builder<true>);
+    impl<'de> DeserializeSeed<'de> for Updates<'_> {
+        type Value = Vec<FieldUpdate>;
+        fn deserialize<D: Deserializer<'de>>(self, d: D) -> Result<Vec<FieldUpdate>, D::Error> {
+            let builder = self.0;
+            d.deserialize_seq(List(|reader: &mut dyn ItemReader<'de>| {
+                reader.update(builder)
+            }))
+        }
+    }
+
+    struct Path;
+    impl<'de> DeserializeSeed<'de> for Path {
+        type Value = Vec<Segment>;
+        fn deserialize<D: Deserializer<'de>>(self, d: D) -> Result<Vec<Segment>, D::Error> {
+            d.deserialize_seq(List(|reader: &mut dyn ItemReader<'de>| reader.segment()))
+        }
+    }
+
+    /// A path segment: a string, or `{"key": ...}` with a non-empty key.
+    struct SegmentSeed;
+    impl<'de> DeserializeSeed<'de> for SegmentSeed {
+        type Value = Segment;
+        fn deserialize<D: Deserializer<'de>>(self, d: D) -> Result<Segment, D::Error> {
+            d.deserialize_any(self)
+        }
+    }
+    impl<'de> Visitor<'de> for SegmentSeed {
+        type Value = Segment;
+        fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.write_str("a path segment")
+        }
+        fn visit_str<E: de::Error>(self, key: &str) -> Result<Segment, E> {
+            Ok(Segment::Key(key.to_owned()))
+        }
+        fn visit_map<M: MapAccess<'de>>(self, mut map: M) -> Result<Segment, M::Error> {
+            let Some(name) = map.next_key_seed(Text)? else {
+                return Err(bail());
+            };
+            if name != "key" {
+                return Err(bail());
+            }
+            let key = map.next_value_seed(Text)?;
+            if key.is_empty() || map.next_key::<IgnoredAny>()?.is_some() {
+                return Err(bail());
+            }
+            Ok(Segment::Item(key))
+        }
+    }
+
+    struct UpdateSeed<'b>(&'b mut Builder<true>);
+    impl<'de> DeserializeSeed<'de> for UpdateSeed<'_> {
+        type Value = FieldUpdate;
+        fn deserialize<D: Deserializer<'de>>(self, d: D) -> Result<FieldUpdate, D::Error> {
+            d.deserialize_map(self)
+        }
+    }
+    impl<'de> Visitor<'de> for UpdateSeed<'_> {
+        type Value = FieldUpdate;
+        fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.write_str("a field update")
+        }
+        fn visit_map<M: MapAccess<'de>>(self, mut map: M) -> Result<FieldUpdate, M::Error> {
+            let (mut op, mut id, mut path, mut value) = (None, None, None, None);
+            while let Some(key) = map.next_key_seed(KeySeed)? {
+                match key {
+                    Key::Op if op.is_none() => op = Some(map.next_value_seed(Text)?),
+                    Key::Id if id.is_none() => id = Some(map.next_value_seed(Text)?),
+                    Key::Path if path.is_none() => path = Some(map.next_value_seed(Path)?),
+                    Key::Value if value.is_none() => {
+                        value = Some(map.next_value_seed(FiniteSeed(&mut *self.0))?);
+                    }
+                    _ => return Err(bail()),
+                }
+            }
+            let id = id.filter(|id: &String| !id.is_empty()).ok_or_else(bail)?;
+            let path = NodePath::try_from(path.ok_or_else(bail)?).map_err(|_| bail())?;
+            let change = match (op.as_deref(), value) {
+                (Some("set_field"), Some(value)) => Change::Set(value),
+                (Some("delete_field"), None) => Change::Delete,
+                _ => return Err(bail()),
+            };
+            let update = FieldUpdate { id, path, change };
+            update.check_keys_kept().map_err(|_| bail())?;
+            Ok(update)
         }
     }
 }
