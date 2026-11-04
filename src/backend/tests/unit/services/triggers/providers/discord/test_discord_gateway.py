@@ -113,11 +113,12 @@ async def execute(monkeypatch, frames, *, trigger=None, responses=None, emit_err
     return adapter, ctx, socket, events, saved, order, dialed, transport
 
 
-async def test_identify_commits_event_before_sequence_and_discards_interaction_tokens(monkeypatch):
+@pytest.mark.parametrize("resume_url", ["wss://gateway.discord.gg/", "wss://gateway-us-east1-b.discord.gg"])
+async def test_identify_commits_event_before_sequence_and_discards_interaction_tokens(monkeypatch, resume_url):
     adapter, ctx, socket, events, saved, order, dialed, _transport = await execute(
         monkeypatch,
         [
-            {"op": 0, "t": "READY", "s": 1, "d": READY},
+            {"op": 0, "t": "READY", "s": 1, "d": {**READY, "resume_gateway_url": resume_url}},
             {"op": 0, "t": "MESSAGE_CREATE", "s": 2, "d": MESSAGE},
             {"op": 7},
         ],
@@ -127,6 +128,8 @@ async def test_identify_commits_event_before_sequence_and_discards_interaction_t
     assert socket.sent[0]["op"] == 2
     assert socket.sent[0]["d"]["intents"] == 1 | (1 << 9) | (1 << 15)
     assert saved[-1]["seq"] == 2
+    assert saved[-1]["resume_url"] == resume_url
+    assert saved[-1]["session_id"] == READY["session_id"]
     assert order[-2:] == ["emit", "save"]
     assert events[0]["dedupe_key"] == "discord:message:444"
     assert "must-not-persist" not in json.dumps(events, default=str)
@@ -136,16 +139,17 @@ async def test_identify_commits_event_before_sequence_and_discards_interaction_t
     assert socket.closed == [4000]
 
 
-async def test_resume_uses_saved_sequence_and_no_identify_budget(monkeypatch):
+@pytest.mark.parametrize("resume_host", ["resume.gateway.discord.gg", "gateway-us-east1-b.discord.gg"])
+async def test_resume_uses_saved_sequence_and_no_identify_budget(monkeypatch, resume_host):
     trigger = snapshot(
         state={
             "bot_id": BOT["id"],
             "session_id": "saved-session",
             "seq": 5,
-            "resume_url": "wss://resume.gateway.discord.gg/",
+            "resume_url": f"wss://{resume_host}/",
         }
     )
-    adapter, ctx, socket, _events, saved, _order, _dialed, transport = await execute(
+    adapter, ctx, socket, _events, saved, _order, dialed, transport = await execute(
         monkeypatch,
         [{"op": 0, "t": "MESSAGE_CREATE", "s": 6, "d": MESSAGE}, {"op": 0, "t": "RESUMED", "s": 7, "d": {}}, {"op": 7}],
         trigger=trigger,
@@ -155,6 +159,7 @@ async def test_resume_uses_saved_sequence_and_no_identify_budget(monkeypatch):
         await adapter.start(ctx)
     assert socket.sent[0] == {"op": 6, "d": {"token": TOKEN, "session_id": "saved-session", "seq": 5}}
     assert saved[-1]["seq"] == 7
+    assert dialed[0][0] == f"wss://{resume_host}/?v=10&encoding=json"
     assert not any("gateway/bot" in call[1] for call in transport.calls)
 
 
@@ -233,6 +238,16 @@ async def test_stop_cancels_receiver_and_never_reconnects(monkeypatch):
         "wss://gateway.discord.gg:443/",
         "wss://gateway.discord.gg/?token=bad",
         "wss://127.0.0.1/",
+        "ws://gateway-us-east1-b.discord.gg/",
+        "wss://gateway-us-east1-b.discord.gg.evil.test/",
+        "wss://gateway-us-east1-b.evil.discord.gg/",
+        "wss://gateway-.discord.gg/",
+        "wss://gateway-us-east1-b-.discord.gg/",
+        "wss://a@gateway-us-east1-b.discord.gg/",
+        "wss://gateway-us-east1-b.discord.gg:443/",
+        "wss://gateway-us-east1-b.discord.gg/path",
+        "wss://gateway-us-east1-b.discord.gg/?token=bad",
+        "wss://gateway-us-east1-b.discord.gg/#bad",
         None,
     ],
 )

@@ -7,6 +7,7 @@ import contextlib
 import json
 import logging
 import random
+import re
 import time
 from urllib.parse import urlsplit
 
@@ -48,7 +49,11 @@ def gateway_url(value: str) -> str:
     host = parsed.hostname or ""
     if (
         parsed.scheme != "wss"
-        or not (host == "gateway.discord.gg" or host.endswith(".gateway.discord.gg"))
+        or not (
+            host == "gateway.discord.gg"
+            or host.endswith(".gateway.discord.gg")
+            or re.fullmatch(r"gateway-[a-z0-9]+(?:-[a-z0-9]+)*\.discord\.gg", host)
+        )
         or parsed.port is not None
         or parsed.username
         or parsed.password
