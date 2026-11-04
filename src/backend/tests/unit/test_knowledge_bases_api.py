@@ -1,5 +1,6 @@
 import io
 import json
+import threading
 import uuid
 from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
@@ -1386,6 +1387,57 @@ class TestKnowledgeBaseAPI:
 
         assert response.status_code == 500
         assert not (tmp_path / "activeuser" / "Rollback_KB").exists()
+
+    @pytest.mark.parametrize(
+        ("failure", "expected_status"),
+        [("duplicate", 409), ("persist", 500), ("validation", 500)],
+    )
+    async def test_create_knowledge_base_rollback_runs_off_event_loop(
+        self, client: AsyncClient, logged_in_headers, tmp_path, failure, expected_status
+    ):
+        from sqlalchemy.exc import IntegrityError
+
+        kb_path = tmp_path / "Rollback_KB"
+        loop_thread = threading.get_ident()
+        cleanup_threads = []
+        delete_storage = KBStorageHelper.delete_storage
+
+        async def validate_backend(**_kwargs):
+            kb_path.mkdir()
+            (kb_path / "partial.txt").write_text("partial data")
+            if failure == "validation":
+                msg = "backend initialization failed"
+                raise RuntimeError(msg)
+
+        def cleanup(path, name):
+            cleanup_threads.append(threading.get_ident())
+            return delete_storage(path, name)
+
+        persist_error = (
+            IntegrityError("insert", {}, RuntimeError("duplicate"))
+            if failure == "duplicate"
+            else RuntimeError("db unavailable")
+        )
+        with (
+            patch("langflow.api.v1.knowledge_bases._resolve_kb_store_path", return_value=kb_path),
+            patch("langflow.api.v1.knowledge_bases._validate_create_backend", side_effect=validate_backend),
+            patch("langflow.api.v1.knowledge_bases.knowledge_base_service.create_record", side_effect=persist_error),
+            patch.object(KBStorageHelper, "delete_storage", side_effect=cleanup),
+        ):
+            response = await client.post(
+                "api/v1/knowledge_bases",
+                headers=logged_in_headers,
+                json={
+                    "name": "Rollback KB",
+                    "embedding_provider": "OpenAI",
+                    "embedding_model": "text-embedding-3-small",
+                },
+            )
+
+        assert response.status_code == expected_status, response.text
+        assert len(cleanup_threads) == 1
+        assert cleanup_threads[0] != loop_thread
+        assert not kb_path.exists()
 
     async def test_delete_knowledge_base(self, client, logged_in_headers, seed_kb):
         record = await seed_kb("To_Delete", backend_type="opensearch")
