@@ -1,5 +1,6 @@
 """Recovery affordances require a credential replacement or restored background consent."""
 
+from contextvars import ContextVar
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
@@ -18,6 +19,7 @@ from sqlalchemy import event
 pytestmark = pytest.mark.no_blockbuster
 
 SCOPE = "https://www.googleapis.com/auth/calendar.events.readonly"
+_RECORDING_REQUEST_SQL = ContextVar("recording_trigger_recovery_request_sql", default=False)
 
 
 def calendar_flow(connection):
@@ -104,9 +106,12 @@ async def test_ready_connection_keeps_reconnect_until_credentials_change(
     statements = []
 
     def record(_connection, _cursor, statement, _parameters, _context, _many):
-        statements.append(statement.lower())
+        if _RECORDING_REQUEST_SQL.get():
+            statements.append(statement.lower())
 
     event.listen(engine, "before_cursor_execute", record)
+    # Request tasks inherit this context; independent lifespan workers do not.
+    token = _RECORDING_REQUEST_SQL.set(True)
     try:
         for url in (f"api/v1/triggers/{trigger_id}", f"api/v1/triggers?flow_id={flow_id}", "api/v1/triggers"):
             response = await client.get(url, headers=logged_in_headers)
@@ -118,7 +123,9 @@ async def test_ready_connection_keeps_reconnect_until_credentials_change(
             assert "resume" not in body["allowed_actions"]
             assert "old-synthetic-token" not in response.text
     finally:
+        _RECORDING_REQUEST_SQL.reset(token)
         event.remove(engine, "before_cursor_execute", record)
+    assert statements
     assert not any("encrypted_payload" in statement for statement in statements)
     assert not any(statement.lstrip().startswith(("insert ", "update ", "delete ")) for statement in statements)
     async with session_scope() as session:

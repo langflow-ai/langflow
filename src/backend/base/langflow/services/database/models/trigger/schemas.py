@@ -92,6 +92,7 @@ class TriggerReason(str, Enum):
     EXPIRED = "expired"
     DEAD = "dead"
     # Caller and applicability reasons; only ever values in ``blocked_actions``.
+    MULTIPLE_TRIGGERS = "multiple_triggers"
     INSUFFICIENT_PERMISSION = "insufficient_permission"
     NOT_CONNECTION_OWNER = "not_connection_owner"
     RECONNECT_NOT_NEEDED = "reconnect_not_needed"
@@ -264,6 +265,9 @@ class TriggerRead(BaseModel):
     next_fire_at: datetime | None
     last_fired_at: datetime | None
     last_error: str | None
+    #: Stable code for ``last_error`` so the UI can show it in the reader's
+    #: language; ``None`` when the text has no code and is shown as written.
+    last_error_code: str | None = None
     admin_paused_at: datetime | None = None
     created_at: datetime | None
     updated_at: datetime | None

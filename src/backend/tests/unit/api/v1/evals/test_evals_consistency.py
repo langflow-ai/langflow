@@ -340,7 +340,7 @@ class TestRunner:
                 flow_name="f",
                 dataset_name="d",
                 dataset_revision=1,
-                status="completed",
+                status="running",
             )
             session.add(run)
             await session.flush()

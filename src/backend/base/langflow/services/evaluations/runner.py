@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
 from lfx.utils.flow_validation import prepare_flow_build_for_user
-from sqlalchemy import update
+from sqlalchemy import Text, cast, or_, update
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, select
 
@@ -29,6 +29,7 @@ from langflow.services.evaluations.judge_budget import JudgeRunBudget
 from langflow.services.evaluations.model_overrides import apply_model_overrides
 from langflow.services.evaluations.row_runner import execute_row, flow_policy_scope
 from langflow.services.evaluations.row_scoring import score_row
+from langflow.services.evaluations.run_reconcile import ACTIVE_STATUSES
 from langflow.services.evaluations.summary import build_summary, summary_rows
 
 if TYPE_CHECKING:
@@ -96,7 +97,9 @@ async def _pending_rows(session: AsyncSession, run: EvaluationRun) -> list[tuple
 
 async def _fail_run(session: AsyncSession, run_id: UUID, error: str) -> None:
     await session.exec(
-        update(EvaluationRun).where(EvaluationRun.id == run_id).values(status="failed", error=error, finished_at=_now())
+        update(EvaluationRun)
+        .where(EvaluationRun.id == run_id, col(EvaluationRun.status).in_(ACTIVE_STATUSES))
+        .values(status="failed", error=error, finished_at=_now())
     )
 
 
@@ -136,18 +139,18 @@ async def _load_context(run_id: UUID) -> RunContext | None:
 
 
 class _RowNotStoredError(Exception):
-    """Rolls back a row save whose run is gone or whose position is already stored."""
+    """Roll back a row save when its run is inactive or its position is already stored."""
 
 
 async def _store_result(run_id: UUID, result: EvaluationResult) -> bool:
-    """Persist one row; False when the run row is gone (deleted with its project) or the row already exists."""
+    """Persist one row only while its run is active and its position is not already stored."""
     errored = result.error is not None
     try:
         # Write first: on SQLite a read that later upgrades to a write fails at once instead of waiting.
         async with session_scope() as session:
             counted = await session.exec(
                 update(EvaluationRun)
-                .where(EvaluationRun.id == run_id)
+                .where(EvaluationRun.id == run_id, col(EvaluationRun.status).in_(ACTIVE_STATUSES))
                 .values(
                     completed_items=EvaluationRun.completed_items + 1,
                     failed_items=EvaluationRun.failed_items + (1 if errored else 0),
@@ -270,7 +273,7 @@ async def _run_status(run_id: UUID) -> str | None:
 
 
 async def _watch_for_cancel(run_id: UUID, rows: asyncio.Future[Any]) -> None:
-    """Pick up a cancel written by any process (another pod, or this one) while rows run."""
+    """Stop rows when another process finishes or removes their run."""
     while not rows.done():
         await asyncio.sleep(CANCEL_POLL_SECONDS)
         try:
@@ -278,29 +281,37 @@ async def _watch_for_cancel(run_id: UUID, rows: asyncio.Future[Any]) -> None:
         except Exception as exc:  # noqa: BLE001 - a failed poll must not end the run; the next poll retries
             await logger.awarning(f"evals_cancel_poll_failed run_id={run_id} error={type(exc).__name__}")
             continue
-        # A missing run was deleted with its project: stop spending on it.
-        if status in {"cancelled", None}:
+        # A finished or deleted run must not keep spending on new rows.
+        if status not in ACTIVE_STATUSES:
             rows.cancel(USER_CANCELLED)
             return
 
 
-async def _finalize_run(run_id: UUID, scorer_names: list[str], status: str, error: str | None = None) -> str:
-    """Write the summary and the terminal status; a cancel written meanwhile wins. Returns the final status."""
+async def _finalize_run(
+    run_id: UUID, scorer_names: list[str], status: str, error: str | None = None
+) -> tuple[str, bool]:
+    """Return the final status and whether this worker finalized the run."""
     async with session_scope() as session:
-        results = await summary_rows(session, run_id)
-        values: dict[str, Any] = {"summary": build_summary(results, scorer_names), "finished_at": _now()}
-        await session.exec(update(EvaluationRun).where(EvaluationRun.id == run_id).values(**values))
-        terminal: dict[str, Any] = {"status": status}
+        values: dict[str, Any] = {"status": status, "finished_at": _now()}
         if error is not None:
-            terminal["error"] = error
-        await session.exec(
+            values["error"] = error
+        finalized = await session.exec(
             update(EvaluationRun)
-            .where(EvaluationRun.id == run_id, col(EvaluationRun.status) != "cancelled")
-            .values(**terminal)
+            .where(EvaluationRun.id == run_id, col(EvaluationRun.status).in_(ACTIVE_STATUSES))
+            .values(**values)
         )
+        results = await summary_rows(session, run_id)
+        summary_update = update(EvaluationRun).where(EvaluationRun.id == run_id)
+        if not finalized.rowcount:
+            # Cancellation sets its terminal status before the worker can summarize saved rows.
+            summary_update = summary_update.where(
+                col(EvaluationRun.status).in_(TERMINAL_RUN_STATUSES),
+                or_(col(EvaluationRun.summary).is_(None), cast(EvaluationRun.summary, Text) == "null"),
+            )
+        await session.exec(summary_update.values(summary=build_summary(results, scorer_names)))
         final = (await session.exec(select(EvaluationRun.status).where(EvaluationRun.id == run_id))).first()
     # A run deleted with its project counts as cancelled.
-    return str(final) if final is not None else "cancelled"
+    return (str(final) if final is not None else "cancelled"), bool(finalized.rowcount)
 
 
 async def run_evaluation(run_id: UUID) -> None:
@@ -309,11 +320,13 @@ async def run_evaluation(run_id: UUID) -> None:
         return
     scorer_names = [spec["name"] for spec in ctx.run.config["scorers"]]
     async with session_scope() as session:
-        await session.exec(
+        started = await session.exec(
             update(EvaluationRun)
             .where(EvaluationRun.id == run_id, EvaluationRun.status == "queued")
             .values(status="running", started_at=_now())
         )
+        if not started.rowcount:
+            return
     run_limit = asyncio.Semaphore(ctx.settings.evals_row_concurrency)
     tasks = [asyncio.ensure_future(_run_one(ctx, position, item, run_limit)) for position, item in ctx.rows]
     rows = asyncio.gather(*tasks)
@@ -322,7 +335,7 @@ async def run_evaluation(run_id: UUID) -> None:
     try:
         await rows
     except asyncio.CancelledError:
-        final = await _finalize_run(run_id, scorer_names, "failed", error=INTERRUPTED_ERROR)
+        final, _ = await _finalize_run(run_id, scorer_names, "failed", error=INTERRUPTED_ERROR)
         await logger.ainfo(f"evals_run_stopped run_id={run_id} status={final}")
         raise asyncio.CancelledError(USER_CANCELLED if final == "cancelled" else "") from None
     except Exception as exc:
@@ -331,9 +344,10 @@ async def run_evaluation(run_id: UUID) -> None:
             task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
         if isinstance(exc, RunAbortedError):
-            await _finalize_run(run_id, scorer_names, "failed", error=str(exc))
-            await logger.awarning(f"evals_run_aborted run_id={run_id} reason=repeated_failure")
-            await _continue_comparison(run_id)
+            _, finalized = await _finalize_run(run_id, scorer_names, "failed", error=str(exc))
+            if finalized:
+                await logger.awarning(f"evals_run_aborted run_id={run_id} reason=repeated_failure")
+                await _continue_comparison(run_id)
             return
         await _finalize_run(run_id, scorer_names, "failed", error=f"Run failed: {type(exc).__name__}")
         raise
@@ -342,9 +356,10 @@ async def run_evaluation(run_id: UUID) -> None:
         watcher.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await watcher
-    await _finalize_run(run_id, scorer_names, "completed")
-    await logger.ainfo(f"evals_run_completed run_id={run_id} rows={len(ctx.rows)}")
-    await _continue_comparison(run_id)
+    _, finalized = await _finalize_run(run_id, scorer_names, "completed")
+    if finalized:
+        await logger.ainfo(f"evals_run_completed run_id={run_id} rows={len(ctx.rows)}")
+        await _continue_comparison(run_id)
 
 
 async def _continue_comparison(run_id: UUID) -> None:
