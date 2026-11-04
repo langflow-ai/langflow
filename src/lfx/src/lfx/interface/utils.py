@@ -75,8 +75,12 @@ def extract_input_variables_from_prompt(prompt: str) -> list[str]:
     seen_add = seen.add
     seen_contains = seen.__contains__
 
+    identifier_pattern = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
     for _, field_name, _, _ in formatter.parse(prompt):
-        if field_name and not seen_contains(field_name):
+        # Only treat Python-identifier-like names as template variables.
+        # This avoids interpreting JSON fragments or other brace usages as variables.
+        if field_name and identifier_pattern.match(field_name) and not seen_contains(field_name):
             variables_append(field_name)
             seen_add(field_name)
 
