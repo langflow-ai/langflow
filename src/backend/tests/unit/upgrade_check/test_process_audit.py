@@ -133,4 +133,5 @@ def test_dry_run_process_audit_event_cannot_appear_verified(monkeypatch, event, 
     assert failure is not None
     assert failure["code"] == "could_not_verify"
     assert event in failure["message"]
+    assert ("network call" if event.startswith("socket.") else "child process launch") in failure["message"]
     assert any(refused.startswith(event) for refused in engine._refused_calls)

@@ -425,10 +425,12 @@ def _dry_run(entry: Mapping[str, Any], saved_node: dict, user_id: str | None) ->
     thread.start()
     thread.join(DRY_RUN_SECONDS)
     if _refused_calls:
+        refused = _refused_calls[0]
+        operation = "a network call" if refused.startswith("socket.") else "a child process launch"
         return None, _reason(
             "could_not_verify",
             None,
-            f"the update attempted a refused network or process operation: {_refused_calls[0]}",
+            f"the update makes {operation}: {refused}",
         )
     if thread.is_alive():
         return None, _reason("could_not_verify", None, f"the update did not finish in {DRY_RUN_SECONDS:g} seconds")
