@@ -140,7 +140,9 @@ def _upsert_single(
                 strip_secrets=strip_secrets,
                 sort_keys=True,
             )
-            if flow_to_json(remote_normalized) == local_file_content:
+            # Normalization strips folder_id, so compare an explicit destination separately.
+            destination_matches = flow_create.folder_id is None or flow_create.folder_id == remote.folder_id
+            if destination_matches and flow_to_json(remote_normalized) == local_file_content:
                 return PushResult(
                     path=path,
                     flow_id=flow_id,
