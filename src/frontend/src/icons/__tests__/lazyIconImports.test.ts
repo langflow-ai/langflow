@@ -1,5 +1,6 @@
 const mockVllmIcon = jest.fn();
 const mockOpenRAGIcon = jest.fn();
+const mockFamulorIcon = jest.fn();
 const mockFigraniumIcon = jest.fn();
 
 jest.mock("@/icons/vLLM", () => ({
@@ -8,6 +9,10 @@ jest.mock("@/icons/vLLM", () => ({
 
 jest.mock("@/icons/OpenRAG", () => ({
   OpenRAGIcon: mockOpenRAGIcon,
+}));
+
+jest.mock("@/icons/Famulor", () => ({
+  FamulorIcon: mockFamulorIcon,
 }));
 
 jest.mock("@/icons/Figranium", () => ({
@@ -27,6 +32,12 @@ describe("lazyIconsMapping", () => {
     const { default: icon } = await lazyIconsMapping.OpenRAG();
 
     expect(icon).toBe(mockOpenRAGIcon);
+  });
+
+  it("loads the Famulor bundle icon", async () => {
+    const { default: icon } = await lazyIconsMapping.Famulor();
+
+    expect(icon).toBe(mockFamulorIcon);
   });
 
   it("loads the Figranium bundle icon", async () => {

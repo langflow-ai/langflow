@@ -22,6 +22,7 @@ OPT_IN_STANDALONE_EXTENSIONS = {
     "lfx-duckduckgo",
     "lfx-empiriolabs",
     "lfx-exa",
+    "lfx-famulor",
     "lfx-firecrawl",
     "lfx-nextplaid",
     "lfx-paddle",
