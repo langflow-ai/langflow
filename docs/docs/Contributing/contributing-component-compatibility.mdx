@@ -22,6 +22,9 @@ The exporter uses each installed runtime's loader in a separate process with net
 It clears inherited credentials and uses temporary home and configuration directories before importing runtime code.
 Both exports set LiteLLM's supported `LITELLM_LOCAL_MODEL_COST_MAP=True` mode to inspect its packaged pricing table without an import-time HTTP refresh.
 This does not discover live provider models or make unavailable dynamic fields verifiable.
+The process guard permits the exact local Git version probe and croniter's `platform.architecture()` probe through the canonical system `/usr/bin/file` executable, limited to `-b` and the resolved current Python interpreter.
+Other executables, targets, extra arguments, and PATH lookalikes are refused.
+A refused operation invalidates the entire snapshot even if component code catches the exception and returns a fallback contract.
 A missing index, failed module import, or skipped template fails the export.
 It cannot produce complete evidence by silently omitting a failed bundle.
 The retained snapshots identify the installed distribution versions and each component's package.

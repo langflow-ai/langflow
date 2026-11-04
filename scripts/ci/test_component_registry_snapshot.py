@@ -1,6 +1,10 @@
 """Incomplete discovery cannot produce a successful release registry snapshot."""
 # ruff: noqa: SLF001
 
+import os
+import subprocess
+import sys
+import textwrap
 from types import SimpleNamespace
 
 import component_registry_snapshot as exporter
@@ -115,6 +119,7 @@ def test_provider_only_bundle_uses_real_model_fields_and_keeps_distribution():
     assert template["template"]["base_url"]["show"] is False
 
 
+@pytest.mark.component_runtime
 def test_provider_projection_uses_only_production_language_model_fields():
     from lfx.base.models import provider_registry, unified_models
     from lfx.interface.components import _read_component_index
@@ -193,3 +198,68 @@ def test_snapshot_child_clears_credentials_and_installs_denial_before_runtime(mo
     monkeypatch.setattr(exporter, "collect_snapshot", collect)
     exporter.main()
     assert json.loads(output.read_text()) == {"complete": True}
+
+
+@pytest.mark.parametrize("event", ["socket.connect", "socket.getaddrinfo", "subprocess.Popen"])
+def test_swallowed_audit_refusal_cannot_publish_complete_snapshot(event, tmp_path):
+    output = tmp_path / "snapshot.json"
+    script = textwrap.dedent("""
+        import importlib.util
+        import sys
+
+        output, module_path, event = sys.argv[1:]
+        spec = importlib.util.spec_from_file_location("exporter", module_path)
+        exporter = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(exporter)
+
+        def fallback_registry():
+            try:
+                sys.audit(event, "fixture-refused-target")
+            except exporter.RegistrySnapshotError:
+                pass
+            return {
+                "format_version": 1, "complete": True,
+                "distributions": {"lfx": "1.14.0"},
+                "all_types": {"core": {"Fallback": {"template": {"code": {"value": "fallback"}}, "outputs": []}}},
+                "component_packages": {"Fallback": "lfx"},
+            }
+
+        exporter.collect_snapshot = fallback_registry
+        sys.argv = ["snapshot", "--output", output]
+        exporter.main()
+    """)
+    result = subprocess.run(  # noqa: S603
+        [sys.executable, "-c", script, str(output), exporter.__file__, event],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+    assert result.returncode == 1
+    assert "incomplete registry cannot be exported" in result.stderr
+    assert "fixture-refused-target" not in result.stderr
+    assert not output.exists()
+
+
+def test_export_allows_only_trusted_file_probe_of_current_interpreter(tmp_path):
+    python = os.path.realpath(sys.executable)
+    trusted_path = {"PATH": "/usr/bin:/bin"}
+    exporter._refuse_network("subprocess.Popen", ("file", ["file", "-b", python], None, trusted_path))
+    interpreter_alias = tmp_path / "python-alias"
+    interpreter_alias.symlink_to(python)
+    exporter._refuse_network("subprocess.Popen", ("file", ["file", "-b", str(interpreter_alias)], None, trusted_path))
+    fake = tmp_path / "file"
+    fake.write_text("fixture-only")
+    fake.chmod(0o755)
+    forbidden = [
+        ("/bin/sh", ["file", "-b", python], None, trusted_path),
+        ("file", ["file", "-b", "/fixture/other-target"], None, trusted_path),
+        ("file", ["file", "-b", python, "/fixture/extra-target"], None, trusted_path),
+        ("file", ["file", "-L", python], None, trusted_path),
+        ("file", ["file", "-b", python], None, {"PATH": str(tmp_path)}),
+        (str(fake), [str(fake), "-b", python], None, trusted_path),
+        ("file", ["file", "-b", python], None, {"PATH": ".:/usr/bin:/bin"}),
+    ]
+    for arguments in forbidden:
+        with pytest.raises(exporter.RegistrySnapshotError):
+            exporter._refuse_network("subprocess.Popen", arguments)

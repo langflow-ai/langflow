@@ -40,6 +40,7 @@ def snapshot(entries=None, *, version="0.3.0", package="lfx-example"):
 
 
 @pytest.mark.parametrize("change", ["field", "output", "type", "connection", "retired", "component"])
+@pytest.mark.component_runtime
 def test_equal_code_still_detects_every_breaking_contract(change):
     previous = snapshot()
     current = copy.deepcopy(previous)
@@ -62,6 +63,7 @@ def test_equal_code_still_detects_every_breaking_contract(change):
     assert previous == snapshot()
 
 
+@pytest.mark.component_runtime
 def test_new_optional_fields_are_compatible():
     previous = snapshot()
     current = copy.deepcopy(previous)
@@ -69,6 +71,7 @@ def test_new_optional_fields_are_compatible():
     assert compare_registries(previous, current, "lfx-example") == []
 
 
+@pytest.mark.component_runtime
 def test_new_required_field_without_default_is_breaking():
     previous = snapshot()
     current = copy.deepcopy(previous)
@@ -77,6 +80,7 @@ def test_new_required_field_without_default_is_breaking():
     assert result.reasons[0]["code"] == "required_input_missing"
 
 
+@pytest.mark.component_runtime
 def test_renamed_component_can_resolve_through_shared_aliases():
     previous = snapshot()
     current = snapshot({"ext:test:Example@official": {**component(), "name": "Example"}})
@@ -130,6 +134,7 @@ def acknowledgment(changes, root: Path):
     }
 
 
+@pytest.mark.component_runtime
 def test_acknowledged_changes_are_rendered_into_release_notes(tmp_path):
     changes = breaking_change()
     document = acknowledgment(changes, tmp_path)
@@ -139,6 +144,7 @@ def test_acknowledged_changes_are_rendered_into_release_notes(tmp_path):
 
 
 @pytest.mark.parametrize("invalid", ["missing", "stale", "duplicate", "unpublished", "escape", "wrong_note"])
+@pytest.mark.component_runtime
 def test_invalid_acknowledgments_cannot_allow_a_break(invalid, tmp_path):
     changes = breaking_change()
     document = acknowledgment(changes, tmp_path)
@@ -159,6 +165,7 @@ def test_invalid_acknowledgments_cannot_allow_a_break(invalid, tmp_path):
         review_acknowledgments(changes, document, tmp_path)
 
 
+@pytest.mark.component_runtime
 def test_provider_identity_and_saved_field_removal_use_the_shared_rule():
     key = "provider:Example:LanguageModelComponent"
     previous = snapshot({key: component()})

@@ -9,19 +9,59 @@ import importlib
 import inspect
 import json
 import os
+import shutil
 import sys
 import tempfile
+from collections.abc import Mapping
 from importlib import metadata
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
+
+# Keep refusal evidence even when imported component code catches the exception.
+_refused_calls: list[str] = []
 
 
 class RegistrySnapshotError(RuntimeError):
     """An installed registry could not be exported completely."""
 
 
+def _is_interpreter_file_probe(arguments: tuple) -> bool:
+    """Allow croniter's platform.architecture probe of this interpreter only."""
+    try:
+        executable, argv, _cwd, environment = arguments
+    except ValueError:
+        return False
+    trusted = Path("/usr/bin/file").resolve()
+    if not trusted.is_file() or not isinstance(executable, str) or executable not in {"file", str(trusted)}:
+        return False
+    if not isinstance(argv, (list, tuple)):
+        return False
+    try:
+        program, option, target = argv
+    except ValueError:
+        return False
+    if not isinstance(program, str) or program not in {"file", str(trusted)} or option != "-b":
+        return False
+    if (
+        not isinstance(target, str)
+        or not Path(target).is_absolute()
+        or os.path.realpath(target) != os.path.realpath(sys.executable)
+    ):
+        return False
+    environment = os.environ if environment is None else environment
+    if not isinstance(environment, Mapping):
+        return False
+    path = environment.get("PATH", os.defpath)
+    if not isinstance(path, str) or any(not Path(part).is_absolute() for part in path.split(os.pathsep)):
+        return False
+    resolved = shutil.which(executable, path=path)
+    return resolved is not None and Path(resolved).resolve() == trusted
+
+
 def _refuse_network(event: str, _args: tuple) -> None:
+    if event == "subprocess.Popen" and _is_interpreter_file_probe(_args):
+        return
     if event == "subprocess.Popen" and len(_args) > 1 and _args[0] == "git" and _args[1] == ["git", "version"]:
         return
     if event in {
@@ -34,9 +74,8 @@ def _refuse_network(event: str, _args: tuple) -> None:
         "os.system",
         "os.posix_spawn",
     }:
+        _refused_calls.append(event)
         msg = "component registry export does not allow network access or subprocesses"
-        if event in {"subprocess.Popen", "os.system", "os.posix_spawn"}:
-            msg += f" {event} {_args[:2]!r}"
         raise RegistrySnapshotError(msg)
 
 
@@ -230,8 +269,12 @@ def main() -> None:
         }
         os.environ.clear()
         os.environ.update(environment)
+        _refused_calls.clear()
         sys.addaudithook(_refuse_network)
         result = collect_snapshot()
+        if _refused_calls:
+            msg = "component discovery attempted a refused operation, so its incomplete registry cannot be exported"
+            raise RegistrySnapshotError(msg)
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(result, sort_keys=True) + "\n", encoding="utf-8")
 

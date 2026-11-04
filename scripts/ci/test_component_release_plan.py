@@ -103,6 +103,7 @@ def test_runner_rejects_forged_or_incomplete_plans_before_installation(tmp_path,
         validate_plan(plan, snapshot(package="langflow", version="1.14.0"), tmp_path)
 
 
+@pytest.mark.component_runtime
 def test_runner_preserves_venv_python_and_retains_other_breaks_after_failed_baseline(monkeypatch, tmp_path):
     import copy
     import sys
