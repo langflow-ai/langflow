@@ -173,6 +173,11 @@ fn held(input: Input<'_>) -> ApiResult<AnyValue> {
 
 /// A list of operations. Text with a number that is not finite is refused.
 fn operations(input: Input<'_>) -> ApiResult<Vec<Operation>> {
+    if let Input::Text(text) = input
+        && let Some(operations) = crate::ops::ops::operations_from_text(text)
+    {
+        return Ok(operations);
+    }
     let value = match input {
         Input::Text(text) => serde_json::from_str(text)
             .map(|FiniteAnyValue(value)| value)
@@ -233,7 +238,7 @@ pub fn applied_json(applied: Applied, options: ApplyOptions) -> AnyMap {
 /// not grow a new buffer each time.
 pub fn write_operation_json(out: &mut Vec<u8>, operation: &Operation) {
     out.clear();
-    json_out::write_value(out, &operation.clone().into_value(), Ascii::Escape);
+    operation.write_json(out, Ascii::Escape);
 }
 
 /// Apply operations to a graph: `{"flow_data", ...}` and what [`applied_json`] lists.

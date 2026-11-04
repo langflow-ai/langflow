@@ -1500,7 +1500,7 @@ impl<'de> Deserialize<'de> for FiniteAnyValue {
 /// array ends its members move off the stack into a map or a list made for
 /// exactly their number.
 #[derive(Debug, Default)]
-struct Builder<const FINITE: bool> {
+pub(crate) struct Builder<const FINITE: bool> {
     strings: StringPool,
     entries: Vec<(AnyString, AnyValue)>,
     items: Vec<AnyValue>,
@@ -1514,6 +1514,17 @@ impl<const FINITE: bool> Builder<FINITE> {
 
 /// Builds an [`AnyValue`] with a [`Builder`]; with `FINITE`, refuses a number that is not finite.
 struct AnyValueVisitor<'b, const FINITE: bool>(&'b mut Builder<FINITE>);
+
+/// Reads one JSON value as [`FiniteAnyValue`] does, with a builder shared
+/// across the values of one input, so they share its string pool.
+pub(crate) struct FiniteSeed<'b>(pub(crate) &'b mut Builder<true>);
+
+impl<'de> DeserializeSeed<'de> for FiniteSeed<'_> {
+    type Value = AnyValue;
+    fn deserialize<D: Deserializer<'de>>(self, deserializer: D) -> Result<AnyValue, D::Error> {
+        deserializer.deserialize_any(AnyValueVisitor::<true>(self.0))
+    }
+}
 
 impl<'de, const FINITE: bool> DeserializeSeed<'de> for AnyValueVisitor<'_, FINITE> {
     type Value = AnyValue;
