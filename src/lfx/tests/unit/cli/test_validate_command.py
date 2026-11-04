@@ -511,6 +511,32 @@ class TestStrictMode:
 
 
 class TestJsonOutput:
+    @pytest.mark.parametrize(
+        ("edges", "message"),
+        [
+            (None, "'data.edges' must be a JSON array"),
+            ({}, "'data.edges' must be a JSON array"),
+            ([None], "Edge at index 0 is not a JSON object"),
+        ],
+    )
+    def test_cli_reports_invalid_edge_shape_and_validates_the_next_flow(self, tmp_path, edges, message):
+        from lfx.__main__ import app
+        from typer.testing import CliRunner
+
+        invalid = _write_flow(tmp_path, "a.json", {**_MINIMAL_VALID, "data": {"nodes": [], "edges": edges}})
+        valid = _write_flow(tmp_path, "b.json", _MINIMAL_VALID)
+
+        result = CliRunner().invoke(app, ["validate", str(tmp_path), "--level", "1", "--format", "json"])
+
+        assert result.exit_code == 1
+        first, second = json.loads(result.stdout)
+        assert first["path"] == str(invalid)
+        assert first["ok"] is False
+        assert [(issue["level"], issue["severity"], issue["message"]) for issue in first["issues"]] == [
+            (1, "error", message)
+        ]
+        assert second == {"path": str(valid), "ok": True, "issues": []}
+
     def test_json_output_shape(self, tmp_path, capsys):
         p = _write_flow(tmp_path, "flow.json", _MINIMAL_VALID)
         validate_command(

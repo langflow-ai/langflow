@@ -144,6 +144,32 @@ def _check_structural(flow: dict[str, Any], result: ValidationResult) -> bool:
                 )
             )
 
+    edges = data.get("edges", [])
+    if not isinstance(edges, list):
+        result.issues.append(
+            _make_issue(
+                level=_LEVEL_STRUCTURAL,
+                severity="error",
+                node_id=None,
+                node_name=None,
+                message="'data.edges' must be a JSON array",
+            )
+        )
+        return False
+
+    for i, edge in enumerate(edges):
+        if not isinstance(edge, dict):
+            result.issues.append(
+                _make_issue(
+                    level=_LEVEL_STRUCTURAL,
+                    severity="error",
+                    node_id=None,
+                    node_name=None,
+                    message=f"Edge at index {i} is not a JSON object",
+                )
+            )
+            ok = False
+
     return ok
 
 
