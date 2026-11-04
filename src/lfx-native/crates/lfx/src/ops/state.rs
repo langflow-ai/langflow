@@ -273,10 +273,16 @@ impl<V: Clone> Layered<V> {
     /// to them. Returns whether the stored map packed its slots, which moves
     /// them ([`Slots::pack_if_sparse`]).
     pub fn fold(&mut self) -> bool {
+        self.fold_into(&mut Vec::new())
+    }
+
+    /// [`Self::fold`], moving each removed entry into `released` instead of
+    /// dropping it, so the caller can free it elsewhere.
+    pub fn fold_into(&mut self, released: &mut Vec<V>) -> bool {
         for (key, written) in self.layer.drain(..) {
             match written {
                 Some(value) => self.stored.insert(key, value),
-                None => drop(self.stored.remove(&key)),
+                None => released.extend(self.stored.remove(&key)),
             }
         }
         self.shrink_large_layer();
@@ -602,6 +608,8 @@ pub struct GraphState {
     snapshot_nodes: SnapshotRows,
     snapshot_edges: SnapshotRows,
     snapshot_cache: Mutex<Option<Arc<SnapshotData>>>,
+    /// The nodes and edges that batches removed since [`Self::take_released`].
+    released: (Vec<Node>, Vec<Edge>),
 }
 
 impl GraphState {
@@ -660,6 +668,7 @@ impl GraphState {
             lists: Lists::default(),
             staged: false,
             text_len: Arc::default(),
+            released: Default::default(),
         })
     }
 
@@ -920,6 +929,10 @@ impl GraphState {
     /// a node the batch deleted and added again is written after it is
     /// added.
     pub(crate) fn commit(&mut self) {
+        // What an earlier batch removed and no caller took is freed here, so
+        // it never waits longer than one batch: apply and replay do not take it.
+        self.released.0.clear();
+        self.released.1.clear();
         self.snapshot_cache
             .get_mut()
             .unwrap_or_else(PoisonError::into_inner)
@@ -927,10 +940,10 @@ impl GraphState {
         let graph = &mut self.graph;
         mirror_layer(&mut self.snapshot_nodes, &graph.nodes, Node::as_map);
         mirror_layer(&mut self.snapshot_edges, &graph.edges, Edge::as_map);
-        if graph.nodes.fold() {
+        if graph.nodes.fold_into(&mut self.released.0) {
             self.snapshot_nodes = packed_mirror(&graph.nodes, Node::as_map);
         }
-        if graph.edges.fold() {
+        if graph.edges.fold_into(&mut self.released.1) {
             self.snapshot_edges = packed_mirror(&graph.edges, Edge::as_map);
         }
         graph.edges_at.0.fold();
@@ -987,8 +1000,19 @@ impl GraphState {
         self.staged = true;
     }
 
+    /// The nodes and edges that kept batches removed, for the caller to free
+    /// where it costs a request nothing, such as on a thread of its own, or
+    /// `None` when there are none. The next commit frees what no caller takes.
+    pub fn take_released(&mut self) -> Option<impl Send + 'static + use<>> {
+        if self.released.0.is_empty() && self.released.1.is_empty() {
+            return None;
+        }
+        Some(std::mem::take(&mut self.released))
+    }
+
     /// Keep the staged batch: its layers become the graph. Returns whether a
-    /// batch was staged; with none, nothing changes.
+    /// batch was staged; with none, nothing changes. The nodes and edges the
+    /// batch removed wait for [`Self::take_released`].
     pub fn keep(&mut self) -> bool {
         if !self.staged {
             return false;
@@ -1627,6 +1651,7 @@ mod tests {
         let witness = state.graph.nodes.stored["a"].as_map().clone();
         state.remove_node("a");
         state.commit();
+        drop(state.take_released());
         assert!(witness.into_unshared_entries().is_some());
         assert_mirrors(&state);
     }
@@ -1752,12 +1777,27 @@ mod tests {
         let deleted = state.graph.nodes.stored["a"].as_map().clone();
         state.remove_node("a");
         state.commit();
+        drop(state.take_released());
         assert!(deleted.into_unshared_entries().is_some());
         let replaced = state.graph.nodes.stored["b"].as_map().clone();
         state.remove_node("b");
         state.insert_node(mirror_node("b"));
         state.commit();
+        drop(state.take_released());
         assert!(replaced.into_unshared_entries().is_some());
         assert_mirrors(&state);
+    }
+
+    #[test]
+    fn removed_items_no_caller_takes_wait_at_most_one_batch() {
+        let mut state = GraphState::new(crate::json!({"nodes":[mirror_node("a").into_value(),mirror_node("b").into_value()],"edges":[]})).unwrap();
+        state.remove_node("a");
+        state.commit();
+        assert_eq!(state.released.0.len(), 1);
+        state.remove_node("b");
+        state.commit();
+        assert_eq!(state.released.0.len(), 1);
+        assert!(state.take_released().is_some());
+        assert!(state.take_released().is_none());
     }
 }
