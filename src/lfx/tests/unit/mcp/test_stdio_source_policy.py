@@ -319,15 +319,24 @@ def test_cmd_wrapper_parser_skips_switches_that_do_not_execute(switch):
 
 
 @pytest.mark.parametrize("command", ["sh", "bash"])
-@pytest.mark.parametrize("flag", ["-c", "-lc", "-ec", "-euc"])
+@pytest.mark.parametrize("flag", ["-c", "-uc", "-ec", "-euc"])
 def test_posix_wrapper_parser_preserves_supported_option_clusters(command, flag):
     assert parse_mcp_shell_wrapper(command, [flag, "uvx mcp-proxy"]) == ("uvx", ["mcp-proxy"])
 
 
 @pytest.mark.parametrize("command", ["sh", "bash"])
-@pytest.mark.parametrize("flag", ["-C", "-norc", "--norc", "-rcfile", "-oc", "-Ocompat43c", "/c", "-kc", "-kec"])
+@pytest.mark.parametrize(
+    "flag", ["-C", "-norc", "--norc", "-rcfile", "-oc", "-Ocompat43c", "/c", "-kc", "-kec", "-ic", "-lc", "-vc", "-xc"]
+)
 def test_posix_wrapper_parser_rejects_unsupported_option_forms(command, flag):
     assert parse_mcp_shell_wrapper(command, [flag, "uvx mcp-proxy"]) is None
+
+
+@pytest.mark.parametrize("command", ["sh", "bash"])
+@pytest.mark.parametrize("flag", ["-ic", "-lc", "-vc", "-xc", "-cuvx mcp-proxy", "-oc"])
+def test_source_policy_explains_unsupported_shell_options(command, flag):
+    with pytest.raises(ValueError, match="Pass the command as a separate argument after -c"):
+        validate_mcp_stdio_source_policy(command, [flag, "uvx mcp-proxy"])
 
 
 @pytest.mark.parametrize("command", ["sh", "bash"])

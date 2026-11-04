@@ -739,6 +739,7 @@ def validate_mcp_stdio_config(
             wrapped_command = None
             wrapped_args: list[str] = []
             if _has_leading_shell_exec_flag(args, base_command) and len(args) > 1:
+                # Parser denials must use MCPStdioSecurityError so callers handle every policy refusal consistently.
                 try:
                     parsed_wrapper = parse_mcp_shell_wrapper(base_command, args)
                 except ValueError as exc:

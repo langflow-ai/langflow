@@ -63,7 +63,7 @@ from lfx.components.deactivated.mcp_stdio import MCPStdio
         ),
         (
             {"mode": "Stdio", "command": "sh", "args": ["-cnode -e pass"]},
-            "Direct shell scripts are not allowed",
+            "Unsupported shell options or attached commands are not allowed",
         ),
         (
             {"mode": "Stdio", "command": "cmd", "args": ["/c", "node -e pass"]},

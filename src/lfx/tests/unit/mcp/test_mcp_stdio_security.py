@@ -240,11 +240,18 @@ def test_shell_wrappers_require_an_inline_command_by_default(command, args):
 
 
 @pytest.mark.parametrize("command", ["sh", "bash"])
-@pytest.mark.parametrize("flag", ["-C", "-norc", "-rcfile", "-oc", "-kc", "-kec"])
+@pytest.mark.parametrize("flag", ["-C", "-norc", "-rcfile", "-oc", "-kc", "-kec", "-ic", "-lc", "-vc", "-xc"])
 @pytest.mark.parametrize("hardened", [False, True])
 def test_shell_wrappers_reject_unsupported_option_forms(command, flag, hardened):
     with pytest.raises(MCPStdioSecurityError):
         validate_mcp_stdio_config(command, [flag, "uvx mcp-proxy"], {}, interpreter_hardening=hardened)
+
+
+@pytest.mark.parametrize("command", ["sh", "bash"])
+@pytest.mark.parametrize("flag", ["-cuvx mcp-proxy", "-oc"])
+def test_shell_wrapper_option_error_identifies_the_inline_command_form(command, flag):
+    with pytest.raises(MCPStdioSecurityError, match="Pass the command as a separate argument after -c"):
+        validate_mcp_stdio_config(command, [flag, "uvx mcp-proxy"], {})
 
 
 @pytest.mark.parametrize("command", ["sh", "bash"])

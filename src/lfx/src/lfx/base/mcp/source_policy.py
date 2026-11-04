@@ -163,8 +163,9 @@ CMD_TOKEN_TRANSFORM_CHARS = frozenset({"%", "!", "^", '"'})
 CMD_NON_EXEC_SWITCH_LETTERS = frozenset({"a", "d", "e", "f", "q", "s", "t", "u", "v"})
 
 # Only no-argument short options may precede the inline-command flag.
-# Keyword assignment mode is excluded because it changes the command environment.
-POSIX_SHELL_BOOLEAN_FLAGS = frozenset("aefhilmnptuvxBCEHPT")
+# Startup-file modes run code outside the validated payload, and tracing can expose credentials.
+# Keyword assignment mode changes the command environment.
+POSIX_SHELL_BOOLEAN_FLAGS = frozenset("aefhmnptuBCEHPT")
 
 HARDENED_ALLOWED_PYTHON_MODULES = frozenset({"langflow.agentic.mcp", "langflow.agentic.mcp.server"})
 PYTHON_MODULE_MIN_ARGS = 2
@@ -601,6 +602,12 @@ def _validate_interpreter_invocation(base_command: str, args: list[str], *, hard
         )
         if has_leading_exec_flag and parse_mcp_shell_wrapper(base_command, args) is not None:
             return
+        if base_command in {"sh", "bash"} and args and args[0].startswith("-"):
+            msg = (
+                f"Unsupported shell options or attached commands are not allowed for MCP command '{base_command}'. "
+                "Pass the command as a separate argument after -c."
+            )
+            raise ValueError(msg)
         msg = f"Direct shell scripts are not allowed for MCP command '{base_command}'"
         raise ValueError(msg)
     if not hardened:
