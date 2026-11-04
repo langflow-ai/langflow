@@ -188,7 +188,13 @@ def check_source(source: SourceDatabase, target: Target) -> Iterator[FlowResult]
             flow.status, flow.error = "warn", row.data_error
             return flow
         is_superuser = bool(user and user.is_superuser)
-        flow.nodes, flow.ok_nodes = check_nodes(row.data or {}, target, user_id=row.user_id, is_superuser=is_superuser)
+        try:
+            flow.nodes, flow.ok_nodes = check_nodes(
+                row.data or {}, target, user_id=row.user_id, is_superuser=is_superuser
+            )
+        except (ValueError, KeyError, TypeError, AttributeError) as exc:
+            flow.status, flow.error = "warn", f"flow data could not be checked: {_short(exc)}"
+            return flow
         flow.status = flow_status(flow.nodes)
         return flow
 
