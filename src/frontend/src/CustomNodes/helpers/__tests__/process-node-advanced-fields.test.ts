@@ -1,4 +1,4 @@
-import type { APIClassType } from "@/types/api";
+import type { APIClassType, OutputFieldType } from "@/types/api";
 import type { AllNodeType, EdgeType } from "@/types/flow";
 import { cleanEdges, scapedJSONStringfy } from "@/utils/reactflowUtils";
 import { processNodeAdvancedFields } from "../process-node-advanced-fields";
@@ -34,17 +34,19 @@ const genericNode = (id: string, node: Partial<APIClassType>) =>
     data: { id, type: id.split("-")[0], node },
   }) as unknown as AllNodeType;
 
+const sourceOutputs: OutputFieldType[] = [
+  {
+    name: "out",
+    display_name: "Out",
+    types: ["Message"],
+    selected: "Message",
+  },
+];
+
 const sourceNode = genericNode("Source-1", {
   display_name: "Source",
   template: {},
-  outputs: [
-    {
-      name: "out",
-      display_name: "Out",
-      types: ["Message"],
-      selected: "Message",
-    },
-  ],
+  outputs: sourceOutputs,
 });
 
 const textField = (show: boolean) => ({
