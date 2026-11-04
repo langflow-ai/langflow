@@ -34,6 +34,8 @@ from lfx.upgrade.registry import UpgradeRegistryError, load_upgrade_registry
 from langflow.upgrade_check.engine import Target, TargetSettings, check_source, flow_status
 from langflow.upgrade_check.reader import SourceDatabaseError, open_source
 from langflow.upgrade_check.source import identity_for_source
+from langflow.upgrade_check.usage import FlowUsage
+from langflow.upgrade_check.usage_reader import read_job_usage, read_serving_usage, unavailable_usage
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
@@ -64,8 +66,13 @@ def main() -> int:
     on_flow = (lambda result: _emit(out, "flow", flow=result.to_dict())) if as_json else None
     try:
         output = _report_destination(options["database_url"], options["output"])
+        serving_url = options.get("serving_database_url")
+        if serving_url:
+            _report_destination(serving_url, options["output"])
         report, listed = run(options, on_flow)
         if output is not None:
+            if serving_url:
+                _report_destination(serving_url, str(output))
             _write_report(options["database_url"], output, report)
     except CheckError as exc:
         _fail(out, exc.code, str(exc), as_json=as_json)
@@ -133,6 +140,8 @@ def run(options: Mapping[str, Any], on_flow: Callable[[FlowResult], None] | None
         except Exception as exc:
             raise CheckError(_source_message(exc), code="source_unreadable") from exc
         policy = source.catalog_policy()
+        editor_usage = read_job_usage(source.connection, identity=identity)
+        serving_usage = read_serving_usage(options.get("serving_database_url"))
         try:
             all_types = load_upgrade_registry(components_path=settings.loaded_components_path)
         except UpgradeRegistryError as exc:
@@ -144,8 +153,25 @@ def run(options: Mapping[str, Any], on_flow: Callable[[FlowResult], None] | None
         nodes["could_not_verify"] = 0
         kinds: Counter[str] = Counter()
         listed: list[FlowResult] = []
+        checked: list[FlowResult] = []
         errors: list[dict[str, Any]] = []
         for result in check_source(source, Target.from_registry(all_types, settings, policy.snapshot)):
+            flow_id = result.flow_id or result.id
+            if result.kind == "component":
+                unknown = unavailable_usage("saved_component_not_executable").default
+                result.usage = FlowUsage(editor=unknown, serving=unknown)
+            else:
+                editor = editor_usage.for_flow(flow_id)
+                serving = serving_usage.for_flow(flow_id)
+                if result.kind == "flow_version":
+                    editor = editor.model_copy(
+                        update={"limitations": [*editor.limitations, "usage_is_flow_level_not_version_specific"]}
+                    )
+                    serving = serving.model_copy(
+                        update={"limitations": [*serving.limitations, "usage_is_flow_level_not_version_specific"]}
+                    )
+                result.usage = FlowUsage(editor=editor, serving=serving)
+            checked.append(result)
             if on_flow:
                 on_flow(result)
             kinds[result.kind] += 1
@@ -189,7 +215,7 @@ def run(options: Mapping[str, Any], on_flow: Callable[[FlowResult], None] | None
                 },
             },
             "summary": {"flows": flows, "nodes": nodes},
-            "flows": [result.to_dict() for result in listed],
+            "flows": [result.to_dict() for result in checked],
             "errors": errors,
         }
     return report, listed

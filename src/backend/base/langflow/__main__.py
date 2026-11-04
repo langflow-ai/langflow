@@ -1778,6 +1778,11 @@ def upgrade_check(
         help="URL of the database the server to upgrade uses, such as sqlite:////app/langflow/langflow.db or "
         "postgresql://user:password@host:5432/langflow. It is only read.",  # pragma: allowlist secret
     ),
+    serving_database_url: str | None = typer.Option(
+        None,
+        help="Optional read-only Serving database URL. Its job.flow_id must preserve the Editor flow ID. "
+        "No new Serving API is required. Unavailable history stays unknown.",
+    ),
     components_path: list[str] = typer.Option(
         [],
         help="A folder of custom components the upgraded server loads (its components_path). Repeat for each folder.",
@@ -1821,6 +1826,7 @@ def upgrade_check(
 
     options = {
         "database_url": database_url,
+        "serving_database_url": serving_database_url,
         "settings": {
             "allow_custom_components": allow_custom_components,
             "substitute_outdated_component_code": substitute_outdated_component_code,

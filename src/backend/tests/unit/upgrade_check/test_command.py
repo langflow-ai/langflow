@@ -97,7 +97,9 @@ def test_clean_source_streams_every_flow_then_the_report(tmp_path):
         "catalog_rules": {"from": "policy_bundle_active", "blocked_component_keys": [], "blocked_template_keys": []},
     }
     assert report["summary"]["flows"] == {"ok": 3, "warn": 0, "fail": 0}
-    assert (report["flows"], report["errors"]) == ([], [])
+    assert len(report["flows"]) == 3
+    assert report["errors"] == []
+    assert all(flow["usage"]["serving"]["history"] == "unavailable" for flow in report["flows"])
 
 
 def test_check_reads_nothing_of_the_server_and_writes_nowhere(tmp_path):
