@@ -127,7 +127,7 @@ def test_check_reads_nothing_of_the_server_and_writes_nowhere(tmp_path):
 
     result = _upgrade_check("--database-url", _url(database), "--json", "--output", output, env=env)
 
-    assert result.returncode == 0, result.stderr
+    assert result.returncode == 1, result.stderr
     events = _events(result)
     statuses = {event["flow"]["name"]: event["flow"]["status"] for event in events[:-1]}
     assert statuses == {"Fixture nested groups": "ok", "Fixture saved component": "ok", "MCP flow": "warn"}
