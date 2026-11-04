@@ -620,20 +620,53 @@ pub fn derive_missing_handle_forms(edge: &mut AnyMap) {
 pub(crate) struct Outputs<'g> {
     /// The outputs list, which is an array.
     items: Cow<'g, AnyValue>,
-    index: ListIndex,
+    /// `None` for a short list whose names were checked: it is scanned.
+    index: Option<ListIndex>,
 }
+
+/// Lists this short are scanned for a name instead of indexed.
+const SCANNED_OUTPUTS: usize = 16;
 
 impl Outputs<'_> {
     /// The output named `name`.
     pub fn get(&self, name: &str) -> Option<&AnyValue> {
-        let slot = self.index.slot(name)?;
-        self.items.as_array().map(|items| &items[slot])
+        let items = self.items.as_array()?;
+        match &self.index {
+            Some(index) => index.slot(name).map(|slot| &items[slot]),
+            None => items
+                .iter()
+                .find(|item| outputs_list().key_of(item) == Some(name)),
+        }
     }
 
     /// The names of all outputs.
-    pub fn names(&self) -> impl Iterator<Item = &str> {
-        self.index.keys()
+    pub fn names(&self) -> Box<dyn Iterator<Item = &str> + '_> {
+        match &self.index {
+            Some(index) => Box::new(index.keys()),
+            None => Box::new(
+                self.items
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter_map(|item| outputs_list().key_of(item)),
+            ),
+        }
     }
+}
+
+/// Whether every item of a short list has a non-empty key that no other item has.
+fn short_with_unique_keys(list: &[AnyValue]) -> bool {
+    if list.len() > SCANNED_OUTPUTS {
+        return false;
+    }
+    let mut keys: [&str; SCANNED_OUTPUTS] = [""; SCANNED_OUTPUTS];
+    for (slot, item) in list.iter().enumerate() {
+        match outputs_list().key_of(item).filter(|key| !key.is_empty()) {
+            Some(key) if !keys[..slot].contains(&key) => keys[slot] = key,
+            _ => return false,
+        }
+    }
+    true
 }
 
 /// Index an outputs list. Every output must have a name that no other output
@@ -642,11 +675,17 @@ pub(crate) fn index_outputs<'g>(items: Cow<'g, AnyValue>, node_id: &str) -> Resu
     let AnyValue::Array(list) = items.as_ref() else {
         bail!("node {}: data.node.outputs must be a list", quoted(node_id));
     };
+    if short_with_unique_keys(list) {
+        return Ok(Outputs { items, index: None });
+    }
     let index = ListIndex::build(outputs_list(), list);
     index.check_keys(&fmt::from_fn(|f| {
         write!(f, "node {}: data.node.outputs", quoted(node_id))
     }))?;
-    Ok(Outputs { items, index })
+    Ok(Outputs {
+        items,
+        index: Some(index),
+    })
 }
 
 /// A node's outputs, or `None` for a node without an `outputs` key.

@@ -475,6 +475,14 @@ impl GraphRead for Graph {
 
     fn node_value(&self, id: &str, path: &[&str]) -> Option<Cow<'_, AnyValue>> {
         let node = self.nodes.get(id)?;
+        let writes = self.fields.node(id);
+        if writes.is_none() {
+            // Nothing written in this batch: the value is in the node as it is.
+            return path
+                .iter()
+                .try_fold(node.as_value(), |value, key| value.as_object()?.get(key))
+                .map(Cow::Borrowed);
+        }
         let path: Vec<Segment> = path
             .iter()
             .map(|key| Segment::Key((*key).to_owned()))
