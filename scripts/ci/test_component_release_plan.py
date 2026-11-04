@@ -101,3 +101,87 @@ def test_runner_rejects_forged_or_incomplete_plans_before_installation(tmp_path,
         row["previous_version"] = "1.14.0rc1"
     with pytest.raises(CompatibilityGateError):
         validate_plan(plan, snapshot(package="langflow", version="1.14.0"), tmp_path)
+
+
+def test_runner_preserves_venv_python_and_retains_other_breaks_after_failed_baseline(monkeypatch, tmp_path):
+    import copy
+    import sys
+
+    import run_component_compatibility as runner
+    from component_compatibility import CompatibilityGateError
+    from test_component_compatibility import component
+
+    packages = ["langflow", "lfx-example", "lfx-vllm"]
+    metadata = {package: {"version": "0.3.0"} for package in packages}
+    monkeypatch.setattr(runner, "declared_distributions", lambda *_args: metadata)
+    current = {
+        "format_version": 1,
+        "complete": True,
+        "distributions": dict.fromkeys(packages, "0.3.0"),
+        "all_types": {"test": {"Example": component(), "Other": component()}},
+        "component_packages": {"Example": "lfx-example", "Other": "lfx-vllm"},
+    }
+    previous = copy.deepcopy(current)
+    previous["distributions"] = dict.fromkeys(packages, "0.2.0")
+    del current["all_types"]["test"]["Example"]["template"]["hidden_input"]
+    plan = {
+        "format_version": 1,
+        "base_sha": "a" * 40,
+        "comparisons": [
+            {
+                "distribution": package,
+                "target_version": "0.3.0",
+                "baseline_ceiling": "0.3.0",
+                "previous_version": "0.2.0",
+                "whole_registry": package == "langflow",
+            }
+            for package in packages
+        ],
+    }
+    plan_path = tmp_path / "plan.json"
+    plan_path.write_text(json.dumps(plan))
+    acknowledgments = tmp_path / "acknowledgments.json"
+    acknowledgments.write_text('{"format_version": 1, "breaks": []}')
+    python = tmp_path / "venv/bin/python"
+    python.parent.mkdir(parents=True)
+    python.symlink_to(sys.executable)
+    seen = []
+
+    def export(interpreter, _exporter, output, _home):
+        if output.name == "current.json":
+            assert interpreter == python
+            return current
+        return previous
+
+    def run(command):
+        if command[:3] == ["uv", "pip", "install"]:
+            seen.append(command[-1])
+            if command[-1].startswith("langflow["):
+                raise subprocess.CalledProcessError(1, command)
+
+    monkeypatch.setattr(runner, "snapshot", export)
+    monkeypatch.setattr(runner, "run", run)
+    output = tmp_path / "evidence"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "runner",
+            "--plan",
+            str(plan_path),
+            "--python",
+            str(python),
+            "--output-dir",
+            str(output),
+            "--acknowledgments",
+            str(acknowledgments),
+        ],
+    )
+    with pytest.raises(CompatibilityGateError, match=r"could not verify.*langflow"):
+        runner.main()
+    report = json.loads((output / "comparison.json").read_text())
+    assert [row["distribution"] for row in report["could_not_verify"]] == ["langflow"]
+    assert [row["component"] for row in report["changes"]] == ["Example"]
+    assert len(seen) == 3
+    assert "lfx-example" in (output / "candidate-breaks.md").read_text()
+    assert not (output / "release-notes.md").exists()

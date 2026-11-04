@@ -98,7 +98,7 @@ def main() -> int:
     failures = []
     with tempfile.TemporaryDirectory(prefix="component-compatibility-") as temporary:
         work = Path(temporary)
-        current = snapshot(args.python.resolve(), exporter, args.output_dir / "current.json", work / "current-home")
+        current = snapshot(args.python.absolute(), exporter, args.output_dir / "current.json", work / "current-home")
         validate_plan(plan, current, root)
         for comparison in plan["comparisons"]:
             package = comparison["distribution"]
@@ -107,7 +107,7 @@ def main() -> int:
                 continue
             environment = work / package
             try:
-                run(["uv", "venv", str(environment), "--python", str(args.python.resolve())])
+                run(["uv", "venv", str(environment), "--python", str(args.python.absolute())])
                 python = environment / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
                 requirement = (
                     f"{package}[bundles]=={previous}" if comparison["whole_registry"] else f"{package}=={previous}"
