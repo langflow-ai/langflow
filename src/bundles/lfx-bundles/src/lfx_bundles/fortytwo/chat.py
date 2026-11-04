@@ -15,7 +15,7 @@ class ChatFortytwo(ChatOpenAI):
         base_generation_info: dict | None,
     ) -> ChatGenerationChunk | None:
         generation = super()._convert_chunk_to_generation_chunk(chunk, default_chunk_class, base_generation_info)
-        choices = chunk.get("choices") or []
+        choices = chunk.get("choices") or chunk.get("chunk", {}).get("choices", [])
         if generation and choices and isinstance(generation.message, AIMessageChunk):
             reasoning = (choices[0].get("delta") or {}).get("reasoning")
             if isinstance(reasoning, str) and reasoning:

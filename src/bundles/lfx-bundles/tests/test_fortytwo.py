@@ -88,7 +88,8 @@ def test_build_model_preserves_parameters(component):
     assert model.use_responses_api is False
 
 
-def test_reasoning_and_tool_chunks_survive():
+@pytest.mark.parametrize("wrapped", [False, True])
+def test_reasoning_and_tool_chunks_survive(wrapped):
     model = ChatFortytwo(api_key="test-key", model="test-model")
     chunks = [
         {"reasoning": "First "},
@@ -100,7 +101,11 @@ def test_reasoning_and_tool_chunks_survive():
         },
     ]
     messages = [
-        model._convert_chunk_to_generation_chunk({"choices": [{"delta": delta}]}, AIMessageChunk, None).message
+        model._convert_chunk_to_generation_chunk(
+            {"type": "chunk", "chunk": {"choices": [{"delta": delta}]}} if wrapped else {"choices": [{"delta": delta}]},
+            AIMessageChunk,
+            None,
+        ).message
         for delta in chunks
     ]
     combined = messages[0] + messages[1] + messages[2]

@@ -103,3 +103,11 @@ describe("SIDEBAR_BUNDLES", () => {
     );
   });
 });
+
+it("registers the Fortytwo bundle", () => {
+  expect(SIDEBAR_BUNDLES).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ name: "fortytwo", icon: "Fortytwo" }),
+    ]),
+  );
+});

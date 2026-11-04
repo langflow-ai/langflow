@@ -1,3 +1,6 @@
+const mockFortytwoIcon = jest.fn();
+jest.mock("@/icons/Fortytwo", () => ({ FortytwoIcon: mockFortytwoIcon }));
+
 const mockVllmIcon = jest.fn();
 const mockOpenRAGIcon = jest.fn();
 const mockFigraniumIcon = jest.fn();
@@ -34,4 +37,9 @@ describe("lazyIconsMapping", () => {
 
     expect(icon).toBe(mockFigraniumIcon);
   });
+});
+
+it("loads the Fortytwo icon", async () => {
+  const { default: icon } = await lazyIconsMapping.Fortytwo();
+  expect(icon).toBe(mockFortytwoIcon);
 });

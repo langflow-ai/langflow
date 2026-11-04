@@ -40,7 +40,7 @@ class FortytwoComponent(LCModelComponent):
         DropdownInput(
             name="reasoning_effort",
             display_name="Reasoning Effort",
-            options=["none", "low", "medium", "xhigh"],
+            options=["none", "minimal", "low", "medium", "high", "xhigh", "max"],
             value="medium",
             advanced=True,
         ),
@@ -75,6 +75,7 @@ class FortytwoComponent(LCModelComponent):
             raise ValueError(msg) from None
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
+        """Refresh choices and discard selections no longer in the catalogue."""
         if field_name not in {"api_key", "model_name"}:
             return build_config
         if field_name == "api_key":
@@ -89,6 +90,7 @@ class FortytwoComponent(LCModelComponent):
         return build_config
 
     def build_model(self) -> LanguageModel:
+        """Construct the chat client with the selected model and inference options."""
         if not self.api_key:
             msg = "Fortytwo API key is required"
             raise ValueError(msg)
