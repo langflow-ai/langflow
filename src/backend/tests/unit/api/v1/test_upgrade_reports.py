@@ -224,3 +224,13 @@ async def test_repair_outcomes_share_the_callers_transaction_and_leave_export_im
             await record_repair_result(session, report_id=None, actor_id=uuid4(), target_sha256="a" * 64, result=result)
             is None
         )
+
+
+@pytest.mark.parametrize("generated_at", ["0001-01-01T00:00:00+01:00", "9999-12-31T23:59:59-01:00"])
+async def test_utc_unrepresentable_timestamp_is_rejected_without_saving(client, admin_headers, generated_at):
+    document = json.loads(FIXTURE.read_text())
+    document["generated_at"] = generated_at
+    response = await client.post(URL, json=document, headers=admin_headers)
+    assert response.status_code == 422
+    assert response.json()["detail"]["code"] == "invalid_upgrade_report"
+    assert (await client.get(URL, headers=admin_headers)).json()["total"] == 0

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Annotated, Literal
 from uuid import UUID
 
@@ -23,7 +23,11 @@ def aware_timestamp(value: str) -> str:
     if not match or (match[1] is not None and (int(match[1]) > _MAX_OFFSET_HOUR or int(match[2]) > _MAX_OFFSET_MINUTE)):
         msg = "timestamps must include a valid timezone"
         raise ValueError(msg)
-    parse_report_timestamp(value)
+    try:
+        parse_report_timestamp(value).astimezone(timezone.utc)
+    except OverflowError:
+        msg = "timestamps must be representable in UTC"
+        raise ValueError(msg) from None
     return value
 
 
