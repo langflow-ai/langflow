@@ -1,6 +1,7 @@
 const mockVllmIcon = jest.fn();
 const mockOpenRAGIcon = jest.fn();
 const mockFigraniumIcon = jest.fn();
+const mockKeenableIcon = jest.fn();
 
 jest.mock("@/icons/vLLM", () => ({
   VllmIcon: mockVllmIcon,
@@ -12,6 +13,10 @@ jest.mock("@/icons/OpenRAG", () => ({
 
 jest.mock("@/icons/Figranium", () => ({
   FigraniumIcon: mockFigraniumIcon,
+}));
+
+jest.mock("@/icons/Keenable", () => ({
+  KeenableIcon: mockKeenableIcon,
 }));
 
 import { lazyIconsMapping } from "../lazyIconImports";
@@ -33,5 +38,11 @@ describe("lazyIconsMapping", () => {
     const { default: icon } = await lazyIconsMapping.Figranium();
 
     expect(icon).toBe(mockFigraniumIcon);
+  });
+
+  it("loads the Keenable bundle icon", async () => {
+    const { default: icon } = await lazyIconsMapping.Keenable();
+
+    expect(icon).toBe(mockKeenableIcon);
   });
 });
