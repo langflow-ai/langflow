@@ -1921,7 +1921,12 @@ describe("useFlowStore", () => {
       [true, true, "NEW", true],
     ])(
       "names a retired component and its replacement instead of running it (custom components allowed: %s, substitution: %s, code: %s, edited: %s)",
-      async (allowCustomComponents, substituteOutdatedComponentCode, code, edited) => {
+      async (
+        allowCustomComponents,
+        substituteOutdatedComponentCode,
+        code,
+        edited,
+      ) => {
         useUtilityStore.setState({
           allowCustomComponents,
           substituteOutdatedComponentCode,
