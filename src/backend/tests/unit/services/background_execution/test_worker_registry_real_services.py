@@ -1,4 +1,4 @@
-"""Real-process proof of the worker_registry lifecycle on real Postgres + Redis.
+"""Real-process proof of the worker_registry lifecycle on real Postgres.
 
 A separate ``langflow worker`` OS process registers, flips busy/idle around a real
 job, and deregisters on a graceful stop.
@@ -7,7 +7,7 @@ The unit tests drive the registry wiring with a stub runner (``test_worker_loop_
 so they prove the loop calls register/heartbeat/deregister but not that a REAL
 ``langflow worker`` subprocess actually writes the rows the fleet dashboard and
 the collector's ``workers_online/busy/idle`` gauges read. This closes that gap
-end to end against real Postgres + Redis:
+end to end against real Postgres:
 
 * register -> exactly one IDLE row with a real pid/host
 * claim a real (slow, no-LLM) job -> the row flips to BUSY with ``current_job_id``
@@ -15,8 +15,9 @@ end to end against real Postgres + Redis:
 * the job completes -> the row returns to IDLE
 * a graceful SIGTERM -> the row is deleted (deregistered)
 
-Requires LANGFLOW_TEST_DATABASE_URI (real Postgres) and LANGFLOW_TEST_REDIS_URL
-(real Redis). Skips otherwise. Every wait is bounded so a regression fails loudly.
+Requires LANGFLOW_TEST_DATABASE_URI (real Postgres); the scaled backend uses the
+job table as its queue, so no broker is needed. Skips otherwise. Every wait is
+bounded so a regression fails loudly.
 """
 
 from __future__ import annotations
@@ -42,12 +43,9 @@ _ONLINE_WINDOW = timedelta(seconds=30)
 
 def _require_real_instances():
     pg = os.environ.get("LANGFLOW_TEST_DATABASE_URI")
-    redis = os.environ.get("LANGFLOW_TEST_REDIS_URL")
     if not pg:
         pytest.skip("LANGFLOW_TEST_DATABASE_URI not set; real-process registry proof requires real Postgres")
-    if not redis:
-        pytest.skip("LANGFLOW_TEST_REDIS_URL not set; real-process registry proof requires real Redis")
-    return pg, redis
+    return pg
 
 
 async def _registry_rows() -> list[WorkerRegistry]:
@@ -81,8 +79,8 @@ async def _wait_until(predicate, *, timeout: float = 60.0, interval: float = 0.5
 
 @pytest.mark.real_services
 async def test_real_worker_registers_runs_and_deregisters():
-    pg, redis = _require_real_instances()
-    harness = await setup_worker_harness(pg, redis, redis_db=13)
+    pg = _require_real_instances()
+    harness = await setup_worker_harness(pg)
     try:
         # Isolate from any rows a previous run's crashed worker may have left.
         await _clear_registry()
