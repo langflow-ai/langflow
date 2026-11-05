@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import runpy
 from pathlib import Path
 
 import pytest
@@ -89,7 +90,7 @@ def test_fixed_dependencies_resolve_on_every_supported_python_line(python: str, 
     # Upstream fixes require Python 3.11. Keep the 3.10 runtime installable;
     # these three findings remain open for that runtime.
     if python != "3.10":
-        for name, minimum in {"dnspython": "2.9.0", "locust": "2.47.0", "pyarrow": "26.0.0"}.items():
+        for name, minimum in {"dnspython": "2.9.1", "locust": "2.47.0", "pyarrow": "26.0.1"}.items():
             assert Version(packages[name]) >= Version(minimum), name
 
 
@@ -197,3 +198,179 @@ def test_workspace_mcp_constraints_reject_affected_major_branch(dependency: str)
     assert "3.4.10" in requirement.specifier
     assert "4.0.0" not in requirement.specifier
     assert "4.1.1" not in requirement.specifier
+
+
+@pytest.mark.parametrize(
+    ("dependency", "affected", "patched"),
+    [("brotli", "1.2.0", "1.2.1"), ("brotlicffi", "1.2.0.1", "1.2.1.0")],
+)
+def test_workspace_brotli_constraints_cover_every_interpreter(dependency: str, affected: str, patched: str) -> None:
+    """Protect both decoder distributions selected by HTTPX's Brotli extra."""
+    constraints = tomllib.loads((ROOT / "pyproject.toml").read_text())["tool"]["uv"]["constraint-dependencies"]
+    requirements = [Requirement(value) for value in constraints if Requirement(value).name == dependency]
+    assert len(requirements) == 1
+    requirement = requirements[0]
+    assert requirement.marker is None
+    assert affected not in requirement.specifier
+    assert patched in requirement.specifier
+    for implementation in ("CPython", "PyPy"):
+        packages = locked_packages(
+            {
+                "python_version": "3.11",
+                "python_full_version": "3.11.0",
+                "sys_platform": "linux",
+                "platform_machine": "x86_64",
+                "platform_python_implementation": implementation,
+            }
+        )
+        assert Version(packages[dependency]) >= Version(patched)
+
+
+@pytest.mark.parametrize(
+    ("manifest", "extra"),
+    [("src/bundles/duckduckgo/pyproject.toml", None), ("src/backend/base/pyproject.toml", "duckduckgo")],
+)
+@pytest.mark.parametrize(
+    ("implementation", "dependency", "affected", "patched"),
+    [("CPython", "brotli", "1.2.0", "1.2.1"), ("PyPy", "brotlicffi", "1.2.0.1", "1.2.1.0")],
+)
+def test_published_duckduckgo_requirements_protect_the_selected_decoder(
+    manifest: str, extra: str | None, implementation: str, dependency: str, affected: str, patched: str
+) -> None:
+    """Keep standalone and legacy DuckDuckGo installs patched on each interpreter."""
+    project = tomllib.loads((ROOT / manifest).read_text())["project"]
+    declarations = project["dependencies"] if extra is None else project["optional-dependencies"][extra]
+    requirements = [
+        requirement
+        for value in declarations
+        if (requirement := Requirement(value)).name in {"brotli", "brotlicffi"}
+        and (
+            requirement.marker is None
+            or requirement.marker.evaluate({"platform_python_implementation": implementation})
+        )
+    ]
+    assert len(requirements) == 1
+    requirement = requirements[0]
+    assert requirement.name == dependency
+    assert affected not in requirement.specifier
+    assert patched in requirement.specifier
+
+
+@pytest.mark.parametrize("manifest", [MANIFESTS[0], "src/bundles/lfx-bundles/pyproject.toml"])
+@pytest.mark.parametrize(
+    ("python", "platform", "machine", "supported"),
+    [
+        ("3.11", "linux", "x86_64", True),
+        ("3.11", "win32", "AMD64", True),
+        ("3.11", "darwin", "arm64", True),
+        ("3.11", "darwin", "x86_64", False),
+        ("3.14", "linux", "x86_64", False),
+        ("3.14", "darwin", "arm64", False),
+    ],
+)
+def test_cuga_extra_protects_fastmcp_only_where_cuga_is_supported(
+    manifest: str, python: str, platform: str, machine: str, *, supported: bool
+) -> None:
+    """Apply the FastMCP maintenance floor to the CUGA extra's supported platforms."""
+    project = tomllib.loads((ROOT / manifest).read_text())["project"]
+    environment = {"python_version": python, "sys_platform": platform, "platform_machine": machine}
+    requirements = [
+        requirement
+        for value in project["optional-dependencies"]["cuga"]
+        if (requirement := Requirement(value)).name in {"cuga", "fastmcp"}
+        and (requirement.marker is None or requirement.marker.evaluate(environment))
+    ]
+    assert sorted(requirement.name for requirement in requirements) == (["cuga", "fastmcp"] if supported else [])
+    if supported:
+        requirement = next(requirement for requirement in requirements if requirement.name == "fastmcp")
+        assert "3.4.4" not in requirement.specifier
+        assert "3.4.10" in requirement.specifier
+        assert "4.0.0" not in requirement.specifier
+        assert "4.1.1" not in requirement.specifier
+
+
+@pytest.mark.parametrize("provider", ["git", "cuga", "nvidia", "lmstudio"])
+def test_generator_preserves_published_provider_security_requirements(provider: str) -> None:
+    """Keep regenerated extras on the same patched ranges as published metadata."""
+    generator = runpy.run_path(str(ROOT / "scripts/migrate/consolidate_bundles.py"))
+    project = tomllib.loads((ROOT / "src/bundles/lfx-bundles/pyproject.toml").read_text())["project"]
+    assert generator["PROVIDER_DEPS"][provider] == project["optional-dependencies"][provider]
+
+
+@pytest.mark.parametrize("manifest", [MANIFESTS[0], "src/bundles/confluent/pyproject.toml"])
+@pytest.mark.parametrize("python", ["3.10", "3.11", "3.14"])
+def test_published_pyarrow_requirements_patch_bundled_brotli_on_supported_python(manifest: str, python: str) -> None:
+    """Use the patched Arrow maintenance release without breaking Python 3.10."""
+    project = tomllib.loads((ROOT / manifest).read_text())["project"]
+    declarations = project["optional-dependencies"]["pyarrow"] if manifest == MANIFESTS[0] else project["dependencies"]
+    requirements = [
+        requirement
+        for value in declarations
+        if (requirement := Requirement(value)).name == "pyarrow"
+        and (requirement.marker is None or requirement.marker.evaluate({"python_version": python}))
+    ]
+    assert len(requirements) == 1
+    requirement = requirements[0]
+    if python == "3.10":
+        # Arrow's patched 26.x wheels require Python 3.11 or newer.
+        assert "23.0.1" in requirement.specifier
+        assert "24.0.0" not in requirement.specifier
+    else:
+        assert "26.0.0" not in requirement.specifier
+        assert "26.0.1" in requirement.specifier
+        assert "27.0.0" not in requirement.specifier
+
+
+@pytest.mark.parametrize("python", ["3.10", "3.11", "3.14"])
+def test_plain_base_requirements_patch_transitive_pyarrow_without_breaking_python310(python: str) -> None:
+    """Protect the mandatory Openlayer path in published base wheels."""
+    project = tomllib.loads((ROOT / MANIFESTS[0]).read_text())["project"]
+    requirements = [
+        requirement
+        for value in project["dependencies"]
+        if (requirement := Requirement(value)).name == "pyarrow"
+        and (requirement.marker is None or requirement.marker.evaluate({"python_version": python}))
+    ]
+    if python == "3.10":
+        assert not requirements
+    else:
+        assert len(requirements) == 1
+        assert "26.0.0" not in requirements[0].specifier
+        assert "26.0.1" in requirements[0].specifier
+        assert "27.0.0" not in requirements[0].specifier
+
+
+def test_duckduckgo_bundle_requirement_matches_the_current_release_line() -> None:
+    """Keep the backport installable without replacing the newer release line's bundle."""
+    project = tomllib.loads((ROOT / "src/bundles/duckduckgo/pyproject.toml").read_text())["project"]
+    lfx_version = tomllib.loads((ROOT / "src/lfx/pyproject.toml").read_text())["project"]["version"]
+    requirement = next(Requirement(value) for value in project["dependencies"] if Requirement(value).name == "lfx")
+    assert lfx_version in requirement.specifier
+    if Version(lfx_version).release[:2] == (1, 13):
+        assert "1.14.0.dev0" not in requirement.specifier
+        assert "1.14.0" not in requirement.specifier
+
+
+@pytest.mark.parametrize(
+    ("dependency", "affected", "patched", "next_major"),
+    [("dnspython", "2.9.0", "2.9.1", "3.0.0"), ("joserfc", "1.7.5", "1.7.6", "2.0.0")],
+)
+@pytest.mark.parametrize("python", ["3.10", "3.11", "3.14"])
+def test_plain_base_requirements_protect_dns_and_jose_transitive_paths(
+    dependency: str, affected: str, patched: str, next_major: str, python: str
+) -> None:
+    """Publish mandatory-path security floors while preserving Python 3.10 support."""
+    project = tomllib.loads((ROOT / MANIFESTS[0]).read_text())["project"]
+    requirements = [
+        requirement
+        for value in project["dependencies"]
+        if (requirement := Requirement(value)).name == dependency
+        and (requirement.marker is None or requirement.marker.evaluate({"python_version": python}))
+    ]
+    if dependency == "dnspython" and python == "3.10":
+        assert not requirements
+    else:
+        assert len(requirements) == 1
+        assert affected not in requirements[0].specifier
+        assert patched in requirements[0].specifier
+        assert next_major not in requirements[0].specifier
