@@ -709,7 +709,7 @@ def build_change_plan(
                 f"src/bundles/{directory}: changed bundle has no pyproject.toml; add package metadata before release"
             )
         bundle_files = tuple(path for path in changed if path.startswith(f"src/bundles/{directory}/"))
-        relative_pyproject = str(bundle.pyproject.relative_to(base_dir))
+        relative_pyproject = bundle.pyproject.relative_to(base_dir).as_posix()
         base_content = _git_file(base_ref, relative_pyproject, base_dir)
         source_changed = any(
             _release_relevant(path, directory)
