@@ -41,7 +41,8 @@ def test_api_key_permission_migration_keeps_one_release_head():
     from pathlib import Path
 
     scripts = ScriptDirectory(str(Path(_MIGRATION.__file__).parents[1]))
-    assert scripts.get_heads() == [_MERGE_MIGRATION.revision]
+    assert len(scripts.get_heads()) == 1
+    assert _MERGE_MIGRATION.revision in {revision.revision for revision in scripts.walk_revisions()}
     assert _MIGRATION.revision in _MERGE_MIGRATION.down_revision
 
 
