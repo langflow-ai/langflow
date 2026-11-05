@@ -1,0 +1,118 @@
+name: Component compatibility
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      base-sha:
+        description: Full base commit used to choose each package's release line
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      ref:
+        required: true
+        type: string
+      base-sha:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: component-compatibility-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  compatibility:
+    name: Registry and preservation gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: compatibility
+          POSTGRES_PASSWORD: compatibility-fixture-only  # pragma: allowlist secret
+          POSTGRES_DB: compatibility
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U compatibility"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DO_NOT_TRACK: 'true'
+      LANGFLOW_TEST_POSTGRES_URL: postgresql+psycopg://compatibility:compatibility-fixture-only@127.0.0.1:5432/compatibility # pragma: allowlist secret
+      BASE_SHA: ${{ inputs.base-sha || github.event.pull_request.base.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v10.0.0
+        with:
+          python-version: '3.13'
+          version: latest-known
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - name: Install the full current registry and package test groups
+        id: install
+        run: |
+          uv sync --frozen --all-packages --extra bundles --group dev
+          uv sync --frozen --package langflow-base --group dev --inexact
+          uv sync --frozen --package lfx --group dev --inexact
+      - name: Test comparison policy and failure handling
+        env:
+          PYTHONPATH: scripts/ci
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: >-
+          uv run --no-sync pytest -q
+          scripts/ci/test_component_compatibility.py
+          scripts/ci/test_component_release_plan.py
+          scripts/ci/test_component_registry_snapshot.py
+          scripts/ci/test_historical_compatibility_gate.py
+          scripts/ci/test_component_compatibility_workflow.py
+      - name: Select independently published release baselines
+        id: plan
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          BASE_SHA="$(printf '%s' "$BASE_SHA" | tr '[:upper:]' '[:lower:]')"
+          uv run --no-sync python scripts/ci/component_release_plan.py \
+            --base-sha "$BASE_SHA" --output compatibility-evidence/plan.json
+      - name: Compare complete registries and render acknowledged release notes
+        if: ${{ !cancelled() && steps.plan.outcome == 'success' }}
+        run: >-
+          uv run --no-sync python scripts/ci/run_component_compatibility.py
+          --plan compatibility-evidence/plan.json
+          --output-dir compatibility-evidence
+      - name: Preserve the shared rule and difficult saved flows
+        env:
+          LFX_TEST_ALLOW_LANGFLOW: '1'
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: >-
+          uv run --no-sync pytest -q
+          src/lfx/tests/unit/upgrade/test_component_compat.py
+          src/lfx/tests/unit/upgrade/test_applier.py
+          src/lfx/tests/unit/custom/test_update_rebuilt_node.py
+          -k 'not source_release_statuses'
+      - name: Enforce historical pins with exact reviewed limitation evidence
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: >-
+          uv run --no-sync python scripts/ci/historical_compatibility_gate.py
+          --output compatibility-evidence/historical-pins.json
+      - name: Preserve source data and reject stale author saves
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: >-
+          uv run --no-sync pytest -q
+          src/backend/tests/unit/upgrade_check/test_reader.py
+          src/backend/tests/unit/upgrade_check/test_report_integrity.py
+          src/backend/tests/unit/api/v1/test_flow_conflict.py
+      - name: Retain comparison, coverage, and release-note evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: component-compatibility
+          path: compatibility-evidence/
+          if-no-files-found: error
+          retention-days: 30
