@@ -838,6 +838,13 @@ class MCPToolsComponent(ComponentWithCache):
                 if is_refresh or not cached_tools or not use_cache:
                     self.tools = []  # Clear previous tools to force refresh
 
+                selected_tool = build_config.get("tool", {}).get("value")
+                previous_inputs = {
+                    key: value.copy()
+                    for key, value in build_config.items()
+                    if key not in self.default_keys and isinstance(value, dict)
+                }
+
                 # Clear previous tool inputs if:
                 # 1. Server actually changed
                 # 2. Cache is disabled (meaning tool list will be refreshed)
@@ -878,6 +885,8 @@ class MCPToolsComponent(ComponentWithCache):
                     # server_changed is only True for real user-initiated changes (not initial load).
                     if server_changed:
                         build_config["tool"]["value"] = uuid.uuid4()
+                    elif selected_tool and any(tool.name == selected_tool for tool in self.tools):
+                        await self._update_tool_config(build_config, selected_tool, previous_inputs=previous_inputs)
                 else:
                     # Keep the tool dropdown hidden if in tool_mode
                     self._not_load_actions = True
@@ -1009,7 +1018,9 @@ class MCPToolsComponent(ComponentWithCache):
             if key not in self.default_keys:
                 build_config.pop(key)
 
-    async def _update_tool_config(self, build_config: dict, tool_name: str) -> None:
+    async def _update_tool_config(
+        self, build_config: dict, tool_name: str, *, previous_inputs: dict[str, dict[str, Any]] | None = None
+    ) -> None:
         """Update tool configuration with proper error handling."""
         if not self.tools:
             self.tools, build_config["mcp_server"]["value"] = await self.update_tool_list()
@@ -1060,6 +1071,13 @@ class MCPToolsComponent(ComponentWithCache):
                     # Preserve existing value if the parameter name exists in current_values
                     if name in current_values:
                         build_config[name]["value"] = current_values[name]
+                    if previous_inputs is not None and name in previous_inputs:
+                        saved_input = previous_inputs[name]
+                        if "value" in saved_input:
+                            build_config[name]["value"] = saved_input["value"]
+                        for key in ("show", "advanced", "load_from_db"):
+                            if isinstance(saved_input.get(key), bool):
+                                build_config[name][key] = saved_input[key]
 
                 except (AttributeError, KeyError, TypeError) as e:
                     msg = f"Error processing schema input {schema_input}: {e!s}"

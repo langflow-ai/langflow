@@ -6,10 +6,13 @@ Validates that tool selection persists when navigating away and back to a flow:
 - UUID override must only happen on genuine server changes
 """
 
+from copy import deepcopy
 from typing import Any
+from unittest.mock import AsyncMock, patch
 from uuid import UUID, uuid4
 
 import pytest
+from langchain_core.tools import StructuredTool
 from lfx.base.agents.utils import safe_cache_get, safe_cache_set
 from lfx.components.models_and_agents.mcp_component import MCPToolsComponent
 
@@ -169,3 +172,65 @@ class TestMCPComponentFlowReload(ComponentTestBaseWithoutClient):
             "Error on MCP Server",
             "Timeout on MCP server",
         )
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("is_refresh", [False, True])
+    @pytest.mark.parametrize("last_selected_server", ["", "test_server"])
+    async def test_same_server_refresh_preserves_selected_tool_inputs(
+        self, component_class, default_kwargs, saved_flow_build_config, is_refresh, last_selected_server
+    ):
+        """Keep saved argument values and presentation when refreshing the same selected tool."""
+        component = await self.component_setup(component_class, default_kwargs)
+        safe_cache_set(component._shared_component_cache, "last_selected_server", last_selected_server)
+        config = deepcopy(saved_flow_build_config)
+        config["is_refresh"] = is_refresh
+        config["name"] = {
+            "name": "name",
+            "type": "str",
+            "value": "saved_name",
+            "show": False,
+            "advanced": True,
+            "load_from_db": True,
+        }
+        config["times"] = {
+            "name": "times",
+            "type": "int",
+            "value": 0,
+            "show": True,
+            "advanced": False,
+            "load_from_db": False,
+        }
+        saved_fields = deepcopy({name: config[name] for name in ("name", "times")})
+
+        async def saved_tool(name: str, times: int = 1) -> str:
+            return name * times
+
+        tool = StructuredTool.from_function(coroutine=saved_tool, description="Local schema fixture")
+        with patch.object(component, "update_tool_list", new=AsyncMock(return_value=([tool], {"name": "test_server"}))):
+            updated = await component.update_build_config(config, {"name": "test_server"}, "mcp_server")
+
+        assert updated["tool"]["value"] == "saved_tool"
+        for name, previous in saved_fields.items():
+            for key in ("value", "show", "advanced", "load_from_db"):
+                assert updated[name][key] == previous[key]
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("last_selected_server", ["", "test_server"])
+    async def test_server_change_drops_previous_tool_inputs(
+        self, component_class, default_kwargs, saved_flow_build_config, last_selected_server
+    ):
+        component = await self.component_setup(component_class, default_kwargs)
+        safe_cache_set(component._shared_component_cache, "last_selected_server", last_selected_server)
+        config = deepcopy(saved_flow_build_config)
+        config["name"] = {"name": "name", "type": "str", "value": "previous server"}
+
+        async def saved_tool(name: str) -> str:
+            return name
+
+        tool = StructuredTool.from_function(coroutine=saved_tool, description="Local schema fixture")
+        with patch.object(component, "update_tool_list", new=AsyncMock(return_value=([tool], {"name": "new_server"}))):
+            updated = await component.update_build_config(config, {"name": "new_server"}, "mcp_server")
+
+        assert isinstance(updated["tool"]["value"], UUID)
+        assert updated["tool"]["options"] == ["saved_tool"]
+        assert "name" not in updated
