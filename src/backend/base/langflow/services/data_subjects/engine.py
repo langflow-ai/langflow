@@ -16,6 +16,7 @@ from lfx.log.logger import logger
 from langflow.services.data_subjects import audit_events
 from langflow.services.data_subjects.builder_account_steps import BUILDER_ACCOUNT_STEPS
 from langflow.services.data_subjects.builder_flow_steps import erase_owned_flows
+from langflow.services.data_subjects.context import EraseStepPending
 from langflow.services.data_subjects.end_user_steps import END_USER_STEPS
 from langflow.services.data_subjects.errors import DataSubjectError
 from langflow.services.data_subjects.knowledge_base_steps import erase_knowledge_base_upgrades, erase_knowledge_bases
@@ -86,9 +87,11 @@ async def _run_steps(request_id: UUID, ctx: EraseContext, steps, heartbeat: Hear
                 return
             name, step = steps[index]
             processed = await step(session, ctx)
+            pending = isinstance(processed, EraseStepPending)
+            deleted = 0 if pending else processed
             counts = dict(request.counts or {})
-            counts[name] = int(counts.get(name, 0)) + processed
-            cursor[key] = index if processed else index + 1
+            counts[name] = int(counts.get(name, 0)) + deleted
+            cursor[key] = index if pending or deleted else index + 1
             cursor["data"] = ctx.cursor
             request.counts, request.cursor = counts, cursor
             if ctx.memory_base_cleanups:

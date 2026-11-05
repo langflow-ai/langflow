@@ -48,6 +48,7 @@ TABLE_POLICY: dict[str, str] = {
     "job_events": ERASED_WITH_FLOW,
     "knowledge_base": BUILDER_ROWS,
     "knowledge_base_storage_migration": "builder rows matched by the `<username>/` storage directory they name",
+    "maintenance_state": "setter reference cleared; shared operational reason and maintenance switch retained",
     "mcp_server": BUILDER_ROWS,
     "memory_base": ERASED_WITH_FLOW,
     "memory_base_preprocessing_output": END_USER_ROWS,
@@ -74,6 +75,8 @@ TABLE_POLICY: dict[str, str] = {
     "trigger_source_version": "deleted with its trigger when the erase is approved",
     "trigger_subscription": "deleted with its trigger",
     "user": "deleted last, through the identity-mutation protocol",
+    "upgrade_report": "whole archive deleted when its creator or a listed owner is erased",
+    "upgrade_report_repair": "deleted with its report, or independently by repair author",
     "variable": BUILDER_ROWS,
     "vertex_build": END_USER_ROWS,
 }
