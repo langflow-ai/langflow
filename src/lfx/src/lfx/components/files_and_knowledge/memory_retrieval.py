@@ -129,6 +129,18 @@ class MemoryBaseComponent(Component):
         ),
     ]
 
+    async def _get_tools(self) -> list:
+        """Identify the selected memory source when exposed to an agent."""
+        tools = await super()._get_tools()
+        selected = getattr(self, "memory_base", None)
+        if isinstance(selected, str) and selected.strip():
+            source = f" Memory Base: {selected.strip()!r}."
+            for tool in tools:
+                tool.description += source
+                if tool.metadata is not None:
+                    tool.metadata["display_description"] = tool.description
+        return tools
+
     async def _policy_embedding_selection(self, selected: str) -> tuple[str, str]:
         """Resolve an attached Memory Base's non-secret embedding metadata."""
         flow_id = _coerce_uuid(self._get_runtime_or_frontend_node_attr("flow_id"))
