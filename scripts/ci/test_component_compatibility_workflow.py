@@ -34,6 +34,7 @@ def test_every_main_release_and_patch_pr_runs_without_path_or_draft_filters():
         "historical_compatibility_gate.py",
         "test_reader.py",
         "test_source_connection.py",
+        "test_source_trust.py",
         "test_report_integrity.py",
         "test_flow_conflict.py",
         "test_update_rebuilt_node.py",
