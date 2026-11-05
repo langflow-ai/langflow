@@ -176,7 +176,7 @@ def test_published_settings_argument_does_not_start_application_services(monkeyp
 
 
 def test_export_allows_only_the_git_library_local_version_probe():
-    trusted_path = {"PATH": "/usr/bin:/bin"}
+    trusted_path = {"PATH": os.defpath}
     exporter._refuse_network("subprocess.Popen", ("git", ["git", "version"], None, trusted_path))
     exporter._refuse_network("subprocess.Popen", ("/usr/bin/git", ["/usr/bin/git", "version"], None, trusted_path))
     with pytest.raises(exporter.RegistrySnapshotError):
@@ -189,7 +189,7 @@ def test_git_version_probe_rejects_path_lookalikes_without_executing_them(tmp_pa
     fake = tmp_path / "git"
     fake.write_text("fixture-only")
     fake.chmod(0o755)
-    trusted_path = {"PATH": "/usr/bin:/bin"}
+    trusted_path = {"PATH": os.defpath}
     forbidden = [
         ("git", ["git", "version"], None, {"PATH": str(tmp_path)}),
         ("git", ["git", "version"], None, {"PATH": f"{tmp_path}:/usr/bin:/bin"}),
@@ -301,7 +301,7 @@ def test_swallowed_audit_refusal_cannot_publish_complete_snapshot(event, tmp_pat
 
 def test_export_allows_only_trusted_file_probe_of_current_interpreter(tmp_path):
     python = os.path.realpath(sys.executable)
-    trusted_path = {"PATH": "/usr/bin:/bin"}
+    trusted_path = {"PATH": os.defpath}
     exporter._refuse_network("subprocess.Popen", ("file", ["file", "-b", python], None, trusted_path))
     interpreter_alias = tmp_path / "python-alias"
     interpreter_alias.symlink_to(python)
@@ -321,3 +321,55 @@ def test_export_allows_only_trusted_file_probe_of_current_interpreter(tmp_path):
     for arguments in forbidden:
         with pytest.raises(exporter.RegistrySnapshotError):
             exporter._refuse_network("subprocess.Popen", arguments)
+
+
+@pytest.mark.parametrize("program", ["git", "file"])
+@pytest.mark.parametrize(
+    "extra",
+    [
+        {"LD_PRELOAD": "/synthetic/unused-library.so"},
+        {"UNREVIEWED_ENVIRONMENT": "fixture-only"},
+        {"HOME": "/synthetic/unreviewed-home"},
+        {"HOME": None},
+    ],
+)
+def test_metadata_probe_rejects_injected_environment(program, extra):
+    argv = [program, "version"] if program == "git" else [program, "-b", os.path.realpath(sys.executable)]
+    previous = len(exporter._refused_calls)
+    with pytest.raises(exporter.RegistrySnapshotError):
+        exporter._refuse_network("subprocess.Popen", (program, argv, None, {"PATH": os.defpath, **extra}))
+    assert exporter._refused_calls[previous:] == ["subprocess.Popen"]
+
+
+def test_malformed_probe_environment_keeps_refusal_evidence():
+    from collections.abc import Mapping
+
+    class BrokenEnvironment(Mapping):
+        def __getitem__(self, _key):
+            raise RuntimeError("synthetic environment lookup failure")
+
+        def __iter__(self):
+            return iter(("PATH",))
+
+        def __len__(self):
+            return 1
+
+    previous = len(exporter._refused_calls)
+    with pytest.raises(exporter.RegistrySnapshotError):
+        exporter._refuse_network("subprocess.Popen", ("git", ["git", "version"], None, BrokenEnvironment()))
+    assert exporter._refused_calls[previous:] == ["subprocess.Popen"]
+
+
+@pytest.mark.parametrize("program", ["git", "file"])
+def test_metadata_probe_keeps_the_known_runtime_flag_unchanged(program, monkeypatch):
+    monkeypatch.setenv("OTEL_SEMCONV_STABILITY_OPT_IN", "http")
+    argv = [program, "version"] if program == "git" else [program, "-b", os.path.realpath(sys.executable)]
+    environment = {"PATH": os.defpath, "OTEL_SEMCONV_STABILITY_OPT_IN": "http"}
+    previous = len(exporter._refused_calls)
+    exporter._refuse_network("subprocess.Popen", (program, argv, None, environment))
+    assert len(exporter._refused_calls) == previous
+    with pytest.raises(exporter.RegistrySnapshotError):
+        exporter._refuse_network(
+            "subprocess.Popen", (program, argv, None, {**environment, "OTEL_SEMCONV_STABILITY_OPT_IN": "changed"})
+        )
+    assert exporter._refused_calls[previous:] == ["subprocess.Popen"]

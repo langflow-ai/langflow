@@ -20,6 +20,17 @@ from typing import Any
 
 # Keep refusal evidence even when imported component code catches the exception.
 _refused_calls: list[str] = []
+# Registry imports set the reviewed OpenTelemetry semantic-convention flag.
+_METADATA_ENVIRONMENT = frozenset(
+    {
+        "PATH",
+        "HOME",
+        "LANGFLOW_CONFIG_DIR",
+        "DO_NOT_TRACK",
+        "LITELLM_LOCAL_MODEL_COST_MAP",
+        "OTEL_SEMCONV_STABILITY_OPT_IN",
+    }
+)
 
 
 class RegistrySnapshotError(RuntimeError):
@@ -47,10 +58,19 @@ def _is_trusted_local_probe(arguments: tuple, program: str, options: tuple[str, 
     environment = os.environ if environment is None else environment
     if not isinstance(environment, Mapping):
         return False
-    path = environment.get("PATH", os.defpath)
-    if not isinstance(path, str) or any(not Path(part).is_absolute() for part in path.split(os.pathsep)):
+    if environment.get("PATH") != os.defpath:
         return False
-    resolved = shutil.which(executable, path=path)
+    for name, value in environment.items():
+        if not isinstance(name, str) or not isinstance(value, str):
+            return False
+        # GitPython and platform force C locale for their metadata parsers.
+        if name in {"LANGUAGE", "LC_ALL"} and value == "C":
+            continue
+        if name == "PATH":
+            continue
+        if name not in _METADATA_ENVIRONMENT or value != os.environ.get(name):
+            return False
+    resolved = shutil.which(executable, path=os.defpath)
     return resolved is not None and Path(resolved).resolve() == trusted
 
 
@@ -72,10 +92,13 @@ def _is_interpreter_file_probe(arguments: tuple) -> bool:
 
 
 def _refuse_network(event: str, _args: tuple) -> None:
-    if event == "subprocess.Popen" and (
-        _is_interpreter_file_probe(_args) or _is_trusted_local_probe(_args, "git", ("version",))
-    ):
-        return
+    if event == "subprocess.Popen":
+        try:
+            allowed = _is_interpreter_file_probe(_args) or _is_trusted_local_probe(_args, "git", ("version",))
+        except Exception:  # noqa: BLE001 -- malformed probe validation must retain refusal evidence
+            allowed = False
+        if allowed:
+            return
     if event in {
         "socket.connect",
         "socket.getaddrinfo",
