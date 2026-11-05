@@ -320,7 +320,7 @@ fake-useragent = ["fake-useragent>=2.0.0"]
 # extra remains so older explicit langflow-base[duckduckgo] installs still work.
 duckduckgo = [
     "ddgs>=9.0.0",
-    "brotli>=1.2.1; platform_python_implementation == 'CPython'",
+    "brotli>=1.2.1",
     "brotlicffi>=1.2.1.0; platform_python_implementation != 'CPython'",
 ]
 yfinance = ["yfinance==0.2.50"]

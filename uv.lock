@@ -8872,7 +8872,7 @@ docx = [
     { name = "python-docx" },
 ]
 duckduckgo = [
-    { name = "brotli", marker = "platform_python_implementation == 'CPython'" },
+    { name = "brotli" },
     { name = "brotlicffi", marker = "platform_python_implementation != 'CPython'" },
     { name = "ddgs" },
 ]
@@ -9179,7 +9179,7 @@ requires-dist = [
     { name = "asyncer", specifier = ">=0.0.5,<1.0.0" },
     { name = "atlassian-python-api", marker = "extra == 'atlassian'", specifier = "==3.41.16" },
     { name = "boto3", marker = "extra == 'aws'", specifier = ">=1.34.162,<2.0.0" },
-    { name = "brotli", marker = "platform_python_implementation == 'CPython' and extra == 'duckduckgo'", specifier = ">=1.2.1" },
+    { name = "brotli", marker = "extra == 'duckduckgo'", specifier = ">=1.2.1" },
     { name = "brotlicffi", marker = "platform_python_implementation != 'CPython' and extra == 'duckduckgo'", specifier = ">=1.2.1.0" },
     { name = "cachetools", specifier = ">=6.0.0" },
     { name = "chardet", specifier = ">=7.3.0" },
@@ -10792,7 +10792,7 @@ name = "lfx-duckduckgo"
 version = "0.3.0"
 source = { editable = "src/bundles/duckduckgo" }
 dependencies = [
-    { name = "brotli", marker = "platform_python_implementation == 'CPython'" },
+    { name = "brotli" },
     { name = "brotlicffi", marker = "platform_python_implementation != 'CPython'" },
     { name = "ddgs" },
     { name = "langchain-community" },
@@ -10801,7 +10801,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "brotli", marker = "platform_python_implementation == 'CPython'", specifier = ">=1.2.1" },
+    { name = "brotli", specifier = ">=1.2.1" },
     { name = "brotlicffi", marker = "platform_python_implementation != 'CPython'", specifier = ">=1.2.1.0" },
     { name = "ddgs", specifier = ">=9.0.0" },
     { name = "langchain-community", specifier = ">=0.4.1,<1.0.0" },

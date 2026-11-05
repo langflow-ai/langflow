@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import runpy
 from pathlib import Path
 
@@ -234,18 +235,22 @@ def test_workspace_brotli_constraints_cover_every_interpreter(dependency: str, a
 )
 @pytest.mark.parametrize(
     ("implementation", "dependency", "affected", "patched"),
-    [("CPython", "brotli", "1.2.0", "1.2.1"), ("PyPy", "brotlicffi", "1.2.0.1", "1.2.1.0")],
+    [
+        ("CPython", "brotli", "1.2.0", "1.2.1"),
+        ("PyPy", "brotli", "1.2.0", "1.2.1"),
+        ("PyPy", "brotlicffi", "1.2.0.1", "1.2.1.0"),
+    ],
 )
 def test_published_duckduckgo_requirements_protect_the_selected_decoder(
     manifest: str, extra: str | None, implementation: str, dependency: str, affected: str, patched: str
 ) -> None:
-    """Keep standalone and legacy DuckDuckGo installs patched on each interpreter."""
+    """Protect both installed decoders because HTTPX always prefers Brotli."""
     project = tomllib.loads((ROOT / manifest).read_text())["project"]
     declarations = project["dependencies"] if extra is None else project["optional-dependencies"][extra]
     requirements = [
         requirement
         for value in declarations
-        if (requirement := Requirement(value)).name in {"brotli", "brotlicffi"}
+        if (requirement := Requirement(value)).name == dependency
         and (
             requirement.marker is None
             or requirement.marker.evaluate({"platform_python_implementation": implementation})
@@ -315,6 +320,7 @@ def test_published_pyarrow_requirements_patch_bundled_brotli_on_supported_python
     requirement = requirements[0]
     if python == "3.10":
         # Arrow's patched 26.x wheels require Python 3.11 or newer.
+        assert "23.0.0" not in requirement.specifier
         assert "23.0.1" in requirement.specifier
         assert "24.0.0" not in requirement.specifier
     else:
@@ -376,3 +382,32 @@ def test_plain_base_requirements_protect_dns_and_jose_transitive_paths(
         assert affected not in requirements[0].specifier
         assert patched in requirements[0].specifier
         assert next_major not in requirements[0].specifier
+
+
+@pytest.mark.parametrize("python", ["3.10", "3.11", "3.14"])
+@pytest.mark.parametrize("regression", ["missing", "lowered"])
+def test_pyarrow_extra_rejects_missing_or_lowered_security_floor(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, python: str, regression: str
+) -> None:
+    """Exercise the published-extra check against missing and downgraded metadata."""
+    project = tomllib.loads((ROOT / MANIFESTS[0]).read_text())["project"]
+    requirements = (
+        []
+        if regression == "missing"
+        else [
+            "pyarrow>=23.0.0,<24.0.0; python_version < '3.11'",
+            "pyarrow>=26.0.0,<27.0.0; python_version >= '3.11'",
+        ]
+    )
+    manifest = tmp_path / MANIFESTS[0]
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(
+        "[project]\ndependencies = "
+        + json.dumps(project["dependencies"])
+        + "\n[project.optional-dependencies]\npyarrow = "
+        + json.dumps(requirements)
+        + "\n"
+    )
+    monkeypatch.setitem(globals(), "ROOT", tmp_path)
+    with pytest.raises(AssertionError):
+        test_published_pyarrow_requirements_patch_bundled_brotli_on_supported_python(MANIFESTS[0], python)
