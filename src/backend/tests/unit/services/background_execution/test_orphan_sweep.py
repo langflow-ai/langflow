@@ -166,11 +166,13 @@ async def test_startup_enqueue_failure_releases_queued_lease(active_user, monkey
         frame_source_factory=lambda **_kw: _scripted,
     )
 
-    async def fail_enqueue(**_kwargs):
+    async def fail_dispatch(*_args, **_kwargs):
         msg = "executor unavailable"
         raise RuntimeError(msg)
 
-    monkeypatch.setattr(svc, "_enqueue", fail_enqueue)
+    # Patch the backend seam the facade now dispatches through, not the removed
+    # private _enqueue: the recovery path is what matters, wherever it routes.
+    monkeypatch.setattr(svc._backend, "dispatch", fail_dispatch)
 
     await svc.start()
     try:

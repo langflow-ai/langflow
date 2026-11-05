@@ -43,11 +43,24 @@ class _StubUser:
 
 
 class _RecordingBackend:
+    """Scaled-shaped backend double: records dispatches, never runs anything."""
+
+    external_workers = True
+
     def __init__(self) -> None:
         self.enqueued: list[str] = []
 
+    async def start(self) -> None:
+        """Nothing to start: no workers behind the double."""
+
+    async def teardown(self) -> None:
+        """Nothing to close."""
+
     async def enqueue(self, job_id: str) -> None:
         self.enqueued.append(job_id)
+
+    async def dispatch(self, job_id, *, flow_id, request, user) -> None:  # noqa: ARG002
+        await self.enqueue(str(job_id))
 
 
 def _runner(job_service, job_id, source):
