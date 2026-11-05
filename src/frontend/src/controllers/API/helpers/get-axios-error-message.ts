@@ -5,7 +5,8 @@ import axios from "axios";
  *
  * FastAPI returns `detail` as a plain string for most HTTP errors, but
  * Pydantic validation errors (422) return an array of objects with a `msg`
- * property.  This helper handles both shapes.
+ * property, and coded refusals return `{ code, message }`.  This helper
+ * handles all three shapes.
  */
 function extractDetail(data: unknown): string | undefined {
   if (data == null || typeof data !== "object") return undefined;
@@ -13,6 +14,16 @@ function extractDetail(data: unknown): string | undefined {
   const detail = (data as Record<string, unknown>).detail;
 
   if (typeof detail === "string") return detail;
+
+  // A coded refusal: `{ code, message }`, where `message` is for people.
+  if (
+    detail != null &&
+    typeof detail === "object" &&
+    !Array.isArray(detail) &&
+    typeof (detail as Record<string, unknown>).message === "string"
+  ) {
+    return (detail as Record<string, string>).message;
+  }
 
   if (Array.isArray(detail) && detail.length > 0) {
     return detail
@@ -28,6 +39,17 @@ function extractDetail(data: unknown): string | undefined {
   }
 
   return undefined;
+}
+
+// Statuses that mean this user may not read the resource, so a retry fails the
+// same way. A model-provider policy denial is reported as 404.
+const ACCESS_REFUSALS = new Set([401, 403, 404]);
+
+/** Whether a failed request was refused for access rather than failing to complete. */
+export function isAccessRefusal(err: unknown): boolean {
+  const status = (err as { response?: { status?: number } } | null)?.response
+    ?.status;
+  return status !== undefined && ACCESS_REFUSALS.has(status);
 }
 
 /** Use a translated fallback when the server supplies no displayable detail. */

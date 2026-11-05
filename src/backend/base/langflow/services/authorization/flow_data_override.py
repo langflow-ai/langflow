@@ -17,10 +17,12 @@ from contextvars import ContextVar
 from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
+from lfx.log.logger import logger
 
 from langflow.api.utils.execution_errors import caller_owns_flow
 from langflow.services.authorization.actions import FlowAction
 from langflow.services.authorization.guards import ensure_flow_permission
+from langflow.services.deps import get_authorization_service
 
 if TYPE_CHECKING:
     from langflow.services.database.models.flow.model import FlowRead
@@ -39,18 +41,29 @@ async def resolve_flow_data_override(current_user: UserRead, flow: FlowRead) -> 
     allowed = caller_owns_flow(flow, current_user)
     if not allowed:
         try:
-            await ensure_flow_permission(
-                current_user,
-                FlowAction.WRITE,
-                flow_id=flow.id,
-                flow_user_id=flow.user_id,
-                workspace_id=getattr(flow, "workspace_id", None),
-                folder_id=getattr(flow, "folder_id", None),
-            )
-        except HTTPException:
-            allowed = False
-        else:
-            allowed = True
+            authz = get_authorization_service()
+            # The OSS pass-through permits every check without granting cross-user
+            # writes. Match the capability gate used when loading shared resources.
+            plugin_may_grant_write = await authz.supports_cross_user_fetch() and await authz.is_enabled()
+        except Exception:  # noqa: BLE001
+            # A failing plugin probe must degrade to the stored graph like the
+            # capability checks in guards, not fail the whole build.
+            logger.exception("Authorization plugin failed capability check; ignoring flow data override")
+            plugin_may_grant_write = False
+        if plugin_may_grant_write:
+            try:
+                await ensure_flow_permission(
+                    current_user,
+                    FlowAction.WRITE,
+                    flow_id=flow.id,
+                    flow_user_id=flow.user_id,
+                    workspace_id=getattr(flow, "workspace_id", None),
+                    folder_id=getattr(flow, "folder_id", None),
+                )
+            except HTTPException:
+                allowed = False
+            else:
+                allowed = True
     _flow_data_override_allowed.set(allowed)
     return allowed
 

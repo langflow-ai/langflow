@@ -1,0 +1,357 @@
+{
+  "vertex_builds": {
+    "ChatInput-NCmix": [
+      {
+        "data": {
+          "results": {
+            "message": {
+              "text_key": "text",
+              "data": {
+                "timestamp": "2024-12-23 19:10:57",
+                "sender": "User",
+                "sender_name": "User",
+                "session_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a",
+                "text": "Hello",
+                "files": [],
+                "error": "False",
+                "edit": "False",
+                "properties": {
+                  "text_color": "",
+                  "background_color": "",
+                  "edited": "False",
+                  "source": {
+                    "id": "None",
+                    "display_name": "None",
+                    "source": "None"
+                  },
+                  "icon": "",
+                  "allow_markdown": "False",
+                  "positive_feedback": "None",
+                  "state": "complete",
+                  "targets": []
+                },
+                "category": "message",
+                "content_blocks": [],
+                "id": "c95bed34-f906-4aa6-84e4-68553f6db772",
+                "flow_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a"
+              },
+              "default_value": "",
+              "text": "Hello",
+              "sender": "User",
+              "sender_name": "User",
+              "files": [],
+              "session_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a",
+              "timestamp": "2024-12-23 19:10:57+00:00",
+              "flow_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a",
+              "error": "False",
+              "edit": "False",
+              "properties": {
+                "text_color": "",
+                "background_color": "",
+                "edited": "False",
+                "source": {
+                  "id": "None",
+                  "display_name": "None",
+                  "source": "None"
+                },
+                "icon": "",
+                "allow_markdown": "False",
+                "positive_feedback": "None",
+                "state": "complete",
+                "targets": []
+              },
+              "category": "message",
+              "content_blocks": []
+            }
+          },
+          "outputs": {
+            "message": {
+              "message": {
+                "timestamp": "2024-12-23T19:10:57",
+                "sender": "User",
+                "sender_name": "User",
+                "session_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a",
+                "text": "Hello",
+                "files": [],
+                "error": false,
+                "edit": false,
+                "properties": {
+                  "text_color": "",
+                  "background_color": "",
+                  "edited": false,
+                  "source": {
+                    "id": null,
+                    "display_name": null,
+                    "source": null
+                  },
+                  "icon": "",
+                  "allow_markdown": false,
+                  "positive_feedback": null,
+                  "state": "complete",
+                  "targets": []
+                },
+                "category": "message",
+                "content_blocks": [],
+                "id": "c95bed34-f906-4aa6-84e4-68553f6db772",
+                "flow_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a"
+              },
+              "type": "object"
+            }
+          },
+          "logs": { "message": [] },
+          "message": {
+            "message": "Hello",
+            "sender": "User",
+            "sender_name": "User",
+            "files": [],
+            "type": "object"
+          },
+          "artifacts": {
+            "message": "Hello",
+            "sender": "User",
+            "sender_name": "User",
+            "files": [],
+            "type": "object"
+          },
+          "timedelta": 0.015060124918818474,
+          "duration": "15 ms",
+          "used_frozen_result": false
+        },
+        "artifacts": {
+          "message": "Hello",
+          "sender": "User",
+          "sender_name": "User",
+          "files": [],
+          "type": "object"
+        },
+        "params": "- Files: []\n  Message: Hello\n  Sender: User\n  Sender Name: User\n  Type: object\n",
+        "valid": true,
+        "build_id": "40aa200e-74db-4651-b698-f80301d2b26b",
+        "id": "ChatInput-NCmix",
+        "timestamp": "2024-12-23T19:10:58.772766Z",
+        "flow_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a"
+      }
+    ],
+    "Prompt-BEn9c": [
+      {
+        "data": {
+          "results": {},
+          "outputs": {
+            "prompt": {
+              "message": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.",
+              "type": "text"
+            }
+          },
+          "logs": { "prompt": [] },
+          "message": {
+            "prompt": {
+              "repr": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.",
+              "raw": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.",
+              "type": "text"
+            }
+          },
+          "artifacts": {
+            "prompt": {
+              "repr": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.",
+              "raw": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.",
+              "type": "text"
+            }
+          },
+          "timedelta": 0.0057758750626817346,
+          "duration": "6 ms",
+          "used_frozen_result": false
+        },
+        "artifacts": {
+          "prompt": {
+            "repr": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.",
+            "raw": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.",
+            "type": "text"
+          }
+        },
+        "params": "None",
+        "valid": true,
+        "build_id": "39bbbfde-97fd-42a5-a9ed-d42a5c5d532b",
+        "id": "Prompt-BEn9c",
+        "timestamp": "2024-12-23T19:10:58.781019Z",
+        "flow_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a"
+      }
+    ],
+    "OpenAIModel-7AjrN": [
+      {
+        "data": {
+          "results": {},
+          "outputs": {
+            "text_output": {
+              "message": "Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!",
+              "type": "text"
+            },
+            "model_output": { "message": "", "type": "unknown" }
+          },
+          "logs": { "text_output": [] },
+          "message": {
+            "text_output": {
+              "repr": "Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!",
+              "raw": "Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!",
+              "type": "text"
+            }
+          },
+          "artifacts": {
+            "text_output": {
+              "repr": "Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!",
+              "raw": "Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!",
+              "type": "text"
+            }
+          },
+          "timedelta": 1.034765167045407,
+          "duration": "1.03 seconds",
+          "used_frozen_result": false
+        },
+        "artifacts": {
+          "text_output": {
+            "repr": "Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!",
+            "raw": "Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!",
+            "type": "text"
+          }
+        },
+        "params": "None",
+        "valid": true,
+        "build_id": "4f0ae730-a266-4d35-b89f-7b825c620a0f",
+        "id": "OpenAIModel-7AjrN",
+        "timestamp": "2024-12-23T19:10:58.790484Z",
+        "flow_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a"
+      }
+    ],
+    "ChatOutput-sfUhT": [
+      {
+        "data": {
+          "results": {
+            "message": {
+              "text_key": "text",
+              "data": {
+                "timestamp": "2024-12-23 19:10:58",
+                "sender": "Machine",
+                "sender_name": "AI",
+                "session_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a",
+                "text": "Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!",
+                "files": [],
+                "error": "False",
+                "edit": "False",
+                "properties": {
+                  "text_color": "",
+                  "background_color": "",
+                  "edited": "False",
+                  "source": {
+                    "id": "OpenAIModel-7AjrN",
+                    "display_name": "OpenAI",
+                    "source": "gpt-4o-mini"
+                  },
+                  "icon": "OpenAI",
+                  "allow_markdown": "False",
+                  "positive_feedback": "None",
+                  "state": "complete",
+                  "targets": []
+                },
+                "category": "message",
+                "content_blocks": [],
+                "id": "5688356d-9f30-40ca-9907-79a7a2fc16fd",
+                "flow_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a"
+              },
+              "default_value": "",
+              "text": "Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!",
+              "sender": "Machine",
+              "sender_name": "AI",
+              "files": [],
+              "session_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a",
+              "timestamp": "2024-12-23 19:10:58+00:00",
+              "flow_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a",
+              "error": "False",
+              "edit": "False",
+              "properties": {
+                "text_color": "",
+                "background_color": "",
+                "edited": "False",
+                "source": {
+                  "id": "OpenAIModel-7AjrN",
+                  "display_name": "OpenAI",
+                  "source": "gpt-4o-mini"
+                },
+                "icon": "OpenAI",
+                "allow_markdown": "False",
+                "positive_feedback": "None",
+                "state": "complete",
+                "targets": []
+              },
+              "category": "message",
+              "content_blocks": []
+            }
+          },
+          "outputs": {
+            "message": {
+              "message": {
+                "timestamp": "2024-12-23T19:10:58",
+                "sender": "Machine",
+                "sender_name": "AI",
+                "session_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a",
+                "text": "Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!",
+                "files": [],
+                "error": false,
+                "edit": false,
+                "properties": {
+                  "text_color": "",
+                  "background_color": "",
+                  "edited": false,
+                  "source": {
+                    "id": "OpenAIModel-7AjrN",
+                    "display_name": "OpenAI",
+                    "source": "gpt-4o-mini"
+                  },
+                  "icon": "OpenAI",
+                  "allow_markdown": false,
+                  "positive_feedback": null,
+                  "state": "complete",
+                  "targets": []
+                },
+                "category": "message",
+                "content_blocks": [],
+                "id": "5688356d-9f30-40ca-9907-79a7a2fc16fd",
+                "flow_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a"
+              },
+              "type": "object"
+            }
+          },
+          "logs": { "message": [] },
+          "message": {
+            "message": "Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!",
+            "sender": "Machine",
+            "sender_name": "AI",
+            "files": [],
+            "type": "object"
+          },
+          "artifacts": {
+            "message": "Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!",
+            "sender": "Machine",
+            "sender_name": "AI",
+            "files": [],
+            "type": "object"
+          },
+          "timedelta": 0.017838125000707805,
+          "duration": "18 ms",
+          "used_frozen_result": false
+        },
+        "artifacts": {
+          "message": "Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!",
+          "sender": "Machine",
+          "sender_name": "AI",
+          "files": [],
+          "type": "object"
+        },
+        "params": "- Files: []\n  Message: Hello! 🌟 I'm excited to help you get started on your journey to building\n    something fresh! What do you have in mind? Whether it's a project, an idea, or\n    a concept, let's dive in and make it happen!\n  Sender: Machine\n  Sender Name: AI\n  Type: object\n",
+        "valid": true,
+        "build_id": "1e8b908b-aba7-403b-9e9b-eca92bb78668",
+        "id": "ChatOutput-sfUhT",
+        "timestamp": "2024-12-23T19:10:58.813268Z",
+        "flow_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a"
+      }
+    ]
+  }
+}

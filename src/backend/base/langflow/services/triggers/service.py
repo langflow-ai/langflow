@@ -31,15 +31,20 @@ from langflow.services.database.models.trigger.schemas import (
 )
 from langflow.services.triggers.cleanup import delete_triggers
 from langflow.services.triggers.constants import (
-    CANVAS_ONLY_KINDS,
-    GOOGLE_SOURCE_KINDS,
-    MICROSOFT_SOURCE_KINDS,
-    PUSH_MECHANISMS,
     SLACK_TRIGGER_KINDS,
 )
+from langflow.services.triggers.error_codes import CodedTriggerError, TriggerErrorCode
 from langflow.services.triggers.errors import TriggerNotFoundError
+from langflow.services.triggers.locking import lock_trigger, lock_trigger_for_admission
 from langflow.services.triggers.ownership import require_owned_connection
-from langflow.services.triggers.reconciliation import apply_config_verdict
+from langflow.services.triggers.providers.registry import canvas_only_kinds, push_mechanisms, source_kinds
+from langflow.services.triggers.reconciliation import (
+    NODE_REMOVED_ERROR,
+    apply_config_verdict,
+    sync_display_name,
+    trigger_node_on_canvas,
+    validate_single_trigger_per_flow,
+)
 from langflow.services.triggers.schedule_config import schedule_timing_changed, validate_schedule_config
 
 if TYPE_CHECKING:
@@ -90,7 +95,7 @@ def _reject_mechanism(config: dict | None) -> None:
         raise ValueError(msg)
 
 
-async def _arm_slack(session: AsyncSession, row: Trigger) -> None:
+async def _arm_slack(session: AsyncSession, row: Trigger, *, connection_ids: frozenset[UUID]) -> None:
     """Re-check a Slack trigger's filters, re-derive its connection and transport, and check it may run unattended.
 
     Re-derived rather than trusted: the connection can change between the save
@@ -110,6 +115,9 @@ async def _arm_slack(session: AsyncSession, row: Trigger) -> None:
 
     config = normalize_slack_config(row.kind, row.config or {})
     arming = await resolve_arming(session, owner_id=row.user_id, config=config, context=deployment_context())
+    if arming.connection_id not in connection_ids:
+        msg = "The source connection changed while enabling. Try again."
+        raise ValueError(msg)
     await check_ready_to_arm(session, kind=row.kind, config=config, arming=arming)
     moved = bind_connection(row, arming.connection_id)
     if moved or config.get("mechanism_id") != arming.mechanism_id:
@@ -138,6 +146,8 @@ class TriggerService(Service):
         flow_ids: list[UUID],
         limit: int = 100,
         offset: int = 0,
+        provider: str | None = None,
+        state: TriggerState | None = None,
     ) -> list[Trigger]:
         """List triggers on the given flows, newest first.
 
@@ -154,6 +164,10 @@ class TriggerService(Service):
             .offset(offset)
             .limit(limit)
         )
+        if provider is not None:
+            statement = statement.where(Trigger.provider == provider)
+        if state is not None:
+            statement = statement.where(Trigger.state == state.value)
         return list((await session.exec(statement)).all())
 
     async def list_active(self, session: AsyncSession, *, kind: str | None = None) -> list[Trigger]:
@@ -172,9 +186,11 @@ class TriggerService(Service):
         return (await session.exec(statement)).first()
 
     async def create(self, session: AsyncSession, *, payload: TriggerCreate, owner_id: UUID) -> Trigger:
-        if payload.kind in CANVAS_ONLY_KINDS:
+        if payload.kind in canvas_only_kinds():
             msg = f"A {payload.kind!r} trigger is created by adding its component to the flow, not through this API."
             raise ValueError(msg)
+        if payload.state is TriggerState.ACTIVE:
+            await self._validate_saved_canvas(session, payload.flow_id)
         _reject_mechanism(payload.config)
         await self._validate_flow_version(session, flow_id=payload.flow_id, flow_version_id=payload.flow_version_id)
         if payload.connection_id is not None:
@@ -213,7 +229,7 @@ class TriggerService(Service):
         an explicit null, without every other omitted field being nulled too.
         """
         changes = payload.model_dump(exclude_unset=True)
-        if row.kind in CANVAS_ONLY_KINDS and ({"config", "connection_id"} & changes.keys()):
+        if (row.kind in canvas_only_kinds() or "." in row.kind) and ({"config", "connection_id"} & changes.keys()):
             msg = "This trigger's configuration and connection are set on its component in the flow."
             raise ValueError(msg)
         if "config" in changes:
@@ -224,10 +240,14 @@ class TriggerService(Service):
             await self._validate_flow_version(session, flow_id=row.flow_id, flow_version_id=payload.flow_version_id)
         if "config" in changes and row.kind == "schedule":
             changes["config"] = validate_schedule_config(changes["config"])
+            if row.state == TriggerState.ERROR.value:
+                await self._validate_saved_canvas(session, row.flow_id)
             if schedule_timing_changed(row.config or {}, changes["config"]):
                 row.next_fire_at = None
             # A schedule that validates clears the error a broken one left.
             apply_config_verdict(row, None)
+        if "config" in changes and "name" not in changes:
+            sync_display_name(row, changes["config"])
         for field, value in changes.items():
             setattr(row, field, value.value if hasattr(value, "value") else value)
         row.updated_at = datetime.now(timezone.utc)
@@ -238,7 +258,9 @@ class TriggerService(Service):
 
     async def set_state(self, session: AsyncSession, *, row: Trigger, state: TriggerState) -> Trigger:
         row.state = state.value
-        if state is not TriggerState.ERROR:
+        # The removal reason is reconciliation's: only the save that brings the
+        # node back clears it, so pausing again cannot be a way around it.
+        if state is not TriggerState.ERROR and row.last_error != NODE_REMOVED_ERROR:
             row.last_error = None
         row.updated_at = datetime.now(timezone.utc)
         session.add(row)
@@ -247,28 +269,68 @@ class TriggerService(Service):
         return row
 
     async def enable(self, session: AsyncSession, *, row: Trigger) -> Trigger:
+        row, connection_ids = await lock_trigger_for_admission(session, row.id)
+        if row is None:
+            msg = "The trigger no longer exists."
+            raise ValueError(msg)
         if row.state not in _ENABLEABLE_STATES:
             msg = f"Trigger in state {row.state!r} cannot be enabled."
+            raise ValueError(msg)
+        flow = await self._validate_saved_canvas(session, row.flow_id)
+        # Arming a trigger whose node is gone runs a flow with no trigger in it,
+        # so every event fails. Removing a node pauses its trigger, so only a
+        # paused one can have lost it; ask its saved canvas, reloaded under the
+        # lock, too: a row paused before the removal reason existed lacks it.
+        if row.last_error == NODE_REMOVED_ERROR or (
+            row.state == TriggerState.PAUSED.value and not trigger_node_on_canvas(row, flow.data if flow else None)
+        ):
+            msg = "The trigger node was removed from the flow. Add it back to resume the trigger."
+            raise CodedTriggerError(TriggerErrorCode.NODE_REMOVED, msg)
+        if "." in row.kind and row.kind not in source_kinds() | SLACK_TRIGGER_KINDS:
+            msg = "This trigger provider is unavailable. Install its integration bundle before enabling it."
             raise ValueError(msg)
         if row.kind == "schedule":
             validate_schedule_config(row.config or {})
         if row.kind in SLACK_TRIGGER_KINDS:
-            await _arm_slack(session, row)
-        if row.kind in MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS:
+            await _arm_slack(session, row, connection_ids=connection_ids)
+        if row.kind in source_kinds():
             from langflow.services.triggers.source_arming import check_ready, normalize_source_config, resolve_arming
 
             config = normalize_source_config(row.kind, row.config or {})
             arming = await resolve_arming(session, kind=row.kind, owner_id=row.user_id, config=config)
+            if arming.connection_id not in connection_ids:
+                msg = "The source connection changed while enabling. Try again."
+                raise ValueError(msg)
             await check_ready(session, kind=row.kind, arming=arming, config=config)
             changed = (
                 row.connection_id != arming.connection_id
                 or (row.config or {}).get("mechanism_id") != arming.mechanism_id
             )
+            if (
+                row.state == TriggerState.ACTIVE.value
+                and not changed
+                and row.config == {**config, "mechanism_id": arming.mechanism_id}
+                and arming.mechanism_id in push_mechanisms()
+            ):
+                return row
             row.connection_id = arming.connection_id
             row.config = {**config, "mechanism_id": arming.mechanism_id}
             if changed:
                 row.provider_state = {}
-            if arming.mechanism_id in PUSH_MECHANISMS:
+            from langflow.services.triggers.providers.registry import get_provider
+
+            extension = get_provider(row.provider or "")
+            if extension is not None:
+                if arming.mechanism_id in push_mechanisms():
+                    if not row.public_id:
+                        row.public_id = mint_public_id()
+                    if not row.signing_secret_encrypted:
+                        from langflow.services.auth.utils import encrypt_api_key
+
+                        row.signing_secret_encrypted = encrypt_api_key(mint_signing_secret())
+                if extension.prepare is not None:
+                    await extension.prepare(session, row)
+            if arming.mechanism_id in push_mechanisms():
                 if not row.public_id:
                     row.public_id = mint_public_id()
                 # The route commits this intent before any provider I/O. The
@@ -281,7 +343,52 @@ class TriggerService(Service):
             row.next_fire_at = None
         return await self.set_state(session, row=row, state=TriggerState.ACTIVE)
 
+    async def enable_and_activate(self, session: AsyncSession, *, row: Trigger) -> Trigger:
+        """Enable ``row`` and, for a push source, finish its provider activation.
+
+        A Microsoft or Google push source is left ``pending`` by :meth:`enable`;
+        the intent is committed before any provider I/O, then the initializer
+        subscribes and moves it to ``active`` (or records why it could not).
+        This commits ``session``. Raises ``ValueError`` with an owner-facing
+        reason when the trigger cannot be enabled.
+        """
+        return await self.activate_push_source(session, row=await self.enable(session, row=row))
+
+    async def activate_push_source(self, session: AsyncSession, *, row: Trigger) -> Trigger:
+        """Finish a push source's activation after :meth:`enable`; any other trigger is returned as is.
+
+        Commits ``session`` first, so callers must not hold a savepoint open
+        across this call.
+        """
+        if (
+            row.state != TriggerState.PENDING.value
+            or row.kind not in source_kinds()
+            or (row.config or {}).get("mechanism_id") not in push_mechanisms()
+        ):
+            return row
+        from langflow.services.triggers.source_runtime import initialize_source
+
+        await session.commit()
+        await initialize_source(row.id)
+        await session.refresh(row)
+        return row
+
+    async def admin_pause(self, session: AsyncSession, *, row: Trigger) -> Trigger:
+        """Pause ``row`` on an operator's behalf, exactly as :meth:`disable` would, and say so.
+
+        The marker is what lets the owner see that an administrator paused it,
+        and what an operator's bulk resume re-arms; a pause the owner chose is
+        never resumed by the operator.
+        """
+        paused = await self.disable(session, row=row)
+        paused.admin_paused_at = datetime.now(timezone.utc)
+        session.add(paused)
+        await session.flush()
+        await session.refresh(paused)
+        return paused
+
     async def disable(self, session: AsyncSession, *, row: Trigger) -> Trigger:
+        row = await self._lock_for_mutation(session, row=row)
         if row.state == TriggerState.DEAD.value:
             msg = "A dead trigger cannot be disabled."
             raise ValueError(msg)
@@ -292,7 +399,24 @@ class TriggerService(Service):
         from langflow.services.triggers.subscriptions import revoke_for_trigger
 
         await revoke_for_trigger(session, trigger_id=row.id)
+        # A pause asked for here is the caller's own, even on a trigger an
+        # operator already paused: the operator's bulk resume must then leave it.
+        row.admin_paused_at = None
         return await self.set_state(session, row=row, state=TriggerState.PAUSED)
+
+    @staticmethod
+    async def _validate_saved_canvas(session: AsyncSession, flow_id: UUID) -> Flow | None:
+        flow = await session.get(Flow, flow_id, populate_existing=True)
+        validate_single_trigger_per_flow(flow.data if flow is not None else None)
+        return flow
+
+    @staticmethod
+    async def _lock_for_mutation(session: AsyncSession, *, row: Trigger) -> Trigger:
+        current = await lock_trigger(session, row.id)
+        if current is None:
+            msg = "The trigger no longer exists."
+            raise ValueError(msg)
+        return current
 
     async def pin(self, session: AsyncSession, *, row: Trigger, flow_version_id: UUID | None) -> Trigger:
         """Pin the trigger to a flow version, or unpin with ``None``."""

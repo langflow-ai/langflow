@@ -20,6 +20,8 @@ export type UtilityStoreType = {
   setFeatureFlags: (featureFlags: Record<string, unknown>) => void;
   webhookPollingInterval: number;
   setWebhookPollingInterval: (webhookPollingInterval: number) => void;
+  triggerPollingInterval: number;
+  setTriggerPollingInterval: (triggerPollingInterval: number) => void;
   chatValueStore: string;
   setChatValueStore: (value: string) => void;
   currentSessionId: string;

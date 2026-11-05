@@ -31,7 +31,6 @@ from langflow.api.utils import (
     CurrentActiveUser,
     DbSession,
     cascade_delete_flow,
-    normalize_code_for_import,
     validate_is_component,
 )
 from langflow.api.utils.core import strip_secret_field_values
@@ -53,6 +52,7 @@ from langflow.api.v1.flow_conflict import (
     ensure_version_precondition,
     parse_if_match,
 )
+from langflow.api.v1.flow_validation import flow_validation_error
 from langflow.api.v1.flows_helpers import (
     _build_flows_download_response,
     _canonicalize_flow_destination,
@@ -64,6 +64,7 @@ from langflow.api.v1.flows_helpers import (
     _save_flow_to_fs,
     _update_existing_flow,
     _validate_and_assign_folder,
+    _validate_new_flow_id,
     _verify_fs_path,
     destination_folder_owner_id,
 )
@@ -1151,6 +1152,7 @@ async def create_flows(
     # Validate the complete request before adding or flushing any rows. This
     # keeps a denial in a later item from partially applying an earlier item.
     for flow in flow_list.flows:
+        await _validate_new_flow_id(session, flow.id)
         _validate_catalog_policy_for_write(flow.data, snapshot=catalog_policy_snapshot)
         await persist_and_strip_mcp_secrets(flow.data, current_user.id, session, flow_id=flow.id)
         # This endpoint bypasses _new_flow, so the fs_path containment check
@@ -1264,8 +1266,6 @@ async def upload_file(
         except orjson.JSONDecodeError as e:
             raise HTTPException(status_code=400, detail=f"Invalid JSON file: {e}") from e
 
-    # Normalise code fields: if exported with code-as-lines format, rejoin to
-    # strings before creating the Pydantic models so the DB always stores strings.
     if not isinstance(data, dict):
         raise HTTPException(
             status_code=422,
@@ -1284,14 +1284,13 @@ async def upload_file(
                     status_code=422,
                     detail=f"Invalid JSON: flows[{non_dict[0]}] is not an object",
                 )
-            data = {**data, "flows": [normalize_code_for_import(f) for f in data["flows"]]}
             flow_list = FlowListCreate(**data)
         else:
-            flow_list = FlowListCreate(flows=[FlowCreate(**normalize_code_for_import(data))])
+            flow_list = FlowListCreate(flows=[FlowCreate(**data)])
     except HTTPException:
         raise
     except ValidationError as e:
-        raise HTTPException(status_code=422, detail=str(e)) from e
+        raise flow_validation_error(e) from e
 
     # TODO: Full-version import is planned as a follow-up feature.
     # When implemented, extract raw flow dicts here to read embedded "version"

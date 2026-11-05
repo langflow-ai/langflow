@@ -97,6 +97,7 @@ To install every provider, including providers that require PyTorch as a depende
 | [`huggingface`](/bundles-huggingface) (Hugging Face) | `uv pip install "lfx-bundles[huggingface]"` |
 | [`icosacomputing`](/bundles-icosacomputing) (Icosa Computing) | `uv pip install "lfx-bundles[icosacomputing]"` |
 | `jigsawstack` | `uv pip install "lfx-bundles[jigsawstack]"` |
+| [`keenable`](./bundles-keenable) (Keenable) | `uv pip install "lfx-bundles[keenable]"` |
 | `langwatch` | `uv pip install "lfx-bundles[langwatch]"` |
 | `litellm` | `uv pip install "lfx-bundles[litellm]"` |
 | [`lmstudio`](/bundles-lmstudio) (LM Studio) | `uv pip install "lfx-bundles[lmstudio]"` |
@@ -146,4 +147,5 @@ To install every provider, including providers that require PyTorch as a depende
 - [Install LFX](./lfx-install)
 - [About bundles](/components-bundle-components)
 
-Chroma and ALTK providers are retired in 1.13. Saved import paths remain available for compatibility, but the retired components require replacement. See [storage upgrade guidance](../Develop/knowledge-storage-upgrade.mdx).
+Chroma is retired in 1.13. Saved import paths remain available for compatibility, but the component requires replacement. See [Upgrade Knowledge and Memory storage](/knowledge-storage-upgrade).
+The [ALTK](/components-bundle-components) component is removed. Replace it with the Agent component.

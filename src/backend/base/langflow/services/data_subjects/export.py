@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Any
 
+from lfx.utils.file_path_security import user_storage_scope_for_path
 from sqlmodel import col, select
 
 from langflow.services.data_subjects.batching import BATCH_SIZE
@@ -100,7 +101,9 @@ async def _builder_files(session: AsyncSession, archive: _Archive, user: User) -
     storage = get_storage_service()
     for stored in files:
         try:
-            data = await storage.get_file(str(user.id), PurePosixPath(stored.path).name)
+            data = await storage.get_file(
+                user_storage_scope_for_path(stored.path, user.id), PurePosixPath(stored.path).name
+            )
         except FileNotFoundError:
             continue
         archive.write_bytes(f"files/{stored.id}_{_safe_member(stored.name)}", data)

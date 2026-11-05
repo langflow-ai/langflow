@@ -1,6 +1,27 @@
+import { TRIGGER_PLACEMENT_KEY } from "@/utils/componentConstraints";
 import { getDisabledTooltip } from "../get-disabled-tooltip";
 
 describe("getDisabledTooltip", () => {
+  describe("Trigger components", () => {
+    it("explains the one-trigger rule when the flow already has a trigger", () => {
+      expect(
+        getDisabledTooltip(
+          ["SlackOnMessage", TRIGGER_PLACEMENT_KEY],
+          new Set(["ScheduleTrigger", TRIGGER_PLACEMENT_KEY]),
+        ),
+      ).toBe("This flow already has a trigger. A flow has one trigger.");
+    });
+
+    it("allows the first trigger", () => {
+      expect(
+        getDisabledTooltip(
+          ["ScheduleTrigger", TRIGGER_PLACEMENT_KEY],
+          new Set(),
+        ),
+      ).toBe("");
+    });
+  });
+
   describe("ChatInput component", () => {
     it("should return tooltip when ChatInput already exists", () => {
       expect(getDisabledTooltip("ChatInput", new Set(["ChatInput"]))).toBe(

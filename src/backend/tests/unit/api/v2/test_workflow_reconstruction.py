@@ -184,7 +184,9 @@ class TestWorkflowReconstruction:
             # Verify filtering happened by checking terminal nodes were retrieved
             mock_graph.get_terminal_nodes.assert_called_once()
 
-    async def test_reconstructed_outputs_carry_terminal_content(self):
+    @pytest.mark.parametrize("is_superuser", [False, True])
+    @pytest.mark.parametrize("admin_only", [False, True])
+    async def test_reconstructed_outputs_carry_terminal_content(self, monkeypatch, tmp_path, is_superuser, admin_only):
         """The rebuilt response must carry the persisted terminal content.
 
         The persisted vertex_build ``data`` blob (a ``ResultDataResponse`` dump) has no
@@ -225,6 +227,28 @@ class TestWorkflowReconstruction:
                 }
             ],
         }
+        # A status read must use the saved result even if the stored component
+        # source changed after execution. Neither admins nor ordinary readers
+        # should instantiate that source as a side effect of reading a job.
+        from lfx.services.deps import get_settings_service
+
+        settings = get_settings_service().settings
+        monkeypatch.setattr(settings, "allow_custom_components", True)
+        monkeypatch.setattr(settings, "custom_component_admin_only", admin_only)
+        marker = tmp_path / "component-executed"
+        payload["nodes"][1]["data"]["node"]["template"]["code"]["value"] = f"""
+from pathlib import Path
+from lfx.custom import Component
+from lfx.io import Output
+from lfx.schema import Message
+
+class StoredComponent(Component):
+    Path({str(marker)!r}).write_text("executed")
+    outputs = [Output(name="message", display_name="Message", method="build")]
+
+    def build(self) -> Message:
+        return Message(text="new output")
+"""
         mock_flow = MagicMock()
         mock_flow.id = uuid4()
         mock_flow.name = "echo"
@@ -256,8 +280,10 @@ class TestWorkflowReconstruction:
                 flow=mock_flow,
                 job_id=str(uuid4()),
                 user_id=str(uuid4()),
+                is_superuser=is_superuser,
             )
 
+        assert not marker.exists(), "Reading saved job outputs executed stored component code"
         assert response.outputs["chat_output"].content == "hello content probe"
         assert response.output.text == "hello content probe"
         assert response.session_id == "session-1"
