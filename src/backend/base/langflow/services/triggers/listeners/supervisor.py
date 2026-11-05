@@ -638,13 +638,9 @@ class ListenerSupervisor:
             expected_kind: str | None = None,
             allow_slack_fanout: bool = False,
         ) -> Trigger:
-            if await maintenance_enabled(session):
-                raise ListenerDeliveryRejectedError(reason="maintenance")
             target = next((target for target in worker.triggers if target.id == trigger_id), None)
             config = expected_config if expected_config is not None else target.config if target else None
             kind = expected_kind if expected_kind is not None else target.kind if target else None
-            if stopping.is_set():
-                raise ListenerDeliveryRejectedError(reason="lease_changed")
             # Connection deletion locks its parent before updating trigger and
             # lease FKs. Use that same order, including a fanout destination,
             # so neither transaction can hold a child while waiting on its
@@ -661,6 +657,8 @@ class ListenerSupervisor:
             for identifier in sorted(connection_ids, key=str):
                 if identifier not in connections:
                     connections[identifier] = await lock_connection(session, identifier)
+            if await maintenance_enabled(session):
+                raise ListenerDeliveryRejectedError(reason="maintenance")
             if connections[worker.connection_id] is None:
                 raise ListenerDeliveryRejectedError(reason="connection_changed")
             if (
@@ -831,6 +829,8 @@ class ListenerSupervisor:
                 if exc.reason == "target_removed":
                     return
                 stopping.set()
+                if exc.reason == "maintenance":
+                    return
             else:
                 if row.kind in SLACK_TRIGGER_KINDS and (provider_state or {}).get(SLACK_PROVIDER_STATE_APP_ID):
                     slack_apps[row.id] = provider_state[SLACK_PROVIDER_STATE_APP_ID]

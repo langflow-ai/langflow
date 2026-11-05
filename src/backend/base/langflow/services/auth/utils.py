@@ -19,6 +19,7 @@ from langflow.services.auth.cookies import auth_cookie_name
 from langflow.services.auth.exceptions import (
     AuthBackendUnavailableError,
     AuthenticationError,
+    ExternalAuthMaintenanceError,
     InsufficientPermissionsError,
     InvalidCredentialsError,
     MissingCredentialsError,
@@ -192,7 +193,9 @@ def _auth_error_to_http(e: AuthenticationError) -> HTTPException:
     if isinstance(e, AuthBackendUnavailableError):
         return HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=e.message,
+            detail={"code": e.error_code, "message": e.message}
+            if isinstance(e, ExternalAuthMaintenanceError)
+            else e.message,
             headers={"Retry-After": "1"},
         )
     if isinstance(
