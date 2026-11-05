@@ -7,7 +7,7 @@ import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
-from urllib.parse import unquote, urlsplit
+from urllib.parse import parse_qs, unquote, urlsplit
 
 from alembic.config import Config
 from alembic.script import ScriptDirectory
@@ -101,15 +101,16 @@ def _sqlite_revisions(path: Path) -> set[str]:
 async def read_revisions_before_startup(engine: AsyncEngine) -> set[str]:
     """Read existing state without creating tables or changing SQLite pragmas."""
     if engine.dialect.name == "sqlite":
-        database = engine.url.database
-        # Use the dialect's boolean parsing, including uri=1. Without URI mode,
-        # file: is literal and SQLite URI options do not apply.
-        uri_mode = engine.dialect.create_connect_args(engine.url)[1].get("uri", False)
-        memory_database = database == ":memory:" or (
-            uri_mode and (database == "file::memory:" or engine.url.query.get("mode") == "memory")
-        )
+        arguments, options = engine.dialect.create_connect_args(engine.url)
+        database = arguments[0]
+        # The driver's complete filename can include a literal query suffix.
+        # Only file: names with URI mode enabled interpret that suffix as options.
+        uri = urlsplit(database) if options.get("uri", False) and database.startswith("file:") else None
+        if uri is not None:
+            database = unquote(uri.path)
+        memory_database = database == ":memory:" or (uri is not None and parse_qs(uri.query).get("mode") == ["memory"])
         if database and not memory_database:
-            path = Path(unquote(urlsplit(database).path) if uri_mode and database.startswith("file:") else database)
+            path = Path(database)
             if not path.exists():
                 return set()
             return await asyncio.to_thread(_sqlite_revisions, path)

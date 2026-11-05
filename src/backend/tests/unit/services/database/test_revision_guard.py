@@ -63,11 +63,16 @@ def test_overlapping_known_revisions_are_refused():
     assert "overlap" in state.message
 
 
-def _service(database: Path, *, uri_mode: str | None = None) -> DatabaseService:
+def _service(database: Path, *, uri_mode: str | None = None, mode: str | None = None) -> DatabaseService:
     service = object.__new__(DatabaseService)
     service.database_url = f"sqlite+aiosqlite:///{database}"
+    query = []
     if uri_mode is not None:
-        service.database_url += f"?uri={uri_mode}"
+        query.append(f"uri={uri_mode}")
+    if mode is not None:
+        query.append(f"mode={mode}")
+    if query:
+        service.database_url += "?" + "&".join(query)
     service.engine = create_async_engine(service.database_url)
     service.script_location = Path(__import__("langflow").__file__).parent / "alembic"
     service.settings_service = SimpleNamespace(settings=SimpleNamespace(database_connection_retry=False))
@@ -112,6 +117,50 @@ async def test_uri_file_prefix_checks_the_decoded_database(tmp_path, monkeypatch
     service = _service(Path("file:source%20file.db"), uri_mode=uri_mode)
     try:
         assert await read_revisions_before_startup(service.engine) == {"unknown_future_revision"}
+    finally:
+        await service.engine.dispose()
+
+
+@pytest.mark.parametrize("uri_mode", ["true", "1"])
+@pytest.mark.parametrize("mode", ["ro", "memory"])
+@pytest.mark.parametrize("decoy_exists", [False, True])
+async def test_uri_flag_without_file_prefix_checks_the_complete_literal_filename(
+    tmp_path, monkeypatch, uri_mode, mode, decoy_exists
+):
+    monkeypatch.chdir(tmp_path)
+    database = Path(f"source.db?mode={mode}")
+    _record_revision(database, "unknown_future_revision")
+    if decoy_exists:
+        _record_revision(Path("source.db"), LEGACY_BRANCH_POINT)
+    before = {path.name: path.read_bytes() for path in tmp_path.iterdir()}
+    service = _service(Path("source.db"), uri_mode=uri_mode, mode=mode)
+    arguments, _ = service.engine.dialect.create_connect_args(service.engine.url)
+    assert Path(arguments[0]) == database
+    application_connections = []
+    event.listen(service.engine.sync_engine, "connect", lambda *_: application_connections.append(True))
+    service.ensure_postgresql_version = AsyncMock()
+    service.create_db_and_tables = AsyncMock(side_effect=AssertionError("must not create tables"))
+    monkeypatch.setattr("langflow.services.deps.get_db_service", lambda: service)
+    try:
+        with pytest.raises(DatabaseRevisionError, match="unknown_future_revision"):
+            await initialize_database()
+        assert application_connections == []
+        assert {path.name: path.read_bytes() for path in tmp_path.iterdir()} == before
+        service.create_db_and_tables.assert_not_awaited()
+    finally:
+        await service.engine.dispose()
+
+
+@pytest.mark.parametrize("uri_mode", ["true", "1"])
+async def test_uri_memory_query_without_file_prefix_does_not_create_a_missing_file(tmp_path, monkeypatch, uri_mode):
+    monkeypatch.chdir(tmp_path)
+    service = _service(Path("missing.db"), uri_mode=uri_mode, mode="memory")
+    application_connections = []
+    event.listen(service.engine.sync_engine, "connect", lambda *_: application_connections.append(True))
+    try:
+        assert await read_revisions_before_startup(service.engine) == set()
+        assert application_connections == []
+        assert not list(tmp_path.iterdir())
     finally:
         await service.engine.dispose()
 
