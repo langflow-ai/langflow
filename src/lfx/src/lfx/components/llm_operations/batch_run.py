@@ -80,7 +80,8 @@ class BatchRunComponent(Component):
             display_name="Column Name",
             info=(
                 "The name of the DataFrame column to treat as text messages. "
-                "If empty, all columns will be formatted in TOML."
+                "If empty, each row is sent to the model as TOML text, column names included, "
+                "which is longer than a single column."
             ),
             required=False,
             advanced=False,
@@ -96,7 +97,11 @@ class BatchRunComponent(Component):
         BoolInput(
             name="enable_metadata",
             display_name="Enable Metadata",
-            info="If True, add metadata to the output DataFrame.",
+            info=(
+                "If True, add metadata to the output DataFrame. "
+                "input_length counts the characters of each row's text sent to the model, "
+                "including TOML formatting when Column Name is empty."
+            ),
             value=False,
             required=False,
             advanced=True,
@@ -131,7 +136,14 @@ class BatchRunComponent(Component):
         return row
 
     def _add_metadata(
-        self, row: dict[str, Any], *, success: bool = True, system_msg: str = "", error: str | None = None
+        self,
+        row: dict[str, Any],
+        *,
+        success: bool = True,
+        system_msg: str = "",
+        input_text: str = "",
+        input_format: str = "",
+        error: str | None = None,
     ) -> None:
         """Add metadata to a row if enabled."""
         if not self.enable_metadata:
@@ -140,7 +152,8 @@ class BatchRunComponent(Component):
         if success:
             row["metadata"] = {
                 "has_system_message": bool(system_msg),
-                "input_length": len(row.get("text_input", "")),
+                "input_length": len(input_text),
+                "input_format": input_format,
                 "response_length": len(row[self.output_column_name]),
                 "processing_status": "success",
             }
@@ -180,6 +193,7 @@ class BatchRunComponent(Component):
 
         try:
             # Determine text input for each row
+            input_format = "column" if col_name else "toml"
             if col_name:
                 user_texts = df[col_name].astype(str).tolist()
             else:
@@ -238,7 +252,9 @@ class BatchRunComponent(Component):
                 row = self._create_base_row(
                     cast("dict[str, Any]", original_row), model_response=response_text, batch_index=idx
                 )
-                self._add_metadata(row, success=True, system_msg=system_msg)
+                self._add_metadata(
+                    row, success=True, system_msg=system_msg, input_text=user_texts[idx], input_format=input_format
+                )
                 rows.append(row)
 
                 # Log progress
