@@ -23,7 +23,7 @@ def policy_bundle_content_hash(
     blocked_component_keys: Collection[str],
     blocked_template_keys: Collection[str],
     blocked_model_keys: Collection[str] = (),
-    approved_integration_provider_ids: Collection[str] = (),
+    approved_integration_provider_ids: Collection[str] | None = None,
     blocked_integration_action_keys: Collection[str] = (),
 ) -> str:
     """Return the SHA-256 of the canonical complete decision payload.
@@ -41,7 +41,7 @@ def policy_bundle_content_hash(
     }
     if blocked_model_keys:
         payload["blocked_model_keys"] = sorted(set(blocked_model_keys))
-    if approved_integration_provider_ids:
+    if approved_integration_provider_ids is not None:
         payload["approved_integration_provider_ids"] = sorted(set(approved_integration_provider_ids))
     if blocked_integration_action_keys:
         payload["blocked_integration_action_keys"] = sorted(set(blocked_integration_action_keys))
@@ -60,11 +60,9 @@ class PolicyBundleSnapshot:
     blocked_component_keys: frozenset[str] = frozenset()
     blocked_template_keys: frozenset[str] = frozenset()
     blocked_model_keys: frozenset[str] = frozenset()
-    # Integration governance (INT-7). Both default to empty so every caller
-    # written before integrations existed keeps producing an identical bundle.
-    # An empty persisted ceiling means "unrestricted". Plugins must not silently
-    # reinterpret existing rows on installation; external deny-all is explicit.
-    approved_integration_provider_ids: frozenset[str] = frozenset()
+    # ``None`` means unrestricted, while an explicit empty set means deny all.
+    # This keeps the operator intent distinct without a second policy-mode flag.
+    approved_integration_provider_ids: frozenset[str] | None = None
     blocked_integration_action_keys: frozenset[str] = frozenset()
     content_hash: str = ""
     created_at: datetime | None = None
@@ -80,11 +78,12 @@ class PolicyBundleSnapshot:
         object.__setattr__(self, "blocked_component_keys", frozenset(self.blocked_component_keys))
         object.__setattr__(self, "blocked_template_keys", frozenset(self.blocked_template_keys))
         object.__setattr__(self, "blocked_model_keys", frozenset(self.blocked_model_keys))
-        object.__setattr__(
-            self,
-            "approved_integration_provider_ids",
-            frozenset(self.approved_integration_provider_ids),
-        )
+        if self.approved_integration_provider_ids is not None:
+            object.__setattr__(
+                self,
+                "approved_integration_provider_ids",
+                frozenset(self.approved_integration_provider_ids),
+            )
         object.__setattr__(
             self,
             "blocked_integration_action_keys",

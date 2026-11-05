@@ -17,10 +17,11 @@ This is the same credential the [Users API](/api-users) requires.
 An empty policy is the default, and has no restrictions.
 Nothing is restricted until a superuser writes a policy.
 
-The six lists of restrictions are saved in one policy bundle.
+The six policy fields are saved in one policy bundle.
 Replace the policy bundle with a `PUT` request.
-Send every list you want in effect with the `PUT` request.
-Send `[]` for a list you want unrestricted.
+Send every field you want in effect with the `PUT` request.
+For `approved_integration_provider_ids`, send `null` to allow every integration
+or `[]` to disable every integration. Send `[]` to clear the other list fields.
 
 | You want to… | Field | Example |
 |--------------|-------|---------|
@@ -28,7 +29,7 @@ Send `[]` for a list you want unrestricted.
 | Hide a starter template | `blocked_template_keys` | `basic_prompting` |
 | Allow only some providers | `approved_provider_ids` | `["openai", "anthropic"]`. `[]` means every provider. |
 | Block a model | `blocked_model_keys` | `gpt-4o`, `openai::gpt-4o`, or `openai::llm::gpt-4o` |
-| Allow only some integrations | `approved_integration_provider_ids` | `["google", "slack"]`. `[]` means every integration. |
+| Control integration access | `approved_integration_provider_ids` | `null` allows every integration, `[]` disables every integration, and `["google", "slack"]` allows only those integrations. |
 | Block one integration action | `blocked_integration_action_keys` | `integrations.google.drive.delete` |
 
 A blocked component disappears from the palette.
@@ -305,6 +306,9 @@ Integration providers use their manifest `provider_id`, in lowercase.
 "approved_integration_provider_ids": ["google", "slack"]
 ```
 
+Use `null` for unrestricted integration access. An empty list is an explicit
+deny-all policy.
+
 Integration actions use the `policy_keys` a bundle declares for each capability.
 A key is always `integrations.<provider_id>.<action>`; missing provider or action
 segments and other malformed syntax are rejected with `422` before anything is written.
@@ -394,20 +398,20 @@ If you are changing more than one list, use one `PUT` to `/api/v1/policy-bundle`
     blocked action keys and the complete loaded provider list. Other users
     receive an empty `blocked_action_keys` list and only allowed providers in
     `loaded_provider_ids`; use `GET /api/v1/integrations` to list usable actions.
-    Check `unrestricted` before interpreting an empty approved provider list:
-    an externally managed empty ceiling can deny every provider.
+    Check `unrestricted` before interpreting an empty allowed-provider result:
+    both a persisted empty ceiling and an externally managed empty ceiling deny
+    every integration.
     Set `approved_integration_provider_ids` and `blocked_integration_action_keys` with
     `PUT /api/v1/policy-bundle`.
 
 :::warning Installing an integration policy plugin
 
-An empty persisted `approved_integration_provider_ids` list means unrestricted.
-Installing a plugin must preserve that meaning. Denying all providers requires
-an explicit external policy configuration; a plugin changing existing policy
-semantics must provide an operator-visible migration or configuration step before
-enforcement changes. This API does not perform that migration automatically.
-Before enabling external enforcement, verify the intended provider set and check
-`managed_externally` and `unrestricted` on the effective-policy endpoint.
+Persisted integration policy is tri-state: `null` means unrestricted, `[]` denies
+every integration, and a non-empty list allows only those integrations. External
+plugins use the same distinction: no external ceiling means unrestricted, while
+an empty external ceiling denies every integration. Before enabling external
+enforcement, verify the intended provider set and check `managed_externally` and
+`unrestricted` on the effective-policy endpoint.
 
 :::
 

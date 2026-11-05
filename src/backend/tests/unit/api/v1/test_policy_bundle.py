@@ -201,12 +201,12 @@ def test_put_forwards_one_complete_cas_replacement_and_publishes_committed_snaps
     read_state.assert_not_awaited()
 
 
-def test_put_without_integration_fields_governs_no_integration_for_legacy_writers(monkeypatch):
+def test_put_without_integration_fields_leaves_integrations_unrestricted_for_legacy_writers(monkeypatch):
     """QA: OSS pass-through remains unchanged when no integration policy is set (INT-7)."""
     client, admin, _read_state, replace_state, _list_history, _rollback_state, apply_state = _client(monkeypatch)
     committed = replace(
         _snapshot(revision=8, actor_id=admin.id),
-        approved_integration_provider_ids=frozenset(),
+        approved_integration_provider_ids=None,
         blocked_integration_action_keys=frozenset(),
     )
     replace_state.return_value = committed
@@ -223,13 +223,13 @@ def test_put_without_integration_fields_governs_no_integration_for_legacy_writer
     )
 
     assert response.status_code == status.HTTP_200_OK
-    assert replace_state.await_args.kwargs["approved_integration_provider_ids"] == []
+    assert replace_state.await_args.kwargs["approved_integration_provider_ids"] is None
     assert replace_state.await_args.kwargs["blocked_integration_action_keys"] == []
-    assert response.json()["approved_integration_provider_ids"] == []
+    assert response.json()["approved_integration_provider_ids"] is None
     assert response.json()["blocked_integration_action_keys"] == []
     apply_state.assert_called_once_with(committed)
     published = apply_state.call_args.args[0]
-    assert published.approved_integration_provider_ids == frozenset()
+    assert published.approved_integration_provider_ids is None
     assert published.blocked_integration_action_keys == frozenset()
 
 
@@ -421,7 +421,7 @@ def test_put_without_model_keys_blocks_no_models_for_legacy_writers(monkeypatch)
         blocked_component_keys=[],
         blocked_template_keys=[],
         blocked_model_keys=[],
-        approved_integration_provider_ids=[],
+        approved_integration_provider_ids=None,
         blocked_integration_action_keys=[],
         actor_user_id=admin.id,
         reason=None,

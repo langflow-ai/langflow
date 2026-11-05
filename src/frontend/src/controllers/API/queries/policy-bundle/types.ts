@@ -11,7 +11,7 @@ export interface PolicyBundleRead {
   blocked_component_keys: string[];
   blocked_template_keys: string[];
   blocked_model_keys: string[];
-  approved_integration_provider_ids: string[];
+  approved_integration_provider_ids: string[] | null;
   blocked_integration_action_keys: string[];
   content_hash: string;
   created_at: string;
@@ -28,7 +28,7 @@ export interface PolicyBundleWrite {
   blocked_component_keys: string[];
   blocked_template_keys: string[];
   blocked_model_keys: string[];
-  approved_integration_provider_ids: string[];
+  approved_integration_provider_ids: string[] | null;
   blocked_integration_action_keys: string[];
   reason?: string | null;
 }

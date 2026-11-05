@@ -42,10 +42,10 @@ export function buildPolicyBundleUpdate(
       "blocked_model_keys",
       bundle.blocked_model_keys ?? [],
     ),
-    approved_integration_provider_ids: current(
-      "approved_integration_provider_ids",
-      bundle.approved_integration_provider_ids ?? [],
-    ),
+    approved_integration_provider_ids:
+      changes.approved_integration_provider_ids === undefined
+        ? (bundle.approved_integration_provider_ids ?? null)
+        : changes.approved_integration_provider_ids,
     blocked_integration_action_keys: current(
       "blocked_integration_action_keys",
       bundle.blocked_integration_action_keys ?? [],

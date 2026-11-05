@@ -152,7 +152,9 @@ def _snapshot_from_row(row: PolicyBundleRevision, *, initialized: bool | None = 
         blocked_component_keys=frozenset(row.blocked_component_keys),
         blocked_template_keys=frozenset(row.blocked_template_keys),
         blocked_model_keys=frozenset(row.blocked_model_keys or []),
-        approved_integration_provider_ids=frozenset(row.approved_integration_provider_ids or []),
+        approved_integration_provider_ids=(
+            None if row.approved_integration_provider_ids is None else frozenset(row.approved_integration_provider_ids)
+        ),
         blocked_integration_action_keys=frozenset(row.blocked_integration_action_keys or []),
         content_hash=row.content_hash,
         created_at=row.created_at,
@@ -284,7 +286,7 @@ async def replace_policy_bundle_state(
     blocked_component_keys: Collection[str],
     blocked_template_keys: Collection[str],
     blocked_model_keys: Collection[str] = (),
-    approved_integration_provider_ids: Collection[str] = (),
+    approved_integration_provider_ids: Collection[str] | None = None,
     blocked_integration_action_keys: Collection[str] = (),
     actor_user_id: UUID | None,
     reason: str | None = None,
@@ -297,7 +299,11 @@ async def replace_policy_bundle_state(
     components = _normalize_catalog_keys(blocked_component_keys)
     templates = _normalize_catalog_keys(blocked_template_keys)
     models = _normalize_model_keys(blocked_model_keys)
-    integration_providers = _normalize_integration_provider_ids(approved_integration_provider_ids)
+    integration_providers = (
+        None
+        if approved_integration_provider_ids is None
+        else _normalize_integration_provider_ids(approved_integration_provider_ids)
+    )
     integration_actions = _normalize_integration_action_keys(blocked_integration_action_keys)
     normalized_reason = _normalize_reason(reason)
     normalized_source = _normalize_source(source)
@@ -357,7 +363,11 @@ async def replace_policy_bundle_state(
             blocked_component_keys=sorted(snapshot.blocked_component_keys),
             blocked_template_keys=sorted(snapshot.blocked_template_keys),
             blocked_model_keys=sorted(snapshot.blocked_model_keys),
-            approved_integration_provider_ids=sorted(snapshot.approved_integration_provider_ids),
+            approved_integration_provider_ids=(
+                None
+                if snapshot.approved_integration_provider_ids is None
+                else sorted(snapshot.approved_integration_provider_ids)
+            ),
             blocked_integration_action_keys=sorted(snapshot.blocked_integration_action_keys),
             content_hash=snapshot.content_hash,
             source=normalized_source,
@@ -405,7 +415,7 @@ async def bootstrap_policy_bundle_if_pristine(
     blocked_component_keys: Collection[str],
     blocked_template_keys: Collection[str],
     blocked_model_keys: Collection[str] = (),
-    approved_integration_provider_ids: Collection[str] = (),
+    approved_integration_provider_ids: Collection[str] | None = None,
     blocked_integration_action_keys: Collection[str] = (),
     reason: str | None = None,
 ) -> tuple[PolicyBundleSnapshot, bool]:
