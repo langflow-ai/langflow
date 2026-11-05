@@ -13,8 +13,15 @@ from lfx.io import (
     SecretStrInput,
     StrInput,
 )
+from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx_datastax.base.astradb_base import validate_api_endpoint
+
+SEARCH_TYPES = {
+    "Similarity": "similarity",
+    "Similarity with score threshold": "similarity_score_threshold",
+    "MMR (Max Marginal Relevance)": "mmr",
+}
 
 
 class HCDVectorStoreComponent(LCVectorStoreComponent):
@@ -147,11 +154,7 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
             name="search_type",
             display_name="Search Type",
             info="Search type to use",
-            options=[
-                "Similarity",
-                "Similarity with score threshold",
-                "MMR (Max Marginal Relevance)",
-            ],
+            options=list(SEARCH_TYPES),
             value="Similarity",
             advanced=True,
         ),
@@ -275,11 +278,11 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
             self.log("No documents to add to the Vector Store.")
 
     def _map_search_type(self) -> str:
-        if self.search_type == "Similarity with score threshold":
-            return "similarity_score_threshold"
-        if self.search_type == "MMR (Max Marginal Relevance)":
-            return "mmr"
-        return "similarity"
+        search_type = SEARCH_TYPES.get(self.search_type)
+        if search_type is None:
+            logger.warning("Unknown search type %r; falling back to 'similarity'", self.search_type)
+            return "similarity"
+        return search_type
 
     def _build_search_args(self):
         args = {
