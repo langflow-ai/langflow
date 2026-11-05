@@ -186,7 +186,7 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
             return "similarity_score_threshold"
         if self.search_type == "MMR (Max Marginal Relevance)":
             return "mmr"
-        if self.search_type == "MMR Traversal":
+        if self.search_type == "MMR traversal":
             return "mmr_traversal"
         return "traversal"
 
