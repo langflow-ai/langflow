@@ -52,11 +52,11 @@ _CHILD_ENVIRONMENT = frozenset(
     }
 )
 
-_SOURCE_HOME_ENVIRONMENT = frozenset({"HOME", "USERPROFILE", "APPDATA"})
+_SOURCE_ENVIRONMENT = frozenset({"HOME", "USERPROFILE", "APPDATA", "SSL_CERT_FILE", "SSL_CERT_DIR"})
 
 
 def _source_variable(name: str) -> bool:
-    return name in _SOURCE_HOME_ENVIRONMENT or name == "KRB5CCNAME" or name.startswith(("PG", "KRB5_"))
+    return name in _SOURCE_ENVIRONMENT or name == "KRB5CCNAME" or name.startswith(("PG", "KRB5_"))
 
 
 @contextmanager
