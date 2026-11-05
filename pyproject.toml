@@ -47,6 +47,7 @@ dependencies = [
     "lfx-jira>=0.1.0,<1.0.0",
     "lfx-slack>=0.2.3,<1.0.0",
     "lfx-github>=0.1.0,<1.0.0",
+    "lfx-whatsapp>=0.1.1,<1.0.0",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -136,6 +137,7 @@ lfx-microsoft = { workspace = true }
 lfx-jira = { workspace = true }
 lfx-slack = { workspace = true }
 lfx-github = { workspace = true }
+lfx-whatsapp = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -178,6 +180,7 @@ members = [
     "src/bundles/jira",
     "src/bundles/slack",
     "src/bundles/github",
+    "src/bundles/whatsapp",
     # langflow-extensions:bundle-members-end
 ]
 

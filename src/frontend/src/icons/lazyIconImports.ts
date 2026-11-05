@@ -1,5 +1,8 @@
 // Export the lazy loading mapping for icons
 export const lazyIconsMapping = {
+  WhatsApp: () =>
+    import("@/icons/WhatsApp").then((mod) => ({ default: mod.WhatsAppIcon })),
+
   AIML: () => import("@/icons/AIML").then((mod) => ({ default: mod.AIMLIcon })),
   Agentics: () =>
     import("@/icons/Agentics").then((mod) => ({

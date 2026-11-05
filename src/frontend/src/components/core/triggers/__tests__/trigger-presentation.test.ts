@@ -162,7 +162,7 @@ describe("transportOf", () => {
 describe("sourceKeyOf", () => {
   it.each([
     ["gitlab", "Gitlab"],
-    ["whatsapp", "MessageCircle"],
+    ["whatsapp", "WhatsApp"],
     ["discord", "MessageCircle"],
     ["telegram", "Send"],
     ["salesforce", "Cloud"],

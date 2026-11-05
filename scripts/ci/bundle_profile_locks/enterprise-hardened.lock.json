@@ -191,6 +191,16 @@
       "requested": ">=0.2.1,<1.0.0",
       "requirement": "lfx-vllm==0.2.1",
       "resolved_version": "0.2.1"
+    },
+    {
+      "distribution": "lfx-whatsapp",
+      "extras": [],
+      "providers": [
+        "lfx-whatsapp"
+      ],
+      "requested": ">=0.1.1,<1.0.0",
+      "requirement": "lfx-whatsapp==0.1.1",
+      "resolved_version": "0.1.1"
     }
   ],
   "image_families": [
@@ -200,7 +210,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:945d998a3037b557",
+  "profile_digest": "sha256:7c9e7c9b09da6a5d",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",
@@ -219,7 +229,8 @@
     "lfx-oracle",
     "lfx-slack",
     "lfx-toolguard",
-    "lfx-vllm"
+    "lfx-vllm",
+    "lfx-whatsapp"
   ],
   "python": ">=3.11,<3.16",
   "schema_version": 1
