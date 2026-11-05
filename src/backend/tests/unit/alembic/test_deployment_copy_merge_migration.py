@@ -6,7 +6,7 @@ import pytest
 from alembic import command
 from alembic.migration import MigrationContext
 from alembic.script import ScriptDirectory
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, inspect, text
 
 from .test_migration_execution import _engine_url, _make_alembic_cfg, db_url  # noqa: F401
 
@@ -24,7 +24,8 @@ def _insert_job(connection, job_type: str) -> None:
 def test_deployment_copy_and_release_have_single_head():
     """Startup upgrades to "head", which Alembic refuses while there are two."""
     script = ScriptDirectory.from_config(_make_alembic_cfg("sqlite+aiosqlite://"))
-    assert script.get_heads() == ["b7e1d4a92c60"]  # pragma: allowlist secret
+    assert len(script.get_heads()) == 1
+    assert "b7e1d4a92c60" in {revision.revision for revision in script.walk_revisions()}  # pragma: allowlist secret
 
 
 @pytest.mark.parametrize(
@@ -33,6 +34,8 @@ def test_deployment_copy_and_release_have_single_head():
         "base",
         "c14fe0b7508c",  # pragma: allowlist secret
         "f2d6b8c4a901",  # pragma: allowlist secret
+        "c4e6f8a0b2d9",  # pragma: allowlist secret
+        "b7e1d4a92c60",  # pragma: allowlist secret
     ],
 )
 def test_upgrading_from_either_side_keeps_jobs_and_accepts_a_copy_job(db_url, prior_revision):  # noqa: F811
@@ -51,7 +54,8 @@ def test_upgrading_from_either_side_keeps_jobs_and_accepts_a_copy_job(db_url, pr
             jobs = connection.execute(text("SELECT COUNT(*) FROM job")).scalar()
             assert jobs == (1 if prior_revision == "base" else 2)
             assert MigrationContext.configure(connection).get_current_heads() == (
-                "b7e1d4a92c60",  # pragma: allowlist secret
+                ScriptDirectory.from_config(config).get_current_head(),
             )
+            assert "permissions" in {column["name"] for column in inspect(connection).get_columns("apikey")}
     finally:
         engine.dispose()
