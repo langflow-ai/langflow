@@ -106,6 +106,8 @@ jobs:
         run: >-
           uv run --no-sync pytest -q
           src/backend/tests/unit/upgrade_check/test_reader.py
+          src/backend/tests/unit/upgrade_check/test_source_connection.py
+          src/backend/tests/unit/upgrade_check/test_source_trust.py
           src/backend/tests/unit/upgrade_check/test_report_integrity.py
           src/backend/tests/unit/api/v1/test_flow_conflict.py
       - name: Retain comparison, coverage, and release-note evidence
