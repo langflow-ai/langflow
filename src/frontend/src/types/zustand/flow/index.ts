@@ -263,12 +263,18 @@ export type FlowStoreType = {
     runId?: string;
     verticesToRun: string[];
   } | null;
-  updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => void;
+  updateBuildStatus: (
+    nodeIdList: string[],
+    status: BuildStatus,
+    skippedBy?: string,
+  ) => void;
   revertBuiltStatusFromBuilding: () => void;
   flowBuildStatus: {
     [key: string]: {
       status: BuildStatus;
       timestamp?: string;
+      /** The branch component (If-Else, Smart Router) whose route skipped this node. */
+      skippedBy?: string;
     };
   };
   updateFlowPool: (

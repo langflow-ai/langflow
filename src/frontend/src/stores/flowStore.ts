@@ -1232,12 +1232,14 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       },
     });
   },
-  updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => {
+  updateBuildStatus: (
+    nodeIdList: string[],
+    status: BuildStatus,
+    skippedBy?: string,
+  ) => {
     const newFlowBuildStatus = { ...get().flowBuildStatus };
     nodeIdList.forEach((id) => {
-      newFlowBuildStatus[id] = {
-        status,
-      };
+      newFlowBuildStatus[id] = skippedBy ? { status, skippedBy } : { status };
       if (status == BuildStatus.BUILT) {
         const timestamp_string = new Date(Date.now()).toLocaleString();
         newFlowBuildStatus[id].timestamp = timestamp_string;

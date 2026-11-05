@@ -1,6 +1,8 @@
 import { useTranslation } from "react-i18next";
+import type { BranchSkip } from "@/CustomNodes/helpers/get-branch-skip";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { BuildStatus } from "@/constants/enums";
+import type { VertexBuildTypeAPI } from "@/types/api";
 import type { UsageType } from "@/types/chat";
 import { formatTokenCount } from "@/utils/format-token-count";
 
@@ -82,6 +84,13 @@ const BuildStatusDisplay = ({
   validationStatus,
   validationString,
   lastRunTime,
+  branchSkip,
+}: {
+  buildStatus: BuildStatus | undefined;
+  validationStatus: VertexBuildTypeAPI | null;
+  validationString: string;
+  lastRunTime: string | undefined;
+  branchSkip?: BranchSkip | null;
 }) => {
   const { t } = useTranslation();
 
@@ -94,7 +103,19 @@ const BuildStatusDisplay = ({
     const lastDuration = validationStatus?.data?.duration;
     return (
       <div className="flex flex-col gap-1">
-        <StatusMessage>{t("flow.statusInactive")}</StatusMessage>
+        <StatusMessage>
+          {branchSkip
+            ? t("flow.statusBranchNotTaken")
+            : t("flow.statusInactive")}
+        </StatusMessage>
+        {branchSkip && branchSkip.outputs.length > 0 && (
+          <div className="break-words text-sm text-foreground">
+            {t("flow.statusBranchTakenTo", {
+              component: branchSkip.component,
+              outputs: branchSkip.outputs.join(", "),
+            })}
+          </div>
+        )}
         {lastDuration && (
           <>
             {validationStatus.timestamp && (

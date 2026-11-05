@@ -165,6 +165,9 @@ export function applyStateDelta(
   originalBuildStatuses?: Map<string, FlowBuildStatusEntry | undefined>,
 ): void {
   const flowStore = useFlowStore.getState();
+  // The backend sends a branch component's not-taken nodes as ``inactive`` in
+  // the same delta as that component's ``success``; remember who skipped them.
+  let branchNodeId: string | undefined;
   for (const op of ops) {
     const match = /^\/nodes\/([^/]+)$/.exec(op.path);
     if (!match) continue;
@@ -182,7 +185,12 @@ export function applyStateDelta(
         currentStatus ? { ...currentStatus } : undefined,
       );
     }
-    flowStore.updateBuildStatus([nodeId], buildStatus);
+    if (value.status === "success") branchNodeId = nodeId;
+    flowStore.updateBuildStatus(
+      [nodeId],
+      buildStatus,
+      value.status === "inactive" ? branchNodeId : undefined,
+    );
     nodeIds.add(nodeId);
 
     // Drive the canvas edge animation in step with build status so the AG-UI

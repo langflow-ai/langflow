@@ -997,6 +997,8 @@
   "flow.statusBuild": "Compiler pour vérifier l'état.",
   "flow.statusBuilding": "Chantier...",
   "flow.statusInactive": "Exécution bloquée",
+  "flow.statusBranchNotTaken": "Branche non empruntée",
+  "flow.statusBranchTakenTo": "{{component}} a envoyé l'entrée vers {{outputs}}.",
   "flow.statusMissingFieldsError": "Veuillez remplir tous les champs obligatoires.",
   "flow.toAvoidLosingProgress": "pour ne pas perdre ce que vous avez accompli.",
   "flow.tooltipHiddenOutputsCollapse": "Réduire les sorties masquées",

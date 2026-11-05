@@ -186,6 +186,50 @@ describe("applyStateDelta", () => {
     expect(touched.has("node-a")).toBe(true);
   });
 
+  it("records which branch component skipped the nodes it inactivated", () => {
+    applyStateDelta(
+      [
+        {
+          op: "add",
+          path: "/nodes/router",
+          value: { status: "success", output: { results: {} } },
+        },
+        {
+          op: "add",
+          path: "/nodes/node-b",
+          value: { status: "inactive", output: null },
+        },
+      ],
+      "run-1",
+      new Set<string>(),
+    );
+
+    const state = useFlowStore.getState();
+    expect(state.flowBuildStatus["node-b"]).toMatchObject({
+      status: BuildStatus.INACTIVE,
+      skippedBy: "router",
+    });
+    expect(state.flowBuildStatus.router?.skippedBy).toBeUndefined();
+  });
+
+  it("leaves skippedBy unset when no node finished in the same delta", () => {
+    applyStateDelta(
+      [
+        {
+          op: "add",
+          path: "/nodes/node-b",
+          value: { status: "inactive", output: null },
+        },
+      ],
+      "run-1",
+      new Set<string>(),
+    );
+
+    expect(
+      useFlowStore.getState().flowBuildStatus["node-b"]?.skippedBy,
+    ).toBeUndefined();
+  });
+
   it("falls back to BuildStatus.BUILDING when the status is unknown", () => {
     const touched = new Set<string>();
 

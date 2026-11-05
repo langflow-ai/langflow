@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useTranslation } from "react-i18next";
+import { getBranchSkip } from "@/CustomNodes/helpers/get-branch-skip";
 import { getSpecificClassFromBuildStatus } from "@/CustomNodes/helpers/get-class-from-build-status";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import useIconStatus from "@/CustomNodes/hooks/use-icons-status";
@@ -108,6 +109,14 @@ export default function NodeStatus({
   const lastRunTime = useFlowStore(
     (state) => state.flowBuildStatus[nodeId_]?.timestamp,
   );
+  const skippedBy = useFlowStore(
+    (state) => state.flowBuildStatus[nodeId_]?.skippedBy,
+  );
+  const branchSkip = useMemo(() => {
+    if (!conditionInactive || !skippedBy) return null;
+    const { flowBuildStatus, nodes, edges } = useFlowStore.getState();
+    return getBranchSkip(nodeId_, flowBuildStatus, nodes, edges);
+  }, [conditionInactive, skippedBy, nodeId_]);
   const iconStatus = useIconStatus(buildStatus);
   const buildFlow = useFlowStore((state) => state.buildFlow);
   const isBuilding = useFlowStore((state) => state.isBuilding);
@@ -447,6 +456,7 @@ export default function NodeStatus({
                   validationStatus={validationStatus}
                   validationString={validationString}
                   lastRunTime={lastRunTime}
+                  branchSkip={branchSkip}
                 />
               }
               side="bottom"
