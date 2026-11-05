@@ -493,6 +493,23 @@ def handle_model_input_update(
             return provider if isinstance(provider, str) and provider else None
         return None
 
+    model_config = build_config.get(model_field_name, {})
+    declared_input = next(
+        (item for item in getattr(component, "inputs", ()) if getattr(item, "name", None) == model_field_name),
+        None,
+    )
+    if model_config.get("model_type") == "decision" or getattr(declared_input, "model_type", None) == "decision":
+        from lfx.inputs.inputs import decision_model_field_settings
+
+        model_config.update(decision_model_field_settings(field_value))
+        options_func = get_options_func or unified_models_module.get_decision_model_options
+        model_config["options"] = options_func(user_id=component.user_id)
+        if field_name == model_field_name:
+            model_config["value"] = field_value
+        # Preserve an unavailable saved selection so execution can explain the
+        # failure, without silently choosing a different decision provider.
+        return build_config
+
     selected_provider_before_refresh = _selected_provider()
 
     # If get_options_func is not provided, derive one from the declarative

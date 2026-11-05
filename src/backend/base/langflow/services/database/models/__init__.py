@@ -37,12 +37,14 @@ from .ingestion_run import IngestionRun, IngestionRunStatus
 from .jobs import ExecutionSignal, Job, JobCheckpoint, JobEvent, JobMetricTotals, SignalType
 from .knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
 from .knowledge_base_storage_migration import KnowledgeBaseStorageMigration
+from .maintenance import MaintenanceState
 from .mcp_server import MCPServer
 from .memory_base import MemoryBase, MemoryBaseSession, MemoryBaseWorkflowRun, MessageIngestionRecord
 from .message import MessageTable
 from .model_provider_policy import ModelProviderPolicy
 from .policy_bundle import PolicyBundleActive, PolicyBundleRevision
 from .project_replacement_operation import ProjectReplacementOperation
+from .secret_rotation import SecretRotation
 from .traces.model import SpanTable, TraceTable
 from .transactions import TransactionTable
 from .trigger import (
@@ -97,6 +99,7 @@ __all__ = [
     "KnowledgeBaseStatus",
     "KnowledgeBaseStorageMigration",
     "MCPServer",
+    "MaintenanceState",
     "MemoryBase",
     "MemoryBaseSession",
     "MemoryBaseWorkflowRun",
@@ -113,6 +116,7 @@ __all__ = [
     "SSOSecretError",
     "SSOSettings",
     "SSOUserProfile",
+    "SecretRotation",
     "SignalType",
     "SpanTable",
     "TraceTable",

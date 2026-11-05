@@ -101,7 +101,7 @@ async def test_scoped_value_used_without_consulting_env_for_that_name():
     token = activate_request_variables({"access_token": "from-request"})
     with (
         patch.dict(os.environ, {"access_token": "from-env"}),
-        patch("lfx.services.variable.service.os.getenv") as mock_getenv,
+        patch("os.getenv") as mock_getenv,
     ):
         try:
             assert await service.get_variable("access_token") == "from-request"
@@ -130,7 +130,7 @@ async def test_no_env_fallback_suppresses_env_in_variable_service():
     flag_token = activate_no_env_fallback(disabled=True)
     with (
         patch.dict(os.environ, {"OTHER_SECRET": "from-env"}),
-        patch("lfx.services.variable.service.os.getenv") as mock_getenv,
+        patch("os.getenv") as mock_getenv,
     ):
         try:
             # Supplied via the request scope -> still resolves.

@@ -31,7 +31,14 @@ from lfx.interface.components import _read_component_index
 from lfx.upgrade.checker import NodeStatusLiteral
 from lfx.upgrade.registry import UpgradeRegistryError, load_upgrade_registry
 
-from langflow.upgrade_check.engine import Target, TargetSettings, check_source, flow_status
+from langflow.upgrade_check.engine import (
+    ComponentDiscoveryError,
+    Target,
+    TargetSettings,
+    check_source,
+    discover_offline,
+    flow_status,
+)
 from langflow.upgrade_check.reader import SourceDatabaseError, open_source
 from langflow.upgrade_check.source import identity_for_source
 from langflow.upgrade_check.usage import FlowUsage
@@ -146,9 +153,9 @@ def run(options: Mapping[str, Any], on_flow: Callable[[FlowResult], None] | None
         editor_usage = read_job_usage(source.connection, identity=identity)
         serving_usage = read_serving_usage(options.get("serving_database_url"))
         try:
-            all_types = load_upgrade_registry(components_path=settings.loaded_components_path)
-        except UpgradeRegistryError as exc:
-            msg = f"cannot load this release's components: {exc} ({_first_line(exc.__cause__ or exc)})"
+            all_types = discover_offline(lambda: load_upgrade_registry(components_path=settings.loaded_components_path))
+        except (UpgradeRegistryError, ComponentDiscoveryError) as exc:
+            msg = f"cannot load this release's components: {exc}"
             raise CheckError(msg, code="registry_unavailable") from exc
 
         flows = dict.fromkeys(("ok", "warn", "fail"), 0)

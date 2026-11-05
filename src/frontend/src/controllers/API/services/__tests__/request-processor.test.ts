@@ -21,6 +21,7 @@ jest.mock("@tanstack/react-query", () => ({
 import { CanceledError } from "axios";
 import {
   getRetryAfterMs,
+  isPauseRefusal,
   isRetryableServerError,
   UseRequestProcessor,
   withTransientErrorRetry,
@@ -51,6 +52,18 @@ const pauseRefusal = {
     data: { detail: "This instance is being migrated." },
   },
 };
+
+it("does not retry the specific external authentication maintenance refusal", () => {
+  const error = {
+    isAxiosError: true,
+    response: {
+      status: 503,
+      data: { detail: { code: "external_auth_maintenance" } },
+    },
+  };
+  expect(isPauseRefusal(error)).toBe(true);
+  expect(isRetryableServerError(error)).toBe(false);
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -98,6 +111,19 @@ describe("UseRequestProcessor.query retry policy", () => {
   it("does not retry a read that a migration pause refused, such as the permissions lookup, which is a POST", () => {
     const { retry } = setup();
     expect(retry(0, pauseRefusal)).toBe(false);
+  });
+
+  it("does not retry changes refused by database maintenance", () => {
+    const { retry } = setup();
+    expect(
+      retry(0, {
+        isAxiosError: true,
+        response: {
+          status: 503,
+          data: { detail: "This instance is in maintenance mode." },
+        },
+      }),
+    ).toBe(false);
   });
 
   it("treats non-axios / unknown errors as transient (retries)", () => {

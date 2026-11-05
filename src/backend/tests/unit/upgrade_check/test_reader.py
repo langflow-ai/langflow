@@ -14,13 +14,14 @@ import os
 import sqlite3
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from uuid import uuid4
 
 import pytest
 import sqlalchemy as sa
 from langflow.upgrade_check import SourceCatalogPolicy, SourceDatabaseError, open_source, read_only_connection
+from langflow.upgrade_check.reader import _timestamp
 from lfx.services.catalog_policy import CatalogPolicySnapshot
 from lfx.services.policy_bundle import policy_bundle_content_hash
 
@@ -35,6 +36,37 @@ RELEASES = {
     "1.13.0": ("e5a7c9b1d3f2", True, True),  # pragma: allowlist secret
 }
 REVISION = RELEASES["1.13.0"][0]
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (None, None),
+        ("", None),
+        ("not a timestamp", None),
+        (12345, None),
+        ("2026-11-04", None),
+        ("2026-11-04T13:14:15+00:99", None),
+        ("2026-11-04T13:14:15+24:00", None),
+        ("2026-11-04T13:14:15-01:60", None),
+        ("2026-02-30T13:14:15Z", None),
+        ("2026-11-04 13:14:15.1", "2026-11-04T13:14:15.100000+00:00"),
+        ("2026-11-04T13:14:15.12Z", "2026-11-04T13:14:15.120000+00:00"),
+        ("2026-11-04T13:14:15.1234-07:30", "2026-11-04T13:14:15.123400-07:30"),
+        ("2026-11-04T13:14:15.123456789+23:59", "2026-11-04T13:14:15.123456+23:59"),
+        ("2026-11-04 13:14:15.123456", "2026-11-04T13:14:15.123456+00:00"),
+        ("2026-11-04T13:14:15Z", "2026-11-04T13:14:15+00:00"),
+        ("2026-11-04T13:14:15-07:00", "2026-11-04T13:14:15-07:00"),
+        (datetime(2026, 11, 4, 13, 14, 15), "2026-11-04T13:14:15+00:00"),  # noqa: DTZ001
+        (datetime(2026, 11, 4, 13, 14, 15, tzinfo=timezone.utc), "2026-11-04T13:14:15+00:00"),
+        (
+            datetime(2026, 11, 4, 13, 14, 15, tzinfo=timezone(timedelta(hours=-7))),
+            "2026-11-04T13:14:15-07:00",
+        ),
+    ],
+)
+def test_source_timestamps_have_an_explicit_timezone_or_remain_unknown(value, expected):
+    assert _timestamp(value) == expected
 
 
 def _load(release: str, folder: Path) -> Path:
@@ -142,6 +174,7 @@ def test_reads_a_database_each_release_saved(release, tmp_path):
     # The auto-login superuser made them through the API.
     assert flow.user_id == component.user_id == users["langflow"].id
     assert flow.updated_at
+    assert datetime.fromisoformat(flow.updated_at).tzinfo is not None
     assert flow.data_error is None
     [outer] = _group_nodes(flow.data["nodes"])
     [inner] = _group_nodes(outer["data"]["node"]["flow"]["data"]["nodes"])
@@ -158,6 +191,7 @@ def test_reads_a_database_each_release_saved(release, tmp_path):
         [version] = versions
         assert version.flow_id == flow.id
         assert version.version_number == 1
+        assert datetime.fromisoformat(version.created_at).tzinfo is not None
         assert len(version.pinned_by_triggers) == 1
         assert version.attached_to_deployments == ()
         assert version.data["nodes"] == flow.data["nodes"]
@@ -441,6 +475,7 @@ def test_postgres_source_is_read_in_a_read_only_transaction():
         assert source.alembic_revisions == [REVISION]
         assert [(user.id, user.username) for user in source.users] == [(str(user_id), "fixture-user")]
         [flow] = flows
+        assert datetime.fromisoformat(flow.updated_at).tzinfo is not None
         assert (flow.id, flow.folder_id, flow.is_component, flow.data) == (
             str(flow_id),
             str(folder_id),
@@ -451,6 +486,7 @@ def test_postgres_source_is_read_in_a_read_only_transaction():
         [version] = versions
         assert (version.id, version.pinned_by_triggers) == (str(version_id), (str(trigger_id),))
         assert policy == SourceCatalogPolicy(CatalogPolicySnapshot({"ChatInput"}, {"Basic Prompting"}))
+        assert datetime.fromisoformat(version.created_at).tzinfo is not None
         with (
             read_only_connection(url.render_as_string(hide_password=False)) as connection,
             pytest.raises(sa.exc.InternalError, match="read-only transaction"),

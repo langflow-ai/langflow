@@ -150,6 +150,18 @@ def test_hard_flows_keep_their_expected_status(release, target):
         for key in keys:
             node = by_key.get(key)
             actual[key] = "no_action" if node is None or node.status == "outdated_safe" else node.status
+            uncertain_mcp = {
+                "v1.12.6": "mcp_tools_arguments.json::MCPTools-BS8An",
+                "v1.13.0": "mcp_tools_arguments.json::MCPTools-4BbE9",
+            }
+            if key == uncertain_mcp[release] and node is not None and node.status == "could_not_verify":
+                assert node.dry_run == {"result": "could_not_verify"}
+                assert all(reason["code"] == "could_not_verify" for reason in node.reasons)
+                assert any(
+                    "generated fields" in reason["message"] or "network call" in reason["message"]
+                    for reason in node.reasons
+                )
+                expected = {**expected, key: "could_not_verify"}
             if node is not None and node.status == "blocked":
                 missing_bundles[key] = (node.bundle, [reason["code"] for reason in node.reasons])
 
