@@ -390,12 +390,11 @@ class TestFileNotFoundHandling:
         with pytest.raises(ValueError, match=r"[Ff]ile.*not found|[Nn]ot found"):
             component._validate_and_resolve_paths()
 
-    @pytest.mark.xfail(reason="Silent mode should skip missing files but currently adds them anyway")
     def test_missing_file_silent_mode(self, tmp_path):
         """Test that missing files are skipped in silent mode.
 
-        This test currently fails because silent_errors=True should skip
-        missing files, but the current implementation still adds them to the list.
+        silent_errors=True must skip missing files so they are not added
+        to the list of files returned by _validate_and_resolve_paths.
         """
         # Use FileComponent instead of abstract BaseFileComponent
         component = FileComponent()
