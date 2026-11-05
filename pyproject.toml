@@ -261,6 +261,8 @@ constraint-dependencies = [
     "brotlicffi>=1.2.1.0",
     "certifi>=2026.10.19",
     "dnspython>=2.9.1; python_version >= '3.11'",
+    "fastmcp>=3.4.10,<4.0.0",  # GHSA-7xgj-8392-5q4r
+    "fastmcp-slim>=3.4.10,<4.0.0",
     "joserfc>=1.7.6,<2.0.0",
     "msgpack>=1.2.3,<2.0.0",
     "datamodel-code-generator>=0.81.0",  # CVE-2026-107377
