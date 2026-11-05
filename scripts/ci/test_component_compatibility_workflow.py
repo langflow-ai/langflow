@@ -151,3 +151,19 @@ def test_saved_flow_preservation_uses_the_existing_full_install_opt_in():
     assert step.get("env", {}).get("LFX_TEST_ALLOW_LANGFLOW") == "1"
     assert "LFX_TEST_ALLOW_LANGFLOW" not in job["env"]
     assert "--noconftest" not in step["run"]
+
+
+def test_lfx_lane_enforces_the_exact_historical_ledger():
+    job = workflow(".github/workflows/python_test.yml")["jobs"]["lfx-tests"]
+    tests = next(step for step in job["steps"] if step.get("name") == "Run lfx tests")
+    assert tests["run"] == (
+        'make lfx_tests args="--deselect=tests/unit/upgrade/test_component_compat.py::test_source_release_statuses"'
+    )
+    gate = next(step for step in job["steps"] if step.get("name") == "Enforce exact historical LFX pins")
+    assert gate["run"] == (
+        "uv run --project src/lfx --no-sync python scripts/ci/historical_compatibility_gate.py "
+        "--ledger scripts/ci/historical_compatibility_limitations.json --output src/lfx/historical-pins.json"
+    )
+    evidence = next(step for step in job["steps"] if step.get("name") == "Retain historical LFX evidence")
+    assert evidence["if"] == "always()"
+    assert evidence["with"]["path"] == "src/lfx/historical-pins.json"
