@@ -186,38 +186,43 @@ describe("applyStateDelta", () => {
     expect(touched.has("node-a")).toBe(true);
   });
 
-  it("records which branch component skipped the nodes it inactivated", () => {
+  it("records the router and taken outputs the backend sent for a skipped node", () => {
     applyStateDelta(
       [
         {
           op: "add",
-          path: "/nodes/router",
-          value: { status: "success", output: { results: {} } },
-        },
-        {
-          op: "add",
           path: "/nodes/node-b",
-          value: { status: "inactive", output: null },
+          value: {
+            status: "inactive",
+            output: null,
+            skipped_by: "router",
+            taken_outputs: ["false_result"],
+          },
         },
       ],
       "run-1",
       new Set<string>(),
     );
 
-    const state = useFlowStore.getState();
-    expect(state.flowBuildStatus["node-b"]).toMatchObject({
+    expect(useFlowStore.getState().flowBuildStatus["node-b"]).toMatchObject({
       status: BuildStatus.INACTIVE,
       skippedBy: "router",
+      takenOutputs: ["false_result"],
     });
-    expect(state.flowBuildStatus.router?.skippedBy).toBeUndefined();
   });
 
-  it("leaves skippedBy unset when no node finished in the same delta", () => {
+  it("does not credit a node another component stopped to the last success", () => {
+    // A Loop stops its body: the body is inactive but no router skipped it.
     applyStateDelta(
       [
         {
           op: "add",
-          path: "/nodes/node-b",
+          path: "/nodes/loop",
+          value: { status: "success", output: { results: {} } },
+        },
+        {
+          op: "add",
+          path: "/nodes/body",
           value: { status: "inactive", output: null },
         },
       ],
@@ -226,7 +231,7 @@ describe("applyStateDelta", () => {
     );
 
     expect(
-      useFlowStore.getState().flowBuildStatus["node-b"]?.skippedBy,
+      useFlowStore.getState().flowBuildStatus.body?.skippedBy,
     ).toBeUndefined();
   });
 

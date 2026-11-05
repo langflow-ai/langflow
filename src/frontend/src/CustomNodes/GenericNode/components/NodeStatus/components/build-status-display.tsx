@@ -92,7 +92,7 @@ const BuildStatusDisplay = ({
   lastRunTime: string | undefined;
   branchSkip?: BranchSkip | null;
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   if (buildStatus === BuildStatus.BUILDING) {
     return <StatusMessage>{t("flow.statusBuilding")}</StatusMessage>;
@@ -112,7 +112,9 @@ const BuildStatusDisplay = ({
           <div className="break-words text-sm text-foreground">
             {t("flow.statusBranchTakenTo", {
               component: branchSkip.component,
-              outputs: branchSkip.outputs.join(", "),
+              outputs: new Intl.ListFormat(i18n.language).format(
+                branchSkip.outputs,
+              ),
             })}
           </div>
         )}

@@ -1,40 +1,32 @@
-import type { AllNodeType, EdgeType } from "@/types/flow";
+import type { AllNodeType } from "@/types/flow";
 import type { FlowStoreType } from "@/types/zustand/flow";
 
 export type BranchSkip = {
-  /** Display name of the branch component that routed away from the node. */
+  /** Display name of the router that excluded the node. */
   component: string;
-  /** Display names of the outputs that branch component sent the input to. */
+  /** Display names of the outputs that router took instead. */
   outputs: string[];
 };
 
 /**
- * Explain why a node on a branch was not run: which branch component skipped
- * it and which of that component's outputs received the input instead.
+ * Explain why a node was not run, from what the backend reported: which router
+ * excluded it and which of that router's outputs it took instead.
  */
 export function getBranchSkip(
   nodeId: string,
   flowBuildStatus: FlowStoreType["flowBuildStatus"],
   nodes: AllNodeType[],
-  edges: EdgeType[],
 ): BranchSkip | null {
-  const branchId = flowBuildStatus[nodeId]?.skippedBy;
-  if (!branchId) return null;
-  const branchNode = nodes.find((node) => node.id === branchId)?.data.node;
+  const entry = flowBuildStatus[nodeId];
+  if (!entry?.skippedBy) return null;
+  const branchNode = nodes.find((node) => node.id === entry.skippedBy)?.data
+    .node;
   if (!branchNode) return null;
 
-  const skippedOutputs = new Set(
-    edges
-      .filter(
-        (edge) =>
-          edge.source === branchId &&
-          flowBuildStatus[edge.target]?.skippedBy === branchId,
-      )
-      .map((edge) => edge.data?.sourceHandle?.name),
-  );
+  const taken = new Set(entry.takenOutputs ?? []);
   const outputs = (branchNode.outputs ?? [])
-    .filter((output) => !skippedOutputs.has(output.name))
-    .map((output) => output.display_name ?? output.name);
+    .filter((output) => taken.has(output.name))
+    .map((output) => output.display_name || output.name);
 
   return { component: branchNode.display_name, outputs };
 }

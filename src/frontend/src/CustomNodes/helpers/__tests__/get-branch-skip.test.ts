@@ -1,5 +1,5 @@
 import { BuildStatus } from "@/constants/enums";
-import type { AllNodeType, EdgeType } from "@/types/flow";
+import type { AllNodeType } from "@/types/flow";
 import type { FlowStoreType } from "@/types/zustand/flow";
 import { getBranchSkip } from "../get-branch-skip";
 
@@ -17,18 +17,13 @@ const branchNode = (
     data: { id, type: "Router", node: { display_name: displayName, outputs } },
   }) as unknown as AllNodeType;
 
-const edge = (source: string, output: string, target: string): EdgeType =>
-  ({
-    id: `${source}-${output}-${target}`,
-    source,
-    target,
-    data: { sourceHandle: { name: output }, targetHandle: {} },
-  }) as unknown as EdgeType;
-
-const skipped = (ids: string[], by: string): FlowStoreType["flowBuildStatus"] =>
-  Object.fromEntries(
-    ids.map((id) => [id, { status: BuildStatus.INACTIVE, skippedBy: by }]),
-  );
+const skipped = (
+  id: string,
+  by: string,
+  takenOutputs: string[],
+): FlowStoreType["flowBuildStatus"] => ({
+  [id]: { status: BuildStatus.INACTIVE, skippedBy: by, takenOutputs },
+});
 
 const IF_ELSE_OUTPUTS = [
   { name: "true_result", display_name: "True" },
@@ -44,59 +39,46 @@ const SMART_ROUTER_OUTPUTS = [
 describe("getBranchSkip", () => {
   it("should_name_the_taken_if_else_output_when_the_clicked_branch_was_skipped", () => {
     const nodes = [branchNode("router", "If-Else", IF_ELSE_OUTPUTS)];
-    const edges = [
-      edge("router", "true_result", "out-true"),
-      edge("router", "false_result", "out-false"),
+
+    const skip = getBranchSkip(
+      "out-false",
+      skipped("out-false", "router", ["true_result"]),
+      nodes,
+    );
+
+    expect(skip).toEqual({ component: "If-Else", outputs: ["True"] });
+  });
+
+  it("should_list_only_the_outputs_the_backend_reported_as_taken", () => {
+    // Else is enabled but unconnected, and the router did not take it.
+    const nodes = [branchNode("router", "Smart Router", SMART_ROUTER_OUTPUTS)];
+
+    const skip = getBranchSkip(
+      "billing",
+      skipped("billing", "router", ["category_2_result"]),
+      nodes,
+    );
+
+    expect(skip).toEqual({ component: "Smart Router", outputs: ["Sales"] });
+  });
+
+  it("should_fall_back_to_the_output_name_when_its_display_name_is_blank", () => {
+    const nodes = [
+      branchNode("router", "Smart Router", [
+        { name: "category_1_result", display_name: "" },
+      ]),
     ];
 
     const skip = getBranchSkip(
-      "out-false",
-      skipped(["out-false"], "router"),
+      "other",
+      skipped("other", "router", ["category_1_result"]),
       nodes,
-      edges,
     );
 
-    expect(skip).toEqual({ component: "If-Else", outputs: ["True"] });
+    expect(skip?.outputs).toEqual(["category_1_result"]);
   });
 
-  it.each(["Language Model", "Decision Model"])(
-    "should_name_the_taken_smart_router_route_in_%s_mode",
-    () => {
-      const nodes = [
-        branchNode("router", "Smart Router", SMART_ROUTER_OUTPUTS),
-      ];
-      const edges = [
-        edge("router", "category_1_result", "billing"),
-        edge("router", "category_2_result", "sales"),
-        edge("router", "default_result", "else"),
-      ];
-
-      const skip = getBranchSkip(
-        "billing",
-        skipped(["billing", "else"], "router"),
-        nodes,
-        edges,
-      );
-
-      expect(skip).toEqual({ component: "Smart Router", outputs: ["Sales"] });
-    },
-  );
-
-  it("should_name_a_taken_output_even_when_nothing_is_connected_to_it", () => {
-    const nodes = [branchNode("router", "If-Else", IF_ELSE_OUTPUTS)];
-    const edges = [edge("router", "false_result", "out-false")];
-
-    const skip = getBranchSkip(
-      "out-false",
-      skipped(["out-false"], "router"),
-      nodes,
-      edges,
-    );
-
-    expect(skip).toEqual({ component: "If-Else", outputs: ["True"] });
-  });
-
-  it("should_return_null_when_no_branch_skipped_the_node", () => {
+  it("should_return_null_when_no_router_skipped_the_node", () => {
     const nodes = [branchNode("router", "If-Else", IF_ELSE_OUTPUTS)];
 
     expect(
@@ -104,15 +86,14 @@ describe("getBranchSkip", () => {
         "out-false",
         { "out-false": { status: BuildStatus.INACTIVE } },
         nodes,
-        [],
       ),
     ).toBeNull();
-    expect(getBranchSkip("out-false", {}, nodes, [])).toBeNull();
+    expect(getBranchSkip("out-false", {}, nodes)).toBeNull();
   });
 
-  it("should_return_null_when_the_branch_node_is_gone", () => {
+  it("should_return_null_when_the_router_node_is_gone", () => {
     expect(
-      getBranchSkip("out-false", skipped(["out-false"], "router"), [], []),
+      getBranchSkip("out-false", skipped("out-false", "router", []), []),
     ).toBeNull();
   });
 });

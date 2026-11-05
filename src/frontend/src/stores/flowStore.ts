@@ -1235,11 +1235,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   updateBuildStatus: (
     nodeIdList: string[],
     status: BuildStatus,
-    skippedBy?: string,
+    branchSkip?: { skippedBy: string; takenOutputs: string[] },
   ) => {
     const newFlowBuildStatus = { ...get().flowBuildStatus };
     nodeIdList.forEach((id) => {
-      newFlowBuildStatus[id] = skippedBy ? { status, skippedBy } : { status };
+      newFlowBuildStatus[id] = branchSkip
+        ? { status, ...branchSkip }
+        : { status };
       if (status == BuildStatus.BUILT) {
         const timestamp_string = new Date(Date.now()).toLocaleString();
         newFlowBuildStatus[id].timestamp = timestamp_string;

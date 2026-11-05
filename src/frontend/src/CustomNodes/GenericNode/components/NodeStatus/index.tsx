@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useTranslation } from "react-i18next";
+import { useShallow } from "zustand/react/shallow";
 import { getBranchSkip } from "@/CustomNodes/helpers/get-branch-skip";
 import { getSpecificClassFromBuildStatus } from "@/CustomNodes/helpers/get-class-from-build-status";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
@@ -109,14 +110,28 @@ export default function NodeStatus({
   const lastRunTime = useFlowStore(
     (state) => state.flowBuildStatus[nodeId_]?.timestamp,
   );
-  const skippedBy = useFlowStore(
-    (state) => state.flowBuildStatus[nodeId_]?.skippedBy,
+  // Selected from the store so renaming or rewiring the router updates the text.
+  const branchComponent = useFlowStore((state) =>
+    conditionInactive
+      ? getBranchSkip(nodeId_, state.flowBuildStatus, state.nodes)?.component
+      : undefined,
   );
-  const branchSkip = useMemo(() => {
-    if (!conditionInactive || !skippedBy) return null;
-    const { flowBuildStatus, nodes, edges } = useFlowStore.getState();
-    return getBranchSkip(nodeId_, flowBuildStatus, nodes, edges);
-  }, [conditionInactive, skippedBy, nodeId_]);
+  const branchOutputs = useFlowStore(
+    useShallow(
+      (state) =>
+        (conditionInactive &&
+          getBranchSkip(nodeId_, state.flowBuildStatus, state.nodes)
+            ?.outputs) ||
+        [],
+    ),
+  );
+  const branchSkip = useMemo(
+    () =>
+      branchComponent === undefined
+        ? null
+        : { component: branchComponent, outputs: branchOutputs },
+    [branchComponent, branchOutputs],
+  );
   const iconStatus = useIconStatus(buildStatus);
   const buildFlow = useFlowStore((state) => state.buildFlow);
   const isBuilding = useFlowStore((state) => state.isBuilding);

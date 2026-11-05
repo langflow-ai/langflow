@@ -266,7 +266,7 @@ export type FlowStoreType = {
   updateBuildStatus: (
     nodeIdList: string[],
     status: BuildStatus,
-    skippedBy?: string,
+    branchSkip?: { skippedBy: string; takenOutputs: string[] },
   ) => void;
   revertBuiltStatusFromBuilding: () => void;
   flowBuildStatus: {
@@ -275,6 +275,8 @@ export type FlowStoreType = {
       timestamp?: string;
       /** The branch component (If-Else, Smart Router) whose route skipped this node. */
       skippedBy?: string;
+      /** The outputs of `skippedBy` that the router took instead. */
+      takenOutputs?: string[];
     };
   };
   updateFlowPool: (

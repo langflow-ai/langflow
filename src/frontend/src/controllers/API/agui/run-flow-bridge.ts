@@ -28,6 +28,7 @@ import type {
   VertexDataTypeAPI,
 } from "@/types/api";
 import type { ChatInputType, ChatOutputType } from "@/types/chat";
+import type { FlowStoreType } from "@/types/zustand/flow";
 import { api } from "../api";
 import {
   injectHumanInputCard,
@@ -67,12 +68,12 @@ interface JsonPatchOp {
 interface AGUINodeState {
   status: string;
   output: VertexDataTypeAPI | null;
+  /** Set on a router-excluded node: the router and the outputs it took. */
+  skipped_by?: string;
+  taken_outputs?: string[];
 }
 
-type FlowBuildStatusEntry = {
-  status: BuildStatus;
-  timestamp?: string;
-};
+type FlowBuildStatusEntry = FlowStoreType["flowBuildStatus"][string];
 
 /**
  * Hooks the bridge exposes to {@link handleAGUIEvent}. Injecting them keeps
@@ -165,9 +166,6 @@ export function applyStateDelta(
   originalBuildStatuses?: Map<string, FlowBuildStatusEntry | undefined>,
 ): void {
   const flowStore = useFlowStore.getState();
-  // The backend sends a branch component's not-taken nodes as ``inactive`` in
-  // the same delta as that component's ``success``; remember who skipped them.
-  let branchNodeId: string | undefined;
   for (const op of ops) {
     const match = /^\/nodes\/([^/]+)$/.exec(op.path);
     if (!match) continue;
@@ -185,11 +183,15 @@ export function applyStateDelta(
         currentStatus ? { ...currentStatus } : undefined,
       );
     }
-    if (value.status === "success") branchNodeId = nodeId;
     flowStore.updateBuildStatus(
       [nodeId],
       buildStatus,
-      value.status === "inactive" ? branchNodeId : undefined,
+      value.status === "inactive" && value.skipped_by
+        ? {
+            skippedBy: value.skipped_by,
+            takenOutputs: value.taken_outputs ?? [],
+          }
+        : undefined,
     );
     nodeIds.add(nodeId);
 
