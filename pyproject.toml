@@ -260,6 +260,7 @@ constraint-dependencies = [
     "certifi>=2026.10.18",
     "dnspython>=2.9.1; python_version >= '3.11'",
     "joserfc>=1.7.6,<2.0.0",
+    "markdown>=3.11.2; python_version >= '3.11'",
     "msgpack>=1.2.3,<2.0.0",
     "datamodel-code-generator>=0.81.0",  # CVE-2026-107377
     "fsspec>=2026.6.0",  # CVE-2026-104851
