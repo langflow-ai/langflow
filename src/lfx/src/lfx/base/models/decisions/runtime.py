@@ -6,7 +6,12 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.models.decision_constants import LIVE_DECISION_PROVIDERS
-from lfx.base.models.decisions.schema import DecisionBatchRequest, DecisionConfigurationError, DecisionRequest
+from lfx.base.models.decisions.schema import (
+    NOUL_KINDS,
+    DecisionBatchRequest,
+    DecisionConfigurationError,
+    DecisionRequest,
+)
 from lfx.schema.properties import Usage
 from lfx.services.variable.request_scope import variable_name_forms
 from lfx.utils.secrets import secret_value_to_str
@@ -85,7 +90,8 @@ def evaluate_decision(
             msg = "The selected Decision Model is no longer offered. Pick another Decision Model."
             raise DecisionConfigurationError(msg)
         capabilities = selected.get("metadata", {}).get("capabilities", [])
-        unsupported = sorted({q.kind for q in request.questions.values()} - set(capabilities))
+        asked = {"noul" if q.kind in NOUL_KINDS else q.kind for q in request.questions.values()}
+        unsupported = sorted(asked - set(capabilities))
         if unsupported:
             names = " or ".join(kind.title() for kind in unsupported)
             msg = (

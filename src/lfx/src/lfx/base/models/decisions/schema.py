@@ -17,7 +17,9 @@ from pydantic import (
     model_validator,
 )
 
-DecisionKind = Literal["choice", "noul", "score"]
+# Component code saved before the rename still asks for "boolean"; it means noul.
+DecisionKind = Literal["choice", "noul", "score", "boolean"]
+NOUL_KINDS = frozenset({"noul", "boolean"})
 Probability = Annotated[float, Field(strict=True, ge=0, le=1, allow_inf_nan=False)]
 FiniteNumber = Annotated[float, Field(strict=True, allow_inf_nan=False)]
 NonEmpty = Annotated[str, Field(strict=True, min_length=1, pattern=r"\S")]
@@ -150,7 +152,7 @@ class DecisionQuestion(BaseModel):
         if (self.kind != "choice" and self.options) or (self.kind != "score" and self.levels):
             msg = "Options belong to Choice and ordered levels belong to Score"
             raise ValueError(msg)
-        if self.kind != "noul" and (self.yes_description or self.no_description):
+        if self.kind not in NOUL_KINDS and (self.yes_description or self.no_description):
             msg = "Yes and No descriptions belong to Noul"
             raise ValueError(msg)
         ids = [c.id for c in candidates]
@@ -227,7 +229,7 @@ class DecisionResult(BaseModel):
         if self.refusal is not None:
             msg = "Successful judgments cannot contain a refusal"
             raise ValueError(msg)
-        if self.kind == "noul":
+        if self.kind in NOUL_KINDS:
             if self.probability_true is None or any(
                 value is not None for value in (self.probabilities, self.score, self.selected_option)
             ):

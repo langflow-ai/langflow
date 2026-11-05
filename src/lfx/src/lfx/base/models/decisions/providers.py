@@ -12,6 +12,7 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from lfx.base.models.decisions.schema import (
+    NOUL_KINDS,
     QUESTION_ID,
     DecisionBatchRequest,
     DecisionBatchResult,
@@ -80,7 +81,7 @@ def require_official_openai_endpoint(*sources: Mapping[str, Any]) -> None:
 
 def _answer_type(provider: str, kind: str) -> str:
     """The provider's name for a decision kind; only Noul differs."""
-    if kind != "noul":
+    if kind not in NOUL_KINDS:
         return kind
     return "predicate" if provider == "OpenAI" else "noul"
 
@@ -259,7 +260,7 @@ def _parse_answer(provider: str, request: DecisionQuestion, answer: Any, common:
         # Never echo provider text: it reaches errors and evidence.
         msg = f"the answer type does not match the requested {expected_type!r}"
         raise ValueError(msg)
-    if request.kind == "noul":
+    if request.kind in NOUL_KINDS:
         result = DecisionResult(
             **common,
             probability_true=answer["probability" if provider == "OpenAI" else "noul"],

@@ -13,6 +13,7 @@ from lfx.base.models.decisions.schema import (
     DecisionEvaluationError,
     DecisionOption,
     DecisionRequest,
+    decision_request,
 )
 from lfx.base.models.unified_models import get_provider_secret_variable_key
 
@@ -849,3 +850,21 @@ def test_openai_batch_rejects_duplicate_names():
     body["answers"].append(body["answers"][0])
     with pytest.raises(DecisionEvaluationError, match="repeat a question"):
         providers.parse_response("OpenAI", batch_request(), body)
+
+
+@pytest.mark.parametrize("provider", PROVIDERS)
+def test_saved_component_code_that_still_asks_for_boolean_gets_a_noul_answer(provider, monkeypatch):
+    """Decision Model and Smart Router code saved before the rename keeps running without an update.
+
+    That code calls decision_request(kind="boolean"), branches on request.kind == "boolean" and reads
+    result.probability_true, so the alias is kept on the request and the result rather than renamed.
+    """
+    request = decision_request(kind="boolean", question="Refund?", context="x", yes_description="", no_description="")
+    assert request.kind == "boolean"
+    payload = providers.build_payload(provider, DEFAULT_MODELS[provider], request)
+    question = payload["questions"][0] if provider == "OpenAI" else payload["questions"]["decision"]
+    assert question["type"] == ("predicate" if provider == "OpenAI" else "noul")
+    response = httpx.Response(200, json=response_for(provider, "noul"))
+    monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: response)
+    result = providers.evaluate_provider(provider, DEFAULT_MODELS[provider], request, api_key="key")
+    assert (result.kind, result.probability_true, result.probabilities) == ("boolean", 0.7, None)

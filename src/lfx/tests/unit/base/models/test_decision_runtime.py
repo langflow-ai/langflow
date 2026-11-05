@@ -163,6 +163,19 @@ def test_unoffered_model_and_capability_are_authoritative(execution, monkeypatch
     transport.assert_not_called()
 
 
+def test_saved_boolean_requests_count_as_noul_for_capabilities(execution, monkeypatch):
+    """A catalog that offers noul also serves component code saved while the type was called boolean."""
+    _request, model, transport = execution
+    request = DecisionRequest(kind="boolean", question="Is this a complaint?", context="My payment failed.")
+    options = Mock(return_value=[{**model, "metadata": {"capabilities": ["noul"]}}])
+    monkeypatch.setattr(unified_models, "get_decision_model_options", options)
+    monkeypatch.setattr(
+        unified_models, "get_all_variables_for_provider", Mock(return_value={"OPENAI_API_KEY": SecretStr("sk-key")})
+    )
+    evaluate_decision(request, model=model)
+    transport.assert_called_once()
+
+
 def test_configuration_read_failure_does_not_invoke_provider(execution, monkeypatch):
     request, model, transport = execution
     monkeypatch.setattr(
