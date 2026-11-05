@@ -35,6 +35,18 @@ For flows that require another type of input, such as a webhook event, file uplo
 
 For technical details about how the **Playground** works, see [Monitor endpoints](/api-monitor).
 
+### Display math in chat
+
+Chat messages support LaTeX math with double-dollar delimiters. Use `$$x^2$$` within a sentence, or place the delimiters on separate lines for a display equation:
+
+```text
+$$
+\frac{1}{2}
+$$
+```
+
+Single-dollar delimiters are treated as ordinary text so prices such as `$5 and $10` remain readable. Math inside code snippets is also displayed as text.
+
 ### Review agent logic
 
 If your flow has an **Agent** component, the **Playground** prints the tools used by the agent and the output from each tool.
