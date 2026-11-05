@@ -45,6 +45,7 @@ def _assert_floor(requirement: Requirement, version: str) -> None:
 
 
 def test_workspace_security_overrides_enforce_patched_versions() -> None:
+    """Keep workspace overrides above their patched dependency floors."""
     overrides = _load_pyproject("pyproject.toml")["tool"]["uv"]["override-dependencies"]
 
     gitpython = _requirement(overrides, "GitPython")
@@ -121,6 +122,7 @@ def test_published_packages_enforce_patched_mcp_floor() -> None:
 
 
 def test_published_extras_enforce_patched_gitpython_floor() -> None:
+    """Preserve the GitPython fix in both published extras and their generator."""
     base_extras = _load_pyproject("src/backend/base/pyproject.toml")["project"]["optional-dependencies"]
     _assert_floor(_requirement(base_extras["gitpython"], "GitPython"), "3.2.1")
 
@@ -132,6 +134,7 @@ def test_published_extras_enforce_patched_gitpython_floor() -> None:
 
 
 def test_workspace_constraints_enforce_patched_pymongo_and_tornado() -> None:
+    """Check the MongoDB and Tornado fixes in constraints and locked versions."""
     constraints = _load_pyproject("pyproject.toml")["tool"]["uv"]["constraint-dependencies"]
 
     pymongo = _requirement(constraints, "pymongo")
@@ -194,6 +197,7 @@ def test_provider_upgrades_remove_indirect_community_requirements() -> None:
 
 
 def test_workspace_security_overrides_enforce_current_python_floors() -> None:
+    """Preserve current Python security floors and the LiteLLM maintenance cap."""
     project = _load_pyproject("pyproject.toml")
     constraints = project["tool"]["uv"]["constraint-dependencies"]
     overrides = project["tool"]["uv"]["override-dependencies"]
@@ -238,6 +242,7 @@ def test_workspace_security_overrides_enforce_current_python_floors() -> None:
 
 
 def test_published_packages_enforce_current_python_floors() -> None:
+    """Publish the security floors required by installs outside this workspace."""
     root_dependencies = _load_pyproject("pyproject.toml")["project"]["dependencies"]
     base_project = _load_pyproject("src/backend/base/pyproject.toml")["project"]
     lfx_dependencies = _load_pyproject("src/lfx/pyproject.toml")["project"]["dependencies"]
