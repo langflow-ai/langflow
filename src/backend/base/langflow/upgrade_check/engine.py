@@ -6,9 +6,9 @@ values are carried over, as the ``/api/v1/custom_component`` route does, and not
 rule then compares the rebuilt node with the saved one, so a node is breaking only when an update
 would actually lose a connection, a value, a field, or an output.
 
-A dry run executes component code. While it runs, every network call in the process is refused (an
-audit hook sees each socket connect and name lookup), it has a time limit, and anything it raises
-is recorded on that node instead of stopping the check.
+A dry run executes component code. Python network and process-launch audit events are refused while
+it runs, apart from exact local system metadata probes. It has a time limit, and anything it raises
+is recorded on that node instead of stopping the check. This audit guard is not an OS sandbox.
 
 Each node also gets ``runs``: what the upgraded server executes for it under the target's settings
 (its saved code, the server's code, or nothing), decided by the runtime's own build checks.
@@ -25,13 +25,14 @@ import threading
 from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from lfx.custom.custom_component.component import Component
+from lfx.custom import Component
 from lfx.custom.utils import build_custom_component_template, update_rebuilt_node
 from lfx.extension.migration import migrate_flow_payload
 from lfx.extension.migration.loader import load_migration_table
 from lfx.interface.components import ComponentCache
 from lfx.services.catalog_policy import CatalogPolicySnapshot
 from lfx.upgrade.checker import breaking_reasons, build_registry_lookup, classify_node, iter_flow_nodes
+from lfx.upgrade.registry import UpgradeRegistryError
 from lfx.utils.flow_code import normalize_code_for_import
 from lfx.utils.flow_validation import (
     CustomComponentValidationError,
@@ -42,9 +43,10 @@ from lfx.utils.flow_validation import (
 from lfx.utils.python_repl_security import code_execution_refusal
 
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
+from langflow.upgrade_check.isolation import is_local_metadata_probe
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping
+    from collections.abc import Callable, Iterator, Mapping
 
     from lfx.extension.migration.schema import MigrationTable
     from lfx.upgrade.checker import NodeStatus
@@ -52,6 +54,7 @@ if TYPE_CHECKING:
     from langflow.upgrade_check.reader import SourceDatabase, SourceFlow
 
 DRY_RUN_SECONDS = 30.0
+REGISTRY_SECONDS = 30.0
 
 # A node in one of these states makes its flow fail.
 _FAILING = frozenset({"outdated_breaking", "retired", "blocked"})
@@ -60,15 +63,75 @@ _WARNING = frozenset({"customized", "could_not_verify", "build_failed"})
 
 # Audit events of an outbound connection or a name lookup; the same names from Python 3.10 to 3.14.
 _NETWORK_EVENTS = frozenset(
-    {"socket.connect", "socket.getaddrinfo", "socket.gethostbyname", "socket.gethostbyaddr", "socket.sendto"}
+    {
+        "socket.connect",
+        "socket.getaddrinfo",
+        "socket.gethostbyname",
+        "socket.gethostbyaddr",
+        "socket.getnameinfo",
+        "socket.sendto",
+        "socket.sendmsg",
+    }
 )
-# ponytail: one process-wide gate. The command runs the check alone in its process, and a dry run's
+_PROCESS_EVENTS = frozenset(
+    {
+        "subprocess.Popen",
+        "os.system",
+        "os.posix_spawn",
+        "os.spawn",
+        "os.exec",
+        "os.fork",
+        "os.forkpty",
+        "os.startfile",
+        "os.startfile/2",
+        "pty.spawn",
+    }
+)
+# One process-wide gate covers registry callbacks and dry runs. The command runs alone, and callbacks
 # calls can come from any thread (asyncio resolves names in its executor). If the check ever runs
 # inside a server (the admin page), this would also refuse the server's own calls during a dry run;
-# gate per context then. The network is refused while any thread here is running a dry run, so a
-# dry run past its time limit stays refused until it ends.
+# gate per context then. Refusal stays active while a callback thread runs, including after its timeout.
 _dry_run_threads: set[int] = set()
 _refused_calls: list[str] = []
+
+
+class ComponentDiscoveryError(RuntimeError):
+    """The complete target registry could not be discovered offline."""
+
+
+def discover_offline(callback: Callable[[], dict[str, Any]]) -> dict[str, Any]:
+    """Bound discovery and reject partial registries after a refused network callback."""
+    _install_network_guard()
+    outcome: dict[str, Any] = {}
+    _refused_calls.clear()
+
+    def run() -> None:
+        _dry_run_threads.add(threading.get_ident())
+        try:
+            outcome["registry"] = callback()
+        except BaseException as exc:  # noqa: BLE001
+            outcome["error"] = exc
+        finally:
+            _dry_run_threads.discard(threading.get_ident())
+
+    worker = threading.Thread(target=run, name="upgrade-check-registry", daemon=True)
+    worker.start()
+    worker.join(REGISTRY_SECONDS)
+    if worker.is_alive():
+        msg = f"component discovery did not finish in {REGISTRY_SECONDS:g} seconds"
+        raise ComponentDiscoveryError(msg)
+    if _refused_calls:
+        msg = (
+            "component discovery attempted a refused network or process operation, "
+            "so its incomplete registry cannot be checked"
+        )
+        raise ComponentDiscoveryError(msg)
+    if error := outcome.get("error"):
+        if isinstance(error, UpgradeRegistryError):
+            raise error
+        msg = f"component discovery failed ({type(error).__name__})"
+        raise ComponentDiscoveryError(msg) from error
+    return outcome["registry"]
 
 
 @dataclass(frozen=True)
@@ -376,7 +439,13 @@ def _dry_run(entry: Mapping[str, Any], saved_node: dict, user_id: str | None) ->
     thread.start()
     thread.join(DRY_RUN_SECONDS)
     if _refused_calls:
-        return None, _reason("could_not_verify", None, f"the update makes a network call: {_refused_calls[0]}")
+        refused = _refused_calls[0]
+        operation = "a network call" if refused.startswith("socket.") else "a child process launch"
+        return None, _reason(
+            "could_not_verify",
+            None,
+            f"the update makes {operation}: {refused}",
+        )
     if thread.is_alive():
         return None, _reason("could_not_verify", None, f"the update did not finish in {DRY_RUN_SECONDS:g} seconds")
     error = outcome.get("error")
@@ -412,9 +481,19 @@ async def _update(entry: Mapping[str, Any], saved_node: dict, user_id: str | Non
 
 
 def _refuse_network(event: str, args: tuple[Any, ...]) -> None:
+    if _dry_run_threads and event in _PROCESS_EVENTS:
+        try:
+            trusted = event == "subprocess.Popen" and is_local_metadata_probe(args)
+        except Exception:  # noqa: BLE001 - metadata validation failures must remain recorded refusals
+            trusted = False
+        if trusted:
+            return
+        _refused_calls.append(event)
+        msg = f"the upgrade check refuses child processes ({event})"
+        raise PermissionError(msg)
     if _dry_run_threads and event in _NETWORK_EVENTS:
         # connect and sendto get (socket, address); the lookups get the host first.
-        target = args[1] if event in {"socket.connect", "socket.sendto"} else args[0]
+        target = args[1] if event in {"socket.connect", "socket.sendto", "socket.sendmsg"} else args[0]
         _refused_calls.append(f"{event} {target!r}")
         msg = f"the upgrade check refuses network calls ({event} {target!r})"
         raise ConnectionRefusedError(msg)
