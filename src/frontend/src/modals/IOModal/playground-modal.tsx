@@ -234,9 +234,11 @@ export default function IOModal({
     // the playground page). Wait for its first message: the history load that
     // opening a new chat triggers also changes `messages`, and refetching then
     // would miss the session. Select it by id: the refetched list is newest
-    // first and may not be complete.
+    // first and may not be complete. Selecting reloads that session's history
+    // over the live messages, so wait for the build: mid-build it drops the reply.
     if (
       newChatOnPlayground &&
+      !isBuilding &&
       !sessionsLoading &&
       messages.some((message) => message.session_id === sessionId)
     ) {
@@ -253,7 +255,7 @@ export default function IOModal({
       handleRefetchAndSetSession();
       setNewChatOnPlayground(false);
     }
-  }, [messages, playgroundPage]);
+  }, [messages, playgroundPage, isBuilding]);
 
   useEffect(() => {
     if (!visibleSession) {
