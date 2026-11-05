@@ -224,6 +224,14 @@ the deserialize half is covered by
 
 ## Changelog
 
+- **Raw model provider selections (2026-11-04).** The public module
+  `lfx.base.models.provider_selection` exports `raw_model_provider_names` and
+  selector constants. Before input hydration,
+  `Component._selected_model_provider_policy_ids` uses this pure helper to read
+  provider selections. First-selection, canonical `provider` override, and legacy
+  `agent_llm` behavior remain unchanged. No existing signature or selection
+  semantics change, so `BUNDLE_API_VERSION` remains `1`.
+
 - **Headless integration context checks (2026-10-28).** `Component` checks the
   selected capability's declared deployment contexts before resolving a
   connection or running an integration action. Unsupported headless actions
