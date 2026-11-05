@@ -130,9 +130,16 @@ be written only to `authz_audit_log`.
 | `PUT /projects/{id}` new id | project / `project:create` / `create` | as create |
 | `DELETE /projects/{id}` | project / `project:delete` / `delete` | `flows` (removed); plus one `flow:delete` per Flow removed |
 | `POST /projects/upload/` | project / `project:create` / `create` | `description`, `flows` (added); plus one `flow:create` per Flow |
+| `PUT /projects/{id}/replacement-operations/{operation_id}` | project / `project:create` or `project:write` / `create` or `replace` | `description`, `flows`; plus each Flow create, update, or delete |
 
-`replace` for Projects (atomic complete-content replacement) arrives with the
-atomic Project APIs; no existing route replaces a Project's contents.
+Project replacement writes its audit events as one batch in the same transaction
+as the content and retry receipt. Replaying a saved receipt writes no new events.
+An expired receipt returns 410 and records a failed event after authorization.
+The event uses the current project name. If the project was deleted, the route
+logs the fallback and reads the latest successful audit event for that project
+and owner. It never uses the retry's caller-supplied name for this fallback.
+If audit retention removed that history, the route logs a warning and records
+the failure without a name. An ID filter can still find the unnamed event.
 
 **Outcome rules**
 

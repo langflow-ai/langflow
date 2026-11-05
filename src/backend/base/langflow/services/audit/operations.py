@@ -46,6 +46,7 @@ from langflow.services.audit.writer import (
     stage_audit_event,
 )
 from langflow.services.authorization.refusal import is_authorization_refusal
+from langflow.services.creation_hooks import ERROR_CODE_HEADER
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Iterable, Mapping
@@ -60,6 +61,16 @@ R = TypeVar("R")
 UNKNOWN_RESOURCE_ID = UUID(int=0)
 _NOT_WRITTEN = object()
 _current: ContextVar[AuditedOperation | None] = ContextVar("langflow_audited_operation", default=None)
+_REPLACEMENT_FAILURE_CODES = {
+    "replacement_project_name_conflict": AuditErrorCode.PROJECT_NAME_CONFLICT,
+    "replacement_flow_name_conflict": AuditErrorCode.FLOW_NAME_CONFLICT,
+    "replacement_duplicate_flow_names": AuditErrorCode.FLOW_NAME_CONFLICT,
+    "replacement_endpoint_name_conflict": AuditErrorCode.FLOW_NAME_CONFLICT,
+    "replacement_duplicate_flow_ids": AuditErrorCode.FLOW_ID_CONFLICT,
+    "replacement_flow_belongs_to_another_project": AuditErrorCode.FLOW_ID_CONFLICT,
+    "replacement_flow_not_found": AuditErrorCode.FLOW_NOT_FOUND,
+    "replacement_receipt_expired": AuditErrorCode.CONSTRAINT_VIOLATION,
+}
 
 
 @dataclass
@@ -156,8 +167,22 @@ def _unique_conflict_code(exc: BaseException, *, is_flow: bool) -> AuditErrorCod
     return AuditErrorCode.FLOW_NAME_CONFLICT if is_flow else AuditErrorCode.PROJECT_NAME_CONFLICT
 
 
+def _replacement_failure_code(exc: HTTPException) -> AuditErrorCode | None:
+    """Use replacement machine codes to distinguish Project and Flow failures."""
+    replacement_code = (exc.headers or {}).get(ERROR_CODE_HEADER, "")
+    if not replacement_code.startswith("replacement_"):
+        return None
+    if replacement_code in _REPLACEMENT_FAILURE_CODES:
+        return _REPLACEMENT_FAILURE_CODES[replacement_code]
+    if exc.status_code == HTTPStatus.CONFLICT:
+        return AuditErrorCode.CONSTRAINT_VIOLATION
+    return None
+
+
 def classify_failure(exc: BaseException, resource_type: AuditResourceType) -> AuditErrorCode:
     """A safe, bounded code for a failure; the exception text is never stored."""
+    if isinstance(exc, HTTPException) and (replacement_code := _replacement_failure_code(exc)) is not None:
+        return replacement_code
     detail = str(getattr(exc, "detail", "")).lower()
     is_flow = resource_type is AuditResourceType.FLOW
     conflict = _unique_conflict_code(exc, is_flow=is_flow)
@@ -223,12 +248,13 @@ def describe_project_body(param: str) -> Callable[[dict[str, Any]], dict[str, An
     """Attempted name, field names and requested Flow count of a Project body."""
 
     def describe(kwargs: dict[str, Any]) -> dict[str, Any]:
+        """Extract safe attempted fields and membership counts from the named body."""
         body = kwargs.get(param)
         fields = _fields_set(body)
         # FolderCreate names them *_list, FolderUpdate names them flows/components.
         requested = [value for name in _PROJECT_MEMBERSHIP_FIELDS for value in (getattr(body, name, None) or [])]
         return {
-            "resource_name": getattr(body, "name", None),
+            "resource_name": getattr(body, "name", None) or getattr(body, "project_name", None),
             "attempted_fields": {("flows" if name in _PROJECT_MEMBERSHIP_FIELDS else name) for name in fields},
             "requested_flow_count": len(requested) if fields & _PROJECT_MEMBERSHIP_FIELDS else None,
         }
