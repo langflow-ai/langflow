@@ -1710,6 +1710,12 @@ async def init_mcp_servers():
             projects = (await session.exec(select(Folder))).all()
 
             for project in projects:
+                # Captured before the savepoint below: a rollback (e.g. a denied
+                # API key issuance) expires project's attributes, and reading
+                # project.id afterward would lazy-load outside the greenlet
+                # context and raise MissingGreenlet instead of logging the
+                # original error.
+                project_id = project.id
                 try:
                     target_auth_settings, persist_reason = _get_startup_project_auth_settings(
                         project,
@@ -1779,7 +1785,7 @@ async def init_mcp_servers():
                             await register_project_with_composer(project)
 
                 except Exception as e:  # noqa: BLE001
-                    msg = f"Failed to initialize MCP server for project {project.id}: {e}"
+                    msg = f"Failed to initialize MCP server for project {project_id}: {e}"
                     await logger.aexception(msg)
                     # Continue to next project even if this one fails
 
