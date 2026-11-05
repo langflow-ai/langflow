@@ -27,7 +27,7 @@ from lfx.workflow.adapters.langflow import WORKFLOW_OUTPUT_CAPTURE_EVENT, WORKFL
 
 from langflow.services.background_execution.live_bus import LiveFrame
 from langflow.services.database.models.jobs.model import JobStatus, SignalType
-from langflow.services.jobs.exceptions import HUMAN_INPUT_REQUIRED_EVENT, PauseRequested
+from langflow.services.jobs.exceptions import HUMAN_INPUT_REQUIRED_EVENT, JobNotClaimable, PauseRequested
 from langflow.services.telemetry.context import telemetry_user_context
 
 if TYPE_CHECKING:
@@ -107,7 +107,15 @@ class JobRunner:
         heartbeat_task = self._start_heartbeat(job_id)
         paused = False
         try:
-            await self._jobs.execute_with_status(job_id, _wrapped)
+            await self._jobs.execute_with_status(job_id, _wrapped, owner=self._owner)
+        except JobNotClaimable:
+            # Another worker owns this row. Stop without writing a status, closing the
+            # bus as a failure or appending a terminal event: all of those would stamp
+            # this process's verdict onto a run somebody else is executing.
+            await self._stop_heartbeat(heartbeat_task)
+            heartbeat_task = None
+            await logger.awarning(f"Worker: job {job_id} was claimed by another worker; standing down")
+            return
         except PauseRequested as exc:
             # Stop the heartbeat BEFORE stamping suspend metadata: both are whole-blob
             # read-modify-writes, so a beat racing the stamp would clobber the request id.
