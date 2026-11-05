@@ -39,6 +39,7 @@ from langflow.upgrade_check.engine import (
     discover_offline,
     flow_status,
 )
+from langflow.upgrade_check.isolation import source_connection_context
 from langflow.upgrade_check.reader import SourceDatabaseError, open_source
 from langflow.upgrade_check.source import identity_for_source
 from langflow.utils.version import get_version_info
@@ -63,6 +64,7 @@ class CheckError(Exception):
 
 def main() -> int:
     options = json.load(sys.stdin)
+    source_connection = options.pop("_source_connection", None)
     as_json = options["json"]
     # The events and the summary own stdout. Anything else written there, such as a custom component
     # that prints when it loads, goes to stderr, so every stdout line with --json is an event.
@@ -71,7 +73,7 @@ def main() -> int:
     on_flow = (lambda result: _emit(out, "flow", flow=result.to_dict())) if as_json else None
     try:
         output = _report_destination(options["database_url"], options["output"])
-        report, listed = run(options, on_flow)
+        report, listed = run(options, on_flow, source_connection=source_connection)
         if output is not None:
             _write_report(options["database_url"], output, report)
     except CheckError as exc:
@@ -128,7 +130,12 @@ def _write_report(database_url: str, output: Path, report: Mapping[str, Any]) ->
             temporary.unlink(missing_ok=True)
 
 
-def run(options: Mapping[str, Any], on_flow: Callable[[FlowResult], None] | None = None) -> tuple[dict, list]:
+def run(
+    options: Mapping[str, Any],
+    on_flow: Callable[[FlowResult], None] | None = None,
+    *,
+    source_connection: Mapping[str, Any] | None = None,
+) -> tuple[dict, list]:
     """Check the source the options name and return the report, with the results of the flows it lists."""
     settings = TargetSettings(
         **{**options["settings"], "components_path": tuple(options["settings"]["components_path"])}
@@ -138,11 +145,12 @@ def run(options: Mapping[str, Any], on_flow: Callable[[FlowResult], None] | None
         raise CheckError(msg, code="components_path_missing")
     with ExitStack() as stack:
         try:
-            source = stack.enter_context(open_source(options["database_url"]))
-            identity = identity_for_source(options["database_url"], source.connection)
+            with source_connection_context(source_connection):
+                source = stack.enter_context(open_source(options["database_url"]))
+                identity = identity_for_source(options["database_url"], source.connection)
+                policy = source.catalog_policy()
         except Exception as exc:
             raise CheckError(_source_message(exc), code="source_unreadable") from exc
-        policy = source.catalog_policy()
         try:
             all_types = discover_offline(lambda: load_upgrade_registry(components_path=settings.loaded_components_path))
         except (UpgradeRegistryError, ComponentDiscoveryError) as exc:
