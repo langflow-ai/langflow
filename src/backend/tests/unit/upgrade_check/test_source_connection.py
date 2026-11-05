@@ -249,7 +249,8 @@ def test_native_postgres_source_inputs_are_removed_before_callbacks(monkeypatch,
         assert password not in json.dumps(report)
         assert {path: path.read_bytes() for path in paths} == before
     finally:
-        sa.event.remove(sa.engine.Engine, "do_connect", on_connect)
+        if sa.event.contains(sa.engine.Engine, "do_connect", on_connect):
+            sa.event.remove(sa.engine.Engine, "do_connect", on_connect)
         with admin.begin() as connection:
             connection.execute(sa.schema.DropSchema(schema, cascade=True))
         admin.dispose()
