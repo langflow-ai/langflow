@@ -1,4 +1,4 @@
-"""Legacy build queues persist and revalidate restricted-key admission."""
+"""Legacy build queues persist and revalidate database-key admission."""
 
 import asyncio
 import json
@@ -10,7 +10,12 @@ import pytest
 from fastapi import BackgroundTasks, HTTPException
 from langflow.api import build
 from langflow.events.event_manager import create_default_event_manager
-from langflow.services.auth.context import AuthCredentialContext, clear_current_auth_context, set_current_auth_context
+from langflow.services.auth.context import (
+    AuthCredentialContext,
+    clear_current_auth_context,
+    get_current_auth_context,
+    set_current_auth_context,
+)
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.auth import SSOUserProfile
 from langflow.services.database.models.flow.model import Flow
@@ -49,11 +54,14 @@ class HeldQueue:
             self.task_coro.close()
 
 
-async def seed_restricted_build(active_user, monkeypatch):
+async def seed_restricted_build(active_user, monkeypatch, *, restricted=True):
     policy = {"restrictions": [{"resource_type": "flow", "actions": ["read", "execute"]}]}
 
     async def enforce(**kwargs):
-        return any(kwargs["act"] in item["actions"] for item in policy["restrictions"])
+        current_policy = get_current_auth_context().api_key_permissions
+        return current_policy is None or any(
+            kwargs["act"] in item["actions"] for item in current_policy["restrictions"]
+        )
 
     authorization = SimpleNamespace(supports_api_key_scopes=AsyncMock(return_value=True), enforce=enforce)
     monkeypatch.setattr(get_settings_service().auth_settings, "AUTHZ_ENABLED", True)
@@ -63,7 +71,12 @@ async def seed_restricted_build(active_user, monkeypatch):
     monkeypatch.setattr("langflow.services.authorization.guards.get_authorization_service", lambda: authorization)
     async with session_scope() as session:
         flow = Flow(id=uuid4(), name="Scoped legacy build", user_id=active_user.id, data={"nodes": [], "edges": []})
-        key = ApiKey(name="Scoped legacy build", api_key="not-a-real-key", user_id=active_user.id, permissions=policy)
+        key = ApiKey(
+            name="Scoped legacy build",
+            api_key="not-a-real-key",  # pragma: allowlist secret
+            user_id=active_user.id,
+            permissions=policy if restricted else None,
+        )
         session.add_all([flow, key])
         await session.flush()
         key_id = key.id
@@ -72,8 +85,8 @@ async def seed_restricted_build(active_user, monkeypatch):
             method="api_key",
             api_key_id=key_id,
             api_key_source="db",  # pragma: allowlist secret
-            api_key_restricted=True,
-            api_key_permissions=policy,
+            api_key_restricted=restricted,
+            api_key_permissions=policy if restricted else None,
         )
     )
     return flow, key_id
@@ -96,8 +109,9 @@ async def start_build(user, flow, queue, **kwargs):
     )
 
 
-async def test_restricted_metadata_exists_before_queue_start_and_uses_real_flow(active_user, monkeypatch):
-    flow, key_id = await seed_restricted_build(active_user, monkeypatch)
+@pytest.mark.parametrize("restricted", [False, True])
+async def test_database_key_metadata_exists_before_queue_start_and_uses_real_flow(active_user, monkeypatch, restricted):
+    flow, key_id = await seed_restricted_build(active_user, monkeypatch, restricted=restricted)
     service = get_job_service()
     real_create = service.create_job
     admitted = []
@@ -132,8 +146,13 @@ async def test_restricted_metadata_exists_before_queue_start_and_uses_real_flow(
         queue.close()
 
 
-async def test_revoked_key_waiting_in_legacy_queue_is_denied_before_graph_build(active_user, monkeypatch):
-    flow, key_id = await seed_restricted_build(active_user, monkeypatch)
+@pytest.mark.parametrize("restricted", [False, True])
+@pytest.mark.parametrize("key_change", ["delete", "revoke", "restrict"])
+async def test_changed_key_waiting_in_legacy_queue_is_denied_before_graph_build(
+    active_user, monkeypatch, restricted, key_change
+):
+    """Credential changes after admission must stop a queued build before constructing its graph."""
+    flow, key_id = await seed_restricted_build(active_user, monkeypatch, restricted=restricted)
     graph_build = AsyncMock(side_effect=AssertionError("Graph construction must not run"))
     monkeypatch.setattr(build, "build_graph_from_db", graph_build)
     queue = HeldQueue()
@@ -141,8 +160,14 @@ async def test_revoked_key_waiting_in_legacy_queue_is_denied_before_graph_build(
         job_id = await start_build(active_user, flow, queue)
         async with session_scope() as session:
             key = await session.get(ApiKey, key_id)
-            key.is_active = False
-            session.add(key)
+            if key_change == "delete":
+                await session.delete(key)
+            elif key_change == "revoke":
+                key.is_active = False
+                session.add(key)
+            else:
+                key.permissions = {"restrictions": [{"resource_type": "flow", "actions": ["read"]}]}
+                session.add(key)
         with pytest.raises(PermissionError):
             await queue.task_coro
         graph_build.assert_not_awaited()
@@ -220,8 +245,9 @@ async def test_build_rechecks_external_key_access_after_job_authorization(active
         queue.close()
 
 
-async def test_restricted_pause_keeps_job_nonterminal_and_preserves_provenance(active_user, monkeypatch):
-    flow, key_id = await seed_restricted_build(active_user, monkeypatch)
+@pytest.mark.parametrize("restricted", [False, True])
+async def test_database_key_pause_keeps_job_nonterminal_and_preserves_provenance(active_user, monkeypatch, restricted):
+    flow, key_id = await seed_restricted_build(active_user, monkeypatch, restricted=restricted)
     graph = MagicMock()
     graph.vertices = []
     graph.vertices_to_run = set()
@@ -256,8 +282,9 @@ async def test_restricted_pause_keeps_job_nonterminal_and_preserves_provenance(a
         queue.close()
 
 
-async def test_restricted_admission_failure_prevents_queue_allocation(active_user, monkeypatch):
-    flow, _ = await seed_restricted_build(active_user, monkeypatch)
+@pytest.mark.parametrize("restricted", [False, True])
+async def test_database_key_admission_failure_prevents_queue_allocation(active_user, monkeypatch, restricted):
+    flow, _ = await seed_restricted_build(active_user, monkeypatch, restricted=restricted)
     monkeypatch.setattr(get_job_service(), "create_job", AsyncMock(side_effect=RuntimeError("Database unavailable")))
     queue = MagicMock()
     with pytest.raises(HTTPException):
@@ -296,7 +323,16 @@ async def test_restricted_queue_failure_terminalizes_durable_job(active_user, mo
         queue.start_job.assert_called_once()
 
 
-async def test_unrestricted_build_preserves_legacy_queue_call_shape(active_user, monkeypatch):
+@pytest.mark.parametrize("credential", [None, "jwt", "env"])
+async def test_non_database_credentials_preserve_legacy_queue_call_shape(active_user, monkeypatch, credential):
+    """Bearer and environment credentials retain the legacy queue behavior."""
+    if credential is not None:
+        set_current_auth_context(
+            AuthCredentialContext(
+                method="api_key" if credential == "env" else credential,
+                api_key_source="env" if credential == "env" else None,  # pragma: allowlist secret
+            )
+        )
     queue = HeldQueue()
     service = MagicMock()
     monkeypatch.setattr(build, "get_job_service", lambda: service)
@@ -314,10 +350,11 @@ async def test_unrestricted_build_preserves_legacy_queue_call_shape(active_user,
         queue.close()
 
 
-@pytest.mark.parametrize("restricted", [False, True])
-async def test_legacy_tracking_failure_is_fatal_only_for_restricted_keys(active_user, monkeypatch, restricted):
-    if restricted:
-        flow, _ = await seed_restricted_build(active_user, monkeypatch)
+@pytest.mark.parametrize("credential", ["jwt", "unrestricted_key", "restricted_key"])
+async def test_legacy_tracking_failure_is_fatal_for_database_keys(active_user, monkeypatch, credential):
+    database_key = credential != "jwt"
+    if database_key:
+        flow, _ = await seed_restricted_build(active_user, monkeypatch, restricted=credential == "restricted_key")
     else:
         flow = Flow(id=uuid4(), name="Legacy build", user_id=active_user.id)
     graph = MagicMock()
@@ -347,7 +384,7 @@ async def test_legacy_tracking_failure_is_fatal_only_for_restricted_keys(active_
         current_user=active_user,
         provider_policy_flow=flow,
     )
-    if restricted:
+    if database_key:
         with pytest.raises(RuntimeError, match="Tracking unavailable"):
             await callback
         graph.flow_execution_span.assert_not_called()

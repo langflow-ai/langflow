@@ -43,7 +43,7 @@ from langflow.events.event_manager import EventManager
 from langflow.exceptions.component import ComponentBuildError
 from langflow.schema.message import ErrorMessage
 from langflow.schema.schema import OutputValue
-from langflow.services.auth.context import current_auth_is_restricted_api_key
+from langflow.services.auth.context import AUTH_METHOD_API_KEY, get_current_auth_context
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.jobs.model import JobStatus, JobType
 from langflow.services.database.models.user.model import User, UserRead
@@ -196,7 +196,17 @@ def _log_component_input_telemetry(
             )
 
 
-async def _execute_restricted_build(job_service, job_id: uuid.UUID, **kwargs) -> None:
+def _requires_api_key_admission() -> bool:
+    """Keep every database-key build bound to its credential while it is queued."""
+    context = get_current_auth_context()
+    return (
+        context is not None
+        and context.method == AUTH_METHOD_API_KEY
+        and (context.api_key_source != "env" or context.api_key_restricted)  # pragma: allowlist secret
+    )
+
+
+async def _execute_admitted_build(job_service, job_id: uuid.UUID, **kwargs) -> None:
     async def run() -> None:
         from langflow.services.auth.api_key_context import refresh_database_api_key_user
 
@@ -271,15 +281,15 @@ async def start_flow_build(
     validate_targeted_inputs([inputs] if inputs is not None else None)
 
     job_id = str(uuid.uuid4())
-    restricted_job_service = None
+    admitted_job_service = None
     admitted = False
     task_coro = None
     try:
         build_task = generate_flow_events
-        if current_auth_is_restricted_api_key():
-            restricted_job_service = get_job_service()
+        if _requires_api_key_admission():
+            admitted_job_service = get_job_service()
             durable_job_id = uuid.UUID(job_id)
-            await restricted_job_service.create_job(
+            await admitted_job_service.create_job(
                 job_id=durable_job_id,
                 flow_id=provider_policy_flow.id,
                 user_id=current_user.id,
@@ -290,8 +300,8 @@ async def start_flow_build(
             # Revalidate before graph construction. The driver reuses this row
             # and leaves status ownership with the outer job-service wrapper.
             build_task = partial(
-                _execute_restricted_build,
-                restricted_job_service,
+                _execute_admitted_build,
+                admitted_job_service,
                 durable_job_id,
             )
         _, event_manager = queue_service.create_queue(job_id)
@@ -316,11 +326,11 @@ async def start_flow_build(
         )
         queue_service.start_job(job_id, task_coro)
     except Exception as e:
-        if restricted_job_service is not None:
+        if admitted_job_service is not None:
             if task_coro is not None:
                 task_coro.close()
             if admitted:
-                await restricted_job_service.update_job_status(
+                await admitted_job_service.update_job_status(
                     uuid.UUID(job_id), JobStatus.FAILED, finished_timestamp=True
                 )
         await logger.aexception("Failed to create queue and start task")
@@ -1040,7 +1050,7 @@ async def _generate_flow_events(
         raise client_error from e
 
     # Create a WORKFLOW job record so memory-base on_flow_output can track this run.
-    # Best-effort for unrestricted callers. Restricted callers must never
+    # Best-effort for non-database credentials. Database-key builds must never
     # continue into components without their durable authorization record.
     _build_job_svc = None
     _build_run_id: uuid.UUID | None = None
@@ -1061,7 +1071,7 @@ async def _generate_flow_events(
                     heartbeat=True,
                 )
     except Exception:
-        if current_auth_is_restricted_api_key():
+        if _requires_api_key_admission():
             raise
         await logger.awarning(
             "Failed to create workflow job for /build — memory base tracking disabled for flow %s",

@@ -374,6 +374,11 @@ async def upload_user_file(
         # filesystem's single-segment byte limit.
         _validate_file_name(unique_filename)
 
+        storage_namespace = (
+            _user_file_namespace(existing_file.path, current_user.id)
+            if existing_file
+            else user_storage_scope(current_user.id)
+        )
         if current_auth_is_restricted_api_key():
             if existing_file is not None:
                 session.expunge(existing_file)
@@ -389,7 +394,7 @@ async def upload_user_file(
                 # grant may create a new path, but cannot replace or append to
                 # an existing path that has no resolvable resource identity.
                 try:
-                    await storage_service.get_file_size(flow_id=str(current_user.id), file_name=unique_filename)
+                    await storage_service.get_file_size(flow_id=storage_namespace, file_name=unique_filename)
                 except FileNotFoundError:
                     pass
                 else:
@@ -403,14 +408,10 @@ async def upload_user_file(
                 current_user,
                 file_name=unique_filename,
                 append=append,
-                namespace=_user_file_namespace(existing_file.path, current_user.id) if existing_file else None,
+                namespace=storage_namespace,
             )
             file_size = await storage_service.get_file_size(
-                flow_id=(
-                    user_storage_scope(current_user.id)
-                    if not existing_file
-                    else _user_file_namespace(existing_file.path, current_user.id)
-                ),
+                flow_id=storage_namespace,
                 file_name=stored_file_name,
             )
         except FileNotFoundError as e:
@@ -423,11 +424,6 @@ async def upload_user_file(
             # General error saving file or getting file size
             raise HTTPException(status_code=500, detail=f"Error accessing file: {e}") from e
 
-        storage_namespace = (
-            _user_file_namespace(existing_file.path, current_user.id)
-            if existing_file
-            else user_storage_scope(current_user.id)
-        )
         if ephemeral:
             # Ephemeral uploads: file is saved to storage (servable for chat history)
             # but no UserFile record is created (won't appear in "My Files")
