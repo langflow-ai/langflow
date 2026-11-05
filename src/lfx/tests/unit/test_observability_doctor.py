@@ -362,9 +362,9 @@ def test_per_signal_headers_replace_the_generic_ones_rather_than_merging(monkeyp
 
 
 class _RedirectingStub:
-    """A stub that 302s the OTLP POST to a login page, like an auth proxy in front of a collector."""
+    """A stub that redirects the OTLP POST to a login page, like an auth proxy."""
 
-    def __init__(self) -> None:
+    def __init__(self, status: int = 302) -> None:
         self.saw: list[str] = []
         saw = self.saw
 
@@ -372,7 +372,7 @@ class _RedirectingStub:
             def do_POST(self) -> None:
                 self.rfile.read(int(self.headers.get("Content-Length", 0)))
                 saw.append(f"POST {self.path}")
-                self.send_response(302)
+                self.send_response(status)
                 self.send_header("Location", "/login")
                 self.send_header("Content-Length", "0")
                 self.end_headers()
@@ -405,9 +405,14 @@ class _RedirectingStub:
 
 @requires_otel
 @pytest.mark.usefixtures("clean_otel_env")
-def test_a_redirected_export_is_not_reported_as_delivered(monkeypatch):
-    """A redirect must fail even when the exporter reports success."""
-    with _RedirectingStub() as stub:
+@pytest.mark.parametrize("status", [301, 302, 303, 307, 308])
+def test_a_redirected_export_is_not_reported_as_delivered(monkeypatch, status):
+    """The SDK blocks redirects but still reports a 3xx response as SUCCESS.
+
+    An auth proxy or an ingress redirect rule has not accepted the payload. The doctor must
+    report that without following the redirect or sending credentials to its target.
+    """
+    with _RedirectingStub(status) as stub:
         monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", stub.endpoint)
         report = run_doctor(timeout=5)
 
@@ -415,7 +420,8 @@ def test_a_redirected_export_is_not_reported_as_delivered(monkeypatch):
         for signal in report.signals:
             assert signal.status == FAILED, signal.detail
             assert "redirected" in signal.detail, signal.detail
-        assert {f"POST {path}" for path in OTLP_PATHS}.issubset(stub.saw)
+            assert str(status) in signal.detail, signal.detail
+        assert set(stub.saw) == {f"POST {path}" for path in OTLP_PATHS}
 
 
 @requires_otel
@@ -435,28 +441,32 @@ def test_a_followed_redirect_is_not_reported_as_delivered():
 
 @requires_otel
 @pytest.mark.usefixtures("clean_otel_env")
-def test_a_partial_success_response_is_not_reported_as_delivered(monkeypatch):
+@pytest.mark.parametrize(
+    ("signal", "rejected_field"),
+    [("traces", "rejected_spans"), ("metrics", "rejected_data_points"), ("logs", "rejected_log_records")],
+)
+def test_a_partial_success_response_is_not_reported_as_delivered(monkeypatch, signal, rejected_field):
     """A collector can answer 200 and still reject the items, for quota or an unknown tenant.
 
     The count lives in the OTLP response body, which the exporter never reads.
     """
-    from opentelemetry.proto.collector.trace.v1.trace_service_pb2 import ExportTraceServiceResponse
+    from lfx.observability_doctor import _response_class
 
-    rejected = ExportTraceServiceResponse()
-    rejected.partial_success.rejected_spans = 1
+    rejected = _response_class(signal)()
+    setattr(rejected.partial_success, rejected_field, 1)
     rejected.partial_success.error_message = "quota exceeded"
     body = rejected.SerializeToString()
 
     with _CollectorStub(status=200) as collector:
         collector.response_body = body
         collector.response_content_type = "application/x-protobuf"
-        monkeypatch.setenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", f"{collector.endpoint}/v1/traces")
+        monkeypatch.setenv(f"OTEL_EXPORTER_OTLP_{signal.upper()}_ENDPOINT", f"{collector.endpoint}/v1/{signal}")
         report = run_doctor(timeout=5)
 
-        traces = _by_signal(report)["traces"]
-        assert traces.status == FAILED, traces.detail
-        assert "rejected 1 item" in traces.detail, traces.detail
-        assert "quota exceeded" in traces.detail, traces.detail
+        result = _by_signal(report)[signal]
+        assert result.status == FAILED, result.detail
+        assert "rejected 1 item" in result.detail, result.detail
+        assert "quota exceeded" in result.detail, result.detail
 
 
 @requires_otel

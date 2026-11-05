@@ -119,7 +119,7 @@ otel = [
 #
 # Documented as a headless/serverless deployment footnote, not a
 # getting-started headline.  There is intentionally NO ``lfx[all]``.
-bundles = ["lfx-bundles[all]>=1.1.32,<2.0"]
+bundles = ["lfx-bundles[all]>=1.1.41,<2.0"]
 
 [project.scripts]
 lfx = "lfx.__main__:main"
@@ -159,6 +159,7 @@ dev = [
     "coverage>=7.9.2",
     "hypothesis>=6.136.3",
     "langchain-anthropic~=1.4.6",
+    "langchain-community>=0.4.1,<1.0.0",
     # The otel extra itself, so the observability tests exercise the real exporters. Bare lfx
     # still ships without them: the tests that assert the no-otel path force the condition by
     # blocking the import rather than by relying on the extra being absent here.

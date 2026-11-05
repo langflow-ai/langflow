@@ -13,12 +13,15 @@ from uuid import uuid4
 import pytest
 from ag_ui.core import StepFinishedEvent, StepStartedEvent
 from lfx.components.input_output import ChatInput
+from lfx.custom.custom_component.component import Component
 from lfx.graph import Graph
 from lfx.graph.edge.base import Edge
 from lfx.graph.vertex import base as vertex_base_module
 from lfx.graph.vertex import vertex_types as vertex_types_module
 from lfx.graph.vertex.base import ParameterHandler, Vertex, VertexStates
 from lfx.interface.components import component_cache
+from lfx.io import HandleInput, Output
+from lfx.schema.message import Message
 from lfx.services.model_provider_policy import (
     BaseModelProviderPolicyService,
     ModelProviderPolicyContext,
@@ -1656,3 +1659,43 @@ class TestStorageNamespaceDenialIsNotDowngraded(TestFileInputStorageNamespaceOwn
 
         with pytest.raises(StorageNamespaceError):
             handler.process_file_value(f"{self.VICTIM_ID}/secret.txt", is_list=False)
+
+
+class _TwoOutputs(Component):
+    display_name = "Two Outputs"
+    outputs = [
+        Output(display_name="First", name="first", method="build_first", group_outputs=True),
+        Output(display_name="Second", name="second", method="build_second", group_outputs=True),
+    ]
+
+    def build_first(self) -> Message:
+        return Message(text="first")
+
+    def build_second(self) -> Message:
+        return Message(text="second")
+
+
+class _JoinTexts(Component):
+    display_name = "Join Texts"
+    inputs = [HandleInput(name="messages", display_name="Messages", input_types=["Message"], is_list=True)]
+    outputs = [Output(display_name="Joined", name="joined", method="join")]
+
+    def join(self) -> Message:
+        return Message(text="+".join(message.text for message in self.messages))
+
+
+@pytest.mark.asyncio
+async def test_two_outputs_of_one_component_into_one_list_input_both_arrive():
+    """Each edge into a list input brings its own output, also when one component sends two.
+
+    The list holds the source vertex once per edge, and each entry used to resolve to the first
+    edge matching the input, so the input got the first output twice.
+    """
+    source = _TwoOutputs(_id="source")
+    join = _JoinTexts(_id="join")
+    join.set(messages=[source.build_first, source.build_second])
+
+    graph = Graph(source, join)
+    [r async for r in graph.async_start()]
+
+    assert sorted(graph.get_vertex("join").built_object["joined"].text.split("+")) == ["first", "second"]
