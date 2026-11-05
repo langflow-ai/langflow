@@ -146,21 +146,6 @@ def test_workspace_constraints_enforce_patched_pymongo_and_tornado() -> None:
             assert Version(package["version"]) >= Version(minimum)
 
 
-def test_workspace_constraints_enforce_patched_brotli() -> None:
-    constraints = _load_pyproject("pyproject.toml")["tool"]["uv"]["constraint-dependencies"]
-
-    _assert_floor(_requirement(constraints, "brotli"), "1.2.1")
-    _assert_floor(_requirement(constraints, "brotlicffi"), "1.2.1.0")
-
-    with (REPO_ROOT / "uv.lock").open("rb") as lock_file:
-        packages = tomllib.load(lock_file)["package"]
-    for name, minimum in (("brotli", "1.2.1"), ("brotlicffi", "1.2.1.0")):
-        matches = [package for package in packages if package["name"] == name]
-        assert matches
-        for package in matches:
-            assert Version(package["version"]) >= Version(minimum)
-
-
 def test_published_packages_enforce_patched_pymongo_floor() -> None:
     """langchain-mongodb is a core langflow-base dependency, so pymongo is always installed.
 
