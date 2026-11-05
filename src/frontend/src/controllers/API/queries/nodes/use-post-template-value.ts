@@ -85,6 +85,7 @@ export const usePostTemplateValue: useMutationFunctionType<
 
     const preparedTemplate = {
       ...template,
+      _frontend_node_id: { value: nodeId },
       ...(flowId ? { _frontend_node_flow_id: { value: flowId } } : {}),
       ...(folderId ? { _frontend_node_folder_id: { value: folderId } } : {}),
       is_refresh: payload.is_refresh,

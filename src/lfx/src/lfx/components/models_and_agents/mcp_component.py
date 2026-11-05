@@ -133,11 +133,6 @@ class MCPToolsComponent(ComponentWithCache):
         if servers_value is None:
             safe_cache_set(self._shared_component_cache, "servers", {})
 
-        # Check if last_selected_server key exists and is not CacheMiss
-        last_server_value = safe_cache_get(self._shared_component_cache, "last_selected_server")
-        if last_server_value is None:
-            safe_cache_set(self._shared_component_cache, "last_selected_server", "")
-
     def _normalized_headers_for_cache(self) -> dict[str, str]:
         """Component headers as a dict for stable cache keying (auth / tweaks)."""
         component_headers = getattr(self, "headers", None) or []
@@ -201,6 +196,17 @@ class MCPToolsComponent(ComponentWithCache):
         payload = json.dumps(cache_data, sort_keys=True)
         digest = hashlib.sha256(payload.encode()).hexdigest()[:16]
         return f"{server_name}:{digest}"
+
+    def _mcp_selected_server_cache_key(self, build_config: dict) -> str | None:
+        """Keep selection history within the authenticated editor node's flow."""
+        user_id = self._mcp_cache_user_id()
+        flow_id = getattr(self, "_flow_id", None)
+        node_context = build_config.get("_frontend_node_id")
+        node_id = node_context.get("value") if isinstance(node_context, dict) else None
+        if not user_id or not flow_id or not isinstance(node_id, str) or not node_id:
+            return None
+        payload = json.dumps([user_id, str(flow_id), node_id])
+        return f"mcp_selected_server:{hashlib.sha256(payload.encode()).hexdigest()}"
 
     def _mcp_cache_user_id(self) -> str | None:
         """Return the authenticated user id without requiring a fully attached graph.
@@ -755,7 +761,12 @@ class MCPToolsComponent(ComponentWithCache):
                     else build_config_server_value
                 )
                 servers_cache_key_ui = self._mcp_servers_cache_key(current_server_name) if current_server_name else ""
-                _last_selected_server = safe_cache_get(self._shared_component_cache, "last_selected_server", "")
+                selection_cache_key = self._mcp_selected_server_cache_key(build_config)
+                _last_selected_server = (
+                    safe_cache_get(self._shared_component_cache, selection_cache_key, "")
+                    if selection_cache_key
+                    else self._last_selected_server or ""
+                )
                 # Only treat as a server change if there was a previous server selection.
                 # Cold cache (_last_selected_server="") on initial flow load is NOT a server change —
                 # the user didn't switch anything, the backend just hasn't seen this component yet.
@@ -783,7 +794,9 @@ class MCPToolsComponent(ComponentWithCache):
                     else:
                         if not is_in_tool_mode:
                             build_config["tool"]["show"] = True
-                        safe_cache_set(self._shared_component_cache, "last_selected_server", current_server_name)
+                        self._last_selected_server = current_server_name
+                        if selection_cache_key:
+                            safe_cache_set(self._shared_component_cache, selection_cache_key, current_server_name)
                         return build_config
 
                 # To avoid unnecessary updates, only proceed if the server has actually changed
@@ -805,7 +818,9 @@ class MCPToolsComponent(ComponentWithCache):
                                     return build_config
                     else:
                         return build_config
-                safe_cache_set(self._shared_component_cache, "last_selected_server", current_server_name)
+                self._last_selected_server = current_server_name
+                if selection_cache_key:
+                    safe_cache_set(self._shared_component_cache, selection_cache_key, current_server_name)
 
                 # When cache is disabled, clear any cached data for this server
                 # This ensures we always fetch fresh data from the database

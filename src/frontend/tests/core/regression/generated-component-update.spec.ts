@@ -237,7 +237,15 @@ for (const componentType of ["RunFlow", "MCPTools"] as const) {
         expect(created.status()).toBe(201);
         const flowId = (await created.json()).id as string;
         resources.flows.push(flowId);
-        await page.goto(`/flow/${flowId}`);
+        await Promise.all([
+          page.waitForResponse(
+            (response) =>
+              response.request().method() === "GET" &&
+              new URL(response.url()).pathname === `/api/v1/flows/${flowId}` &&
+              response.ok(),
+          ),
+          page.goto(`/flow/${flowId}`),
+        ]);
         await waitForFlowEditorReady(page);
         await expect(page.getByTestId("div-generic-node")).toHaveCount(
           flow.data!.nodes.length,
@@ -363,6 +371,12 @@ for (const componentType of ["RunFlow", "MCPTools"] as const) {
           page.waitForResponse(
             (response) =>
               new URL(response.url()).pathname === "/api/v1/all" &&
+              response.ok(),
+          ),
+          page.waitForResponse(
+            (response) =>
+              response.request().method() === "GET" &&
+              new URL(response.url()).pathname === `/api/v1/flows/${flowId}` &&
               response.ok(),
           ),
           page.reload(),

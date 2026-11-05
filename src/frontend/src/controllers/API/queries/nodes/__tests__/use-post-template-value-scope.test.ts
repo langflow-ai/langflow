@@ -82,6 +82,10 @@ describe("usePostTemplateValue scope continuity", () => {
       expect.any(String),
       expect.objectContaining({
         frontend_node: { metadata: { component_class_name: "Second" } },
+        template: expect.objectContaining({
+          _frontend_node_id: { value: "shared-node" },
+          _frontend_node_flow_id: { value: "flow-one" },
+        }),
       }),
     );
   });
