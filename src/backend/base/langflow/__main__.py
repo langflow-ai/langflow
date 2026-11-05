@@ -98,9 +98,11 @@ from lfx.cli._observability_commands import observability_app  # noqa: E402
 app.add_typer(observability_app, name="observability")
 app.add_typer(admin_app, name="admin")
 
+from langflow.cli.maintenance import maintenance_app  # noqa: E402
 from langflow.cli.secrets import secrets_app  # noqa: E402
 
 app.add_typer(secrets_app, name="secrets")
+app.add_typer(maintenance_app, name="maintenance")
 
 
 class ProcessManager:
@@ -1213,8 +1215,12 @@ def reconcile_kb_from_disk(
 
 async def _reconcile_kb_from_disk(*, username: str | None, dry_run: bool) -> None:
     from langflow.api.utils import knowledge_base_service
+    from langflow.api.utils.migration_pause import writes_paused
 
     await initialize_services()
+    if not dry_run and await writes_paused():
+        typer.echo("Knowledge base reconciliation skipped because changes are paused for maintenance or migration.")
+        return
     inserted = await knowledge_base_service.backfill_all_users_from_disk(
         username=username,
         dry_run=dry_run,

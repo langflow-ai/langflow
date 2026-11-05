@@ -24,7 +24,11 @@ def _insert_job(connection, job_type: str) -> None:
 def test_deployment_copy_and_release_have_single_head():
     """Startup upgrades to "head", which Alembic refuses while there are two."""
     script = ScriptDirectory.from_config(_make_alembic_cfg("sqlite+aiosqlite://"))
-    assert script.get_heads() == ["b7e1d4a92c60"]  # pragma: allowlist secret
+    heads = script.get_heads()
+    assert len(heads) == 1
+    assert "b7e1d4a92c60" in {  # pragma: allowlist secret
+        revision.revision for revision in script.iterate_revisions(heads, "base")
+    }
 
 
 @pytest.mark.parametrize(
@@ -50,8 +54,8 @@ def test_upgrading_from_either_side_keeps_jobs_and_accepts_a_copy_job(db_url, pr
         with engine.connect() as connection:
             jobs = connection.execute(text("SELECT COUNT(*) FROM job")).scalar()
             assert jobs == (1 if prior_revision == "base" else 2)
-            assert MigrationContext.configure(connection).get_current_heads() == (
-                "b7e1d4a92c60",  # pragma: allowlist secret
+            assert MigrationContext.configure(connection).get_current_heads() == tuple(
+                ScriptDirectory.from_config(config).get_heads()
             )
     finally:
         engine.dispose()

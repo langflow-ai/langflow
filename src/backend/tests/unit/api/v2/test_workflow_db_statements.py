@@ -188,6 +188,16 @@ _ROUND_TRIPS = {
 }
 
 
+def _assert_round_trips(recorder: _Recorder, expected: tuple[int, int], *, maintenance_reads: int) -> None:
+    # Every admission reads the shared flag through its own read-only session.
+    # Keep this exact cost visible without relaxing the existing execution budget.
+    assert recorder.statements.count("SELECT maintenance_state") == maintenance_reads, recorder.statements
+    assert (len(recorder.statements), recorder.checkouts) == (
+        expected[0] + maintenance_reads,
+        expected[1] + maintenance_reads,
+    ), recorder.statements
+
+
 def _follows(statements: list[str], first: str, then: str) -> bool:
     return any(a == first and b == then for a, b in pairwise(statements))
 
@@ -205,7 +215,9 @@ async def test_run_db_round_trips(client: AsyncClient, created_api_key, chat_flo
         # The sync job row is created IN_PROGRESS and written once more when it ends.
         assert [s for s in statements if s.endswith(" job")] == ["INSERT job", "UPDATE job"], statements
     flow_name = request.node.callspec.params["chat_flow"]
-    assert (len(statements), recorder.checkouts) == _ROUND_TRIPS[flow_name][mode], statements
+    # One HTTP admission, then submission and start of the memory-base output
+    # hook. The queued start must recheck a freeze set after submission.
+    _assert_round_trips(recorder, _ROUND_TRIPS[flow_name][mode], maintenance_reads=3)
 
 
 @pytest.mark.usefixtures("client")
@@ -275,5 +287,10 @@ async def test_run_task_wait_includes_delayed_child_sql():
             measurement.cancel()
         await asyncio.gather(measurement, return_exceptions=True)
 
-    assert recorder.statements == ["SELECT", "SELECT"]
-    assert recorder.checkouts == 2
+    assert [statement for statement in recorder.statements if statement != "SELECT maintenance_state"] == [
+        "SELECT",
+        "SELECT",
+    ]
+    # Both the parent hook and its child check admission when submitted and
+    # again when the queue starts them. Their own two statements remain counted.
+    _assert_round_trips(recorder, (2, 2), maintenance_reads=4)

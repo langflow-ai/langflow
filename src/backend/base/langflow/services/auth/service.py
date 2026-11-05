@@ -33,6 +33,7 @@ from langflow.services.auth.context import (
 from langflow.services.auth.exceptions import (
     AuthBackendUnavailableError,
     AuthenticationError,
+    ExternalAuthMaintenanceError,
     InactiveUserError,
     InvalidCredentialsError,
     MissingCredentialsError,
@@ -945,6 +946,10 @@ class AuthService(BaseAuthService):
         from sqlmodel import select
 
         from langflow.services.database.models.auth import SSOUserProfile
+        from langflow.services.maintenance.state import maintenance_enabled
+
+        if await maintenance_enabled(db):
+            raise ExternalAuthMaintenanceError
 
         profile_stmt = select(SSOUserProfile).where(
             SSOUserProfile.sso_provider == identity.provider,
@@ -1490,7 +1495,9 @@ class AuthService(BaseAuthService):
             expires_delta=refresh_token_expires,
         )
 
-        if update_last_login:
+        from langflow.services.maintenance.state import maintenance_enabled
+
+        if update_last_login and not await maintenance_enabled(db):
             await update_user_last_login_at(user_id, db)
 
         return {
