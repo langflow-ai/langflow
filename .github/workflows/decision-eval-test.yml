@@ -1,0 +1,43 @@
+name: Decision Eval Harness Tests
+
+# The routing eval harness drives the real Smart Router, so it runs when either the
+# harness or the decision code it measures changes. It never calls a provider: the
+# tests answer decisions in-process, and live runs are manual (see its README).
+on:
+  pull_request:
+    paths:
+      - "scripts/eval/**"
+      - "src/lfx/src/lfx/base/models/decision_constants.py"
+      - "src/lfx/src/lfx/base/models/decisions/**"
+      - "src/lfx/src/lfx/components/llm_operations/llm_conditional_router.py"
+      - ".github/workflows/decision-eval-test.yml"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Test decision routing eval harness
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.0.0
+        with:
+          version: latest-known
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+          prune-cache: false
+
+      # The harness needs only lfx, the provider-free engine: install it alone, as
+      # `make lfx_tests` does, so a run never depends on langflow or provider SDKs.
+      - name: Install lfx
+        working-directory: src/lfx
+        run: uv sync --dev
+
+      - name: Run harness tests
+        run: uv run --no-sync pytest scripts/eval/decision_routing/tests -v
+        env:
+          DO_NOT_TRACK: true
