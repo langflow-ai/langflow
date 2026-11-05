@@ -145,7 +145,7 @@ dependencies = [
     "opik>=2.0.0,<3.0.0",
     # Opik installs LiteLLM even without the optional litellm extra.
     # Block the compromised 1.107.0 release in published wheel metadata.
-    "litellm>=1.103.1,<2.0.0,!=1.104.0rc1,!=1.107.0",
+    "litellm>=1.103.10,<1.104.0,!=1.104.0rc1,!=1.107.0",
     # Newer Opik releases cap LiteLLM below its security floor on Python 3.10.
     # Publish the compatible version constraint so fresh wheel installs stay valid.
     "opik==2.2.7; python_version < '3.11'",
@@ -274,7 +274,7 @@ google = [
     "google-api-python-client~=2.161",
 ]
 ollama = ["langchain-ollama~=0.3.10"]
-nvidia = ["langchain-nvidia-ai-endpoints~=1.0.0"]
+nvidia = ["langchain-nvidia-ai-endpoints>=1.5.0,<2.0.0"]
 mistral = ["langchain-mistralai~=1.1.1"]
 sambanova = ["langchain-sambanova~=1.0.0"]
 groq = ["langchain-groq~=1.1.1"]
@@ -326,7 +326,7 @@ fastavro = [
     'fastavro==1.9.7; python_version < "3.13"',
     'fastavro>=1.9.8,<2.0.0; python_version >= "3.13"',
 ]
-gitpython = ["GitPython>=3.1.58"]
+gitpython = ["GitPython>=3.2.1"]
 nltk = ["nltk>=3.10.4"]
 lark = ["lark==1.2.2"]
 
@@ -350,7 +350,7 @@ pgvector = [
     "psycopg[binary]>=3.1,<4.0",
 ]
 litellm = [
-    "litellm>=1.103.1,<2.0.0,!=1.104.0rc1,!=1.107.0",
+    "litellm>=1.103.10,<1.104.0,!=1.104.0rc1,!=1.107.0",
     # Runtime deps from litellm[proxy] that langflow-ide hits when logging
     # to langfuse via litellm.proxy.proxy_server (issue #12228). The full
     # Pull in only the modules Langflow uses from litellm[proxy] rather than
@@ -434,8 +434,8 @@ cuga = [
     # Temporary compatibility valve: newer langchain-litellm releases require cryptography<49.
     "langchain-litellm==0.5.1; sys_platform != 'darwin' and python_version < '3.14'",
     "langchain-litellm==0.5.1; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",
-    "litellm>=1.103.1,<2.0.0,!=1.104.0rc1,!=1.107.0; sys_platform != 'darwin' and python_version < '3.14'",
-    "litellm>=1.103.1,<2.0.0,!=1.104.0rc1,!=1.107.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",
+    "litellm>=1.103.10,<1.104.0,!=1.104.0rc1,!=1.107.0; sys_platform != 'darwin' and python_version < '3.14'",
+    "litellm>=1.103.10,<1.104.0,!=1.104.0rc1,!=1.107.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",
 ]
 mlx = [
     # mlx ships no cp315 wheels (and no sdist) yet.
@@ -444,7 +444,7 @@ mlx = [
 ]
 
 # MCP
-fastmcp = ["fastmcp>=3.2.0"]
+fastmcp = ["fastmcp>=3.4.10,<4.0.0"]
 
 # AWS async client. S3 storage uses aiobotocore directly so boto3 is no longer
 # constrained by aioboto3's exact pin to aiobotocore 2.25.1.
