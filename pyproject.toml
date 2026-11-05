@@ -247,6 +247,8 @@ constraint-dependencies = [
     "brotli>=1.2.1",
     "brotlicffi>=1.2.1.0",
     "dnspython>=2.9.1; python_version >= '3.11'",
+    "fastmcp>=3.4.10,<4.0.0",  # GHSA-7xgj-8392-5q4r
+    "fastmcp-slim>=3.4.10,<4.0.0",
     "joserfc>=1.7.6,<2.0.0",
     "pyarrow>=26.0.1,<27.0.0; python_version >= '3.11'",
     "pyasn1>=0.6.5,<0.7.0",

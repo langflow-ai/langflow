@@ -441,7 +441,7 @@ mlx = [
 ]
 
 # MCP
-fastmcp = ["fastmcp>=3.2.0"]
+fastmcp = ["fastmcp>=3.4.10,<4.0.0"]
 
 # AWS async client. S3 storage uses aiobotocore directly so boto3 is no longer
 # constrained by aioboto3's exact pin to aiobotocore 2.25.1.
