@@ -32,8 +32,8 @@ def litellm_guard(request: pytest.FixtureRequest) -> Requirement:
     for guard in guards:
         assert "1.107.0" not in guard.specifier
         assert "1.103.0" not in guard.specifier
-        assert "1.103.2" in guard.specifier
-        assert "1.106.2" in guard.specifier, "Do not freeze installs to the current lockfile version"
+        assert "1.103.10" in guard.specifier
+        assert "1.103.11" in guard.specifier, "Do not freeze installs to the current lockfile version"
         if project["name"] != "lfx-bundles":
             assert guard.marker is None
     # Exercise CUGA's version restriction independently of its platform markers.
@@ -62,8 +62,8 @@ def offline_resolver(tmp_path: Path):
     def resolve(guard: Requirement | None, *, force_compromised: bool = False) -> subprocess.CompletedProcess[str]:
         dependencies = ["upstream"] + ([str(guard)] if guard else [])
         for name, version, requirements in (
-            ("litellm", "1.103.2", []),
-            ("litellm", "1.106.2", []),
+            ("litellm", "1.103.10", []),
+            ("litellm", "1.103.11", []),
             ("litellm", "1.107.0", []),
             ("upstream", "1.0.0", ["litellm>=1.103.1"]),
             ("consumer", "1.0.0", dependencies),
@@ -118,7 +118,7 @@ def test_published_requirement_protects_transitive_install_without_lockfile(
     assert protected.returncode == 0, protected.stdout + protected.stderr
     after = json.loads((tmp_path / "resolved.json").read_text())
     versions = {item["metadata"]["name"]: item["metadata"]["version"] for item in after["install"]}
-    assert versions["litellm"] == "1.106.2"
+    assert versions["litellm"] == "1.103.11"
 
 
 def test_published_requirement_rejects_explicit_compromised_release(

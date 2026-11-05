@@ -427,3 +427,21 @@ def test_the_listener_deployment_names_a_uid_and_not_only_non_root() -> None:
 
     for dockerfile in ("build_and_push.Dockerfile", "build_and_push_backend.Dockerfile"):
         assert _image_uid(dockerfile) == runtime_uid, f"{dockerfile} runs as a different uid than the manifest asks for"
+
+
+@pytest.mark.parametrize(
+    "dockerfile",
+    ["build_and_push.Dockerfile", "build_and_push_backend.Dockerfile", "build_and_push_ep.Dockerfile"],
+)
+def test_published_node_versions_include_brotli_security_fix(dockerfile: str) -> None:
+    """Reject Node runtimes that still bundle the vulnerable Brotli decoder."""
+    versions = [
+        instruction.split("=", 1)[1]
+        for instruction in _logical_instructions(REPO_ROOT / "docker" / dockerfile)
+        if instruction.startswith("ARG NODE_VERSION=")
+    ]
+    assert len(versions) == 1
+    version = tuple(int(part) for part in versions[0].split("."))
+    fixed = {22: (22, 23, 4), 24: (24, 22, 1), 26: (26, 12, 1)}
+    assert version[0] in fixed, "Verify the Brotli fix before changing Node release lines"
+    assert version >= fixed[version[0]], f"{dockerfile} still ships CVE-2026-111497"
