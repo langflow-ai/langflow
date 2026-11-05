@@ -29,7 +29,8 @@ dependencies = [
     "langchain-community~=0.4.1",
     "langchain-mongodb>=0.11.0",
     # langchain-mongodb always installs pymongo; publish the patched floor on this unconditional path.
-    "pymongo>=4.18.2,<5.0.0",  # CVE-2026-88029, CVE-2026-96747, CVE-2026-96748, CVE-2026-96749
+    "pymongo>=4.18.3,<5.0.0",  # CVE-2026-88029, CVE-2026-96747, CVE-2026-96748, CVE-2026-96749
+    "dnspython>=2.9.1,<3.0.0; python_version >= '3.11'",
     "urllib3>=2.8.0,<3.0.0",  # CVE-2026-97688
     "langchain-perplexity>=1.0.0,<2.0.0",
     "langchain-qdrant>=1.0.0,<2.0.0",
@@ -56,6 +57,7 @@ dependencies = [
     "pillow>=12.3.0,<13.0.0; python_version < '3.11'",
     "pillow>=13.0.0,<14.0.0; python_version >= '3.11'",
     "docstring-parser>=0.16,<1.0.0",
+    "joserfc>=1.7.6,<2.0.0",
     "PyJWT>=2.15.1,<3.0.0",  # CVE-2026-102266, CVE-2026-102267, CVE-2026-102271, CVE-2026-102272, CVE-2026-102274
     "pandas>=2.2.3",
     "multiprocess>=0.70.14,<1.0.0",
@@ -84,8 +86,9 @@ dependencies = [
     "prometheus-client>=0.20.0,<1.0.0",
     "aiofiles>=24.1.0,<25.0.0",
     "aiohttp>=3.14.4,<4.0.0",
+    "certifi>=2026.10.19",
     "pip>=26.2.1,<27.0.0",
-    "setuptools>=83.0.0,<84.0.0",
+    "setuptools>=84.1.0,<85.0.0",
     "nanoid>=2.0.0,<3.0.0",
     "filelock>=4.1.0,<4.2.0; python_version < '3.11'",
     "filelock>=4.2.1,<5.0.0; python_version >= '3.11'",
@@ -118,7 +121,7 @@ dependencies = [
     "onnxruntime>=1.20,<1.24; python_version<'3.14'", # >=1.24 does not support Python 3.10; allow 1.23.x for agent-lifecycle-toolkit compatibility
     "onnxruntime>=1.26; python_version>='3.14'",
     "dynaconf>=3.2.13,<4.0.0",
-    "pyasn1>=0.6.3,<0.7.0",
+    "pyasn1>=0.6.5,<0.7.0",
     "langgraph-checkpoint>4.0.0,<5.0.0",
     # CVE-2026-9856: reject path traversal when saving named chat templates (5.10.0 was yanked).
     "transformers>=5.10.1,<6.0.0",
@@ -139,6 +142,7 @@ dependencies = [
     "opik==2.2.7; python_version < '3.11'",
     "traceloop-sdk>=0.43.1,<1.0.0",
     "openlayer>=0.9.0,<1.0.0",
+    "pyarrow>=26.0.1,<27.0.0; python_version >= '3.11'",
     "kubernetes>=31.0.0,<33.0.0",
     "aiobotocore>=3.7.0,<4.0.0",
 ]
@@ -231,7 +235,7 @@ cassandra = ["lfx[cassandra]==1.12.9"]  # Compatibility spelling for the lfx-dat
 clickhouse = ["clickhouse-connect==0.7.19"]
 
 
-mongodb = ["pymongo>=4.18.2,<5.0.0"]
+mongodb = ["pymongo>=4.18.3,<5.0.0"]
 supabase = ["supabase>=2.6.0,<3.0.0"]
 redis = ["redis>=7.4.0,<8.0.0"]
 elasticsearch = ["elasticsearch~=8.19", "langchain-elasticsearch~=1.0.0"]
@@ -303,12 +307,19 @@ fake-useragent = ["fake-useragent>=2.0.0"]
 # duckduckgo: the runtime dep for the extracted lfx-duckduckgo bundle.
 # Public consumers should install lfx-duckduckgo directly. The compatibility
 # extra remains so older explicit langflow-base[duckduckgo] installs still work.
-duckduckgo = ["ddgs>=9.0.0"]
+duckduckgo = [
+    "ddgs>=9.0.0",
+    "brotli>=1.2.1",
+    "brotlicffi>=1.2.1.0; platform_python_implementation != 'CPython'",
+]
 yfinance = ["yfinance==0.2.50"]
 wolframalpha = ["wolframalpha==5.1.3"]
 
 # Individual utilities
-pyarrow = ["pyarrow>=23.0.1,<24.0.0"]
+pyarrow = [
+    "pyarrow>=23.0.1,<24.0.0; python_version < '3.11'",
+    "pyarrow>=26.0.1,<27.0.0; python_version >= '3.11'",
+]
 fastavro = [
     'fastavro==1.9.7; python_version < "3.13"',
     'fastavro>=1.9.8,<2.0.0; python_version >= "3.13"',
