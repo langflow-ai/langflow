@@ -517,16 +517,21 @@ class TestJsonOutput:
             (None, "'data.edges' must be a JSON array"),
             ({}, "'data.edges' must be a JSON array"),
             ([None], "Edge at index 0 is not a JSON object"),
+            ([{"source": "node-a", "target": "node-b", "data": None}], "Edge at index 0 has a non-object 'data' field"),
+            ([{"source": "node-a", "target": "node-b", "data": []}], "Edge at index 0 has a non-object 'data' field"),
         ],
     )
     def test_cli_reports_invalid_edge_shape_and_validates_the_next_flow(self, tmp_path, edges, message):
         from lfx.__main__ import app
         from typer.testing import CliRunner
 
-        invalid = _write_flow(tmp_path, "a.json", {**_MINIMAL_VALID, "data": {"nodes": [], "edges": edges}})
-        valid = _write_flow(tmp_path, "b.json", _MINIMAL_VALID)
+        node_b = {**_NODE, "id": "node-b", "data": {**_NODE["data"], "id": "node-b"}}
+        nodes = [_NODE, node_b]
+        legacy_edge = {"source": "node-a", "target": "node-b"}
+        invalid = _write_flow(tmp_path, "a.json", {**_MINIMAL_VALID, "data": {"nodes": nodes, "edges": edges}})
+        valid = _write_flow(tmp_path, "b.json", {**_MINIMAL_VALID, "data": {"nodes": nodes, "edges": [legacy_edge]}})
 
-        result = CliRunner().invoke(app, ["validate", str(tmp_path), "--level", "1", "--format", "json"])
+        result = CliRunner().invoke(app, ["validate", str(tmp_path), "--skip-components", "--format", "json"])
 
         assert result.exit_code == 1
         first, second = json.loads(result.stdout)

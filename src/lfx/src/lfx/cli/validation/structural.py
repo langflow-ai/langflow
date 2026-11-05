@@ -159,16 +159,21 @@ def _check_structural(flow: dict[str, Any], result: ValidationResult) -> bool:
 
     for i, edge in enumerate(edges):
         if not isinstance(edge, dict):
-            result.issues.append(
-                _make_issue(
-                    level=_LEVEL_STRUCTURAL,
-                    severity="error",
-                    node_id=None,
-                    node_name=None,
-                    message=f"Edge at index {i} is not a JSON object",
-                )
+            message = f"Edge at index {i} is not a JSON object"
+        elif not isinstance(edge.get("data", {}), dict):
+            message = f"Edge at index {i} has a non-object 'data' field"
+        else:
+            continue
+        result.issues.append(
+            _make_issue(
+                level=_LEVEL_STRUCTURAL,
+                severity="error",
+                node_id=None,
+                node_name=None,
+                message=message,
             )
-            ok = False
+        )
+        ok = False
 
     return ok
 
