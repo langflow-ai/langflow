@@ -70,6 +70,30 @@ def test_exact_current_interpreter_metadata_probe_allows_a_path_alias_without_la
         )
 
 
+@pytest.mark.parametrize("program", ["git", "file"])
+@pytest.mark.parametrize(("value", "allowed"), [("http", True), ("http/dup", False)])
+def test_metadata_probe_retains_only_the_current_semantic_convention_flag(monkeypatch, program, value, allowed):
+    if not Path(f"/usr/bin/{program}").is_file():
+        pytest.skip("system metadata probe is unavailable")
+    monkeypatch.setenv("OTEL_SEMCONV_STABILITY_OPT_IN", "http")
+    argv = [program, "version"] if program == "git" else [program, "-b", sys.executable]
+    environment = {"PATH": os.defpath, "OTEL_SEMCONV_STABILITY_OPT_IN": value}
+    arguments = (program, argv, None, environment)
+    assert is_local_metadata_probe(arguments) is allowed
+
+    def discover():
+        _callback("subprocess.Popen", arguments, swallow=True)
+        return {}
+
+    if allowed:
+        assert engine.discover_offline(discover) == {}
+        assert engine._refused_calls == []
+    else:
+        with pytest.raises(engine.ComponentDiscoveryError, match="process"):
+            engine.discover_offline(discover)
+        assert engine._refused_calls == ["subprocess.Popen"]
+
+
 @pytest.mark.parametrize(
     "variant",
     ["path", "extra_arg", "shell", "lookalike", "argv_lookalike", "injected_env", "wrong_target", "relative_target"],
