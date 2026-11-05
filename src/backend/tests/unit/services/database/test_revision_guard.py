@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -87,6 +88,7 @@ def _record_revision(database: Path, revision: str) -> None:
 
 @pytest.mark.parametrize("uri_mode", [None, "false", "0"])
 @pytest.mark.parametrize("decoy_exists", [False, True])
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot represent this literal colon filename")
 async def test_literal_file_prefix_checks_the_engine_database_before_startup(
     tmp_path, monkeypatch, uri_mode, decoy_exists
 ):
@@ -124,6 +126,7 @@ async def test_uri_file_prefix_checks_the_decoded_database(tmp_path, monkeypatch
 @pytest.mark.parametrize("uri_mode", ["true", "1"])
 @pytest.mark.parametrize("mode", ["ro", "memory"])
 @pytest.mark.parametrize("decoy_exists", [False, True])
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot represent this literal question-mark filename")
 async def test_uri_flag_without_file_prefix_checks_the_complete_literal_filename(
     tmp_path, monkeypatch, uri_mode, mode, decoy_exists
 ):
@@ -152,6 +155,7 @@ async def test_uri_flag_without_file_prefix_checks_the_complete_literal_filename
 
 
 @pytest.mark.parametrize("uri_mode", ["true", "1"])
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot represent this literal question-mark filename")
 async def test_uri_memory_query_without_file_prefix_does_not_create_a_missing_file(tmp_path, monkeypatch, uri_mode):
     monkeypatch.chdir(tmp_path)
     service = _service(Path("missing.db"), uri_mode=uri_mode, mode="memory")
@@ -165,6 +169,7 @@ async def test_uri_memory_query_without_file_prefix_does_not_create_a_missing_fi
         await service.engine.dispose()
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot represent this literal colon filename")
 async def test_file_memory_name_is_literal_without_uri_mode(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     database = Path("file::memory:")
