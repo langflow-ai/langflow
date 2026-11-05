@@ -136,6 +136,11 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
       const templateFieldType = targetNode.data.node!.template[field]?.type;
       const rawInputTypes = targetNode.data.node!.template[field]?.input_types;
       const modelType = targetNode.data.node!.template[field]?.model_type;
+      if (templateFieldType === "model" && modelType === "decision") {
+        newEdges = newEdges.filter((e) => e !== edgeInNewEdges);
+        brokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
+        return;
+      }
       // For ModelInput types, default based on model_type:
       // - "embedding" -> ["Embeddings"]
       // - "language" (default) -> ["LanguageModel"]

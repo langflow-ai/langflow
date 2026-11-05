@@ -283,6 +283,9 @@ async def test_withdrawing_background_consent_stops_listeners_without_restarting
         assert await _state(paused) == (TriggerState.PAUSED.value, None)
         assert await _state(schedule) == (TriggerState.ACTIVE.value, None)
         async with session_scope() as session:
+            for trigger_id in trigger_ids:
+                trigger = await session.get(Trigger, trigger_id)
+                assert trigger.provider_state["_connection_recovery"]["consent_required"] is True
             assert await connection_leases.current_holder(session, connection_id=connection_id, ttl_s=300) is None
             events = await session.exec(select(TriggerEvent).where(TriggerEvent.dedupe_key == "after-withdrawal"))
             assert not events.all()

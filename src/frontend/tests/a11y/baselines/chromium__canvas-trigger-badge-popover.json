@@ -1,0 +1,28 @@
+{
+  "label": "chromium__canvas-trigger-badge-popover",
+  "description": "KNOWN a11y limitation, not fixable in app code (LE-2235). The two <span tabindex=\"0\" data-radix-focus-guard> elements are injected at the <body> edges by Radix's focus guards while the trigger badge Popover is open, so IBM reports element_tabbable_role_valid on them. Same limitation as chromium__model-picker-popover-open-non-first-selected: they are invisible, contentless focus sentinels that disappear when the popover closes. Only these two guards are baselined; any other violation in the popover still fails tests/a11y/triggers.a11y.spec.ts ('badge popover opens from the keyboard, names the state and returns focus').",
+  "results": [
+    {
+      "ruleId": "element_tabbable_role_valid",
+      "reasonId": "fail_no_valid_role",
+      "level": "violation",
+      "message": "The tabbable element does not have a valid widget role",
+      "path": {
+        "dom": "/html[1]/body[1]/span[1]",
+        "aria": "/document[1]"
+      },
+      "value": ["VIOLATION", "FAIL"]
+    },
+    {
+      "ruleId": "element_tabbable_role_valid",
+      "reasonId": "fail_no_valid_role",
+      "level": "violation",
+      "message": "The tabbable element does not have a valid widget role",
+      "path": {
+        "dom": "/html[1]/body[1]/span[2]",
+        "aria": "/document[1]"
+      },
+      "value": ["VIOLATION", "FAIL"]
+    }
+  ]
+}

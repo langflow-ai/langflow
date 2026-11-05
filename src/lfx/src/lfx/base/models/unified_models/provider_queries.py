@@ -6,6 +6,7 @@ from functools import lru_cache
 
 from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS_DETAILED
 from lfx.base.models.azure_ai_foundry_constants import AZURE_AI_FOUNDRY_MODELS_DETAILED
+from lfx.base.models.decision_constants import DECISION_MODELS_DETAILED
 from lfx.base.models.google_generative_ai_constants import (
     GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS_DETAILED,
     GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
@@ -61,6 +62,7 @@ _STATIC_MODELS_DETAILED: list[list[dict]] = [
     # ``get_provider_for_model_name`` returns the first catalog hit, so keep
     # Foundry after established providers for 1.8.x backwards compat.
     AZURE_AI_FOUNDRY_MODELS_DETAILED,
+    DECISION_MODELS_DETAILED,
 ]
 
 

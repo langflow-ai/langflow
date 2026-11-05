@@ -1,9 +1,9 @@
 [project]
 name = "lfx-slack"
-version = "0.2.2"
+version = "0.2.3"
 description = "Slack Web API actions (user-identity and bot-identity) as a standalone Langflow Extension Bundle backed by connections."
 readme = "README.md"
-requires-python = ">=3.10,<3.15"
+requires-python = ">=3.10,<3.16"
 license = { text = "MIT" }
 authors = [
     { name = "Langflow", email = "contact@langflow.org" },
@@ -32,7 +32,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "slack", "integrations", "
 # Fine-grained BUNDLE_API compatibility is enforced via extension.json's
 # lfx.compat list against BUNDLE_API_VERSION.
 dependencies = [
-    "lfx>=1.13.0.dev0,<2.0.0",
+    "lfx>=1.14.0.dev0,<2.0.0",
     "slack-sdk>=3.33.0,<4.0.0",
     "aiohttp>=3.10.0,<4.0.0",
 ]

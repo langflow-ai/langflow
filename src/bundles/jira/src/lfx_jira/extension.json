@@ -1,0 +1,25 @@
+{
+  "$schema": "https://schemas.langflow.org/extension/v1.json",
+  "id": "lfx-jira",
+  "version": "0.1.0",
+  "name": "Jira",
+  "description": "Jira Cloud issue actions and latest-state polling triggers.",
+  "lfx": {
+    "compat": [
+      "1"
+    ]
+  },
+  "bundles": [
+    {
+      "name": "jira",
+      "path": "components/jira"
+    }
+  ],
+  "integrations": [
+    {
+      "provider_id": "jira",
+      "bundle": "jira",
+      "path": "capabilities.v1.json"
+    }
+  ]
+}

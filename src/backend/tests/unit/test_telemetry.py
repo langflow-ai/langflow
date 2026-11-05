@@ -25,6 +25,7 @@ def mock_settings_service(mocker, tmp_path):
     settings.settings.segment_write_key = "segment-test-key"
     settings.settings.prometheus_enabled = False
     settings.settings.do_not_track = False
+    settings.settings.edition = "opensource"
     return settings
 
 

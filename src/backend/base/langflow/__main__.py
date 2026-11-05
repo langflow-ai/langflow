@@ -98,6 +98,10 @@ from lfx.cli._observability_commands import observability_app  # noqa: E402
 app.add_typer(observability_app, name="observability")
 app.add_typer(admin_app, name="admin")
 
+from langflow.cli.secrets import secrets_app  # noqa: E402
+
+app.add_typer(secrets_app, name="secrets")
+
 
 class ProcessManager:
     """Manages the lifecycle of the backend process."""
