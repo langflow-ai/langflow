@@ -18,7 +18,7 @@ from langflow.services.data_subjects.builder_account_steps import BUILDER_ACCOUN
 from langflow.services.data_subjects.builder_flow_steps import erase_owned_flows
 from langflow.services.data_subjects.context import EraseStepPending
 from langflow.services.data_subjects.end_user_steps import END_USER_STEPS
-from langflow.services.data_subjects.errors import DataSubjectError
+from langflow.services.data_subjects.errors import DataSubjectError, ReportOwnerAttributionRequiredError
 from langflow.services.data_subjects.knowledge_base_steps import erase_knowledge_base_upgrades, erase_knowledge_bases
 from langflow.services.data_subjects.memory_base_storage import memory_base_items
 from langflow.services.data_subjects.requests import close_request, erase_context
@@ -66,6 +66,8 @@ def is_retry_due(request: DataSubjectRequest, now: datetime | None = None) -> bo
     error = request.error or {}
     if not error:
         return True
+    if error.get("code") == ReportOwnerAttributionRequiredError.code:
+        return False
     if int(error.get("attempts", 0)) >= MAX_ATTEMPTS:
         return False
     retry_at = error.get("retry_at")
@@ -167,14 +169,25 @@ async def _record_failure(request_id: UUID, step: str, exc: Exception) -> None:
     async with session_scope() as session:
         request = await _load(session, request_id)
         attempts = int((request.error or {}).get("attempts", 0)) + 1
+        manual_review = isinstance(exc, ReportOwnerAttributionRequiredError)
         request.error = {
             "phase": request.phase,
             "step": step,
             "code": exc.code if isinstance(exc, DataSubjectError) else type(exc).__name__,
             "attempts": attempts,
             "failed_at": _now().isoformat(),
-            "retry_at": (_now() + timedelta(seconds=RETRY_BASE_SECONDS * 2 ** (attempts - 1))).isoformat(),
+            "retry_at": (
+                None
+                if manual_review
+                else (_now() + timedelta(seconds=RETRY_BASE_SECONDS * 2 ** (attempts - 1))).isoformat()
+            ),
         }
+        if manual_review:
+            request.error.update(
+                manual_review_required=True,
+                message=exc.message,
+                details=exc.details,
+            )
         session.add(request)
 
 

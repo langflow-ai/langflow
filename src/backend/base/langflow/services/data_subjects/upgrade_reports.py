@@ -11,6 +11,7 @@ from sqlmodel import select
 
 from langflow.services.data_subjects.batching import delete_batch
 from langflow.services.data_subjects.context import EraseStepPending
+from langflow.services.data_subjects.errors import ReportOwnerAttributionRequiredError
 from langflow.services.database.models.upgrade_report import UpgradeReport, UpgradeReportRepair
 from langflow.services.upgrade_reports.history import lock_report
 
@@ -23,7 +24,8 @@ _CURSOR = "upgrade_report_after"
 REPORT_SCAN_BATCH_SIZE = 10
 
 
-def _names_subject(document: str, ctx: EraseContext) -> bool:
+def _names_subject(document: str, ctx: EraseContext, report_id: UUID) -> bool:
+    ambiguous_name = False
     for flow in json.loads(document).get("flows", []):
         owner = flow.get("owner")
         if not isinstance(owner, dict):
@@ -33,7 +35,16 @@ def _names_subject(document: str, ctx: EraseContext) -> bool:
                 return True
         except (ValueError, TypeError, AttributeError):
             if ctx.username is not None and owner.get("username") == ctx.username:
-                return True
+                ambiguous_name = True
+    if ambiguous_name:
+        msg = "Review upgrade report owner attribution before continuing this account erasure."
+        raise ReportOwnerAttributionRequiredError(
+            msg,
+            details={
+                "report_id": str(report_id),
+                "action": "Resolve the report owner's identity through manual attribution review before retrying.",
+            },
+        )
     return False
 
 
@@ -54,7 +65,9 @@ async def erase_upgrade_reports(session: AsyncSession, ctx: EraseContext) -> int
         return 0
     for report_id in ids:
         row = await session.get(UpgradeReport, report_id)
-        if row is not None and (row.created_by == ctx.subject_user_id or _names_subject(row.document_json, ctx)):
+        if row is not None and (
+            row.created_by == ctx.subject_user_id or _names_subject(row.document_json, ctx, report_id)
+        ):
             if not await lock_report(session, report_id):
                 ctx.cursor[_CURSOR] = str(report_id)
                 continue
