@@ -949,3 +949,28 @@ class TestMemoryBaseRetrievalBehavior:
 
         # The whole row must JSON-serialize without falling back to a custom encoder.
         json.dumps(row)
+
+
+@pytest.mark.parametrize("selected", ["customer-history", "technical-notes", None, ""])
+async def test_tool_description_identifies_selected_memory_base(selected):
+    component = _make_component(flow_id=uuid.uuid4(), session_id="session", selected=selected)
+    component.set(tool_mode=True)
+    tools = await component._get_tools()
+    assert tools
+    for tool in tools:
+        if selected:
+            assert f"Memory Base: {selected!r}." in tool.description
+            assert tool.metadata["display_description"] == tool.description
+        else:
+            assert "Memory Base:" not in tool.description
+
+
+async def test_tool_description_tracks_selection_without_accumulating_names():
+    component = _make_component(flow_id=uuid.uuid4(), session_id="session", selected="first-base")
+    component.set(tool_mode=True)
+    first = await component._get_tools()
+    component.memory_base = "second-base"
+    second = await component._get_tools()
+    assert "first-base" in first[0].description
+    assert "second-base" in second[0].description
+    assert "first-base" not in second[0].description
