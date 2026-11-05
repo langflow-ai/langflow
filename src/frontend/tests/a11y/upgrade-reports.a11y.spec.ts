@@ -10,6 +10,7 @@ import {
   report,
 } from "../../src/pages/SettingsPage/pages/UpgradeReportsPage/__tests__/fixture";
 import { expect, test } from "../fixtures";
+import { TIMEOUTS } from "../utils/constants/timeouts";
 
 const routePath = "/settings/upgrade-reports";
 
@@ -20,7 +21,7 @@ test(
     await page.goto(routePath);
     await expect(
       page.getByRole("heading", { name: "Upgrade reports", exact: true }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: TIMEOUTS.standard });
     await page
       .getByLabel("Checker report file")
       .setInputFiles(
@@ -37,6 +38,9 @@ test(
     ).toBeVisible();
     await expect(page).toHaveURL(/report=/);
     await page.reload();
+    await expect(
+      page.getByRole("heading", { name: "Upgrade reports", exact: true }),
+    ).toBeVisible({ timeout: TIMEOUTS.standard });
     await expect(
       page.getByRole("heading", { name: "MCP flow", exact: true }),
     ).toBeVisible();
@@ -98,6 +102,9 @@ test(
     });
     await page.goto(routePath);
     await expect(
+      page.getByRole("heading", { name: "Upgrade reports", exact: true }),
+    ).toBeVisible({ timeout: TIMEOUTS.standard });
+    await expect(
       page.getByRole("heading", { name: "Customer support" }),
     ).toBeVisible();
     await page.runA11yScan("upgrade-reports-populated");
@@ -124,7 +131,7 @@ test(
     await expect(apply).toBeDisabled();
     await page.runA11yScan("upgrade-reports-preview");
     await page.screenshot({
-      path: "/private/tmp/le-3099-report-preview.png",
+      path: test.info().outputPath("upgrade-report-preview.png"),
       fullPage: true,
     });
     await page
@@ -154,6 +161,9 @@ test(
       route.fulfill({ json: { items: [], total: 0, offset: 0, limit: 20 } }),
     );
     await page.goto(routePath);
+    await expect(
+      page.getByRole("heading", { name: "Upgrade reports", exact: true }),
+    ).toBeVisible({ timeout: TIMEOUTS.standard });
     await expect(
       page.getByText("No upgrade reports have been imported."),
     ).toBeVisible();
