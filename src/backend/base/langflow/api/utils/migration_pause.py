@@ -187,7 +187,7 @@ async def async_writing(
         yield refusal is None
 
 
-async def _superuser(scope) -> UUID | None:
+async def _superuser(scope, receive=None, send=None) -> UUID | None:
     """Resolve the caller through the configured authentication service before allowing repairs."""
     from langflow.services.auth.exceptions import AuthenticationError
     from langflow.services.auth.utils import (
@@ -200,7 +200,9 @@ async def _superuser(scope) -> UUID | None:
     try:
         async with session_scope_readonly() as session:
             if scope["type"] == "websocket":
-                user = await get_current_user_for_websocket(WebSocket(scope), session)
+                if receive is None or send is None:
+                    return None
+                user = await get_current_user_for_websocket(WebSocket(scope, receive, send), session)
             else:
                 request = Request(scope)
                 user = await get_current_user(
@@ -371,7 +373,7 @@ class MigrationPauseMiddleware:
         with writing(kind, method=scope.get("method"), path=_path(scope)) as let_in:
             if let_in:
                 paused = await _database_pause_status()
-                caller_id = await _superuser(scope) if paused is True else None
+                caller_id = await _superuser(scope, receive, send) if paused is True else None
                 if paused is False or caller_id is not None:
                     token = _maintenance_caller.set(caller_id)
                     try:

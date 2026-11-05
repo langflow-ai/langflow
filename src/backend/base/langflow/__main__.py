@@ -1215,8 +1215,12 @@ def reconcile_kb_from_disk(
 
 async def _reconcile_kb_from_disk(*, username: str | None, dry_run: bool) -> None:
     from langflow.api.utils import knowledge_base_service
+    from langflow.api.utils.migration_pause import writes_paused
 
     await initialize_services()
+    if not dry_run and await writes_paused():
+        typer.echo("Knowledge base reconciliation skipped because changes are paused for maintenance or migration.")
+        return
     inserted = await knowledge_base_service.backfill_all_users_from_disk(
         username=username,
         dry_run=dry_run,
@@ -1826,6 +1830,7 @@ def upgrade_check(
     import tempfile
 
     from langflow.cli.events import emit
+    from langflow.upgrade_check.isolation import child_environment, resolve_input_paths
 
     options = {
         "database_url": database_url,
@@ -1840,10 +1845,9 @@ def upgrade_check(
         "json": as_json,
         "output": str(output) if output else None,
     }
-    # Component code can build Langflow's settings, and this process already imported modules that
-    # read the environment. So the check runs in a child that sees no LANGFLOW_ variable and keeps
-    # whatever it writes in a folder that is deleted at the end.
-    env = {name: value for name, value in os.environ.items() if not name.startswith("LANGFLOW_")}
+    # Component discovery runs in a child without inherited provider credentials or home configuration.
+    # Resolve explicit paths before moving that child into its temporary working directory.
+    options = resolve_input_paths(options)
     with (
         tempfile.TemporaryDirectory(prefix="langflow-upgrade-check-") as config_dir,
         interruption_reported("The check only reads, so nothing changed.", as_json=as_json),
@@ -1852,7 +1856,8 @@ def upgrade_check(
         child = subprocess.Popen(  # noqa: S603
             [sys.executable, "-m", "langflow.upgrade_check.command"],
             stdin=subprocess.PIPE,
-            env={**env, "LANGFLOW_CONFIG_DIR": config_dir},
+            env=child_environment(config_dir, os.environ),
+            cwd=config_dir,
             text=True,
             start_new_session=True,
         )

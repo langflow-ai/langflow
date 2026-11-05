@@ -28,9 +28,11 @@ writes, so it is never used.
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
@@ -47,6 +49,12 @@ _SYNC_POSTGRES_DRIVER = "postgresql+psycopg"
 
 # Flow data can be megabytes per row, so rows are read in small pages.
 _ROWS_PER_PAGE = 50
+
+_SOURCE_TIMESTAMP = re.compile(
+    r"(?P<stamp>[0-9]{4}-[0-9]{2}-[0-9]{2}[T ][0-9]{2}:[0-9]{2}:[0-9]{2})"
+    r"(?:\.(?P<fraction>[0-9]+))?"
+    r"(?P<offset>Z|[+-](?:[01][0-9]|2[0-3]):[0-5][0-9])?"
+)
 
 _READ_ONLY_FOLDER = (
     "SQLite could not read the database because its folder is not writable: a database in WAL mode "
@@ -360,9 +368,22 @@ def _uuid(value: Any) -> str | None:
 
 
 def _timestamp(value: Any) -> str | None:
-    if value is None:
-        return None
-    return value.isoformat() if hasattr(value, "isoformat") else str(value)
+    """Keep known edit times in ISO 8601 and leave absent or invalid times unknown."""
+    if not isinstance(value, datetime):
+        if not isinstance(value, str) or (match := _SOURCE_TIMESTAMP.fullmatch(value)) is None:
+            return None
+        normalized = match["stamp"]
+        if fraction := match["fraction"]:
+            normalized += f".{fraction[:6].ljust(6, '0')}"
+        normalized += "+00:00" if match["offset"] == "Z" else match["offset"] or ""
+        try:
+            value = datetime.fromisoformat(normalized)
+        except ValueError:
+            return None
+    # Langflow stores naive SQLite timestamps in UTC, as its flow serializers do.
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.isoformat()
 
 
 def _flow_data(value: Any) -> dict[str, Any]:

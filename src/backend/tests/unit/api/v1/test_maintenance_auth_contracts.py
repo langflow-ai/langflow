@@ -77,10 +77,11 @@ async def test_external_bearer_returns_retryable_503_without_jit_or_directory_wr
         await client.post(maintenance_fixtures.ON, json={}, headers=logged_in_headers_super_user)
     ).status_code == 200
     before = await _snapshot((User, SSOUserProfile, Folder, Variable))
-    response = await client.get("/api/v1/flows/", headers={"Authorization": f"Bearer {token}"})
+    response = await client.get(maintenance_fixtures.STATUS, headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 503
     assert response.headers["Retry-After"] == "1"
-    assert "External SSO/OIDC" in response.json()["detail"]
+    assert response.json()["detail"]["code"] == "external_auth_maintenance"
+    assert "External SSO/OIDC" in response.json()["detail"]["message"]
     assert await _snapshot((User, SSOUserProfile, Folder, Variable)) == before
     reconcile.assert_not_awaited()
 

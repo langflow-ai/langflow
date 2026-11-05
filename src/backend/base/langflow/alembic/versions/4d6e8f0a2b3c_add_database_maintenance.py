@@ -2,7 +2,7 @@
 
 Phase: EXPAND
 Revision ID: 4d6e8f0a2b3c
-Revises: f2d6b8c4a901
+Revises: b7e1d4a92c60
 """
 
 from collections.abc import Sequence
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "4d6e8f0a2b3c"  # pragma: allowlist secret
-down_revision: str | None = "f2d6b8c4a901"  # pragma: allowlist secret
+down_revision: str | None = "b7e1d4a92c60"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
