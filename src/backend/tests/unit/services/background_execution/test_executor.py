@@ -111,3 +111,32 @@ async def test_worker_survives_a_failing_job(executor):
     await executor.submit("job-ok", ok)
     await asyncio.wait_for(second_ran.wait(), timeout=2)
     assert second_ran.is_set()
+
+
+async def test_stop_does_not_start_a_job_that_was_still_queued():
+    # stop() snapshots _in_flight before it awaits the cancelled job, so a worker that
+    # survives that cancellation must not pick up the next queued job: it would run
+    # unwatched while the event loop is torn down.
+    ex = InProcessExecutor(max_concurrency=1)
+    await ex.start()
+    started = asyncio.Event()
+    queued_started = asyncio.Event()
+
+    async def busy():
+        started.set()
+        await asyncio.Event().wait()
+
+    async def queued():
+        queued_started.set()
+
+    try:
+        await ex.submit("busy", busy)
+        await asyncio.wait_for(started.wait(), timeout=2)
+        await ex.submit("queued", queued)
+
+        await ex.stop()
+
+        assert not queued_started.is_set()
+        assert not ex._in_flight
+    finally:
+        await ex.stop()

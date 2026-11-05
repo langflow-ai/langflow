@@ -99,7 +99,10 @@ class InProcessExecutor:
             task.result()
 
     async def _worker(self, worker_id: int) -> None:
-        while True:
+        # stop() snapshots _in_flight before awaiting the job cancels it makes, so a
+        # worker that survives that cancellation must not pick up the next queued job:
+        # it would run unwatched while the event loop is torn down.
+        while not self._closed:
             try:
                 key, coro_factory = await self._queue.get()
             except asyncio.CancelledError:
