@@ -2150,6 +2150,8 @@
   "settings.migration.pause.bannerWaiting": "Änderungen werden abgelehnt. Eine Pause wurde angefordert und hat noch nicht begonnen.",
   "settings.migration.pause.notice": "Änderungen an dieser Instanz sind pausiert, während sie auf eine neue umzieht. Sie können Ihre Arbeit ansehen, aber Änderungen, die Sie jetzt vornehmen, werden nicht gespeichert.",
   "settings.maintenance.notice": "Normale Änderungen und Flow-Ausführungen sind für Wartungsarbeiten pausiert. Administratoren können weiterhin Änderungen vornehmen.",
+  "settings.maintenance.externalAuthNotice": "Diese Instanz befindet sich im Wartungsmodus. Die Anmeldung über externes SSO ist pausiert. Verwenden Sie einen API-Schlüssel oder ein lokales JWT.",
+  "settings.maintenance.statusLabel": "Wartungsstatus",
   "settings.migration.pause.asked": "Angefordert am {{time}} von {{user}}.",
   "settings.migration.pause.ended": "Die Pause hat nicht begonnen. Während diese Anfrage wartete, wurden Änderungen wieder zugelassen oder eine andere Anfrage für dieselbe Pause wurde abgelehnt.",
   "settings.migration.pause.resume": "Änderungen wieder zulassen",
