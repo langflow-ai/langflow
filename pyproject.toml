@@ -485,6 +485,12 @@ external = ["RUF027"]
     "TRY003",  # Long exception messages
     "EM101",   # String literals in exceptions
 ]
+"scripts/eval/*/tests/*" = [
+    "D1",      # Missing docstrings
+    "PLR2004", # Magic value comparisons
+    "S101",    # Use of assert (required for pytest)
+    "SLF001",  # Tests patch the router module the harness drives
+]
 "scripts/ci/test_*.py" = [
     "D1",      # Missing docstrings
     "PLR2004", # Magic value comparisons

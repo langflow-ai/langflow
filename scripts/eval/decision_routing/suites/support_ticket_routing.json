@@ -1,0 +1,13 @@
+{
+  "name": "support-ticket-routing-seed",
+  "description": "SEED suite mirroring the Support Ticket Routing starter. Not the agreed release dataset: replace or extend it with cases the dataset owner signs off.",
+  "kind": "choice",
+  "question": "Which team should handle this customer message?",
+  "minimum_probability": 0.7,
+  "routes": [
+    {"name": "Billing", "description": "Payments, invoices, refunds, charges and subscription billing"},
+    {"name": "Technical Support", "description": "Bugs, errors, outages, login problems and other product issues"},
+    {"name": "Sales", "description": "Pricing, plans, quotes, upgrades and new purchases"}
+  ],
+  "cases": "support_ticket_routing.jsonl"
+}

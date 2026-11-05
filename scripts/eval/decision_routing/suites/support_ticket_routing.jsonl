@@ -1,0 +1,40 @@
+{"id": "billing-001", "text": "I was charged twice for my October invoice.", "expected": "Billing", "tags": ["clear"]}
+{"id": "billing-002", "text": "Can I get a refund for last month? I cancelled before the renewal date.", "expected": "Billing", "tags": ["clear"]}
+{"id": "billing-003", "text": "My card was declined but the money still left my account.", "expected": "Billing", "tags": ["clear"]}
+{"id": "billing-004", "text": "Please send me a copy of invoice INV-20481 with our VAT number on it.", "expected": "Billing", "tags": ["clear"]}
+{"id": "billing-005", "text": "Why did my subscription price go up this month?", "expected": "Billing", "tags": ["clear"]}
+{"id": "billing-006", "text": "How do I change the credit card on file?", "expected": "Billing", "tags": ["clear"]}
+{"id": "billing-007", "text": "We were billed for 12 seats but only have 9 users.", "expected": "Billing", "tags": ["clear"]}
+{"id": "billing-008", "text": "I need to switch our billing from monthly to annual invoicing.", "expected": "Billing", "tags": ["clear"]}
+{"id": "billing-009", "text": "There's a charge from you I don't recognise on my statement.", "expected": "Billing", "tags": ["clear"]}
+{"id": "billing-010", "text": "Can you cancel my subscription and stop future charges?", "expected": "Billing", "tags": ["clear"]}
+{"id": "tech-001", "text": "The export button does nothing when I click it.", "expected": "Technical Support", "tags": ["clear"]}
+{"id": "tech-002", "text": "I can't log in, it says my password is wrong but I just reset it.", "expected": "Technical Support", "tags": ["clear"]}
+{"id": "tech-003", "text": "Your API returns 500 errors for every request since this morning.", "expected": "Technical Support", "tags": ["clear"]}
+{"id": "tech-004", "text": "The dashboard won't load in Safari, just a blank page.", "expected": "Technical Support", "tags": ["clear"]}
+{"id": "tech-005", "text": "Two-factor codes never arrive on my phone.", "expected": "Technical Support", "tags": ["clear"]}
+{"id": "tech-006", "text": "Uploads over 10 MB fail with a network error.", "expected": "Technical Support", "tags": ["clear"]}
+{"id": "tech-007", "text": "The app crashes when I open the settings page.", "expected": "Technical Support", "tags": ["clear"]}
+{"id": "tech-008", "text": "Webhooks stopped firing after we rotated our signing secret.", "expected": "Technical Support", "tags": ["clear"]}
+{"id": "tech-009", "text": "Search returns results from a project I deleted last week.", "expected": "Technical Support", "tags": ["clear"]}
+{"id": "tech-010", "text": "Is the service down? Nothing is loading for my whole team.", "expected": "Technical Support", "tags": ["clear"]}
+{"id": "sales-001", "text": "What does the Enterprise plan cost for 200 users?", "expected": "Sales", "tags": ["clear"]}
+{"id": "sales-002", "text": "Do you offer discounts for nonprofits?", "expected": "Sales", "tags": ["clear"]}
+{"id": "sales-003", "text": "We'd like a quote for 50 seats with SSO.", "expected": "Sales", "tags": ["clear"]}
+{"id": "sales-004", "text": "What's the difference between the Team and Business plans?", "expected": "Sales", "tags": ["clear"]}
+{"id": "sales-005", "text": "Can I upgrade to the Pro plan in the middle of my billing cycle?", "expected": "Sales", "tags": ["clear"]}
+{"id": "sales-006", "text": "Do you have a reseller programme in Europe?", "expected": "Sales", "tags": ["clear"]}
+{"id": "sales-007", "text": "I'd like to book a demo for my company.", "expected": "Sales", "tags": ["clear"]}
+{"id": "sales-008", "text": "Is there a free trial of the Business plan?", "expected": "Sales", "tags": ["clear"]}
+{"id": "sales-009", "text": "How much extra storage can we buy on top of our plan?", "expected": "Sales", "tags": ["clear"]}
+{"id": "sales-010", "text": "Can we sign an annual contract with a purchase order?", "expected": "Sales", "tags": ["clear"]}
+{"id": "else-001", "text": "hello", "expected": "Else", "tags": ["out-of-scope"]}
+{"id": "else-002", "text": "Thanks, that's all!", "expected": "Else", "tags": ["out-of-scope"]}
+{"id": "else-003", "text": "What's the weather like in Paris today?", "expected": "Else", "tags": ["out-of-scope"]}
+{"id": "else-004", "text": "Can you write me a poem about the sea?", "expected": "Else", "tags": ["out-of-scope"]}
+{"id": "else-005", "text": "asdfghjkl", "expected": "Else", "tags": ["out-of-scope"]}
+{"id": "mixed-001", "text": "The upgrade failed and I was still charged for the new plan.", "expected": "Else", "tags": ["ambiguous"]}
+{"id": "mixed-002", "text": "I want to know if the bug I reported will be fixed before I renew.", "expected": "Else", "tags": ["ambiguous"]}
+{"id": "lang-001", "text": "Me cobraron dos veces este mes, ¿pueden devolverme el dinero?", "expected": "Billing", "tags": ["multilingual"]}
+{"id": "lang-002", "text": "Je n'arrive plus à me connecter depuis la mise à jour.", "expected": "Technical Support", "tags": ["multilingual"]}
+{"id": "lang-003", "text": "Wie viel kostet der Business-Plan für 30 Nutzer?", "expected": "Sales", "tags": ["multilingual"]}
