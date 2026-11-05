@@ -174,9 +174,11 @@ class BhivedSearchComponent(Component):
         return rows
 
     async def search_lessons(self) -> DataFrame:
+        """Run the search and return a DataFrame with one row per lesson, warning or failed approach."""
         return DataFrame(await self.search())
 
     def _error(self, message: str) -> list[Data]:
+        """Log the error, show it as the component status and return it as a single Data row."""
         logger.error(message)
         self.status = message
         return [Data(text=message, data={"error": message})]

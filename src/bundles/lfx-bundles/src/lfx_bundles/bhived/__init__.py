@@ -34,4 +34,5 @@ def __getattr__(attr_name: str) -> Any:
 
 
 def __dir__() -> list[str]:
+    """List the public names of this package for dir() and tab completion."""
     return list(__all__)

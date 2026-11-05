@@ -67,6 +67,7 @@ WRITE_RESPONSE = {
 
 @pytest.fixture(autouse=True)
 def operator_environment(monkeypatch, tmp_path: Path):
+    """Put a different key in the environment and in ~/.bhived so tests prove neither is read."""
     # A key in the server's environment or home directory must never be used.
     monkeypatch.setenv("BHIVED_API_KEY", SERVER_KEY)
     monkeypatch.setenv("BHIVED_API_URL", "https://operator-proxy.example")
@@ -77,12 +78,14 @@ def operator_environment(monkeypatch, tmp_path: Path):
 
 
 def _search(**values) -> BhivedSearchComponent:
+    """Build a search component with the test key and a query, then apply the overrides."""
     component = BhivedSearchComponent()
     component.set(**{"api_key": API_KEY, "query": "respx httpx 1.0 TypeError", **values})
     return component
 
 
 def _write(**values) -> BhivedWriteComponent:
+    """Build a write component with the test key and a valid instruction, then apply the overrides."""
     component = BhivedWriteComponent()
     component.set(
         **{
@@ -99,6 +102,7 @@ def _write(**values) -> BhivedWriteComponent:
 @pytest.mark.unit
 @pytest.mark.parametrize("component_class", [BhivedSearchComponent, BhivedWriteComponent])
 def test_input_names_do_not_shadow_component_attributes(component_class: type[Component]) -> None:
+    """No input name may collide with an attribute of the Component base class."""
     shadowed = [inp.name for inp in component_class.inputs if hasattr(Component, inp.name)]
     assert not shadowed, f"{component_class.__name__} inputs shadow Component attributes: {shadowed}"
 
@@ -106,6 +110,7 @@ def test_input_names_do_not_shadow_component_attributes(component_class: type[Co
 @pytest.mark.unit
 @pytest.mark.parametrize("component_class", [BhivedSearchComponent, BhivedWriteComponent])
 def test_metadata(component_class: type[Component]) -> None:
+    """Both components use the bhived icon, link the docs page and require an API key."""
     component = component_class()
     assert component.icon == "Bhived"
     assert component.documentation == DOCUMENTATION_URL
@@ -115,14 +120,18 @@ def test_metadata(component_class: type[Component]) -> None:
 
 @pytest.mark.unit
 def test_write_description_warns_about_public_lessons() -> None:
+    """The write description warns that lessons are public and must not contain secrets."""
     assert "the lesson is public" in BhivedWriteComponent.description
     assert "never include secrets" in BhivedWriteComponent.description
 
 
 @pytest.mark.unit
 class TestBhivedSearch:
+    """Tests for the bhived Search component."""
+
     @respx.mock
     async def test_search_returns_lessons_warnings_and_failed_approaches(self) -> None:
+        """A search sends the key and returns lessons, warnings and failed approaches."""
         route = respx.post(f"{API_URL}/v2/query").mock(return_value=httpx.Response(200, json=QUERY_RESPONSE))
 
         rows = await _search(context="python 3.12").search()
@@ -151,6 +160,7 @@ class TestBhivedSearch:
 
     @respx.mock
     async def test_scope_and_max_results_are_sent(self) -> None:
+        """A non-default scope and the result limit are sent in the request body."""
         route = respx.post(f"{API_URL}/v2/query").mock(return_value=httpx.Response(200, json=QUERY_RESPONSE))
 
         await _search(scope="team_only", max_results=500).search()
@@ -161,6 +171,7 @@ class TestBhivedSearch:
 
     @respx.mock
     async def test_default_scope_is_left_to_the_server(self) -> None:
+        """The default scope is omitted so the server applies its own default."""
         route = respx.post(f"{API_URL}/v2/query").mock(return_value=httpx.Response(200, json=QUERY_RESPONSE))
 
         await _search(scope="team_plus_global").search()
@@ -168,6 +179,7 @@ class TestBhivedSearch:
         assert "scope" not in json.loads(route.calls.last.request.content)
 
     async def test_empty_query_makes_no_request(self) -> None:
+        """A blank query returns an error without calling the API."""
         with respx.mock(assert_all_called=False) as router:
             rows = await _search(query="   ").search()
 
@@ -175,6 +187,7 @@ class TestBhivedSearch:
         assert rows[0].data["error"] == "Enter a query."
 
     async def test_missing_key_never_falls_back_to_the_server_key(self) -> None:
+        """Without a key the component errors instead of using a key from the server."""
         with respx.mock(assert_all_called=False) as router:
             rows = await _search(api_key="").search()
 
@@ -183,6 +196,7 @@ class TestBhivedSearch:
 
     @respx.mock
     async def test_rejected_key_is_returned_as_an_error(self) -> None:
+        """A 403 response becomes an error row that does not contain the key."""
         respx.post(f"{API_URL}/v2/query").mock(return_value=httpx.Response(403, json={"detail": "invalid_api_key"}))
 
         rows = await _search().search()
@@ -192,6 +206,7 @@ class TestBhivedSearch:
 
     @respx.mock
     async def test_echoed_key_is_masked(self) -> None:
+        """A key echoed back in an error message is masked before it is shown."""
         respx.post(f"{API_URL}/v2/query").mock(
             return_value=httpx.Response(400, json={"detail": f"bad request for {API_KEY}"})
         )
@@ -203,6 +218,7 @@ class TestBhivedSearch:
 
     @respx.mock
     async def test_dataframe_output_has_one_row_per_result(self) -> None:
+        """The DataFrame output has one row per lesson, warning and failed approach."""
         respx.post(f"{API_URL}/v2/query").mock(return_value=httpx.Response(200, json=QUERY_RESPONSE))
 
         frame = await _search().search_lessons()
@@ -217,9 +233,12 @@ class TestBhivedSearch:
 
 @pytest.mark.unit
 class TestBhivedWrite:
+    """Tests for the bhived Write Lesson component."""
+
     @pytest.mark.parametrize("lesson_type", ["instruction", "mistake", "update"])
     @respx.mock
     async def test_write_links_the_query_and_reports_the_lesson(self, lesson_type: str) -> None:
+        """Each lesson type is written with the query link, and the saved lesson is reported."""
         route = respx.post(f"{API_URL}/v1/memories").mock(return_value=httpx.Response(200, json=WRITE_RESPONSE))
 
         result = await _write(lesson_type=lesson_type, query_id="q-123").write_lesson()
@@ -245,6 +264,7 @@ class TestBhivedWrite:
 
     @respx.mock
     async def test_write_without_query_id_sends_no_link(self) -> None:
+        """A blank query ID is not sent, so the lesson is written without a link."""
         route = respx.post(f"{API_URL}/v1/memories").mock(
             return_value=httpx.Response(200, json={**WRITE_RESPONSE, "query_id_linked": None})
         )
@@ -255,6 +275,7 @@ class TestBhivedWrite:
 
     @respx.mock
     async def test_near_duplicate_is_reported_as_not_saved(self) -> None:
+        """A 409 duplicate response is reported as not saved, with the existing lesson's ID."""
         respx.post(f"{API_URL}/v1/memories").mock(
             return_value=httpx.Response(
                 409,
@@ -274,6 +295,7 @@ class TestBhivedWrite:
 
     @respx.mock
     async def test_rejected_write_is_returned_as_an_error(self) -> None:
+        """A rejected write becomes an error result."""
         respx.post(f"{API_URL}/v1/memories").mock(
             return_value=httpx.Response(422, json={"detail": "text is empty after cleanup"})
         )
@@ -292,6 +314,7 @@ class TestBhivedWrite:
         ],
     )
     async def test_invalid_input_makes_no_request(self, values: dict, error: str) -> None:
+        """Invalid input returns an error without calling the API."""
         with respx.mock(assert_all_called=False) as router:
             result = await _write(**values).write_lesson()
 

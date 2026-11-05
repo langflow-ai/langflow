@@ -147,6 +147,7 @@ class BhivedWriteComponent(Component):
         return data
 
     def _error(self, message: str) -> Data:
+        """Log the error, show it as the component status and return it as Data."""
         logger.error(message)
         self.status = message
         return Data(text=message, data={"error": message})
