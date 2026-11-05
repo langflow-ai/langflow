@@ -8,6 +8,7 @@ from the component's own dropdown so a label change cannot drift past this test.
 from __future__ import annotations
 
 import pytest
+from lfx_datastax.components.cassandra import cassandra_graph
 from lfx_datastax.components.cassandra.cassandra_graph import CassandraGraphVectorStoreComponent
 
 EXPECTED_SEARCH_TYPES = {
@@ -43,5 +44,20 @@ def test_should_map_each_option_to_its_own_search_type(option: str):
     assert component.get_retriever_kwargs()["search_type"] == EXPECTED_SEARCH_TYPES[option]
 
 
-def test_should_map_mmr_traversal_to_mmr_traversal_not_traversal():
-    assert _component("MMR traversal")._map_search_type() == "mmr_traversal"
+@pytest.mark.parametrize("unknown", ["MMR Traversal", "", None])
+def test_should_fall_back_to_traversal_and_warn_when_search_type_is_unknown(unknown, monkeypatch):
+    warnings: list[str] = []
+    monkeypatch.setattr(cassandra_graph.logger, "warning", warnings.append)
+
+    assert _component(unknown)._map_search_type() == "traversal"
+    assert len(warnings) == 1
+    assert repr(unknown) in warnings[0]
+
+
+def test_should_not_warn_when_search_type_is_known(monkeypatch):
+    warnings: list[str] = []
+    monkeypatch.setattr(cassandra_graph.logger, "warning", warnings.append)
+
+    _component("Traversal")._map_search_type()
+
+    assert warnings == []

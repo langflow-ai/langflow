@@ -1,5 +1,6 @@
 """Cassandra graph-vector-store component."""
 
+from types import MappingProxyType
 from uuid import UUID
 
 from langchain_community.graph_vectorstores import CassandraGraphVectorStore
@@ -14,8 +15,20 @@ from lfx.io import (
     MessageTextInput,
     SecretStrInput,
 )
+from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx_datastax.components.cassandra._ssrf import validate_cassandra_connection
+
+# Labels are stored in saved flows: never rename them.
+SEARCH_TYPES = MappingProxyType(
+    {
+        "Traversal": "traversal",
+        "MMR traversal": "mmr_traversal",
+        "Similarity": "similarity",
+        "Similarity with score threshold": "similarity_score_threshold",
+        "MMR (Max Marginal Relevance)": "mmr",
+    }
+)
 
 
 class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
@@ -80,13 +93,7 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
             name="search_type",
             display_name="Search Type",
             info="Search type to use",
-            options=[
-                "Traversal",
-                "MMR traversal",
-                "Similarity",
-                "Similarity with score threshold",
-                "MMR (Max Marginal Relevance)",
-            ],
+            options=list(SEARCH_TYPES),
             value="Traversal",
             advanced=True,
         ),
@@ -180,15 +187,11 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
         return store
 
     def _map_search_type(self) -> str:
-        if self.search_type == "Similarity":
-            return "similarity"
-        if self.search_type == "Similarity with score threshold":
-            return "similarity_score_threshold"
-        if self.search_type == "MMR (Max Marginal Relevance)":
-            return "mmr"
-        if self.search_type == "MMR traversal":
-            return "mmr_traversal"
-        return "traversal"
+        search_type = SEARCH_TYPES.get(self.search_type)
+        if search_type is None:
+            logger.warning(f"Unknown Cassandra Graph search type {self.search_type!r}; falling back to 'traversal'.")
+            return "traversal"
+        return search_type
 
     def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
