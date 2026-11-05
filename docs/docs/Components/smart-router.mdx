@@ -15,7 +15,7 @@ Instead of string matching, the **Smart Router** uses a model to categorize inco
 The **Routing Mode** parameter sets which kind of model categorizes the message:
 
 * **Language Model** (default): A [language model](/components-models) reads the routes and replies with the name of the one that matches. See [Language Model mode](#language-model-mode).
-* **Decision Model**: A [decision model](/decision-model) returns a probability for every route, and the router uses the most likely route only when it is likely enough. Answers that aren't go to **Else**. See [Decision Model mode](#decision-model-mode).
+* **Decision Model**: A [decision model](./decision-model.mdx) returns a probability for every route, and the router uses the most likely route only when it is likely enough. Answers that aren't go to **Else**. See [Decision Model mode](#decision-model-mode).
 
 Use **Decision Model** mode when a wrong route is costly and an uncertain message should go somewhere safe, such as a person, instead.
 
@@ -63,17 +63,19 @@ In **Decision Model** mode, the router asks a decision model its **Decision Ques
 
 Two templates use this mode:
 
-* **Support Ticket Routing** sends each customer message to **Billing**, **Technical Support** or **Sales**, and sends messages no team is likely enough for to a person.
+* **Support Ticket Routing** sends each customer message to **Billing**, **Technical Support**, or **Sales**, and sends messages no team is likely enough for to a person.
 * **LLM Gatekeeper** answers common questions with saved replies, and passes only the rest to a language model.
 
 ### Set up Decision Model mode
 
-1. Set up a decision model provider in **Model Providers**. See [Set up a decision model provider](/decision-model#set-up-a-decision-model-provider).
+1. Set up a decision model provider in **Model Providers**. See [Set up a decision model provider](./decision-model.mdx#set-up-a-decision-model-provider).
 2. In the **Smart Router** component, set **Routing Mode** to **Decision Model**.
 **Include Else Output** turns on, because this mode requires it.
-3. Select a **Decision Model**, and choose a **Decision Type**: **Choice**, **Boolean** or **Score**.
+3. Select a **Decision Model**, and choose a **Decision Type**: **Choice**, **Boolean**, or **Score**.
 4. Enter a **Decision Question**.
-5. Connect the **Else** output. A run stops with an error if **Include Else Output** is off or **Else** isn't connected.
+5. For Choice or Boolean, enter a **Minimum Probability**, such as `0.7`.
+The field starts empty, and a run stops with an error until it is set.
+6. Connect the **Else** output. A run stops with an error if **Include Else Output** is off or **Else** isn't connected.
 
 The **Language Model** and **API Key** fields are hidden in this mode, and their key is never sent to the decision provider.
 
@@ -113,9 +115,9 @@ Each level gets its own output.
 
 The model returns a score from 0 (the first level) to one less than the number of levels.
 The message goes to the level the score rounds to. A score exactly halfway between two levels goes to the higher level.
-For example, with **Low**, **Medium** and **High**, a score of 1.6 goes to **High**, and 0.5 goes to **Medium**.
+For example, with **Low**, **Medium**, and **High**, a score of 1.6 goes to **High**, and 0.5 goes to **Medium**.
 
-Every score reaches a level, so **Score** has no **Minimum Probability**, and **Else** only receives evaluation errors when **Evaluation Error Action** is **Route to Else**.
+Every score reaches a level, so **Score** has no **Minimum Probability**, and **Else** only receives evaluation errors and refusals when **Evaluation Error Action** is **Route to Else**.
 
 </TabItem>
 </Tabs>
@@ -126,6 +128,7 @@ Renaming or reordering routes or levels keeps their connections, because each ou
 ### Minimum Probability
 
 **Minimum Probability** is a number from 0 to 1, such as `0.7`, and is inclusive: a route with a probability of exactly 0.7 is used.
+It has no default. Choice and Boolean require it, and a run stops with an error while it is empty.
 Raise it to send more messages to **Else**, and lower it to route more messages automatically.
 
 A route's own **Minimum Probability** in the **Routes** table, or **Yes Minimum Probability** and **No Minimum Probability** for Boolean, override the router's.
@@ -139,11 +142,12 @@ Leave them empty to use the router's value.
 * **Route to Else**: the message goes to the **Else** output, and the run continues.
 
 **Evaluation Error Action** only applies to errors about this one message or this one request.
-Errors in the key, the account or the settings always stop the run, so a broken configuration never looks like a stream of uncertain answers.
+Errors in the key, the account, or the settings always stop the run, so a broken configuration never looks like a stream of uncertain answers.
 
 | Error | With **Stop with error** | With **Route to Else** |
 |-------|--------------------------|------------------------|
-| The provider didn't answer in time, or couldn't be reached. | Stops | **Else** |
+| The provider didn't answer in time, or couldn't be reached because the DNS lookup or the connection failed. | Stops | **Else** |
+| The server's network security settings block the provider's endpoint. | Stops | Stops |
 | The provider is rate-limiting the key (HTTP 429) or had a server problem (HTTP 5xx). | Stops | **Else** |
 | The input is too large for the model. | Stops | **Else** |
 | The answer is malformed, such as probabilities that don't sum to 1 or a score outside the levels. | Stops | **Else** |
@@ -156,17 +160,19 @@ A malformed answer is always an error, never treated as an uncertain answer.
 
 ### Inspect a decision
 
+{/* The inspection panel is being redesigned in langflow-ai/langflow#16122. Update this section when it merges. */}
+
 Each decision records why the message went where it did.
 In the **Smart Router** component's output inspector, the result includes a `decision` object next to the message, and the same record is written to the component's logs as **Decision evidence**.
 
 | Field | Meaning |
 |-------|---------|
-| `reason` | Why the message went where it did: `accepted`, `below_minimum_probability`, `tied_top_probability`, `evaluation_error`, `refusal`, `permission_denied` or `configuration_error`. |
+| `reason` | Why the message went where it did: `accepted`, `below_minimum_probability`, `tied_top_probability`, `evaluation_error`, `refusal`, `permission_denied`, or `configuration_error`. |
 | `activated_branch` | The output the message went to, such as `category_2_result` or `default_result` for **Else**. Empty when the run stopped. |
 | `top_outcome` | The most likely route, which the threshold was checked against. |
 | `applied_threshold` | The minimum probability that applied to `top_outcome`, the router's or the route's own. |
 | `route_probabilities` | Boolean: the probability of Yes and of No. |
-| `result` | The decision model's answer: provider, model, probabilities or score, and token usage. See [the Decision Result fields](/decision-model#use-the-decision-model-component-in-a-flow). |
+| `result` | The decision model's answer: provider, model, probabilities or score, and token usage. See [the Decision Result fields](./decision-model.mdx#use-the-decision-model-component-in-a-flow). |
 | `error` | For an error, its category and message. |
 | `options`, `minimum_probability`, `route_thresholds`, `error_action` | The routes and settings the decision was made with. |
 
@@ -180,12 +186,12 @@ In the **Smart Router** component's output inspector, the result includes a `dec
 | Language Model      | [LanguageModel](/data-types#languagemodel) | Input parameter. **Language Model** mode only. The language model to use for categorization. The LLM receives the input text and available categories, then returns the exact category name that matches. Required in this mode. |
 | API Key             | Secret String | Input parameter. **Language Model** mode only. Overrides the language model provider's configured key. Never sent to a decision provider. Advanced. |
 | Decision Model      | Model    | Input parameter. **Decision Model** mode only. The decision model to use. Only models enabled under **Decision Models** in **Model Providers** are listed. Required in this mode. |
-| Decision Type       | String   | Input parameter. **Decision Model** mode only. **Choice**, **Boolean** or **Score**. Changing it replaces the route outputs and removes their connections. Default: **Choice**. |
+| Decision Type       | String   | Input parameter. **Decision Model** mode only. **Choice**, **Boolean**, or **Score**. Changing it replaces the route outputs and removes their connections. Default: **Choice**. |
 | Decision Question   | String   | Input parameter. **Decision Model** mode only. The question the decision model answers about the input. Choice and Score have a default question; Boolean needs one written as a yes or no question. Required in this mode. |
-| Minimum Probability | Float    | Input parameter. **Decision Model** mode, Choice and Boolean. The probability, from 0 to 1, the most likely route needs to be used; otherwise the message goes to **Else**. Inclusive. |
+| Minimum Probability | Float    | Input parameter. **Decision Model** mode, Choice and Boolean. The probability, from 0 to 1, the most likely route needs to be used; otherwise the message goes to **Else**. Inclusive. Required for Choice and Boolean, with no default. |
 | Input               | String   | Input parameter. The primary text input for categorization. Required. |
 | Routes              | Table    | Input parameter. Table defining categories for routing. Each row contains a route name (required), an optional route description to help the model understand the category, and an optional custom output message. In **Decision Model** mode, each row can also set its own **Minimum Probability**. The component creates one output port for each route category. Required, except for Boolean and Score. |
-| Levels              | Table    | Input parameter. **Decision Model** mode, Score only. Levels ordered from lowest to highest, 2 to 10, each with a name, optional description and optional message. Each level gets its own output. |
+| Levels              | Table    | Input parameter. **Decision Model** mode, Score only. Levels ordered from lowest to highest, 2 to 10, each with a name, an optional description, and an optional message. Each level gets its own output. |
 | What Yes Means (Optional), What No Means (Optional) | String | Input parameter. Boolean only. What each answer means. OpenAI decision models don't accept them. |
 | Yes Message (Optional), No Message (Optional) | String | Input parameter. Boolean only. The message each output sends. Leave empty to pass the input through. |
 | Yes Minimum Probability (Optional), No Minimum Probability (Optional) | Float | Input parameter. Boolean only. Override **Minimum Probability** for each answer. Advanced. |

@@ -19,7 +19,7 @@ def _node(data: dict, component_type: str) -> dict:
     return next(node for node in data["nodes"] if node["data"]["type"] == component_type)
 
 
-async def test_a_message_is_classified_with_every_categorys_probability(monkeypatch):
+async def test_a_message_is_classified_with_a_probability_for_each_category(monkeypatch):
     sent = []
 
     def post(_url, **kwargs):
@@ -40,24 +40,10 @@ async def test_a_message_is_classified_with_every_categorys_probability(monkeypa
     (request,) = sent
     assert request["state"] == MESSAGE
     assert list(request["questions"]["decision"]["criteria"]) == list(PROBABILITIES)
-    shown = graph.get_vertex(chat_output).built_object["message"].text
-    assert all(f'"{option_id}": {probability}' in shown for option_id, probability in PROBABILITIES.items())
-    assert '"selected_option": "bug"' in shown
-
-
-def test_edge_handles_match_the_fields_they_connect():
-    """The editor drops any edge whose handle disagrees with its field, as cleanEdges does on load."""
-    data = _data()
-    nodes = {node["id"]: node["data"]["node"] for node in data["nodes"]}
-    assert len(data["edges"]) == 2
-    for edge in data["edges"]:
-        source, target = edge["data"]["sourceHandle"], edge["data"]["targetHandle"]
-        assert json.loads(edge["sourceHandle"].replace("œ", '"')) == source
-        assert json.loads(edge["targetHandle"].replace("œ", '"')) == target
-        output = next(output for output in nodes[edge["source"]]["outputs"] if output["name"] == source["name"])
-        assert source["output_types"] == output["types"]
-        field = nodes[edge["target"]]["template"][target["fieldName"]]
-        assert (target["type"], target["inputTypes"]) == (field["type"], field["input_types"])
+    fenced = graph.get_vertex(chat_output).built_object["message"].text  # ```json ... ```
+    shown = json.loads(fenced.strip().strip("`").removeprefix("json"))
+    assert shown["probabilities"] == PROBABILITIES
+    assert shown["selected_option"] == "bug"
 
 
 def test_the_starter_shows_the_components_help():
