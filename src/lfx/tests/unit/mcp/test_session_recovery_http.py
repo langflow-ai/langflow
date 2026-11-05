@@ -74,7 +74,10 @@ class _Server:
 
 
 @pytest.fixture
-def server(tmp_path: Path) -> Iterator[_Server]:
+def server(tmp_path: Path, monkeypatch) -> Iterator[_Server]:
+    from lfx.services.deps import get_settings_service
+
+    monkeypatch.setattr(get_settings_service().settings, "ssrf_allowed_hosts", ["127.0.0.1"])
     script = tmp_path / "restartable_server.py"
     script.write_text(SERVER, encoding="utf-8")
     running = _Server(script, _free_port())

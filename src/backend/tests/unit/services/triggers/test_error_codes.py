@@ -17,6 +17,7 @@ from langflow.services.triggers.error_codes import (
     refusal_detail,
 )
 from langflow.services.triggers.providers.slack.arming import SlackTriggerArmingError
+from langflow.services.triggers.reconciliation import validate_single_trigger_per_flow
 from langflow.services.triggers.schedule_config import InvalidScheduleError, validate_schedule_config
 
 
@@ -75,6 +76,17 @@ def test_an_uncoded_refusal_says_so() -> None:
     assert refusal_detail(ValueError("The trigger no longer exists.")) == {
         "code": None,
         "message": "The trigger no longer exists.",
+    }
+
+
+def test_multiple_canvas_triggers_have_a_translatable_refusal() -> None:
+    graph = {"nodes": [{"data": {"type": "ScheduleTrigger"}}, {"data": {"type": "InboundWebhookTrigger"}}]}
+    with pytest.raises(ValueError, match="only one trigger") as raised:
+        validate_single_trigger_per_flow(graph)
+
+    assert refusal_detail(raised.value) == {
+        "code": "multiple_triggers",
+        "message": "A flow can have only one trigger. Remove the extra triggers and try again.",
     }
 
 
