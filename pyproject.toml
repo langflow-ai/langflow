@@ -264,7 +264,6 @@ constraint-dependencies = [
     "fastmcp>=3.4.10,<4.0.0",  # GHSA-7xgj-8392-5q4r
     "fastmcp-slim>=3.4.10,<4.0.0",
     "joserfc>=1.7.6,<2.0.0",
-    "markdown>=3.11.2; python_version >= '3.11'",
     "msgpack>=1.2.3,<2.0.0",
     "datamodel-code-generator>=0.81.0",  # CVE-2026-107377
     "fsspec>=2026.6.0",  # CVE-2026-104851
