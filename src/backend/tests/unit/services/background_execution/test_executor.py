@@ -69,6 +69,35 @@ async def test_cancel_unknown_job_returns_false(executor):
     assert await executor.cancel("nope") is False
 
 
+@pytest.mark.parametrize("worker_first", [True, False])
+async def test_loop_shutdown_cancels_busy_worker(worker_first):
+    executor = InProcessExecutor(max_concurrency=1)
+    await executor.start()
+    started = asyncio.Event()
+
+    async def work():
+        started.set()
+        await asyncio.Event().wait()
+
+    try:
+        await executor.submit("shutdown-job", work)
+        await asyncio.wait_for(started.wait(), timeout=2)
+        job = executor._in_flight["shutdown-job"]
+        worker = executor._workers[0]
+        tasks = [worker, job] if worker_first else [job, worker]
+        for task in tasks:
+            task.cancel()
+
+        # Runner.close cancels all pending tasks before waiting for their completion.
+        # Use a bounded wait so a swallowed worker cancellation cannot hang pytest.
+        done, pending = await asyncio.wait(tasks, timeout=1)
+        assert not pending
+        assert all(task.done() for task in done)
+        assert not executor._in_flight
+    finally:
+        await executor.stop()
+
+
 async def test_worker_survives_a_failing_job(executor):
     second_ran = asyncio.Event()
 

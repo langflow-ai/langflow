@@ -89,12 +89,14 @@ class InProcessExecutor:
         # finishing, that wakeup is lost: the job task completes but the worker is
         # never rescheduled, so the event loop idles forever in select(None) — a
         # hard deadlock in stop(). A done-callback + Event is immune (it is the
-        # same mechanism stop()'s own asyncio.gather uses, which never hangs), and
-        # task.result() re-raises CancelledError/exception exactly like await task.
+        # same mechanism stop()'s own asyncio.gather uses, which never hangs).
         done = asyncio.Event()
         task.add_done_callback(lambda _t: done.set())
         await done.wait()
-        task.result()
+        # A cancelled job leaves its worker available. Cancellation of the
+        # worker itself must propagate from done.wait(), including loop shutdown.
+        with contextlib.suppress(asyncio.CancelledError):
+            task.result()
 
     async def _worker(self, worker_id: int) -> None:
         while True:
@@ -119,17 +121,6 @@ class InProcessExecutor:
             self._in_flight[key] = task
             try:
                 await self._await_task(task)
-            except asyncio.CancelledError:
-                # A cancelled job must not take the worker down with it — but a
-                # cancel aimed at the WORKER (stop()) must. ``Task.cancelling()``
-                # is Python 3.11+; the project supports 3.10, so we distinguish
-                # the two with an explicit ``_closed`` flag set by ``stop()``
-                # rather than that version-specific API. When ``stop()`` ran, the
-                # cancel targets the worker — re-raise to exit. Otherwise it was
-                # a ``cancel(key)`` aimed at the job — swallow and keep serving.
-                if self._closed:
-                    raise
-                await logger.adebug(f"Background job {key} cancelled on worker {worker_id}")
             except Exception as exc:  # noqa: BLE001
                 await logger.aerror(f"Background job {key} failed on worker {worker_id}: {exc}", exc_info=True)
             finally:
