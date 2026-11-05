@@ -14,6 +14,7 @@ from langflow.upgrade_check import command, engine
 from langflow.upgrade_check.engine import TargetSettings
 from langflow.upgrade_check.isolation import child_environment, resolve_input_paths
 from langflow.upgrade_check.reader import SourceDatabase
+from lfx.upgrade.registry import UpgradeRegistryError
 
 from tests.unit.upgrade_check.test_command import _events, _upgrade_check
 from tests.unit.upgrade_check.test_reader import _load, _url
@@ -26,6 +27,17 @@ def _options(tmp_path):
         "json": True,
         "output": None,
     }
+
+
+def test_specific_registry_failure_keeps_its_actionable_message(monkeypatch, tmp_path):
+    def discover(**_kwargs):
+        message = "install the missing synthetic bundle"
+        raise UpgradeRegistryError(message)
+
+    monkeypatch.setattr(command, "load_upgrade_registry", discover)
+    with pytest.raises(command.CheckError, match="install the missing synthetic bundle") as caught:
+        command.run(_options(tmp_path))
+    assert caught.value.code == "registry_unavailable"
 
 
 @pytest.mark.parametrize("phase", ["extension_import", "constructor", "template", "custom_folder"])

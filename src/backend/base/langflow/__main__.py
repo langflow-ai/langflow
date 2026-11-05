@@ -1821,7 +1821,8 @@ def upgrade_check(
     Run it from the release you upgrade to. It reads the database and never changes it,
     and names every flow, saved component and running flow version that needs action
     before the upgrade, and why. Pass the upgraded server's settings as options: the
-    command reads no environment variable and no .env file of the server.
+    command reads no server setting from the environment or a .env file. Selected
+    PostgreSQL sources retain their libpq connection settings before component isolation.
 
     Exits 0 when nothing needs review. Exit 1 means a flow warns or fails, or a database
     problem stops the upgraded server. Exit 2 means the check could not finish.
