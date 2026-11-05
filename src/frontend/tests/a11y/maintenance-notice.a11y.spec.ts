@@ -1,11 +1,12 @@
 import { expect, test } from "../fixtures";
+import { awaitBootstrapTest } from "../utils/await-bootstrap-test";
+import { TIMEOUTS } from "../utils/constants/timeouts";
 
 for (const path of ["/flows", "/settings/migration"]) {
   test(
     `announces maintenance transitions on ${path}`,
     { tag: ["@release", "@workspace", "@api"] },
     async ({ page }) => {
-      await page.clock.install();
       let response:
         | { paused: boolean; maintenance: boolean; migration: boolean }
         | "external" = {
@@ -35,9 +36,13 @@ for (const path of ["/flows", "/settings/migration"]) {
               },
         );
       });
+      await awaitBootstrapTest(page, { skipModal: true });
+      await page.clock.install();
       await page.goto(path);
       const notice = page.getByTestId("changes-paused-notice");
-      await expect(notice).toHaveAttribute("role", "status");
+      await expect(notice).toHaveAttribute("role", "status", {
+        timeout: TIMEOUTS.standard,
+      });
       await expect(notice).toBeEmpty();
       await expect.poll(() => polls).toBeGreaterThan(0);
       await notice.evaluate((element) => {
