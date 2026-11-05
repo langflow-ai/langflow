@@ -883,11 +883,39 @@ def test_change_plan_accepts_a_version_in_this_lfx_lines_own_bundle_minor(tmp_pa
     assert [(entry.name, entry.version, entry.errors) for entry in checked] == [("lfx-alpha", "0.3.0", ())]
 
 
-def test_nightly_guard_rejects_only_unpublished_versions_in_an_older_lines_bundle_minor(tmp_path: Path) -> None:
-    # alpha 0.2.1 is already public, so its shared minor is history; beta 0.2.1 would be a new claim.
+def test_nightly_guard_rejects_published_bundle_with_incompatible_lfx_metadata(tmp_path: Path) -> None:
+    repo = _create_repository(tmp_path, {"docling": "0.2.3"})
+    pyproject = repo / "src" / "bundles" / "docling" / "pyproject.toml"
+    pyproject.write_text(
+        pyproject.read_text().replace("lfx>=1.11.0.dev0,<2.0.0", "lfx>=1.14.0.dev0,<2.0.0"),
+        encoding="utf-8",
+    )
+    index = FakeIndex()
+    _publish_releases(index, "lfx-docling", {"0.2.3": "lfx>=1.13.0.dev0,<1.14.0.dev0"})
+
+    # The local wheel admits this nightly, but installers receive the already-published metadata.
+    with pytest.raises(
+        PlanError,
+        match=r"lfx-docling 0\.2\.3: already published for .*which excludes lfx 1\.14\.0\.dev16; bump",
+    ):
+        ensure_unpublished_bundles_fit_lfx_line("1.14.0.dev16", index, base_dir=repo)
+
+
+@pytest.mark.parametrize("published_requirement", ["lfx>=1.14.0.dev0,<2.0.0", "lfx>=1.13.0.dev0,<2.0.0"])
+def test_nightly_guard_allows_compatible_published_bundle_reuse(tmp_path: Path, published_requirement: str) -> None:
+    repo = _create_repository(tmp_path, {"docling": "0.2.3"})
+    index = FakeIndex()
+    _publish_releases(index, "lfx-docling", {"0.2.3": published_requirement})
+
+    ensure_unpublished_bundles_fit_lfx_line("1.14.0.dev16", index, base_dir=repo)
+
+
+def test_nightly_guard_aggregates_published_reuse_and_unpublished_minor_conflicts(tmp_path: Path) -> None:
     repo = _create_repository(tmp_path, {"alpha": "0.2.1", "beta": "0.2.1", "gamma": "0.3.0"})
     index = FakeIndex()
-    _publish_releases(index, "lfx-alpha", {"0.2.0": "lfx<2.0.0,>=1.10.0.dev0", "0.2.1": "lfx<2.0.0,>=1.11.0.dev0"})
+    _publish_releases(
+        index, "lfx-alpha", {"0.2.0": "lfx<1.11.0.dev0,>=1.10.0.dev0", "0.2.1": "lfx<1.11.0.dev0,>=1.10.0.dev0"}
+    )
     _publish_releases(index, "lfx-beta", {"0.2.0": "lfx<2.0.0,>=1.10.0.dev0"})
     _publish_releases(index, "lfx-gamma", {"0.2.0": "lfx<2.0.0,>=1.10.0.dev0"})
 
@@ -895,6 +923,7 @@ def test_nightly_guard_rejects_only_unpublished_versions_in_an_older_lines_bundl
         ensure_unpublished_bundles_fit_lfx_line("1.11.0.dev7", index, base_dir=repo)
 
     message = str(raised.value)
+    assert "lfx-alpha 0.2.1: already published for" in message
+    assert "which excludes lfx 1.11.0.dev7" in message
     assert "lfx-beta 0.2.1: bundle minor 0.2 is not above older lfx lines' releases" in message
-    assert "lfx-alpha" not in message
     assert "lfx-gamma" not in message

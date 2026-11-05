@@ -49,7 +49,13 @@ from langflow.services.triggers.constants import (
     PROVIDER_SLACK,
     SLACK_TRIGGER_KINDS,
 )
-from langflow.services.triggers.error_codes import NODE_REMOVED_ERROR, SOURCE_SETTINGS_CHANGED_ERROR
+from langflow.services.triggers.error_codes import (
+    MULTIPLE_TRIGGERS_ERROR,
+    NODE_REMOVED_ERROR,
+    SOURCE_SETTINGS_CHANGED_ERROR,
+    CodedTriggerError,
+    TriggerErrorCode,
+)
 from langflow.services.triggers.locking import lock_trigger
 from langflow.services.triggers.providers.registry import component_kind, get_kind, source_kinds
 from langflow.services.triggers.schedule_config import (
@@ -277,6 +283,23 @@ def _node_kind(node_type: Any) -> str | None:
     return BUNDLE_TRIGGER_COMPONENT_KINDS.get((match["bundle"], match["cls"])) or component_kind(
         match["bundle"], match["cls"]
     )
+
+
+def validate_single_trigger_per_flow(flow_data: dict[str, Any] | None) -> None:
+    """Reject extra canvas triggers before saving or enabling the flow."""
+    nodes = (flow_data or {}).get("nodes")
+    if not isinstance(nodes, list):
+        return
+    count = 0
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        node_data = node.get("data")
+        if not isinstance(node_data, dict) or _node_kind(node_data.get("type")) is None:
+            continue
+        count += 1
+        if count > 1:
+            raise CodedTriggerError(TriggerErrorCode.MULTIPLE_TRIGGERS, MULTIPLE_TRIGGERS_ERROR)
 
 
 def _display_name(config: dict[str, Any], kind: str) -> str:
@@ -615,6 +638,9 @@ async def reconcile_flow_triggers_safely(
     if owner_id is None:
         return
     try:
+        # Legacy graphs remain editable, but a metadata save cannot restart
+        # their stopped triggers before the extra canvas nodes are removed.
+        validate_single_trigger_per_flow(flow_data)
         async with session.begin_nested():
             await reconcile_flow_triggers(session, flow_id=flow_id, owner_id=owner_id, flow_data=flow_data)
     except DBAPIError:

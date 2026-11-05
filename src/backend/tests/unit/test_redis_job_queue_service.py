@@ -1567,16 +1567,23 @@ async def test_cancel_dispatcher_reconnects_after_pubsub_error():
     Without this resilience, a Redis blip kills the dispatcher silently and the
     worker becomes blind to cross-worker cancels until restart.
     """
+    resubscribed = asyncio.Event()
 
     class _FlakeyPubSub:
         """Fakes pubsub.listen() raising once then yielding normally."""
 
-        def __init__(self, real: Any, *, raise_on_listen_count: int = 1) -> None:
+        def __init__(
+            self, real: Any, *, raise_on_listen_count: int = 1, subscribed: asyncio.Event | None = None
+        ) -> None:
             self._real = real
             self._raises_left = raise_on_listen_count
+            self._subscribed = subscribed
 
         async def psubscribe(self, *args: Any, **kwargs: Any) -> Any:
-            return await self._real.psubscribe(*args, **kwargs)
+            result = await self._real.psubscribe(*args, **kwargs)
+            if self._subscribed is not None:
+                self._subscribed.set()
+            return result
 
         async def punsubscribe(self, *args: Any, **kwargs: Any) -> Any:
             return await self._real.punsubscribe(*args, **kwargs)
@@ -1608,7 +1615,11 @@ async def test_cancel_dispatcher_reconnects_after_pubsub_error():
             self._pubsub_count += 1
             base = self._real.pubsub()
             # Only the first dispatcher's pubsub fails; subsequent reconnects succeed.
-            return _FlakeyPubSub(base, raise_on_listen_count=1 if self._pubsub_count == 1 else 0)
+            return _FlakeyPubSub(
+                base,
+                raise_on_listen_count=1 if self._pubsub_count == 1 else 0,
+                subscribed=resubscribed if self._pubsub_count > 1 else None,
+            )
 
         # Delegate everything else.
         def __getattr__(self, item: str) -> Any:
@@ -1623,11 +1634,10 @@ async def test_cancel_dispatcher_reconnects_after_pubsub_error():
     svc_producer._cleanup_task = asyncio.create_task(svc_producer._periodic_cleanup())
     svc_producer._cancel_dispatcher_task = asyncio.create_task(svc_producer._run_cancel_dispatcher())
     svc_producer.ready = True
-    # Allow the first (flakey) subscribe + the reconnect to settle.
-    await asyncio.sleep(0.6)
-
     svc_other, _ = await _make_service(shared_client=real_client)
     try:
+        # Wait for the replacement subscription before publishing a cancel.
+        await asyncio.wait_for(resubscribed.wait(), timeout=2.0)
         # After reconnect, a publish should still reach the dispatcher.
         job_id = str(uuid.uuid4())
         svc_producer.create_queue(job_id)

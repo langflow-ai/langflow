@@ -46,8 +46,9 @@ export function extractApiErrorMessages(error: unknown): string[] {
         }
         return String(entry);
       })
+      .map((message) => message.replace(/^Value error,\s*/, ""))
       .filter(Boolean);
-    if (msgs.length > 0) return msgs;
+    if (msgs.length > 0) return [...new Set(msgs)];
   }
 
   if (typeof detail === "string" && detail) return [detail];
