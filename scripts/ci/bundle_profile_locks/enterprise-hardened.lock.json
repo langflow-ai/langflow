@@ -173,6 +173,16 @@
       "resolved_version": "0.2.3"
     },
     {
+      "distribution": "lfx-telegram",
+      "extras": [],
+      "providers": [
+        "lfx-telegram"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-telegram==0.1.0",
+      "resolved_version": "0.1.0"
+    },
+    {
       "distribution": "lfx-toolguard",
       "extras": [],
       "providers": [
@@ -200,7 +210,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:945d998a3037b557",
+  "profile_digest": "sha256:205ccbc52daac742",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",
@@ -218,6 +228,7 @@
     "lfx-openai-compatible",
     "lfx-oracle",
     "lfx-slack",
+    "lfx-telegram",
     "lfx-toolguard",
     "lfx-vllm"
   ],

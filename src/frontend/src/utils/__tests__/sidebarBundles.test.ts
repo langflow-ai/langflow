@@ -115,3 +115,11 @@ describe("SIDEBAR_BUNDLES", () => {
     );
   });
 });
+
+it("uses the Telegram logo for its integration palette group", () => {
+  expect(SIDEBAR_BUNDLES).toContainEqual({
+    display_name: "Telegram",
+    name: "telegram",
+    icon: "Telegram",
+  });
+});
