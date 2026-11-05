@@ -62,9 +62,11 @@ members = [
 constraints = [
     { name = "aiohttp", specifier = ">=3.14.4,<4.0.0" },
     { name = "black", specifier = ">=26.10.1" },
+    { name = "brotli", specifier = ">=1.2.1" },
     { name = "brotli", specifier = ">=1.2.1,<2.0.0" },
+    { name = "brotlicffi", specifier = ">=1.2.1.0" },
     { name = "brotlicffi", specifier = ">=1.2.1.0,<2.0.0" },
-    { name = "certifi", specifier = ">=2026.10.18" },
+    { name = "certifi", specifier = ">=2026.10.19" },
     { name = "datamodel-code-generator", specifier = ">=0.81.0" },
     { name = "dnspython", marker = "python_full_version >= '3.11'", specifier = ">=2.9.1" },
     { name = "fsspec", specifier = ">=2026.6.0" },
@@ -76,8 +78,10 @@ constraints = [
     { name = "msgpack", specifier = ">=1.2.3,<2.0.0" },
     { name = "multidict", specifier = ">=6.9.1" },
     { name = "oauthlib", specifier = ">=4.0.0,<5.0.0" },
-    { name = "pyarrow", marker = "python_full_version >= '3.11'", specifier = ">=26.0.0,<27.0.0" },
+    { name = "pyarrow", marker = "python_full_version >= '3.11'", specifier = ">=26.0.1,<27.0.0" },
+    { name = "pyasn1", specifier = ">=0.6.5,<0.7.0" },
     { name = "pymongo", specifier = ">=4.18.3,<5.0.0" },
+    { name = "setuptools", specifier = ">=84.1.0,<85.0.0" },
     { name = "tornado", specifier = ">=6.5.10,<7.0.0" },
 ]
 overrides = [
@@ -8440,11 +8444,13 @@ dependencies = [
     { name = "assemblyai" },
     { name = "asyncer" },
     { name = "cachetools" },
+    { name = "certifi" },
     { name = "chardet" },
     { name = "clickhouse-connect" },
     { name = "croniter" },
     { name = "cryptography" },
     { name = "defusedxml" },
+    { name = "dnspython", version = "2.9.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "docstring-parser" },
     { name = "duckdb" },
     { name = "dynaconf" },
@@ -8464,6 +8470,7 @@ dependencies = [
     { name = "ibm-watsonx-ai", version = "1.3.42", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "ibm-watsonx-ai", version = "1.6.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "jaraco-context" },
+    { name = "joserfc" },
     { name = "jq", marker = "sys_platform != 'win32'" },
     { name = "json-repair" },
     { name = "jsonquerylang" },
@@ -8514,6 +8521,7 @@ dependencies = [
     { name = "pip" },
     { name = "platformdirs" },
     { name = "prometheus-client" },
+    { name = "pyarrow", version = "26.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "pyasn1" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
@@ -8633,6 +8641,8 @@ docx = [
     { name = "python-docx" },
 ]
 duckduckgo = [
+    { name = "brotli" },
+    { name = "brotlicffi", marker = "platform_python_implementation != 'CPython'" },
     { name = "ddgs" },
 ]
 easyocr = [
@@ -8938,7 +8948,10 @@ requires-dist = [
     { name = "asyncer", specifier = ">=0.0.5,<1.0.0" },
     { name = "atlassian-python-api", marker = "extra == 'atlassian'", specifier = "==3.41.16" },
     { name = "boto3", marker = "extra == 'aws'", specifier = ">=1.34.162,<2.0.0" },
+    { name = "brotli", marker = "extra == 'duckduckgo'", specifier = ">=1.2.1" },
+    { name = "brotlicffi", marker = "platform_python_implementation != 'CPython' and extra == 'duckduckgo'", specifier = ">=1.2.1.0" },
     { name = "cachetools", specifier = ">=6.0.0" },
+    { name = "certifi", specifier = ">=2026.10.19" },
     { name = "chardet", specifier = ">=7.3.0" },
     { name = "cleanlab-tlm", marker = "extra == 'cleanlab'", specifier = ">=1.1.2,<2.0.0" },
     { name = "clickhouse-connect", specifier = "==0.7.19" },
@@ -8956,6 +8969,7 @@ requires-dist = [
     { name = "datasets", marker = "extra == 'datasets'", specifier = ">2.14.7,<6.0.0" },
     { name = "ddgs", marker = "extra == 'duckduckgo'", specifier = ">=9.0.0" },
     { name = "defusedxml", specifier = ">=0.7.1,<1.0.0" },
+    { name = "dnspython", marker = "python_full_version >= '3.11'", specifier = ">=2.9.1,<3.0.0" },
     { name = "docling-core", marker = "extra == 'docling'", specifier = ">=2.103.0,<3.0.0" },
     { name = "docling-core", extras = ["chunking"], marker = "extra == 'docling-chunking'", specifier = ">=2.103.0,<3.0.0" },
     { name = "docling-slim", extras = ["cli", "convert-core", "extract-core", "feat-ocr-rapidocr", "format-latex", "format-office", "format-pdf", "format-web", "models-local", "service-client"], marker = "(platform_machine != 'x86_64' and extra == 'docling') or (sys_platform != 'darwin' and extra == 'docling')", specifier = ">=2.132.0,<3.0.0" },
@@ -8997,6 +9011,7 @@ requires-dist = [
     { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11' and extra == 'ibm-watsonx-clients'", specifier = "~=2.12.0" },
     { name = "jaraco-context", specifier = ">=6.1.0" },
     { name = "jigsawstack", marker = "extra == 'jigsawstack'", specifier = "==0.2.7" },
+    { name = "joserfc", specifier = ">=1.7.6,<2.0.0" },
     { name = "jq", marker = "sys_platform != 'win32'", specifier = ">=1.7.0,<2.0.0" },
     { name = "json-repair", specifier = ">=0.30.3,<1.0.0" },
     { name = "json-repair", marker = "extra == 'json-repair'", specifier = ">=0.60.1" },
@@ -9098,7 +9113,8 @@ requires-dist = [
     { name = "platformdirs", specifier = ">=4.2.0,<5.0.0" },
     { name = "prometheus-client", specifier = ">=0.20.0,<1.0.0" },
     { name = "psycopg", extras = ["binary"], marker = "extra == 'pgvector'", specifier = ">=3.1,<4.0" },
-    { name = "pyarrow", marker = "python_full_version >= '3.11' and extra == 'pyarrow'", specifier = ">=26.0.0,<27.0.0" },
+    { name = "pyarrow", marker = "python_full_version >= '3.11'", specifier = ">=26.0.1,<27.0.0" },
+    { name = "pyarrow", marker = "python_full_version >= '3.11' and extra == 'pyarrow'", specifier = ">=26.0.1,<27.0.0" },
     { name = "pyarrow", marker = "python_full_version < '3.11' and extra == 'pyarrow'", specifier = ">=23.0.1,<24.0.0" },
     { name = "pyasn1", specifier = ">=0.6.5,<0.7.0" },
     { name = "pydantic", specifier = ">=2.13.0,<2.14" },
@@ -10427,7 +10443,7 @@ requires-dist = [
     { name = "langchain-core", specifier = ">=1.2.28,<2.0.0" },
     { name = "lfx", editable = "src/lfx" },
     { name = "pyarrow", marker = "python_full_version < '3.11'", specifier = ">=23.0.1,<24.0.0" },
-    { name = "pyarrow", marker = "python_full_version >= '3.11'", specifier = ">=26.0.0,<27.0.0" },
+    { name = "pyarrow", marker = "python_full_version >= '3.11'", specifier = ">=26.0.1,<27.0.0" },
     { name = "pyiceberg", specifier = ">=0.10,<1" },
 ]
 
@@ -10541,6 +10557,8 @@ name = "lfx-duckduckgo"
 version = "0.2.0"
 source = { editable = "src/bundles/duckduckgo" }
 dependencies = [
+    { name = "brotli" },
+    { name = "brotlicffi", marker = "platform_python_implementation != 'CPython'" },
     { name = "ddgs" },
     { name = "langchain-community" },
     { name = "lfx" },
@@ -10548,6 +10566,8 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "brotli", specifier = ">=1.2.1" },
+    { name = "brotlicffi", marker = "platform_python_implementation != 'CPython'", specifier = ">=1.2.1.0" },
     { name = "ddgs", specifier = ">=9.0.0" },
     { name = "langchain-community", specifier = ">=0.4.1,<1.0.0" },
     { name = "lfx", editable = "src/lfx" },

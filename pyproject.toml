@@ -257,7 +257,9 @@ opensearch = [
 constraint-dependencies = [
     "aiohttp>=3.14.4,<4.0.0",
     "black>=26.10.1",
-    "certifi>=2026.10.18",
+    "brotli>=1.2.1",
+    "brotlicffi>=1.2.1.0",
+    "certifi>=2026.10.19",
     "dnspython>=2.9.1; python_version >= '3.11'",
     "joserfc>=1.7.6,<2.0.0",
     "markdown>=3.11.2; python_version >= '3.11'",
@@ -272,7 +274,9 @@ constraint-dependencies = [
     "multidict>=6.9.1",  # GHSA-54p9-h82j-f925 / CVE-2026-104874
     # Security floors for every workspace dependency path, including optional bundles.
     "oauthlib>=4.0.0,<5.0.0",  # CVE-2026-49264, CVE-2026-49265
-    "pyarrow>=26.0.0,<27.0.0; python_version >= '3.11'",
+    "pyarrow>=26.0.1,<27.0.0; python_version >= '3.11'",
+    "pyasn1>=0.6.5,<0.7.0",
+    "setuptools>=84.1.0,<85.0.0",
     "pymongo>=4.18.3,<5.0.0",  # CVE-2026-88029, CVE-2026-96747, CVE-2026-96748, CVE-2026-96749
     "tornado>=6.5.10,<7.0.0",  # 6.5.8/6.5.9 security fixes plus Jupyter compatibility fix
     "brotli>=1.2.1,<2.0.0",  # CVE-2026-111497

@@ -1,7 +1,7 @@
 import type { Frame, Page, Request } from "@playwright/test";
 import type { PendingRequestTracker } from "./server-error-contract.mjs";
 
-/** Retire XHRs abandoned when Chromium replaces their owning document. */
+/** Retire requests abandoned when Chromium replaces their owning document. */
 export async function installDocumentRequestCleanup(
   page: Page,
   trackers: PendingRequestTracker<Request>[],
@@ -27,12 +27,27 @@ export async function installDocumentRequestCleanup(
             .snapshot()
             .filter(
               (pending) =>
-                pending.resourceType() === "xhr" &&
+                (pending.resourceType() === "xhr" ||
+                  pending.resourceType() === "fetch") &&
                 frameForRequest(pending) === frame,
             ),
         ),
       ),
     );
+  };
+
+  const onFrameDetached = (frame: Frame) => {
+    navigationCandidates.delete(frame);
+    for (const tracker of trackers) {
+      for (const request of tracker.snapshot()) {
+        if (
+          !request.isNavigationRequest() &&
+          frameForRequest(request) === frame
+        ) {
+          tracker.finish(request);
+        }
+      }
+    }
   };
 
   await page.exposeBinding(
@@ -56,9 +71,11 @@ export async function installDocumentRequestCleanup(
     ).__langflowPlaywrightDocumentStarted();
   });
   page.on("request", onRequest);
+  page.on("framedetached", onFrameDetached);
 
   return () => {
     page.off("request", onRequest);
+    page.off("framedetached", onFrameDetached);
     navigationCandidates.clear();
   };
 }
