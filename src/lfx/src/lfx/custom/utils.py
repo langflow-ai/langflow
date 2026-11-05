@@ -805,6 +805,13 @@ def _restore_rebuilt_values(component: Component, frontend_node: dict, saved_nod
 async def _replay_saved_refreshes(
     component: Component, frontend_node: dict, saved_node: dict
 ) -> tuple[list[str], bool]:
+    """Replay saved selectors declared refreshable by the rebuilt component.
+
+    This applies to every Component subclass that overrides the configuration hook.
+    Selectors follow saved declaration order and must still be refreshable in the current
+    template. Global variables are hydrated before hooks run, and hooks can access
+    configured services, so offline callers must provide their own execution isolation.
+    """
     hook = component.update_build_config
     if getattr(hook, "__func__", hook) is CustomComponent.update_build_config:
         return [], False
@@ -870,9 +877,15 @@ async def update_rebuilt_node(
     *,
     warnings: list[ComponentUpdateWarning] | None = None,
 ) -> dict[str, Any]:
-    """Carries the saved node's values into a node rebuilt from code and refreshes its tool-mode outputs.
+    """Restore saved values and rerun declared configuration and output metadata hooks.
 
-    This is what the editor's Update runs after rebuilding a node, and the upgrade check runs it too.
+    The editor's Update and upgrade check share this generic Component behavior. Callers
+    establish authorization and service access policy before invoking these hooks;
+    offline callers also isolate hooks that may use configured services.
+
+    Pass a warning list to collect missing fields and recoverable discovery failures
+    separately from the saved node. Omitting it preserves the legacy node-only return
+    behavior, which does not encode uncertainty. Authorization refusals continue to raise.
     """
     generated_fields = (
         _saved_generated_fields(component_instance, frontend_node, saved_node)
