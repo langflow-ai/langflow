@@ -88,6 +88,7 @@ class MCPToolsComponent(ComponentWithCache):
     # (server_name, header-hash) pair is a distinct entry; without a bound a
     # tenant that rotates session tokens would grow this map without limit.
     SHARED_SERVERS_CACHE_MAX_ENTRIES: int = 64
+    SHARED_SELECTIONS_CACHE_MAX_ENTRIES: int = 64
 
     schema_inputs: list = []
     tools: list[StructuredTool] = []
@@ -207,6 +208,18 @@ class MCPToolsComponent(ComponentWithCache):
             return None
         payload = json.dumps([user_id, str(flow_id), node_id])
         return f"mcp_selected_server:{hashlib.sha256(payload.encode()).hexdigest()}"
+
+    def _remember_selected_server(self, selection_cache_key: str | None, server_name: str) -> None:
+        self._last_selected_server = server_name
+        if not selection_cache_key:
+            return
+        selections = safe_cache_get(self._shared_component_cache, "mcp_selected_servers", {})
+        if not isinstance(selections, dict):
+            selections = {}
+        while len(selections) >= self.SHARED_SELECTIONS_CACHE_MAX_ENTRIES and selection_cache_key not in selections:
+            selections.pop(next(iter(selections)))
+        selections[selection_cache_key] = server_name
+        safe_cache_set(self._shared_component_cache, "mcp_selected_servers", selections)
 
     def _mcp_cache_user_id(self) -> str | None:
         """Return the authenticated user id without requiring a fully attached graph.
@@ -754,7 +767,13 @@ class MCPToolsComponent(ComponentWithCache):
                 build_config["tool_placeholder"]["tool_mode"] = True
 
                 current_server_name = field_value.get("name") if isinstance(field_value, dict) else field_value
-                build_config_server_value = build_config.get("mcp_server", {}).get("value")
+                previous_server_context = build_config.get("_frontend_node_previous_mcp_server")
+                has_previous_server = isinstance(previous_server_context, dict) and "value" in previous_server_context
+                build_config_server_value = (
+                    previous_server_context["value"]
+                    if has_previous_server
+                    else build_config.get("mcp_server", {}).get("value")
+                )
                 build_config_server_name = (
                     build_config_server_value.get("name")
                     if isinstance(build_config_server_value, dict)
@@ -762,16 +781,17 @@ class MCPToolsComponent(ComponentWithCache):
                 )
                 servers_cache_key_ui = self._mcp_servers_cache_key(current_server_name) if current_server_name else ""
                 selection_cache_key = self._mcp_selected_server_cache_key(build_config)
-                _last_selected_server = (
-                    safe_cache_get(self._shared_component_cache, selection_cache_key, "")
-                    if selection_cache_key
-                    else self._last_selected_server or ""
-                )
+                selections = safe_cache_get(self._shared_component_cache, "mcp_selected_servers", {})
+                _last_selected_server = self._last_selected_server or ""
+                if selection_cache_key:
+                    _last_selected_server = (
+                        selections.get(selection_cache_key, "") if isinstance(selections, dict) else ""
+                    )
                 # Only treat as a server change if there was a previous server selection.
                 # Cold cache (_last_selected_server="") on initial flow load is NOT a server change —
                 # the user didn't switch anything, the backend just hasn't seen this component yet.
                 server_changed = bool(
-                    (_last_selected_server and current_server_name != _last_selected_server)
+                    (not has_previous_server and _last_selected_server and current_server_name != _last_selected_server)
                     or (build_config_server_name and current_server_name != build_config_server_name)
                 )
 
@@ -794,9 +814,7 @@ class MCPToolsComponent(ComponentWithCache):
                     else:
                         if not is_in_tool_mode:
                             build_config["tool"]["show"] = True
-                        self._last_selected_server = current_server_name
-                        if selection_cache_key:
-                            safe_cache_set(self._shared_component_cache, selection_cache_key, current_server_name)
+                        self._remember_selected_server(selection_cache_key, current_server_name)
                         return build_config
 
                 # To avoid unnecessary updates, only proceed if the server has actually changed
@@ -818,9 +836,7 @@ class MCPToolsComponent(ComponentWithCache):
                                     return build_config
                     else:
                         return build_config
-                self._last_selected_server = current_server_name
-                if selection_cache_key:
-                    safe_cache_set(self._shared_component_cache, selection_cache_key, current_server_name)
+                self._remember_selected_server(selection_cache_key, current_server_name)
 
                 # When cache is disabled, clear any cached data for this server
                 # This ensures we always fetch fresh data from the database

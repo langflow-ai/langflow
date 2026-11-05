@@ -90,6 +90,46 @@ describe("usePostTemplateValue scope continuity", () => {
     );
   });
 
+  it("sends the previous MCP server separately from the edited template", async () => {
+    const savedNode = {
+      ...node,
+      template: {
+        ...node.template,
+        mcp_server: { value: { name: "old-server" } },
+      },
+    } as unknown as APIClassType;
+    mockApiPost.mockResolvedValueOnce({ data: savedNode });
+    const mutation = usePostTemplateValue({
+      parameterId: "mcp_server",
+      nodeId: "shared-node",
+      node: savedNode,
+    });
+
+    await mutation.mutateAsync({
+      value: { name: "new-server" },
+      template: {
+        ...savedNode.template,
+        mcp_server: {
+          ...savedNode.template.mcp_server,
+          value: { name: "new-server" },
+        },
+      },
+    });
+
+    expect(mockApiPost).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        field_value: { name: "new-server" },
+        template: expect.objectContaining({
+          mcp_server: expect.objectContaining({
+            value: { name: "new-server" },
+          }),
+          _frontend_node_previous_mcp_server: { value: "old-server" },
+        }),
+      }),
+    );
+  });
+
   it("does not start a request after the captured flow scope becomes stale", async () => {
     const mutation = usePostTemplateValue({
       parameterId: "model",

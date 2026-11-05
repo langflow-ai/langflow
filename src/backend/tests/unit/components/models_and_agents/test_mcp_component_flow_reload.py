@@ -13,8 +13,9 @@ from uuid import UUID, uuid4
 
 import pytest
 from langchain_core.tools import StructuredTool
-from lfx.base.agents.utils import safe_cache_get, safe_cache_set
+from lfx.base.agents.utils import safe_cache_get
 from lfx.components.models_and_agents.mcp_component import MCPToolsComponent
+from lfx.services.cache.service import ThreadingInMemoryCache
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -81,9 +82,7 @@ class TestMCPComponentFlowReload(ComponentTestBaseWithoutClient):
         """
         # Arrange — ensure cold cache (no previous server selection)
         component = await self.component_setup(component_class, default_kwargs)
-        safe_cache_set(
-            component._shared_component_cache, component._mcp_selected_server_cache_key(saved_flow_build_config), ""
-        )
+        component._remember_selected_server(component._mcp_selected_server_cache_key(saved_flow_build_config), "")
         build_config = saved_flow_build_config.copy()
         server_value = {"name": "test_server"}
 
@@ -101,9 +100,7 @@ class TestMCPComponentFlowReload(ComponentTestBaseWithoutClient):
         """Cold cache on initial flow load must not override saved tool value with UUID."""
         # Arrange — ensure cold cache
         component = await self.component_setup(component_class, default_kwargs)
-        safe_cache_set(
-            component._shared_component_cache, component._mcp_selected_server_cache_key(saved_flow_build_config), ""
-        )
+        component._remember_selected_server(component._mcp_selected_server_cache_key(saved_flow_build_config), "")
         build_config = saved_flow_build_config.copy()
         server_value = {"name": "test_server"}
 
@@ -125,10 +122,8 @@ class TestMCPComponentFlowReload(ComponentTestBaseWithoutClient):
         build_config = saved_flow_build_config.copy()
 
         # Simulate previous server was set (warm cache)
-        safe_cache_set(
-            component._shared_component_cache,
-            component._mcp_selected_server_cache_key(saved_flow_build_config),
-            "old_server",
+        component._remember_selected_server(
+            component._mcp_selected_server_cache_key(saved_flow_build_config), "old_server"
         )
 
         new_server_value = {"name": "new_server"}
@@ -146,9 +141,7 @@ class TestMCPComponentFlowReload(ComponentTestBaseWithoutClient):
         """Initial load must populate the cache with the current server name."""
         # Arrange — ensure cold cache
         component = await self.component_setup(component_class, default_kwargs)
-        safe_cache_set(
-            component._shared_component_cache, component._mcp_selected_server_cache_key(saved_flow_build_config), ""
-        )
+        component._remember_selected_server(component._mcp_selected_server_cache_key(saved_flow_build_config), "")
         build_config = saved_flow_build_config.copy()
         server_value = {"name": "test_server"}
 
@@ -156,9 +149,8 @@ class TestMCPComponentFlowReload(ComponentTestBaseWithoutClient):
         await component.update_build_config(build_config, server_value, "mcp_server")
 
         # Assert
-        cached_server = safe_cache_get(
-            component._shared_component_cache, component._mcp_selected_server_cache_key(saved_flow_build_config), ""
-        )
+        selections = safe_cache_get(component._shared_component_cache, "mcp_selected_servers", {})
+        cached_server = selections[component._mcp_selected_server_cache_key(saved_flow_build_config)]
         assert cached_server == "test_server"
 
     @pytest.mark.asyncio
@@ -171,10 +163,8 @@ class TestMCPComponentFlowReload(ComponentTestBaseWithoutClient):
         build_config = saved_flow_build_config.copy()
 
         # Simulate previous server was set (warm cache)
-        safe_cache_set(
-            component._shared_component_cache,
-            component._mcp_selected_server_cache_key(saved_flow_build_config),
-            "old_server",
+        component._remember_selected_server(
+            component._mcp_selected_server_cache_key(saved_flow_build_config), "old_server"
         )
 
         new_server_value = {"name": "new_server"}
@@ -199,10 +189,8 @@ class TestMCPComponentFlowReload(ComponentTestBaseWithoutClient):
     ):
         """Keep saved argument values and presentation when refreshing the same selected tool."""
         component = await self.component_setup(component_class, default_kwargs)
-        safe_cache_set(
-            component._shared_component_cache,
-            component._mcp_selected_server_cache_key(saved_flow_build_config),
-            last_selected_server,
+        component._remember_selected_server(
+            component._mcp_selected_server_cache_key(saved_flow_build_config), last_selected_server
         )
         config = deepcopy(saved_flow_build_config)
         config["is_refresh"] = is_refresh
@@ -242,10 +230,8 @@ class TestMCPComponentFlowReload(ComponentTestBaseWithoutClient):
         self, component_class, default_kwargs, saved_flow_build_config, last_selected_server
     ):
         component = await self.component_setup(component_class, default_kwargs)
-        safe_cache_set(
-            component._shared_component_cache,
-            component._mcp_selected_server_cache_key(saved_flow_build_config),
-            last_selected_server,
+        component._remember_selected_server(
+            component._mcp_selected_server_cache_key(saved_flow_build_config), last_selected_server
         )
         config = deepcopy(saved_flow_build_config)
         config["name"] = {"name": "name", "type": "str", "value": "previous server"}
@@ -297,7 +283,7 @@ class TestMCPComponentFlowReload(ComponentTestBaseWithoutClient):
         config["mcp_server"]["value"] = {"name": "new_server"}
         config["name"] = {"name": "name", "type": "str", "value": "previous server"}
         key = component._mcp_selected_server_cache_key(config)
-        safe_cache_set(component._shared_component_cache, key, "test_server")
+        component._remember_selected_server(key, "test_server")
 
         async def saved_tool(name: str) -> str:
             return name
@@ -308,3 +294,54 @@ class TestMCPComponentFlowReload(ComponentTestBaseWithoutClient):
 
         assert isinstance(updated["tool"]["value"], UUID)
         assert "name" not in updated
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("refresh", [False, True])
+    async def test_request_previous_server_controls_cold_and_stale_selection_history(
+        self, component_class, default_kwargs, saved_flow_build_config, refresh
+    ):
+        component = await self.component_setup(component_class, default_kwargs)
+        config = deepcopy(saved_flow_build_config)
+        config["is_refresh"] = refresh
+        config["mcp_server"]["value"] = {"name": "new_server"}
+        config["_frontend_node_previous_mcp_server"] = {"value": {"name": "new_server" if refresh else "test_server"}}
+        config["name"] = {"name": "name", "type": "str", "value": "saved name"}
+        if refresh:
+            key = component._mcp_selected_server_cache_key(config)
+            component._remember_selected_server(key, "test_server")
+
+        async def saved_tool(name: str) -> str:
+            return name
+
+        tool = StructuredTool.from_function(coroutine=saved_tool, description="Local schema fixture")
+        with patch.object(component, "update_tool_list", new=AsyncMock(return_value=([tool], {"name": "new_server"}))):
+            updated = await component.update_build_config(config, {"name": "new_server"}, "mcp_server")
+
+        if refresh:
+            assert updated["tool"]["value"] == "saved_tool"
+            assert updated["name"]["value"] == "saved name"
+        else:
+            assert isinstance(updated["tool"]["value"], UUID)
+            assert "name" not in updated
+
+    @pytest.mark.asyncio
+    async def test_selection_history_has_bounded_storage(
+        self, component_class, default_kwargs, saved_flow_build_config
+    ):
+        component = await self.component_setup(component_class, default_kwargs)
+        component._shared_component_cache = ThreadingInMemoryCache()
+        component.SHARED_SELECTIONS_CACHE_MAX_ENTRIES = 3
+        component.use_cache = True
+        keys = []
+        with patch.object(component, "update_tool_list", new=AsyncMock()) as discover:
+            for index in range(5):
+                config = deepcopy(saved_flow_build_config)
+                config["_frontend_node_id"] = {"value": f"node-{index}"}
+                keys.append(component._mcp_selected_server_cache_key(config))
+                updated = await component.update_build_config(config, {"name": "test_server"}, "mcp_server")
+                assert updated["tool"]["value"] == "saved_tool"
+
+        discover.assert_not_awaited()
+        selections = safe_cache_get(component._shared_component_cache, "mcp_selected_servers", {})
+        assert list(selections) == keys[-3:]
+        assert len(component._shared_component_cache) == 1
