@@ -152,6 +152,7 @@ def test_dry_run_process_audit_event_cannot_appear_verified(monkeypatch, event, 
 
     monkeypatch.setattr(engine, "build_custom_component_template", build)
     monkeypatch.setattr(engine, "update_rebuilt_node", rebuild)
+    engine._install_network_guard()
     _outcome, failure = engine._dry_run({"template": {"code": {"value": ""}}}, {}, None)
 
     assert failure is not None

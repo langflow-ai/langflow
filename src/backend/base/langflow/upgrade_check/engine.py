@@ -32,6 +32,7 @@ from lfx.extension.migration.loader import load_migration_table
 from lfx.interface.components import ComponentCache
 from lfx.services.catalog_policy import CatalogPolicySnapshot
 from lfx.upgrade.checker import breaking_reasons, build_registry_lookup, classify_node, iter_flow_nodes
+from lfx.upgrade.registry import UpgradeRegistryError
 from lfx.utils.flow_code import normalize_code_for_import
 from lfx.utils.flow_validation import (
     CustomComponentValidationError,
@@ -128,6 +129,8 @@ def discover_offline(callback: Callable[[], dict[str, Any]]) -> dict[str, Any]:
         )
         raise ComponentDiscoveryError(msg)
     if error := outcome.get("error"):
+        if isinstance(error, UpgradeRegistryError):
+            raise error
         msg = f"component discovery failed ({type(error).__name__})"
         raise ComponentDiscoveryError(msg) from error
     return outcome["registry"]
