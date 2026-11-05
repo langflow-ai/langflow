@@ -96,9 +96,13 @@ export const useChatFileUpload = ({
               return newFiles;
             });
 
+            const detail = error.response?.data?.detail;
             setErrorData({
               title: t("errors.upload"),
-              list: [t("misc.fsErrorText"), SN_ERROR_TEXT],
+              list:
+                typeof detail === "string" && detail.trim()
+                  ? [detail]
+                  : [t("misc.fsErrorText"), SN_ERROR_TEXT],
             });
           },
         },
