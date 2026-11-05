@@ -305,6 +305,7 @@ def test_full_target_checks_only_default_workspace_distributions() -> None:
 
 
 def test_published_images_pin_hardened_package_managers() -> None:
+    """Keep package-manager pins and installed dependency checks aligned."""
     install_script = (REPO_ROOT / "docker" / "install_hardened_npm.sh").read_text(encoding="utf-8")
 
     assert 'NPM_VERSION="12.0.2"' in install_script

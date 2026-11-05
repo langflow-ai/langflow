@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -33,6 +34,7 @@ def locked_packages(environment: dict[str, str]) -> dict[str, str]:
 @pytest.mark.parametrize("python", ["3.10", "3.11", "3.14"])
 @pytest.mark.parametrize("platform", ["linux", "darwin", "win32"])
 def test_fixed_dependencies_resolve_on_every_supported_python_line(python: str, platform: str) -> None:
+    """Keep patched locked dependencies installable on each supported Python line."""
     environment = {
         "python_version": python,
         "python_full_version": f"{python}.0",
@@ -117,12 +119,16 @@ def test_published_requirements_reject_vulnerable_aiohttp_without_workspace_cons
 )
 @pytest.mark.parametrize(
     ("implementation", "dependency", "affected", "fixed"),
-    [("CPython", "brotli", "1.2.0", "1.2.1"), ("PyPy", "brotlicffi", "1.2.0.1", "1.2.1.0")],
+    [
+        ("CPython", "brotli", "1.2.0", "1.2.1"),
+        ("PyPy", "brotli", "1.2.0", "1.2.1"),
+        ("PyPy", "brotlicffi", "1.2.0.1", "1.2.1.0"),
+    ],
 )
 def test_published_duckduckgo_requires_patched_decoder(
     manifest: str, extra: str | None, implementation: str, dependency: str, affected: str, fixed: str
 ) -> None:
-    """Protect published installs through the decoder selected by HTTPX."""
+    """Protect both installed decoders because HTTPX always prefers Brotli."""
     project = tomllib.loads((ROOT / manifest).read_text())["project"]
     declarations = project["optional-dependencies"][extra] if extra else project["dependencies"]
     environment = {"platform_python_implementation": implementation, "python_version": "3.14"}
@@ -140,8 +146,36 @@ def test_published_duckduckgo_requires_patched_decoder(
 @pytest.mark.parametrize("manifest", ["src/backend/base/pyproject.toml", "src/bundles/confluent/pyproject.toml"])
 @pytest.mark.parametrize("python", ["3.10", "3.11", "3.14"])
 def test_published_pyarrow_floor_keeps_supported_python_lines(manifest: str, python: str) -> None:
-    """Require patched Arrow where available without dropping Python 3.10."""
+    """Check the base extra and Confluent separately on each supported Python line."""
     project = tomllib.loads((ROOT / manifest).read_text())["project"]
+    declarations = project["optional-dependencies"]["pyarrow"] if manifest == MANIFESTS[0] else project["dependencies"]
+    requirements = [
+        requirement
+        for value in declarations
+        if (requirement := Requirement(value)).name.lower() == "pyarrow"
+        and (requirement.marker is None or requirement.marker.evaluate({"python_version": python}))
+    ]
+    assert len(requirements) == 1
+    requirement = requirements[0]
+    if python == "3.10":
+        if manifest == MANIFESTS[0]:
+            assert "23.0.0" not in requirement.specifier
+            assert "23.0.1" in requirement.specifier
+            assert "24.0.0" not in requirement.specifier
+        else:
+            assert "16.1.0" not in requirement.specifier
+            assert "17.0.0" in requirement.specifier
+    else:
+        assert "26.0.0" not in requirement.specifier
+        assert "26.0.1" in requirement.specifier
+        if manifest == MANIFESTS[0]:
+            assert "27.0.0" not in requirement.specifier
+
+
+@pytest.mark.parametrize("python", ["3.10", "3.11", "3.14"])
+def test_plain_base_pyarrow_floor_preserves_python310_compatibility(python: str) -> None:
+    """Check the mandatory Openlayer path independently from the optional base extra."""
+    project = tomllib.loads((ROOT / MANIFESTS[0]).read_text())["project"]
     requirements = [
         requirement
         for value in project["dependencies"]
@@ -149,11 +183,12 @@ def test_published_pyarrow_floor_keeps_supported_python_lines(manifest: str, pyt
         and (requirement.marker is None or requirement.marker.evaluate({"python_version": python}))
     ]
     if python == "3.10":
-        assert all("23.0.1" in requirement.specifier for requirement in requirements)
+        assert not requirements
     else:
         assert len(requirements) == 1
         assert "26.0.0" not in requirements[0].specifier
         assert "26.0.1" in requirements[0].specifier
+        assert "27.0.0" not in requirements[0].specifier
 
 
 @pytest.mark.parametrize(
@@ -179,3 +214,52 @@ def test_plain_base_requirements_protect_dns_and_jose_transitive_paths(
         assert affected not in requirements[0].specifier
         assert patched in requirements[0].specifier
         assert next_major not in requirements[0].specifier
+
+
+@pytest.mark.parametrize("python", ["3.10", "3.11", "3.14"])
+@pytest.mark.parametrize("regression", ["missing", "lowered"])
+def test_pyarrow_extra_rejects_missing_or_lowered_security_floor(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, python: str, regression: str
+) -> None:
+    """Exercise the published-extra check against missing and downgraded metadata."""
+    project = tomllib.loads((ROOT / MANIFESTS[0]).read_text())["project"]
+    requirements = (
+        []
+        if regression == "missing"
+        else [
+            "pyarrow>=23.0.0,<24.0.0; python_version < '3.11'",
+            "pyarrow>=26.0.0,<27.0.0; python_version >= '3.11'",
+        ]
+    )
+    manifest = tmp_path / MANIFESTS[0]
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(
+        "[project]\ndependencies = "
+        + json.dumps(project["dependencies"])
+        + "\n[project.optional-dependencies]\npyarrow = "
+        + json.dumps(requirements)
+        + "\n"
+    )
+    monkeypatch.setitem(globals(), "ROOT", tmp_path)
+    with pytest.raises(AssertionError):
+        test_published_pyarrow_floor_keeps_supported_python_lines(MANIFESTS[0], python)
+
+
+@pytest.mark.parametrize("manifest", ["pyproject.toml", MANIFESTS[0]])
+def test_certifi_security_floor_uses_the_restored_patched_trust_store(manifest: str) -> None:
+    """Reject affected roots while retaining the unaffected roots restored after the fix."""
+    metadata = tomllib.loads((ROOT / manifest).read_text())
+    declarations = (
+        metadata["tool"]["uv"]["constraint-dependencies"]
+        if manifest == "pyproject.toml"
+        else metadata["project"]["dependencies"]
+    )
+    requirements = [Requirement(value) for value in declarations if Requirement(value).name == "certifi"]
+    assert len(requirements) == 1
+    assert requirements[0].marker is None
+    assert "2026.7.22" not in requirements[0].specifier
+    assert "2026.10.18" not in requirements[0].specifier
+    assert "2026.10.19" in requirements[0].specifier
+    assert Version(locked_packages({"python_version": "3.14", "python_full_version": "3.14.0"})["certifi"]) >= Version(
+        "2026.10.19"
+    )

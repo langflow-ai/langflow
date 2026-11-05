@@ -242,6 +242,7 @@ opensearch = [
 
 [tool.uv]
 constraint-dependencies = [
+    "certifi>=2026.10.19",
     "aiohttp>=3.14.4,<4.0.0",
     "brotli>=1.2.1",
     "brotlicffi>=1.2.1.0",

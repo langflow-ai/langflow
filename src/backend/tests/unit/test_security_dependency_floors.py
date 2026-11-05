@@ -128,6 +128,7 @@ def test_published_extras_enforce_patched_gitpython_floor() -> None:
 
 
 def test_workspace_constraints_enforce_patched_pymongo_and_tornado() -> None:
+    """Keep patched database and Tornado floors consistent with the lock."""
     constraints = _load_pyproject("pyproject.toml")["tool"]["uv"]["constraint-dependencies"]
 
     pymongo = _requirement(constraints, "pymongo")
