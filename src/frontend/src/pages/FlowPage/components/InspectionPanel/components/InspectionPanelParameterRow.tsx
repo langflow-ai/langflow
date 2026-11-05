@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import NodeInputInfo from "@/CustomNodes/GenericNode/components/NodeInputInfo";
 import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
@@ -10,7 +10,7 @@ import { isFieldTweakable } from "@/modals/apiModal/utils/api-exposure-rules";
 import useFlowStore from "@/stores/flowStore";
 import { useTypesStore } from "@/stores/typesStore";
 import type { NodeDataType } from "@/types/flow";
-import { scapeJSONParse } from "@/utils/reactflowUtils";
+import { questionConnections, scapeJSONParse } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
 import { getDefaultDisplay, isValueEmpty } from "../utils";
 
@@ -44,6 +44,22 @@ export default function InspectionPanelParameterRow({
     name,
   });
 
+  // A question list's questions are connected through their own hidden fields, which leave the
+  // canvas with the list.
+  const connectionFields = useMemo(
+    () => [
+      name,
+      ...(template?.type === "decision_questions" &&
+      Array.isArray(template.value)
+        ? template.value.flatMap((question) =>
+            questionConnections(question, template.connection_prefix).map(
+              ({ fieldName }) => fieldName,
+            ),
+          )
+        : []),
+    ],
+    [name, template],
+  );
   const isConnected = useFlowStore(
     useCallback(
       (state) =>
@@ -51,9 +67,11 @@ export default function InspectionPanelParameterRow({
           (edge) =>
             edge.target === data.id &&
             edge.targetHandle &&
-            scapeJSONParse(edge.targetHandle)?.fieldName === name,
+            connectionFields.includes(
+              scapeJSONParse(edge.targetHandle)?.fieldName,
+            ),
         ),
-      [data.id, name],
+      [data.id, connectionFields],
     ),
   );
 
