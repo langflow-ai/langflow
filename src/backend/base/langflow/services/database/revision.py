@@ -102,8 +102,14 @@ async def read_revisions_before_startup(engine: AsyncEngine) -> set[str]:
     """Read existing state without creating tables or changing SQLite pragmas."""
     if engine.dialect.name == "sqlite":
         database = engine.url.database
-        if database and database not in {":memory:", "file::memory:"} and engine.url.query.get("mode") != "memory":
-            path = Path(unquote(urlsplit(database).path) if database.startswith("file:") else database)
+        # Use the dialect's boolean parsing, including uri=1. Without URI mode,
+        # file: is literal and SQLite URI options do not apply.
+        uri_mode = engine.dialect.create_connect_args(engine.url)[1].get("uri", False)
+        memory_database = database == ":memory:" or (
+            uri_mode and (database == "file::memory:" or engine.url.query.get("mode") == "memory")
+        )
+        if database and not memory_database:
+            path = Path(unquote(urlsplit(database).path) if uri_mode and database.startswith("file:") else database)
             if not path.exists():
                 return set()
             return await asyncio.to_thread(_sqlite_revisions, path)

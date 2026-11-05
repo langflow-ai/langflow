@@ -147,7 +147,10 @@ async def test_read_only_checks_recognize_the_side_branch_without_migrating_it(d
         assert version.status == "ok"
         assert schema.status == "fail"
         assert "supported Langflow 1.10.3 side branch" in version.summary
-        assert schema.summary == version.summary
+        assert schema.summary.startswith(version.summary)
+        assert "Back up the database" in schema.summary
+        assert "start this Langflow once to migrate it" in schema.summary
+        assert "run the check again" in schema.summary
         assert (await source.validate_database_revision()).kind == "legacy"
     finally:
         await source.engine.dispose()

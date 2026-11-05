@@ -143,8 +143,14 @@ async def check_schema(session: AsyncSession) -> CheckResult:
     if revisions == heads:
         return CheckResult("schema", "ok", f"database at revision {', '.join(sorted(revisions))}")
     state = classify_revisions(revisions, script_directory())
-    if state.kind != "known":
+    if state.kind == "unknown":
         return CheckResult("schema", "fail", state.message)
+    if state.kind == "legacy":
+        return CheckResult(
+            "schema",
+            "fail",
+            f"{state.message}. Back up the database, start this Langflow once to migrate it, then run the check again",
+        )
     found = ", ".join(sorted(revisions)) or "no recorded revision"
     return CheckResult(
         "schema",
