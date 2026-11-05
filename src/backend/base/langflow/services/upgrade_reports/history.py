@@ -93,6 +93,23 @@ async def require_report(session: AsyncSession, report_id: UUID | None) -> None:
         raise ValueError(msg)
 
 
+async def lock_report(session: AsyncSession, report_id: UUID) -> bool:
+    """Serialize report deletion and outcome admission without changing archive data.
+
+    A no-op UPDATE takes the parent row lock on PostgreSQL and the writer
+    reservation on SQLite, where SELECT FOR UPDATE is ignored. Both writers
+    must take it before checking children or admitting a new outcome; SQLite
+    may have foreign key enforcement disabled.
+    """
+    result = await session.exec(
+        sa.update(UpgradeReport)
+        .where(UpgradeReport.id == report_id)
+        .values(id=UpgradeReport.id)
+        .execution_options(synchronize_session=False)
+    )
+    return result.rowcount == 1
+
+
 async def record_repair_result(
     session: AsyncSession,
     *,
@@ -104,7 +121,9 @@ async def record_repair_result(
     """Add trusted server outcomes to the caller's existing repair transaction."""
     if report_id is None:
         return None
-    await require_report(session, report_id)
+    if not await lock_report(session, report_id):
+        msg = "Upgrade report not found"
+        raise ValueError(msg)
     row = UpgradeReportRepair(
         report_id=report_id,
         created_by=actor_id,
