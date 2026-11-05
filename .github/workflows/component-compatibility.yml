@@ -63,6 +63,8 @@ jobs:
           uv sync --frozen --package langflow-base --group dev --inexact
           uv sync --frozen --package lfx --group dev --inexact
       - name: Test comparison policy and failure handling
+        env:
+          PYTHONPATH: scripts/ci
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: >-
           uv run --no-sync pytest -q
@@ -85,6 +87,8 @@ jobs:
           --plan compatibility-evidence/plan.json
           --output-dir compatibility-evidence
       - name: Preserve the shared rule and difficult saved flows
+        env:
+          LFX_TEST_ALLOW_LANGFLOW: '1'
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: >-
           uv run --no-sync pytest -q

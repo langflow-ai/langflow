@@ -3,6 +3,7 @@
 import ast
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 import yaml
@@ -118,3 +119,33 @@ def test_plan_receives_lowercase_sha_for_uppercase_release_input(tmp_path):
     assert result.returncode == 0, result.stderr
     arguments = captured.read_text().splitlines()
     assert arguments[arguments.index("--base-sha") + 1] == commit.lower()
+
+
+def test_policy_step_imports_sibling_scripts_from_the_checkout_root():
+    job = workflow(".github/workflows/component-compatibility.yml")["jobs"]["compatibility"]
+    step = next(step for step in job["steps"] if step.get("name") == "Test comparison policy and failure handling")
+    result = subprocess.run(  # noqa: S603
+        [
+            sys.executable,
+            "-c",
+            "import component_compatibility, component_release_plan, component_registry_snapshot, "
+            "historical_compatibility_gate",
+        ],
+        cwd=ROOT,
+        env={**os.environ, **step.get("env", {})},
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=10,
+    )
+    assert result.returncode == 0, result.stderr
+
+
+def test_saved_flow_preservation_uses_the_existing_full_install_opt_in():
+    job = workflow(".github/workflows/component-compatibility.yml")["jobs"]["compatibility"]
+    step = next(
+        step for step in job["steps"] if step.get("name") == "Preserve the shared rule and difficult saved flows"
+    )
+    assert step.get("env", {}).get("LFX_TEST_ALLOW_LANGFLOW") == "1"
+    assert "LFX_TEST_ALLOW_LANGFLOW" not in job["env"]
+    assert "--noconftest" not in step["run"]
