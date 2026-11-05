@@ -73,8 +73,11 @@ so the two never collide alphabetically in a provider group.
    interval", not "updates instantly".
 3. **The normalized payload only.** The event inspector renders what the API returns. The browser never calls a
    provider, and a thin-payload mechanism's raw notification is not exposed.
-4. **One trigger per flow in wave 1.** A3's gating enforces it; the tooltip explains it rather than the drop silently
-   failing.
+4. **One trigger node per saved canvas in wave 1.** A3's gating prevents adding a second node. The server also
+   rejects flow creates, canvas updates, and imports containing multiple trigger nodes before saving them, with
+   a message asking the user to remove the extra nodes. Existing canvases remain readable and repairable, but
+   their triggers cannot be activated until the canvas contains at most one trigger node. This canvas constraint
+   does not count historical trigger rows or limit schedules created through the API without a canvas node.
 5. **i18n and a11y are review gates.** Every string lands in all seven `src/locales/*.json` catalogs (machine
    translations for the six non-English locales, as with the `#14220` precedent), and `locale-parity.test.ts` is the
    check; every new settings route ships an axe baseline.
@@ -139,6 +142,11 @@ one) and is not rendered. Action to route:
 | `delete` | `DELETE /triggers/{id}` |
 | `rotate_secret` | `POST /triggers/{id}/signing-secret` (inbound webhook triggers only) |
 
+For revoked or expired credentials, Reconnect opens Settings → Connections. After reauthorization, the trigger
+shows "Ready to resume" and remains stopped until the user chooses Resume. This is a guided recovery path,
+not a promise that OAuth reauthorization and trigger activation happen in one click. The consent recovery path
+through B9 is separate and attempts activation after the consent update succeeds.
+
 State reasons (`reason`, and `blocked_actions` values):
 
 | Reason | When |
@@ -200,6 +208,22 @@ readable so the ledger history explains what happened. No 1.13 code path moves a
 dead-letter state is a per-event state, shown in the event inspector), so this is a guard for a terminal state the
 contract reserves, not a common case. Nothing sets trigger-level `expired` today either: a removed subscription is
 resubscribed while the trigger stays `active`, and an unusable connection moves it to `needs_reconnect`.
+
+## QA scope and known limitations
+
+[QA acceptance checks](qa-acceptance.md) cover the canvas constraint, explicit recovery, action visibility,
+rejected-delivery diagnostics, and the boundary between frontend checks and full deployment validation.
+
+The event inspector contains accepted ledger events. A webhook request rejected during authentication is not
+a failed flow run and does not appear there. Operators can inspect rejection reasons through the superuser audit
+API when authorization auditing is enabled. Some provider rejections happen before a trusted trigger or owner
+can be identified, so registration-wide audit rows cannot be shown as one owner's delivery history. Reliable
+owner-visible rejection diagnostics remain follow-up work.
+
+TRG-7 covers the core frontend and reader/writer presentation with an authorization plugin that supports shared
+flows. OSS-only testing cannot prove those plugin permissions. The complete source and deployment matrix,
+including Desktop and hosted runtime behavior, belongs to TRG-8. Mocked capability tests verify UI behavior.
+They do not replace a live plugin check or runtime validation.
 
 ## MVP versus defer
 
