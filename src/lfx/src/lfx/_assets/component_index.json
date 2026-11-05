@@ -8247,7 +8247,7 @@
           "icon": "brain",
           "legacy": false,
           "metadata": {
-            "code_hash": "fddf83963c66",
+            "code_hash": "48c364e00433",
             "component_class_name": "MemoryBaseComponent",
             "dependencies": {
               "dependencies": [
@@ -33421,6 +33421,6 @@
     "num_components": 131,
     "num_modules": 17
   },
-  "sha256": "3af3500cc938e720299940841375ed1df77887a35697331831bb2ea36aa4c46b",
+  "sha256": "1009357e45c3e26d41efd9170473938cdcf119136624cdae23d22a36f4221b7c",
   "version": "1.14.0"
 }
