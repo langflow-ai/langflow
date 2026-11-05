@@ -12,6 +12,12 @@ import dialogPayload from "../../../../../../../bundles/github/tests/fixtures/ma
 import AddConnectionDialog from "../components/AddConnectionDialog";
 
 jest.unmock("react-i18next");
+
+beforeAll(() => {
+  Element.prototype.hasPointerCapture ??= jest.fn(() => false);
+  Element.prototype.releasePointerCapture ??= jest.fn();
+  Element.prototype.scrollIntoView ??= jest.fn();
+});
 const mockCreate = jest.fn();
 const mockRenew = jest.fn();
 const mockStartOAuth = jest.fn();
@@ -138,17 +144,15 @@ it("updates setup guidance when the selected provider changes", async () => {
     "href",
     manifest.docs_url,
   );
-  await user.selectOptions(
-    screen.getByTestId("connection-provider"),
-    other.provider_id,
-  );
+  await user.click(screen.getByTestId("connection-provider"));
+  await user.click(screen.getByRole("option", { name: other.display_name }));
   expect(screen.getByRole("link", { name: "Setup guide" })).toHaveAttribute(
     "href",
     other.docs_url,
   );
-  await user.selectOptions(
-    screen.getByTestId("connection-provider"),
-    undocumented.provider_id,
+  await user.click(screen.getByTestId("connection-provider"));
+  await user.click(
+    screen.getByRole("option", { name: undocumented.display_name }),
   );
   expect(
     screen.queryByRole("link", { name: "Setup guide" }),

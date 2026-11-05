@@ -12,6 +12,12 @@ import AddConnectionDialog from "../components/AddConnectionDialog";
 
 jest.unmock("react-i18next");
 
+beforeAll(() => {
+  Element.prototype.hasPointerCapture ??= jest.fn(() => false);
+  Element.prototype.releasePointerCapture ??= jest.fn();
+  Element.prototype.scrollIntoView ??= jest.fn();
+});
+
 const mockCreate = jest.fn();
 // Stable references: the dialog memoizes on these.
 const mockRegistrations = { data: [], isSuccess: true };
@@ -456,15 +462,11 @@ describe("AddConnectionDialog: pasted Slack tokens", () => {
     fireEvent.change(screen.getByLabelText("Token expiration"), {
       target: { value: "2100-06-15T12:30" },
     });
-    await user.selectOptions(
-      screen.getByTestId("connection-provider"),
-      "slack",
-    );
+    await user.click(screen.getByTestId("connection-provider"));
+    await user.click(screen.getByRole("option", { name: "Slack" }));
     expect(screen.queryByLabelText("Token expiration")).not.toBeInTheDocument();
-    await user.selectOptions(
-      screen.getByTestId("connection-provider"),
-      "pilot",
-    );
+    await user.click(screen.getByTestId("connection-provider"));
+    await user.click(screen.getByRole("option", { name: "Pilot" }));
     expect(screen.getByLabelText("Token expiration")).toHaveValue("");
   });
 

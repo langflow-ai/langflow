@@ -27,6 +27,8 @@ class OAuthAdapter:
     required_scopes: tuple[str, ...] = ()
     # Error codes this provider uses, besides the shared ones, to reject a stored refresh token.
     refresh_rejection_errors: frozenset[str] = frozenset()
+    # Some providers return account-wide scopes for a grant verified against one site.
+    limit_refresh_scopes_to_previous: bool = False
 
     def checked_endpoints(self, registration: OAuthRegistration) -> tuple[str, str]:
         """Reject a provider endpoint outside its declared credential hosts."""

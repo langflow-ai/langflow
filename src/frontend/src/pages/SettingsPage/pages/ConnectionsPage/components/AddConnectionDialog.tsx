@@ -12,6 +12,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { getAxiosErrorDetail } from "@/controllers/API/helpers/get-axios-error-message";
 import {
   CONNECTION_NAME_MAX_LENGTH,
@@ -165,6 +172,9 @@ export function AddConnectionDialog({
   const { usesToken } = slackToken;
 
   const registrations = useOAuthRegistrationsQuery(providerId, open);
+  const registrationError = registrations.isError
+    ? getAxiosErrorDetail(registrations.error, t("connections.add.failed"))
+    : null;
   const candidates = useMemo(
     () =>
       (registrations.data ?? []).filter(
@@ -482,6 +492,7 @@ export function AddConnectionDialog({
   const canAuthorize =
     reauthorizeSelection.length > 0 &&
     !noRegistration &&
+    !registrations.isError &&
     !registrations.isLoading &&
     requiredUnavailable.length === 0;
   const notRequestable = uniqueNormalizedScopes(providerId, [
@@ -535,7 +546,9 @@ export function AddConnectionDialog({
         (providerId === "slack"
           ? slackToken.tokenKind !== null
           : slackToken.token.trim().length > 0)
-      : !noRegistration && requiredUnavailable.length === 0);
+      : !noRegistration &&
+        !registrations.isError &&
+        requiredUnavailable.length === 0);
 
   /** The server validates pasted tokens before returning the connection. */
   const onCreateWithToken = async () => {
@@ -654,23 +667,42 @@ export function AddConnectionDialog({
                     <Label htmlFor="connection-provider">
                       {t("connections.add.provider")}
                     </Label>
-                    <select
-                      id="connection-provider"
-                      className="h-9 rounded-md border border-border bg-background px-2 text-sm"
+                    <Select
                       value={providerId}
-                      onChange={(event) => {
-                        setProviderId(event.target.value);
+                      onValueChange={(value) => {
+                        setProviderId(value);
                         // A pasted token belongs to the provider it was pasted for.
                         slackToken.reset();
                       }}
-                      data-testid="connection-provider"
                     >
-                      {providers.map((item) => (
-                        <option key={item.provider_id} value={item.provider_id}>
-                          {item.display_name}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger
+                        id="connection-provider"
+                        className="h-9 w-full"
+                        data-testid="connection-provider"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {providers.map((item) => (
+                          <SelectItem
+                            key={item.provider_id}
+                            value={item.provider_id}
+                            textValue={item.display_name}
+                          >
+                            <span className="flex items-center gap-2">
+                              {item.icon && (
+                                <ForwardedIconComponent
+                                  name={item.icon}
+                                  className="h-4 w-4 shrink-0"
+                                  ariaHidden
+                                />
+                              )}
+                              {item.display_name}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   {slackToken.offersToken && !tokenOnly && (
@@ -688,6 +720,7 @@ export function AddConnectionDialog({
                     key={`${providerId}:${usesToken}`}
                     providerId={providerId}
                     noRegistration={noRegistration}
+                    registrationError={registrationError}
                     usesToken={usesToken}
                     docsUrl={provider?.docs_url}
                   />
@@ -788,6 +821,7 @@ export function AddConnectionDialog({
                   key={`${providerId}:${usesToken}`}
                   providerId={providerId}
                   noRegistration={noRegistration}
+                  registrationError={registrationError}
                   usesToken={usesToken}
                   docsUrl={provider?.docs_url}
                 />
@@ -920,6 +954,7 @@ export function AddConnectionDialog({
                 key={providerId}
                 providerId={providerId}
                 noRegistration={noRegistration}
+                registrationError={registrationError}
                 docsUrl={provider?.docs_url}
               />
               {registrationSelect}
