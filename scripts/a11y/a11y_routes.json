@@ -174,6 +174,26 @@
       "path": "/settings/migration",
       "surface": "Migration settings page",
       "currentBehavior": "Redirects to /settings unless the backend runs with LANGFLOW_FEATURE_INSTANCE_MIGRATION=true. Scan as a superuser with that flag on."
+    },
+    {
+      "path": "/assets/datasets",
+      "surface": "Datasets page",
+      "currentBehavior": "Redirects to /flows unless the backend runs with LANGFLOW_FEATURE_EVALS=true. Scan with that flag on."
+    },
+    {
+      "path": "/assets/datasets/:datasetId",
+      "surface": "Dataset items page",
+      "currentBehavior": "Redirects to /flows unless the backend runs with LANGFLOW_FEATURE_EVALS=true. Scan with that flag on and a dataset ID."
+    },
+    {
+      "path": "/assets/evaluations",
+      "surface": "Evaluations page",
+      "currentBehavior": "Redirects to /flows unless the backend runs with LANGFLOW_FEATURE_EVALS=true. Scan with that flag on."
+    },
+    {
+      "path": "/assets/evaluations/:evaluationId",
+      "surface": "Evaluation runs page",
+      "currentBehavior": "Redirects to /flows unless the backend runs with LANGFLOW_FEATURE_EVALS=true. Scan with that flag on and an evaluation ID."
     }
   ],
   "excluded": [

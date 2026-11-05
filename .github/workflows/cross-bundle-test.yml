@@ -127,7 +127,9 @@ jobs:
 
           # Valkey loads its SDK lazily, and its unit tests mock the client.
           # Import the real SDK so source packaging failures remain visible.
-          if name == "lfx-valkey":
+          # valkey-glide ships no cp315 wheels yet, and its sdist build omits the
+          # generated protobuf modules, so the SDK cannot import on 3.15.
+          if name == "lfx-valkey" and sys.version_info < (3, 15):
               importlib.import_module("glide_sync")
 
           # The manifest-less metapackage must be discoverable by the loader.

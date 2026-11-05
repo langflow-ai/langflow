@@ -87,6 +87,16 @@ def include_migration_router(target_router: APIRouter) -> None:
         target_router.include_router(migration_router)
 
 
+def include_evals_routers(target_router: APIRouter) -> None:
+    """Mount the Evals routes (datasets, evaluations, runs) only when the feature is enabled."""
+    if FEATURE_FLAGS.evals:
+        from langflow.api.v1.datasets import router as datasets_router
+        from langflow.api.v1.evaluations import router as evaluations_router
+
+        target_router.include_router(datasets_router)
+        target_router.include_router(evaluations_router)
+
+
 router_v1.include_router(flow_conflict_router)
 router_v1.include_router(chat_router)
 router_v1.include_router(connections_router)
@@ -147,6 +157,7 @@ router_v1.include_router(trigger_ingress_router)
 router_v1.include_router(extensions_router)
 include_deployment_router(router_v1)
 include_migration_router(router_v1)
+include_evals_routers(router_v1)
 
 
 # Agentic flow execution - lazy import to avoid circular dependency

@@ -3,7 +3,14 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from langchain_core.messages import AIMessage
 from langchain_core.outputs import ChatGeneration, LLMResult
-from lfx.components.models_and_agents.policies.llm_wrapper import LangchainModelWrapper
+
+try:
+    from lfx.components.models_and_agents.policies.llm_wrapper import LangchainModelWrapper
+except ModuleNotFoundError as exc:
+    # toolguard imports litellm, which still imports sre_constants, removed in Python 3.15.
+    if exc.name != "sre_constants":
+        raise
+    pytest.skip("litellm does not import on Python 3.15 yet", allow_module_level=True)
 
 
 @pytest.fixture
