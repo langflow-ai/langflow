@@ -11,7 +11,7 @@ jest.mock("@tanstack/react-query", () => ({
 
 const apiPostMock = jest.fn();
 jest.mock("@/controllers/API/api", () => ({
-  api: { post: (...args: any[]) => apiPostMock(...args) },
+  api: { post: (...args: unknown[]) => apiPostMock(...args) },
 }));
 jest.mock("@/controllers/API/helpers/constants", () => ({
   getURL: () => "/api/v1/flows",
@@ -27,7 +27,7 @@ const setSuccessDataMock = jest.fn();
 const setErrorDataMock = jest.fn();
 jest.mock("@/stores/alertStore", () => ({
   __esModule: true,
-  default: (selector: any) =>
+  default: (selector: (state: Record<string, unknown>) => unknown) =>
     selector({
       setSuccessData: setSuccessDataMock,
       setErrorData: setErrorDataMock,
@@ -37,13 +37,14 @@ jest.mock("@/stores/alertStore", () => ({
 const clearPreviewMock = jest.fn();
 const setPreviewStateMock = jest.fn();
 jest.mock("@/stores/versionPreviewStore", () => {
-  const store: any = (selector: any) =>
-    selector({ clearPreview: clearPreviewMock });
-  store.getState = () => ({
-    clearPreview: clearPreviewMock,
-    didRestore: false,
-  });
-  store.setState = (...args: any[]) => setPreviewStateMock(...args);
+  const store = Object.assign(
+    (selector: (state: Record<string, unknown>) => unknown) =>
+      selector({ clearPreview: clearPreviewMock }),
+    {
+      getState: () => ({ clearPreview: clearPreviewMock, didRestore: false }),
+      setState: (...args: unknown[]) => setPreviewStateMock(...args),
+    },
+  );
   return { __esModule: true, default: store };
 });
 
@@ -104,6 +105,105 @@ describe("useRestoreVersion", () => {
     // isRestoring should be false after completion
     expect(result.current.isRestoring).toBe(false);
   });
+
+  it("should send the persisted token when restoring a repaired flow", async () => {
+    apiPostMock.mockResolvedValueOnce({
+      data: { id: "flow-1", data: { nodes: [], edges: [] } },
+    });
+    const { result } = renderHook(() =>
+      useRestoreVersion("flow-1", "persisted-token"),
+    );
+
+    await act(async () => {
+      await result.current.restore("historical-entry");
+    });
+
+    expect(apiPostMock).toHaveBeenCalledWith(
+      "/api/v1/flows/flow-1/versions/historical-entry/activate",
+      null,
+      {
+        params: { save_draft: true },
+        headers: { "If-Match": "persisted-token" },
+      },
+    );
+  });
+
+  it("should use the refreshed persisted token after the flow is saved", async () => {
+    apiPostMock.mockResolvedValueOnce({
+      data: { id: "flow-1", data: { nodes: [], edges: [] } },
+    });
+    const { result, rerender } = renderHook(
+      ({ token }) => useRestoreVersion("flow-1", token),
+      { initialProps: { token: "old-token" } },
+    );
+    rerender({ token: "current-token" });
+
+    await act(async () => {
+      await result.current.restore("historical-entry");
+    });
+
+    expect(apiPostMock.mock.calls[0][2].headers).toEqual({
+      "If-Match": "current-token",
+    });
+  });
+
+  it("should keep the reviewed token when retrying a busy activation", async () => {
+    apiPostMock.mockRejectedValueOnce({ response: { status: 503 } });
+    apiPostMock.mockResolvedValueOnce({
+      data: { id: "flow-1", data: { nodes: [], edges: [] } },
+    });
+    const { result } = renderHook(() =>
+      useRestoreVersion("flow-1", "reviewed-token"),
+    );
+
+    await act(async () => {
+      await result.current.restore("historical-entry");
+    });
+
+    expect(apiPostMock).toHaveBeenCalledTimes(2);
+    for (const [, , config] of apiPostMock.mock.calls) {
+      expect(config.headers).toEqual({ "If-Match": "reviewed-token" });
+    }
+  });
+
+  it("should leave the canvas unchanged when the persisted token is stale", async () => {
+    apiPostMock.mockRejectedValueOnce({
+      response: { status: 409, data: { detail: "Flow changed since review" } },
+    });
+    const onSuccess = jest.fn();
+    const { result } = renderHook(() =>
+      useRestoreVersion("flow-1", "stale-token"),
+    );
+
+    await act(async () => {
+      await result.current.restore("historical-entry", { onSuccess });
+    });
+
+    expect(apiPostMock).toHaveBeenCalledTimes(1);
+    expect(applyFlowToCanvasMock).not.toHaveBeenCalled();
+    expect(clearPreviewMock).not.toHaveBeenCalled();
+    expect(onSuccess).not.toHaveBeenCalled();
+    expect(setErrorDataMock).toHaveBeenCalledWith({
+      title: "Failed to restore version",
+      list: ["Flow changed since review"],
+    });
+  });
+
+  it.each([undefined, null])(
+    "should preserve legacy activation when the token is %s",
+    async (token) => {
+      apiPostMock.mockResolvedValueOnce({
+        data: { id: "flow-1", data: { nodes: [], edges: [] } },
+      });
+      const { result } = renderHook(() => useRestoreVersion("flow-1", token));
+
+      await act(async () => {
+        await result.current.restore("historical-entry");
+      });
+
+      expect(apiPostMock.mock.calls[0][2]).not.toHaveProperty("headers");
+    },
+  );
 
   it("calls onSuccess callback after successful restore", async () => {
     apiPostMock.mockResolvedValueOnce({
@@ -184,7 +284,7 @@ describe("useRestoreVersion", () => {
   });
 
   it("sets isRestoring to true during restore and false after", async () => {
-    let resolvePost: (value: any) => void;
+    let resolvePost: (value: unknown) => void;
     apiPostMock.mockReturnValueOnce(
       new Promise((resolve) => {
         resolvePost = resolve;
