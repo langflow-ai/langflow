@@ -25,7 +25,7 @@ import threading
 from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from lfx.custom.custom_component.component import Component
+from lfx.custom import Component
 from lfx.custom.utils import build_custom_component_template, update_rebuilt_node
 from lfx.extension.migration import migrate_flow_payload
 from lfx.extension.migration.loader import load_migration_table
