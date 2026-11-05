@@ -93,6 +93,18 @@ describe("lastErrorText", () => {
 });
 
 describe("triggerRefusalText", () => {
+  it("translates a refusal for multiple canvas triggers", () => {
+    expect(
+      triggerRefusalText(
+        refusal({
+          code: "multiple_triggers",
+          message: "A flow can have only one trigger.",
+        }),
+        t,
+      ),
+    ).toBe("t:triggers.serverError.multiple_triggers");
+  });
+
   it("translates a coded refusal", () => {
     expect(
       triggerRefusalText(

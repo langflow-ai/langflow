@@ -78,7 +78,7 @@ test(
         page.waitForResponse(
           (response) =>
             response.request().method() === "POST" &&
-            response.url().endsWith("/api/v1/flows/") &&
+            response.url().endsWith("/api/v1/flows/upload/") &&
             response.status() === 201,
           { timeout: TIMEOUTS.standard },
         ),

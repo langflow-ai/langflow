@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import inspect
 import random
 from typing import TYPE_CHECKING, Annotated, Final
 from uuid import UUID
@@ -211,9 +212,8 @@ async def get_current_user(
 ) -> User:
     # Keep the native token (resolved by oauth2_login, which may already have
     # collapsed to the external credential) separate from a freshly-extracted
-    # external credential so a present-but-invalid native cookie cannot shadow a
-    # valid external one. The auth service tries the native token first and only
-    # falls back to the external credential when it differs from the token.
+    # external credential so native verification never forwards a native token
+    # to the external resolver.
     external_token = _get_external_token(request.headers, request.cookies)
     try:
         user = await _auth_service().get_current_user(
@@ -311,6 +311,7 @@ async def get_current_user_for_sse(
 
 
 async def get_current_user_for_workflow(
+    request: Request,
     token: Annotated[str | None, Security(oauth2_login)],
     query_param: Annotated[str | None, Security(api_key_query)],
     header_param: Annotated[str | None, Security(api_key_header)],
@@ -326,9 +327,12 @@ async def get_current_user_for_workflow(
     """
     from langflow.services.database.models.user.model import UserRead
 
+    external_token = _get_external_token(request.headers, request.cookies)
     async with session_scope() as db:
         try:
-            user = await _auth_service().get_current_user(token, query_param, header_param, db)
+            user = await _auth_service().get_current_user(
+                token, query_param, header_param, db, external_token=external_token
+            )
         except AuthenticationError as e:
             raise _auth_error_to_http(e) from e
         active_user = await _auth_service().get_current_active_user(user)
@@ -343,6 +347,7 @@ async def get_current_user_for_workflow(
 
 
 async def get_optional_user(
+    request: Request,
     token: Annotated[str | None, Security(oauth2_login)],
     query_param: Annotated[str | None, Security(api_key_query)],
     header_param: Annotated[str | None, Security(api_key_header)],
@@ -356,8 +361,11 @@ async def get_optional_user(
     Returns:
         User | None: The authenticated user if valid credentials are provided, None otherwise.
     """
+    external_token = _get_external_token(request.headers, request.cookies)
     try:
-        user = await _auth_service().get_current_user(token, query_param, header_param, db)
+        user = await _auth_service().get_current_user(
+            token, query_param, header_param, db, external_token=external_token
+        )
     except (AuthenticationError, HTTPException):
         return None
     else:
@@ -550,13 +558,26 @@ async def create_user_longterm_token(db: AsyncSession) -> tuple:
 
 
 async def get_current_user_mcp(
+    request: Request,
     token: Annotated[str | None, Security(oauth2_login)],
     query_param: Annotated[str | None, Security(api_key_query)],
     header_param: Annotated[str | None, Security(api_key_header)],
     db: AsyncSession = Depends(injectable_session_scope, scope="function"),
 ) -> User:
+    external_token = _get_external_token(request.headers, request.cookies)
+    service = _auth_service()
+    external_kwargs = {}
+    if external_token:
+        parameters = inspect.signature(service.get_current_user_mcp).parameters.values()
+        supports_external_token = any(
+            parameter.kind == inspect.Parameter.VAR_KEYWORD
+            or (parameter.name == "external_token" and parameter.kind != inspect.Parameter.POSITIONAL_ONLY)
+            for parameter in parameters
+        )
+        if supports_external_token:
+            external_kwargs["external_token"] = external_token
     try:
-        return await _auth_service().get_current_user_mcp(token, query_param, header_param, db)
+        return await service.get_current_user_mcp(token, query_param, header_param, db, **external_kwargs)
     except AuthenticationError as e:
         raise _auth_error_to_http(e) from e
 
