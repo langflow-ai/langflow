@@ -85,11 +85,14 @@ export function useGetMessageHistory({
       seen.add(message.id);
       return true;
     });
-    store.setMessages([
-      ...otherFlows,
-      ...unique,
-      ...(appending ? current : []),
-    ]);
+    // A build adds messages after the request started; a full replacement
+    // would drop them (the reply of a new chat), so keep the ones it lacks.
+    const kept = appending
+      ? current
+      : useFlowStore.getState().isBuilding
+        ? current.filter((message) => !seen.has(message.id))
+        : [];
+    store.setMessages([...otherFlows, ...unique, ...kept]);
     applied.current = { scope, pages };
   }, [history.data, enabled, id, scope]);
 

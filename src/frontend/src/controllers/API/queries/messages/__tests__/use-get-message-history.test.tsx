@@ -8,13 +8,19 @@ import { useGetMessageHistory } from "../use-get-message-history";
 const mockGet = jest.fn();
 let mockPlayground = false;
 let mockAuthenticated = false;
+let mockBuilding = false;
 
 jest.mock("@/controllers/API/api", () => ({
   api: { get: (...args: unknown[]) => mockGet(...args) },
 }));
 jest.mock("@/stores/flowStore", () => ({
   __esModule: true,
-  default: { getState: () => ({ playgroundPage: mockPlayground }) },
+  default: {
+    getState: () => ({
+      playgroundPage: mockPlayground,
+      isBuilding: mockBuilding,
+    }),
+  },
 }));
 jest.mock("@/stores/flowsManagerStore", () => ({
   __esModule: true,
@@ -56,6 +62,7 @@ beforeEach(() => {
   mockGet.mockReset();
   mockPlayground = false;
   mockAuthenticated = false;
+  mockBuilding = false;
   useMessagesStore.getState().clearMessages();
   sessionStorage.clear();
   mockGet.mockImplementation(async (_url, { params }) => ({
@@ -267,4 +274,33 @@ it("stops at exactly one page and honors disabled queries", async () => {
   rerender({ enabled: true });
   await waitFor(() => expect(result.current.isSuccess).toBe(true));
   expect(result.current.hasNextPage).toBe(false);
+});
+
+it("keeps a reply a build adds while the history request is in flight", async () => {
+  mockBuilding = true;
+  const question = message(0, "new-chat");
+  const reply = { ...message(1, "new-chat"), sender: "Machine" };
+  useMessagesStore.getState().addMessage(question);
+  let finishRequest!: (value: { data: Message[] }) => void;
+  mockGet.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finishRequest = resolve;
+      }),
+  );
+  const { result } = renderHook(
+    () => useGetMessageHistory({ id: "flow", sessionId: "new-chat" }),
+    { wrapper: wrapper() },
+  );
+  await waitFor(() => expect(mockGet).toHaveBeenCalled());
+
+  act(() => {
+    useMessagesStore.getState().addMessage(reply);
+  });
+  await act(async () => {
+    finishRequest({ data: [question] });
+  });
+  await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+  expect(useMessagesStore.getState().messages).toEqual([question, reply]);
 });

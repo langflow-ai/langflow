@@ -215,6 +215,7 @@ function receiveMessage(sessionId: string) {
 describe("IOModal (playground) new chat", () => {
   afterEach(() => {
     flowState.newChatOnPlayground = false;
+    flowState.isBuilding = false;
     act(() => useMessagesStore.getState().setMessages([]));
     sessionsQueryResult.data = refetchedSessions;
     sessionsQueryResult.refetch.mockClear();
@@ -250,8 +251,8 @@ describe("IOModal (playground) new chat", () => {
     expect(sessionsQueryResult.refetch).toHaveBeenCalled();
   });
 
-  it("waits for the build to finish before selecting the new chat", async () => {
-    const { rerender } = renderModal(true);
+  it("selects the new chat on its first message while the flow still builds", async () => {
+    renderModal(true);
     fireEvent.click(screen.getByRole("button", { name: "new chat" }));
     const storedSessionId =
       screen.getByTestId("send-session").textContent ?? "";
@@ -261,27 +262,10 @@ describe("IOModal (playground) new chat", () => {
       ...refetchedSessions.slice(1),
     ];
 
-    // Selecting reloads the session history, which replaces the live
-    // messages: doing it mid-build drops the reply still streaming in.
+    // The chat hides messages until a session is visible, so waiting for the
+    // build would leave the question blank for the whole run.
     flowState.isBuilding = true;
     receiveMessage(storedSessionId);
-    expect(sessionsQueryResult.refetch).not.toHaveBeenCalled();
-    expect(screen.getByTestId("visible-session")).toBeEmptyDOMElement();
-
-    flowState.isBuilding = false;
-    rerender(
-      <TooltipProvider>
-        <IOModal
-          open
-          setOpen={jest.fn()}
-          isPlayground
-          playgroundPage
-          canvasOpen={false}
-        >
-          <div />
-        </IOModal>
-      </TooltipProvider>,
-    );
 
     await waitFor(() =>
       expect(screen.getByTestId("visible-session")).toHaveTextContent(

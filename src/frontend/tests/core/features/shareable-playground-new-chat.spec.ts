@@ -93,31 +93,35 @@ test(
     await awaitBootstrapTest(page, { skipModal: true });
     const flowId = await createPublicEchoFlow(page);
 
-    await page.goto(`/playground/${flowId}`);
-    await page
-      .getByPlaceholder(TEXTS.placeholderSendMessage)
-      .waitFor({ state: "visible", timeout: TIMEOUTS.long });
+    try {
+      await page.goto(`/playground/${flowId}`);
+      await page
+        .getByPlaceholder(TEXTS.placeholderSendMessage)
+        .waitFor({ state: "visible", timeout: TIMEOUTS.long });
 
-    const replies = page.getByTestId(TID.chatMessage);
-    await ask(page, "first question");
-    await expect(replies).toHaveText(["first question"], {
-      timeout: TIMEOUTS.standard,
-    });
+      const replies = page.getByTestId(TID.chatMessage);
+      await ask(page, "first question");
+      await expect(replies).toHaveText(["first question"], {
+        timeout: TIMEOUTS.standard,
+      });
 
-    await page.getByTestId(TID.newChat).click();
-    await ask(page, "second question");
+      await page.getByTestId(TID.newChat).click();
+      await ask(page, "second question");
 
-    await expect(page.getByTestId(TID.sessionSelector)).toHaveCount(2, {
-      timeout: TIMEOUTS.standard,
-    });
-    await expect(replies).toHaveText(["second question"], {
-      timeout: TIMEOUTS.standard,
-    });
+      await expect(page.getByTestId(TID.sessionSelector)).toHaveCount(2, {
+        timeout: TIMEOUTS.standard,
+      });
+      await expect(replies).toHaveText(["second question"], {
+        timeout: TIMEOUTS.standard,
+      });
 
-    await page.reload();
-    await page.getByTestId(TID.sessionSelector).last().click();
-    await expect(replies).toHaveText(["second question"], {
-      timeout: TIMEOUTS.standard,
-    });
+      await page.reload();
+      await page.getByTestId(TID.sessionSelector).last().click();
+      await expect(replies).toHaveText(["second question"], {
+        timeout: TIMEOUTS.standard,
+      });
+    } finally {
+      await page.request.delete(`/api/v1/flows/${flowId}`);
+    }
   },
 );
