@@ -7,6 +7,7 @@ import type {
   ReactFlowInstance,
   Viewport,
 } from "@xyflow/react";
+import type { SaveFlowOptions } from "@/hooks/flows/use-save-flow";
 import type { AllNodeType, EdgeType, FlowType } from "@/types/flow";
 import type { BuildStatus, EventDeliveryType } from "../../../constants/enums";
 import type { LogsLogType, VertexBuildTypeAPI } from "../../api";
@@ -81,7 +82,7 @@ export type AutoSaveFlowType = ((flow?: FlowType) => void) & {
   flush: () => Promise<void> | void;
   // Saves `flow` after every pending and in-flight save; later autosaves wait
   // for it. Rejects when that save fails.
-  enqueue: (flow: FlowType) => Promise<void>;
+  enqueue: (flow: FlowType, options?: SaveFlowOptions) => Promise<void>;
 };
 
 export type FlowStoreType = {

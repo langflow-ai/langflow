@@ -7,6 +7,7 @@ from collections.abc import Collection, Iterator, Mapping
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
+from lfx.template.field_migrations import can_migrate_chat_output_input
 from lfx.utils.flow_code import normalize_code_for_import
 
 COMPONENTS_TO_IGNORE_UPDATE: frozenset[str] = frozenset({"CustomComponent"})
@@ -211,6 +212,7 @@ def _shared_field_reasons(
     connected_fields: Collection[str] | None,
     *,
     in_tool_mode: bool = False,
+    component_class_name: str | None = None,
 ) -> Iterator[BreakingReason]:
     """Yield a reason for every field both sides have that loses its saved edges or its saved value.
 
@@ -233,7 +235,9 @@ def _shared_field_reasons(
         if not isinstance(registry_field, Mapping) or not isinstance(flow_field, Mapping):
             continue
         connected = connected_fields is None or key in connected_fields
-        retyped = registry_field.get("type") != flow_field.get("type")
+        retyped = registry_field.get("type") != flow_field.get("type") and not can_migrate_chat_output_input(
+            component_class_name, key, registry_field, flow_field
+        )
         if retyped and connected:
             yield BreakingReason("connection_dropped", key, f"{key} changed type and has a connection")
         elif retyped and _holds_value(flow_field):
@@ -339,7 +343,13 @@ def breaking_reasons(
     if registry_template:
         reasons.extend(_template_key_reasons(registry_template, flow_template, _custom_field_names(node_info)))
         reasons.extend(
-            _shared_field_reasons(registry_template, flow_template, connected_fields, in_tool_mode=in_tool_mode)
+            _shared_field_reasons(
+                registry_template,
+                flow_template,
+                connected_fields,
+                in_tool_mode=in_tool_mode,
+                component_class_name=(registry_entry.get("metadata") or {}).get("component_class_name"),
+            )
         )
     return reasons
 

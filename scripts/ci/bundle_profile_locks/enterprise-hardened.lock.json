@@ -68,9 +68,19 @@
       "providers": [
         "lfx-docling"
       ],
-      "requested": ">=0.2.2,<1.0.0",
-      "requirement": "lfx-docling==0.2.2",
-      "resolved_version": "0.2.2"
+      "requested": ">=0.3.0,<1.0.0",
+      "requirement": "lfx-docling==0.3.0",
+      "resolved_version": "0.3.0"
+    },
+    {
+      "distribution": "lfx-github",
+      "extras": [],
+      "providers": [
+        "lfx-github"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-github==0.1.0",
+      "resolved_version": "0.1.0"
     },
     {
       "distribution": "lfx-google",
@@ -88,9 +98,19 @@
       "providers": [
         "lfx-ibm"
       ],
-      "requested": ">=0.3.1,<1.0.0",
-      "requirement": "lfx-ibm==0.3.1",
-      "resolved_version": "0.3.1"
+      "requested": ">=0.4.0,<1.0.0",
+      "requirement": "lfx-ibm==0.4.0",
+      "resolved_version": "0.4.0"
+    },
+    {
+      "distribution": "lfx-jira",
+      "extras": [],
+      "providers": [
+        "lfx-jira"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-jira==0.1.0",
+      "resolved_version": "0.1.0"
     },
     {
       "distribution": "lfx-microsoft",
@@ -138,9 +158,9 @@
       "providers": [
         "lfx-oracle"
       ],
-      "requested": ">=0.2.1,<1.0.0",
-      "requirement": "lfx-oracle==0.2.1",
-      "resolved_version": "0.2.1"
+      "requested": ">=0.4.0,<1.0.0",
+      "requirement": "lfx-oracle==0.4.0",
+      "resolved_version": "0.4.0"
     },
     {
       "distribution": "lfx-slack",
@@ -180,7 +200,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:a1a88da21b583360",
+  "profile_digest": "sha256:945d998a3037b557",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",
@@ -188,8 +208,10 @@
     "lfx-cohere",
     "lfx-datastax",
     "lfx-docling",
+    "lfx-github",
     "lfx-google",
     "lfx-ibm",
+    "lfx-jira",
     "lfx-microsoft",
     "lfx-ollama",
     "lfx-openai",
@@ -199,6 +221,6 @@
     "lfx-toolguard",
     "lfx-vllm"
   ],
-  "python": ">=3.10,<3.16",
+  "python": ">=3.11,<3.16",
   "schema_version": 1
 }

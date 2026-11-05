@@ -383,7 +383,7 @@ class TestUpdateBuildConfigRefresh:
         component.use_cache = True
         tool = _make_tool("fresh")
 
-        safe_cache_set(component._shared_component_cache, "last_selected_server", "srv")
+        component._last_selected_server = "srv"
         with patch.object(
             component,
             "update_tool_list",

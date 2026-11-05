@@ -5,6 +5,7 @@ This module tests the following bug fixes:
 2. Model defaults (cb6208f0ab): The first 5 models from each provider should be marked as default.
 """
 
+from lfx.base.models.decision_constants import is_decision_row
 from lfx.base.models.unified_models import get_unified_models_detailed
 from lfx.inputs.inputs import ModelInput
 
@@ -79,6 +80,11 @@ class TestModelInputValueNormalization:
         assert model_input.value is None
 
 
+def _default_groups(models: list[dict]) -> tuple[list[dict], list[dict]]:
+    """A provider's models split the way defaults are assigned: chat and embedding, then decision."""
+    return [m for m in models if not is_decision_row(m)], [m for m in models if is_decision_row(m)]
+
+
 class TestUnifiedModelsDefaults:
     """Test that first 5 models per provider are marked as default (fix: cb6208f0ab)."""
 
@@ -99,19 +105,17 @@ class TestUnifiedModelsDefaults:
                 )
 
     def test_models_after_five_not_default(self):
-        """Models after the first 5 should not be marked as default."""
+        """Models after the first 5 should not be marked as default.
+
+        Decision models are counted separately, so they never displace a provider's chat defaults.
+        """
         all_providers = get_unified_models_detailed()
 
         for provider_data in all_providers:
             provider = provider_data["provider"]
-            models = provider_data["models"]
-
-            # Check models after first 5
-            if len(models) > 5:
+            for models in _default_groups(provider_data["models"]):
                 for i in range(5, len(models)):
-                    model = models[i]
-                    # These should not have default=True
-                    assert model["metadata"].get("default") is not True, (
+                    assert models[i]["metadata"].get("default") is not True, (
                         f"Model {i} in provider {provider} should not be marked as default"
                     )
 
@@ -123,8 +127,10 @@ class TestUnifiedModelsDefaults:
             provider = provider_data["provider"]
             models = provider_data["models"]
 
-            # Should have at most 5 models
-            assert len(models) <= 5, f"Provider {provider} should have at most 5 models when only_defaults=True"
+            # Should have at most 5 models, and at most 5 decision models
+            assert all(len(group) <= 5 for group in _default_groups(models)), (
+                f"Provider {provider} should have at most 5 models when only_defaults=True"
+            )
 
             # All returned models should have default=True
             for model in models:

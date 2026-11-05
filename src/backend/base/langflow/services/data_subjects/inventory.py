@@ -59,6 +59,7 @@ TABLE_POLICY: dict[str, str] = {
     "policy_bundle_active": NOT_PERSONAL,
     "policy_bundle_revision": REFERENCE_CLEARED,
     "project_replacement_operation": BUILDER_ROWS,
+    "secret_rotation": NOT_PERSONAL,
     "span": ERASED_WITH_FLOW,
     "sso_config": REFERENCE_CLEARED,
     "sso_settings": NOT_PERSONAL,

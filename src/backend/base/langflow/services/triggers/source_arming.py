@@ -21,6 +21,7 @@ from langflow.services.triggers.constants import (
     MECHANISM_GRAPH_NOTIFICATIONS,
     MICROSOFT_SOURCE_KINDS,
 )
+from langflow.services.triggers.error_codes import CodedTriggerError, TriggerErrorCode
 from langflow.services.triggers.ownership import UNUSABLE_CONNECTION_STATUSES
 from langflow.services.triggers.providers.registry import get_kind, source_kinds
 
@@ -227,10 +228,10 @@ async def check_ready(
     row = await session.get(Connection, arming.connection_id)
     if row is None or row.status in UNUSABLE_CONNECTION_STATUSES:
         msg = "This source connection was revoked or expired. Reconnect it before enabling the trigger."
-        raise ValueError(msg)
+        raise CodedTriggerError(TriggerErrorCode.CONNECTION_UNUSABLE, msg)
     if not row.allow_non_interactive:
         msg = "Turn on Allow background runs for this source connection."
-        raise ValueError(msg)
+        raise CodedTriggerError(TriggerErrorCode.BACKGROUND_RUNS_NOT_ALLOWED, msg)
     extension = get_kind(kind)
     if extension is not None:
         from lfx.integrations.capabilities import ScopeSet

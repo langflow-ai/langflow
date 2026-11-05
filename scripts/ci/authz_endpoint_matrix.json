@@ -472,6 +472,7 @@
         "POST|/{connection_id}/test|test_connection|execute|authenticated",
         "POST|/{connection_id}/health|refresh_connection_health|execute|authenticated",
         "PATCH|/{connection_id}|update_connection|write|authenticated",
+        "POST|/{connection_id}/token|renew_connection_token|write|authenticated",
         "POST|/{connection_id}/revoke|revoke_connection|write|authenticated",
         "DELETE|/{connection_id}|delete_connection|delete|authenticated",
         "POST|/{connection_id}/oauth/start|start_connection_oauth|write|authenticated",
@@ -538,10 +539,12 @@
         "src/backend/tests/unit/api/v1/test_trigger_settings_api.py::test_the_all_users_view_is_superuser_only",
         "src/backend/tests/unit/api/v1/test_trigger_settings_api.py::test_a_collaborator_is_offered_exactly_what_their_role_allows",
         "src/backend/tests/unit/api/v1/test_trigger_settings_api.py::test_bulk_pause_and_resume_are_superuser_only",
-        "src/backend/tests/unit/api/v1/test_trigger_settings_api.py::test_bulk_resume_rearms_only_what_an_administrator_paused"
+        "src/backend/tests/unit/api/v1/test_trigger_settings_api.py::test_bulk_resume_rearms_only_what_an_administrator_paused",
+        "src/backend/tests/unit/api/v1/test_trigger_settings_api.py::test_trigger_session_labels_need_read_access_to_the_flow"
       ],
       "routes": [
         "GET||list_triggers|read|authenticated",
+        "GET|/sessions|list_trigger_sessions|read|authenticated",
         "POST||create_trigger|write|authenticated",
         "POST|/bulk/pause|bulk_pause_triggers|write|authenticated",
         "POST|/bulk/resume|bulk_resume_triggers|write|authenticated",

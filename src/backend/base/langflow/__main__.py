@@ -98,6 +98,12 @@ from lfx.cli._observability_commands import observability_app  # noqa: E402
 app.add_typer(observability_app, name="observability")
 app.add_typer(admin_app, name="admin")
 
+from langflow.cli.maintenance import maintenance_app  # noqa: E402
+from langflow.cli.secrets import secrets_app  # noqa: E402
+
+app.add_typer(secrets_app, name="secrets")
+app.add_typer(maintenance_app, name="maintenance")
+
 
 class ProcessManager:
     """Manages the lifecycle of the backend process."""
@@ -603,6 +609,8 @@ def run(
             settings_service.settings.ssl_cert_file if ssl_cert_file_path is None else ssl_cert_file_path
         )
         ssl_key_file_path = settings_service.settings.ssl_key_file if ssl_key_file_path is None else ssl_key_file_path
+        settings_service.settings.ssl_cert_file = ssl_cert_file_path
+        settings_service.settings.ssl_key_file = ssl_key_file_path
 
         # create path object if frontend_path is provided
         static_files_dir: Path | None = Path(frontend_path) if frontend_path else None
@@ -1207,8 +1215,12 @@ def reconcile_kb_from_disk(
 
 async def _reconcile_kb_from_disk(*, username: str | None, dry_run: bool) -> None:
     from langflow.api.utils import knowledge_base_service
+    from langflow.api.utils.migration_pause import writes_paused
 
     await initialize_services()
+    if not dry_run and await writes_paused():
+        typer.echo("Knowledge base reconciliation skipped because changes are paused for maintenance or migration.")
+        return
     inserted = await knowledge_base_service.backfill_all_users_from_disk(
         username=username,
         dry_run=dry_run,
@@ -1778,6 +1790,11 @@ def upgrade_check(
         help="URL of the database the server to upgrade uses, such as sqlite:////app/langflow/langflow.db or "
         "postgresql://user:password@host:5432/langflow. It is only read.",  # pragma: allowlist secret
     ),
+    serving_database_url: str | None = typer.Option(
+        None,
+        help="Optional read-only Serving database URL. Its job.flow_id must preserve the Editor flow ID. "
+        "No new Serving API is required. Unavailable history stays unknown.",
+    ),
     components_path: list[str] = typer.Option(
         [],
         help="A folder of custom components the upgraded server loads (its components_path). Repeat for each folder.",
@@ -1823,6 +1840,7 @@ def upgrade_check(
 
     options = {
         "database_url": database_url,
+        "serving_database_url": serving_database_url,
         "settings": {
             "allow_custom_components": allow_custom_components,
             "substitute_outdated_component_code": substitute_outdated_component_code,
