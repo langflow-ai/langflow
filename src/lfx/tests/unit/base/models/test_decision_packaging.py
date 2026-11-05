@@ -73,12 +73,22 @@ def test_every_mandatory_provider_is_offered_and_reachable():
 
 
 def test_importing_the_decision_path_loads_no_provider_sdk():
-    """Checked in a fresh interpreter, so another test's imports can't hide or cause a failure."""
+    """Checked in a fresh interpreter, so another test's imports can't hide or cause a failure.
+
+    A finder on ``sys.meta_path`` records every attempt to import a provider SDK, so the check holds
+    whether or not the SDK is installed where the tests run; provider-free lanes don't install any.
+    """
     script = (
         "import sys\n"
+        "attempted = set()\n"
+        "class RecordProviderImports:\n"
+        "    def find_spec(self, name, path=None, target=None):\n"
+        f"        if name.split('.')[0] in {sorted(PROVIDER_SDKS)!r}:\n"
+        "            attempted.add(name.split('.')[0])\n"
+        "sys.meta_path.insert(0, RecordProviderImports())\n"
         f"for name in {list(DECISION_MODULES)!r}:\n"
         "    __import__(name)\n"
-        "print(','.join(sorted({module.split('.')[0] for module in sys.modules})))\n"
+        "print(','.join(sorted(attempted | {module.split('.')[0] for module in sys.modules})))\n"
     )
     loaded = (
         subprocess.run(  # noqa: S603 - fixed interpreter and script
