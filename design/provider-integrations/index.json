@@ -8,6 +8,10 @@
     {
       "provider_id": "jira",
       "contract": "contracts/jira.v1.json"
+    },
+    {
+      "provider_id": "salesforce",
+      "contract": "contracts/salesforce.v1.json"
     }
   ]
 }

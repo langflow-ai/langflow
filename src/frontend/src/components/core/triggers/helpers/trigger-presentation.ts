@@ -205,7 +205,7 @@ export const sourceIconOf = (
     case "telegram":
       return "Send";
     case "salesforce":
-      return "Cloud";
+      return "Salesforce";
     case "servicenow":
       return "Server";
     case "jira":
