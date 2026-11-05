@@ -123,7 +123,7 @@ def test_lxml_rebuild_ignores_cached_wheels_and_existing_installations() -> None
     """Require an uncached source reinstall rather than trusting cached lxml wheels."""
     helper = REPO_ROOT / "docker" / "build_lxml.sh"
     tokens = shlex.split(" ".join(_logical_instructions(helper)))
-    assert {"--no-cache", "--no-deps", "--force-reinstall", "--no-binary"}.issubset(tokens)
+    assert {"--no-cache", "--no-config", "--no-deps", "--force-reinstall", "--no-binary"}.issubset(tokens)
     assert tokens[tokens.index("--no-binary") + 1] == "lxml"
 
 
@@ -337,12 +337,13 @@ def test_published_images_pin_hardened_package_managers() -> None:
         ("BRACE_EXPANSION_VERSION", "5.0.12", "brace-expansion", '"brace-expansion": "5.0.12"'),
         ("TAR_VERSION", "7.5.22", "tar", 'tar: "7.5.22"'),
         ("UNDICI_VERSION", "6.29.1", "undici", 'undici: "6.29.1"'),
+        ("POSTCSS_SELECTOR_PARSER_VERSION", "7.1.6", "postcss-selector-parser", '"postcss-selector-parser": "7.1.6"'),
     ):
         assert f'{variable}="{version}"' in install_script
         assert f'"{package}@${{{variable}}}"' in install_script
         assert validation_entry in install_script
 
-    assert "for package in ip-address brace-expansion tar undici; do" in install_script
+    assert "for package in ip-address brace-expansion tar undici postcss-selector-parser; do" in install_script
     for validation_entry in (
         'sigstore: "5.0.0"',
         '"@sigstore/core": "4.0.1"',

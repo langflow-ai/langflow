@@ -67,10 +67,16 @@ def test_fixed_dependencies_resolve_on_every_supported_python_line(python: str, 
 
     for name, minimum in {
         "black": "26.10.1",
+        "brotli": "1.2.1",
         "certifi": "2026.10.18",
         "docling-core": "2.103.0",
+        "fastmcp": "3.4.10",
+        "fastmcp-slim": "3.4.10",
+        "gitpython": "3.2.1",
         "joserfc": "1.7.6",
+        "langchain-nvidia-ai-endpoints": "1.5.0",
         "langgraph": "1.2.15",
+        "litellm": "1.103.10",
         "mem0ai": "2.0.18",
         "msgpack": "1.2.3",
         "nltk": "3.10.4",
@@ -141,3 +147,53 @@ def test_published_base_requirements_reject_vulnerable_mako_without_workspace_ov
     assert "1.4.1" not in requirement.specifier
     assert "1.4.2" in requirement.specifier
     assert "2.0.0" not in requirement.specifier
+
+
+@pytest.mark.parametrize(
+    ("manifest", "dependency", "affected", "patched"),
+    [
+        ("src/backend/base/pyproject.toml", "litellm", "1.103.2", "1.103.10"),
+        ("src/bundles/toolguard/pyproject.toml", "litellm", "1.103.2", "1.103.10"),
+        ("src/bundles/lfx-bundles/pyproject.toml", "litellm", "1.103.2", "1.103.10"),
+        ("src/backend/base/pyproject.toml", "gitpython", "3.2.0", "3.2.1"),
+        ("src/bundles/lfx-bundles/pyproject.toml", "gitpython", "3.2.0", "3.2.1"),
+        ("src/backend/base/pyproject.toml", "fastmcp", "3.4.4", "3.4.10"),
+        ("src/bundles/toolguard/pyproject.toml", "fastmcp", "3.4.4", "3.4.10"),
+        ("src/backend/base/pyproject.toml", "langchain-nvidia-ai-endpoints", "1.0.4", "1.5.0"),
+        ("src/bundles/lfx-bundles/pyproject.toml", "langchain-nvidia-ai-endpoints", "1.0.4", "1.5.0"),
+    ],
+)
+def test_published_security_floors_reject_affected_versions(
+    manifest: str, dependency: str, affected: str, patched: str
+) -> None:
+    """Protect fresh wheel installs without relying on the workspace lockfile."""
+    project = tomllib.loads((ROOT / manifest).read_text())["project"]
+    declarations = project.get("dependencies", []) + [
+        value for values in project.get("optional-dependencies", {}).values() for value in values
+    ]
+    requirements = [
+        requirement for value in declarations if (requirement := Requirement(value)).name.lower() == dependency
+    ]
+    assert requirements, f"{manifest} must declare its {dependency} security floor"
+    for requirement in requirements:
+        assert affected not in requirement.specifier, str(requirement)
+        assert patched in requirement.specifier, str(requirement)
+        if dependency == "litellm":
+            assert "1.104.0rc1" not in requirement.specifier
+            assert "1.107.0" not in requirement.specifier
+            for affected_branch in ("1.104.7", "1.105.5", "1.106.4"):
+                assert affected_branch not in requirement.specifier
+        if dependency == "fastmcp":
+            assert "4.0.0" not in requirement.specifier
+            assert "4.1.1" not in requirement.specifier
+
+
+@pytest.mark.parametrize("dependency", ["fastmcp", "fastmcp-slim"])
+def test_workspace_mcp_constraints_reject_affected_major_branch(dependency: str) -> None:
+    """Retain the audited maintenance line across transitive workspace paths."""
+    constraints = tomllib.loads((ROOT / "pyproject.toml").read_text())["tool"]["uv"]["constraint-dependencies"]
+    requirement = next(Requirement(value) for value in constraints if Requirement(value).name == dependency)
+    assert "3.4.4" not in requirement.specifier
+    assert "3.4.10" in requirement.specifier
+    assert "4.0.0" not in requirement.specifier
+    assert "4.1.1" not in requirement.specifier
