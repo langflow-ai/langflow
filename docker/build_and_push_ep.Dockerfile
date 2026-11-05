@@ -117,7 +117,9 @@ RUN python3.14 /tmp/install_release_wheels.py /tmp/release-artifacts \
 FROM ${PYTHON_IMAGE} AS runtime
 USER root
 RUN microdnf update -y \
-    && microdnf install -y curl git libpq libxml2 libxslt gnupg xz tar shadow-utils \
+    && microdnf install -y curl git libpq libxml2 libxslt shadow-utils tar xz \
+    && useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data \
+    && microdnf remove -y shadow-utils \
     && microdnf clean all
 RUN python3.14 -m pip install --no-cache-dir --upgrade "pip==26.2.1"
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
@@ -136,8 +138,6 @@ RUN ARCH=$(uname -m) \
     | tar -xJ -C /usr/local --strip-components=1 \
     && sh /tmp/install_hardened_npm.sh \
     && rm -f /tmp/install_hardened_npm.sh
-RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
-
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
 COPY --chown=1000:0 ./scripts/ci/verify_lxml_runtime.py /tmp/verify_lxml_runtime.py
 RUN /app/.venv/bin/python /tmp/verify_lxml_runtime.py && rm /tmp/verify_lxml_runtime.py

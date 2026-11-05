@@ -32,7 +32,7 @@ dependencies = [
     "lfx-ibm>=0.3.2,<1.0.0",
     "lfx-docling>=0.2.3,<1.0.0",
     "lfx-datastax>=0.2.0,<1.0.0",
-    "lfx-toolguard>=0.2.2,<1.0.0",
+    "lfx-toolguard>=0.2.3,<1.0.0",
     "lfx-openai>=0.2.0,<1.0.0",
     "lfx-anthropic>=0.2.0,<1.0.0",
     "lfx-azure>=0.2.0,<1.0.0",
@@ -183,10 +183,10 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 bundles = [
-    "lfx-bundles[all-no-torch]>=1.2.7,<2.0",
+    "lfx-bundles[all-no-torch]>=1.2.8,<2.0",
     "lfx-arxiv>=0.2.0,<1.0.0",
-    "lfx-confluent>=0.2.2,<1.0.0",
-    "lfx-duckduckgo>=0.2.0,<1.0.0",
+    "lfx-confluent>=0.2.3,<1.0.0",
+    "lfx-duckduckgo>=0.2.2,<1.0.0",
     "lfx-empiriolabs>=0.2.0,<1.0.0",
     "lfx-exa>=0.2.0,<1.0.0",
     "lfx-firecrawl>=0.2.0,<1.0.0",
@@ -269,9 +269,9 @@ constraint-dependencies = [
     "fsspec>=2026.6.0",  # CVE-2026-104851
     "langgraph>=1.2.15",  # GHSA-3fx2-cqw9-xr3c
     "langgraph-sdk>=0.4.6",  # GHSA-fvww-7h3r-vfhp / CVE-2026-104873, GHSA-3fx2-cqw9-xr3c
-    # GHSA-7hp6-4w63-5g45 is fixed in 1.103.1 and 1.104.0rc2.
+    # GHSA-w4c7-34wj-hqm8 is fixed in the 1.103.10 maintenance release.
     # Keep Opik's upper bound while enforcing the patched LiteLLM floor.
-    "litellm>=1.103.1,<2.0.0,!=1.104.0rc1,!=1.107.0",
+    "litellm>=1.103.10,<1.104.0,!=1.104.0rc1,!=1.107.0",
     "multidict>=6.9.1",  # GHSA-54p9-h82j-f925 / CVE-2026-104874
     # Security floors for every workspace dependency path, including optional bundles.
     "oauthlib>=4.0.0,<5.0.0",  # CVE-2026-49264, CVE-2026-49265
@@ -304,7 +304,7 @@ override-dependencies = [
     "mako>=1.4.2,<2.0.0",
     "urllib3>=2.8.0,<3.0.0",  # CVE-2026-97688
     "python-liquid>=2.2.0,<3.0.0",  # CVE-2026-45017
-    "GitPython>=3.1.58",  # GHSA-wvpp-8hx9-p66j, GHSA-jm78-9fvv-mhgr, GHSA-hmq2-w58f-27jc, GHSA-4gmw-gg2m-w46p, GHSA-9rj7-rf2p-w77r, GHSA-hh9p-6wh2-4mfc
+    "GitPython>=3.2.1",  # GHSA-wvpp-8hx9-p66j, GHSA-jm78-9fvv-mhgr, GHSA-hmq2-w58f-27jc, GHSA-4gmw-gg2m-w46p, GHSA-9rj7-rf2p-w77r, GHSA-hh9p-6wh2-4mfc
     "h2>=4.4.1",  # CVE-2026-71554
 ]
 
