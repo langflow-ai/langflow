@@ -61,6 +61,13 @@ def test_fixed_dependencies_resolve_on_every_supported_python_line(python: str, 
         assert Version(packages["filelock"]) >= Version("4.2.1")
     assert Version(packages["pypdf"]) >= Version("6.21.2")
     assert Version(packages["aiohttp"]) >= Version("3.14.4")
+    assert Version(packages["brotli"]) >= Version("1.2.1")
+    assert Version(packages["brotlicffi"]) >= Version("1.2.1.0")
+    for name, minimum in {"joserfc": "1.7.6", "pyasn1": "0.6.5", "pymongo": "4.18.3", "setuptools": "84.1.0"}.items():
+        assert Version(packages[name]) >= Version(minimum), name
+    if python != "3.10":
+        assert Version(packages["dnspython"]) >= Version("2.9.1")
+        assert Version(packages["pyarrow"]) >= Version("26.0.1")
 
 
 def test_opentelemetry_lock_updates_the_whole_official_release_set() -> None:
@@ -102,3 +109,73 @@ def test_published_requirements_reject_vulnerable_aiohttp_without_workspace_cons
     assert requirement.marker is None
     assert "3.14.3" not in requirement.specifier
     assert "3.14.4" in requirement.specifier
+
+
+@pytest.mark.parametrize(
+    ("manifest", "extra"),
+    [("src/backend/base/pyproject.toml", "duckduckgo"), ("src/bundles/duckduckgo/pyproject.toml", None)],
+)
+@pytest.mark.parametrize(
+    ("implementation", "dependency", "affected", "fixed"),
+    [("CPython", "brotli", "1.2.0", "1.2.1"), ("PyPy", "brotlicffi", "1.2.0.1", "1.2.1.0")],
+)
+def test_published_duckduckgo_requires_patched_decoder(
+    manifest: str, extra: str | None, implementation: str, dependency: str, affected: str, fixed: str
+) -> None:
+    """Protect published installs through the decoder selected by HTTPX."""
+    project = tomllib.loads((ROOT / manifest).read_text())["project"]
+    declarations = project["optional-dependencies"][extra] if extra else project["dependencies"]
+    environment = {"platform_python_implementation": implementation, "python_version": "3.14"}
+    requirements = [
+        requirement
+        for value in declarations
+        if (requirement := Requirement(value)).name.lower() == dependency
+        and (requirement.marker is None or requirement.marker.evaluate(environment))
+    ]
+    assert len(requirements) == 1
+    assert affected not in requirements[0].specifier
+    assert fixed in requirements[0].specifier
+
+
+@pytest.mark.parametrize("manifest", ["src/backend/base/pyproject.toml", "src/bundles/confluent/pyproject.toml"])
+@pytest.mark.parametrize("python", ["3.10", "3.11", "3.14"])
+def test_published_pyarrow_floor_keeps_supported_python_lines(manifest: str, python: str) -> None:
+    """Require patched Arrow where available without dropping Python 3.10."""
+    project = tomllib.loads((ROOT / manifest).read_text())["project"]
+    requirements = [
+        requirement
+        for value in project["dependencies"]
+        if (requirement := Requirement(value)).name.lower() == "pyarrow"
+        and (requirement.marker is None or requirement.marker.evaluate({"python_version": python}))
+    ]
+    if python == "3.10":
+        assert all("23.0.1" in requirement.specifier for requirement in requirements)
+    else:
+        assert len(requirements) == 1
+        assert "26.0.0" not in requirements[0].specifier
+        assert "26.0.1" in requirements[0].specifier
+
+
+@pytest.mark.parametrize(
+    ("dependency", "affected", "patched", "next_major"),
+    [("dnspython", "2.9.0", "2.9.1", "3.0.0"), ("joserfc", "1.7.5", "1.7.6", "2.0.0")],
+)
+@pytest.mark.parametrize("python", ["3.10", "3.11", "3.14"])
+def test_plain_base_requirements_protect_dns_and_jose_transitive_paths(
+    dependency: str, affected: str, patched: str, next_major: str, python: str
+) -> None:
+    """Publish mandatory-path security floors while preserving Python 3.10 support."""
+    project = tomllib.loads((ROOT / MANIFESTS[0]).read_text())["project"]
+    requirements = [
+        requirement
+        for value in project["dependencies"]
+        if (requirement := Requirement(value)).name == dependency
+        and (requirement.marker is None or requirement.marker.evaluate({"python_version": python}))
+    ]
+    if dependency == "dnspython" and python == "3.10":
+        assert not requirements
+    else:
+        assert len(requirements) == 1
+        assert affected not in requirements[0].specifier
+        assert patched in requirements[0].specifier
+        assert next_major not in requirements[0].specifier

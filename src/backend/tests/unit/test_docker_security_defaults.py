@@ -317,12 +317,13 @@ def test_published_images_pin_hardened_package_managers() -> None:
         ("BRACE_EXPANSION_VERSION", "5.0.12", "brace-expansion", '"brace-expansion": "5.0.12"'),
         ("TAR_VERSION", "7.5.22", "tar", 'tar: "7.5.22"'),
         ("UNDICI_VERSION", "6.29.1", "undici", 'undici: "6.29.1"'),
+        ("POSTCSS_SELECTOR_PARSER_VERSION", "7.1.6", "postcss-selector-parser", '"postcss-selector-parser": "7.1.6"'),
     ):
         assert f'{variable}="{version}"' in install_script
         assert f'"{package}@${{{variable}}}"' in install_script
         assert validation_entry in install_script
 
-    assert "for package in ip-address brace-expansion tar undici; do" in install_script
+    assert "for package in ip-address brace-expansion tar undici postcss-selector-parser; do" in install_script
     for validation_entry in (
         'sigstore: "5.0.0"',
         '"@sigstore/core": "4.0.1"',
@@ -349,3 +350,21 @@ def test_published_images_pin_hardened_package_managers() -> None:
     lockfile = tomllib.loads((REPO_ROOT / "uv.lock").read_text(encoding="utf-8"))
     locked_pip_versions = {package["version"] for package in lockfile["package"] if package["name"] == "pip"}
     assert locked_pip_versions == {"26.2.1"}
+
+
+@pytest.mark.parametrize(
+    "dockerfile",
+    ["build_and_push.Dockerfile", "build_and_push_backend.Dockerfile", "build_and_push_ep.Dockerfile"],
+)
+def test_published_node_versions_include_brotli_security_fix(dockerfile: str) -> None:
+    """Reject Node runtimes that still bundle the vulnerable Brotli decoder."""
+    versions = [
+        instruction.split("=", 1)[1]
+        for instruction in _logical_instructions(REPO_ROOT / "docker" / dockerfile)
+        if instruction.startswith("ARG NODE_VERSION=")
+    ]
+    assert len(versions) == 1
+    version = tuple(int(part) for part in versions[0].split("."))
+    fixed = {22: (22, 23, 4), 24: (24, 22, 1), 26: (26, 12, 1)}
+    assert version[0] in fixed, "Verify the Brotli fix before changing Node release lines"
+    assert version >= fixed[version[0]], f"{dockerfile} still ships CVE-2026-111497"

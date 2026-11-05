@@ -131,14 +131,14 @@ def test_workspace_constraints_enforce_patched_pymongo_and_tornado() -> None:
     constraints = _load_pyproject("pyproject.toml")["tool"]["uv"]["constraint-dependencies"]
 
     pymongo = _requirement(constraints, "pymongo")
-    _assert_floor(pymongo, "4.18.2")
+    _assert_floor(pymongo, "4.18.3")
     _assert_specifier(pymongo, "<", "5.0.0")
 
     _assert_floor(_requirement(constraints, "tornado"), "6.5.10")
 
     with (REPO_ROOT / "uv.lock").open("rb") as lock_file:
         packages = tomllib.load(lock_file)["package"]
-    for name, minimum in (("pymongo", "4.18.2"), ("tornado", "6.5.10")):
+    for name, minimum in (("pymongo", "4.18.3"), ("tornado", "6.5.10")):
         matches = [package for package in packages if package["name"] == name]
         assert matches
         for package in matches:
@@ -158,7 +158,7 @@ def test_published_packages_enforce_patched_pymongo_floor() -> None:
         bundle_extras["mongodb"],
     ):
         pymongo = _requirement(requirements, "pymongo")
-        _assert_floor(pymongo, "4.18.2")
+        _assert_floor(pymongo, "4.18.3")
         _assert_specifier(pymongo, "<", "5.0.0")
 
     generator = runpy.run_path(str(REPO_ROOT / "scripts/migrate/consolidate_bundles.py"))
@@ -272,3 +272,11 @@ def test_published_packages_enforce_current_python_floors() -> None:
 
     generator = runpy.run_path(str(REPO_ROOT / "scripts/migrate/consolidate_bundles.py"))
     assert generator["PROVIDER_DEPS"]["cuga"] == bundle_extras["cuga"]
+
+
+def test_standalone_lfx_bundles_extra_requires_patched_legacy_metadata() -> None:
+    """Standalone bundle installs must retain the published PyMongo security floor."""
+    extras = _load_pyproject("src/lfx/pyproject.toml")["project"]["optional-dependencies"]
+    legacy_bundle = _requirement(extras["bundles"], "lfx-bundles")
+    assert "1.1.40" not in legacy_bundle.specifier
+    assert "1.1.41" in legacy_bundle.specifier
