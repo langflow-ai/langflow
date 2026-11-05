@@ -21,20 +21,24 @@ Starter projects are skipped, because Langflow recreates them at startup.
 For each node, the command reports the following:
 
 - The node's status, with the same rule as [`lfx upgrade`](/lfx-compatibility#check-and-upgrade-flows-with-lfx-upgrade): `ok`, `outdated_safe`, `outdated_breaking`, `retired`, `customized`, or `blocked`.
-- For an outdated node, the result of a dry run of the visual editor's **Update**: the node is rebuilt from the new release's code with its saved values, and nothing is saved. A node is `outdated_breaking` only when the update would drop a connection, a value, a field, or an output.
+- For an outdated node, the result of a dry run of the visual editor's **Update**. The node is rebuilt from the new release's code with its saved values, and nothing is saved. A completed dry run is breaking when it drops a connection, a value, a field, or an output. When that update cannot be verified, the static compatibility status remains and the dry-run result explains the uncertainty.
 - What the upgraded server runs for the node under the settings you pass: its saved code (`saved_code`), the server's own code (`server_code`), or nothing (`refused`). The catalog rules saved in the database apply too.
+
+Update replays saved, nonempty refresh selectors that the current component still declares, including selectors on components other than Run Flow or MCP. Those existing hooks can use their configured services and add latency in the editor. The isolated checker refuses external discovery and records incomplete refresh warnings rather than treating partial discovery as verified.
 
 The command doesn't do the following:
 
-- It doesn't run flows. Python network and process-launch audit events are refused during target component discovery and dry runs. A refused operation or a discovery wait over 30 seconds stops the check with exit 2 rather than reporting against an incomplete registry. A node whose update attempts a refused operation is reported as `could_not_verify`.
+- It doesn't run flows. Python network and process-launch audit events are refused during target component discovery and dry runs. A refused operation or a discovery wait over 30 seconds stops the check with exit 2 rather than reporting against an incomplete registry. A refused or incomplete update records `could_not_verify` as its dry-run result and reason. The node retains its static compatibility status, which can still be `outdated_breaking`; `could_not_verify` is not a node status.
 - It doesn't migrate the database schema or update any flow.
 - It doesn't check files, knowledge bases, credentials, or variables. To check those, see [Migrate to a new Langflow instance](/instance-migration).
 
 ## Before you run the check
 
 Pass the upgraded server's settings as options.
-The command reads no environment variable and no `.env` file of the server, so a value you don't pass takes its default.
+The command reads no server setting from its environment or `.env` file, so a server option you don't pass takes its default.
 Its child retains only interpreter and operating system essentials. Provider credential variables are removed, and its home, configuration, cache, and working directory are temporary. Explicit source, output, and custom component paths are resolved before this isolation. Supported SDK offline settings also prevent automatic model metadata downloads.
+
+Selected PostgreSQL sources still use libpq's normal connection precedence, including explicit URL values, `PG*` variables, service definitions, default password/TLS files, and Kerberos inputs. These private source inputs travel over stdin and are applied only while opening and reading the source connections, using the caller's original home and working directory. They are removed before component discovery or dry runs. The existing connection remains open for later read-only pages. Provider credentials are never added to the child's environment, and source inputs are not copied into reports or child process arguments.
 
 The guard permits only two local metadata probes used by installed dependencies. These are the canonical system Git executable with exactly `version`, and the canonical system `file` executable with exactly `-b` and the current interpreter path. Executable identity, arguments, target, sanitized environment, and system PATH are checked before launch. Alternate executables, arguments, and environments are refused. Refusals remain recorded even if component code catches the exception.
 
@@ -159,17 +163,19 @@ Save that event with the extraction command below.
     `backoffLimit: 0` keeps Kubernetes from running the check again when it exits with `1`.
     If the server loads custom components, mount the same folders and add `--components-path` for each one.
 
-3. When the Job completes, save its logs:
+3. After the Job reaches either terminal state, `Complete` or `Failed`, save its logs:
 
     ```bash
     kubectl logs job/langflow-upgrade-check --namespace langflow > upgrade-check.jsonl
     ```
 
+    Exit `1` marks the Job as failed even though the check finished and produced a report that needs review. Exit `2` means the check could not finish. Keep the logs from either terminal state and inspect the final event.
+
 </TabItem>
 </Tabs>
 
 For Docker or Kubernetes, extract exactly one report event from the saved logs.
-A failed check has no report event, so extraction fails and leaves any existing report unchanged.
+A check that could not finish has no report event, so extraction fails and leaves any existing report unchanged. A completed warning or failure report still has a report event.
 Non-JSON log lines are ignored.
 
 ```bash
@@ -182,7 +188,7 @@ if jq -R -s -e '
   mv -- "$report_tmp" upgrade-check.json
 else
   rm -f -- "$report_tmp"
-  exit 1
+  false
 fi
 ```
 
@@ -198,7 +204,7 @@ fi
 A flow's status is the worst of its nodes:
 
 - `fail`: a node is `outdated_breaking`, `retired`, or `blocked`, the upgraded server refuses to run a node, or a customized node's edits will not run because the server runs its own code instead.
-- `warn`: a node is `customized` and its edits still run, a node `could_not_verify`, or the new release's code for a node doesn't build. A flow whose saved data can't be read also warns.
+- `warn`: a node is `customized` and its edits still run, a dry run has a `could_not_verify` reason, or the new release's code for a node doesn't build. A flow whose saved data can't be read also warns. An existing failing static status still takes precedence.
 - `ok`: nothing needs action.
 
 Without `--json`, the command prints the number of flows with each status, then each failing or warning flow with the nodes and reasons behind its status.
