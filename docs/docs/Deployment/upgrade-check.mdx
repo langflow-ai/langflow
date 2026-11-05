@@ -28,7 +28,7 @@ Update replays saved, nonempty refresh selectors that the current component stil
 
 The command doesn't do the following:
 
-- It doesn't run flows. Python network and process-launch audit events are refused during target component discovery and dry runs. A refused operation or a discovery wait over 30 seconds stops the check with exit 2 rather than reporting against an incomplete registry. A refused or incomplete update records `could_not_verify` as its dry-run result and reason. This does not automatically replace the node's compatibility status, which can remain `outdated_safe` or `outdated_breaking`. Inspect dry-run results and reasons as well as node statuses when finding these warnings.
+- It doesn't run flows. The Python audit guard described below applies during target component discovery and dry runs. During discovery, a refused operation or a wait over 30 seconds stops the check with exit 2, preventing a report against an incomplete registry. During a node's dry run, a refused or incomplete update records `could_not_verify` as its dry-run result and reason, and the check continues. This does not automatically replace the node's compatibility status, which can remain `outdated_safe` or `outdated_breaking`. Inspect dry-run results and reasons as well as node statuses when finding these warnings.
 - It doesn't migrate the database schema or update any flow.
 - It doesn't check files, knowledge bases, credentials, or variables. To check those, see [Migrate to a new Langflow instance](/instance-migration).
 
@@ -41,6 +41,8 @@ Its child retains only interpreter and operating system essentials. Provider cre
 Selected PostgreSQL sources still use libpq's normal connection precedence, including explicit URL values, `PG*` variables, service definitions, default password/TLS files, and Kerberos inputs. These private source inputs travel over stdin and are applied only while opening and reading the source connections, using the caller's original home and working directory. They are removed before component discovery or dry runs. The existing connection remains open for later read-only pages. Provider credentials are never added to the child's environment, and source inputs are not copied into reports or child process arguments.
 
 For `sslrootcert=system`, the source-only context also preserves `SSL_CERT_FILE` and `SSL_CERT_DIR`, including relative paths resolved from the caller's working directory.
+
+The guard refuses these Python network audit events: `socket.connect`, `socket.getaddrinfo`, `socket.gethostbyname`, `socket.gethostbyaddr`, `socket.getnameinfo`, `socket.sendto`, and `socket.sendmsg`. Some Python networking remains allowed, including `socket.bind`.
 
 The guard permits only two local metadata probes used by installed dependencies. These are the canonical system Git executable with exactly `version`, and the canonical system `file` executable with exactly `-b` and the current interpreter path. Executable identity, arguments, target, sanitized environment, and system PATH are checked before launch. Alternate executables, arguments, and environments are refused. Refusals remain recorded even if component code catches the exception.
 
