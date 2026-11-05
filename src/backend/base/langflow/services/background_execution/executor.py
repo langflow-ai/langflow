@@ -1,4 +1,4 @@
-""" "Bounded in-process executor for background workflow jobs.
+"""Bounded in-process executor for background workflow jobs.
 
 A small pool of worker tasks drains a single ``asyncio.Queue`` of submitted
 jobs. Concurrency is capped at ``max_concurrency`` so background runs cannot
