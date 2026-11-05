@@ -39,6 +39,7 @@ def test_langflow_base_metadata_contract():
 
 
 def test_langflow_base_default_is_service_complete_without_extensions_or_torch():
+    """Keep the base distribution complete while publishing its LiteLLM guard."""
     project = _load_pyproject(BASE_ROOT / "pyproject.toml")["project"]
     requirements = [Requirement(requirement) for requirement in project["dependencies"]]
     requirement_names = {requirement.name for requirement in requirements}
@@ -64,7 +65,7 @@ def test_langflow_base_default_is_service_complete_without_extensions_or_torch()
     litellm = next(requirement for requirement in requirements if requirement.name == "litellm")
     assert litellm.marker is None
     assert "1.107.0" not in litellm.specifier
-    assert "1.103.2" in litellm.specifier
+    assert "1.103.10" in litellm.specifier
 
 
 def test_full_langflow_consumes_base_workspace_distribution():
