@@ -92,6 +92,7 @@ serpapi = ["google-search-results>=2.4.1,<3.0.0", "langchain-community>=0.4.1,<1
 spider = ["spider-client>=0.0.27,<1.0.0"]
 supabase = ["supabase>=2.6.0,<3.0.0", "langchain-community>=0.4.1,<1.0.0"]
 tavily = []
+testmuai = []
 twelvelabs = ["twelvelabs>=0.4.7,<1.0.0"]
 unstructured = ["langchain-unstructured~=1.0.0"]
 upstash = ["upstash-vector==0.6.0", "langchain-community>=0.4.1,<1.0.0"]
@@ -165,6 +166,7 @@ all = [
     "lfx-bundles[spider]",
     "lfx-bundles[supabase]",
     "lfx-bundles[tavily]",
+    "lfx-bundles[testmuai]",
     "lfx-bundles[twelvelabs]",
     "lfx-bundles[unstructured]",
     "lfx-bundles[upstash]",
@@ -237,6 +239,7 @@ all-no-torch = [
     "lfx-bundles[spider]",
     "lfx-bundles[supabase]",
     "lfx-bundles[tavily]",
+    "lfx-bundles[testmuai]",
     "lfx-bundles[twelvelabs]",
     "lfx-bundles[unstructured]",
     "lfx-bundles[upstash]",
