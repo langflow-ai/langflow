@@ -117,6 +117,11 @@ class InProcessExecutor:
                 self._queue.put_nowait((key, coro_factory))
                 self._queue.task_done()
                 return
+            if self._closed:
+                # Shutdown may begin while this worker waits for a job or a pause.
+                self._queue.put_nowait((key, coro_factory))
+                self._queue.task_done()
+                return
             task = asyncio.create_task(coro_factory())
             # A migration pause waits for the task and not only for the job's status: a run that is
             # told to stop is marked as cancelled at once, and still writes until its task ends.

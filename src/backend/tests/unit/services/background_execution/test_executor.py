@@ -140,3 +140,42 @@ async def test_stop_does_not_start_a_job_that_was_still_queued():
         assert not ex._in_flight
     finally:
         await ex.stop()
+
+
+async def test_stop_preserves_a_job_claimed_by_an_idle_worker():
+    ex = InProcessExecutor(max_concurrency=2)
+    started = asyncio.Event()
+    release = asyncio.Event()
+    queued_runs = 0
+
+    async def busy():
+        started.set()
+        await asyncio.Event().wait()
+
+    async def queued():
+        nonlocal queued_runs
+        queued_runs += 1
+        await release.wait()
+
+    await ex.start()
+    try:
+        await ex.submit("busy", busy)
+        await asyncio.wait_for(started.wait(), timeout=2)
+        # The other worker is already waiting in queue.get(). It can claim this
+        # job while stop() waits for the busy job's cancellation to finish.
+        await ex.submit("queued", queued)
+        await ex.stop()
+
+        assert queued_runs == 0
+        assert not ex._in_flight
+        assert ex._queue.qsize() == 1
+
+        release.set()
+        await ex.start()
+        await asyncio.wait_for(ex._queue.join(), timeout=2)
+        assert queued_runs == 1
+        assert not ex._in_flight
+    finally:
+        release.set()
+        await ex.stop()
+        await asyncio.sleep(0)
