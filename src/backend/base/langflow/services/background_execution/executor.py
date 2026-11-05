@@ -1,4 +1,4 @@
-"""Bounded in-process executor for background workflow jobs.
+""""Bounded in-process executor for background workflow jobs.
 
 A small pool of worker tasks drains a single ``asyncio.Queue`` of submitted
 jobs. Concurrency is capped at ``max_concurrency`` so background runs cannot
@@ -29,6 +29,7 @@ class InProcessExecutor:
     """A bounded worker pool over an asyncio.Queue."""
 
     def __init__(self, max_concurrency: int = 5) -> None:
+        """Initialize the queue, worker registry, and concurrency limit."""
         self._max_concurrency = max(int(max_concurrency), 1)
         self._queue: asyncio.Queue[tuple[str, CoroFactory]] = asyncio.Queue()
         self._workers: list[asyncio.Task] = []
@@ -37,6 +38,7 @@ class InProcessExecutor:
         self._closed = False
 
     async def start(self) -> None:
+        """Start the bounded worker pool unless it is already running."""
         if self._workers:
             return
         self._closed = False
@@ -44,6 +46,7 @@ class InProcessExecutor:
         await logger.adebug(f"InProcessExecutor started with {self._max_concurrency} workers")
 
     async def stop(self) -> None:
+        """Cancel active jobs and workers, preserving jobs not yet started."""
         self._closed = True
         # Cancel the in-flight JOB tasks directly first, then await them. A job
         # that catches its cancel (a user-stop reconciles to CANCELLED) would
@@ -68,14 +71,14 @@ class InProcessExecutor:
         self._workers.clear()
 
     async def submit(self, key: str, coro_factory: CoroFactory) -> None:
-        """Enqueue a job. A free worker picks it up and invokes the factory."""
+        """Enqueue a job for the next available worker."""
         if self._closed:
             msg = "Executor is closed"
             raise RuntimeError(msg)
         await self._queue.put((key, coro_factory))
 
     async def cancel(self, key: str) -> bool:
-        """Cancel the in-flight task for ``key``. Returns False if not in flight."""
+        """Cancel the in-flight task for ``key``; return False if it is absent."""
         task = self._in_flight.get(key)
         if task is None or task.done():
             return False
@@ -84,6 +87,7 @@ class InProcessExecutor:
 
     @staticmethod
     async def _await_task(task: asyncio.Task) -> None:
+        """Wait for task completion without losing the worker's cancellation."""
         # A bare ``await task`` relies on the task's own wakeup of its awaiter. On
         # Python 3.10, when stop() cancels this worker while the job task is also
         # finishing, that wakeup is lost: the job task completes but the worker is
@@ -99,6 +103,7 @@ class InProcessExecutor:
             task.result()
 
     async def _worker(self, worker_id: int) -> None:
+        """Run queued jobs until shutdown, returning claimed work to the queue."""
         # stop() snapshots _in_flight before awaiting the job cancels it makes, so a
         # worker that survives that cancellation must not pick up the next queued job:
         # it would run unwatched while the event loop is torn down.
