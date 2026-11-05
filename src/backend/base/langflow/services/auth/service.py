@@ -33,6 +33,7 @@ from langflow.services.auth.context import (
 from langflow.services.auth.exceptions import (
     AuthBackendUnavailableError,
     AuthenticationError,
+    ExternalAuthMaintenanceError,
     InactiveUserError,
     InvalidCredentialsError,
     MissingCredentialsError,
@@ -948,8 +949,7 @@ class AuthService(BaseAuthService):
         from langflow.services.maintenance.state import maintenance_enabled
 
         if await maintenance_enabled(db):
-            msg = "External SSO/OIDC authentication is paused during maintenance. Use an API key or local JWT."
-            raise AuthBackendUnavailableError(msg)
+            raise ExternalAuthMaintenanceError
 
         profile_stmt = select(SSOUserProfile).where(
             SSOUserProfile.sso_provider == identity.provider,

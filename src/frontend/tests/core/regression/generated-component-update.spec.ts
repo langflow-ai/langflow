@@ -7,6 +7,7 @@ import type { APIClassType, APIObjectType } from "../../../src/types/api";
 import type { FlowType, GenericNodeType } from "../../../src/types/flow";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { waitForFlowEditorReady } from "../../utils/flow/wait-for-flow-editor-ready";
 
 const hardFlows = path.resolve(
   __dirname,
@@ -236,7 +237,16 @@ for (const componentType of ["RunFlow", "MCPTools"] as const) {
         expect(created.status()).toBe(201);
         const flowId = (await created.json()).id as string;
         resources.flows.push(flowId);
-        await page.goto(`/flow/${flowId}`);
+        await Promise.all([
+          page.waitForResponse(
+            (response) =>
+              response.request().method() === "GET" &&
+              new URL(response.url()).pathname === `/api/v1/flows/${flowId}` &&
+              response.ok(),
+          ),
+          page.goto(`/flow/${flowId}`),
+        ]);
+        await waitForFlowEditorReady(page);
         await expect(page.getByTestId("div-generic-node")).toHaveCount(
           flow.data!.nodes.length,
         );
@@ -248,6 +258,20 @@ for (const componentType of ["RunFlow", "MCPTools"] as const) {
             response.request().postDataJSON()?.frontend_node?.display_name ===
               saved.display_name,
         );
+        const persistedUpdate = Promise.all([
+          page.waitForResponse(
+            (response) =>
+              response.request().method() === "PATCH" &&
+              new URL(response.url()).pathname === `/api/v1/flows/${flowId}`,
+          ),
+          ...["/api/v1/flows/", "/api/v1/projects/"].map((pathname) =>
+            page.waitForResponse(
+              (response) =>
+                response.request().method() === "GET" &&
+                new URL(response.url()).pathname === pathname,
+            ),
+          ),
+        ]);
         const canvasNodeBefore = page.locator(
           `.react-flow__node[data-id="${node.id}"]`,
         );
@@ -303,6 +327,10 @@ for (const componentType of ["RunFlow", "MCPTools"] as const) {
             await expect(
               page.getByText(field, { exact: true }).last(),
             ).toBeVisible();
+          for (const response of await persistedUpdate) {
+            expect(response.ok()).toBeTruthy();
+            await response.finished();
+          }
           await expect
             .poll(async () => {
               const persisted = await page.request.get(
@@ -320,6 +348,10 @@ for (const componentType of ["RunFlow", "MCPTools"] as const) {
           return;
         }
         expect(result.warnings ?? []).toEqual([]);
+        for (const response of await persistedUpdate) {
+          expect(response.ok()).toBeTruthy();
+          await response.finished();
+        }
         await expect
           .poll(async () => {
             const persisted = await page.request.get(`/api/v1/flows/${flowId}`);
@@ -341,8 +373,15 @@ for (const componentType of ["RunFlow", "MCPTools"] as const) {
               new URL(response.url()).pathname === "/api/v1/all" &&
               response.ok(),
           ),
+          page.waitForResponse(
+            (response) =>
+              response.request().method() === "GET" &&
+              new URL(response.url()).pathname === `/api/v1/flows/${flowId}` &&
+              response.ok(),
+          ),
           page.reload(),
         ]);
+        await waitForFlowEditorReady(page);
         await expect(page.getByTestId("div-generic-node")).toHaveCount(
           flow.data!.nodes.length,
         );

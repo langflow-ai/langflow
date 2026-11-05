@@ -28,11 +28,104 @@ from langflow.services.triggers.listeners.adapters import (
 )
 from langflow.services.triggers.listeners.supervisor import ListenerSupervisor
 from lfx.integrations.errors import AuthExpiredError, ConnectionUnresolvedError, ProviderUnavailableError
+from sqlalchemy import event, text
 from sqlmodel import col, select
 
 pytestmark = pytest.mark.no_blockbuster
 
 TEST_KIND = "test_listener_source"
+
+
+@pytest.mark.parametrize("operation", ["concurrent_emit", "cursor"])
+async def test_maintenance_listener_admission_rolls_back_its_first_sqlite_writer_lock(
+    make_connection, make_trigger, adapter_registry, monkeypatch, operation
+):
+    from unittest.mock import AsyncMock
+
+    from langflow.services.deps import get_db_service
+
+    adapter = adapter_registry(RecordingAdapter())
+    connection_id = await make_connection()
+    trigger_id = await make_trigger(kind=TEST_KIND, connection_id=connection_id, provider_state={"cursor": "original"})
+    supervisor = ListenerSupervisor(holder="maintenance-sqlite-lock")
+    await supervisor.reconcile()
+    await asyncio.wait_for(adapter.started.wait(), timeout=5)
+    engine = get_db_service().engine
+    assert engine.dialect.name == "sqlite"
+    warning = AsyncMock()
+    monkeypatch.setattr("langflow.services.triggers.listeners.supervisor.logger.awarning", warning)
+
+    async def snapshot():
+        async with session_scope() as session:
+            return (
+                (await session.get(Connection, connection_id)).model_dump(),
+                (await session.get(Trigger, trigger_id)).model_dump(),
+                (await session.get(TriggerListenerLease, connection_id)).model_dump(),
+                (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == trigger_id))).all(),
+            )
+
+    async with session_scope() as session:
+        # Make the lock's UPDATE observable if a refused transaction accidentally commits.
+        await session.execute(
+            text("""
+            CREATE TRIGGER maintenance_lock_touch AFTER UPDATE ON connection
+            WHEN NEW.updated_at = OLD.updated_at
+            BEGIN
+                UPDATE connection SET updated_at = '2001-01-01 00:00:00' WHERE id = NEW.id;
+            END
+        """)
+        )
+        await set_maintenance(session, enabled=True)
+    before = await snapshot()
+    try:
+        if operation == "cursor":
+            await adapter.ctx.save_cursor(trigger_id=trigger_id, provider_state={"cursor": "must not persist"})
+            assert adapter.ctx.stopping.is_set()
+            warning.assert_not_awaited()
+        else:
+            attempted = asyncio.Event()
+            updates = 0
+
+            def record_attempt(_connection, _cursor, statement, _parameters, _context, _executemany):
+                nonlocal updates
+                if statement.lstrip().upper().startswith("UPDATE CONNECTION"):
+                    updates += 1
+                    if updates == 2:
+                        attempted.set()
+
+            event.listen(engine.sync_engine, "before_cursor_execute", record_attempt)
+            tasks = []
+            try:
+                async with engine.connect() as blocker:
+                    await blocker.exec_driver_sql("BEGIN IMMEDIATE")
+                    tasks = [
+                        asyncio.create_task(
+                            adapter.ctx.emit(
+                                trigger_id=trigger_id, dedupe_key=f"frozen-{index}", payload={"index": index}
+                            )
+                        )
+                        for index in range(2)
+                    ]
+                    try:
+                        await asyncio.wait_for(attempted.wait(), timeout=5)
+                    finally:
+                        await blocker.rollback()
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+                assert all(
+                    isinstance(result, ListenerDeliveryRejectedError) and result.reason == "maintenance"
+                    for result in results
+                )
+            finally:
+                event.remove(engine.sync_engine, "before_cursor_execute", record_attempt)
+                for task in tasks:
+                    if not task.done():
+                        task.cancel()
+                await asyncio.gather(*tasks, return_exceptions=True)
+        assert await snapshot() == before
+    finally:
+        async with session_scope() as session:
+            await set_maintenance(session, enabled=False)
+        await supervisor.stop()
 
 
 @pytest.mark.parametrize("callback", ["connected", "failed", "reconnect", "credential", "stop"])

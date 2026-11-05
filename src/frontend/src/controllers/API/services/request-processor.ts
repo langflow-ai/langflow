@@ -15,6 +15,7 @@ import type {
   MutationFunctionType,
   QueryFunctionType,
 } from "../../../types/api";
+import { isExternalAuthMaintenanceRefusal } from "../helpers/maintenance";
 
 const MAX_MUTATION_RETRIES = 3;
 const MAX_RETRY_DELAY_MS = 30000;
@@ -31,12 +32,13 @@ function isClientError(error: unknown): boolean {
 // retry only delays it. The text is REFUSAL in the server's migration_pause.py.
 export function isPauseRefusal(error: unknown): boolean {
   return (
-    axios.isAxiosError(error) &&
-    error.response?.status === 503 &&
-    [
-      "This instance is being migrated.",
-      "This instance is in maintenance mode.",
-    ].includes(error.response.data?.detail)
+    isExternalAuthMaintenanceRefusal(error) ||
+    (axios.isAxiosError(error) &&
+      error.response?.status === 503 &&
+      [
+        "This instance is being migrated.",
+        "This instance is in maintenance mode.",
+      ].includes(error.response.data?.detail))
   );
 }
 
