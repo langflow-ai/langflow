@@ -124,7 +124,9 @@ test(
     await untaken.hover();
     await untaken.getByTestId("button_run_chat output").click();
 
-    const blocked = untaken.getByTestId("node_status_icon_chat output_inactive");
+    const blocked = untaken.getByTestId(
+      "node_status_icon_chat output_inactive",
+    );
     await expect(blocked).toBeVisible({ timeout: TIMEOUTS.long });
     await blocked.hover();
 

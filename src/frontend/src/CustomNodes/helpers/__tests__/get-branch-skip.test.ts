@@ -25,10 +25,7 @@ const edge = (source: string, output: string, target: string): EdgeType =>
     data: { sourceHandle: { name: output }, targetHandle: {} },
   }) as unknown as EdgeType;
 
-const skipped = (
-  ids: string[],
-  by: string,
-): FlowStoreType["flowBuildStatus"] =>
+const skipped = (ids: string[], by: string): FlowStoreType["flowBuildStatus"] =>
   Object.fromEntries(
     ids.map((id) => [id, { status: BuildStatus.INACTIVE, skippedBy: by }]),
   );
@@ -65,7 +62,9 @@ describe("getBranchSkip", () => {
   it.each(["Language Model", "Decision Model"])(
     "should_name_the_taken_smart_router_route_in_%s_mode",
     () => {
-      const nodes = [branchNode("router", "Smart Router", SMART_ROUTER_OUTPUTS)];
+      const nodes = [
+        branchNode("router", "Smart Router", SMART_ROUTER_OUTPUTS),
+      ];
       const edges = [
         edge("router", "category_1_result", "billing"),
         edge("router", "category_2_result", "sales"),
