@@ -228,6 +228,7 @@ class TestNVIDIAAbsentKeyCredentialEgress:
 
     @pytest.fixture(autouse=True)
     def _no_allowlist(self, monkeypatch):
+        """Isolate credential checks from endpoint validation and SDK transport setup."""
         monkeypatch.delenv("LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS", raising=False)
         monkeypatch.setattr(
             "lfx.base.models.provider_ssrf.validate_strict_url_for_ssrf_or_raise",
@@ -466,6 +467,7 @@ class TestNVIDIARedirectPolicy:
         assert all(self.PROMPT not in entry["body"] for entry in received)
 
     def test_sync_streaming_refuses_redirect(self, redirect_endpoint):
+        """Reject streaming redirects before credentials reach the target."""
         from lfx.utils.ssrf_protection import SSRFProtectionError
 
         base_url, received = redirect_endpoint
@@ -521,6 +523,7 @@ class TestNVIDIARedirectPolicyFailsClosed:
 
     @pytest.mark.parametrize("class_name", ["_NVIDIABaseClient", "_NVIDIAAsyncClient"])
     def test_missing_client_class_refuses_to_build(self, class_name, monkeypatch):
+        """Refuse construction when an SDK client cannot be protected."""
         common = pytest.importorskip("langchain_nvidia_ai_endpoints._common")
         from lfx_bundles.nvidia.nvidia import _install_redirect_policy
 
@@ -537,6 +540,7 @@ class TestNVIDIARedirectPolicyFailsClosed:
         ],
     )
     def test_missing_session_factory_refuses_to_build(self, class_name, factory_name, monkeypatch):
+        """Refuse construction when an SDK session factory cannot be protected."""
         common = pytest.importorskip("langchain_nvidia_ai_endpoints._common")
         from lfx_bundles.nvidia.nvidia import _install_redirect_policy
 

@@ -67,15 +67,18 @@ def _install_redirect_policy() -> None:
 
     def install_client_policy(client_cls: Any, factory_name: str, field_name: str, protect_session: Any) -> None:
         # An inherited base-class marker must not skip the async subclass's factory.
+        """Wrap each SDK client once with its own redirect protection."""
         if client_cls.__dict__.get(_REDIRECT_POLICY_INSTALLED, False):
             return
         original_init = client_cls.__init__
         original_create_session = getattr(client_cls, factory_name)
 
         def create_session(self: Any) -> Any:
+            """Protect the session returned by the original SDK factory."""
             return protect_session(original_create_session(self))
 
         def guarded_init(self: Any, **kwargs: Any) -> None:
+            """Provide the protected factory before constructor-time model discovery."""
             kwargs.setdefault(field_name, getattr(self, factory_name))
             original_init(self, **kwargs)
 
@@ -159,6 +162,7 @@ class NVIDIAModelComponent(LCModelComponent):
         # Note: don't include the previous model, as it may not exist in available models from the new base url
         # The key sent below may resolve to the operator's environment-provisioned
         # credential; refuse to forward it to a tenant-chosen endpoint.
+        """List models only after validating credentials and protecting SDK redirects."""
         ensure_credential_endpoint_allowed(
             self.api_key or None,
             self.base_url,

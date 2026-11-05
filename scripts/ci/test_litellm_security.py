@@ -23,6 +23,7 @@ MANIFESTS = [
 
 @pytest.fixture(params=MANIFESTS)
 def litellm_guard(request: pytest.FixtureRequest) -> Requirement:
+    """Read the published LiteLLM guard without relying on the workspace lock."""
     project = tomllib.loads((ROOT / request.param).read_text())["project"]
     dependencies = (
         project["optional-dependencies"]["cuga"] if project["name"] == "lfx-bundles" else project["dependencies"]
@@ -60,6 +61,7 @@ def offline_resolver(tmp_path: Path):
     """Resolve harmless metadata-only wheels with pip; never download or execute the malicious artifact."""
 
     def resolve(guard: Requirement | None, *, force_compromised: bool = False) -> subprocess.CompletedProcess[str]:
+        """Resolve harmless local wheels to exercise the published version guard."""
         dependencies = ["upstream"] + ([str(guard)] if guard else [])
         for name, version, requirements in (
             ("litellm", "1.103.10", []),
@@ -109,6 +111,7 @@ def offline_resolver(tmp_path: Path):
 def test_published_requirement_protects_transitive_install_without_lockfile(
     litellm_guard: Requirement, offline_resolver, tmp_path: Path
 ) -> None:
+    """Keep a transitive install within the patched LiteLLM maintenance line."""
     unprotected = offline_resolver(None)
     assert unprotected.returncode == 0, unprotected.stdout + unprotected.stderr
     before = json.loads((tmp_path / "resolved.json").read_text())
