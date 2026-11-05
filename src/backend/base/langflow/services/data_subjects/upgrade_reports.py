@@ -12,6 +12,7 @@ from sqlmodel import select
 from langflow.services.data_subjects.batching import delete_batch
 from langflow.services.data_subjects.context import EraseStepPending
 from langflow.services.database.models.upgrade_report import UpgradeReport, UpgradeReportRepair
+from langflow.services.upgrade_reports.history import lock_report
 
 if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -54,6 +55,9 @@ async def erase_upgrade_reports(session: AsyncSession, ctx: EraseContext) -> int
     for report_id in ids:
         row = await session.get(UpgradeReport, report_id)
         if row is not None and (row.created_by == ctx.subject_user_id or _names_subject(row.document_json, ctx)):
+            if not await lock_report(session, report_id):
+                ctx.cursor[_CURSOR] = str(report_id)
+                continue
             # Explicit child-first deletes work even when SQLite FK cascade
             # is disabled. Keep this report pending until all children drain.
             deleted = await delete_batch(session, UpgradeReportRepair, UpgradeReportRepair.report_id == report_id)
