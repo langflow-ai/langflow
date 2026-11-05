@@ -48,6 +48,7 @@ from langflow.services.connection.oauth.config import OAuthError, deployment_con
 from langflow.services.connection.oauth.locking import lock_connection
 from langflow.services.connection.policy import provider_has_usable_action
 from langflow.services.connection.slack_credentials import (
+    APP_TOKEN_SCOPE,
     PROVIDER_SLACK,
     ManualCredentialError,
     check_slack_web_token,
@@ -67,6 +68,7 @@ from langflow.services.database.models.connection import (
     ExecutingIdentityDescriptor,
     PersistedConnectionStatus,
 )
+from langflow.services.database.models.connection.oauth import ConnectionOAuth
 from langflow.services.database.models.connection.schemas import ConnectionRevokeRead, ConnectionTokenRenewal
 from langflow.services.deps import get_authorization_service, get_settings_service, session_scope
 
@@ -505,7 +507,7 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         from langflow.services.triggers.providers.registry import get_provider
 
         provider = get_provider(row.provider_key)
-        if provider is None or provider.validate_manual_credential is None:
+        if row.provider_key != PROVIDER_SLACK and (provider is None or provider.validate_manual_credential is None):
             msg = "This integration does not support manual token renewal."
             raise ManualCredentialError(msg)
         await enforce_integration_policy_for_provider(row.provider_key, user_id=user.id, require_usable_action=True)
@@ -520,11 +522,18 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
                 credentials=payload.credentials,
             )
         )
+        if is_app_token_connection(row) and APP_TOKEN_SCOPE not in validated.granted_scopes:
+            msg = "This connection holds a Slack app-level token. Renew it with an app-level token (xapp-)."
+            raise ManualCredentialError(msg)
         raw_credentials = _credential_payload(validated)
         if raw_credentials is None:
             msg = "The integration credential validator returned no token."
             raise ManualCredentialError(msg)
         encrypted_payload = _encrypt_credential_payload(raw_credentials)
+        # Manual renewal supersedes consent that may still be open in a browser.
+        binding = await session.get(ConnectionOAuth, row.id)
+        if binding is not None:
+            await session.delete(binding)
         secret = await session.get(ConnectionSecret, row.id)
         if secret is None:
             secret = ConnectionSecret(connection_id=row.id, encrypted_payload=encrypted_payload)
