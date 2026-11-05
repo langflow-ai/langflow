@@ -5,7 +5,8 @@ from __future__ import annotations
 import os
 import shutil
 import sys
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -50,6 +51,44 @@ _CHILD_ENVIRONMENT = frozenset(
         "TRANSFORMERS_OFFLINE",
     }
 )
+
+_SOURCE_ENVIRONMENT = frozenset({"HOME", "USERPROFILE", "APPDATA", "SSL_CERT_FILE", "SSL_CERT_DIR"})
+
+
+def _source_variable(name: str) -> bool:
+    return name in _SOURCE_ENVIRONMENT or name == "KRB5CCNAME" or name.startswith(("PG", "KRB5_"))
+
+
+@contextmanager
+def source_connection_context(inputs: Mapping[str, Any] | None) -> Iterator[None]:
+    """Apply private CLI connection inputs only before component callbacks start."""
+    if inputs is None:
+        yield
+        return
+    environment = inputs.get("environment")
+    directory = inputs.get("working_directory")
+    if (
+        not isinstance(environment, Mapping)
+        or not isinstance(directory, str)
+        or any(
+            not isinstance(name, str) or not isinstance(value, str) or not _source_variable(name)
+            for name, value in environment.items()
+        )
+    ):
+        msg = "invalid private source connection inputs"
+        raise ValueError(msg)
+    previous_environment, previous_directory = dict(os.environ), Path.cwd()
+    try:
+        for name in list(os.environ):
+            if _source_variable(name):
+                del os.environ[name]
+        os.environ.update(environment)
+        os.chdir(directory)
+        yield
+    finally:
+        os.environ.clear()
+        os.environ.update(previous_environment)
+        os.chdir(previous_directory)
 
 
 def is_local_metadata_probe(arguments: tuple[Any, ...]) -> bool:
@@ -126,6 +165,7 @@ def child_environment(config_dir: str, inherited: Mapping[str, str]) -> dict[str
 def resolve_input_paths(options: Mapping[str, Any]) -> dict[str, Any]:
     """Resolve selected local paths before the child leaves the caller's home and directory."""
     selected = {**options, "settings": dict(options["settings"])}
+    needs_postgres = False
     selected["settings"]["components_path"] = [
         str(Path(path).expanduser().resolve()) for path in options["settings"]["components_path"]
     ]
@@ -142,6 +182,7 @@ def resolve_input_paths(options: Mapping[str, Any]) -> dict[str, Any]:
         if url.get_backend_name() == "sqlite" and url.database and url.database != ":memory:":
             url = url.set(database=str(Path(url.database).expanduser().resolve()))
         elif url.get_backend_name() in {"postgres", "postgresql"}:
+            needs_postgres = True
             paths = {
                 key: str(Path(value).expanduser().resolve())
                 for key, value in url.query.items()
@@ -152,4 +193,8 @@ def resolve_input_paths(options: Mapping[str, Any]) -> dict[str, Any]:
             }
             url = url.update_query_dict(paths)
         selected[name] = url.render_as_string(hide_password=False)
+    if needs_postgres:
+        environment = {name: value for name, value in os.environ.items() if _source_variable(name)}
+        environment.setdefault("HOME", str(Path.home()))
+        selected["_source_connection"] = {"environment": environment, "working_directory": str(Path.cwd())}
     return selected
