@@ -16,6 +16,7 @@ from langflow.services.deps import get_settings_service, get_storage_service, se
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 from lfx.services.authorization import ResourceVisibilityScope
 from lfx.services.settings.feature_flags import FEATURE_FLAGS
+from lfx.utils.file_path_security import user_storage_scope
 
 from tests.unit.services.authorization._policy_double import install_policy_authz
 
@@ -235,13 +236,15 @@ async def test_appending_existing_file_requires_its_write_permission(
 ):
     import anyio
 
-    row = File(user_id=active_user.id, name="existing", path=f"{active_user.id}/existing.txt", size=6)
+    # Unrecorded uploads use the typed namespace; recorded rows may retain a legacy path.
+    namespace = str(active_user.id) if recorded else user_storage_scope(active_user.id)
+    row = File(user_id=active_user.id, name="existing", path=f"{namespace}/existing.txt", size=6)
     if recorded:
         async with session_scope() as session:
             session.add(row)
     storage = get_storage_service()
     monkeypatch.setattr(storage, "data_dir", anyio.Path(tmp_path))
-    await storage.save_file(flow_id=str(active_user.id), file_name="existing.txt", data=b"before")
+    await storage.save_file(flow_id=namespace, file_name="existing.txt", data=b"before")
     with exact_resource_plugin(monkeypatch):
         headers = await scoped_headers(
             client, logged_in_headers, resource_type="file", actions=["create", "write"] if can_write else ["create"]
@@ -254,7 +257,7 @@ async def test_appending_existing_file_requires_its_write_permission(
         )
         allowed = recorded and can_write
         assert response.status_code == (201 if allowed else 403), response.text
-        assert await storage.get_file(flow_id=str(active_user.id), file_name="existing.txt") == (
+        assert await storage.get_file(flow_id=namespace, file_name="existing.txt") == (
             b"beforeafter" if allowed else b"before"
         )
 
