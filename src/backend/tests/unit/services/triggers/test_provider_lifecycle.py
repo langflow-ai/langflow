@@ -268,8 +268,6 @@ async def _reconcile(flow_id, owner_id):
 async def test_provider_normalization_failure_stays_with_its_node(
     pilot, trigger_owner, owned_flow, monkeypatch, error_type
 ):
-    from langflow.services.triggers.reconciliation import reconcile_flow_triggers_safely
-
     await _connection(trigger_owner)
     trigger = await _reconcile(owned_flow, trigger_owner)
 
@@ -302,8 +300,10 @@ async def test_provider_normalization_failure_stays_with_its_node(
         ],
         "edges": [],
     }
+    # This legacy canvas exercises failure isolation through direct reconciliation.
+    # The save wrapper rejects two trigger nodes before provider normalization.
     async with session_scope() as session:
-        await reconcile_flow_triggers_safely(session, flow_id=owned_flow, owner_id=trigger_owner, flow_data=data)
+        await reconcile_flow_triggers(session, flow_id=owned_flow, owner_id=trigger_owner, flow_data=data)
     expected = (
         "synthetic-private-detail"
         if error_type is ValueError
