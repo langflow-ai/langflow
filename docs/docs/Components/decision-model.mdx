@@ -1,0 +1,169 @@
+---
+title: Decision Model
+slug: /decision-model
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+A **decision model** answers one fixed question about some text with probabilities instead of generated text.
+You ask a question such as "Which team should handle this message?" and the model returns a probability for every option you gave it.
+Because the answer is a number, your flow decides what is likely enough to act on, and nothing depends on parsing free text.
+
+Langflow uses decision models in two places:
+
+* The **Decision Model** component, described on this page, returns the decision as JSON for the rest of your flow to use.
+* The [**Smart Router** component](/smart-router#decision-model-mode) can use a decision model to choose a route, with a minimum probability and an **Else** output for answers that aren't likely enough.
+
+## Decision types
+
+Every decision has one of three types:
+
+| Type | Question it answers | Result |
+|------|---------------------|--------|
+| **Choice** | Which of these options applies? | A probability for each option, summing to 1. |
+| **Boolean** | Yes or no? | `probability_true`: the probability that the answer is yes, from 0 to 1. |
+| **Score** | Where does this sit on these ordered levels? | A `score` from 0 (the first level) to one less than the number of levels, and a probability for each level. |
+
+## Supported providers and models
+
+| Provider | Models | Notes |
+|----------|--------|-------|
+| TypeSafe | `jev-latest` | Decision models only. |
+| Perplexity | `pplx-decider-latest`, `pplx-decider-flash-latest` | Decision models only. The model name in a result is the name requested, which Perplexity echoes, not a resolved version. |
+| OpenAI | `gpt-6-luna` | Only through the official OpenAI endpoint. If an OpenAI base URL is set anywhere (in **Model Providers**, a global variable, a request header, or the environment), decision requests to OpenAI stop with an error rather than send the key to that URL. OpenAI doesn't accept **What Yes Means** or **What No Means**. |
+
+All three models support Choice, Boolean and Score.
+
+Each provider is called through its documented HTTP API, so no provider SDK is required.
+
+### Set up a decision model provider
+
+1. To open the **Model Providers** pane, click your profile icon, select **Settings**, and then click <Icon name="Brain" aria-hidden="true"/> **Model Providers**.
+2. Select **TypeSafe**, **Perplexity** or **OpenAI**, enter the provider's API key, and click **Save**.
+Saving a key sends one small decision request to check it. That request is billed by the provider.
+3. Under **Decision Models**, enable the models you want to use.
+Decision models are turned on separately from language models: enabling OpenAI's language models doesn't enable `gpt-6-luna` for decisions.
+
+The enabled models then appear in the **Decision Model** field of the **Decision Model** and **Smart Router** components.
+
+### Credentials and policy
+
+A decision only ever uses its provider's own API key. A flow can't supply or name a different key, and the **Smart Router** never sends its **Language Model** API key to a decision provider.
+
+Langflow looks for the key in this order:
+
+1. A per-request value sent with the run, such as the `X-LANGFLOW-GLOBAL-VAR-TYPESAFE_API_KEY` header on `/api/v1/run`. See [Pass global variables in request headers](/api-flows-run#pass-global-variables-in-headers).
+2. The key saved in **Model Providers**.
+3. The `TYPESAFE_API_KEY`, `PERPLEXITY_API_KEY` or `OPENAI_API_KEY` environment variable, also accepted with a `LANGFLOW_` prefix, unless environment fallback is turned off.
+
+Before reading any key, Langflow checks that the provider and model are allowed for the user who runs the flow.
+A model blocked by policy, or no longer offered, stops the run before any request reaches the provider.
+
+## Use the Decision Model component in a flow
+
+The **Message Classifier** template classifies a message with the **Decision Model** component and shows the full result:
+
+1. Create a flow from the **Message Classifier** template.
+2. In the **Decision Model** component, select an enabled decision model.
+3. Open the **Playground** and send a message, such as `The export button does nothing when I click it.`
+The **Chat Output** shows the result, with a probability for each option.
+
+To build the same flow yourself, do the following:
+
+1. Add a **Chat Input**, a **Decision Model** and a **Chat Output** component.
+2. Connect the **Chat Input** output to the **Decision Model** component's **Context** input, and the **Decision Result** output to the **Chat Output**.
+3. In the **Decision Model** component, select a model, set **Decision Type** to **Choice**, and enter a **Question**, such as `What kind of message is this?`
+4. In the **Options** table, add one row for each option. **ID** is the short key the result uses, such as `bug`. **Label** is the name the model reads, such as `Bug report`. **Description** optionally says when the option applies.
+
+The **Decision Result** is a JSON object you can pass to other components, such as a [**Parser**](/parser) or an [**If-Else** component](/if-else).
+For example, a Choice decision returns:
+
+```json
+{
+  "kind": "choice",
+  "provider": "TypeSafe",
+  "model": "jev-1.13.0",
+  "model_source": "response",
+  "status": "success",
+  "probabilities": { "question": 0.06, "bug": 0.88, "feature": 0.04, "billing": 0.02 },
+  "confidence": 0.81,
+  "usage": { "input_tokens": 62, "output_tokens": 1, "total_tokens": 63 },
+  "request_id": "req_abc123",
+  "request": {
+    "kind": "choice",
+    "question": "What kind of message is this?",
+    "options": [{ "id": "bug", "label": "Bug report", "description": "" }]
+  }
+}
+```
+
+| Field | Meaning |
+|-------|---------|
+| `kind` | `choice`, `boolean` or `score`. |
+| `provider`, `model` | Who answered. `model` is the version the provider reports serving, except for Perplexity. |
+| `model_source` | `response` when `model` came from the provider's answer, `request` when it echoes the requested name. |
+| `status` | `success`, or `refusal` when the provider declined to answer. Only OpenAI documents refusals. |
+| `probabilities` | Choice and Score: a probability for each option or level, keyed by its **ID**. |
+| `probability_true` | Boolean: the probability that the answer is yes. |
+| `score` | Score: the probability-weighted level, from 0 to one less than the number of levels. |
+| `selected_option` | Choice: the option the provider picked, when it names one. Otherwise, use the most probable option. |
+| `confidence` | The provider's own confidence measure, when it sends one. It isn't an option's probability. |
+| `refusal` | The provider's reason when `status` is `refusal`, if it gave one. |
+| `usage` | Token counts the provider reported. |
+| `request_id` | The provider's ID for the request, to quote when you contact the provider. |
+| `request` | The question and options that were asked, without the context. |
+
+### Use structured context
+
+To judge a record instead of text, connect a `Data` or `JSON` output to the component's **Structured Context** input and leave **Context** empty.
+Use one or the other: setting both stops the run.
+
+### Use the component as an agent tool
+
+The **Context** input supports [tool mode](/agents-tools), so an agent can call the component as a tool.
+The agent passes the text to judge, and the component answers its fixed **Question** with its fixed options.
+
+## Errors
+
+The **Decision Model** component has no **Else** output, so every error stops the run with a message that says what to fix.
+Provider errors end with the HTTP status, the provider's error code and its request ID, when the provider sends them. The provider's own error text is never shown, because it can include content from the request.
+
+| What happened | Message says |
+|---------------|--------------|
+| The provider didn't answer within **Timeout (seconds)**. | The provider didn't answer in time. |
+| Langflow couldn't reach the provider. | Check the server's network. |
+| The provider is rate-limiting the key (HTTP 429), or had a server problem (HTTP 5xx). | Try again later. |
+| The input is too large for the model. | Shorten the input. |
+| The answer is malformed: probabilities that don't sum to 1, an unknown option, a score outside the levels, or a score that disagrees with its probabilities. | The provider sent an answer Langflow couldn't use. |
+| The key was rejected (HTTP 401), can't use decision models (HTTP 403), or the account is out of credit (HTTP 402, or OpenAI's `insufficient_quota`). | Check the key or plan in **Model Providers**. |
+| The key can't use this model (HTTP 404), or the provider didn't accept the request (HTTP 400 or 422). | Pick another model, or check its settings. |
+| No key is configured, the settings are invalid, or OpenAI has a custom base URL. | What to change. No request is sent. |
+
+The **Smart Router** handles the same errors, and can send operational errors to its **Else** output. See [Errors in Decision Model mode](/smart-router#errors-in-decision-model-mode).
+
+## Limits
+
+* Choice: 2 to 255 options.
+* Score: 2 to 10 levels.
+* **Timeout (seconds)**: more than 0 and at most 300. Default: 60.
+* Option and level **ID**s must be unique, and **Label**s must differ, ignoring case.
+* One question per request. Images aren't supported.
+* Each request is billed by the provider, including refusals and the check sent when you save a key.
+
+## Decision Model parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| Decision Model | Model | Input parameter. The decision model to use. Only models enabled under **Decision Models** in **Model Providers** are listed. Required. |
+| Decision Type | String | Input parameter. **Choice**, **Boolean** or **Score**. Default: **Choice**. |
+| Context | String | Input parameter. The text the question is about, such as a message or a document. Supports tool mode. |
+| Question | String | Input parameter. What to decide about the context, such as `Which team should handle this message?` Required. |
+| Options / Levels | Table | Input parameter. Choice: the options, 2 to 255. Score: the levels, ordered from lowest to highest, 2 to 10. Each row has an **ID**, a **Label** and an optional **Description**. Not used for Boolean. |
+| What Yes Means (Optional) | String | Input parameter. Boolean only: what a yes answer means. OpenAI doesn't accept it. Advanced. |
+| What No Means (Optional) | String | Input parameter. Boolean only: what a no answer means. OpenAI doesn't accept it. Advanced. |
+| Structured Context | Data or JSON | Input parameter. JSON to judge in place of **Context**. Use one or the other. Advanced. |
+| Timeout (seconds) | Float | Input parameter. How long to wait for the provider: more than 0 and at most 300. Default: 60. Advanced. |
+| Decision Result | JSON | Output parameter. The decision, as described in [Use the Decision Model component in a flow](#use-the-decision-model-component-in-a-flow). |
