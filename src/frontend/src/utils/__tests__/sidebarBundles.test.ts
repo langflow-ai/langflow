@@ -115,3 +115,11 @@ describe("SIDEBAR_BUNDLES", () => {
     );
   });
 });
+
+it("uses the Discord logo for its integration palette group", () => {
+  expect(SIDEBAR_BUNDLES).toContainEqual({
+    display_name: "Discord",
+    name: "discord",
+    icon: "discord",
+  });
+});
