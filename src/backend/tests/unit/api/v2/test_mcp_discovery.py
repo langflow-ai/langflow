@@ -106,6 +106,23 @@ async def test_plain_listing_does_not_start_processes(discovery_db, server_scrip
     assert processes[0] == []
 
 
+async def test_bound_account_denial_precedes_mcp_discovery(discovery_db, server_scripts, processes, monkeypatch):
+    from langflow.services.variable import runtime_policy
+    from lfx.services.variable.exceptions import RuntimeVariableError
+
+    user = await _register(discovery_db, server_scripts[0], 1)
+
+    async def refused(**_):
+        msg = "Target disabled"
+        raise RuntimeVariableError(msg, reason="target_disabled")
+
+    monkeypatch.setattr(runtime_policy, "_bulk_resolver", refused)
+    with pytest.raises(HTTPException) as caught:
+        await get_servers(user, discovery_db, None, get_settings_service(), action_count=True)
+    assert caught.value.status_code == 409
+    assert processes[0] == []
+
+
 async def test_successful_counts_reap_processes_and_manager_tasks(discovery_db, server_scripts, processes):
     user = await _register(discovery_db, server_scripts[0], 6)
     before = _manager_tasks()

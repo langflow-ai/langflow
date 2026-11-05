@@ -16,6 +16,13 @@ from langflow.services.base import Service
 from langflow.services.database.models.variable.model import Variable, VariableCreate, VariableRead, VariableUpdate
 from langflow.services.variable.base import VariableService
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
+from langflow.services.variable.runtime_policy import (
+    RuntimeVariable,
+    guard_variable_mutation,
+    resolve_runtime_variable,
+    resolve_runtime_variables,
+    runtime_variables_policy_enabled,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -112,6 +119,7 @@ class DatabaseVariableService(VariableService, Service):
         if not self.settings_service.settings.store_environment_variables:
             await logger.adebug("Skipping environment variable storage.")
             return
+        await guard_variable_mutation(session=session, user_id=user_id)
 
         # Import provider metadata to identify placeholder API-key values and
         # enforce provider-governance policy for environment imports.
@@ -172,7 +180,11 @@ class DatabaseVariableService(VariableService, Service):
                     )
                     continue
 
-                query = select(Variable).where(Variable.user_id == user_id, Variable.name == var_name)
+                query = (
+                    select(Variable)
+                    .where(Variable.user_id == user_id, Variable.name == var_name)
+                    .execution_options(populate_existing=True)
+                )
                 try:
                     existing = (await session.exec(query)).first()
                 except Exception as e:  # noqa: BLE001
@@ -283,6 +295,18 @@ class DatabaseVariableService(VariableService, Service):
 
         return variable
 
+    async def get_account_bound_variable(
+        self,
+        user_id: UUID | str,
+        name: str,
+        field: str,
+        session: AsyncSession,
+    ) -> RuntimeVariable | None:
+        """Resolve deployment accounts before any shared or request override."""
+        return await resolve_runtime_variable(
+            user_id=UUID(str(user_id)), name=name, field=field, session=session, settings=self.settings_service
+        )
+
     async def get_variable(
         self,
         user_id: UUID | str,
@@ -290,6 +314,9 @@ class DatabaseVariableService(VariableService, Service):
         field: str,
         session: AsyncSession,
     ) -> str | SecretStr:
+        bound = await self.get_account_bound_variable(user_id, name, field, session)
+        if bound is not None:
+            return bound.value
         # we get the credential from the database
         # credential = session.query(Variable).filter(Variable.user_id == user_id, Variable.name == name).first()
         try:
@@ -447,6 +474,18 @@ class DatabaseVariableService(VariableService, Service):
             variables_read.append(variable_read)
         return variables_read
 
+    @staticmethod
+    def account_bound_variables_enabled() -> bool:
+        return runtime_variables_policy_enabled()
+
+    async def get_account_bound_variables(
+        self,
+        user_id: UUID | str,
+        session: AsyncSession,
+    ) -> dict[str, str] | None:
+        """Return an authoritative account map, or None for an unmanaged account."""
+        return await resolve_runtime_variables(user_id=user_id, session=session, settings=self.settings_service)
+
     async def get_all_decrypted_variables(
         self,
         user_id: UUID | str,
@@ -461,6 +500,9 @@ class DatabaseVariableService(VariableService, Service):
         Returns:
             Dictionary mapping variable names to decrypted values
         """
+        bound = await self.get_account_bound_variables(user_id=user_id, session=session)
+        if bound is not None:
+            return bound
         # Convert string to UUID if needed for SQLAlchemy query
         user_id_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
         stmt = select(Variable).where(Variable.user_id == user_id_uuid)
@@ -533,7 +575,12 @@ class DatabaseVariableService(VariableService, Service):
         value: str,
         session: AsyncSession,
     ):
-        stmt = select(Variable).where(Variable.user_id == user_id, Variable.name == name)
+        await guard_variable_mutation(session=session, user_id=user_id)
+        stmt = (
+            select(Variable)
+            .where(Variable.user_id == user_id, Variable.name == name)
+            .execution_options(populate_existing=True)
+        )
         variable = (await session.exec(stmt)).first()
         if not variable:
             msg = f"{name} variable not found."
@@ -566,7 +613,12 @@ class DatabaseVariableService(VariableService, Service):
         variable: VariableUpdate,
         session: AsyncSession,
     ):
-        query = select(Variable).where(Variable.id == variable_id, Variable.user_id == user_id)
+        await guard_variable_mutation(session=session, user_id=user_id, new_name=variable.name, variable_id=variable_id)
+        query = (
+            select(Variable)
+            .where(Variable.id == variable_id, Variable.user_id == user_id)
+            .execution_options(populate_existing=True)
+        )
         db_variable = (await session.exec(query)).one()
 
         # Security: prevent a CREDENTIAL -> GENERIC type-confusion that would expose the
@@ -626,7 +678,12 @@ class DatabaseVariableService(VariableService, Service):
         name: str,
         session: AsyncSession,
     ) -> None:
-        stmt = select(Variable).where(Variable.user_id == user_id).where(Variable.name == name)
+        await guard_variable_mutation(session=session, user_id=user_id)
+        stmt = (
+            select(Variable)
+            .where(Variable.user_id == user_id, Variable.name == name)
+            .execution_options(populate_existing=True)
+        )
         variable = (await session.exec(stmt)).first()
         if not variable:
             msg = f"{name} variable not found."
@@ -634,7 +691,12 @@ class DatabaseVariableService(VariableService, Service):
         await session.delete(variable)
 
     async def delete_variable_by_id(self, user_id: UUID | str, variable_id: UUID, session: AsyncSession) -> None:
-        stmt = select(Variable).where(Variable.user_id == user_id, Variable.id == variable_id)
+        await guard_variable_mutation(session=session, user_id=user_id)
+        stmt = (
+            select(Variable)
+            .where(Variable.user_id == user_id, Variable.id == variable_id)
+            .execution_options(populate_existing=True)
+        )
         variable = (await session.exec(stmt)).first()
         if not variable:
             msg = f"{variable_id} variable not found."
@@ -651,6 +713,7 @@ class DatabaseVariableService(VariableService, Service):
         type_: str = CREDENTIAL_TYPE,
         session: AsyncSession,
     ):
+        await guard_variable_mutation(session=session, user_id=user_id, new_name=name)
         # Validate that GENERIC variables don't start with Fernet signature
         if type_ == GENERIC_TYPE and value.startswith("gAAAAA"):
             msg = (

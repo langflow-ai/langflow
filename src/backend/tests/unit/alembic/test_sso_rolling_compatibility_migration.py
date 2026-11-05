@@ -10,6 +10,9 @@ from uuid import UUID, uuid4
 import pytest
 import sqlalchemy as sa
 from alembic import command
+from alembic.migration import MigrationContext
+from alembic.operations import Operations
+from langflow.utils import migration as migration_utils
 from sqlalchemy.exc import IntegrityError
 
 from .test_migration_execution import _engine_url, _make_alembic_cfg, db_url  # noqa: F401
@@ -23,6 +26,12 @@ _TEST_INVALID_BASE64_ENVELOPE = (  # pragma: allowlist secret
     "lf-sso:v1:hkdf-sha256-v1:aes-256-gcm:!!!!!!!!!!!!!!!!:!!!!!!!!!!!!!!!!!!!!!!"
 )
 _TEST_PASSWORD = "hashed"  # noqa: S105  # pragma: allowlist secret
+_INITIAL_MIGRATION = importlib.import_module(
+    "langflow.alembic.versions.b1c2d3e4f5a6_add_sso_plugin_tables_sso_user_profile_"
+)
+_IDENTITY_MIGRATION = importlib.import_module(
+    "langflow.alembic.versions.e9f2a3b4c5d6_allow_multiple_sso_identities_per_user"
+)
 _INVARIANT_MIGRATION = importlib.import_module("langflow.alembic.versions.7c8e9f0a1b2d_add_sso_config_invariant_checks")
 _HEAD_MIGRATION = importlib.import_module("langflow.alembic.versions.8d9e0f1a2b3c_complete_sso_expand_compatibility")
 
@@ -70,6 +79,148 @@ def _oidc_settings(*, discovery_url: str = "https://idp.example.com/.well-known/
         "issuer": "https://idp.example.com",
         "client_id": "client-id",
     }
+
+
+@pytest.mark.parametrize("invariant_checks_installed", [True, False], ids=["complete-schema", "missing-checks"])
+def test_sso_migration_replay_preserves_installed_sqlite_triggers(invariant_checks_installed):
+    engine = sa.create_engine("sqlite://")
+    try:
+        with engine.begin() as connection, Operations.context(MigrationContext.configure(connection)):
+            # Some SQLite builds default to legacy rename behavior, which hides
+            # dangling cross-table trigger references during a batch rebuild.
+            connection.exec_driver_sql("PRAGMA legacy_alter_table=OFF")
+            metadata = sa.MetaData()
+            sa.Table("user", metadata, sa.Column("id", sa.Uuid(), primary_key=True))
+            metadata.create_all(connection)
+            _INITIAL_MIGRATION.upgrade()
+            _IDENTITY_MIGRATION.upgrade()
+            if invariant_checks_installed:
+                _INVARIANT_MIGRATION.upgrade()
+            else:
+                # A partially restored schema also needs the invariant migration
+                # to rebuild the table while the newer compatibility triggers exist.
+                _INVARIANT_MIGRATION._create_slug_trigger(connection)
+            _HEAD_MIGRATION.upgrade()
+
+            trigger_query = sa.text(
+                "SELECT name, sql FROM sqlite_master WHERE type = 'trigger' "
+                "AND tbl_name IN ('sso_config', 'sso_settings')"
+            )
+            original_triggers = dict(connection.execute(trigger_query).all())
+            assert set(original_triggers) == {
+                "trg_sso_config_slug_immutable",
+                "trg_sso_config_expand_compat_insert",
+                "trg_sso_config_expand_compat_update",
+                "trg_sso_config_expand_compat_enforce",
+                "trg_sso_settings_expand_compat_enforce",
+            }
+
+            timestamp = datetime.now(timezone.utc)
+            config_id = str(uuid4())
+            config = sa.Table("sso_config", sa.MetaData(), autoload_with=connection)
+            settings = sa.Table("sso_settings", sa.MetaData(), autoload_with=connection)
+            connection.execute(
+                config.insert(),
+                {
+                    **_legacy_config_values(
+                        config_id=config_id,
+                        provider="oidc",
+                        provider_name="Existing OIDC",
+                        timestamp=timestamp,
+                    ),
+                    "client_secret_encrypted": _TEST_ENCRYPTED_SECRET,
+                    **{key: value for key, value in _oidc_settings().items() if key != "protocol"},
+                },
+            )
+            original_row = dict(connection.execute(sa.select(config)).mappings().one())
+
+            for migration in (_INITIAL_MIGRATION, _IDENTITY_MIGRATION, _INVARIANT_MIGRATION, _HEAD_MIGRATION):
+                migration.upgrade()
+                # Check each revision so the final migration cannot hide triggers
+                # lost during an earlier table rebuild by reinstalling them.
+                assert dict(connection.execute(trigger_query).all()) == original_triggers
+                assert dict(connection.execute(sa.select(config)).mappings().one()) == original_row
+
+            connection.execute(settings.update().where(settings.c.id == 1).values(enforce_sso=True))
+            assert connection.scalar(sa.select(config.c.enforce_sso).where(config.c.id == config_id))
+
+            inserted_id = str(uuid4())
+            connection.execute(
+                config.insert(),
+                _legacy_config_values(
+                    config_id=inserted_id,
+                    provider="saml",
+                    provider_name="Inserted After Replay",
+                    timestamp=timestamp,
+                ),
+            )
+            inserted = connection.execute(sa.select(config).where(config.c.id == inserted_id)).mappings().one()
+            assert inserted["slug"] == f"sso-{UUID(inserted_id).hex}"
+            assert inserted["display_name"] == "Inserted After Replay"
+            assert inserted["protocol"] == "saml"
+            assert inserted["provider_settings"]["protocol"] == "saml"
+            assert inserted["enforce_sso"]
+
+            changed_settings = {**_oidc_settings(), "issuer": "https://after-replay.example.com"}
+            connection.execute(
+                config.update().where(config.c.id == config_id).values(provider_settings=changed_settings)
+            )
+            assert (
+                connection.scalar(sa.select(config.c.issuer).where(config.c.id == config_id))
+                == changed_settings["issuer"]
+            )
+
+            connection.execute(config.update().where(config.c.id == config_id).values(enforce_sso=False))
+            assert not connection.scalar(sa.select(settings.c.enforce_sso).where(settings.c.id == 1))
+            assert not any(connection.execute(sa.select(config.c.enforce_sso)).scalars())
+            with pytest.raises(IntegrityError, match=r"SSOConfig\.slug is immutable"):
+                connection.execute(config.update().where(config.c.id == config_id).values(slug="changed-slug"))
+    finally:
+        engine.dispose()
+
+
+def test_sso_failed_sqlite_rebuild_restores_schema_data_and_triggers():
+    engine = sa.create_engine("sqlite://")
+    try:
+        with engine.begin() as connection, Operations.context(MigrationContext.configure(connection)) as operations:
+            connection.exec_driver_sql("PRAGMA legacy_alter_table=OFF")
+            metadata = sa.MetaData()
+            sa.Table("user", metadata, sa.Column("id", sa.Uuid(), primary_key=True))
+            metadata.create_all(connection)
+            for migration in (_INITIAL_MIGRATION, _IDENTITY_MIGRATION, _INVARIANT_MIGRATION, _HEAD_MIGRATION):
+                migration.upgrade()
+
+            config = sa.Table("sso_config", sa.MetaData(), autoload_with=connection)
+            connection.execute(
+                config.insert(),
+                _legacy_config_values(
+                    config_id=str(uuid4()),
+                    provider="saml",
+                    provider_name="Existing SAML",
+                    timestamp=datetime.now(timezone.utc),
+                ),
+            )
+            original_row = dict(connection.execute(sa.select(config)).mappings().one())
+            schema_query = sa.text(
+                "SELECT name, sql FROM sqlite_master WHERE tbl_name IN ('sso_config', 'sso_settings') ORDER BY name"
+            )
+            original_schema = connection.execute(schema_query).all()
+
+            with (
+                pytest.raises(IntegrityError, match="ck_sso_config_disabled"),
+                migration_utils.preserve_sqlite_triggers(connection, "sso_config", "sso_settings"),
+                operations.batch_alter_table("sso_config", recreate="always") as batch,
+            ):
+                batch.create_check_constraint("ck_sso_config_disabled", "enabled = 0")
+
+            assert connection.execute(schema_query).all() == original_schema
+            assert dict(connection.execute(sa.select(config)).mappings().one()) == original_row
+            assert not sa.inspect(connection).has_table("_alembic_tmp_sso_config")
+            settings = sa.Table("sso_settings", sa.MetaData(), autoload_with=connection)
+            connection.execute(settings.update().where(settings.c.id == 1).values(enforce_sso=True))
+            assert connection.scalar(sa.select(config.c.enforce_sso))
+    finally:
+        engine.dispose()
 
 
 def test_sso_protocol_preflight_is_schema_aware_and_rejects_unsupported_legacy_state(db_url):  # noqa: F811

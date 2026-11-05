@@ -72,6 +72,14 @@ def stdio_client() -> MCPStdioClient:
     return _stdio_client_with_mocked_session()[0]
 
 
+@pytest.fixture
+def trust_mock_mcp_server(monkeypatch):
+    from lfx.services.deps import get_settings_service
+
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "ssrf_allowed_hosts", [*settings.ssrf_allowed_hosts, "test-mcp.example"])
+
+
 class TestMCPStdioShellFreeLaunch:
     """Tests for the shell=False stdio launcher.
 
@@ -323,6 +331,7 @@ class TestMCPSessionManager:
 
         assert session_tasks.isdisjoint(session_manager._background_tasks)
 
+    @pytest.mark.usefixtures("trust_mock_mcp_server")
     async def test_http_session_creation_cancellation_stops_background_task(self, session_manager):
         """Cancelling HTTP session creation must also stop the task that owns the transport."""
         initialize_started = asyncio.Event()
@@ -4070,6 +4079,7 @@ class TestMCPStructuredToolToolCallId:
         assert result.name == "get_image"
 
 
+@pytest.mark.usefixtures("trust_mock_mcp_server")
 class TestStreamableHttpTransportPolicy:
     """Mocked streamable HTTP vs SSE: reconnect policy and fallback classification."""
 

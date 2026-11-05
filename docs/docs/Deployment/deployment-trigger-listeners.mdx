@@ -129,7 +129,9 @@ Start or upgrade the API against this database, then start the listener again.
 The listener's `LANGFLOW_SECRET_KEY` or `LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS` does not match the API. Set both to the API's values and restart the listener. Armed triggers resume on their own.
 
 **A trigger shows "needs reconnect."**
-The provider revoked or expired the credential. Reconnect the connection, then enable the trigger again.
+Read the reason shown on the trigger. If **Allow background runs** is off, choose **Reconnect** on the trigger, then **Allow and resume** in the consent dialog. Only the connection owner can grant this permission. Langflow then tries to activate the trigger and reports any remaining error.
+
+If the provider revoked or expired the credential, open **Settings → Connections** and reauthorize the connection. Return to the trigger and choose **Resume** when it shows **Ready to resume**. Reauthorization does not start the trigger automatically.
 
 **A new replica holds no connections.**
 Check that it uses the same database as the other replicas. If it does, wait a few seconds. The loaded replica releases extra connections, and the new one takes them.

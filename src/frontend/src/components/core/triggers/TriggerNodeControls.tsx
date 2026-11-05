@@ -1,7 +1,6 @@
 import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Switch } from "@/components/ui/switch";
-import { getAxiosErrorDetail } from "@/controllers/API/helpers/get-axios-error-message";
 import {
   useGetConnections,
   useUpdateConnectionMutation,
@@ -13,6 +12,7 @@ import {
 } from "@/controllers/API/queries/triggers";
 import useAlertStore from "@/stores/alertStore";
 import { isTriggerEnabled } from "./helpers/trigger-enabled";
+import { triggerRefusalText } from "./helpers/trigger-error-text";
 import {
   availabilityOf,
   blockedReasonKey,
@@ -101,7 +101,7 @@ function TriggerNodeControlsBody({ trigger }: { trigger: TriggerRead }) {
         title: next
           ? t("triggers.alerts.resumeFailed", { name: trigger.name })
           : t("triggers.alerts.pauseFailed", { name: trigger.name }),
-        list: [getAxiosErrorDetail(error, t("triggers.errors.unknown"))],
+        list: [triggerRefusalText(error, t)],
       });
     }
   };
@@ -116,7 +116,7 @@ function TriggerNodeControlsBody({ trigger }: { trigger: TriggerRead }) {
     } catch (error) {
       setErrorData({
         title: t("triggers.alerts.consentFailed"),
-        list: [getAxiosErrorDetail(error, t("triggers.errors.unknown"))],
+        list: [triggerRefusalText(error, t)],
       });
     }
   };

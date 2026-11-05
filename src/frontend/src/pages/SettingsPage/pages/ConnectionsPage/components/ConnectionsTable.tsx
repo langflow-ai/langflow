@@ -218,6 +218,14 @@ export function ConnectionsTable({
             const account = connection.executing_identity?.account;
             const identity = connection.executing_identity?.identity;
             const scopes = connection.granted_scopes ?? [];
+            const provider = providers.get(connection.provider_key);
+            const usesGitHubAppPermissions =
+              connection.provider_key === "github" &&
+              provider?.manual_token_profiles?.some(
+                (profile) =>
+                  profile.id === "github-installation" &&
+                  profile.required_scopes.length === 0,
+              );
 
             return (
               <TableRow
@@ -229,7 +237,7 @@ export function ConnectionsTable({
                   <div className="flex items-center gap-3">
                     <ProviderMark
                       providerKey={connection.provider_key}
-                      provider={providers.get(connection.provider_key)}
+                      provider={provider}
                     />
                     <div className="flex min-w-0 flex-col">
                       <span className="truncate text-sm font-medium">
@@ -299,7 +307,9 @@ export function ConnectionsTable({
                 <TableCell>
                   {scopes.length === 0 ? (
                     <span className="text-xs text-muted-foreground">
-                      {t("connections.scopes.none")}
+                      {usesGitHubAppPermissions
+                        ? t("connections.scopes.githubApp")
+                        : t("connections.scopes.none")}
                     </span>
                   ) : (
                     <ShadTooltip

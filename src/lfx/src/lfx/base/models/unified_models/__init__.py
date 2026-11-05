@@ -26,6 +26,7 @@ from .credentials import (
 )
 from .instantiation import get_embeddings, get_llm
 from .model_catalog import (
+    get_decision_model_options,
     get_embedding_model_options,
     get_language_model_options,
     get_unified_models_detailed,
@@ -58,6 +59,7 @@ __all__ = [
     "apply_provider_variable_config_to_build_config",
     "get_all_variables_for_provider",
     "get_api_key_for_provider",
+    "get_decision_model_options",
     "get_embedding_class",
     "get_embedding_model_options",
     "get_embeddings",
