@@ -588,6 +588,70 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
             assert "test_output.csv" in result.text
             assert "test_output.csv.csv" not in result.text
 
+    @pytest.mark.parametrize("input_kind", ["data", "dataframe"])
+    def test_csv_append_aligns_columns_to_existing_header(self, component_class, tmp_path, input_kind):
+        component = component_class()
+        component.append_mode = True
+        path = tmp_path / "rows.csv"
+
+        if input_kind == "data":
+            component._save_data(Data(data={"a": [1], "b": [2]}), path, "csv")
+            component._save_data(Data(data={"b": [3], "a": [4]}), path, "csv")
+        else:
+            component._save_dataframe(DataFrame([{"a": 1, "b": 2}]), path, "csv")
+            component._save_dataframe(DataFrame([{"b": 3, "a": 4}]), path, "csv")
+
+        assert path.read_text(encoding="utf-8").splitlines() == ["a,b", "1,2", "4,3"]
+
+    @pytest.mark.parametrize("input_kind", ["data", "dataframe"])
+    @pytest.mark.parametrize("values", [{"a": [3]}, {"a": [3], "c": [4]}, {"a": [3], "b": [4], "c": [5]}])
+    def test_csv_append_rejects_column_mismatch_without_changing_file(
+        self, component_class, tmp_path, input_kind, values
+    ):
+        component = component_class()
+        component.append_mode = True
+        path = tmp_path / "rows.csv"
+        path.write_text("a,b\n1,2\n", encoding="utf-8")
+        original = path.read_bytes()
+
+        value = Data(data=values) if input_kind == "data" else DataFrame(pd.DataFrame(values))
+        method = component._save_data if input_kind == "data" else component._save_dataframe
+
+        with pytest.raises(ValueError, match="columns do not match"):
+            method(value, path, "csv")
+
+        assert path.read_bytes() == original
+
+    @pytest.mark.parametrize("input_kind", ["data", "dataframe"])
+    def test_csv_append_writes_header_to_empty_file(self, component_class, tmp_path, input_kind):
+        component = component_class()
+        component.append_mode = True
+        path = tmp_path / "rows.csv"
+        path.touch()
+
+        value = Data(data={"a": [1], "b": [2]}) if input_kind == "data" else DataFrame([{"a": 1, "b": 2}])
+        method = component._save_data if input_kind == "data" else component._save_dataframe
+        method(value, path, "csv")
+
+        assert path.read_text(encoding="utf-8").splitlines() == ["a,b", "1,2"]
+
+    def test_csv_append_preserves_same_order_complex_headers(self, component_class, tmp_path):
+        component = component_class()
+        component.append_mode = True
+
+        duplicate_path = tmp_path / "duplicates.csv"
+        duplicate = DataFrame(pd.DataFrame([[1, 2]], columns=["a", "a"]))
+        component._save_dataframe(duplicate, duplicate_path, "csv")
+        component._save_dataframe(duplicate, duplicate_path, "csv")
+        assert duplicate_path.read_text(encoding="utf-8").splitlines() == ["a,a", "1,2", "1,2"]
+
+        multi_path = tmp_path / "multi.csv"
+        columns = pd.MultiIndex.from_tuples([("a", "x"), ("b", "y")])
+        multi = DataFrame(pd.DataFrame([[1, 2]], columns=columns))
+        component._save_dataframe(multi, multi_path, "csv")
+        component._save_dataframe(multi, multi_path, "csv")
+        assert multi_path.read_text(encoding="utf-8").splitlines() == ["a,b", "x,y", "1,2", "1,2"]
+
     @pytest.mark.asyncio
     async def test_append_mode_txt_file(self, component_class):
         """Test append mode for text files."""

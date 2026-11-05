@@ -1,4 +1,5 @@
 import contextlib
+import csv
 import json
 from collections.abc import AsyncIterator, Iterator
 from pathlib import Path, PurePath, PureWindowsPath
@@ -427,6 +428,43 @@ class SaveToFileComponent(Component):
         plain_text_formats = ["txt", "json", "markdown", "md", "csv", "xml", "html", "yaml", "log", "tsv", "jsonl"]
         return fmt.lower() in plain_text_formats
 
+    @staticmethod
+    def _csv_column_keys(dataframe: pd.DataFrame) -> list[tuple[str, ...]]:
+        """Return the column labels as they are serialized in a CSV header."""
+        if dataframe.columns.nlevels == 1:
+            return [(str(column),) for column in dataframe.columns]
+        return [tuple(str(level) for level in column) for column in dataframe.columns]
+
+    def _prepare_csv_append(self, dataframe: pd.DataFrame, path: Path) -> tuple[pd.DataFrame, bool]:
+        """Align new CSV columns with an existing header before appending."""
+        if not path.exists() or path.stat().st_size == 0:
+            return dataframe, False
+
+        new_columns = self._csv_column_keys(dataframe)
+        with path.open(encoding="utf-8-sig", newline="") as csv_file:
+            reader = csv.reader(csv_file)
+            header_rows = [next(reader, []) for _ in range(dataframe.columns.nlevels)]
+
+        if not header_rows or any(len(row) != len(new_columns) for row in header_rows):
+            msg = "CSV columns do not match the existing file header; append was not performed."
+            raise ValueError(msg)
+
+        existing_columns = list(zip(*header_rows, strict=True))
+        if existing_columns == new_columns:
+            return dataframe, True
+
+        if (
+            len(set(existing_columns)) != len(existing_columns)
+            or len(set(new_columns)) != len(new_columns)
+            or set(existing_columns) != set(new_columns)
+        ):
+            msg = "CSV columns do not match the existing file header; append was not performed."
+            raise ValueError(msg)
+
+        column_positions = {column: position for position, column in enumerate(new_columns)}
+        ordered_positions = [column_positions[column] for column in existing_columns]
+        return dataframe.iloc[:, ordered_positions], True
+
     async def _upload_file(self, file_path: Path) -> Any:
         """Upload the saved file using the upload_user_file service.
 
@@ -466,6 +504,8 @@ class SaveToFileComponent(Component):
         should_append = append_mode and path.exists() and self._is_plain_text_format(fmt)
 
         if fmt == "csv":
+            if append_mode:
+                dataframe, should_append = self._prepare_csv_append(dataframe, path)
             dataframe.to_csv(path, index=False, mode="a" if should_append else "w", header=not should_append)
         elif fmt == "excel":
             dataframe.to_excel(path, index=False, engine="openpyxl")
@@ -512,7 +552,10 @@ class SaveToFileComponent(Component):
         should_append = append_mode and path.exists() and self._is_plain_text_format(fmt)
 
         if fmt == "csv":
-            pd.DataFrame(data.data).to_csv(
+            dataframe = pd.DataFrame(data.data)
+            if append_mode:
+                dataframe, should_append = self._prepare_csv_append(dataframe, path)
+            dataframe.to_csv(
                 path,
                 index=False,
                 mode="a" if should_append else "w",
