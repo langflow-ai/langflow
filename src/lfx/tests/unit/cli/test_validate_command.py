@@ -47,6 +47,7 @@ _NODE = {
     },
     "position": {"x": 0, "y": 0},
 }
+_EDGE_ENDPOINTS = {"source": "node-a", "target": "node-b"}
 
 
 def _write_flow(tmp_path: Path, name: str, flow: dict) -> Path:
@@ -517,8 +518,46 @@ class TestJsonOutput:
             (None, "'data.edges' must be a JSON array"),
             ({}, "'data.edges' must be a JSON array"),
             ([None], "Edge at index 0 is not a JSON object"),
-            ([{"source": "node-a", "target": "node-b", "data": None}], "Edge at index 0 has a non-object 'data' field"),
-            ([{"source": "node-a", "target": "node-b", "data": []}], "Edge at index 0 has a non-object 'data' field"),
+            ([{**_EDGE_ENDPOINTS, "data": None}], "Edge at index 0 has a non-object 'data' field"),
+            ([{**_EDGE_ENDPOINTS, "data": []}], "Edge at index 0 has a non-object 'data' field"),
+            ([{**_EDGE_ENDPOINTS, "source": ["node-a"]}], "Edge at index 0 has a non-string 'source' field"),
+            (
+                [{**_EDGE_ENDPOINTS, "data": {"sourceHandle": "old-handle"}}],
+                "Edge at index 0 has a non-object 'data.sourceHandle' field",
+            ),
+            (
+                [{**_EDGE_ENDPOINTS, "data": {"targetHandle": ["input_value"]}}],
+                "Edge at index 0 has a non-object 'data.targetHandle' field",
+            ),
+            (
+                [{**_EDGE_ENDPOINTS, "data": {"sourceHandle": {"output_types": {"Message": True}}}}],
+                "Edge at index 0 has a 'data.sourceHandle.output_types' field that is not an array of strings",
+            ),
+            (
+                [
+                    {
+                        **_EDGE_ENDPOINTS,
+                        "data": {"sourceHandle": {"output_types": [["Message"]]}, "targetHandle": {"type": "Message"}},
+                    }
+                ],
+                "Edge at index 0 has a 'data.sourceHandle.output_types' field that is not an array of strings",
+            ),
+            (
+                [{**_EDGE_ENDPOINTS, "data": {"targetHandle": {"fieldName": ["input_value"]}}}],
+                "Edge at index 0 has a non-string 'data.targetHandle.fieldName' field",
+            ),
+            (
+                [
+                    {
+                        **_EDGE_ENDPOINTS,
+                        "data": {
+                            "sourceHandle": {"output_types": ["Message"]},
+                            "targetHandle": {"type": {"bad": True}},
+                        },
+                    }
+                ],
+                "Edge at index 0 has a non-string 'data.targetHandle.type' field",
+            ),
         ],
     )
     def test_cli_reports_invalid_edge_shape_and_validates_the_next_flow(self, tmp_path, edges, message):
@@ -527,13 +566,18 @@ class TestJsonOutput:
 
         node_b = {**_NODE, "id": "node-b", "data": {**_NODE["data"], "id": "node-b"}}
         nodes = [_NODE, node_b]
-        legacy_edge = {"source": "node-a", "target": "node-b"}
+        legacy_edge = {
+            **_EDGE_ENDPOINTS,
+            "sourceHandle": "Message|message|node-a",
+            "targetHandle": "Message|text|node-b",
+        }
         invalid = _write_flow(tmp_path, "a.json", {**_MINIMAL_VALID, "data": {"nodes": nodes, "edges": edges}})
         valid = _write_flow(tmp_path, "b.json", {**_MINIMAL_VALID, "data": {"nodes": nodes, "edges": [legacy_edge]}})
 
         result = CliRunner().invoke(app, ["validate", str(tmp_path), "--skip-components", "--format", "json"])
 
         assert result.exit_code == 1
+        assert result.stdout, result.exception
         first, second = json.loads(result.stdout)
         assert first["path"] == str(invalid)
         assert first["ok"] is False

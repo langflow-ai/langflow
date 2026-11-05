@@ -51,6 +51,40 @@ _REQUIRED_DATA_KEYS = {"nodes", "edges"}
 # ---------------------------------------------------------------------------
 
 
+def _edge_shape_error(edge: object) -> str | None:
+    """Check the edge fields read by the graph and semantic checks."""
+    if not isinstance(edge, dict):
+        return "is not a JSON object"
+
+    data = edge.get("data", {})
+    if not isinstance(data, dict):
+        return "has a non-object 'data' field"
+
+    for field in ("source", "target"):
+        endpoint = edge.get(field)
+        if endpoint is not None and not isinstance(endpoint, str):
+            return f"has a non-string '{field}' field"
+
+    for field in ("sourceHandle", "targetHandle"):
+        handle = data.get(field)
+        if handle is not None and not isinstance(handle, dict):
+            return f"has a non-object 'data.{field}' field"
+
+    source_handle = data.get("sourceHandle") or {}
+    output_types = source_handle.get("output_types")
+    if output_types is not None and (
+        not isinstance(output_types, list) or not all(isinstance(value, str) for value in output_types)
+    ):
+        return "has a 'data.sourceHandle.output_types' field that is not an array of strings"
+
+    target_handle = data.get("targetHandle") or {}
+    for field in ("type", "fieldName"):
+        value = target_handle.get(field)
+        if value is not None and not isinstance(value, str):
+            return f"has a non-string 'data.targetHandle.{field}' field"
+    return None
+
+
 def _check_structural(flow: dict[str, Any], result: ValidationResult) -> bool:
     """Return False if the flow is so broken that further checks cannot run."""
     ok = True
@@ -158,11 +192,8 @@ def _check_structural(flow: dict[str, Any], result: ValidationResult) -> bool:
         return False
 
     for i, edge in enumerate(edges):
-        if not isinstance(edge, dict):
-            message = f"Edge at index {i} is not a JSON object"
-        elif not isinstance(edge.get("data", {}), dict):
-            message = f"Edge at index {i} has a non-object 'data' field"
-        else:
+        error = _edge_shape_error(edge)
+        if error is None:
             continue
         result.issues.append(
             _make_issue(
@@ -170,7 +201,7 @@ def _check_structural(flow: dict[str, Any], result: ValidationResult) -> bool:
                 severity="error",
                 node_id=None,
                 node_name=None,
-                message=message,
+                message=f"Edge at index {i} {error}",
             )
         )
         ok = False
