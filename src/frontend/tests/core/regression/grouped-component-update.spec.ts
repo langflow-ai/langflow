@@ -2,6 +2,7 @@ import type { APIClassType, APIObjectType } from "../../../src/types/api";
 import type { GenericNodeType } from "../../../src/types/flow";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TIMEOUTS } from "../../utils/constants/timeouts";
 import { waitForFlowEditorReady } from "../../utils/flow/wait-for-flow-editor-ready";
 
 function componentNode(
@@ -144,6 +145,9 @@ for (const scenario of [
             response.request().method() === "GET" &&
             new URL(response.url()).pathname === `/api/v1/flows/${flowId}` &&
             response.ok(),
+          // Cold editor imports can consume the default action budget before
+          // the flow request starts; use the editor readiness budget here too.
+          { timeout: TIMEOUTS.standard },
         ),
         page.goto(`/flow/${flowId}`),
       ]);
@@ -230,12 +234,14 @@ for (const scenario of [
         page.waitForResponse(
           (response) =>
             new URL(response.url()).pathname === "/api/v1/all" && response.ok(),
+          { timeout: TIMEOUTS.standard },
         ),
         page.waitForResponse(
           (response) =>
             response.request().method() === "GET" &&
             new URL(response.url()).pathname === `/api/v1/flows/${flowId}` &&
             response.ok(),
+          { timeout: TIMEOUTS.standard },
         ),
         page.reload(),
       ]);
