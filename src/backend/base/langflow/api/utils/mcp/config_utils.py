@@ -14,6 +14,7 @@ from sqlalchemy import or_
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from langflow.api.v1.auth_helpers import get_default_project_auth_settings
 from langflow.api.v2.mcp import get_server_list, update_server
 from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
 from langflow.services.auth.utils import decrypt_api_key
@@ -482,13 +483,10 @@ async def auto_configure_starter_projects_mcp(session):
                 if flows_configured > 0:
                     await logger.adebug(f"Enabled MCP for {flows_configured} starter flows for user {user.username}")
 
-                default_auth = user_starter_folder.auth_settings or {"auth_type": "none"}
-                if not user_starter_folder.auth_settings and not (
-                    settings_service.auth_settings.AUTO_LOGIN
-                    and settings_service.auth_settings.skip_auth_auto_login
-                    and user.username == settings_service.auth_settings.SUPERUSER
-                ):
-                    default_auth = {"auth_type": "apikey"}
+                default_auth = user_starter_folder.auth_settings or get_default_project_auth_settings(
+                    settings_service.auth_settings, user
+                )
+                if not user_starter_folder.auth_settings and default_auth["auth_type"] == "apikey":
                     user_starter_folder.auth_settings = encrypt_auth_settings(default_auth)
                 requires_api_key = default_auth.get("auth_type") == "apikey"
 
