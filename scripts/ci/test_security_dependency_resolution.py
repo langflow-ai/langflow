@@ -65,12 +65,13 @@ def test_fixed_dependencies_resolve_on_every_supported_python_line(python: str, 
         assert Version(packages["filelock"]) >= Version("4.2.1")
     assert Version(packages["pypdf"]) >= Version("6.21.2")
     assert Version(packages["aiohttp"]) >= Version("3.14.4")
+    assert Version(packages["brotli"]) >= Version("1.2.1")
+    assert Version(packages["brotlicffi"]) >= Version("1.2.1.0")
     assert Version(packages["mako"]) >= Version("1.4.2")
 
     for name, minimum in {
         "black": "26.10.1",
-        "brotli": "1.2.1",
-        "certifi": "2026.10.18",
+        "certifi": "2026.10.19",
         "docling-core": "2.103.0",
         "fastmcp": "3.4.10",
         "fastmcp-slim": "3.4.10",
@@ -409,3 +410,23 @@ def test_pyarrow_extra_rejects_missing_or_lowered_security_floor(
     monkeypatch.setitem(globals(), "ROOT", tmp_path)
     with pytest.raises(AssertionError):
         test_published_pyarrow_requirements_patch_bundled_brotli_on_supported_python(MANIFESTS[0], python)
+
+
+@pytest.mark.parametrize("manifest", ["pyproject.toml", MANIFESTS[0]])
+def test_certifi_security_floor_uses_the_restored_patched_trust_store(manifest: str) -> None:
+    """Reject affected roots while retaining the unaffected roots restored after the fix."""
+    metadata = tomllib.loads((ROOT / manifest).read_text())
+    declarations = (
+        metadata["tool"]["uv"]["constraint-dependencies"]
+        if manifest == "pyproject.toml"
+        else metadata["project"]["dependencies"]
+    )
+    requirements = [Requirement(value) for value in declarations if Requirement(value).name == "certifi"]
+    assert len(requirements) == 1
+    assert requirements[0].marker is None
+    assert "2026.7.22" not in requirements[0].specifier
+    assert "2026.10.18" not in requirements[0].specifier
+    assert "2026.10.19" in requirements[0].specifier
+    assert Version(locked_packages({"python_version": "3.14", "python_full_version": "3.14.0"})["certifi"]) >= Version(
+        "2026.10.19"
+    )

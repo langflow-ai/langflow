@@ -283,3 +283,11 @@ def test_published_packages_enforce_current_python_floors() -> None:
 
     generator = runpy.run_path(str(REPO_ROOT / "scripts/migrate/consolidate_bundles.py"))
     assert generator["PROVIDER_DEPS"]["cuga"] == bundle_extras["cuga"]
+
+
+def test_standalone_lfx_bundles_extra_requires_patched_legacy_metadata() -> None:
+    """Standalone bundle installs must retain the published PyMongo security floor."""
+    extras = _load_pyproject("src/lfx/pyproject.toml")["project"]["optional-dependencies"]
+    legacy_bundle = _requirement(extras["bundles"], "lfx-bundles")
+    assert "1.1.40" not in legacy_bundle.specifier
+    assert "1.1.41" in legacy_bundle.specifier

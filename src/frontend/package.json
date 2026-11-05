@@ -46,7 +46,7 @@
     "handlebars": "^4.7.10",
     "minimatch": "^11.0.4",
     "serialize-javascript": "^7.0.5",
-    "undici": "^8.10.2",
+    "undici": "^8.12.2",
     "postcss-selector-parser": "^7.1.6",
     "form-data": "^4.0.6",
     "fast-uri": "^4.2.3",
