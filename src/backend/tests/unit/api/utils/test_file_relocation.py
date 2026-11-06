@@ -354,10 +354,9 @@ class TestLargeFiles:
 
         again = await relocate_files(target_bucket=bucket, target_prefix="files")
 
-        # Uploaded in parts, so its ETag is no MD5 and identity falls back to size.
-        assert [(r.status, r.reason) for r in again] == [
-            ("skipped", "already in the target (20971520 bytes, identity checked by size only)")
-        ]
+        # Uploaded in parts, so its ETag is no MD5; the md5 label written with it still lets
+        # identity be checked by content rather than by size alone.
+        assert [(r.status, r.reason) for r in again] == [("skipped", "already in the target")]
 
 
 class TestConcurrency:

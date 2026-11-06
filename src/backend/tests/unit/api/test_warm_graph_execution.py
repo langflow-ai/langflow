@@ -251,6 +251,32 @@ async def test_warm_deepcopy_rejects_a_graph_from_another_flow_revision(monkeypa
     assert graph is None
 
 
+async def test_warm_deepcopy_revalidates_legacy_flow_id_against_current_users(monkeypatch) -> None:
+    """A cached raw-flow grant must cold-fallback if its ID becomes a user collision."""
+    from langflow.api.utils import flow_utils
+    from langflow.services import deps
+    from langflow.services.warm_registry import service as registry_service
+
+    template = _FakeGraph([_FakeVertex({"stream": False})])
+    template.authorized_legacy_flow_ids = frozenset({"flow-id"})
+    template.copy_for_run = Mock(side_effect=AssertionError("stale legacy grant was copied"))
+    registry = SimpleNamespace(get=lambda _flow_id: (template, "v1"))
+    monkeypatch.setattr(warm_graph, "is_warm_registry_enabled", lambda _settings: True)
+    monkeypatch.setattr(deps, "get_settings_service", lambda: SimpleNamespace(settings=SimpleNamespace()))
+    monkeypatch.setattr(registry_service, "get_warm_registry", lambda: registry)
+    monkeypatch.setattr(flow_utils, "get_authorized_legacy_flow_ids", AsyncMock(return_value=frozenset()))
+
+    graph = await warm_graph.warm_deepcopy(
+        "flow-id",
+        expected_version="v1",
+        user_id="user-id",
+        session_id=None,
+    )
+
+    assert graph is None
+    template.copy_for_run.assert_not_called()
+
+
 async def test_warm_deepcopy_cold_falls_back_when_extension_events_need_user_keyspace(monkeypatch) -> None:
     """Migrated/error-bearing templates must replay parsing under the caller."""
     from langflow.services import deps

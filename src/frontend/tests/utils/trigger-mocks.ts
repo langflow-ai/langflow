@@ -254,6 +254,11 @@ export async function installTriggerMocks(
 
   const read = (row: MockTrigger) => ({
     ...row,
+    // The server's code for the one stored error these mocks write.
+    last_error_code:
+      row.last_error === CONNECTION_NOT_AUTHORIZED_ERROR
+        ? "connection_not_authorized"
+        : null,
     binding_target: "draft",
     deployment_id: null,
     flow_version_id: null,
@@ -482,6 +487,7 @@ export async function installTriggerMocks(
       if (sub === "events" && method === "GET") {
         const limit = Number(url.searchParams.get("limit") ?? 50);
         const offset = Number(url.searchParams.get("offset") ?? 0);
+        const eventFilter = url.searchParams.get("filter");
         if (limit > 200) {
           await route.fulfill({
             status: 422,
@@ -492,6 +498,21 @@ export async function installTriggerMocks(
         await route.fulfill({
           json: server.events
             .filter((event) => event.trigger_id === row.id)
+            .filter((event) => {
+              const isReplay =
+                event.replay_of_event_id !== null ||
+                event.dedupe_key.startsWith("replay:");
+              switch (eventFilter) {
+                case "failed":
+                  return event.state === "failed" || event.state === "dead";
+                case "replays":
+                  return isReplay;
+                case "tests":
+                  return event.dedupe_key.startsWith("test:") && !isReplay;
+                default:
+                  return true;
+              }
+            })
             .slice(offset, offset + limit),
         });
         return;

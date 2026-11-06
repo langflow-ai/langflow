@@ -52,6 +52,7 @@ from langflow.api.v1.flow_conflict import (
     ensure_version_precondition,
     parse_if_match,
 )
+from langflow.api.v1.flow_validation import flow_validation_error
 from langflow.api.v1.flows_helpers import (
     _build_flows_download_response,
     _canonicalize_flow_destination,
@@ -1151,7 +1152,7 @@ async def create_flows(
     # Validate the complete request before adding or flushing any rows. This
     # keeps a denial in a later item from partially applying an earlier item.
     for flow in flow_list.flows:
-        _validate_new_flow_id(flow.id)
+        await _validate_new_flow_id(session, flow.id)
         _validate_catalog_policy_for_write(flow.data, snapshot=catalog_policy_snapshot)
         await persist_and_strip_mcp_secrets(flow.data, current_user.id, session, flow_id=flow.id)
         # This endpoint bypasses _new_flow, so the fs_path containment check
@@ -1289,7 +1290,7 @@ async def upload_file(
     except HTTPException:
         raise
     except ValidationError as e:
-        raise HTTPException(status_code=422, detail=str(e)) from e
+        raise flow_validation_error(e) from e
 
     # TODO: Full-version import is planned as a follow-up feature.
     # When implemented, extract raw flow dicts here to read embedded "version"

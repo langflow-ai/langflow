@@ -7,7 +7,7 @@
 
 ARG UV_VERSION=0.10.4
 ARG PYTHON_IMAGE=registry.access.redhat.com/ubi10/python-314-minimal
-ARG NODE_VERSION=24.21.0
+ARG NODE_VERSION=24.22.2
 
 ################################
 # BUILDER
@@ -28,6 +28,7 @@ RUN microdnf install -y tar xz \
         gcc gcc-c++ make python3.14-devel \
         gcc \
         git \
+        libxml2-devel libxslt-devel \
         curl \
     && microdnf clean all
 
@@ -35,6 +36,7 @@ RUN microdnf install -y tar xz \
 COPY ./src/backend ./src/backend
 COPY ./src/lfx ./src/lfx
 COPY ./src/sdk ./src/sdk
+COPY ./docker/build_lxml.sh /tmp/build_lxml.sh
 
 # Create venv and install langflow-base with dependencies
 # Using uv pip instead of uv sync to avoid workspace complexities
@@ -48,11 +50,13 @@ ENV VIRTUAL_ENV="/app/.venv"
 # Install the runnable base with PostgreSQL. ``complete`` is retained as an
 # empty 1.12 compatibility alias. Provider extensions are intentionally absent;
 # use a Langflow application image or install the required extension packages.
+# Build lxml against UBI's patched XML libraries instead of its bundled copies.
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install \
+    uv pip install "lxml==6.1.1" \
         ./src/sdk \
         ./src/lfx \
-        "./src/backend/base[complete,postgresql]"
+        "./src/backend/base[complete,postgresql]" \
+    && sh /tmp/build_lxml.sh
 
 ################################
 # RUNTIME
@@ -61,12 +65,9 @@ FROM ${PYTHON_IMAGE} AS runtime
 USER root
 # Install minimal runtime dependencies
 RUN microdnf update -y \
-    && microdnf install -y tar xz \
-        curl \
-        git \
-        libpq \
-        gnupg \
-        xz tar \
+    && microdnf install -y curl git libpq libxml2 libxslt shadow-utils tar xz \
+    && useradd --uid 1000 --gid 0 --no-create-home --home-dir /app/data user \
+    && microdnf remove -y shadow-utils \
     && microdnf clean all
 RUN python3.14 -m pip install --no-cache-dir --upgrade "pip==26.2.1"
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
@@ -87,11 +88,10 @@ RUN ARCH=$(uname -m) \
     && sh /tmp/install_hardened_npm.sh \
     && rm -f /tmp/install_hardened_npm.sh
 
-# Create non-root user
-RUN useradd --uid 1000 --gid 0 --no-create-home --home-dir /app/data user
-
 # Copy only the virtual environment
 COPY --from=builder --chown=1000:0 /app/.venv /app/.venv
+COPY --chown=1000:0 ./scripts/ci/verify_lxml_runtime.py /tmp/verify_lxml_runtime.py
+RUN /app/.venv/bin/python /tmp/verify_lxml_runtime.py && rm /tmp/verify_lxml_runtime.py
 ENV PATH="/app/.venv/bin:$PATH"
 ENV HOME=/app/data
 ENV BASH_ENV="" \
