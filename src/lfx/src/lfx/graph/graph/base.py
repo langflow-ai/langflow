@@ -530,11 +530,15 @@ class Graph:
         config: StartConfigDict | None = None,
         event_manager: EventManager | None = None,
         *,
+        user_id: str | None = None,
         reset_output_values: bool = True,
         fallback_to_env_vars: bool = False,
         open_flow_span: bool = True,
     ):
         """Run the graph, yielding each step.
+
+        Pass the authenticated caller as ``user_id``. It is forwarded to each
+        vertex build and is never inferred from cached graph state.
 
         open_flow_span=False says the caller already opened the flow span and this run belongs
         to it. Prefer that: a span opened here cannot be made current, because this is an async
@@ -564,7 +568,10 @@ class Graph:
 
             while should_continue(yielded_counts, max_iterations):
                 result = await self.astep(
-                    event_manager=event_manager, inputs=inputs, fallback_to_env_vars=fallback_to_env_vars
+                    event_manager=event_manager,
+                    inputs=inputs,
+                    user_id=user_id,
+                    fallback_to_env_vars=fallback_to_env_vars,
                 )
                 yield result
                 if isinstance(result, Finish):
@@ -2378,9 +2385,10 @@ class Graph:
             ValueError: If no result is found for the vertex.
         """
         vertex = self.get_vertex(vertex_id)
-        if not user_id and self.user_id is not None:
+        user_scope = str(user_id).strip() if user_id is not None else ""
+        if not user_scope and (user_id is not None or self.user_id is not None):
             # Components can fall back to the graph's user when no caller is supplied.
-            # Do not share their results under an unscoped cache key.
+            # Missing or blank caller IDs cannot safely share that result cache.
             get_cache = None
             set_cache = None
         self.run_manager.add_to_vertices_being_run(vertex_id)

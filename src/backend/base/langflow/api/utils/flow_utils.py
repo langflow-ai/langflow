@@ -130,6 +130,7 @@ async def build_and_cache_graph_from_data(
 
     This is the Playground's primary build seam, so it carries the same
     ``execution_principal`` contract as ``build_graph_from_data``.
+    ``user_id`` records the caller on the graph for component initialization.
     """
     # Convert flow_id to str if it's UUID
     str_flow_id = str(flow_id) if isinstance(flow_id, uuid.UUID) else flow_id

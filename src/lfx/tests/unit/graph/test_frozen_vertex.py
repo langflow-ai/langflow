@@ -1,10 +1,14 @@
 import copy
 import json
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from lfx.components.input_output import TextInputComponent, TextOutputComponent
+from lfx.execution.backends.in_process import InProcessExecutor
+from lfx.execution.coordinator import Coordinator
+from lfx.execution.registry import ExecutorRegistry
 from lfx.graph import Graph
 from lfx.services.authorization import PUBLIC_ANONYMOUS_ACTOR_ID
 from lfx.services.cache.utils import CacheMiss
@@ -285,7 +289,7 @@ async def test_public_build_does_not_restore_legacy_flow_scoped_results(monkeypa
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("user_id", [None, ""])
+@pytest.mark.parametrize("user_id", [None, "", " \t"])
 async def test_missing_build_user_does_not_cache_a_graph_users_results(monkeypatch, user_id):
     graph = Graph(user_id="owner", flow_id="shared-flow")
     vertex = _mock_built_vertex("shared-vertex", frozen=True)
@@ -298,6 +302,53 @@ async def test_missing_build_user_does_not_cache_a_graph_users_results(monkeypat
     get_cache.assert_not_awaited()
     set_cache.assert_not_awaited()
     vertex.build.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("graph_user_id", [None, "owner"])
+async def test_whitespace_build_user_cannot_use_unscoped_cache(monkeypatch, graph_user_id):
+    graph = Graph(user_id=graph_user_id, flow_id="shared-flow")
+    vertex = _mock_built_vertex("shared-vertex", frozen=True)
+    monkeypatch.setattr(graph, "get_vertex", lambda _vertex_id: vertex)
+    get_cache = AsyncMock()
+    set_cache = AsyncMock()
+
+    await graph.build_vertex(vertex.id, get_cache=get_cache, set_cache=set_cache, user_id=" \t")
+
+    get_cache.assert_not_awaited()
+    set_cache.assert_not_awaited()
+    vertex.build.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("build_user_id", [None, "owner"])
+async def test_coordinator_preserves_frozen_reuse_only_for_explicit_caller(monkeypatch, build_user_id):
+    store = {}
+    get_cache, set_cache = _dict_cache(store)
+    monkeypatch.setattr(
+        "lfx.graph.graph.base.get_chat_service", lambda: SimpleNamespace(get_cache=get_cache, set_cache=set_cache)
+    )
+    registry = ExecutorRegistry()
+    registry.register(InProcessExecutor())
+    coordinator = Coordinator(registry=registry)
+
+    for text in ("first", "second"):
+        text_input = TextInputComponent(_id="shared-input").set(input_value=text)
+        text_output = TextOutputComponent(_id="output").set(input_value=text_input.text_response)
+        graph = Graph(text_input, text_output, flow_id="shared-flow", user_id="stale-user")
+        vertex = graph.get_vertex("shared-input")
+        vertex.frozen = True
+
+        results = [result async for result in coordinator.stream(graph, user_id=build_user_id)]
+
+        assert results
+        if build_user_id is None:
+            assert vertex.built_object["text"].text == text
+            assert "unscoped:flow:shared-flow:shared-input" not in store
+        else:
+            assert vertex.built_object["text"].text == "first"
+            assert "user:owner:shared-input" in store
+            assert "user:stale-user:shared-input" not in store
 
 
 @pytest.mark.asyncio
