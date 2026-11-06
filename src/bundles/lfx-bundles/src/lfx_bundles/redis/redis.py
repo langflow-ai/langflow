@@ -1,4 +1,3 @@
-from pathlib import Path
 from urllib.parse import urlparse
 
 from langchain_community.vectorstores.redis import Redis
@@ -76,8 +75,6 @@ class RedisVectorStoreComponent(LCVectorStoreComponent):
                 documents.append(_input.to_lc_document())
             else:
                 documents.append(_input)
-        Path("docuemnts.txt").write_text(str(documents), encoding="utf-8")
-
         if not documents:
             if self.schema is None:
                 msg = "If no documents are provided, a schema must be provided."
