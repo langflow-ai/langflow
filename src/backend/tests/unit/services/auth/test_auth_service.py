@@ -3187,6 +3187,9 @@ async def test_trusted_proxy_credential_isolated_from_native_channels(
         patch("langflow.services.auth.utils._auth_service", return_value=auth_service),
         patch("langflow.services.auth.utils.get_settings_service", return_value=auth_service.settings),
         patch("langflow.services.auth.utils.set_authenticated_telemetry_user"),
+        patch.object(
+            auth_service, "_authenticate_with_token", wraps=auth_service._authenticate_with_token
+        ) as native_auth,
         patch.object(auth_service, "_materialize_external_user", new=materialize),
         patch.object(auth_service, "_reconcile_verified_external_groups", new=AsyncMock()),
     ):
@@ -3232,5 +3235,7 @@ async def test_trusted_proxy_credential_isolated_from_native_channels(
                 expected_status = status.HTTP_403_FORBIDDEN if entrypoint == "sse" else status.HTTP_401_UNAUTHORIZED
                 assert exc_info.value.status_code == expected_status
 
+    if entrypoint == "websocket-query":
+        native_auth.assert_awaited_once_with(forged_token, db)
     if external_source == "missing":
         materialize.assert_not_awaited()
