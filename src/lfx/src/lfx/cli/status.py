@@ -26,6 +26,7 @@ import typer
 from rich import box
 from rich.console import Console
 from rich.table import Table
+from rich.text import Text
 
 from lfx.cli.common import load_sdk
 
@@ -111,7 +112,7 @@ def _render_table(statuses: list[FlowStatus], env_label: str) -> None:
         box=box.SIMPLE,
         show_header=True,
         header_style="bold",
-        title=f"Flow status vs [bold]{env_label}[/bold]",
+        title=Text.assemble("Flow status vs ", (env_label, "bold")),
         title_justify="left",
     )
     table.add_column("Flow", min_width=24)
@@ -121,14 +122,16 @@ def _render_table(statuses: list[FlowStatus], env_label: str) -> None:
 
     for s in statuses:
         icon, color, label = _STATUS_STYLE.get(s.status, ("?", "dim", s.status))
-        detail_str = f"  [dim]({s.detail})[/dim]" if s.detail else ""
+        status_text = Text.assemble((f"{icon} {label}", color))
+        if s.detail:
+            status_text.append(f"  ({s.detail})", style="dim")
         id_str = str(s.flow_id)[:8] + "…" if s.flow_id else "—"
         file_str = s.path.name if s.path else "—"
         table.add_row(
-            s.name,
+            Text(s.name),
             id_str,
-            file_str,
-            f"[{color}]{icon} {label}[/{color}]{detail_str}",
+            Text(file_str),
+            status_text,
         )
 
     console.print(table)
@@ -216,10 +219,33 @@ def status_command(
                 )
                 continue
 
-            name: str = raw.get("name", path.stem)
+            name = raw.get("name", path.stem)
             raw_id = raw.get("id")
+            try:
+                flow_id = UUID(str(raw_id)) if raw_id else None
+            except ValueError:
+                label = name if isinstance(name, str) else path.name
+                statuses.append(
+                    FlowStatus(name=label, status=_STATUS_ERROR, path=path, detail=f"invalid id: {raw_id!r}")
+                )
+                continue
 
-            if not raw_id:
+            if flow_id is not None:
+                seen_ids.add(flow_id)
+
+            if not isinstance(name, str):
+                statuses.append(
+                    FlowStatus(
+                        name=path.name,
+                        status=_STATUS_ERROR,
+                        path=path,
+                        flow_id=flow_id,
+                        detail="expected a string for flow name",
+                    )
+                )
+                continue
+
+            if flow_id is None:
                 statuses.append(
                     FlowStatus(
                         name=name,
@@ -229,16 +255,6 @@ def status_command(
                     )
                 )
                 continue
-
-            try:
-                flow_id = UUID(str(raw_id))
-            except ValueError:
-                statuses.append(
-                    FlowStatus(name=name, status=_STATUS_ERROR, path=path, detail=f"invalid id: {raw_id!r}")
-                )
-                continue
-
-            seen_ids.add(flow_id)
 
             try:
                 remote_flow = client.get_flow(flow_id)

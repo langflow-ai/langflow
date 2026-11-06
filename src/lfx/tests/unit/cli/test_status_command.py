@@ -400,6 +400,18 @@ class TestRenderTable:
         assert "MyFlow" in output
         assert "synced" in output.lower()
 
+    def test_flow_text_is_displayed_literally(self, tmp_path):
+        from lfx.cli.status import FlowStatus
+
+        row = FlowStatus(
+            name="draft [/bold]", status="error", path=tmp_path / "[local].json", detail="invalid id: '[/red]'"
+        )
+        output = self._capture_render([row], "staging [blue]")
+        assert "staging [blue]" in output
+        assert row.name in output
+        assert "[local].json" in output
+        assert row.detail in output
+
     def test_ahead_status_contains_label(self, tmp_path):
         from lfx.cli.status import FlowStatus
 
@@ -726,6 +738,25 @@ class TestStatusCommandErrors:
         client.get_flow.assert_called_once_with(_FLOW_ID)
         statuses = render.call_args.args[0]
         assert [(row.path, row.status) for row in statuses] == [(p_bad, "error"), (p_good, "synced")]
+
+    @pytest.mark.parametrize("name", [None, ["not a string"]], ids=["null", "array"])
+    def test_invalid_flow_name_still_displays_the_other_flows(self, tmp_path, capsys, name):
+        bad = _write_flow(tmp_path, "bad.json", {**_FLOW_DICT_2, "name": name})
+        good = _write_flow(tmp_path, "good.json")
+        remote_bad_id = _fake_remote_flow(_FLOW_ID_2, _FLOW_DICT_2)
+        client = _make_client_mock(list_flows_result=[remote_bad_id])
+
+        with pytest.raises(typer.Exit) as exc_info:
+            _run_status([str(bad), str(good)], sdk_triple=_make_sdk_triple(client), show_remote_only=True)
+
+        assert exc_info.value.exit_code == 1
+        client.get_flow.assert_called_once_with(_FLOW_ID)
+        output = capsys.readouterr().out
+        assert "bad.json" in output
+        assert "error" in output
+        assert "My Test Flow" in output
+        assert "synced" in output
+        assert "remote only" not in output
 
     def test_missing_file_in_flow_paths_gives_error_status(self, tmp_path):
         """A path that doesn't exist → error status → exits 1."""
