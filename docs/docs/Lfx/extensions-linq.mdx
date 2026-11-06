@@ -1,0 +1,47 @@
+---
+title: Linq community extension
+slug: /extensions-linq
+---
+
+[Linq](https://linqapp.com) provides messaging APIs for iMessage, RCS, and SMS. The community-maintained [`lfx-linq`](https://pypi.org/project/lfx-linq/) extension adds two messaging components to Langflow. It is maintained by Linq outside the Langflow repository and is not included in the default Langflow installation.
+
+## Install
+
+Install the extension into the same Python environment that runs Langflow, then restart Langflow:
+
+```bash
+uv pip install lfx-linq
+langflow run
+```
+
+The published 0.1.0 release supports Python 3.10–3.14 and Langflow/LFX 1.13.x. To confirm discovery, run:
+
+```bash
+lfx extension list --format json
+```
+
+The **Linq** bundle contains:
+
+| Component | Purpose |
+| --- | --- |
+| **Linq Send Message** | Send text to comma-separated E.164 phone numbers or email addresses. Linq selects the sending line. |
+| **Linq Reply in Chat** | Send text to an existing Linq chat ID. |
+
+## Configure and use
+
+Provide a Linq API key through the component's secret input or a Langflow global secret. A Linq account and an enabled messaging line are required; Linq service usage may incur charges.
+
+Configure recipients or the chat ID in your flow. Both components expose the message text in tool mode and return the Linq response as a `Data` object. Use a stable **Idempotency Key** for each logical message when retrying sends. Reuse the same key for retries of that message, and use a different key for each new message.
+
+## Receive and reply
+
+The extension's [gateway example](https://github.com/linq-team/linq-examples/tree/main/langflow/examples) receives signed Linq webhooks, runs a saved Langflow text-generation flow, and replies to the verified originating chat. The gateway is a separate service, not a built-in Langflow trigger component. Its README explains signing-secret configuration, duplicate-event handling, deployment limits, and retention considerations.
+
+Message content is sent to Linq and can also pass through Langflow and any model provider configured in the flow. Review each service's retention settings before using sensitive data.
+
+## Resources
+
+- [Package and version history](https://pypi.org/project/lfx-linq/)
+- [Source, setup, tests, and gateway instructions](https://github.com/linq-team/linq-examples/tree/main/langflow)
+- [Report an issue](https://github.com/linq-team/linq-examples/issues)
+- [Linq API documentation](https://docs.linqapp.com/)
