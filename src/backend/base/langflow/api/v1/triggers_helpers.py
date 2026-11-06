@@ -50,8 +50,9 @@ from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service
 from langflow.services.triggers.capabilities import NO_ACCESS, TriggerCaller, trigger_capabilities
 from langflow.services.triggers.connection_recovery import as_utc, connection_failure
-from langflow.services.triggers.error_codes import last_error_code
+from langflow.services.triggers.error_codes import CodedTriggerError, last_error_code
 from langflow.services.triggers.ownership import is_owned_by
+from langflow.services.triggers.reconciliation import validate_single_trigger_per_flow
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -140,6 +141,7 @@ async def present(
         if connection_ids
         else {}
     )
+    resume_blocks = await _canvas_resume_blocks(session, rows)
     callers: dict[UUID, TriggerCaller] = {}
     responses: list[TriggerRead] = []
     for row, flow, owner_username in rows:
@@ -154,7 +156,12 @@ async def present(
             if row.state == TriggerState.NEEDS_RECONNECT.value
             else None
         )
-        caps = trigger_capabilities(row, caller=replace(caller, owns_connection=owns), recovery_reason=recovery_reason)
+        caps = trigger_capabilities(
+            row,
+            caller=replace(caller, owns_connection=owns),
+            recovery_reason=recovery_reason,
+            resume_block=resume_blocks.get(flow.id),
+        )
         responses.append(
             TriggerRead.model_validate(row).model_copy(
                 update={
@@ -168,6 +175,25 @@ async def present(
             )
         )
     return responses
+
+
+async def _canvas_resume_blocks(
+    session: AsyncSession, rows: list[tuple[Trigger, Flow, str | None]]
+) -> dict[UUID, TriggerReason]:
+    """Check the displayed resume candidates in one query without loading every flow."""
+    flow_ids = {
+        flow.id for row, flow, _ in rows if row.state not in {TriggerState.ACTIVE.value, TriggerState.DEAD.value}
+    }
+    if not flow_ids:
+        return {}
+    blocks: dict[UUID, TriggerReason] = {}
+    canvases = await session.exec(select(Flow.id, col(Flow.data)["nodes"]).where(col(Flow.id).in_(flow_ids)))
+    for flow_id, nodes in canvases:
+        try:
+            validate_single_trigger_per_flow({"nodes": nodes})
+        except CodedTriggerError:
+            blocks[flow_id] = TriggerReason.MULTIPLE_TRIGGERS
+    return blocks
 
 
 async def _connection_recovery_reason(
