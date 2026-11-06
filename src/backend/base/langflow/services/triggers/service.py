@@ -43,6 +43,7 @@ from langflow.services.triggers.reconciliation import (
     apply_config_verdict,
     sync_display_name,
     trigger_node_on_canvas,
+    validate_single_trigger_per_flow,
 )
 from langflow.services.triggers.schedule_config import schedule_timing_changed, validate_schedule_config
 
@@ -188,6 +189,8 @@ class TriggerService(Service):
         if payload.kind in canvas_only_kinds():
             msg = f"A {payload.kind!r} trigger is created by adding its component to the flow, not through this API."
             raise ValueError(msg)
+        if payload.state is TriggerState.ACTIVE:
+            await self._validate_saved_canvas(session, payload.flow_id)
         _reject_mechanism(payload.config)
         await self._validate_flow_version(session, flow_id=payload.flow_id, flow_version_id=payload.flow_version_id)
         if payload.connection_id is not None:
@@ -237,6 +240,8 @@ class TriggerService(Service):
             await self._validate_flow_version(session, flow_id=row.flow_id, flow_version_id=payload.flow_version_id)
         if "config" in changes and row.kind == "schedule":
             changes["config"] = validate_schedule_config(changes["config"])
+            if row.state == TriggerState.ERROR.value:
+                await self._validate_saved_canvas(session, row.flow_id)
             if schedule_timing_changed(row.config or {}, changes["config"]):
                 row.next_fire_at = None
             # A schedule that validates clears the error a broken one left.
@@ -271,12 +276,13 @@ class TriggerService(Service):
         if row.state not in _ENABLEABLE_STATES:
             msg = f"Trigger in state {row.state!r} cannot be enabled."
             raise ValueError(msg)
+        flow = await self._validate_saved_canvas(session, row.flow_id)
         # Arming a trigger whose node is gone runs a flow with no trigger in it,
         # so every event fails. Removing a node pauses its trigger, so only a
         # paused one can have lost it; ask its saved canvas, reloaded under the
         # lock, too: a row paused before the removal reason existed lacks it.
         if row.last_error == NODE_REMOVED_ERROR or (
-            row.state == TriggerState.PAUSED.value and not await self._node_on_saved_canvas(session, row)
+            row.state == TriggerState.PAUSED.value and not trigger_node_on_canvas(row, flow.data if flow else None)
         ):
             msg = "The trigger node was removed from the flow. Add it back to resume the trigger."
             raise CodedTriggerError(TriggerErrorCode.NODE_REMOVED, msg)
@@ -399,9 +405,10 @@ class TriggerService(Service):
         return await self.set_state(session, row=row, state=TriggerState.PAUSED)
 
     @staticmethod
-    async def _node_on_saved_canvas(session: AsyncSession, row: Trigger) -> bool:
-        flow = await session.get(Flow, row.flow_id, populate_existing=True)
-        return trigger_node_on_canvas(row, flow.data if flow is not None else None)
+    async def _validate_saved_canvas(session: AsyncSession, flow_id: UUID) -> Flow | None:
+        flow = await session.get(Flow, flow_id, populate_existing=True)
+        validate_single_trigger_per_flow(flow.data if flow is not None else None)
+        return flow
 
     @staticmethod
     async def _lock_for_mutation(session: AsyncSession, *, row: Trigger) -> Trigger:

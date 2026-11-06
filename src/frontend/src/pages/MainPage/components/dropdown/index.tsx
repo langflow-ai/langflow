@@ -5,6 +5,7 @@ import { usePermissions } from "@/contexts/permissionsContext";
 import CustomFlowShareAction from "@/customization/components/custom-flow-share-action";
 import useAlertStore from "@/stores/alertStore";
 import type { FlowType } from "@/types/flow";
+import { extractApiErrorMessages } from "@/utils/apiError";
 import useDuplicateFlow from "../../hooks/use-handle-duplicate";
 import useSelectOptionsChange from "../../hooks/use-select-options-change";
 
@@ -32,12 +33,18 @@ const DropdownComponent = ({
   const { handleDuplicate } = useDuplicateFlow({ flow: flowData });
 
   const duplicateFlow = () => {
-    handleDuplicate().then(() =>
-      setSuccessData({
-        title: t("flow.duplicatedSuccess", {
-          type: flowData.is_component ? "Component" : "Flow",
+    void handleDuplicate().then(
+      () =>
+        setSuccessData({
+          title: t("flow.duplicatedSuccess", {
+            type: flowData.is_component ? "Component" : "Flow",
+          }),
         }),
-      }),
+      (error: unknown) =>
+        setErrorData({
+          title: t("multiEdit.dialog.duplicateFailed"),
+          list: extractApiErrorMessages(error),
+        }),
     );
   };
 
