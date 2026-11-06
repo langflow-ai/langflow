@@ -293,3 +293,36 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         # Assert - Should use default_value when key is missing
         assert isinstance(result, Message)
         assert result.text == "Text: "
+
+    def test_parse_dataframe_preserves_integer_precision(self, component_class):
+        # Arrange: mixed int64 + float64 columns; iterrows() upcasts the row
+        # to float and loses precision on integers > 2**53.
+        data_frame = DataFrame({"doc id": [2**53, 2**53 + 1], "_score": [0.5, 0.25]})
+        component = component_class(
+            input_data=data_frame,
+            pattern="{doc id}: {_score:.2f}",
+            sep=" | ",
+            mode="Parser",
+        )
+
+        # Act
+        result = component.parse_combined_text()
+
+        # Assert
+        assert result.text == "9007199254740992: 0.50 | 9007199254740993: 0.25"
+
+    def test_parse_dataframe_integer_format_specifier(self, component_class):
+        # Arrange: {doc id:d} fails when the row was upcast to float.
+        data_frame = DataFrame({"doc id": [2**53, 2**53 + 1], "_score": [0.5, 0.25]})
+        component = component_class(
+            input_data=data_frame,
+            pattern="{doc id:d}: {_score:.2f}",
+            sep=" | ",
+            mode="Parser",
+        )
+
+        # Act
+        result = component.parse_combined_text()
+
+        # Assert
+        assert result.text == "9007199254740992: 0.50 | 9007199254740993: 0.25"
