@@ -92,3 +92,11 @@ async def test_reports_the_run_outcome_as_success_flag(tmp_path, success):
 
     assert properties["successFlag"] is success
     assert "runSuccess" not in properties
+
+
+@pytest.mark.asyncio
+async def test_reports_version_and_os_on_the_version_event(tmp_path):
+    properties = await _sent_properties(tmp_path, VERSION_PAYLOAD.model_copy(), None)
+
+    assert properties["productVersion"] == get_version_info()["version"]
+    assert properties["osName"] == platform.system().lower()

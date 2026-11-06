@@ -123,8 +123,8 @@ class TelemetryService(BaseTelemetryService):
             return
         try:
             properties = get_safe_payload_properties(payload)
-            if not isinstance(payload, VersionPayload):
-                properties.update(self._common_fields)
+            for key, value in self._common_fields.items():
+                properties.setdefault(key, value)
             properties.update(IBM_PRODUCT_PROPERTIES)
             properties["productPlanName"] = self.edition
             properties["instanceId"] = self.anonymous_id

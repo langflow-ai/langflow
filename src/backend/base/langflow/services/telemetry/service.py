@@ -124,9 +124,8 @@ class TelemetryService(Service):
             payload_dict = get_safe_payload_properties(payload)
             event_anonymous_id = str(uuid.uuid4()) if isinstance(payload, EmailPayload) else self.anonymous_id
 
-            # Add common fields to all payloads except VersionPayload
-            if not isinstance(payload, VersionPayload):
-                payload_dict.update(self.common_telemetry_fields)
+            for key, value in self.common_telemetry_fields.items():
+                payload_dict.setdefault(key, value)
             payload_dict.update(IBM_PRODUCT_PROPERTIES)
             payload_dict["productPlanName"] = self.edition
             payload_dict["instanceId"] = event_anonymous_id

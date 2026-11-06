@@ -106,6 +106,22 @@ async def test_reports_the_version_and_os_with_accepted_names() -> None:
     assert "os" not in properties
 
 
+@pytest.mark.asyncio
+async def test_reports_version_and_os_on_the_version_event() -> None:
+    service = TelemetryService(base_url="https://api.segment.test/v1/track", write_key="test-key", do_not_track=False)
+    service.anonymous_id = "test-installation"
+    service._client = AsyncMock()
+    service._client.post.return_value.status_code = 200
+
+    await service.log_package_version()
+    await service.send_telemetry_data(*await service._queue.get())
+
+    properties = service._client.post.await_args.kwargs["json"]["properties"]
+    assert properties["subProductTitle"] == "Langflow MCP"
+    assert properties["productVersion"] == service._get_version()
+    assert properties["osName"] == platform.system().lower()
+
+
 @pytest.mark.parametrize(
     ("path", "expected"),
     [
