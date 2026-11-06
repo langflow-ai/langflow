@@ -43,7 +43,11 @@ if [[ "$pagination" == "--all-pages" && ( -n "${DOCKERHUB_USERNAME:-}" || -n "${
   headers+=(--header "Authorization: Bearer $access_token")
 fi
 
-url="https://registry.hub.docker.com/v2/repositories/${repository}/tags?page_size=100"
+# Organization access tokens require the namespace-scoped Docker Hub API.
+namespace="${repository%%/*}"
+repository_name="${repository#*/}"
+tag_endpoint="https://hub.docker.com/v2/namespaces/${namespace}/repositories/${repository_name}/tags"
+url="${tag_endpoint}?page_size=100"
 while [[ -n "$url" ]]; do
   http_status="$({
     curl \
@@ -80,7 +84,7 @@ while [[ -n "$url" ]]; do
     exit 1
   fi
   url="$(jq -r '.next // empty' "$response_file")"
-  if [[ -n "$url" && "$url" != "https://registry.hub.docker.com/v2/repositories/${repository}/tags?"* ]]; then
+  if [[ -n "$url" && "$url" != "${tag_endpoint}?"* ]]; then
     echo "Docker Hub returned an unexpected next page for ${repository}" >&2
     exit 1
   fi

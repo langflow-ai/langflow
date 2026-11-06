@@ -2,6 +2,7 @@ import re
 
 import pandas as pd
 import pytest
+from lfx.components.processing.converter import TypeConverterComponent
 from lfx.components.processing.parser import ParserComponent
 from lfx.schema import Data, DataFrame
 from lfx.schema.message import Message
@@ -165,6 +166,19 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         assert "| Name   |   Age |" in result.text
         assert "| John   |    30 |" in result.text
         assert "| Jane   |    25 |" in result.text
+
+    def test_stringify_table_from_json_preserves_integer_ids(self, component_class):
+        converter = TypeConverterComponent(
+            input_data=Message(text='[{"id": 1234567, "score": 0.5}, {"id": 1234568, "score": 0.25}]'),
+            output_type="Table",
+            auto_parse=True,
+        )
+        component = component_class(input_data=converter.convert_to_dataframe(), mode="Stringify")
+
+        result = component.parse_combined_text()
+
+        rows = [[cell.strip() for cell in line.strip("|").split("|")] for line in result.text.splitlines()[2:]]
+        assert rows == [["1234567", "0.5"], ["1234568", "0.25"]]
 
     def test_stringify_data_object(self, component_class):
         # Arrange
