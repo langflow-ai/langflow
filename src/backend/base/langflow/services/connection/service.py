@@ -38,6 +38,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import and_, col, false, or_, select
 
 from langflow.services.auth import utils as auth_utils
+from langflow.services.auth.context import current_auth_is_restricted_api_key
 from langflow.services.authorization import filter_visible_resources, visible_scope_prefilter
 from langflow.services.authorization.listing import (
     apply_owned_or_visible_scope_prefilter,
@@ -48,6 +49,7 @@ from langflow.services.connection.oauth.config import OAuthError, deployment_con
 from langflow.services.connection.oauth.locking import lock_connection
 from langflow.services.connection.policy import provider_has_usable_action
 from langflow.services.connection.slack_credentials import (
+    APP_TOKEN_SCOPE,
     PROVIDER_SLACK,
     ManualCredentialError,
     check_slack_web_token,
@@ -67,6 +69,7 @@ from langflow.services.database.models.connection import (
     ExecutingIdentityDescriptor,
     PersistedConnectionStatus,
 )
+from langflow.services.database.models.connection.oauth import ConnectionOAuth
 from langflow.services.database.models.connection.schemas import ConnectionRevokeRead, ConnectionTokenRenewal
 from langflow.services.deps import get_authorization_service, get_settings_service, session_scope
 
@@ -425,7 +428,8 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         user: User | UserRead,
         provider_ids: frozenset[str] | None,
     ) -> list[Connection]:
-        is_superuser = bool(getattr(user, "is_superuser", False))
+        restricted_key = current_auth_is_restricted_api_key()
+        is_superuser = bool(getattr(user, "is_superuser", False)) and not restricted_key
         owner_clause = or_(
             Connection.owner_id == user.id,
             Connection.ownership_mode == ConnectionOwnershipMode.INSTANCE.value,
@@ -449,7 +453,7 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
                 stmt = stmt.where(owner_clause)
         stmt = stmt.order_by(col(Connection.display_name), col(Connection.id))
         rows = list((await session.exec(stmt)).all())
-        if not is_superuser and cross_user:
+        if not is_superuser and (cross_user or restricted_key):
             rows = await filter_visible_resources(
                 user,
                 resource_type="connection",
@@ -505,7 +509,7 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         from langflow.services.triggers.providers.registry import get_provider
 
         provider = get_provider(row.provider_key)
-        if provider is None or provider.validate_manual_credential is None:
+        if row.provider_key != PROVIDER_SLACK and (provider is None or provider.validate_manual_credential is None):
             msg = "This integration does not support manual token renewal."
             raise ManualCredentialError(msg)
         await enforce_integration_policy_for_provider(row.provider_key, user_id=user.id, require_usable_action=True)
@@ -520,11 +524,18 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
                 credentials=payload.credentials,
             )
         )
+        if is_app_token_connection(row) and APP_TOKEN_SCOPE not in validated.granted_scopes:
+            msg = "This connection holds a Slack app-level token. Renew it with an app-level token (xapp-)."
+            raise ManualCredentialError(msg)
         raw_credentials = _credential_payload(validated)
         if raw_credentials is None:
             msg = "The integration credential validator returned no token."
             raise ManualCredentialError(msg)
         encrypted_payload = _encrypt_credential_payload(raw_credentials)
+        # Manual renewal supersedes consent that may still be open in a browser.
+        binding = await session.get(ConnectionOAuth, row.id)
+        if binding is not None:
+            await session.delete(binding)
         secret = await session.get(ConnectionSecret, row.id)
         if secret is None:
             secret = ConnectionSecret(connection_id=row.id, encrypted_payload=encrypted_payload)
@@ -804,7 +815,7 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         authz = get_authorization_service()
         if not settings.auth_settings.AUTHZ_ENABLED or not await authz.supports_cross_user_fetch():
             return None
-        context = {"execution_principal_kind": principal.kind}
+        context = {"execution_principal_kind": principal.kind, "execution_principal": principal}
         stmt = select(Connection).where(
             Connection.provider_key == request.ref.provider,
             Connection.name == request.ref.name,

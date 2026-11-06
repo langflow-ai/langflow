@@ -1,5 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import { type ReactNode } from "react";
+import {
+  acceptedChoice,
+  transportStopped,
+} from "@/components/core/decisionInspection/__tests__/decision-fixtures";
 import { SpanDetail } from "../SpanDetail";
 import { buildSpan } from "./spanTestUtils";
 
@@ -184,5 +188,66 @@ describe("SpanDetail", () => {
     );
 
     expect(screen.getByText("error")).toBeInTheDocument();
+  });
+
+  describe("decision evidence", () => {
+    const routerOutputs = {
+      category_5_result: { text: "I was charged twice" },
+      logs: [{ name: "Decision evidence", message: acceptedChoice }],
+    };
+
+    it("shows the Smart Router's decision above its payloads", () => {
+      render(
+        <SpanDetail
+          span={buildSpan({ name: "Smart Router", outputs: routerOutputs })}
+        />,
+      );
+
+      const panel = screen.getByTestId("decision-inspection");
+      expect(panel).toHaveTextContent("Branch: Billing");
+      const input = screen.getByText("Input");
+      expect(
+        panel.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it("shows the diagnostics a failed decision recorded", () => {
+      render(
+        <SpanDetail
+          span={buildSpan({
+            status: "error",
+            error: "Langflow couldn't reach OpenAI.",
+            outputs: {
+              logs: [{ name: "Decision evidence", message: transportStopped }],
+            },
+          })}
+        />,
+      );
+
+      expect(screen.getByTestId("decision-failure")).toHaveTextContent(
+        "Connection failed",
+      );
+    });
+
+    it("shows no decision on the run summary, which aggregates every component", () => {
+      render(
+        <SpanDetail
+          span={buildSpan({ outputs: routerOutputs })}
+          isRunSummary
+        />,
+      );
+
+      expect(
+        screen.queryByTestId("decision-inspection"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("shows no decision for a span without evidence", () => {
+      render(<SpanDetail span={buildSpan({ outputs: { text: "hello" } })} />);
+
+      expect(
+        screen.queryByTestId("decision-inspection"),
+      ).not.toBeInTheDocument();
+    });
   });
 });
