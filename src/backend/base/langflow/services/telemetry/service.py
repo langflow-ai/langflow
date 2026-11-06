@@ -97,7 +97,7 @@ class TelemetryService(Service):
         version_info = get_version_info()
         self.common_telemetry_fields = {
             "productVersion": version_info["version"],
-            "os": platform.system().lower(),
+            "osName": platform.system().lower(),
         }
 
     async def telemetry_worker(self) -> None:

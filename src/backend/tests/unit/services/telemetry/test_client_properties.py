@@ -1,6 +1,7 @@
 """Client properties use names the IBM tracking plan accepts; the plan drops unknown ones."""
 
 import json
+import platform
 from types import SimpleNamespace
 
 import httpx
@@ -74,3 +75,11 @@ async def test_reports_the_langflow_version_as_product_version(tmp_path):
 
     assert properties["productVersion"] == get_version_info()["version"]
     assert "langflow_version" not in properties
+
+
+@pytest.mark.asyncio
+async def test_reports_the_operating_system_as_os_name(tmp_path):
+    properties = await _sent_properties(tmp_path, RunPayload(run_seconds=1, run_success=True), "run")
+
+    assert properties["osName"] == platform.system().lower()
+    assert "os" not in properties

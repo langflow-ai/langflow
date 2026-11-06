@@ -94,7 +94,7 @@ class TestExceptionTelemetry:
         telemetry_service.edition = "opensource"
         telemetry_service.common_telemetry_fields = {
             "productVersion": "1.0.0",
-            "os": "linux",
+            "osName": "linux",
         }
 
         # Mock HTTP client
@@ -134,7 +134,7 @@ class TestExceptionTelemetry:
         assert body["properties"]["stackTraceHash"] == "abc123"
         assert body["properties"]["subProductTitle"] == "oss"
         assert body["properties"]["productVersion"] == "1.0.0"
-        assert body["properties"]["os"] == "linux"
+        assert body["properties"]["osName"] == "linux"
         assert body["properties"]["UT30"] == "30AS5"
         assert body["properties"]["productCode"] == "WW3151"
         assert body["properties"]["productCodeType"] == "WWPC"
@@ -260,7 +260,7 @@ class TestExceptionTelemetry:
         telemetry_service.edition = "opensource"
         telemetry_service.common_telemetry_fields = {
             "productVersion": "1.0.0",
-            "os": "linux",
+            "osName": "linux",
         }
 
         # Mock HTTP client
@@ -334,7 +334,7 @@ class TestExceptionTelemetry:
         telemetry_service.edition = "opensource"
         telemetry_service.common_telemetry_fields = {
             "productVersion": "1.0.0",
-            "os": "linux",
+            "osName": "linux",
         }
 
         # Create payload with potentially sensitive data

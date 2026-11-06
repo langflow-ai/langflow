@@ -70,7 +70,7 @@ class TelemetryService(BaseTelemetryService):
         self._common_fields = {
             "productVersion": self._get_version(),
             "subProductTitle": SUB_PRODUCT_MCP,
-            "os": platform.system().lower(),
+            "osName": platform.system().lower(),
         }
         self.set_ready()
 

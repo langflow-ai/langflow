@@ -1,3 +1,4 @@
+import platform
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -90,7 +91,7 @@ async def test_identifies_mcp_events_with_a_sub_product_title() -> None:
 
 
 @pytest.mark.asyncio
-async def test_reports_the_version_as_product_version() -> None:
+async def test_reports_the_version_and_os_with_accepted_names() -> None:
     service = TelemetryService(base_url="https://api.segment.test/v1/track", write_key="test-key", do_not_track=False)
     service.anonymous_id = "test-installation"
     service._client = AsyncMock()
@@ -101,6 +102,8 @@ async def test_reports_the_version_as_product_version() -> None:
     properties = service._client.post.await_args.kwargs["json"]["properties"]
     assert properties["productVersion"] == service._get_version()
     assert "langflow_version" not in properties
+    assert properties["osName"] == platform.system().lower()
+    assert "os" not in properties
 
 
 @pytest.mark.parametrize(

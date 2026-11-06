@@ -31,7 +31,7 @@ class TestExceptionTelemetryIntegration:
         telemetry_service.edition = "opensource"
         telemetry_service.common_telemetry_fields = {
             "productVersion": "1.0.0",
-            "os": "darwin",
+            "osName": "darwin",
         }
 
         # Mock successful response
@@ -92,7 +92,7 @@ class TestExceptionTelemetryIntegration:
         telemetry_service.edition = "opensource"
         telemetry_service.common_telemetry_fields = {
             "productVersion": "1.0.0",
-            "os": "darwin",
+            "osName": "darwin",
         }
 
         # Mock the async queue and HTTP client
