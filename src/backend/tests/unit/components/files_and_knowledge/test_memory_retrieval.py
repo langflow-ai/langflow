@@ -990,3 +990,20 @@ async def test_toolkit_uses_current_selection_with_saved_tool_metadata():
     for tool in tools:
         assert "current-base" in tool.description
         assert "old-base" not in tool.description
+
+
+async def test_toolkit_preserves_custom_description_with_saved_metadata():
+    """A user-authored tool description remains an intentional override."""
+    from lfx.schema.dataframe import DataFrame
+
+    component = _make_component(flow_id=uuid.uuid4(), session_id="session", selected="old-base")
+    component.set(tool_mode=True)
+    old_tools = await component._get_tools()
+    rows = [component._build_tool_data(tool) for tool in old_tools]
+    for row in rows:
+        row["description"] = "Look up customer preferences."
+    component.tools_metadata = DataFrame(rows)
+    component.memory_base = "current-base"
+    tools = await component.to_toolkit()
+    assert tools
+    assert all(tool.description == "Look up customer preferences." for tool in tools)
