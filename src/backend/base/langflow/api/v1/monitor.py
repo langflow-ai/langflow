@@ -529,10 +529,8 @@ async def update_session_id(
         session.add_all(messages)
 
         await session.flush()
-        message_responses = []
-        for message in messages:
-            await session.refresh(message)
-            message_responses.append(MessageResponse.model_validate(message, from_attributes=True))
+        # MessageTable has no update-generated fields; the flushed objects are current.
+        message_responses = [MessageResponse.model_validate(message, from_attributes=True) for message in messages]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -818,10 +816,8 @@ async def rename_shared_session(
         session.add_all(messages)
         await session.flush()
 
-        result = []
-        for message in messages:
-            await session.refresh(message)
-            result.append(MessageResponse.model_validate(message, from_attributes=True))
+        # MessageTable has no update-generated fields; the flushed objects are current.
+        result = [MessageResponse.model_validate(message, from_attributes=True) for message in messages]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
