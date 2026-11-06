@@ -123,6 +123,7 @@ async def build_and_cache_graph_from_data(
     chat_service: ChatService,
     graph_data: dict,
     *,
+    user_id: str | None = None,
     execution_principal: ExecutionPrincipal | None = None,
 ):  # -> Graph | Any:
     """Build and cache the graph.
@@ -135,6 +136,7 @@ async def build_and_cache_graph_from_data(
     graph = Graph.from_payload(
         graph_data,
         str_flow_id,
+        user_id=user_id,
         authorized_legacy_flow_ids=await get_authorized_legacy_flow_ids(flow_id),
     )
     if execution_principal is not None:
