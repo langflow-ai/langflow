@@ -251,3 +251,14 @@ describe("FlowPageSlidingContainerContent — session list mounting", () => {
     expect(screen.queryByTestId("chat-sidebar")).not.toBeInTheDocument();
   });
 });
+
+describe("FlowPageSlidingContainerContent — mobile safe area", () => {
+  it("keeps the chat input above the Android navigation bar", () => {
+    renderPanel();
+
+    const footer = screen.getByTestId("chat-input-footer");
+    expect(footer.className).toContain(
+      "pb-[calc(1rem+env(safe-area-inset-bottom))]",
+    );
+  });
+});
