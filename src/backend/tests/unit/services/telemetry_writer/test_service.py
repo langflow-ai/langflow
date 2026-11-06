@@ -10,7 +10,10 @@ test wires up the writer's internals directly against the test
 from __future__ import annotations
 
 import asyncio
+import os
 import shutil
+import subprocess
+import sys
 import tempfile
 import warnings
 from pathlib import Path
@@ -479,6 +482,26 @@ def _find_dead_pid(start: int = 99_999, max_checks: int = 50_000) -> int:
         pid += 1
     pytest.fail("Unable to find an unused PID for orphan outbox setup")
     return 0  # unreachable, for type-checkers
+
+
+def test_pid_alive_reports_exited_process_as_dead() -> None:
+    """The PID of a process that has exited must read as dead instead of raising.
+
+    Outbox directories are named after the PID of the run that created them, so on
+    every restart ``start()`` checks the PID of an earlier, finished run. On Windows
+    ``os.kill(pid, 0)`` raised ``OSError`` for such a PID, which aborted ``start()``.
+    """
+    from langflow.services.telemetry_writer.service import _pid_alive
+
+    finished = subprocess.run(  # noqa: S603
+        [sys.executable, "-c", "import os; print(os.getpid())"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    assert _pid_alive(int(finished.stdout)) is False
+    assert _pid_alive(os.getpid()) is True
 
 
 def test_adopt_orphan_outboxes(tmp_path: Path) -> None:
