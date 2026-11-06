@@ -50,6 +50,16 @@ def _validate_endpoint_name_value(v: str | None) -> str | None:
     return v
 
 
+def _normalize_flow_data_for_write(value: dict | None) -> dict | None:
+    if value is None:
+        return None
+    from langflow.services.triggers.reconciliation import validate_single_trigger_per_flow
+
+    normalized = normalize_code_for_import(value)
+    validate_single_trigger_per_flow(normalized)
+    return normalized
+
+
 def _serialize_flow_datetime(value):
     """Serialize a flow timestamp to whole-second ISO-8601 with an explicit offset.
 
@@ -300,7 +310,7 @@ class FlowCreate(FlowBase):
     @field_validator("data")
     @classmethod
     def normalize_code(cls, value: dict | None) -> dict | None:
-        return normalize_code_for_import(value) if value is not None else value
+        return _normalize_flow_data_for_write(value)
 
 
 class FlowRead(FlowBase):
@@ -370,7 +380,7 @@ class FlowUpdate(SQLModel):
     @field_validator("data")
     @classmethod
     def normalize_code(cls, value: dict | None) -> dict | None:
-        return normalize_code_for_import(value) if value is not None else value
+        return _normalize_flow_data_for_write(value)
 
     @field_validator("endpoint_name")
     @classmethod

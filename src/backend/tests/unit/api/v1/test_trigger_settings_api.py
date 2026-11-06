@@ -979,3 +979,47 @@ async def test_an_error_without_a_code_is_shown_as_written(client: AsyncClient) 
     shown = (await client.get(f"api/v1/triggers/{trigger_id}", headers=headers)).json()
 
     assert (shown["last_error"], shown["last_error_code"]) == ("Provider returned 502", None)
+
+
+@pytest.mark.parametrize("view", ["detail", "flow", "mine", "all"])
+async def test_legacy_canvas_explains_blocked_resume_before_the_action(
+    client: AsyncClient, logged_in_headers: dict[str, str], active_user, view: str
+) -> None:
+    flow_id = await _flow(active_user.id)
+    nodes = [
+        {"id": "schedule-a", "data": {"type": "ScheduleTrigger"}},
+        {"id": "schedule-b", "data": {"type": "ScheduleTrigger"}},
+    ]
+    async with session_scope() as session:
+        flow = await session.get(Flow, flow_id)
+        flow.data = {"nodes": nodes, "edges": []}
+        session.add(flow)
+    trigger_id = await _trigger(flow_id, active_user.id, state="pending", node_id="schedule-a")
+    url = {
+        "detail": f"api/v1/triggers/{trigger_id}",
+        "flow": f"api/v1/triggers?flow_id={flow_id}",
+        "mine": "api/v1/triggers",
+        "all": "api/v1/triggers?scope=all",
+    }[view]
+    headers = logged_in_headers
+    if view == "all":
+        _, admin_name = await _user(superuser=True)
+        headers = await _login(client, admin_name)
+    response = await client.get(url, headers=headers)
+    assert response.status_code == 200, response.text
+    shown = response.json() if view == "detail" else next(r for r in response.json() if r["id"] == str(trigger_id))
+    assert "resume" not in shown["allowed_actions"]
+    assert shown["blocked_actions"]["resume"] == "multiple_triggers"
+
+    refused = await client.post(f"api/v1/triggers/{trigger_id}/enable", headers=logged_in_headers)
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["detail"] == {
+        "code": "multiple_triggers",
+        "message": "A flow can have only one trigger. Remove the extra triggers and try again.",
+    }
+    async with session_scope() as session:
+        flow = await session.get(Flow, flow_id)
+        flow.data = {"nodes": nodes[:1], "edges": []}
+        session.add(flow)
+    repaired = await client.get(f"api/v1/triggers/{trigger_id}", headers=logged_in_headers)
+    assert "resume" in repaired.json()["allowed_actions"]

@@ -92,6 +92,7 @@ class TriggerReason(str, Enum):
     EXPIRED = "expired"
     DEAD = "dead"
     # Caller and applicability reasons; only ever values in ``blocked_actions``.
+    MULTIPLE_TRIGGERS = "multiple_triggers"
     INSUFFICIENT_PERMISSION = "insufficient_permission"
     NOT_CONNECTION_OWNER = "not_connection_owner"
     RECONNECT_NOT_NEEDED = "reconnect_not_needed"

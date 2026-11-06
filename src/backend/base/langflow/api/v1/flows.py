@@ -52,6 +52,7 @@ from langflow.api.v1.flow_conflict import (
     ensure_version_precondition,
     parse_if_match,
 )
+from langflow.api.v1.flow_validation import flow_validation_error
 from langflow.api.v1.flows_helpers import (
     _build_flows_download_response,
     _canonicalize_flow_destination,
@@ -1289,7 +1290,7 @@ async def upload_file(
     except HTTPException:
         raise
     except ValidationError as e:
-        raise HTTPException(status_code=422, detail=str(e)) from e
+        raise flow_validation_error(e) from e
 
     # TODO: Full-version import is planned as a follow-up feature.
     # When implemented, extract raw flow dicts here to read embedded "version"

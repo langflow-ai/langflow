@@ -780,13 +780,22 @@ class TestMessageBaseFromMessageAgentInit:
 class TestMessageBaseFromMessageFilePaths:
     """Tests for the file path handling in MessageBase.from_message."""
 
-    def test_from_message_with_session_id_in_file_path(self):
-        """Test that file paths containing session_id are correctly processed."""
+    @pytest.mark.parametrize(
+        "file_path_template",
+        [
+            "/uploads/{session_id}/image.png",
+            r"C:\uploads\{session_id}\image.png",
+            r"C:\uploads/{session_id}\image.png",
+        ],
+        ids=["posix", "windows", "mixed"],
+    )
+    def test_from_message_with_session_id_in_file_path(self, file_path_template):
+        """Keep legacy image paths portable across filesystem separators."""
         from langflow.services.database.models.message.model import MessageTable
         from lfx.schema.image import Image
 
         session_id = "test-session-123"
-        file_path = f"/uploads/{session_id}/image.png"
+        file_path = file_path_template.format(session_id=session_id)
         img = Image(path=file_path, url=f"http://example.com{file_path}")
 
         message = Message(
@@ -802,13 +811,22 @@ class TestMessageBaseFromMessageFilePaths:
         assert len(result.files) == 1
         assert result.files[0] == f"{session_id}/image.png"
 
-    def test_from_message_preserves_typed_flow_namespace(self):
+    @pytest.mark.parametrize(
+        "file_path_template",
+        [
+            "/uploads/flow-{session_id}/image.png",
+            r"C:\uploads\flow-{session_id}\image.png",
+            r"C:\uploads/flow-{session_id}\image.png",
+        ],
+        ids=["posix", "windows", "mixed"],
+    )
+    def test_from_message_preserves_typed_flow_namespace(self, file_path_template):
         """Keep the typed flow prefix when normalizing an uploaded image path."""
         from langflow.services.database.models.message.model import MessageTable
         from lfx.schema.image import Image
 
         session_id = "785c90a9-37bd-4aae-b873-447772a33893"
-        file_path = f"/uploads/flow-{session_id}/image.png"
+        file_path = file_path_template.format(session_id=session_id)
         message = Message(
             text="Test message",
             sender="User",
