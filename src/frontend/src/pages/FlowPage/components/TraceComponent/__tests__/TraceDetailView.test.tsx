@@ -5,6 +5,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import { acceptedChoice } from "@/components/core/decisionInspection/__tests__/decision-fixtures";
 import useFlowStore from "@/stores/flowStore";
 import { useHitlStore } from "@/stores/hitlStore";
 import { TraceDetailView } from "../TraceDetailView";
@@ -130,6 +131,54 @@ describe("TraceDetailView", () => {
       expect(codeBlocks[0]).toHaveTextContent('"input_value": "hello"');
       expect(codeBlocks[1]).toHaveTextContent('"result": "world"');
     });
+  });
+
+  it("shows a decision on the Smart Router span but not on the run summary", async () => {
+    const routerOutputs = {
+      logs: [{ name: "Decision evidence", message: acceptedChoice }],
+    };
+    mockTrace = {
+      id: "trace-1",
+      name: "My Trace",
+      status: "ok",
+      startTime: "2024-01-01T00:00:00Z",
+      endTime: "2024-01-01T00:00:01Z",
+      totalLatencyMs: 1234,
+      totalTokens: 0,
+      totalCost: 0,
+      flowId: "flow-1",
+      sessionId: "session-1",
+      input: { input_value: "hello" },
+      // The summary aggregates the router's outputs, evidence included.
+      output: { "Smart Router": routerOutputs },
+      spans: [
+        {
+          id: "span-router",
+          name: "Smart Router",
+          type: "chain",
+          status: "ok",
+          startTime: "2024-01-01T00:00:00Z",
+          endTime: "2024-01-01T00:00:01Z",
+          latencyMs: 10,
+          inputs: {},
+          outputs: routerOutputs,
+          children: [],
+        },
+      ],
+    };
+
+    render(<TraceDetailView traceId="trace-1" flowName="Flow" />);
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("code-tab").length).toBeGreaterThan(0);
+    });
+    expect(screen.queryByTestId("decision-inspection")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("span-node-span-router"));
+
+    expect(await screen.findByTestId("decision-inspection")).toHaveTextContent(
+      "Branch: Billing",
+    );
   });
 
   it("injects a Human In The Loop node + bar when a request is pending", () => {
