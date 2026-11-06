@@ -36,11 +36,13 @@ class RedisIndexChatMemory(LCChatMemoryComponent):
         validate_connector_url_for_ssrf(f"http://{self.host}:{int(self.port)}")
 
         kwargs = {}
-        password: str | None = self.password
         if self.key_prefix:
             kwargs["key_prefix"] = self.key_prefix
-        if password:
-            password = parse.quote_plus(password)
+        # Percent-encode every reserved character: redis-py decodes URL credentials
+        # with unquote (not unquote_plus), so "@", "/", "#", ":" or "?" in a raw
+        # password would otherwise be parsed as part of the host, path or port.
+        username = parse.quote(self.username or "", safe="")
+        password = parse.quote(self.password or "", safe="")
 
-        url = f"redis://{self.username}:{self.password}@{self.host}:{self.port}/{self.database}"
+        url = f"redis://{username}:{password}@{self.host}:{self.port}/{self.database}"
         return RedisChatMessageHistory(session_id=self.session_id, url=url, **kwargs)
