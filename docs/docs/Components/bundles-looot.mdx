@@ -1,0 +1,65 @@
+---
+title: looot
+slug: /bundles-looot
+---
+
+import Icon from "@site/src/components/icon";
+
+[looot](https://looot.ai) gives an agent one API key and one prepaid balance for data endpoints from many providers: work emails, phone numbers, company and people search, Google results, web pages, news, and LinkedIn profiles.
+The agent searches the catalog, sees the price before it runs an endpoint, and pays per call.
+
+Your flows can use the **looot** bundle components to search the catalog, inspect an endpoint, run it, fetch a run, and read your balance.
+
+All components authenticate with a looot API key, sent as a `Bearer` token to `https://api.looot.ai`.
+Create a key at [looot.ai](https://looot.ai).
+Each component reads the `LOOOT_TOKEN` environment variable when you leave **looot API Key** empty.
+For more information, see the [looot documentation](https://docs.looot.ai).
+
+## looot Search Catalog
+
+The **looot Search Catalog** component calls `GET /v1/catalog/search`. It is free.
+
+* **looot API Key**: Enter your looot API key.
+* **Query**: Describe the task in plain words, such as `find work email from name and company`.
+* **Limit**: Set the maximum number of endpoints to return.
+* **Prefer**: Rank results as `balanced`, `cheapest`, `fastest`, or `reliable`.
+
+The component returns the ranked endpoints, with their IDs and prices, in Langflow's [`Data` type](/data-types).
+
+## looot Inspect Endpoint
+
+The **looot Inspect Endpoint** component calls `GET /v1/operations/{endpointId}`. It is free.
+Use it before **looot Run Endpoint** to read the input fields, the output shape, and the price of one endpoint.
+
+* **Endpoint ID**: Enter an endpoint ID from a search result, such as `serper-search`.
+
+## looot Run Endpoint
+
+The **looot Run Endpoint** component calls `POST /v1/runs` and charges your balance per call.
+
+* **Endpoint ID**: Enter the endpoint to run.
+* **Input (JSON)**: Enter the endpoint input as a JSON object, such as `{"q": "coffee roasters berlin"}`.
+* **Idempotency Key**: Enter a unique key for the call. The same key with the same input never pays twice. If you leave it empty, each run uses a new random key and is not deduplicated.
+* **Wait (seconds)**: Set how long to wait for the result, from 0 to 60. With `0` the component returns a run ID at once.
+
+The component returns the run, including its `status`, `result`, and `actualCost`.
+The statuses `queued`, `running`, `reconciliation_pending`, and `pending_provider` are not failures.
+Fetch the run again with **looot Get Run**.
+
+## looot Get Run
+
+The **looot Get Run** component calls `GET /v1/runs/{runId}` and returns the current state of a run.
+
+* **Run ID**: Enter the `runId` that **looot Run Endpoint** returned.
+
+## looot Get Balance
+
+The **looot Get Balance** component calls `GET /v1/balance` and returns the prepaid balance left on your workspace.
+
+## Tool Mode
+
+Every component in the bundle can be used as a standalone step in a flow or as a tool for an agent.
+
+To enable **Tool Mode** for a component, change the component's output type from **Output** to **Tool**, and then connect it to the **Tools** port on an **Agent** component.
+
+Component failures, such as a `402` for a low balance, are returned as an `error` field in the `Data` output instead of stopping the flow.

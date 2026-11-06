@@ -60,6 +60,7 @@ link_extractors
 litellm
 llm_operations
 lmstudio
+looot
 logic
 maritalk
 mem0
