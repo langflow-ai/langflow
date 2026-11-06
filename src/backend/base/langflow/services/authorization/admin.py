@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from fastapi import HTTPException, status
 
+from langflow.services.auth.context import current_auth_is_restricted_api_key
 from langflow.services.authorization.audit import AUDIT_EVENT_ACCESS, audit_decision
 
 if TYPE_CHECKING:
@@ -45,6 +46,8 @@ async def is_administrator(
     authorization_service: BaseAuthorizationService,
 ) -> bool:
     """Return whether ``user`` is a superuser or a plugin-delegated administrator."""
+    if current_auth_is_restricted_api_key():
+        return False
     if getattr(user, "is_superuser", False):
         return True
     return await authorization_service.can_administer(user_id=user.id, resource=resource)
