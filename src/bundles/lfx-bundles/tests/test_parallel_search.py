@@ -2,6 +2,7 @@
 
 import json
 import sys
+from types import SimpleNamespace
 
 import anyio
 import httpx
@@ -172,15 +173,33 @@ async def test_redirects_are_refused(monkeypatch, location):
     assert len(requests) == 1
 
 
-def test_default_ssrf_validation_rejects_private_resolution(monkeypatch):
+@pytest.mark.asyncio
+async def test_default_ssrf_validation_rejects_private_resolution(monkeypatch):
     from lfx.utils import ssrf_protection
 
     monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
     monkeypatch.setenv("LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED", "true")
     monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "")
-    monkeypatch.setattr(ssrf_protection, "resolve_hostname", lambda _: ["127.0.0.1"])
+    # An empty environment value falls back to settings cached by other bundle tests.
+    monkeypatch.setattr(
+        ssrf_protection,
+        "get_settings_service",
+        lambda: SimpleNamespace(settings=SimpleNamespace(ssrf_allowed_hosts=[])),
+    )
+    resolved_hosts = []
+
+    def resolve(hostname):
+        resolved_hosts.append(hostname)
+        return ["127.0.0.1"]
+
+    def fail_client(**_kwargs):
+        pytest.fail("Private resolution must be rejected before creating an HTTP client")
+
+    monkeypatch.setattr(ssrf_protection, "resolve_hostname", resolve)
+    monkeypatch.setattr(module.httpx, "AsyncClient", fail_client)
     with pytest.raises(ssrf_protection.SSRFProtectionError, match=r"SSRF|blocked|private"):
-        module.ssrf_protected_strict_httpx_client_kwargs_for_url(module.MCP_URL)
+        await ParallelSearchComponent().set(query="Python").fetch_content()
+    assert resolved_hosts == ["mcp.parallel.ai"]
 
 
 @pytest.mark.asyncio

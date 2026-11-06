@@ -321,6 +321,7 @@
         "olivya",
         "openrouter",
         "orcarouter",
+        "parallel",
         "perplexity",
         "pgvector",
         "pinecone",
