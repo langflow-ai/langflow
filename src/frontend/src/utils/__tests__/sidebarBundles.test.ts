@@ -13,6 +13,18 @@ describe("SIDEBAR_BUNDLES", () => {
     );
   });
 
+  it("classifies MiniCPM OCR as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "MiniCPM OCR",
+          icon: "FileSearch",
+          name: "minicpm",
+        }),
+      ]),
+    );
+  });
+
   it("classifies IBM Confluent as a sidebar bundle", () => {
     expect(SIDEBAR_BUNDLES).toEqual(
       expect.arrayContaining([

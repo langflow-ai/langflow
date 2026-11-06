@@ -52,6 +52,7 @@ members = [
     "lfx-ibm",
     "lfx-jira",
     "lfx-microsoft",
+    "lfx-minicpm",
     "lfx-nextplaid",
     "lfx-ollama",
     "lfx-openai",
@@ -8480,6 +8481,7 @@ bundles = [
     { name = "lfx-empiriolabs" },
     { name = "lfx-exa" },
     { name = "lfx-firecrawl" },
+    { name = "lfx-minicpm" },
     { name = "lfx-nextplaid" },
     { name = "lfx-paddle" },
     { name = "lfx-serpingapi" },
@@ -8601,6 +8603,7 @@ requires-dist = [
     { name = "lfx-ibm", editable = "src/bundles/ibm" },
     { name = "lfx-jira", editable = "src/bundles/jira" },
     { name = "lfx-microsoft", editable = "src/bundles/microsoft" },
+    { name = "lfx-minicpm", marker = "extra == 'bundles'", editable = "src/bundles/minicpm" },
     { name = "lfx-nextplaid", marker = "extra == 'bundles'", editable = "src/bundles/nextplaid" },
     { name = "lfx-ollama", editable = "src/bundles/ollama" },
     { name = "lfx-openai", editable = "src/bundles/openai" },
@@ -10965,6 +10968,25 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "lfx", editable = "src/lfx" }]
+
+[[package]]
+name = "lfx-minicpm"
+version = "0.1.0"
+source = { editable = "src/bundles/minicpm" }
+dependencies = [
+    { name = "httpx" },
+    { name = "lfx" },
+    { name = "pillow" },
+    { name = "pypdfium2" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.24.0,<1.0.0" },
+    { name = "lfx", editable = "src/lfx" },
+    { name = "pillow", specifier = ">=9.0.0" },
+    { name = "pypdfium2", specifier = ">=4.0.0" },
+]
 
 [[package]]
 name = "lfx-nextplaid"

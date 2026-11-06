@@ -583,6 +583,7 @@ module.exports = {
             "Components/bundles-mem0",
             "Components/bundles-microsoft",
             "Components/bundles-milvus",
+            "Components/bundles-minicpm",
             "Components/bundles-mistralai",
             "Components/bundles-mongodb",
             "Components/bundles-mrscraper",
