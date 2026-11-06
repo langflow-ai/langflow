@@ -7,6 +7,7 @@ import httpx
 import pytest
 from langflow.services.telemetry.schema import RunPayload, VersionPayload
 from langflow.services.telemetry.service import TelemetryService
+from langflow.utils.version import get_version_info
 
 VERSION_PAYLOAD = VersionPayload(
     package="langflow",
@@ -65,3 +66,11 @@ async def test_does_not_send_the_dropped_platform_property(tmp_path):
     properties = await _sent_properties(tmp_path, RunPayload(run_seconds=1, run_success=True), "run")
 
     assert "platform" not in properties
+
+
+@pytest.mark.asyncio
+async def test_reports_the_langflow_version_as_product_version(tmp_path):
+    properties = await _sent_properties(tmp_path, RunPayload(run_seconds=1, run_success=True), "run")
+
+    assert properties["productVersion"] == get_version_info()["version"]
+    assert "langflow_version" not in properties

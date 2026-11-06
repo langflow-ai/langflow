@@ -93,7 +93,7 @@ class TestExceptionTelemetry:
         telemetry_service.client_type = "oss"
         telemetry_service.edition = "opensource"
         telemetry_service.common_telemetry_fields = {
-            "langflow_version": "1.0.0",
+            "productVersion": "1.0.0",
             "os": "linux",
         }
 
@@ -133,7 +133,7 @@ class TestExceptionTelemetry:
         assert body["properties"]["exceptionContext"] == "handler"
         assert body["properties"]["stackTraceHash"] == "abc123"
         assert body["properties"]["subProductTitle"] == "oss"
-        assert body["properties"]["langflow_version"] == "1.0.0"
+        assert body["properties"]["productVersion"] == "1.0.0"
         assert body["properties"]["os"] == "linux"
         assert body["properties"]["UT30"] == "30AS5"
         assert body["properties"]["productCode"] == "WW3151"
@@ -259,7 +259,7 @@ class TestExceptionTelemetry:
         telemetry_service.client_type = "oss"
         telemetry_service.edition = "opensource"
         telemetry_service.common_telemetry_fields = {
-            "langflow_version": "1.0.0",
+            "productVersion": "1.0.0",
             "os": "linux",
         }
 
@@ -333,7 +333,7 @@ class TestExceptionTelemetry:
         telemetry_service.client_type = "oss"
         telemetry_service.edition = "opensource"
         telemetry_service.common_telemetry_fields = {
-            "langflow_version": "1.0.0",
+            "productVersion": "1.0.0",
             "os": "linux",
         }
 

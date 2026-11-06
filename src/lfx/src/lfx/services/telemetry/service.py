@@ -68,7 +68,7 @@ class TelemetryService(BaseTelemetryService):
         self._start_time = datetime.now(timezone.utc)
 
         self._common_fields = {
-            "langflow_version": self._get_version(),
+            "productVersion": self._get_version(),
             "subProductTitle": SUB_PRODUCT_MCP,
             "os": platform.system().lower(),
         }

@@ -30,7 +30,7 @@ class TestExceptionTelemetryIntegration:
         telemetry_service.client_type = "oss"
         telemetry_service.edition = "opensource"
         telemetry_service.common_telemetry_fields = {
-            "langflow_version": "1.0.0",
+            "productVersion": "1.0.0",
             "os": "darwin",
         }
 
@@ -91,7 +91,7 @@ class TestExceptionTelemetryIntegration:
         telemetry_service.client_type = "oss"
         telemetry_service.edition = "opensource"
         telemetry_service.common_telemetry_fields = {
-            "langflow_version": "1.0.0",
+            "productVersion": "1.0.0",
             "os": "darwin",
         }
 
