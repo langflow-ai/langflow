@@ -7,6 +7,7 @@ from lfx.inputs.inputs import DropdownInput, IntInput, SecretStrInput, SliderInp
 from pydantic.v1 import SecretStr
 
 POPNOW_API_BASE = "https://api.popnow.ai/v1"
+MODELS_LOAD_FAILED = "Failed to load models"
 
 
 class PopNowComponent(LCModelComponent):
@@ -68,9 +69,9 @@ class PopNowComponent(LCModelComponent):
         if models:
             build_config["model_name"]["options"] = [m["id"] for m in models]
             build_config["model_name"]["tooltips"] = {m["id"]: f"{m['context']:,} tokens" for m in models}
-        else:
-            build_config["model_name"]["options"] = ["Failed to load models"]
-            build_config["model_name"]["value"] = "Failed to load models"
+        elif not build_config["model_name"].get("value"):
+            # Keep an existing selection when a refresh fails; only show the failure if nothing is selected.
+            build_config["model_name"]["options"] = [MODELS_LOAD_FAILED]
         return build_config
 
     def build_model(self) -> LanguageModel:
@@ -78,7 +79,7 @@ class PopNowComponent(LCModelComponent):
         if not self.api_key:
             msg = "API key is required"
             raise ValueError(msg)
-        if not self.model_name or self.model_name == "Loading...":
+        if not self.model_name or self.model_name in {"Loading...", MODELS_LOAD_FAILED}:
             msg = "Please select a model"
             raise ValueError(msg)
 
