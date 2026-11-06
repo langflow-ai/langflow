@@ -91,6 +91,7 @@ class LCModelComponent(Component):
         return str(e)
 
     def supports_tool_calling(self, model: LanguageModel) -> bool:
+        """Return True if the model can bind tools, False otherwise."""
         try:
             # Check if the bind_tools method is the same as the base class's method
             # (compared on the class: a bound method is never identical to the function)
