@@ -27,9 +27,16 @@ from lfx.io import (
     SecretStrInput,
     StrInput,
 )
+from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.serialization import serialize
 from lfx.utils.version import get_version_info
+
+SEARCH_TYPES = {
+    "Similarity": "similarity",
+    "Similarity with score threshold": "similarity_score_threshold",
+    "MMR (Max Marginal Relevance)": "mmr",
+}
 
 
 @vector_store_connection
@@ -127,11 +134,7 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
             name="search_type",
             display_name="Search Type",
             info="Search type to use",
-            options=[
-                "Similarity",
-                "Similarity with score threshold",
-                "MMR (Max Marginal Relevance)",
-            ],
+            options=list(SEARCH_TYPES),
             value="Similarity",
             advanced=True,
         ),
@@ -451,12 +454,11 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
             self.log("No documents to add to the Vector Store.")
 
     def _map_search_type(self) -> str:
-        search_type_mapping = {
-            "Similarity with score threshold": "similarity_score_threshold",
-            "MMR (Max Marginal Relevance)": "mmr",
-        }
-
-        return search_type_mapping.get(self.search_type, "similarity")
+        search_type = SEARCH_TYPES.get(self.search_type)
+        if search_type is None:
+            logger.warning("Unknown search type %r; falling back to 'similarity'", self.search_type)
+            return "similarity"
+        return search_type
 
     def _build_search_args(self):
         # Clean up the search query
