@@ -1,6 +1,7 @@
 """Outbound product telemetry must not carry free-form errors or username hashes."""
 
 import json
+import platform
 from types import SimpleNamespace
 from uuid import UUID, uuid4
 
@@ -15,6 +16,7 @@ from langflow.services.telemetry.schema import (
     ExceptionPayload,
     PlaygroundPayload,
     RunPayload,
+    VersionPayload,
 )
 from langflow.services.telemetry.service import TelemetryService
 from lfx.services.telemetry.identity import get_hashed_user_id, get_installation_user_id
@@ -197,3 +199,43 @@ def test_tracking_disabled_does_not_attribute_users(monkeypatch):
 def test_legacy_username_hash_is_not_restored_from_background_job():
     with telemetry_user_context(get_hashed_user_id("synthetic@example.test")):
         assert get_current_telemetry_user_id() is None
+
+
+@pytest.mark.asyncio
+async def test_startup_event_carries_the_accepted_common_fields(tmp_path):
+    settings = SimpleNamespace(
+        settings=SimpleNamespace(
+            config_dir=str(tmp_path),
+            segment_api_url="https://segment.example.test/v1/track",
+            segment_write_key="test-key",
+            edition="opensource",
+            do_not_track=False,
+            prometheus_enabled=False,
+        )
+    )
+    service = TelemetryService(settings)
+    requests = []
+
+    def capture(request):
+        requests.append(request)
+        return httpx.Response(200)
+
+    payload = VersionPayload(
+        package="langflow",
+        version="0.0.1-payload",
+        platform="payload-platform",
+        python="3.12",
+        arch="x86_64",
+        auto_login=True,
+        cache_type="memory",
+        backend_only=False,
+    )
+    async with httpx.AsyncClient(transport=httpx.MockTransport(capture)) as client:
+        service.client = client
+        await service.send_telemetry_data(payload, None)
+
+    properties = json.loads(requests[0].content)["properties"]
+    assert properties["productVersion"] == service.common_telemetry_fields["productVersion"]
+    assert properties["osName"] == platform.system().lower()
+    assert properties["version"] == "0.0.1-payload"
+    assert properties["platform"] == "payload-platform"
