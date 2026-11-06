@@ -47,6 +47,7 @@ class TriggerKind:
     push_mechanism: str | None = None
     listener_factory: Callable[[ListenerTrigger], ListenerAdapter] | None = None
     listener_mechanism: str | None = None
+    hosted_unsupported_message: str | None = None
 
 
 @dataclass(frozen=True)
