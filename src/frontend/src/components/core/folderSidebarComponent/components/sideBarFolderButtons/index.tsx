@@ -218,7 +218,16 @@ const SideBarFoldersButtonsComponent = ({
 
       getObjectsFromFilelist<UploadedFlowFile>(files)
         .then((objects) => {
-          if (objects.every((flow) => flow.data?.nodes)) {
+          if (
+            objects.every(
+              (flow) =>
+                flow &&
+                (("data" in flow && flow.data?.nodes) ||
+                  ("flows" in flow &&
+                    Array.isArray(flow.flows) &&
+                    !("folder_name" in flow))),
+            )
+          ) {
             uploadFlow({ files })
               .then(() => {
                 setSuccessData({
@@ -228,9 +237,7 @@ const SideBarFoldersButtonsComponent = ({
               .catch((error) => {
                 setErrorData({
                   title: t("errors.upload"),
-                  list: [
-                    error instanceof Error ? error.message : String(error),
-                  ],
+                  list: extractApiErrorMessages(error),
                 });
               });
           } else {
@@ -249,10 +256,7 @@ const SideBarFoldersButtonsComponent = ({
                     console.error(err);
                     setErrorData({
                       title: t("sidebar.projectUploadError"),
-                      list: [
-                        err?.response?.data?.detail ??
-                          (err instanceof Error ? err.message : String(err)),
-                      ],
+                      list: extractApiErrorMessages(err),
                     });
                   },
                 },
@@ -263,7 +267,7 @@ const SideBarFoldersButtonsComponent = ({
         .catch((error) => {
           setErrorData({
             title: t("errors.upload"),
-            list: [error instanceof Error ? error.message : String(error)],
+            list: extractApiErrorMessages(error),
           });
         });
     });
