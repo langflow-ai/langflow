@@ -66,3 +66,14 @@ def test_should_keep_escaping_pipes_when_rendering_a_table():
     markdown = safe_convert(table)
 
     assert r"a \| b" in markdown
+
+
+@pytest.mark.parametrize("first_id", [1_234_567, 2**53])
+@pytest.mark.parametrize("clean_data", [False, True])
+def test_should_preserve_integer_ids_when_a_table_has_decimal_columns(first_id, clean_data):
+    table = DataFrame({"id": [first_id, first_id + 1], "score": [0.5, 0.25]})
+
+    markdown = safe_convert(table, clean_data=clean_data)
+
+    rows = [[cell.strip() for cell in line.strip("|").split("|")] for line in markdown.splitlines()[2:]]
+    assert rows == [[str(first_id), "0.5"], [str(first_id + 1), "0.25"]]
