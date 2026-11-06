@@ -113,7 +113,7 @@ module.exports = {
         },
       ],
     ],
-    maxWorkers: "50%",
+    maxWorkers: "100%",
     verbose: true,
   }),
 };
