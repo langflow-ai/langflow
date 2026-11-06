@@ -18,7 +18,7 @@ import docker_latest_tags
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 WORKFLOW_PATH = SCRIPT_DIR.parents[1] / ".github" / "workflows" / "docker-build-v2.yml"
-TAG_URL = "https://registry.hub.docker.com/v2/repositories/langflowai/langflow/tags?page_size=100"
+TAG_URL = "https://hub.docker.com/v2/namespaces/langflowai/repositories/langflow/tags?page_size=100"
 NEXT_URL = f"{TAG_URL}&page=2"
 AUTH_URL = "https://hub.docker.com/v2/auth/token"
 AUTH_ENV = {"DOCKERHUB_USERNAME": "fixture-user", "DOCKERHUB_TOKEN": "fixture-password-secret"}
@@ -190,6 +190,10 @@ def test_registry_errors_on_later_pages_fail_closed(tmp_path, status, body):
 def test_authenticated_lookup_sends_bearer_token_on_every_page(tmp_path):
     pages = {
         AUTH_URL: (200, {"access_token": "fixture-bearer-token"}),
+        "https://registry.hub.docker.com/v2/repositories/langflowai/langflow/tags?page_size=100": (
+            403,
+            {"message": "organization access tokens cannot use legacy endpoints"},
+        ),
         TAG_URL: (200, {"results": [{"name": "1.12.9"}], "next": NEXT_URL}),
         NEXT_URL: (200, {"results": [{"name": "1.13.1"}], "next": None}),
     }
@@ -200,6 +204,37 @@ def test_authenticated_lookup_sends_bearer_token_on_every_page(tmp_path):
     assert [call["url"] for call in calls] == [AUTH_URL, TAG_URL, NEXT_URL]
     for call in calls[1:]:
         assert "Authorization: Bearer fixture-bearer-token" in call["args"]
+
+
+@pytest.mark.parametrize(
+    "next_url",
+    [
+        "https://registry.hub.docker.com/v2/repositories/langflowai/langflow/tags?page_size=100&page=2",
+        "https://hub.docker.com/v2/namespaces/other/repositories/langflow/tags?page_size=100&page=2",
+    ],
+)
+def test_authenticated_lookup_rejects_pagination_outside_the_repository(tmp_path, next_url):
+    pages = {
+        AUTH_URL: (200, {"access_token": "fixture-bearer-token"}),
+        TAG_URL: (200, {"results": [{"name": "1.12.9"}], "next": next_url}),
+    }
+    result = _fetch_tags(tmp_path, pages, credentials=AUTH_ENV)
+    assert result.returncode != 0
+    assert "unexpected next page" in result.stderr
+    calls = json.loads((tmp_path / "calls.json").read_text(encoding="utf-8"))
+    assert [call["url"] for call in calls] == [AUTH_URL, TAG_URL]
+
+
+def test_authenticated_tag_permission_errors_fail_closed(tmp_path):
+    pages = {
+        AUTH_URL: (200, {"access_token": "fixture-bearer-token"}),
+        TAG_URL: (403, {"message": "tag read permission required"}),
+    }
+    result = _fetch_tags(tmp_path, pages, credentials=AUTH_ENV)
+    assert result.returncode != 0
+    assert "HTTP 403" in result.stderr
+    assert not result.stdout
+    assert "fixture-bearer-token" not in result.stderr
 
 
 @pytest.mark.parametrize(
