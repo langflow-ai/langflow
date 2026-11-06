@@ -1,12 +1,17 @@
 """Synthetic MCP responses exercise the native component and real SDK transport."""
 
 import json
+import sys
 
+import anyio
 import httpx
 import pytest
 from lfx_bundles.parallel import ParallelSearchComponent
 from lfx_bundles.parallel import parallel_search as module
 from mcp.types import CallToolResult, TextContent
+
+if sys.version_info < (3, 11):
+    from exceptiongroup import ExceptionGroup
 
 PAYLOAD = {"results": [{"title": "Python", "url": "https://docs.python.org/3/", "excerpts": ["one\u2028two", "three"]}]}
 
@@ -193,3 +198,39 @@ def test_non_json_response_fails():
             CallToolResult(content=[TextContent(type="text", text="not JSON")]),
             1,
         )
+
+
+@pytest.mark.asyncio
+async def test_search_deadline_cancels_sdk_and_closes_client(monkeypatch):
+    deadline = module.fail_after
+    budgets = []
+    cancelled = []
+    closed = []
+
+    def short_deadline(seconds):
+        budgets.append(seconds)
+        return deadline(0.05)
+
+    async def handler(_request):
+        try:
+            await anyio.sleep_forever()
+        finally:
+            cancelled.append(True)
+
+    class ClosingTransport(httpx.MockTransport):
+        async def aclose(self):
+            closed.append(True)
+            await super().aclose()
+
+    transport = ClosingTransport(handler)
+    monkeypatch.setattr(module, "fail_after", short_deadline)
+    monkeypatch.setattr(
+        module,
+        "ssrf_protected_strict_httpx_client_kwargs_for_url",
+        lambda _: ({}, {"transport": transport}),
+    )
+    with pytest.raises(TimeoutError):
+        await ParallelSearchComponent().set(query="Python").fetch_content()
+    assert budgets == [90]
+    assert cancelled == [True]
+    assert closed == [True]

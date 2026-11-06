@@ -5,6 +5,7 @@ import json
 from typing import TYPE_CHECKING
 
 import httpx
+from anyio import fail_after
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, IntInput, MessageTextInput, Output, SecretStrInput
 from lfx.schema.data import Data
@@ -114,21 +115,21 @@ class ParallelSearchComponent(Component):
         _, kwargs = await asyncio.to_thread(ssrf_protected_strict_httpx_client_kwargs_for_url, MCP_URL)
         # The fixed endpoint never redirects. Keep redirects disabled even when SSRF checks are off.
         kwargs["follow_redirects"] = False
-        async with (
-            asyncio.timeout(90),
-            httpx.AsyncClient(headers=headers, timeout=90, max_redirects=0, **kwargs) as http,
-            streamable_http_client(MCP_URL, http_client=http) as (read, write, _),
-            ClientSession(read, write) as session,
-        ):
-            await session.initialize()
-            tools = await session.list_tools()
-            if not any(tool.name == "web_search" for tool in tools.tools):
-                msg = "Parallel MCP does not expose web_search."
-                raise ValueError(msg)
-            result = await session.call_tool(
-                "web_search",
-                {"objective": query, "search_queries": [query]},
-            )
+        with fail_after(90):
+            async with (
+                httpx.AsyncClient(headers=headers, timeout=90, max_redirects=0, **kwargs) as http,
+                streamable_http_client(MCP_URL, http_client=http) as (read, write, _),
+                ClientSession(read, write) as session,
+            ):
+                await session.initialize()
+                tools = await session.list_tools()
+                if not any(tool.name == "web_search" for tool in tools.tools):
+                    msg = "Parallel MCP does not expose web_search."
+                    raise ValueError(msg)
+                result = await session.call_tool(
+                    "web_search",
+                    {"objective": query, "search_queries": [query]},
+                )
         rows = self._result_data(result, self.max_results)
         self.status = rows
         return rows
