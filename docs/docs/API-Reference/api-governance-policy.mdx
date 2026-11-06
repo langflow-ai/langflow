@@ -23,6 +23,14 @@ Send every field you want in effect with the `PUT` request.
 For `approved_integration_provider_ids`, send `null` to allow every integration
 or `[]` to disable every integration. Send `[]` to clear the other list fields.
 
+Use `/api/v2/policy-bundle` for this contract. During a rolling upgrade, an old
+replica returns `404` for this endpoint; retry after it is upgraded instead of
+falling back to API v1. The legacy `/api/v1/policy-bundle` endpoint keeps `[]`
+unrestricted and represents deny-all as
+`["langflow-reserved.integration-policy.deny-all"]`. Old clients must carry this
+reserved value through unchanged when editing another policy field. It cannot
+be used as an integration manifest provider ID.
+
 | You want to… | Field | Example |
 |--------------|-------|---------|
 | Hide a component and refuse flows that use it | `blocked_component_keys` | `PythonREPLComponent` (Python Interpreter) |
@@ -75,7 +83,7 @@ An uninitialized bundle returns `503`.
 
     import requests
 
-    url = f"{os.environ['LANGFLOW_URL']}/api/v1/policy-bundle"
+    url = f"{os.environ['LANGFLOW_URL']}/api/v2/policy-bundle"
     headers = {
         "accept": "application/json",
         "x-api-key": os.environ["LANGFLOW_API_KEY"],
@@ -90,7 +98,7 @@ An uninitialized bundle returns `503`.
     <TabItem value="JavaScript" label="JavaScript">
 
     ```javascript
-    const url = `${process.env.LANGFLOW_URL}/api/v1/policy-bundle`;
+    const url = `${process.env.LANGFLOW_URL}/api/v2/policy-bundle`;
 
     const response = await fetch(url, {
       method: "GET",
@@ -111,7 +119,7 @@ An uninitialized bundle returns `503`.
 
     ```bash
     curl -X GET \
-      "$LANGFLOW_URL/api/v1/policy-bundle" \
+      "$LANGFLOW_URL/api/v2/policy-bundle" \
       -H "accept: application/json" \
       -H "x-api-key: $LANGFLOW_API_KEY"
     ```
@@ -149,7 +157,7 @@ An uninitialized bundle returns `503`.
 
 4. Replace the bundle with a `PUT` request that includes every list you want in effect.
     Send the `revision` number copied from step 3 as `expected_revision`.
-    Send `[]` for a list you want unrestricted.
+    Send `null` for unrestricted integration access and `[]` to clear another list.
 
     <Tabs>
     <TabItem value="Python" label="Python" default>
@@ -166,7 +174,7 @@ An uninitialized bundle returns `503`.
         "x-api-key": os.environ["LANGFLOW_API_KEY"],
     }
 
-    current = requests.get(f"{base}/api/v1/policy-bundle", headers=headers)
+    current = requests.get(f"{base}/api/v2/policy-bundle", headers=headers)
     current.raise_for_status()
     revision = current.json()["revision"]
 
@@ -179,7 +187,7 @@ An uninitialized bundle returns `503`.
         "reason": "Limit providers and block code execution",
     }
 
-    response = requests.put(f"{base}/api/v1/policy-bundle", headers=headers, json=payload)
+    response = requests.put(f"{base}/api/v2/policy-bundle", headers=headers, json=payload)
     response.raise_for_status()
     print(response.json())
     ```
@@ -195,13 +203,13 @@ An uninitialized bundle returns `503`.
       "x-api-key": process.env.LANGFLOW_API_KEY,
     };
 
-    const current = await fetch(`${base}/api/v1/policy-bundle`, { headers });
+    const current = await fetch(`${base}/api/v2/policy-bundle`, { headers });
     if (!current.ok) {
       throw new Error(`HTTP ${current.status}`);
     }
     const revision = (await current.json()).revision;
 
-    const response = await fetch(`${base}/api/v1/policy-bundle`, {
+    const response = await fetch(`${base}/api/v2/policy-bundle`, {
       method: "PUT",
       headers,
       body: JSON.stringify({
@@ -225,7 +233,7 @@ An uninitialized bundle returns `503`.
 
     ```bash
     curl -X PUT \
-      "$LANGFLOW_URL/api/v1/policy-bundle" \
+      "$LANGFLOW_URL/api/v2/policy-bundle" \
       -H "accept: application/json" \
       -H "Content-Type: application/json" \
       -H "x-api-key: $LANGFLOW_API_KEY" \
@@ -257,13 +265,13 @@ An uninitialized bundle returns `503`.
 
 5. Optional: Undo a prior revision.
 
-    `GET /api/v1/policy-bundle/history` lists prior bundle policy revisions.
+    `GET /api/v2/policy-bundle/history` lists prior bundle policy revisions.
 
-    To restore a revision, `POST` to `/api/v1/policy-bundle/rollback/{revision}` with the current `expected_revision`:
+    To restore a revision, `POST` to `/api/v2/policy-bundle/rollback/{revision}` with the current `expected_revision`:
 
     ```bash
     curl -X POST \
-      "$LANGFLOW_URL/api/v1/policy-bundle/rollback/1" \
+      "$LANGFLOW_URL/api/v2/policy-bundle/rollback/1" \
       -H "accept: application/json" \
       -H "Content-Type: application/json" \
       -H "x-api-key: $LANGFLOW_API_KEY" \
@@ -342,7 +350,7 @@ message in flow history.
 ## Change one list at a time {#catalog-policy}
 
 Use these endpoints when you want to change only components, templates, or providers.
-If you are changing more than one list, use one `PUT` to `/api/v1/policy-bundle` instead. See [Apply a policy](#policy-bundle).
+If you are changing more than one list, use one `PUT` to `/api/v2/policy-bundle` instead. See [Apply a policy](#policy-bundle).
 
 1. To hide or unhide components, `PUT` the complete blocked list to `/api/v1/catalog-policy/components`.
     A `PUT` replaces the whole list.
@@ -389,7 +397,7 @@ If you are changing more than one list, use one `PUT` to `/api/v1/policy-bundle`
       -d '{"approved_provider_ids": ["openai", "anthropic"]}'
     ```
 
-    Set `blocked_model_keys` with `PUT /api/v1/policy-bundle`.
+    Set `blocked_model_keys` with `PUT /api/v2/policy-bundle`.
 
 5. To see the integration policy that applies to you, `GET /api/v1/integrations/policy/effective`.
 
@@ -399,16 +407,19 @@ If you are changing more than one list, use one `PUT` to `/api/v1/policy-bundle`
     receive an empty `blocked_action_keys` list and only allowed providers in
     `loaded_provider_ids`; use `GET /api/v1/integrations` to list usable actions.
     Check `unrestricted` before interpreting an empty allowed-provider result:
-    both a persisted empty ceiling and an externally managed empty ceiling deny
+    both an explicitly configured empty ceiling and an externally managed empty ceiling deny
     every integration.
     Set `approved_integration_provider_ids` and `blocked_integration_action_keys` with
-    `PUT /api/v1/policy-bundle`.
+    `PUT /api/v2/policy-bundle`.
 
 :::warning Installing an integration policy plugin
 
-Persisted integration policy is tri-state: `null` means unrestricted, `[]` denies
-every integration, and a non-empty list allows only those integrations. External
-plugins use the same distinction: no external ceiling means unrestricted, while
+The API v2 and process-local integration policy contracts are tri-state: `null`
+means unrestricted, `[]` denies every integration, and a non-empty list allows
+only those integrations. The database retains the legacy meaning of an empty
+list and uses the reserved deny-all marker so old replicas enforce the same
+decision during an upgrade. External plugins use the same distinction: no
+external ceiling means unrestricted, while
 an empty external ceiling denies every integration. Before enabling external
 enforcement, verify the intended provider set and check `managed_externally` and
 `unrestricted` on the effective-policy endpoint.

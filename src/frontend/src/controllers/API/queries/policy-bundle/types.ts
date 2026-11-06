@@ -1,5 +1,5 @@
 /**
- * The policy bundle as `GET /api/v1/policy-bundle` returns it, and the body
+ * The policy bundle as `GET /api/v2/policy-bundle` returns it, and the body
  * `PUT` expects. The PUT replaces every list at once, which is why updates go
  * through `buildPolicyBundleUpdate` rather than being assembled per caller.
  */

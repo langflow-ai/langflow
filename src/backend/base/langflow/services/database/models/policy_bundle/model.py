@@ -38,11 +38,11 @@ class PolicyBundleRevision(SQLModel, table=True):  # type: ignore[call-arg]
         default_factory=list,
         sa_column=sa.Column(sa.JSON, nullable=True, server_default=sa.text("'[]'")),
     )
-    # ``NULL`` means unrestricted; an explicit empty JSON list denies every
-    # integration provider.
-    approved_integration_provider_ids: list[str] | None = Field(
-        default=None,
-        sa_column=sa.Column(sa.JSON(none_as_null=True), nullable=True),
+    # Keep the legacy empty-list representation unrestricted. The policy store
+    # encodes deny-all as a reserved nonempty allowlist that old replicas enforce.
+    approved_integration_provider_ids: list[str] = Field(
+        default_factory=list,
+        sa_column=sa.Column(sa.JSON, nullable=True, server_default=sa.text("'[]'")),
     )
     blocked_integration_action_keys: list[str] = Field(
         default_factory=list,

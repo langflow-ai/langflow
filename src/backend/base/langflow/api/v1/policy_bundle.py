@@ -8,6 +8,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from lfx.base.models.provider_registry import resolve_provider_id
+from lfx.integrations.policy_constants import INTEGRATION_POLICY_DENY_ALL_PROVIDER_ID
 from lfx.services.deps import (
     get_catalog_policy_service,
     get_integration_policy_service,
@@ -16,6 +17,7 @@ from lfx.services.deps import (
 from lfx.services.integration_policy import integration_policy_key_provider, normalize_integration_policy_key
 from lfx.services.model_provider_policy import normalize_blocked_model_key
 from lfx.services.policy_bundle import PolicyBundleSnapshot
+from lfx.services.policy_bundle.base import decode_integration_provider_ids, encode_integration_provider_ids
 from pydantic import BaseModel, Field, StringConstraints, field_validator
 
 from langflow.api.utils import DbSession, DbSessionReadOnly
@@ -39,6 +41,7 @@ from langflow.services.policy_bundle import (
 )
 
 router = APIRouter(prefix="/policy-bundle", tags=["Policy Bundle"])
+router_v2 = APIRouter(prefix="/policy-bundle", tags=["Policy Bundle"])
 
 ProviderId = Annotated[str, StringConstraints(pattern=r"^[a-z0-9][a-z0-9._-]*$", max_length=255)]
 IntegrationProviderId = Annotated[
@@ -100,7 +103,11 @@ class PolicyBundleWrite(BaseModel):
     def normalize_integration_provider_ids(cls, provider_ids: list[str] | None) -> list[str] | None:
         if provider_ids is None:
             return None
-        return sorted({provider_id.casefold() for provider_id in provider_ids})
+        normalized = sorted({provider_id.casefold() for provider_id in provider_ids})
+        if INTEGRATION_POLICY_DENY_ALL_PROVIDER_ID in normalized:
+            msg = "The integration policy marker is reserved; use an empty list to deny all integrations in API v2"
+            raise ValueError(msg)
+        return normalized
 
     @field_validator("blocked_integration_action_keys")
     @classmethod
@@ -138,6 +145,39 @@ class PolicyBundleRead(BaseModel):
 class PolicyBundleHistoryRead(BaseModel):
     items: list[PolicyBundleRead]
     next_before_revision: int | None
+
+
+class LegacyPolicyBundleWrite(PolicyBundleWrite):
+    """Keep the API v1 representation safe for old servers and browser clients."""
+
+    @field_validator("approved_integration_provider_ids")
+    @classmethod
+    def normalize_integration_provider_ids(cls, provider_ids: list[str] | None) -> list[str] | None:
+        if provider_ids is None:
+            return None
+        normalized = sorted({provider_id.casefold() for provider_id in provider_ids})
+        decode_integration_provider_ids(normalized)
+        return normalized
+
+
+class LegacyPolicyBundleRead(PolicyBundleRead):
+    approved_integration_provider_ids: list[str]
+
+
+class LegacyPolicyBundleHistoryRead(BaseModel):
+    items: list[LegacyPolicyBundleRead]
+    next_before_revision: int | None
+
+
+def _legacy_response(response: PolicyBundleRead) -> LegacyPolicyBundleRead:
+    return LegacyPolicyBundleRead.model_validate(
+        response.model_dump()
+        | {
+            "approved_integration_provider_ids": encode_integration_provider_ids(
+                response.approved_integration_provider_ids
+            )
+        }
+    )
 
 
 def _integration_policy_managed_externally() -> bool:
@@ -273,8 +313,8 @@ async def _audit_bundle(snapshot: PolicyBundleSnapshot, *, user_id: UUID, action
     )
 
 
-@router.get("", response_model=PolicyBundleRead)
-@router.get("/", response_model=PolicyBundleRead, include_in_schema=False)
+@router_v2.get("", response_model=PolicyBundleRead)
+@router_v2.get("/", response_model=PolicyBundleRead, include_in_schema=False)
 async def read_policy_bundle(
     _admin: Annotated[User, Depends(get_current_active_superuser)],
     session: DbSessionReadOnly,
@@ -286,8 +326,8 @@ async def read_policy_bundle(
     return _response(snapshot, managed_externally=_managed_externally())
 
 
-@router.put("", response_model=PolicyBundleRead)
-@router.put("/", response_model=PolicyBundleRead, include_in_schema=False)
+@router_v2.put("", response_model=PolicyBundleRead)
+@router_v2.put("/", response_model=PolicyBundleRead, include_in_schema=False)
 async def replace_policy_bundle(
     payload: PolicyBundleWrite,
     admin: Annotated[User, Depends(get_current_active_superuser)],
@@ -320,7 +360,7 @@ async def replace_policy_bundle(
     return _response(snapshot)
 
 
-@router.get("/history", response_model=PolicyBundleHistoryRead)
+@router_v2.get("/history", response_model=PolicyBundleHistoryRead)
 async def read_policy_bundle_history(
     _admin: Annotated[User, Depends(get_current_active_superuser)],
     session: DbSessionReadOnly,
@@ -339,7 +379,7 @@ async def read_policy_bundle_history(
     )
 
 
-@router.post("/rollback/{revision}", response_model=PolicyBundleRead)
+@router_v2.post("/rollback/{revision}", response_model=PolicyBundleRead)
 async def rollback_policy_bundle(
     revision: int,
     payload: PolicyBundleRollbackWrite,
@@ -367,10 +407,64 @@ async def rollback_policy_bundle(
     return _response(snapshot)
 
 
+@router.get("", response_model=LegacyPolicyBundleRead)
+@router.get("/", response_model=LegacyPolicyBundleRead, include_in_schema=False)
+async def read_legacy_policy_bundle(
+    admin: Annotated[User, Depends(get_current_active_superuser)],
+    session: DbSessionReadOnly,
+) -> LegacyPolicyBundleRead:
+    return _legacy_response(await read_policy_bundle(admin, session))
+
+
+@router.put("", response_model=LegacyPolicyBundleRead)
+@router.put("/", response_model=LegacyPolicyBundleRead, include_in_schema=False)
+async def replace_legacy_policy_bundle(
+    payload: LegacyPolicyBundleWrite,
+    admin: Annotated[User, Depends(get_current_active_superuser)],
+    session: DbSession,
+) -> LegacyPolicyBundleRead:
+    # A stale browser turns an unrestricted value into []; v1 must continue
+    # interpreting that value as unrestricted on every replica in a rollout.
+    integration_providers = decode_integration_provider_ids(payload.approved_integration_provider_ids)
+    semantic_payload = payload.model_copy(
+        update={
+            "approved_integration_provider_ids": None
+            if integration_providers is None
+            else sorted(integration_providers)
+        }
+    )
+    return _legacy_response(await replace_policy_bundle(semantic_payload, admin, session))
+
+
+@router.get("/history", response_model=LegacyPolicyBundleHistoryRead)
+async def read_legacy_policy_bundle_history(
+    admin: Annotated[User, Depends(get_current_active_superuser)],
+    session: DbSessionReadOnly,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    before_revision: Annotated[int | None, Query(ge=1)] = None,
+) -> LegacyPolicyBundleHistoryRead:
+    response = await read_policy_bundle_history(admin, session, limit, before_revision)
+    return LegacyPolicyBundleHistoryRead(
+        items=[_legacy_response(item) for item in response.items],
+        next_before_revision=response.next_before_revision,
+    )
+
+
+@router.post("/rollback/{revision}", response_model=LegacyPolicyBundleRead)
+async def rollback_legacy_policy_bundle(
+    revision: int,
+    payload: PolicyBundleRollbackWrite,
+    admin: Annotated[User, Depends(get_current_active_superuser)],
+    session: DbSession,
+) -> LegacyPolicyBundleRead:
+    return _legacy_response(await rollback_policy_bundle(revision, payload, admin, session))
+
+
 __all__ = [
     "PolicyBundleHistoryRead",
     "PolicyBundleRead",
     "PolicyBundleRollbackWrite",
     "PolicyBundleWrite",
     "router",
+    "router_v2",
 ]

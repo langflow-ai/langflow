@@ -8,6 +8,7 @@ import json
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from lfx.integrations.policy_constants import INTEGRATION_POLICY_DENY_ALL_PROVIDER_ID
 from lfx.services.base import Service
 from lfx.services.schema import ServiceType
 
@@ -15,6 +16,33 @@ if TYPE_CHECKING:
     from collections.abc import Collection
     from datetime import datetime
     from uuid import UUID
+
+
+def encode_integration_provider_ids(provider_ids: Collection[str] | None) -> list[str]:
+    """Encode a semantic ceiling for storage and the legacy API.
+
+    Preserve the old meaning of an empty list across rolling upgrades. A
+    reserved, nonempty allowlist makes deny-all enforceable by old replicas.
+    """
+    if provider_ids is None:
+        return []
+    if INTEGRATION_POLICY_DENY_ALL_PROVIDER_ID in provider_ids:
+        msg = "The integration deny-all identity is reserved for policy storage"
+        raise ValueError(msg)
+    return sorted(set(provider_ids)) if provider_ids else [INTEGRATION_POLICY_DENY_ALL_PROVIDER_ID]
+
+
+def decode_integration_provider_ids(provider_ids: Collection[str] | None) -> frozenset[str] | None:
+    """Read legacy empty ceilings and the rolling-upgrade-safe deny-all marker."""
+    if not provider_ids:
+        return None
+    providers = frozenset(provider_ids)
+    if INTEGRATION_POLICY_DENY_ALL_PROVIDER_ID in providers:
+        if len(providers) != 1:
+            msg = "The integration deny-all identity cannot be combined with provider IDs"
+            raise ValueError(msg)
+        return frozenset()
+    return providers
 
 
 def policy_bundle_content_hash(
@@ -28,11 +56,9 @@ def policy_bundle_content_hash(
 ) -> str:
     """Return the SHA-256 of the canonical complete decision payload.
 
-    ``blocked_model_keys``, ``approved_integration_provider_ids`` and
-    ``blocked_integration_action_keys`` join the canonical payload only when
-    non-empty so every revision hashed before those fields existed keeps its
-    stored hash, and a bundle without model blocks or integration governance
-    hashes identically across releases.
+    Optional facets join the canonical payload only when their legacy storage
+    representation is nonempty. Thus unrestricted policies retain their old
+    hashes, and deny-all hashes agree with old replicas carrying its marker.
     """
     payload = {
         "approved_provider_ids": sorted(set(approved_provider_ids)),
@@ -41,8 +67,9 @@ def policy_bundle_content_hash(
     }
     if blocked_model_keys:
         payload["blocked_model_keys"] = sorted(set(blocked_model_keys))
-    if approved_integration_provider_ids is not None:
-        payload["approved_integration_provider_ids"] = sorted(set(approved_integration_provider_ids))
+    integration_providers = encode_integration_provider_ids(approved_integration_provider_ids)
+    if integration_providers:
+        payload["approved_integration_provider_ids"] = integration_providers
     if blocked_integration_action_keys:
         payload["blocked_integration_action_keys"] = sorted(set(blocked_integration_action_keys))
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()

@@ -22,6 +22,7 @@ from langflow.services.policy_bundle import (
 )
 from lfx.extension.loader._types import LoadedIntegration
 from lfx.integrations.capabilities import IntegrationCapabilityManifest
+from lfx.integrations.policy_constants import INTEGRATION_POLICY_DENY_ALL_PROVIDER_ID
 from lfx.services.deps import injectable_session_scope, injectable_session_scope_readonly
 from lfx.services.policy_bundle import PolicyBundleSnapshot
 
@@ -30,9 +31,11 @@ async def _unused_session():
     yield SimpleNamespace()
 
 
-def _client(monkeypatch, *, superuser: bool = True):
+def _client(monkeypatch, *, superuser: bool = True, include_v2: bool = True):
     app = FastAPI()
     app.include_router(policy_api.router, prefix="/api/v1")
+    if include_v2:
+        app.include_router(policy_api.router_v2, prefix="/api/v2")
     admin = SimpleNamespace(id=uuid4(), is_superuser=True)
 
     if superuser:
@@ -87,8 +90,9 @@ def _snapshot(*, revision: int, actor_id=None, reason: str | None = None) -> Pol
     )
 
 
-def test_router_exposes_only_the_shared_bundle_administration_contract():
-    routes = [route for route in policy_api.router.routes if isinstance(route, APIRoute)]
+@pytest.mark.parametrize("router", [policy_api.router, policy_api.router_v2])
+def test_router_exposes_only_the_shared_bundle_administration_contract(router):
+    routes = [route for route in router.routes if isinstance(route, APIRoute)]
     schema_routes = [route for route in routes if route.include_in_schema]
 
     assert {(route.path, frozenset(route.methods)) for route in schema_routes} == {
@@ -109,6 +113,10 @@ def test_router_exposes_only_the_shared_bundle_administration_contract():
         ("put", "/api/v1/policy-bundle"),
         ("get", "/api/v1/policy-bundle/history"),
         ("post", "/api/v1/policy-bundle/rollback/1"),
+        ("get", "/api/v2/policy-bundle"),
+        ("put", "/api/v2/policy-bundle"),
+        ("get", "/api/v2/policy-bundle/history"),
+        ("post", "/api/v2/policy-bundle/rollback/1"),
     ],
 )
 def test_policy_bundle_routes_reject_non_superusers_without_database_access(monkeypatch, method, path):
@@ -225,12 +233,136 @@ def test_put_without_integration_fields_leaves_integrations_unrestricted_for_leg
     assert response.status_code == status.HTTP_200_OK
     assert replace_state.await_args.kwargs["approved_integration_provider_ids"] is None
     assert replace_state.await_args.kwargs["blocked_integration_action_keys"] == []
-    assert response.json()["approved_integration_provider_ids"] is None
+    assert response.json()["approved_integration_provider_ids"] == []
     assert response.json()["blocked_integration_action_keys"] == []
     apply_state.assert_called_once_with(committed)
     published = apply_state.call_args.args[0]
     assert published.approved_integration_provider_ids is None
     assert published.blocked_integration_action_keys == frozenset()
+
+
+@pytest.mark.parametrize(
+    ("version", "ceiling", "wire_ceiling"),
+    [
+        ("v1", None, []),
+        ("v1", frozenset(), [INTEGRATION_POLICY_DENY_ALL_PROVIDER_ID]),
+        ("v1", frozenset({"google"}), ["google"]),
+        ("v2", None, None),
+        ("v2", frozenset(), []),
+        ("v2", frozenset({"google"}), ["google"]),
+    ],
+)
+def test_versioned_read_modify_write_preserves_integration_intent(monkeypatch, version, ceiling, wire_ceiling):
+    """A catalog edit must preserve both unrestricted and deny-all policies."""
+    client, admin, read_state, replace_state, _history, _rollback, apply_state = _client(monkeypatch)
+    active = replace(_snapshot(revision=7, actor_id=admin.id), approved_integration_provider_ids=ceiling)
+    read_state.return_value = active
+    committed = replace(active, revision=8)
+    replace_state.return_value = committed
+    path = f"/api/{version}/policy-bundle"
+
+    current = client.get(path)
+    assert current.status_code == status.HTTP_200_OK
+    assert current.json()["approved_integration_provider_ids"] == wire_ceiling
+    payload = current.json()
+    payload["expected_revision"] = payload.pop("revision")
+    payload["blocked_component_keys"] = ["AnotherComponent"]
+    response = client.put(path, json=payload)
+
+    assert response.status_code == status.HTTP_200_OK
+    forwarded = replace_state.await_args.kwargs["approved_integration_provider_ids"]
+    assert forwarded == (None if ceiling is None else sorted(ceiling))
+    assert response.json()["approved_integration_provider_ids"] == wire_ceiling
+    apply_state.assert_called_once_with(committed)
+
+
+def test_stale_browser_empty_list_stays_unrestricted_on_new_server(monkeypatch):
+    client, admin, _read_state, replace_state, _history, _rollback, _apply = _client(monkeypatch)
+    replace_state.return_value = replace(
+        _snapshot(revision=8, actor_id=admin.id), approved_integration_provider_ids=None
+    )
+
+    response = client.put(
+        "/api/v1/policy-bundle",
+        json={
+            "expected_revision": 7,
+            "approved_provider_ids": [],
+            "blocked_component_keys": ["AnotherComponent"],
+            "blocked_template_keys": [],
+            # This is the old browser builder's `null ?? []` payload.
+            "approved_integration_provider_ids": [],
+        },
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert replace_state.await_args.kwargs["approved_integration_provider_ids"] is None
+
+
+@pytest.mark.parametrize("method", ["get", "put"])
+def test_old_replica_does_not_accept_the_new_contract(monkeypatch, method):
+    client, _admin, _read_state, replace_state, _history, _rollback, apply_state = _client(
+        monkeypatch, include_v2=False
+    )
+    payload = {
+        "expected_revision": 7,
+        "approved_provider_ids": [],
+        "blocked_component_keys": [],
+        "blocked_template_keys": [],
+        "approved_integration_provider_ids": [],
+    }
+
+    response = getattr(client, method)("/api/v2/policy-bundle", **({"json": payload} if method == "put" else {}))
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    replace_state.assert_not_awaited()
+    apply_state.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("version", "ceiling"),
+    [
+        ("v1", [INTEGRATION_POLICY_DENY_ALL_PROVIDER_ID, "google"]),
+        ("v2", [INTEGRATION_POLICY_DENY_ALL_PROVIDER_ID]),
+        ("v2", [INTEGRATION_POLICY_DENY_ALL_PROVIDER_ID, "google"]),
+    ],
+)
+def test_reserved_marker_cannot_be_mixed_with_real_providers(monkeypatch, version, ceiling):
+    client, _admin, _read_state, replace_state, _history, _rollback, apply_state = _client(monkeypatch)
+
+    response = client.put(
+        f"/api/{version}/policy-bundle",
+        json={
+            "expected_revision": 7,
+            "approved_provider_ids": [],
+            "blocked_component_keys": [],
+            "blocked_template_keys": [],
+            "approved_integration_provider_ids": ceiling,
+        },
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    replace_state.assert_not_awaited()
+    apply_state.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("version", "wire_ceiling"),
+    [("v1", [INTEGRATION_POLICY_DENY_ALL_PROVIDER_ID]), ("v2", [])],
+)
+def test_history_and_rollback_use_the_requested_wire_contract(monkeypatch, version, wire_ceiling):
+    client, admin, _read_state, _replace_state, list_history, rollback_state, apply_state = _client(monkeypatch)
+    deny_all = replace(_snapshot(revision=8, actor_id=admin.id), approved_integration_provider_ids=frozenset())
+    list_history.return_value = [deny_all]
+    rollback_state.return_value = replace(deny_all, revision=9)
+
+    history = client.get(f"/api/{version}/policy-bundle/history")
+    rollback = client.post(f"/api/{version}/policy-bundle/rollback/8", json={"expected_revision": 8})
+
+    assert history.status_code == status.HTTP_200_OK
+    assert history.json()["items"][0]["approved_integration_provider_ids"] == wire_ceiling
+    assert rollback.status_code == status.HTTP_200_OK
+    assert rollback.json()["approved_integration_provider_ids"] == wire_ceiling
+    apply_state.assert_called_once_with(rollback_state.return_value)
 
 
 @pytest.mark.parametrize(

@@ -5,7 +5,7 @@ import type {
 } from "./types";
 
 /**
- * Builds the body for `PUT /api/v1/policy-bundle`.
+ * Builds the body for `PUT /api/v2/policy-bundle`.
  *
  * The PUT is a complete replacement: a list left out of the body is cleared, not
  * kept. Two panels edit this bundle — the catalog (components, templates,

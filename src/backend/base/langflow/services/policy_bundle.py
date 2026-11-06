@@ -8,10 +8,12 @@ from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 from lfx.base.models.provider_registry import resolve_provider_id
+from lfx.integrations.policy_constants import INTEGRATION_POLICY_DENY_ALL_PROVIDER_ID
 from lfx.log.logger import logger
 from lfx.services.integration_policy import normalize_integration_policy_key
 from lfx.services.model_provider_policy import ModelProviderPolicyService, normalize_blocked_model_key
 from lfx.services.policy_bundle import PolicyBundleSnapshot, policy_bundle_content_hash
+from lfx.services.policy_bundle.base import decode_integration_provider_ids, encode_integration_provider_ids
 from sqlalchemy import update
 from sqlmodel import col, select
 
@@ -115,6 +117,9 @@ def _normalize_integration_provider_ids(provider_ids: Collection[str]) -> frozen
         if _INTEGRATION_PROVIDER_ID_RE.fullmatch(provider_id) is None:
             msg = "Integration provider IDs must use stable lowercase identifier syntax"
             raise ValueError(msg)
+        if provider_id == INTEGRATION_POLICY_DENY_ALL_PROVIDER_ID:
+            msg = "The integration deny-all identity is reserved for policy storage"
+            raise ValueError(msg)
         normalized.add(provider_id)
     return frozenset(normalized)
 
@@ -152,9 +157,7 @@ def _snapshot_from_row(row: PolicyBundleRevision, *, initialized: bool | None = 
         blocked_component_keys=frozenset(row.blocked_component_keys),
         blocked_template_keys=frozenset(row.blocked_template_keys),
         blocked_model_keys=frozenset(row.blocked_model_keys or []),
-        approved_integration_provider_ids=(
-            None if row.approved_integration_provider_ids is None else frozenset(row.approved_integration_provider_ids)
-        ),
+        approved_integration_provider_ids=decode_integration_provider_ids(row.approved_integration_provider_ids),
         blocked_integration_action_keys=frozenset(row.blocked_integration_action_keys or []),
         content_hash=row.content_hash,
         created_at=row.created_at,
@@ -363,10 +366,8 @@ async def replace_policy_bundle_state(
             blocked_component_keys=sorted(snapshot.blocked_component_keys),
             blocked_template_keys=sorted(snapshot.blocked_template_keys),
             blocked_model_keys=sorted(snapshot.blocked_model_keys),
-            approved_integration_provider_ids=(
-                None
-                if snapshot.approved_integration_provider_ids is None
-                else sorted(snapshot.approved_integration_provider_ids)
+            approved_integration_provider_ids=encode_integration_provider_ids(
+                snapshot.approved_integration_provider_ids
             ),
             blocked_integration_action_keys=sorted(snapshot.blocked_integration_action_keys),
             content_hash=snapshot.content_hash,
