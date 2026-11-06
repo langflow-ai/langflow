@@ -563,6 +563,7 @@ module.exports = {
             "Components/bundles-elastic",
             "Components/bundles-empiriolabs",
             "Components/bundles-exa",
+            "Components/bundles-parallel",
             "Components/bundles-faiss",
             "Components/bundles-figranium",
             "Components/bundles-files-ingestion",

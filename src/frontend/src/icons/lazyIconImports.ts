@@ -1,5 +1,7 @@
 // Export the lazy loading mapping for icons
 export const lazyIconsMapping = {
+  Parallel: () =>
+    import("@/icons/Parallel").then((mod) => ({ default: mod.ParallelIcon })),
   AIML: () => import("@/icons/AIML").then((mod) => ({ default: mod.AIMLIcon })),
   Agentics: () =>
     import("@/icons/Agentics").then((mod) => ({

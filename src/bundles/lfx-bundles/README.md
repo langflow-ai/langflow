@@ -104,3 +104,11 @@ Starter projects that require a provider belong in that provider's
 `starter_projects/` directory. Langflow discovers them only after the
 manifest-less provider loads, then applies the normal component-availability
 filter before seeding them.
+
+## Parallel
+
+Install `pip install 'lfx-bundles[parallel]'` and select **Parallel Search** in
+**Bundles > Parallel**. Run `Python asyncio TaskGroup documentation` for a Table
+of source URLs and passages, or use Tool Mode with an Agent. Anonymous search
+requires no key; an optional Parallel API Key enables higher limits. Disable
+**Enabled** to avoid network calls. See the [component reference](../../../docs/docs/Components/bundles-parallel.mdx).
