@@ -1,0 +1,44 @@
+[project]
+name = "lfx-minicpm"
+version = "0.1.0"
+description = "MiniCPM-OCR component (images and scanned PDFs via an OpenAI-compatible endpoint) as a standalone Langflow Extension Bundle."
+readme = "README.md"
+requires-python = ">=3.10,<3.16"
+license = { text = "MIT" }
+authors = [
+    { name = "Langflow", email = "contact@langflow.org" },
+]
+keywords = ["langflow", "lfx", "extension", "bundle", "minicpm", "ocr"]
+
+# Runtime deps: lfx (the BUNDLE_API surface), httpx for the chat-completions
+# call, pypdfium2 for local PDF page rendering, and pillow for PNG encoding.
+dependencies = [
+    "lfx>=1.14.0.dev0,<2.0.0",
+    "httpx>=0.24.0,<1.0.0",
+    "pypdfium2>=4.0.0",
+    "pillow>=9.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/langflow-ai/langflow"
+Documentation = "https://docs.langflow.org/extensions"
+Repository = "https://github.com/langflow-ai/langflow"
+
+[project.entry-points."langflow.extensions"]
+lfx-minicpm = "lfx_minicpm"
+
+[build-system]
+requires = ["hatchling==1.31.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lfx_minicpm"]
+include = ["src/lfx_minicpm/extension.json", "src/lfx_minicpm/components/**/*.py"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/lfx_minicpm",
+    "extension.json",
+    "README.md",
+    "pyproject.toml",
+]

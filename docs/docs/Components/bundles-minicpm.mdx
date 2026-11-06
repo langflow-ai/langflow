@@ -1,0 +1,58 @@
+---
+title: MiniCPM OCR
+slug: /bundles-minicpm
+---
+
+import Icon from "@site/src/components/icon";
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+<GraduatedBundleInstall packageName="minicpm" />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **MiniCPM-OCR** bundle.
+
+## MiniCPM OCR
+
+This component extracts text from images and scanned PDFs with [MiniCPM-OCR](https://github.com/OpenBMB/MiniCPM-OCR), a 1.3B open OCR model served through an OpenAI-compatible `chat/completions` endpoint (vLLM, SGLang, llama.cpp or Ollama).
+
+The component runs no model locally: it renders PDF pages with `pypdfium2` at 200 DPI, sends each page to your endpoint, and returns the recognized Markdown or text. Start the server first, for example:
+
+```bash
+vllm serve openbmb/MiniCPM-OCR-1.0 --port 8000
+```
+
+Then set **Base URL** to `http://127.0.0.1:8000`; do not append `/v1`, the component adds it. Set **API Key** only when the server requires one.
+
+The request follows MiniCPM-OCR's own client: the image content part precedes the prompt, and `mm_processor_kwargs` (`max_slice_nums: 9`, `downsample_mode: "4x"`) controls page slicing. Endpoints that reject that field with HTTP 400 or 422 are retried once without it.
+
+### MiniCPM OCR parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Files (`file`) | File | Input parameter. Images (PNG, JPEG, BMP, TIFF, WebP) or PDF files to recognize. |
+| Base URL (`base_url`) | String | Input parameter. Base URL of the OpenAI-compatible MiniCPM-OCR server. Default: `http://127.0.0.1:8000`. |
+| Model (`model`) | String | Input parameter. Model name served by the endpoint. Default: `minicpm-ocr`. |
+| API Key (`api_key`) | SecretString | Input parameter. Optional Bearer token. |
+| Prompt (`prompt`) | String | Input parameter. Instruction sent with every page. Default: `Text Recognition:`. |
+| Timeout (`timeout`) | Integer | Input parameter. Timeout in seconds for one page request. Default: `120`. |
+
+### Output
+
+Each input file produces one [`Data`](/data-types) object with the recognized text in `text` and these fields in `data`:
+
+| Field | Description |
+|-------|-------------|
+| `file_path` | Server-side path of the processed file. |
+| `text` | Recognized text; pages are joined with blank lines. |
+| `page_count` | Number of pages sent to the endpoint. |
+| `model` | Model name used for recognition. |
+| `ocr_engine` | Always `minicpm-ocr`. |
+
+Page-level recognition preserves the text but not the original table structure or reading order. Use a document-parsing component, such as the [Docling bundle](/bundles-docling) or the [PaddleOCR bundle](/bundles-paddle), when structured layout recovery is required.
+
+## See also
+
+* [**Docling** bundle](/bundles-docling)
+* [**PaddleOCR** bundle](/bundles-paddle)
+* [**Read File** component](/read-file)
