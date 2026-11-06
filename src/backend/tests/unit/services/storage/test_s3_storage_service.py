@@ -397,3 +397,62 @@ class TestMd5Label:
 
         with pytest.raises(ValueError, match="md5"):
             await service.create_upload_link("ns", "a.pdf", md5=bad)
+
+
+class _NetworkError(Exception):
+    """What botocore raises when the network fails: a ``response`` attribute that is None."""
+
+    response = None
+
+
+def _failing_client_service(mock_session_service, mock_settings_service, error):
+    from contextlib import asynccontextmanager
+
+    class Client:
+        def __getattr__(self, name):
+            async def fail(**_kwargs):
+                raise error
+
+            return fail
+
+    service = S3StorageService(mock_session_service, mock_settings_service)
+
+    @asynccontextmanager
+    async def _client(**_kwargs):
+        yield Client()
+
+    service._get_client = _client
+    return service
+
+
+class TestNetworkErrorsKeepTheirType:
+    """A network error has no S3 error code to read. It must surface, not crash the handler reading it."""
+
+    @pytest.mark.parametrize(
+        "call",
+        [
+            lambda service: service.get_file("ns", "a.pdf"),
+            lambda service: service.get_file_size("ns", "a.pdf"),
+            lambda service: service.get_file_md5("ns", "a.pdf"),
+            lambda service: service.move_file("source", "target", "a.pdf"),
+        ],
+        ids=["get_file", "get_file_size", "get_file_md5", "move_file"],
+    )
+    async def test_a_call_raises_the_network_error(self, mock_session_service, mock_settings_service, call):
+        service = _failing_client_service(mock_session_service, mock_settings_service, _NetworkError("no route"))
+        with pytest.raises(_NetworkError):
+            await call(service)
+
+    async def test_a_stream_raises_the_network_error(self, mock_session_service, mock_settings_service):
+        service = _failing_client_service(mock_session_service, mock_settings_service, _NetworkError("no route"))
+        with pytest.raises(_NetworkError):
+            async for _ in service.get_file_stream("ns", "a.pdf"):
+                pass
+
+    async def test_a_missing_key_is_still_file_not_found(self, mock_session_service, mock_settings_service):
+        class MissingKeyError(Exception):
+            response = {"Error": {"Code": "NoSuchKey"}}
+
+        service = _failing_client_service(mock_session_service, mock_settings_service, MissingKeyError("gone"))
+        with pytest.raises(FileNotFoundError):
+            await service.get_file_size("ns", "a.pdf")

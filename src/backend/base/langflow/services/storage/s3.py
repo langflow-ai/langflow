@@ -32,6 +32,12 @@ MD5_METADATA_KEY = "md5"
 _MD5_PATTERN = re.compile(r"[0-9a-f]{32}")
 
 
+def _error_code(error: Exception) -> str | None:
+    """The S3 error code a failed call carries; none for a network error, whose ``response`` is None."""
+    response = getattr(error, "response", None)
+    return response.get("Error", {}).get("Code") if isinstance(response, dict) else None
+
+
 def _md5_hex(data: bytes) -> str:
     return hashlib.md5(data, usedforsecurity=False).hexdigest()
 
@@ -402,7 +408,7 @@ class S3StorageService(StorageService):
 
             logger.debug(f"File {file_name} retrieved successfully from S3: s3://{self.bucket_name}/{key}")
         except Exception as e:
-            if hasattr(e, "response") and e.response.get("Error", {}).get("Code") == "NoSuchKey":
+            if _error_code(e) == "NoSuchKey":
                 await logger.awarning(f"File {file_name} not found in S3 flow {flow_id}")
                 msg = f"File not found: {file_name}"
                 raise FileNotFoundError(msg) from e
@@ -446,7 +452,7 @@ class S3StorageService(StorageService):
                             await body.close()
 
         except Exception as e:
-            if hasattr(e, "response") and e.response.get("Error", {}).get("Code") == "NoSuchKey":
+            if _error_code(e) == "NoSuchKey":
                 await logger.awarning(f"File {file_name} not found in S3 flow {flow_id}")
                 msg = f"File not found: {file_name}"
                 raise FileNotFoundError(msg) from e
@@ -602,7 +608,7 @@ class S3StorageService(StorageService):
                     **extra,
                 )
             except Exception as e:
-                if not (hasattr(e, "response") and e.response.get("Error", {}).get("Code") in ["NoSuchKey", "404"]):
+                if _error_code(e) not in ["NoSuchKey", "404"]:
                     logger.exception(f"Error moving file {file_name} from {source_namespace} to {target_namespace}")
                     raise
                 # Checked on this client rather than through _has_object, which would open a
@@ -610,8 +616,7 @@ class S3StorageService(StorageService):
                 try:
                     await s3_client.head_object(Bucket=self.bucket_name, Key=target_key)
                 except Exception as head_error:
-                    code = getattr(head_error, "response", {}).get("Error", {}).get("Code")
-                    if code not in ["NoSuchKey", "404"]:
+                    if _error_code(head_error) not in ["NoSuchKey", "404"]:
                         raise
                     msg = f"File not found: {file_name}"
                     raise FileNotFoundError(msg) from e
@@ -663,7 +668,7 @@ class S3StorageService(StorageService):
 
         except Exception as e:
             # Check if it's a 404 error
-            if hasattr(e, "response") and e.response.get("Error", {}).get("Code") in ["NoSuchKey", "404"]:
+            if _error_code(e) in ["NoSuchKey", "404"]:
                 await logger.awarning(f"File {file_name} not found in S3 flow {flow_id}")
                 msg = f"File not found: {file_name}"
                 raise FileNotFoundError(msg) from e
@@ -685,7 +690,7 @@ class S3StorageService(StorageService):
             async with self._get_client() as s3_client:
                 response = await s3_client.head_object(Bucket=self.bucket_name, Key=key)
         except Exception as e:
-            if hasattr(e, "response") and e.response.get("Error", {}).get("Code") in ["NoSuchKey", "404"]:
+            if _error_code(e) in ["NoSuchKey", "404"]:
                 msg = f"File not found: {file_name}"
                 raise FileNotFoundError(msg) from e
             raise
