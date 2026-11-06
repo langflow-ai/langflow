@@ -1,7 +1,9 @@
 """Synthetic MCP responses exercise the native component and real SDK transport."""
 
+import asyncio
 import json
 import sys
+import traceback
 from types import SimpleNamespace
 
 import anyio
@@ -121,21 +123,26 @@ async def test_native_output_sdk_and_all_transport_headers(monkeypatch, credenti
 
 
 @pytest.mark.asyncio
-async def test_bad_credentials_not_retried_anonymously(monkeypatch):
+@pytest.mark.parametrize("status", [401, 429])
+async def test_initialization_http_status_is_safe_and_not_retried(monkeypatch, status):
     requests = []
 
     def handler(request):
         requests.append(request)
         assert request.headers["authorization"] == "Bearer synthetic-invalid"
-        return httpx.Response(401)
+        return httpx.Response(status, text="synthetic-sensitive-body")
 
     monkeypatch.setattr(
         module,
         "ssrf_protected_strict_httpx_client_kwargs_for_url",
         lambda _: ({}, {"transport": httpx.MockTransport(handler)}),
     )
-    with pytest.raises(ExceptionGroup):
-        await ParallelSearchComponent().set(query="Python", api_key="synthetic-invalid").fetch_content()
+    component = ParallelSearchComponent().set(query="Python", api_key="synthetic-invalid")
+    with pytest.raises(ValueError, match=rf"Parallel MCP request failed \(HTTP {status}\)") as caught:
+        await component.build_results()
+    displayed = "".join(traceback.format_exception(caught.value))
+    assert "synthetic-invalid" not in displayed
+    assert "synthetic-sensitive-body" not in displayed
     assert len(requests) == 1
 
 
@@ -154,7 +161,7 @@ async def test_ssrf_denial_propagates(monkeypatch):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("location", ["/redirect", "https://example.com/redirect"])
+@pytest.mark.parametrize("location", ["/synthetic-sensitive-target", "https://example.com/synthetic-sensitive-target"])
 async def test_redirects_are_refused(monkeypatch, location):
     requests = []
 
@@ -168,8 +175,9 @@ async def test_redirects_are_refused(monkeypatch, location):
         "ssrf_protected_strict_httpx_client_kwargs_for_url",
         lambda _: ({}, {"transport": httpx.MockTransport(handler)}),
     )
-    with pytest.raises(ExceptionGroup):
-        await ParallelSearchComponent().set(query="Python").fetch_content()
+    with pytest.raises(ValueError, match=r"Parallel MCP refused a redirect \(HTTP 307\)") as caught:
+        await ParallelSearchComponent().set(query="Python").build_results()
+    assert "synthetic-sensitive-target" not in "".join(traceback.format_exception(caught.value))
     assert len(requests) == 1
 
 
@@ -252,4 +260,66 @@ async def test_search_deadline_cancels_sdk_and_closes_client(monkeypatch):
         await ParallelSearchComponent().set(query="Python").fetch_content()
     assert budgets == [90]
     assert cancelled == [True]
+    assert closed == [True]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("kind", ["connection", "timeout", "other", "mixed"])
+async def test_initialization_non_status_errors_stay_intact(monkeypatch, kind):
+    original = None
+
+    def handler(request):
+        nonlocal original
+        errors = {
+            "connection": httpx.ConnectError("synthetic connection failure", request=request),
+            "timeout": httpx.ReadTimeout("synthetic timeout", request=request),
+            "other": RuntimeError("synthetic SDK failure"),
+            "mixed": ExceptionGroup(
+                "synthetic mixed failure",
+                [
+                    httpx.HTTPStatusError("synthetic HTTP failure", request=request, response=httpx.Response(429)),
+                    RuntimeError("synthetic unrelated failure"),
+                ],
+            ),
+        }
+        original = errors[kind]
+        raise original
+
+    monkeypatch.setattr(
+        module,
+        "ssrf_protected_strict_httpx_client_kwargs_for_url",
+        lambda _: ({}, {"transport": httpx.MockTransport(handler)}),
+    )
+    with pytest.raises(ExceptionGroup) as caught:
+        await ParallelSearchComponent().set(query="Python").fetch_content_dataframe()
+    error = caught.value
+    while isinstance(error, ExceptionGroup) and len(error.exceptions) == 1:
+        error = error.exceptions[0]
+    assert error is original
+
+
+@pytest.mark.asyncio
+async def test_caller_cancellation_stays_cancelled_and_closes_client(monkeypatch):
+    started = asyncio.Event()
+    closed = []
+
+    async def handler(_request):
+        started.set()
+        await anyio.sleep_forever()
+
+    class ClosingTransport(httpx.MockTransport):
+        async def aclose(self):
+            closed.append(True)
+            await super().aclose()
+
+    monkeypatch.setattr(
+        module,
+        "ssrf_protected_strict_httpx_client_kwargs_for_url",
+        lambda _: ({}, {"transport": ClosingTransport(handler)}),
+    )
+    task = asyncio.create_task(ParallelSearchComponent().set(query="Python").fetch_content_dataframe())
+    await asyncio.wait_for(started.wait(), timeout=2)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
     assert closed == [True]

@@ -107,8 +107,8 @@ filter before seeding them.
 
 ## Parallel
 
-Install `pip install 'lfx-bundles[parallel]'` and select **Parallel Search** in
+Install `pip install 'lfx-bundles[parallel]>=1.3.5'` and select **Parallel Search** in
 **Bundles > Parallel**. Run `Python asyncio TaskGroup documentation` for a Table
 of source URLs and passages, or use Tool Mode with an Agent. Anonymous search
 requires no key; an optional Parallel API Key enables higher limits. Disable
-**Enabled** to avoid network calls. See the [component reference](../../../docs/docs/Components/bundles-parallel.mdx).
+**Enabled** to avoid network calls. See the [component reference](https://github.com/georgeatparallel/langflow/blob/2c95931e583c7e721ed434ee78f34e6b77cce4f8/docs/docs/Components/bundles-parallel.mdx).

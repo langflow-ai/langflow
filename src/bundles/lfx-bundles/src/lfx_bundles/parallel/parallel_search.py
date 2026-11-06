@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import sys
 from typing import TYPE_CHECKING
 
 import httpx
@@ -13,6 +14,9 @@ from lfx.schema.dataframe import DataFrame
 from lfx.utils.ssrf_httpx import ssrf_protected_strict_httpx_client_kwargs_for_url
 from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
+
+if sys.version_info < (3, 11):
+    from exceptiongroup import ExceptionGroup
 
 if TYPE_CHECKING:
     from mcp.types import CallToolResult
@@ -116,20 +120,36 @@ class ParallelSearchComponent(Component):
         # The fixed endpoint never redirects. Keep redirects disabled even when SSRF checks are off.
         kwargs["follow_redirects"] = False
         with fail_after(90):
-            async with (
-                httpx.AsyncClient(headers=headers, timeout=90, max_redirects=0, **kwargs) as http,
-                streamable_http_client(MCP_URL, http_client=http) as (read, write, _),
-                ClientSession(read, write) as session,
-            ):
-                await session.initialize()
-                tools = await session.list_tools()
-                if not any(tool.name == "web_search" for tool in tools.tools):
-                    msg = "Parallel MCP does not expose web_search."
-                    raise ValueError(msg)
-                result = await session.call_tool(
-                    "web_search",
-                    {"objective": query, "search_queries": [query]},
-                )
+            try:
+                async with (
+                    httpx.AsyncClient(headers=headers, timeout=90, max_redirects=0, **kwargs) as http,
+                    streamable_http_client(MCP_URL, http_client=http) as (read, write, _),
+                    ClientSession(read, write) as session,
+                ):
+                    await session.initialize()
+                    tools = await session.list_tools()
+                    if not any(tool.name == "web_search" for tool in tools.tools):
+                        msg = "Parallel MCP does not expose web_search."
+                        raise ValueError(msg)
+                    result = await session.call_tool(
+                        "web_search",
+                        {"objective": query, "search_queries": [query]},
+                    )
+            except Exception as exc:
+                # AnyIO task groups wrap HTTP failures. Only unwrap a single cause so
+                # cancellation, timeouts and unrelated/multiple failures stay intact.
+                error = exc
+                while isinstance(error, ExceptionGroup) and len(error.exceptions) == 1:
+                    error = error.exceptions[0]
+                if not isinstance(error, httpx.HTTPStatusError):
+                    raise
+                status = error.response.status_code
+                if error.response.is_redirect:
+                    msg = f"Parallel MCP refused a redirect (HTTP {status})."
+                else:
+                    msg = f"Parallel MCP request failed (HTTP {status})."
+                # Never expose a response body, request URL, redirect target or credential.
+                raise ValueError(msg) from None
         rows = self._result_data(result, self.max_results)
         self.status = rows
         return rows
