@@ -329,6 +329,45 @@ async def test_webhook_runs_only_flows_with_a_webhook_component(
         await webhook_event_manager.unsubscribe(webhook_flow_id, webhook_events)
 
 
+async def test_webhook_rate_limits_calls_when_auth_is_disabled(client, added_webhook_test, monkeypatch):
+    """Without webhook auth, each client IP gets public_flow_rate_limit_per_minute calls per flow."""
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.auth_settings, "WEBHOOK_AUTH_ENABLE", False)
+    monkeypatch.setattr(settings_service.settings, "rate_limit_enabled", True)
+    monkeypatch.setattr(settings_service.settings, "public_flow_rate_limit_per_minute", 2)
+
+    # The flow ID and the endpoint name count against the same flow.
+    for flow_id_or_name in (added_webhook_test["id"], added_webhook_test["endpoint_name"]):
+        response = await client.post(f"api/v1/webhook/{flow_id_or_name}", json={"k": "v"})
+        assert response.status_code == 202
+
+    response = await client.post(f"api/v1/webhook/{added_webhook_test['id']}", json={"k": "v"})
+    assert response.status_code == 429
+    assert response.headers["Retry-After"] == "60"
+
+
+async def test_webhook_does_not_rate_limit_authenticated_calls(
+    client, added_webhook_test, created_api_key, monkeypatch
+):
+    """With webhook auth on, API key calls are not throttled."""
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.auth_settings, "WEBHOOK_AUTH_ENABLE", True)
+    monkeypatch.setattr(settings_service.settings, "rate_limit_enabled", True)
+    monkeypatch.setattr(settings_service.settings, "public_flow_rate_limit_per_minute", 2)
+
+    for _ in range(3):
+        response = await client.post(
+            f"api/v1/webhook/{added_webhook_test['id']}",
+            headers={"x-api-key": created_api_key.api_key},
+            json={"k": "v"},
+        )
+        assert response.status_code == 202
+
+
 # async def test_webhook_not_found_invalid_flow_id(client, created_api_key):
 #     """Test that webhook returns 404 for invalid flow ID."""
 #     endpoint = "api/v1/webhook/00000000-0000-0000-0000-000000000000"
