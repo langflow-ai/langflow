@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from lfx.integrations.errors import ConnectionNotAuthorizedError
+from lfx.integrations.errors import ConnectionNotAuthorizedError, IntegrationError, ProviderUnavailableError
 from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest
 from lfx.services.authorization.base import ExecutionPrincipal
 from pydantic import ValidationError
@@ -34,11 +34,10 @@ from langflow.services.triggers.constants import (
     FAMILY_TRIGGER_LISTENER,
     FAMILY_TRIGGER_PUSH,
     KIND_INBOUND_WEBHOOK,
-    PUSH_MECHANISMS,
 )
+from langflow.services.triggers.providers.registry import push_mechanisms
 
 if TYPE_CHECKING:
-    from lfx.integrations.errors import IntegrationError
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.database.models.trigger.model import Trigger
@@ -53,7 +52,7 @@ def family_for(trigger: Trigger) -> str:
     this is about an audit row saying where a run truly came from.
     """
     mechanism = (trigger.config or {}).get("mechanism_id")
-    if trigger.kind == KIND_INBOUND_WEBHOOK or mechanism in PUSH_MECHANISMS:
+    if trigger.kind == KIND_INBOUND_WEBHOOK or mechanism in push_mechanisms():
         return FAMILY_TRIGGER_PUSH
     return FAMILY_TRIGGER_LISTENER
 
@@ -88,6 +87,8 @@ async def connection_preflight(
     resolves connections by handle is authorized inside the run, by the same
     resolver, with the same principal.
     """
+    if unavailable := provider_availability_denial(trigger):
+        return unavailable
     if trigger.connection_id is None:
         return None
     row = await session.get(Connection, trigger.connection_id)
@@ -98,11 +99,20 @@ async def connection_preflight(
         return None
     resolver = get_connection_resolver_service()
     try:
+        from langflow.services.connection.service import enforce_integration_policy_for_provider
+        from langflow.services.triggers.providers.registry import capability_ids, get_kind
+
+        if get_kind(trigger.kind) is not None:
+            await enforce_integration_policy_for_provider(
+                row.provider_key, user_id=trigger.user_id, capability_ids=capability_ids(trigger.kind)
+            )
         request = ConnectionResolutionRequest(
             ref=ConnectionRef(provider=row.provider_key, name=row.name),
             principal=trigger_execution_principal(trigger, family=family),
             required_scopes=frozenset(),
         )
+    except IntegrationError as exc:
+        return exc
     except ValidationError:
         # A row whose handle does not even parse cannot be authorized. Fail
         # closed rather than letting the exception escape and leave the event
@@ -114,3 +124,13 @@ async def connection_preflight(
         owner_kind=row.ownership_mode,
         allow_non_interactive=row.allow_non_interactive,
     )
+
+
+def provider_availability_denial(trigger: Trigger) -> ProviderUnavailableError | None:
+    """Refuse a saved extension source while its trusted descriptor is unloaded."""
+    from langflow.services.triggers.providers.registry import get_kind
+
+    prefix = trigger.kind.partition(".")[0]
+    if "." in trigger.kind and prefix not in {"slack", "google", "microsoft"} and get_kind(trigger.kind) is None:
+        return ProviderUnavailableError(provider=trigger.provider or prefix)
+    return None

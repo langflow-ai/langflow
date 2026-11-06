@@ -97,6 +97,84 @@ def test_replacement_digest_preserves_legacy_no_dependency_shape() -> None:
     )
 
 
+def test_replacement_variable_metadata_is_strict_and_bound_to_receipt() -> None:
+    body = {"description": None, "flows": []}
+    target = {"target_id": str(uuid4()), "declarations": [{"name": "KEY", "kind": "secret"}]}
+    before = ProjectReplacementRequest.model_validate(body)
+    after = ProjectReplacementRequest.model_validate({**body, "variables": target})
+    assert projects_module._replacement_request_digest(before) != projects_module._replacement_request_digest(after)
+    for invalid in (
+        {**target, "values": {"KEY": "must-not-be-accepted"}},
+        {**target, "declarations": target["declarations"] * 2},
+        {**target, "declarations": [{"name": "KEY", "kind": "unknown"}]},
+    ):
+        with pytest.raises(ValidationError):
+            ProjectReplacementRequest.model_validate({**body, "variables": invalid})
+
+
+async def test_activation_guard_failure_rolls_back_flows_variables_and_receipt(
+    client: AsyncClient, active_user, logged_in_headers, monkeypatch
+):
+    from langflow.services.database.models.variable.model import Variable
+    from langflow.services.deployment_artifacts import activation
+
+    project = await _create_project(active_user)
+    flow = await _create_flow(active_user, project["id"], _flow_payload(name="keep-before-activation"))
+    async with session_scope() as session:
+        variable = Variable(name="ATOMIC_KEY", value="old", type="Generic", user_id=active_user.id)
+        session.add(variable)
+        await session.flush()
+        variable_id = variable.id
+
+    async def refuse_after_variable_write(*, session, **_):
+        row = await session.get(Variable, variable_id)
+        row.value = "new"
+        session.add(row)
+        await session.flush()
+        raise HTTPException(status_code=409, detail="readiness failed")
+
+    monkeypatch.setattr(activation, "_activation_guard", refuse_after_variable_write)
+    monkeypatch.setattr(activation, "_extensions_loaded", True)
+    operation_id = uuid4()
+    response = await client.put(
+        f"api/v1/projects/{project['id']}/replacement-operations/{operation_id}",
+        json={"description": "new", "flows": []},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 409, response.text
+    async with session_scope() as session:
+        assert (await session.get(Variable, variable_id)).value == "old"
+        assert (await session.get(Flow, UUID(flow["id"]))).name == "keep-before-activation"
+        assert (await session.get(Folder, UUID(project["id"]))).description == "original description"
+        receipt = (
+            await session.exec(
+                select(ProjectReplacementOperation).where(ProjectReplacementOperation.operation_id == operation_id)
+            )
+        ).first()
+        assert receipt is None
+
+
+async def test_variable_activation_without_extension_fails_closed(
+    client: AsyncClient, active_user, logged_in_headers, monkeypatch
+):
+    from langflow.services.deployment_artifacts import activation
+
+    monkeypatch.setattr(activation, "_activation_guard", None)
+    monkeypatch.setattr(activation, "_extensions_loaded", True)
+    project = await _create_project(active_user)
+    response = await client.put(
+        f"api/v1/projects/{project['id']}/replacement-operations/{uuid4()}",
+        json={
+            "description": "refused",
+            "flows": [],
+            "variables": {"target_id": str(uuid4()), "declarations": []},
+        },
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 409, response.text
+    assert response.headers["x-langflow-error-code"] == "variable_provisioning_unavailable"
+
+
 def test_replacement_digest_matches_a_pinned_value() -> None:
     """Pin one digest so silent encoding drift is caught instead of shipped.
 
@@ -122,7 +200,7 @@ def test_replacement_digest_matches_a_pinned_value() -> None:
 
     digest = projects_module._replacement_request_digest(request)
 
-    assert digest == "c1ae5b89480dd418ac8f6369c41fdd1e9aeb6776ef523f152fb063f60da83abb"
+    assert digest == "c1ae5b89480dd418ac8f6369c41fdd1e9aeb6776ef523f152fb063f60da83abb"  # pragma: allowlist secret
 
 
 def test_replacement_digest_distinguishes_null_from_present_description() -> None:
@@ -1390,7 +1468,11 @@ async def test_replacement_by_non_owner_with_literal_mcp_secret_is_rejected(
             )
         )
         await session.commit()
-    login = await client.post("api/v1/login", data={"username": other_username, "password": other_password})
+    login_data = {
+        "username": other_username,
+        "password": other_password,
+    }
+    login = await client.post("api/v1/login", data=login_data)
     assert login.status_code == 200, login.text
     other_headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
 

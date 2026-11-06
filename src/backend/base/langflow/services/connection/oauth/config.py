@@ -16,20 +16,24 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 #: ``provider-unavailable`` means the exchange failed without a confirmed
 #: credential rejection. Neither should disarm a listener or require reconnect.
 OAuthErrorReason = Literal["registration-unavailable", "provider-unavailable"]
+OAuthErrorCode = Literal["oauth-refresh-token-missing"]
 
 
 class OAuthError(ValueError):
     """A deliberately credential-free error safe for API responses."""
 
-    def __init__(self, message: str, *, reason: OAuthErrorReason | None = None) -> None:
+    def __init__(
+        self, message: str, *, reason: OAuthErrorReason | None = None, code: OAuthErrorCode | None = None
+    ) -> None:
         super().__init__(message)
         self.reason: OAuthErrorReason | None = reason
+        self.code = code
 
 
 class OAuthRegistration(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True)
 
-    provider: Literal["google", "microsoft", "slack"]
+    provider: str = Field(pattern=r"^[a-z0-9][a-z0-9._-]*$", max_length=120)
     profile: Literal["user", "bot"] = "user"
     owner: Literal["customer", "langflow"] = "customer"
     context: Literal["self_managed", "hosted", "desktop"] = "self_managed"
@@ -50,6 +54,19 @@ class OAuthRegistration(BaseModel):
 
     @model_validator(mode="after")
     def validate_registration(self) -> OAuthRegistration:
+        from langflow.services.connection.oauth.adapter import provider_adapter
+
+        adapter = None
+        if self.provider not in {"google", "microsoft", "slack"}:
+            adapter = provider_adapter(self.provider)
+            if adapter is None:
+                msg = "OAuth registration field 'provider' is invalid."
+                raise OAuthError(msg, reason="registration-unavailable")
+            adapter.validate_registration(self)
+            adapter.checked_endpoints(self)
+            if self.client_type == "public" and not adapter.supports_pkce:
+                msg = "Public OAuth clients require a provider with PKCE support."
+                raise OAuthError(msg)
         redirect_error = "OAuth redirect must be HTTPS (or loopback HTTP) at the provider callback"
         try:
             uri = urlsplit(self.redirect_uri)
@@ -89,7 +106,7 @@ class OAuthRegistration(BaseModel):
         if self.private_key and not re.fullmatch(r"[0-9a-fA-F]{64}", self.certificate_thumbprint or ""):
             msg = "Certificate thumbprint must be a SHA-256 digest in hexadecimal"
             raise OAuthError(msg)
-        if self.profile == "bot" and (self.provider != "slack" or self.client_type == "public"):
+        if self.profile == "bot" and (self.provider != "slack" or self.client_type == "public") and adapter is None:
             msg = "Only confidential Slack clients support the bot profile"
             raise OAuthError(msg)
         if self.signing_secret is not None and self.provider != "slack":

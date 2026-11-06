@@ -171,15 +171,85 @@ describe("LoginPage accessibility", () => {
     const username = screen.getByPlaceholderText("Username");
     const password = screen.getByPlaceholderText("Password");
     expect(username).toHaveAttribute("aria-invalid", "true");
-    expect(username).toHaveAttribute("aria-describedby", "login-form-error");
+    expect(username).toHaveAttribute(
+      "aria-describedby",
+      "login-form-error login-upgrade-recovery",
+    );
     expect(password).toHaveAttribute("aria-invalid", "true");
-    expect(password).toHaveAttribute("aria-describedby", "login-form-error");
+    expect(password).toHaveAttribute(
+      "aria-describedby",
+      "login-form-error login-upgrade-recovery",
+    );
 
     // Editing either field clears the stale error and the invalid state.
     fireEvent.change(username, { target: { value: "alice2" } });
     expect(screen.queryByText(message)).not.toBeInTheDocument();
     expect(username).toHaveAttribute("aria-invalid", "false");
     expect(password).not.toHaveAttribute("aria-invalid");
+    expect(
+      screen.queryByRole("link", { name: /recover access after upgrading/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it.each(["langflow", "alice", "unknown-user"])(
+    "offers the same upgrade recovery guidance after rejected credentials for %s",
+    async (username) => {
+      mockLoginMutate.mockImplementation((_user, options) => {
+        options.onError({
+          response: { data: { detail: "Incorrect username or password" } },
+        });
+      });
+      const { container } = renderLoginPage();
+      expect(
+        screen.queryByRole("link", { name: /recover access after upgrading/i }),
+      ).not.toBeInTheDocument();
+      fireEvent.change(screen.getByPlaceholderText("Username"), {
+        target: { value: username },
+      });
+      fireEvent.change(screen.getByPlaceholderText("Password"), {
+        target: { value: "wrong-password" },
+      });
+      fireEvent.submit(container.querySelector("form")!);
+
+      expect(
+        screen.getByText(/an existing account can keep its password/),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("link", { name: /recover access after upgrading/i }),
+      ).toHaveAttribute(
+        "href",
+        "https://github.com/langflow-ai/langflow/blob/release-1.13.0/docs/docs/Develop/api-keys-and-authentication.mdx#recover-access-after-upgrading-recover-access-after-upgrading",
+      );
+      expect(await axe(container)).toHaveNoViolations();
+
+      fireEvent.change(screen.getByPlaceholderText("Password"), {
+        target: { value: "another-password" },
+      });
+      expect(
+        screen.queryByRole("link", { name: /recover access after upgrading/i }),
+      ).not.toBeInTheDocument();
+    },
+  );
+
+  it("does not suggest upgrade recovery for unrelated login errors", () => {
+    mockLoginMutate.mockImplementation((_user, options) => {
+      options.onError({
+        response: {
+          data: { detail: "An error occurred during authentication" },
+        },
+      });
+    });
+    const { container } = renderLoginPage();
+    fireEvent.change(screen.getByPlaceholderText("Username"), {
+      target: { value: "alice" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Password"), {
+      target: { value: "wrong-password" },
+    });
+    fireEvent.submit(container.querySelector("form")!);
+    expect(
+      screen.queryByRole("link", { name: /recover access after upgrading/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("adds_actionable_suggestion_to_server_login_errors", () => {

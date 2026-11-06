@@ -305,7 +305,7 @@ async def test_storage_status_requires_superuser(client, logged_in_headers, rout
     assert response.status_code == 403
 
 
-@pytest.mark.parametrize("route", ["migrations/{id}/retry", "attention/{id}/detach"])
+@pytest.mark.parametrize("route", ["migrations/{id}/retry", "attention/{id}/detach", "inventory/retry"])
 async def test_storage_recovery_requires_superuser(client, logged_in_headers, route):
     """Recovery authorization precedes lookup and mutation."""
     response = await client.post(
@@ -325,6 +325,35 @@ async def test_inventory_and_empty_status_routes(client, admin_headers, storage_
         response = await client.get(f"/api/v1/knowledge-base-storage/{route}", headers=admin_headers)
         assert response.status_code == 200
         assert response.json() == []
+
+
+async def test_admin_can_rescan_orphaned_storage_without_a_migration(
+    client, admin_headers, logged_in_headers, storage_root
+):
+    from langflow.services.knowledge_base_storage import coordinator
+
+    source = storage_root / "former-owner" / "orphaned-base"
+    source.mkdir(parents=True)
+    (source / "chroma.sqlite3").write_bytes(b"preserved legacy data")
+    await coordinator.run_pending()
+    response = await client.get("/api/v1/knowledge-base-storage/status", headers=admin_headers)
+    assert response.status_code == 200
+    status = response.json()
+    assert status["stores"] == []
+    assert status["inventory"]["issues"] == 1
+    assert status["inventory"]["storage_directory"] == str(storage_root)
+    assert status["inventory"]["details"] == [{"source": "former-owner/orphaned-base", "code": "missing_source_owner"}]
+    response = await client.get("/api/v1/knowledge-base-storage/status", headers=logged_in_headers)
+    assert response.status_code == 200
+    assert response.json()["inventory"] is None
+    source.rename(storage_root.parent / "retained-base")
+    response = await client.post("/api/v1/knowledge-base-storage/inventory/retry", headers=admin_headers)
+    assert response.status_code == 202
+    assert response.json() == {"status": "scheduled"}
+    await coordinator.wait_for_upgrade()
+    response = await client.get("/api/v1/knowledge-base-storage/status", headers=admin_headers)
+    assert response.json()["inventory"] == {"complete": True, "issues": 0}
+    assert (storage_root.parent / "retained-base" / "chroma.sqlite3").read_bytes() == b"preserved legacy data"
 
 
 async def _attention_migration(user_id):
@@ -386,6 +415,27 @@ async def test_migration_status_retry_and_detach(client, admin_headers, active_u
     async with session_scope() as session:
         assert (await session.get(KnowledgeBaseStorageMigration, run.id)).phase == "detached"
     assert await coordinator.readiness()
+
+
+@pytest.mark.parametrize("route", ["status", "migrations"])
+async def test_migration_guidance_covers_all_host_processes(client, admin_headers, active_user, storage_root, route):  # noqa: ARG001
+    """Both status views explain that unrelated Langflow processes also block upgrades."""
+    from langflow.services.database.models.knowledge_base_storage_migration import KnowledgeBaseStorageMigration
+
+    record, run = await _attention_migration(active_user.id)
+    async with session_scope() as session:
+        row = await session.get(KnowledgeBaseStorageMigration, run.id)
+        row.error_code = "legacy_workers_running"
+        await session.commit()
+    response = await client.get(f"/api/v1/knowledge-base-storage/{route}", headers=admin_headers)
+    assert response.status_code == 200
+    entries = response.json()["stores"] if route == "status" else response.json()
+    entry = next(row for row in entries if row["kb_id"] == str(record.id))
+    assert entry["error_code"] == "legacy_workers_running"
+    assert entry["guidance"] == (
+        "Stop all other Langflow processes on this host, then retry the upgrade. "
+        "This includes instances using different databases or knowledge directories."
+    )
 
 
 @pytest.mark.parametrize("state", ["ready", "deleting", "detached"])

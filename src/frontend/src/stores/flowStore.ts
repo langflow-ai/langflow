@@ -43,7 +43,10 @@ import type {
   FlowStoreType,
   VertexLayerElementType,
 } from "../types/zustand/flow";
-import { filterPlaceableSelection } from "../utils/componentConstraints";
+import {
+  filterPlaceableSelection,
+  TRIGGER_PLACEMENT_KEY,
+} from "../utils/componentConstraints";
 import {
   buildPositionDictionary,
   cleanEdges,
@@ -627,7 +630,14 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     selection.edges = placeable.edges;
     if (placeable.violations.length > 0) {
       const messages: string[] = [];
-      if (placeable.violations.some((v) => v.reason === "singleton")) {
+      if (placeable.violations.some((v) => v.type === TRIGGER_PLACEMENT_KEY)) {
+        messages.push(i18n.t("triggers.palette.triggerNotPasted"));
+      }
+      if (
+        placeable.violations.some(
+          (v) => v.reason === "singleton" && v.type !== TRIGGER_PLACEMENT_KEY,
+        )
+      ) {
         messages.push(i18n.t("flow.duplicateComponentsNotPasted"));
       }
       if (placeable.violations.some((v) => v.reason === "exclusivity")) {

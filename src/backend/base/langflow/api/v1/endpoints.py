@@ -11,7 +11,7 @@ from uuid import UUID, uuid4
 
 import orjson
 import sqlalchemy as sa
-from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, StreamingResponse
 from lfx.custom.custom_component.component import Component
@@ -65,6 +65,7 @@ from langflow.api.utils.execution_principal import (
     execution_principal_for,
     stamp_execution_principal,
 )
+from langflow.api.utils.flow_utils import get_authorized_legacy_flow_ids
 from langflow.api.utils.migration_pause import writing_on
 from langflow.api.v1.custom_component_policy import (
     CatalogPolicyHTTPException,
@@ -130,11 +131,12 @@ from langflow.services.integration_policy_discovery import (
     filter_component_palette_by_integration_policy,
 )
 from langflow.services.telemetry.schema import RunPayload
-from langflow.utils.flow_secrets import strip_secret_field_values
+from langflow.utils.flow_secrets import restore_request_variable_references, strip_secret_field_values
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
     from langflow.events.event_manager import EventManager
+    from langflow.services.telemetry.service import TelemetryService
 
 router = APIRouter(tags=["Base"])
 
@@ -163,7 +165,14 @@ def _reject_shared_secret_variable_overrides(
     variables: object,
 ) -> None:
     """Keep request variables from redirecting a shared flow's hidden credential."""
-    if variables and not _caller_owns_flow(flow, user) and strip_secret_field_values(flow.data) != flow.data:
+    if not variables or _caller_owns_flow(flow, user):
+        return
+    scrubbed_data = strip_secret_field_values(flow.data)
+    if isinstance(variables, Mapping):
+        # Request-backed references resolve to the caller's value rather than an owner's
+        # secret. Bindings on ordinary fields are not hidden, so they never block a run.
+        restore_request_variable_references(flow.data, scrubbed_data, variables)
+    if scrubbed_data != flow.data:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot override variables in a shared flow using its owner's hidden credentials.",
@@ -509,7 +518,12 @@ async def simple_run_flow(
             if user_id is not None:
                 graph_data = await apply_global_variable_defaults(graph_data, user_id)
             graph = Graph.from_payload(
-                graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name, context=context
+                graph_data,
+                flow_id=flow_id_str,
+                user_id=str(user_id),
+                flow_name=flow.name,
+                context=context,
+                authorized_legacy_flow_ids=await get_authorized_legacy_flow_ids(flow.id),
             )
         stamp_execution_principal(graph, execution_principal)
         graph.expose_error_details = expose_error_details
@@ -979,9 +993,19 @@ async def get_webhook_auth(
     return WebhookAuth(user=webhook_user, flow=flow)
 
 
+async def _record_run_telemetry(telemetry_service: TelemetryService, payload: RunPayload) -> None:
+    """Record completion without allowing telemetry failures to change the run result."""
+    # Error responses discard response background tasks, so record before returning or raising.
+    # This appends locally and queues Segment delivery without waiting for network I/O.
+    try:
+        await telemetry_service.log_package_run(payload)
+    except Exception as exc:  # noqa: BLE001
+        # Exception messages can contain private payload data; log only the type and run ID.
+        await logger.awarning("Failed to record run telemetry for run_id=%s (%s)", payload.run_id, type(exc).__name__)
+
+
 async def _run_flow_internal(
     *,
-    background_tasks: BackgroundTasks,
     flow: FlowRead | None,
     input_request: SimplifiedAPIRequest | None,
     stream: bool,
@@ -994,7 +1018,6 @@ async def _run_flow_internal(
     This function is shared between session-based and API key-based authentication endpoints.
 
     Args:
-        background_tasks (BackgroundTasks): FastAPI background task manager
         flow (FlowRead | None): The flow to execute, loaded via dependency
         input_request (SimplifiedAPIRequest | None): Input parameters for the flow
         stream (bool): Whether to stream the response
@@ -1097,21 +1120,9 @@ async def _run_flow_internal(
             expose_error_details=expose_error_details,
             http_request=http_request,
         )
-        end_time = time.perf_counter()
-        background_tasks.add_task(
-            telemetry_service.log_package_run,
-            RunPayload(
-                run_is_webhook=False,
-                run_seconds=int(end_time - start_time),
-                run_success=True,
-                run_error_message="",
-                run_id=run_id,
-            ),
-        )
-
     except ValueError as exc:
-        background_tasks.add_task(
-            telemetry_service.log_package_run,
+        await _record_run_telemetry(
+            telemetry_service,
             RunPayload(
                 run_is_webhook=False,
                 run_seconds=int(time.perf_counter() - start_time),
@@ -1164,8 +1175,8 @@ async def _run_flow_internal(
         # one is the failure this whole path is here to prevent.
         raise
     except Exception as exc:
-        background_tasks.add_task(
-            telemetry_service.log_package_run,
+        await _record_run_telemetry(
+            telemetry_service,
             RunPayload(
                 run_is_webhook=False,
                 run_seconds=int(time.perf_counter() - start_time),
@@ -1185,6 +1196,17 @@ async def _run_flow_internal(
             exception=client_error,
             flow=flow if expose_error_details else None,
         ) from exc
+    else:
+        await _record_run_telemetry(
+            telemetry_service,
+            RunPayload(
+                run_is_webhook=False,
+                run_seconds=int(time.perf_counter() - start_time),
+                run_success=True,
+                run_error_message="",
+                run_id=run_id,
+            ),
+        )
 
     return _v1_run_response(result)
 
@@ -1192,7 +1214,6 @@ async def _run_flow_internal(
 @router.post("/run/{flow_id_or_name}", response_model=None, response_model_exclude_none=True)
 async def simplified_run_flow(
     *,
-    background_tasks: BackgroundTasks,
     flow: Annotated[FlowRead, Depends(get_flow_for_api_key_user)],
     input_request: SimplifiedAPIRequest | None = None,
     stream: bool = False,
@@ -1207,7 +1228,6 @@ async def simplified_run_flow(
     This endpoint uses API key authentication (Bearer token).
 
     Args:
-        background_tasks (BackgroundTasks): FastAPI background task manager
         flow (FlowRead | None): The flow to execute, loaded via dependency
         input_request (SimplifiedAPIRequest | None): Input parameters for the flow
         stream (bool): Whether to stream the response
@@ -1245,7 +1265,6 @@ async def simplified_run_flow(
         folder_id=flow.folder_id,
     )
     return await _run_flow_internal(
-        background_tasks=background_tasks,
         flow=flow,
         input_request=input_request,
         stream=stream,
@@ -1260,7 +1279,6 @@ async def simplified_run_flow(
 )
 async def simplified_run_flow_session(
     *,
-    background_tasks: BackgroundTasks,
     flow: Annotated[FlowRead, Depends(get_flow_for_current_user)],
     input_request: SimplifiedAPIRequest | None = None,
     stream: bool = False,
@@ -1276,7 +1294,6 @@ async def simplified_run_flow_session(
     This endpoint uses session-based authentication (cookies).
 
     Args:
-        background_tasks (BackgroundTasks): FastAPI background task manager
         flow (FlowRead | None): The flow to execute, loaded via dependency
         input_request (SimplifiedAPIRequest | None): Input parameters for the flow
         stream (bool): Whether to stream the response
@@ -1333,7 +1350,6 @@ async def simplified_run_flow_session(
     await release_db_transaction(session)
 
     return await _run_flow_internal(
-        background_tasks=background_tasks,
         flow=flow,
         input_request=input_request,
         stream=stream,
@@ -1678,6 +1694,7 @@ async def experimental_run_flow(
                     flow_id=flow_id_str,
                     user_id=str(api_key_user.id),
                     flow_name=flow.name,
+                    authorized_legacy_flow_ids=await get_authorized_legacy_flow_ids(flow.id),
                 )
         except CustomComponentValidationError as exc:
             await logger.aexception("Advanced-run flow validation failed for flow %s", flow.id)
@@ -1886,12 +1903,27 @@ def _raw_component_parameters(
     return params
 
 
+def _bind_request_flow_id(component: Any, flow_id: UUID | None) -> None:
+    """Expose the request's flow to a component built for a design-time update.
+
+    The model-provider preflight runs on a freshly built instance, before the
+    template's ``_frontend_node_*`` values are applied, and no graph exists to
+    supply ``flow_id``. Components whose preflight reads persisted, flow-scoped
+    state (Memory Base) would otherwise fail with "flow_id is not available".
+    ``flow_id`` here is the query parameter ``ProviderPolicyAttributesDependency``
+    has already authorized, so it is safe to trust, unlike the template copy.
+    """
+    if flow_id is not None:
+        component._flow_id = str(flow_id)  # noqa: SLF001
+
+
 @router.post("/custom_component", status_code=HTTPStatus.OK, include_in_schema=False)
 async def custom_component(
     raw_code: CustomComponentRequest,
     user: CurrentActiveUser,
     request: Request,
     provider_policy_attributes: ProviderPolicyAttributesDependency,
+    flow_id: Annotated[UUID | None, Query()] = None,
 ) -> CustomComponentResponse:
     # Building a custom component instantiates (and partially executes) posted
     # code. That is a create/write-class action, so enforce the external access
@@ -1928,6 +1960,7 @@ async def custom_component(
         built_frontend_node, component_instance = build_custom_component_template(
             component, user_id=user.id, class_name=raw_code.get_class_name()
         )
+        _bind_request_flow_id(component_instance, flow_id)
         type_ = get_instance_name(component_instance)
         enforce_catalog_policy_for_component_type(type_, snapshot=catalog_policy_snapshot)
         # Posting the source of a blocked integration component must not
@@ -1990,6 +2023,7 @@ async def custom_component_update(
     user: CurrentActiveUser,
     request: Request,
     provider_policy_attributes: ProviderPolicyAttributesDependency,
+    flow_id: Annotated[UUID | None, Query()] = None,
 ):
     """Update an existing custom component with new code and configuration.
 
@@ -2034,6 +2068,7 @@ async def custom_component_update(
             user_id=user.id,
             class_name=code_request.get_class_name(),
         )
+        _bind_request_flow_id(cc_instance, flow_id)
         component_type = get_instance_name(cc_instance)
         enforce_catalog_policy_for_component_type(component_type, snapshot=catalog_policy_snapshot)
         await aenforce_integration_policy_for_component(

@@ -39,6 +39,7 @@ from lfx.utils.file_path_security import (
     component_authenticated_user_scope,
     component_file_access_scopes,
     enforce_local_file_access,
+    storage_scope_id,
     validate_storage_key,
 )
 from lfx.utils.helpers import build_content_type_from_extension
@@ -453,6 +454,8 @@ class BaseFileComponent(Component, ABC):
             return
 
         settings = get_settings_service().settings
+        user_scope = component_authenticated_user_scope(self)
+        user_namespaces = {user_scope, storage_scope_id(user_scope)} if user_scope is not None else set()
         if settings.storage_type == "s3":
             parsed_path = parse_storage_path(str(file.path))
             if not parsed_path:
@@ -462,11 +465,7 @@ class BaseFileComponent(Component, ABC):
                 return
 
             namespace_id, file_name = parsed_path
-            if namespace_id != component_authenticated_user_scope(self):
-                # User-file and legacy flow-file objects share an untyped top-level
-                # namespace. Flow IDs are caller-selectable, so accepting a matching
-                # graph flow ID here could collide with another user's UUID. Only the
-                # authenticated user's namespace has unambiguous ownership.
+            if namespace_id not in user_namespaces:
                 self.log("Skipping S3 file cleanup outside the authenticated user's storage namespace.")
                 return
 
@@ -476,6 +475,20 @@ class BaseFileComponent(Component, ABC):
                 raise StorageServiceUnavailableError(msg)
             await storage_service.delete_file(namespace_id, file_name)
             return
+
+        if user_scope is not None:
+            config_dir = getattr(settings, "config_dir", None)
+            if config_dir is None:
+                self.log("Skipping local file cleanup because the storage directory is unavailable.")
+                return
+            try:
+                user_roots = [(Path(config_dir) / namespace).resolve() for namespace in user_namespaces]
+                owned_path = any(file.path.resolve().is_relative_to(root) for root in user_roots)
+            except (OSError, RuntimeError):
+                owned_path = False
+            if not owned_path:
+                self.log("Skipping local file cleanup outside the authenticated user's storage namespace.")
+                return
 
         await asyncio.to_thread(self._delete_local_path, file.path)
 
