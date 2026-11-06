@@ -7,9 +7,11 @@ import { useSessionManager } from "../use-session-manager";
 const FLOW_ID = "flow-1";
 
 const mockGet = jest.fn();
+const mockDelete = jest.fn();
 jest.mock("@/controllers/API/api", () => ({
   api: {
     get: (...args: unknown[]) => mockGet(...args),
+    delete: (...args: unknown[]) => mockDelete(...args),
   },
 }));
 jest.mock("@/controllers/API/helpers/constants", () => ({
@@ -46,15 +48,20 @@ jest.mock("../../chat-view/utils/message-utils", () => ({
 }));
 
 /**
- * Serves `sessions` from the sessions endpoint (as the server does, capped at
- * 100) and answers the one-message existence check with a message for every id
- * in `taken`.
+ * Serves `sessions` from the paged sessions endpoint and answers the
+ * one-message existence check with a message for every id in `taken`.
  */
 function serve(sessions: string[], taken: string[] = []) {
   mockGet.mockImplementation(
-    async (url: string, { params }: { params: Record<string, string> }) => {
+    async (
+      url: string,
+      { params }: { params: Record<string, string | number> },
+    ) => {
       if (url.endsWith("/sessions")) {
-        return { data: sessions.slice(0, 100) };
+        const offset = Number(params.offset);
+        return {
+          data: sessions.slice(offset, offset + Number(params.limit)),
+        };
       }
       return {
         data: taken.includes(String(params.session_id))
@@ -96,9 +103,52 @@ const activeSessionId = () => useSessionManagerStore.getState().activeSessionId;
 
 beforeEach(() => {
   mockGet.mockReset();
+  mockDelete.mockReset();
   mockSetErrorData.mockReset();
   window.sessionStorage.clear();
   useSessionManagerStore.getState().reset();
+});
+
+describe("useSessionManager.sessions", () => {
+  // The list used to be read from the store during render without a
+  // subscription, so it stayed stale until an unrelated re-render.
+  it("re-renders with the server sessions once they are synced", async () => {
+    serve(["session-a", "session-b"]);
+
+    const { result } = await renderManager();
+
+    await waitFor(() =>
+      expect(result.current.sessions).toEqual([
+        FLOW_ID,
+        "session-a",
+        "session-b",
+      ]),
+    );
+  });
+
+  it("does not sync the previous flow's sessions into the next flow while its list loads", async () => {
+    let serveFlowB: (response: { data: string[] }) => void = () => {};
+    mockGet.mockImplementation(
+      (_url: string, { params }: { params: Record<string, string> }) =>
+        params.flow_id === "flow-b"
+          ? new Promise((resolve) => {
+              serveFlowB = resolve;
+            })
+          : Promise.resolve({ data: ["flow-a-session"] }),
+    );
+    const { result, rerender } = await renderManager();
+
+    rerender({ flowId: "flow-b" });
+
+    await waitFor(() =>
+      expect(useSessionManagerStore.getState().flowId).toBe("flow-b"),
+    );
+    expect(result.current.sessions).toEqual(["flow-b"]);
+    act(() => serveFlowB({ data: ["flow-b-session"] }));
+    await waitFor(() =>
+      expect(result.current.sessions).toEqual(["flow-b", "flow-b-session"]),
+    );
+  });
 });
 
 describe("useSessionManager.createSession", () => {
@@ -111,7 +161,7 @@ describe("useSessionManager.createSession", () => {
       let checks = 0;
       mockGet.mockImplementation((url: string) => {
         if (url.endsWith("/sessions")) {
-          return Promise.resolve({ data: recentSessions(100) });
+          return Promise.resolve({ data: recentSessions(101) });
         }
         if (checks++ === 0) {
           return new Promise((resolve, reject) => {
@@ -161,7 +211,7 @@ describe("useSessionManager.createSession", () => {
           return Promise.resolve({
             data:
               params.flow_id === FLOW_ID
-                ? recentSessions(100)
+                ? recentSessions(101)
                 : ["other-flow-session"],
           });
         }
@@ -235,7 +285,7 @@ describe("useSessionManager.createSession", () => {
   });
 
   it("skips names that unloaded older sessions already use", async () => {
-    serve(recentSessions(100), [
+    serve(recentSessions(101), [
       "New Session 0",
       "New Session 1",
       "New Session 2",
@@ -256,7 +306,7 @@ describe("useSessionManager.createSession", () => {
 
   it("gallops past a long run of taken names instead of giving up", async () => {
     serve(
-      recentSessions(100),
+      recentSessions(101),
       Array.from({ length: 30 }, (_, i) => `New Session ${i}`),
     );
     const { result } = await renderManager();
@@ -277,7 +327,7 @@ describe("useSessionManager.createSession", () => {
   });
 
   it("creates no session and reports an error when every checked name is taken", async () => {
-    serve(recentSessions(100));
+    serve(recentSessions(101));
     const { result } = await renderManager();
     mockGet.mockResolvedValue({ data: [{ id: "m" }] });
 
@@ -292,7 +342,7 @@ describe("useSessionManager.createSession", () => {
   });
 
   it("creates one session when clicked again while the name is checked", async () => {
-    serve(recentSessions(100));
+    serve(recentSessions(101));
     const { result } = await renderManager();
 
     await act(() =>
@@ -316,7 +366,7 @@ describe("useSessionManager.createSession", () => {
           return Promise.resolve({
             data:
               params.flow_id === FLOW_ID
-                ? recentSessions(100)
+                ? recentSessions(101)
                 : ["New Session 4"],
           });
         }
@@ -344,14 +394,15 @@ describe("useSessionManager.createSession", () => {
     });
 
     expect(activeSessionId()).toBe("New Session 5");
-    expect(result.current.sessions).toHaveLength(3);
-    expect(result.current.sessions).toEqual(
-      expect.arrayContaining(["flow-b", "New Session 5", "New Session 4"]),
-    );
+    expect(result.current.sessions).toEqual([
+      "flow-b",
+      "New Session 5",
+      "New Session 4",
+    ]);
   });
 
   it("creates no session and reports an error when the check fails", async () => {
-    serve(recentSessions(100));
+    serve(recentSessions(101));
     const { result } = await renderManager();
     mockGet.mockRejectedValue(new Error("network down"));
 
@@ -361,5 +412,32 @@ describe("useSessionManager.createSession", () => {
     expect(mockSetErrorData).toHaveBeenCalledWith({
       title: "Error creating session.",
     });
+  });
+});
+
+describe("useSessionManager.bulkDeleteSessions", () => {
+  it("deletes on the server every saved session, including one outside the loaded pages", async () => {
+    serve(["loaded"]);
+    mockDelete.mockResolvedValue({ data: null });
+    const { result } = await renderManager();
+    // The open session was kept by the store after newer sessions pushed it
+    // past the loaded pages; "draft" was never sent.
+    act(() => {
+      const { sessions } = useSessionManagerStore.getState();
+      useSessionManagerStore.setState({
+        sessions: [
+          { id: "draft", isLocal: true },
+          ...sessions,
+          { id: "kept-open", isLocal: false },
+        ],
+      });
+    });
+
+    await act(async () => {
+      result.current.bulkDeleteSessions(["draft", "loaded", "kept-open"]);
+    });
+
+    await waitFor(() => expect(mockDelete).toHaveBeenCalledTimes(1));
+    expect(mockDelete.mock.calls[0][1].data).toEqual(["loaded", "kept-open"]);
   });
 });

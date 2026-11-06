@@ -226,6 +226,19 @@ class FileComponent(BaseFileComponent):
         ),
         *_base_inputs,
         StrInput(
+            name="text_encoding",
+            display_name="Text Encoding",
+            value="",
+            advanced=True,
+            info=(
+                "Leave blank to detect encoding automatically for standard text parsing, which reports the selected "
+                "encoding in logs and raw output metadata. For structured CSV output, leaving this blank uses the "
+                "parser default. If accents or punctuation look incorrect, enter the file's encoding, such as cp1252 "
+                "or utf-8. The CSV reader uses the selected encoding but does not add it to structured output "
+                "metadata. Applies to standard text parsing and CSV, not PDF, DOCX, or the Advanced Parser."
+            ),
+        ),
+        StrInput(
             name="file_path_str",
             display_name="File Path",
             info=(
@@ -1456,8 +1469,15 @@ class FileComponent(BaseFileComponent):
         async def process_file_standard(file_path: str, *, silent_errors: bool = False) -> Data | None:
             try:
                 _raise_if_file_tool_cancelled(cancel_event)
-                result = await aparse_text_file_to_data(file_path, silent_errors=silent_errors)
+                encoding = (getattr(self, "text_encoding", "") or "").strip() or None
+                result = await aparse_text_file_to_data(file_path, silent_errors=silent_errors, encoding=encoding)
                 _raise_if_file_tool_cancelled(cancel_event)
+                if result is not None and (selected := result.data.get("encoding")):
+                    selection = "explicit" if encoding else "automatic"
+                    self.log(
+                        f"Read {Path(file_path).name} with text encoding '{selected}' ({selection}). "
+                        "If text looks incorrect, set Text Encoding to the file's encoding."
+                    )
             except _FileToolCancelledError:
                 raise
             except FileNotFoundError as e:

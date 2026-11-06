@@ -756,36 +756,50 @@ def extract_function_name(code):
 
 # Keep this small: each cache key retains the full component source string.
 @lru_cache(maxsize=128)
-def extract_class_name(code: str) -> str:
-    """Extract the name of the first Component subclass found in the code.
+def extract_class_name(code: str, class_name: str | None = None) -> str:
+    """Extract the name of the Component subclass to build from the code.
 
-    The result depends only on the exact source text, so it is cached per
-    source; every request otherwise re-parses each component's code. Errors
-    are not cached, so invalid source raises on every call.
+    Custom components store their whole containing file as ``code``, so one
+    source can define several components. ``class_name`` selects among them;
+    without it, or when it names no component in the source, the first
+    Component subclass is returned, as before.
+
+    The result depends only on the exact arguments, so it is cached; every
+    request otherwise re-parses each component's code. Errors are not cached,
+    so invalid source raises on every call.
 
     Args:
         code (str): The source code to parse
+        class_name (str | None): The component class the caller expects
 
     Returns:
-        str: Name of the first Component subclass found
+        str: Name of the selected Component subclass
 
     Raises:
         TypeError: If no Component subclass is found in the code
     """
     try:
         module = ast.parse(code)
-        for node in module.body:
-            if not isinstance(node, ast.ClassDef):
-                continue
-
-            # Check bases for Component inheritance
-            # TODO: Build a more robust check for Component inheritance
-            for base in node.bases:
-                if isinstance(base, ast.Name) and any(pattern in base.id for pattern in ["Component", "LC"]):
-                    return node.name
-
-        msg = f"No Component subclass found in the code string. Code snippet: {code[:100]}"
-        raise TypeError(msg)
     except SyntaxError as e:
         msg = f"Invalid Python code: {e!s}"
         raise ValueError(msg) from e
+
+    first_component: str | None = None
+    component_classes: set[str] = set()
+    for node in module.body:
+        if not isinstance(node, ast.ClassDef):
+            continue
+        base_names = [base.id for base in node.bases if isinstance(base, ast.Name)]
+        # TODO: Build a more robust check for Component inheritance
+        if any(pattern in name for name in base_names for pattern in ["Component", "LC"]):
+            first_component = first_component or node.name
+            component_classes.add(node.name)
+        elif any(name in component_classes for name in base_names):
+            component_classes.add(node.name)
+
+    if first_component is None:
+        msg = f"No Component subclass found in the code string. Code snippet: {code[:100]}"
+        raise TypeError(msg)
+    if class_name in component_classes:
+        return class_name
+    return first_component

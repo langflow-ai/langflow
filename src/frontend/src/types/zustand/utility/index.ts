@@ -20,6 +20,8 @@ export type UtilityStoreType = {
   setFeatureFlags: (featureFlags: Record<string, unknown>) => void;
   webhookPollingInterval: number;
   setWebhookPollingInterval: (webhookPollingInterval: number) => void;
+  triggerPollingInterval: number;
+  setTriggerPollingInterval: (triggerPollingInterval: number) => void;
   chatValueStore: string;
   setChatValueStore: (value: string) => void;
   currentSessionId: string;
@@ -58,6 +60,21 @@ export type UtilityStoreType = {
   // False on the production deployment profile, where local SQLite is refused.
   localVectorStoreAvailable: boolean;
   setLocalVectorStoreAvailable: (localVectorStoreAvailable: boolean) => void;
+  // Backend the server picks for a new KB/MB that names none (env-driven:
+  // postgres, else opensearch, else sqlite). Undefined until config loads.
+  defaultVectorStoreBackend: string | undefined;
+  configuredVectorStoreBackends: string[];
+  setDefaultVectorStoreBackend: (
+    defaultVectorStoreBackend: string | undefined,
+  ) => void;
+  // Readiness is independent of the optional default-backend field so older
+  // authenticated config responses still enable provider initialization.
+  vectorStoreConfigLoaded: boolean;
+  setVectorStoreConfig: (config: {
+    localVectorStoreAvailable: boolean;
+    defaultVectorStoreBackend: string | undefined;
+    configuredVectorStoreBackends: string[];
+  }) => void;
   mcpBaseUrl: string;
   setMcpBaseUrl: (mcpBaseUrl: string) => void;
   /**

@@ -48,16 +48,32 @@ jest.mock(
   }),
 );
 
+// Pressing "finish animation" stands in for framer-motion ending a width
+// animation.
 jest.mock("@/components/ui/animated-close", () => ({
-  AnimatedConditional: ({ children }: { children?: React.ReactNode }) => (
-    <>{children}</>
+  AnimatedConditional: ({
+    children,
+    onAnimationComplete,
+  }: {
+    children?: React.ReactNode;
+    onAnimationComplete?: () => void;
+  }) => (
+    <>
+      {onAnimationComplete && (
+        <button type="button" onClick={onAnimationComplete}>
+          finish animation
+        </button>
+      )}
+      {children}
+    </>
   ),
 }));
 
 const mockSetOpen = jest.fn();
+let mockPanelOpen = true;
 jest.mock("@/components/ui/simple-sidebar", () => ({
   useSimpleSidebar: () => ({
-    open: true,
+    open: mockPanelOpen,
     setOpen: mockSetOpen,
     setWidth: jest.fn(),
   }),
@@ -196,5 +212,42 @@ describe("FlowPageSlidingContainerContent — Escape handling (WCAG 2.1.2)", () 
     fireEvent.keyDown(screen.getByTestId("chat-header"), { key: "a" });
 
     expect(mockSetOpen).not.toHaveBeenCalled();
+  });
+});
+
+describe("FlowPageSlidingContainerContent — session list mounting", () => {
+  afterEach(() => {
+    mockPanelOpen = true;
+  });
+
+  // The panel stays mounted while hidden; rendering a row per session there
+  // froze the editor on flows with thousands of sessions.
+  it("does not mount the session list while the panel is closed", () => {
+    mockPanelOpen = false;
+
+    renderPanel();
+
+    expect(screen.queryByTestId("chat-sidebar")).not.toBeInTheDocument();
+  });
+
+  it("mounts the session list once the panel is open", () => {
+    renderPanel();
+
+    expect(screen.getByTestId("chat-sidebar")).toBeInTheDocument();
+  });
+
+  it("keeps the session list until the sidebar has finished collapsing", () => {
+    const { rerender } = renderPanel();
+
+    rerender(
+      <FlowPageSlidingContainerContent
+        isFullscreen={false}
+        setIsFullscreen={noop}
+      />,
+    );
+    expect(screen.getByTestId("chat-sidebar")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "finish animation" }));
+    expect(screen.queryByTestId("chat-sidebar")).not.toBeInTheDocument();
   });
 });

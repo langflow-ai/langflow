@@ -17,6 +17,7 @@ from langflow.services.auth import utils as auth_utils
 from langflow.services.authorization import ConnectionAction, ensure_connection_permission
 from langflow.services.authorization.guards import audit_guard_in_transaction
 from langflow.services.connection.oauth import providers
+from langflow.services.connection.oauth.adapter import provider_adapter
 from langflow.services.connection.oauth.config import OAuthError, get_oauth_settings
 from langflow.services.connection.oauth.locking import lock_connection
 from langflow.services.database.models.connection import Connection, ConnectionSecret
@@ -57,6 +58,10 @@ async def start(
         raise OAuthError(msg)
     if not scopes or not set(scopes) <= set(registration.scopes):
         msg = "Requested scopes are outside the configured registration."
+        raise OAuthError(msg)
+    adapter = provider_adapter(registration.provider)
+    if adapter and (missing := set(adapter.required_scopes) - set(scopes)):
+        msg = f"Requested scopes must include {', '.join(sorted(missing))} for this connection."
         raise OAuthError(msg)
     if registration.provider == "google" and registration.allowed_tenants and not {"openid", "email"} <= set(scopes):
         msg = "Google tenant restrictions require openid and email scopes."
@@ -208,8 +213,12 @@ async def complete(*, provider: str, state: str, browser: str, code: str | None,
             # A new consent may belong to a different account. Clear stale
             # metadata when this authorization does not provide identity.
             row.executing_identity = {**row.executing_identity, "account": account}
+            binding.completed_registration_id = binding.registration_id
+            session.add(binding)
             session.add(row)
-    except OAuthError:
+    except OAuthError as exc:
+        if exc.code == "oauth-refresh-token-missing":
+            reason = ConnectionStatusReason.OAUTH_REFRESH_TOKEN_MISSING
         await _record_failed_authorization(values["connection_id"], values["generation"], reason)
         raise
 
@@ -245,6 +254,7 @@ async def store_tokens(session: AsyncSession, row: Connection, payload: dict, sc
     row.health = "healthy"
     row.health_checked_at = datetime.now(timezone.utc)
     row.updated_at = row.health_checked_at
+    secret.updated_at = row.health_checked_at
     session.add(secret)
     session.add(row)
     await session.flush()
@@ -259,8 +269,12 @@ async def refresh_if_needed(
     if not oauth:
         return payload
     binding = await session.get(ConnectionOAuth, row.id)
-    if binding is None or str(binding.generation) != oauth.get("generation"):
-        msg = "OAuth authorization was superseded or revoked. Reconnect."
+    # The binding generation identifies the latest consent attempt, which may
+    # never complete. The caller reads the current saved credential under the
+    # connection lock, so only a successful callback replaces that grant.
+    # Revocation still removes both the binding and the stored credential.
+    if binding is None:
+        msg = "OAuth authorization was revoked. Reconnect."
         raise OAuthError(msg)
     registration = get_oauth_settings().registration(oauth["registration_id"])
     if registration.provider != row.provider_key or registration.fingerprint() != oauth["config_digest"]:
@@ -297,12 +311,16 @@ async def revoke(
     try:
         payload = _decrypt_credential_payload(secret.encrypted_payload)
         oauth = payload.get("oauth")
+        if not oauth and row.provider_key == "slack":
+            # Pasted Slack tokens have no registration binding. auth.revoke
+            # needs only the token, including for Desktop bot connections.
+            return "revoked" if await providers.revoke("slack", payload) else "unsupported"
         if not oauth:
             return "not_applicable"
         registration = get_oauth_settings().registration(oauth["registration_id"])
         if registration.fingerprint() != oauth["config_digest"]:
             return "failed"
-        return "revoked" if await providers.revoke(registration, payload) else "unsupported"
+        return "revoked" if await providers.revoke(registration.provider, payload) else "unsupported"
     except (OAuthError, ValueError, KeyError, TypeError, RuntimeError):
         # Local revocation must commit even if a provider is unavailable, a
         # registration was removed, or the old envelope cannot be decrypted.

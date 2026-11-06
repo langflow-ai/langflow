@@ -19,11 +19,11 @@ import asyncio
 import hashlib
 import json
 import uuid
-from collections.abc import Mapping
+from collections.abc import Awaitable, Mapping
 from contextlib import aclosing
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import anyio
 import pandas as pd
@@ -99,6 +99,42 @@ if TYPE_CHECKING:
 # Langflow's TabInput palette — see ``MemoryComponent`` for the same convention.
 MODE_INGEST = "Ingest"
 MODE_RETRIEVE = "Retrieve"
+
+# How often a flow ingestion checks whether its job was cancelled from the
+# Knowledge page while it waits on the embedding provider.
+JOB_CANCEL_POLL_SECONDS = 1.0
+
+
+class KnowledgeIngestionCancelledError(Exception):
+    """The ingestion's job was cancelled from the Knowledge page."""
+
+
+_T = TypeVar("_T")
+
+
+async def _finish_despite_cancellation(awaitable: Awaitable[_T]) -> _T:
+    """Run ``awaitable`` to completion even if the caller is cancelled meanwhile.
+
+    ``anyio.CancelScope(shield=True)`` holds off AnyIO cancellation, but a
+    repeated native ``Task.cancel()`` still interrupts it, and a stopped flow
+    build can cancel its task more than once. The work runs in its own task,
+    and the caller waits through every cancellation, re-raising once the work
+    has landed.
+    """
+    task = asyncio.ensure_future(awaitable)
+    cancelled = False
+    with anyio.CancelScope(shield=True):
+        while not task.done():
+            try:
+                await asyncio.wait({task})
+            except asyncio.CancelledError:
+                cancelled = True
+    if cancelled:
+        error = None if task.cancelled() else task.exception()
+        if error is not None:
+            logger.warning(f"Work finished during cancellation failed: {error!r}")
+        raise asyncio.CancelledError from error
+    return task.result()
 
 
 def _is_retrieve_mode(value: Any) -> bool:
@@ -923,8 +959,10 @@ class KnowledgeComponent(Component):
         df_source: pd.DataFrame,
         config_list: list[dict[str, Any]],
         embedding_function,
-    ) -> BaseVectorStoreBackend:
-        """Create vector store using the configured DB provider."""
+        *,
+        job_id: uuid.UUID | None = None,
+    ) -> tuple[BaseVectorStoreBackend, set[int]]:
+        """Create the vector store and return the input row positions actually stored."""
         from langflow.api.utils.kb_helpers import backend_for_name
 
         owner_id = self._user_uuid
@@ -933,10 +971,9 @@ class KnowledgeComponent(Component):
             raise ValueError(msg)
         backend = await backend_for_name(owner_id, self.knowledge_base, embedding_function=embedding_function)
         try:
-            return await self._ingest_into_backend(backend, df_source, config_list, embedding_function)
+            return await self._ingest_into_backend(backend, df_source, config_list, embedding_function, job_id=job_id)
         except BaseException:
-            with anyio.CancelScope(shield=True):
-                await backend.teardown()
+            await _finish_despite_cancellation(backend.teardown())
             raise
 
     async def _ingest_into_backend(
@@ -945,7 +982,9 @@ class KnowledgeComponent(Component):
         df_source: pd.DataFrame,
         config_list: list[dict[str, Any]],
         embedding_function,
-    ) -> BaseVectorStoreBackend:
+        *,
+        job_id: uuid.UUID | None = None,
+    ) -> tuple[BaseVectorStoreBackend, set[int]]:
         await backend.ensure_ready()
 
         from langflow.services.knowledge_base_storage.runtime import operation, resolve_record
@@ -961,50 +1000,117 @@ class KnowledgeComponent(Component):
                             if doc_id:
                                 existing_ids.add(doc_id)
 
-        data_objects = await self._convert_df_to_data_objects(df_source, config_list, existing_ids=existing_ids)
+        # Keep row positions through both duplicate checks so run history can
+        # distinguish stored rows from rows skipped before or after embedding.
+        data_objects = await self._convert_df_to_data_objects(df_source, config_list)
 
         user_metadata_tag = self._resolve_user_metadata_tag()
 
         documents = []
-        for data_obj in data_objects:
+        row_indices = []
+        for row_index, data_obj in enumerate(data_objects):
+            if not self.allow_duplicates and data_obj.data["_id"] in existing_ids:
+                continue
             doc = data_obj.to_lc_document()
             if user_metadata_tag:
                 doc.metadata["source_metadata"] = user_metadata_tag
             documents.append(doc)
+            row_indices.append(row_index)
         if not documents:
-            return backend
+            return backend, set()
 
         # No storage lease may surround the provider call. The write lease
         # below rechecks routing and IDs after concurrent operations finish.
-        vectors = await embedding_function.aembed_documents([doc.page_content for doc in documents])
+        vectors = await self._embed_unless_job_cancelled(
+            embedding_function, [doc.page_content for doc in documents], job_id
+        )
         if len(vectors) != len(documents):
             msg = "Embedding provider returned an incorrect number of vectors"
             raise BackendConfigurationError(msg)
         embedded = [
-            IngestedDocument(doc.page_content, doc.metadata, vector, id=doc.id)
-            for doc, vector in zip(documents, vectors, strict=True)
+            (row_index, IngestedDocument(doc.page_content, doc.metadata, vector, id=doc.id))
+            for row_index, doc, vector in zip(row_indices, documents, vectors, strict=True)
         ]
         async with operation(record):
+            # A cancel that landed after the embeddings returned must still
+            # keep this run's chunks out of the KB.
+            await self._raise_if_job_cancelled(job_id)
             if not self.allow_duplicates:
                 current_ids = set()
                 async with aclosing(backend.iter_documents()) as batches:
                     async for batch in batches:
                         current_ids.update(doc.metadata["_id"] for doc in batch if doc.metadata.get("_id"))
                 unique = []
-                for doc in embedded:
+                for row_index, doc in embedded:
                     doc_id = doc.metadata.get("_id")
                     if doc_id and doc_id in current_ids:
                         continue
                     if doc_id:
                         current_ids.add(doc_id)
-                    unique.append(doc)
+                    unique.append((row_index, doc))
                 embedded = unique
 
             if embedded:
-                await backend.add_embedded_documents(embedded)
+                await backend.add_embedded_documents([doc for _, doc in embedded])
                 self.log(f"Added {len(embedded)} documents to vector store '{self.knowledge_base}'")
 
-        return backend
+        return backend, {row_index for row_index, _ in embedded}
+
+    async def _embed_unless_job_cancelled(
+        self, embedding_function, texts: list[str], job_id: uuid.UUID | None
+    ) -> list[list[float]]:
+        """Embed ``texts``, giving up as soon as the run's job is cancelled.
+
+        The Knowledge page cancels a run by marking its job. The embedding call
+        is the long, write-free part of a flow ingestion, so it is the safe
+        place to stop.
+        """
+        await self._raise_if_job_cancelled(job_id)
+        if job_id is None:
+            return await embedding_function.aembed_documents(texts)
+
+        # A task group would wrap provider errors in an ExceptionGroup, so a
+        # plain watcher task cancels this scope instead.
+        with anyio.CancelScope() as scope:
+            watcher = asyncio.ensure_future(self._cancel_when_job_cancelled(job_id, scope))
+            try:
+                return await embedding_function.aembed_documents(texts)
+            finally:
+                # The watcher may be mid-poll; let its DB session close.
+                watcher.cancel()
+                with anyio.CancelScope(shield=True):
+                    await asyncio.wait({watcher})
+        raise self._cancelled_error()
+
+    async def _cancel_when_job_cancelled(self, job_id: uuid.UUID, scope: anyio.CancelScope) -> None:
+        # The cancel is a job-row write from another request, so it is polled.
+        while True:
+            await asyncio.sleep(JOB_CANCEL_POLL_SECONDS)
+            if await self._job_cancelled(job_id):
+                scope.cancel()
+                return
+
+    async def _raise_if_job_cancelled(self, job_id: uuid.UUID | None) -> None:
+        if await self._job_cancelled(job_id):
+            raise self._cancelled_error()
+
+    def _cancelled_error(self) -> KnowledgeIngestionCancelledError:
+        return KnowledgeIngestionCancelledError(f"Ingestion into '{self.knowledge_base}' was cancelled.")
+
+    async def _job_cancelled(self, job_id: uuid.UUID | None) -> bool:
+        if job_id is None:
+            return False
+        try:
+            from langflow.services.database.models.jobs.model import JobStatus
+            from langflow.services.deps import get_job_service
+        except ImportError:
+            return False
+        try:
+            job = await get_job_service().get_job_by_job_id(job_id)
+        except Exception as exc:  # noqa: BLE001 — a failed poll must not abort the ingestion
+            self.log(f"Could not check whether ingestion job {job_id} was cancelled: {exc}")
+            return False
+        return job is not None and job.status == JobStatus.CANCELLED
 
     async def _convert_df_to_data_objects(
         self,
@@ -1172,11 +1278,11 @@ class KnowledgeComponent(Component):
             # authority. No sidecar is read, so ingestion resolves the same model
             # on any replica.
             stored_metadata = await self._get_kb_metadata()
-            previous_kb_status = stored_metadata.get("status", "ready")
-            # Empty is an API projection of a ready KB with no chunks.
-            if previous_kb_status in {"empty", "ingesting"}:
-                previous_kb_status = "ready"
-            previous_failure_reason = stored_metadata.get("failure_reason")
+            # A cancelled run restores this status. Only an earlier failure is
+            # kept; "empty" is an API projection of a ready KB with no chunks.
+            if stored_metadata.get("status") == "failed":
+                previous_kb_status = "failed"
+                previous_failure_reason = stored_metadata.get("failure_reason")
             model_selection = stored_metadata.get("model_selection")
             if model_selection:
                 model_selection = [model_selection] if isinstance(model_selection, dict) else list(model_selection)
@@ -1240,7 +1346,9 @@ class KnowledgeComponent(Component):
             if kb_record_id is not None:
                 await self._record_kb_status(kb_record_id, "ingesting")
 
-            backend = await self._create_vector_store(df_source, config_list, embedding_function=embedding_function)
+            backend, stored_rows = await self._create_vector_store(
+                df_source, config_list, embedding_function=embedding_function, job_id=run_job_id
+            )
 
             try:
                 # Stamp the KB with the file extensions we just ingested so
@@ -1259,13 +1367,14 @@ class KnowledgeComponent(Component):
                     extensions=source_types,
                 )
             finally:
-                with anyio.CancelScope(shield=True):
-                    await backend.teardown()
+                await _finish_despite_cancellation(backend.teardown())
 
             meta: dict[str, Any] = {
-                "kb_id": str(uuid.uuid4()),
+                "kb_id": str(kb_record_id) if kb_record_id is not None else None,
                 "kb_name": self.knowledge_base,
                 "rows": len(df_source),
+                "chunks_created": len(stored_rows),
+                "skipped": len(df_source) - len(stored_rows),
                 "column_metadata": column_metadata,
                 "path": str(kb_path),
                 "config_columns": len(config_list),
@@ -1273,26 +1382,35 @@ class KnowledgeComponent(Component):
             }
 
             if run_summary is not None:
-                run_summary.record_item(
-                    IngestionItemResult(
-                        item_id=self.knowledge_base,
-                        display_name=f"{self.knowledge_base} ({len(df_source)} rows)",
-                        status=IngestionItemStatus.SUCCEEDED,
-                        chunks_created=len(df_source),
-                    ),
-                )
+                for row_index in range(len(df_source)):
+                    stored = row_index in stored_rows
+                    run_summary.record_item(
+                        IngestionItemResult(
+                            item_id=f"{self.knowledge_base}:{row_index}",
+                            display_name=f"{self.knowledge_base} (row {row_index + 1})",
+                            status=IngestionItemStatus.SUCCEEDED if stored else IngestionItemStatus.SKIPPED,
+                            chunks_created=int(stored),
+                        ),
+                    )
 
             if kb_record_id is not None:
                 # Stats were already refreshed straight from the backend above.
                 await self._record_kb_status(kb_record_id, "ready")
 
-            self.status = f"✅ KB **{self.knowledge_base}** saved · {len(df_source)} chunks."
+            self.status = (
+                f"✅ KB **{self.knowledge_base}** saved · {len(stored_rows)} chunks "
+                f"· {len(df_source) - len(stored_rows)} rows skipped."
+            )
 
             return Data(data=meta)
 
         except asyncio.CancelledError:
             run_status = IngestionRunStatus.CANCELLED
             run_error = "Flow ingestion was cancelled."
+            raise
+        except KnowledgeIngestionCancelledError as e:
+            run_status = IngestionRunStatus.CANCELLED
+            run_error = str(e)
             raise
         except (OSError, ValueError, RuntimeError, KeyError) as e:
             run_status = IngestionRunStatus.FAILED
@@ -1304,9 +1422,8 @@ class KnowledgeComponent(Component):
             run_error = str(e) or e.__class__.__name__
             raise
         finally:
-            # A disconnected canvas can cancel every await in its AnyIO scope,
-            # including the DB writes that make the run terminal.
-            with anyio.CancelScope(shield=True):
+
+            async def settle_run() -> None:
                 if run_id is not None and run_summary is not None:
                     await self._finalize_ingestion_run(
                         run_id=run_id,
@@ -1322,6 +1439,10 @@ class KnowledgeComponent(Component):
                         await self._record_kb_status(
                             kb_record_id, previous_kb_status, failure_reason=previous_failure_reason
                         )
+
+            # A stopped build can cancel this task more than once, and the
+            # writes that make the run terminal must survive every cancel.
+            await _finish_despite_cancellation(settle_run())
 
     async def _begin_ingestion_run(
         self,
@@ -1349,6 +1470,7 @@ class KnowledgeComponent(Component):
         job_id: uuid.UUID | None = None
         run_id: uuid.UUID | None = None
         summary: IngestionSummary | None = None
+        kb_record_id: uuid.UUID | None = None
         try:
             kb_record = await knowledge_base_service.get_by_user_and_name(user_uuid, self.knowledge_base)
             kb_record_id = kb_record.id if kb_record is not None else None
@@ -1375,6 +1497,8 @@ class KnowledgeComponent(Component):
                 source_config=source.describe().get("config") or {},
                 user_metadata=user_metadata,
             )
+            # Inserted running and already heartbeated, so an orphan sweep in
+            # another worker never sees this live run without a heartbeat.
             await job_service.create_job(
                 job_id=job_id,
                 flow_id=flow_id_uuid,
@@ -1382,8 +1506,9 @@ class KnowledgeComponent(Component):
                 asset_id=kb_record_id,
                 asset_type="knowledge_base",
                 user_id=user_uuid,
+                status=JobStatus.IN_PROGRESS,
+                heartbeat=True,
             )
-            await job_service.update_job_status(job_id, JobStatus.IN_PROGRESS)
 
             run_id = await ingestion_run_service.create_run(
                 kb_name=self.knowledge_base,
@@ -1398,22 +1523,25 @@ class KnowledgeComponent(Component):
             await ingestion_run_service.mark_running(run_id)
 
             self.log(f"Started ingestion run job_id={job_id} kb_name={self.knowledge_base} kb_id={kb_record_id}")
+            # Keeps the job heartbeated until _finalize_ingestion_run stops it.
+            await job_service.start_keep_alive(job_id)
         except asyncio.CancelledError:
             # The caller has not received the run ID yet, so it cannot finalize
             # a cancellation that arrives while tracking is being initialized.
-            with anyio.CancelScope(shield=True):
-                if job_id is not None and summary is not None:
-                    await self._finalize_ingestion_run(
+            if job_id is not None and summary is not None:
+                await _finish_despite_cancellation(
+                    self._finalize_ingestion_run(
                         run_id=run_id or job_id,
                         job_id=job_id,
                         summary=summary,
                         status=IngestionRunStatus.CANCELLED,
                         error_message="Flow ingestion was cancelled.",
                     )
+                )
             raise
         except Exception as exc:  # noqa: BLE001 — telemetry must never abort ingestion
             self.log(f"Could not begin ingestion-run tracking: {exc}")
-            return None, None, None, None
+            return None, None, None, kb_record_id
         else:
             return run_id, job_id, summary, kb_record_id
 
@@ -1436,6 +1564,9 @@ class KnowledgeComponent(Component):
             return
 
         try:
+            if job_id is not None:
+                # The heartbeat also rewrites job_metadata, so it stops first.
+                await get_job_service().stop_keep_alive(job_id)
             await ingestion_run_service.finalize_run(
                 run_id,
                 summary=summary,

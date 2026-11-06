@@ -30,7 +30,7 @@ def discovery_server(monkeypatch):
 
         def do_POST(self):
             self.rfile.read(int(self.headers.get("Content-Length", 0)))
-            self.respond({"capabilities": ["completion", "tools"]})
+            self.respond({"capabilities": ["completion", "tools", "embedding"]})
 
         def respond(self, payload):
             body = json.dumps(payload).encode()
@@ -106,7 +106,10 @@ async def pooled_variables(monkeypatch, tmp_path, discovery_server):
 
 
 @pytest.mark.asyncio
-async def test_catalog_discovery_waits_on_caller_pool_and_uses_real_http(pooled_variables):
+@pytest.mark.parametrize(
+    "lookup", [model_catalog.aget_language_model_options, model_catalog.aget_embedding_model_options]
+)
+async def test_catalog_discovery_waits_on_caller_pool_and_uses_real_http(pooled_variables, lookup):
     state = pooled_variables
     held = await state.engine.connect()
     ticks = []
@@ -119,9 +122,7 @@ async def test_catalog_discovery_waits_on_caller_pool_and_uses_real_http(pooled_
 
     release_task = asyncio.create_task(release())
     try:
-        options = await asyncio.wait_for(
-            model_catalog.aget_language_model_options(OWNER, provider_policy=state.policy), 3
-        )
+        options = await asyncio.wait_for(lookup(OWNER, provider_policy=state.policy), 3)
         assert any(option["name"] == "owned-model" for option in options)
         assert state.observed
         assert all(loop is asyncio.get_running_loop() for loop in state.observed)
@@ -133,10 +134,13 @@ async def test_catalog_discovery_waits_on_caller_pool_and_uses_real_http(pooled_
 
 
 @pytest.mark.asyncio
-async def test_catalog_cancellation_closes_discovery_input_session(pooled_variables):
+@pytest.mark.parametrize(
+    "lookup", [model_catalog.aget_language_model_options, model_catalog.aget_embedding_model_options]
+)
+async def test_catalog_cancellation_closes_discovery_input_session(pooled_variables, lookup):
     state = pooled_variables
     state.pause.set()
-    task = asyncio.create_task(model_catalog.aget_language_model_options(OWNER, provider_policy=state.policy))
+    task = asyncio.create_task(lookup(OWNER, provider_policy=state.policy))
     await asyncio.wait_for(state.read.wait(), 2)
     assert state.engine.pool.checkedout() == 1
     task.cancel()
@@ -146,13 +150,16 @@ async def test_catalog_cancellation_closes_discovery_input_session(pooled_variab
 
 
 @pytest.mark.asyncio
-async def test_simultaneous_catalogs_preserve_owner_and_no_env_fallback(pooled_variables, monkeypatch):
+@pytest.mark.parametrize(
+    "lookup", [model_catalog.aget_language_model_options, model_catalog.aget_embedding_model_options]
+)
+async def test_simultaneous_catalogs_preserve_owner_and_no_env_fallback(pooled_variables, monkeypatch, lookup):
     monkeypatch.setenv("OLLAMA_BASE_URL", "http://server-value-must-not-be-used.invalid")
     token = activate_no_env_fallback(disabled=True)
     try:
         owned, other = await asyncio.gather(
-            model_catalog.aget_language_model_options(OWNER, provider_policy=pooled_variables.policy),
-            model_catalog.aget_language_model_options(OTHER, provider_policy=pooled_variables.policy),
+            lookup(OWNER, provider_policy=pooled_variables.policy),
+            lookup(OTHER, provider_policy=pooled_variables.policy),
         )
     finally:
         reset_no_env_fallback(token)
@@ -210,3 +217,32 @@ async def test_discovery_without_owner_uses_required_environment_only(pooled_var
         "OPENAI_BASE_URL": None,
     }
     assert pooled_variables.observed == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "reason", ["absent", "variable_not_approved", "undecryptable", "target_disabled", "policy_unavailable"]
+)
+@pytest.mark.usefixtures("pooled_variables")
+async def test_discovery_account_refusal_never_uses_environment(monkeypatch, reason):
+    from lfx.services.variable.exceptions import RuntimeVariableError
+
+    async def refused(**_kwargs):
+        message = "Account variable unavailable"
+        raise RuntimeVariableError(message, reason=reason)
+
+    def forbidden_environment(_key):
+        message = "Account policy must not use environment credentials"
+        raise AssertionError(message)
+
+    service = SimpleNamespace(get_variables=refused, get_variable=refused)
+    monkeypatch.setattr(model_utils, "get_variable_service", lambda: service)
+    monkeypatch.setattr(model_utils, "_environment_variable_value", forbidden_environment)
+    if reason in {"absent", "variable_not_approved"}:
+        assert await model_utils.aget_live_model_variables(
+            OWNER, {"Ollama"}, model_catalog.model_provider_metadata
+        ) == {"OLLAMA_BASE_URL": None}
+    else:
+        with pytest.raises(RuntimeVariableError) as caught:
+            await model_utils.aget_live_model_variables(OWNER, {"Ollama"}, model_catalog.model_provider_metadata)
+        assert caught.value.reason == reason

@@ -472,6 +472,18 @@ class TestFilesystemToolsInToolkit:
     files. The wrapper emits ``file_written`` only on successful writes.
     """
 
+    @pytest.fixture(autouse=True, params=[False, True], ids=["authenticated", "auto-login"])
+    def filesystem_user_context(self, request, monkeypatch):
+        from langflow.agentic.services.user_components_context import current_user_id, set_current_user_id
+        from langflow.services.deps import get_settings_service
+
+        # Requests bind a user before building tools, including when auto-login is enabled.
+        previous_user_id = current_user_id()
+        monkeypatch.setattr(get_settings_service().auth_settings, "AUTO_LOGIN", request.param)
+        set_current_user_id("filesystem-toolkit-test-user")
+        yield
+        set_current_user_id(previous_user_id)
+
     async def test_toolkit_should_include_filesystem_tools(self):
         from langflow.agentic.flows.flow_builder_assistant import build_toolkit
 
@@ -531,11 +543,15 @@ class TestFilesystemToolsInToolkit:
         edit_tool = next(t for t in tools if t.name == "edit_file")
 
         # Arrange — write then drain the write event so only the edit event is observed.
-        write_tool.func(path="DOCS.md", content="hello world")
+        import json
+
+        result = json.loads(write_tool.func(path="DOCS.md", content="hello world"))
+        assert result.get("status") in {"created", "updated"}, result
         drain_file_events()
 
         # Act
-        edit_tool.func(path="DOCS.md", old_string="hello", new_string="hi")
+        result = json.loads(edit_tool.func(path="DOCS.md", old_string="hello", new_string="hi"))
+        assert result.get("status") == "ok", result
 
         # Assert
         events = drain_file_events()
@@ -551,7 +567,10 @@ class TestFilesystemToolsInToolkit:
 
         tools = await build_toolkit()
         write_tool = next(t for t in tools if t.name == "write_file")
-        write_tool.func(path="DOCS.md", content="x")
+        import json
+
+        result = json.loads(write_tool.func(path="DOCS.md", content="x"))
+        assert result.get("status") in {"created", "updated"}, result
 
         [event] = drain_file_events()
         path = event["path"]
@@ -588,10 +607,14 @@ class TestFilesystemToolsInToolkit:
         write_tool = next(t for t in tools if t.name == "write_file")
         read_tool = next(t for t in tools if t.name == "read_file")
 
-        write_tool.func(path="DOCS.md", content="content")
+        import json
+
+        result = json.loads(write_tool.func(path="DOCS.md", content="content"))
+        assert result.get("status") in {"created", "updated"}, result
         drain_file_events()  # discard write event
 
-        read_tool.func(path="DOCS.md")
+        result = json.loads(read_tool.func(path="DOCS.md"))
+        assert "content" in result, result
         assert drain_file_events() == []
 
 

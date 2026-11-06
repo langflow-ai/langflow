@@ -6,9 +6,10 @@ This source runs on ``https://www.googleapis.com/auth/drive.file``, the
 non-sensitive Drive scope, in line with
 ``design/dedicated-integrations/decisions/google-restricted-scopes.md``. It
 therefore sees **only files this application created or the user explicitly
-opened with it** — not the user's whole Drive. An empty listing is a normal
-result for a correctly configured connection, not a failure. Reading arbitrary
-Drive content needs a restricted scope and a Google security assessment, which
+opened with it** — not the user's whole Drive. An unfiltered empty listing is a
+normal result for a fresh connection. An empty folder or query result explains
+the access boundary instead of silently reporting a successful ingestion.
+Reading arbitrary Drive content needs a restricted scope and a Google security assessment, which
 1.13 deliberately does not take on.
 
 Identity
@@ -82,6 +83,10 @@ _DRIVE_FILE_BOUNDARY = (
 _DRIVE_GRANT_HINT = f"Use a file this app created or opened. {_DRIVE_FILE_BOUNDARY}"
 _DRIVE_NOT_FOUND_HINT = (
     f"Check the file ID. {_DRIVE_FILE_BOUNDARY} Google can report a file outside that set as not found."
+)
+_DRIVE_EMPTY_FILTER_HINT = (
+    "No matching Drive files were visible to this app. The folder or query may be empty, "
+    f"or its files may be outside this app's access. {_DRIVE_FILE_BOUNDARY}"
 )
 HTTP_STATUS_FORBIDDEN = 403
 HTTP_STATUS_NOT_FOUND = 404
@@ -207,6 +212,11 @@ class GoogleDriveSource(KBConnectorSource):
             params["includeItemsFromAllDrives"] = "true"
             params["supportsAllDrives"] = "true"
 
+        has_filter = any(
+            isinstance(value := self.source_config.get(key), str) and value.strip() for key in ("folder_id", "query")
+        )
+        has_visible_files = False
+
         async with httpx.AsyncClient() as client:
             page_token: str | None = None
             while True:
@@ -215,11 +225,14 @@ class GoogleDriveSource(KBConnectorSource):
                     page_params["pageToken"] = page_token
                 payload = (await self._request(client, FILES_URL, params=page_params)).json()
                 for entry in payload.get("files", []):
+                    has_visible_files = True
                     item = self._to_item(entry)
                     if item is not None:
                         yield item
                 page_token = payload.get("nextPageToken")
                 if not page_token:
+                    if has_filter and not has_visible_files:
+                        raise ValueError(_DRIVE_EMPTY_FILTER_HINT)
                     return
 
     def _to_item(self, entry: dict[str, Any]) -> IngestionItem | None:

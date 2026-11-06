@@ -4,6 +4,10 @@ from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
 from typing import Any, TypeVar
 
+import anyio
+
+from lfx.log.logger import logger
+
 _F = TypeVar("_F", bound=Callable[..., Any])
 
 # Dunder-named so ``unittest.mock`` objects report it missing instead of inventing a value.
@@ -104,3 +108,69 @@ async def acquire_thread_lock(lock: threading.Lock) -> None:
     while not lock.acquire(blocking=False):
         await asyncio.sleep(delay)
         delay = min(delay * 2, 0.05)
+
+
+# How long a stream whose client went away waits for its cancelled run to unwind. Far above
+# cooperative cleanup (a job row's FAILED write, a component closing its client), so it only
+# bites when a component swallows its cancellation; that run then finishes unobserved.
+RUN_CANCEL_GRACE_SECONDS = 30.0
+
+
+async def cancel_and_wait(task: asyncio.Task[Any], *, grace_seconds: float | None) -> None:
+    """Cancel ``task`` once and wait up to ``grace_seconds`` for it to finish unwinding.
+
+    For a consumer tearing down a producer task it owns, typically in the ``finally`` of a
+    streaming generator. A bare ``task.cancel(); await task`` is unsafe there in two ways:
+
+    * Starlette streams a response inside an AnyIO cancel scope and cancels that scope when
+      the client disconnects. AnyIO cancellation is level-triggered: until the waiting task
+      leaves the cancelled scope it is cancelled again on every event-loop tick, and asyncio
+      forwards each of those cancels to the task it is awaiting. ``task`` then gets a cancel
+      per tick, which cuts its cleanup short at the next ``await``. An
+      ``anyio.CancelScope(shield=True)`` inside ``task`` does not help: it holds off AnyIO's
+      own delivery, not a native ``Task.cancel()``.
+    * A task that swallows its cancellation never finishes, so the caller waits forever.
+
+    So the wait runs in a shielded scope, through ``asyncio.wait``, which neither forwards a
+    cancel to ``task`` nor cancels it when the grace period runs out: ``task`` receives
+    exactly this one cancel. A cancel aimed straight at the caller still ends the wait early
+    without reaching ``task``.
+
+    The bound is a trade-off. Past ``grace_seconds`` the caller moves on and ``task``
+    finishes on its own, unobserved; nothing can force-stop a task that ignores
+    cancellation, so the bound frees the caller, not the work. Keep ``grace_seconds`` well
+    above how long cooperative cleanup takes (a few writes, closing a client), or the caller
+    stops waiting on cleanup that is still running. ``None`` waits for as long as ``task``
+    takes.
+
+    Re-raises the task's exception, other than its cancellation, as ``await task`` would. A
+    task that outlives the wait has a late failure logged rather than dropped.
+    """
+    if not task.done():
+        task.cancel()
+    try:
+        with anyio.CancelScope(shield=True):
+            await asyncio.wait({task}, timeout=grace_seconds)
+    finally:
+        # Also reached when the wait itself is cancelled: either way nobody awaits ``task`` now.
+        if not task.done():
+            task.add_done_callback(_log_late_failure)
+    if not task.done():
+        # Not awaited: past the shield the caller may sit in a cancelled scope again,
+        # and an awaited log call would be the first thing cancelled.
+        logger.warning(
+            "Task %s was still running %ss after it was cancelled; no longer waiting for it",
+            task.get_name(),
+            grace_seconds,
+        )
+        return
+    if not task.cancelled():
+        task.result()
+
+
+def _log_late_failure(task: asyncio.Task[Any]) -> None:
+    if task.cancelled():
+        return
+    exc = task.exception()
+    if exc is not None:
+        logger.warning("Task %s failed after its caller stopped waiting for it", task.get_name(), exc_info=exc)

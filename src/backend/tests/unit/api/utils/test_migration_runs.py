@@ -9,6 +9,7 @@ all that two workers share.
 from __future__ import annotations
 
 import asyncio
+import errno
 import json
 import os
 import signal
@@ -121,6 +122,41 @@ async def config_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
 def gate(tmp_path: Path) -> Path:
     """The file a waiting child holds for. Create it to let the child go on."""
     return tmp_path / "gate"
+
+
+async def test_admission_finishes_before_the_child_can_write(config_dir):
+    admitted = config_dir / "admitted"
+    argv = _child("assert os.path.exists(sys.argv[-1]); emit(event='report', ok=True)", admitted)
+
+    run_id = await migration_runs.start_run(
+        "copy_database", argv, dict(os.environ), started_by="alice", before_spawn=admitted.touch
+    )
+    events = await _follow(run_id)
+
+    assert any(event.get("event") == "report" for event in events)
+    assert events[-1]["status"] == "done"
+
+
+async def test_refused_admission_never_starts_the_child_or_replaces_the_previous_run(config_dir):
+    previous = await _start("emit(event='report', ok=True)")
+    await _follow(previous)
+    marker = config_dir / "must-not-write"
+
+    def refuse():
+        message = "cutover already confirmed"
+        raise ValueError(message)
+
+    with pytest.raises(ValueError, match="cutover already confirmed"):
+        await migration_runs.start_run(
+            "copy_database",
+            _child("open(sys.argv[-1], 'w').close()", marker),
+            dict(os.environ),
+            started_by="alice",
+            before_spawn=refuse,
+        )
+
+    assert not marker.exists()
+    assert [run["run_id"] for run in migration_runs.list_runs()] == [previous]
 
 
 @pytest.fixture
@@ -459,9 +495,18 @@ async def test_a_second_run_is_refused_while_one_is_live_and_allowed_after_it_en
         gate,
     )
 
-    # One run at a time, whichever step it belongs to.
+    # One run at a time, whichever step it belongs to. The second is refused before it is admitted, so it
+    # changes nothing that the first one counts on.
+    admitted = []
     with pytest.raises(migration_runs.RunActiveError):
-        await _start('emit(event="report", ok=True)', step="copy_files")
+        await migration_runs.start_run(
+            "copy_files",
+            _child('emit(event="report", ok=True)'),
+            dict(os.environ),
+            started_by="alice",
+            before_spawn=lambda: admitted.append(True),
+        )
+    assert admitted == []
 
     gate.touch()
     await _follow(first)
@@ -489,6 +534,55 @@ async def test_a_command_that_cannot_be_spawned_leaves_no_run_behind():
     assert (await _follow(run_id))[-1]["status"] == "done"
 
 
+async def test_admission_is_taken_back_when_the_command_itself_cannot_be_started():
+    taken_back = []
+
+    def admit():
+        return lambda: taken_back.append(True)
+
+    argv = _child('emit(event="report", ok=True)')
+    run_id = await migration_runs.start_run(
+        "copy_database", argv, dict(os.environ), started_by="alice", before_spawn=admit
+    )
+    assert (await _follow(run_id))[-1]["status"] == "done"
+    # The command ran, so what admission saved for it stands.
+    assert taken_back == []
+
+    with pytest.raises(FileNotFoundError):
+        await migration_runs.start_run(
+            "copy_database", ["/no/such/command"], {}, started_by="alice", before_spawn=admit
+        )
+
+    assert taken_back == [True]
+    assert [run["run_id"] for run in migration_runs.list_runs()] == [run_id]
+
+
+async def test_admission_stands_when_the_spawn_fails_with_an_error_that_names_no_file():
+    """Out of file descriptors. On Linux the same error can come after the child was made, and say nothing of it."""
+    resource = pytest.importorskip("resource")
+    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    taken_back = []
+
+    def admit():
+        # One descriptor is left. The spawn opens /dev/null with it and has none for a pipe.
+        lowest = os.open(os.devnull, os.O_RDONLY)
+        os.close(lowest)
+        resource.setrlimit(resource.RLIMIT_NOFILE, (lowest + 1, hard))
+        return lambda: taken_back.append(True)
+
+    try:
+        with pytest.raises(OSError) as raised:  # noqa: PT011
+            await migration_runs.start_run(
+                "copy_database", _child("pass"), dict(os.environ), started_by="alice", before_spawn=admit
+            )
+    finally:
+        resource.setrlimit(resource.RLIMIT_NOFILE, (soft, hard))
+
+    assert (raised.value.errno, raised.value.filename) == (errno.EMFILE, None)
+    assert taken_back == []
+    assert migration_runs.list_runs() == []
+
+
 async def test_a_run_that_cannot_be_recorded_does_not_leave_its_child_running(config_dir: Path, gate: Path):
     if os.getuid() == 0:
         pytest.skip("Root can write to a folder whatever its permissions say")
@@ -496,15 +590,24 @@ async def test_a_run_that_cannot_be_recorded_does_not_leave_its_child_running(co
     runs.mkdir(parents=True)
     (runs / "start.lock").touch()
     children = set(psutil.Process().children())
+    taken_back = []
     # The lock file can still be opened, but none of the run's files can be created.
     runs.chmod(0o500)
     try:
         with pytest.raises(PermissionError):
-            await _start("wait_for_gate()", gate)
+            await migration_runs.start_run(
+                "copy_database",
+                _child("wait_for_gate()", gate),
+                dict(os.environ),
+                started_by="alice",
+                before_spawn=lambda: lambda: taken_back.append(True),
+            )
     finally:
         runs.chmod(0o700)
 
     await _until(lambda: set(psutil.Process().children()) <= children)
+    # The command ran for a moment, so what admission saved for it stands.
+    assert taken_back == []
 
 
 async def test_a_run_whose_log_can_no_longer_be_written_ends_failed_and_stops_its_child(config_dir: Path, gate: Path):
@@ -593,6 +696,62 @@ async def test_a_run_is_not_interrupted_while_its_worker_still_reads_it(gate: Pa
     gate.touch()
     assert [event["event"] for event in await _follow(run_id)] == ["progress", "report", "end"]
     assert migration_runs.read_run(run_id)["status"] == "done"
+
+
+def _unmatch(config_dir: Path, run_id: str) -> None:
+    """Leave a run's status as a clock update leaves it: what it recorded matches neither the worker nor the child.
+
+    A process is told apart by when it started. On macOS that time moves when the system clock is set:
+    psutil shifts it once the boot time differs by a second or more from the one it read at import.
+    Linux goes by the start ticks, which no clock moves. They are moved as well, so every system is
+    asked the same.
+    """
+    status = config_dir / "migrations" / "runs" / f"{run_id}.json"
+    recorded = json.loads(status.read_text())
+    for process in (recorded["worker"], recorded["child"]):
+        process["created"] += 2
+        if "start_ticks" in process:
+            process["start_ticks"] += 200
+    status.write_text(json.dumps(recorded))
+
+
+async def test_a_run_stays_live_for_the_worker_reading_it_when_the_system_no_longer_matches_what_was_recorded(
+    gate: Path, config_dir: Path
+):
+    run_id = await _start('wait_for_gate()\nemit(event="report", ok=True)', gate)
+    _unmatch(config_dir, run_id)
+
+    assert migration_runs.read_run(run_id)["status"] == "running"
+    # Nor can a second run be started on top of it.
+    with pytest.raises(migration_runs.RunActiveError):
+        await _start("pass")
+    gate.touch()
+    assert [event["event"] for event in await _follow(run_id)] == ["report", "end"]
+    assert migration_runs.read_run(run_id)["status"] == "done"
+
+
+async def test_the_worker_reading_a_run_can_still_stop_it_when_the_system_no_longer_matches_what_was_recorded(
+    gate: Path, config_dir: Path
+):
+    run_id = await _start(
+        """
+        emit(event="progress", done=1)
+        wait_for_gate()
+        """,
+        gate,
+    )
+    seen, follower = _follow_in_background(run_id)
+    await _until(lambda: seen)
+    child = psutil.Process(migration_runs.read_run(run_id)["child"]["pid"])
+    _unmatch(config_dir, run_id)
+
+    await migration_runs.cancel_run(run_id)
+
+    # The worker holds the child it started, so it needs no match to end it.
+    assert not child.is_running() or child.status() == psutil.STATUS_ZOMBIE
+    await asyncio.wait_for(follower, _TIMEOUT)
+    assert seen[-1] == {"event": "end", "status": "cancelled", "exit_code": -signal.SIGTERM, "seq": 2}
+    assert migration_runs.read_run(run_id)["status"] == "cancelled"
 
 
 async def test_a_cancel_that_arrives_after_the_child_exited_changes_nothing(gate: Path):

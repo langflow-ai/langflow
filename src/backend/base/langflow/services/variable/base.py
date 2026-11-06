@@ -4,6 +4,7 @@ from uuid import UUID
 
 from lfx.log.logger import logger
 from lfx.services.variable import VariableNotFoundError
+from lfx.services.variable.exceptions import RuntimeVariableError
 from pydantic import SecretStr
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -68,6 +69,8 @@ class VariableService(Service):
         for name in names:
             try:
                 values[name] = await self.get_variable(user_id, name, field, session)
+            except RuntimeVariableError:
+                raise
             except ValueError:
                 values[name] = None
         return values

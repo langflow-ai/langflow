@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlmodel import col, select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.api.utils.migration_pause import changes_the_instance
 from langflow.api.v1.data_subjects_common import require_data_subject_feature, to_http_error, zip_response
 from langflow.services.auth.context import AUTH_METHOD_API_KEY, AUTH_METHOD_AUTO_LOGIN, get_current_auth_context
 from langflow.services.data_subjects import audit_events
@@ -117,7 +118,8 @@ async def withdraw_own_deletion(
     return _own_status(request)
 
 
-@router.get("/data-export")
+# The export answers a GET and adds a row to the audit log, so a paused instance refuses it.
+@router.get("/data-export", dependencies=[Depends(changes_the_instance)])
 async def export_own_data(
     http_request: Request, current_user: CurrentActiveUser, session: DbSession, _: InteractiveLogin
 ):

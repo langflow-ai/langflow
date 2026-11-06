@@ -1,65 +1,38 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { cloneDeep } from "lodash";
-import { useParams } from "react-router-dom";
 import { UUID_PARSING_ERROR } from "@/constants/constants";
-import { getGlobalVariablesQueryKey } from "@/controllers/API/helpers/global-variable-scope";
-import { getSettledSuccessfulQueryData } from "@/controllers/API/helpers/query-cache";
 import { usePostAddFlow } from "@/controllers/API/queries/flows/use-post-add-flow";
-import { usePostFolders } from "@/controllers/API/queries/folders";
-import { fetchGlobalVariables } from "@/controllers/API/queries/variables/use-get-global-variables";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAlertStore from "@/stores/alertStore";
-import useAuthStore from "@/stores/authStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { useFolderStore } from "@/stores/foldersStore";
-import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavailable-fields";
 import { useTypesStore } from "@/stores/typesStore";
-import { useUtilityStore } from "@/stores/utilityStore";
 import type { FlowType } from "@/types/flow";
-import type { GlobalVariable } from "@/types/global_variables";
 import { extractApiErrorMessages } from "@/utils/apiError";
-import { getFolderScopedDuplicateName } from "@/utils/flow-naming";
 import {
-  createNewFlow,
   extractFieldsFromComponenents,
-  processDataFromFlow,
   processFlows,
-  updateGroupRecursion,
 } from "@/utils/reactflowUtils";
 import useDeleteFlow from "./use-delete-flow";
+import usePrepareFlows from "./use-prepare-flows";
 
 const FLOW_CREATION_ERROR = "Flow creation error";
 const FOLDER_NOT_FOUND_ERROR = "Folder not found. Redirecting to flows...";
 const REDIRECT_DELAY = 3000;
 const useAddFlow = () => {
+  const navigate = useCustomNavigate();
   const flows = useFlowsManagerStore((state) => state.flows);
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
   const { deleteFlow } = useDeleteFlow();
 
   const setNoticeData = useAlertStore.getState().setNoticeData;
-  const { folderId } = useParams();
-  const myCollectionId = useFolderStore((state) => state.myCollectionId);
-  const folders = useFolderStore((state) => state.folders);
-  const setMyCollectionId = useFolderStore((state) => state.setMyCollectionId);
-  const queryClient = useQueryClient();
-
-  const userData = useAuthStore((state) => state.userData);
-  const hideGettingStartedProgress = useUtilityStore(
-    (state) => state.hideGettingStartedProgress,
-  );
-  const isOnboarding =
-    !hideGettingStartedProgress && !userData?.optins?.dialog_dismissed;
   const { mutate: postAddFlow } = usePostAddFlow();
-  const { mutateAsync: postAddFolder } = usePostFolders();
+  const prepareFlows = usePrepareFlows();
 
   const addFlow = async (params?: {
     flow?: FlowType;
     override?: boolean;
     new_blank?: boolean;
   }): Promise<string> => {
-    const flow = cloneDeep(params?.flow) ?? undefined;
-    const flowData = flow
-      ? await processDataFromFlow(flow)
-      : { nodes: [], edges: [], viewport: { zoom: 1, x: 0, y: 0 } };
+    const flow = params?.flow;
+    const [newFlow] = await prepareFlows([flow]);
     // Create a new flow with a default name if no flow is provided.
     if (params?.override && flow) {
       const flowId = flows?.find((f) => f.name === flow.name);
@@ -67,73 +40,6 @@ const useAddFlow = () => {
         await deleteFlow({ id: flowId.id });
       }
     }
-
-    // Determine folder_id, creating a new folder if needed
-    let folder_id = folderId ?? myCollectionId ?? "";
-
-    // If no folder exists, create one with the appropriate name based on onboarding state
-    if (!folder_id && (!folders || folders.length === 0)) {
-      try {
-        const projectName = isOnboarding ? "Starter Project" : "New Project";
-        const newFolder = await postAddFolder({
-          data: {
-            name: projectName,
-            parent_id: null,
-            description: "",
-          },
-        });
-        folder_id = newFolder.id;
-        setMyCollectionId(folder_id);
-      } catch {
-        // Continue with empty folder_id - backend will create default folder
-      }
-    }
-
-    // Only validate stored references against a snapshot fetched for the
-    // exact target project. If that snapshot is not ready (or a project was
-    // just created), preserving the reference is safer than treating a global
-    // or sibling-project list as authoritative and silently clearing it.
-    let cleanupVariables = folder_id
-      ? getSettledSuccessfulQueryData<GlobalVariable[]>(
-          queryClient,
-          getGlobalVariablesQueryKey({ projectId: folder_id }),
-        )
-      : undefined;
-    if (folder_id && cleanupVariables === undefined) {
-      try {
-        cleanupVariables = await queryClient.fetchQuery({
-          queryKey: getGlobalVariablesQueryKey({ projectId: folder_id }),
-          queryFn: () => fetchGlobalVariables({ projectId: folder_id }),
-        });
-      } catch {
-        // Preserve stored references when the exact project policy snapshot
-        // cannot be loaded; a missing snapshot must never act like an empty one.
-        cleanupVariables = undefined;
-      }
-    }
-    const unavailableFields = cleanupVariables
-      ? getUnavailableFields(cleanupVariables)
-      : undefined;
-    const globalVariablesEntries = cleanupVariables?.map(
-      (variable) => variable.name,
-    );
-    flowData?.nodes.forEach((node) => {
-      updateGroupRecursion(
-        node,
-        flowData?.edges,
-        unavailableFields,
-        globalVariablesEntries,
-      );
-    });
-
-    const newFlow = createNewFlow(flowData!, folder_id, flow);
-    const newName = getFolderScopedDuplicateName(
-      newFlow,
-      flows ?? [],
-      myCollectionId,
-    );
-    newFlow.name = newName;
-    newFlow.folder_id = folder_id;
 
     return new Promise<string>((resolve, reject) => {
       postAddFlow(newFlow, {
@@ -161,9 +67,10 @@ const useAddFlow = () => {
               title: FOLDER_NOT_FOUND_ERROR,
             });
             setTimeout(() => {
-              window.location.href = `/flows`;
+              navigate("/flows", { replace: true });
             }, REDIRECT_DELAY);
 
+            reject(error);
             return;
           }
 

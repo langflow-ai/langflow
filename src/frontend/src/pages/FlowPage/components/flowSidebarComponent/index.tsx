@@ -41,6 +41,7 @@ import SidebarSegmentedNav from "./components/sidebarSegmentedNav";
 import { useSearchContext } from "./context/SearchContext";
 import { applyFeatureFlagFilters } from "./helpers/apply-feature-flag-filters";
 import { computeSectionVisibility } from "./helpers/compute-section-visibility";
+import { getSidebarContentFlags } from "./helpers/get-sidebar-content-flags";
 import sensitiveSort from "./helpers/sensitive-sort";
 import { useDebouncedSearch } from "./hooks/useDebouncedSearch";
 import { useSegmentedSidebarPanel } from "./hooks/useSegmentedSidebarPanel";
@@ -248,16 +249,6 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     showLegacy,
   });
 
-  const hasResults = useMemo(() => {
-    return Object.entries(dataFilter).some(
-      ([category, items]) =>
-        (Object.keys(items).length > 0 &&
-          (CATEGORIES.find((c) => c.name === category) ||
-            BUNDLES.find((b) => b.name === category))) ||
-        (dataFilter["MCP"] && Object.keys(dataFilter["MCP"]).length > 0),
-    );
-  }, [dataFilter]);
-
   const isCatalogPolicyEmpty = useMemo(
     () =>
       catalogGovernanceEnabled &&
@@ -355,27 +346,8 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     [],
   );
 
-  const hasCoreComponents = useMemo(() => {
-    const categoriesWithItems = CATEGORIES.filter(
-      (item) =>
-        dataFilter[item.name] && Object.keys(dataFilter[item.name]).length > 0,
-    );
-    const result = categoriesWithItems.length > 0;
-    return result;
-  }, [dataFilter]);
-
-  const hasBundleItems = useMemo(() => {
-    const bundlesWithItems = BUNDLES.filter(
-      (item) =>
-        dataFilter[item.name] && Object.keys(dataFilter[item.name]).length > 0,
-    );
-    const result = bundlesWithItems.length > 0;
-    return result;
-  }, [dataFilter]);
-
-  const hasMcpComponents = useMemo(() => {
-    return dataFilter["MCP"] && Object.keys(dataFilter["MCP"]).length > 0;
-  }, [dataFilter]);
+  const { hasResults, hasCoreComponents, hasBundleItems, hasMcpComponents } =
+    useMemo(() => getSidebarContentFlags(dataFilter), [dataFilter]);
 
   const hasMcpServers = Boolean(mcpServers && mcpServers.length > 0);
 

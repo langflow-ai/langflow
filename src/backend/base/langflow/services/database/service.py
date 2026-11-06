@@ -35,8 +35,13 @@ from langflow.services.database.constants import (
     MIN_POSTGRESQL_MAJOR_VERSION,
     POSTGRESQL_VERSION_REQUIRED_MESSAGE,
 )
-from langflow.services.database.migration import get_current_alembic_heads
 from langflow.services.database.models.user.crud import get_user_by_username
+from langflow.services.database.revision import (
+    RevisionState,
+    classify_revisions,
+    read_revisions_before_startup,
+    script_directory,
+)
 from langflow.services.database.session import NoopSession
 from langflow.services.database.utils import Result, TableResults
 from langflow.services.deps import get_settings_service
@@ -423,9 +428,12 @@ class DatabaseService(Service):
                 "check_same_thread": False,
                 "timeout": settings.db_connect_timeout,
             }
-        # For PostgreSQL, set the timezone to UTC
+        # For PostgreSQL, set the timezone to UTC and disable server-side prepared
+        # statements, mirroring alembic/env.py's migration-engine connect_args. A
+        # stable backend connection is required for the lifetime of a prepared
+        # statement, which PgBouncer transaction-pooling mode does not guarantee.
         if settings.database_url and settings.database_url.startswith(("postgresql", "postgres")):
-            return {"options": "-c timezone=utc"}
+            return {"options": "-c timezone=utc", "prepare_threshold": None}
         return {}
 
     def on_connection(self, dbapi_connection, _connection_record) -> None:
@@ -647,10 +655,16 @@ class DatabaseService(Service):
         # The advisory lock serialises concurrent migration runs across workers
         # so they do not race on CREATE TYPE / CREATE TABLE against a fresh PG.
         with _postgres_migration_lock(self.database_url), buffer_context as buffer:
+            state = classify_revisions(self._current_alembic_revisions(), script_directory(self.script_location))
+            state.require_supported()
             alembic_cfg = Config(stdout=buffer)
             # alembic_cfg.attributes["connection"] = session
             alembic_cfg.set_main_option("script_location", str(self.script_location))
             alembic_cfg.set_main_option("sqlalchemy.url", self.database_url.replace("%", "%%"))
+
+            if state.upgrade_from:
+                # Only the recognized single-revision 1.10.3 branch is restamped.
+                command.stamp(alembic_cfg, state.upgrade_from, purge=True)
 
             if should_initialize_alembic:
                 try:
@@ -684,17 +698,26 @@ class DatabaseService(Service):
                 self.try_downgrade_upgrade_until_success(alembic_cfg)
 
     async def run_migrations(self, *, fix=False) -> None:
-        async with session_scope() as session:
-            should_initialize_alembic = not await get_current_alembic_heads(session)
-            if should_initialize_alembic:
-                await logger.adebug("Alembic not initialized")
+        state = await self.validate_database_revision()
+        should_initialize_alembic = not state.revisions
+        if should_initialize_alembic:
+            await logger.adebug("Alembic not initialized")
         await asyncio.to_thread(self._run_migrations, should_initialize_alembic, fix)
+
+    async def validate_database_revision(self) -> RevisionState:
+        """Reject unsupported revisions before any application schema writes."""
+        revisions = await read_revisions_before_startup(self.engine)
+        state = classify_revisions(revisions, script_directory(self.script_location))
+        state.require_supported()
+        return state
 
     def _current_alembic_revisions(self) -> set[str]:
         """Read current revisions from the configured database, never alembic.ini."""
         engine = sa.create_engine(_normalize_sync_postgres_url(self.database_url))
         try:
             with engine.connect() as connection:
+                if not sa.inspect(connection).has_table("alembic_version"):
+                    return set()
                 return set(connection.execute(sa.text("SELECT version_num FROM alembic_version")).scalars())
         finally:
             engine.dispose()

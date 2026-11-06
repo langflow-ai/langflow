@@ -23,7 +23,7 @@ class OutlookSearchComponent(MicrosoftGraphComponent):
 
     display_name = "Outlook: Search Mail"
     description = "Search the connected user's Outlook mailbox."
-    documentation = "https://learn.microsoft.com/en-us/graph/api/user-list-messages"
+    documentation = "https://docs.langflow.org/bundles-microsoft"
     name = "OutlookSearchMail"
     capability_id = "microsoft.outlook.search"
 
@@ -90,7 +90,7 @@ class OutlookSearchComponent(MicrosoftGraphComponent):
     async def search_messages(self) -> list[Data]:
         """Return the matching messages as Data rows."""
         if self._rows is not None:
-            self.status = f"{len(self._rows)} message(s)"
+            self.status = self._rows
             return self._rows
         limit = int(self.top or DEFAULT_TOP)
         if limit <= 0:
@@ -119,11 +119,12 @@ class OutlookSearchComponent(MicrosoftGraphComponent):
         self._next_link = next_link
         rows = [Data(data=item) for item in items]
         self._rows = rows
-        self.status = f"{len(rows)} message(s)"
+        self.status = rows
         return rows
 
     async def next_page_link(self) -> Message:
         """Return the unfollowed ``@odata.nextLink``, if Graph supplied one."""
         if self._rows is None:
             await self.search_messages()
-        return Message(text=self._next_link or "")
+        self.status = self._next_link or ""
+        return Message(text=self.status)

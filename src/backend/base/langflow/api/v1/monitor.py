@@ -6,9 +6,8 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.utils.file_path_security import LocalFileAccessError, enforce_local_file_access, enforce_storage_key_scope
-from sqlalchemy import func
 from sqlalchemy.orm.exc import StaleDataError
-from sqlmodel import col, delete, select
+from sqlmodel import col, delete, func, select
 
 from langflow.api.utils import DbSession, custom_params
 from langflow.api.utils.flow_utils import compute_virtual_flow_id
@@ -16,7 +15,7 @@ from langflow.schema.message import MessageResponse
 from langflow.services.auth.utils import get_current_active_superuser, get_current_active_user
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.authorization.fetch import authorized_or_owner_scoped
-from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow.model import Flow, is_virtual_flow_id, persisted_flow_history_filter
 from langflow.services.database.models.message.crud import (
     delete_messages_for_user,
     delete_messages_for_user_by_session,
@@ -84,10 +83,29 @@ def _validate_message_attachment_scopes(files: list[str] | None, scope_ids: tupl
 # Message-history reads must never return an entire table: the editor polls
 # this endpoint every few seconds, so an unbounded default serializes the full
 # history on every request and freezes the UI on flows with large histories
-# (issue #15023). Values match the list-endpoint defaults used by the authz
-# routers (_LIST_DEFAULT_LIMIT / _LIST_MAX_LIMIT).
+# (issue #15023). The session-list endpoints share the bounds for the same
+# reason (issue #15463). Values match the list-endpoint defaults used by the
+# authz routers (_LIST_DEFAULT_LIMIT / _LIST_MAX_LIMIT).
 _MESSAGES_DEFAULT_LIMIT = 100
 _MESSAGES_MAX_LIMIT = 200
+
+
+def _paged_session_ids_stmt(stmt, *, limit: int | None, offset: int | None):
+    """Group a session_id select into distinct sessions, newest activity first, and page it.
+
+    A flow can hold ~10k sessions and the editor lists them on load, so the list
+    must be bounded (issue #15463). Ordering by latest message (not first) keeps
+    active sessions on the first page; session_id breaks timestamp ties so
+    offset paging is stable.
+    """
+    effective_limit = _MESSAGES_DEFAULT_LIMIT if not limit else min(limit, _MESSAGES_MAX_LIMIT)
+    return (
+        stmt.where(col(MessageTable.session_id).isnot(None))
+        .group_by(MessageTable.session_id)
+        .order_by(func.max(MessageTable.timestamp).desc(), col(MessageTable.session_id).desc())
+        .offset(offset or 0)
+        .limit(effective_limit)
+    )
 
 
 def _sorted_for_display(messages: list[MessageTable], *, order_by: str | None, descending: bool) -> list[MessageTable]:
@@ -109,6 +127,13 @@ def _message_history_response(message: MessageTable) -> MessageResponse:
     if message.text is None:
         return MessageResponse.model_validate(message.model_dump() | {"text": ""})
     return MessageResponse.model_validate(message, from_attributes=True)
+
+
+def _message_update_response(message: MessageTable) -> MessageRead:
+    """Represent legacy NULL text in update responses without changing storage."""
+    if message.text is None:
+        return MessageRead.model_validate(message.model_dump() | {"text": ""})
+    return MessageRead.model_validate(message, from_attributes=True)
 
 
 async def _log_message_update_failure(error: Exception) -> None:
@@ -176,6 +201,8 @@ async def _ensure_flow_action_or_404(
     action: FlowAction,
 ) -> Flow | None:
     """Load a flow (share-aware), enforce permission, return None if missing."""
+    if is_virtual_flow_id(flow_id):
+        return None
     flow = await authorized_or_owner_scoped(
         session,
         Flow,
@@ -248,30 +275,28 @@ async def get_message_sessions(
     current_user: Annotated[User, Depends(get_current_active_user)],
     flow_id: Annotated[UUID | None, Query()] = None,
     limit: Annotated[int | None, Query(ge=0)] = None,
+    offset: Annotated[int | None, Query(ge=0)] = None,
 ) -> list[str]:
     try:
         # When a flow_id is provided, gate on flow READ permission so a viewer
         # without flow access cannot enumerate sessions. The bulk path
         # (flow_id is None) keeps the user-scoped JOIN — share-aware listing
         # across all visible flows is an plugin optimisation.
-        # Bound the list to the most recent sessions (default 100, max 200).
-        effective_limit = _MESSAGES_DEFAULT_LIMIT if not limit else min(limit, _MESSAGES_MAX_LIMIT)
-        stmt = select(MessageTable.session_id, func.max(MessageTable.timestamp))
         if flow_id is not None:
             flow = await _ensure_flow_action_or_404(session, flow_id=flow_id, user=current_user, action=FlowAction.READ)
             if flow is None:
                 return []
-            stmt = stmt.where(MessageTable.flow_id == flow_id)
-        else:
-            stmt = stmt.join(Flow, MessageTable.flow_id == Flow.id)
-            stmt = stmt.where(Flow.user_id == current_user.id)
-        stmt = stmt.where(col(MessageTable.session_id).isnot(None))
+            stmt = select(MessageTable.session_id).where(MessageTable.flow_id == flow_id)
+            stmt = stmt.where(~col(MessageTable.session_id).startswith("agentic_"))
+            session_ids = await session.exec(_paged_session_ids_stmt(stmt, limit=limit, offset=offset))
+            return list(session_ids)
+
+        stmt = select(MessageTable.session_id).join(Flow, MessageTable.flow_id == Flow.id)
         stmt = stmt.where(~col(MessageTable.session_id).startswith("agentic_"))
-        stmt = stmt.group_by(MessageTable.session_id)
-        stmt = stmt.order_by(func.max(MessageTable.timestamp).desc(), col(MessageTable.session_id).desc())
-        stmt = stmt.limit(effective_limit)
-        rows = await session.exec(stmt)
-        return [row[0] for row in rows]
+        stmt = stmt.where(Flow.user_id == current_user.id, persisted_flow_history_filter())
+
+        session_ids = await session.exec(_paged_session_ids_stmt(stmt, limit=limit, offset=offset))
+        return list(session_ids)
     except HTTPException:
         raise
     except Exception as e:
@@ -303,7 +328,7 @@ async def get_messages(
 
         # Use JOIN instead of subquery for better performance
         stmt = select(MessageTable)
-        stmt = stmt.join(Flow, MessageTable.flow_id == Flow.id)
+        stmt = stmt.join(Flow, MessageTable.flow_id == Flow.id).where(persisted_flow_history_filter())
         if flow_id is None:
             stmt = stmt.where(Flow.user_id == current_user.id)
 
@@ -471,7 +496,7 @@ async def update_message(
                 sender=db_message.sender,
                 positive_feedback=current_positive_feedback,
             )
-    return db_message
+    return _message_update_response(db_message)
 
 
 @router.patch(
@@ -579,7 +604,7 @@ async def delete_messages_sessions(
         # First, get distinct session IDs that have messages belonging to the user's flows
         session_stmt = select(MessageTable.session_id).distinct()
         session_stmt = session_stmt.join(Flow, MessageTable.flow_id == Flow.id)
-        session_stmt = session_stmt.where(Flow.user_id == current_user.id)
+        session_stmt = session_stmt.where(Flow.user_id == current_user.id, persisted_flow_history_filter())
         session_stmt = session_stmt.where(col(MessageTable.session_id).in_(session_ids))
 
         result = await session.exec(session_stmt)
@@ -603,7 +628,7 @@ async def delete_messages_sessions(
             # Get message IDs to delete
             msg_stmt = select(MessageTable.id)
             msg_stmt = msg_stmt.join(Flow, MessageTable.flow_id == Flow.id)
-            msg_stmt = msg_stmt.where(Flow.user_id == current_user.id)
+            msg_stmt = msg_stmt.where(Flow.user_id == current_user.id, persisted_flow_history_filter())
             msg_stmt = msg_stmt.where(col(MessageTable.session_id).in_(affected_session_ids))
 
             msg_result = await session.exec(msg_stmt)
@@ -640,25 +665,20 @@ async def get_shared_message_sessions(
     current_user: Annotated[User, Depends(get_current_active_user)],
     source_flow_id: Annotated[UUID, Query(description="The original public flow ID")],
     limit: Annotated[int | None, Query(ge=0)] = None,
+    offset: Annotated[int | None, Query(ge=0)] = None,
 ) -> list[str]:
     """Get session IDs for a shared/public flow, scoped to the authenticated user.
 
     Uses a deterministic virtual flow_id derived from the user's ID and the
-    original flow ID. Only messages stored under this virtual flow_id are returned.
-    Bounded to the most recent sessions (default 100, hard max 200).
+    original flow ID. Only messages stored under this virtual flow_id are returned,
+    most recently active session first, bounded by ``limit``/``offset``.
     """
     try:
         virtual_flow_id = _compute_shared_message_flow_id(current_user.id, source_flow_id)
-        effective_limit = _MESSAGES_DEFAULT_LIMIT if not limit else min(limit, _MESSAGES_MAX_LIMIT)
-        stmt = select(MessageTable.session_id, func.max(MessageTable.timestamp))
-        stmt = stmt.where(MessageTable.flow_id == virtual_flow_id)
-        stmt = stmt.where(col(MessageTable.session_id).isnot(None))
-        stmt = stmt.group_by(MessageTable.session_id)
-        stmt = stmt.order_by(func.max(MessageTable.timestamp).desc(), col(MessageTable.session_id).desc())
-        stmt = stmt.limit(effective_limit)
+        stmt = select(MessageTable.session_id).where(MessageTable.flow_id == virtual_flow_id)
 
-        rows = await session.exec(stmt)
-        return [row[0] for row in rows]
+        session_ids = await session.exec(_paged_session_ids_stmt(stmt, limit=limit, offset=offset))
+        return list(session_ids)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -767,7 +787,7 @@ async def update_shared_message(
         await session.refresh(db_message)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
-    return db_message
+    return _message_update_response(db_message)
 
 
 @router.patch("/messages/shared/session/{old_session_id}")

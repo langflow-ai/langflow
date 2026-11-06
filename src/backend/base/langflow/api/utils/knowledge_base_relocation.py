@@ -108,6 +108,7 @@ async def relocate_knowledge_bases(
     dry_run: bool = False,
     batch_size: int = 500,
     allow_metric_change: bool = False,
+    verify_skipped: bool = False,
     on_result: Callable[[KBRelocationResult], None] | None = None,
     on_progress: Callable[[KBRelocationResult], None] | None = None,
 ) -> list[KBRelocationResult]:
@@ -118,6 +119,10 @@ async def relocate_knowledge_bases(
 
     ``on_result`` is called with each result as its knowledge base finishes, and
     ``on_progress`` with the result so far after each batch of chunks is copied.
+
+    ``verify_skipped`` counts a knowledge base whose row already names the target
+    before it is skipped, and fails it when the store holds fewer chunks than the
+    row records.
     """
     validate_relocation_target_config(target_backend_type, target_backend_config)
     async with session_scope() as session:
@@ -136,6 +141,7 @@ async def relocate_knowledge_bases(
             dry_run=dry_run,
             batch_size=batch_size,
             allow_metric_change=allow_metric_change,
+            verify_skipped=verify_skipped,
             on_progress=on_progress,
         )
         results.append(result)
@@ -153,6 +159,7 @@ async def _relocate_one(
     dry_run: bool,
     batch_size: int,
     allow_metric_change: bool,
+    verify_skipped: bool,
     on_progress: Callable[[KBRelocationResult], None] | None = None,
 ) -> KBRelocationResult:
     source_config = record.backend_config or {}
@@ -166,12 +173,14 @@ async def _relocate_one(
         source_count=record.chunks,
     )
     if record.backend_type == target_backend_type and source_config == target_backend_config:
+        if verify_skipped and (short := await _short_on_the_target(record, result)):
+            result.reason = short
+            return result
         result.status = "skipped"
         result.reason = "already on the target backend"
         return result
     if not_ready := _storage_not_ready(record):
-        result.code = "kb_upgrade_pending"
-        result.reason = not_ready
+        result.code, result.reason = not_ready
         return result
     if record.status == KnowledgeBaseStatus.INGESTING.value:
         result.code = "kb_ingesting"
@@ -184,10 +193,14 @@ async def _relocate_one(
         with _failing_as(result, "kb_backend_missing"):
             get_backend_class(record.backend_type)
             get_backend_class(target_backend_type)
-        source = unfenced_backend(record)
+        # A store that cannot be opened is gone, or its server is out of reach from here. Neither is put right
+        # by copying again, so it is told apart from a failure of the copy itself.
+        with _failing_as(result, "kb_source_unreadable"):
+            source = unfenced_backend(record)
         with _failing_as(result, "kb_target_unreachable"):
             target = _build_backend(target_backend_type, target_backend_config, record)
-        await source.ensure_ready()
+        with _failing_as(result, "kb_source_unreadable"):
+            await source.ensure_ready()
         if type(source) is type(target):
             # A stored config usually carries keys the target config leaves out (field
             # names, TLS flags) while naming the same store, so compare where the two
@@ -195,6 +208,9 @@ async def _relocate_one(
             with _failing_as(result, "kb_target_unreachable"):
                 await target.ensure_ready()
             if source.store_location is not None and source.store_location == target.store_location:
+                if verify_skipped and (short := await _short_on_the_target(record, result)):
+                    result.reason = short
+                    return result
                 result.status = "skipped"
                 result.reason = "already on the target backend"
                 return result
@@ -205,7 +221,8 @@ async def _relocate_one(
             result.warnings.append(
                 "model_selection is empty, so the embedding model that produced these vectors is unknown"
             )
-        result.source_count = await source.count()
+        with _failing_as(result, "kb_source_unreadable"):
+            result.source_count = await source.count()
         if result.source_count < record.chunks:
             # Fewer chunks than recorded is what a truncated or half-lost store
             # looks like. Copying what is left and repointing would make the loss
@@ -312,29 +329,74 @@ async def _relocate_one(
     return result
 
 
-def _storage_not_ready(record: KnowledgeBaseRecord) -> str | None:
-    """Why the row's store cannot be read yet, or None when it can.
+def _storage_not_ready(record: KnowledgeBaseRecord) -> tuple[str, str] | None:
+    """The code and the reason why the row's store cannot be read, or None when it can.
 
     A Langflow 1.13 server upgrades local Chroma knowledge bases to SQLite at
     startup. Until a row's upgrade finishes, it still names Chroma or its storage
-    is not ready, and relocate-kb does not read Chroma.
+    is not ready, and relocate-kb does not read Chroma. A detached store is one this
+    instance no longer serves, and check-integrity leaves it out, so no upgrade or
+    retry is asked for.
     """
     state = record.storage_state
+    if state == "detached":
+        return (
+            "kb_detached",
+            "its store is detached, so this instance no longer serves it and check-integrity leaves it out; "
+            "there is nothing here to copy",
+        )
     if record.backend_type == "chroma" and (record.backend_config or {}).get("mode", "local") != "local":
         return (
+            "kb_backend_missing",
             "it is a Chroma Cloud knowledge base, which this Langflow can neither read nor upgrade, "
-            "so it cannot be moved from here; its data is still in Chroma Cloud"
+            "so it cannot be moved from here; its data is still in Chroma Cloud",
         )
     if record.backend_type == "chroma" or state in ("migrating", "needs_attention"):
         return (
+            "kb_upgrade_pending",
             f"its storage upgrade to SQLite has not finished (backend {record.backend_type}, storage_state {state}); "
             "start this Langflow version once with a single worker and wait until "
             "/healthz?require_storage_ready=true returns 200, or retry the upgrade from the storage status API "
-            "(/api/v1/knowledge-base-storage/status), then re-run"
+            "(/api/v1/knowledge-base-storage/status), then re-run",
         )
     if state != "ready":
-        return f"its storage is not ready (storage_state {state}); not relocating"
+        return "kb_upgrade_pending", f"its storage is not ready (storage_state {state}); not relocating"
     return None
+
+
+async def _short_on_the_target(record: KnowledgeBaseRecord, result: KBRelocationResult) -> str | None:
+    """Why a knowledge base whose row already names the target cannot be skipped, or None when it can.
+
+    A row names its store through this process's environment, and pgvector's is one
+    variable for the whole deployment. Run under another value of it, a row names a
+    store its chunks never reached. So the store is counted, and it has to hold what
+    the row records. Each reason sets its own code.
+    """
+    # ponytail: the row's count is all there is to hold the store to. A row that records no chunks passes
+    # unseen, and so does a store that holds as many chunks of something else. A row the app does not
+    # serve (detached, or on its way out) is not counted, as in check-integrity.
+    if not record.chunks or record.storage_state != "ready":
+        return None
+    store: BaseVectorStoreBackend | None = None
+    try:
+        store = unfenced_backend(record)
+        # Read without creating the store or anything in it, so a dry run can ask too.
+        held = await store.read_only_count() or 0
+    except Exception as exc:  # noqa: BLE001 - reported per knowledge base
+        result.code = "kb_target_unreachable"
+        return f"could not count it on the target: {_describe(exc)}"
+    finally:
+        if store is not None:
+            await store.teardown()
+    result.target_count = held
+    if held >= record.chunks:
+        return None
+    # Not kb_short: there the knowledge base's own store lost chunks. Here the store may hold all of them.
+    result.code = "kb_target_short"
+    return (
+        f"its row already names {record.backend_type}, but the store this run reads holds {held} of its "
+        f"{record.chunks} recorded chunks; if they are kept in another store, this run does not copy them from there"
+    )
 
 
 def _build_backend(

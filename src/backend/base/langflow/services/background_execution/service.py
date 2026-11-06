@@ -39,6 +39,7 @@ from langflow.services.base import Service
 from langflow.services.database.models.jobs.model import JobStatus, JobType, SignalType
 from langflow.services.deps import get_job_service
 from langflow.services.jobs.exceptions import DuplicateJobError
+from langflow.services.telemetry.context import get_current_telemetry_user_id
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable
@@ -131,6 +132,7 @@ class BackgroundExecutionService(Service):
         self._deadline_task: asyncio.Task | None = None
         self._orphan_task: asyncio.Task | None = None
         self._retention_task: asyncio.Task | None = None
+        self._lease_expiry_task: asyncio.Task | None = None
         self.set_ready()
 
     @property
@@ -181,13 +183,14 @@ class BackgroundExecutionService(Service):
         self._start_retention_sweep()
 
     async def stop(self) -> None:
-        tasks = (self._deadline_task, self._orphan_task, self._retention_task)
+        tasks = (self._deadline_task, self._orphan_task, self._retention_task, self._lease_expiry_task)
         watchdogs = [task for task in tasks if task is not None]
         for task in watchdogs:
             task.cancel()
         self._deadline_task = None
         self._orphan_task = None
         self._retention_task = None
+        self._lease_expiry_task = None
         if watchdogs:
             await asyncio.gather(*watchdogs, return_exceptions=True)
         await self._executor.stop()
@@ -237,6 +240,30 @@ class BackgroundExecutionService(Service):
                     await logger.aexception("Periodic background orphan sweep failed")
 
         self._orphan_task = asyncio.create_task(_loop())
+
+    def _start_lease_expiry_sweep(self, lease_ttl_s: float) -> None:
+        """Sweep once more after the lease TTL, for runs whose worker died just before this boot.
+
+        That worker's last heartbeat can still be fresh when the startup sweep
+        runs, and the startup sweep must spare any fresh run because it may
+        belong to a live sibling. The default mode has no periodic sweep, so
+        without this pass the run would stay IN_PROGRESS until the next restart.
+
+        Only heartbeated rows are considered. A sibling still on an older version
+        may be serving runs that never heartbeat, and the startup sweep already
+        failed any such row that was left over from before boot.
+        """
+        if self._lease_expiry_task is not None:
+            return
+
+        async def _sweep_after_lease() -> None:
+            await asyncio.sleep(lease_ttl_s)
+            try:
+                await get_job_service().sweep_orphans(lease_ttl_s=lease_ttl_s, require_heartbeat=True)
+            except Exception:  # noqa: BLE001 -- a failed pass must not surface as an unretrieved task error
+                await logger.aexception("Orphan sweep after the startup lease expired failed")
+
+        self._lease_expiry_task = asyncio.create_task(_sweep_after_lease())
 
     def _start_retention_sweep(self) -> None:
         """Purge terminal jobs past the retention window, hourly, until caught up.
@@ -374,6 +401,11 @@ class BackgroundExecutionService(Service):
         # authenticated override envelope together; no worker can claim a row in
         # the old create-then-patch gap.
         initial_metadata = self._persisted_request_metadata(job_id=job_id, flow_id=flow_id, request=request)
+        # Persist only the opaque attribution ID so execution and resume on a
+        # worker do not depend on the submitting request's context or credentials.
+        telemetry_user_id = get_current_telemetry_user_id()
+        if telemetry_user_id is not None:
+            initial_metadata["telemetry_user_id"] = telemetry_user_id
         try:
             await job_service.create_job(
                 job_id=job_id,
@@ -862,7 +894,9 @@ class BackgroundExecutionService(Service):
         runs the IN_PROGRESS reconcile; the others skip it. The reconcile is also
         liveness-aware (``sweep_orphans`` only fails rows whose heartbeat is
         stale/absent), so even without the lock a booting worker can never flip a
-        sibling's actively-running, freshly-heartbeated job FAILED.
+        sibling's actively-running, freshly-heartbeated job FAILED. One more pass
+        runs after the lease TTL, for a run whose worker died just before this
+        boot and still looked fresh to the first pass.
 
         ``JobService.sweep_orphans`` does the durable reconcile (FAILED +
         worker_lost + terminal event). QUEUED workflow rows never started, so
@@ -892,6 +926,7 @@ class BackgroundExecutionService(Service):
         except Timeout:
             # Another worker is running the reconcile; skip ours.
             await logger.adebug("Another worker is sweeping orphans, skipping")
+        self._start_lease_expiry_sweep(lease_ttl)
         # Re-enqueue QUEUED workflow rows (at-least-once for not-yet-started work).
         # Each row is LEASE-claimed (single-flight) WITHOUT flipping it to
         # IN_PROGRESS, so two workers booting against the same DB cannot both

@@ -48,10 +48,13 @@ export const URLs = {
   AGENTIC_CHECK_CONFIG: `agentic/check-config`,
   AGENTIC_FILES: `agentic/files`,
   POLICY_BUNDLE: `policy-bundle`,
+  MIGRATION: `migration`,
   CONNECTIONS: `connections`,
+  TRIGGERS: `triggers`,
   INTEGRATIONS: `integrations`,
   EXTENSIONS: `extensions`,
   AUTHZ_ME_PERMISSIONS: `authz/me/permissions`,
+  AUTHZ_SHARES: `authz/shares`,
 } as const;
 
 // IMPORTANT: FOLDERS endpoint now points to 'projects' for backward compatibility

@@ -6,6 +6,7 @@ import {
 import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
+import { isPauseRefusal } from "../../services/request-processor";
 import { mapMemoryApiToMemoryInfo } from "./mappers";
 import { updateMemoryInMemoriesCache } from "./memories-cache-helpers";
 import {
@@ -56,7 +57,8 @@ export const useUpdateMemory: useMutationFunctionType<
   >({
     mutationKey: ["useUpdateMemory"],
     mutationFn: updateMemoryFn,
-    retry: MEMORIES_RETRY_MAX_ATTEMPTS,
+    retry: (failureCount, error) =>
+      !isPauseRefusal(error) && failureCount < MEMORIES_RETRY_MAX_ATTEMPTS,
     retryDelay: memoriesRetryDelay,
     ...restOptions,
     onSettled: (data, error, variables, onMutateResult, context) => {

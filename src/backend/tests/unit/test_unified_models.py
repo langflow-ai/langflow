@@ -1811,3 +1811,25 @@ def test_get_provider_for_model_name_backwards_compat():
     assert get_provider_for_model_name("") == ""
     assert get_provider_for_model_name("__definitely_not_a_real_model__") == ""
     assert get_provider_for_model_name(None) == ""  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("stored", ['{"unexpected": "object"}', "[1]", "broken"])
+async def test_malformed_persisted_decision_status_fails_closed(monkeypatch, stored):
+    """Strict decision status reads reject corrupt persisted enablement instead of ignoring it."""
+    from contextlib import asynccontextmanager
+    from types import SimpleNamespace
+    from uuid import uuid4
+
+    from langflow.services.variable.service import DatabaseVariableService
+    from lfx.base.models.unified_models import credentials
+
+    @asynccontextmanager
+    async def session():
+        yield object()
+
+    service = MagicMock(spec=DatabaseVariableService)
+    service.get_all = AsyncMock(return_value=[SimpleNamespace(name="__disabled_models__", value=stored)])
+    monkeypatch.setattr(credentials, "session_scope", session)
+    monkeypatch.setattr(credentials, "get_variable_service", lambda: service)
+    with pytest.raises(ValueError, match=r"Invalid persisted|Expecting value"):
+        await credentials._get_model_status(uuid4(), strict=True)

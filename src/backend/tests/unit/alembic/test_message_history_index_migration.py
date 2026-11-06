@@ -16,6 +16,7 @@ from sqlalchemy.exc import IntegrityError
 from .test_migration_execution import _engine_url, _make_alembic_cfg, db_url  # noqa: F401
 
 _PREVIOUS_REVISION = "d7e9f1a3b5c8"  # pragma: allowlist secret
+_SESSION_LIST_INDEX = "ix_message_flow_id_session_id_timestamp"
 _EXPECTED_INDEXES = {
     "ix_message_flow_id_timestamp_id": ["flow_id", "timestamp", "id"],
     "ix_message_session_id_timestamp_id": ["session_id", "timestamp", "id"],
@@ -136,5 +137,35 @@ def test_message_history_index_recovers_failed_concurrent_build(db_url):  # noqa
             assert _message_index_columns(connection) == _EXPECTED_INDEXES
             assert connection.execute(validity).scalar_one() is True
             assert connection.execute(text("SELECT COUNT(*) FROM message")).scalar_one() == 2
+    finally:
+        engine.dispose()
+
+
+def test_message_session_list_index_roundtrip(db_url):  # noqa: F811
+    """The session-list index is created at head and dropped by its own downgrade."""
+    alembic_cfg = _make_alembic_cfg(db_url)
+    command.upgrade(alembic_cfg, "head")
+
+    def session_list_index(connection):
+        return {
+            index["name"]: list(index["column_names"])
+            for index in inspect(connection).get_indexes("message")
+            if index["name"] == _SESSION_LIST_INDEX
+        }
+
+    engine = create_engine(_engine_url(db_url))
+    try:
+        with engine.connect() as connection:
+            assert session_list_index(connection) == {_SESSION_LIST_INDEX: ["flow_id", "session_id", "timestamp"]}
+
+        command.downgrade(alembic_cfg, "d4f1a6c8e2b7")  # pragma: allowlist secret -- index revision parent
+        with engine.connect() as connection:
+            assert session_list_index(connection) == {}
+            # Earlier read-path indexes belong to a previous revision and stay.
+            assert _message_index_columns(connection) == _EXPECTED_INDEXES
+
+        command.upgrade(alembic_cfg, "head")
+        with engine.connect() as connection:
+            assert list(session_list_index(connection)) == [_SESSION_LIST_INDEX]
     finally:
         engine.dispose()

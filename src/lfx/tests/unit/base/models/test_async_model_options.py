@@ -63,7 +63,10 @@ async def test_async_catalog_parity_retains_policy_status_and_live_filters(monke
 
 
 @pytest.mark.asyncio
-async def test_unavailable_catalog_policy_precedes_status_and_credentials(monkeypatch):
+@pytest.mark.parametrize(
+    "lookup", [model_catalog.aget_language_model_options, model_catalog.aget_embedding_model_options]
+)
+async def test_unavailable_catalog_policy_precedes_status_and_credentials(monkeypatch, lookup):
     monkeypatch.setattr(
         "lfx.services.model_provider_policy.aresolve_model_provider_policy",
         AsyncMock(side_effect=RuntimeError("policy unavailable")),
@@ -73,7 +76,7 @@ async def test_unavailable_catalog_policy_precedes_status_and_credentials(monkey
     monkeypatch.setattr(model_catalog, "_get_model_status", status)
     monkeypatch.setattr(model_catalog, "_fetch_enabled_providers_for_user", enabled)
     with pytest.raises(RuntimeError, match="policy unavailable"):
-        await model_catalog.aget_language_model_options("runtime-owner")
+        await lookup("runtime-owner")
     status.assert_not_awaited()
     enabled.assert_not_awaited()
 
@@ -123,3 +126,35 @@ async def test_async_override_uses_fallback_when_lookup_misses_or_fails(lookup_f
     get_options.assert_awaited_once_with(user_id="owner")
     assert result == [{"name": "new-model", "provider": "Anthropic", "category": "Anthropic", "metadata": {}}]
     assert saved == before
+
+
+@pytest.mark.asyncio
+async def test_async_embedding_catalog_matches_sync_and_preserves_model_filters(monkeypatch):
+    rows = [
+        {
+            "provider": "OpenAI",
+            "models": [
+                {"model_name": "default", "metadata": {"default": True}},
+                {"model_name": "disabled", "metadata": {"default": True}},
+                {"model_name": "enabled", "metadata": {"default": False}},
+                {"model_name": "hidden", "metadata": {"default": False}},
+                {"model_name": "denied", "metadata": {"default": True}},
+            ],
+        }
+    ]
+    p = policy()
+    p.allows_model = lambda _provider, name, **_kw: name != "denied"
+    monkeypatch.setattr("lfx.services.model_provider_policy.aresolve_model_provider_policy", AsyncMock(return_value=p))
+    monkeypatch.setattr(model_catalog, "get_unified_models_detailed", lambda **_kw: deepcopy(rows))
+    monkeypatch.setattr(
+        model_catalog,
+        "_get_model_status",
+        AsyncMock(return_value=({"OpenAI::embeddings::disabled"}, {"OpenAI::embeddings::enabled"})),
+    )
+    monkeypatch.setattr(model_catalog, "_fetch_enabled_providers_for_user", AsyncMock(return_value={"OpenAI"}))
+    monkeypatch.setattr(model_catalog, "aget_live_model_variables", AsyncMock(return_value={}))
+    monkeypatch.setattr(model_catalog, "replace_with_live_models", lambda *_a, **_kw: None)
+    options = await model_catalog.aget_embedding_model_options("runtime-owner")
+    assert options == model_catalog.get_embedding_model_options("runtime-owner")
+    assert [option["name"] for option in options] == ["default", "enabled"]
+    assert all(option["metadata"]["model_type"] == "embeddings" for option in options)

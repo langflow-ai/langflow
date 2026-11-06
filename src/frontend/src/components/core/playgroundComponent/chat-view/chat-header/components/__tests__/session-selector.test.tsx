@@ -2,18 +2,10 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SessionSelector } from "../session-selector";
 
-jest.mock("@/controllers/API/queries/messages/use-rename-session", () => ({
-  useUpdateSessionName: () => ({ mutate: jest.fn() }),
-}));
-
 type VoiceState = { setNewSessionCloseVoiceAssistant: jest.Mock };
 jest.mock("@/stores/voiceStore", () => ({
   useVoiceStore: <TResult,>(selector: (state: VoiceState) => TResult) =>
     selector({ setNewSessionCloseVoiceAssistant: jest.fn() }),
-}));
-
-jest.mock("../../hooks/use-session-has-messages", () => ({
-  useSessionHasMessages: () => true,
 }));
 
 jest.mock("../session-more-menu", () => ({
@@ -31,6 +23,7 @@ const baseProps = {
   toggleVisibility: jest.fn(),
   updateVisibleSession: jest.fn(),
   handleRename: jest.fn().mockResolvedValue(undefined),
+  hasMessages: true,
   onMenuOpenChange: jest.fn(),
   onToggleSelect: jest.fn(),
   showCheckbox: true,
@@ -115,5 +108,27 @@ describe("SessionSelector — visual focus cue", () => {
     expect(root).not.toHaveAttribute("data-active");
     expect(root.className).toContain("font-normal");
     expect(root.className).not.toMatch(ROW_BG_ACCENT);
+  });
+});
+
+describe("SessionSelector — trigger run label", () => {
+  it("shows the label instead of the raw id", () => {
+    const session = "trigger:706f62f5-3c4b-415f-a734-49296d1d8710:362d99c5";
+    render(
+      <SessionSelector
+        {...baseProps}
+        session={session}
+        label="Oct 29, 3:45:12 PM · Schedule"
+        isVisible={false}
+      />,
+    );
+
+    expect(getRoot()).toHaveTextContent("Oct 29, 3:45:12 PM · Schedule");
+    expect(getRoot()).not.toHaveTextContent(session);
+  });
+
+  it("shows the raw id when there is no label", () => {
+    render(<SessionSelector {...baseProps} isVisible={false} />);
+    expect(getRoot()).toHaveTextContent("New Session 0");
   });
 });

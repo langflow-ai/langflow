@@ -5,35 +5,20 @@ from typing import TYPE_CHECKING, Any
 from lfx.utils.lazy_import import import_mod
 
 if TYPE_CHECKING:
-    from .mrscraper_ai_scraper import MrscraperAiScraper
-    from .mrscraper_batch_scrape import MrscraperBatchScrape
-    from .mrscraper_crawl_website import MrscraperCrawlWebsite
+    from .mrscraper_account import MrscraperAccount
     from .mrscraper_fetch_html import MrscraperFetchHtml
-    from .mrscraper_get_result import MrscraperGetResult
-    from .mrscraper_get_results import MrscraperGetResults
-    from .mrscraper_run_ai_scraper import MrscraperRunAiScraper
-    from .mrscraper_run_manual_scraper import MrscraperRunManualScraper
+    from .mrscraper_web_search import MrscraperWebSearch
 
 _dynamic_imports = {
-    "MrscraperAiScraper": "mrscraper_ai_scraper",
-    "MrscraperBatchScrape": "mrscraper_batch_scrape",
-    "MrscraperCrawlWebsite": "mrscraper_crawl_website",
+    "MrscraperAccount": "mrscraper_account",
     "MrscraperFetchHtml": "mrscraper_fetch_html",
-    "MrscraperGetResult": "mrscraper_get_result",
-    "MrscraperGetResults": "mrscraper_get_results",
-    "MrscraperRunAiScraper": "mrscraper_run_ai_scraper",
-    "MrscraperRunManualScraper": "mrscraper_run_manual_scraper",
+    "MrscraperWebSearch": "mrscraper_web_search",
 }
 
 __all__ = [
-    "MrscraperAiScraper",
-    "MrscraperBatchScrape",
-    "MrscraperCrawlWebsite",
+    "MrscraperAccount",
     "MrscraperFetchHtml",
-    "MrscraperGetResult",
-    "MrscraperGetResults",
-    "MrscraperRunAiScraper",
-    "MrscraperRunManualScraper",
+    "MrscraperWebSearch",
 ]
 
 

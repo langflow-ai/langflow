@@ -18,9 +18,7 @@ Use embedding model components anywhere you need to generate embeddings in a flo
 This example shows how to use an embedding model component in a flow to create a semantic search system.
 This flow loads a text file, splits the text into chunks, generates embeddings for each chunk, and then loads the chunks and embeddings into a vector store. The input and output components allow a user to query the vector store through a chat interface.
 
-![A semantic search flow that connects embedding and vector store components](/img/component-embedding-models-add-chat.png)
-
-This screenshot shows the legacy Chroma component. In Langflow 1.13, use a supported vector store such as Astra DB instead.
+![A semantic search flow that connects embedding and vector store components](/img/component-embedding-models-add-chat-113.png)
 
 1. Create a flow, add a **Read File** component, and then select a file containing text data, such as a PDF, that you can use to test the flow.
 

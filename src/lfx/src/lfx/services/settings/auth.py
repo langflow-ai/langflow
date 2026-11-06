@@ -94,7 +94,7 @@ class AuthSettings(BaseSettings):
     )
 
     AUTO_LOGIN: bool = Field(
-        default=True,  # TODO: Set the development default to False in v2.0.
+        default=False,  # TODO: Set the development default to False in v2.0.
         description=(
             "Enable automatic login with a configured or generated bootstrap account. "
             "SECURITY WARNING: This bypasses authentication and should only be used in development environments. "
@@ -296,6 +296,13 @@ class AuthSettings(BaseSettings):
     AUTHZ_ENABLED: bool = Field(
         default=False,
         description="Enable authorization enforcement. Requires an authorization_service plugin.",
+    )
+    API_KEY_SCOPES_ENABLED: bool = Field(
+        default=False,
+        description=(
+            "Allow issuing and editing restricted API keys after every API and worker replica supports key scopes. "
+            "Existing restricted keys remain subject to enforcement when this switch is off."
+        ),
     )
     AUTHZ_SUPERUSER_BYPASS: bool = Field(
         default=True,

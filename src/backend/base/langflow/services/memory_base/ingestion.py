@@ -38,6 +38,7 @@ from langflow.services.memory_base.provider_scope import (
 from langflow.services.memory_base.task import IngestionRequest, ingest_memory_task
 
 if TYPE_CHECKING:
+    from lfx.base.knowledge_bases.backends.base import BaseVectorStoreBackend
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 
@@ -106,6 +107,9 @@ async def trigger_ingestion(
         asset_id=memory_base_id,
         asset_type="memory_base",
         dedupe_key=dedupe_key,
+        # Live from insert, then kept alive by execute_with_status, so an orphan sweep
+        # cannot fail it mid-run. Ingestion writes no job_metadata of its own.
+        heartbeat=True,
     )
 
     task_service = get_task_service()
@@ -113,6 +117,7 @@ async def trigger_ingestion(
         job_service.execute_with_status,
         job_id=job_id,
         run_coro_func=ingest_memory_task,
+        keep_alive=True,
         request=IngestionRequest(
             memory_base_id=memory_base_id,
             session_id=session_id,
@@ -228,6 +233,7 @@ async def _maybe_trigger(
             asset_id=mb.id,
             asset_type="memory_base",
             dedupe_key=dedupe_key,
+            heartbeat=True,
         )
     except DuplicateJobError:
         await logger.adebug("Auto-capture: duplicate job for dedupe_key=%s - skipping.", dedupe_key)
@@ -238,6 +244,7 @@ async def _maybe_trigger(
         job_service.execute_with_status,
         job_id=job_id,
         run_coro_func=ingest_memory_task,
+        keep_alive=True,
         request=IngestionRequest(
             memory_base_id=mb.id,
             session_id=session_id,
@@ -551,14 +558,21 @@ async def _delete_chunks_for_session(
     try:
         await backend.ensure_ready()
         await backend.delete_by({"session_id": session_id})
-        # Refresh the knowledge_base row's cached counts so the UI reflects the
-        # post-purge state. Row-driven (not the sidecar), so it's replica-safe.
-        try:
-            await _sync_metrics_after_purge(user_id=user_id, kb_name=kb_name, backend=backend)
-        except Exception as exc:  # noqa: BLE001 -- successful privacy deletion is independent of cached metrics
-            await logger.awarning("Memory metrics refresh after purge lagged: %s", exc)
+        await refresh_metrics_after_purge(user_id=user_id, kb_name=kb_name, backend=backend)
     finally:
         await backend.teardown()
+
+
+async def refresh_metrics_after_purge(*, user_id: uuid.UUID, kb_name: str, backend: BaseVectorStoreBackend) -> None:
+    """Refresh the knowledge_base row's cached counts after a privacy deletion, best-effort.
+
+    Row-driven (not the sidecar), so it's replica-safe. The deletion has already
+    succeeded by the time this runs, so a failed refresh only logs a warning.
+    """
+    try:
+        await _sync_metrics_after_purge(user_id=user_id, kb_name=kb_name, backend=backend)
+    except Exception as exc:  # noqa: BLE001 -- successful privacy deletion is independent of cached metrics
+        await logger.awarning("Memory metrics refresh after purge lagged: %s", exc)
 
 
 async def _sync_metrics_after_purge(*, user_id: uuid.UUID, kb_name: str, backend) -> None:

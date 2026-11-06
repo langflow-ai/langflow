@@ -118,7 +118,7 @@ class TestTelemetryService:
     @pytest.mark.asyncio
     async def test_start_and_stop_lifecycle(self):
         """Test that start creates worker/client and stop cleans them up."""
-        svc = TelemetryService(base_url="http://localhost:0")
+        svc = TelemetryService(base_url="http://localhost:0", write_key="test-key", do_not_track=False)
         svc.start()
         assert svc._running is True
         assert svc._worker_task is not None
@@ -160,7 +160,7 @@ class TestTelemetryService:
     @pytest.mark.asyncio
     async def test_teardown_after_start(self):
         """Test that teardown properly stops a started service."""
-        svc = TelemetryService(base_url="http://localhost:0")
+        svc = TelemetryService(base_url="http://localhost:0", write_key="test-key", do_not_track=False)
         svc.start()
         assert svc._running is True
         await svc.teardown()

@@ -54,6 +54,35 @@ describe("computeDisplayHandle", () => {
     });
   });
 
+  describe("connection_ref handling", () => {
+    it("should return false for connection_ref fields", () => {
+      expect(computeDisplayHandle({ type: "connection_ref" }, false)).toBe(
+        false,
+      );
+    });
+
+    it("should return false for connection_ref even when input_types is set", () => {
+      expect(
+        computeDisplayHandle(
+          { type: "connection_ref", input_types: ["Message"] },
+          false,
+        ),
+      ).toBe(false);
+    });
+
+    it("should return false for connection_ref in tool mode", () => {
+      expect(
+        computeDisplayHandle({ type: "connection_ref", tool_mode: true }, true),
+      ).toBe(false);
+    });
+
+    it("should only match the exact connection_ref type", () => {
+      expect(computeDisplayHandle({ type: "Connection_Ref" }, false)).toBe(
+        true,
+      );
+    });
+  });
+
   describe("input_types handling", () => {
     it("should return true when input_types has values, even for supported types", () => {
       expect(
@@ -102,6 +131,12 @@ describe("computeDisplayHandle", () => {
   });
 
   describe("model input handling", () => {
+    it("shows no handle for a decision model, which takes no connections", () => {
+      expect(
+        computeDisplayHandle({ type: "model", model_type: "decision" }, false),
+      ).toBe(false);
+    });
+
     it("should always show handle for model type", () => {
       expect(computeDisplayHandle({ type: "model" }, false)).toBe(true);
       expect(

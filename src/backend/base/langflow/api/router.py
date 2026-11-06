@@ -34,6 +34,7 @@ from langflow.api.v1 import (
     mcp_projects_router,
     mcp_router,
     memories_router,
+    migration_router,
     model_options_router,
     model_provider_policy_router,
     models_router,
@@ -78,6 +79,12 @@ def include_deployment_router(target_router: APIRouter) -> None:
         from langflow.api.v1.deployments import router as deployment_router
 
         target_router.include_router(deployment_router)
+
+
+def include_migration_router(target_router: APIRouter) -> None:
+    """Mount the instance migration routes only when the feature is enabled."""
+    if FEATURE_FLAGS.instance_migration:
+        target_router.include_router(migration_router)
 
 
 router_v1.include_router(flow_conflict_router)
@@ -139,6 +146,7 @@ router_v1.include_router(trigger_ingress_router)
 # per-request guard in api.v1.extensions reads the live flag and 404s when it is off.
 router_v1.include_router(extensions_router)
 include_deployment_router(router_v1)
+include_migration_router(router_v1)
 
 
 # Agentic flow execution - lazy import to avoid circular dependency

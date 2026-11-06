@@ -2,15 +2,15 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
-import { useUpdateSessionName } from "@/controllers/API/queries/messages/use-rename-session";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { cn } from "@/utils/utils";
-import { useSessionHasMessages } from "../hooks/use-session-has-messages";
 import { SessionMoreMenu } from "./session-more-menu";
 import { SessionRename } from "./session-rename";
 
 export interface SessionSelectorProps {
   session: string;
+  /** Shown instead of the raw id, e.g. what started a trigger run and when. */
+  label?: string;
   currentFlowId: string;
   deleteSession: (session: string) => void;
   toggleVisibility: () => void;
@@ -20,9 +20,10 @@ export interface SessionSelectorProps {
     triggerElement: HTMLElement | null,
   ) => void;
   updateVisibleSession: (session: string) => void;
-  selectedView?: { type: string; id: string };
-  setSelectedView?: (view: { type: string; id: string } | undefined) => void;
-  handleRename?: (oldSessionId: string, newSessionId: string) => Promise<void>;
+  handleRename: (oldSessionId: string, newSessionId: string) => Promise<void>;
+  // Gates rename, and delete of the default session. Only read while the
+  // row's menu is open, since that is the only place those actions appear.
+  hasMessages: boolean;
   menuOpen?: boolean;
   onMenuOpenChange?: (open: boolean) => void;
   isSelected?: boolean;
@@ -32,15 +33,15 @@ export interface SessionSelectorProps {
 
 export function SessionSelector({
   session,
+  label,
   currentFlowId,
   deleteSession,
   toggleVisibility,
   isVisible,
   inspectSession,
   updateVisibleSession,
-  selectedView,
-  setSelectedView,
   handleRename,
+  hasMessages,
   menuOpen,
   onMenuOpenChange,
   isSelected = false,
@@ -49,7 +50,6 @@ export function SessionSelector({
 }: SessionSelectorProps) {
   const { t } = useTranslation();
   const [isEditing, setIsEditing] = useState(false);
-  const { mutate: updateSessionName } = useUpdateSessionName();
   const setNewSessionCloseVoiceAssistant = useVoiceStore(
     (state) => state.setNewSessionCloseVoiceAssistant,
   );
@@ -63,45 +63,12 @@ export function SessionSelector({
     const trimmed = newSessionId.trim();
     if (!trimmed || trimmed === session) return;
 
-    // Use handleRename if provided (from sidebar), otherwise use mutation directly (from header)
-    if (handleRename) {
-      await handleRename(session, trimmed);
-      updateVisibleSession(trimmed);
-      if (
-        selectedView?.type === "Session" &&
-        selectedView?.id === session &&
-        setSelectedView
-      ) {
-        setSelectedView({ type: "Session", id: trimmed });
-      }
-    } else {
-      // Wait for the mutation to complete before updating visible session
-      await updateSessionName(
-        { old_session_id: session, new_session_id: trimmed },
-        {
-          onSuccess: () => {
-            // Update visible session after rename is complete
-            updateVisibleSession(trimmed);
-            if (
-              selectedView?.type === "Session" &&
-              selectedView?.id === session &&
-              setSelectedView
-            ) {
-              setSelectedView({ type: "Session", id: trimmed });
-            }
-          },
-        },
-      );
-    }
+    await handleRename(session, trimmed);
+    updateVisibleSession(trimmed);
   };
 
   // Default session (flowId) cannot be renamed, but can be deleted if it has messages
   const isDefaultSession = session === currentFlowId;
-
-  const hasMessages = useSessionHasMessages({
-    sessionId: session,
-    flowId: currentFlowId,
-  });
 
   const canModifySession = !isDefaultSession;
   const canDeleteSession = hasMessages || !isDefaultSession;
@@ -183,7 +150,9 @@ export function SessionSelector({
             <ShadTooltip styleClasses="z-50" content={session}>
               <div className="relative w-full overflow-hidden">
                 <span className="w-full truncate bg-transparent text-mmd">
-                  {isDefaultSession ? t("chat.defaultSession") : session}
+                  {isDefaultSession
+                    ? t("chat.defaultSession")
+                    : (label ?? session)}
                 </span>
               </div>
             </ShadTooltip>

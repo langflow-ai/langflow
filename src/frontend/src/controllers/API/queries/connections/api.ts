@@ -4,6 +4,7 @@ import type {
   ConnectionCreate,
   ConnectionRead,
   ConnectionRevokeRead,
+  ConnectionTokenRenewal,
   ConnectionUpdate,
   EffectiveIntegrationPolicyRead,
   IntegrationListRead,
@@ -57,6 +58,14 @@ export async function testConnection(
   const { data } = await api.post<ConnectionRead>(`${one(id)}/test`, {
     required_scopes: requiredScopes,
   });
+  return data;
+}
+
+export async function renewConnectionToken(
+  id: string,
+  payload: ConnectionTokenRenewal,
+): Promise<ConnectionRead> {
+  const { data } = await api.post<ConnectionRead>(`${one(id)}/token`, payload);
   return data;
 }
 

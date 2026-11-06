@@ -147,27 +147,62 @@ def _reserved_secret_paths(data_dir: Path) -> set[Path]:
     return reserved
 
 
+USER_STORAGE_SCOPE_PREFIX = "user-"
+FLOW_STORAGE_SCOPE_PREFIX = "flow-"
+
+
+def user_storage_scope(scope_id: object) -> str:
+    """Return the typed storage namespace for a user, safe on local filesystems and S3."""
+    return f"{USER_STORAGE_SCOPE_PREFIX}{str(scope_id).strip()}"
+
+
+def flow_storage_scope(scope_id: object) -> str:
+    """Return the typed storage namespace for a flow, safe on local filesystems and S3."""
+    return f"{FLOW_STORAGE_SCOPE_PREFIX}{str(scope_id).strip()}"
+
+
+def user_storage_scope_for_path(path: str, owner_id: object) -> str:
+    """Resolve a recorded user-file path to its typed or legacy raw storage namespace."""
+    typed_namespace = user_storage_scope(owner_id)
+    return typed_namespace if str(path).startswith(f"{typed_namespace}/") else str(owner_id)
+
+
+def storage_scope_id(scope: object) -> str:
+    """Return the principal ID from a typed scope, or an untyped legacy scope unchanged."""
+    value = str(scope)
+    for prefix in (USER_STORAGE_SCOPE_PREFIX, FLOW_STORAGE_SCOPE_PREFIX):
+        if value.startswith(prefix):
+            return value[len(prefix) :]
+    return value
+
+
 def component_authenticated_user_scope(component: object) -> str | None:
-    """Return the authenticated user's storage scope without requiring component properties."""
+    """Return the authenticated user's typed storage scope without requiring component properties."""
     graph = getattr(getattr(component, "_vertex", None), "graph", None)
     candidate = getattr(component, "_user_id", None) or getattr(graph, "user_id", None)
     if candidate is None:
         return None
     scope = str(candidate).strip()
-    return scope or None
+    return user_storage_scope(scope) if scope else None
 
 
 def component_file_access_scopes(component: object) -> tuple[str, ...]:
-    """Return authenticated user, execution-flow, and trusted source-flow storage scopes.
+    """Return typed scopes plus legacy flow IDs authorized by the server.
 
     Components are instantiated without a graph while metadata is built. Reading ``user_id`` or
     ``flow_id`` properties in that state raises, so this helper inspects their backing graph safely.
     """
     graph = getattr(getattr(component, "_vertex", None), "graph", None)
+    flow_id = getattr(graph, "flow_id", None)
+    source_flow_id = getattr(graph, "source_flow_id", None)
+    authorized_legacy = getattr(graph, "authorized_legacy_flow_ids", frozenset())
+    if not isinstance(authorized_legacy, frozenset):
+        authorized_legacy = frozenset()
     candidates = (
         component_authenticated_user_scope(component),
-        getattr(graph, "flow_id", None),
-        getattr(graph, "source_flow_id", None),
+        flow_storage_scope(flow_id) if flow_id is not None else None,
+        flow_storage_scope(source_flow_id) if source_flow_id is not None else None,
+        *sorted(str(candidate) for candidate in authorized_legacy),
     )
     scopes: list[str] = []
     for candidate in candidates:
@@ -181,24 +216,20 @@ def component_file_access_scopes(component: object) -> tuple[str, ...]:
 def enforce_storage_key_scope(path: str, scope_ids: Iterable[object] | None) -> tuple[str, str]:
     """Split a ``"<namespace>/<file_name>"`` storage key and verify the caller may address it.
 
-    Storage keys are the internal addressing scheme for uploaded files: ``<namespace>`` is the
-    uploading user's id (``/api/v2/files``) or a flow id (legacy per-flow uploads), and it selects
-    a per-principal directory under ``config_dir`` (local storage) or object prefix (S3). The value
-    arrives from a tenant-controlled component input field, so an unvalidated namespace lets one
-    tenant address another tenant's uploads — the *shape* of the path ends up deciding access.
+    New user and flow uploads use physically distinct ``user-<uuid>`` and ``flow-<uuid>``
+    namespaces. Untyped legacy keys are accepted as user namespaces when that user is in scope,
+    or as flow namespaces only when the server authorized a non-colliding legacy flow ID.
 
     Unlike :func:`enforce_local_file_access` this check is NOT gated on
     ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS``. Reading a local *server* file by absolute path is a
     documented single-tenant feature that the flag exists to turn off; addressing another
-    principal's storage namespace is never legitimate, so it is rejected unconditionally. This
-    mirrors the namespace check already applied to unauthenticated public builds by
-    ``langflow.api.utils.flow_utils.validate_public_files``.
+    principal's storage namespace is never legitimate, so it is rejected unconditionally.
 
     Args:
         path: The caller-supplied storage key.
         scope_ids: Storage namespaces the executing graph owns. An empty/None value means there is
             no tenant boundary to enforce (standalone ``lfx run``, scripted graphs), and the key is
-            accepted; served executions always carry at least the caller's user id or the flow id.
+            accepted; served executions always carry at least one typed user or flow scope.
 
     Returns:
         tuple[str, str]: The validated ``(namespace, file_name)`` pair.
@@ -212,9 +243,6 @@ def enforce_storage_key_scope(path: str, scope_ids: Iterable[object] | None) -> 
         msg = f"Invalid storage path '{path}'. Expected '<namespace>/<file_name>'."
         raise StorageNamespaceError(msg)
 
-    # Stored file names are single path segments (the storage backends reject separators on
-    # write), so anything else here is an attempt to climb out of the namespace directory —
-    # e.g. "<own_id>/../<victim_id>/secret.txt" would otherwise pass the scope check below.
     if ".." in file_name or any(char in file_name for char in ("/", "\\", "\x00")):
         msg = "Invalid storage file name: contains path separators or traversal sequences."
         raise StorageNamespaceError(msg)
@@ -226,7 +254,8 @@ def enforce_storage_key_scope(path: str, scope_ids: Iterable[object] | None) -> 
     if not scopes:
         return namespace, file_name
 
-    if namespace.casefold() not in scopes:
+    legacy_user_scope = user_storage_scope(namespace).casefold()
+    if namespace.casefold() not in scopes and legacy_user_scope not in scopes:
         msg = (
             "Access to a storage namespace outside the authenticated user's or executing flow's scope is not permitted."
         )
@@ -255,15 +284,19 @@ def _scope_roots(
     roots: list[Path] = []
     for raw_scope in scope_ids or ():
         scope = str(raw_scope).strip()
-        if not scope or scope in {".", ".."} or any(char in scope for char in ("/", "\\", "\x00")):
-            msg = "Invalid local-file access scope."
-            raise LocalFileAccessError(msg)
-        root = (data_dir / scope).resolve()
-        if not root.is_relative_to(data_dir):
-            msg = "Invalid local-file access scope."
-            raise LocalFileAccessError(msg)
-        if root not in roots:
-            roots.append(root)
+        scope_candidates = [scope]
+        if scope.startswith(USER_STORAGE_SCOPE_PREFIX):
+            scope_candidates.append(storage_scope_id(scope))
+        for candidate in scope_candidates:
+            if not candidate or candidate in {".", ".."} or any(char in candidate for char in ("/", "\\", "\x00")):
+                msg = "Invalid local-file access scope."
+                raise LocalFileAccessError(msg)
+            root = (data_dir / candidate).resolve()
+            if not root.is_relative_to(data_dir):
+                msg = "Invalid local-file access scope."
+                raise LocalFileAccessError(msg)
+            if root not in roots:
+                roots.append(root)
 
     if allow_storage_root and data_dir not in roots:
         roots.append(data_dir)

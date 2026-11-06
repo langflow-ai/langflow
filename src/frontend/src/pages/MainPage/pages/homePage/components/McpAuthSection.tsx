@@ -66,9 +66,12 @@ export const McpAuthSection = ({
               />
               {isLoading
                 ? t("mcp.loading")
-                : AUTH_METHODS[
-                    currentAuthSettings?.auth_type as keyof typeof AUTH_METHODS
-                  ]?.label || currentAuthSettings?.auth_type}
+                : t(`authModal.authMethod.${currentAuthSettings?.auth_type}`, {
+                    defaultValue:
+                      AUTH_METHODS[
+                        currentAuthSettings?.auth_type as keyof typeof AUTH_METHODS
+                      ]?.label || currentAuthSettings?.auth_type,
+                  })}
             </span>
           </ShadTooltip>
         )}

@@ -1,9 +1,11 @@
 from unittest.mock import MagicMock, patch
+from uuid import uuid4
 
 import pytest
 from langflow.services.variable.constants import CREDENTIAL_TYPE
 from langflow.services.variable.kubernetes import KubernetesSecretService
 from lfx.services.variable import VariableNotFoundError
+from lfx.services.variable.exceptions import RuntimeVariableError
 
 
 def _service_with_secret(secret: dict[str, str] | None) -> KubernetesSecretService:
@@ -45,11 +47,13 @@ def test_resolve_variable_returns_credential_variable() -> None:
 
 async def test_batch_fallback_preserves_values_and_warns_on_each_call() -> None:
     service = _service_with_secret({"VALUE": "test-value"})
+    service.settings_service = object()
+    user_id = uuid4()
     with patch("langflow.services.variable.base.logger.awarning") as warning:
-        assert await service.get_variables("user-1", [], "", None) == {}
+        assert await service.get_variables(user_id, [], "", None) == {}
         warning.assert_not_awaited()
         for _ in range(2):
-            assert await service.get_variables("user-1", ["VALUE", "MISSING"], "", None) == {
+            assert await service.get_variables(user_id, ["VALUE", "MISSING"], "", None) == {
                 "VALUE": "test-value",
                 "MISSING": None,
             }
@@ -58,3 +62,20 @@ async def test_batch_fallback_preserves_values_and_warns_on_each_call() -> None:
     assert "KubernetesSecretService" in message
     assert "VALUE" not in message
     assert "test-value" not in message
+
+
+@pytest.mark.asyncio
+async def test_bound_account_refusal_precedes_kubernetes_secret_lookup(monkeypatch):
+    from langflow.services.variable import runtime_policy
+
+    service = _service_with_secret({"Credential_API_KEY": "alternate-store-value"})
+    service.settings_service = object()
+
+    async def refused(**_):
+        msg = "Account denied"
+        raise RuntimeVariableError(msg, reason="variable_not_approved")
+
+    monkeypatch.setattr(runtime_policy, "_resolver", refused)
+    with pytest.raises(RuntimeVariableError, match="Account denied"):
+        await service.get_variable(user_id=uuid4(), name="API_KEY", field="", session=None)
+    service.kubernetes_secrets.get_secret.assert_not_called()

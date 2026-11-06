@@ -115,6 +115,26 @@ async function driveLoginErrorToast(page: LangflowPage) {
     ),
   ).toHaveCount(2);
   await expect(page.locator("#login-form-error")).toBeVisible();
+  await expect(page.locator("#login-upgrade-recovery")).toContainText(
+    "an existing account can keep its password even when LANGFLOW_SUPERUSER_PASSWORD is set",
+  );
+  await expect(
+    page.getByRole("link", { name: "Recover access after upgrading" }),
+  ).toHaveAttribute(
+    "href",
+    "https://github.com/langflow-ai/langflow/blob/release-1.13.0/docs/docs/Develop/api-keys-and-authentication.mdx#recover-access-after-upgrading-recover-access-after-upgrading",
+  );
+}
+
+async function driveLoginErrorMobile(page: LangflowPage) {
+  await page.setViewportSize({ width: 320, height: 800 });
+  await driveLoginErrorToast(page);
+  // Wait for the existing fixed-width toast to close before checking the persistent inline guidance.
+  await expect(page.getByText("Error signing in")).not.toBeVisible({
+    timeout: 10000,
+  });
+  await expect(page.locator("#login-upgrade-recovery")).toBeVisible();
+  await expectPageToReflow(page);
 }
 
 async function driveSignupEmpty(page: LangflowPage) {
@@ -191,6 +211,7 @@ const AUTH_STATES: Array<{
   { label: "auth-login-mobile", drive: driveLoginMobile },
   { label: "auth-login-validation", drive: driveLoginValidation },
   { label: "auth-login-error-toast", drive: driveLoginErrorToast },
+  { label: "auth-login-error-mobile", drive: driveLoginErrorMobile },
   { label: "auth-signup-empty", drive: driveSignupEmpty },
   { label: "auth-signup-mobile", drive: driveSignupMobile },
   { label: "auth-signup-mismatch", drive: driveSignupMismatch },

@@ -72,9 +72,9 @@ class TestAparseTextFileToData:
         parse_threads: list[threading.Thread] = []
         real_parse = data_utils.parse_text_file_to_data
 
-        def recording_parse(file_path: str, *, silent_errors: bool):
+        def recording_parse(file_path: str, *, silent_errors: bool, encoding: str | None = None):
             parse_threads.append(threading.current_thread())
-            return real_parse(file_path, silent_errors=silent_errors)
+            return real_parse(file_path, silent_errors=silent_errors, encoding=encoding)
 
         monkeypatch.setattr(data_utils, "parse_text_file_to_data", recording_parse)
 
@@ -99,5 +99,5 @@ class TestAparseTextFileToData:
 
         result = await aparse_text_file_to_data("user-id/data.json", silent_errors=False)
 
-        assert result.data == {"file_path": "user-id/data.json", "text": '{"key":"value"}'}
+        assert result.data == {"file_path": "user-id/data.json", "text": '{"key":"value"}', "encoding": "ascii"}
         storage_service.get_file.assert_awaited_once_with("user-id", "data.json")

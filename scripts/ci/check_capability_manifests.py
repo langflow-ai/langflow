@@ -38,6 +38,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from provider_integration_contracts import DEFAULT_CONTRACT_ROOT, WAVE_ONE_PROVIDERS, validate_contracts
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DESIGN_ROOT = REPO_ROOT / "design" / "dedicated-integrations"
 DEFAULT_BUNDLES_ROOT = REPO_ROOT / "src" / "bundles"
@@ -215,11 +217,19 @@ def compare(provider_id: str, manifest_path: Path, matrix_path: Path) -> list[st
     return errors
 
 
-def validate_all(*, design_root: Path = DEFAULT_DESIGN_ROOT, bundles_root: Path = DEFAULT_BUNDLES_ROOT) -> list[str]:
+def validate_all(
+    *,
+    design_root: Path = DEFAULT_DESIGN_ROOT,
+    bundles_root: Path = DEFAULT_BUNDLES_ROOT,
+    contract_root: Path = DEFAULT_CONTRACT_ROOT,
+) -> list[str]:
     """Validate every bundle-owned capability manifest against its matrix."""
     errors: list[str] = []
-    for provider_id, _extension_path, manifest_path in discover_manifests(bundles_root):
-        errors.extend(compare(provider_id, manifest_path, design_root / "matrices" / f"{provider_id}.json"))
+    manifests = discover_manifests(bundles_root)
+    for provider_id, _extension_path, manifest_path in manifests:
+        if provider_id in WAVE_ONE_PROVIDERS:
+            errors.extend(compare(provider_id, manifest_path, design_root / "matrices" / f"{provider_id}.json"))
+    errors.extend(validate_contracts(manifests, contract_root=contract_root))
     return errors
 
 
@@ -227,10 +237,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--design-root", type=Path, default=DEFAULT_DESIGN_ROOT)
     parser.add_argument("--bundles-root", type=Path, default=DEFAULT_BUNDLES_ROOT)
+    parser.add_argument("--contract-root", type=Path, default=DEFAULT_CONTRACT_ROOT)
     args = parser.parse_args()
 
     manifests = discover_manifests(args.bundles_root)
-    errors = validate_all(design_root=args.design_root, bundles_root=args.bundles_root)
+    errors = validate_all(
+        design_root=args.design_root, bundles_root=args.bundles_root, contract_root=args.contract_root
+    )
     if errors:
         print("Capability manifest validation failed:")
         for error in errors:

@@ -1,5 +1,12 @@
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  type ReactNode,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
@@ -25,6 +32,11 @@ import {
   usePostUploadFolders,
 } from "@/controllers/API/queries/folders";
 import { useGetDownloadFolders } from "@/controllers/API/queries/folders/use-get-download-folders";
+import {
+  CustomProjectSidebarProjectLabel,
+  getCustomProjectSidebarProjectTitle,
+  useCustomProjectSidebar,
+} from "@/customization/components/custom-project-sidebar";
 import {
   ENABLE_CUSTOM_PARAM,
   ENABLE_FILE_MANAGEMENT,
@@ -83,7 +95,11 @@ const SideBarFoldersButtonsComponent = ({
   const pathname = location.pathname;
   const folders = useFolderStore((state) => state.folders);
   const loading = !folders;
+  const projectSidebar = useCustomProjectSidebar(folders);
   const refInput = useRef<HTMLInputElement>(null);
+  const projectMenuRef = useRef<HTMLUListElement>(null);
+  const [activeIndicatorStyle, setActiveIndicatorStyle] =
+    useState<CSSProperties>({ opacity: 0 });
 
   const _navigate = useCustomNavigate();
 
@@ -108,6 +124,31 @@ const SideBarFoldersButtonsComponent = ({
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
   const folderId = useParams().folderId ?? myCollectionId ?? "";
+
+  useLayoutEffect(() => {
+    if (!projectSidebar.activeIndicatorClassName) return;
+
+    const menu = projectMenuRef.current;
+    const activeButton = menu?.querySelector<HTMLElement>(
+      '[data-sidebar="menu-button"][data-active="true"]',
+    );
+    if (!menu || !activeButton) {
+      setActiveIndicatorStyle((style) => ({ ...style, opacity: 0 }));
+      return;
+    }
+
+    const menuBounds = menu.getBoundingClientRect();
+    const buttonBounds = activeButton.getBoundingClientRect();
+    setActiveIndicatorStyle({
+      height: buttonBounds.height,
+      opacity: 1,
+      transform: `translateY(${buttonBounds.top - menuBounds.top}px)`,
+    });
+  }, [
+    pathname,
+    projectSidebar.activeIndicatorClassName,
+    projectSidebar.projects,
+  ]);
 
   const { dragOver, dragEnter, dragLeave, onDrop } = useFileDrop(folderId);
   const uploadFlow = useUploadFlow();
@@ -177,7 +218,16 @@ const SideBarFoldersButtonsComponent = ({
 
       getObjectsFromFilelist<UploadedFlowFile>(files)
         .then((objects) => {
-          if (objects.every((flow) => flow.data?.nodes)) {
+          if (
+            objects.every(
+              (flow) =>
+                flow &&
+                (("data" in flow && flow.data?.nodes) ||
+                  ("flows" in flow &&
+                    Array.isArray(flow.flows) &&
+                    !("folder_name" in flow))),
+            )
+          ) {
             uploadFlow({ files })
               .then(() => {
                 setSuccessData({
@@ -187,9 +237,7 @@ const SideBarFoldersButtonsComponent = ({
               .catch((error) => {
                 setErrorData({
                   title: t("errors.upload"),
-                  list: [
-                    error instanceof Error ? error.message : String(error),
-                  ],
+                  list: extractApiErrorMessages(error),
                 });
               });
           } else {
@@ -208,10 +256,7 @@ const SideBarFoldersButtonsComponent = ({
                     console.error(err);
                     setErrorData({
                       title: t("sidebar.projectUploadError"),
-                      list: [
-                        err?.response?.data?.detail ??
-                          (err instanceof Error ? err.message : String(err)),
-                      ],
+                      list: extractApiErrorMessages(err),
                     });
                   },
                 },
@@ -222,7 +267,7 @@ const SideBarFoldersButtonsComponent = ({
         .catch((error) => {
           setErrorData({
             title: t("errors.upload"),
-            list: [error instanceof Error ? error.message : String(error)],
+            list: extractApiErrorMessages(error),
           });
         });
     });
@@ -437,35 +482,62 @@ const SideBarFoldersButtonsComponent = ({
 
   return (
     <Sidebar
+      aria-hidden={
+        projectSidebar.secondaryNavigationState === "closed" || undefined
+      }
+      data-secondary-navigation-state={projectSidebar.secondaryNavigationState}
       collapsible={isMobile ? "offcanvas" : "none"}
+      className={projectSidebar.className}
       data-testid="project-sidebar"
       aria-labelledby="project-sidebar-title"
+      id="project-sidebar"
+      inert={projectSidebar.secondaryNavigationState === "closed" || undefined}
     >
-      <SidebarHeader className="px-4 py-1">
+      <SidebarHeader
+        className={cn("px-4 py-1", projectSidebar.headerContainerClassName)}
+      >
         <HeaderButtons
           handleUploadFlowsToFolder={handleUploadFlowsToFolder}
           isUpdatingFolder={isUpdatingFolder}
           isPending={isPending}
           addNewFolder={addNewFolder}
+          containerClassName={projectSidebar.headerRowClassName}
+          titleClassName={projectSidebar.headerClassName}
         />
+        {projectSidebar.tools}
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup className="p-4 py-2">
+        <SidebarGroup
+          className={cn("p-4 py-2", projectSidebar.contentClassName)}
+        >
           <SidebarGroupContent>
             <PermissionsProvider
               resourceType="project"
-              resourceIds={folders
+              resourceIds={projectSidebar.projects
                 .map((folder) => folder.id ?? "")
                 .filter(Boolean)}
             >
-              <SidebarMenu>
+              <SidebarMenu
+                className={cn(
+                  projectSidebar.activeIndicatorClassName && "relative",
+                )}
+                ref={projectMenuRef}
+              >
+                {projectSidebar.activeIndicatorClassName ? (
+                  <span
+                    aria-hidden="true"
+                    className={projectSidebar.activeIndicatorClassName}
+                    data-testid="project-active-indicator"
+                    style={activeIndicatorStyle}
+                  />
+                ) : null}
                 {!loading ? (
-                  folders.length === 0 ? (
+                  projectSidebar.projects.length === 0 ? (
                     <div className="px-2 py-5 text-center text-sm text-muted-foreground">
                       {t("sidebar.emptyMessage")}
                     </div>
                   ) : (
-                    folders.map((item) => {
+                    projectSidebar.projects.map((item) => {
                       const editFolderName = editFolders?.filter(
                         (folder) => folder.id === item.id,
                       )[0];
@@ -498,6 +570,7 @@ const SideBarFoldersButtonsComponent = ({
                                   }}
                                   className={cn(
                                     "flex-grow pr-8",
+                                    projectSidebar.itemClassName,
                                     hoveredFolderId === item.id && "bg-accent",
                                     checkHoveringFolder(item.id!),
                                   )}
@@ -522,16 +595,25 @@ const SideBarFoldersButtonsComponent = ({
                                         />
                                       ) : (
                                         <span
-                                          className="block w-0 grow truncate text-sm opacity-100"
+                                          className="block w-0 grow text-sm opacity-100"
                                           // The sidebar cannot be widened, so a
                                           // truncated name is otherwise
                                           // unreadable. With one default project
                                           // per user the list fills with rows
                                           // that differ only in the truncated
                                           // part.
-                                          title={getProjectDisplayName(item, t)}
+                                          title={getCustomProjectSidebarProjectTitle(
+                                            item,
+                                            getProjectDisplayName(item, t),
+                                          )}
                                         >
-                                          {getProjectDisplayName(item, t)}
+                                          <CustomProjectSidebarProjectLabel
+                                            project={item}
+                                            defaultLabel={getProjectDisplayName(
+                                              item,
+                                              t,
+                                            )}
+                                          />
                                         </span>
                                       )}
                                     </div>
@@ -539,7 +621,12 @@ const SideBarFoldersButtonsComponent = ({
                                 </SidebarMenuButton>
                               )}
                             </ProjectRenamePermission>
-                            <div className="absolute right-2 top-[0.45rem] flex items-center hover:text-foreground">
+                            <div
+                              className={cn(
+                                "absolute right-2 top-[0.45rem] flex items-center hover:text-foreground",
+                                projectSidebar.itemActionClassName,
+                              )}
+                            >
                               <SelectOptions
                                 item={item}
                                 handleDeleteFolder={handleDeleteFolder}
@@ -575,27 +662,45 @@ const SideBarFoldersButtonsComponent = ({
           </div>
         )}
       </SidebarContent>
-      {ENABLE_FILE_MANAGEMENT && (
-        <SidebarFooter className="border-t">
-          <div className="grid w-full items-center gap-2 p-2">
-            {ENABLE_KNOWLEDGE_BASES && (
-              <SidebarMenuButton
-                onClick={handleKnowledgeNavigation}
-                size="md"
-                className="text-sm"
-              >
-                <ForwardedIconComponent name="Library" className="h-4 w-4" />
-                {t("sidebar.knowledge")}
-              </SidebarMenuButton>
+      {(projectSidebar.footer || ENABLE_FILE_MANAGEMENT) && (
+        <SidebarFooter
+          className={cn("border-t", projectSidebar.footerClassName)}
+        >
+          <div
+            className={cn(
+              "grid w-full items-center gap-2 p-2",
+              projectSidebar.footerContentClassName,
             )}
-            <SidebarMenuButton
-              onClick={handleFilesNavigation}
-              size="md"
-              className="text-sm"
-            >
-              <ForwardedIconComponent name="File" className="h-4 w-4" />
-              {t("sidebar.myFiles")}
-            </SidebarMenuButton>
+          >
+            {projectSidebar.footer}
+            {ENABLE_FILE_MANAGEMENT && (
+              <>
+                {ENABLE_KNOWLEDGE_BASES && (
+                  <SidebarMenuButton
+                    onClick={handleKnowledgeNavigation}
+                    size="md"
+                    className={cn(
+                      "text-sm",
+                      projectSidebar.footerItemClassName,
+                    )}
+                  >
+                    <ForwardedIconComponent
+                      name="Library"
+                      className="h-4 w-4"
+                    />
+                    {t("sidebar.knowledge")}
+                  </SidebarMenuButton>
+                )}
+                <SidebarMenuButton
+                  onClick={handleFilesNavigation}
+                  size="md"
+                  className={cn("text-sm", projectSidebar.footerItemClassName)}
+                >
+                  <ForwardedIconComponent name="File" className="h-4 w-4" />
+                  {t("sidebar.myFiles")}
+                </SidebarMenuButton>
+              </>
+            )}
           </div>
         </SidebarFooter>
       )}

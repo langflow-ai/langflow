@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import asyncio
 import json
+from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import pytest
+from filelock import FileLock
+from langflow.services.background_execution import service as service_module
 from langflow.services.background_execution.service import BackgroundExecutionService
 from langflow.services.database.models.jobs.model import JobStatus
 from langflow.services.deps import get_job_service, get_settings_service
@@ -16,6 +19,18 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
 pytestmark = pytest.mark.usefixtures("client")
+
+
+@pytest.fixture(autouse=True)
+def _per_test_sweep_lock(monkeypatch, tmp_path):
+    """Give each test its own startup-sweep lock.
+
+    The real lock lives in the system temp dir. Under xdist, another worker's app
+    startup can hold it, and this test's sweep then skips the reconcile it asserts.
+    """
+    monkeypatch.setattr(
+        service_module, "FileLock", lambda path, **kwargs: FileLock(tmp_path / Path(path).name, **kwargs)
+    )
 
 
 def _frame(event_type, data):
@@ -172,3 +187,67 @@ async def test_startup_enqueue_failure_releases_queued_lease(active_user, monkey
         )
     finally:
         await svc.stop()
+
+
+async def test_startup_reconciles_an_orphan_once_its_lease_expires(active_user, monkeypatch):
+    """A run whose worker died just before this boot is failed once its heartbeat goes stale.
+
+    The dead worker's last heartbeat is still fresh when the startup sweep runs,
+    so that sweep must spare it. Without a later pass, the default (non-Redis)
+    mode never sweeps again and the run stays IN_PROGRESS until the next restart.
+    The later pass must leave alone runs that never heartbeat, such as a
+    synchronous run this process started after boot.
+    """
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "background_lease_ttl_s", 1.0)
+    job_service = get_job_service()
+    orphan_id = uuid4()
+    await job_service.create_job(
+        job_id=orphan_id, flow_id=uuid4(), user_id=active_user.id, status=JobStatus.IN_PROGRESS
+    )
+    # The previous process heartbeated moments before it died.
+    await job_service.heartbeat(orphan_id, owner="dead-worker")
+
+    svc = BackgroundExecutionService(
+        settings_service=settings_service,
+        frame_source_factory=lambda **_kw: _scripted,
+    )
+    await svc.start()
+    try:
+        await svc.sweep_orphans_on_startup()
+        assert (await job_service.get_job_by_job_id(orphan_id)).status == JobStatus.IN_PROGRESS
+        # A synchronous run started after boot: in progress, never heartbeats.
+        live_id = uuid4()
+        await job_service.create_job(
+            job_id=live_id, flow_id=uuid4(), user_id=active_user.id, status=JobStatus.IN_PROGRESS
+        )
+
+        orphan = None
+        for _ in range(80):
+            orphan = await job_service.get_job_by_job_id(orphan_id)
+            if orphan.status == JobStatus.FAILED:
+                break
+            await asyncio.sleep(0.05)
+        assert orphan.status == JobStatus.FAILED
+        assert (orphan.error or {}).get("type") == "worker_lost"
+        live = await job_service.get_job_by_job_id(live_id)
+        assert live.status == JobStatus.IN_PROGRESS
+        assert live.error is None
+    finally:
+        await svc.stop()
+
+
+async def test_stop_cancels_the_pending_lease_expiry_sweep():
+    svc = BackgroundExecutionService(
+        settings_service=get_settings_service(),
+        frame_source_factory=lambda **_kw: _scripted,
+    )
+    await svc.start()
+    await svc.sweep_orphans_on_startup()
+    pending = svc._lease_expiry_task
+    assert pending is not None
+    assert not pending.done()
+
+    await svc.stop()
+
+    assert pending.cancelled()

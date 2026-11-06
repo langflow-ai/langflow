@@ -13,6 +13,7 @@ import httpx
 import requests
 from cachetools import TTLCache
 
+from lfx.base.models.decision_constants import is_decision_row
 from lfx.base.models.model_metadata import (
     CONDITIONAL_LIVE_MODEL_PROVIDERS,
     EXPLICIT_ENABLE_ONLY_PROVIDERS,
@@ -30,6 +31,7 @@ from lfx.base.models.watsonx_constants import (
 )
 from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
+from lfx.services.variable.exceptions import RuntimeVariableError
 from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.secrets import unwrap_secret_value
 from lfx.utils.ssrf_httpx import ssrf_safe_httpx_get
@@ -511,6 +513,11 @@ async def aget_provider_variable_value(user_id: UUID | str | None, variable_key:
                     field="",
                     session=session,
                 )
+            except RuntimeVariableError as exc:
+                if exc.reason not in {"absent", "variable_not_approved"}:
+                    raise
+                # Account-policy absence must not use process credentials.
+                return None
             except ValueError:
                 # Missing or unreadable variables are unavailable for discovery.
                 value = None
@@ -534,15 +541,21 @@ async def aget_live_model_variables(
         return {}
     values = {}
     if is_uuid_set(user_id):
-        async with session_scope() as session:
-            variable_service = get_variable_service()
-            if variable_service is not None:
-                values = await variable_service.get_variables(
-                    user_id=to_uuid(user_id),
-                    names=keys,
-                    field="",
-                    session=session,
-                )
+        try:
+            async with session_scope() as session:
+                variable_service = get_variable_service()
+                if variable_service is not None:
+                    values = await variable_service.get_variables(
+                        user_id=to_uuid(user_id),
+                        names=keys,
+                        field="",
+                        session=session,
+                    )
+        except RuntimeVariableError as exc:
+            if exc.reason not in {"absent", "variable_not_approved"}:
+                raise
+            # Resolve authoritative absences per name without environment fallback.
+            return {key: await aget_provider_variable_value(user_id, key) for key in keys}
     return {key: _to_str(values.get(key)) or _environment_variable_value(key) for key in keys}
 
 
@@ -1371,7 +1384,7 @@ def replace_with_live_models(
 
 
 def _replace_with_live_models(provider_models, user_id, enabled_providers, model_type, provider_metadata):
-    if not user_id or not enabled_providers:
+    if not user_id or not enabled_providers or model_type == "decision":
         return provider_models
 
     for provider in set(enabled_providers) & (LIVE_MODEL_PROVIDERS | CONDITIONAL_LIVE_MODEL_PROVIDERS):
@@ -1391,8 +1404,10 @@ def _replace_with_live_models(provider_models, user_id, enabled_providers, model
         replaced = False
         for provider_dict in provider_models:
             if provider_dict.get("provider") == provider:
-                provider_dict["models"] = catalog_models
-                provider_dict["num_models"] = len(catalog_models)
+                # Chat/embedding discovery does not establish decision capability.
+                preserved_decisions = [row for row in provider_dict.get("models", []) if is_decision_row(row)]
+                provider_dict["models"] = [*catalog_models, *preserved_decisions]
+                provider_dict["num_models"] = len(provider_dict["models"])
                 replaced = True
                 break
 

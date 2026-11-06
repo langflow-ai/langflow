@@ -1073,17 +1073,19 @@ class TestMCPComponentGlobalVariableResolution:
     }
     DB_VARIABLES = {"AUTH-VAR1": "var1-placeholder", "AUTH-VAR2": "my-api-key"}
 
-    async def _run(self, context_variables, server_config=None):
+    async def _run(self, context_variables, server_config=None, *, variable_service=None, revoke_after_first=False):
         """Drive update_tool_list and return (request_variables passed on, variable_service)."""
         component = MCPToolsComponent()
         component.mcp_server = "test_server"
         component._user_id = self.USER_ID
+        component.use_cache = revoke_after_first
         if context_variables is not None:
             # ``graph`` is a read-only property backed by ``_vertex.graph``.
             component._vertex = SimpleNamespace(graph=SimpleNamespace(context={"request_variables": context_variables}))
 
-        variable_service = MagicMock()
-        variable_service.get_all_decrypted_variables = AsyncMock(return_value=dict(self.DB_VARIABLES))
+        if variable_service is None:
+            variable_service = MagicMock()
+            variable_service.get_all_decrypted_variables = AsyncMock(return_value=dict(self.DB_VARIABLES))
 
         with (
             patch(
@@ -1102,6 +1104,23 @@ class TestMCPComponentGlobalVariableResolution:
             ) as mock_update_tools,
         ):
             await component.update_tool_list()
+            if revoke_after_first:
+                import time
+
+                from lfx.services.variable.exceptions import RuntimeVariableError
+
+                # Simulate tools cached before this account became bound or lost
+                # approval. A TTL hit must not skip the current account decision.
+                component._ttl_tool_cache[component._mcp_servers_cache_key("test_server")] = (
+                    time.monotonic(),
+                    ["stale-tool"],
+                )
+                variable_service.revoked = True
+                with pytest.raises(RuntimeVariableError, match="revoked"):
+                    await component.update_tool_list()
+                with pytest.raises(RuntimeVariableError, match="revoked"):
+                    await component._get_tools()
+                assert mock_update_tools.await_count == 1
 
         return mock_update_tools.call_args.kwargs["request_variables"], variable_service
 
@@ -1135,6 +1154,39 @@ class TestMCPComponentGlobalVariableResolution:
         _, variable_service = await self._run(None, server_config={"url": "https://echo.invalid/mcp"})
 
         variable_service.get_all_decrypted_variables.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_bound_account_ignores_request_overrides_and_rechecks_cached_tools(self):
+        from lfx.services.variable.exceptions import RuntimeVariableError
+
+        approved = dict(self.DB_VARIABLES)
+
+        class BoundService:
+            revoked = False
+
+            async def get_account_bound_variables(self, **_kwargs):
+                if self.revoked:
+                    msg = "Approval revoked"
+                    raise RuntimeVariableError(msg, reason="variable_not_approved")
+                return approved
+
+        resolved, _ = await self._run(
+            {"AUTH-VAR1": "caller-replacement", "UNAPPROVED": "caller-only"},
+            variable_service=BoundService(),
+            revoke_after_first=True,
+        )
+        assert resolved == approved
+
+    @pytest.mark.asyncio
+    async def test_authoritative_bulk_failure_cannot_continue_with_request_only_values(self):
+        from lfx.services.variable.exceptions import RuntimeVariableError
+
+        variable_service = MagicMock()
+        variable_service.get_all_decrypted_variables = AsyncMock(
+            side_effect=RuntimeVariableError("Target disabled", reason="target_disabled")
+        )
+        with pytest.raises(RuntimeVariableError, match="Target disabled"):
+            await self._run({"AUTH-VAR1": "caller-only"}, variable_service=variable_service)
 
 
 # ============================================================================

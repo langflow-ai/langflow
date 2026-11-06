@@ -28,6 +28,7 @@ from langflow.services.auth.context import (
     AUTH_METHOD_JWT,
     AuthCredentialContext,
     clear_current_auth_context,
+    current_auth_is_restricted_api_key,
     set_current_auth_context,
 )
 from langflow.services.auth.exceptions import (
@@ -389,15 +390,12 @@ class AuthService(BaseAuthService):
                 # 401 would blame a token that was never rejected.
                 raise
             except (AuthInvalidTokenError, TokenExpiredError, InactiveUserError) as e:
-                # Native auth failed. If a *distinct* external credential was
-                # extracted, try it before surfacing the native error so a present
-                # but invalid/expired native token can't shadow a valid external
-                # one. When external_token is None or identical to the token we
-                # already tried, behavior is unchanged.
-                if external_token and external_token != token:
+                # Native auth failed. Try only the separately-extracted external
+                # credential before surfacing the native error.
+                if external_token:
                     # A recognized auth failure can still follow external JIT
                     # materialization (for example, a later authorization-policy
-                    # rejection). Start the distinct credential at a clean
+                    # rejection). Start the external credential at a clean
                     # transaction and context boundary so its commit cannot
                     # persist state from the rejected attempt.
                     await db.rollback()
@@ -408,13 +406,13 @@ class AuthService(BaseAuthService):
                         return external_user
                 raise e  # noqa: TRY201
             except Exception as e:
-                # Token auth failed for an unexpected reason; try the distinct
+                # Token auth failed for an unexpected reason; try the configured
                 # external credential first, then fall back to API key if provided.
-                if external_token and external_token != token:
+                if external_token:
                     # Token authentication can delegate to external JIT
                     # provisioning, which may flush user/profile state before a
-                    # later step fails. Give the distinct external credential a
-                    # clean transaction and authentication context.
+                    # later step fails. Give the external credential a clean
+                    # transaction and authentication context.
                     await db.rollback()
                     clear_current_auth_context()
                     clear_current_external_access_context()
@@ -546,16 +544,10 @@ class AuthService(BaseAuthService):
             msg = "Token has expired"
             raise TokenExpiredError(msg) from e
         except InvalidTokenError as e:
-            external_user = await self._authenticate_with_external_token(token, db)
-            if external_user is not None:
-                return external_user
             logger.debug("JWT validation failed: Invalid token format or signature")
             msg = "Invalid token"
             raise AuthInvalidTokenError(msg) from e
         except Exception as e:
-            external_user = await self._authenticate_with_external_token(token, db)
-            if external_user is not None:
-                return external_user
             logger.error(f"Unexpected error decoding token: {e}")
             msg = "Token validation failed"
             raise AuthInvalidTokenError(msg) from e
@@ -1225,8 +1217,7 @@ class AuthService(BaseAuthService):
 
         ``external_token`` is an optional, separately-extracted external credential
         tried as a fallback when native token authentication fails so a
-        present-but-invalid native token cannot shadow a valid external one. When
-        ``None`` (or identical to ``token``) behavior is unchanged.
+        present-but-invalid native token cannot shadow a valid external one.
         """
         clear_current_auth_context()
         clear_current_external_access_context()
@@ -1270,17 +1261,15 @@ class AuthService(BaseAuthService):
             raise MissingCredentialsError(msg)
 
         # Use internal authentication method. Try the native token first; on
-        # failure fall back to a *distinct* external credential before surfacing
-        # the native error so a stale/invalid native token can't shadow a valid
-        # external one. When external_token is None or identical, behavior is
-        # unchanged.
+        # failure fall back only to the separately-extracted external credential
+        # before surfacing the native error.
         try:
             return await self._authenticate_with_token(resolved_token, db)
         except (AuthInvalidTokenError, TokenExpiredError, InactiveUserError, InvalidCredentialsError) as e:
-            if external_token and external_token != resolved_token:
+            if external_token:
                 # Match the framework-agnostic credential path: the failed
                 # attempt may have staged JIT/profile state before a policy
-                # rejection, so the distinct credential needs a clean boundary.
+                # rejection, so the external credential needs a clean boundary.
                 await db.rollback()
                 clear_current_auth_context()
                 clear_current_external_access_context()
@@ -1319,7 +1308,7 @@ class AuthService(BaseAuthService):
         return current_user
 
     async def get_current_active_superuser(self, current_user: User | UserRead) -> User | UserRead | None:
-        if not current_user.is_active or not current_user.is_superuser:
+        if current_auth_is_restricted_api_key() or not current_user.is_active or not current_user.is_superuser:
             return None
         set_current_model_provider_policy_context(user_id=current_user.id, attributes={"is_superuser": True})
         return current_user
@@ -1377,7 +1366,9 @@ class AuthService(BaseAuthService):
 
     def create_token(self, data: dict, expires_delta: timedelta):
         from langflow.services.auth.utils import get_jwt_signing_key
+        from langflow.services.database.models.api_key.policy import ensure_api_key_management_allowed
 
+        ensure_api_key_management_allowed()
         settings_service = self.settings
         to_encode = data.copy()
         expire = datetime.now(timezone.utc) + expires_delta
@@ -1680,11 +1671,16 @@ class AuthService(BaseAuthService):
         query_param: str | None,
         header_param: str | None,
         db: AsyncSession,
+        external_token: str | None = None,
     ) -> User | UserRead:
         clear_current_auth_context()
         clear_current_external_access_context()
-        if token:
-            return await self.get_current_user_from_access_token(token, db)
+        if token or external_token:
+            try:
+                return await self.get_current_user_from_access_token(token, db, external_token=external_token)
+            except MissingCredentialsError:
+                if not (query_param or header_param):
+                    raise
 
         settings_service = self.settings
         result: User | None

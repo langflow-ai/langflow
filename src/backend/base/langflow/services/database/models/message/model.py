@@ -92,11 +92,14 @@ class MessageBase(SQLModel):
             image_paths = []
             for file in message.files:
                 if hasattr(file, "path") and hasattr(file, "url") and file.path:
+                    file_path = file.path.replace("\\", "/")
                     session_id = message.session_id
-                    if session_id and str(session_id) in file.path:
-                        parts = file.path.split(str(session_id))
+                    typed_flow_scope = f"flow-{session_id}"
+                    attachment_scope = typed_flow_scope if f"{typed_flow_scope}/" in file_path else str(session_id)
+                    if session_id and attachment_scope in file_path:
+                        parts = file_path.split(attachment_scope)
                         if len(parts) > 1:
-                            image_paths.append(f"{session_id}{parts[1]}")
+                            image_paths.append(f"{attachment_scope}{parts[1]}")
                         else:
                             image_paths.append(file.path)
                     else:
@@ -190,6 +193,9 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
         # planner sort the matched rows instead of walking the index in order.
         Index("ix_message_flow_id_timestamp_id", "flow_id", "timestamp", "id"),
         Index("ix_message_session_id_timestamp_id", "session_id", "timestamp", "id"),
+        # Session lists group a flow's messages by session_id and take MAX(timestamp);
+        # with all three columns in the index that is an index-only scan.
+        Index("ix_message_flow_id_session_id_timestamp", "flow_id", "session_id", "timestamp"),
         Index(
             "ix_message_session_metadata_tenant",
             text("(session_metadata->>'tenant_id')"),

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/utils/utils";
 import IconComponent from "../../../components/common/genericIconComponent";
+import { getSessionLabel } from "../helpers/session-label";
 import type { ChatViewWrapperProps } from "../types/chat-view-wrapper";
 import ChatView from "./chatView/components/chat-view";
 import { MessageHistoryLoader } from "./message-history-loader";
@@ -66,7 +67,7 @@ export const ChatViewWrapper = ({
           >
             {visibleSession === currentFlowId
               ? t("modal.io.defaultSession")
-              : `${visibleSession}`}
+              : getSessionLabel(visibleSession, currentFlowId)}
           </div>
         )}
         <div

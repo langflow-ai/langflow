@@ -1,6 +1,8 @@
 """Run an approved request to completion: row steps, storage, a final pass, then (for a builder) the account.
 
 Each step batch commits together with the request's cursor, so a crash resumes at the next batch.
+The automatic storage upgrade's application backup holds every row an erase deletes. After the final
+pass, the erase deletes it if the upgrade has finished, and otherwise records it as not reached.
 """
 
 from __future__ import annotations
@@ -26,6 +28,7 @@ from langflow.services.database.models.data_subject_request import (
     DataSubjectType,
 )
 from langflow.services.deps import session_scope
+from langflow.services.knowledge_base_storage.application_backup import discard_outside_pass
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -49,6 +52,9 @@ MAX_ATTEMPTS = 5
 RETRY_BASE_SECONDS = 30
 LATE_WRITE_SETTLE_SECONDS = 2.0
 RUNNABLE = (DataSubjectRequestStatus.APPROVED.value, DataSubjectRequestStatus.ERASING.value)
+STORAGE_LOCATIONS = "storage_locations"
+RETAINED_BACKUPS = "retained_backups"
+_NOT_ROWS = (STORAGE_LOCATIONS, RETAINED_BACKUPS)
 
 
 def _now() -> datetime:
@@ -108,10 +114,19 @@ async def _run_storage(request_id: UUID, heartbeat: Heartbeat) -> None:
             request = await _load(session, request_id)
             request.pending_paths = list(request.pending_paths or [])[1:]
             counts = dict(request.counts or {})
-            counts["storage_locations"] = int(counts.get("storage_locations", 0)) + 1
+            counts[STORAGE_LOCATIONS] = int(counts.get(STORAGE_LOCATIONS, 0)) + 1
             request.counts = counts
             session.add(request)
         await heartbeat()
+
+
+async def _record_retained_backups(request_id: UUID) -> None:
+    """Delete a finished upgrade's application backup, or record that it still holds the subject's rows."""
+    retained = await discard_outside_pass()
+    async with session_scope() as session:
+        request = await _load(session, request_id)
+        request.counts = {**(request.counts or {}), RETAINED_BACKUPS: retained}
+        session.add(request)
 
 
 async def _set_phase(request_id: UUID, phase: str) -> None:
@@ -137,11 +152,10 @@ async def _finish(request_id: UUID) -> None:
             details={
                 "request_id": str(request.id),
                 "subject_type": request.subject_type,
-                "rows_deleted": sum(
-                    int(v) for k, v in counts.items() if isinstance(v, int) and k != "storage_locations"
-                ),
-                "paths_deleted": int(counts.get("storage_locations", 0)),
+                "rows_deleted": sum(int(v) for k, v in counts.items() if isinstance(v, int) and k not in _NOT_ROWS),
+                "paths_deleted": int(counts.get(STORAGE_LOCATIONS, 0)),
                 "rows_redacted": int(counts.get("audit_redaction", 0)),
+                "backups_not_reached": int(counts.get(RETAINED_BACKUPS, 0)),
             },
         )
 
@@ -196,6 +210,7 @@ async def run_request(request_id: UUID, heartbeat: Heartbeat = _noop) -> str | N
             ctx.cursor = {}
             await _run_steps(request_id, ctx, steps, heartbeat, final=True)
             await _run_storage(request_id, heartbeat)
+            await _record_retained_backups(request_id)
             phase = PHASE_ACCOUNT
             await _set_phase(request_id, phase)
         if phase == PHASE_ACCOUNT and not is_end_user:

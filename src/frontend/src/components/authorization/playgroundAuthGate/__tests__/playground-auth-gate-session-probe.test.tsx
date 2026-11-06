@@ -5,7 +5,9 @@
  * gate against the real auth store; only the network hooks are mocked.
  */
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import type { SessionResponse } from "@/controllers/API/queries/auth";
 import useAuthStore from "@/stores/authStore";
 
@@ -33,10 +35,20 @@ const UNAUTHENTICATED_PROBE: SessionQueryResult = {
 };
 
 function renderGate() {
+  const client = new QueryClient({
+    defaultOptions: { queries: { gcTime: 0 } },
+  });
   return render(
     <PlaygroundAuthGate>
       <div data-testid="playground" />
     </PlaygroundAuthGate>,
+    {
+      wrapper: ({ children }) => (
+        <MemoryRouter>
+          <QueryClientProvider client={client}>{children}</QueryClientProvider>
+        </MemoryRouter>
+      ),
+    },
   );
 }
 

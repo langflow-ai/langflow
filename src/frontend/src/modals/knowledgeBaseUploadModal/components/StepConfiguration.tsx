@@ -193,6 +193,7 @@ export function StepConfiguration({
                   onFieldChange?.();
                 }}
                 options={embeddingModelOptions}
+                modelType="embeddings"
                 providerScope={{}}
                 placeholder={t("knowledge.embeddingModelPlaceholder")}
                 showEmptyState

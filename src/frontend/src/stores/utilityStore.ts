@@ -1,5 +1,8 @@
 import { create } from "zustand";
-import { DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH } from "@/constants/constants";
+import {
+  DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH,
+  DEFAULT_TRIGGER_POLLING_INTERVAL,
+} from "@/constants/constants";
 import { EventDeliveryType } from "@/constants/enums";
 import type { Pagination, Tag } from "@/types/utils/types";
 import type { UtilityStoreType } from "@/types/zustand/utility";
@@ -47,6 +50,9 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   webhookPollingInterval: 0, // Disabled: SSE provides real-time updates
   setWebhookPollingInterval: (webhookPollingInterval: number) =>
     set({ webhookPollingInterval }),
+  triggerPollingInterval: DEFAULT_TRIGGER_POLLING_INTERVAL,
+  setTriggerPollingInterval: (triggerPollingInterval: number) =>
+    set({ triggerPollingInterval }),
   currentSessionId: "",
   setCurrentSessionId: (sessionId: string) =>
     set({ currentSessionId: sessionId }),
@@ -88,6 +94,14 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   localVectorStoreAvailable: true,
   setLocalVectorStoreAvailable: (localVectorStoreAvailable: boolean) =>
     set({ localVectorStoreAvailable }),
+  defaultVectorStoreBackend: undefined,
+  configuredVectorStoreBackends: [],
+  setDefaultVectorStoreBackend: (
+    defaultVectorStoreBackend: string | undefined,
+  ) => set({ defaultVectorStoreBackend }),
+  vectorStoreConfigLoaded: false,
+  setVectorStoreConfig: (config) =>
+    set({ ...config, vectorStoreConfigLoaded: true }),
   mcpBaseUrl: "",
   setMcpBaseUrl: (mcpBaseUrl: string) => set({ mcpBaseUrl }),
   // Default false to match the backend's "reload disabled" default until the

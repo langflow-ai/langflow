@@ -188,6 +188,10 @@ def test_integration_provider_rejects_profile_identity_mismatch() -> None:
     [
         ("google", "https://www.googleapis.com/auth/drive.readonly", "drive.readonly"),
         ("google_workspace", "https://www.googleapis.com/auth/drive.readonly", "drive.readonly"),
+        ("google", "email", "https://www.googleapis.com/auth/userinfo.email"),
+        ("google", "profile", "https://www.googleapis.com/auth/userinfo.profile"),
+        ("google_workspace", "email", "userinfo.email"),
+        ("google_workspace", "https://www.googleapis.com/auth/userinfo.profile", "profile"),
         ("microsoft", "https://graph.microsoft.com/Mail.Read", "mail.read"),
     ],
 )

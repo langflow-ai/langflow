@@ -5,6 +5,7 @@ import {
   LANGFLOW_AUTO_LOGIN_OPTION,
   LANGFLOW_REFRESH_TOKEN,
 } from "@/constants/constants";
+import { BASENAME } from "@/customization/config-constants";
 
 class CookieManager {
   private static instance: CookieManager;
@@ -45,7 +46,7 @@ class CookieManager {
       typeof window !== "undefined" && window.location.protocol === "https:";
 
     this.cookies.set(name, value, {
-      path: "/",
+      path: `${BASENAME}/`,
       secure: isSecure,
       sameSite: isSecure ? "strict" : "lax",
       ...options,
@@ -61,7 +62,7 @@ class CookieManager {
       typeof window !== "undefined" && window.location.protocol === "https:";
 
     this.cookies.remove(name, {
-      path: "/",
+      path: `${BASENAME}/`,
       secure: isSecure,
       sameSite: isSecure ? "strict" : "lax",
       ...options,

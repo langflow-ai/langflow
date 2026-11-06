@@ -13,7 +13,7 @@ from langflow.services.database.models.variable.model import Variable, VariableU
 from langflow.services.deps import get_settings_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService, has_variable_value
-from lfx.services.authorization.base import ResourceVisibilityScope
+from lfx.services.authorization.base import ExecutionPrincipal, ResourceVisibilityScope
 from lfx.services.model_provider_policy import (
     ModelProviderPolicyContext,
     ModelProviderPolicyPurpose,
@@ -629,6 +629,10 @@ async def test_get_variables_batches_shared_visibility_and_preserves_owner_prece
     else:
         authz.get_resource_visibility.assert_awaited_once()
         authz.list_visible_resource_ids.assert_not_awaited()
+    visibility_hook = authz.list_visible_resource_ids if legacy_visibility else authz.get_resource_visibility
+    assert visibility_hook.await_args.kwargs["context"] == {
+        "execution_principal": ExecutionPrincipal(kind="actor", user_id=str(actor))
+    }
 
 
 @pytest.mark.parametrize("all_resources", [False, True])
@@ -779,6 +783,37 @@ async def test_get_variable_fails_closed_for_domain_only_runtime_scope(service, 
 
     authz.get_resource_visibility.assert_awaited_once()
     authz.list_visible_resource_ids.assert_not_awaited()
+
+
+@pytest.mark.parametrize("global_grant", [False, True])
+@pytest.mark.parametrize("allow_one", [False, True])
+async def test_get_variable_intersects_shared_runtime_visibility(
+    service, session: AsyncSession, global_grant, allow_one
+):
+    actor_id = uuid4()
+    allowed = await service.create_variable(
+        uuid4(), "SCOPED_SHARED_VALUE", "allowed-value", type_=GENERIC_TYPE, session=session
+    )
+    denied = await service.create_variable(
+        uuid4(), "SCOPED_SHARED_VALUE", "denied-value", type_=GENERIC_TYPE, session=session
+    )
+    authz = MagicMock()
+    authz.is_enabled = AsyncMock(return_value=True)
+    authz.supports_cross_user_fetch = AsyncMock(return_value=True)
+    authz.get_resource_visibility = AsyncMock(
+        return_value=ResourceVisibilityScope(
+            all_resources=global_grant,
+            resource_ids=() if global_grant else (allowed.id, denied.id),
+            intersections=(ResourceVisibilityScope(resource_ids=(allowed.id,) if allow_one else ()),),
+        )
+    )
+
+    with patch("langflow.services.deps.get_authorization_service", return_value=authz):
+        if allow_one:
+            assert await service.get_variable(actor_id, "SCOPED_SHARED_VALUE", "", session=session) == "allowed-value"
+        else:
+            with pytest.raises(VariableNotFoundError, match="SCOPED_SHARED_VALUE variable not found"):
+                await service.get_variable(actor_id, "SCOPED_SHARED_VALUE", "", session=session)
 
 
 async def test_get_all_redacts_shared_generic_values(service, session: AsyncSession):
@@ -1415,3 +1450,86 @@ async def test_get_all_never_returns_decrypted_credential_as_generic(service, se
     leaked = [v for v in results if v.value and v.value.startswith("gAAAAA")]
     assert leaked == []
     assert all(v.id != saved_id for v in results if v.value is not None)
+
+
+@pytest.mark.parametrize("bound_value", ["account-value", "", SecretStr("account-secret")])
+async def test_get_variables_account_values_skip_underlying_reads(service, session, bound_value):
+    from langflow.services.variable.runtime_policy import RuntimeVariable
+
+    actor = uuid4()
+    await service.create_variable(actor, "BOUND", "owned-shadow", type_=GENERIC_TYPE, session=session)
+    await service.create_variable(uuid4(), "BOUND", "shared-shadow", type_=GENERIC_TYPE, session=session)
+    with (
+        patch.object(service, "get_account_bound_variable", return_value=RuntimeVariable(bound_value)) as resolve,
+        patch.object(session, "exec", wraps=session.exec) as execute,
+        patch.object(service, "_get_shared_variables") as shared,
+    ):
+        assert await service.get_variables(str(actor), {"BOUND"}, "api_key", session) == {"BOUND": bound_value}
+    resolve.assert_awaited_once_with(actor, "BOUND", "api_key", session)
+    execute.assert_not_awaited()
+    shared.assert_not_awaited()
+
+
+async def test_get_variables_only_queries_unmanaged_names(service, session):
+    from langflow.services.variable.runtime_policy import RuntimeVariable
+
+    actor = uuid4()
+    await service.create_variable(actor, "OWNED", "owned", type_=GENERIC_TYPE, session=session)
+    await service.create_variable(actor, "BOUND", "shadow", type_=GENERIC_TYPE, session=session)
+
+    async def resolve(_user_id, name, _field, _session):
+        return RuntimeVariable("account") if name == "BOUND" else None
+
+    with (
+        patch.object(service, "get_account_bound_variable", side_effect=resolve),
+        patch.object(service, "get_variable_objects", wraps=service.get_variable_objects) as read,
+        patch.object(session, "exec", wraps=session.exec) as execute,
+    ):
+        assert await service.get_variables(actor, {"BOUND", "OWNED"}, "", session) == {
+            "BOUND": "account",
+            "OWNED": "owned",
+        }
+    read.assert_awaited_once_with(actor, {"OWNED"}, session)
+    execute.assert_awaited_once()
+
+
+@pytest.mark.parametrize(
+    "reason", ["absent", "variable_not_approved", "undecryptable", "target_disabled", "policy_unavailable"]
+)
+async def test_get_variables_propagates_account_refusal_before_database_reads(service, session, reason):
+    from lfx.services.variable.exceptions import RuntimeVariableError
+
+    refusal = RuntimeVariableError("Account lookup refused", reason=reason)
+    with (
+        patch.object(service, "get_account_bound_variable", side_effect=refusal),
+        patch.object(session, "exec", wraps=session.exec) as execute,
+        patch.object(service, "_get_shared_variables") as shared,
+        pytest.raises(RuntimeVariableError) as caught,
+    ):
+        await service.get_variables(uuid4(), {"BOUND"}, "", session)
+    assert caught.value is refusal
+    execute.assert_not_awaited()
+    shared.assert_not_awaited()
+
+
+@pytest.mark.parametrize("empty_ceiling", [False, True])
+async def test_get_variables_applies_shared_visibility_intersections(service, session, empty_ceiling):
+    actor = uuid4()
+    allowed = await service.create_variable(uuid4(), "ALLOWED", "allowed", type_=GENERIC_TYPE, session=session)
+    await service.create_variable(uuid4(), "DENIED", "denied", type_=GENERIC_TYPE, session=session)
+    authz = MagicMock()
+    authz.is_enabled = AsyncMock(return_value=True)
+    authz.supports_cross_user_fetch = AsyncMock(return_value=True)
+    authz.get_resource_visibility = AsyncMock(
+        return_value=ResourceVisibilityScope(
+            all_resources=True,
+            intersections=(ResourceVisibilityScope(resource_ids=() if empty_ceiling else (allowed.id,)),),
+        )
+    )
+    with patch("langflow.services.deps.get_authorization_service", return_value=authz):
+        assert await service.get_variables(actor, {"ALLOWED", "DENIED"}, "", session) == {
+            "ALLOWED": None if empty_ceiling else "allowed",
+            "DENIED": None,
+        }
+        with pytest.raises(VariableNotFoundError):
+            await service.get_variable(actor, "DENIED", "", session)

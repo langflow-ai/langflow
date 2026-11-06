@@ -272,7 +272,14 @@ async def _build_graph_from_authorized_flow(
         # against the deployment policy would make ``off`` stop an agent from
         # calling a flow as a tool. The protected-field floor still applies.
         graph_data = process_tweaks(graph_data=graph_data, tweaks=tweaks, caller_supplied=False)
-    return Graph.from_payload(graph_data, flow_id=flow_id, user_id=user_id)
+    from langflow.api.utils.flow_utils import get_authorized_legacy_flow_ids
+
+    return Graph.from_payload(
+        graph_data,
+        flow_id=flow_id,
+        user_id=user_id,
+        authorized_legacy_flow_ids=await get_authorized_legacy_flow_ids(flow_id),
+    )
 
 
 async def _resolve_authorized_target_flow(
@@ -718,7 +725,12 @@ async def generate_unique_flow_name(flow_name, user_id, session):
 def _get_flow_input_nodes(flow: Flow) -> list[Vertex]:
     from lfx.graph.graph.base import Graph
 
-    graph = Graph.from_payload(flow.data or {})
+    # Schema derivation reads stored data only: ``is_input`` comes from the node's type and the
+    # advertised fields from its saved template. Instantiating a component evaluates the node's
+    # stored ``code``, and this runs for callers who may never build the flow -- anonymous MCP
+    # ``tools/list`` on an ``auth_type="none"`` project and the public A2A agent card -- so it
+    # would run code the public call paths refuse to execute.
+    graph = Graph.from_payload(flow.data or {}, instantiate_components=False)
     return [vertex for vertex in graph.vertices if vertex.is_input]
 
 

@@ -565,7 +565,10 @@ async def test_should_have_public_cancel_endpoint_accessible_without_auth(client
 
 
 @pytest.mark.benchmark
-async def test_build_public_tmp_ignores_data_parameter(client, json_memory_chatbot_no_llm, logged_in_headers):
+@pytest.mark.security
+async def test_build_public_tmp_ignores_data_parameter(
+    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+):
     """Test that build_public_tmp endpoint silently ignores data parameter for security.
 
     Security Test: Verifies that when a user attempts to provide custom flow data
@@ -586,6 +589,10 @@ async def test_build_public_tmp_ignores_data_parameter(client, json_memory_chatb
     # Create malicious flow data with different structure
     malicious_data = {"nodes": [{"id": "malicious", "data": {"type": "CustomComponent"}}], "edges": []}
 
+    # Capture the graph dispatched to the build
+    captured: dict = {}
+    _stub_start_flow_build(monkeypatch, captured)
+
     # Set a client_id cookie
     client.cookies.set("client_id", "test-security-client-123")
 
@@ -603,6 +610,13 @@ async def test_build_public_tmp_ignores_data_parameter(client, json_memory_chatb
     assert response.status_code == codes.OK
     response_data = response.json()
     assert "job_id" in response_data
+
+    # The build must run the stored flow, never the malicious data
+    stored_node_ids = {node["id"] for node in json.loads(json_memory_chatbot_no_llm)["data"]["nodes"]}
+    built_data = captured["data"]
+    built_node_ids = stored_node_ids if built_data is None else {node["id"] for node in built_data.nodes}
+    assert "malicious" not in built_node_ids
+    assert built_node_ids == stored_node_ids
 
 
 @pytest.mark.benchmark

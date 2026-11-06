@@ -145,6 +145,9 @@ export function applyFlowUpdate(
                 ...data,
                 node: {
                   ...innerNode,
+                  ...(Array.isArray(event.outputs)
+                    ? { outputs: event.outputs }
+                    : {}),
                   template: {
                     ...tpl,
                     ...Object.fromEntries(
@@ -162,6 +165,7 @@ export function applyFlowUpdate(
             } as never;
           }),
         );
+        if (Array.isArray(event.outputs)) updateNodeInternals(compId);
       }
       break;
     }

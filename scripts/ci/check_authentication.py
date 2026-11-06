@@ -104,6 +104,33 @@ def check_authentication(port: int, username: str, password: str) -> None:
         raise RuntimeError(msg)
 
 
+def stop_server(process: subprocess.Popen) -> None:
+    """Release server resources before removing the disposable config directory."""
+    if process.poll() is not None:
+        return
+    if sys.platform == "win32":
+        # A Windows venv launcher can outlive or leave behind the actual Python
+        # server. Kill the tree while the launcher still exists so descendants
+        # cannot keep SQLite or log files locked after we reap the launcher.
+        result = subprocess.run(  # noqa: S603
+            ["taskkill", "/PID", str(process.pid), "/T", "/F"],  # noqa: S607
+            capture_output=True,
+            timeout=15,
+            check=False,
+        )
+        # The process may have exited between poll() and taskkill.
+        if result.returncode and process.poll() is None:
+            result.check_returncode()
+        process.wait(timeout=5)
+        return
+    process.terminate()
+    try:
+        process.wait(timeout=15)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait(timeout=5)
+
+
 def check_installed_wheel(port: int, timeout: float, username: str, password: str) -> None:
     """Start installed code outside the checkout, with no auto-login override."""
     with tempfile.TemporaryDirectory(prefix="langflow-auth-smoke-") as directory:
@@ -121,7 +148,8 @@ def check_installed_wheel(port: int, timeout: float, username: str, password: st
         )
         # Exercise the CLI's platform-specific startup as well as authentication.
         # -I excludes the source checkout and PYTHONPATH from Python's search path.
-        with Path(directory, "server.log").open("w") as log:
+        log_path = Path(directory, "server.log")
+        with log_path.open("w") as log:
             process = subprocess.Popen(  # noqa: S603
                 [
                     sys.executable,
@@ -145,19 +173,20 @@ def check_installed_wheel(port: int, timeout: float, username: str, password: st
             try:
                 wait_until_ready(port, timeout, process)
                 check_authentication(port, username, password)
+            except Exception:
+                # Keep startup failures diagnosable before the disposable directory is removed.
+                log.flush()
+                diagnostic = log_path.read_text(errors="replace").replace(password, "[redacted]")[-12000:]
+                print(f"Langflow authentication smoke server log:\n{diagnostic}", file=sys.stderr)
+                raise
             finally:
-                process.terminate()
-                try:
-                    process.wait(timeout=15)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                    process.wait(timeout=5)
+                stop_server(process)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int)
-    parser.add_argument("--timeout", type=float, default=120)
+    parser.add_argument("--timeout", type=float, default=240)
     parser.add_argument("--start-server", action="store_true")
     args = parser.parse_args()
     if (args.port is not None and not 0 < args.port <= MAX_PORT) or args.timeout <= 0:

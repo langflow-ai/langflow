@@ -224,6 +224,31 @@ This example changes the value for `endpoint_name` from a random UUID to `my_new
 
 </details>
 
+As of Langflow 1.13, each flow response includes `version_token`, an identifier that changes every time the graph is saved.
+
+Langflow compares `version_token` with the token stored with the flow, and applies the update only when the tokens are the same.
+Read the flow, copy its `version_token`, and send that value with the update:
+
+```bash
+curl -X PATCH \
+  "$LANGFLOW_URL/api/v1/flows/$FLOW_ID" \
+  -H "accept: application/json" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -H "If-Match: $VERSION_TOKEN" \
+  -d '{
+  "data": {}
+}'
+```
+
+When the tokens match, the update returns `200`.
+If `data` changed, the response includes a new `version_token` to send on the next update.
+When another save has already changed the graph, the tokens differ and the update returns `409` with the code `flow_version_conflict`.
+The body includes the token now on the server and the user that saved the flow last.
+A request with no `If-Match` header skips the comparison and writes the update.
+
+For the editor banner and the related endpoints, see [Concurrent editing](./concurrent-editing).
+
 ## Delete flow
 
 Deletes a specific flow by its ID.

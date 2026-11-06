@@ -5,6 +5,7 @@ import { defineConfig, loadEnv } from "vite";
 import istanbul from "vite-plugin-istanbul";
 import svgr from "vite-plugin-svgr";
 import tsconfigPaths from "vite-tsconfig-paths";
+import { normalizeBasePath } from "./src/customization/base-path";
 import {
   API_ROUTES,
   BASENAME,
@@ -13,7 +14,7 @@ import {
 } from "./src/customization/config-constants";
 import { createAccessTokenExpireSecondsDefinition } from "./vite-env-definitions";
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
 
   const envLangflowResult = dotenv.config({
@@ -23,6 +24,8 @@ export default defineConfig(({ mode }) => {
   const envLangflow = envLangflowResult.parsed || {};
 
   const apiRoutes = API_ROUTES || ["^/api/v1/", "^/api/v2/", "/health"];
+  const basePath = normalizeBasePath(env.VITE_LANGFLOW_BASE_PATH ?? BASENAME);
+  const escapedBasePath = basePath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
   const target =
     env.VITE_PROXY_TARGET || PROXY_TARGET || "http://localhost:7860";
@@ -30,17 +33,23 @@ export default defineConfig(({ mode }) => {
   const port = Number(env.VITE_PORT) || PORT || 3000;
 
   const proxyTargets = apiRoutes.reduce((proxyObj, route) => {
-    proxyObj[route] = {
+    const prefixedRoute = route.startsWith("^")
+      ? `^${escapedBasePath}${route.slice(1)}`
+      : `${basePath}${route}`;
+    proxyObj[prefixedRoute] = {
       target: target,
       changeOrigin: true,
       secure: false,
       ws: true,
+      rewrite: (requestPath: string) =>
+        requestPath.slice(basePath.length) || "/",
     };
     return proxyObj;
   }, {});
 
   return {
-    base: BASENAME || "",
+    // Relative build assets allow the backend to select the prefix at startup.
+    base: command === "serve" ? `${basePath}/` : "./",
     build: {
       outDir: "build",
     },
@@ -76,6 +85,16 @@ export default defineConfig(({ mode }) => {
       ),
     },
     plugins: [
+      {
+        name: "langflow-dev-base",
+        apply: "serve",
+        transformIndexHtml(html) {
+          return html.replace(
+            '<base href="/" />',
+            `<base href="${basePath}/" />`,
+          );
+        },
+      },
       react(),
       svgr(),
       tsconfigPaths(),
