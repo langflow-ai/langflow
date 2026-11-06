@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import base64
 import io
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import httpx
@@ -14,6 +13,7 @@ from lfx.utils.ssrf_transport import create_ssrf_protected_sync_client, pin_host
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from pathlib import Path
 
 IMAGE_MIME_BY_EXTENSION = {
     "png": "image/png",
@@ -258,8 +258,7 @@ class MiniCPMOCRComponent(BaseFileComponent):
 
     @staticmethod
     def _normalize_base_url(raw: str) -> str:
-        base_url = raw.strip().rstrip("/")
-        return base_url[: -len("/v1")] if base_url.endswith("/v1") else base_url
+        return raw.strip().rstrip("/").removesuffix("/v1")
 
     def _build_client(self, url: str, validated_ips: list[str], timeout: float) -> httpx.Client:
         """Create the HTTP client, pinning DNS when SSRF protection applies."""

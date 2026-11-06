@@ -6,15 +6,16 @@ replace the SSRF resolver and the HTTP client so no network access is required.
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any, Self
 
 import httpx
 import pytest
 from lfx.base.data.base_file import BaseFileComponent
 from lfx.schema.data import Data
-
 from lfx_minicpm import MiniCPMOCRComponent
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 MODULE = "lfx_minicpm.components.minicpm.minicpm_ocr"
 ENDPOINT = "http://127.0.0.1:8000/v1/chat/completions"
@@ -25,7 +26,7 @@ class FakeClient:
         self.responses = list(responses)
         self.calls: list[dict[str, Any]] = []
 
-    def __enter__(self) -> FakeClient:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *_: object) -> bool:
@@ -146,7 +147,9 @@ def test_reports_http_error(component: MiniCPMOCRComponent, monkeypatch: pytest.
         component.process_files([_file(tmp_path)])
 
 
-def test_reports_invalid_response(component: MiniCPMOCRComponent, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_reports_invalid_response(
+    component: MiniCPMOCRComponent, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     _install_client(monkeypatch, [_response(text="<html>gateway</html>")])
 
     with pytest.raises(RuntimeError, match="invalid response"):
@@ -161,7 +164,9 @@ def test_reports_empty_result(component: MiniCPMOCRComponent, monkeypatch: pytes
 
 
 def test_recognizes_every_pdf_page(
-    component: MiniCPMOCRComponent, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    component: MiniCPMOCRComponent,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     monkeypatch.setattr(
         MiniCPMOCRComponent,
