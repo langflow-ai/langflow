@@ -13,6 +13,9 @@ import AddConnectionDialog from "../components/AddConnectionDialog";
 jest.unmock("react-i18next");
 
 const mockCreate = jest.fn();
+const mockRenew = jest.fn();
+const mockStartOAuth = jest.fn();
+const mockRemove = jest.fn();
 // Stable references: the dialog memoizes on these.
 const mockRegistrations = { data: [], isSuccess: true };
 const mockTypesState = {
@@ -52,11 +55,11 @@ jest.mock("@/controllers/API/queries/connections", () => ({
     isPending: false,
   }),
   useRenewConnectionTokenMutation: () => ({
-    mutateAsync: jest.fn(),
+    mutateAsync: mockRenew,
     isPending: false,
   }),
-  useStartOAuthMutation: () => ({ mutateAsync: jest.fn() }),
-  useDeleteConnectionMutation: () => ({ mutate: jest.fn() }),
+  useStartOAuthMutation: () => ({ mutateAsync: mockStartOAuth }),
+  useDeleteConnectionMutation: () => ({ mutate: mockRemove }),
   useOAuthRegistrationsQuery: () => mockRegistrations,
   usePendingConnectionPoll: () => mockPoll,
 }));
@@ -189,6 +192,7 @@ const dialog = (
   providers: IntegrationProviderRead[],
   deploymentContext: DeploymentContext | undefined,
   open = true,
+  reauthorize?: ConnectionRead,
 ) => (
   <I18nextProvider i18n={i18n}>
     <AddConnectionDialog
@@ -197,6 +201,7 @@ const dialog = (
       providers={providers}
       canCreateInstance={false}
       deploymentContext={deploymentContext}
+      reauthorize={reauthorize}
     />
   </I18nextProvider>
 );
@@ -204,7 +209,8 @@ const dialog = (
 const renderDialog = (
   providers: IntegrationProviderRead[],
   deploymentContext: DeploymentContext | undefined = "desktop",
-) => render(dialog(providers, deploymentContext));
+  reauthorize?: ConnectionRead,
+) => render(dialog(providers, deploymentContext, true, reauthorize));
 
 const choosePastedToken = async (
   user: ReturnType<typeof userEvent.setup>,
@@ -219,6 +225,9 @@ const choosePastedToken = async (
 describe("AddConnectionDialog: pasted Slack tokens", () => {
   beforeEach(() => {
     mockCreate.mockReset();
+    mockRenew.mockReset();
+    mockStartOAuth.mockReset();
+    mockRemove.mockReset();
     jest.spyOn(window, "open").mockReturnValue(null);
   });
 
@@ -661,5 +670,163 @@ describe("AddConnectionDialog: pasted Slack tokens", () => {
     await user.type(screen.getByTestId("connection-token"), "2");
 
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+});
+
+describe("AddConnectionDialog Slack token reconnect", () => {
+  const revokedConnection = (allowBackgroundRuns = true) =>
+    created({
+      status: "revoked",
+      has_credentials: false,
+      allow_non_interactive: allowBackgroundRuns,
+    });
+
+  beforeEach(() => {
+    mockCreate.mockReset();
+    mockRenew.mockReset();
+    mockStartOAuth.mockReset();
+    mockRemove.mockReset();
+    jest.spyOn(window, "open").mockReturnValue(null);
+  });
+
+  afterEach(() => jest.restoreAllMocks());
+
+  it.each([
+    ["desktop", "xapp-replacement", true],
+    ["self_managed", "xapp-replacement", false],
+    ["desktop", "xoxb-replacement", false],
+    ["self_managed", "xoxb-replacement", true],
+  ] as const)(
+    "renews a revoked Slack connection on %s with %s and background consent %s",
+    async (context, token, allowBackgroundRuns) => {
+      const user = userEvent.setup();
+      const connection = revokedConnection(allowBackgroundRuns);
+      mockRenew.mockResolvedValue({
+        ...connection,
+        status: "ready",
+        has_credentials: true,
+      });
+      renderDialog([slack], context, connection);
+
+      await user.selectOptions(
+        screen.getByLabelText("How to connect"),
+        "token",
+      );
+
+      expect(
+        screen.queryByText(/No OAuth registration/),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByTestId("connection-name")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("connection-display-name"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("connection-identity"),
+      ).not.toBeInTheDocument();
+      expect(screen.getByTestId("connection-token")).toHaveValue("");
+      expect(screen.getByTestId("connection-continue")).toBeDisabled();
+      expect(
+        screen.getByTestId("connection-allow-background-runs"),
+      ).toHaveAttribute(
+        "data-state",
+        allowBackgroundRuns ? "checked" : "unchecked",
+      );
+      await user.type(screen.getByTestId("connection-token"), token);
+      await user.click(screen.getByTestId("connection-continue"));
+
+      expect(mockRenew).toHaveBeenCalledWith({
+        id: connection.id,
+        payload: {
+          credentials: { access_token: token },
+          allow_non_interactive: allowBackgroundRuns,
+        },
+      });
+      expect(await screen.findByTestId("connection-done")).toHaveTextContent(
+        "Done",
+      );
+      expect(mockCreate).not.toHaveBeenCalled();
+      expect(mockStartOAuth).not.toHaveBeenCalled();
+      expect(window.open).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["hosted", undefined] as const)(
+    "keeps Slack reconnect on OAuth when the deployment context is %s",
+    (context) => {
+      render(dialog([slack], context, true, revokedConnection()));
+
+      expect(screen.queryByTestId("connection-method")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("connection-token")).not.toBeInTheDocument();
+      expect(screen.getByTestId("connection-authorize")).toBeDisabled();
+    },
+  );
+
+  it("keeps user-delegated Slack reconnect on OAuth", () => {
+    renderDialog([slack], "desktop", {
+      ...revokedConnection(),
+      executing_identity: { identity: "user_delegated" },
+    });
+
+    expect(screen.queryByTestId("connection-method")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("connection-token")).not.toBeInTheDocument();
+    expect(screen.getByTestId("connection-authorize")).toBeDisabled();
+  });
+
+  it("returns to OAuth scope selection when the reconnect method changes", async () => {
+    const user = userEvent.setup();
+    renderDialog([slack], "desktop", revokedConnection());
+    await user.selectOptions(screen.getByLabelText("How to connect"), "token");
+    await user.type(screen.getByTestId("connection-token"), "xapp-unsaved");
+
+    await user.selectOptions(screen.getByLabelText("How to connect"), "oauth");
+
+    expect(screen.queryByTestId("connection-token")).not.toBeInTheDocument();
+    expect(screen.getByTestId("connection-authorize")).toBeDisabled();
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect(mockRenew).not.toHaveBeenCalled();
+  });
+
+  it("keeps the existing connection when token reconnect is canceled", async () => {
+    const user = userEvent.setup();
+    renderDialog([slack], "desktop", revokedConnection());
+    await user.selectOptions(screen.getByLabelText("How to connect"), "token");
+    await user.type(screen.getByTestId("connection-token"), "xapp-unsaved");
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(mockRenew).not.toHaveBeenCalled();
+    expect(mockRemove).not.toHaveBeenCalled();
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it("keeps a rejected replacement editable without completing reconnect", async () => {
+    const user = userEvent.setup();
+    mockRenew.mockRejectedValue({
+      isAxiosError: true,
+      response: { data: { detail: "Slack rejected this replacement token." } },
+    });
+    renderDialog([slack], "desktop", revokedConnection());
+    await user.selectOptions(screen.getByLabelText("How to connect"), "token");
+    await user.type(screen.getByTestId("connection-token"), "xapp-rejected");
+
+    await user.click(screen.getByTestId("connection-continue"));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Slack rejected this replacement token.",
+    );
+    expect(screen.queryByTestId("connection-done")).not.toBeInTheDocument();
+    expect(screen.getByTestId("connection-continue")).toBeEnabled();
+    await user.type(screen.getByTestId("connection-token"), "2");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect(mockRemove).not.toHaveBeenCalled();
+  });
+
+  it("has no axe violations in the Slack token reconnect form", async () => {
+    const user = userEvent.setup();
+    renderDialog([slack], "desktop", revokedConnection());
+    await user.selectOptions(screen.getByLabelText("How to connect"), "token");
+
+    expect(await axe(screen.getByRole("dialog"))).toHaveNoViolations();
   });
 });

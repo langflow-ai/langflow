@@ -67,7 +67,7 @@
     "open": "^11.0.4"
   },
   "dependencies": {
-    "@ag-ui/client": "1.0.0",
+    "@ag-ui/client": "1.0.4",
     "@chakra-ui/number-input": "^2.1.2",
     "@chakra-ui/system": "^2.6.2",
     "@emotion/react": "^11.14.0",
@@ -158,7 +158,7 @@
     "vanilla-jsoneditor": "^2.4.0",
     "web-vitals": "^4.1.1",
     "whatwg-fetch": "^3.6.20",
-    "zod": "^3.23.8",
+    "zod": "^4.6.7",
     "zustand": "^4.5.2"
   },
   "scripts": {

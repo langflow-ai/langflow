@@ -6,7 +6,7 @@ import secrets
 from collections.abc import Callable
 from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from cryptography.fernet import InvalidToken
@@ -16,9 +16,10 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate, ApiKeyRead, UnmaskedApiKeyRead
-from langflow.services.database.models.api_key.policy import check_api_key_issuance
+from langflow.services.database.models.api_key.permissions import validate_permission_policy
+from langflow.services.database.models.api_key.policy import check_api_key_issuance, ensure_api_key_management_allowed
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_settings_service, session_scope
+from langflow.services.deps import get_authorization_service, get_settings_service, session_scope
 
 if TYPE_CHECKING:
     from sqlmodel.sql.expression import SelectOfScalar
@@ -31,6 +32,8 @@ class ApiKeyAuthResult:
     user: User
     api_key_source: str
     api_key_id: UUID | None = None
+    api_key_restricted: bool = False
+    api_key_permissions: dict[str, Any] | None = None
 
 
 SessionScopeFactory = Callable[[], AbstractAsyncContextManager[AsyncSession]]
@@ -58,6 +61,7 @@ def _is_expired(expires_at: datetime.datetime | None) -> bool:
 
 async def get_api_keys(session: AsyncSession, user_id: UUID) -> list[ApiKeyRead]:
     """Get all API keys for a user with decrypted values."""
+    ensure_api_key_management_allowed()
     query: SelectOfScalar = select(ApiKey).where(ApiKey.user_id == user_id)
     api_key_objects = (await session.exec(query)).all()
 
@@ -85,6 +89,7 @@ async def get_api_keys(session: AsyncSession, user_id: UUID) -> list[ApiKeyRead]
 
 async def create_api_key(session: AsyncSession, api_key_create: ApiKeyCreate, user_id: UUID) -> UnmaskedApiKeyRead:
     """Create a new API key, storing an encrypted value and a SHA-256 hash for fast lookup."""
+    ensure_api_key_management_allowed()
     settings_service = get_settings_service()
     auth_settings = settings_service.auth_settings
     if (
@@ -101,6 +106,9 @@ async def create_api_key(session: AsyncSession, api_key_create: ApiKeyCreate, us
     # ones that mint implicitly, so a deployment's sign-in policy is asked here
     # rather than route by route.
     await check_api_key_issuance(session, user_id)
+    permissions = validate_permission_policy(api_key_create.permissions)
+    if permissions is not None:
+        await validate_api_key_permissions(session, user_id=user_id, permissions=permissions)
 
     # Generate a random API key with 32 bytes of randomness
     generated_api_key = f"sk-{secrets.token_urlsafe(32)}"
@@ -114,6 +122,7 @@ async def create_api_key(session: AsyncSession, api_key_create: ApiKeyCreate, us
         user_id=user_id,
         created_at=api_key_create.created_at or datetime.datetime.now(datetime.timezone.utc),
         expires_at=api_key_create.expires_at,
+        permissions=permissions,
     )
 
     session.add(api_key)
@@ -126,6 +135,7 @@ async def create_api_key(session: AsyncSession, api_key_create: ApiKeyCreate, us
 
 async def delete_api_key(session: AsyncSession, api_key_id: UUID, user_id: UUID) -> None:
     """Delete an API key, raising ValueError if not found or not owned by user_id."""
+    ensure_api_key_management_allowed()
     api_key = await session.get(ApiKey, api_key_id)
     if api_key is None:
         msg = "API Key not found"
@@ -134,6 +144,85 @@ async def delete_api_key(session: AsyncSession, api_key_id: UUID, user_id: UUID)
         msg = "API Key not found"
         raise ValueError(msg)
     await session.delete(api_key)
+
+
+async def validate_api_key_permissions(session: AsyncSession, *, user_id: UUID, permissions: dict[str, Any]) -> None:
+    """Ask an enabled supporting plugin to validate references and owner visibility."""
+    auth_settings = get_settings_service().auth_settings
+    if not auth_settings.AUTHZ_ENABLED:
+        msg = "Scoped API keys require enabled authorization"
+        raise PermissionError(msg)
+    if not auth_settings.API_KEY_SCOPES_ENABLED:
+        msg = "Scoped API key issuance is disabled"
+        raise PermissionError(msg)
+    authorization = get_authorization_service()
+    if not await authorization.supports_api_key_scopes():
+        msg = "Scoped API keys require a supporting authorization service"
+        raise PermissionError(msg)
+    await authorization.validate_api_key_permissions(session=session, user_id=user_id, permissions=permissions)
+
+
+async def update_api_key_permissions(
+    session: AsyncSession, *, api_key_id: UUID, user_id: UUID, permissions: dict[str, Any] | None
+) -> ApiKeyRead:
+    """Replace an owned key's ceiling without disclosing or rotating its secret."""
+    ensure_api_key_management_allowed()
+    query = select(ApiKey).where(ApiKey.id == api_key_id, ApiKey.user_id == user_id).with_for_update()
+    api_key = (await session.exec(query)).first()
+    if api_key is None:
+        msg = "API Key not found"
+        raise ValueError(msg)
+    permissions = validate_permission_policy(permissions)
+    if permissions is not None:
+        await validate_api_key_permissions(session, user_id=user_id, permissions=permissions)
+    api_key.permissions = permissions
+    session.add(api_key)
+    await session.flush()
+    data = api_key.model_dump()
+    data["api_key"] = "********"
+    return ApiKeyRead.model_validate(data)
+
+
+async def _scoped_key_can_authenticate(api_key: ApiKey, settings_service) -> bool:
+    if api_key.permissions is None:
+        return True
+    try:
+        validate_permission_policy(api_key.permissions)
+        if not settings_service.auth_settings.AUTHZ_ENABLED:
+            return False
+        return bool(await get_authorization_service().supports_api_key_scopes())
+    except Exception:  # noqa: BLE001 - malformed policies and failed capability probes deny
+        logger.warning("Scoped API key authentication refused because scope enforcement is unavailable")
+        return False
+
+
+async def _audit_scoped_authentication_refusal(session: AsyncSession, api_key: ApiKey) -> None:
+    from lfx.services.authorization import AuthorizationPrincipal
+
+    from langflow.services.authorization.audit import audit_decision, stage_audit_decision
+
+    event: dict[str, Any] = {
+        "user_id": api_key.user_id,
+        "principal": AuthorizationPrincipal(actor_type="api_key", actor_id=api_key.id, user_id=api_key.user_id),
+        "action": "api_key:authenticate",
+        "obj": f"api_key:{api_key.id}",
+        "result": "deny",
+        "details": {"event": "authorization_decision", "reason": "api_key_scope_enforcement_unavailable"},
+    }
+    # Durable audit shares this owned authentication transaction, so a small
+    # connection pool never waits on an audit writer needing its own connection.
+    if not stage_audit_decision(session=session, **event):
+        await audit_decision(**event)
+
+
+def _api_key_auth_result(user: User, api_key: ApiKey) -> ApiKeyAuthResult:
+    return ApiKeyAuthResult(
+        user=user,
+        api_key_source="db",  # pragma: allowlist secret
+        api_key_id=api_key.id,
+        api_key_restricted=api_key.permissions is not None,
+        api_key_permissions=api_key.permissions,
+    )
 
 
 async def check_key(api_key: str) -> User | None:
@@ -239,6 +328,9 @@ async def _check_key_from_db_with_context(
         api_key_obj = matches[0]
         if _is_expired(api_key_obj.expires_at):
             return None
+        if not await _scoped_key_can_authenticate(api_key_obj, settings_service):
+            await _audit_scoped_authentication_refusal(session, api_key_obj)
+            return None
         # Resolve + authorize the user BEFORE the usage counters, so a denied authentication
         # (missing user, blocked external user) does not bump total_uses / last_used_at.
         user = await session.get(User, api_key_obj.user_id)
@@ -252,7 +344,7 @@ async def _check_key_from_db_with_context(
             api_key_obj.last_used_at = datetime.datetime.now(datetime.timezone.utc)
             session.add(api_key_obj)
             await session.flush()
-        return ApiKeyAuthResult(user=user, api_key_source="db", api_key_id=api_key_obj.id)  # pragma: allowlist secret
+        return _api_key_auth_result(user, api_key_obj)
 
     if len(matches) > 1:
         key_ids = [str(m.id) for m in matches]
@@ -283,6 +375,9 @@ async def _check_key_from_db_with_context(
         if matched:
             if _is_expired(api_key_obj.expires_at):
                 return None
+            if not await _scoped_key_can_authenticate(api_key_obj, settings_service):
+                await _audit_scoped_authentication_refusal(session, api_key_obj)
+                return None
             # Resolve + authorize the user BEFORE the usage counters / hash backfill, so a denied
             # authentication (missing user, blocked external user) does not bump total_uses.
             user = await session.get(User, api_key_obj.user_id)
@@ -298,11 +393,7 @@ async def _check_key_from_db_with_context(
                 api_key_obj.last_used_at = datetime.datetime.now(datetime.timezone.utc)
             session.add(api_key_obj)
             await session.flush()
-            return ApiKeyAuthResult(
-                user=user,
-                api_key_source="db",  # pragma: allowlist secret
-                api_key_id=api_key_obj.id,
-            )
+            return _api_key_auth_result(user, api_key_obj)
 
     return None
 
