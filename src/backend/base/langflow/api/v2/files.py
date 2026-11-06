@@ -3,7 +3,7 @@ import re
 import unicodedata
 import uuid
 import zipfile
-from collections.abc import AsyncGenerator, AsyncIterable
+from collections.abc import AsyncGenerator, AsyncIterable, AsyncIterator
 from datetime import datetime
 from http import HTTPStatus
 from pathlib import Path
@@ -38,6 +38,7 @@ router = APIRouter(tags=["Files"], prefix="/files")
 MCP_SERVERS_FILE = "_mcp_servers"
 SAMPLE_DATA_DIR = Path(__file__).parent / "sample_data"
 MAX_FILENAME_BYTES = 255
+UPLOAD_READ_CHUNK = 1024 * 1024
 _UNSAFE_ARCHIVE_NAME_CHARS = re.compile(r'[\\/\x00-\x1f\x7f-\x9f<>:"|?*]')
 _WINDOWS_DEVICE_NAME = re.compile(
     r"^(?:CON|PRN|AUX|NUL|CONIN\$|CONOUT\$|COM[0-9¹²³]|LPT[0-9¹²³])(?=[ .]|$)",
@@ -224,6 +225,11 @@ def _user_file_namespace(path: str, owner_id: uuid.UUID) -> str:
     return user_storage_scope_for_path(path, owner_id)
 
 
+async def _upload_chunks(file) -> AsyncIterator[bytes]:
+    while chunk := await file.read(UPLOAD_READ_CHUNK):
+        yield chunk
+
+
 async def save_file_routine(
     file,
     storage_service,
@@ -237,15 +243,22 @@ async def save_file_routine(
     """Routine to save the file content to the storage service."""
     file_id = uuid.uuid4()
 
-    if not file_content:
-        file_content = await file.read()
     if not file_name:
         file_name = file.filename
+    flow_id = namespace or user_storage_scope(current_user.id)
+
+    # Read in pieces: FastAPI has the body on disk by now, and reading it whole is what takes
+    # an Editor down once an upload is bigger than its memory.
+    # shortcut: an append still reads the whole body. Local disk could stream it too, if a
+    # large append ever needs to.
+    if not file_content and not append:
+        await storage_service.save_upload_stream(flow_id, file_name, _upload_chunks(file))
+        return file_id, file_name
 
     await storage_service.save_file(
-        flow_id=namespace or user_storage_scope(current_user.id),
+        flow_id=flow_id,
         file_name=file_name,
-        data=file_content,
+        data=file_content or await file.read(),
         append=append,
     )
 

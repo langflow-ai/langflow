@@ -456,3 +456,22 @@ class TestNetworkErrorsKeepTheirType:
         service = _failing_client_service(mock_session_service, mock_settings_service, MissingKeyError("gone"))
         with pytest.raises(FileNotFoundError):
             await service.get_file_size("ns", "a.pdf")
+
+
+class TestSaveUploadStream:
+    async def test_it_streams_and_labels_the_file(self, mock_session_service, mock_settings_service):
+        client = _RecordingS3Client()
+        service = _recording_service(mock_session_service, mock_settings_service, client)
+
+        written = await service.save_upload_stream("ns", "a.pdf", _chunks(b"ab", b"cd"))
+
+        assert written == 4
+        assert client.named("put_object")[0]["Body"] == b"abcd"
+
+    async def test_a_missing_bucket_reads_as_save_file_reads_it(self, mock_session_service, mock_settings_service):
+        class NoBucketError(Exception):
+            response = {"Error": {"Code": "NoSuchBucket", "Message": "no bucket"}}
+
+        service = _failing_client_service(mock_session_service, mock_settings_service, NoBucketError("no bucket"))
+        with pytest.raises(FileNotFoundError, match="does not exist"):
+            await service.save_upload_stream("ns", "a.pdf", _chunks(b"ab"))

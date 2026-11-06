@@ -103,6 +103,21 @@ class StorageService(Service):
     async def save_file(self, flow_id: str, file_name: str, data: bytes, *, append: bool = False) -> None:
         raise NotImplementedError
 
+    async def save_upload_stream(self, flow_id: str, file_name: str, chunks: AsyncIterator[bytes]) -> int:
+        """Save an upload from a stream of chunks, replacing any file there, and return its size.
+
+        Holds one chunk in memory at a time, so a large upload does not need that much memory.
+        """
+        written = 0
+        append = False
+        async for chunk in chunks:
+            await self.save_file(flow_id, file_name, chunk, append=append)
+            append = True
+            written += len(chunk)
+        if not append:  # an empty upload is still a file
+            await self.save_file(flow_id, file_name, b"")
+        return written
+
     @abstractmethod
     async def get_file(self, flow_id: str, file_name: str) -> bytes:
         raise NotImplementedError

@@ -13,7 +13,7 @@ import hashlib
 import os
 import re
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NoReturn
 
 from langflow.logging.logger import logger
 
@@ -362,28 +362,32 @@ class S3StorageService(StorageService):
 
             await logger.ainfo(f"File {file_name} saved successfully to S3: s3://{self.bucket_name}/{key}")
 
-        except Exception as e:
-            error_msg = str(e)
-            error_code = None
+        except Exception as e:  # noqa: BLE001 - _raise_save_error always raises
+            self._raise_save_error(e, flow_id, file_name)
 
-            if hasattr(e, "response") and isinstance(e.response, dict):
-                error_info = e.response.get("Error", {})
-                error_code = error_info.get("Code")
-                error_msg = error_info.get("Message", str(e))
+    def _raise_save_error(self, e: Exception, flow_id: str, file_name: str) -> NoReturn:
+        """Raise what a failed write means to a caller: a missing bucket, bad credentials, or a failure."""
+        error_msg = str(e)
+        error_code = None
 
-            logger.exception(f"Error saving file {file_name} to S3 in flow {flow_id}: {error_msg}")
+        if hasattr(e, "response") and isinstance(e.response, dict):
+            error_info = e.response.get("Error", {})
+            error_code = error_info.get("Code")
+            error_msg = error_info.get("Message", str(e))
 
-            if error_code == "NoSuchBucket":
-                msg = f"S3 bucket '{self.bucket_name}' does not exist"
-                raise FileNotFoundError(msg) from e
-            if error_code == "AccessDenied":
-                msg = "Access denied to S3 bucket. Please check your AWS credentials and bucket permissions"
-                raise PermissionError(msg) from e
-            if error_code == "InvalidAccessKeyId":
-                msg = "Invalid AWS credentials. Please check your AWS access key and secret key"
-                raise PermissionError(msg) from e
-            msg = f"Failed to save file to S3: {error_msg}"
-            raise RuntimeError(msg) from e
+        logger.exception(f"Error saving file {file_name} to S3 in flow {flow_id}: {error_msg}")
+
+        if error_code == "NoSuchBucket":
+            msg = f"S3 bucket '{self.bucket_name}' does not exist"
+            raise FileNotFoundError(msg) from e
+        if error_code == "AccessDenied":
+            msg = "Access denied to S3 bucket. Please check your AWS credentials and bucket permissions"
+            raise PermissionError(msg) from e
+        if error_code == "InvalidAccessKeyId":
+            msg = "Invalid AWS credentials. Please check your AWS access key and secret key"
+            raise PermissionError(msg) from e
+        msg = f"Failed to save file to S3: {error_msg}"
+        raise RuntimeError(msg) from e
 
     async def get_file(self, flow_id: str, file_name: str) -> bytes:
         """Retrieve a file from S3.
@@ -768,6 +772,13 @@ class S3StorageService(StorageService):
                     f"Stored {file_name} without its md5 label; it will be compared by size only until it is rewritten"
                 )
         return written
+
+    async def save_upload_stream(self, flow_id: str, file_name: str, chunks: AsyncIterator[bytes]) -> int:
+        """``save_file_stream``, failing the way ``save_file`` fails, as the upload routes expect."""
+        try:
+            return await self.save_file_stream(flow_id, file_name, chunks)
+        except Exception as e:  # noqa: BLE001 - _raise_save_error always raises
+            self._raise_save_error(e, flow_id, file_name)
 
     async def teardown(self) -> None:
         """Close the clients this service built.
