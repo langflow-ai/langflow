@@ -318,26 +318,29 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     data: VertexBuildTypeAPI | ChatOutputType | ChatInputType,
     buildId?: string,
   ) => {
-    const newFlowPool = cloneDeep({ ...get().flowPool });
-    if (!newFlowPool[nodeId]) {
+    const prevPool = get().flowPool;
+    const prevEntries = prevPool?.[nodeId];
+    if (!prevEntries) {
       return;
-    } else {
-      let index = newFlowPool[nodeId].length - 1;
-      if (buildId) {
-        index = newFlowPool[nodeId].findIndex((flow) => flow.id === buildId);
-      }
-      //check if the data is a flowpool object
-      if ((data as VertexBuildTypeAPI).valid !== undefined) {
-        newFlowPool[nodeId][index] = data as VertexBuildTypeAPI;
-      }
-      //update data results
-      else {
-        newFlowPool[nodeId][index].data.message = data as
-          | ChatOutputType
-          | ChatInputType;
-      }
     }
-    get().setFlowPool(newFlowPool);
+    const index = buildId
+      ? prevEntries.findIndex((flow) => flow.id === buildId)
+      : prevEntries.length - 1;
+    const newEntries = [...prevEntries];
+    if ((data as VertexBuildTypeAPI).valid !== undefined) {
+      newEntries[index] = data as VertexBuildTypeAPI;
+    } else {
+      // Copy the message's ancestors so earlier pool snapshots remain unchanged.
+      const entry = prevEntries[index];
+      newEntries[index] = {
+        ...entry,
+        data: {
+          ...entry.data,
+          message: data as ChatOutputType | ChatInputType,
+        },
+      };
+    }
+    get().setFlowPool({ ...prevPool, [nodeId]: newEntries });
   },
   CleanFlowPool: () => {
     get().setFlowPool({});
