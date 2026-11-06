@@ -31,10 +31,10 @@ def locked_packages(environment: dict[str, str]) -> dict[str, str]:
     return packages
 
 
-@pytest.mark.parametrize("python", ["3.10", "3.11", "3.14"])
+@pytest.mark.parametrize("python", ["3.11", "3.14"])
 @pytest.mark.parametrize("platform", ["linux", "darwin", "win32"])
 def test_fixed_dependencies_resolve_on_every_supported_python_line(python: str, platform: str) -> None:
-    """Check patched versions while retaining compatible Python 3.10 resolutions."""
+    """Check patched versions resolve on every supported Python line (>=3.11 since #16023)."""
     environment = {
         "python_version": python,
         "python_full_version": f"{python}.0",
@@ -55,12 +55,8 @@ def test_fixed_dependencies_resolve_on_every_supported_python_line(python: str, 
                 continue
             assert len(requirements) == 1, f"{relative_path}: {name} must resolve exactly once on {python}"
             assert packages[name] in requirements[0].specifier
-    if python == "3.10":
-        assert Version(packages["pillow"]).major == 12
-        assert Version(packages["filelock"]) < Version("4.2")
-    else:
-        assert Version(packages["pillow"]) >= Version("13.0.0")
-        assert Version(packages["filelock"]) >= Version("4.2.1")
+    assert Version(packages["pillow"]) >= Version("13.0.0")
+    assert Version(packages["filelock"]) >= Version("4.2.1")
     assert Version(packages["pypdf"]) >= Version("6.21.2")
     assert Version(packages["aiohttp"]) >= Version("3.14.4")
     assert Version(packages["mako"]) >= Version("1.4.2")
@@ -80,11 +76,8 @@ def test_fixed_dependencies_resolve_on_every_supported_python_line(python: str, 
     }.items():
         assert Version(packages[name]) >= Version(minimum), name
 
-    # Upstream fixes require Python 3.11. Keep the 3.10 runtime installable;
-    # these three findings remain open for that runtime.
-    if python != "3.10":
-        for name, minimum in {"dnspython": "2.9.0", "locust": "2.47.0", "pyarrow": "26.0.0"}.items():
-            assert Version(packages[name]) >= Version(minimum), name
+    for name, minimum in {"dnspython": "2.9.0", "locust": "2.47.0", "pyarrow": "26.0.0"}.items():
+        assert Version(packages[name]) >= Version(minimum), name
 
 
 def test_opentelemetry_lock_updates_the_whole_official_release_set() -> None:
