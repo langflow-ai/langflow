@@ -4,12 +4,15 @@ import {
   checkConnectionHealth,
   createConnection,
   deleteConnection,
+  deleteSavedOAuthRegistration,
   getConnection,
   getEffectiveIntegrationPolicy,
   listIntegrations,
   listOAuthRegistrations,
+  listSavedOAuthRegistrations,
   renewConnectionToken,
   revokeConnection,
+  saveOAuthRegistration,
   startOAuth,
   testConnection,
   updateConnection,
@@ -26,6 +29,7 @@ import type {
   Iso8601,
   OAuthRegistrationRead,
   OAuthStartResponse,
+  SavedOAuthRegistrationRead,
 } from "./types";
 
 export const useInvalidateConnections = () => {
@@ -71,6 +75,34 @@ export const useOAuthRegistrationsQuery = (
     staleTime: 60_000,
     retry: 1,
   });
+
+export const useSavedOAuthRegistrationsQuery = () =>
+  useQuery<SavedOAuthRegistrationRead[]>({
+    queryKey: connectionsKeys.savedRegistrations(),
+    queryFn: listSavedOAuthRegistrations,
+    retry: 1,
+  });
+
+export const useSaveOAuthRegistrationMutation = () => {
+  const invalidate = useInvalidateConnections();
+  return useMutation<
+    void,
+    unknown,
+    { id: string; registration: Record<string, unknown> }
+  >({
+    mutationFn: ({ id, registration }) =>
+      saveOAuthRegistration(id, registration),
+    onSuccess: invalidate,
+  });
+};
+
+export const useDeleteSavedOAuthRegistrationMutation = () => {
+  const invalidate = useInvalidateConnections();
+  return useMutation<void, unknown, string>({
+    mutationFn: deleteSavedOAuthRegistration,
+    onSuccess: invalidate,
+  });
+};
 
 export const useCreateConnectionMutation = () => {
   const invalidate = useInvalidateConnections();

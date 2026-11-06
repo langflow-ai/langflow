@@ -11,6 +11,7 @@ import type {
   OAuthRegistrationListRead,
   OAuthRegistrationRead,
   OAuthStartResponse,
+  SavedOAuthRegistrationRead,
 } from "./types";
 
 const connections = () => getURL("CONNECTIONS");
@@ -147,4 +148,31 @@ export async function getEffectiveIntegrationPolicy(): Promise<EffectiveIntegrat
     `${integrations()}/policy/effective`,
   );
   return data;
+}
+
+/** Superuser-only: registrations saved from Settings > Connections > Manage providers. */
+export async function listSavedOAuthRegistrations(): Promise<
+  SavedOAuthRegistrationRead[]
+> {
+  const { data } = await api.get<{
+    registrations: SavedOAuthRegistrationRead[];
+  }>(`${connections()}/oauth/registrations/saved`);
+  return asArray<SavedOAuthRegistrationRead>(data?.registrations);
+}
+
+/** Omit every secret field to keep the secret already saved for this ID. */
+export async function saveOAuthRegistration(
+  id: string,
+  registration: Record<string, unknown>,
+): Promise<void> {
+  await api.put(
+    `${connections()}/oauth/registrations/saved/${encodeURIComponent(id)}`,
+    { registration },
+  );
+}
+
+export async function deleteSavedOAuthRegistration(id: string): Promise<void> {
+  await api.delete(
+    `${connections()}/oauth/registrations/saved/${encodeURIComponent(id)}`,
+  );
 }
