@@ -434,8 +434,9 @@ async def upload_user_file(
             # Access denied or invalid credentials - return 500 as this is a server config issue
             raise HTTPException(status_code=500, detail="Error accessing storage") from e
         except Exception as e:
-            # General error saving file or getting file size
-            raise HTTPException(status_code=500, detail=f"Error accessing file: {e}") from e
+            # The raw error can name the storage's address, which is no use to whoever uploaded.
+            await logger.aexception("Error saving an upload to storage")
+            raise HTTPException(status_code=500, detail="Error accessing storage") from e
 
         if ephemeral:
             # Ephemeral uploads: file is saved to storage (servable for chat history)
