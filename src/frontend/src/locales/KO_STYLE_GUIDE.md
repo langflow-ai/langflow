@@ -235,6 +235,7 @@ Langflow 문서에 라벨로 나오는 제품 개념어와, 정착된 한국어�
 | `starter_flows.*.description` | 한국어 |
 | `template_notes.*` (템플릿 메모) | 한국어. 마크다운 구조는 그대로 |
 
+- 예외: Schedule, Inbound Webhook Trigger의 이름은 메인테이너가 모든 언어로 번역했으므로 그 번역을 둔다 (#16132).
 - 키에는 영어 원문의 해시가 들어 있다 (`components.agent.description.c4a4ee71`). **키는 복사만 하고 고치지 않는다.**
 - 같은 영어 문장은 어느 컴포넌트에서든 같은 한국어로 옮긴다.
 - 설명문 안에서 다른 필드나 컴포넌트를 가리키는 이름은 영어로 둔다. 화면에 영어로 보이기 때문이다.

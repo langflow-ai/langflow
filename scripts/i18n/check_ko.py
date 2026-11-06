@@ -128,6 +128,8 @@ TRANSLATIONESE = [
 
 # Backend keys that must stay out of ko.json so the English name shows through.
 BACKEND_NAME_KEY = re.compile(r"^components\..*\.display_name\.[0-9a-f]{8}$|^starter_flows\..*\.name$")
+# Components whose names the maintainers translate in every locale (#16132), so ko keeps them.
+TRANSLATED_NAME_COMPONENTS = {"inboundwebhooktrigger", "scheduletrigger"}
 
 
 def load(path: Path) -> dict[str, str]:
@@ -297,7 +299,7 @@ def check_backend(ko_path: Path, *, partial: bool, max_lines: int) -> int:
         if key not in en:
             report.error(key, "not in en.json (keys carry a hash of the English text, never edit them)")
             continue
-        if BACKEND_NAME_KEY.match(key):
+        if BACKEND_NAME_KEY.match(key) and key.split(".")[1] not in TRANSLATED_NAME_COMPONENTS:
             report.error(key, "name keys must be left out so the English name shows")
             continue
         check_value(report, key, en[key], value, markdown=key.startswith("template_notes."))
