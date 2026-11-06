@@ -1,5 +1,7 @@
 """Minimal variable service for lfx package with in-memory storage and environment fallback."""
 
+from collections.abc import Iterable
+
 from lfx.log.logger import logger
 from lfx.services.base import Service
 from lfx.services.variable.request_scope import (
@@ -81,6 +83,10 @@ class VariableService(Service):
                 return value
 
         return None
+
+    async def get_variables(self, names: Iterable[str], **kwargs) -> dict[str, str | None]:
+        """Resolve a batch using the same request and environment rules as single reads."""
+        return {name: await self.get_variable(name, **kwargs) for name in set(names)}
 
     def set_variable(self, name: str, value: str, **kwargs) -> None:  # noqa: ARG002
         """Set a variable value (in-memory only)."""

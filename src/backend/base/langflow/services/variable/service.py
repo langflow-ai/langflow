@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from collections import Counter
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -9,6 +10,7 @@ from lfx.log.logger import logger
 from lfx.services.authorization.base import ExecutionPrincipal, ResourceVisibilityScope
 from lfx.services.settings.constants import AGENTIC_VARIABLES
 from lfx.services.variable import VariableNotFoundError
+from lfx.utils.util import to_uuid
 from sqlmodel import col, false, select, update
 
 from langflow.services.auth import utils as auth_utils
@@ -25,7 +27,7 @@ from langflow.services.variable.runtime_policy import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Iterable, Sequence
 
     from lfx.services.settings.service import SettingsService
     from pydantic import SecretStr
@@ -295,6 +297,13 @@ class DatabaseVariableService(VariableService, Service):
 
         return variable
 
+    async def get_variable_objects(
+        self, user_id: UUID | str, names: Iterable[str], session: AsyncSession
+    ) -> dict[str, Variable]:
+        """Fetch nonempty owned variable objects by name in one database query."""
+        stmt = select(Variable).where(Variable.user_id == to_uuid(user_id), col(Variable.name).in_(names))
+        return {variable.name: variable for variable in (await session.exec(stmt)).all() if variable.value}
+
     async def get_account_bound_variable(
         self,
         user_id: UUID | str,
@@ -326,44 +335,7 @@ class DatabaseVariableService(VariableService, Service):
             # must never broaden administrative get/update/delete lookups. An
             # owned variable wins on name collisions; otherwise require one
             # unambiguous READ-visible row from the authorization plugin.
-            from langflow.services.deps import get_authorization_service
-
-            authz = get_authorization_service()
-            if not await authz.is_enabled() or not await authz.supports_cross_user_fetch():
-                raise
-            dependency_context = {"execution_principal": ExecutionPrincipal(kind="actor", user_id=str(user_id))}
-            get_visibility = getattr(authz, "get_resource_visibility", None)
-            if get_visibility is None:
-                # Compatibility for duck-typed authorization services that
-                # predate ResourceVisibilityScope.
-                visible_ids = await authz.list_visible_resource_ids(
-                    user_id=UUID(str(user_id)),
-                    resource_type="variable",
-                    domain="*",
-                    act="read",
-                    context=dependency_context,
-                )
-                visibility = None if visible_ids is None else ResourceVisibilityScope(resource_ids=tuple(visible_ids))
-            else:
-                visibility = await get_visibility(
-                    user_id=UUID(str(user_id)),
-                    resource_type="variable",
-                    domain="*",
-                    act="read",
-                    context=dependency_context,
-                )
-            if visibility is None:
-                raise
-
-            from langflow.services.authorization.listing import restrict_to_owned_or_visible_scope
-
-            shared_stmt = restrict_to_owned_or_visible_scope(
-                select(Variable).where(Variable.name == name, Variable.user_id != user_id),
-                id_column=Variable.id,
-                owner_clause=false(),
-                visibility=visibility,
-            )
-            shared_variables = list((await session.exec(shared_stmt)).all())
+            shared_variables = await self._get_shared_variables(user_id, {name}, session)
             if not shared_variables:
                 raise
             if len(shared_variables) > 1:
@@ -371,9 +343,93 @@ class DatabaseVariableService(VariableService, Service):
                 raise ValueError(msg) from owned_lookup_error
             variable = shared_variables[0]
 
+        return self._variable_value(variable, field)
+
+    async def _get_shared_variables(
+        self, user_id: UUID | str, names: set[str], session: AsyncSession
+    ) -> list[Variable]:
+        """Fetch READ-visible variables for unresolved names without widening owner reads."""
+        from langflow.services.deps import get_authorization_service
+
+        authz = get_authorization_service()
+        if not await authz.is_enabled() or not await authz.supports_cross_user_fetch():
+            return []
+        dependency_context = {"execution_principal": ExecutionPrincipal(kind="actor", user_id=str(user_id))}
+        get_visibility = getattr(authz, "get_resource_visibility", None)
+        if get_visibility is None:
+            # Compatibility for duck-typed authorization services that
+            # predate ResourceVisibilityScope.
+            visible_ids = await authz.list_visible_resource_ids(
+                user_id=UUID(str(user_id)),
+                resource_type="variable",
+                domain="*",
+                act="read",
+                context=dependency_context,
+            )
+            visibility = None if visible_ids is None else ResourceVisibilityScope(resource_ids=tuple(visible_ids))
+        else:
+            visibility = await get_visibility(
+                user_id=UUID(str(user_id)),
+                resource_type="variable",
+                domain="*",
+                act="read",
+                context=dependency_context,
+            )
+        if visibility is None:
+            return []
+
+        from langflow.services.authorization.listing import restrict_to_owned_or_visible_scope
+
+        shared_stmt = restrict_to_owned_or_visible_scope(
+            select(Variable).where(col(Variable.name).in_(names), Variable.user_id != user_id),
+            id_column=Variable.id,
+            owner_clause=false(),
+            visibility=visibility,
+        )
+        return list((await session.exec(shared_stmt)).all())
+
+    async def get_variables(
+        self, user_id: UUID | str, names: Iterable[str], field: str, session: AsyncSession
+    ) -> dict[str, str | SecretStr | None]:
+        """Resolve requested names in one owner query and, when needed, one shared query.
+
+        Owned values win. Missing, ambiguous, or unreadable values resolve to None,
+        matching independent discovery reads without fetching unrelated secrets.
+        """
+        names = set(names)
+        if not names:
+            return {}
+        user_id = to_uuid(user_id)
+        bound_values: dict[str, str | SecretStr | None] = {}
+        for name in names:
+            bound = await self.get_account_bound_variable(user_id, name, field, session)
+            if bound is not None:
+                bound_values[name] = bound.value
+        unresolved = names - bound_values.keys()
+        if not unresolved:
+            return bound_values
+        variables = await self.get_variable_objects(user_id, unresolved, session)
+        missing = unresolved - variables.keys()
+        if missing:
+            shared = await self._get_shared_variables(user_id, missing, session)
+            counts = Counter(variable.name for variable in shared)
+            variables.update({variable.name: variable for variable in shared if counts[variable.name] == 1})
+        values: dict[str, str | SecretStr | None] = dict.fromkeys(unresolved)
+        values.update(bound_values)
+        for name, variable in variables.items():
+            try:
+                values[name] = self._variable_value(variable, field)
+            except ValueError:
+                # Discovery treats unreadable credentials as unavailable.
+                continue
+        return values
+
+    @staticmethod
+    def _variable_value(variable: Variable, field: str) -> str | SecretStr:
+        """Apply field restrictions and unwrap storage using the single-read rules."""
         if variable.type == CREDENTIAL_TYPE and field == "session_id":
             msg = (
-                f"variable {name} of type 'Credential' cannot be used in a Session ID field "
+                f"variable {variable.name} of type 'Credential' cannot be used in a Session ID field "
                 "because its purpose is to prevent the exposure of values."
             )
             raise TypeError(msg)
@@ -389,7 +445,7 @@ class DatabaseVariableService(VariableService, Service):
             decrypted = auth_utils.decrypt_api_key(variable.value)
             if not decrypted:
                 msg = (
-                    f"Could not decrypt credential variable '{name}'. The stored value cannot be "
+                    f"Could not decrypt credential variable '{variable.name}'. The stored value cannot be "
                     "decrypted with the current LANGFLOW_SECRET_KEY — it may have been encrypted "
                     "with a different key."
                 )
@@ -507,7 +563,7 @@ class DatabaseVariableService(VariableService, Service):
         if bound is not None:
             return bound
         # Convert string to UUID if needed for SQLAlchemy query
-        user_id_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
+        user_id_uuid = to_uuid(user_id)
         stmt = select(Variable).where(Variable.user_id == user_id_uuid)
         variables = (await session.exec(stmt)).all()
 

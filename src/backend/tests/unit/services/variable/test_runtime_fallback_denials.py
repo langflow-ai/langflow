@@ -91,3 +91,18 @@ async def test_policy_load_failure_cannot_enable_fallback(monkeypatch, bulk):
         await resolve(user_id=uuid4())
     with pytest.raises(RuntimeVariableError, match="Deployment variable policy is unavailable"):
         runtime_policy.runtime_variables_policy_enabled()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "reason", ["absent", "variable_not_approved", "undecryptable", "target_disabled", "policy_unavailable"]
+)
+async def test_compatibility_batch_preserves_account_refusal(reason):
+    from langflow.services.variable.base import VariableService
+
+    refusal = RuntimeVariableError("Account lookup refused", reason=reason)
+    service = SimpleNamespace(get_variable=AsyncMock(side_effect=refusal))
+    with pytest.raises(RuntimeVariableError) as caught:
+        await VariableService.get_variables(service, uuid4(), {"TOKEN"}, "", None)
+    assert caught.value is refusal
+    service.get_variable.assert_awaited_once()

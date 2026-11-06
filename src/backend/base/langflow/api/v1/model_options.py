@@ -3,8 +3,8 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Query
 from lfx.base.models.provider_registry import resolve_provider_id
 from lfx.base.models.unified_models import (
-    get_embedding_model_options,
-    get_language_model_options,
+    aget_embedding_model_options,
+    aget_language_model_options,
     get_model_providers,
 )
 from lfx.services.model_provider_policy import (
@@ -80,7 +80,7 @@ async def get_language_model_options_endpoint(
     """Get language model options filtered by user's enabled providers and models."""
     provider_policy = await _resolve_option_policy(current_user, purpose, provider_policy_attributes)
     return _annotate_options(
-        get_language_model_options(user_id=current_user.id, provider_policy=provider_policy),
+        await aget_language_model_options(user_id=current_user.id, provider_policy=provider_policy),
         provider_policy,
     )
 
@@ -94,6 +94,6 @@ async def get_embedding_model_options_endpoint(
     """Get embedding model options filtered by user's enabled providers and models."""
     provider_policy = await _resolve_option_policy(current_user, purpose, provider_policy_attributes)
     return _annotate_options(
-        get_embedding_model_options(user_id=current_user.id, provider_policy=provider_policy),
+        await aget_embedding_model_options(user_id=current_user.id, provider_policy=provider_policy),
         provider_policy,
     )

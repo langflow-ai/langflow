@@ -8,7 +8,8 @@ import socket
 import struct
 from functools import wraps
 from pathlib import Path
-from typing import Any
+from typing import Any, overload
+from uuid import UUID
 
 from docstring_parser import parse
 
@@ -627,3 +628,21 @@ def find_closest_match(string: str, list_of_strings: list[str]) -> str | None:
     if closest_match:
         return closest_match[0]
     return None
+
+
+def is_uuid_set(value: UUID | str | None) -> bool:
+    """Return whether a UUID value is neither None nor the serialized string 'None'."""
+    return value is not None and str(value) != "None"
+
+
+@overload
+def to_uuid(value: UUID | str) -> UUID: ...
+
+
+@overload
+def to_uuid(value: None) -> None: ...
+
+
+def to_uuid(value: UUID | str | None) -> UUID | None:
+    """Convert strings to UUIDs, preserving UUID objects and None."""
+    return UUID(value) if isinstance(value, str) else value

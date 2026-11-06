@@ -7,7 +7,7 @@ from lfx.base.models.model_utils import _to_str
 from lfx.log.logger import logger
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Awaitable, Callable
 
 
 def _clean_override(value: Any) -> str | None:
@@ -33,25 +33,16 @@ def _find_matching_option(
     return None
 
 
-def apply_model_overrides(
-    model: Any,
-    *,
-    model_name: Any = None,
-    provider: Any = None,
-    user_id: str | None = None,
-    get_options: Callable[..., list[dict[str, Any]]] | None = None,
-) -> Any:
-    """Apply optional scalar overrides to a ModelInput selection.
+def _model_override_selection(model, model_name, provider):
+    """Extract the existing override rules into a shared, I/O-free selection step.
 
-    ``ModelInput`` stores the rich provider/model object the runtime needs. The
-    scalar fields added to the model components are intentionally only an overlay:
-    they let global variables choose a model name or provider at run time while
-    preserving the selected model as the UI-visible default.
+    Work on a copy because the rich ModelInput value remains the UI default;
+    runtime scalar overrides must not modify the saved selection.
     """
     override_name = _clean_override(model_name)
     override_provider = _clean_override(provider)
     if not override_name and not override_provider:
-        return model
+        return None
 
     if not isinstance(model, list):
         msg = "Model name/provider overrides require a built-in model selection, not a connected model object."
@@ -67,6 +58,44 @@ def apply_model_overrides(
         msg = "A model name is required when using model selection overrides."
         raise ValueError(msg)
 
+    return selected, target_name, target_provider, selected_provider
+
+
+def _fallback_model_override(selection):
+    selected, target_name, target_provider, selected_provider = selection
+    provider_changed = bool(target_provider and target_provider != selected_provider)
+    if provider_changed:
+        # Metadata belongs to the previous provider. Carrying its parameter or
+        # class hints into a different provider would build the wrong client.
+        selected = {"metadata": {}}
+
+    selected["name"] = target_name
+    if target_provider:
+        selected["provider"] = target_provider
+        selected["category"] = target_provider
+
+    return [selected]
+
+
+def apply_model_overrides(
+    model: Any,
+    *,
+    model_name: Any = None,
+    provider: Any = None,
+    user_id: str | None = None,
+    get_options: Callable[..., list[dict[str, Any]]] | None = None,
+) -> Any:
+    """Apply optional scalar overrides to a ModelInput selection.
+
+    ``ModelInput`` stores the rich provider/model object the runtime needs. The
+    scalar fields added to the model components are intentionally only an overlay:
+    they let global variables choose a model name or provider at run time while
+    preserving the selected model as the UI-visible default.
+    """
+    selection = _model_override_selection(model, model_name, provider)
+    if selection is None:
+        return model
+    _selected, target_name, target_provider, _selected_provider = selection
     if get_options is not None:
         try:
             if options_match := _find_matching_option(
@@ -80,13 +109,33 @@ def apply_model_overrides(
             # fallbacks. Keep model execution available if option refresh fails.
             logger.debug("Could not refresh model options for model override", exc_info=exc)
 
-    provider_changed = bool(target_provider and target_provider != selected_provider)
-    if provider_changed:
-        selected = {"metadata": {}}
+    return _fallback_model_override(selection)
 
-    selected["name"] = target_name
-    if target_provider:
-        selected["provider"] = target_provider
-        selected["category"] = target_provider
 
-    return [selected]
+async def aapply_model_overrides(
+    model: Any,
+    *,
+    model_name: Any = None,
+    provider: Any = None,
+    user_id: str | None = None,
+    get_options: Callable[..., Awaitable[list[dict[str, Any]]]] | None = None,
+) -> Any:
+    """Await option lookup for runtime overrides without changing selection semantics."""
+    selection = _model_override_selection(model, model_name, provider)
+    if selection is None:
+        return model
+    _selected, target_name, target_provider, _selected_provider = selection
+    if get_options is not None:
+        try:
+            if options_match := _find_matching_option(
+                await get_options(user_id=user_id),
+                model_name=target_name,
+                provider=target_provider,
+            ):
+                return [options_match]
+        except Exception as exc:  # noqa: BLE001
+            # The runtime instantiation helpers still have provider-level
+            # fallbacks. Keep model execution available if option refresh fails.
+            logger.debug("Could not refresh model options for model override", exc_info=exc)
+
+    return _fallback_model_override(selection)

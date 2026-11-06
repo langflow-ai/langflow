@@ -688,7 +688,7 @@ def test_non_list_live_discovery_return_is_normalized():
 def test_clear_restores_baseline():
     baseline_providers = get_model_providers()
     baseline_meta_keys = set(MODEL_PROVIDER_METADATA)
-    baseline_live = list(LIVE_MODEL_PROVIDERS)
+    baseline_live = LIVE_MODEL_PROVIDERS.copy()
 
     register_provider(
         _fakeco_spec(
@@ -705,7 +705,7 @@ def test_clear_restores_baseline():
 
     assert get_model_providers() == baseline_providers
     assert set(MODEL_PROVIDER_METADATA) == baseline_meta_keys
-    assert list(LIVE_MODEL_PROVIDERS) == baseline_live
+    assert baseline_live == LIVE_MODEL_PROVIDERS
     assert "FakeCo" not in EMBEDDING_PROVIDER_CLASS_MAPPING
     assert "FakeCo" not in EMBEDDING_PARAM_MAPPINGS
     assert "FakeCo Embeddings" not in EMBEDDING_PARAM_MAPPINGS

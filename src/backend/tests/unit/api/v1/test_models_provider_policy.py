@@ -591,7 +591,7 @@ async def test_provider_read_purpose_can_narrow_but_never_widen_endpoint_policy(
         {"name": "gpt-test", "provider": "OpenAI", "metadata": {}},
         {"name": "claude-test", "provider": "Anthropic", "metadata": {}},
     ]
-    monkeypatch.setattr(model_options_module, "get_language_model_options", lambda **_kwargs: raw_options)
+    monkeypatch.setattr(model_options_module, "aget_language_model_options", AsyncMock(return_value=raw_options))
 
     discover_use = await client.get(
         "api/v1/models/providers",
@@ -640,8 +640,8 @@ async def test_model_options_add_provider_identity_and_filter_defensively(
         {"name": "gpt-test", "provider": "OpenAI", "metadata": {}},
         {"name": "claude-test", "provider": "Anthropic", "metadata": {}},
     ]
-    monkeypatch.setattr(model_options_module, "get_language_model_options", lambda **_kwargs: raw_options)
-    monkeypatch.setattr(model_options_module, "get_embedding_model_options", lambda **_kwargs: raw_options)
+    monkeypatch.setattr(model_options_module, "aget_language_model_options", AsyncMock(return_value=raw_options))
+    monkeypatch.setattr(model_options_module, "aget_embedding_model_options", AsyncMock(return_value=raw_options))
 
     for path in ("api/v1/model_options/language", "api/v1/model_options/embedding"):
         response = await client.get(path, headers=logged_in_headers)
@@ -726,3 +726,41 @@ async def test_hidden_provider_variables_are_omitted_but_can_be_deleted(
 
     assert "ANTHROPIC_API_KEY" not in {variable["name"] for variable in hidden_response.json()}
     assert delete_response.status_code == status.HTTP_204_NO_CONTENT
+
+
+@pytest.mark.parametrize("kind", ["language", "embedding"])
+async def test_model_options_route_awaits_lookup_on_caller_loop(monkeypatch, kind):
+    import asyncio
+    from types import SimpleNamespace
+
+    from langflow.api.v1 import model_options as model_options_module
+
+    owner = uuid4()
+    policy = SimpleNamespace(allows=lambda provider: provider == "OpenAI")
+    resolve_policy = AsyncMock(return_value=policy)
+    monkeypatch.setattr(model_options_module, "_resolve_option_policy", resolve_policy)
+    started = asyncio.Event()
+    release = asyncio.Event()
+    caller_loop = asyncio.get_running_loop()
+
+    async def lookup(*, user_id, provider_policy):
+        assert user_id == owner
+        assert provider_policy is policy
+        assert asyncio.get_running_loop() is caller_loop
+        started.set()
+        await release.wait()
+        return [{"name": "test-model", "provider": "OpenAI", "metadata": {}}]
+
+    monkeypatch.setattr(model_options_module, f"aget_{kind}_model_options", lookup)
+    endpoint = getattr(model_options_module, f"get_{kind}_model_options_endpoint")
+    task = asyncio.create_task(endpoint(SimpleNamespace(id=owner), {}, None))
+    try:
+        await asyncio.wait_for(started.wait(), 1)
+        assert not task.done()
+        release.set()
+        result = await asyncio.wait_for(task, 1)
+        assert result == [{"name": "test-model", "provider": "OpenAI", "metadata": {}, "provider_id": "openai"}]
+    finally:
+        release.set()
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
