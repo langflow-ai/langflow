@@ -323,6 +323,58 @@ async def test_v1_advanced_shared_session_rebuilds_mismatched_real_graph_for_cal
     assert all(str(component.user_id) == str(caller_id) for component in caller_components)
 
 
+async def test_v1_advanced_uncached_session_id_builds_from_stored_flow(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A caller-supplied session_id with no cached session must not 404.
+
+    Nothing populates the advanced-run session cache, so a fresh caller id
+    could never hit it; the endpoint builds the graph from the stored flow
+    under the current caller instead (Fixes #16063).
+    """
+    from langflow.api.v1 import endpoints
+    from lfx.components.input_output.chat import ChatInput
+
+    owner_id = uuid4()
+    caller_id = uuid4()
+    flow_data = {
+        "nodes": [ChatInput(_id="ChatInput-execution-principal").to_frontend_node()],
+        "edges": [],
+    }
+    flow = _flow(owner_id=owner_id, data=copy.deepcopy(flow_data))
+    captured: dict = {}
+
+    async def fake_run_graph_internal(**kwargs):
+        captured.update(kwargs)
+        return [], "my-session-1"
+
+    session = SimpleNamespace(in_transaction=lambda: False, commit=AsyncMock())
+    session_service = SimpleNamespace(load_session=AsyncMock(return_value=(None, None)))
+    monkeypatch.setattr(endpoints, "ensure_flow_permission", AsyncMock())
+    monkeypatch.setattr(endpoints, "get_session_service", lambda: session_service)
+    monkeypatch.setattr(endpoints, "run_graph_internal", fake_run_graph_internal)
+    monkeypatch.setattr(endpoints, "get_task_service", lambda: SimpleNamespace(fire_and_forget_task=AsyncMock()))
+    monkeypatch.setattr(endpoints, "get_memory_base_service", lambda: SimpleNamespace(on_flow_output=MagicMock()))
+
+    response = await endpoints.experimental_run_flow(
+        session=session,
+        flow=flow,
+        inputs=None,
+        outputs=None,
+        tweaks=None,
+        stream=False,
+        session_id="my-session-1",
+        api_key_user=SimpleNamespace(id=caller_id),
+    )
+
+    assert response.status_code == 200
+    session_service.load_session.assert_awaited_once_with("my-session-1", flow_id=str(flow.id))
+    built_graph = captured["graph"]
+    assert built_graph.flow_id == str(flow.id)
+    assert built_graph.user_id == str(caller_id)
+    assert captured["session_id"] == "my-session-1"
+
+
 async def test_v1_advanced_non_owner_tweaks_are_hidden_as_not_found(monkeypatch: pytest.MonkeyPatch) -> None:
     from langflow.api.v1 import endpoints
 
