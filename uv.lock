@@ -1438,6 +1438,18 @@ wheels = [
 ]
 
 [[package]]
+name = "bhived"
+version = "0.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/55/3f/4667f3f07e2afa5b6ba025b2268337887c9ee2356f5360531379156efce6/bhived-0.1.0.tar.gz", hash = "sha256:6a0e2d81414e4e075963bf4ef492593df3f0443480a81a49c128941fb43057be", size = 33885, upload-time = "2026-11-03T09:56:18.616Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/df/22/7a882a68e7749afd2cd0a22bb23e2b04e7bd37d21268be8cdc9b5f64eb6e/bhived-0.1.0-py3-none-any.whl", hash = "sha256:8c1494baeb9dfc94bd6685f675eaee97663bea3cadc9f3daa7159fb753048368", size = 31657, upload-time = "2026-11-03T09:56:17.367Z" },
+]
+
+[[package]]
 name = "bidict"
 version = "0.23.1"
 source = { registry = "https://pypi.org/simple" }
@@ -10029,6 +10041,7 @@ all = [
     { name = "apify-client" },
     { name = "assemblyai" },
     { name = "atlassian-python-api" },
+    { name = "bhived" },
     { name = "cleanlab-tlm" },
     { name = "clickhouse-connect" },
     { name = "composio" },
@@ -10098,6 +10111,7 @@ all-no-torch = [
     { name = "apify-client" },
     { name = "assemblyai" },
     { name = "atlassian-python-api" },
+    { name = "bhived" },
     { name = "cleanlab-tlm" },
     { name = "clickhouse-connect" },
     { name = "composio" },
@@ -10170,6 +10184,9 @@ azure = [
 baidu = [
     { name = "langchain-community" },
     { name = "qianfan" },
+]
+bhived = [
+    { name = "bhived" },
 ]
 bing = [
     { name = "langchain-community" },
@@ -10394,6 +10411,7 @@ requires-dist = [
     { name = "apify-client", marker = "extra == 'apify'", specifier = ">=1.8.1" },
     { name = "assemblyai", marker = "extra == 'assemblyai'", specifier = ">=0.33.0,<1.0.0" },
     { name = "atlassian-python-api", marker = "extra == 'confluence'", specifier = "==3.41.16" },
+    { name = "bhived", marker = "extra == 'bhived'", specifier = ">=0.1.0,<0.2" },
     { name = "cleanlab-tlm", marker = "extra == 'cleanlab'", specifier = ">=1.1.2,<2.0.0" },
     { name = "clickhouse-connect", marker = "extra == 'clickhouse'", specifier = "==0.7.19" },
     { name = "composio", marker = "extra == 'composio'", specifier = "==0.16.0" },
@@ -10472,6 +10490,8 @@ requires-dist = [
     { name = "lfx-bundles", extras = ["assemblyai"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["baidu"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["baidu"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["bhived"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["bhived"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["bing"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["bing"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["cleanlab"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
@@ -10644,7 +10664,7 @@ requires-dist = [
     { name = "youtube-transcript-api", marker = "extra == 'youtube'", specifier = ">=1.0.0,<2.0.0" },
     { name = "zep-python", marker = "extra == 'zep'", specifier = "==2.0.2" },
 ]
-provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "baidu", "bing", "chroma", "cleanlab", "clickhouse", "cloudflare", "codeagents", "cometapi", "composio", "confluence", "couchbase", "cuga", "deepseek", "elastic", "faiss", "figranium", "funasr", "git", "glean", "google", "groq", "homeassistant", "huggingface", "icosacomputing", "jigsawstack", "keenable", "langwatch", "litellm", "lmstudio", "maritalk", "mem0", "milvus", "mistral", "mongodb", "mrscraper", "needle", "notdiamond", "notion", "novita", "nvidia", "olivya", "ollama", "openrouter", "orcarouter", "perplexity", "pgvector", "pinecone", "plivo", "qdrant", "redis", "sambanova", "scrapegraph", "searchapi", "serpapi", "spider", "supabase", "tavily", "twelvelabs", "unstructured", "upstash", "vectara", "vertexai", "vlmrun", "weaviate", "wikipedia", "wolframalpha", "xai", "yahoosearch", "youtube", "zep", "all", "all-no-torch"]
+provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "baidu", "bhived", "bing", "chroma", "cleanlab", "clickhouse", "cloudflare", "codeagents", "cometapi", "composio", "confluence", "couchbase", "cuga", "deepseek", "elastic", "faiss", "figranium", "funasr", "git", "glean", "google", "groq", "homeassistant", "huggingface", "icosacomputing", "jigsawstack", "keenable", "langwatch", "litellm", "lmstudio", "maritalk", "mem0", "milvus", "mistral", "mongodb", "mrscraper", "needle", "notdiamond", "notion", "novita", "nvidia", "olivya", "ollama", "openrouter", "orcarouter", "perplexity", "pgvector", "pinecone", "plivo", "qdrant", "redis", "sambanova", "scrapegraph", "searchapi", "serpapi", "spider", "supabase", "tavily", "twelvelabs", "unstructured", "upstash", "vectara", "vertexai", "vlmrun", "weaviate", "wikipedia", "wolframalpha", "xai", "yahoosearch", "youtube", "zep", "all", "all-no-torch"]
 
 [[package]]
 name = "lfx-cohere"

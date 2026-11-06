@@ -17,6 +17,7 @@ model). Covers:
 from __future__ import annotations
 
 import importlib
+import importlib.util
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -141,6 +142,17 @@ def test_root_registers_each_provider_at_official(tmp_path: Path) -> None:
                 "KeenableFetchComponent",
                 "KeenableSearchComponent",
             },
+        ),
+        pytest.param(
+            "bhived",
+            {
+                "BhivedSearchComponent",
+                "BhivedWriteComponent",
+            },
+            # Its modules import the bhived SDK, which only the lfx-bundles[bhived] extra installs.
+            marks=pytest.mark.skipif(
+                importlib.util.find_spec("bhived") is None, reason="needs the lfx-bundles[bhived] extra"
+            ),
         ),
     ],
 )
