@@ -605,6 +605,7 @@ module.exports = {
             "Components/bundles-redis",
             "Components/bundles-sambanova",
             "Components/bundles-searchapi",
+            "Components/bundles-sequenzy",
             "Components/bundles-serper",
             "Components/bundles-serpingapi",
             "Components/bundles-serply",

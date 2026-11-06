@@ -142,6 +142,17 @@ def test_root_registers_each_provider_at_official(tmp_path: Path) -> None:
                 "KeenableSearchComponent",
             },
         ),
+        (
+            "sequenzy",
+            {
+                "SequenzyAddSubscriberComponent",
+                "SequenzyGetSubscriberComponent",
+                "SequenzyListCampaignsComponent",
+                "SequenzySendEmailComponent",
+                "SequenzyTagSubscriberComponent",
+                "SequenzyTriggerEventComponent",
+            },
+        ),
     ],
 )
 def test_checked_in_provider_loads_with_production_bundle_loader(
