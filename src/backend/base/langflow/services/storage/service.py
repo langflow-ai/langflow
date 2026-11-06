@@ -123,13 +123,16 @@ class StorageService(Service):
         raise NotImplementedError
 
     @abstractmethod
-    def get_file_stream(self, flow_id: str, file_name: str, chunk_size: int = 8192) -> AsyncIterator[bytes]:
+    def get_file_stream(
+        self, flow_id: str, file_name: str, chunk_size: int = 8192, *, offset: int = 0
+    ) -> AsyncIterator[bytes]:
         """Retrieve a file as a stream of chunks.
 
         Args:
             flow_id: The flow/user identifier for namespacing
             file_name: The name of the file to retrieve
             chunk_size: Size of chunks to yield (default: 8192 bytes)
+            offset: Where in the file to start, without reading what comes before it
 
         Yields:
             bytes: Chunks of the file content

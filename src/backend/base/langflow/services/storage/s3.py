@@ -422,13 +422,16 @@ class S3StorageService(StorageService):
         else:
             return content
 
-    async def get_file_stream(self, flow_id: str, file_name: str, chunk_size: int = 8192) -> AsyncIterator[bytes]:
+    async def get_file_stream(
+        self, flow_id: str, file_name: str, chunk_size: int = 8192, *, offset: int = 0
+    ) -> AsyncIterator[bytes]:
         """Retrieve a file from S3 as a stream.
 
         Args:
             flow_id: The flow/user identifier for namespacing
             file_name: The name of the file to retrieve
             chunk_size: Size of chunks to yield (default: 8192 bytes)
+            offset: Where in the file to start; S3 sends only the bytes from there on
 
         Yields:
             bytes: Chunks of the file content
@@ -444,7 +447,8 @@ class S3StorageService(StorageService):
             # download can make as long as it likes. The shared client's 10 connections serve
             # every operation on this loop, so a stream gets a client of its own.
             async with self._get_client(shared=False) as s3_client:
-                response = await s3_client.get_object(Bucket=self.bucket_name, Key=key)
+                extra = {"Range": f"bytes={offset}-"} if offset else {}
+                response = await s3_client.get_object(Bucket=self.bucket_name, Key=key, **extra)
                 body = response["Body"]
 
                 try:

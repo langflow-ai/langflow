@@ -475,3 +475,41 @@ class TestSaveUploadStream:
         service = _failing_client_service(mock_session_service, mock_settings_service, NoBucketError("no bucket"))
         with pytest.raises(FileNotFoundError, match="does not exist"):
             await service.save_upload_stream("ns", "a.pdf", _chunks(b"ab"))
+
+
+class TestStreamFromAnOffset:
+    """A resumed copy must not download again what it has already sent."""
+
+    @staticmethod
+    def _service(mock_session_service, mock_settings_service, asked):
+        from contextlib import asynccontextmanager
+
+        class Body:
+            async def iter_chunks(self, _chunk_size):
+                yield b"tail"
+
+        class Client:
+            async def get_object(self, **kwargs):
+                asked.append(kwargs)
+                return {"Body": Body()}
+
+        service = S3StorageService(mock_session_service, mock_settings_service)
+
+        @asynccontextmanager
+        async def _client(**_kwargs):
+            yield Client()
+
+        service._get_client = _client
+        return service
+
+    async def test_it_asks_s3_only_for_the_rest(self, mock_session_service, mock_settings_service):
+        asked = []
+        service = self._service(mock_session_service, mock_settings_service, asked)
+        assert [c async for c in service.get_file_stream("ns", "a.pdf", offset=44)] == [b"tail"]
+        assert asked[0]["Range"] == "bytes=44-"
+
+    async def test_without_an_offset_it_asks_for_the_whole_file(self, mock_session_service, mock_settings_service):
+        asked = []
+        service = self._service(mock_session_service, mock_settings_service, asked)
+        assert [c async for c in service.get_file_stream("ns", "a.pdf")] == [b"tail"]
+        assert "Range" not in asked[0]
