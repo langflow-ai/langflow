@@ -6,7 +6,16 @@ from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.custom.custom_component.component import Component
 from lfx.custom.custom_component.custom_component import CustomComponent
 from lfx.custom.utils import update_component_build_config
-from lfx.inputs.inputs import MultilineSecretInput, SecretStrInput, StrInput
+from lfx.inputs.inputs import (
+    AuthInput,
+    ConnectionInput,
+    ConnectionRefInput,
+    FileInput,
+    McpInput,
+    MultilineSecretInput,
+    SecretStrInput,
+    StrInput,
+)
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
 from lfx.template import Output
@@ -266,4 +275,46 @@ def test_trace_redacts_runtime_and_metadata_secrets():
     assert component.get_trace_as_metadata() == {
         "runtime_label": "metadata-safe-label",
         "metadata_secret": "**********",
+    }
+
+
+def test_trace_masks_credential_field_types():
+    class TraceComponent(Component):
+        inputs = [
+            AuthInput(name="auth", value="https://auth.example.com/?code=metadata-sentinel"),
+            ConnectionInput(
+                name="connection",
+                value="postgresql://app:metadata-sentinel@db/app",  # pragma: allowlist secret
+            ),
+            McpInput(name="mcp_server", value={"name": "server", "config": {"env": {"TOKEN": "metadata-sentinel"}}}),
+            # A connection reference is a non-secret handle and a file path is not a credential.
+            ConnectionRefInput(name="connection_ref", provider="github", value="github/metadata"),
+            FileInput(name="path", value="/data/metadata.txt"),
+            StrInput(name="label", value="metadata-label"),
+        ]
+
+    component = TraceComponent()
+    component.set_attributes(
+        {
+            "auth": "https://auth.example.com/?code=runtime-sentinel",
+            "connection": "postgresql://app:runtime-sentinel@db/app",  # pragma: allowlist secret
+            "mcp_server": {"name": "server", "config": {"headers": {"Authorization": "Bearer runtime-sentinel"}}},
+            "connection_ref": "github/runtime",
+            "path": "/data/runtime.txt",
+            "label": "runtime-label",
+        }
+    )
+
+    masked = {"auth": "**********", "connection": "**********", "mcp_server": "**********"}
+    assert component.get_trace_as_inputs() == {
+        **masked,
+        "connection_ref": "github/runtime",
+        "path": "/data/runtime.txt",
+        "label": "runtime-label",
+    }
+    assert component.get_trace_as_metadata() == {
+        **masked,
+        "connection_ref": "github/metadata",
+        "path": "/data/metadata.txt",
+        "label": "metadata-label",
     }
