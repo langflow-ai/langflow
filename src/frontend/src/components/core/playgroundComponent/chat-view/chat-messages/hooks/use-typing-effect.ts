@@ -52,11 +52,12 @@ export function useTypingEffect({
     }
 
     setIsTyping(true);
+    const characters = Array.from(text);
 
     const timer = setInterval(() => {
-      if (indexRef.current < text.length) {
-        const nextIndex = Math.min(indexRef.current + speed, text.length);
-        setDisplayedText(text.slice(0, nextIndex));
+      if (indexRef.current < characters.length) {
+        const nextIndex = Math.min(indexRef.current + speed, characters.length);
+        setDisplayedText(characters.slice(0, nextIndex).join(""));
         indexRef.current = nextIndex;
       } else {
         setIsTyping(false);
