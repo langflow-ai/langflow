@@ -974,3 +974,19 @@ async def test_tool_description_tracks_selection_without_accumulating_names():
     assert "first-base" in first[0].description
     assert "second-base" in second[0].description
     assert "first-base" not in second[0].description
+
+
+async def test_toolkit_uses_current_selection_with_saved_tool_metadata():
+    """Saved tool descriptions must not bring back a previous memory source."""
+    from lfx.schema.dataframe import DataFrame
+
+    component = _make_component(flow_id=uuid.uuid4(), session_id="session", selected="old-base")
+    component.set(tool_mode=True)
+    old_tools = await component._get_tools()
+    component.tools_metadata = DataFrame([component._build_tool_data(tool) for tool in old_tools])
+    component.memory_base = "current-base"
+    tools = await component.to_toolkit()
+    assert tools
+    for tool in tools:
+        assert "current-base" in tool.description
+        assert "old-base" not in tool.description

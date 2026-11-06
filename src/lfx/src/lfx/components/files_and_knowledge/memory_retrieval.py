@@ -141,6 +141,19 @@ class MemoryBaseComponent(Component):
                     tool.metadata["display_description"] = tool.description
         return tools
 
+    def _update_tools_with_metadata(self, tools, metadata):
+        """Refresh generated descriptions while preserving user-authored overrides."""
+        if metadata is not None:
+            metadata = metadata.copy(deep=True)
+            for index, row in metadata.iterrows():
+                if row.get("description") != row.get("display_description"):
+                    continue
+                for tool in tools:
+                    if tool.tags and row.get("tags") == tool.tags:
+                        metadata.at[index, "description"] = tool.description
+                        break
+        return super()._update_tools_with_metadata(tools, metadata)
+
     async def _policy_embedding_selection(self, selected: str) -> tuple[str, str]:
         """Resolve an attached Memory Base's non-secret embedding metadata."""
         flow_id = _coerce_uuid(self._get_runtime_or_frontend_node_attr("flow_id"))
