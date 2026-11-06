@@ -1,4 +1,4 @@
-import { renderHook } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import useFileDrop from "../use-on-file-drop";
 
 const mockSaveFlow = jest.fn().mockResolvedValue(undefined);
@@ -115,5 +115,38 @@ describe("useFileDrop.onDrop (drag-and-drop flow between projects)", () => {
     );
     expect(mockSetFolderDragging).toHaveBeenCalledWith(false);
     expect(mockSetFolderIdDragging).toHaveBeenCalledWith("");
+  });
+
+  it("shows why a dropped flow was rejected by validation", () => {
+    const { result } = renderHook(() => useFileDrop("project-B"));
+    const file = new File(["{}"], "flow.json", { type: "application/json" });
+    const event = {
+      dataTransfer: {
+        getData: () => "",
+        types: ["Files"],
+        files: [file],
+      },
+      preventDefault: jest.fn(),
+    } as unknown as React.DragEvent<HTMLDivElement>;
+
+    act(() => result.current.onDrop(event, "project-B"));
+    expect(mockUploadFlowToFolder).toHaveBeenCalledWith(
+      { flows: expect.any(FormData), folderId: "project-B" },
+      expect.objectContaining({ onError: expect.any(Function) }),
+    );
+    const mutationOptions = mockUploadFlowToFolder.mock.calls[0][1];
+    const message =
+      "A flow can have only one trigger. Remove the extra triggers and try again.";
+    act(() => {
+      mutationOptions.onError({
+        message: "Request failed with status code 422",
+        response: { status: 422, data: { detail: [{ msg: message }] } },
+      });
+    });
+
+    expect(mockSetErrorData).toHaveBeenCalledWith({
+      title: "errors.upload",
+      list: [message],
+    });
   });
 });
