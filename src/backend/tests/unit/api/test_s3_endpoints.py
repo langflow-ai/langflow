@@ -33,6 +33,7 @@ class TestS3FileEndpoints:
         service.get_file = AsyncMock(return_value=b"test file content")
         service.get_file_stream = MagicMock(return_value=iter([b"chunk1", b"chunk2", b"chunk3"]))
         service.save_file = AsyncMock()
+        service.save_upload_stream = AsyncMock()
         service.delete_file = AsyncMock()
         service.get_file_size = AsyncMock(return_value=1024)
         return service
@@ -246,7 +247,7 @@ class TestS3FileEndpoints:
 
                 await save_file_routine(mock_file, mock_storage_service, mock_user, file_name="upload.txt")
 
-                # Verify storage service was called
-                mock_storage_service.save_file.assert_called_once_with(
-                    flow_id="user-user_123", file_name="upload.txt", data=b"file content", append=False
-                )
+                # Verify storage service was called: streamed, never as one whole body
+                mock_storage_service.save_file.assert_not_called()
+                mock_storage_service.save_upload_stream.assert_called_once()
+                assert mock_storage_service.save_upload_stream.call_args.args[:2] == ("user-user_123", "upload.txt")

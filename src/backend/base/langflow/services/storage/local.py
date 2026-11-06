@@ -239,7 +239,9 @@ class LocalStorageService(StorageService):
         logger.debug(f"File {file_name} retrieved successfully from flow {flow_id}.")
         return content
 
-    async def get_file_stream(self, flow_id: str, file_name: str, chunk_size: int = 8192) -> AsyncIterator[bytes]:
+    async def get_file_stream(
+        self, flow_id: str, file_name: str, chunk_size: int = 8192, *, offset: int = 0
+    ) -> AsyncIterator[bytes]:
         """Retrieve a file from storage as a stream."""
         file_path = await self._validated_path(flow_id, file_name)
         if not await file_path.exists():
@@ -248,6 +250,7 @@ class LocalStorageService(StorageService):
             raise FileNotFoundError(msg)
 
         async with aiofiles.open(str(file_path), "rb") as f:
+            await f.seek(offset)
             while True:
                 chunk = await f.read(chunk_size)
                 if not chunk:

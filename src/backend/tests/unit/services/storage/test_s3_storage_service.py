@@ -397,3 +397,119 @@ class TestMd5Label:
 
         with pytest.raises(ValueError, match="md5"):
             await service.create_upload_link("ns", "a.pdf", md5=bad)
+
+
+class _NetworkError(Exception):
+    """What botocore raises when the network fails: a ``response`` attribute that is None."""
+
+    response = None
+
+
+def _failing_client_service(mock_session_service, mock_settings_service, error):
+    from contextlib import asynccontextmanager
+
+    class Client:
+        def __getattr__(self, name):
+            async def fail(**_kwargs):
+                raise error
+
+            return fail
+
+    service = S3StorageService(mock_session_service, mock_settings_service)
+
+    @asynccontextmanager
+    async def _client(**_kwargs):
+        yield Client()
+
+    service._get_client = _client
+    return service
+
+
+class TestNetworkErrorsKeepTheirType:
+    """A network error has no S3 error code to read. It must surface, not crash the handler reading it."""
+
+    @pytest.mark.parametrize(
+        "call",
+        [
+            lambda service: service.get_file("ns", "a.pdf"),
+            lambda service: service.get_file_size("ns", "a.pdf"),
+            lambda service: service.get_file_md5("ns", "a.pdf"),
+            lambda service: service.move_file("source", "target", "a.pdf"),
+        ],
+        ids=["get_file", "get_file_size", "get_file_md5", "move_file"],
+    )
+    async def test_a_call_raises_the_network_error(self, mock_session_service, mock_settings_service, call):
+        service = _failing_client_service(mock_session_service, mock_settings_service, _NetworkError("no route"))
+        with pytest.raises(_NetworkError):
+            await call(service)
+
+    async def test_a_stream_raises_the_network_error(self, mock_session_service, mock_settings_service):
+        service = _failing_client_service(mock_session_service, mock_settings_service, _NetworkError("no route"))
+        with pytest.raises(_NetworkError):
+            async for _ in service.get_file_stream("ns", "a.pdf"):
+                pass
+
+    async def test_a_missing_key_is_still_file_not_found(self, mock_session_service, mock_settings_service):
+        class MissingKeyError(Exception):
+            response = {"Error": {"Code": "NoSuchKey"}}
+
+        service = _failing_client_service(mock_session_service, mock_settings_service, MissingKeyError("gone"))
+        with pytest.raises(FileNotFoundError):
+            await service.get_file_size("ns", "a.pdf")
+
+
+class TestSaveUploadStream:
+    async def test_it_streams_and_labels_the_file(self, mock_session_service, mock_settings_service):
+        client = _RecordingS3Client()
+        service = _recording_service(mock_session_service, mock_settings_service, client)
+
+        written = await service.save_upload_stream("ns", "a.pdf", _chunks(b"ab", b"cd"))
+
+        assert written == 4
+        assert client.named("put_object")[0]["Body"] == b"abcd"
+
+    async def test_a_missing_bucket_reads_as_save_file_reads_it(self, mock_session_service, mock_settings_service):
+        class NoBucketError(Exception):
+            response = {"Error": {"Code": "NoSuchBucket", "Message": "no bucket"}}
+
+        service = _failing_client_service(mock_session_service, mock_settings_service, NoBucketError("no bucket"))
+        with pytest.raises(FileNotFoundError, match="does not exist"):
+            await service.save_upload_stream("ns", "a.pdf", _chunks(b"ab"))
+
+
+class TestStreamFromAnOffset:
+    """A resumed copy must not download again what it has already sent."""
+
+    @staticmethod
+    def _service(mock_session_service, mock_settings_service, asked):
+        from contextlib import asynccontextmanager
+
+        class Body:
+            async def iter_chunks(self, _chunk_size):
+                yield b"tail"
+
+        class Client:
+            async def get_object(self, **kwargs):
+                asked.append(kwargs)
+                return {"Body": Body()}
+
+        service = S3StorageService(mock_session_service, mock_settings_service)
+
+        @asynccontextmanager
+        async def _client(**_kwargs):
+            yield Client()
+
+        service._get_client = _client
+        return service
+
+    async def test_it_asks_s3_only_for_the_rest(self, mock_session_service, mock_settings_service):
+        asked = []
+        service = self._service(mock_session_service, mock_settings_service, asked)
+        assert [c async for c in service.get_file_stream("ns", "a.pdf", offset=44)] == [b"tail"]
+        assert asked[0]["Range"] == "bytes=44-"
+
+    async def test_without_an_offset_it_asks_for_the_whole_file(self, mock_session_service, mock_settings_service):
+        asked = []
+        service = self._service(mock_session_service, mock_settings_service, asked)
+        assert [c async for c in service.get_file_stream("ns", "a.pdf")] == [b"tail"]
+        assert "Range" not in asked[0]

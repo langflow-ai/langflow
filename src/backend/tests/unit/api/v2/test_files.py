@@ -1668,3 +1668,95 @@ class TestStorageFailureHandling:
             result["message"]
             == "2 files deleted successfully, 1 files kept in database due to transient storage errors (can retry)"
         )
+
+
+class _Upload:
+    """An upload that records how much each read asks for, as a large file cares about."""
+
+    def __init__(self, data: bytes):
+        self.filename, self._data, self.asked = "upload.bin", data, []
+
+    async def read(self, size: int = -1) -> bytes:
+        self.asked.append(size)
+        size = len(self._data) if size < 0 else size
+        piece, self._data = self._data[:size], self._data[size:]
+        return piece
+
+
+def _local_storage(tmp_path):
+    from unittest.mock import MagicMock
+
+    from langflow.services.storage.local import LocalStorageService
+
+    settings_service = MagicMock()
+    settings_service.settings.config_dir = str(tmp_path)
+    return LocalStorageService(MagicMock(), settings_service)
+
+
+async def _saved(tmp_path, data: bytes, *, append: bool = False, already: bytes | None = None):
+    from types import SimpleNamespace
+
+    from langflow.api.v2.files import save_file_routine
+
+    storage = _local_storage(tmp_path)
+    if already is not None:
+        await storage.save_file("ns", "upload.bin", already)
+    upload = _Upload(data)
+    await save_file_routine(
+        upload, storage, SimpleNamespace(id="u1"), file_name="upload.bin", namespace="ns", append=append
+    )
+    return upload, await storage.get_file("ns", "upload.bin")
+
+
+async def test_a_large_upload_is_never_read_whole(tmp_path):
+    """Before: one read of the whole body, which is what ran a 4 GiB Editor out of memory."""
+    from langflow.api.v2.files import UPLOAD_READ_CHUNK
+
+    data = b"x" * (UPLOAD_READ_CHUNK * 2 + 5)
+
+    upload, stored = await _saved(tmp_path, data)
+
+    assert stored == data
+    assert all(0 < size <= UPLOAD_READ_CHUNK for size in upload.asked), upload.asked
+
+
+async def test_an_empty_upload_still_stores_a_file(tmp_path):
+    _, stored = await _saved(tmp_path, b"")
+    assert stored == b""
+
+
+async def test_an_upload_replaces_what_was_there(tmp_path):
+    _, stored = await _saved(tmp_path, b"new", already=b"older and longer")
+    assert stored == b"new"
+
+
+async def test_appending_still_adds_to_the_end(tmp_path):
+    _, stored = await _saved(tmp_path, b"new", append=True, already=b"old")
+    assert stored == b"oldnew"
+
+
+async def test_a_storage_failure_on_upload_names_no_address():
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock, MagicMock
+
+    from fastapi import HTTPException
+    from langflow.api.v2.files import upload_user_file
+
+    url = "https://bucket.s3.amazonaws.com/files/user-1/upload.bin"
+    storage = MagicMock()
+    storage.save_upload_stream = AsyncMock(side_effect=RuntimeError(f"Could not connect to the endpoint URL: {url}"))
+    session = MagicMock()
+    session.exec = AsyncMock(return_value=MagicMock(all=list, first=lambda: None))
+    upload = SimpleNamespace(filename="upload.bin", size=1, read=AsyncMock(return_value=b""))
+
+    with pytest.raises(HTTPException) as raised:
+        await upload_user_file(
+            file=upload,
+            session=session,
+            current_user=SimpleNamespace(id="u1", is_superuser=False),
+            storage_service=storage,
+            settings_service=SimpleNamespace(settings=SimpleNamespace(max_file_size_upload=100)),
+        )
+
+    assert raised.value.status_code == 500
+    assert "amazonaws" not in str(raised.value.detail)

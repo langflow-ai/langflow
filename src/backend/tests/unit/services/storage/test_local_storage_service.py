@@ -471,3 +471,9 @@ class TestLocalStorageServiceEdgeCases:
 
         listed = await local_storage_service.list_files(flow_id)
         assert len(listed) == num_files
+
+
+async def test_a_stream_can_start_part_way_through(local_storage_service):
+    await local_storage_service.save_file("ns", "a.bin", b"0123456789")
+    chunks = [chunk async for chunk in local_storage_service.get_file_stream("ns", "a.bin", 4, offset=6)]
+    assert b"".join(chunks) == b"6789"

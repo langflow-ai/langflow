@@ -13,7 +13,7 @@ import hashlib
 import os
 import re
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NoReturn
 
 from langflow.logging.logger import logger
 
@@ -30,6 +30,12 @@ _ETAG_NOT_MD5_ENCRYPTION = {"aws:kms", "aws:kms:dsse"}
 # service stores, so the checksum is known even where the ETag is not one.
 MD5_METADATA_KEY = "md5"
 _MD5_PATTERN = re.compile(r"[0-9a-f]{32}")
+
+
+def _error_code(error: Exception) -> str | None:
+    """The S3 error code a failed call carries; none for a network error, whose ``response`` is None."""
+    response = getattr(error, "response", None)
+    return response.get("Error", {}).get("Code") if isinstance(response, dict) else None
 
 
 def _md5_hex(data: bytes) -> str:
@@ -356,28 +362,32 @@ class S3StorageService(StorageService):
 
             await logger.ainfo(f"File {file_name} saved successfully to S3: s3://{self.bucket_name}/{key}")
 
-        except Exception as e:
-            error_msg = str(e)
-            error_code = None
+        except Exception as e:  # noqa: BLE001 - _raise_save_error always raises
+            self._raise_save_error(e, flow_id, file_name)
 
-            if hasattr(e, "response") and isinstance(e.response, dict):
-                error_info = e.response.get("Error", {})
-                error_code = error_info.get("Code")
-                error_msg = error_info.get("Message", str(e))
+    def _raise_save_error(self, e: Exception, flow_id: str, file_name: str) -> NoReturn:
+        """Raise what a failed write means to a caller: a missing bucket, bad credentials, or a failure."""
+        error_msg = str(e)
+        error_code = None
 
-            logger.exception(f"Error saving file {file_name} to S3 in flow {flow_id}: {error_msg}")
+        if hasattr(e, "response") and isinstance(e.response, dict):
+            error_info = e.response.get("Error", {})
+            error_code = error_info.get("Code")
+            error_msg = error_info.get("Message", str(e))
 
-            if error_code == "NoSuchBucket":
-                msg = f"S3 bucket '{self.bucket_name}' does not exist"
-                raise FileNotFoundError(msg) from e
-            if error_code == "AccessDenied":
-                msg = "Access denied to S3 bucket. Please check your AWS credentials and bucket permissions"
-                raise PermissionError(msg) from e
-            if error_code == "InvalidAccessKeyId":
-                msg = "Invalid AWS credentials. Please check your AWS access key and secret key"
-                raise PermissionError(msg) from e
-            msg = f"Failed to save file to S3: {error_msg}"
-            raise RuntimeError(msg) from e
+        logger.exception(f"Error saving file {file_name} to S3 in flow {flow_id}: {error_msg}")
+
+        if error_code == "NoSuchBucket":
+            msg = f"S3 bucket '{self.bucket_name}' does not exist"
+            raise FileNotFoundError(msg) from e
+        if error_code == "AccessDenied":
+            msg = "Access denied to S3 bucket. Please check your AWS credentials and bucket permissions"
+            raise PermissionError(msg) from e
+        if error_code == "InvalidAccessKeyId":
+            msg = "Invalid AWS credentials. Please check your AWS access key and secret key"
+            raise PermissionError(msg) from e
+        msg = f"Failed to save file to S3: {error_msg}"
+        raise RuntimeError(msg) from e
 
     async def get_file(self, flow_id: str, file_name: str) -> bytes:
         """Retrieve a file from S3.
@@ -402,7 +412,7 @@ class S3StorageService(StorageService):
 
             logger.debug(f"File {file_name} retrieved successfully from S3: s3://{self.bucket_name}/{key}")
         except Exception as e:
-            if hasattr(e, "response") and e.response.get("Error", {}).get("Code") == "NoSuchKey":
+            if _error_code(e) == "NoSuchKey":
                 await logger.awarning(f"File {file_name} not found in S3 flow {flow_id}")
                 msg = f"File not found: {file_name}"
                 raise FileNotFoundError(msg) from e
@@ -412,13 +422,16 @@ class S3StorageService(StorageService):
         else:
             return content
 
-    async def get_file_stream(self, flow_id: str, file_name: str, chunk_size: int = 8192) -> AsyncIterator[bytes]:
+    async def get_file_stream(
+        self, flow_id: str, file_name: str, chunk_size: int = 8192, *, offset: int = 0
+    ) -> AsyncIterator[bytes]:
         """Retrieve a file from S3 as a stream.
 
         Args:
             flow_id: The flow/user identifier for namespacing
             file_name: The name of the file to retrieve
             chunk_size: Size of chunks to yield (default: 8192 bytes)
+            offset: Where in the file to start; S3 sends only the bytes from there on
 
         Yields:
             bytes: Chunks of the file content
@@ -434,7 +447,8 @@ class S3StorageService(StorageService):
             # download can make as long as it likes. The shared client's 10 connections serve
             # every operation on this loop, so a stream gets a client of its own.
             async with self._get_client(shared=False) as s3_client:
-                response = await s3_client.get_object(Bucket=self.bucket_name, Key=key)
+                extra = {"Range": f"bytes={offset}-"} if offset else {}
+                response = await s3_client.get_object(Bucket=self.bucket_name, Key=key, **extra)
                 body = response["Body"]
 
                 try:
@@ -446,7 +460,7 @@ class S3StorageService(StorageService):
                             await body.close()
 
         except Exception as e:
-            if hasattr(e, "response") and e.response.get("Error", {}).get("Code") == "NoSuchKey":
+            if _error_code(e) == "NoSuchKey":
                 await logger.awarning(f"File {file_name} not found in S3 flow {flow_id}")
                 msg = f"File not found: {file_name}"
                 raise FileNotFoundError(msg) from e
@@ -602,7 +616,7 @@ class S3StorageService(StorageService):
                     **extra,
                 )
             except Exception as e:
-                if not (hasattr(e, "response") and e.response.get("Error", {}).get("Code") in ["NoSuchKey", "404"]):
+                if _error_code(e) not in ["NoSuchKey", "404"]:
                     logger.exception(f"Error moving file {file_name} from {source_namespace} to {target_namespace}")
                     raise
                 # Checked on this client rather than through _has_object, which would open a
@@ -610,8 +624,7 @@ class S3StorageService(StorageService):
                 try:
                     await s3_client.head_object(Bucket=self.bucket_name, Key=target_key)
                 except Exception as head_error:
-                    code = getattr(head_error, "response", {}).get("Error", {}).get("Code")
-                    if code not in ["NoSuchKey", "404"]:
+                    if _error_code(head_error) not in ["NoSuchKey", "404"]:
                         raise
                     msg = f"File not found: {file_name}"
                     raise FileNotFoundError(msg) from e
@@ -663,7 +676,7 @@ class S3StorageService(StorageService):
 
         except Exception as e:
             # Check if it's a 404 error
-            if hasattr(e, "response") and e.response.get("Error", {}).get("Code") in ["NoSuchKey", "404"]:
+            if _error_code(e) in ["NoSuchKey", "404"]:
                 await logger.awarning(f"File {file_name} not found in S3 flow {flow_id}")
                 msg = f"File not found: {file_name}"
                 raise FileNotFoundError(msg) from e
@@ -685,7 +698,7 @@ class S3StorageService(StorageService):
             async with self._get_client() as s3_client:
                 response = await s3_client.head_object(Bucket=self.bucket_name, Key=key)
         except Exception as e:
-            if hasattr(e, "response") and e.response.get("Error", {}).get("Code") in ["NoSuchKey", "404"]:
+            if _error_code(e) in ["NoSuchKey", "404"]:
                 msg = f"File not found: {file_name}"
                 raise FileNotFoundError(msg) from e
             raise
@@ -763,6 +776,13 @@ class S3StorageService(StorageService):
                     f"Stored {file_name} without its md5 label; it will be compared by size only until it is rewritten"
                 )
         return written
+
+    async def save_upload_stream(self, flow_id: str, file_name: str, chunks: AsyncIterator[bytes]) -> int:
+        """``save_file_stream``, failing the way ``save_file`` fails, as the upload routes expect."""
+        try:
+            return await self.save_file_stream(flow_id, file_name, chunks)
+        except Exception as e:  # noqa: BLE001 - _raise_save_error always raises
+            self._raise_save_error(e, flow_id, file_name)
 
     async def teardown(self) -> None:
         """Close the clients this service built.
