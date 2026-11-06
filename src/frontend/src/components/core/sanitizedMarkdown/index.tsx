@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Markdown from "react-markdown";
-import rehypeMathjax from "rehype-mathjax/browser";
+import rehypeKatex from "rehype-katex";
+import remarkMath from "remark-math";
+import "katex/dist/katex.min.css";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
@@ -64,11 +66,14 @@ export const SanitizedMarkdown = ({
       )}
       {!showWarning && (
         <Markdown
-          remarkPlugins={[remarkGfm]}
+          remarkPlugins={[
+            remarkGfm,
+            [remarkMath, { singleDollarTextMath: false }],
+          ]}
           rehypePlugins={[
-            rehypeMathjax,
             rehypeRaw,
             [rehypeSanitize, markdownSanitizeSchema],
+            [rehypeKatex, { trust: false, strict: "ignore" }],
           ]}
           className={cn(
             "markdown prose flex w-full max-w-full flex-col items-baseline text-sm font-normal word-break-break-word dark:prose-invert",

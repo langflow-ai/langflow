@@ -1,7 +1,9 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
 import Markdown from "react-markdown";
-import rehypeMathjax from "rehype-mathjax/browser";
+import rehypeKatex from "rehype-katex";
+import remarkMath from "remark-math";
+import "katex/dist/katex.min.css";
 import remarkGfm from "remark-gfm";
 import SimplifiedCodeTabComponent from "@/components/core/codeTabsComponent";
 import type { JSONValue } from "@/types/chat";
@@ -30,8 +32,11 @@ function FormattedOutput({ value }: { value: JSONValue }) {
     }
     return (
       <Markdown
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeMathjax]}
+        remarkPlugins={[
+          remarkGfm,
+          [remarkMath, { singleDollarTextMath: false }],
+        ]}
+        rehypePlugins={[[rehypeKatex, { trust: false, strict: "ignore" }]]}
         className="markdown prose max-w-full text-sm font-normal dark:prose-invert"
         components={{
           pre({ node, ...props }) {
