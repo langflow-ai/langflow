@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/utils/utils";
 import { useGetFlowId } from "../../../hooks/use-get-flow-id";
+import { useSessionLabels } from "../hooks/use-session-labels";
 import {
   type SessionsPagination,
   ShowMoreSessions,
@@ -38,6 +39,7 @@ export function ChatSessionsDropdown({
 }: ChatSessionsDropdownProps) {
   const { t } = useTranslation();
   const currentFlowId = useGetFlowId();
+  const sessionLabels = useSessionLabels(currentFlowId, sessions);
   const hasSessions: boolean = sessions.length > 0;
   const [internalOpen, setInternalOpen] = useState(false);
 
@@ -75,7 +77,9 @@ export function ChatSessionsDropdown({
                       setOpen(false);
                     }}
                   >
-                    {session === currentFlowId ? "Default Session" : session}
+                    {session === currentFlowId
+                      ? t("chat.defaultSession")
+                      : (sessionLabels.get(session) ?? session)}
                   </DropdownMenuItem>
                 ))}
                 <ShowMoreSessions pagination={sessionsPagination} asMenuItem />

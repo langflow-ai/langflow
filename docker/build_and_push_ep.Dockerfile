@@ -3,7 +3,7 @@
 
 ARG UV_VERSION=0.10.4
 ARG PYTHON_IMAGE=registry.access.redhat.com/ubi10/python-314-minimal
-ARG NODE_VERSION=24.21.0
+ARG NODE_VERSION=24.22.2
 
 ################################
 # BUILDER-BASE
@@ -37,6 +37,7 @@ RUN microdnf install -y tar xz \
     # deps for building python deps
     gcc gcc-c++ make python3.14-devel \
     git \
+    libxml2-devel libxslt-devel \
     # npm
     npm \
     # gcc
@@ -54,6 +55,7 @@ COPY ./src/lfx/pyproject.toml /app/src/lfx/pyproject.toml
 COPY ./src/sdk/README.md /app/src/sdk/README.md
 COPY ./src/sdk/pyproject.toml /app/src/sdk/pyproject.toml
 COPY ./scripts/ci/rewrite_langflow_base_constraint.sh /tmp/rewrite_langflow_base_constraint.sh
+COPY ./docker/build_lxml.sh /tmp/build_lxml.sh
 # Workspace bundles (LE-1023 pilot+): every directory under ``src/bundles``
 # is a uv workspace member, so each bundle's pyproject.toml must be present
 # for ``uv sync --no-install-project`` to resolve the workspace.  Copy the
@@ -105,7 +107,8 @@ COPY ./scripts/ci/install_release_wheels.py /tmp/install_release_wheels.py
 RUN python3.14 /tmp/install_release_wheels.py /tmp/release-artifacts \
     --python /app/.venv/bin/python \
     --mode main \
-    --frontend-source /app/src/backend/base/langflow/frontend
+    --frontend-source /app/src/backend/base/langflow/frontend \
+    && sh /tmp/build_lxml.sh
 
 ################################
 # RUNTIME
@@ -114,7 +117,9 @@ RUN python3.14 /tmp/install_release_wheels.py /tmp/release-artifacts \
 FROM ${PYTHON_IMAGE} AS runtime
 USER root
 RUN microdnf update -y \
-    && microdnf install -y curl git libpq gnupg xz tar shadow-utils \
+    && microdnf install -y curl git libpq libxml2 libxslt shadow-utils tar xz \
+    && useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data \
+    && microdnf remove -y shadow-utils \
     && microdnf clean all
 RUN python3.14 -m pip install --no-cache-dir --upgrade "pip==26.2.1"
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
@@ -133,9 +138,9 @@ RUN ARCH=$(uname -m) \
     | tar -xJ -C /usr/local --strip-components=1 \
     && sh /tmp/install_hardened_npm.sh \
     && rm -f /tmp/install_hardened_npm.sh
-RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
-
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
+COPY --chown=1000:0 ./scripts/ci/verify_lxml_runtime.py /tmp/verify_lxml_runtime.py
+RUN /app/.venv/bin/python /tmp/verify_lxml_runtime.py && rm /tmp/verify_lxml_runtime.py
 ENV PATH="/app/.venv/bin:$PATH"
 ENV HOME=/app/data
 ENV BASH_ENV="" \
