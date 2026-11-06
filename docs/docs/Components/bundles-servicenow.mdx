@@ -110,10 +110,13 @@ See [Configure connection OAuth](../Develop/connection-oauth.mdx) for shared set
 
 1. Open **Settings**, **Connections**, and **Add connection**.
 2. Select **ServiceNow**, enter a handle such as `work`, and enter a display name.
-3. Keep `langflow_table_read` selected and add `langflow_table_write` for create or update actions.
+3. Keep **Read tickets** (`langflow_table_read`) selected and add **Create and update tickets** (`langflow_table_write`) for write actions.
 4. Select **Continue** and complete ServiceNow consent.
 5. Add **ServiceNow: Read Ticket** to a flow, select the connection, and supply the table and `sys_id` of a visible ticket.
 6. Run the flow to check account access before configuring writes or triggers.
+
+ServiceNow connections are personal connections owned by the flow owner, so instance sharing is unavailable during setup.
+If an existing ServiceNow connection appears under **Instance**, create a personal connection and select its handle in the flow instead.
 
 The connection account label says **ServiceNow instance** because the token response does not verify a remote user's name.
 Langflow still checks connection ownership, the exact issuing instance, and the granted scopes.
@@ -159,7 +162,9 @@ Exceeding either bound stops advancement and reports the source limit.
 This preview has no trigger query filter, so select a smaller approved table or reduce source volume.
 
 ServiceNow applies its page limit before ACL filtering.
-The listener continues after short pages and requires `X-Total-Count` to prove an empty page has no remaining matches.
+The listener continues after short pages and requires `X-Total-Count: 0` to prove an empty successful page has no remaining matches.
+It also accepts the Table API's HTTP 404 `No Record found` response for a collection query as an exhausted page, even when that response omits the count header.
+Missing individual tickets and other missing-resource errors still fail the request.
 Configure permissions that can enumerate the selected table.
 An empty page with remaining matches fails the round instead of silently discarding tickets.
 

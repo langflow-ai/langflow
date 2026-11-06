@@ -69,6 +69,7 @@ from langflow.services.triggers.constants import (
     SLACK_PROVIDER_STATE_APP_ID,
     SLACK_TRIGGER_KINDS,
 )
+from langflow.services.triggers.error_codes import CodedTriggerError, TriggerErrorCode
 from langflow.services.triggers.listeners import connection_leases, replicas
 from langflow.services.triggers.listeners.adapters import (
     ListenerContext,
@@ -606,6 +607,11 @@ class ListenerSupervisor:
             # fresh adapter if this replica still owns a desired connection.
             if self.workers.get(worker.connection_id) is worker and worker.task is asyncio.current_task():
                 await self._drop(worker.connection_id, release_lease=False)
+        except CodedTriggerError as exc:
+            if exc.code == TriggerErrorCode.BACKGROUND_RUNS_NOT_ALLOWED.value:
+                await self._needs_reconnect(worker, exc)
+            else:
+                await self._failed(worker, exc)
         except _NEEDS_RECONNECT_ERRORS as exc:
             if is_local_configuration_failure(exc):
                 await self._failed(worker, exc)
@@ -1003,6 +1009,9 @@ class ListenerSupervisor:
             async with session_scope() as session:
                 consent_required = (
                     isinstance(exc, ConnectionNotAuthorizedError) and exc.reason == "non-interactive-opt-in-required"
+                ) or (
+                    isinstance(exc, CodedTriggerError)
+                    and exc.code == TriggerErrorCode.BACKGROUND_RUNS_NOT_ALLOWED.value
                 )
                 await mark_needs_reconnect(
                     session,

@@ -10,6 +10,7 @@ from lfx.integrations.errors import (
     InvalidRequestError,
     ProviderUnavailableError,
     RateLimitedError,
+    ResourceNotFoundError,
     ScopeMissingError,
 )
 from lfx.integrations.models import ConnectionAccount, ConnectionRef, ResolvedCredential
@@ -142,6 +143,71 @@ async def test_actual_components_send_bounded_requests(monkeypatch, component, m
         import json
 
         assert json.loads(seen[0].content) == values["fields"]
+
+
+@pytest.mark.asyncio
+async def test_search_without_matching_tickets_returns_empty_results(monkeypatch):
+    seen = []
+
+    def handler(request):
+        seen.append(request)
+        return httpx.Response(
+            404,
+            json={
+                "error": {"message": "No Record found", "detail": "Records matching query not found."},
+                "status": "failure",
+            },
+        )
+
+    node = ServiceNowSearchRecordsComponent()
+    node.set(table="incident", filter_field="number", filter_value="INC9999999", limit=10)
+    monkeypatch.setattr(ServiceNowSearchRecordsComponent, "resolve_connection", lambda *_: Lease())
+    node.transport = httpx.MockTransport(handler)
+
+    assert await node.search_records() == []
+    assert node.status == []
+    assert len(seen) == 1
+    assert seen[0].url.params["sysparm_query"] == "number=INC9999999^ORDERBYsys_id"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("method", "path"),
+    [
+        ("GET", f"/api/now/v1/table/incident/{ID}"),
+        ("POST", "/api/now/v1/table/incident"),
+        ("PATCH", f"/api/now/v1/table/incident/{ID}"),
+    ],
+)
+async def test_missing_individual_tickets_and_writes_still_raise(method, path):
+    async with ServiceNowClient(
+        Lease(),
+        transport=httpx.MockTransport(
+            lambda _: httpx.Response(404, json={"error": {"message": "No Record found"}, "status": "failure"})
+        ),
+    ) as client:
+        with pytest.raises(ResourceNotFoundError):
+            await client.request(method, path)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("payload", "headers"),
+    [
+        ({"error": {"message": "Table not found"}}, {}),
+        ({"error": "No Record found"}, {}),
+        ({"error": {"message": "No Record found"}}, {"X-Total-Count": "2"}),
+        ({"error": {"message": "No Record found"}}, {"X-Total-Count": "invalid"}),
+        (None, {}),
+    ],
+)
+async def test_unrecognized_collection_not_found_responses_still_raise(payload, headers):
+    async with ServiceNowClient(
+        Lease(),
+        transport=httpx.MockTransport(lambda _: httpx.Response(404, json=payload, headers=headers)),
+    ) as client:
+        with pytest.raises(ResourceNotFoundError):
+            await client.request("GET", "/api/now/v1/table/incident")
 
 
 @pytest.mark.asyncio

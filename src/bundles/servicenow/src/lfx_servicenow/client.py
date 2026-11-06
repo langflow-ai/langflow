@@ -92,6 +92,21 @@ class ServiceNowClient:
             if response.status_code == httpx.codes.FORBIDDEN:
                 raise ConnectionNotAuthorizedError(provider=PROVIDER, reason="provider")
             if response.status_code == httpx.codes.NOT_FOUND:
+                # Some instances return a 404 without count headers when a Table API
+                # collection query has no matches, including the final keyset page.
+                # A missing record or a different provider error must still fail.
+                if method == "GET" and len(parts) == _TABLE_PATH_PARTS:
+                    try:
+                        payload = response.json()
+                    except ValueError:
+                        payload = None
+                    error = payload.get("error") if isinstance(payload, dict) else None
+                    if (
+                        isinstance(error, dict)
+                        and error.get("message") == "No Record found"
+                        and response.headers.get("X-Total-Count") in {None, "0"}
+                    ):
+                        return {"result": [], "total_count": 0}
                 raise ResourceNotFoundError(provider=PROVIDER)
             if response.status_code == httpx.codes.TOO_MANY_REQUESTS:
                 try:

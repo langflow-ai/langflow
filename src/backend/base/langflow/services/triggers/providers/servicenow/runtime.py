@@ -209,6 +209,10 @@ PROVIDER = TriggerProvider(
             config_fields=("connection", "table", "delivery_mode"),
             required_scopes=(READ_SCOPE,),
             poll_mechanism="servicenow.poll",
+            hosted_unsupported_message=(
+                "ServiceNow triggers are not supported on hosted Langflow. "
+                "They require self-managed Langflow with a running listener."
+            ),
         )
         for kind, component, name in (
             ("servicenow.ticket_created", "ServiceNowOnTicketCreatedTriggerComponent", "ServiceNow: On Ticket Created"),

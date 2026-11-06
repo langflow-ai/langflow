@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Literal
 from urllib.parse import urlencode, urlsplit
 from uuid import uuid4
 
+from lfx.integrations.capabilities import ScopeSet
 from sqlalchemy import update
 from sqlmodel import col
 
@@ -43,6 +44,11 @@ def _handoff_digest(value: str) -> str:
 
 def _aware(value: datetime) -> datetime:
     return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+
+
+def _consented_scopes(provider: str, returned: list[str], consented: list[str]) -> list[str]:
+    """Keep approved provider scope aliases without adding new authority."""
+    return sorted(set(returned) - ScopeSet.missing(provider=provider, required=set(returned), granted=set(consented)))
 
 
 async def start(
@@ -204,6 +210,10 @@ async def complete(*, provider: str, state: str, browser: str, code: str | None,
             payload, scopes, account = await providers.exchange(
                 registration, code=code, verifier=verifier, previous_scopes=values["scopes"]
             )
+            # Some providers return every scope configured on the OAuth app,
+            # including permissions the owner declined in this consent flow.
+            # Provider credentials cannot widen the connection's local authority.
+            scopes = _consented_scopes(registration.provider, scopes, values["scopes"])
             payload["oauth"] = {
                 "registration_id": binding.registration_id,
                 "config_digest": binding.config_digest,
@@ -280,6 +290,15 @@ async def refresh_if_needed(
     if registration.provider != row.provider_key or registration.fingerprint() != oauth["config_digest"]:
         msg = "OAuth registration changed. Reconnect the connection."
         raise OAuthError(msg)
+    if str(binding.generation) == oauth.get("generation"):
+        # Repair older grants that recorded the provider's app-wide scopes.
+        # A matching generation proves these are the saved grant's consent
+        # bounds; a pending reconnect has different bounds and must not alter it.
+        consented = _consented_scopes(row.provider_key, row.granted_scopes, binding.scopes)
+        if set(consented) != set(row.granted_scopes):
+            row.granted_scopes = consented
+            row.updated_at = datetime.now(timezone.utc)
+            session.add(row)
     expiry = _parse_expiry(payload.get("expires_at"))
     rejected = rejected_token_digest is not None and secrets.compare_digest(
         rejected_token_digest, digest(payload["access_token"])
@@ -292,6 +311,9 @@ async def refresh_if_needed(
     refreshed, scopes, _ = await providers.exchange(
         registration, refresh_token=payload["refresh_token"], previous_scopes=row.granted_scopes
     )
+    # Refresh is not new consent. Preserve scope reductions and require a new
+    # authorization flow before this connection can acquire more permissions.
+    scopes = _consented_scopes(registration.provider, scopes, row.granted_scopes)
     refreshed["oauth"] = oauth
     await store_tokens(session, row, refreshed, scopes)
     return refreshed

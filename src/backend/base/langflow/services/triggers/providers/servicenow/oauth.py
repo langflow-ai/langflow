@@ -70,6 +70,15 @@ async def parse_token(registration: OAuthRegistration, body: dict, *, refresh: b
     return token, account
 
 
+def refresh_rejected(status_code: int, body: dict) -> bool:
+    """Recognize ServiceNow's revoked grant without treating outages as expiry."""
+    return (
+        status_code == 401  # noqa: PLR2004 - provider's rejected-refresh response
+        and body.get("error") == "server_error"
+        and body.get("error_description") == "access_denied"
+    )
+
+
 try:
     _ORIGINS = (origin(),)
 except InvalidRequestError:
@@ -82,4 +91,5 @@ OAUTH = OAuthAdapter(
     parse_token=parse_token,
     supports_pkce=True,
     required_scopes=(READ_SCOPE,),
+    refresh_rejection_response=refresh_rejected,
 )

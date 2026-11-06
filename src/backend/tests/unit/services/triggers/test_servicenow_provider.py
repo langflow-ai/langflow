@@ -6,7 +6,7 @@ import asyncio
 import importlib
 import json
 from dataclasses import replace
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from functools import partial
 from pathlib import Path
 from types import SimpleNamespace
@@ -267,6 +267,108 @@ async def test_oauth_initial_and_refresh_bind_issuing_instance(provider):
         reg, {"access_token": "new", "token_type": "Bearer", "expires_in": 1800}, refresh=True
     )
     assert account is None
+
+
+@pytest.mark.parametrize(
+    ("refresh", "status", "body", "reason"),
+    [
+        (True, 401, {"error": "server_error", "error_description": "access_denied"}, None),
+        (False, 401, {"error": "server_error", "error_description": "access_denied"}, "provider-unavailable"),
+        (True, 500, {"error": "server_error", "error_description": "access_denied"}, "provider-unavailable"),
+        (True, 429, {"error": "server_error", "error_description": "access_denied"}, "provider-unavailable"),
+        (True, 401, {"error": "server_error", "error_description": "temporarily_unavailable"}, "provider-unavailable"),
+        (True, 401, {"error": "server_error", "error_description": ["access_denied"]}, "provider-unavailable"),
+    ],
+)
+@pytest.mark.usefixtures("provider")
+async def test_only_rejected_servicenow_refresh_requires_reconnect(respx_mock, refresh, status, body, reason):
+    from langflow.services.connection.oauth import providers
+
+    respx_mock.post(ROOT + "/oauth_token.do").respond(status, json=body)
+    with pytest.raises(OAuthError) as caught:
+        await providers.exchange(
+            registration(),
+            code=None if refresh else "synthetic-code",
+            refresh_token="synthetic-refresh" if refresh else None,
+            previous_scopes=[READ_SCOPE],
+        )
+    assert caught.value.reason == reason
+    assert "access_denied" not in str(caught.value)
+    assert "synthetic" not in str(caught.value)
+
+
+@pytest.mark.usefixtures("provider")
+async def test_revoked_servicenow_refresh_expires_connection_and_disarms_trigger(
+    trigger_owner, owned_flow, monkeypatch, respx_mock
+):
+    from langflow.services.connection.oauth import broker
+    from langflow.services.database.models.connection.oauth import ConnectionOAuth
+    from langflow.services.deps import get_connection_resolver_service
+    from langflow.services.triggers import source_subscription
+    from langflow.services.triggers.listeners.supervisor import ListenerSupervisor
+    from lfx.integrations.errors import AuthExpiredError
+    from lfx.integrations.models import ConnectionResolutionRequest
+    from lfx.services.authorization.base import ExecutionPrincipal
+
+    reg = registration()
+    monkeypatch.setattr(broker, "get_oauth_settings", lambda: SimpleNamespace(registration=lambda _id: reg))
+    monkeypatch.setattr(
+        source_subscription, "get_oauth_settings", lambda: SimpleNamespace(registration=lambda _id: reg)
+    )
+    connection = await _connection(trigger_owner)
+    async with session_scope() as session:
+        connection = await session.get(Connection, connection.id)
+        await broker.start(
+            session,
+            row=connection,
+            user_id=trigger_owner,
+            registration_id="servicenow-work",
+            scopes=[READ_SCOPE],
+        )
+        binding = await session.get(ConnectionOAuth, connection.id)
+        payload = {
+            "version": 1,
+            "access_token": "synthetic-access",
+            "refresh_token": "synthetic-refresh",
+            "token_type": "Bearer",
+            "expires_at": "2020-01-01T00:00:00+00:00",
+            "oauth": {
+                "registration_id": binding.registration_id,
+                "config_digest": binding.config_digest,
+                "generation": str(binding.generation),
+            },
+        }
+        await broker.store_tokens(session, connection, payload, [READ_SCOPE])
+    trigger = await _reconcile(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        trigger = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=trigger)
+    rejected = respx_mock.post(ROOT + "/oauth_token.do").respond(
+        401, json={"error": "server_error", "error_description": "access_denied"}
+    )
+    request = ConnectionResolutionRequest(
+        ref=ConnectionRef(provider="servicenow", name="work"),
+        principal=ExecutionPrincipal(
+            kind="actor", user_id=str(trigger_owner), actor_id=str(trigger_owner), interactive=True
+        ),
+        required_scopes=frozenset({READ_SCOPE}),
+    )
+    with pytest.raises(AuthExpiredError):
+        await get_connection_resolver_service().resolve(request)
+    assert rejected.call_count == 1
+    async with session_scope() as session:
+        saved = await session.get(Connection, connection.id)
+        assert (saved.status, saved.health) == ("expired", "unhealthy")
+    supervisor = ListenerSupervisor(holder="servicenow-revoked-refresh")
+    try:
+        await supervisor.reconcile()
+        assert supervisor.workers == {}
+        async with session_scope() as session:
+            saved = await session.get(Trigger, trigger.id)
+            assert saved.state == "needs_reconnect"
+            assert "revoked or expired" in saved.last_error
+    finally:
+        await supervisor.stop()
 
 
 @pytest.mark.parametrize("policy", ["all", "read", "write"])
@@ -530,6 +632,61 @@ class FixedLease:
             granted_scopes=frozenset({READ_SCOPE}),
             scopes_verified=True,
         )
+
+
+@pytest.mark.parametrize("kind", ["servicenow.ticket_created", "servicenow.status_changed"])
+async def test_empty_404_poll_advances_then_delivers_a_later_ticket(provider, monkeypatch, kind):
+    prior = {
+        "watermark": "2026-10-22 11:59:00",
+        "started_at": "2026-10-22 11:59:00",
+        "baseline_complete": True,
+    }
+    if kind == "servicenow.status_changed":
+        prior["observed_states"] = {ID: "1"}
+    row = SimpleNamespace(kind=kind, config={"table": "incident"}, provider_state=prior, connection_id=uuid4())
+    available = False
+    seen = []
+    record = {
+        "sys_id": ID,
+        "number": "INC001",
+        "state": "2",
+        "sys_created_on": "2026-10-22 12:00:40",
+        "sys_updated_on": "2026-10-22 12:00:40",
+        "sys_mod_count": "2",
+    }
+
+    def handler(request):
+        query = request.url.params["sysparm_query"]
+        seen.append(query)
+        if available and "sys_id>" not in query:
+            return httpx.Response(200, json={"result": [record]}, headers={"X-Total-Count": "1"})
+        return httpx.Response(
+            404,
+            json={
+                "error": {"message": "No Record found", "detail": "Records matching query not found."},
+                "status": "failure",
+            },
+        )
+
+    monkeypatch.setattr(
+        provider.runtime, "ServiceNowClient", partial(ServiceNowClient, transport=httpx.MockTransport(handler))
+    )
+    empty = await provider.runtime.collect(row, FixedLease())
+    assert empty.items == []
+    assert empty.cursor["watermark"] == "2026-10-22 12:00:00"
+    assert row.provider_state == prior
+
+    row.provider_state = empty.cursor
+    available = True
+    monkeypatch.setattr(provider.runtime, "_now", lambda: NOW + timedelta(minutes=1))
+    delivered = await provider.runtime.collect(row, FixedLease())
+    assert len(delivered.items) == 1
+    assert delivered.items[0]["id"] == ID
+    assert delivered.items[0]["data"]["state"] == "2"
+    assert delivered.cursor["watermark"] == "2026-10-22 12:01:00"
+    assert row.provider_state["watermark"] == "2026-10-22 12:00:00"
+    assert len(seen) == 3
+    assert f"sys_id>{ID}" in seen[-1]
 
 
 @pytest.mark.parametrize("record_count", [10000, 10001])
