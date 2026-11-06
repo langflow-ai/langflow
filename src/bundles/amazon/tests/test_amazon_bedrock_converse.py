@@ -101,3 +101,31 @@ def test_additional_model_fields_still_reach_unsupported_providers():
     ).build_model()
 
     assert model.additional_model_request_fields == {"max_gen_len": 512}
+
+
+def test_default_model_is_an_inference_profile_in_the_options():
+    model_input = next(i for i in AmazonBedrockConverseComponent.inputs if i.name == "model_id")
+
+    assert model_input.value == "global.anthropic.claude-sonnet-4-6"
+    assert model_input.value in model_input.options
+
+
+@pytest.mark.parametrize("model_id", ["global.anthropic.claude-sonnet-4-6", "anthropic.claude-haiku-4-5-20251001-v1:0"])
+def test_top_p_not_sent_to_anthropic_with_temperature(model_id):
+    model = _component(model_id=model_id, temperature=0.7, top_p=0.9).build_model()
+
+    assert model.temperature == 0.7
+    assert model.top_p is None
+
+
+def test_top_p_sent_to_anthropic_without_temperature():
+    model = _component(model_id="global.anthropic.claude-sonnet-4-6", temperature=None, top_p=0.9).build_model()
+
+    assert model.top_p == 0.9
+
+
+def test_top_p_still_sent_with_temperature_to_other_providers():
+    model = _component(model_id="meta.llama3-1-70b-instruct-v1:0", temperature=0.7, top_p=0.9).build_model()
+
+    assert model.temperature == 0.7
+    assert model.top_p == 0.9
