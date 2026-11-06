@@ -38,7 +38,6 @@ include = ["src/lfx_minicpm/extension.json", "src/lfx_minicpm/components/**/*.py
 [tool.hatch.build.targets.sdist]
 include = [
     "src/lfx_minicpm",
-    "extension.json",
     "README.md",
     "pyproject.toml",
 ]

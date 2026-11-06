@@ -128,7 +128,7 @@ def test_retries_without_slice_arguments_when_endpoint_rejects_them(
     client = _install_client(
         monkeypatch,
         [
-            _response(400, text="Unrecognized request argument: mm_processor_kwargs"),
+            _response(400, text="bad request"),
             _response(payload=_completion("retried")),
         ],
     )
@@ -138,6 +138,17 @@ def test_retries_without_slice_arguments_when_endpoint_rejects_them(
 
     assert len(client.calls) == 2
     assert "mm_processor_kwargs" not in client.calls[1]["json"]
+
+
+def test_rejects_invalid_timeouts(component: MiniCPMOCRComponent, tmp_path: Path) -> None:
+    file = _file(tmp_path)
+    component.timeout = "abc"
+    with pytest.raises(ValueError, match="Timeout must be a number"):
+        component.process_files([file])
+
+    component.timeout = -5
+    with pytest.raises(ValueError, match="Timeout must be greater than zero"):
+        component.process_files([file])
 
 
 def test_reports_http_error(component: MiniCPMOCRComponent, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

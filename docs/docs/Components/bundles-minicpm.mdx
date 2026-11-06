@@ -24,7 +24,7 @@ vllm serve openbmb/MiniCPM-OCR-1.0 --port 8000
 
 Then set **Base URL** to `http://127.0.0.1:8000`; do not append `/v1`, the component adds it. Set **API Key** only when the server requires one.
 
-The request follows MiniCPM-OCR's own client: the image content part precedes the prompt, and `mm_processor_kwargs` (`max_slice_nums: 9`, `downsample_mode: "4x"`) controls page slicing. Endpoints that reject that field with HTTP 400 or 422 are retried once without it.
+The request follows MiniCPM-OCR's own client: the image content part precedes the prompt, and `mm_processor_kwargs` (`max_slice_nums: 9`, `downsample_mode: "4x"`) controls page slicing. Endpoints that answer HTTP 400 or 422 are retried once without it.
 
 ### MiniCPM OCR parameters
 

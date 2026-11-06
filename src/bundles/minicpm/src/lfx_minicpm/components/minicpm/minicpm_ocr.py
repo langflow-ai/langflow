@@ -101,7 +101,7 @@ class MiniCPMOCRComponent(BaseFileComponent):
 
         base_url = self._normalize_base_url(self.base_url or self.DEFAULT_BASE_URL)
         prompt = str(self.prompt or "").strip() or self.DEFAULT_PROMPT
-        timeout = float(self.timeout or self.REQUEST_TIMEOUT)
+        timeout = self._resolve_timeout()
         headers = {"Content-Type": "application/json"}
         api_key = str(self.api_key or "").strip()
         if api_key:
@@ -204,9 +204,9 @@ class MiniCPMOCRComponent(BaseFileComponent):
         image_url = f"data:{mime};base64,{base64.b64encode(image_bytes).decode('ascii')}"
 
         response = self._post(client, endpoint, headers, image_url, prompt, timeout, with_slice_args=True)
-        if response.status_code in (400, 422) and "mm_processor_kwargs" in response.text:
-            # Endpoints that do not implement the vLLM/SGLang extension reject
-            # the field; retry once without it.
+        if response.status_code in (400, 422):
+            # Endpoints that do not implement the vLLM/SGLang extension may
+            # reject the field with a generic message; retry once without it.
             response = self._post(client, endpoint, headers, image_url, prompt, timeout, with_slice_args=False)
 
         if response.is_error:
@@ -255,6 +255,18 @@ class MiniCPMOCRComponent(BaseFileComponent):
             payload["mm_processor_kwargs"] = MINICPM_SLICE_ARGS
 
         return client.post(endpoint, headers=headers, json=payload, timeout=timeout)
+
+    def _resolve_timeout(self) -> float:
+        raw = self.timeout if self.timeout is not None else self.REQUEST_TIMEOUT
+        try:
+            timeout = float(raw)
+        except (TypeError, ValueError) as error:
+            msg = f"Timeout must be a number of seconds, got {raw!r}"
+            raise ValueError(msg) from error
+        if timeout <= 0:
+            msg = f"Timeout must be greater than zero, got {timeout}"
+            raise ValueError(msg)
+        return timeout
 
     @staticmethod
     def _normalize_base_url(raw: str) -> str:

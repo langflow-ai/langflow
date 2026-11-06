@@ -32,8 +32,7 @@ Set an **API Key** only when the server requires one.
 
 The component sends the page image before the prompt and includes the
 `mm_processor_kwargs` slice arguments that MiniCPM-OCR's own client uses. If an
-endpoint rejects that field with HTTP 400 or 422, the request is retried once
-without it.
+endpoint answers HTTP 400 or 422, the request is retried once without it.
 
 ## Output
 
