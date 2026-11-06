@@ -44,6 +44,8 @@ describe("chat math", () => {
         isEmpty={false}
       />,
     );
+    expect(container.querySelector(".katex")).not.toBeNull();
+    expect(container.querySelector(".katex a")).toBeNull();
     expect(container.querySelector("[onerror]")).toBeNull();
     expect(container.querySelector('a[href^="javascript:"]')).toBeNull();
   });
