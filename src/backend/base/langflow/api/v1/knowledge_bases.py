@@ -1351,13 +1351,11 @@ async def list_knowledge_bases(
 
             # Map job statuses back to knowledge bases
             # Normalize to frontend-expected values: ready, ingesting, failed, empty
-            # A cancelled job is absent: cancelling rolls the KB back, so the
-            # row's own status (ready / empty / an earlier failure) still holds.
+            # Ended runs do not determine whether the base remains usable.
+            # Preserve its stored failure or its existing chunk availability.
             job_status_map = {
                 "queued": "ingesting",
                 "in_progress": "ingesting",
-                "failed": "failed",
-                "timed_out": "failed",
             }
             for kb_info in knowledge_bases:
                 try:
@@ -1368,7 +1366,6 @@ async def list_knowledge_bases(
                         mapped = job_status_map.get(raw_status)
                         if mapped:
                             kb_info.status = mapped
-                        # For "completed", keep the file-marker / chunk-count status already set
                         kb_info.last_job_id = str(job.job_id)
                 except (ValueError, AttributeError):
                     # If KB ID is not a valid UUID, skip job status update

@@ -11,6 +11,7 @@ from fastapi import Depends, HTTPException, Path, Query
 from fastapi_pagination import Params
 from lfx.log.logger import logger
 from lfx.services.deps import injectable_session_scope, injectable_session_scope_readonly
+from lfx.utils import flow_code as _flow_code
 from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -26,6 +27,7 @@ if TYPE_CHECKING:
 
 
 API_WORDS = _flow_secrets.API_WORDS
+normalize_code_for_import = _flow_code.normalize_code_for_import
 has_api_terms = _flow_secrets.has_api_terms
 remove_api_keys = _flow_secrets.remove_api_keys
 strip_flow_secrets = _flow_secrets.strip_flow_secrets
@@ -34,6 +36,15 @@ strip_secret_field_values_in_place = _flow_secrets.strip_secret_field_values_in_
 
 MAX_PAGE_SIZE = 50
 MIN_PAGE_SIZE = 1
+# Mirrors the `le` ceiling fastapi_pagination.Params puts on `size`; MAX_PAGE_SIZE (50) stays the
+# default when size is absent, not a bound.
+PARAMS_MAX_PAGE_SIZE = 100
+
+# Bounds are declared on the query because a bound violated inside the dependency (when Params is
+# built) escapes the route's try/except and reaches the app-wide Exception handler as a 500;
+# declaring it here lets FastAPI reject it as 422 like routes that depend on Params directly.
+PageQuery = Annotated[int | None, Query(ge=MIN_PAGE_SIZE)]
+SizeQuery = Annotated[int | None, Query(ge=MIN_PAGE_SIZE, le=PARAMS_MAX_PAGE_SIZE)]
 
 CurrentActiveUser = Annotated[User, Depends(get_current_active_user)]
 CurrentActiveMCPUser = Annotated[User, Depends(get_current_active_user_mcp)]
@@ -157,25 +168,6 @@ def _split_code_to_lines(flow: dict) -> None:
                     field_data["value"] = value.split("\n")
 
 
-def _join_code_from_lines(flow: dict) -> None:
-    """In-place: rejoin code template line arrays back to strings.
-
-    Inverse of :func:`_split_code_to_lines`.  Safe to call on flows that
-    already use the string format — ``isinstance`` guard means it's a no-op.
-    """
-    for node in flow.get("data", {}).get("nodes", []):
-        template = node.get("data", {}).get("node", {}).get("template", {})
-        if not isinstance(template, dict):
-            continue
-        for field_data in template.values():
-            if not isinstance(field_data, dict):
-                continue
-            if field_data.get("type") == "code":
-                value = field_data.get("value")
-                if isinstance(value, list):
-                    field_data["value"] = "\n".join(value)
-
-
 def normalize_flow_for_export(flow: dict) -> dict:
     """Return a git-friendly, deterministic copy of a flow dict.
 
@@ -210,20 +202,6 @@ def normalize_flow_for_export(flow: dict) -> dict:
     # Code → line arrays
     _split_code_to_lines(flow)
 
-    return flow
-
-
-def normalize_code_for_import(flow: dict) -> dict:
-    """Rejoin code-as-lines back to strings for backward-compatible import.
-
-    Accepts both the list format produced by :func:`normalize_flow_for_export`
-    and the legacy single-string format, so this function is safe to call
-    unconditionally on every uploaded flow.
-    """
-    import copy
-
-    flow = copy.deepcopy(flow)
-    _join_code_from_lines(flow)
     return flow
 
 
@@ -425,10 +403,7 @@ def parse_value(value: Any, input_type: str) -> Any:
     return value
 
 
-def custom_params(
-    page: int | None = Query(None),
-    size: int | None = Query(None),
-):
+def custom_params(page: PageQuery = None, size: SizeQuery = None):
     if page is None and size is None:
         return None
     return Params(page=page or MIN_PAGE_SIZE, size=size or MAX_PAGE_SIZE)

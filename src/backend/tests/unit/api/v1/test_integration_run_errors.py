@@ -9,7 +9,7 @@ from fastapi import BackgroundTasks, FastAPI, Request
 from httpx import ASGITransport, AsyncClient
 from langflow.api.v1 import endpoints
 from langflow.api.v1.schemas import SimplifiedAPIRequest
-from lfx.integrations.errors import ActionUnsupportedError, ConnectionNotAuthorizedError
+from lfx.integrations.errors import ActionUnsupportedError, ConnectionNotAuthorizedError, IntegrationNetworkError
 from lfx.services.integration_policy import IntegrationPolicyError, IntegrationPolicyPurpose
 
 pytestmark = pytest.mark.no_blockbuster
@@ -27,6 +27,8 @@ pytestmark = pytest.mark.no_blockbuster
         ),
         (ConnectionNotAuthorizedError(provider="qaprobe"), 403),
         (ActionUnsupportedError(provider="qaprobe", http_status=422), 422),
+        (IntegrationNetworkError(provider="google", reason="timeout", host="gmail.googleapis.com"), 504),
+        (IntegrationNetworkError(provider="google", reason="dns", host="gmail.googleapis.com"), 502),
     ],
 )
 async def test_simple_run_keeps_typed_errors_through_the_http_boundary(monkeypatch, owner, error, status_code):

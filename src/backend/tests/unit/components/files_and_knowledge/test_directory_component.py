@@ -6,7 +6,9 @@ import pytest
 from lfx.components.files_and_knowledge.directory import DirectoryComponent
 from lfx.schema import Data, DataFrame
 from lfx.services.deps import get_settings_service
+from lfx.utils.file_path_security import LocalFileAccessError
 
+import lfx
 from tests.base import ComponentTestBaseWithoutClient
 
 
@@ -387,6 +389,84 @@ class TestDirectoryComponent(ComponentTestBaseWithoutClient):
         results = directory_component.load_directory()
 
         assert [result.text for result in results] == ["configured content"]
+
+    def test_directory_loads_bundled_lfx_components_outside_working_root(self, tmp_path, monkeypatch):
+        """The installed lfx components dir loads even when the process runs from elsewhere.
+
+        Langflow Desktop runs from its data dir, so the Assistant's read of the bundled
+        component sources sits outside the working root.
+        """
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(get_settings_service().settings, "directory_component_allowed_roots", [])
+        components_dir = Path(lfx.__file__).parent / "components"
+
+        directory_component = DirectoryComponent()
+        directory_component.set_attributes(
+            {
+                "path": str(components_dir),
+                "recursive": False,
+                "use_multithreading": False,
+                "silent_errors": False,
+                "types": ["py"],
+            }
+        )
+
+        results = directory_component.load_directory()
+
+        assert results
+        assert all(Path(result.data["file_path"]).parent == components_dir.resolve() for result in results)
+
+    def test_directory_loads_bundled_lfx_components_when_local_file_access_is_restricted(self, tmp_path, monkeypatch):
+        """Bundled component sources are public package files, not another tenant's storage."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(get_settings_service().settings, "directory_component_allowed_roots", [])
+        monkeypatch.setattr(get_settings_service().settings, "restrict_local_file_access", True)
+
+        directory_component = DirectoryComponent()
+        directory_component.set_attributes(
+            {
+                "path": str(Path(lfx.__file__).parent / "components"),
+                "recursive": False,
+                "use_multithreading": False,
+                "silent_errors": False,
+                "types": ["py"],
+            }
+        )
+
+        assert directory_component.load_directory()
+
+    def test_directory_still_confines_working_root_when_local_file_access_is_restricted(self, tmp_path, monkeypatch):
+        """Trusting the bundled sources must not lift the restriction for any other path."""
+        workspace = tmp_path / "workspace"
+        workspace.mkdir()
+        (workspace / "secret.txt").write_text("server file", encoding="utf-8")
+        monkeypatch.chdir(workspace)
+        monkeypatch.setattr(get_settings_service().settings, "directory_component_allowed_roots", [])
+        monkeypatch.setattr(get_settings_service().settings, "restrict_local_file_access", True)
+
+        directory_component = DirectoryComponent()
+        directory_component.set_attributes(
+            {
+                "path": str(workspace),
+                "recursive": False,
+                "use_multithreading": False,
+                "silent_errors": False,
+                "types": ["txt"],
+            }
+        )
+
+        with pytest.raises(LocalFileAccessError):
+            directory_component.load_directory()
+
+    def test_directory_rejects_lfx_package_outside_bundled_components(self, tmp_path, monkeypatch):
+        """Only the bundled components dir is trusted, not the rest of the lfx install."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(get_settings_service().settings, "directory_component_allowed_roots", [])
+
+        directory_component = DirectoryComponent()
+
+        with pytest.raises(ValueError, match="Directory path escapes the allowed root"):
+            directory_component._resolve_directory_path(str(Path(lfx.__file__).parent))
 
     def test_directory_allows_drive_absolute_path_inside_allowed_root(self, tmp_path, monkeypatch):
         r"""A Windows drive/UNC path inside a configured allowed root must not be blanket-rejected.

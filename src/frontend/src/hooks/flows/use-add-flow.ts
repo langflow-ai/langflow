@@ -7,6 +7,7 @@ import { getSettledSuccessfulQueryData } from "@/controllers/API/helpers/query-c
 import { usePostAddFlow } from "@/controllers/API/queries/flows/use-post-add-flow";
 import { usePostFolders } from "@/controllers/API/queries/folders";
 import { fetchGlobalVariables } from "@/controllers/API/queries/variables/use-get-global-variables";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -31,6 +32,7 @@ const FLOW_CREATION_ERROR = "Flow creation error";
 const FOLDER_NOT_FOUND_ERROR = "Folder not found. Redirecting to flows...";
 const REDIRECT_DELAY = 3000;
 const useAddFlow = () => {
+  const navigate = useCustomNavigate();
   const flows = useFlowsManagerStore((state) => state.flows);
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
   const { deleteFlow } = useDeleteFlow();
@@ -161,9 +163,10 @@ const useAddFlow = () => {
               title: FOLDER_NOT_FOUND_ERROR,
             });
             setTimeout(() => {
-              window.location.href = `/flows`;
+              navigate("/flows", { replace: true });
             }, REDIRECT_DELAY);
 
+            reject(error);
             return;
           }
 

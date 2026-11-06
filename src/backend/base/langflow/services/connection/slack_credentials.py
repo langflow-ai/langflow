@@ -29,7 +29,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from lfx.integrations.errors import ConnectionNotAuthorizedError
+import httpx
+from lfx.integrations.errors import HTTP_UNAUTHORIZED, AuthExpiredError, ConnectionNotAuthorizedError, IntegrationError
 
 from langflow.services.database.models.connection.schemas import ConnectionOwnershipMode
 
@@ -42,10 +43,57 @@ APP_TOKEN_PREFIX = "xapp-"  # noqa: S105 - Slack's app-level token type prefix, 
 #: The only scope an app-level token carries, and the server-set marker that a
 #: connection holds one.
 APP_TOKEN_SCOPE = "connections:write"  # noqa: S105 - an OAuth scope name, not a credential
+_AUTH_TEST_URL = "https://slack.com/api/auth.test"
+_AUTH_ERRORS = frozenset({"invalid_auth", "not_authed", "token_revoked", "token_expired", "account_inactive"})
+_CHECK_FAILED = "Slack could not check the credential. Try again."
 
 
 class ManualCredentialError(ValueError):
     """A manually entered credential that Langflow will not store."""
+
+
+async def check_slack_web_token(access_token: str) -> list[str]:
+    """Verify a Web API token and return only scopes reported by Slack.
+
+    App-level tokens stay confined to the Socket Mode listener. No client
+    secret or OAuth registration is needed for this fixed, read-only endpoint.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=10, follow_redirects=False) as client:
+            response = await client.post(_AUTH_TEST_URL, headers={"Authorization": f"Bearer {access_token}"})
+        if response.status_code == HTTP_UNAUTHORIZED:
+            raise AuthExpiredError(provider=PROVIDER_SLACK)
+        response.raise_for_status()
+        body = response.json()
+    except (httpx.HTTPError, ValueError):
+        # Neither the response body nor HTTP exceptions may expose a token.
+        raise IntegrationError(_CHECK_FAILED, provider=PROVIDER_SLACK) from None
+    if not isinstance(body, dict) or body.get("ok") is not True:
+        error = body.get("error") if isinstance(body, dict) else None
+        if isinstance(error, str) and error in _AUTH_ERRORS:
+            raise AuthExpiredError(provider=PROVIDER_SLACK)
+        raise IntegrationError(_CHECK_FAILED, provider=PROVIDER_SLACK)
+    # A missing header must never turn the caller's claimed scopes into grants.
+    return sorted({scope.strip() for scope in response.headers.get("x-oauth-scopes", "").split(",") if scope.strip()})
+
+
+async def validate_manual_credential(payload: ConnectionCreate, *, context: str) -> ConnectionCreate:
+    """Apply local token rules, then verify Slack Web API credentials before saving."""
+    payload = prepare_manual_credential(payload, context=context)
+    if payload.provider_key != PROVIDER_SLACK or payload.credentials is None:
+        return payload
+    token = payload.credentials.access_token.get_secret_value()
+    if token.startswith(APP_TOKEN_PREFIX):
+        return payload
+    try:
+        scopes = await check_slack_web_token(token)
+    except AuthExpiredError:
+        msg = "Slack rejected this token. Paste a valid token and try again."
+        raise ManualCredentialError(msg) from None
+    except IntegrationError:
+        msg = "Slack could not check this token. Try again."
+        raise ManualCredentialError(msg) from None
+    return payload.model_copy(update={"granted_scopes": scopes})
 
 
 def is_app_token_connection(row: Connection) -> bool:

@@ -183,6 +183,40 @@ async def _attach(
     return att
 
 
+async def _make_deployer(db: AsyncSession) -> tuple[User, Deployment]:
+    """Create a second user with their own project, provider account and deployment."""
+    deployer = User(username="deployer", password=_TEST_PASSWORD, is_active=True)
+    db.add(deployer)
+    await db.commit()
+    await db.refresh(deployer)
+    folder = Folder(name="deployer-project", user_id=deployer.id)
+    db.add(folder)
+    await db.commit()
+    await db.refresh(folder)
+    account = DeploymentProviderAccount(
+        user_id=deployer.id,
+        provider_tenant_id="tenant-2",
+        provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
+        name="deployer-provider",
+        provider_url="https://provider.example.com",
+        api_key="encrypted-value",  # pragma: allowlist secret
+    )
+    db.add(account)
+    await db.commit()
+    await db.refresh(account)
+    deployment = Deployment(
+        user_id=deployer.id,
+        project_id=folder.id,
+        deployment_provider_account_id=account.id,
+        resource_key="rk-deployer",
+        display_name="deployer-deployment",
+    )
+    db.add(deployment)
+    await db.commit()
+    await db.refresh(deployment)
+    return deployer, deployment
+
+
 async def _make_orphan_attachment(
     db: AsyncSession,
     user: User,
@@ -268,6 +302,15 @@ class TestDeleteFlowVersionEntry:
             await delete_flow_version_entry(db, version.id, user.id)
 
         assert (await db.exec(select(FlowVersion.id).where(FlowVersion.id == version.id))).one() == version.id
+
+    async def test_rejects_version_deployed_by_another_user(self, db: AsyncSession, flow: Flow, user: User):
+        deployer, deployer_deployment = await _make_deployer(db)
+        version = await _create_version(db, flow, user)
+        await _attach(db, deployer, version, deployer_deployment)
+
+        with pytest.raises(FlowVersionDeployedError):
+            await delete_flow_version_entry(db, version.id, user.id)
+        assert (await db.exec(select(FlowVersion).where(FlowVersion.id == version.id))).first() is not None
 
     async def test_rejects_another_users_version(self, db: AsyncSession, flow: Flow, user: User):
         version = await _create_version(db, flow, user)
@@ -620,6 +663,28 @@ class TestVersionPruningRespectsLiveDeployments:
         assert len(remaining) == 2, "Live attachment should have pinned v1"
         assert remaining[0].version_number == 1
         assert remaining[1].version_number == 2
+
+    async def test_other_users_live_attachment_pins_version_when_owner_snapshots(
+        self, db: AsyncSession, flow: Flow, user: User
+    ):
+        """A teammate's deployment of the owner's flow must survive the owner's next snapshot."""
+        deployer, deployer_deployment = await _make_deployer(db)
+
+        settings_mock = SimpleNamespace(settings=SimpleNamespace(max_flow_version_entries_per_flow=1))
+        with patch(
+            "langflow.services.database.models.flow_version.crud.get_settings_service",
+            return_value=settings_mock,
+        ):
+            deployed = await create_flow_version_entry(db, flow.id, deployer.id, data={"nodes": []}, prune=False)
+            attachment = await _attach(db, deployer, deployed, deployer_deployment)
+
+            await create_flow_version_entry(db, flow.id, user.id, data={"nodes": []})
+            await db.commit()
+
+        remaining = (await db.exec(select(FlowVersion).where(FlowVersion.flow_id == flow.id))).all()
+        assert {v.version_number for v in remaining} == {1, 2}, "Owner snapshot must not prune the deployed version"
+        stmt = select(FlowVersionDeploymentAttachment).where(FlowVersionDeploymentAttachment.id == attachment.id)
+        assert (await db.exec(stmt)).first() is not None
 
 
 # ===========================================================================
@@ -1002,6 +1067,21 @@ class TestRetainedVersions:
             await create_flow_version_entry(db, flow.id, user.id, data={"nodes": []})
             numbers = {v.version_number for v in (await db.exec(select(FlowVersion))).all()}
             assert numbers == {4}
+
+    async def test_prune_false_keeps_oldest_unretained_version(self, db: AsyncSession, flow: Flow, user: User):
+        settings_mock = SimpleNamespace(settings=SimpleNamespace(max_flow_version_entries_per_flow=1))
+        with patch(
+            "langflow.services.database.models.flow_version.crud.get_settings_service",
+            return_value=settings_mock,
+        ):
+            await _create_version(db, flow, user, n=1)
+            await create_flow_version_entry(db, flow.id, user.id, data={"nodes": []}, prune=False)
+            numbers = {v.version_number for v in (await db.exec(select(FlowVersion))).all()}
+            assert numbers == {1, 2}
+
+            await create_flow_version_entry(db, flow.id, user.id, data={"nodes": []})
+            numbers = {v.version_number for v in (await db.exec(select(FlowVersion))).all()}
+            assert numbers == {3}
 
     async def test_retained_versions_do_not_count_toward_the_limit(self, db: AsyncSession, flow: Flow, user: User):
         settings_mock = SimpleNamespace(settings=SimpleNamespace(max_flow_version_entries_per_flow=2))

@@ -21,6 +21,7 @@ import FilesContextMenuComponent from "@/modals/fileManagerModal/components/file
 import useAlertStore from "@/stores/alertStore";
 import type { FileType } from "@/types/file_management";
 import { extractApiErrorMessages } from "@/utils/apiError";
+import { parseApiTimestamp } from "@/utils/dateTime";
 import { formatFileSize } from "@/utils/stringManipulation";
 import { FILE_ICONS } from "@/utils/styleUtils";
 import { cn } from "@/utils/utils";
@@ -274,7 +275,7 @@ const FilesTab = ({
       valueFormatter: (params) => {
         return params.data.progress
           ? ""
-          : new Date(params.value + "Z").toLocaleString();
+          : (parseApiTimestamp(params.value)?.toLocaleString() ?? "");
       },
       editable: false,
       flex: 1,

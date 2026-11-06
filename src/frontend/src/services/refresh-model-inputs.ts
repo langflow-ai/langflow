@@ -210,6 +210,7 @@ async function refreshSingleNode(
         }`,
         {
           code: nodeData.template.code?.value,
+          frontend_node: { metadata: nodeData.metadata },
           template: requestPayload,
           field: modelFieldKey,
           field_value: currentModelValue,

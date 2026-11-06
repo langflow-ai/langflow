@@ -122,14 +122,9 @@ def test_root_registers_each_provider_at_official(tmp_path: Path) -> None:
         (
             "mrscraper",
             {
-                "MrscraperAiScraper",
-                "MrscraperBatchScrape",
-                "MrscraperCrawlWebsite",
+                "MrscraperAccount",
                 "MrscraperFetchHtml",
-                "MrscraperGetResult",
-                "MrscraperGetResults",
-                "MrscraperRunAiScraper",
-                "MrscraperRunManualScraper",
+                "MrscraperWebSearch",
             },
         ),
         (

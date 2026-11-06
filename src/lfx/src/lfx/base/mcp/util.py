@@ -27,7 +27,11 @@ from pydantic import AliasChoices, BaseModel, SkipValidation
 
 from lfx.base.agents.utils import maybe_unflatten_dict
 from lfx.base.mcp import security as mcp_security
-from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH, MAX_MCP_TOOL_NAME_LENGTH
+from lfx.base.mcp.constants import (
+    GLOBAL_VARIABLE_PLACEHOLDER_PATTERN,
+    MAX_MCP_SERVER_NAME_LENGTH,
+    MAX_MCP_TOOL_NAME_LENGTH,
+)
 from lfx.base.mcp.pinned import PinnedServerSpec, enforce_pinned_tools
 from lfx.base.mcp.security import (
     AGENTIC_MCP_MODULE,
@@ -937,8 +941,6 @@ def _inject_mcp_stdio_headers(args: list[str], headers: dict[str, str]) -> list[
         return final_args[:last_positional_idx] + extra_args + final_args[last_positional_idx:]
     return [*final_args, *extra_args]
 
-
-GLOBAL_VARIABLE_PLACEHOLDER_PATTERN = re.compile(r"\{\{\s*([A-Za-z_][A-Za-z0-9_\-]*)\s*\}\}")
 
 HTTP_STATUS_IN_MESSAGE_PATTERN = re.compile(r"(?:HTTP|status(?:\s+code)?)[\s:=]*([45]\d{2})\b", re.IGNORECASE)
 

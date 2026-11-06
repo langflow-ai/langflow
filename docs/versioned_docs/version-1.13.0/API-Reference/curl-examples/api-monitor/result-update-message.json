@@ -1,0 +1,25 @@
+{
+  "timestamp": "2024-12-23T18:49:06",
+  "sender": "string",
+  "sender_name": "string",
+  "session_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a",
+  "text": "testing 1234",
+  "files": ["string"],
+  "error": true,
+  "edit": true,
+  "properties": {
+    "text_color": "string",
+    "background_color": "string",
+    "edited": false,
+    "source": { "id": "string", "display_name": "string", "source": "string" },
+    "icon": "string",
+    "allow_markdown": false,
+    "positive_feedback": true,
+    "state": "complete",
+    "targets": []
+  },
+  "category": "message",
+  "content_blocks": [],
+  "id": "3ab66cc6-c048-48f8-ab07-570f5af7b160",
+  "flow_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a"
+}

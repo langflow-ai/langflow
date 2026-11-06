@@ -22,6 +22,7 @@ from langflow.services.knowledge_base_storage.coordinator import (
     schedule_upgrade,
     upgrade_in_progress,
 )
+from langflow.services.knowledge_base_storage.inventory import inventory_recovery_details
 from langflow.services.knowledge_base_storage.runtime import StorageUnavailableError
 
 router = APIRouter(prefix="/knowledge-base-storage", tags=["Knowledge Base Upgrade"])
@@ -45,7 +46,10 @@ _GUIDANCE = {
         "Stop all old instances, then run one Langflow worker on the host with the original "
         "local data. Distributed deployments need administrator recovery."
     ),
-    "legacy_workers_running": "Stop the other Langflow instance using this data, then retry the upgrade.",
+    "legacy_workers_running": (
+        "Stop all other Langflow processes on this host, then retry the upgrade. "
+        "This includes instances using different databases or knowledge directories."
+    ),
     "local_filesystem_required": (
         "Copy the original data to a local filesystem and run one Langflow worker there. "
         "Shared filesystems require administrator recovery."
@@ -53,8 +57,8 @@ _GUIDANCE = {
     "remote_source_requires_migration": "Migrate the remote collection to a configured pgVector or OpenSearch store.",
     "validation_failed": "The copy failed validation. Preserve the original source and inspect the upgrade logs.",
     "automatic_reader_limit": (
-        "This store exceeds the automatic reader's resource limits. Preserve the source and use the "
-        "managed controller with a qualified signed helper, or export it from an isolated old-release environment."
+        "This store exceeds the automatic reader's resource limits. Preserve the source and "
+        "export it from an isolated old-release environment."
     ),
     "storage_changed": "Routing changed during upgrade. Inspect the authoritative KB record before retrying.",
     "interrupted": "The upgrade was interrupted. Retry resumes the unpublished generation safely.",
@@ -119,6 +123,9 @@ async def storage_status(session: DbSession, current_user: CurrentActiveUser):
         ).all()
         for kb_id, name in references:
             memory_names.setdefault(kb_id, name)
+    inventory = await published_inventory_status() if current_user.is_superuser else None
+    if inventory and inventory["issues"]:
+        inventory = {**inventory, **(await inventory_recovery_details(scan_failed=inventory.get("scan_failed", False)))}
     return {
         "stores": [
             {
@@ -138,7 +145,7 @@ async def storage_status(session: DbSession, current_user: CurrentActiveUser):
         "revision": max((run.updated_at.isoformat() for _, run in rows if run and run.phase == "complete"), default=""),
         "running": any(record.storage_state == "migrating" for record, _ in rows)
         or (current_user.is_superuser and upgrade_in_progress()),
-        "inventory": await published_inventory_status() if current_user.is_superuser else None,
+        "inventory": inventory,
         "is_admin": bool(current_user.is_superuser),
     }
 
@@ -153,6 +160,13 @@ class CleanupRetryRequest(BaseModel):
 async def get_inventory(_admin: Annotated[User, Depends(get_current_active_superuser)]):
     """Report whether legacy storage discovery completed and requires recovery."""
     return await published_inventory_status()
+
+
+@router.post("/inventory/retry", status_code=202)
+async def retry_inventory(_admin: Annotated[User, Depends(get_current_active_superuser)]):
+    """Rescan repaired legacy folders even when there is no registered base to retry."""
+    schedule_upgrade(retry=True)
+    return {"status": "scheduled"}
 
 
 @router.get("/pending-cleanup")

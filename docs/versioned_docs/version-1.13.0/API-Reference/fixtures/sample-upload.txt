@@ -1,0 +1,2 @@
+This is a stock fixture file used by API example upload tests.
+It is intentionally small and stable for local/CI automation.

@@ -69,6 +69,13 @@ export interface CopyItem {
   decision?: CopyDecision | null;
 }
 
+/** The new instance's database as the record keeps it. */
+export interface MigrationDatabaseDestination {
+  location: string | null;
+  /** A digest of where the address leads and as whom, with no secret in it. One database saved twice keeps it. */
+  identity?: string;
+}
+
 /** The latest run of a copy step, as the record keeps it. */
 export interface MigrationCopyRun {
   run_id: string;
@@ -78,6 +85,8 @@ export interface MigrationCopyRun {
   started_by: string;
   started_at: string;
   finished_at: string | null;
+  /** The parts of the destination the run wrote to, as they were saved when it started. */
+  destination?: { database?: MigrationDatabaseDestination };
   /** The command's last word on a run that ended. */
   report: {
     ok: boolean;
@@ -154,7 +163,7 @@ export interface MigrationState {
     accepted_findings: AcceptedFinding[];
     /** Where the new instance keeps its data. Each part is there only when this instance needs it, and none holds a secret. */
     destinations?: {
-      database?: { location: string | null };
+      database?: MigrationDatabaseDestination;
       vectors?: { kind: string };
       files?: { bucket: string; prefix: string; endpoint_url?: string | null };
       /** What the last test of each part found. A part that failed is saved too. */

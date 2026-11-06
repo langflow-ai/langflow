@@ -259,8 +259,12 @@ async def refresh_if_needed(
     if not oauth:
         return payload
     binding = await session.get(ConnectionOAuth, row.id)
-    if binding is None or str(binding.generation) != oauth.get("generation"):
-        msg = "OAuth authorization was superseded or revoked. Reconnect."
+    # The binding generation identifies the latest consent attempt, which may
+    # never complete. The caller reads the current saved credential under the
+    # connection lock, so only a successful callback replaces that grant.
+    # Revocation still removes both the binding and the stored credential.
+    if binding is None:
+        msg = "OAuth authorization was revoked. Reconnect."
         raise OAuthError(msg)
     registration = get_oauth_settings().registration(oauth["registration_id"])
     if registration.provider != row.provider_key or registration.fingerprint() != oauth["config_digest"]:
@@ -297,12 +301,16 @@ async def revoke(
     try:
         payload = _decrypt_credential_payload(secret.encrypted_payload)
         oauth = payload.get("oauth")
+        if not oauth and row.provider_key == "slack":
+            # Pasted Slack tokens have no registration binding. auth.revoke
+            # needs only the token, including for Desktop bot connections.
+            return "revoked" if await providers.revoke("slack", payload) else "unsupported"
         if not oauth:
             return "not_applicable"
         registration = get_oauth_settings().registration(oauth["registration_id"])
         if registration.fingerprint() != oauth["config_digest"]:
             return "failed"
-        return "revoked" if await providers.revoke(registration, payload) else "unsupported"
+        return "revoked" if await providers.revoke(registration.provider, payload) else "unsupported"
     except (OAuthError, ValueError, KeyError, TypeError, RuntimeError):
         # Local revocation must commit even if a provider is unavailable, a
         # registration was removed, or the old envelope cannot be decrypted.

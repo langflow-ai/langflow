@@ -224,6 +224,41 @@ To install a specific version of the Langflow package, add the required version 
 
 To reinstall Langflow and all of its dependencies, run `uv pip install langflow --force-reinstall`.
 
+#### Roll back to an earlier release
+
+Before rolling back, stop Langflow and restore the database and application files from a backup taken with the target version.
+Installing older packages does not undo database migrations.
+Keep a backup of the current installation before restoring the earlier backup.
+
+For older releases, pin all three core packages together.
+Pinning only `langflow` can install a newer backend or execution engine.
+Before Langflow 1.12, the core packages could use different version numbers.
+Use the matching versions for your target release, as shown in these examples.
+
+| Langflow | langflow-base | lfx |
+| --- | --- | --- |
+| 1.10.2 | 0.10.2 | 1.10.2 |
+| 1.11.6 | 0.11.6 | 1.11.6 |
+
+For example, install Langflow 1.11.6 in a fresh virtual environment with Python 3.12.
+
+```shell
+uv venv --python 3.12 .venv
+uv pip install --python .venv "langflow==1.11.6" "langflow-base==0.11.6" "lfx==1.11.6"
+```
+
+Starting with Langflow 1.12, all three core packages use the same version number.
+Specify all three versions when rolling back an older installation from that release line, too.
+To reproduce the complete environment, restore its lockfile or dependency snapshot as well.
+Core package pins do not freeze independently versioned provider extensions or other dependencies.
+
+:::warning Upgrading from an auto-login installation
+Langflow 1.13 disables auto-login by default.
+Before you upgrade an installation that signs in automatically, [prepare the existing account for password sign-in](/api-keys-and-authentication#upgrade-from-auto-login).
+If you already upgraded and can't sign in, see [Recover access after upgrading](/api-keys-and-authentication#recover-access-after-upgrading).
+Don't delete or reinstall Langflow to regain access, because that can permanently remove your flows.
+:::
+
 :::note Langflow 1.12 package migration
 The new runnable `langflow-base` package starts at version `1.12.0` and stays
 version-aligned with `langflow`. Requirements such as

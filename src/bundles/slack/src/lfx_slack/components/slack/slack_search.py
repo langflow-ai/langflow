@@ -104,7 +104,7 @@ class SlackSearchComponent(SlackBaseComponent):
         messages = body.get("messages")
         matches = messages.get("matches", []) if isinstance(messages, dict) else []
         results = [Data(data=match) for match in matches if isinstance(match, dict)]
-        self.status = f"{len(results)} match(es)"
+        self.status = results
         return results
 
     async def build_pagination(self) -> Data:
@@ -114,4 +114,6 @@ class SlackSearchComponent(SlackBaseComponent):
         pagination = messages.get("pagination", {}) if isinstance(messages, dict) else {}
         payload = dict(pagination) if isinstance(pagination, dict) else {}
         payload["next_cursor"] = next_cursor(body)
-        return Data(data=payload)
+        data = Data(data=payload)
+        self.status = data
+        return data

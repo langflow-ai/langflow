@@ -19,6 +19,11 @@ langflow==X.Y.Z.devN
 
 The SDK uses the same coordinated version. Standalone extension distributions
 retain their canonical names and their bounded LFX compatibility ranges.
+If a bundle requires the final LFX release for the line being built, the nightly
+tag gives that bundle a `.devN` version and an exact LFX nightly pin. For the same
+release, an older RC sorts after every dev version, so a lower bound would still
+admit incompatible RCs. The bundle manifest and the full package's dependency floor change together. Compatible
+bundles remain unchanged, and the stable source keeps its final-release floor.
 Affected extension wheels are built and published before `langflow-base`.
 
 ## Publish order

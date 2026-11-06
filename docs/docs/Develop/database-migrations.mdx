@@ -11,6 +11,8 @@ By default, the Langflow database uses [SQLite](https://www.sqlite.org/docs.html
 
 This page explains when migrations run and how to run and repair migrations safely.
 
+To move users, flows, files, and knowledge bases to another Langflow installation, see [Move to a new Langflow instance](/instance-migration).
+
 ## Default migrations behavior and triggers
 
 Most Langflow users never need to run a database migration.
@@ -101,6 +103,7 @@ Keep the same `LANGFLOW_SECRET_KEY` when you point Langflow at the new database,
 To run the command from another program, add `--json`.
 It then writes one JSON object per line to standard output: `progress` as it checks the source, prepares the target, and copies rows, `item` for each copied table, `error` or `decision_needed` for anything it refuses, and a final `report`.
 Each problem carries a stable `code`, logs go to standard error, and the exit code is non-zero if anything was refused or failed.
+A run stopped by `SIGINT` or `SIGTERM` ends with an `error` whose `code` is `interrupted`, and exits with 130 for `SIGINT` or 143 for `SIGTERM`.
 
 To move only your flows instead, do the following:
 
@@ -131,6 +134,7 @@ For troubleshooting database migrations, see [Langflow upgrade issues](/troubles
 
 ## See also
 
+* [Move to a new Langflow instance](/instance-migration)
 * [Configure an external PostgreSQL database](/configuration-custom-database)
 * [Langflow database guide for enterprise DBAs](/enterprise-database-guide)
 * [Memory management options](/memory)

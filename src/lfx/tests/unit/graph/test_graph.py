@@ -1,6 +1,7 @@
 import copy
 import json
 import pickle
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -23,6 +24,31 @@ from lfx.utils.flow_validation import CatalogPolicyValidationError, CustomCompon
 
 # now we have three types of graph:
 # BASIC_EXAMPLE_PATH, COMPLEX_EXAMPLE_PATH, OPENAPI_EXAMPLE_PATH
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("wrapped", [False, True])
+async def test_from_payload_runs_exported_code_lines(wrapped):
+    flow_path = Path(__file__).parents[2] / "data" / "simple_chat_no_llm.json"
+    flow = json.loads(flow_path.read_text(encoding="utf-8"))
+    for node in flow["data"]["nodes"]:
+        template = node["data"]["node"]["template"]
+        for field in template.values():
+            if isinstance(field, dict) and field.get("type") == "code":
+                field["value"] = field["value"].split("\n")
+        if node["data"]["type"] == "ChatInput":
+            template["input_value"]["value"] = "Exported graph echo"
+        else:
+            output_id = node["id"]
+    payload = flow if wrapped else flow["data"]
+    original = copy.deepcopy(payload)
+
+    graph = Graph.from_payload(payload)
+    results = [result async for result in graph.async_start()]
+
+    assert len(results) == 3
+    assert graph.get_vertex(output_id).built_object["message"].text == "Exported graph echo"
+    assert payload == original
 
 
 @pytest.fixture

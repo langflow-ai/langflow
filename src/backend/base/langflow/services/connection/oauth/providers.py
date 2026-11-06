@@ -16,6 +16,7 @@ import jwt
 from langflow.services.connection.oauth.config import OAuthError
 
 _MAX_TOKEN_LIFETIME_SECONDS = 31536000
+_CREDENTIAL_REJECTION_ERRORS = frozenset({"invalid_grant", "invalid_refresh_token", "token_expired", "token_revoked"})
 
 if TYPE_CHECKING:
     from langflow.services.connection.oauth.config import OAuthRegistration
@@ -82,20 +83,30 @@ def client_auth(registration: OAuthRegistration) -> dict[str, str]:
 async def _request(
     url: str, data: dict[str, str], *, headers: dict[str, str] | None = None, allow_empty: bool = False
 ) -> dict:
+    """Send an OAuth request without mistaking provider failures for rejected credentials."""
     # No redirects or response text in errors: provider responses may echo codes/tokens.
+    unavailable = "OAuth provider request failed. Retry the action later."
     try:
         async with httpx.AsyncClient(timeout=20, follow_redirects=False) as client:
             response = await client.post(url, data=data, headers=headers)
-            if response.status_code != httpx.codes.OK:
-                msg = "OAuth provider rejected the request. Reconnect the connection."
-                raise OAuthError(msg)
-            body = {} if allow_empty and not response.content else response.json()
-        if not isinstance(body, dict) or body.get("error") or body.get("ok") is False:
+    except httpx.HTTPError:
+        raise OAuthError(unavailable, reason="provider-unavailable") from None
+    # An outage or rate limit says nothing about the stored grant, regardless
+    # of any error code a proxy or provider puts in its response body.
+    if response.is_server_error or response.status_code in {httpx.codes.REQUEST_TIMEOUT, httpx.codes.TOO_MANY_REQUESTS}:
+        raise OAuthError(unavailable, reason="provider-unavailable")
+    try:
+        body = {} if allow_empty and not response.content else response.json()
+    except ValueError:
+        raise OAuthError(unavailable, reason="provider-unavailable") from None
+    if not isinstance(body, dict):
+        raise OAuthError(unavailable, reason="provider-unavailable")
+    if response.status_code != httpx.codes.OK or body.get("error") or body.get("ok") is False:
+        error = body.get("error")
+        if isinstance(error, str) and error in _CREDENTIAL_REJECTION_ERRORS:
             msg = "OAuth provider rejected the request. Reconnect the connection."
             raise OAuthError(msg)
-    except (httpx.HTTPError, ValueError):
-        msg = "OAuth provider request failed. Reconnect the connection."
-        raise OAuthError(msg) from None
+        raise OAuthError(unavailable, reason="provider-unavailable")
     return body
 
 
@@ -107,6 +118,7 @@ async def exchange(
     refresh_token: str | None = None,
     previous_scopes: list[str],
 ) -> tuple[dict, list[str], dict | None]:
+    """Exchange a code or refresh token and validate the provider's credential response."""
     data = client_auth(registration)
     if refresh_token:
         data.update(grant_type="refresh_token", refresh_token=refresh_token)
@@ -121,7 +133,7 @@ async def exchange(
         team = body.get("team") or {}
         if not isinstance(team, dict):
             msg = "OAuth provider returned invalid workspace metadata."
-            raise OAuthError(msg)
+            raise OAuthError(msg, reason="provider-unavailable")
         # Refresh replies need not contain team; it was checked during consent.
         if registration.allowed_tenants and team.get("id") not in registration.allowed_tenants and not refresh_token:
             msg = "OAuth account is outside the configured tenant restriction."
@@ -130,10 +142,10 @@ async def exchange(
             token = body.get("authed_user") or {}
         if not isinstance(token, dict):
             msg = "OAuth provider returned an invalid user token response."
-            raise OAuthError(msg)
+            raise OAuthError(msg, reason="provider-unavailable")
         if token.get("token_type") != ("bot" if registration.profile == "bot" else "user"):
             msg = "OAuth provider returned the wrong identity type."
-            raise OAuthError(msg)
+            raise OAuthError(msg, reason="provider-unavailable")
         if not refresh_token:
             account = {
                 "id": str(token.get("id") or body.get("bot_user_id") or ""),
@@ -155,11 +167,11 @@ async def exchange(
     refresh = token.get("refresh_token", refresh_token)
     if not isinstance(access_token, str) or not access_token or (refresh is not None and not isinstance(refresh, str)):
         msg = "OAuth provider returned an invalid credential response."
-        raise OAuthError(msg)
+        raise OAuthError(msg, reason="provider-unavailable")
     raw_scopes = token.get("scope")
     if raw_scopes is not None and not isinstance(raw_scopes, str):
         msg = "OAuth provider returned invalid scopes."
-        raise OAuthError(msg)
+        raise OAuthError(msg, reason="provider-unavailable")
     scopes = sorted(set(raw_scopes.replace(",", " ").split())) if raw_scopes is not None else previous_scopes
     expiry = None
     if "expires_in" in token:
@@ -170,7 +182,7 @@ async def exchange(
             expiry = (datetime.now(timezone.utc) + timedelta(seconds=seconds)).isoformat()
         except (ValueError, TypeError, OverflowError):
             msg = "OAuth provider returned an invalid token expiry."
-            raise OAuthError(msg) from None
+            raise OAuthError(msg, reason="provider-unavailable") from None
     return (
         {
             "version": 1,
@@ -184,18 +196,21 @@ async def exchange(
     )
 
 
-async def revoke(registration: OAuthRegistration, payload: dict) -> bool:
-    if registration.provider == "google":
+async def revoke(provider: str, payload: dict) -> bool:
+    if provider == "google":
         await _request(
             "https://oauth2.googleapis.com/revoke",
             {"token": payload.get("refresh_token") or payload["access_token"]},
             allow_empty=True,
         )
         return True
-    if registration.provider == "slack":
-        await _request(
+    if provider == "slack":
+        result = await _request(
             "https://slack.com/api/auth.revoke", {}, headers={"Authorization": f"Bearer {payload['access_token']}"}
         )
+        if result.get("ok") is not True or result.get("revoked") is not True:
+            msg = "Slack did not confirm token revocation. Revoke the token in Slack's settings."
+            raise OAuthError(msg)
         return True
     # Entra has no RFC 7009 endpoint for revoking just this delegated grant.
     return False

@@ -413,6 +413,7 @@ async def test_custom_component_update_viewer_denied_before_build(monkeypatch, o
 async def test_custom_component_editor_passes_ceiling(monkeypatch, owner):
     """An editor ceiling allows component instantiation (create is in the editor set)."""
     from langflow.api.v1 import endpoints
+    from langflow.api.v1.schemas import CustomComponentRequest
 
     # Stub the build pipeline so the route returns without real execution; the
     # point is that the ceiling check does NOT short-circuit for an editor.
@@ -429,7 +430,7 @@ async def test_custom_component_editor_passes_ceiling(monkeypatch, owner):
     monkeypatch.setattr(endpoints, "get_settings_service", lambda: SimpleNamespace(settings=settings))
     # ``isinstance(instance, Component)`` must be False so the optional
     # run_and_validate_update_outputs branch is skipped for this MagicMock.
-    raw_code = SimpleNamespace(code="print('x')", frontend_node=None)
+    raw_code = CustomComponentRequest(code="print('x')")
     request = SimpleNamespace(state=SimpleNamespace(locale="en"))
 
     set_current_external_access_context(ExternalAccessContext(provider="openrag", subject="s-1", level="editor"))

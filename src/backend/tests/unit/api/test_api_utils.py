@@ -1,8 +1,20 @@
+from typing import Annotated
 from unittest.mock import patch
 
 import pytest
+from fastapi import Depends, FastAPI
+from fastapi.responses import JSONResponse
+from fastapi.testclient import TestClient
+from fastapi_pagination import Params
 from langflow.api.utils import get_suggestion_message, remove_api_keys
-from langflow.api.utils.core import build_content_disposition, format_exception_message, get_causing_exception
+from langflow.api.utils.core import (
+    MIN_PAGE_SIZE,
+    PARAMS_MAX_PAGE_SIZE,
+    build_content_disposition,
+    custom_params,
+    format_exception_message,
+    get_causing_exception,
+)
 from langflow.services.database.models.flow.utils import get_outdated_components
 from langflow.utils.version import get_version_info
 
@@ -294,3 +306,61 @@ def test_get_causing_exception_stops_at_curated_shim_error():
     curated = _raise_like_shim(raw)
     wrapped = _wrap_like_create_class(curated)
     assert get_causing_exception(wrapped) is curated
+
+
+def _custom_params_client() -> TestClient:
+    app = FastAPI()
+
+    @app.exception_handler(Exception)
+    async def _catch_all(_request, exc):  # mirrors the app-wide handler: a raised error would be a 500
+        return JSONResponse(status_code=500, content={"message": str(exc)})
+
+    @app.get("/probe")
+    def probe(params: Annotated[Params | None, Depends(custom_params)]):
+        return None if params is None else {"page": params.page, "size": params.size}
+
+    return TestClient(app, raise_server_exceptions=False)
+
+
+@pytest.mark.parametrize(
+    ("query", "field"),
+    [
+        ("?page=1&size=101", "size"),
+        ("?page=1&size=1000", "size"),
+        ("?page=1&size=-5", "size"),
+        ("?page=1&size=0", "size"),
+        ("?page=0&size=10", "page"),
+    ],
+)
+def test_custom_params_rejects_out_of_range_with_422(query, field):
+    response = _custom_params_client().get(f"/probe{query}")
+
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["loc"] == ["query", field]
+
+
+@pytest.mark.parametrize(
+    ("query", "expected"),
+    [
+        ("", None),
+        ("?page=2&size=10", {"page": 2, "size": 10}),
+        ("?page=1&size=100", {"page": 1, "size": 100}),
+        ("?page=3", {"page": 3, "size": 50}),
+        ("?size=20", {"page": 1, "size": 20}),
+    ],
+)
+def test_custom_params_accepts_in_range(query, expected):
+    response = _custom_params_client().get(f"/probe{query}")
+
+    assert response.status_code == 200
+    assert response.json() == expected
+
+
+def test_params_bounds_match_fastapi_pagination():
+    """PARAMS_MAX_PAGE_SIZE and MIN_PAGE_SIZE must track the limits fastapi_pagination.Params enforces."""
+
+    def bound(field: str, attr: str):
+        return next(m for m in Params.model_fields[field].metadata if hasattr(m, attr))
+
+    assert bound("size", "le").le == PARAMS_MAX_PAGE_SIZE
+    assert bound("page", "ge").ge == MIN_PAGE_SIZE

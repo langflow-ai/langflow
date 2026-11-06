@@ -4,17 +4,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { type SlackTokenKind, slackTokenKind } from "../helpers/slack-token";
 import type { ConnectionMethod } from "../hooks/useSlackTokenConnection";
-import ScopeChecklist from "./ScopeChecklist";
 
 export interface SlackTokenFieldsProps {
   token: string;
   onTokenChange: (token: string) => void;
   allowBackgroundRuns: boolean;
   onAllowBackgroundRunsChange: (allow: boolean) => void;
-  /** The scopes a bot token can be recorded with, offered once one is pasted. */
-  botTokenScopes: string[];
-  tokenScopes: Set<string>;
-  onToggleTokenScope: (scope: string, checked: boolean) => void;
 }
 
 export interface ConnectionMethodSelectProps {
@@ -52,15 +47,12 @@ const HINT_KEY: Record<SlackTokenKind, string> = {
   bot: "connections.add.tokenBot",
 };
 
-/** The token, scope and background-runs fields of a pasted-token Slack connection. */
+/** The token and background-runs fields of a pasted-token Slack connection. */
 export function SlackTokenFields({
   token,
   onTokenChange,
   allowBackgroundRuns,
   onAllowBackgroundRunsChange,
-  botTokenScopes,
-  tokenScopes,
-  onToggleTokenScope,
 }: SlackTokenFieldsProps) {
   const { t } = useTranslation();
   const kind = slackTokenKind(token);
@@ -116,19 +108,6 @@ export function SlackTokenFields({
           {t("connections.add.allowBackgroundRunsHelp")}
         </p>
       </div>
-
-      {kind === "bot" && (
-        <div className="flex flex-col gap-2">
-          <span className="text-sm font-medium">
-            {t("connections.add.tokenScopes")}
-          </span>
-          <ScopeChecklist
-            scopes={botTokenScopes}
-            selected={tokenScopes}
-            onToggle={onToggleTokenScope}
-          />
-        </div>
-      )}
     </div>
   );
 }

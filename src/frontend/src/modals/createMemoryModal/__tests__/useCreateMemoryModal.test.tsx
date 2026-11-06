@@ -1,5 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import type { ModelOption } from "@/components/core/parameterRenderComponent/components/modelInputComponent/types";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { useCreateMemoryModal } from "../useCreateMemoryModal";
 
 const mockSetErrorData = jest.fn();
@@ -71,6 +72,12 @@ jest.mock("@/controllers/API/queries/variables", () => ({
 describe("useCreateMemoryModal", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    useUtilityStore.setState({
+      vectorStoreConfigLoaded: true,
+      localVectorStoreAvailable: true,
+      defaultVectorStoreBackend: undefined,
+      configuredVectorStoreBackends: [],
+    });
     mockModelProvidersResult = {
       data: mockProviders,
       isFetching: false,
@@ -101,6 +108,69 @@ describe("useCreateMemoryModal", () => {
       fetchStatus: "idle",
     };
   });
+
+  it("waits for config before applying an OpenSearch default or allowing creation", () => {
+    useUtilityStore.setState({ vectorStoreConfigLoaded: false });
+    const { result } = renderHook(() =>
+      useCreateMemoryModal({ flowId: "flow-1", onClose: jest.fn() }),
+    );
+
+    expect(result.current.backendConfigured).toBe(false);
+    act(() => {
+      useUtilityStore.setState({
+        vectorStoreConfigLoaded: true,
+        localVectorStoreAvailable: false,
+        defaultVectorStoreBackend: "opensearch",
+      });
+    });
+
+    expect(result.current.backendType).toBe("opensearch");
+    expect(result.current.backendConfigured).toBe(true);
+    act(() => {
+      result.current.setName("OpenSearch Memory");
+      result.current.setSelectedEmbeddingModel([
+        result.current.embeddingModelOptions[0],
+      ]);
+    });
+    act(() => result.current.handleSubmit());
+    expect(mockMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ backend_type: "opensearch" }),
+    );
+  });
+
+  it.each([
+    [true, []],
+    [false, []],
+    [true, ["postgres"]],
+    [false, ["postgres"]],
+  ] as const)(
+    "creates memory using environment pgVector (local storage: %s, configured: %j)",
+    (localAvailable, configured) => {
+      useUtilityStore.setState({
+        localVectorStoreAvailable: localAvailable,
+        defaultVectorStoreBackend: "postgres",
+        configuredVectorStoreBackends: [...configured],
+      });
+      const { result } = renderHook(() =>
+        useCreateMemoryModal({ flowId: "flow-1", onClose: jest.fn() }),
+      );
+      expect(result.current.backendType).toBe("postgres");
+      expect(result.current.backendConfigured).toBe(true);
+      act(() => {
+        result.current.setName("Environment Memory");
+        result.current.setSelectedEmbeddingModel([
+          result.current.embeddingModelOptions[0],
+        ]);
+      });
+      act(() => result.current.handleSubmit());
+      expect(mockMutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          backend_type: "postgres",
+          backend_config: {},
+        }),
+      );
+    },
+  );
 
   it("scopes provider and global-variable discovery to the current flow", () => {
     renderHook(() =>

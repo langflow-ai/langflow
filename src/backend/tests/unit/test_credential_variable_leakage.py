@@ -104,7 +104,8 @@ async def test_credential_variable_does_not_leak_into_text_input_output():
 
 
 @pytest.mark.asyncio
-async def test_credential_variable_in_password_field_preserves_runtime_string_contract():
+@pytest.mark.parametrize("explicit_repr", [False, True])
+async def test_credential_variable_in_password_field_preserves_runtime_string_contract(explicit_repr):
     """A CREDENTIAL variable in a password field remains usable as a string.
 
     A CREDENTIAL global variable routed into a password (SecretStrInput) field
@@ -122,6 +123,8 @@ async def test_credential_variable_in_password_field_preserves_runtime_string_co
         def build_output(self) -> Message:
             self.log(self.api_key)
             self.status = self.api_key
+            if explicit_repr:
+                self.repr_value = self.api_key
             return Message(text=self.api_key)
 
     component = _PasswordFieldComponent(_user_id=str(uuid.uuid4()))
@@ -148,7 +151,7 @@ async def test_credential_variable_in_password_field_preserves_runtime_string_co
     assert _LEAKY_SECRET not in artifacts["output"]["repr"]
     assert component._output_logs["output"][0].message == "**********"
     assert component.status == "**********"
-    assert component.repr_value == "**********"
+    assert component.repr_value == ("**********" if explicit_repr else "")
 
 
 @pytest.mark.asyncio
