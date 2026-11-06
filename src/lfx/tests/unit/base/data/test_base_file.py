@@ -117,6 +117,28 @@ class TestLoadFilesMessage:
 
         assert [item.data["text"] for item in result] == ["allowed content"]
 
+    def test_validate_silent_errors_skip_missing_file(self):
+        """In silent mode a missing file is skipped, not returned as a nonexistent BaseFile.
+
+        silent_errors=True must keep validation going past a missing file while still
+        omitting it: a returned BaseFile whose path does not exist only moves the failure
+        to file processing, where a missing local file surfaces as a different error
+        mixed in with the results of the files that do exist.
+        """
+        missing_path = self.temp_path / "nonexistent.txt"
+        existing_path = self.temp_path / "existing.txt"
+        existing_path.write_text("existing content", encoding="utf-8")
+
+        self.component.path = [str(missing_path), str(existing_path)]
+        self.component.delete_server_file_after_processing = False
+        self.component.silent_errors = True
+
+        files = self.component._validate_and_resolve_paths()
+
+        assert [file.path for file in files] == [existing_path], (
+            "Silent mode must skip the missing file and keep only the existing one"
+        )
+
     def test_load_files_message_with_json_dict_content(self):
         """Test load_files_message with JSON file containing dict (simulates get_text() returning dict)."""
         # Create JSON file with dict content
