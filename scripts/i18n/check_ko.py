@@ -285,6 +285,7 @@ def check_frontend(ko_path: Path, *, partial: bool, max_lines: int) -> int:
 
 
 def check_backend(ko_path: Path, *, partial: bool, max_lines: int) -> int:
+    """Check a backend ko.json, or a partial file when ``partial``, and return the number of errors."""
     en = load(BACKEND_DIR / "en.json")
     ko = load(ko_path)
     expected = backend_expected_keys(en)
