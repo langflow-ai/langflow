@@ -182,7 +182,7 @@ class TestExceptionTelemetry:
                 RunPayload(run_seconds=1, run_success=False, run_error_message="user input"),
                 "run",
                 "runErrorMessage",
-                "runSuccess",
+                "successFlag",
             ),
             (
                 DeploymentPayload(

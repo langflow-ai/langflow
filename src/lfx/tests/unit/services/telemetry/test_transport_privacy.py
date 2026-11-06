@@ -28,7 +28,7 @@ ERROR_TEXT = "synthetic-private-input; SQL parameters: synthetic@example.test"
             "exception",
             {"exceptionType": "ValueError", "stackTraceHash": "abc123"},
         ),
-        (RunPayload(run_seconds=2, run_success=False, run_error_message=ERROR_TEXT), "run", {"runSuccess": False}),
+        (RunPayload(run_seconds=2, run_success=False, run_error_message=ERROR_TEXT), "run", {"successFlag": False}),
         (
             ComponentPayload(
                 component_name="Test", component_seconds=2, component_success=False, component_error_message=ERROR_TEXT

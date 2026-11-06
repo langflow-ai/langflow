@@ -156,7 +156,7 @@ class TestRunPayload:
 
         assert data["runIsWebhook"] is True
         assert data["runSeconds"] == 180
-        assert data["runSuccess"] is True
+        assert data["successFlag"] is True
         assert data["runErrorMessage"] == ""
         assert data["subProductTitle"] == "desktop"
         assert data["runId"] is None

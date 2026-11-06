@@ -14,7 +14,7 @@ class BasePayload(BaseModel):
 class RunPayload(BasePayload):
     run_is_webhook: bool = Field(default=False, serialization_alias="runIsWebhook")
     run_seconds: int = Field(serialization_alias="runSeconds")
-    run_success: bool = Field(serialization_alias="runSuccess")
+    run_success: bool = Field(serialization_alias="successFlag")
     run_error_message: str | None = Field(None, serialization_alias="runErrorMessage")
 
 

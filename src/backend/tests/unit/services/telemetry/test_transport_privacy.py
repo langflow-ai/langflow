@@ -39,7 +39,7 @@ ERROR_TEXT = "synthetic-private-input; SQL: UPDATE files SET name=?; parameters:
         (
             RunPayload(run_seconds=2, run_success=False, run_error_message=ERROR_TEXT),
             "run",
-            {"runSuccess": False, "runSeconds": 2},
+            {"successFlag": False, "runSeconds": 2},
         ),
         (
             ComponentPayload(

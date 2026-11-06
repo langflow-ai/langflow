@@ -287,7 +287,7 @@ class TestTelemetryPayloadValidation:
         expected = {
             "runIsWebhook": True,
             "runSeconds": 300,
-            "runSuccess": False,
+            "successFlag": False,
             "runErrorMessage": "Connection timeout",
             "subProductTitle": "oss",
             "runId": None,
@@ -448,7 +448,7 @@ class TestTelemetryPayloadValidation:
         # Exclude unset should only include explicitly set fields
         exclude_unset = payload.model_dump(by_alias=True, exclude_unset=True)
         assert "runSeconds" in exclude_unset
-        assert "runSuccess" in exclude_unset
+        assert "successFlag" in exclude_unset
         # These have defaults but weren't set explicitly, so they're excluded
         assert "runIsWebhook" not in exclude_unset
         assert "runErrorMessage" not in exclude_unset

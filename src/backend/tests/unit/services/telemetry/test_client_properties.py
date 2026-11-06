@@ -83,3 +83,12 @@ async def test_reports_the_operating_system_as_os_name(tmp_path):
 
     assert properties["osName"] == platform.system().lower()
     assert "os" not in properties
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("success", [True, False])
+async def test_reports_the_run_outcome_as_success_flag(tmp_path, success):
+    properties = await _sent_properties(tmp_path, RunPayload(run_seconds=1, run_success=success), "run")
+
+    assert properties["successFlag"] is success
+    assert "runSuccess" not in properties
