@@ -2894,7 +2894,7 @@ class TestProjectNameValidation:
             "api/v1/projects/", json={"name": "\U0001f680 rockets", "description": ""}, headers=logged_in_headers
         )
 
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
         assert "emoji" in response.text
 
     async def test_rename_project_to_emoji_name_is_rejected(self, client: AsyncClient, logged_in_headers, basic_case):
@@ -2905,7 +2905,7 @@ class TestProjectNameValidation:
             f"api/v1/projects/{project_id}", json={"name": "\U0001f389\U0001f389"}, headers=logged_in_headers
         )
 
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
         stored = await client.get(f"api/v1/projects/{project_id}", headers=logged_in_headers)
         assert stored.json()["name"] == basic_case["name"]
 
@@ -2925,7 +2925,7 @@ class TestProjectNameValidation:
             "api/v1/projects/", json={"name": name, "description": ""}, headers=logged_in_headers
         )
 
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
         assert "at least one letter or number" in response.text
 
     async def test_importing_a_project_with_an_emoji_name_is_a_422_not_a_500(
@@ -2939,7 +2939,7 @@ class TestProjectNameValidation:
             headers=logged_in_headers,
         )
 
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
         assert response.json()["detail"] == "Project names cannot contain emoji"
 
 

@@ -258,7 +258,7 @@ def test_put_rejects_malformed_integration_action_keys_without_writing(monkeypat
         },
     )
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     replace_state.assert_not_awaited()
     apply_state.assert_not_called()
 

@@ -25,7 +25,7 @@ async def test_refused_tweak_returns_422_on_the_v1_sync_run(client, simple_api_t
 
     response = await client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT, response.text
     detail = response.json()["detail"]
     assert detail == {
         "error": "Refused tweaks",
@@ -49,7 +49,7 @@ async def test_refused_tweak_returns_422_on_the_v2_sync_run(client, simple_api_t
 
     response = await client.post("/api/v2/workflows", headers=headers, json=payload)
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT, response.text
     detail = response.json()["detail"]
     assert detail["code"] == "TWEAKS_REFUSED"
     assert detail["fields"] == ["code"]
@@ -89,7 +89,7 @@ async def test_refused_tweak_returns_422_on_the_v1_advanced_run(client, simple_a
 
     response = await client.post(f"/api/v1/run/advanced/{flow_id}", headers=headers, json=payload)
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT, response.text
     detail = response.json()["detail"]
     assert detail["code"] == "TWEAKS_REFUSED"
     assert detail["fields"] == ["code"]
@@ -113,7 +113,7 @@ async def test_off_refuses_component_targeted_inputs_on_the_v1_advanced_run(
         f"/api/v1/run/advanced/{flow_id}", headers={"x-api-key": created_api_key.api_key}, json=payload
     )
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT, response.text
     detail = response.json()["detail"]
     assert detail["code"] == "TWEAKS_REFUSED"
     assert detail["fields"] == [node_id]
@@ -138,7 +138,7 @@ async def test_off_refuses_component_targeted_inputs_on_the_v1_build(
 
     response = await client.post(f"/api/v1/build/{flow_id}/flow", headers=logged_in_headers, json=payload)
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT, response.text
     detail = response.json()["detail"]
     assert detail["code"] == "TWEAKS_REFUSED"
     assert detail["fields"] == [node_id]
@@ -167,7 +167,7 @@ async def test_off_refuses_component_targeted_inputs_on_the_v1_public_build(
 
     response = await client.post(f"/api/v1/build_public_tmp/{flow_id}/flow", json=payload)
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT, response.text
     detail = response.json()["detail"]
     assert detail["code"] == "TWEAKS_REFUSED"
     assert detail["fields"] == [node_id]
