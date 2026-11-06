@@ -401,6 +401,7 @@ class TestRenderTable:
         assert "synced" in output.lower()
 
     def test_flow_text_is_displayed_literally(self, tmp_path):
+        """A bracket in a flow, file, or environment name can be part of the displayed value."""
         from lfx.cli.status import FlowStatus
 
         row = FlowStatus(
@@ -722,25 +723,25 @@ class TestStatusCommandErrors:
         [b"{{invalid", b"[]", b"null", b"\xff"],
         ids=["malformed", "array", "null", "invalid-utf8"],
     )
-    def test_error_on_one_flow_still_processes_others(self, tmp_path: Path, bad_content: bytes):
-        """An error on flow 1 doesn't abort processing of flow 2."""
+    def test_error_on_one_flow_still_processes_others(self, tmp_path: Path, bad_content: bytes, capsys):
+        """The status table shows the unreadable file and its synced neighbor together."""
         p_bad = tmp_path / "bad.json"
         p_bad.write_bytes(bad_content)
         p_good = _write_flow(tmp_path, "good.json")
-        remote = _fake_remote_flow(flow_dict=_FLOW_DICT)
-        client = _make_client_mock(remote_flow=remote)
-        triple = _make_sdk_triple(client)
+        client = _make_client_mock()
 
-        with patch("lfx.cli.status._render_table") as render, pytest.raises(typer.Exit) as exc_info:
-            _run_status([str(p_bad), str(p_good)], sdk_triple=triple)
-        # Exits 1 due to the error flow; the good flow was also processed
+        with pytest.raises(typer.Exit) as exc_info:
+            _run_status([str(p_bad), str(p_good)], sdk_triple=_make_sdk_triple(client))
+
         assert exc_info.value.exit_code == 1
         client.get_flow.assert_called_once_with(_FLOW_ID)
-        statuses = render.call_args.args[0]
-        assert [(row.path, row.status) for row in statuses] == [(p_bad, "error"), (p_good, "synced")]
+        lines = capsys.readouterr().out.splitlines()
+        assert any("bad.json" in line and "error" in line for line in lines)
+        assert any("good.json" in line and "synced" in line for line in lines)
 
     @pytest.mark.parametrize("name", [None, ["not a string"]], ids=["null", "array"])
     def test_invalid_flow_name_still_displays_the_other_flows(self, tmp_path, capsys, name):
+        """A local file with a valid ID is still local even when its name is malformed."""
         bad = _write_flow(tmp_path, "bad.json", {**_FLOW_DICT_2, "name": name})
         good = _write_flow(tmp_path, "good.json")
         remote_bad_id = _fake_remote_flow(_FLOW_ID_2, _FLOW_DICT_2)

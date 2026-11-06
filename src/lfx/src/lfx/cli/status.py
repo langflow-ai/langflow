@@ -108,6 +108,7 @@ def _collect_files(dir_path: str | None, flow_paths: list[str]) -> list[Path]:
 
 
 def _render_table(statuses: list[FlowStatus], env_label: str) -> None:
+    """Print flow names and diagnostics literally alongside the styled status indicators."""
     table = Table(
         box=box.SIMPLE,
         show_header=True,
