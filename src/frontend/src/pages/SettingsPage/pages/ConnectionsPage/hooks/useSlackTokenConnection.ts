@@ -3,6 +3,7 @@ import type {
   ConnectionCreate,
   ConnectionRead,
   DeploymentContext,
+  IntegrationIdentity,
   ManualTokenProfileRead,
 } from "@/controllers/API/queries/connections";
 import {
@@ -18,8 +19,9 @@ export interface UseSlackTokenConnectionOptions {
   providerId: string;
   /** Which deployment this is; hosted offers no pasted tokens. */
   deploymentContext: DeploymentContext | undefined;
-  /** Only token-only providers may renew a manually entered credential. */
+  /** Reconnect retains the existing executing identity. */
   reauthorizing: boolean;
+  reauthorizingIdentity?: IntegrationIdentity;
   initialAllowBackgroundRuns?: boolean;
   /** Stores the validated token through creation or renewal. */
   create: (payload: ConnectionCreate) => Promise<ConnectionRead>;
@@ -75,6 +77,7 @@ export function useSlackTokenConnection({
   providerId,
   deploymentContext,
   reauthorizing,
+  reauthorizingIdentity,
   initialAllowBackgroundRuns = false,
   create,
   tokenProfile,
@@ -89,7 +92,9 @@ export function useSlackTokenConnection({
   );
 
   const offersToken =
-    (!reauthorizing || tokenOnly) &&
+    (!reauthorizing ||
+      tokenOnly ||
+      (providerId === "slack" && reauthorizingIdentity === "bot")) &&
     (offersSlackToken(providerId, deploymentContext) ||
       tokenProfile !== undefined);
   const defaultMethod =

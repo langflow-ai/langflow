@@ -58,6 +58,22 @@ describe("TriggerNodeControls", () => {
     );
   });
 
+  it("explains why a legacy canvas cannot be enabled", async () => {
+    mockTrigger = makeTrigger({
+      state: "pending",
+      allowed_actions: ["delete"],
+      blocked_actions: { resume: "multiple_triggers" },
+    });
+    render(<TriggerNodeControls nodeId="n1" />);
+    const enabled = screen.getByRole("switch", { name: "Enabled" });
+    expect(enabled).toHaveAttribute("aria-disabled", "true");
+    expect(enabled).toHaveAccessibleDescription(
+      "A flow can have only one trigger. Remove the extra triggers and try again.",
+    );
+    await userEvent.click(enabled);
+    expect(mockEnable).not.toHaveBeenCalled();
+  });
+
   it("holds Enabled until background runs are allowed, and says why", async () => {
     mockTrigger = makeTrigger({
       state: "pending",

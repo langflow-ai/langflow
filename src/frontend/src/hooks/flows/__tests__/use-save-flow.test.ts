@@ -183,6 +183,92 @@ describe("useSaveFlow", () => {
     expect(mockSetSaveLoading).toHaveBeenCalledWith(false);
   });
 
+  it("reports the actionable message once when a legacy graph save is refused", async () => {
+    const message =
+      "A flow can have only one trigger. Remove the extra triggers and try again.";
+    const error = {
+      response: {
+        status: 422,
+        data: {
+          detail: [
+            { msg: `Value error, ${message}` },
+            { msg: `Value error, ${message}` },
+          ],
+        },
+      },
+    };
+    mockMutate.mockImplementation((_payload, options) =>
+      options.onError(error),
+    );
+    const { result } = renderHook(() => useSaveFlow());
+
+    await expect(result.current()).rejects.toBe(error);
+
+    expect(mockSetErrorData).toHaveBeenCalledTimes(1);
+    expect(mockSetErrorData).toHaveBeenCalledWith({
+      title: "Failed to save flow",
+      list: [message],
+    });
+  });
+
+  it("saves metadata without sending or discarding unsaved canvas edits", async () => {
+    const saved = {
+      ...flowsManagerState.currentFlow,
+      version_token: "built-on",
+    };
+    flowsManagerState.currentFlow = saved;
+    const live = { ...flowStoreState.currentFlow, version_token: "built-on" };
+    flowStoreState.currentFlow = live;
+    mockMutate.mockImplementation((_payload, options) => {
+      options.onSuccess({
+        ...saved,
+        name: "Renamed",
+        version_token: "other-writer",
+      });
+    });
+    const { result } = renderHook(() => useSaveFlow());
+
+    await result.current({ ...live, name: "Renamed" }, { metadataOnly: true });
+
+    expect(mockMutate.mock.calls[0][0]).toEqual({
+      id: "flow-1",
+      name: "Renamed",
+      description: "desc",
+      locked: false,
+      versionToken: null,
+    });
+    expect(mockSetCurrentFlow).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "Renamed",
+        data: live.data,
+        version_token: "built-on",
+      }),
+    );
+    expect(mockSetFlows.mock.calls[0][0][0].data).toBe(saved.data);
+    expect(mockSetFlows.mock.calls[0][0][0].version_token).toBe("built-on");
+  });
+
+  it("renames a flow card without fetching or sending its graph", async () => {
+    const card = {
+      ...flowsManagerState.currentFlow,
+      data: null,
+      name: "Renamed card",
+    };
+    flowStoreState.currentFlow = undefined;
+    flowStoreState.onFlowPage = false;
+    flowsManagerState.currentFlow = undefined;
+    mockMutate.mockImplementation((_payload, options) =>
+      options.onSuccess(card),
+    );
+    const { result } = renderHook(() => useSaveFlow());
+
+    await result.current(card, { metadataOnly: true });
+
+    expect(mockMutate.mock.calls[0][0]).not.toHaveProperty("data");
+    expect(mockGetFlow).not.toHaveBeenCalled();
+    expect(mockSetCurrentFlow).not.toHaveBeenCalled();
+  });
+
   it("suppresses the store-inconsistency toast too so the caller never gets two", async () => {
     // A caller that reports the rejection itself would otherwise show a second
     // toast on top of this one.
