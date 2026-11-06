@@ -1,0 +1,101 @@
+---
+title: Sequenzy
+slug: /bundles-sequenzy
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Sequenzy** bundle.
+
+[Sequenzy](https://sequenzy.com) is an email marketing platform for SaaS and ecommerce.
+With these components, a flow or an agent can manage subscribers, tag them, trigger events that start automations, send transactional email, and list campaigns.
+
+All components need a Sequenzy API key.
+Create one in the Sequenzy dashboard, then enter it in the **Sequenzy API Key** field, or store it in a [global variable](/configuration-global-variables) such as `SEQUENZY_API_KEY`.
+
+The components call the Sequenzy REST API at `https://api.sequenzy.com/api/v1`.
+For more information, see the [Sequenzy API reference](https://docs.sequenzy.com/api-reference/introduction).
+
+<PartialParams />
+
+Every component also has an advanced **Timeout (seconds)** (`timeout`) parameter that sets how long to wait for Sequenzy to answer. Default: `30`.
+
+## Sequenzy Add Subscriber
+
+This component creates a subscriber, or updates one that already exists, with a name, tags and custom attributes.
+It outputs a [`Data`](/data-types#json) object with the saved subscriber.
+
+| Name | Type | Description |
+|------|------|-------------|
+| Sequenzy API Key (`api_key`) | SecretString | Input parameter. Your Sequenzy API key. |
+| Email (`email`) | String | Input parameter. The subscriber's email address. |
+| First Name (`first_name`) | String | Input parameter. Optional. |
+| Last Name (`last_name`) | String | Input parameter. Optional. |
+| Tags (`tags`) | String | Input parameter. Optional. Comma-separated tags to add, such as `newsletter, trial`. |
+| Custom Attributes (`custom_attributes`) | String | Input parameter. Optional. A JSON object of custom attributes, such as `{"plan": "pro"}`. |
+| If Subscriber Exists (`duplicate_strategy`) | String | Input parameter. `overwrite` replaces fields with the values sent, `merge` only fills in missing fields, and `skip` leaves the existing subscriber unchanged. Default: `overwrite`. |
+
+## Sequenzy Get Subscriber
+
+This component looks up one subscriber by email address and outputs a [`Data`](/data-types#json) object with the subscriber's status, tags, lists and custom attributes.
+
+| Name | Type | Description |
+|------|------|-------------|
+| Sequenzy API Key (`api_key`) | SecretString | Input parameter. Your Sequenzy API key. |
+| Email (`email`) | String | Input parameter. The subscriber's email address. |
+
+## Sequenzy Tag Subscriber
+
+This component adds a tag to, or removes a tag from, a subscriber.
+Adding a tag creates the subscriber if needed and can start automations that listen for the tag.
+
+| Name | Type | Description |
+|------|------|-------------|
+| Sequenzy API Key (`api_key`) | SecretString | Input parameter. Your Sequenzy API key. |
+| Action (`action`) | String | Input parameter. **Add Tag** or **Remove Tag**. Default: **Add Tag**. |
+| Email (`email`) | String | Input parameter. The subscriber's email address. |
+| Tag (`tag`) | String | Input parameter. The tag name, such as `premium`. |
+
+## Sequenzy Trigger Event
+
+This component records a custom event, such as `purchase.completed`, for a subscriber.
+Events can start automations and be used in segments.
+The subscriber is created if needed.
+
+| Name | Type | Description |
+|------|------|-------------|
+| Sequenzy API Key (`api_key`) | SecretString | Input parameter. Your Sequenzy API key. |
+| Email (`email`) | String | Input parameter. The subscriber's email address. |
+| Event Name (`event`) | String | Input parameter. The event name, such as `purchase.completed`. |
+| Event Properties (`properties`) | String | Input parameter. Optional. A JSON object of event properties, such as `{"amount": 9900, "currency": "USD"}`. |
+| Event ID (`event_id`) | String | Input parameter. Optional. An idempotency key. Sending the same ID again does not record a second event. |
+
+## Sequenzy Send Email
+
+This component sends a transactional email, either from a saved transactional template or from a subject and HTML body.
+
+| Name | Type | Description |
+|------|------|-------------|
+| Sequenzy API Key (`api_key`) | SecretString | Input parameter. Your Sequenzy API key. |
+| To (`to`) | String | Input parameter. The recipient's email address. |
+| Template Slug (`slug`) | String | Input parameter. The slug of a saved transactional email. Leave it empty to send the subject and body instead. |
+| Subject (`subject`) | String | Input parameter. The email subject. Required when no template slug is set. |
+| HTML Body (`body`) | String | Input parameter. The email body as HTML. Required when no template slug is set. |
+| Variables (`template_variables`) | String | Input parameter. Optional. A JSON object of template variables, such as `{"name": "Ada"}`. |
+| Idempotency Key (`idempotency_key`) | String | Input parameter. Optional. Retrying with the same key does not send the email twice. |
+
+## Sequenzy List Campaigns
+
+This component lists email campaigns and returns them as a [`Table`](/data-types#table), with one row per campaign, including its `id`, `name`, `subject`, `status` and send dates.
+
+| Name | Type | Description |
+|------|------|-------------|
+| Sequenzy API Key (`api_key`) | SecretString | Input parameter. Your Sequenzy API key. |
+| Status (`campaign_status`) | String | Input parameter. Only list campaigns with this status, such as `draft`, `scheduled` or `sent`. Default: `any`. |
+| Limit (`limit`) | Integer | Input parameter. The number of campaigns to return, from 1 to 100. Default: `20`. |

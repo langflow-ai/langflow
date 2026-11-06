@@ -114,4 +114,16 @@ describe("SIDEBAR_BUNDLES", () => {
       ]),
     );
   });
+
+  it("classifies Sequenzy as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "Sequenzy",
+          icon: "Sequenzy",
+          name: "sequenzy",
+        }),
+      ]),
+    );
+  });
 });
