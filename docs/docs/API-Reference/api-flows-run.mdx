@@ -235,6 +235,8 @@ If your flow components reference variables that aren't provided in headers or y
 ## Webhook run flow
 
 Use the `/webhook` endpoint to start a flow by sending an HTTP `POST` request.
+The flow must contain a **Webhook** component.
+For any other flow, including a flow that has only an [**Inbound Webhook** trigger](/deployment-trigger-webhooks), the endpoint returns the same `404` as for a flow that doesn't exist.
 
 :::tip
 After you add a [**Webhook** component](/webhook) to a flow, open the [**API access** pane](/concepts-publish), and then click the **Webhook curl** tab to get an automatically generated `POST /webhook` request for your flow.

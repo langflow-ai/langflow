@@ -75,10 +75,10 @@ For example:
 
 ```bash
 curl -X POST \
-  "PUBLIC_SERVER_DOMAIN/api/v1/webhook/FLOW_ID" \
+  "PUBLIC_SERVER_DOMAIN/api/v1/run/FLOW_ID" \
   -H "Content-Type: application/json" \
   -H "x-api-key: LANGFLOW_API_KEY" \
-  -d '{"data": "example-data"}'
+  -d '{"output_type": "chat", "input_type": "chat", "input_value": "Hello"}'
 ```
 
 :::tip
