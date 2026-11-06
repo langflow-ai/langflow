@@ -8,7 +8,7 @@ MAX_TELEMETRY_PAYLOAD_SIZE = 30 * 1024
 
 
 class BasePayload(BaseModel):
-    client_type: str | None = Field(default=None, serialization_alias="clientType")
+    client_type: str | None = Field(default=None, serialization_alias="subProductTitle")
 
 
 class RunPayload(BasePayload):

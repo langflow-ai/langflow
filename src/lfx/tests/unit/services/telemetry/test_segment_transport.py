@@ -74,6 +74,21 @@ async def test_sends_edition_as_product_plan_name(monkeypatch, argument, environ
     assert service._client.post.await_args.kwargs["json"]["properties"]["productPlanName"] == expected
 
 
+@pytest.mark.asyncio
+async def test_identifies_mcp_events_with_a_sub_product_title() -> None:
+    service = TelemetryService(base_url="https://api.segment.test/v1/track", write_key="test-key", do_not_track=False)
+    service.anonymous_id = "test-installation"
+    service._client = AsyncMock()
+    service._client.post.return_value.status_code = 200
+
+    await service.send_telemetry_data(BasePayload(), "mcp_tool")
+
+    properties = service._client.post.await_args.kwargs["json"]["properties"]
+    assert properties["subProductTitle"] == "Langflow MCP"
+    assert "platform" not in properties
+    assert "clientType" not in properties
+
+
 @pytest.mark.parametrize(
     ("path", "expected"),
     [

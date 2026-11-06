@@ -11,7 +11,12 @@ from typing import TYPE_CHECKING
 
 import httpx
 from lfx.log.logger import logger
-from lfx.services.telemetry.constants import IBM_PRODUCT_PROPERTIES, get_ibm_common_event
+from lfx.services.telemetry.constants import (
+    IBM_PRODUCT_PROPERTIES,
+    SUB_PRODUCT_DESKTOP,
+    SUB_PRODUCT_OSS,
+    get_ibm_common_event,
+)
 from lfx.services.telemetry.identity import get_hashed_user_id, get_or_create_anonymous_id, is_installation_user_id
 from lfx.services.telemetry.privacy import get_safe_payload_properties
 
@@ -92,7 +97,6 @@ class TelemetryService(Service):
         version_info = get_version_info()
         self.common_telemetry_fields = {
             "langflow_version": version_info["version"],
-            "platform": "desktop" if self._get_langflow_desktop() else "python_package",
             "os": platform.system().lower(),
         }
 
@@ -193,7 +197,7 @@ class TelemetryService(Service):
         return str(os.getenv("LANGFLOW_DESKTOP", "False")).lower() in {"1", "true"}
 
     def _get_client_type(self) -> str:
-        return "desktop" if self._get_langflow_desktop() else "oss"
+        return SUB_PRODUCT_DESKTOP if self._get_langflow_desktop() else SUB_PRODUCT_OSS
 
     async def _send_email_telemetry(self) -> None:
         """Send the telemetry event for the registered email address."""
