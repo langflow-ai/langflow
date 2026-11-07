@@ -44,6 +44,8 @@ RAW_SINKS = frozenset({"get", "post", "put", "patch", "delete", "request", "stre
 # Mirrors the behavioural coverage that skips without the bundle installed.
 GUARDED_MODULES: dict[str, set[str]] = {
     "deepseek/deepseek.py": {"ssrf_safe_httpx_get", "ssrf_protected_openai_clients_for_url"},
+    "elastic/opensearch.py": {"validate_connector_url_for_ssrf"},
+    "elastic/opensearch_multimodal.py": {"validate_connector_url_for_ssrf"},
     "figranium/base.py": {"ssrf_safe_httpx_get", "ssrf_safe_httpx_post"},
     "funasr/funasr_transcription.py": {"ssrf_safe_httpx_post"},
     "glean/glean_search_api.py": {"ssrf_safe_httpx_post"},
@@ -147,16 +149,23 @@ def test_no_raw_network_sink(rel_path: str) -> None:
 
 
 def test_registry_covers_every_declared_guard_user() -> None:
-    """Any bundle module importing a ``ssrf_safe_*`` helper must be in GUARDED_MODULES.
+    """Discover SSRF helpers and OpenSearch SDK users, including unguarded ones.
 
     Without this, a new provider can fetch a tenant-controlled URL and silently sit outside the
     conformance net -- the registry would still be green because it never heard of the module.
     """
-    users = {
-        str(path.relative_to(BUNDLES_ROOT))
-        for path in BUNDLES_ROOT.rglob("*.py")
-        if "ssrf_safe_" in path.read_text(encoding="utf-8")
-    }
+    users = set()
+    for path in BUNDLES_ROOT.rglob("*.py"):
+        source = path.read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        uses_opensearch = any(
+            isinstance(node, ast.ImportFrom)
+            and node.module == "opensearchpy"
+            and any(alias.name == "OpenSearch" for alias in node.names)
+            for node in ast.walk(tree)
+        )
+        if "ssrf_safe_" in source or uses_opensearch:
+            users.add(str(path.relative_to(BUNDLES_ROOT)))
     unregistered = users - set(GUARDED_MODULES)
     assert not unregistered, (
         f"these bundle modules use an SSRF-safe helper but are not in GUARDED_MODULES: {sorted(unregistered)}. "

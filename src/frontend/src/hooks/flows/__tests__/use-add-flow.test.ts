@@ -1,4 +1,5 @@
 import { renderHook } from "@testing-library/react";
+import { UUID_PARSING_ERROR } from "@/constants/constants";
 import { getGlobalVariablesQueryKey } from "@/controllers/API/helpers/global-variable-scope";
 import type { AllNodeType, FlowType } from "@/types/flow";
 import type { GlobalVariable } from "@/types/global_variables";
@@ -14,6 +15,7 @@ const mockSetFlows = jest.fn();
 const mockSetMyCollectionId = jest.fn();
 const mockDeleteFlow = jest.fn();
 const mockPostAddFlow = jest.fn();
+const mockNavigate = jest.fn();
 const mockPostAddFolder = jest.fn();
 const mockUpdateGroupRecursion = jest.fn();
 const mockGetQueryData = jest.fn();
@@ -43,6 +45,10 @@ jest.mock("@tanstack/react-query", () => ({
 
 jest.mock("react-router-dom", () => ({
   useParams: () => ({ folderId: mockFolderId }),
+}));
+
+jest.mock("@/customization/hooks/use-custom-navigate", () => ({
+  useCustomNavigate: () => mockNavigate,
 }));
 
 jest.mock("@/controllers/API/queries/flows/use-post-add-flow", () => ({
@@ -191,6 +197,22 @@ const FLOW_WITH_PROJECT_CREDENTIAL: FlowType = {
     viewport: { x: 0, y: 0, zoom: 1 },
   },
 };
+
+it("uses router navigation after a missing-folder error and settles the request", async () => {
+  jest.useFakeTimers();
+  try {
+    const error = {
+      response: { data: { detail: [{ type: UUID_PARSING_ERROR }] } },
+    };
+    rejectAddFlow(error);
+    const { result } = renderHook(() => useAddFlow());
+    await expect(result.current({ flow: FLOW_STUB })).rejects.toBe(error);
+    jest.advanceTimersByTime(3000);
+    expect(mockNavigate).toHaveBeenCalledWith("/flows", { replace: true });
+  } finally {
+    jest.useRealTimers();
+  }
+});
 
 beforeEach(() => {
   mockScopedGlobalVariables = PROJECT_VARIABLES;

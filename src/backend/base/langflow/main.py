@@ -18,7 +18,7 @@ import sqlalchemy
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi_pagination import add_pagination
 from filelock import FileLock
 from lfx.interface.utils import setup_llm_caching
@@ -70,6 +70,7 @@ from langflow.services.deps import (
 from langflow.services.schema import ServiceType
 from langflow.services.telemetry.opentelemetry import instrument_db_pool
 from langflow.services.utils import initialize_services, initialize_settings_service, teardown_services
+from langflow.utils.frontend import render_frontend_index
 from langflow.utils.mcp_cleanup import cleanup_mcp_sessions
 
 if TYPE_CHECKING:
@@ -1368,9 +1369,15 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
         app (FastAPI): FastAPI app.
         static_files_dir (str): Path to the static files directory.
     """
+    frontend_html = render_frontend_index((static_files_dir / "index.html").read_text(encoding="utf-8"), app.root_path)
 
-    # app.frontend() serves index.html for any unmatched GET, so an unknown
-    # /api/* GET would otherwise return the SPA shell instead of a JSON 404.
+    @app.api_route("/", include_in_schema=False, methods=["GET", "HEAD"])
+    @app.api_route("/index.html", include_in_schema=False, methods=["GET", "HEAD"])
+    async def frontend_index():
+        """Serve the frontend with the prefix selected at backend startup."""
+        return HTMLResponse(frontend_html, headers={"Cache-Control": "no-store"})
+
+    # Unknown /api/* GETs must return a JSON 404 instead of the SPA shell.
     # Reserve /api GET/HEAD to force a 404 that the handler below shapes as JSON.
     # Only GET/HEAD are claimed: wrong-method requests to real endpoints still
     # get a native 405, and real API routes are registered earlier so they win.
@@ -1398,16 +1405,19 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
 
     # FastAPI >=0.138 serves the frontend build as low-priority routes: path
     # operations are matched first, static files only if nothing else matched.
-    # fallback="index.html" returns the SPA entrypoint for extensionless
-    # client-side routes; the handler below covers the rest (e.g. deep links
-    # whose last segment contains a dot).
-    app.frontend("/", directory=str(static_files_dir), fallback="index.html")
+    # All client-side routes use the handler below so they receive the same
+    # runtime base as the entrypoint, including routes with dotted segments.
+    app.frontend("/", directory=str(static_files_dir), fallback=None)
 
     @app.exception_handler(404)
     async def custom_404_handler(_request, _exc):
         # Return JSON for all API endpoints to prevent HTML responses
         """Return JSON for missing API routes and preserve frontend page handling."""
-        if _request.url.path.startswith("/api"):
+        path = _request.url.path
+        root_path = _request.scope.get("root_path", "").rstrip("/")
+        if root_path and path.startswith(f"{root_path}/"):
+            path = path[len(root_path) :]
+        if path == "/api" or path.startswith("/api/"):
             # Extract detail from HTTPException if available
             detail = _exc.detail if isinstance(_exc, HTTPException) else "Not Found"
             return JSONResponse(
@@ -1415,12 +1425,7 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
                 content=detail if isinstance(detail, dict) else {"detail": detail},
             )
 
-        path = anyio.Path(static_files_dir) / "index.html"
-
-        if not await path.exists():
-            msg = f"File at path {path} does not exist."
-            raise RuntimeError(msg)
-        return FileResponse(path)
+        return await frontend_index()
 
 
 def get_static_files_dir():

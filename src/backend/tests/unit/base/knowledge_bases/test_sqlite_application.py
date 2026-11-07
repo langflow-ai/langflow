@@ -543,3 +543,101 @@ async def test_deletion_never_follows_reused_name_to_a_new_uuid(
     assert await backend.count() == 1
     if replacement_memory is not None:
         assert await MemoryBaseService().get(replacement_memory.id, active_user.id) is not None
+
+
+@pytest.mark.parametrize(
+    ("change", "expect_abort"),
+    [
+        ("metadata_only", False),  # usage/state finalized after dispatch -> must NOT abort (LF fix)
+        ("text_edit", True),  # real content edit -> must still abort
+        ("purge", True),  # source deleted -> must still abort
+    ],
+)
+async def test_preproc_snapshot_ignores_volatile_metadata(
+    stored_memory_history, active_user, monkeypatch, change, expect_abort
+):
+    """validate_source_snapshot aborts on real content changes, not metadata finalization."""
+    import asyncio
+    from unittest.mock import AsyncMock, MagicMock
+
+    from langflow.services.deps import session_scope
+    from langflow.services.memory_base import task
+    from langflow.services.memory_base.preprocessing import PreprocessingResult
+    from langflow.services.memory_base.service import MemoryBaseService
+
+    record, memory, message, tracked, _ing, _proc, _backend = stored_memory_history
+    async with session_scope() as session:
+        row = await session.get(type(tracked), tracked.id)
+        row.cursor_id = None
+        session.add(row)
+        src = await session.get(type(message), message.id)
+        src.category = "message"
+        session.add(src)
+        await session.commit()
+
+    started = asyncio.Event()
+    finish = asyncio.Event()
+
+    async def paused_pre(**_kwargs):
+        started.set()
+        await finish.wait()
+        return PreprocessingResult(status="ingested", output_text="summary", raw_response="summary")
+
+    monkeypatch.setattr(task, "preflight_memory_provider_use", AsyncMock(return_value=MagicMock()))
+    monkeypatch.setattr(task, "_build_embeddings_for_owner", AsyncMock(return_value=LocalEmbeddings()))
+    monkeypatch.setattr(task, "run_preprocessing", paused_pre)
+
+    request = task.IngestionRequest(
+        memory_base_id=memory.id,
+        session_id=message.session_id,
+        flow_id=memory.flow_id,
+        kb_name=record.name,
+        kb_username=active_user.username,
+        owner_user_id=active_user.id,
+        actor_user_id=active_user.id,
+        embedding_provider="OpenAI",
+        embedding_model="test",
+        cursor_id=None,
+        task_job_id=uuid.uuid4(),
+        job_service=AsyncMock(),
+        preprocessing=True,
+        preproc_model="test",
+    )
+    monkeypatch.setattr(
+        "langflow.api.utils.kb_helpers.KBIngestionHelper.is_job_cancelled",
+        AsyncMock(return_value=False),
+    )
+    writer = asyncio.create_task(task.ingest_memory_task(request=request))
+    try:
+        await asyncio.wait_for(started.wait(), timeout=10)
+        if change == "metadata_only":
+            async with session_scope() as session:
+                row = await session.get(type(message), message.id)
+                props = dict(row.properties or {})
+                props["state"] = "complete"
+                props["usage"] = {"input_tokens": 12, "output_tokens": 7}
+                row.properties = props
+                session.add(row)
+                await session.commit()
+        elif change == "text_edit":
+            async with session_scope() as session:
+                row = await session.get(type(message), message.id)
+                row.text = "edited during model call"
+                session.add(row)
+                await session.commit()
+        else:  # purge
+            await asyncio.wait_for(
+                MemoryBaseService().purge_session_data(active_user.id, [message.session_id]), timeout=5
+            )
+        finish.set()
+        if expect_abort:
+            with pytest.raises(StorageUnavailableError, match="changed during preprocessing"):
+                await asyncio.wait_for(writer, timeout=10)
+        else:
+            result = await asyncio.wait_for(writer, timeout=10)
+            assert result.get("ingested", 0) >= 1, result
+    finally:
+        finish.set()
+        if not writer.done():
+            writer.cancel()
+            await asyncio.gather(writer, return_exceptions=True)

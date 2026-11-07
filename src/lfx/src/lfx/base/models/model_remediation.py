@@ -58,10 +58,21 @@ REMEDIATIONS: tuple[Remediation, ...] = (
         providers=("OpenAI",),
     ),
     Remediation(
-        # Claude 5 rejects a temperature its 4.x siblings accept (GH-14291); markers
-        # stay narrow so an out-of-range value, which only the user can fix, surfaces.
+        # Models that only accept the default temperature reject an explicitly set
+        # one at call time: Claude 5 calls it "deprecated" (GH-14291), while OpenAI
+        # and Azure reasoning models (o-series, gpt-5*) answer with "'temperature'
+        # is not supported with this model" or "'temperature' does not support
+        # <value> ... Only the default (1) value is supported". Dropping temperature
+        # (→ provider default) is the fix for all of them. Markers stay narrow so a
+        # genuine out-of-range value ("temperature must be between 0 and 2"), which
+        # only the user can fix, still surfaces.
         name="temperature-unsupported",
-        markers=("`temperature` is deprecated", "temperature is deprecated"),
+        markers=(
+            "`temperature` is deprecated",
+            "temperature is deprecated",
+            "'temperature' is not supported",
+            "'temperature' does not support",
+        ),
         overrides={"temperature": None},
     ),
 )

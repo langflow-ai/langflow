@@ -143,6 +143,11 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
             if len(subtypes) == NULLABLE_TYPE_LENGTH and "null" in subtypes:
                 # Get the non-null type
                 non_null_type = next(t for t in subtypes if t != "null")
+                # Keep the item type for nullable arrays (e.g. list[str] | None);
+                # a bare `list` produces `items: {}`, which Gemini rejects.
+                if non_null_type == "array":
+                    arr = next(sub for sub in s["anyOf"] if isinstance(sub, dict) and sub.get("type") == "array")
+                    return list[parse_type(arr.get("items", {}))] | None
                 # Map it to Python type
                 if isinstance(non_null_type, str):
                     return {
@@ -167,6 +172,10 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
             # JSON Schema: "type": ["string", "null"] for nullable
             non_null = [x for x in t if x != "null" and isinstance(x, str)]
             if non_null:
+                if non_null[0] == "array":
+                    # Same as above for the "type": ["array", "null"] form
+                    item_type: Any = parse_type(s.get("items", {}))
+                    return list[item_type] | None if "null" in t else list[item_type]
                 prim = {
                     "string": str,
                     "integer": int,
