@@ -17,10 +17,12 @@ import pytest
 from lfx.components.flow_controls.loop import LoopComponent
 from lfx.components.input_output import ChatOutput
 from lfx.components.processing.combine_text import CombineTextComponent
+from lfx.components.processing.data_operations import DataOperationsComponent
 from lfx.components.processing.parser import ParserComponent
 from lfx.custom.custom_component.component import Component
 from lfx.events.event_manager import create_default_event_manager
 from lfx.graph import Graph
+from lfx.io import HandleInput, Output
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 
@@ -177,6 +179,92 @@ async def test_item_fanning_out_to_multiple_branches_reaches_every_branch():
     [r async for r in graph.async_start()]
 
     assert [d.text for d in loop.ctx["loop_aggregated"]] == ["A=Q001 B=Q001", "A=Q002 B=Q002"]
+
+
+class _TagRow(Component):
+    """Loop-body branch whose output differs from the item it gets.
+
+    No ``name`` here or in ``_TwoTags``: a loop body is rebuilt from this module's code, and the
+    node type, which defaults to the class name, picks the class to build.
+    """
+
+    display_name = "Tag Row"
+
+    inputs = [HandleInput(name="row", display_name="Row", input_types=["Data"])]
+    outputs = [Output(display_name="Tagged", name="tagged", method="build_tagged")]
+
+    def build_tagged(self) -> Data:
+        return Data(text=f"{self.row.data['text']}-tagged")
+
+
+@pytest.mark.asyncio
+async def test_item_and_another_branch_in_one_list_input_both_reach_it():
+    """A list input fed by Loop.item and by another loop-body branch gets both values.
+
+    The injected item used to replace the whole list, so the other branch's output was dropped
+    and Combine failed with "'JSON' object is not subscriptable". The values follow the graph's
+    edge order, which is not fixed across processes, so only the values are compared.
+    """
+    loop = LoopComponent(_id="loop")
+    loop.set(data=DataFrame([Data(text="Q001"), Data(text="Q002")]))
+
+    tag = _TagRow(_id="TagRow-branch")
+    tag.set(row=loop.item_output)
+
+    merge = DataOperationsComponent(_id="merge", operations=[{"name": "Combine"}])
+    merge.set(data=[loop.item_output, tag.build_tagged])
+    loop.set(item=merge.as_data)
+
+    graph = Graph(loop, merge)
+    [r async for r in graph.async_start()]
+
+    assert [sorted(d.data["text"]) for d in loop.ctx["loop_aggregated"]] == [
+        ["Q001", "Q001-tagged"],
+        ["Q002", "Q002-tagged"],
+    ]
+
+
+class _TwoTags(Component):
+    """Loop-body branch that feeds one list input through two of its outputs."""
+
+    display_name = "Two Tags"
+
+    inputs = [HandleInput(name="row", display_name="Row", input_types=["Data"])]
+    outputs = [
+        Output(display_name="First", name="first", method="build_first", group_outputs=True),
+        Output(display_name="Second", name="second", method="build_second", group_outputs=True),
+    ]
+
+    def build_first(self) -> Data:
+        return Data(text=f"{self.row.data['text']}-first")
+
+    def build_second(self) -> Data:
+        return Data(text=f"{self.row.data['text']}-second")
+
+
+@pytest.mark.asyncio
+async def test_item_and_two_outputs_of_one_branch_in_one_list_input_all_reach_it():
+    """Loop.item and two outputs of one loop-body component in one list input: all three arrive.
+
+    Both outputs' entries used to resolve to the first matching edge, so the first output came twice.
+    """
+    loop = LoopComponent(_id="loop")
+    loop.set(data=DataFrame([Data(text="Q001"), Data(text="Q002")]))
+
+    tags = _TwoTags(_id="TwoTags-branch")
+    tags.set(row=loop.item_output)
+
+    merge = DataOperationsComponent(_id="merge", operations=[{"name": "Combine"}])
+    merge.set(data=[loop.item_output, tags.build_first, tags.build_second])
+    loop.set(item=merge.as_data)
+
+    graph = Graph(loop, merge)
+    [r async for r in graph.async_start()]
+
+    assert [sorted(d.data["text"]) for d in loop.ctx["loop_aggregated"]] == [
+        ["Q001", "Q001-first", "Q001-second"],
+        ["Q002", "Q002-first", "Q002-second"],
+    ]
 
 
 @pytest.mark.asyncio
