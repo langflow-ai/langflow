@@ -73,6 +73,14 @@ def test_unc_and_device_paths_are_denied_before_resolve(tmp_path, restricted, pa
         r"C:\NUL",
         "uploads/NUL/file.txt",
         "NUL.dat",
+        "COM¹",
+        "LPT³.log",
+        "CONOUT$",
+        "CONIN$",
+        "NUL ",
+        "NUL.",
+        "COM1 ",
+        "LPT9.log ",
     ],
 )
 def test_windows_reserved_device_names_are_denied_before_resolve(tmp_path, restricted, path):

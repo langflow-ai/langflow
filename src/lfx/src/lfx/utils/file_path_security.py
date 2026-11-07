@@ -100,7 +100,7 @@ _RESERVED_SECRET_FILENAMES = frozenset({"secret_key", "private_key.pem", "public
 # DOS/Windows device names, including the same name with an extension (NUL.txt).
 # Compared per path segment so ``uploads/NUL/file.txt`` is denied before resolve.
 _WINDOWS_RESERVED_DEVICE = re.compile(
-    r"^(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\..*)?$",
+    r"^(?:CON|PRN|AUX|NUL|CONIN\$|CONOUT\$|COM[1-9¹²³]|LPT[1-9¹²³])(?:\..*)?$",
     re.IGNORECASE,
 )
 
@@ -112,7 +112,7 @@ def _has_windows_device_segment(raw_path: str) -> bool:
             continue
         if segment.endswith(":") and segment[0].isalpha() and segment[1:] == ":":
             continue
-        if _WINDOWS_RESERVED_DEVICE.fullmatch(segment):
+        if _WINDOWS_RESERVED_DEVICE.fullmatch(segment.rstrip(" .")):
             return True
     return False
 
