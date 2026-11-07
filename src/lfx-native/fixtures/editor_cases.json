@@ -1,0 +1,484 @@
+{
+  "description": "The editor's side of table rows and restore fixes. `assign` gives rows the ids and positions the editor writes (withTableRowIds): unlike the server, it renumbers a table 1..n in stored order when a gap has no room left. `append` adds rows after a table (appendTableRows). `assign_nodes` gives row ids to the tables nodes add or change against the same nodes as they were (withNodesTableRowIds). `edge_fixes` turns a revision's edges as read into the edges its preview shows (edgeFixes); `fixes_for_edges` keeps the fixes of the flagged edges (fixesForEdges). Random row ids appear as `<generated row id>`; positions compare by value. Each case names the rule it checks in `rule`; README.md lists the rules. The expected outputs are reviewed data that every engine must meet.",
+  "assign": [
+    {
+      "name": "rows that have ids and positions are left as they are",
+      "rule": "table-row-ids-assigned",
+      "rows": [{"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"}, {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"}],
+      "expected": [{"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"}, {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"}]
+    },
+    {
+      "name": "new rows get random ids and positions in order",
+      "rule": "table-row-ids-assigned",
+      "rows": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}],
+      "expected": [
+        {"key": "Accept", "value": "json", "__id__": "<generated row id>", "__pos__": 1},
+        {"key": "Auth", "value": "token", "__id__": "<generated row id>", "__pos__": 2}
+      ]
+    },
+    {
+      "name": "a row equal to a previous row takes its id and position",
+      "rule": "table-row-ids-assigned",
+      "rows": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}],
+      "previous": [{"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"}, {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"}],
+      "expected": [{"key": "Accept", "value": "json", "__pos__": 1, "__id__": "r1"}, {"key": "Auth", "value": "token", "__pos__": 2, "__id__": "r2"}]
+    },
+    {
+      "name": "a run between two positions is spread evenly",
+      "rule": "table-row-positions",
+      "rows": [{"__id__": "a", "__pos__": 1}, {"k": 1}, {"k": 2}, {"__id__": "b", "__pos__": 2}],
+      "expected": [
+        {"__id__": "a", "__pos__": 1},
+        {"k": 1, "__id__": "<generated row id>", "__pos__": 1.3333333333333333},
+        {"k": 2, "__id__": "<generated row id>", "__pos__": 1.6666666666666665},
+        {"__id__": "b", "__pos__": 2}
+      ]
+    },
+    {
+      "name": "a gap with no room left renumbers the table in stored order",
+      "rule": "table-row-positions",
+      "rows": [{"__id__": "a", "__pos__": 1}, {"k": 1}, {"__id__": "b", "__pos__": 1.0000000000000002}],
+      "expected": [{"__id__": "a", "__pos__": 1}, {"k": 1, "__id__": "<generated row id>", "__pos__": 2}, {"__id__": "b", "__pos__": 3}]
+    },
+    {
+      "name": "a run before the first position counts down",
+      "rule": "table-row-positions",
+      "rows": [{"k": 1}, {"k": 2}, {"__id__": "a", "__pos__": 10}],
+      "expected": [
+        {"k": 1, "__id__": "<generated row id>", "__pos__": 8},
+        {"k": 2, "__id__": "<generated row id>", "__pos__": 9},
+        {"__id__": "a", "__pos__": 10}
+      ]
+    },
+    {
+      "name": "a run between out-of-order neighbours follows the one before",
+      "rule": "table-row-positions",
+      "rows": [{"__id__": "a", "__pos__": 3}, {"k": 1}, {"__id__": "b", "__pos__": 1}],
+      "expected": [{"__id__": "a", "__pos__": 3}, {"k": 1, "__id__": "<generated row id>", "__pos__": 4}, {"__id__": "b", "__pos__": 1}]
+    },
+    {
+      "name": "a duplicate id is replaced",
+      "rule": "table-row-ids-assigned",
+      "rows": [{"__id__": "a", "__pos__": 1}, {"__id__": "a", "__pos__": 2}],
+      "expected": [{"__id__": "a", "__pos__": 1}, {"__id__": "<generated row id>", "__pos__": 2}]
+    },
+    {
+      "name": "a table with a row that is not an object is left alone",
+      "rule": "table-row-ids-assigned",
+      "rows": [{"key": "Accept", "value": "json"}, "x"],
+      "expected": [{"key": "Accept", "value": "json"}, "x"]
+    }
+  ],
+  "append": [
+    {
+      "name": "rows are appended one past the last position",
+      "rule": "table-row-positions",
+      "rows": [{"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"}, {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"}],
+      "new_rows": [{"key": "New", "value": "x"}],
+      "expected": [
+        {"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"},
+        {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"},
+        {"key": "New", "value": "x", "__id__": "<generated row id>", "__pos__": 3}
+      ]
+    },
+    {
+      "name": "a duplicated row gets a new id and position",
+      "rule": "table-row-ids-assigned",
+      "rows": [{"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"}, {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"}],
+      "new_rows": [{"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"}, {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"}],
+      "expected": [
+        {"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"},
+        {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"},
+        {"key": "Accept", "value": "json", "__id__": "<generated row id>", "__pos__": 3},
+        {"key": "Auth", "value": "token", "__id__": "<generated row id>", "__pos__": 4}
+      ]
+    },
+    {
+      "name": "the next position follows a fractional last position",
+      "rule": "table-row-positions",
+      "rows": [{"__id__": "a", "__pos__": 2.5}],
+      "new_rows": [{"k": 1}, {"k": 2}],
+      "expected": [
+        {"__id__": "a", "__pos__": 2.5},
+        {"k": 1, "__id__": "<generated row id>", "__pos__": 3},
+        {"k": 2, "__id__": "<generated row id>", "__pos__": 4}
+      ]
+    },
+    {
+      "name": "a table without ids gets them first",
+      "rule": "table-row-ids-assigned",
+      "rows": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}],
+      "new_rows": [{"key": "New"}],
+      "expected": [
+        {"key": "Accept", "value": "json", "__id__": "<generated row id>", "__pos__": 1},
+        {"key": "Auth", "value": "token", "__id__": "<generated row id>", "__pos__": 2},
+        {"key": "New", "__id__": "<generated row id>", "__pos__": 3}
+      ]
+    },
+    {
+      "name": "the first row of an empty table is 1",
+      "rule": "table-row-positions",
+      "rows": [],
+      "new_rows": [{"key": "New"}],
+      "expected": [{"key": "New", "__id__": "<generated row id>", "__pos__": 1}]
+    }
+  ],
+  "assign_nodes": [
+    {
+      "name": "a new node gets ids on every table",
+      "rule": "table-row-ids-assigned",
+      "nodes": [
+        {
+          "id": "api",
+          "data": {
+            "node": {
+              "template": {
+                "headers": {"type": "table", "_input_type": "TableInput", "value": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]},
+                "url": {"type": "str", "value": "http://x"}
+              }
+            }
+          }
+        }
+      ],
+      "previous": [],
+      "expected": [
+        {
+          "id": "api",
+          "data": {
+            "node": {
+              "template": {
+                "headers": {
+                  "type": "table",
+                  "_input_type": "TableInput",
+                  "value": [
+                    {"key": "Accept", "value": "json", "__id__": "<generated row id>", "__pos__": 1},
+                    {"key": "Auth", "value": "token", "__id__": "<generated row id>", "__pos__": 2}
+                  ]
+                },
+                "url": {"type": "str", "value": "http://x"}
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "an unchanged legacy table is left alone",
+      "rule": "legacy-tables",
+      "nodes": [
+        {
+          "id": "api",
+          "data": {
+            "node": {
+              "template": {
+                "headers": {"type": "table", "_input_type": "TableInput", "value": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]},
+                "url": {"type": "str", "value": "http://x"}
+              }
+            }
+          }
+        }
+      ],
+      "previous": [
+        {
+          "id": "api",
+          "data": {
+            "node": {
+              "template": {
+                "headers": {"type": "table", "_input_type": "TableInput", "value": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]},
+                "url": {"type": "str", "value": "http://x"}
+              }
+            }
+          }
+        }
+      ],
+      "expected": [
+        {
+          "id": "api",
+          "data": {
+            "node": {
+              "template": {
+                "headers": {"type": "table", "_input_type": "TableInput", "value": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]},
+                "url": {"type": "str", "value": "http://x"}
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "a changed table keeps the ids of rows it still holds",
+      "rule": "table-row-ids-assigned",
+      "nodes": [
+        {
+          "id": "api",
+          "data": {
+            "node": {
+              "template": {
+                "headers": {
+                  "type": "table",
+                  "_input_type": "TableInput",
+                  "value": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}, {"key": "New"}]
+                },
+                "url": {"type": "str", "value": "http://x"}
+              }
+            }
+          }
+        }
+      ],
+      "previous": [
+        {
+          "id": "api",
+          "data": {
+            "node": {
+              "template": {
+                "headers": {
+                  "type": "table",
+                  "_input_type": "TableInput",
+                  "value": [{"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"}, {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"}]
+                },
+                "url": {"type": "str", "value": "http://x"}
+              }
+            }
+          }
+        }
+      ],
+      "expected": [
+        {
+          "id": "api",
+          "data": {
+            "node": {
+              "template": {
+                "headers": {
+                  "type": "table",
+                  "_input_type": "TableInput",
+                  "value": [
+                    {"key": "Accept", "value": "json", "__pos__": 1, "__id__": "r1"},
+                    {"key": "Auth", "value": "token", "__pos__": 2, "__id__": "r2"},
+                    {"key": "New", "__id__": "<generated row id>", "__pos__": 3}
+                  ]
+                },
+                "url": {"type": "str", "value": "http://x"}
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "edge_fixes": [
+    {
+      "name": "an edge the preview dropped is deleted",
+      "rule": "restore-fixes",
+      "read": [
+        {
+          "id": "e1",
+          "source": "a",
+          "target": "b",
+          "sourceHandle": "{œnameœ:œoutœ}",
+          "targetHandle": "{œfieldNameœ:œfœ}",
+          "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+        },
+        {
+          "id": "e2",
+          "source": "a",
+          "target": "b",
+          "sourceHandle": "{œnameœ:œoutœ}",
+          "targetHandle": "{œfieldNameœ:œfœ}",
+          "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+        }
+      ],
+      "shown": [
+        {
+          "id": "e1",
+          "source": "a",
+          "target": "b",
+          "sourceHandle": "{œnameœ:œoutœ}",
+          "targetHandle": "{œfieldNameœ:œfœ}",
+          "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+        }
+      ],
+      "fixes": [{"type": "delete_edges", "ids": ["e2"]}]
+    },
+    {
+      "name": "a handle the preview respelled is rewritten in both forms",
+      "rule": "restore-fixes",
+      "read": [
+        {
+          "id": "e1",
+          "source": "a",
+          "target": "b",
+          "sourceHandle": "{œnameœ:œoutœ}",
+          "targetHandle": "{œfieldNameœ: œfœ}",
+          "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+        }
+      ],
+      "shown": [
+        {
+          "id": "e1",
+          "source": "a",
+          "target": "b",
+          "sourceHandle": "{œnameœ:œoutœ}",
+          "targetHandle": "{œfieldNameœ:œgœ}",
+          "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "g"}}
+        }
+      ],
+      "fixes": [
+        {"type": "delete_edges", "ids": ["e1"]},
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e1",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œgœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "g"}}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "an edge without data gets its handles as data",
+      "rule": "restore-fixes",
+      "read": [{"id": "e1", "source": "a", "target": "b", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œfœ}"}],
+      "shown": [
+        {
+          "id": "e1",
+          "source": "a",
+          "target": "b",
+          "sourceHandle": "{œnameœ:œoutœ}",
+          "targetHandle": "{œfieldNameœ:œfœ}",
+          "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+        }
+      ],
+      "fixes": [
+        {"type": "delete_edges", "ids": ["e1"]},
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e1",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œfœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "an edge whose data is null gets its handles as data",
+      "rule": "restore-fixes",
+      "read": [{"id": "e1", "source": "a", "target": "b", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œfœ}", "data": null}],
+      "shown": [
+        {
+          "id": "e1",
+          "source": "a",
+          "target": "b",
+          "sourceHandle": "{œnameœ:œoutœ}",
+          "targetHandle": "{œfieldNameœ:œfœ}",
+          "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+        }
+      ],
+      "fixes": [
+        {"type": "delete_edges", "ids": ["e1"]},
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e1",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œfœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "nothing changed, nothing to fix",
+      "rule": "restore-fixes",
+      "read": [
+        {
+          "id": "e1",
+          "source": "a",
+          "target": "b",
+          "sourceHandle": "{œnameœ:œoutœ}",
+          "targetHandle": "{œfieldNameœ:œfœ}",
+          "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+        }
+      ],
+      "shown": [
+        {
+          "id": "e1",
+          "source": "a",
+          "target": "b",
+          "sourceHandle": "{œnameœ:œoutœ}",
+          "targetHandle": "{œfieldNameœ:œfœ}",
+          "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "f"}}
+        }
+      ],
+      "fixes": []
+    }
+  ],
+  "fixes_for_edges": [
+    {
+      "name": "only the fixes of the flagged edges are kept",
+      "rule": "restore-fixes",
+      "fixes": [
+        {"type": "delete_edges", "ids": ["e1", "e2", "e3"]},
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œxœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "x"}}
+            },
+            {
+              "id": "e3",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œyœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "y"}}
+            }
+          ]
+        }
+      ],
+      "edge_ids": ["e2"],
+      "expected": [
+        {"type": "delete_edges", "ids": ["e2"]},
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œxœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "x"}}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "fixes for no flagged edge are dropped",
+      "rule": "restore-fixes",
+      "fixes": [{"type": "delete_edges", "ids": ["e1"]}],
+      "edge_ids": ["e9"],
+      "expected": []
+    }
+  ]
+}
