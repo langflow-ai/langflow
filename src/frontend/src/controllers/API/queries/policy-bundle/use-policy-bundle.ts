@@ -14,7 +14,9 @@ export const policyBundleKeys = {
 } as const;
 
 export async function getPolicyBundle(): Promise<PolicyBundleRead> {
-  const { data } = await api.get<PolicyBundleRead>(getURL("POLICY_BUNDLE"));
+  const { data } = await api.get<PolicyBundleRead>(
+    getURL("POLICY_BUNDLE", {}, true),
+  );
   return data;
 }
 
@@ -22,7 +24,7 @@ export async function replacePolicyBundle(
   payload: PolicyBundleWrite,
 ): Promise<PolicyBundleRead> {
   const { data } = await api.put<PolicyBundleRead>(
-    getURL("POLICY_BUNDLE"),
+    getURL("POLICY_BUNDLE", {}, true),
     payload,
   );
   return data;

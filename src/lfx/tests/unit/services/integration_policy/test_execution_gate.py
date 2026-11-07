@@ -87,7 +87,7 @@ def _component(monkeypatch, resolver: _Resolver) -> DriveComponent:
     return component
 
 
-def _blocked_bundle(*, providers: frozenset[str] = frozenset(), actions: frozenset[str] = frozenset()):
+def _blocked_bundle(*, providers: frozenset[str] | None = None, actions: frozenset[str] = frozenset()):
     bundle = PolicyBundleService()
     bundle.publish(
         PolicyBundleSnapshot(

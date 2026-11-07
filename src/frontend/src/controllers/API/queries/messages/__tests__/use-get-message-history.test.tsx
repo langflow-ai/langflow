@@ -14,7 +14,9 @@ jest.mock("@/controllers/API/api", () => ({
 }));
 jest.mock("@/stores/flowStore", () => ({
   __esModule: true,
-  default: { getState: () => ({ playgroundPage: mockPlayground }) },
+  default: {
+    getState: () => ({ playgroundPage: mockPlayground }),
+  },
 }));
 jest.mock("@/stores/flowsManagerStore", () => ({
   __esModule: true,
@@ -267,4 +269,62 @@ it("stops at exactly one page and honors disabled queries", async () => {
   rerender({ enabled: true });
   await waitFor(() => expect(result.current.isSuccess).toBe(true));
   expect(result.current.hasNextPage).toBe(false);
+});
+
+it("keeps a message added while the history read is in flight", async () => {
+  const question = message(0, "new-chat");
+  const reply = { ...message(1, "new-chat"), sender: "Machine" };
+  useMessagesStore.getState().addMessage(question);
+  let finishRequest!: (value: { data: Message[] }) => void;
+  mockGet.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finishRequest = resolve;
+      }),
+  );
+  const { result } = renderHook(
+    () => useGetMessageHistory({ id: "flow", sessionId: "new-chat" }),
+    { wrapper: wrapper() },
+  );
+  await waitFor(() => expect(mockGet).toHaveBeenCalled());
+
+  act(() => {
+    useMessagesStore.getState().addMessage(reply);
+  });
+  await act(async () => {
+    finishRequest({ data: [question] });
+  });
+  await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+  expect(useMessagesStore.getState().messages).toEqual([question, reply]);
+});
+
+it("drops a message that was already in the store when the read started", async () => {
+  const stale = message(5, "new-chat");
+  const question = message(0, "new-chat");
+  useMessagesStore.getState().addMessage(stale);
+  mockGet.mockResolvedValueOnce({ data: [question] });
+  const { result } = renderHook(
+    () => useGetMessageHistory({ id: "flow", sessionId: "new-chat" }),
+    { wrapper: wrapper() },
+  );
+  await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+  expect(useMessagesStore.getState().messages).toEqual([question]);
+});
+
+it("keeps a live message that the anonymous sessionStorage copy lacks", async () => {
+  mockPlayground = true;
+  const question = message(0, "new-chat");
+  const reply = { ...message(1, "new-chat"), sender: "Machine" };
+  sessionStorage.setItem("flow", JSON.stringify([question]));
+  useMessagesStore.getState().addMessage(question);
+  useMessagesStore.getState().addMessage(reply);
+  const { result } = renderHook(
+    () => useGetMessageHistory({ id: "flow", sessionId: "new-chat" }),
+    { wrapper: wrapper() },
+  );
+  await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+  expect(useMessagesStore.getState().messages).toEqual([question, reply]);
 });
