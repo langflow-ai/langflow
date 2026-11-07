@@ -12,6 +12,7 @@ refuse every request, including one that sends no tweaks at all.
 
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import Any
 from unittest.mock import patch
 
@@ -463,6 +464,7 @@ def test_graph_path_honors_the_policy():
     refused = apply_tweaks_on_vertex(vertex, {"a": "new"}, policy="off")
     assert refused == ["a"]
     assert vertex.raw_params == {}
+    assert vertex.data["node"]["template"]["a"]["value"] == "old"
 
 
 def test_graph_path_applies_and_persists_an_allowed_tweak():
@@ -479,6 +481,42 @@ def test_graph_path_applies_and_persists_an_allowed_tweak():
     assert refused == []
     assert vertex.raw_params == {"a": "new"}
     assert vertex.params["a"] == "new"
+
+
+def test_graph_path_writes_an_allowed_tweak_into_the_node_data():
+    """Loop bodies are rebuilt from the node data, so it has to carry the override too.
+
+    Without clearing ``load_from_db`` the rebuilt vertex would resolve the stored
+    variable and the override would lose to it.
+    """
+    from lfx.processing.process import apply_tweaks_on_vertex
+
+    field = {"value": "old", "type": "str", "load_from_db": True}
+    vertex = _FakeVertex("v1", {"a": field})
+    vertex.params = {"a": "old"}
+    assert apply_tweaks_on_vertex(vertex, {"a": "new"}, policy="permissive") == []
+    assert field["value"] == "new"
+    assert field["load_from_db"] is False
+
+
+def test_graph_path_keeps_the_override_out_of_the_saved_flow_data():
+    """Caches and checkpoints reuse ``raw_graph_data``, so a run's override must not land there."""
+    from lfx.components.input_output import ChatInput, ChatOutput
+    from lfx.graph import Graph
+    from lfx.processing.process import process_tweaks_on_graph
+
+    chat_input = ChatInput(_id="ChatInput-a")
+    chat_output = ChatOutput(_id="ChatOutput-b")
+    chat_output.set(input_value=chat_input.message_response)
+    prepared = Graph(chat_input, chat_output)
+    prepared.prepare()
+    saved = prepared.dump()["data"]
+
+    graph = Graph.from_payload({"data": deepcopy(saved)})
+    process_tweaks_on_graph(graph, {"ChatOutput-b": {"sender_name": "only this run"}})
+
+    assert graph.get_vertex("ChatOutput-b").data["node"]["template"]["sender_name"]["value"] == "only this run"
+    assert graph.raw_graph_data["nodes"] == saved["nodes"]
 
 
 @pytest.mark.parametrize(
