@@ -224,6 +224,16 @@ the deserialize half is covered by
 
 ## Changelog
 
+- **Integration policy upgrade compatibility (2026-11-06).** `IntegrationProvider`
+  reserves `langflow-reserved.integration-policy.deny-all` for policy storage and
+  rejects manifests that claim it as a provider identity. The nonempty marker
+  makes deny-all enforceable by older replicas, while persisted empty lists keep
+  their unrestricted meaning. API v2 and process-local policy snapshots use
+  `null`/`None` for unrestricted access and an empty provider set for deny-all; API v1
+  retains the legacy representation. Clients using the tri-state contract must
+  use `/api/v2/policy-bundle` without falling back to v1. Existing bundle provider
+  identities and public symbols are unchanged; `BUNDLE_API_VERSION` remains `1`.
+
 - **Knowledge storage provider defaults.** `DBProviderInput` defaults to the
   application-provided SQLite backend. Its public name, fields and signature
   remain unchanged, so `BUNDLE_API_VERSION` remains `1`. Recognized historical
