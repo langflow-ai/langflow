@@ -193,6 +193,7 @@ class SiliciumVectorStoreComponent(LCVectorStoreComponent):
             name="embedding",
             display_name="Embedding",
             input_types=["Embeddings"],
+            value=None,
             required=False,
         ),
         IntInput(
@@ -209,7 +210,8 @@ class SiliciumVectorStoreComponent(LCVectorStoreComponent):
         """Build and populate the in-process Silicium vector store."""
         col_name = str(getattr(self, "collection_name", "silicium_collection") or "silicium_collection")
         metric = str(getattr(self, "distance_metric", "cosine") or "cosine")
-        emb = getattr(self, "embedding", None)
+        raw_emb = getattr(self, "embedding", None)
+        emb = None if raw_emb in (None, "") else raw_emb
         store = _InMemorySiliciumVectorStore(
             collection_name=col_name,
             embedding=emb,

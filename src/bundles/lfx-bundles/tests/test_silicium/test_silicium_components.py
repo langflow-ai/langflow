@@ -274,6 +274,40 @@ def test_silicium_semantic_cache_tenant_isolation_and_eviction() -> None:
         )
         assert other_user_comp.build_cache_metadata().data["cache_hit"] is False
 
+        # Same user identity with a different tenant_scope is isolated from tenant-alpha
+        other_scope_miss = SiliciumSemanticCacheComponent(_user_id="user-alpha")
+        other_scope_miss.set(
+            query_text="What is the Silicium vector throughput?",
+            tenant_scope="tenant-beta",
+            distance_threshold=0.0,
+        )
+        assert other_scope_miss.build_cache_metadata().data["cache_hit"] is False
+
+        other_scope_seed = SiliciumSemanticCacheComponent(_user_id="user-alpha")
+        other_scope_seed.set(
+            query_text="What is the Silicium vector throughput?",
+            response_to_seed="tenant-beta independent response",
+            tenant_scope="tenant-beta",
+            distance_threshold=0.0,
+        )
+        assert other_scope_seed.build_cache_metadata().data["cache_hit"] is False
+
+        alpha_check = SiliciumSemanticCacheComponent(_user_id="user-alpha")
+        alpha_check.set(
+            query_text="What is the Silicium vector throughput?",
+            tenant_scope="tenant-alpha",
+            distance_threshold=0.0,
+        )
+        assert alpha_check.lookup_cached_message().text == "369,836 QPS @ 99.1% Recall@10."
+
+        beta_check = SiliciumSemanticCacheComponent(_user_id="user-alpha")
+        beta_check.set(
+            query_text="What is the Silicium vector throughput?",
+            tenant_scope="tenant-beta",
+            distance_threshold=0.0,
+        )
+        assert beta_check.lookup_cached_message().text == "tenant-beta independent response"
+
         # Reject missing trusted runtime _user_id and invalid cache_dim < 8 or > 4096
         no_uid_comp = SiliciumSemanticCacheComponent()
         no_uid_comp.set(query_text="test")
@@ -289,6 +323,48 @@ def test_silicium_semantic_cache_tenant_isolation_and_eviction() -> None:
         huge_dim_comp.set(query_text="test", cache_dim=8192)
         with pytest.raises(ValueError, match="cache_dim must be >= 8 and <= 4096"):
             huge_dim_comp.build_cache_metadata()
+
+        # Per-scope FIFO eviction when one scope exceeds its 1,024-entry limit
+        reset_semantic_cache_arena()
+        for entry_idx in range(1025):
+            fifo_comp = SiliciumSemanticCacheComponent(_user_id="fifo-user")
+            fifo_comp.set(
+                query_text=f"scope-fifo-query-{entry_idx}",
+                response_to_seed=f"scope-fifo-answer-{entry_idx}",
+                tenant_scope="fifo-scope",
+                cache_dim=8,
+                distance_threshold=0.0,
+            )
+            fifo_meta = fifo_comp.build_cache_metadata()
+            assert fifo_meta.data["cache_hit"] is False
+            assert int(fifo_meta.data["max_entries_per_tenant"]) == 1024
+
+        evicted_first_entry = SiliciumSemanticCacheComponent(_user_id="fifo-user")
+        evicted_first_entry.set(
+            query_text="scope-fifo-query-0",
+            tenant_scope="fifo-scope",
+            cache_dim=8,
+            distance_threshold=0.0,
+        )
+        assert evicted_first_entry.build_cache_metadata().data["cache_hit"] is False
+
+        retained_second_entry = SiliciumSemanticCacheComponent(_user_id="fifo-user")
+        retained_second_entry.set(
+            query_text="scope-fifo-query-1",
+            tenant_scope="fifo-scope",
+            cache_dim=8,
+            distance_threshold=0.0,
+        )
+        assert retained_second_entry.build_cache_metadata().data["cache_hit"] is True
+
+        retained_latest_entry = SiliciumSemanticCacheComponent(_user_id="fifo-user")
+        retained_latest_entry.set(
+            query_text="scope-fifo-query-1024",
+            tenant_scope="fifo-scope",
+            cache_dim=8,
+            distance_threshold=0.0,
+        )
+        assert retained_latest_entry.build_cache_metadata().data["cache_hit"] is True
 
         # Fill 256 tenant scopes, verify read-only miss does not evict, then seed 257th and verify FIFO eviction
         reset_semantic_cache_arena()
@@ -435,26 +511,46 @@ def test_silicium_vector_store_ingest_search_and_negative_cases() -> None:
 
 
 def test_silicium_framework_discovery_and_component_set_contract() -> None:
-    """Discover all Silicium components through the bundle loader and exercise them through the framework."""
+    """Discover Silicium components via `load_lfx_bundles_extensions` and exercise them in the framework."""
     from lfx_bundles.silicium.silicium_vector_store import Data
 
     reset_semantic_cache_arena()
     try:
         loaded_classes: dict[str, type] = {}
-        for comp_name, mod_name in silicium_bundle._dynamic_imports.items():
-            cls = silicium_bundle.import_mod(
-                comp_name,
-                mod_name,
-                silicium_bundle.__spec__.parent if silicium_bundle.__spec__ else "lfx_bundles.silicium",
-            )
-            assert cls is getattr(silicium_bundle, comp_name)
+        try:
+            from lfx.extension import load_lfx_bundles_extensions
+
+            silicium_dir = Path(silicium_bundle.__file__).resolve().parent
+            bundles_root_dir = silicium_dir.parent
+            claimed = {
+                child.name: ("seed", str(child))
+                for child in bundles_root_dir.iterdir()
+                if child.is_dir() and child.name != "silicium"
+            }
+            ep = types.SimpleNamespace(name="lfx_bundles", value="lfx_bundles", dist=None)
+            bundle_results = load_lfx_bundles_extensions(entry_points=[ep], claimed_bundles=claimed)
+            silicium_result = next(res for res in bundle_results if res.bundle == "silicium")
+            assert silicium_result.ok is True
+            for comp in silicium_result.components:
+                loaded_classes[comp.class_name] = comp.klass
+        except ImportError:
+            for comp_name, mod_name in silicium_bundle._dynamic_imports.items():
+                cls = silicium_bundle.import_mod(
+                    comp_name,
+                    mod_name,
+                    silicium_bundle.__spec__.parent if silicium_bundle.__spec__ else "lfx_bundles.silicium",
+                )
+                assert cls is getattr(silicium_bundle, comp_name)
+                loaded_classes[comp_name] = cls
+
+        assert set(loaded_classes) == set(silicium_bundle.__all__)
+        for comp_name, cls in loaded_classes.items():
             inst = cls()
             assert inst.name == comp_name
             assert isinstance(inst.display_name, str)
             assert len(inst.display_name) > 0
             assert isinstance(inst.description, str)
             assert len(inst.description) > 0
-            loaded_classes[comp_name] = cls
 
         guard_inst = loaded_classes["SiliciumPiiGuardrailComponent"]()
         guard_inst.set(input_text="Contact dev@example.com", pii_policy="mask")
