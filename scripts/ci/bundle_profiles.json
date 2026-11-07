@@ -155,6 +155,14 @@
           "providers": [
             "lfx-slack"
           ]
+        },
+        {
+          "distribution": "lfx-acedatacloud",
+          "extras": [],
+          "version": ">=0.1.3,<1.0.0",
+          "providers": [
+            "lfx-acedatacloud"
+          ]
         }
       ]
     }

@@ -80,9 +80,23 @@ def test_bundles_extra_owns_the_opt_in_standalone_extensions() -> None:
     assert set(full_profile["entry_points"]["langflow.extensions"]) >= OPT_IN_STANDALONE_EXTENSIONS
 
 
+def test_default_install_supplies_ace_provider_and_service_nodes() -> None:
+    contract = load_contract()
+    for profile_name in ("python-default", "python-full", "image-default", "image-full"):
+        profile = resolve_profile(contract, profile_name)
+        assert "lfx-acedatacloud" in profile["required_distributions"]
+        assert "lfx-acedatacloud" not in profile["forbidden_distributions"]
+        assert "lfx-acedatacloud" in profile["entry_points"]["langflow.extensions"]
+        files = profile["required_files"]["lfx-acedatacloud"]
+        assert "lfx_acedatacloud/provider.py" in files
+        for service in ("suno", "seedance", "happy_horse", "gpt_image", "nano_banana"):
+            assert f"lfx_acedatacloud/components/acedatacloud/{service}.py" in files
+
+
 def test_contract_required_files_exist_in_sources() -> None:
     source_roots = {
         "langflow-base": REPO_ROOT / "src" / "backend" / "base",
+        "lfx-acedatacloud": REPO_ROOT / "src" / "bundles" / "acedatacloud" / "src",
         "lfx-azure": REPO_ROOT / "src" / "bundles" / "azure" / "src",
         "lfx-datastax": REPO_ROOT / "src" / "bundles" / "datastax" / "src",
         "lfx-google": REPO_ROOT / "src" / "bundles" / "google" / "src",
