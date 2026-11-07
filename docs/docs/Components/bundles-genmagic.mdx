@@ -1,0 +1,150 @@
+---
+title: GenMagic
+slug: /bundles-genmagic
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **GenMagic** bundle.
+
+[GenMagic](https://genmagic.co) gives you one API key and one pay-as-you-go balance for hundreds of image, video, audio, and text models.
+The components in this bundle call the GenMagic REST API directly, so they need no vendor SDK, except for the **GenMagic** language model component, which uses the `langchain-openai` client that the bundle's `genmagic` extra installs.
+
+Every component needs a GenMagic API key.
+Create one at [genmagic.co/get-api-key](https://genmagic.co/get-api-key), then enter it in the **GenMagic API Key** field or store it in a [global variable](/configuration-global-variables).
+The field defaults to a global variable named `GENMAGIC_API_KEY`.
+
+Generations are billed to the balance of the key's account when they succeed, at the price GenMagic lists for the model.
+Check the prices at [genmagic.co/models](https://genmagic.co/models) before you run an expensive model, such as a long video.
+When a component is used as a [tool](/agents-tools), the agent decides how often to call it, so use a key from an account with a small balance.
+
+The **Model** dropdowns load the live GenMagic model catalog, which is public and needs no key.
+Select **Refresh** to reload it, or type a model ID to use a model that is not listed.
+The default, `auto`, lets GenMagic pick its recommended model.
+
+For more information, see the [GenMagic API documentation](https://genmagic.co/developers).
+
+## GenMagic Image Generation
+
+This component generates an image from a text prompt, or transforms a reference image, with a GenMagic image model.
+
+It has three outputs:
+
+* **Image**: A [`Message`](/data-types#message) with the image as a Markdown picture, so **Chat Output** shows it inline.
+* **Image URL**: A `Message` with the hosted URL of the image, to connect to other components, such as the **Start Image URL** of **GenMagic Video Generation**.
+* **Result**: A [`Data`](/data-types#json) object with the `url`, `model`, `prompt`, `size`, and the `cost_cents` and `balance_cents` that GenMagic reports.
+
+The component makes one request per run, however many outputs are connected.
+When the component is used as a tool, only the **Result** output is exposed to the agent.
+
+### GenMagic Image Generation parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| GenMagic API Key (`api_key`) | SecretString | Input parameter. Your GenMagic API key. |
+| Prompt (`prompt`) | String | Input parameter. Describes the image, or the change to make when a reference image is set. |
+| Model (`model_name`) | Dropdown | Input parameter. The image model. Default: `auto`. |
+| Size (`size`) | Dropdown | Input parameter. `1024x1024`, `1792x1024`, or `1024x1792`. Default: `1024x1024`. |
+| Reference Image URL (`reference_image`) | String | Input parameter. Optional. An `https` URL or a `data:image` URL of a picture to transform. GenMagic fetches the URL, so it must be reachable from the internet. |
+| Timeout (seconds) (`timeout`) | Integer | Input parameter. How long to wait for GenMagic to answer. Default: `180`. |
+
+## GenMagic Video Generation
+
+This component generates a video from a text prompt, or from an opening image, and waits for the render to finish.
+
+It starts a GenMagic video job, then checks on it every **Poll Interval** seconds until the job completes, fails, or the **Timeout** passes.
+GenMagic bills a video only when it completes.
+
+If the **Timeout** passes first, the component stops with an error that names the job ID.
+The render continues on GenMagic's side, and you can fetch the finished clip later with the **GenMagic Video Status** component.
+A few failed checks, such as a network error or a rate limit, do not stop the wait.
+
+It has two outputs:
+
+* **Video URL**: A `Message` with the hosted URL of the finished clip.
+* **Result**: A `Data` object with the `id`, `model`, `status`, `url`, `prompt`, `aspect_ratio`, and the `cost_cents` and `balance_cents` that GenMagic reports.
+
+### GenMagic Video Generation parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| GenMagic API Key (`api_key`) | SecretString | Input parameter. Your GenMagic API key. |
+| Prompt (`prompt`) | String | Input parameter. Describes the video. With a start image, describe the motion. |
+| Model (`model_name`) | Dropdown | Input parameter. The video model. The list shows only models that make a clip from a text prompt. Default: `auto`. |
+| Aspect Ratio (`aspect_ratio`) | Dropdown | Input parameter. `16:9`, `9:16`, or `1:1`. Default: `16:9`. |
+| Duration (seconds) (`duration`) | Integer | Input parameter. The clip length. Leave at `0` for the model's default, usually 5 seconds. Each model accepts only certain lengths, and the price scales with the length. |
+| Start Image URL (`start_image`) | String | Input parameter. Optional. An `https` URL or a `data:image` URL the clip opens on. Only models that accept a first frame can use it. |
+| Timeout (seconds) (`timeout`) | Integer | Input parameter. How long to wait for the render. Default: `600`. |
+| Poll Interval (seconds) (`poll_interval`) | Float | Input parameter. How often to check on the render. Default: `5`. |
+
+## GenMagic Video Status
+
+This component looks up a video job by ID.
+Use it to fetch a clip that was still rendering when the **Timeout** of **GenMagic Video Generation** passed.
+Looking up a job spends no credits.
+
+A job that is still rendering, or that failed, is reported in the result rather than as an error.
+The **Video URL** output is empty until the job completes.
+
+### GenMagic Video Status parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| GenMagic API Key (`api_key`) | SecretString | Input parameter. Your GenMagic API key. |
+| Job ID (`job_id`) | String | Input parameter. The ID of the video job, from the **Result** of **GenMagic Video Generation** or from its timeout error. |
+| Wait (seconds) (`wait`) | Integer | Input parameter. How long to keep checking until the video is done. Leave at `0` to look the job up once. Default: `0`. |
+| Poll Interval (seconds) (`poll_interval`) | Float | Input parameter. How often to check while waiting. Default: `5`. |
+
+## GenMagic Text to Speech
+
+This component turns text into spoken audio with a GenMagic text-to-speech model.
+
+It has two outputs:
+
+* **Audio URL**: A `Message` with the hosted URL of the audio.
+* **Result**: A `Data` object with the `audio_url`, `model`, `voice`, `mime_type`, and the `cost_cents` and `balance_cents` that GenMagic reports.
+
+### GenMagic Text to Speech parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| GenMagic API Key (`api_key`) | SecretString | Input parameter. Your GenMagic API key. |
+| Text (`text`) | String | Input parameter. The text to speak. It is voiced verbatim. |
+| Model (`model_name`) | Dropdown | Input parameter. The text-to-speech model. The list shows only speech models, not music models. Default: `auto`. |
+| Voice (`voice`) | String | Input parameter. The voice name, such as `alloy`. Leave empty for the model's default voice. Default: `alloy`. |
+| Timeout (seconds) (`timeout`) | Integer | Input parameter. How long to wait for GenMagic to answer. Default: `120`. |
+
+## GenMagic
+
+This component generates text with any of GenMagic's text models through its OpenAI-compatible API.
+Install the bundle with the `genmagic` extra to use it.
+
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+
+Use the **Language Model** output when you want to use a GenMagic model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Transform** component.
+For more information, see [Language model components](/components-models).
+
+### GenMagic parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Input (`input_value`) | String | Input parameter. The input text for the model. |
+| System Message (`system_message`) | String | Input parameter. A system message to prepend to the conversation. |
+| Stream (`stream`) | Boolean | Input parameter. Whether to stream the response. |
+| GenMagic API Key (`api_key`) | SecretString | Input parameter. Your GenMagic API key. |
+| Model (`model_name`) | Dropdown | Input parameter. The text model. Select one from the list, which is the live catalog, or type a model ID. |
+| Temperature (`temperature`) | Float | Input parameter. Optional. Leave empty to use the model's own default, because some reasoning models do not accept a temperature. |
+| Max Tokens (`max_tokens`) | Integer | Input parameter. The maximum number of tokens to generate. Leave at `0` for the model's default. |
+
+## See also
+
+* [Language model components](/components-models)
+* [Configure tools for agents](/agents-tools)
