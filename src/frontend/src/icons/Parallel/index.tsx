@@ -1,10 +1,11 @@
 import type React from "react";
 import { forwardRef } from "react";
 
+// The mark paints its own background, so the same colors work in both themes.
 export const ParallelIcon = forwardRef<
   SVGSVGElement,
-  React.PropsWithChildren<{}>
->((props, ref) => (
+  React.SVGProps<SVGSVGElement> & { isDark?: boolean }
+>(({ isDark: _isDark, ...props }, ref) => (
   <svg
     width="24"
     height="24"

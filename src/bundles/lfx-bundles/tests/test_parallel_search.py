@@ -20,6 +20,7 @@ PAYLOAD = {"results": [{"title": "Python", "url": "https://docs.python.org/3/", 
 
 
 def test_parser_structured_text_limits_and_unicode():
+    """Keep structured and JSON-text responses equivalent while limiting rows and preserving Unicode."""
     payload = {"results": PAYLOAD["results"] * 3}
     for result in (
         CallToolResult(content=[], structuredContent=payload),
@@ -52,9 +53,10 @@ def test_service_error_is_not_empty_success():
         ParallelSearchComponent._result_data(CallToolResult(content=[], isError=True), 2)
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize("settings", [{"enabled": False}, {"query": " "}, {"max_results": 0}, {"max_results": 21}])
 async def test_disabled_and_invalid_inputs_never_connect(monkeypatch, settings):
+    """Reject invalid settings and return disabled output before any network setup."""
+
     def fail(_url):
         pytest.fail("Network setup should not run")
 
@@ -70,12 +72,13 @@ async def test_disabled_and_invalid_inputs_never_connect(monkeypatch, settings):
             await component.fetch_content_dataframe()
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize("credential", ["", "synthetic-key"])
 async def test_native_output_sdk_and_all_transport_headers(monkeypatch, credential):
+    """Exercise the SDK lifecycle and native table output with optional authentication on every request."""
     requests = []
 
     def handler(request):
+        """Serve synthetic MCP replies and verify the shared transport headers."""
         requests.append(request)
         assert request.headers["user-agent"] == module.USER_AGENT
         assert request.headers.get("authorization") == (f"Bearer {credential}" if credential else None)
@@ -122,12 +125,13 @@ async def test_native_output_sdk_and_all_transport_headers(monkeypatch, credenti
     }
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize("status", [401, 429])
 async def test_initialization_http_status_is_safe_and_not_retried(monkeypatch, status):
+    """Surface authentication and rate-limit failures once without exposing response bodies or tokens."""
     requests = []
 
     def handler(request):
+        """Require the supplied token and return a sensitive synthetic error body."""
         requests.append(request)
         assert request.headers["authorization"] == "Bearer synthetic-invalid"
         return httpx.Response(status, text="synthetic-sensitive-body")
@@ -146,11 +150,11 @@ async def test_initialization_http_status_is_safe_and_not_retried(monkeypatch, s
     assert len(requests) == 1
 
 
-@pytest.mark.asyncio
 async def test_ssrf_denial_propagates(monkeypatch):
     from lfx.utils.ssrf_protection import SSRFProtectionError
 
     def deny(url):
+        """Check the fixed endpoint and simulate an SSRF denial."""
         assert url == module.MCP_URL
         msg = "blocked"
         raise SSRFProtectionError(msg)
@@ -160,12 +164,13 @@ async def test_ssrf_denial_propagates(monkeypatch):
         await ParallelSearchComponent().set(query="Python").fetch_content()
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize("location", ["/synthetic-sensitive-target", "https://example.com/synthetic-sensitive-target"])
 async def test_redirects_are_refused(monkeypatch, location):
+    """Reject relative and absolute redirects without revealing or following their targets."""
     requests = []
 
     def handler(request):
+        """Return a redirect to ensure the SDK refuses to follow it."""
         requests.append(request)
         assert request.headers["user-agent"] == module.USER_AGENT
         return httpx.Response(307, headers={"location": location})
@@ -181,8 +186,8 @@ async def test_redirects_are_refused(monkeypatch, location):
     assert len(requests) == 1
 
 
-@pytest.mark.asyncio
 async def test_default_ssrf_validation_rejects_private_resolution(monkeypatch):
+    """Block private DNS results through the real SSRF helper before creating an HTTP client."""
     from lfx.utils import ssrf_protection
 
     monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
@@ -210,8 +215,8 @@ async def test_default_ssrf_validation_rejects_private_resolution(monkeypatch):
     assert resolved_hosts == ["mcp.parallel.ai"]
 
 
-@pytest.mark.asyncio
 async def test_tool_mode_keeps_disabled_setting():
+    """Expose only the query argument and preserve disabled behavior in the generated tool."""
     component = ParallelSearchComponent().set(enabled=False)
     tools = await component.to_toolkit()
     assert len(tools) == 1
@@ -227,8 +232,8 @@ def test_non_json_response_fails():
         )
 
 
-@pytest.mark.asyncio
 async def test_search_deadline_cancels_sdk_and_closes_client(monkeypatch):
+    """Enforce the search budget and verify cancellation closes the SDK transport."""
     deadline = module.fail_after
     budgets = []
     cancelled = []
@@ -263,9 +268,9 @@ async def test_search_deadline_cancels_sdk_and_closes_client(monkeypatch):
     assert closed == [True]
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize("kind", ["connection", "timeout", "other", "mixed"])
 async def test_initialization_non_status_errors_stay_intact(monkeypatch, kind):
+    """Preserve non-HTTP failures and mixed exception groups without rewriting their causes."""
     original = None
 
     def handler(request):
@@ -298,8 +303,8 @@ async def test_initialization_non_status_errors_stay_intact(monkeypatch, kind):
     assert error is original
 
 
-@pytest.mark.asyncio
 async def test_caller_cancellation_stays_cancelled_and_closes_client(monkeypatch):
+    """Propagate caller cancellation and close the in-flight transport."""
     started = asyncio.Event()
     closed = []
 

@@ -61,6 +61,7 @@ class ParallelSearchComponent(Component):
 
     @staticmethod
     def _result_data(result: "CallToolResult", limit: int) -> list[Data]:
+        """Validate structured or JSON MCP results and limit source rows with joined excerpts."""
         if result.isError:
             msg = "Parallel search failed. Check your credentials, rate limits, and query."
             raise ValueError(msg)
@@ -103,6 +104,7 @@ class ParallelSearchComponent(Component):
         return rows
 
     async def fetch_content(self) -> list[Data]:
+        """Search through the fixed MCP endpoint with a deadline and sanitized HTTP errors."""
         if not self.enabled:
             return []
         query = self.query.strip()
