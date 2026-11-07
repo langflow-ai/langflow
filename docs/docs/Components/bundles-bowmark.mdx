@@ -1,0 +1,61 @@
+---
+title: Bowmark
+slug: /bundles-bowmark
+---
+
+import Icon from "@site/src/components/icon";
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+<GraduatedBundleInstall packageName="bowmark" />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Bowmark** bundle.
+
+[Bowmark](https://bowmark.ai) runs tasks on live websites and returns typed results.
+An agent first looks up which functions Bowmark has for a site or task, then runs a short JavaScript script that calls them.
+
+Get an API key from [bowmark.ai](https://bowmark.ai).
+
+## Bowmark Library
+
+This component looks up which functions Bowmark has for a website or a task, for example `linkedin.com` or `flight prices`.
+
+It outputs the matching functions, with their arguments and return types, as a [`Message`](/data-types#message).
+
+In [tool mode](/agents-tools), the component exposes a tool named `bowmark_get_library` that an [**Agent** component](/agents) can call with a hostname or a task.
+
+### Bowmark Library parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Query (`query`) | String | Input parameter. A website hostname or a task, for example `news.ycombinator.com` or `track a parcel`. |
+| Bowmark API Key (`bowmark_api_key`) | SecretString | Input parameter. Your Bowmark API key. |
+
+## Bowmark Run
+
+This component runs a short JavaScript script that calls the `bowmark.*` functions found with **Bowmark Library**, and returns the value the script returns. For example:
+
+```js
+return (await bowmark.providers.hackernews.topStories()).slice(0, 3)
+```
+
+It outputs a [`Data`](/data-types#json) object with `result`, `status`, `run_id`, and `logs` fields. The `text` of the object is the result, serialized as JSON when it is not a string.
+If the run fails, for example because the API key is missing or invalid, the object contains an `error` field that describes the problem.
+
+In [tool mode](/agents-tools), the component exposes a tool named `bowmark_run` that an [**Agent** component](/agents) can call with a script.
+Give an agent both tools: it calls `bowmark_get_library` to find the functions for a site, then `bowmark_run` to call them.
+
+### Bowmark Run parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Script (`script`) | String | Input parameter. A JavaScript body that returns a value, using the `bowmark.*` functions from **Bowmark Library**. |
+| Bowmark API Key (`bowmark_api_key`) | SecretString | Input parameter. Your Bowmark API key. |
+| Timeout (seconds) (`timeout`) | Integer | Input parameter. How long to wait for the run to finish. Default: `180`. |
+
+## See also
+
+* [**Web Search** component](/web-search)
+* [**Firecrawl** bundle](/bundles-firecrawl)
+* [**Apify** bundle](/bundles-apify)

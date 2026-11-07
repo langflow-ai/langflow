@@ -91,6 +91,7 @@
         "lfx-firecrawl",
         "lfx-nextplaid",
         "lfx-paddle",
+        "lfx-bowmark",
         "lfx-serpingapi",
         "lfx-serply",
         "lfx-valkey"
@@ -219,6 +220,7 @@
         "lfx-firecrawl",
         "lfx-nextplaid",
         "lfx-paddle",
+        "lfx-bowmark",
         "lfx-serpingapi",
         "lfx-serply",
         "lfx-valkey"
@@ -233,6 +235,7 @@
         "lfx-firecrawl",
         "lfx-nextplaid",
         "lfx-paddle",
+        "lfx-bowmark",
         "lfx-serpingapi",
         "lfx-serply",
         "lfx-valkey"
@@ -262,6 +265,7 @@
           "lfx-openai-compatible",
           "lfx-oracle",
           "lfx-paddle",
+          "lfx-bowmark",
           "lfx-serpingapi",
           "lfx-serply",
           "lfx-slack",
