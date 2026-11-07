@@ -512,36 +512,25 @@ def test_silicium_vector_store_ingest_search_and_negative_cases() -> None:
 
 def test_silicium_framework_discovery_and_component_set_contract() -> None:
     """Discover Silicium components via `load_lfx_bundles_extensions` and exercise them in the framework."""
+    if importlib.util.find_spec("lfx") is None:
+        pytest.skip("Framework discovery requires lfx")
+    from lfx.extension import load_lfx_bundles_extensions
     from lfx_bundles.silicium.silicium_vector_store import Data
 
     reset_semantic_cache_arena()
     try:
-        loaded_classes: dict[str, type] = {}
-        if importlib.util.find_spec("lfx") is not None:
-            from lfx.extension import load_lfx_bundles_extensions
-
-            silicium_dir = Path(silicium_bundle.__file__).resolve().parent
-            bundles_root_dir = silicium_dir.parent
-            claimed = {
-                child.name: ("seed", str(child))
-                for child in bundles_root_dir.iterdir()
-                if child.is_dir() and child.name != "silicium"
-            }
-            ep = types.SimpleNamespace(name="lfx_bundles", value="lfx_bundles", dist=None)
-            bundle_results = load_lfx_bundles_extensions(entry_points=[ep], claimed_bundles=claimed)
-            silicium_result = next(res for res in bundle_results if res.bundle == "silicium")
-            assert silicium_result.ok is True
-            for comp in silicium_result.components:
-                loaded_classes[comp.class_name] = comp.klass
-        else:
-            for comp_name, mod_name in silicium_bundle._dynamic_imports.items():
-                cls = silicium_bundle.import_mod(
-                    comp_name,
-                    mod_name,
-                    silicium_bundle.__spec__.parent if silicium_bundle.__spec__ else "lfx_bundles.silicium",
-                )
-                assert cls is getattr(silicium_bundle, comp_name)
-                loaded_classes[comp_name] = cls
+        silicium_dir = Path(silicium_bundle.__file__).resolve().parent
+        bundles_root_dir = silicium_dir.parent
+        claimed = {
+            child.name: ("seed", str(child))
+            for child in bundles_root_dir.iterdir()
+            if child.is_dir() and child.name != "silicium"
+        }
+        ep = types.SimpleNamespace(name="lfx_bundles", value="lfx_bundles", dist=None)
+        bundle_results = load_lfx_bundles_extensions(entry_points=[ep], claimed_bundles=claimed)
+        silicium_result = next(res for res in bundle_results if res.bundle == "silicium")
+        assert silicium_result.ok is True
+        loaded_classes: dict[str, type] = {comp.class_name: comp.klass for comp in silicium_result.components}
 
         assert set(loaded_classes) == set(silicium_bundle.__all__)
         for comp_name, cls in loaded_classes.items():
@@ -583,4 +572,5 @@ if __name__ == "__main__":
     test_silicium_pii_guardrail_mask_block_audit_and_all_categories()
     test_silicium_semantic_cache_tenant_isolation_and_eviction()
     test_silicium_vector_store_ingest_search_and_negative_cases()
-    test_silicium_framework_discovery_and_component_set_contract()
+    if importlib.util.find_spec("lfx") is not None:
+        test_silicium_framework_discovery_and_component_set_contract()
