@@ -517,7 +517,7 @@ def test_silicium_framework_discovery_and_component_set_contract() -> None:
     reset_semantic_cache_arena()
     try:
         loaded_classes: dict[str, type] = {}
-        try:
+        if importlib.util.find_spec("lfx") is not None:
             from lfx.extension import load_lfx_bundles_extensions
 
             silicium_dir = Path(silicium_bundle.__file__).resolve().parent
@@ -533,7 +533,7 @@ def test_silicium_framework_discovery_and_component_set_contract() -> None:
             assert silicium_result.ok is True
             for comp in silicium_result.components:
                 loaded_classes[comp.class_name] = comp.klass
-        except ImportError:
+        else:
             for comp_name, mod_name in silicium_bundle._dynamic_imports.items():
                 cls = silicium_bundle.import_mod(
                     comp_name,
