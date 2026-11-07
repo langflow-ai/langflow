@@ -293,3 +293,26 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         # Assert - Should use default_value when key is missing
         assert isinstance(result, Message)
         assert result.text == "Text: "
+
+    @pytest.mark.parametrize("mode", ["Parser", "Stringify"])
+    def test_mode_refresh_shows_only_applicable_fields(self, component_class, mode):
+        component = component_class(mode=mode)
+        build_config = {"pattern": {"show": True, "required": True}}
+
+        result = component.update_build_config(build_config, mode, "mode")
+
+        assert result["pattern"]["show"] is (mode == "Parser")
+        assert result["pattern"]["required"] is (mode == "Parser")
+        assert ("clean_data" in result) is (mode == "Stringify")
+
+    def test_switching_back_to_parser_removes_stringify_cleaning(self, component_class):
+        component = component_class(mode="Stringify")
+        build_config = {"pattern": {"show": True, "required": True}}
+        component.update_build_config(build_config, "Stringify", "mode")
+        assert build_config["clean_data"]["value"] is True
+
+        component.set(mode="Parser", input_data=Data(text="First\n\nSecond"), pattern="{text}")
+        result = component.update_build_config(build_config, "Parser", "mode")
+
+        assert "clean_data" not in result
+        assert component.parse_combined_text().text == "First\n\nSecond"
