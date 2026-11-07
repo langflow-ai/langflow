@@ -122,6 +122,7 @@ class GenMagicVideoGenerationComponent(Component):
     ]
 
     def _pre_run_setup(self) -> None:
+        """Forget the previous build's job, so this build starts one paid job shared by its outputs."""
         # One paid job per build, shared by every output that is connected.
         self._generation = None
 
@@ -134,6 +135,7 @@ class GenMagicVideoGenerationComponent(Component):
         )
 
     def _request_body(self) -> dict[str, Any]:
+        """The JSON body for POST /videos, built from the component's inputs."""
         prompt = text_value(self.prompt)
         if not prompt:
             msg = "Enter a prompt for the video."

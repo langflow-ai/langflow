@@ -54,6 +54,7 @@ class GenMagicAPIError(ValueError):
     """A GenMagic request failed. The message is safe to show in the component status."""
 
     def __init__(self, message: str, *, status: int = 0, code: str = "") -> None:
+        """Keep the HTTP status and GenMagic's error code beside the message."""
         super().__init__(message)
         self.status = status
         self.code = code
@@ -68,6 +69,7 @@ class GenMagicVideoTimeoutError(GenMagicAPIError):
     """A video job was still rendering when the wait ran out. ``job`` is its last known state."""
 
     def __init__(self, message: str, *, job: dict[str, Any], costs: dict[str, float]) -> None:
+        """Keep the job as last seen and the costs so far, so a timeout can still report them."""
         super().__init__(message, code="timeout")
         self.job = job
         self.costs = costs
@@ -122,6 +124,7 @@ def chosen_model(value: Any) -> str | None:
 
 
 def _redact(text: str, api_key: str) -> str:
+    """Replace the API key with ``***`` wherever it appears in ``text``."""
     return text.replace(api_key, "***") if api_key else text
 
 
@@ -143,6 +146,7 @@ def _error_fields(response: httpx.Response) -> tuple[str, str]:
 
 
 def _api_error(response: httpx.Response, api_key: str) -> GenMagicAPIError:
+    """Turn a GenMagic error response into a ``GenMagicAPIError`` with a readable message and no key in it."""
     status = response.status_code
     code, detail = _error_fields(response)
     # Redact before truncating, so a key cut at the limit cannot leak in part.
@@ -177,6 +181,7 @@ def _send(
     json: dict[str, Any] | None = None,
     params: dict[str, Any] | None = None,
 ) -> httpx.Response:
+    """Send one request to GenMagic's API with the key and client header, raising ``GenMagicAPIError`` on failure."""
     headers = {"Accept": "application/json, audio/*", "X-GenMagic-Client": client_header()}
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
@@ -261,6 +266,7 @@ def list_models(category: str) -> list[dict[str, Any]]:
     models = [m for m in (data if isinstance(data, list) else []) if isinstance(m, dict) and m.get("id")]
 
     def newest_first(model: dict[str, Any]) -> tuple[int, str]:
+        """Sort key: newest model first, then by name."""
         created = optional_positive_int(model.get("created")) or 0
         return -created, str(model.get("name") or model["id"]).casefold()
 
@@ -291,6 +297,7 @@ def refresh_model_dropdown(
 
 
 def video_path(job_id: str) -> str:
+    """The API path of one video job, with the job ID URL-encoded."""
     return f"/videos/{quote(job_id, safe='')}"
 
 

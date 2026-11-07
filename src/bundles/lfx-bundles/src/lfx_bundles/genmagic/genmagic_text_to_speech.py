@@ -93,6 +93,7 @@ class GenMagicTextToSpeechComponent(Component):
     ]
 
     def _pre_run_setup(self) -> None:
+        """Forget the previous build's audio, so this build makes one paid request shared by its outputs."""
         # One paid request per build, shared by every output that is connected.
         self._speech = None
 
@@ -103,6 +104,7 @@ class GenMagicTextToSpeechComponent(Component):
         return refresh_model_dropdown(build_config, "model_name", "audio", include_auto=True, keep=is_speech_model)
 
     def _request_body(self) -> dict[str, Any]:
+        """The JSON body for POST /audio/speech, built from the component's inputs."""
         text = text_value(self.text)
         if not text:
             msg = "Enter the text to speak."

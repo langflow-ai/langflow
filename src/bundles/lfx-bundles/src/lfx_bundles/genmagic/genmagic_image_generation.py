@@ -96,6 +96,7 @@ class GenMagicImageGenerationComponent(Component):
     ]
 
     def _pre_run_setup(self) -> None:
+        """Forget the previous build's image, so this build makes one paid request shared by its outputs."""
         # One paid request per build, shared by every output that is connected.
         self._generation = None
 
@@ -106,6 +107,7 @@ class GenMagicImageGenerationComponent(Component):
         return refresh_model_dropdown(build_config, "model_name", "image", include_auto=True)
 
     def _request_body(self) -> dict[str, Any]:
+        """The JSON body for POST /images/generations, built from the component's inputs."""
         prompt = text_value(self.prompt)
         if not prompt:
             msg = "Enter a prompt for the image."

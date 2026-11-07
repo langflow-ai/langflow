@@ -80,6 +80,7 @@ class GenMagicVideoStatusComponent(Component):
     ]
 
     def _pre_run_setup(self) -> None:
+        """Forget the previous build's lookup, so this build reads the job once for all its outputs."""
         self._lookup = None
 
     def lookup(self) -> dict[str, Any]:
