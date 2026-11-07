@@ -28,6 +28,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import and_, col, select
 
 from langflow.api.utils import (
+    EMPTY_FILE_DETAIL,
     CurrentActiveUser,
     DbSession,
     cascade_delete_flow,
@@ -1250,7 +1251,7 @@ async def upload_file(
     contents = await file.read()
 
     if not contents:
-        raise HTTPException(status_code=400, detail="The uploaded file is empty")
+        raise HTTPException(status_code=400, detail=EMPTY_FILE_DETAIL)
 
     if zipfile.is_zipfile(io.BytesIO(contents)):
         try:

@@ -17,7 +17,7 @@ from lfx.utils.file_path_security import user_storage_scope, user_storage_scope_
 from sqlmodel import col, select
 
 from langflow.api.schemas import UploadFileResponse
-from langflow.api.utils import CurrentActiveUser, DbSession, build_content_disposition
+from langflow.api.utils import EMPTY_FILE_DETAIL, CurrentActiveUser, DbSession, build_content_disposition
 from langflow.services.auth.context import current_auth_is_restricted_api_key
 from langflow.services.authorization import FileAction, ensure_file_permission
 from langflow.services.authorization.credentials import ensure_mcp_credential_file_access, is_mcp_credential_file
@@ -279,6 +279,9 @@ async def upload_user_file(
     # Validate that a file is actually provided
     if not file or not file.filename:
         raise HTTPException(status_code=400, detail="No file provided")
+
+    if file.size == 0:
+        raise HTTPException(status_code=400, detail=EMPTY_FILE_DETAIL)
 
     # Validate file size (convert MB to bytes)
     if file.size > max_file_size_upload * 1024 * 1024:
