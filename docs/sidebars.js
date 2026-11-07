@@ -597,6 +597,7 @@ module.exports = {
             "Components/bundles-oracle",
             "Components/bundles-orcarouter",
             "Components/bundles-paddle",
+            "Components/bundles-parallel",
             "Components/bundles-perplexity",
             "Components/bundles-pgvector",
             "Components/bundles-pinecone",

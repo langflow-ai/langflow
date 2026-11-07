@@ -510,6 +510,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Oracle", name: "oracle", icon: "Oracle" },
   { display_name: "OrcaRouter", name: "orcarouter", icon: "OrcaRouter" },
   { display_name: "PaddleOCR", name: "paddle", icon: "FileSearch" },
+  { display_name: "Parallel", name: "parallel", icon: "Parallel" },
   { display_name: "Perplexity", name: "perplexity", icon: "Perplexity" },
   { display_name: "pgvector", name: "pgvector", icon: "cpu" },
   { display_name: "Pinecone", name: "pinecone", icon: "Pinecone" },

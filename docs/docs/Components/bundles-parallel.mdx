@@ -1,0 +1,28 @@
+---
+title: Parallel
+slug: /bundles-parallel
+---
+
+The **Parallel Search** component searches the web through [Parallel's MCP server](https://docs.parallel.ai/integrations/mcp/search-mcp)
+and returns a **Table** with `title`, `url`, `content`, and `excerpts` columns.
+The `text` column also contains the joined passages for downstream components.
+
+Install `pip install 'lfx-bundles[parallel]>=1.3.5'` in the same environment as Langflow,
+then select **Bundles > Parallel > Parallel Search**. No inference provider or API
+key is needed to execute the Table output. Enter a query such as
+`Python asyncio TaskGroup documentation`, then run the component. Connect the
+Table to a data processing component, or enable **Tool Mode** to let an Agent
+supply the Search Query.
+
+This is an explicit opt-in component. Adding or installing it does not change
+other search components or route existing flows to Parallel. Queries are sent to
+`https://mcp.parallel.ai/mcp`. Anonymous searches use the service's default fast
+mode and have lower rate limits. Optionally enter a **Parallel API Key** for
+higher limits. Authentication and service errors propagate; a failed key is never
+retried anonymously.
+
+**Max Results** limits returned rows locally; it does not change the server's
+search settings. Turn **Enabled** off for an empty table with no network calls,
+including in offline flows. The component exposes search only and never fetches
+returned source URLs itself. It uses Langflow's existing SSRF validation and DNS
+pinning, verifies TLS, and refuses redirects.
