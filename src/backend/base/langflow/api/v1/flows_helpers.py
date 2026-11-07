@@ -835,7 +835,7 @@ async def _update_existing_flow(
         project_before=existing_folder_id,
         project_after=existing_flow.folder_id,
     )
-    if reconcile_triggers:
+    if reconcile_triggers and "data" in update_data:
         await _reconcile_flow_triggers(
             session, flow_id=existing_flow.id, owner_id=existing_flow.user_id, flow_data=existing_flow.data
         )
@@ -980,7 +980,8 @@ async def _patch_flow(
         project_before=existing_folder_id,
         project_after=db_flow.folder_id,
     )
-    await _reconcile_flow_triggers(session, flow_id=db_flow.id, owner_id=db_flow.user_id, flow_data=db_flow.data)
+    if "data" in update_data:
+        await _reconcile_flow_triggers(session, flow_id=db_flow.id, owner_id=db_flow.user_id, flow_data=db_flow.data)
     # Writes happen under the owner's storage namespace, not the actor's.
     await _save_flow_to_fs(db_flow, owner_user_id, storage_service)
 

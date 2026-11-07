@@ -51,6 +51,7 @@ export const TRIGGER_STATE_REASONS = [
 
 /** Caller reasons: only ever values in `blocked_actions`. */
 export const TRIGGER_CALLER_REASONS = [
+  "multiple_triggers",
   "insufficient_permission",
   "not_connection_owner",
   "reconnect_not_needed",

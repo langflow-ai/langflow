@@ -147,11 +147,17 @@ def _decide(
 
 
 def trigger_capabilities(
-    row: Trigger, *, caller: TriggerCaller, recovery_reason: TriggerReason | None = None
+    row: Trigger,
+    *,
+    caller: TriggerCaller,
+    recovery_reason: TriggerReason | None = None,
+    resume_block: TriggerReason | None = None,
 ) -> TriggerCapabilities:
     """The server's answer for ``caller`` on ``row``, in ``TriggerAction`` display order."""
     reason = trigger_reason(row, recovery_reason=recovery_reason)
     decisions = _decide(row, reason, caller)
+    if resume_block is not None and TriggerAction.RESUME in decisions and row.state != TriggerState.DEAD.value:
+        decisions[TriggerAction.RESUME] = resume_block
     allowed: list[TriggerAction] = []
     blocked: dict[TriggerAction, TriggerReason] = {}
     for action in TriggerAction:
