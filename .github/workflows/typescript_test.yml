@@ -100,7 +100,7 @@ env:
   # — "Path Validation Error ... no cache is being saved" on every job, so no
   # shard ever hit the cache and all 70 re-downloaded Chromium every run.
   PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/ms-playwright
-  PLAYWRIGHT_VERSION: "1.60.0"
+  PLAYWRIGHT_VERSION: "1.64.1"
   LANGFLOW_FEATURE_WXO_DEPLOYMENTS: "true"
 
 jobs:
