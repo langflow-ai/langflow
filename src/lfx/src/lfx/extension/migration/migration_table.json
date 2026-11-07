@@ -5270,6 +5270,51 @@
       "bare_class_name": "MrscraperWebSearch",
       "target": "ext:mrscraper:MrscraperWebSearch@official",
       "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "SiliciumPiiGuardrailComponent",
+      "target": "ext:silicium:SiliciumPiiGuardrailComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx_bundles.silicium.silicium_pii_guardrail.SiliciumPiiGuardrailComponent",
+      "target": "ext:silicium:SiliciumPiiGuardrailComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx_bundles.silicium.SiliciumPiiGuardrailComponent",
+      "target": "ext:silicium:SiliciumPiiGuardrailComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "SiliciumSemanticCacheComponent",
+      "target": "ext:silicium:SiliciumSemanticCacheComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx_bundles.silicium.silicium_semantic_cache.SiliciumSemanticCacheComponent",
+      "target": "ext:silicium:SiliciumSemanticCacheComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx_bundles.silicium.SiliciumSemanticCacheComponent",
+      "target": "ext:silicium:SiliciumSemanticCacheComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "SiliciumVectorStoreComponent",
+      "target": "ext:silicium:SiliciumVectorStoreComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx_bundles.silicium.silicium_vector_store.SiliciumVectorStoreComponent",
+      "target": "ext:silicium:SiliciumVectorStoreComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx_bundles.silicium.SiliciumVectorStoreComponent",
+      "target": "ext:silicium:SiliciumVectorStoreComponent@official",
+      "added_in": "1.13.0"
     }
   ],
   "ambiguous_bare_names": [
