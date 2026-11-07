@@ -98,9 +98,15 @@ class SplitTextComponent(Component):
                 msg = "DataFrame is empty"
                 raise TypeError(msg)
 
-            self.data_inputs.text_key = self.text_key
+            # Build the throwaway copy through the documented DataFrame/Table constructor
+            # instead of pandas' NDFrame.copy: on pandas 2.0.x (inside lfx's declared
+            # pandas>=2.0.0 range) copy() hands the BlockManager to Table.__init__, which does
+            # not load managers, so the copy comes back empty and the text_key assignment
+            # below raises ValueError.
+            table = DataFrame(self.data_inputs)
+            table.text_key = self.text_key
             try:
-                documents = self.data_inputs.to_lc_documents()
+                documents = table.to_lc_documents()
             except Exception as e:
                 msg = f"Error converting DataFrame to documents: {e}"
                 raise TypeError(msg) from e
@@ -114,8 +120,8 @@ class SplitTextComponent(Component):
 
             documents = []
             if isinstance(self.data_inputs, Data):
-                self.data_inputs.text_key = self.text_key
-                documents = [self.data_inputs.to_lc_document()]
+                data = self.data_inputs.model_copy(update={"text_key": self.text_key})
+                documents = [data.to_lc_document()]
             else:
                 try:
                     documents = [input_.to_lc_document() for input_ in self.data_inputs if isinstance(input_, Data)]
