@@ -2959,7 +2959,7 @@
   "connections.tabs.instance": "インスタンス",
   "connections.tabs.others": "他のユーザー",
   "connections.tabs.providers": "プロバイダーを管理",
-  "connections.providers.intro": "ここで登録した OAuth アプリはインスタンス全体で共有されます。新しい接続は保存直後からプロバイダーを使用できますが、トリガーリスナーやその他の Langflow プロセスは、削除を含む変更を Langflow の再起動後に反映します。サーバー環境に同じ ID の登録がある場合はそちらが優先されます。",
+  "connections.providers.intro": "ここで登録した OAuth アプリはインスタンス全体で共有されます。新しい接続は保存直後からプロバイダーを使用できますが、トリガーリスナーやその他の Langflow プロセスは、削除を含む変更を Langflow の再起動後に反映します。サーバー環境に同じ ID の登録がある場合はそちらが優先されます。 保存された各登録は、最後に保存したスーパーユーザーに紐づきます。そのアカウントを削除または無効化するか、スーパーユーザー権限を削除すると、そのアカウントの登録は再起動後に利用できなくなります。",
   "connections.providers.add": "プロバイダーを追加",
   "connections.providers.empty": "まだプロバイダーが設定されていません。",
   "connections.providers.replace": "置き換え",

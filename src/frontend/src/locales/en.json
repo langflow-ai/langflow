@@ -2958,7 +2958,7 @@
   "connections.tabs.instance": "Instance",
   "connections.tabs.others": "Other users",
   "connections.tabs.providers": "Manage providers",
-  "connections.providers.intro": "OAuth apps registered here are shared with the whole instance. New connections can use a provider as soon as you save it; trigger listeners and other Langflow processes pick up a change, including a removal, only after Langflow restarts. A registration with the same ID in the server environment takes precedence.",
+  "connections.providers.intro": "OAuth apps registered here are shared with the whole instance. New connections can use a provider as soon as you save it; trigger listeners and other Langflow processes pick up a change, including a removal, only after Langflow restarts. A registration with the same ID in the server environment takes precedence. Each saved registration is linked to the superuser who last saved it. Deleting or deactivating that account, or removing its superuser access, makes its registrations unavailable after a restart.",
   "connections.providers.add": "Add provider",
   "connections.providers.empty": "No providers configured yet.",
   "connections.providers.replace": "Replace",

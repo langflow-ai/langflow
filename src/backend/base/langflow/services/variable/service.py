@@ -52,6 +52,7 @@ def has_variable_value(variable: Variable) -> bool:
 
 
 def _ensure_user_variable(name: str | None) -> None:
+    """Reject instance OAuth storage names before ordinary variable mutations."""
     if is_oauth_registration_variable(name):
         msg = "OAuth registrations must be managed from Connections settings."
         raise ValueError(msg)
@@ -132,6 +133,7 @@ class DatabaseVariableService(VariableService, Service):
         return [(name, default_fields) for name, default_fields in (await session.exec(stmt)).all() if name]
 
     async def initialize_user_variables(self, user_id: UUID | str, session: AsyncSession) -> None:
+        """Import allowed environment defaults without replacing user edits or exposing OAuth storage."""
         if not self.settings_service.settings.store_environment_variables:
             await logger.adebug("Skipping environment variable storage.")
             return
@@ -303,6 +305,7 @@ class DatabaseVariableService(VariableService, Service):
         name: str,
         session: AsyncSession,
     ) -> Variable:
+        """Load a nonempty owned variable without exposing reserved registration storage."""
         if is_oauth_registration_variable(name):
             msg = f"{name} variable not found."
             raise VariableNotFoundError(msg)
@@ -430,6 +433,7 @@ class DatabaseVariableService(VariableService, Service):
         visibility: ResourceVisibilityScope | None = None,
         include_empty_names: set[str] | None = None,
     ) -> list[VariableRead]:
+        """Return visible user-variable metadata without credentials or reserved registration rows."""
         stmt = (
             select(Variable)
             .where(
@@ -572,6 +576,7 @@ class DatabaseVariableService(VariableService, Service):
         variable_id: UUID | str,
         session: AsyncSession,
     ) -> Variable:
+        """Resolve only owned user variables and hide reserved registration identifiers."""
         query = select(Variable).where(Variable.id == variable_id, Variable.user_id == user_id)
         variable = (await session.exec(query)).first()
         if not variable or is_oauth_registration_variable(variable.name):
@@ -618,6 +623,7 @@ class DatabaseVariableService(VariableService, Service):
         value: str,
         session: AsyncSession,
     ):
+        """Replace an owned user value and encrypt it when its type is Credential."""
         _ensure_user_variable(name)
         await guard_variable_mutation(session=session, user_id=user_id)
         stmt = (
@@ -657,6 +663,7 @@ class DatabaseVariableService(VariableService, Service):
         variable: VariableUpdate,
         session: AsyncSession,
     ):
+        """Apply user-variable edits without reserved renames or unsafe credential type changes."""
         _ensure_user_variable(variable.name)
         await guard_variable_mutation(session=session, user_id=user_id, new_name=variable.name, variable_id=variable_id)
         query = (
@@ -724,6 +731,7 @@ class DatabaseVariableService(VariableService, Service):
         name: str,
         session: AsyncSession,
     ) -> None:
+        """Remove a named owned user variable while leaving instance OAuth storage protected."""
         _ensure_user_variable(name)
         await guard_variable_mutation(session=session, user_id=user_id)
         stmt = (
@@ -738,6 +746,7 @@ class DatabaseVariableService(VariableService, Service):
         await session.delete(variable)
 
     async def delete_variable_by_id(self, user_id: UUID | str, variable_id: UUID, session: AsyncSession) -> None:
+        """Delete an owned user-variable row only after checking its reserved storage name."""
         await guard_variable_mutation(session=session, user_id=user_id)
         stmt = (
             select(Variable)
@@ -761,6 +770,7 @@ class DatabaseVariableService(VariableService, Service):
         type_: str = CREDENTIAL_TYPE,
         session: AsyncSession,
     ):
+        """Store a user-owned value with type-appropriate encryption and reject OAuth storage names."""
         _ensure_user_variable(name)
         await guard_variable_mutation(session=session, user_id=user_id, new_name=name)
         # Validate that GENERIC variables don't start with Fernet signature

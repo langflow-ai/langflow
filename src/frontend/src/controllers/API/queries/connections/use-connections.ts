@@ -76,6 +76,7 @@ export const useOAuthRegistrationsQuery = (
     retry: 1,
   });
 
+/** Load secret-free saved registrations for the superuser management panel. */
 export const useSavedOAuthRegistrationsQuery = () =>
   useQuery<SavedOAuthRegistrationRead[]>({
     queryKey: connectionsKeys.savedRegistrations(),
@@ -83,6 +84,7 @@ export const useSavedOAuthRegistrationsQuery = () =>
     retry: 1,
   });
 
+/** Refresh saved and active provider metadata after a registration changes. */
 export const useSaveOAuthRegistrationMutation = () => {
   const invalidate = useInvalidateConnections();
   return useMutation<
@@ -96,6 +98,7 @@ export const useSaveOAuthRegistrationMutation = () => {
   });
 };
 
+/** Refresh provider metadata after removing a saved registration. */
 export const useDeleteSavedOAuthRegistrationMutation = () => {
   const invalidate = useInvalidateConnections();
   return useMutation<void, unknown, string>({

@@ -2958,7 +2958,7 @@
   "connections.tabs.instance": "实例",
   "connections.tabs.others": "其他用户",
   "connections.tabs.providers": "管理提供商",
-  "connections.providers.intro": "在此注册的 OAuth 应用由整个实例共享。新连接在保存后即可使用提供商；触发器监听进程和其他 Langflow 进程要在 Langflow 重启后才会应用更改（包括移除）。服务器环境中相同 ID 的注册优先。",
+  "connections.providers.intro": "在此注册的 OAuth 应用由整个实例共享。新连接在保存后即可使用提供商；触发器监听进程和其他 Langflow 进程要在 Langflow 重启后才会应用更改（包括移除）。服务器环境中相同 ID 的注册优先。 每个已保存的注册都关联到最后保存它的超级用户。删除或停用该账户，或移除其超级用户权限后，该账户的注册将在重启后不可用。",
   "connections.providers.add": "添加提供商",
   "connections.providers.empty": "尚未配置任何提供商。",
   "connections.providers.replace": "替换",

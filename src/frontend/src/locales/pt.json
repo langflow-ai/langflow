@@ -2959,7 +2959,7 @@
   "connections.tabs.instance": "Instância",
   "connections.tabs.others": "Outros usuários",
   "connections.tabs.providers": "Gerenciar provedores",
-  "connections.providers.intro": "Os apps OAuth registrados aqui são compartilhados com toda a instância. Novas conexões podem usar um provedor assim que você salva; os listeners de triggers e outros processos do Langflow só aplicam uma mudança, inclusive uma remoção, depois que o Langflow reinicia. Um registro com o mesmo ID no ambiente do servidor tem prioridade.",
+  "connections.providers.intro": "Os apps OAuth registrados aqui são compartilhados com toda a instância. Novas conexões podem usar um provedor assim que você salva; os listeners de triggers e outros processos do Langflow só aplicam uma mudança, inclusive uma remoção, depois que o Langflow reinicia. Um registro com o mesmo ID no ambiente do servidor tem prioridade. Cada registro salvo fica vinculado ao superusuário que o salvou por último. Excluir ou desativar essa conta, ou remover seu acesso de superusuário, torna seus registros indisponíveis após uma reinicialização.",
   "connections.providers.add": "Adicionar provedor",
   "connections.providers.empty": "Nenhum provedor configurado ainda.",
   "connections.providers.replace": "Substituir",

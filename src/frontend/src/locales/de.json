@@ -2959,7 +2959,7 @@
   "connections.tabs.instance": "Instanz",
   "connections.tabs.others": "Andere Benutzer",
   "connections.tabs.providers": "Anbieter verwalten",
-  "connections.providers.intro": "Hier registrierte OAuth-Apps gelten für die gesamte Instanz. Neue Verbindungen können einen Anbieter sofort nach dem Speichern verwenden; Trigger-Listener und andere Langflow-Prozesse übernehmen eine Änderung, auch ein Entfernen, erst nach einem Neustart von Langflow. Eine Registrierung mit derselben ID in der Serverumgebung hat Vorrang.",
+  "connections.providers.intro": "Hier registrierte OAuth-Apps gelten für die gesamte Instanz. Neue Verbindungen können einen Anbieter sofort nach dem Speichern verwenden; Trigger-Listener und andere Langflow-Prozesse übernehmen eine Änderung, auch ein Entfernen, erst nach einem Neustart von Langflow. Eine Registrierung mit derselben ID in der Serverumgebung hat Vorrang. Jede gespeicherte Registrierung ist mit dem Superuser verknüpft, der sie zuletzt gespeichert hat. Wird dieses Konto gelöscht oder deaktiviert oder verliert es seine Superuser-Rechte, sind seine Registrierungen nach einem Neustart nicht mehr verfügbar.",
   "connections.providers.add": "Anbieter hinzufügen",
   "connections.providers.empty": "Noch keine Anbieter konfiguriert.",
   "connections.providers.replace": "Ersetzen",

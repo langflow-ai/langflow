@@ -760,7 +760,7 @@ async def save_oauth_registration(
     current_user: Annotated[User, Depends(get_current_active_superuser)],
     session: DbSession,
 ) -> None:
-    """Create or replace a registration for the whole instance; omit secrets to keep the current ones."""
+    """Save an instance registration and apply the resulting OAuth settings to this process."""
     check_rate_limit(
         request,
         scope=_SCOPE_CONNECTIONS,
@@ -788,6 +788,7 @@ async def delete_saved_oauth_registration(
     current_user: Annotated[User, Depends(get_current_active_superuser)],
     session: DbSession,
 ) -> None:
+    """Remove a saved registration and refresh this process without overriding environment values."""
     check_rate_limit(
         request,
         scope=_SCOPE_CONNECTIONS,

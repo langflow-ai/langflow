@@ -2959,7 +2959,7 @@
   "connections.tabs.instance": "Instance",
   "connections.tabs.others": "Autres utilisateurs",
   "connections.tabs.providers": "Gérer les fournisseurs",
-  "connections.providers.intro": "Les applications OAuth enregistrées ici sont partagées avec toute l'instance. Les nouvelles connexions peuvent utiliser un fournisseur dès son enregistrement ; les listeners de triggers et les autres processus Langflow ne prennent en compte une modification, y compris une suppression, qu'après le redémarrage de Langflow. Un enregistrement avec le même ID dans l'environnement du serveur est prioritaire.",
+  "connections.providers.intro": "Les applications OAuth enregistrées ici sont partagées avec toute l'instance. Les nouvelles connexions peuvent utiliser un fournisseur dès son enregistrement ; les listeners de triggers et les autres processus Langflow ne prennent en compte une modification, y compris une suppression, qu'après le redémarrage de Langflow. Un enregistrement avec le même ID dans l'environnement du serveur est prioritaire. Chaque enregistrement sauvegardé est lié au superutilisateur qui l’a enregistré en dernier. La suppression ou la désactivation de ce compte, ou le retrait de ses droits de superutilisateur, rend ses enregistrements indisponibles après un redémarrage.",
   "connections.providers.add": "Ajouter un fournisseur",
   "connections.providers.empty": "Aucun fournisseur configuré pour l'instant.",
   "connections.providers.replace": "Remplacer",

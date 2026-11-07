@@ -95,6 +95,7 @@ async def test_ordinary_variable_api_rejects_reserved_creation(
 async def test_existing_registration_cannot_be_changed_through_variable_api(
     client, stored_variables, logged_in_headers_super_user, method
 ):
+    """Even the storage owner must use the dedicated registration management API."""
     kwargs = {"headers": logged_in_headers_super_user}
     if method == "patch":
         kwargs["json"] = {"id": str(stored_variables.reserved_id), "name": "RENAMED", "value": "replacement"}
@@ -156,6 +157,7 @@ async def test_registration_cannot_be_shared(
 async def test_registration_is_hidden_from_variable_lists_and_bulk_runtime(
     client, stored_variables, logged_in_headers_super_user, variable_service
 ):
+    """Metadata and decrypted discovery paths must enforce the same internal storage exclusion."""
     response = await client.get("api/v1/variables/", headers=logged_in_headers_super_user)
 
     assert response.status_code == 200
@@ -200,6 +202,7 @@ async def test_ordinary_prefix_lookalike_remains_a_user_variable(stored_variable
 async def test_runtime_cannot_read_registration_even_with_shared_access(
     stored_variables, registration_reader, variable_service, monkeypatch
 ):
+    """Reserved storage must fail before role or share visibility can expose its value."""
     from langflow.services import deps
 
     authz = SimpleNamespace(
@@ -238,6 +241,7 @@ async def test_account_bulk_runtime_filters_reserved_names(variable_service, mon
 
 @pytest.mark.parametrize("account_bound", [False, True])
 async def test_mcp_discovery_does_not_receive_registration_values(stored_variables, monkeypatch, account_bound):
+    """Database and deployment account maps must both omit instance registration secrets."""
     from langflow.api.v2 import mcp
     from langflow.services.variable import runtime_policy
 
@@ -278,6 +282,7 @@ async def test_mcp_discovery_does_not_receive_registration_values(stored_variabl
 
 @pytest.mark.parametrize("operation", ["create", "update", "fields", "rename", "delete", "delete_by_id"])
 async def test_service_rejects_registration_mutations(stored_variables, variable_service, operation):
+    """Ordinary mutation paths must reject reserved rows as well as reserved renames."""
     async with session_scope() as session:
         if operation == "create":
             mutation = variable_service.create_variable(

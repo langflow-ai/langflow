@@ -2958,7 +2958,7 @@
   "connections.tabs.instance": "인스턴스",
   "connections.tabs.others": "다른 사용자",
   "connections.tabs.providers": "공급자 관리",
-  "connections.providers.intro": "여기에서 등록한 OAuth 앱은 인스턴스 전체에서 공유됩니다. 새 연결은 저장 즉시 공급자를 사용할 수 있지만, 트리거 리스너와 다른 Langflow 프로세스는 제거를 포함한 변경 사항을 Langflow를 다시 시작한 후에 적용합니다. 서버 환경에 같은 ID의 등록이 있으면 그 등록이 우선합니다.",
+  "connections.providers.intro": "여기에서 등록한 OAuth 앱은 인스턴스 전체에서 공유됩니다. 새 연결은 저장 즉시 공급자를 사용할 수 있지만, 트리거 리스너와 다른 Langflow 프로세스는 제거를 포함한 변경 사항을 Langflow를 다시 시작한 후에 적용합니다. 서버 환경에 같은 ID의 등록이 있으면 그 등록이 우선합니다. 저장된 각 등록은 마지막으로 저장한 슈퍼유저와 연결됩니다. 해당 계정을 삭제하거나 비활성화하거나 슈퍼유저 권한을 제거하면 다시 시작한 후 해당 계정의 등록을 사용할 수 없습니다.",
   "connections.providers.add": "공급자 추가",
   "connections.providers.empty": "아직 구성된 공급자가 없습니다.",
   "connections.providers.replace": "교체",

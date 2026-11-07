@@ -134,7 +134,10 @@ async def run_listeners(*, stop_event: asyncio.Event | None = None) -> None:
     # A standalone listener needs the registrations saved in the UI too.
     from langflow.services.connection.oauth.stored_registrations import load_stored_oauth_registrations
 
-    await load_stored_oauth_registrations()
+    try:
+        await load_stored_oauth_registrations()
+    except Exception:  # noqa: BLE001
+        await logger.aexception("Could not read saved OAuth registrations. Listener startup will continue.")
     with contextlib.suppress(Exception):
         # Advisory only: a listener whose warning query fails still starts.
         await warn_on_unrefreshable_connections()

@@ -62,7 +62,7 @@ interface ProviderForm {
   redirectUri: string;
   tenant: string;
   scopes: string;
-  /** Replacing a saved registration: a blank secret keeps the saved one. */
+  /** A blank secret keeps the saved value when replacing a registration. */
   replacing: boolean;
   registration?: Record<string, unknown>;
 }
@@ -77,6 +77,7 @@ function oauthProfile(provider: IntegrationProviderRead): string | undefined {
     .find((profile) => !manual.has(profile));
 }
 
+/** Suggest the distinct scopes required by capabilities using this OAuth profile. */
 function providerScopes(provider: IntegrationProviderRead, profile: string) {
   const scopes = provider.capabilities
     .filter((capability) => capability.auth_profile_id === profile)
@@ -84,6 +85,7 @@ function providerScopes(provider: IntegrationProviderRead, profile: string) {
   return [...new Set(scopes)].join(", ");
 }
 
+/** Choose an unused provider-based ID without replacing an existing registration. */
 function defaultRegistrationId(providerId: string, taken: Set<string>) {
   const base = `${providerId}-work`;
   let id = base;
@@ -91,6 +93,7 @@ function defaultRegistrationId(providerId: string, taken: Set<string>) {
   return id;
 }
 
+/** Prefill a new registration from the provider catalog and browser callback origin. */
 function emptyForm(
   provider: IntegrationProviderRead | undefined,
   taken: Set<string>,
@@ -113,8 +116,10 @@ function emptyForm(
   };
 }
 
+/** Read string metadata while leaving absent or malformed values blank. */
 const text = (value: unknown) => (typeof value === "string" ? value : "");
 
+/** Keep unexposed registration fields available when editing the visible form fields. */
 function savedForm(saved: SavedOAuthRegistrationRead): ProviderForm {
   const registration = saved.registration;
   const scopes = Array.isArray(registration.scopes) ? registration.scopes : [];
@@ -134,6 +139,7 @@ function savedForm(saved: SavedOAuthRegistrationRead): ProviderForm {
   };
 }
 
+/** Explain which saved changes still require other Langflow processes to restart. */
 function RowStatus({
   status,
 }: {
@@ -155,6 +161,7 @@ function RowStatus({
   );
 }
 
+/** Manage instance OAuth registrations for callers already gated as superusers. */
 export default function ManageProvidersPanel({
   providers,
   deploymentContext = "self_managed",
@@ -202,13 +209,16 @@ export default function ManageProvidersPanel({
   }, [savedQuery.data, activeQuery.data]);
   const takenIds = useMemo(() => new Set(rows.map((row) => row.id)), [rows]);
 
+  /** Fall back to the provider ID when its catalog label is unavailable. */
   const providerName = (providerId: string) =>
     oauthProviders.find((item) => item.provider_id === providerId)
       ?.display_name ?? providerId;
 
+  /** Ignore field updates after the registration dialog has closed. */
   const update = (patch: Partial<ProviderForm>) =>
     setForm((current) => (current ? { ...current, ...patch } : current));
 
+  /** Catch common form mistakes before the server validates the OAuth registration. */
   const formError = (current: ProviderForm) => {
     if (!current.provider || !REGISTRATION_ID.test(current.id))
       return t("connections.providers.errors.id");
@@ -231,6 +241,7 @@ export default function ManageProvidersPanel({
     return null;
   };
 
+  /** Save edits while preserving hidden registration fields and omitted secrets. */
   const save = async () => {
     if (!form || loading || loadFailed || saving) return;
     const problem = formError(form);
@@ -294,6 +305,7 @@ export default function ManageProvidersPanel({
     }
   };
 
+  /** Remove saved configuration and show server failures without hiding the provider list. */
   const remove = async (id: string) => {
     try {
       await deleteRegistration.mutateAsync(id);

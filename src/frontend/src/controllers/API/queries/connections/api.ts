@@ -150,7 +150,7 @@ export async function getEffectiveIntegrationPolicy(): Promise<EffectiveIntegrat
   return data;
 }
 
-/** Superuser-only: registrations saved from Settings > Connections > Manage providers. */
+/** List saved registration metadata without retrieving secrets for the superuser panel. */
 export async function listSavedOAuthRegistrations(): Promise<
   SavedOAuthRegistrationRead[]
 > {
@@ -160,7 +160,7 @@ export async function listSavedOAuthRegistrations(): Promise<
   return asArray<SavedOAuthRegistrationRead>(data?.registrations);
 }
 
-/** Omit every secret field to keep the secret already saved for this ID. */
+/** Omitted secret fields keep their saved values, while explicit null clears a secret. */
 export async function saveOAuthRegistration(
   id: string,
   registration: Record<string, unknown>,
@@ -171,6 +171,7 @@ export async function saveOAuthRegistration(
   );
 }
 
+/** Delete saved configuration while leaving an environment registration with this ID intact. */
 export async function deleteSavedOAuthRegistration(id: string): Promise<void> {
   await api.delete(
     `${connections()}/oauth/registrations/saved/${encodeURIComponent(id)}`,

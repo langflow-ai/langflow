@@ -194,15 +194,11 @@ async def load_stored_oauth_registrations() -> None:
     """Add superuser-saved registrations to this process's environment.
 
     Only variables owned by active superusers count, so a regular user cannot add a
-    registration by creating a variable with the same name. Failures are logged and
-    never stop the process from starting.
+    registration by creating a variable with the same name. Read failures propagate
+    so API startup can retry. Standalone listeners handle these failures separately.
     """
-    try:
-        async with session_scope() as session:
-            saved = await read_saved_registrations(session)
-    except Exception:  # noqa: BLE001
-        await logger.aexception("Could not read saved OAuth registrations")
-        return
+    async with session_scope() as session:
+        saved = await read_saved_registrations(session)
 
     applied = apply_saved_registrations(saved)
     _STARTED_WITH.clear()
