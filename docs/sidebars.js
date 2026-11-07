@@ -496,6 +496,7 @@ module.exports = {
               label: "LLM Operations",
               items: [
                 "Components/batch-run",
+                "Components/decision-model",
                 "Components/guardrails",
                 "Components/policies",
                 "Components/llm-selector",
