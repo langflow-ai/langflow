@@ -1,6 +1,10 @@
 """Connection string parser utilities for lfx package."""
 
+import re
 from urllib.parse import quote
+
+# RFC 3986 scheme at the start of the auth segment (before the final "@").
+_URL_SCHEME_SEP = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*://")
 
 
 def transform_connection_string(connection_string) -> str:
@@ -21,7 +25,9 @@ def transform_connection_string(connection_string) -> str:
 
     auth_part, db_url_name = connection_string.rsplit("@", 1)
 
-    if "://" in auth_part:
+    # Only treat a leading scheme:// as URL form. A legacy password may itself
+    # contain "://", which must not flip parsing into the URL branch.
+    if _URL_SCHEME_SEP.match(auth_part):
         scheme, userinfo = auth_part.split("://", 1)
         if ":" not in userinfo:
             # No password (e.g. postgresql://user@host or postgresql://@host).
@@ -32,13 +38,12 @@ def transform_connection_string(connection_string) -> str:
     if ":" not in auth_part:
         return connection_string
 
-    # Legacy forms without "://":
+    # Legacy forms without a leading scheme://:
     # - user:password@host
-    # - protocol:user:password@host (password may contain ":")
-    segments = auth_part.split(":")
-    if len(segments) == 2:
-        username, password = segments
-        return f"{username}:{quote(password, safe='')}@{db_url_name}"
+    # - protocol:user:password@host (password may contain ":" or "://")
+    first, _, rest = auth_part.partition(":")
+    if ":" not in rest:
+        return f"{first}:{quote(rest, safe='')}@{db_url_name}"
 
-    protocol, username, password = segments[0], segments[1], ":".join(segments[2:])
-    return f"{protocol}:{username}:{quote(password, safe='')}@{db_url_name}"
+    username, _, password = rest.partition(":")
+    return f"{first}:{username}:{quote(password, safe='')}@{db_url_name}"

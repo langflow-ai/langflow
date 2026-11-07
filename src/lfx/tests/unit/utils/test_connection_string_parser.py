@@ -10,6 +10,8 @@ from lfx.utils.connection_string_parser import transform_connection_string
         ("protocol:user:pass@word@host", "protocol:user:pass%40word@host"),
         # Password may contain ":" — encode the whole password (RFC 3986 userinfo).
         ("protocol:user:pa:ss:word@host", "protocol:user:pa%3Ass%3Aword@host"),
+        # Legacy password may contain "://"; must not be treated as a URL scheme.
+        ("protocol:user:p://ss@host", "protocol:user:p%3A%2F%2Fss@host"),
         ("user:password@host", "user:password@host"),
         ("protocol::password@host", "protocol::password@host"),
         ("protocol:user:password@", "protocol:user:password@"),
