@@ -96,6 +96,57 @@ describe("dateTime", () => {
       expect(formatSmartTimestamp(date)).toBe(`31/12/2024 ${time}`);
     });
 
+    it.each([
+      ["2025-02-25T02:30:00Z", "2025-02-24T23:30:00Z"],
+      ["2025-01-01T02:30:00Z", "2025-12-31T23:30:00Z"],
+      ["2025-02-25T23:30:00Z", "2025-02-26T01:30:00Z"],
+    ])("uses UTC calendar days for %s and %s", (now, value) => {
+      jest.setSystemTime(new Date(now));
+      const expected = new Intl.DateTimeFormat(undefined, {
+        day: "2-digit",
+        month: "short",
+        hour: "2-digit",
+        hour12: false,
+        minute: "2-digit",
+        second: "2-digit",
+        timeZone: "UTC",
+      }).format(new Date(value));
+      expect(formatSmartTimestamp(value)).toBe(expected);
+    });
+
+    it.each([
+      ["2025-02-25T04:30:00Z", "2025-02-25T01:30:00Z"],
+      ["2025-02-25T16:30:00Z", "2025-02-25T12:30:00Z"],
+    ])("omits the date for the same UTC day: %s and %s", (now, value) => {
+      jest.setSystemTime(new Date(now));
+      const date = new Date(value);
+      const expected = new Intl.DateTimeFormat(undefined, {
+        hour: "2-digit",
+        hour12: false,
+        minute: "2-digit",
+        second: "2-digit",
+        timeZone: "UTC",
+      }).format(date);
+      expect(formatSmartTimestamp(date)).toBe(expected);
+    });
+
+    it.each([
+      ["2025-01-01T01:30:00Z", "2024-06-01T12:00:00Z", "01/06/2024"],
+      ["2025-06-01T12:00:00Z", "2024-01-01T01:30:00Z", "01/01/2024"],
+      ["2026-06-01T12:00:00Z", "2024-12-31T23:30:00Z", "31/12/2024"],
+    ])("uses UTC years and dates for %s and %s", (now, value, calendarDate) => {
+      jest.setSystemTime(new Date(now));
+      const date = new Date(value);
+      const time = new Intl.DateTimeFormat(undefined, {
+        hour: "2-digit",
+        hour12: false,
+        minute: "2-digit",
+        second: "2-digit",
+        timeZone: "UTC",
+      }).format(date);
+      expect(formatSmartTimestamp(date)).toBe(`${calendarDate} ${time}`);
+    });
+
     it("returns original string for invalid input", () => {
       expect(formatSmartTimestamp("not-a-date")).toBe("not-a-date");
     });
