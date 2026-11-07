@@ -136,6 +136,16 @@ def test_root_registers_each_provider_at_official(tmp_path: Path) -> None:
             },
         ),
         (
+            "genmagic",
+            {
+                "GenMagicImageGenerationComponent",
+                "GenMagicModelComponent",
+                "GenMagicTextToSpeechComponent",
+                "GenMagicVideoGenerationComponent",
+                "GenMagicVideoStatusComponent",
+            },
+        ),
+        (
             "keenable",
             {
                 "KeenableFetchComponent",
