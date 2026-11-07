@@ -234,6 +234,85 @@ describe("ConnectionsPage tabs", () => {
     expect(screen.getByTestId("connection-row-other")).toBeVisible();
   });
 
+  it.each(["ready", "pending", "expired", "revoked"] as const)(
+    "does not offer authorization for another user's %s ServiceNow connection",
+    async (status) => {
+      mockUser = { id: SUPERUSER_ID, is_superuser: true };
+      mockConnections = [
+        connection({
+          id: "other_servicenow",
+          provider_key: "servicenow",
+          owner_id: OTHER_ID,
+          status,
+        }),
+      ];
+      const user = userEvent.setup();
+      render(<ConnectionsPage />);
+
+      await openTab("Other users");
+      expect(
+        screen.queryByTestId("authorize-other_servicenow"),
+      ).not.toBeInTheDocument();
+      await user.click(screen.getByTestId("connection-menu-other_servicenow"));
+
+      expect(
+        screen.queryByRole("menuitem", { name: /^(Authorize|Reconnect)$/ }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByRole("menuitem", { name: "Rename" })).toBeVisible();
+    },
+  );
+
+  it("does not offer authorization for a legacy instance ServiceNow connection", async () => {
+    mockUser = { id: SUPERUSER_ID, is_superuser: true };
+    mockConnections = [
+      connection({
+        id: "instance_servicenow",
+        provider_key: "servicenow",
+        ownership_mode: "instance",
+        status: "pending",
+      }),
+    ];
+    const user = userEvent.setup();
+    render(<ConnectionsPage />);
+
+    await openTab("Instance");
+    expect(
+      screen.queryByTestId("authorize-instance_servicenow"),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByTestId("connection-menu-instance_servicenow"));
+
+    expect(
+      screen.queryByRole("menuitem", { name: "Authorize" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it.each(["menu", "status"] as const)(
+    "lets a ServiceNow owner open authorization from the %s action",
+    async (entryPoint) => {
+      mockUser = { id: SUPERUSER_ID, is_superuser: true };
+      mockConnections = [
+        connection({
+          id: "my_servicenow",
+          provider_key: "servicenow",
+          owner_id: SUPERUSER_ID,
+          status: "pending",
+        }),
+      ];
+      const user = userEvent.setup();
+      render(<ConnectionsPage />);
+
+      if (entryPoint === "menu") {
+        await user.click(screen.getByTestId("connection-menu-my_servicenow"));
+        await user.click(screen.getByRole("menuitem", { name: "Authorize" }));
+      } else {
+        await user.click(screen.getByTestId("authorize-my_servicenow"));
+      }
+
+      expect(screen.getByRole("dialog")).toBeVisible();
+      expect(screen.getByTestId("connection-authorize")).toBeInTheDocument();
+    },
+  );
+
   it("disables Add connection and explains why when policy leaves no provider", () => {
     mockIntegrations = { data: { providers: [] }, isSuccess: true };
     mockUser = { id: SUPERUSER_ID, is_superuser: false };

@@ -23,7 +23,7 @@ from langflow.services.connection.oauth.config import OAuthError, get_oauth_sett
 from langflow.services.connection.oauth.locking import lock_connection
 from langflow.services.database.models.connection import Connection, ConnectionSecret
 from langflow.services.database.models.connection.oauth import ConnectionOAuth
-from langflow.services.database.models.connection.schemas import ConnectionStatusReason
+from langflow.services.database.models.connection.schemas import ConnectionOwnershipMode, ConnectionStatusReason
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import session_scope
 
@@ -51,9 +51,18 @@ def _consented_scopes(provider: str, returned: list[str], consented: list[str]) 
     return sorted(set(returned) - ScopeSet.missing(provider=provider, required=set(returned), granted=set(consented)))
 
 
+def _ensure_consent_owner(row: Connection, user_id: UUID) -> None:
+    if row.provider_key == "servicenow" and (
+        row.ownership_mode != ConnectionOwnershipMode.USER.value or row.owner_id != user_id
+    ):
+        msg = "Only the owner may authorize a personal ServiceNow connection."
+        raise OAuthError(msg)
+
+
 async def start(
     session: AsyncSession, *, row: Connection, user_id: UUID, registration_id: str, scopes: list[str]
 ) -> tuple[str, str, str]:
+    _ensure_consent_owner(row, user_id)
     registration = get_oauth_settings().registration(registration_id)
     if registration.provider != row.provider_key:
         msg = "OAuth registration does not match this connection's provider."
@@ -144,6 +153,7 @@ async def bind_desktop_browser(*, provider: str, state: str, handoff: str) -> tu
         if row is None or user is None or not user.is_active:
             msg = "OAuth initiating connection or user is no longer available."
             raise OAuthError(msg)
+        _ensure_consent_owner(row, user.id)
         async with audit_guard_in_transaction(session):
             await ensure_connection_permission(
                 user, ConnectionAction.WRITE, connection_id=row.id, connection_owner_id=row.owner_id
@@ -200,6 +210,7 @@ async def complete(*, provider: str, state: str, browser: str, code: str | None,
             if user is None or not user.is_active:
                 msg = "OAuth initiating user is no longer active."
                 raise OAuthError(msg)
+            _ensure_consent_owner(row, user.id)
             await ensure_connection_permission(
                 user, ConnectionAction.WRITE, connection_id=row.id, connection_owner_id=row.owner_id
             )

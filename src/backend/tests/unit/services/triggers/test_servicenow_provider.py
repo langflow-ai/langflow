@@ -180,15 +180,142 @@ async def test_oauth_start_requires_read_scope_before_persisting(provider, monke
     reg = registration()
     monkeypatch.setattr(broker, "get_oauth_settings", lambda: SimpleNamespace(registration=lambda _id: reg))
     monkeypatch.setattr(broker, "provider_adapter", lambda _provider: provider.oauth.OAUTH)
-    row = SimpleNamespace(provider_key="servicenow", executing_identity={"identity": "user_delegated"})
+    owner = uuid4()
+    row = SimpleNamespace(
+        provider_key="servicenow",
+        ownership_mode="user",
+        owner_id=owner,
+        executing_identity={"identity": "user_delegated"},
+    )
     with pytest.raises(OAuthError, match=f"Requested scopes must include {READ_SCOPE}"):
         await broker.start(
             SimpleNamespace(),
             row=row,
-            user_id=None,
+            user_id=owner,
             registration_id="servicenow-work",
             scopes=[WRITE_SCOPE],
         )
+
+
+@pytest.mark.parametrize("ownership_mode", ["user", "instance"])
+@pytest.mark.usefixtures("provider")
+async def test_only_the_owner_may_start_servicenow_consent(monkeypatch, trigger_owner, ownership_mode):
+    from langflow.services.connection.oauth import broker
+    from langflow.services.database.models.connection.oauth import ConnectionOAuth
+
+    reg = registration()
+    monkeypatch.setattr(broker, "get_oauth_settings", lambda: SimpleNamespace(registration=lambda _id: reg))
+    async with session_scope() as session:
+        admin = User(
+            username=f"servicenow-admin-{uuid4().hex}",
+            password="not-a-login",  # noqa: S106  # pragma: allowlist secret
+            is_superuser=True,
+            is_active=True,
+        )
+        session.add(admin)
+        row = Connection(
+            provider_key="servicenow",
+            name="work",
+            display_name="Work",
+            ownership_mode=ownership_mode,
+            owner_id=trigger_owner if ownership_mode == "user" else None,
+            executing_identity={"identity": "user_delegated"},
+        )
+        session.add(row)
+        await session.flush()
+        with pytest.raises(OAuthError, match="Only the owner may authorize a personal ServiceNow connection"):
+            await broker.start(session, row=row, user_id=admin.id, registration_id="servicenow-work", scopes=reg.scopes)
+        assert await session.get(ConnectionOAuth, row.id) is None
+
+
+@pytest.mark.usefixtures("provider")
+async def test_admin_cannot_authorize_another_users_servicenow_connection(
+    client, logged_in_headers_super_user, monkeypatch, trigger_owner
+):
+    from langflow.api.v1 import connections
+    from langflow.services.connection.oauth import broker
+    from langflow.services.database.models.connection.oauth import ConnectionOAuth
+
+    reg = registration()
+    settings = SimpleNamespace(registration=lambda _id: reg)
+    monkeypatch.setattr(broker, "get_oauth_settings", lambda: settings)
+    monkeypatch.setattr(connections, "get_oauth_settings", lambda: settings)
+    connection = await _connection(trigger_owner)
+    response = await client.post(
+        f"/api/v1/connections/{connection.id}/oauth/start",
+        headers=logged_in_headers_super_user,
+        json={"registration_id": "servicenow-work", "scopes": [READ_SCOPE]},
+    )
+    assert response.status_code == 400, response.text
+    assert response.json()["detail"] == "Only the owner may authorize a personal ServiceNow connection."
+    assert "set-cookie" not in response.headers
+    async with session_scope() as session:
+        assert await session.get(ConnectionOAuth, connection.id) is None
+
+
+@pytest.mark.parametrize("initiator", ["owner", "admin"])
+@pytest.mark.usefixtures("provider")
+async def test_servicenow_callback_requires_the_connection_owner(monkeypatch, trigger_owner, initiator):
+    from langflow.services.connection.oauth import broker, providers
+    from langflow.services.connection.service import _decrypt_credential_payload
+    from langflow.services.database.models.connection.oauth import ConnectionOAuth
+
+    reg = registration()
+    monkeypatch.setattr(broker, "get_oauth_settings", lambda: SimpleNamespace(registration=lambda _id: reg))
+    connection = await _connection(trigger_owner)
+    calls = []
+
+    async def exchange(*_args, **_kwargs):
+        calls.append(True)
+        return (
+            {
+                "version": 1,
+                "access_token": "owner-authorized-access",
+                "refresh_token": "owner-refresh",
+                "token_type": "Bearer",
+            },
+            [READ_SCOPE],
+            {"id": ROOT, "tenant_id": ROOT},
+        )
+
+    monkeypatch.setattr(providers, "exchange", exchange)
+    async with session_scope() as session:
+        row = await session.get(Connection, connection.id)
+        _, state, browser = await broker.start(
+            session, row=row, user_id=trigger_owner, registration_id="servicenow-work", scopes=reg.scopes
+        )
+        if initiator == "admin":
+            admin = User(
+                username=f"servicenow-admin-{uuid4().hex}",
+                password="not-a-login",  # noqa: S106  # pragma: allowlist secret
+                is_superuser=True,
+                is_active=True,
+            )
+            session.add(admin)
+            await session.flush()
+            binding = await session.get(ConnectionOAuth, connection.id)
+            # Model admin consent that was pending before owner checks were enforced.
+            binding.user_id = admin.id
+            session.add(binding)
+
+    if initiator == "admin":
+        with pytest.raises(OAuthError, match="Only the owner may authorize a personal ServiceNow connection"):
+            await broker.complete(
+                provider="servicenow", state=state, browser=browser, code="synthetic-code", denied=False
+            )
+    else:
+        await broker.complete(provider="servicenow", state=state, browser=browser, code="synthetic-code", denied=False)
+
+    async with session_scope() as session:
+        saved = await session.get(Connection, connection.id)
+        binding = await session.get(ConnectionOAuth, connection.id)
+        secret = await session.get(ConnectionSecret, connection.id)
+        payload = _decrypt_credential_payload(secret.encrypted_payload)
+        assert saved.owner_id == trigger_owner
+        assert binding.state_digest is None
+        assert binding.browser_digest is None
+        assert payload["access_token"] == ("synthetic-access" if initiator == "admin" else "owner-authorized-access")
+        assert len(calls) == (0 if initiator == "admin" else 1)
 
 
 @pytest.mark.parametrize("refresh_token", [None, ""])

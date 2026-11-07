@@ -116,6 +116,7 @@ See [Configure connection OAuth](../Develop/connection-oauth.mdx) for shared set
 6. Run the flow to check account access before configuring writes or triggers.
 
 ServiceNow connections are personal connections owned by the flow owner, so instance sharing is unavailable during setup.
+Only that owner may authorize or reconnect the connection, including when an administrator can view it.
 If an existing ServiceNow connection appears under **Instance**, create a personal connection and select its handle in the flow instead.
 
 The connection account label says **ServiceNow instance** because the token response does not verify a remote user's name.

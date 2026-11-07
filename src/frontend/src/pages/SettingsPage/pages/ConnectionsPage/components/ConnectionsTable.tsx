@@ -75,7 +75,7 @@ export interface ConnectionsTableProps {
   busyId: string | null;
   actions: Omit<
     ConnectionRowMenuProps,
-    "connection" | "canAllowUnattended" | "busy"
+    "connection" | "canAuthorize" | "canAllowUnattended" | "busy"
   >;
 }
 
@@ -215,6 +215,8 @@ export function ConnectionsTable({
         <TableBody>
           {sortedConnections.map((connection) => {
             const owner = ownerKindOf(connection, currentUserId);
+            const canAuthorize =
+              connection.provider_key !== "servicenow" || owner === "you";
             const account = connection.executing_identity?.account;
             const identity = connection.executing_identity?.identity;
             const scopes = connection.granted_scopes ?? [];
@@ -301,7 +303,7 @@ export function ConnectionsTable({
                 <TableCell>
                   <ConnectionStatusBadge
                     connection={connection}
-                    onAuthorize={actions.onAuthorize}
+                    onAuthorize={canAuthorize ? actions.onAuthorize : undefined}
                   />
                 </TableCell>
                 <TableCell>
@@ -362,6 +364,7 @@ export function ConnectionsTable({
                 <TableCell className="text-right">
                   <ConnectionRowMenu
                     connection={connection}
+                    canAuthorize={canAuthorize}
                     canAllowUnattended={
                       owner === "you" || (owner === "instance" && isSuperuser)
                     }
