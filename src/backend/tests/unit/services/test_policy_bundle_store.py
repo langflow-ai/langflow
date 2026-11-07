@@ -689,7 +689,7 @@ async def test_replace_without_integration_fields_keeps_legacy_content_hash_shap
             actor_user_id=uuid4(),
         )
 
-    assert committed.approved_integration_provider_ids == frozenset()
+    assert committed.approved_integration_provider_ids is None
     assert committed.blocked_integration_action_keys == frozenset()
     assert committed.content_hash == policy_store.policy_bundle_content_hash(
         approved_provider_ids=_INITIAL_PROVIDERS,
@@ -737,7 +737,7 @@ async def test_malformed_integration_provider_id_rejected_before_any_write(bundl
 
     active = await _read_active(bundle_session_maker)
     assert active.revision == 1
-    assert active.approved_integration_provider_ids == frozenset()
+    assert active.approved_integration_provider_ids is None
 
 
 async def test_rollback_restores_integration_governance(bundle_session_maker):
@@ -761,7 +761,7 @@ async def test_rollback_restores_integration_governance(bundle_session_maker):
             blocked_template_keys=_INITIAL_TEMPLATES,
             actor_user_id=uuid4(),
         )
-    assert revision_three.approved_integration_provider_ids == frozenset()
+    assert revision_three.approved_integration_provider_ids is None
 
     async with bundle_session_maker() as session:
         rolled_back = await policy_store.rollback_policy_bundle_state(
