@@ -423,6 +423,19 @@ class TestVideoStatus:
         assert request.call_count == 3
         assert no_sleep.call_count == 2
 
+    def test_wait_polls_with_the_given_id_when_the_lookup_omits_it(self, no_sleep) -> None:
+        replies = [
+            response(json_body={"status": "queued"}),
+            response(json_body={"status": "completed", "url": VIDEO_URL}),
+        ]
+        with patch("httpx.Client.request", side_effect=replies) as request:
+            result = _status(wait=120).build_result()
+
+        assert result.data["url"] == VIDEO_URL
+        assert result.data["id"] == "vid_1"
+        assert request.call_args_list[1].args == ("GET", api_url("/videos/vid_1"))
+        assert no_sleep.call_count == 1
+
     def test_wait_that_runs_out_reports_the_latest_state(self) -> None:
         replies = [
             response(json_body={"id": "vid_1", "status": "queued"}),

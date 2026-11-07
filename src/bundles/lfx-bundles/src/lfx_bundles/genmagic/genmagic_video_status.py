@@ -96,8 +96,9 @@ class GenMagicVideoStatusComponent(Component):
         wait = positive_seconds(self.wait, 0)
         if wait and job.get("status") not in VIDEO_DONE_STATES:
             try:
+                # The lookup may answer without the job's own id; the person already gave it, so poll with that one.
                 job, costs = wait_for_video(
-                    job,
+                    {**job, "id": job.get("id") or job_id},
                     api_key=self.api_key,
                     timeout=wait,
                     poll_interval=positive_seconds(self.poll_interval, DEFAULT_POLL_SECONDS),
