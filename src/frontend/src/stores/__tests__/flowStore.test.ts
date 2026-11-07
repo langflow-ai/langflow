@@ -147,6 +147,7 @@ jest.mock("../../utils/reactflowUtils", () => {
 // Note: Some utility modules may not exist in test environment
 // The store should handle missing utilities gracefully
 
+import { applyEdgeChanges } from "@xyflow/react";
 import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
 import type { LogsLogType, VertexBuildTypeAPI } from "@/types/api";
 import type { AllNodeType, EdgeType } from "@/types/flow";
@@ -902,7 +903,7 @@ describe("useFlowStore", () => {
       },
     } as AllNodeType;
 
-    it("setNode should NOT clear stale componentsToUpdate entries", () => {
+    it("setNode should clear stale componentsToUpdate entries", () => {
       const { result } = renderHook(() => useFlowStore());
 
       act(() => {
@@ -936,8 +937,8 @@ describe("useFlowStore", () => {
         );
       });
 
-      // componentsToUpdate is still stale — setNode does not recalculate it
-      expect(result.current.componentsToUpdate).toEqual([outdatedEntry]);
+      // setNode recalculates componentsToUpdate, so the updated node drops out of it
+      expect(result.current.componentsToUpdate).toEqual([]);
     });
 
     it("updateComponentsToUpdate should clear entries when nodes are no longer outdated", () => {
@@ -1051,6 +1052,7 @@ describe("useFlowStore", () => {
         updatedNode.data,
         {},
         false,
+        new Set(),
       );
     });
 
@@ -1092,8 +1094,204 @@ describe("useFlowStore", () => {
         updatedNode.data,
         {},
         true,
+        new Set(),
       );
       expect(useFlowStore.getState().componentsToUpdate).toEqual([]);
+    });
+  });
+
+  describe("breakingChange follows the edges and values a node has now", () => {
+    // The current component changed the type of `inp` from str to int. The saved node's `inp` is
+    // empty, so the update is breaking only when an edge goes into `inp` or `inp` holds a value.
+    const output = {
+      name: "out",
+      display_name: "Out",
+      types: ["Message"],
+      method: "build",
+      allows_loop: false,
+    };
+    const inp = (type: string, value: unknown) => ({
+      type,
+      value,
+      show: true,
+      required: false,
+      list: false,
+      readonly: false,
+      input_types: ["Message"],
+    });
+    const savedNode = (value: unknown = ""): AllNodeType =>
+      ({
+        id: "target",
+        type: "genericNode",
+        position: { x: 0, y: 0 },
+        data: {
+          id: "target",
+          type: "Retyped",
+          node: {
+            display_name: "Retyped",
+            description: "",
+            documentation: "",
+            template: {
+              code: { type: "code", value: "OLD" },
+              inp: inp("str", value),
+            },
+            outputs: [output],
+          },
+        },
+      }) as unknown as AllNodeType;
+    const sourceNode = {
+      id: "source",
+      type: "genericNode",
+      position: { x: 0, y: 0 },
+      data: {
+        id: "source",
+        type: "Source",
+        node: {
+          display_name: "Source",
+          description: "",
+          documentation: "",
+          template: {},
+          outputs: [output],
+        },
+      },
+    } as unknown as AllNodeType;
+    const targetHandle = {
+      fieldName: "inp",
+      id: "target",
+      inputTypes: ["Message"],
+      type: "str",
+    };
+    const edgeIntoInp = {
+      id: "edge-into-inp",
+      source: "source",
+      target: "target",
+      targetHandle: scapedJSONStringfy(targetHandle),
+      data: { targetHandle },
+    } as unknown as EdgeType;
+
+    const breakingChange = () =>
+      useFlowStore
+        .getState()
+        .componentsToUpdate.find((component) => component.id === "target")
+        ?.breakingChange;
+
+    beforeEach(() => {
+      (checkCodeValidity as jest.Mock).mockImplementation(
+        jest.requireActual("@/CustomNodes/helpers/check-code-validity")
+          .checkCodeValidity,
+      );
+      mockTemplates = {
+        Retyped: {
+          template: {
+            code: { type: "code", value: "NEW" },
+            inp: inp("int", 0),
+          },
+          outputs: [output],
+        },
+      };
+    });
+
+    afterEach(() => {
+      (checkCodeValidity as jest.Mock).mockReset();
+    });
+
+    it("connecting an edge into the retyped field makes the update breaking", () => {
+      act(() => {
+        useFlowStore.getState().setNodes([sourceNode, savedNode()]);
+      });
+      expect(breakingChange()).toBe(false);
+
+      act(() => {
+        useFlowStore.getState().setEdges([edgeIntoInp]);
+      });
+      expect(breakingChange()).toBe(true);
+    });
+
+    it("deleting the edge makes the update safe again", () => {
+      act(() => {
+        useFlowStore
+          .getState()
+          .setNodesAndEdges([sourceNode, savedNode()], [edgeIntoInp]);
+      });
+      expect(breakingChange()).toBe(true);
+
+      act(() => {
+        useFlowStore.getState().deleteEdge(edgeIntoInp.id);
+      });
+      expect(breakingChange()).toBe(false);
+    });
+
+    it("removing the edge through onEdgesChange makes the update safe again", () => {
+      (applyEdgeChanges as jest.Mock).mockImplementationOnce(
+        jest.requireActual("@xyflow/react").applyEdgeChanges,
+      );
+      act(() => {
+        useFlowStore
+          .getState()
+          .setNodesAndEdges([sourceNode, savedNode()], [edgeIntoInp]);
+      });
+      expect(breakingChange()).toBe(true);
+
+      act(() => {
+        useFlowStore
+          .getState()
+          .onEdgesChange([{ id: edgeIntoInp.id, type: "remove" }]);
+      });
+      expect(useFlowStore.getState().edges).toEqual([]);
+      expect(breakingChange()).toBe(false);
+    });
+
+    it("selecting an edge keeps componentsToUpdate, and removing it still recomputes", () => {
+      const realApplyEdgeChanges =
+        jest.requireActual("@xyflow/react").applyEdgeChanges;
+      (applyEdgeChanges as jest.Mock)
+        .mockImplementationOnce(realApplyEdgeChanges)
+        .mockImplementationOnce(realApplyEdgeChanges);
+      act(() => {
+        useFlowStore
+          .getState()
+          .setNodesAndEdges([sourceNode, savedNode()], [edgeIntoInp]);
+      });
+      const before = useFlowStore.getState().componentsToUpdate;
+      expect(breakingChange()).toBe(true);
+
+      act(() => {
+        useFlowStore
+          .getState()
+          .onEdgesChange([
+            { id: edgeIntoInp.id, type: "select", selected: true },
+          ]);
+      });
+      expect(useFlowStore.getState().edges[0].selected).toBe(true);
+      expect(useFlowStore.getState().componentsToUpdate).toBe(before);
+
+      act(() => {
+        useFlowStore
+          .getState()
+          .onEdgesChange([{ id: edgeIntoInp.id, type: "remove" }]);
+      });
+      expect(breakingChange()).toBe(false);
+    });
+
+    it("typing a value into the retyped field makes the update breaking", () => {
+      act(() => {
+        useFlowStore.getState().setNodes([sourceNode, savedNode()]);
+      });
+      expect(breakingChange()).toBe(false);
+
+      act(() => {
+        useFlowStore.getState().setNode("target", savedNode("hello"));
+      });
+      expect(breakingChange()).toBe(true);
+    });
+
+    it("setNodes then setEdges, as undo and paste do, ends with the edges counted", () => {
+      act(() => {
+        useFlowStore.getState().setNodes([sourceNode, savedNode()]);
+        useFlowStore.getState().setEdges([edgeIntoInp]);
+      });
+
+      expect(breakingChange()).toBe(true);
     });
   });
 

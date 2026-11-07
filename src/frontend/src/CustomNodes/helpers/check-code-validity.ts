@@ -1,10 +1,13 @@
-import { componentsToIgnoreUpdate } from "@/constants/constants";
+import {
+  componentsToIgnoreUpdate,
+  TYPE_MIGRATIONS,
+} from "@/constants/constants";
 import type {
   APIClassType,
   APITemplateType,
   OutputFieldType,
 } from "@/types/api";
-import type { NodeDataType } from "../../types/flow";
+import type { EdgeType, NodeDataType } from "../../types/flow";
 
 export type CodeValidityType = {
   outdated: boolean;
@@ -13,7 +16,60 @@ export type CodeValidityType = {
   userEdited: boolean;
 };
 
+// Template keys that are editor runtime metadata, not component fields. Must be the same set as
+// TRANSIENT_TEMPLATE_KEYS in src/lfx/src/lfx/upgrade/checker.py.
 const transientTemplateKeys = new Set(["is_refresh", "tools_metadata"]);
+
+const isStructuralTemplateKey = (key: string) =>
+  !key.startsWith("_") && !transientTemplateKeys.has(key);
+
+// A type list as a set, with historical type names (Data, DataFrame) mapped to their current
+// names (JSON, Table): an edge saved with the old name still connects.
+const canonicalTypes = (types: unknown): Set<string> =>
+  new Set(
+    (Array.isArray(types) ? types : []).map((t) => TYPE_MIGRATIONS[t] ?? t),
+  );
+
+const isSubset = (inner: Set<string>, outer: Set<string>): boolean =>
+  [...inner].every((t) => outer.has(t));
+
+// The field an edge goes into, from data.targetHandle when it is an object, else the escaped handle
+// string, or a legacy "type|field|node id" string, which the runtime still reads. Must match
+// _target_handle in src/lfx/src/lfx/upgrade/checker.py.
+const targetFieldName = (edge: EdgeType): string | undefined => {
+  const handle = edge.data?.targetHandle;
+  if (handle && typeof handle === "object" && !Array.isArray(handle))
+    return handle.fieldName;
+  try {
+    return JSON.parse((edge.targetHandle ?? "").replace(/œ/g, '"'))?.fieldName;
+  } catch {
+    return (edge.targetHandle ?? "").split("|")[1];
+  }
+};
+
+// Maps each node id to the fields a connection goes into. Must match _connected_fields_by_node in
+// src/lfx/src/lfx/upgrade/checker.py.
+export const connectedFieldsByNode = (
+  edges: EdgeType[],
+): Map<string, Set<string>> => {
+  const connected = new Map<string, Set<string>>();
+  for (const edge of edges) {
+    const fieldName = targetFieldName(edge);
+    if (!fieldName) continue;
+    if (!connected.has(edge.target)) connected.set(edge.target, new Set());
+    connected.get(edge.target)!.add(fieldName);
+  }
+  return connected;
+};
+
+// The fields the saved node lists in custom_fields. A Prompt saves {"template": ["question", ...]}:
+// one field per template variable, which the component rebuilds when the node is updated.
+const customFieldNames = (data: NodeDataType): Set<string> =>
+  new Set(
+    Object.values(data.node?.custom_fields ?? {}).flatMap((names) =>
+      Array.isArray(names) ? names : [],
+    ),
+  );
 
 // Synthetic output name a component receives when it is switched to tool mode. Must match
 // TOOL_OUTPUT_NAME in src/lfx/src/lfx/base/tools/constants.py.
@@ -55,15 +111,23 @@ const codeIsOutdated = (
   );
 };
 
-// Returns true if there is a breaking change (outputs, template keys, or input_types)
+// Returns true if there is a breaking change (outputs, template keys, or shared fields). A change
+// is breaking when updating the node drops a connection, drops a value, or needs input nobody gave.
+// Must match has_breaking_change in src/lfx/src/lfx/upgrade/checker.py; both run the shared cases in
+// src/lfx/tests/data/component_compat/cases.json.
 const codeHasBreakingChange = (
-  originalOutputs?: OutputFieldType[],
-  userOutputs?: OutputFieldType[],
-  originalTemplate?: APITemplateType,
-  userTemplate?: APITemplateType,
+  originalOutputs: OutputFieldType[] = [],
+  userOutputs: OutputFieldType[] | undefined,
+  originalTemplate: APITemplateType | undefined,
+  userTemplate: APITemplateType | undefined,
+  customFields: Set<string>,
+  connectedFields: ReadonlySet<string> | undefined,
 ): boolean => {
+  // Without saved outputs nothing tells which outputs had edges, so assume they all did.
+  if (!userOutputs && originalOutputs.length > 0) return true;
   // Check outputs
-  if (nodeIsInToolMode(userOutputs)) {
+  const inToolMode = nodeIsInToolMode(userOutputs);
+  if (inToolMode) {
     // A tool-mode node's saved outputs are the toolset projection, so they never match the
     // original component's declared outputs and comparing the two always reports a breaking
     // change. What matters for such a node is whether the component still supports tool mode. A
@@ -72,26 +136,27 @@ const codeHasBreakingChange = (
     if (!templateSupportsToolMode(originalTemplate)) {
       return true;
     }
-  } else if (
-    originalOutputs &&
-    userOutputs &&
-    !outputsAreEqual(originalOutputs, userOutputs)
-  ) {
+  } else if (!outputsCompatible(originalOutputs, userOutputs ?? [])) {
     return true;
   }
   // Check template keys
   if (
     originalTemplate &&
     userTemplate &&
-    !templateKeysCompatible(originalTemplate, userTemplate)
+    !templateKeysCompatible(originalTemplate, userTemplate, customFields)
   ) {
     return true;
   }
-  // Check input_types containment
+  // Check fields both sides have
   if (
     originalTemplate &&
     userTemplate &&
-    !inputTypesContained(originalTemplate, userTemplate)
+    !sharedFieldsCompatible(
+      originalTemplate,
+      userTemplate,
+      connectedFields,
+      inToolMode,
+    )
   ) {
     return true;
   }
@@ -130,10 +195,13 @@ export const blockedStopsExecution = (
   !allowCustomComponents ||
   isBlockedByCatalogPolicy(blockedComponentTypes, componentType);
 
+// connectedFields names the fields a connection goes into (see connectedFieldsByNode). Leaving it
+// undefined means the connections are unknown, so every field counts as connected.
 export const checkCodeValidity = (
   data: NodeDataType,
   templates: { [key: string]: APIClassType },
   allowCustomComponents = true,
+  connectedFields?: ReadonlySet<string>,
 ): CodeValidityType | undefined => {
   if (!data?.node || !templates) return;
   const template = templates[data.type]?.template;
@@ -164,6 +232,8 @@ export const checkCodeValidity = (
         userOutputs,
         originalTemplate,
         userTemplate,
+        customFieldNames(data),
+        connectedFields,
       )
     : false;
 
@@ -177,87 +247,92 @@ export const checkCodeValidity = (
 
 // templates[data.type]?.template is the original component while data.node.template is the user's component
 
-// The codeIsOutdated function will have many checks to make sure the code is outdated
-// the first check is if the current code is defined
-// the second check is if the data.node.outputs are equal to templates[data.type]?.outputs
-// and the data.node.template keys are compatible with templates[data.type]?.template keys
-// and all original input_types in each field are contained in the data.node.template input_types. If so, it means it won't break the component
-// this is a breaking change so we will need to handle it
-
-// Deep comparison for outputs (order-independent, returns object with per-output match status)
-const outputsComparisonResult = (
-  originalOutputs: OutputFieldType[] = [],
-  userOutputs: OutputFieldType[] = [],
-): { [outputName: string]: boolean } => {
-  // Create a map for quick lookup by 'name'
-  const userOutputMap = new Map<string, OutputFieldType>();
-  userOutputs.forEach((output) => {
-    userOutputMap.set(output.name, output);
-  });
-
-  // Build an object with per-output match status
-  const result: { [outputName: string]: boolean } = {};
-
-  originalOutputs.forEach((orig) => {
-    const user = userOutputMap.get(orig.name);
-    result[orig.name] =
-      !!user &&
-      orig.display_name === user.display_name &&
-      JSON.stringify(orig.types) === JSON.stringify(user.types) &&
-      orig.method === user.method &&
-      orig.allows_loop === user.allows_loop;
-  });
-
-  // Check if all user outputs are present in original outputs
-  userOutputs.forEach((user) => {
-    if (!result[user.name]) {
-      result[user.name] = false;
-    }
-  });
-
-  return result;
-};
-
-const outputsAreEqual = (
+// Every output the saved node has must still exist with the same method and loop setting, and may
+// produce more types than the saved node knew (aliases applied), never fewer. An added output and a
+// display name change are safe. Must match _outputs_are_compatible in
+// src/lfx/src/lfx/upgrade/checker.py.
+const outputsCompatible = (
   originalOutputs: OutputFieldType[],
   userOutputs: OutputFieldType[],
-): boolean => {
-  const result = outputsComparisonResult(originalOutputs, userOutputs);
-  // Object.values is more direct for checking all values
-  return Object.values(result).every(Boolean);
-};
+): boolean =>
+  userOutputs.every((user) => {
+    const orig = originalOutputs.find((output) => output.name === user.name);
+    return (
+      !!orig &&
+      isSubset(canonicalTypes(user.types), canonicalTypes(orig.types)) &&
+      orig.method === user.method &&
+      orig.allows_loop === user.allows_loop
+    );
+  });
 
-// Helper to check if all input_types in original are contained in user
-const inputTypesContained = (
+// A saved field holds a value unless the value is undefined, null, "", [] or {}.
+const holdsValue = (value: unknown): boolean =>
+  value !== undefined &&
+  value !== null &&
+  value !== "" &&
+  !(Array.isArray(value) && value.length === 0) &&
+  !(
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    Object.keys(value).length === 0
+  );
+
+// Fields both sides have must keep their saved edges and saved values. Must match
+// _shared_fields_compatible in src/lfx/src/lfx/upgrade/checker.py. Undefined connectedFields
+// means the connections are unknown, so every field counts as connected.
+// - A changed field type is breaking when an edge goes into the field, because cleanEdges keeps
+//   an edge only when the handle's field type is equal. It is also breaking when the saved field
+//   holds a value, because the update copies a saved value only when the field type is equal.
+// - Every type a connected field accepted must still be accepted (aliases applied). Narrowing
+//   drops the saved edges, and an emptied input_types list means the field takes no connections
+//   at all. Widening is safe.
+// - On a node in tool mode, a connected field the component now marks tool_mode is breaking:
+//   cleanEdges drops edges into tool-mode fields of a tool-mode node.
+const sharedFieldsCompatible = (
   originalTemplate: APITemplateType,
   userTemplate: APITemplateType,
+  connectedFields: ReadonlySet<string> | undefined,
+  inToolMode: boolean,
 ): boolean => {
-  for (const key of Object.keys(originalTemplate)) {
+  for (const key of Object.keys(userTemplate)) {
+    if (!isStructuralTemplateKey(key) || !Object.hasOwn(originalTemplate, key))
+      continue;
     const origField = originalTemplate[key];
     const userField = userTemplate[key];
-    // A field the saved node predates has no saved edges feeding it; the rebuilt
-    // template introduces it with its declared input_types, so there is nothing
-    // to narrow.
-    if (!userField) continue;
-    if (origField.input_types) {
-      const origTypes = Array.isArray(origField.input_types)
-        ? origField.input_types
-        : [];
-      const userTypes = Array.isArray(userField.input_types)
-        ? userField.input_types
-        : [];
-      if (!origTypes.every((t) => userTypes.includes(t))) {
-        return false;
-      }
+    if (
+      !origField ||
+      !userField ||
+      typeof origField !== "object" ||
+      typeof userField !== "object"
+    )
+      continue;
+    const connected = !connectedFields || connectedFields.has(key);
+    if (
+      origField.type !== userField.type &&
+      (connected || holdsValue(userField.value))
+    )
+      return false;
+    if (!connected) continue;
+    if (
+      !isSubset(
+        canonicalTypes(userField.input_types),
+        canonicalTypes(origField.input_types),
+      )
+    ) {
+      return false;
     }
+    if (inToolMode && origField.tool_mode && !userField.tool_mode) return false;
   }
   return true;
 };
 
 // Template key sets are compared directionally, not for equality. Must match
 // _template_keys_compatible in src/lfx/src/lfx/upgrade/checker.py:
-// - A field only the saved node has is one the current component dropped. Its stale
-//   value is not read once the node is updated, so it cannot break the node.
+// - A field only the saved node has is one the current component dropped, or one the
+//   component added while it was edited (Run Flow inputs, MCP Tools arguments). The update
+//   drops the field, its value, and any edge into it, so it is always breaking, connected or not.
+//   The exception is a field the node lists in custom_fields (Prompt variables), which the
+//   component rebuilds.
 // - A field only the current component has is one the saved node predates — the
 //   evolution the contributing docs recommend as non-breaking. The update rebuilds
 //   the template through /custom_component, which introduces the field with its
@@ -267,11 +342,20 @@ const inputTypesContained = (
 const templateKeysCompatible = (
   originalTemplate: APITemplateType,
   userTemplate: APITemplateType,
+  customFields: Set<string>,
 ): boolean => {
-  const isStructuralTemplateKey = (key: string) =>
-    !key.startsWith("_") && !transientTemplateKeys.has(key);
+  for (const key of Object.keys(userTemplate)) {
+    if (
+      isStructuralTemplateKey(key) &&
+      !Object.hasOwn(originalTemplate, key) &&
+      !customFields.has(key)
+    ) {
+      return false;
+    }
+  }
   for (const key of Object.keys(originalTemplate)) {
-    if (!isStructuralTemplateKey(key) || key in userTemplate) continue;
+    if (!isStructuralTemplateKey(key) || Object.hasOwn(userTemplate, key))
+      continue;
     const origField = originalTemplate[key];
     if (
       origField?.required &&

@@ -818,7 +818,11 @@ class Vertex:
             # code rather than the code saved in the flow. When the saved component does not
             # match the one that actually ran, say so: otherwise the policy that discarded it is
             # invisible and only the substituted component's own complaint reaches the user.
-            mismatch = explain_restricted_component_mismatch(self.data.get("type"), self.data.get("node"))
+            mismatch = explain_restricted_component_mismatch(
+                self.data.get("type"),
+                self.data.get("node"),
+                {edge.target_param for edge in self.incoming_edges},
+            )
             if mismatch:
                 msg = f"{msg}\n\n{mismatch}"
             raise ComponentBuildError(msg, tb) from exc

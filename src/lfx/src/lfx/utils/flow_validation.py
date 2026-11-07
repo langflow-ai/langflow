@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import hashlib
-from collections.abc import Container, Mapping
+from collections.abc import Collection, Container, Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -1445,7 +1445,9 @@ def _unfillable_required_fields(registry_template: Mapping[str, Any], flow_templ
     return sorted(missing)
 
 
-def describe_restricted_component_mismatch(component_type: Any, node_info: Any) -> str | None:
+def describe_restricted_component_mismatch(
+    component_type: Any, node_info: Any, connected_fields: Collection[str] | None = None
+) -> str | None:
     """Explain a build failure caused by restricted mode running server code for a saved component.
 
     In restricted mode a node's stored code never runs: the build executes this server's
@@ -1460,8 +1462,10 @@ def describe_restricted_component_mismatch(component_type: Any, node_info: Any) 
     incompatible with this server's component of the same type -- the same condition the upgrade
     checker reports as a breaking change, and the frontend as "flow needs review". Returns ``None``
     in permissive mode, for an unknown type (already refused by :func:`check_flow_and_raise`), when
-    the registry is unavailable, and for a node this server's component can still drive: a legacy
-    Agent carrying ``agent_llm``/``model_name`` runs fine after the swap and must not be blamed.
+    the registry is unavailable, and for a node the checker does not call breaking.
+
+    ``connected_fields`` names the node's fields an edge goes into, as the checker receives them.
+    ``None`` means the connections are unknown, so every field counts as connected.
     """
     from lfx.services.deps import get_settings_service
 
@@ -1477,7 +1481,7 @@ def describe_restricted_component_mismatch(component_type: Any, node_info: Any) 
 
     from lfx.upgrade.checker import has_breaking_change
 
-    if not has_breaking_change(registry_entry, node_info):
+    if not has_breaking_change(registry_entry, node_info, connected_fields):
         return None
 
     registry_template = registry_entry.get("template")
@@ -1491,14 +1495,16 @@ def describe_restricted_component_mismatch(component_type: Any, node_info: Any) 
     return RESTRICTED_MODE_MISMATCH_HINT.format(component_type=component_type, missing_clause=missing_clause)
 
 
-def explain_restricted_component_mismatch(component_type: Any, node_info: Any) -> str | None:
+def explain_restricted_component_mismatch(
+    component_type: Any, node_info: Any, connected_fields: Collection[str] | None = None
+) -> str | None:
     """Never-raising wrapper for :func:`describe_restricted_component_mismatch`.
 
     Callers are build-error handlers, where a diagnostic that raises would replace the
     component's real error with an unrelated one.
     """
     try:
-        return describe_restricted_component_mismatch(component_type, node_info)
+        return describe_restricted_component_mismatch(component_type, node_info, connected_fields)
     except Exception:  # noqa: BLE001 -- diagnosis is best effort; never mask the original failure
         logger.debug("Could not diagnose restricted-mode component mismatch", exc_info=True)
         return None
