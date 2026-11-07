@@ -78,7 +78,8 @@ class SplitTextComponent(Component):
 
     def _docs_to_data(self, docs, *, clean: bool = False) -> list[Data]:
         return [
-            Data(text=doc.page_content) if clean else Data(text=doc.page_content, data=doc.metadata) for doc in docs
+            Data(data={"text": doc.page_content}) if clean else Data(data={**doc.metadata, "text": doc.page_content})
+            for doc in docs
         ]
 
     def _fix_separator(self, separator: str) -> str:
