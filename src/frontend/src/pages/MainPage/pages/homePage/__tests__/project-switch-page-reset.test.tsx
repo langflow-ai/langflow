@@ -1,73 +1,29 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
+import { Link, MemoryRouter, Route, Routes } from "react-router-dom";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useFolderStore } from "@/stores/foldersStore";
 import HomePage from "..";
 
-const mockFolders = [
-  { id: "alpha-id", name: "Alpha", description: "", parent_id: "" },
-  { id: "beta-id", name: "Beta", description: "", parent_id: "" },
-];
-const mockFlows = [];
-const mockNavigate = jest.fn();
-let mockFolderId = "alpha-id";
-const mockUseGetFolderQuery = jest.fn();
+const TOTAL_FLOWS = 30;
+const mockApiGet = jest.fn();
 
-jest.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+// The network is the only fake on the paging path: the route, HomePage, the
+// folder query on a real query client and the paginator are all real.
+jest.mock("@/controllers/API/api", () => ({
+  api: { get: (...args: unknown[]) => mockApiGet(...args) },
 }));
-jest.mock("react-router-dom", () => ({
-  useLocation: () => ({ state: undefined }),
-  useParams: () => ({ folderId: mockFolderId }),
-}));
-jest.mock(
-  "@/components/common/paginatorComponent",
-  () =>
-    ({ pageIndex, pageSize, paginate }) => (
-      <button
-        type="button"
-        data-testid="next-page"
-        onClick={() => paginate(pageIndex + 1, pageSize)}
-      >
-        {pageIndex}
-      </button>
-    ),
-);
-jest.mock("@/components/core/cardsWrapComponent", () => ({ children }) => (
-  <>{children}</>
-));
+
+// Parts of the page that paging does not go through.
 jest.mock(
   "@/components/core/flowBuilderWelcome/hooks/use-start-new-flow",
   () => ({ useStartNewFlow: () => jest.fn() }),
 );
-jest.mock("@/constants/constants", () => ({ IS_MAC: false }));
-jest.mock("@/contexts/permissionsContext", () => ({
-  PermissionsProvider: ({ children }) => <>{children}</>,
-}));
-jest.mock("@/controllers/API/queries/folders/use-get-folder", () => ({
-  useGetFolderQuery: (params) => mockUseGetFolderQuery(params),
-}));
-jest.mock("@/customization/components/custom-banner", () => ({
-  CustomBanner: () => null,
-}));
 jest.mock("@/customization/components/custom-McpServerTab", () => ({
   CustomMcpServerTab: () => null,
 }));
-jest.mock("@/customization/feature-flags", () => ({
-  ENABLE_DATASTAX_LANGFLOW: false,
-  ENABLE_MCP: true,
-}));
-jest.mock("@/customization/hooks/use-custom-navigate", () => ({
-  useCustomNavigate: () => mockNavigate,
-}));
-jest.mock("@/stores/flowsManagerStore", () => ({
-  __esModule: true,
-  default: (selector) => selector({ flows: mockFlows }),
-}));
-jest.mock("@/stores/foldersStore", () => ({
-  useFolderStore: (selector) =>
-    selector({ myCollectionId: "alpha-id", folders: mockFolders }),
-}));
 jest.mock("@/pages/MainPage/components/header", () => () => null);
 jest.mock("@/pages/MainPage/components/list", () => () => null);
-jest.mock("@/pages/MainPage/components/listSkeleton", () => () => null);
 jest.mock("@/pages/MainPage/components/modalsComponent", () => () => null);
 jest.mock("@/pages/MainPage/hooks/use-on-file-drop", () => ({
   __esModule: true,
@@ -77,48 +33,73 @@ jest.mock(
   "@/pages/MainPage/pages/deploymentsPage/deployments-page",
   () => () => null,
 );
-jest.mock("@/pages/MainPage/pages/emptyFolder", () => () => null);
 
-const lastRequest = () => mockUseGetFolderQuery.mock.lastCall?.[0];
+const projectRequests = () =>
+  mockApiGet.mock.calls.map(([url]) => {
+    const { pathname, searchParams } = new URL(url, "http://localhost");
+    return `${pathname.split("/").pop()} page ${searchParams.get("page")}`;
+  });
 
 describe("HomePage paging across projects", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    mockFolderId = "alpha-id";
-    // One result per request, as the query cache gives: a new `items` array on
-    // every render would re-run the page's selection effect forever.
-    const results = new Map();
-    mockUseGetFolderQuery.mockImplementation((params) => {
-      const key = `${params.id}:${params.page}`;
-      if (!results.has(key)) {
-        results.set(key, {
-          data: {
-            folder: mockFolders[0],
-            flows: {
-              items: [],
-              page: params.page,
-              size: 12,
-              total: 30,
-              pages: 3,
-            },
+    mockApiGet.mockReset();
+    // Answers with the page the request asks for, as the server does.
+    mockApiGet.mockImplementation(async (url: string) => {
+      const { searchParams } = new URL(url, "http://localhost");
+      const size = Number(searchParams.get("size"));
+      return {
+        data: {
+          folder: {},
+          flows: {
+            items: [],
+            page: Number(searchParams.get("page")),
+            size,
+            total: TOTAL_FLOWS,
+            pages: Math.ceil(TOTAL_FLOWS / size),
           },
-          isLoading: false,
-        });
-      }
-      return results.get(key);
+        },
+      };
     });
+    useFolderStore.setState({
+      folders: [
+        { id: "alpha-id", name: "Alpha" },
+        { id: "beta-id", name: "Beta" },
+      ] as never,
+    });
+    useFlowsManagerStore.setState({ flows: [] });
   });
 
-  it("opens the next project at its first page, and its next page still works", () => {
-    const { rerender } = render(<HomePage type="flows" />);
-    fireEvent.click(screen.getByTestId("next-page"));
-    expect(lastRequest()).toMatchObject({ id: "alpha-id", page: 2 });
+  it("opens the next project at its first page, and its next page still works", async () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter initialEntries={["/all/folder/alpha-id"]}>
+          <Link to="/all/folder/beta-id">Beta</Link>
+          <Routes>
+            <Route
+              path="/all/folder/:folderId"
+              element={<HomePage type="flows" />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const nextPage = () =>
+      screen.getByRole("button", { name: "Go to next page" });
 
-    mockFolderId = "beta-id";
-    rerender(<HomePage type="flows" />);
-    expect(lastRequest()).toMatchObject({ id: "beta-id", page: 1 });
+    await screen.findByText("1-12");
+    fireEvent.click(nextPage());
+    await screen.findByText("13-24");
 
-    fireEvent.click(screen.getByTestId("next-page"));
-    expect(lastRequest()).toMatchObject({ id: "beta-id", page: 2 });
+    fireEvent.click(screen.getByRole("link", { name: "Beta" }));
+    await screen.findByText("1-12");
+    fireEvent.click(nextPage());
+    await screen.findByText("13-24");
+
+    expect(projectRequests()).toEqual([
+      "alpha-id page 1",
+      "alpha-id page 2",
+      "beta-id page 1",
+      "beta-id page 2",
+    ]);
   });
 });
