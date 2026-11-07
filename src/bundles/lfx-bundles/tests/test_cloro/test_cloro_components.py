@@ -14,6 +14,7 @@ import httpx
 import pytest
 from lfx.custom.custom_component.component import Component
 from lfx_bundles.cloro.cloro_ai_mode import CloroAIModeComponent
+from lfx_bundles.cloro.cloro_bing_ai_mode import CloroBingAIModeComponent
 from lfx_bundles.cloro.cloro_chatgpt import CloroChatGPTComponent
 from lfx_bundles.cloro.cloro_common import API_BASE_URL
 from lfx_bundles.cloro.cloro_gemini import CloroGeminiComponent
@@ -22,12 +23,21 @@ from lfx_bundles.cloro.cloro_google_search import CloroGoogleSearchComponent
 # Placeholder credential for the mocked API (not a real key).
 API_KEY = "test-cloro-api-key-placeholder"  # pragma: allowlist secret
 
-ALL_COMPONENTS = [CloroGoogleSearchComponent, CloroChatGPTComponent, CloroAIModeComponent, CloroGeminiComponent]
+ALL_COMPONENTS = [
+    CloroGoogleSearchComponent,
+    CloroChatGPTComponent,
+    CloroAIModeComponent,
+    CloroBingAIModeComponent,
+    CloroGeminiComponent,
+]
 ANSWER_COMPONENTS = [
     (CloroChatGPTComponent, "chatgpt"),
     (CloroAIModeComponent, "aimode"),
+    (CloroBingAIModeComponent, "bing_aimode"),
     (CloroGeminiComponent, "gemini"),
 ]
+# The endpoint path of each engine, where it differs from the engine name.
+ENDPOINT_PATHS = {"bing_aimode": "bing/aimode"}
 
 GOOGLE_RESULT = {
     "organicResults": [
@@ -247,7 +257,7 @@ class TestCloroAnswers:
         with patch("httpx.Client.post", return_value=_ok(ANSWER_RESULT)) as post:
             _answer_component(component_class, country="gb").get_answer()
 
-        assert post.call_args.args == (f"{API_BASE_URL}/v1/monitor/{engine}",)
+        assert post.call_args.args == (f"{API_BASE_URL}/v1/monitor/{ENDPOINT_PATHS.get(engine, engine)}",)
         assert post.call_args.kwargs["headers"] == {"Authorization": f"Bearer {API_KEY}"}
         assert post.call_args.kwargs["json"] == {
             "prompt": "best rank tracker",
@@ -300,3 +310,44 @@ def test_answer_out_of_credits_error_is_returned(component_class: type[Component
         answer = _answer_component(component_class).get_answer()
 
     assert answer.data["error"] == "cloro refused the request (403): INSUFFICIENT_CREDITS: Not enough credits"
+
+
+@pytest.mark.unit
+def test_bing_ai_mode_answer_keeps_every_source() -> None:
+    # Cut down from a real cloro Bing AI Mode response: no markdown, no model field.
+    result = {
+        "text": "The ASICS Gel Pulse 15, Brooks Glycerin 21, and Saucony Guide 19 are good picks.",
+        "sources": [
+            {
+                "position": 1,
+                "label": "Best Running Shoes Under $150 in 2026: 8 Picks Worth the Money",
+                "url": "https://runninggearlab.com/best-running-shoes-under-150/",
+                "description": "The best running shoes under $150 in 2026.",
+            }
+        ],
+        "citationPills": [
+            {
+                "position": 1,
+                "label": "Best Running Shoes Under $150 in 2026: 8 Picks Worth the Money",
+                "url": "https://runninggearlab.com/best-running-shoes-under-150/",
+                "domain": "runninggearlab.com",
+                "citationPillId": 1,
+            }
+        ],
+    }
+    with patch("httpx.Client.post", return_value=_ok(result)):
+        answer = _answer_component(CloroBingAIModeComponent).get_answer()
+
+    assert answer.data["engine"] == "bing_aimode"
+    assert answer.data["answer"] == result["text"]
+    assert answer.data["sources"] == [
+        {
+            "label": "Best Running Shoes Under $150 in 2026: 8 Picks Worth the Money",
+            "url": "https://runninggearlab.com/best-running-shoes-under-150/",
+        }
+    ]
+    assert answer.data["model"] is None
+    assert answer.text.endswith(
+        "Sources:\n1. Best Running Shoes Under $150 in 2026: 8 Picks Worth the Money: "
+        "https://runninggearlab.com/best-running-shoes-under-150/"
+    )

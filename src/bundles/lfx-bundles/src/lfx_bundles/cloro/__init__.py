@@ -6,12 +6,14 @@ from lfx.utils.lazy_import import import_mod
 
 if TYPE_CHECKING:
     from .cloro_ai_mode import CloroAIModeComponent
+    from .cloro_bing_ai_mode import CloroBingAIModeComponent
     from .cloro_chatgpt import CloroChatGPTComponent
     from .cloro_gemini import CloroGeminiComponent
     from .cloro_google_search import CloroGoogleSearchComponent
 
 _dynamic_imports = {
     "CloroAIModeComponent": "cloro_ai_mode",
+    "CloroBingAIModeComponent": "cloro_bing_ai_mode",
     "CloroChatGPTComponent": "cloro_chatgpt",
     "CloroGeminiComponent": "cloro_gemini",
     "CloroGoogleSearchComponent": "cloro_google_search",
@@ -19,6 +21,7 @@ _dynamic_imports = {
 
 __all__ = [
     "CloroAIModeComponent",
+    "CloroBingAIModeComponent",
     "CloroChatGPTComponent",
     "CloroGeminiComponent",
     "CloroGoogleSearchComponent",

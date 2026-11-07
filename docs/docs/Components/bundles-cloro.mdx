@@ -13,7 +13,7 @@ import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-ins
 
 This page describes the components that are available in the **cloro** bundle.
 
-[cloro](https://cloro.dev?utm_source=langflow&utm_medium=byok) is an API that returns Google search results with the AI Overview, and the answers that ChatGPT, Google AI Mode and Gemini give to a prompt, with the sources they cite.
+[cloro](https://cloro.dev?utm_source=langflow&utm_medium=byok) is an API that returns Google search results with the AI Overview, and the answers that ChatGPT, Google AI Mode, Bing AI Mode and Gemini give to a prompt, with the sources they cite.
 
 All components need a cloro API key.
 Create a key on the [API keys page](https://dashboard.cloro.dev/api-keys?utm_source=langflow&utm_medium=byok) and enter it in the **cloro API Key** field, or store it in a [global variable](/configuration-global-variables), such as `CLORO_API_KEY`.
@@ -45,13 +45,13 @@ When the component is used as a [tool](/agents-tools), the agent can set the sea
 | Include AI Overview (`include_ai_overview`) | Boolean | Input parameter. Add the Google AI Overview, with its sources, as the first row. Default: `true`. |
 | Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for cloro to answer. Default: `60`. |
 
-## cloro ChatGPT, cloro Google AI Mode and cloro Gemini
+## cloro ChatGPT, cloro Google AI Mode, cloro Bing AI Mode and cloro Gemini
 
-These components send a prompt to ChatGPT, Google AI Mode or Gemini through cloro and return the answer that a user in the selected country sees.
+These components send a prompt to ChatGPT, Google AI Mode, Bing AI Mode or Gemini through cloro and return the answer that a user in the selected country sees.
 
 Each component outputs a [`Data`](/data-types#json) object with these fields:
 
-* `engine`: `chatgpt`, `aimode` or `gemini`.
+* `engine`: `chatgpt`, `aimode`, `bing_aimode` or `gemini`.
 * `answer`: the answer in markdown.
 * `sources`: the label and URL of each source that the answer cites.
 * `model`: the model that gave the answer, when cloro reports it.
@@ -60,9 +60,11 @@ The text of the `Data` object is the answer. When sources are available, a numbe
 
 An AI answer can take more than a minute.
 
+For **cloro Bing AI Mode**, the prompt can have at most 3,500 characters after URL encoding. cloro rejects a longer prompt.
+
 When a component is used as a [tool](/agents-tools), the agent can set the prompt.
 
-### cloro ChatGPT, cloro Google AI Mode and cloro Gemini parameters
+### cloro ChatGPT, cloro Google AI Mode, cloro Bing AI Mode and cloro Gemini parameters
 
 | Name | Type | Description |
 |------|------|-------------|
