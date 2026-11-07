@@ -1186,6 +1186,14 @@ def create_app():
         request.state.locale = locale
         return await call_next(request)
 
+    # Optional fastapi-guard security middleware (off unless
+    # LANGFLOW_GUARD_ENABLED). Registered last so it runs outermost,
+    # ahead of every middleware above; layers alongside the slowapi
+    # endpoint limiters, which it does not touch.
+    from langflow.services.security import attach_guard
+
+    attach_guard(app)
+
     if prome_port_str := os.environ.get("LANGFLOW_PROMETHEUS_PORT"):
         # set here for create_app() entry point
         prome_port = int(prome_port_str)
