@@ -121,7 +121,6 @@ export default function ToolsTable({
     }
 
     applyingSelection.current = true;
-    agGrid.current.api.setGridOption("suppressRowClickSelection", true);
 
     const selectedIds = new Set(selectedRows.map((row) => row.name));
     agGrid.current.api.forEachNode((node) => {
@@ -131,7 +130,6 @@ export default function ToolsTable({
       }
     });
 
-    agGrid.current.api.setGridOption("suppressRowClickSelection", false);
     setTimeout(() => {
       applyingSelection.current = false;
     }, 50);
