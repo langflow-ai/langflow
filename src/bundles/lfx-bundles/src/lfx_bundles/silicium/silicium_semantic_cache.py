@@ -30,6 +30,7 @@ except ImportError:
 _MAX_TENANT_SCOPES: Final[int] = 256
 _MAX_ENTRIES_PER_TENANT: Final[int] = 1024
 _MIN_CACHE_DIM: Final[int] = 8
+_MAX_CACHE_DIM: Final[int] = 4096
 _DEFAULT_CACHE_DIM: Final[int] = 16
 _TRIGRAM_WIDTH: Final[int] = 3
 _NORM_EPSILON: Final[float] = 1e-12
@@ -89,10 +90,10 @@ def _extract_similarity_features(text: str) -> list[tuple[str, float]]:
 
 
 def _derive_deterministic_embedding(text: str, dim: int = _DEFAULT_CACHE_DIM) -> list[float]:
-    """Compute a unit-normalized feature-hashed embedding vector of dimension `dim >= 8`."""
+    """Compute a unit-normalized feature-hashed embedding vector of dimension `8 <= dim <= 4096`."""
     eff_dim = int(dim)
-    if eff_dim < _MIN_CACHE_DIM:
-        msg = f"Embedding dimension cache_dim must be >= {_MIN_CACHE_DIM}, got {eff_dim}."
+    if eff_dim < _MIN_CACHE_DIM or eff_dim > _MAX_CACHE_DIM:
+        msg = f"Embedding dimension cache_dim must be >= {_MIN_CACHE_DIM} and <= {_MAX_CACHE_DIM}, got {eff_dim}."
         raise ValueError(msg)
     if _NATIVE_VECTOR_MODULE is not None:
         with contextlib.suppress(Exception):
@@ -179,7 +180,7 @@ class SiliciumSemanticCacheComponent(Component):
         IntInput(
             name="cache_dim",
             display_name="Embedding Dimension",
-            info="Vector dimension for in-process L2 similarity lookup (minimum 8).",
+            info="Vector dimension for in-process L2 similarity lookup (8 to 4096).",
             value=16,
             advanced=True,
         ),
@@ -236,6 +237,9 @@ class SiliciumSemanticCacheComponent(Component):
             raise ValueError(msg)
         raw_dim = getattr(self, "cache_dim", _DEFAULT_CACHE_DIM)
         dim = _DEFAULT_CACHE_DIM if raw_dim is None else int(raw_dim)
+        if dim < _MIN_CACHE_DIM or dim > _MAX_CACHE_DIM:
+            msg = f"Embedding dimension cache_dim must be >= {_MIN_CACHE_DIM} and <= {_MAX_CACHE_DIM}, got {dim}."
+            raise ValueError(msg)
 
         exec_sig = (isolation_key, query_str, seed_str, threshold, dim)
         cached_sig = getattr(self, "_last_exec_signature", None)
@@ -262,7 +266,7 @@ class SiliciumSemanticCacheComponent(Component):
                         best_dist = dist
                         best_entry = entry
 
-            if best_entry is not None:
+            if best_entry is not None and (not seed_str or str(best_entry.get("query", "")) == query_str):
                 existing_resp = str(best_entry.get("response", ""))
                 if seed_str and seed_str != existing_resp:
                     best_entry["vector"] = q_vec
@@ -287,6 +291,7 @@ class SiliciumSemanticCacheComponent(Component):
                     }
                 )
                 hit_response = seed_str
+                cache_hit = False
             active_scopes = len(_TENANT_CACHE_ARENA)
 
         meta: dict[str, object] = {

@@ -280,8 +280,8 @@ class SiliciumPiiGuardrailComponent(Component):
         ),
     ]
 
-    def _evaluate(self) -> dict[str, object]:
-        """Inspect `input_text`, enforce token and PII policy rules, and return the audit dictionary."""
+    def _evaluate(self) -> tuple[str, dict[str, object]]:
+        """Inspect `input_text`, enforce token and PII policy rules, and return `(output_text, report_dict)`."""
         raw_val = getattr(self, "input_text", "")
         raw_text = getattr(raw_val, "text", str(raw_val or ""))
         policy = str(getattr(self, "pii_policy", "mask") or "mask").strip().lower()
@@ -296,13 +296,13 @@ class SiliciumPiiGuardrailComponent(Component):
         zone = str(getattr(self, "residency_zone", "ca-central-sovereign") or "ca-central-sovereign")
 
         est_tokens = max(1, (len(raw_text) + 3) // 4) if raw_text else 0
-        flags = scan_pii_flags_swar(raw_text)
-        categories = decode_pii_flags(flags)
-        kv_hash, worker_id = compute_kv_prefix_hash64(raw_text)
-
         if est_tokens > max_tokens:
             msg = f"SiliciumPiiGuardrail blocked message: token budget exceeded ({est_tokens} > {max_tokens})."
             raise ValueError(msg)
+
+        flags = scan_pii_flags_swar(raw_text)
+        categories = decode_pii_flags(flags)
+        kv_hash, worker_id = compute_kv_prefix_hash64(raw_text)
 
         if flags != 0 and policy == "block":
             cats_str = ", ".join(categories)
@@ -323,17 +323,16 @@ class SiliciumPiiGuardrailComponent(Component):
             "worker_id": worker_id,
             "residency_zone": zone,
             "engine_backend": NATIVE_ENGINE_BACKEND,
-            "output_text": output_text,
         }
         self.status = report
-        return report
+        return output_text, report
 
     def build_guarded_message(self) -> Message:
         """Return the inspected or masked Message."""
-        report = self._evaluate()
-        return Message(text=str(report["output_text"]))
+        output_text, _ = self._evaluate()
+        return Message(text=output_text)
 
     def build_audit_report(self) -> Data:
         """Return the structured SWAR PII inspection Data report."""
-        report = self._evaluate()
+        _, report = self._evaluate()
         return Data(data=report)

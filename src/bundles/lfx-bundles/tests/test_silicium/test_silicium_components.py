@@ -17,7 +17,7 @@ def _ensure_silicium_bundle_importable() -> None:
     bundle_src = here.parents[1] / "src"
     if (bundle_src / "lfx_bundles").is_dir() and str(bundle_src) not in sys.path:
         sys.path.insert(0, str(bundle_src))
-    if (here / "langflow_silicium_init.py").is_file():
+    if (here / "langflow_silicium_init.py").is_file() and "lfx_bundles.silicium" not in sys.modules:
         lfx_pkg = types.ModuleType("lfx_bundles")
         lfx_pkg.__path__ = [str(here)]  # type: ignore[attr-defined]
         sys.modules["lfx_bundles"] = lfx_pkg
@@ -100,6 +100,7 @@ def test_silicium_pii_guardrail_mask_block_audit_and_all_categories() -> None:
     assert "PRIVATE_KEY_PEM" in report.data["categories"]
     assert report.data["action"] == "REDACT"
     assert report.data["engine_backend"] in {"silicium_c_abi_simd", "python_portable_swar"}
+    assert "output_text" not in report.data
 
     # Verify all remaining PII/secret categories and audit policy
     sample_tokens = [
@@ -123,6 +124,7 @@ def test_silicium_pii_guardrail_mask_block_audit_and_all_categories() -> None:
     audit_rep = audit_comp.build_audit_report()
     assert audit_rep.data["action"] == "AUDIT_LOG"
     assert audit_msg.text == all_cats_input
+    assert "output_text" not in audit_rep.data
     assert len(audit_rep.data["categories"]) == 12
 
     # Verify all 5 GitHub token prefixes (ghp_, gho_, ghu_, ghs_, ghr_) and github_pat_
@@ -213,9 +215,33 @@ def test_silicium_semantic_cache_tenant_isolation_and_eviction() -> None:
     nonzero_dist = float(near_meta.data["distance"])
     assert nonzero_dist > 0.0
 
+    # Seeding a near-neighbor query inserts a distinct entry without overwriting the original neighbor
+    near_seed_comp = SiliciumSemanticCacheComponent(_user_id="user-alpha")
+    near_seed_comp.set(
+        query_text="What is the Silicium vector throughput today?",
+        response_to_seed="369,836 QPS today.",
+        tenant_scope="tenant-alpha",
+        distance_threshold=0.80,
+    )
+    assert near_seed_comp.build_cache_metadata().data["cache_hit"] is False
+    orig_exact = SiliciumSemanticCacheComponent(_user_id="user-alpha")
+    orig_exact.set(
+        query_text="What is the Silicium vector throughput?",
+        tenant_scope="tenant-alpha",
+        distance_threshold=0.0,
+    )
+    assert orig_exact.lookup_cached_message().text == "369,836 QPS @ 99.1% Recall@10."
+    new_exact = SiliciumSemanticCacheComponent(_user_id="user-alpha")
+    new_exact.set(
+        query_text="What is the Silicium vector throughput today?",
+        tenant_scope="tenant-alpha",
+        distance_threshold=0.0,
+    )
+    assert new_exact.lookup_cached_message().text == "369,836 QPS today."
+
     tight_nonzero_miss = SiliciumSemanticCacheComponent(_user_id="user-alpha")
     tight_nonzero_miss.set(
-        query_text="What is the Silicium vector throughput today?",
+        query_text="What is the Silicium vector throughput tomorrow?",
         tenant_scope="tenant-alpha",
         distance_threshold=max(0.0001, nonzero_dist * 0.5),
     )
@@ -237,7 +263,7 @@ def test_silicium_semantic_cache_tenant_isolation_and_eviction() -> None:
     )
     assert other_user_comp.build_cache_metadata().data["cache_hit"] is False
 
-    # Reject missing trusted runtime _user_id and invalid cache_dim < 8
+    # Reject missing trusted runtime _user_id and invalid cache_dim < 8 or > 4096
     no_uid_comp = SiliciumSemanticCacheComponent()
     no_uid_comp.set(query_text="test")
     with pytest.raises(ValueError, match="Trusted runtime _user_id"):
@@ -247,6 +273,11 @@ def test_silicium_semantic_cache_tenant_isolation_and_eviction() -> None:
     bad_dim_comp.set(query_text="test", cache_dim=1)
     with pytest.raises(ValueError, match="cache_dim must be >= 8"):
         bad_dim_comp.build_cache_metadata()
+
+    huge_dim_comp = SiliciumSemanticCacheComponent(_user_id="user-alpha")
+    huge_dim_comp.set(query_text="test", cache_dim=8192)
+    with pytest.raises(ValueError, match="cache_dim must be >= 8 and <= 4096"):
+        huge_dim_comp.build_cache_metadata()
 
     # Fill 256 tenant scopes, verify read-only miss does not evict, then seed 257th and verify FIFO eviction
     reset_semantic_cache_arena()
