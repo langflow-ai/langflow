@@ -9,11 +9,58 @@ variables and the no-env-fallback flag via ContextVars, and a bare
 
 from __future__ import annotations
 
+import asyncio
 import contextvars
 
-from lfx.utils.async_helpers import run_until_complete
+import pytest
+from lfx.utils.async_helpers import run_until_complete, timeout_context
 
 _probe_var: contextvars.ContextVar[str] = contextvars.ContextVar("probe_var", default="default")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("timeout_seconds", [None, 60])
+async def test_timeout_context_allows_work_before_deadline(timeout_seconds):
+    async with timeout_context(timeout_seconds) as timeout:
+        await asyncio.sleep(0)
+        assert not timeout.expired()
+
+
+@pytest.mark.asyncio
+async def test_timeout_context_cancels_work_after_deadline():
+    with pytest.raises(TimeoutError):
+        async with timeout_context(0):
+            await asyncio.Event().wait()
+
+
+@pytest.mark.asyncio
+async def test_timeout_context_preserves_body_exception():
+    error = ValueError("body failed")
+    with pytest.raises(ValueError, match="body failed") as caught:
+        async with timeout_context(None):
+            raise error
+    assert caught.value is error
+
+
+@pytest.mark.asyncio
+async def test_timeout_context_preserves_external_cancellation():
+    entered = asyncio.Event()
+
+    async def work():
+        async with timeout_context(None):
+            entered.set()
+            await asyncio.Event().wait()
+
+    task = asyncio.create_task(work())
+    try:
+        await asyncio.wait_for(entered.wait(), timeout=1)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+    finally:
+        if not task.done():
+            task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
 
 
 async def test_run_until_complete_propagates_contextvars_in_thread_fallback():
