@@ -1705,11 +1705,19 @@ class TestAGUIBackgroundJobStatus:
             def cancel_events(self, _reason):
                 return []
 
+        class FakeJobService:
+            async def authorize_job_start(self, _job_id):
+                return None
+
+            async def update_job_status(self, *_args, **_kwargs):
+                return None
+
         async def fake_stream_event_frames(**kwargs):
             captured.update(kwargs)
             yield b"data: {}\n\n", "RUN_FINISHED"
 
         monkeypatch.setattr(wf_bg, "get_stream_adapter", lambda *_args, **_kwargs: FakeAdapter())
+        monkeypatch.setattr(wf_bg, "get_job_service", lambda: FakeJobService())
         monkeypatch.setattr(wf_bg, "_stream_event_frames", fake_stream_event_frames)
         monkeypatch.setattr(wf_bg, "_finalize_job_status", AsyncMock())
 
@@ -1789,11 +1797,19 @@ class TestAGUIBackgroundJobStatus:
             def cancel_events(self, _reason):
                 return []
 
+        class FakeJobService:
+            async def authorize_job_start(self, _job_id):
+                return None
+
+            async def update_job_status(self, *_args, **_kwargs):
+                return None
+
         async def fake_stream_event_frames(**kwargs):
             captured.update(kwargs)
             yield b"data: {}\n\n", "RUN_FINISHED"
 
         monkeypatch.setattr(wf_bg, "get_stream_adapter", lambda *_args, **_kwargs: FakeAdapter())
+        monkeypatch.setattr(wf_bg, "get_job_service", lambda: FakeJobService())
         monkeypatch.setattr(wf_bg, "_stream_event_frames", fake_stream_event_frames)
         monkeypatch.setattr(wf_bg, "_finalize_job_status", AsyncMock())
 
