@@ -63,9 +63,18 @@ class DoclingInlineComponent(BaseFileComponent):
         DropdownInput(
             name="ocr_engine",
             display_name="OCR Engine",
-            info="OCR engine to use. None will disable OCR.",
+            info="OCR engine to use. None disables OCR unless Force full-page OCR is enabled.",
             options=["None", "easyocr", "tesserocr", "rapidocr", "ocrmac"],
             value="None",
+        ),
+        BoolInput(
+            name="force_ocr",
+            display_name="Force full-page OCR",
+            info=(
+                "Run OCR over each full page, replacing any existing text layer. "
+                "Only supported by the standard pipeline."
+            ),
+            value=False,
         ),
         BoolInput(
             name="do_picture_classification",
@@ -114,13 +123,24 @@ class DoclingInlineComponent(BaseFileComponent):
             file_paths      = cfg["file_paths"]
             pipeline        = cfg["pipeline"]
             ocr_engine      = cfg["ocr_engine"]
+            force_ocr       = cfg.get("force_ocr", False)
             do_picture_cls  = cfg["do_picture_classification"]
             pic_desc_config = cfg.get("pic_desc_config")
             pic_desc_prompt = cfg.get("pic_desc_prompt", "")
 
+            if force_ocr and pipeline == "vlm":
+                print(json.dumps({
+                    "ok": False,
+                    "error": (
+                        "Force full-page OCR is not supported by the VLM pipeline, "
+                        "which has no separate OCR stage."
+                    ),
+                }))
+                return
+
             try:
                 from docling.datamodel.base_models import ConversionStatus, InputFormat
-                from docling.datamodel.pipeline_options import PdfPipelineOptions
+                from docling.datamodel.pipeline_options import OcrMode, PdfPipelineOptions
                 from docling.document_converter import DocumentConverter, FormatOption, PdfFormatOption
             except ImportError as e:
                 print(json.dumps({"ok": False, "error": f"Docling is not installed: {e}"}))
@@ -129,14 +149,16 @@ class DoclingInlineComponent(BaseFileComponent):
             # --- build converter ------------------------------------------------
             try:
                 pipe = PdfPipelineOptions()
-                pipe.do_ocr = ocr_engine not in ("", "None")
-                if pipe.do_ocr:
+                pipe.do_ocr = force_ocr or ocr_engine not in ("", "None")
+                if ocr_engine not in ("", "None"):
                     try:
                         from docling.models.factories import get_ocr_factory
                         fac = get_ocr_factory(allow_external_plugins=False)
                         pipe.ocr_options = fac.create_options(kind=ocr_engine)
                     except Exception:
                         pipe.do_ocr = False
+                if pipe.do_ocr and force_ocr:
+                    pipe.ocr_options.mode = OcrMode.FULL_PAGE
 
                 pipe.do_picture_classification = do_picture_cls
 
@@ -240,6 +262,11 @@ class DoclingInlineComponent(BaseFileComponent):
     """)
 
     def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[BaseFileComponent.BaseFile]:
+        """Process files in an isolated Docling subprocess."""
+        if self.force_ocr and self.pipeline == "vlm":
+            msg = "Force full-page OCR is not supported by the VLM pipeline, which has no separate OCR stage."
+            raise ValueError(msg)
+
         # Check that docling is installed without actually importing it.
         # The real import (PyTorch, transformers, etc.) happens in the child
         # subprocess.  Importing it here would spike memory and get the
@@ -267,6 +294,7 @@ class DoclingInlineComponent(BaseFileComponent):
             "file_paths": file_paths,
             "pipeline": self.pipeline,
             "ocr_engine": self.ocr_engine,
+            "force_ocr": self.force_ocr,
             "do_picture_classification": self.do_picture_classification,
             "pic_desc_config": pic_desc_config,
             "pic_desc_prompt": self.pic_desc_prompt,
