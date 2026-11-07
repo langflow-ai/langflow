@@ -57,6 +57,8 @@ _STATUS_STYLE: dict[str, tuple[str, str, str]] = {
 
 @dataclass
 class FlowStatus:
+    """Status of one local flow file compared against the remote instance."""
+
     name: str
     status: str
     path: Path | None = None
@@ -306,6 +308,6 @@ def status_command(
     _render_table(statuses, env_label)
 
     # Exit 1 when anything is out of sync so CI pipelines can detect drift
-    not_clean = [s for s in statuses if s.status not in (_STATUS_SYNCED,)]
+    not_clean = [s for s in statuses if s.status != _STATUS_SYNCED]
     if not_clean:
         raise typer.Exit(1)

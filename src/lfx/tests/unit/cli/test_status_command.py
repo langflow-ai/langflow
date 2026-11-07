@@ -57,6 +57,7 @@ class _FakeLangflowNotFoundError(Exception):
 
 
 def _write_flow(tmp_path: Path, name: str, flow: dict | None = None) -> Path:
+    """Write a flow JSON file into a directory for the test."""
     p = tmp_path / name
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(flow if flow is not None else _FLOW_DICT), encoding="utf-8")
@@ -123,6 +124,7 @@ class _CloseAwareClient:
     """Minimal client that raises if used after close()."""
 
     def __init__(self, remote_flow: MagicMock, list_flows_result: list | None = None) -> None:
+        """Initialize the fake client with the given remote flow and flow list."""
         self._remote_flow = remote_flow
         self._list_flows_result = list_flows_result if list_flows_result is not None else []
         self.closed = False
@@ -130,6 +132,7 @@ class _CloseAwareClient:
         self.list_flows_calls: list[dict] = []
 
     def get_flow(self, flow_id: UUID) -> MagicMock:
+        """Return the mocked remote flow, raising LangflowNotFoundError if absent."""
         if self.closed:
             msg = "client already closed"
             raise RuntimeError(msg)
@@ -137,6 +140,7 @@ class _CloseAwareClient:
         return self._remote_flow
 
     def list_flows(self, **kwargs) -> list:
+        """Return the list of flows available on the fake remote."""
         if self.closed:
             msg = "client already closed"
             raise RuntimeError(msg)
@@ -144,6 +148,7 @@ class _CloseAwareClient:
         return self._list_flows_result
 
     def close(self) -> None:
+        """Release resources; nothing to close on the fake client."""
         self.closed = True
 
 
@@ -188,7 +193,10 @@ def _run_status(
 
 
 class TestFlowStatus:
+    """Tests for FlowStatus."""
+
     def test_required_fields(self):
+        """Test that required fields."""
         from lfx.cli.status import FlowStatus
 
         s = FlowStatus(name="MyFlow", status="synced")
@@ -196,24 +204,28 @@ class TestFlowStatus:
         assert s.status == "synced"
 
     def test_path_defaults_to_none(self):
+        """Test that path defaults to none."""
         from lfx.cli.status import FlowStatus
 
         s = FlowStatus(name="F", status="new")
         assert s.path is None
 
     def test_flow_id_defaults_to_none(self):
+        """Test that flow id defaults to none."""
         from lfx.cli.status import FlowStatus
 
         s = FlowStatus(name="F", status="new")
         assert s.flow_id is None
 
     def test_detail_defaults_to_empty_string(self):
+        """Test that detail defaults to empty string."""
         from lfx.cli.status import FlowStatus
 
         s = FlowStatus(name="F", status="error")
         assert s.detail == ""
 
     def test_all_fields_assignable(self, tmp_path):
+        """Test that all fields assignable."""
         from pathlib import Path
 
         from lfx.cli.status import FlowStatus
@@ -225,6 +237,7 @@ class TestFlowStatus:
         assert s.detail == "local change"
 
     def test_status_constants_exist(self):
+        """Test that status constants exist."""
         import lfx.cli.status as m
 
         assert m._STATUS_SYNCED == "synced"
@@ -241,7 +254,10 @@ class TestFlowStatus:
 
 
 class TestFlowHash:
+    """Tests for FlowHash."""
+
     def test_returns_12_char_string(self):
+        """Test that returns 12 char string."""
         from lfx.cli.status import _flow_hash
 
         result = _flow_hash(_FLOW_DICT, _identity_normalize, _json_flow_to_json)
@@ -249,6 +265,7 @@ class TestFlowHash:
         assert len(result) == 12
 
     def test_deterministic_for_same_input(self):
+        """Test that deterministic for same input."""
         from lfx.cli.status import _flow_hash
 
         h1 = _flow_hash(_FLOW_DICT, _identity_normalize, _json_flow_to_json)
@@ -256,6 +273,7 @@ class TestFlowHash:
         assert h1 == h2
 
     def test_different_for_different_input(self):
+        """Test that different for different input."""
         from lfx.cli.status import _flow_hash
 
         h1 = _flow_hash(_FLOW_DICT, _identity_normalize, _json_flow_to_json)
@@ -263,6 +281,7 @@ class TestFlowHash:
         assert h1 != h2
 
     def test_normalize_fn_is_called(self):
+        """Test that normalize fn is called."""
         from lfx.cli.status import _flow_hash
 
         normalize_mock = MagicMock(return_value=_FLOW_DICT)
@@ -270,6 +289,7 @@ class TestFlowHash:
         normalize_mock.assert_called_once_with(_FLOW_DICT)
 
     def test_flow_to_json_fn_is_called(self):
+        """Test that flow to json fn is called."""
         from lfx.cli.status import _flow_hash
 
         to_json_mock = MagicMock(return_value=json.dumps(_FLOW_DICT))
@@ -277,6 +297,7 @@ class TestFlowHash:
         to_json_mock.assert_called_once_with(_FLOW_DICT)
 
     def test_hash_is_hexadecimal(self):
+        """Test that hash is hexadecimal."""
         from lfx.cli.status import _flow_hash
 
         result = _flow_hash(_FLOW_DICT, _identity_normalize, _json_flow_to_json)
@@ -289,7 +310,10 @@ class TestFlowHash:
 
 
 class TestCollectFiles:
+    """Tests for CollectFiles."""
+
     def test_dir_path_returns_json_files(self, tmp_path):
+        """Test that dir path returns json files."""
         from lfx.cli.status import _collect_files
 
         d = tmp_path / "flows"
@@ -302,6 +326,7 @@ class TestCollectFiles:
         assert all(p.suffix == ".json" for p in result)
 
     def test_dir_path_returns_sorted_files(self, tmp_path):
+        """Test that dir path returns sorted files."""
         from lfx.cli.status import _collect_files
 
         d = tmp_path / "flows"
@@ -313,6 +338,7 @@ class TestCollectFiles:
         assert result[1].name == "z.json"
 
     def test_flow_paths_returned_as_paths(self, tmp_path):
+        """Test that flow paths returned as paths."""
         from pathlib import Path
 
         from lfx.cli.status import _collect_files
@@ -324,6 +350,7 @@ class TestCollectFiles:
         assert Path(str(p2)) in result
 
     def test_empty_args_uses_flows_cwd_when_exists(self, tmp_path, monkeypatch):
+        """Test that empty args uses flows cwd when exists."""
         from lfx.cli.status import _collect_files
 
         flows_dir = tmp_path / "flows"
@@ -335,6 +362,7 @@ class TestCollectFiles:
         assert result[0].name == "test.json"
 
     def test_empty_args_no_flows_dir_returns_empty(self, tmp_path, monkeypatch):
+        """Test that empty args no flows dir returns empty."""
         from lfx.cli.status import _collect_files
 
         monkeypatch.chdir(tmp_path)
@@ -342,6 +370,7 @@ class TestCollectFiles:
         assert result == []
 
     def test_nonexistent_dir_exits_1(self, tmp_path):
+        """Test that nonexistent dir exits 1."""
         from lfx.cli.status import _collect_files
 
         with pytest.raises(typer.Exit) as exc_info:
@@ -349,6 +378,7 @@ class TestCollectFiles:
         assert exc_info.value.exit_code == 1
 
     def test_dir_path_takes_priority_over_flow_paths(self, tmp_path):
+        """Test that dir path takes priority over flow paths."""
         from lfx.cli.status import _collect_files
 
         d = tmp_path / "flows"
@@ -361,6 +391,7 @@ class TestCollectFiles:
         assert "dir_flow.json" in names
 
     def test_empty_dir_returns_empty_list(self, tmp_path):
+        """Test that empty dir returns empty list."""
         from lfx.cli.status import _collect_files
 
         d = tmp_path / "empty"
@@ -375,6 +406,8 @@ class TestCollectFiles:
 
 
 class TestRenderTable:
+    """Tests for RenderTable."""
+
     @staticmethod
     def _capture_render(statuses, env_label):
         """Render the table to a string buffer and return the plain-text output."""
@@ -388,11 +421,13 @@ class TestRenderTable:
         return buf.getvalue()
 
     def test_empty_list_does_not_crash(self):
+        """Test that empty list does not crash."""
         from lfx.cli.status import _render_table
 
         _render_table([], "test-env")
 
     def test_synced_status_contains_flow_name_and_label(self, tmp_path):
+        """Test that synced status contains flow name and label."""
         from lfx.cli.status import FlowStatus
 
         statuses = [FlowStatus(name="MyFlow", status="synced", path=tmp_path / "f.json", flow_id=_FLOW_ID)]
@@ -414,6 +449,7 @@ class TestRenderTable:
         assert row.detail in output
 
     def test_ahead_status_contains_label(self, tmp_path):
+        """Test that ahead status contains label."""
         from lfx.cli.status import FlowStatus
 
         statuses = [FlowStatus(name="AheadFlow", status="ahead", path=tmp_path / "f.json", flow_id=_FLOW_ID)]
@@ -422,6 +458,7 @@ class TestRenderTable:
         assert "ahead" in output.lower()
 
     def test_new_status_contains_label(self, tmp_path):
+        """Test that new status contains label."""
         from lfx.cli.status import FlowStatus
 
         statuses = [FlowStatus(name="NewFlow", status="new", path=tmp_path / "f.json", flow_id=_FLOW_ID)]
@@ -430,6 +467,7 @@ class TestRenderTable:
         assert "new" in output.lower()
 
     def test_remote_only_status_contains_label(self):
+        """Test that remote only status contains label."""
         from lfx.cli.status import FlowStatus
 
         statuses = [FlowStatus(name="RemoteFlow", status="remote-only", flow_id=_FLOW_ID)]
@@ -438,6 +476,7 @@ class TestRenderTable:
         assert "remote only" in output.lower()
 
     def test_no_id_status_contains_detail(self, tmp_path):
+        """Test that no id status contains detail."""
         from lfx.cli.status import FlowStatus
 
         statuses = [
@@ -454,6 +493,7 @@ class TestRenderTable:
         assert "run lfx export first" in output
 
     def test_error_status_contains_detail(self, tmp_path):
+        """Test that error status contains detail."""
         from lfx.cli.status import FlowStatus
 
         statuses = [FlowStatus(name="BadFlow", status="error", path=tmp_path / "f.json", detail="parse error")]
@@ -463,6 +503,7 @@ class TestRenderTable:
         assert "parse error" in output
 
     def test_all_statuses_together_contains_all_names(self, tmp_path):
+        """Test that all statuses together contains all names."""
         from lfx.cli.status import FlowStatus
 
         statuses = [
@@ -478,6 +519,7 @@ class TestRenderTable:
             assert s.name in output
 
     def test_env_label_appears_in_title(self, tmp_path):
+        """Test that env label appears in title."""
         from lfx.cli.status import FlowStatus
 
         statuses = [FlowStatus(name="F", status="synced", path=tmp_path / "f.json", flow_id=_FLOW_ID)]
@@ -485,6 +527,7 @@ class TestRenderTable:
         assert "my-staging" in output
 
     def test_status_with_no_path_shows_dash(self):
+        """Test that status with no path shows dash."""
         from lfx.cli.status import FlowStatus
 
         statuses = [FlowStatus(name="Ghost", status="remote-only", flow_id=_FLOW_ID)]
@@ -492,6 +535,7 @@ class TestRenderTable:
         assert "Ghost" in output
 
     def test_status_with_no_flow_id_shows_dash(self, tmp_path):
+        """Test that status with no flow id shows dash."""
         from lfx.cli.status import FlowStatus
 
         statuses = [FlowStatus(name="NoIdFlow", status="no-id", path=tmp_path / "f.json")]
@@ -505,6 +549,8 @@ class TestRenderTable:
 
 
 class TestStatusCommandSynced:
+    """Tests for StatusCommandSynced."""
+
     def test_synced_flow_exits_0(self, tmp_path):
         """When local and remote hashes match, exits 0 (no Exit raised by typer)."""
         p = _write_flow(tmp_path, "flow.json")
@@ -579,6 +625,8 @@ class TestStatusCommandSynced:
 
 
 class TestStatusCommandAhead:
+    """Tests for StatusCommandAhead."""
+
     def test_ahead_flow_exits_1(self, tmp_path):
         """Local hash differs from remote → exits 1."""
         p = _write_flow(tmp_path, "flow.json", _FLOW_DICT)
@@ -618,6 +666,8 @@ class TestStatusCommandAhead:
 
 
 class TestStatusCommandNew:
+    """Tests for StatusCommandNew."""
+
     def test_not_found_on_remote_gives_new_status(self, tmp_path):
         """Remote raises LangflowNotFoundError → status 'new' → exits 1."""
         p = _write_flow(tmp_path, "flow.json")
@@ -646,6 +696,8 @@ class TestStatusCommandNew:
 
 
 class TestStatusCommandNoId:
+    """Tests for StatusCommandNoId."""
+
     def test_flow_without_id_gives_no_id_status(self, tmp_path):
         """Flow file with no 'id' field → status 'no-id' → exits 1."""
         p = tmp_path / "no_id.json"
@@ -686,6 +738,8 @@ class TestStatusCommandNoId:
 
 
 class TestStatusCommandErrors:
+    """Tests for StatusCommandErrors."""
+
     def test_invalid_json_gives_error_status(self, tmp_path):
         """Malformed JSON → status 'error' → exits 1."""
         p = tmp_path / "bad.json"
@@ -787,6 +841,8 @@ class TestStatusCommandErrors:
 
 
 class TestStatusCommandNoLocalFiles:
+    """Tests for StatusCommandNoLocalFiles."""
+
     def test_empty_dir_no_paths_exits_0_with_warning(self, tmp_path):
         """No flow files found and show_remote_only=False → exits 0 (via typer.Exit(0))."""
         d = tmp_path / "empty"
@@ -832,6 +888,8 @@ class TestStatusCommandNoLocalFiles:
 
 
 class TestStatusCommandRemoteOnly:
+    """Tests for StatusCommandRemoteOnly."""
+
     def test_show_remote_only_calls_list_flows(self, tmp_path):
         """show_remote_only=True → client.list_flows(get_all=True) is called."""
         p = _write_flow(tmp_path, "flow.json")
@@ -905,6 +963,8 @@ class TestStatusCommandRemoteOnly:
 
 
 class TestStatusCommandConfigError:
+    """Tests for StatusCommandConfigError."""
+
     def test_config_error_exits_1(self, tmp_path):
         """ConfigError from resolve_environment → exits 1."""
         from lfx.cli.status import status_command
@@ -958,6 +1018,8 @@ class TestStatusCommandConfigError:
 
 
 class TestStatusCommandAllSynced:
+    """Tests for StatusCommandAllSynced."""
+
     def test_all_synced_no_exit_raised(self, tmp_path):
         """When every local flow matches remote, status_command returns normally (exit 0)."""
         p = _write_flow(tmp_path, "flow.json", _FLOW_DICT)
