@@ -146,6 +146,34 @@ async def test_actual_components_send_bounded_requests(monkeypatch, component, m
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("invalid_inputs", [False, True])
+@pytest.mark.parametrize(
+    ("component", "method", "values"),
+    [
+        (ServiceNowSearchRecordsComponent, "search_records", {"filter_value": "INC001"}),
+        (ServiceNowReadRecordComponent, "read_record", {"record_id": ID}),
+        (ServiceNowCreateRecordComponent, "create_record", {"fields": {"short_description": "Example"}}),
+        (ServiceNowUpdateRecordComponent, "update_record", {"record_id": ID, "fields": {"state": "2"}}),
+    ],
+)
+async def test_actions_authorize_before_validating_inputs(monkeypatch, component, method, values, invalid_inputs):
+    class DeniedLease:
+        async def get_credential(self):
+            raise ConnectionNotAuthorizedError(provider="servicenow")
+
+    node = component()
+    node.set(table="sys_user" if invalid_inputs else "incident", **values)
+    monkeypatch.setattr(component, "resolve_connection", lambda *_: DeniedLease())
+    node.transport = httpx.MockTransport(lambda _: pytest.fail("Denied action contacted ServiceNow"))
+
+    with pytest.raises(ConnectionNotAuthorizedError) as refused:
+        await getattr(node, method)()
+
+    assert refused.value.http_status == 403
+    assert refused.value.hint == "Use an owned or explicitly shared connection."
+
+
+@pytest.mark.asyncio
 async def test_search_without_matching_tickets_returns_empty_results(monkeypatch):
     seen = []
 

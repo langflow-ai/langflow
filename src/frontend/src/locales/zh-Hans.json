@@ -2994,6 +2994,8 @@
   "connections.account.tenant": "租户 {{tenant}}",
   "connections.status.ready": "就绪",
   "connections.status.pending": "待处理",
+  "connections.status.unavailable": "不可用",
+  "connections.status.reasonOwnerOnly": "只有连接所有者可以授权和使用此 ServiceNow 连接。",
   "connections.status.expired": "已过期",
   "connections.status.revoked": "已吊销",
   "connections.status.error": "错误",

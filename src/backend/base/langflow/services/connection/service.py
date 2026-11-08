@@ -71,13 +71,14 @@ from langflow.services.database.models.connection import (
 )
 from langflow.services.database.models.connection.oauth import ConnectionOAuth
 from langflow.services.database.models.connection.schemas import ConnectionRevokeRead, ConnectionTokenRenewal
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_authorization_service, get_settings_service, session_scope
 
 if TYPE_CHECKING:
     from lfx.services.authorization.base import ExecutionPrincipal
     from sqlmodel.ext.asyncio.session import AsyncSession
 
-    from langflow.services.database.models.user.model import User, UserRead
+    from langflow.services.database.models.user.model import UserRead
 
 
 # Route families whose dependency principal is ``actor_or_explicit_share``
@@ -659,11 +660,55 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
             explicit_share = row is None
             if explicit_share:
                 row = await self._authorized_share(session, request, user_id)
+            visible_denial = row is None and await self._has_visible_foreign_servicenow_connection(
+                session, request, user_id
+            )
+        if visible_denial:
+            denial = ConnectionNotAuthorizedError(provider=request.ref.provider)
+            await _audit_resolution_denial(request, row=None, error=denial)
+            raise denial
         if row is None:
             raise ConnectionUnresolvedError(request.ref.to_handle(), provider=request.ref.provider)
         policy = _access_policy(row, explicit_share_authorized=explicit_share)
         await self._refuse_denied_policy(request, row=row, policy=policy)
         return policy
+
+    @staticmethod
+    async def _has_visible_foreign_servicenow_connection(
+        session: AsyncSession, request: ConnectionResolutionRequest, user_id: UUID | None
+    ) -> bool:
+        """Distinguish an administrator's visible connection from a missing handle."""
+        if (
+            request.ref.provider != "servicenow"
+            or request.principal.kind != "actor"
+            or not request.principal.interactive
+            or user_id is None
+            or current_auth_is_restricted_api_key()
+        ):
+            return False
+        admin_id = (
+            await session.exec(
+                select(User.id).where(
+                    User.id == user_id, col(User.is_active).is_(True), col(User.is_superuser).is_(True)
+                )
+            )
+        ).first()
+        if admin_id is None:
+            return False
+        # Administrators can already see this metadata in Other users. Read only
+        # an id so a denied handle never loads another user's credential material.
+        return (
+            await session.exec(
+                select(Connection.id)
+                .where(
+                    Connection.provider_key == request.ref.provider,
+                    Connection.name == request.ref.name,
+                    Connection.ownership_mode == ConnectionOwnershipMode.USER.value,
+                    Connection.owner_id != user_id,
+                )
+                .limit(1)
+            )
+        ).first() is not None
 
     async def _refuse_denied_policy(
         self,

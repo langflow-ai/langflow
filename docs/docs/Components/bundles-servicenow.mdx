@@ -117,6 +117,7 @@ See [Configure connection OAuth](../Develop/connection-oauth.mdx) for shared set
 
 ServiceNow connections are personal connections owned by the flow owner, so instance sharing is unavailable during setup.
 Only that owner may authorize or reconnect the connection, including when an administrator can view it.
+Another user's connection appears as **Unavailable** to an administrator, and attempting to use it returns `connection-not-authorized` with HTTP 403 before validating action fields.
 If an existing ServiceNow connection appears under **Instance**, create a personal connection and select its handle in the flow instead.
 
 The connection account label says **ServiceNow instance** because the token response does not verify a remote user's name.

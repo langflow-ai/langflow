@@ -2995,6 +2995,8 @@
   "connections.account.tenant": "テナント {{tenant}}",
   "connections.status.ready": "利用可能",
   "connections.status.pending": "保留中",
+  "connections.status.unavailable": "利用不可",
+  "connections.status.reasonOwnerOnly": "この ServiceNow 接続を認可して使用できるのは、接続の所有者だけです。",
   "connections.status.expired": "期限切れ",
   "connections.status.revoked": "取り消し済み",
   "connections.status.error": "エラー",

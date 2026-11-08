@@ -2995,6 +2995,8 @@
   "connections.account.tenant": "Mandant {{tenant}}",
   "connections.status.ready": "Bereit",
   "connections.status.pending": "Ausstehend",
+  "connections.status.unavailable": "Nicht verfügbar",
+  "connections.status.reasonOwnerOnly": "Nur der Eigentümer kann diese ServiceNow-Verbindung autorisieren und verwenden.",
   "connections.status.expired": "Abgelaufen",
   "connections.status.revoked": "Widerrufen",
   "connections.status.error": "Fehler",

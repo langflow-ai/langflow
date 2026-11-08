@@ -2995,6 +2995,8 @@
   "connections.account.tenant": "Locatário {{tenant}}",
   "connections.status.ready": "Pronta",
   "connections.status.pending": "Pendente",
+  "connections.status.unavailable": "Indisponível",
+  "connections.status.reasonOwnerOnly": "Somente o proprietário pode autorizar e usar esta conexão do ServiceNow.",
   "connections.status.expired": "Expirada",
   "connections.status.revoked": "Revogada",
   "connections.status.error": "Erro",

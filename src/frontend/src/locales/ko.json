@@ -2994,6 +2994,8 @@
   "connections.account.tenant": "테넌트 {{tenant}}",
   "connections.status.ready": "준비됨",
   "connections.status.pending": "대기 중",
+  "connections.status.unavailable": "사용 불가",
+  "connections.status.reasonOwnerOnly": "이 ServiceNow 연결은 소유자만 인증하고 사용할 수 있습니다.",
   "connections.status.expired": "만료됨",
   "connections.status.revoked": "권한 취소됨",
   "connections.status.error": "오류",

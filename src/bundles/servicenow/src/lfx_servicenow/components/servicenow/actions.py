@@ -42,6 +42,7 @@ class ServiceNowSearchRecordsComponent(ServiceNowActionComponent):
     outputs = [Output(name="records", display_name="Records", method="search_records")]
 
     async def search_records(self) -> list[Data]:
+        lease = await self.authorize_connection()
         chosen = table(self.table)
         if self.filter_field not in {"number", "state", "assigned_to"}:
             msg = "Choose a supported filter field."
@@ -58,6 +59,7 @@ class ServiceNowSearchRecordsComponent(ServiceNowActionComponent):
         body = await self.call(
             "GET",
             f"/api/now/v1/table/{chosen}",
+            lease=lease,
             params={
                 "sysparm_query": query + "^ORDERBYsys_id",
                 "sysparm_limit": self.limit,
@@ -84,8 +86,9 @@ class ServiceNowReadRecordComponent(ServiceNowActionComponent):
     outputs = [Output(name="record", display_name="Record", method="read_record")]
 
     async def read_record(self) -> Data:
+        lease = await self.authorize_connection()
         path = f"/api/now/v1/table/{table(self.table)}/{record_id(self.record_id)}"
-        result = Data(data=result_record((await self.call("GET", path))["result"]))
+        result = Data(data=result_record((await self.call("GET", path, lease=lease))["result"]))
         self.status = result
         return result
 
@@ -99,9 +102,10 @@ class ServiceNowCreateRecordComponent(ServiceNowActionComponent):
     outputs = [Output(name="record", display_name="Record", method="create_record")]
 
     async def create_record(self) -> Data:
+        lease = await self.authorize_connection()
         path = f"/api/now/v1/table/{table(self.table)}"
         payload = fields(self.fields, create=True)
-        result = Data(data=result_record((await self.call("POST", path, body=payload))["result"]))
+        result = Data(data=result_record((await self.call("POST", path, body=payload, lease=lease))["result"]))
         self.status = result
         return result
 
@@ -120,8 +124,9 @@ class ServiceNowUpdateRecordComponent(ServiceNowActionComponent):
     outputs = [Output(name="record", display_name="Record", method="update_record")]
 
     async def update_record(self) -> Data:
+        lease = await self.authorize_connection()
         path = f"/api/now/v1/table/{table(self.table)}/{record_id(self.record_id)}"
         payload = fields(self.fields)
-        result = Data(data=result_record((await self.call("PATCH", path, body=payload))["result"]))
+        result = Data(data=result_record((await self.call("PATCH", path, body=payload, lease=lease))["result"]))
         self.status = result
         return result

@@ -234,8 +234,8 @@ describe("ConnectionsPage tabs", () => {
     expect(screen.getByTestId("connection-row-other")).toBeVisible();
   });
 
-  it.each(["ready", "pending", "expired", "revoked"] as const)(
-    "does not offer authorization for another user's %s ServiceNow connection",
+  it.each(["ready", "pending", "expired", "revoked", "error"] as const)(
+    "shows another user's %s ServiceNow connection as unavailable",
     async (status) => {
       mockUser = { id: SUPERUSER_ID, is_superuser: true };
       mockConnections = [
@@ -250,6 +250,13 @@ describe("ConnectionsPage tabs", () => {
       render(<ConnectionsPage />);
 
       await openTab("Other users");
+      const row = screen.getByTestId("connection-row-other_servicenow");
+      expect(within(row).getByText("Unavailable")).toBeVisible();
+      expect(
+        within(row).getByText(
+          "Only the connection owner can authorize and use this ServiceNow connection.",
+        ),
+      ).toBeVisible();
       expect(
         screen.queryByTestId("authorize-other_servicenow"),
       ).not.toBeInTheDocument();
@@ -277,6 +284,11 @@ describe("ConnectionsPage tabs", () => {
 
     await openTab("Instance");
     expect(
+      within(
+        screen.getByTestId("connection-row-instance_servicenow"),
+      ).getByText("Unavailable"),
+    ).toBeVisible();
+    expect(
       screen.queryByTestId("authorize-instance_servicenow"),
     ).not.toBeInTheDocument();
     await user.click(screen.getByTestId("connection-menu-instance_servicenow"));
@@ -300,6 +312,12 @@ describe("ConnectionsPage tabs", () => {
       ];
       const user = userEvent.setup();
       render(<ConnectionsPage />);
+
+      expect(
+        within(screen.getByTestId("connection-row-my_servicenow")).getByText(
+          "Pending",
+        ),
+      ).toBeVisible();
 
       if (entryPoint === "menu") {
         await user.click(screen.getByTestId("connection-menu-my_servicenow"));
