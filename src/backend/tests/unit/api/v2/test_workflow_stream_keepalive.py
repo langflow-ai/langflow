@@ -17,6 +17,8 @@ from lfx.workflow.converters import ParsedWorkflowRun
 
 _UVICORN_SCOPE = {"type": "http", "asgi": {"version": "3.0", "spec_version": "2.3"}}
 _KEEPALIVE = b": keepalive\n\n"
+# Response completion includes error logging and cleanup on busy CI workers.
+_RESPONSE_TIMEOUT_SECONDS = 10
 
 
 def _patch_run(monkeypatch, run):
@@ -84,7 +86,7 @@ async def test_idle_live_stream_emits_comments_and_preserves_terminal_events(mon
         """Keep the client connected until the workflow ends."""
         await asyncio.Event().wait()
 
-    await asyncio.wait_for(response(_UVICORN_SCOPE, receive, send), timeout=2)
+    await asyncio.wait_for(response(_UVICORN_SCOPE, receive, send), timeout=_RESPONSE_TIMEOUT_SECONDS)
 
     assert bodies.count(_KEEPALIVE) >= 2
     assert response.headers["content-type"].startswith("text/event-stream")
@@ -153,7 +155,9 @@ async def test_disconnect_after_keepalive_cancels_run_once_and_finishes_cleanup(
         await heartbeat_sent.wait()
         return {"type": "http.disconnect"}
 
-    await asyncio.wait_for(_response(workflow_execution, protocol)(_UVICORN_SCOPE, receive, send), timeout=2)
+    await asyncio.wait_for(
+        _response(workflow_execution, protocol)(_UVICORN_SCOPE, receive, send), timeout=_RESPONSE_TIMEOUT_SECONDS
+    )
 
     assert cancelled == [True]
     assert cleanup_done.is_set()
@@ -238,7 +242,7 @@ async def _collect_idle_response(response, release):
         """Keep the client connected until the source finishes."""
         await asyncio.Event().wait()
 
-    await asyncio.wait_for(response(_UVICORN_SCOPE, receive, send), timeout=2)
+    await asyncio.wait_for(response(_UVICORN_SCOPE, receive, send), timeout=_RESPONSE_TIMEOUT_SECONDS)
     return bodies
 
 
@@ -311,7 +315,7 @@ async def test_public_disconnect_after_keepalive_finishes_run_cleanup(monkeypatc
         await heartbeat_sent.wait()
         return {"type": "http.disconnect"}
 
-    await asyncio.wait_for(response(_UVICORN_SCOPE, receive, send), timeout=2)
+    await asyncio.wait_for(response(_UVICORN_SCOPE, receive, send), timeout=_RESPONSE_TIMEOUT_SECONDS)
 
     assert cancelled == [True]
     assert cleanup_done.is_set()
@@ -412,7 +416,7 @@ async def test_reattach_disconnect_closes_idle_subscription_once(monkeypatch):
         await heartbeat_sent.wait()
         return {"type": "http.disconnect"}
 
-    await asyncio.wait_for(response(_UVICORN_SCOPE, receive, send), timeout=2)
+    await asyncio.wait_for(response(_UVICORN_SCOPE, receive, send), timeout=_RESPONSE_TIMEOUT_SECONDS)
 
     assert cancelled == [True]
     assert cleanup_done.is_set()

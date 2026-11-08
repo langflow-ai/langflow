@@ -11,9 +11,13 @@ if TYPE_CHECKING:
 
 
 def validate_namespace(namespace: str) -> str:
-    """Return the canonical form of a UUID namespace, or raise ``ValueError``."""
+    """Return a canonical raw or ``user-``/``flow-`` typed UUID namespace."""
+    value = str(namespace)
+    scope_type, separator, principal_id = value.partition("-")
     try:
-        return str(uuid.UUID(str(namespace)))
+        if separator and scope_type in {"user", "flow"}:
+            return f"{scope_type}-{uuid.UUID(principal_id)}"
+        return str(uuid.UUID(value))
     except (ValueError, AttributeError, TypeError) as exc:
         msg = "Storage namespace must be a UUID"
         raise ValueError(msg) from exc

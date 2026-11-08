@@ -79,6 +79,7 @@ async def test_outbound_errors_are_removed_without_mutating_local_payload(
             config_dir=str(tmp_path),
             segment_api_url="https://segment.example.test/v1/track",
             segment_write_key="test-key",
+            edition="opensource",
             do_not_track=False,
             prometheus_enabled=False,
         )
@@ -121,6 +122,7 @@ async def test_email_event_is_not_linked_to_installation_or_user(tmp_path):
             config_dir=str(tmp_path),
             segment_api_url="https://segment.example.test/v1/track",
             segment_write_key="test-key",
+            edition="opensource",
             do_not_track=False,
             prometheus_enabled=False,
         )

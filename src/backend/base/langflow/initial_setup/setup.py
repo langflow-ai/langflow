@@ -1650,7 +1650,7 @@ async def sync_flows_from_fs():
                                     try:
                                         flow_changed = False
                                         for field_name in ("name", "description", "data", "locked"):
-                                            if (new_value := update_data.get(field_name)) and getattr(
+                                            if (new_value := update_data.get(field_name)) is not None and getattr(
                                                 flow, field_name
                                             ) != new_value:
                                                 setattr(flow, field_name, new_value)

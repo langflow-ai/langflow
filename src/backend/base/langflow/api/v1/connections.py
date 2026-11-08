@@ -22,6 +22,7 @@ from langflow.services.authorization import ConnectionAction, ensure_connection_
 from langflow.services.authorization.guards import audit_guard_in_transaction
 from langflow.services.connection import ConnectionConflictError, DatabaseConnectionResolverService
 from langflow.services.connection.oauth import broker as oauth_broker
+from langflow.services.connection.oauth.adapter import provider_adapter
 from langflow.services.connection.oauth.config import OAuthError, OAuthRegistration, get_oauth_settings
 from langflow.services.connection.policy import providers_with_usable_actions
 from langflow.services.connection.service import enforce_integration_policy_for_provider
@@ -34,7 +35,7 @@ from langflow.services.database.models.connection import (
     ConnectionTestRequest,
     ConnectionUpdate,
 )
-from langflow.services.database.models.connection.schemas import ConnectionRevokeRead
+from langflow.services.database.models.connection.schemas import ConnectionRevokeRead, ConnectionTokenRenewal
 from langflow.services.deps import get_connection_resolver_service, session_scope
 from langflow.services.rate_limit import (
     check_rate_limit,
@@ -146,6 +147,7 @@ class OAuthRegistrationRead(BaseModel):
     context: Literal["self_managed", "hosted", "desktop"]
     client_type: Literal["confidential", "public"]
     scopes: list[str] = Field(description="The operator's ceiling; a start request selects a nonempty subset.")
+    required_scopes: list[str] = Field(default_factory=list, description="Scopes every connection must request.")
     allowed_tenants: list[str] = Field(description="Workspaces or domains the provider account must belong to.")
 
 
@@ -423,6 +425,42 @@ async def update_connection(
     return await service.update(session, row, payload)
 
 
+@router.post("/{connection_id}/token", response_model=ConnectionRead)
+async def renew_connection_token(
+    request: Request,
+    connection_id: UUID,
+    payload: ConnectionTokenRenewal,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+    service: ConnectionService,
+) -> ConnectionRead:
+    """Validate a replacement token and update the owner's existing connection."""
+    check_rate_limit(
+        request,
+        scope=_SCOPE_CONNECTIONS,
+        limit_per_minute=get_connection_write_limit(),
+        key=get_user_limiter_key(current_user.id),
+    )
+    row = await _authorized_row(
+        service=service,
+        session=session,
+        user=current_user,
+        connection_id=connection_id,
+        action=ConnectionAction.WRITE,
+        for_update=True,
+    )
+    if not _may_enable_non_interactive(current_user, row):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Only the connection owner may renew its token."
+        )
+    try:
+        return await service.renew_token(session, row=row, user=current_user, payload=payload)
+    except IntegrationPolicyBlockedError as exc:
+        raise _policy_blocked(exc) from exc
+    except ManualCredentialError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
+
+
 @router.post("/{connection_id}/revoke", response_model=ConnectionRevokeRead)
 async def revoke_connection(
     request: Request,
@@ -625,6 +663,9 @@ async def list_oauth_registrations(
                 context=registration.context,
                 client_type=registration.client_type,
                 scopes=list(registration.scopes),
+                required_scopes=sorted(adapter.required_scopes)
+                if (adapter := provider_adapter(registration.provider))
+                else [],
                 allowed_tenants=list(registration.allowed_tenants),
             )
             for registration_id, registration in available
@@ -660,8 +701,17 @@ async def complete_connection_oauth(provider: str, request: Request, service: Co
         await oauth_broker.complete(
             provider=provider, state=state_value, browser=browser, code=code, denied="error" in query
         )
-    except OAuthError:
+    except OAuthError as exc:
         response.status_code = 400
-        response.body = b"OAuth authorization failed. Return to connections and start again."
+        if exc.code == "oauth-refresh-token-missing":
+            adapter = provider_adapter(provider)
+            message = "The provider did not return a refresh token."
+            if adapter and adapter.required_scopes:
+                message += f" Reconnect with the required scopes {', '.join(adapter.required_scopes)}."
+            else:
+                message += " Check the provider's refresh-access settings and reconnect."
+            response.body = message.encode("utf-8")
+        else:
+            response.body = b"OAuth authorization failed. Return to connections and start again."
         response.headers["content-length"] = str(len(response.body))
     return response

@@ -7,6 +7,7 @@ import os
 import re
 import shlex
 import shutil
+import sys
 import unicodedata
 from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass
@@ -38,13 +39,16 @@ from lfx.base.mcp.security import (
     AGENTIC_USER_ID_ENV_VAR,
     validate_mcp_stdio_config,
 )
+from lfx.base.mcp.source_policy import CMD_TOKEN_TRANSFORM_CHARS
 from lfx.log.logger import logger
 from lfx.observability import outbound_call_span
 from lfx.schema.data import Data
 from lfx.schema.json_schema import create_input_schema_from_json_schema
 from lfx.services.deps import get_settings_service
 from lfx.utils.async_helpers import run_until_complete
-from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
+from lfx.utils.ssrf_httpx import validate_strict_url_for_ssrf_or_raise
+from lfx.utils.ssrf_protection import is_connector_ssrf_validation_enabled, validate_and_resolve_url
+from lfx.utils.ssrf_transport import SSRFProtectedTransport, pin_host_for_url
 from lfx.utils.url_redaction import redact_urls_in_text, sanitize_url_for_display
 
 MCP_TOOL_SPAN_NAME = "mcp.tool.call"
@@ -182,6 +186,7 @@ def create_mcp_http_client_with_ssl_option(
     auth: httpx.Auth | None = None,
     *,
     verify_ssl: bool = True,
+    pinned_ips: dict[str, list[str]] | None = None,
 ) -> httpx.AsyncClient:
     """Create an httpx AsyncClient with configurable SSL verification.
 
@@ -197,6 +202,7 @@ def create_mcp_http_client_with_ssl_option(
         timeout: Request timeout as httpx.Timeout object.
         auth: Optional authentication handler.
         verify_ssl: Whether to verify SSL certificates (default: True).
+        pinned_ips: Validated addresses for this MCP server, when protection is enabled.
 
     Returns:
         Configured httpx.AsyncClient instance.
@@ -205,6 +211,10 @@ def create_mcp_http_client_with_ssl_option(
         "follow_redirects": False,
         "verify": verify_ssl,
     }
+
+    if pinned_ips:
+        kwargs["transport"] = SSRFProtectedTransport(pinned_ips=pinned_ips, verify=verify_ssl)
+        kwargs["trust_env"] = False
 
     if timeout is None:
         kwargs["timeout"] = httpx.Timeout(30.0)
@@ -1217,6 +1227,16 @@ def _is_mcp_session_bust_error(exc: BaseException) -> bool:
 # (``lfx.base.mcp.pinned``) needs ``serverInfo`` to compare the server it reached
 # against the one its bundle pinned.
 _INITIALIZE_RESULT_ATTR = "_lf_initialize_result"
+_HTTP_CONNECTION_ATTR = "_lf_http_connection"
+
+
+@dataclass(frozen=True, slots=True)
+class _MCPHTTPConnection:
+    """Validated destination and HTTP configuration retained for session cleanup."""
+
+    url: str
+    headers: dict[str, str]
+    client_factory: Callable[..., httpx.AsyncClient]
 
 
 @dataclass(frozen=True, slots=True)
@@ -1766,6 +1786,12 @@ class MCPSessionManager:
         sse_preference_locked: list[bool] = [False]
 
         verify_ssl = connection_params.get("verify_ssl", True)
+        url = connection_params["url"]
+        pinned_ips = None
+        if is_connector_ssrf_validation_enabled():
+            url, resolved_ips = await asyncio.to_thread(validate_and_resolve_url, url)
+            if resolved_ips:
+                pinned_ips = {pin_host_for_url(url): resolved_ips}
         # A pinned preset pins the transport as well as the tools: an endpoint that
         # answers on a transport the pin does not name is drift, not a fallback
         # opportunity, and a misleading SSE connection error would mask it.
@@ -1779,8 +1805,10 @@ class MCPSessionManager:
             auth: httpx.Auth | None = None,
         ) -> httpx.AsyncClient:
             return create_mcp_http_client_with_ssl_option(
-                headers=headers, timeout=timeout, auth=auth, verify_ssl=verify_ssl
+                headers=headers, timeout=timeout, auth=auth, verify_ssl=verify_ssl, pinned_ips=pinned_ips
             )
+
+        http_connection = _MCPHTTPConnection(url, dict(connection_params["headers"]), custom_httpx_factory)
 
         async def session_task():
             """Background task that keeps the session alive."""
@@ -1794,7 +1822,7 @@ class MCPSessionManager:
                             f"(attempt {attempt + 1}/{STREAMABLE_HTTP_CONNECT_ATTEMPTS})"
                         )
                         async with streamablehttp_client(
-                            url=connection_params["url"],
+                            url=url,
                             headers=connection_params["headers"],
                             timeout=connection_params["timeout_seconds"],
                             httpx_client_factory=custom_httpx_factory,
@@ -1803,6 +1831,8 @@ class MCPSessionManager:
                             async with session:
                                 initialize_result = await asyncio.wait_for(session.initialize(), timeout=2.0)
                                 _remember_initialize_result(session, initialize_result)
+                                with contextlib.suppress(AttributeError, TypeError):
+                                    session.__dict__[_HTTP_CONNECTION_ATTR] = http_connection
                                 used_transport.append("streamable_http")
                                 await logger.ainfo(f"Session {session_id} connected via Streamable HTTP")
                                 session_future.set_result(session)
@@ -1867,7 +1897,7 @@ class MCPSessionManager:
                 sse_read_timeout = connection_params.get("sse_read_timeout_seconds", 30)
 
                 async with sse_client(
-                    connection_params["url"],
+                    url,
                     connection_params["headers"],
                     connection_params["timeout_seconds"],
                     sse_read_timeout,
@@ -1877,6 +1907,8 @@ class MCPSessionManager:
                     async with session:
                         initialize_result = await session.initialize()
                         _remember_initialize_result(session, initialize_result)
+                        with contextlib.suppress(AttributeError, TypeError):
+                            session.__dict__[_HTTP_CONNECTION_ATTR] = http_connection
                         used_transport.append("sse")
                         sse_preference_locked[0] = True
                         fallback_msg = " (fallback)" if streamable_error else " (preferred)"
@@ -2171,27 +2203,11 @@ class MCPStdioClient(_PooledSessionClient):
         current_user_id: str | UUID | None = None,
         headers: dict[str, str] | None = None,
     ) -> list[StructuredTool]:
-        """Connect to MCP server using stdio transport (SDK style).
+        """Connect to an MCP stdio server after validating its command and arguments.
 
-        The server process is launched **without a shell** (``shell=False``
-        semantics): ``command_str`` is tokenized with :func:`shlex.split` and
-        the resulting executable + arguments are passed to
-        :class:`~mcp.StdioServerParameters` directly.  The MCP SDK then execs
-        the process via ``anyio.open_process`` on POSIX and
-        ``create_windows_process`` on Windows -- the latter resolving ``.cmd`` /
-        ``.bat`` / ``.exe`` wrappers (e.g. ``npx.cmd``) through ``shutil.which``
-        -- so no ``bash -c`` / ``cmd /c`` wrapper is required on any platform.
-
-        Removing the shell wrapper structurally eliminates the entire class of
-        injection vectors that depend on a shell interpreter starting up:
-        shell metacharacters, ``IFS`` word-splitting, ``CDPATH`` redirection,
-        ``BASH_ENV`` / ``ENV`` / ``BASH_FUNC_*`` startup injection, and
-        ``PS4`` / ``SHELLOPTS`` xtrace abuse.  None of those can fire because no
-        shell is ever spawned.  The :func:`_validate_mcp_stdio_env` backstop
-        still rejects loader and interpreter env vars (``LD_PRELOAD``,
-        ``DYLD_*``, ``GCONV_PATH``, ``PYTHONPATH``, ``NODE_OPTIONS``, ...) which
-        remain dangerous regardless of the shell because they are honored by the
-        dynamic linker or the target interpreter itself.
+        Native executables receive structured arguments directly through the MCP SDK.
+        Explicit shell wrappers and Windows batch scripts also require validation after
+        HTTP headers are inserted, because HTTP-valid punctuation can become shell syntax.
         """
         from mcp import StdioServerParameters
 
@@ -2206,11 +2222,30 @@ class MCPStdioClient(_PooledSessionClient):
         # directly, and no unvalidated argv or tenant-controlled environment may reach
         # StdioServerParameters.
         validate_mcp_stdio_config(command, args, env)
-        # Component headers are validated as HTTP data and appended as structured
-        # argv only after command policy succeeds. Cookie/signature values may
-        # legitimately contain shell-looking punctuation, which is inert because
-        # the process is launched without a shell.
+        # Preserve opaque HTTP values for direct executables, but apply the shell
+        # policy to the assembled argv when a wrapper will interpret those values.
         final_args = _inject_mcp_stdio_headers(args, _process_headers(headers))
+        is_windows_batch = False
+        if sys.platform == "win32":
+            from mcp.os.win32.utilities import get_windows_executable_command
+
+            # Windows can invoke cmd.exe for a batch script even with shell=False.
+            # Use the SDK's resolver and pin the script whose arguments we check.
+            resolved_command = get_windows_executable_command(command)
+            if resolved_command.lower().endswith((".cmd", ".bat")):
+                is_windows_batch = True
+                command = resolved_command
+        base_command = mcp_security.extract_base_command(command)
+        if is_windows_batch or base_command in mcp_security.SHELL_WRAPPERS:
+            # The original arguments already passed command-specific policy.
+            # Header values need shell syntax checks without keyword restrictions.
+            shell_chars = mcp_security.DANGEROUS_SHELL_CHARS
+            if is_windows_batch or base_command == "cmd":
+                shell_chars |= CMD_TOKEN_TRANSFORM_CHARS
+            if any(char in arg for arg in final_args for char in shell_chars):
+                # Header values may contain credentials, so omit the offending argument.
+                msg = "MCP stdio arguments are unsafe for a shell wrapper; use a direct executable instead"
+                raise mcp_security.MCPStdioSecurityError(msg)
         safe_env = _validate_mcp_stdio_env(env)
         if AGENTIC_MCP_MODULE in command or any(AGENTIC_MCP_MODULE in arg for arg in args):
             if not current_user_id:
@@ -2221,10 +2256,7 @@ class MCPStdioClient(_PooledSessionClient):
             safe_env = {**safe_env, AGENTIC_USER_ID_ENV_VAR: str(current_user_id)}
         env_data: dict[str, str] = {"DEBUG": "true", "PATH": os.environ["PATH"], **safe_env}
 
-        # shell=False: exec the binary directly with structured args. The MCP SDK
-        # abstracts the platform differences (POSIX exec vs. Windows executable
-        # resolution), so identical parameters work on every OS and no shell
-        # interpreter is ever interposed between Langflow and the server process.
+        # Pass the validated command and assembled arguments to the MCP SDK.
         server_params = StdioServerParameters(
             command=command,
             args=final_args,
@@ -2592,11 +2624,12 @@ class MCPStreamableHttpClient(_PooledSessionClient):
 
     async def _terminate_remote_session(self) -> None:
         """Attempt to explicitly terminate the remote MCP session via HTTP DELETE (best-effort)."""
-        # Only relevant for Streamable HTTP or SSE transport
-        if not self._connection_params or "url" not in self._connection_params:
+        # A rejected connection has no validated session and must not send credentials during cleanup.
+        http_connection = getattr(self.session, "__dict__", {}).get(_HTTP_CONNECTION_ATTR)
+        if not isinstance(http_connection, _MCPHTTPConnection):
             return
 
-        url: str = self._connection_params["url"]
+        url = http_connection.url
 
         # Retrieve session id from the underlying SDK if exposed
         session_id = None
@@ -2604,12 +2637,12 @@ class MCPStreamableHttpClient(_PooledSessionClient):
             # Common attributes in MCP python SDK: `session_id` or `id`
             session_id = getattr(self.session, "session_id", None) or getattr(self.session, "id", None)
 
-        headers: dict[str, str] = dict(self._connection_params.get("headers", {}))
+        headers = dict(http_connection.headers)
         if session_id:
             headers["Mcp-Session-Id"] = str(session_id)
 
         try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
+            async with http_connection.client_factory(timeout=httpx.Timeout(5.0)) as client:
                 await client.delete(url, headers=headers)
         except Exception as e:  # noqa: BLE001
             # DELETE is advisory—log and continue
@@ -2960,7 +2993,7 @@ async def update_tools(
         # SECURITY: a tenant-embedded MCP HTTP config could point at an internal service or
         # the cloud-metadata endpoint. Guard the URL with the same SSRF posture as other
         # outbound fetches (no-op when SSRF protection is disabled / host is allowlisted).
-        validate_connector_url_for_ssrf(url)
+        await asyncio.to_thread(validate_strict_url_for_ssrf_or_raise, url)
         # Serving-plane: forward the end-user identity to a SIBLING project (an operator-
         # allowlisted internal host) so it attributes the run to the same end user. Fail-closed —
         # external hosts never receive the PII header; no-op when the feature is off / no end user.
