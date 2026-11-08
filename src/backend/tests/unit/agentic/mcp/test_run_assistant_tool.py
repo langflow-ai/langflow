@@ -84,6 +84,11 @@ def _session_mock() -> AsyncMock:
     session = AsyncMock()
     # SQLAlchemy's add() API is synchronous even on AsyncSession.
     session.add = MagicMock()
+    # Existing-flow fixtures have no retained repair history. SQLModel returns a
+    # synchronous result from exec(), including its first() lookup.
+    result = MagicMock()
+    result.first.return_value = None
+    session.exec.return_value = result
     return session
 
 
