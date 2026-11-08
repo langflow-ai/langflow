@@ -36,6 +36,7 @@ members = [
     "lfx",
     "lfx-amazon",
     "lfx-anthropic",
+    "lfx-arcmira",
     "lfx-arxiv",
     "lfx-azure",
     "lfx-bundles",
@@ -8473,6 +8474,7 @@ audio = [
     { name = "langflow-base", extra = ["audio"] },
 ]
 bundles = [
+    { name = "lfx-arcmira" },
     { name = "lfx-arxiv" },
     { name = "lfx-bundles", extra = ["all-no-torch"] },
     { name = "lfx-confluent" },
@@ -8582,6 +8584,7 @@ requires-dist = [
     { name = "langflow-base", extras = ["sandbox"], marker = "extra == 'sandbox'", editable = "src/backend/base" },
     { name = "lfx-amazon", editable = "src/bundles/amazon" },
     { name = "lfx-anthropic", editable = "src/bundles/anthropic" },
+    { name = "lfx-arcmira", marker = "extra == 'bundles'", editable = "src/bundles/arcmira" },
     { name = "lfx-arxiv", marker = "extra == 'bundles'", editable = "src/bundles/arxiv" },
     { name = "lfx-azure", editable = "src/bundles/azure" },
     { name = "lfx-bundles", extras = ["all-no-torch"], marker = "extra == 'bundles'", editable = "src/bundles/lfx-bundles" },
@@ -9978,6 +9981,21 @@ requires-dist = [
     { name = "langchain-anthropic", specifier = "~=1.4.6" },
     { name = "lfx", editable = "src/lfx" },
     { name = "requests", specifier = ">=2.32.0" },
+]
+
+[[package]]
+name = "lfx-arcmira"
+version = "0.2.0"
+source = { editable = "src/bundles/arcmira" }
+dependencies = [
+    { name = "httpx" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.28.1,<1" },
+    { name = "lfx", editable = "src/lfx" },
 ]
 
 [[package]]

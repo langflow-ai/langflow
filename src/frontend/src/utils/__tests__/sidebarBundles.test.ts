@@ -1,6 +1,18 @@
 import { SIDEBAR_BUNDLES } from "../styleUtils";
 
 describe("SIDEBAR_BUNDLES", () => {
+  it("classifies Arcmira as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "Arcmira",
+          icon: "Search",
+          name: "arcmira",
+        }),
+      ]),
+    );
+  });
+
   it("classifies PaddleOCR as a sidebar bundle", () => {
     expect(SIDEBAR_BUNDLES).toEqual(
       expect.arrayContaining([

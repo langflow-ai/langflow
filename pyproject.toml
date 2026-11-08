@@ -130,6 +130,7 @@ lfx-exa = { workspace = true }
 lfx-valkey = { workspace = true }
 lfx-google = { workspace = true }
 lfx-confluent = { workspace = true }
+lfx-arcmira = { workspace = true }
 lfx-serply = { workspace = true }
 lfx-serpingapi = { workspace = true }
 lfx-microsoft = { workspace = true }
@@ -172,6 +173,7 @@ members = [
     "src/bundles/valkey",
     "src/bundles/google",
     "src/bundles/confluent",
+    "src/bundles/arcmira",
     "src/bundles/serply",
     "src/bundles/serpingapi",
     "src/bundles/microsoft",
@@ -199,6 +201,7 @@ bundles = [
     "lfx-firecrawl>=0.2.1,<1.0.0",
     "lfx-nextplaid>=0.3.0,<1.0.0",
     "lfx-paddle>=0.2.1,<1.0.0",
+    "lfx-arcmira>=0.2.0,<1.0.0",
     "lfx-serpingapi>=0.1.1,<1.0.0",
     "lfx-serply>=0.1.1,<1.0.0",
     "lfx-valkey>=0.2.1,<1.0.0",

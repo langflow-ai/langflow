@@ -541,6 +541,7 @@ module.exports = {
             "Components/bundles-amazon",
             "Components/bundles-anthropic",
             "Components/bundles-apify",
+            "Components/bundles-arcmira",
             "Components/bundles-arxiv",
             "Components/bundles-assemblyai",
             "Components/bundles-azure",
