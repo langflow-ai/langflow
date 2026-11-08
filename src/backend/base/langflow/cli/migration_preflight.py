@@ -28,6 +28,7 @@ from langflow.cli.integrity import (
     recorded_revisions,
     script_directory,
 )
+from langflow.services.database.revision import classify_revisions
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -107,6 +108,21 @@ async def check_version_direction(
     different commits can carry the same version.
     """
     name = "version"
+    script = script_directory()
+    try:
+        await session.connection()
+    except sa.exc.SQLAlchemyError:
+        await session.rollback()
+        return CheckResult(name, "warn", "not checked: the database could not be reached")
+    try:
+        # A source with no alembic_version table records no revision, which the schema check reports.
+        source_revisions = sorted(await recorded_revisions(session))
+    except sa.exc.SQLAlchemyError:
+        await session.rollback()
+        return CheckResult(name, "warn", "not checked: the database schema could not be read")
+    state = classify_revisions(source_revisions, script)
+    if state.kind == "unknown":
+        return CheckResult(name, "fail", state.message)
     if not target_revision and target_version:
         check = check_target_version(target_version)
         # The admin gave a version and it could not be read, so the command must not end as if the check passed.
@@ -120,18 +136,6 @@ async def check_version_direction(
 
     # get_heads() prints a list, such as ['<revision>']; pasted as is, it names that revision.
     target_revision = target_revision.strip("[]'\" ")
-    script = script_directory()
-    try:
-        await session.connection()
-    except sa.exc.SQLAlchemyError:
-        await session.rollback()
-        return CheckResult(name, "warn", "not checked: the database could not be reached")
-    try:
-        # A source with no alembic_version table records no revision, which the schema check reports.
-        source_revisions = sorted(await recorded_revisions(session))
-    except sa.exc.SQLAlchemyError:
-        await session.rollback()
-        return CheckResult(name, "warn", "not checked: the database schema could not be read")
     try:
         target_ancestry = {revision.revision for revision in script.iterate_revisions(target_revision, "base")}
     except Exception:  # noqa: BLE001 - an unknown revision raises one of several alembic errors
@@ -142,7 +146,8 @@ async def check_version_direction(
             "run the preflight with the target's Langflow version to be sure",
         )
 
-    behind = [revision for revision in source_revisions if revision not in target_ancestry]
+    upgrade_revisions = [state.upgrade_from] if state.upgrade_from else source_revisions
+    behind = [revision for revision in upgrade_revisions if revision not in target_ancestry]
     if behind:
         return CheckResult(
             name,
@@ -152,6 +157,17 @@ async def check_version_direction(
         )
     if set(source_revisions) == {target_revision}:
         return CheckResult(name, "ok", f"source and target are both at {target_revision}; attaching runs no migration")
+    if state.kind == "legacy":
+        verified_target = script.get_current_head()
+        if verified_target not in target_ancestry:
+            return CheckResult(
+                name,
+                "fail",
+                f"the source uses a Langflow 1.10.3 side branch ({', '.join(source_revisions)}). "
+                f"This release verifies its forward upgrade only to {verified_target}, not {target_revision}. "
+                "Run preflight with the intended target release before attaching to an earlier target",
+            )
+        return CheckResult(name, "ok", state.message)
     return CheckResult(
         name, "ok", f"the target ({target_revision}) is ahead of the source; attaching migrates the schema forward"
     )

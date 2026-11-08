@@ -972,7 +972,7 @@ async def list_a2a_agents(request: Request, session: DbSession, current_user: Cu
         stmt = restrict_to_owned_or_visible_scope(
             select(Flow).outerjoin(Folder, Folder.id == Flow.folder_id),
             id_column=Flow.id,
-            owner_clause=owned_clause if await should_apply_owner_override() else false(),
+            owner_clause=owned_clause if visibility.intersections or await should_apply_owner_override() else false(),
             workspace_expression=canonical_workspace,
             project_column=Flow.folder_id,
             visibility=visibility,
