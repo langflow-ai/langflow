@@ -19,9 +19,45 @@ jest.mock("@/icons/Keenable", () => ({
   KeenableIcon: mockKeenableIcon,
 }));
 
+import { render } from "@testing-library/react";
+import { createElement, createRef } from "react";
 import { lazyIconsMapping } from "../lazyIconImports";
+import { ParallelIcon } from "../Parallel";
 
 describe("lazyIconsMapping", () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it("loads the Parallel bundle icon", async () => {
+    const { default: icon } = await lazyIconsMapping.Parallel();
+
+    expect(icon).toBe(ParallelIcon);
+  });
+
+  it.each([false, true])(
+    "renders Parallel with isDark=%s without forwarding the theme prop to SVG",
+    (isDark) => {
+      const consoleError = jest
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+      const ref = createRef<SVGSVGElement>();
+      const { getByRole } = render(
+        createElement(ParallelIcon, {
+          isDark,
+          ref,
+          role: "img",
+          "aria-label": "Parallel",
+          className: "h-4 w-4",
+        }),
+      );
+      const svg = getByRole("img", { name: "Parallel" });
+
+      expect(svg).not.toHaveAttribute("isDark");
+      expect(svg).toHaveClass("h-4 w-4");
+      expect(ref.current).toBe(svg);
+      expect(consoleError).not.toHaveBeenCalled();
+    },
+  );
+
   it("loads the vLLM provider icon", async () => {
     const { default: icon } = await lazyIconsMapping.vLLM();
 
