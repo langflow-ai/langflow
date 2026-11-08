@@ -10,6 +10,7 @@ from sqlmodel import and_, col, or_, select
 from langflow.services.data_subjects.audit_redaction import redact_audit_rows
 from langflow.services.data_subjects.batching import clear_reference_batch, delete_batch, delete_job_batch
 from langflow.services.data_subjects.transactions import builder_transactions
+from langflow.services.data_subjects.upgrade_reports import erase_upgrade_reports
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.auth.authz import (
     AuthzAccessException,
@@ -31,11 +32,13 @@ from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.ingestion_run.model import IngestionRun
 from langflow.services.database.models.jobs.model import Job
+from langflow.services.database.models.maintenance import MaintenanceState
 from langflow.services.database.models.mcp_server.model import MCPServer
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.policy_bundle.model import PolicyBundleRevision
 from langflow.services.database.models.project_replacement_operation import ProjectReplacementOperation
 from langflow.services.database.models.transactions.model import TransactionTable
+from langflow.services.database.models.upgrade_report import UpgradeReportRepair
 from langflow.services.database.models.variable.model import Variable
 
 if TYPE_CHECKING:
@@ -44,9 +47,9 @@ if TYPE_CHECKING:
 
     from sqlmodel.ext.asyncio.session import AsyncSession
 
-    from langflow.services.data_subjects.context import EraseContext
+    from langflow.services.data_subjects.context import EraseContext, EraseStepPending
 
-    Step = Callable[[AsyncSession, EraseContext], Awaitable[int]]
+    Step = Callable[[AsyncSession, EraseContext], Awaitable[int | EraseStepPending]]
 
 
 def _owned_folder_ids(user_id: UUID):
@@ -191,4 +194,7 @@ BUILDER_ACCOUNT_STEPS: tuple[tuple[str, Step], ...] = (
     ("audit_subject", _clear_reference(AuthzAuditLog, AuthzAuditLog.user_id)),
     ("project_receipts", erase_project_receipts),
     ("folders", erase_folders),
+    ("maintenance_setter", _clear_reference(MaintenanceState, MaintenanceState.set_by)),
+    ("upgrade_repair_author", _delete_by_user(UpgradeReportRepair, UpgradeReportRepair.created_by)),
+    ("upgrade_reports", erase_upgrade_reports),
 )
