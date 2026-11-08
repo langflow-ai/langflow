@@ -610,6 +610,7 @@ module.exports = {
             "Components/bundles-serply",
             "Components/bundles-slack",
             "Components/bundles-supabase",
+            "Components/bundles-textkit",
             "Components/bundles-upstash",
             "Components/bundles-valkey",
             "Components/bundles-vectara",

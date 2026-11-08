@@ -93,6 +93,7 @@
         "lfx-paddle",
         "lfx-serpingapi",
         "lfx-serply",
+        "lfx-textkit",
         "lfx-valkey"
       ],
       "forbidden_distributions_remove": [
@@ -221,6 +222,7 @@
         "lfx-paddle",
         "lfx-serpingapi",
         "lfx-serply",
+        "lfx-textkit",
         "lfx-valkey"
       ],
       "forbidden_distributions_remove": [
@@ -235,6 +237,7 @@
         "lfx-paddle",
         "lfx-serpingapi",
         "lfx-serply",
+        "lfx-textkit",
         "lfx-valkey"
       ],
       "entry_points": {
@@ -264,6 +267,7 @@
           "lfx-paddle",
           "lfx-serpingapi",
           "lfx-serply",
+          "lfx-textkit",
           "lfx-slack",
           "lfx-toolguard",
           "lfx-valkey",

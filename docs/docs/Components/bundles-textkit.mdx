@@ -1,0 +1,62 @@
+---
+title: TextKit
+slug: /bundles-textkit
+---
+
+import Icon from "@site/src/components/icon";
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+<GraduatedBundleInstall packageName="textkit" />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **TextKit** bundle.
+
+[TextKit](https://jointextkit.com) is an SMS API. Get an API key from the [TextKit console](https://jointextkit.com/console). A test key (`tk_sk_test_...`) simulates sends, and a live key texts real numbers. For details on the underlying API, see the [TextKit documentation](https://jointextkit.com/docs/quickstart).
+
+If a request fails, for example because the API key is invalid, the output contains an `error` field that describes the problem.
+
+In [tool mode](/agents-tools), each component exposes one tool that an [**Agent** component](/agents) can call.
+
+## TextKit Send Text
+
+This component sends an SMS and outputs the created message as [`Data`](/data-types#data). In tool mode, the tool is named `textkit_send_text`.
+
+| Name | Type | Description |
+|------|------|-------------|
+| TextKit API Key (`textkit_api_key`) | SecretString | Input parameter. Your TextKit API key. |
+| To (`to_number`) | String | Input parameter. The recipient's number in E.164 format. |
+| Message (`message_body`) | String | Input parameter. The text to send. |
+| From (`from_number`) | String | Input parameter. One of your numbers, or a sender pool ID. Optional when the account has exactly one number. |
+
+## TextKit List Messages
+
+This component lists sent and received texts, newest first, and outputs them as a [`Table`](/data-types#table) with `id`, `to`, `from`, `body`, `direction`, `status`, and `created_at` columns. In tool mode, the tool is named `textkit_list_messages`.
+
+| Name | Type | Description |
+|------|------|-------------|
+| TextKit API Key (`textkit_api_key`) | SecretString | Input parameter. Your TextKit API key. |
+| Phone Number (`phone_number`) | String | Input parameter. Only messages to or from this number. Optional. |
+| Direction (`message_direction`) | String | Input parameter. Only `outbound` or `inbound` messages. Default: `any`. |
+| Status (`message_status`) | String | Input parameter. Only messages with this status. Default: `any`. |
+| Limit (`limit`) | Integer | Input parameter. How many messages to return, from `1` to `100`. Default: `25`. |
+
+## TextKit Send Verification
+
+This component texts a one-time code to a phone number and outputs the verification as [`Data`](/data-types#data). In tool mode, the tool is named `textkit_send_verification`.
+
+| Name | Type | Description |
+|------|------|-------------|
+| TextKit API Key (`textkit_api_key`) | SecretString | Input parameter. Your TextKit API key. |
+| Phone Number (`phone_number`) | String | Input parameter. The number to text the code to, in E.164 format. |
+| App Name (`app_name`) | String | Input parameter. Your product name, shown in the message. Optional. |
+
+## TextKit Check Verification
+
+This component checks the code a user entered and outputs the result as [`Data`](/data-types#data). A wrong code is a normal result where `verified` is `false`. In tool mode, the tool is named `textkit_check_verification`.
+
+| Name | Type | Description |
+|------|------|-------------|
+| TextKit API Key (`textkit_api_key`) | SecretString | Input parameter. Your TextKit API key. |
+| Phone Number (`phone_number`) | String | Input parameter. The number the code was texted to, in E.164 format. |
+| Code (`verification_code`) | String | Input parameter. The code the user entered. |

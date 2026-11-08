@@ -5057,6 +5057,26 @@
       "added_in": "1.13.0"
     },
     {
+      "bare_class_name": "TextKitCheckVerificationComponent",
+      "target": "ext:textkit:TextKitCheckVerificationComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "TextKitListMessagesComponent",
+      "target": "ext:textkit:TextKitListMessagesComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "TextKitSendMessageComponent",
+      "target": "ext:textkit:TextKitSendMessageComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "TextKitSendVerificationComponent",
+      "target": "ext:textkit:TextKitSendVerificationComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
       "bare_class_name": "GmailSendComponent",
       "target": "ext:google:GmailSendComponent@official",
       "added_in": "1.13.0"
