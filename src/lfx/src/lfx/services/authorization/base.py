@@ -164,6 +164,7 @@ class AuthorizationMutationKind(str, Enum):
     TEAM_MEMBER_REMOVED = "team_member.removed"
     API_KEY_CREATED = "api_key.created"  # pragma: allowlist secret
     API_KEY_DELETED = "api_key.deleted"  # pragma: allowlist secret
+    API_KEY_PERMISSIONS_UPDATED = "api_key.permissions_updated"  # pragma: allowlist secret
 
 
 class DirectoryMembershipClaimState(str, Enum):
@@ -315,6 +316,8 @@ class ResourceVisibilityScope:
     excluded_global_project_ids: tuple[UUID, ...] = ()
     exclude_personal_projects: bool = False
     excluded_resource_ids: tuple[UUID, ...] = ()
+    # Each additional scope is a ceiling over both ownership and grants.
+    intersections: tuple[ResourceVisibilityScope, ...] = ()
 
     @property
     def has_cross_user_access(self) -> bool:
@@ -355,6 +358,17 @@ class BaseAuthorizationService(Service, abc.ABC):
     async def supports_api_key_scopes(self) -> bool:
         """Return True when API-key requests should be enforced even for owners."""
         return self.SUPPORTS_API_KEY_SCOPES
+
+    async def validate_api_key_permissions(self, *, session: Any, user_id: UUID, permissions: dict[str, Any]) -> None:
+        """Validate a proposed key ceiling against the owner's selectable resources."""
+        _ = (session, user_id, permissions)
+        msg = "Scoped API keys require a supporting authorization service"
+        raise PermissionError(msg)
+
+    async def get_api_key_permission_options(self, *, user_id: UUID) -> dict[str, Any]:
+        """Return the owner's selectable role templates and permission vocabulary."""
+        _ = user_id
+        return {"supported": False, "roles": [], "resource_actions": {}, "scope_types": {}}
 
     async def supports_incomplete_directory_membership_snapshots(self) -> bool:
         """Return whether this service accepts sanitized incomplete claim states."""
@@ -675,6 +689,7 @@ class BaseAuthorizationService(Service, abc.ABC):
             AuthorizationMutationKind.TEAM_MEMBER_REMOVED,
             AuthorizationMutationKind.API_KEY_CREATED,
             AuthorizationMutationKind.API_KEY_DELETED,
+            AuthorizationMutationKind.API_KEY_PERMISSIONS_UPDATED,
         }
 
         if event.kind is AuthorizationMutationKind.ROLE_CREATED:
