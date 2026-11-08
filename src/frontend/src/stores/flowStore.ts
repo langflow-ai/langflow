@@ -25,6 +25,7 @@ import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import { track, trackFlowBuild } from "@/customization/utils/analytics";
 import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavailable-fields";
 import type { GlobalVariable } from "@/types/global_variables";
+import { nodeWithGroupValues, walkFlowNodes } from "@/utils/grouped-nodes";
 import { clearLoadRefreshes } from "@/utils/load-refreshes";
 import { brokenEdgeMessage } from "@/utils/utils";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
@@ -130,11 +131,16 @@ function retiredComponentMessage(component: ComponentsToUpdateType): string {
     const type = ref.split(".").pop() ?? ref;
     return templates[type]?.display_name ?? type;
   });
-  return `${component.display_name ?? component.id} was retired in ${component.retiredIn} and fails when the flow runs. ${
+  return i18n.t(
     replacements.length > 0
-      ? `Use ${replacements.join(", ")}.`
-      : "No direct replacement."
-  }`;
+      ? "errors.retiredComponentWithReplacement"
+      : "errors.retiredComponentWithoutReplacement",
+    {
+      component: component.display_name ?? component.id,
+      version: component.retiredIn,
+      replacement: replacements.join(", "),
+    },
+  );
 }
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
@@ -186,14 +192,28 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     const templates = useTypesStore.getState().templates;
     const allowCustomComponents =
       useUtilityStore.getState().allowCustomComponents;
-    const connectedFields = connectedFieldsByNode(edges);
-    nodes.forEach((node) => {
+    const fieldsByEdges = new Map<
+      EdgeType[],
+      ReturnType<typeof connectedFieldsByNode>
+    >();
+    for (const context of walkFlowNodes(nodes, edges)) {
+      const node = nodeWithGroupValues(context);
+      let connectedFields: ReturnType<typeof connectedFieldsByNode> | undefined;
+      if (context.edges !== undefined) {
+        connectedFields = fieldsByEdges.get(context.edges);
+        if (!connectedFields) {
+          connectedFields = connectedFieldsByNode(context.edges);
+          fieldsByEdges.set(context.edges, connectedFields);
+        }
+      }
       if (node.type === "genericNode") {
         const codeValidity = checkCodeValidity(
           node.data,
           templates,
           allowCustomComponents,
-          connectedFields.get(node.id) ?? new Set(),
+          connectedFields
+            ? (connectedFields.get(node.id) ?? new Set())
+            : undefined,
         );
         if (
           codeValidity &&
@@ -215,7 +235,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
             replacement: codeValidity.replacement,
           });
       }
-    });
+    }
     set({ componentsToUpdate: outdatedNodes });
   },
   onFlowPage: false,
@@ -1068,7 +1088,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       );
     // A partial build only executes its own subgraph, so only that subgraph can
     // block it. componentsToUpdate stays whole-flow for the update banner.
-    const validatedNodeIds = new Set(nodesToValidate.map((node) => node.id));
+    const validatedNodeIds = new Set(
+      Array.from(walkFlowNodes(nodesToValidate), ({ node }) => node.id),
+    );
     const componentsToPreflight = get().componentsToUpdate.filter((component) =>
       validatedNodeIds.has(component.id),
     );
@@ -1124,16 +1146,20 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         const blockedTitle = allowCustomComponents
           ? "Components disabled by an administrator must be removed before building"
           : "Custom components are blocked while custom components are disabled";
-        const outdatedTitle =
+        const outdatedTitle = i18n.t(
           outdatedComponents.length > 0
-            ? "Outdated components must be updated"
-            : "Retired components must be replaced";
+            ? "errors.outdatedComponents"
+            : "errors.retiredComponents",
+        );
+        const outdatedBuildTitle = i18n.t(
+          outdatedComponents.length > 0
+            ? "errors.outdatedComponentsBeforeBuilding"
+            : "errors.retiredComponentsBeforeBuilding",
+        );
 
         setErrorData({
           title:
-            blockedComponents.length > 0
-              ? blockedTitle
-              : `${outdatedTitle} before building`,
+            blockedComponents.length > 0 ? blockedTitle : outdatedBuildTitle,
           list: errorList,
         });
         get().setIsBuilding(false);

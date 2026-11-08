@@ -97,7 +97,9 @@ def test_clean_source_streams_every_flow_then_the_report(tmp_path):
         "catalog_rules": {"from": "policy_bundle_active", "blocked_component_keys": [], "blocked_template_keys": []},
     }
     assert report["summary"]["flows"] == {"ok": 3, "warn": 0, "fail": 0}
-    assert (report["flows"], report["errors"]) == ([], [])
+    assert len(report["flows"]) == 3
+    assert report["errors"] == []
+    assert all(flow["usage"]["serving"]["history"] == "unavailable" for flow in report["flows"])
 
 
 def test_check_reads_nothing_of_the_server_and_writes_nowhere(tmp_path):
@@ -130,7 +132,7 @@ def test_check_reads_nothing_of_the_server_and_writes_nowhere(tmp_path):
     assert result.returncode == 1, result.stderr
     events = _events(result)
     statuses = {event["flow"]["name"]: event["flow"]["status"] for event in events[:-1]}
-    assert statuses == {"Fixture nested groups": "ok", "Fixture saved component": "ok", "MCP flow": "fail"}
+    assert statuses == {"Fixture nested groups": "ok", "Fixture saved component": "ok", "MCP flow": "warn"}
     report = events[-1]["report"]
     assert json.loads(output.read_text()) == report
     # Every flow with a node to update is listed, ok ones too, and its nodes say what the update does.
@@ -141,7 +143,9 @@ def test_check_reads_nothing_of_the_server_and_writes_nowhere(tmp_path):
             ("outdated_safe", "keeps")
         }
     mcp_nodes = [(node["type"], node["status"]) for node in listed["MCP flow"]["nodes"]]
-    assert mcp_nodes == [("MCPTools", "outdated_breaking")]
+    assert mcp_nodes == [("MCPTools", "could_not_verify")]
+    assert report["summary"]["nodes"]["could_not_verify"] == 1
+    assert report["summary"]["flows"] == {"ok": 2, "warn": 1, "fail": 0}
     # Defaults, not the server's variables: custom code allowed, no components path.
     assert {key: value for key, value in report["settings"].items() if key != "catalog_rules"} == _default_settings()
     assert report["target"]["custom_components"] == {"path": [], "count": 0}

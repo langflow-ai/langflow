@@ -2,8 +2,9 @@
 
 `python_test.yml` delegates the complete backend unit suite to
 `backend-unit-tests.yml`. Integration, LFX, bundle and CLI jobs remain separate.
-Both supported Python endpoints run the full unit selection. Python 3.10 also
-collects coverage and publishes the existing Codecov report.
+The supported Python endpoints and experimental Python 3.15 run the full unit
+selection. Python 3.11 also collects coverage and publishes the existing Codecov
+report.
 
 ## Timing baselines
 
@@ -75,9 +76,9 @@ Dispatch `Store pytest durations` with `shards`, `workers` and `distribution`:
 
 ```bash
 gh workflow run store_pytest_durations.yml --ref YOUR_BRANCH \
-  -f python-versions='["3.10"]' -f shards=5 -f workers=2 -f distribution=load
+  -f python-versions='["3.11"]' -f shards=5 -f workers=2 -f distribution=load
 gh workflow run store_pytest_durations.yml --ref YOUR_BRANCH \
-  -f python-versions='["3.10"]' -f shards=5 -f workers=4 -f distribution=worksteal
+  -f python-versions='["3.11"]' -f shards=5 -f workers=4 -f distribution=worksteal
 ```
 
 Compare elapsed time, summed phase time, total runner minutes, memory pressure,

@@ -32,7 +32,7 @@ env:
   # Define the directory where Playwright browsers will be installed.
   # This path is used for caching across workflows
   PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/ms-playwright
-  PLAYWRIGHT_VERSION: "1.60.0"
+  PLAYWRIGHT_VERSION: "1.64.1"
 
 jobs:
   resolve-ref:

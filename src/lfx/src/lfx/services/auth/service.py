@@ -136,6 +136,7 @@ class AuthService(BaseAuthService):
         query_param: str | None,
         header_param: str | None,
         db: Any,
+        external_token: str | None = None,
     ) -> Any:
         raise NotImplementedError("get_current_user_mcp not implemented")
 

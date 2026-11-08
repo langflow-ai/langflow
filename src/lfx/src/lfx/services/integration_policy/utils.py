@@ -149,6 +149,25 @@ def integration_capabilities_for_component_class(class_name: str) -> dict[str, t
     }
 
 
+def require_headless_integration_support(provider_id: str, capability_ids: Iterable[str]) -> None:
+    """Reject explicitly unsupported actions before suggesting credential setup."""
+    from lfx.extension.bundle_registry import get_default_registry
+    from lfx.integrations.errors import IntegrationContextUnsupportedError
+
+    selected = set(capability_ids)
+    if not selected:
+        return
+    for integration in get_default_registry().list_integrations():
+        if integration.provider_id != provider_id:
+            continue
+        manifest = integration.capability_manifest
+        if any(
+            capability.id in selected and "headless" not in capability.deployment_contexts
+            for capability in manifest.capabilities
+        ):
+            raise IntegrationContextUnsupportedError(provider=provider_id, display_name=manifest.display_name)
+
+
 def integration_policy_identity_for_component_class(class_name: str) -> tuple[str, tuple[str, ...]] | None:
     """Return ``(provider_id, policy_keys)`` for the class a capability names.
 

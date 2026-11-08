@@ -119,6 +119,7 @@ def test_connection_status_vocabularies_are_frozen() -> None:
         "oauth-denied",
         "oauth-expired",
         "oauth-failed",
+        "oauth-refresh-token-missing",
     }
     assert {member.value for member in ConnectionHealth} == {"unknown", "healthy", "unhealthy"}
     assert {member.value for member in ConnectionOwnershipMode} == {"user", "instance"}

@@ -41,6 +41,10 @@ jest.mock("@/controllers/API/queries/connections", () => ({
     mutateAsync: mockCreate,
     isPending: false,
   }),
+  useRenewConnectionTokenMutation: () => ({
+    mutateAsync: jest.fn(),
+    isPending: false,
+  }),
   useStartOAuthMutation: () => ({
     mutateAsync: jest
       .fn()

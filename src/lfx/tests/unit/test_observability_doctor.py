@@ -246,11 +246,12 @@ def test_every_failure_names_the_endpoint_and_protocol(monkeypatch):
 def test_an_unbuildable_exporter_is_reported_with_its_route(monkeypatch):
     """The other failure branch: the exporter cannot even be constructed.
 
-    A malformed OTEL_EXPORTER_OTLP_TIMEOUT is a plausible operator typo and raises inside the
-    constructor, before any probe payload exists. That path must name the endpoint, the
-    protocol and the underlying error rather than reporting a bare exception.
+    The gRPC exporters reject a malformed timeout during construction. HTTP exporters now
+    warn and use their default timeout instead. The failure must name the endpoint, protocol
+    and underlying error before any probe payload exists.
     """
     monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:4318")
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "grpc")
     monkeypatch.setenv("OTEL_EXPORTER_OTLP_TIMEOUT", "abc")
 
     report = run_doctor()
@@ -405,12 +406,7 @@ class _RedirectingStub:
 @requires_otel
 @pytest.mark.usefixtures("clean_otel_env")
 def test_a_redirected_export_is_not_reported_as_delivered(monkeypatch):
-    """A 302 turns the POST into a GET and drops the payload, but the exporter still says SUCCESS.
-
-    An auth proxy or an ingress redirect rule in front of the collector produces exactly this:
-    the body never arrives, the login page answers 200, and the exporter reports success because
-    it only looks at the status code. Reporting OK here sends the operator away from the problem.
-    """
+    """A redirect must fail even when the exporter reports success."""
     with _RedirectingStub() as stub:
         monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", stub.endpoint)
         report = run_doctor(timeout=5)
@@ -419,7 +415,21 @@ def test_a_redirected_export_is_not_reported_as_delivered(monkeypatch):
         for signal in report.signals:
             assert signal.status == FAILED, signal.detail
             assert "redirected" in signal.detail, signal.detail
-        # The payload really was thrown away: each POST became a GET of the login page.
+        assert {f"POST {path}" for path in OTLP_PATHS}.issubset(stub.saw)
+
+
+@requires_otel
+def test_a_followed_redirect_is_not_reported_as_delivered():
+    """Keep detecting payload loss when a requests transport follows a redirect."""
+    from lfx.observability_doctor import _delivery_problem, _recording_session
+
+    with _RedirectingStub() as stub, _recording_session() as session:
+        session.post(f"{stub.endpoint}/v1/traces", data=b"probe", timeout=5)
+
+        problem = _delivery_problem(session, "traces")
+
+        assert problem is not None
+        assert "redirected (302)" in problem
         assert "GET /login" in stub.saw
 
 

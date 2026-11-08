@@ -48,10 +48,12 @@ from langflow.upgrade_check.isolation import is_local_metadata_probe
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Mapping
 
+    from lfx.custom.schema import ComponentUpdateWarning
     from lfx.extension.migration.schema import MigrationTable
     from lfx.upgrade.checker import NodeStatus
 
     from langflow.upgrade_check.reader import SourceDatabase, SourceFlow
+    from langflow.upgrade_check.usage import FlowUsage
 
 DRY_RUN_SECONDS = 30.0
 REGISTRY_SECONDS = 30.0
@@ -226,9 +228,12 @@ class FlowResult:
     used_by: dict[str, list[str]] | None = None
     # Set when the saved data could not be read; the flow then has no nodes.
     error: str | None = None
+    usage: FlowUsage | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        result = asdict(self)
+        result["usage"] = self.usage.model_dump(mode="json") if self.usage else None
+        return result
 
 
 def check_source(source: SourceDatabase, target: Target) -> Iterator[FlowResult]:
@@ -368,13 +373,43 @@ def _node_result(
         result.reasons = [_reason("customized", None, "the saved code was edited")]
     elif status.status != "ok":
         rebuilt, failure = _dry_run(entry, node_info, user_id)
-        if failure is not None:
+        unverified = [warning for warning in rebuilt.warnings if warning.get("unverified", False)] if rebuilt else []
+        if rebuilt is not None and unverified:
+            reasons = [asdict(reason) for reason in breaking_reasons(rebuilt.node, node_info, connected_fields)]
+            unresolved = {
+                name for warning in unverified if warning.get("inputs_unverified", False) for name in warning["fields"]
+            }
+            outputs_unverified = any(warning.get("outputs_unverified", False) for warning in unverified)
+            outputs = {output.get("name") for output in rebuilt.node.get("outputs", [])}
+            # Run Flow joins node IDs and discovered output names with "~". MCP Tools outputs stay fixed.
+            reasons = [
+                reason
+                for reason in reasons
+                if not (
+                    (reason["code"] == "field_removed" and reason["field"] in unresolved)
+                    or (
+                        reason["code"] == "output_changed"
+                        and outputs_unverified
+                        and status.component_type == "RunFlow"
+                        and isinstance(reason["field"], str)
+                        and "~" in reason["field"]
+                        and reason["field"] not in outputs
+                    )
+                )
+            ]
+            result.status = "outdated_breaking" if reasons else "could_not_verify"
+            result.reasons = [
+                *reasons,
+                failure or _reason("could_not_verify", None, "the update could not verify the generated fields"),
+            ]
+            result.dry_run = {"result": "could_not_verify"}
+        elif failure is not None:
             # The rule's own verdict stands, and the node says why the dry run could not decide.
             reasons = [asdict(reason) for reason in breaking_reasons(entry, node_info, connected_fields)]
             result.reasons = [*reasons, failure]
             result.dry_run = {"result": failure["code"]}
         else:
-            reasons = [asdict(reason) for reason in breaking_reasons(rebuilt, node_info, connected_fields)]
+            reasons = [asdict(reason) for reason in breaking_reasons(rebuilt.node, node_info, connected_fields)]
             result.status = "outdated_breaking" if reasons else "outdated_safe"
             result.reasons = reasons
             result.dry_run = {"result": "loses" if reasons else "keeps"}
@@ -420,7 +455,15 @@ def _runs(node: dict, target: Target, *, is_superuser: bool) -> tuple[str, dict 
     return "server_code", None
 
 
-def _dry_run(entry: Mapping[str, Any], saved_node: dict, user_id: str | None) -> tuple[dict | None, dict | None]:
+@dataclass
+class _RebuildOutcome:
+    node: dict
+    warnings: list[ComponentUpdateWarning]
+
+
+def _dry_run(
+    entry: Mapping[str, Any], saved_node: dict, user_id: str | None
+) -> tuple[_RebuildOutcome | None, dict | None]:
     """Return the node the editor's Update makes from ``saved_node`` with ``entry``'s code, or why there is none.
 
     The update runs in its own thread and event loop, so a time limit can stop waiting for it. A
@@ -439,9 +482,11 @@ def _dry_run(entry: Mapping[str, Any], saved_node: dict, user_id: str | None) ->
     thread.start()
     thread.join(DRY_RUN_SECONDS)
     if _refused_calls:
+        # Completed partial rebuilds identify unverified fields through warnings filtered above.
+        # A timeout has no completed outcome or warnings to identify which fields are missing.
         refused = _refused_calls[0]
         operation = "a network call" if refused.startswith("socket.") else "a child process launch"
-        return None, _reason(
+        return outcome.get("node"), _reason(
             "could_not_verify",
             None,
             f"the update makes {operation}: {refused}",
@@ -460,7 +505,7 @@ class _BuildError(Exception):
     """This release's code for the node does not build."""
 
 
-async def _update(entry: Mapping[str, Any], saved_node: dict, user_id: str | None) -> dict:
+async def _update(entry: Mapping[str, Any], saved_node: dict, user_id: str | None) -> _RebuildOutcome:
     """What the editor's Update runs on the server, without the route's policy checks."""
     # The event loop already exists, so its own sockets (a local pair on Windows) are not refused.
     _dry_run_threads.add(threading.get_ident())
@@ -475,7 +520,9 @@ async def _update(entry: Mapping[str, Any], saved_node: dict, user_id: str | Non
             )
         except Exception as exc:
             raise _BuildError from exc
-        return await update_rebuilt_node(instance, built, saved_node)
+        warnings: list[ComponentUpdateWarning] = []
+        node = await update_rebuilt_node(instance, built, saved_node, warnings=warnings)
+        return _RebuildOutcome(node, warnings)
     finally:
         _dry_run_threads.discard(threading.get_ident())
 

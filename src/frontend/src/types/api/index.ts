@@ -35,6 +35,16 @@ export type CustomFieldsType = {
 export type CustomComponentRequest = {
   data: APIClassType;
   type: string;
+  warnings?: ComponentUpdateWarning[];
+};
+
+export type ComponentUpdateWarning = {
+  code: "generated_fields_not_restored";
+  fields: string[];
+  refresh_fields: string[];
+  unverified?: boolean;
+  inputs_unverified?: boolean;
+  outputs_unverified?: boolean;
 };
 
 export type APIClassType = {

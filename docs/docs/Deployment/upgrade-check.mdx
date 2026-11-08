@@ -20,15 +20,15 @@ Starter projects are skipped, because Langflow recreates them at startup.
 
 For each node, the command reports the following:
 
-- The node's status, with the same rule as [`lfx upgrade`](/lfx-compatibility#check-and-upgrade-flows-with-lfx-upgrade): `ok`, `outdated_safe`, `outdated_breaking`, `retired`, `customized`, or `blocked`.
-- For an outdated node, the result of a dry run of the visual editor's **Update**. The node is rebuilt from the new release's code with its saved values, and nothing is saved. A completed dry run is breaking when it drops a connection, a value, a field, or an output. When that update cannot be verified, the static compatibility status remains and the dry-run result explains the uncertainty.
+- The node's status uses the same rule as [`lfx upgrade`](/lfx-compatibility#check-and-upgrade-flows-with-lfx-upgrade), with `ok`, `outdated_safe`, `outdated_breaking`, `retired`, `customized`, or `blocked`. The checker also reports `could_not_verify` when an outdated node's generated fields cannot be verified and no independent breaking change is confirmed.
+- For an outdated node, the result of a dry run of the visual editor's **Update**. The node is rebuilt from the new release's code with its saved values, and nothing is saved. A completed dry run is breaking when it drops a connection, a value, a field, or an output. An incomplete update records uncertainty, and any independent breaking finding still takes precedence.
 - What the upgraded server runs for the node under the settings you pass: its saved code (`saved_code`), the server's own code (`server_code`), or nothing (`refused`). The catalog rules saved in the database apply too.
 
 Update replays saved, nonempty refresh selectors that the current component still declares, including selectors on components other than Run Flow or MCP. Those existing hooks can use their configured services and add latency in the editor. The isolated checker refuses external discovery and records incomplete refresh warnings rather than treating partial discovery as verified.
 
 The command doesn't do the following:
 
-- It doesn't run flows. The Python audit guard described below applies during target component discovery and dry runs. During discovery, a refused operation or a wait over 30 seconds stops the check with exit 2, preventing a report against an incomplete registry. During a node's dry run, a refused or incomplete update records `could_not_verify` as its dry-run result and reason, and the check continues. The node retains its static compatibility status, which can still be `outdated_breaking`; `could_not_verify` is not a node status.
+- It doesn't run flows. The Python audit guard described below applies during target component discovery and dry runs. During discovery, a refused operation or a wait over 30 seconds stops the check with exit 2, preventing a report against an incomplete registry. During a node's dry run, a refused or incomplete update records `could_not_verify` as its dry-run result and reason, and the check continues. This does not automatically replace the node's compatibility status, which can remain `outdated_safe` or `outdated_breaking`. Inspect dry-run results and reasons as well as node statuses when finding these warnings.
 - It doesn't migrate the database schema or update any flow.
 - It doesn't check files, knowledge bases, credentials, or variables. To check those, see [Migrate to a new Langflow instance](/instance-migration).
 
@@ -208,7 +208,7 @@ fi
 A flow's status is the worst of its nodes:
 
 - `fail`: a node is `outdated_breaking`, `retired`, or `blocked`, the upgraded server refuses to run a node, or a customized node's edits will not run because the server runs its own code instead.
-- `warn`: a node is `customized` and its edits still run, a dry run has a `could_not_verify` reason, or the new release's code for a node doesn't build. A flow whose saved data can't be read also warns. An existing failing static status still takes precedence.
+- `warn`: a node is `customized` and its edits still run, a dry run has a `could_not_verify` reason, or the new release's code for a node doesn't build. A flow whose saved data can't be read also warns. An independently confirmed failing finding still takes precedence.
 - `ok`: nothing needs action.
 
 Without `--json`, the command prints the number of flows with each status, then each failing or warning flow with the nodes and reasons behind its status.
@@ -225,7 +225,7 @@ If the check can't finish, the last line is `{"event": "error", "code": "...", "
 - `target`: the Langflow and LFX versions, the hash of the component index, the installed bundles, and the custom components folders and how many components they hold.
 - `settings`: every setting the check used, and the catalog rules it applied.
 - `summary`: the number of flows by status, and the number of nodes by status.
-- `flows`: every flow with a node that needs a look (`outdated_safe` included) or an unreadable row. Each flow has its owner, project, last edit, and those nodes. A flow whose nodes are all `ok` isn't listed. Each node lists its `status`, what it `runs`, its `reasons`, and its `dry_run` result: `keeps`, `loses`, `could_not_verify`, or `build_failed`.
+- `flows`: every checked flow, saved component, and running flow version, including healthy rows. Each row has its owner, project, last edit, separate Editor and Serving usage, and nodes that need review. Each node lists its `status`, what it `runs`, its `reasons`, and its `dry_run` result of `keeps`, `loses`, `could_not_verify`, or `build_failed`.
 - `errors`: saved rows that couldn't be read, and catalog rules that couldn't be read, which stop the upgraded server from starting.
 
 The source identity contains a `kind`, a structured `locator`, and a `sha256` fingerprint of that locator.
@@ -237,15 +237,38 @@ Changing only credentials does not change the identity when the endpoint and sel
 The identity's shape and fingerprint are validated together.
 This identifies the selected locator. It does not authenticate an installation or prove that its data stayed unchanged.
 
-The output file must be separate from the SQLite source database and its WAL, shared-memory, and journal files.
+The output file must be separate from either SQLite source database and its WAL, shared-memory, and journal files.
 The command refuses paths, symlinks, and hard links that alias those files before checking any flows.
 It replaces a report file atomically rather than truncating an inode through a hard link.
+
+## Flow usage and retained history
+
+The JSON report includes every checked flow, including healthy flows. Each flow carries separate Editor and Serving usage. The text summary still lists flows that need review.
+
+Usage comes from the existing job table. Only workflow jobs with execution evidence count as runs. The supported execution states are `in_progress`, `completed`, `failed`, `timed_out`, and `suspended`. A suspended graph already executed before it paused for human input. Errors count failed and timed-out jobs. Queued jobs do not count. Canceled jobs cannot establish whether execution started, so they are excluded and flagged. Ingestion, evaluation, and unclassified job types are excluded.
+
+The last run uses the newest creation time among jobs with execution evidence. This timestamp marks job creation because older schemas do not retain a separate execution-start timestamp. Stored timestamp components are validated before UTC normalization. SQLite and PostgreSQL timestamps retain microsecond precision. Retained coverage shows the oldest and newest workflow job creation times observed, including queued and canceled records.
+
+Zero retained executions does not establish that a flow never ran. Job retention can remove records, and executions without job records are outside this evidence. The report keeps `coverage.complete` false and leaves the retention policy unknown because it does not load the source server's settings. Missing tables, missing required columns, and unavailable databases produce explicit unknown values and limitation codes. They do not become zero counts or compatibility failures.
+
+To read Serving usage, pass its existing database through a read-only account. This adapter requires the preserved Editor flow ID in `job.flow_id`. It needs no new route on the older Serving release.
+
+```bash
+langflow upgrade-check \
+  --database-url "postgresql://langflow_check:CHANGE_ME@editor-db.example.com:5432/langflow" \
+  --serving-database-url "postgresql://langflow_check:CHANGE_ME@serving-db.example.com:5432/langflow" \
+  --output upgrade-check.json
+```
+
+Editor and Serving counts stay separate. A missing Serving configuration or missing preserved Editor ID is visible in the report. Saved flow versions reuse their owning flow's usage with a limitation that the counts are not version-specific. Saved components have no execution history.
+
+Both databases are read before any component dry run begins. Read transactions end before component checks. The report binds each available usage source to its credential-free database identity and never contains its connection URL. A scan across multiple short reads is not one database snapshot.
 
 ## Limits
 
 - The command reads flows in pages, each page in its own short transaction, so a long check never blocks the database. The report isn't one snapshot: a flow saved while the check runs is read as it is when its page comes.
 - Each flow is judged as its owner runs it. A shared flow that another user runs can get a different result, such as with `--custom-component-admin-only`, which treats admins and other users differently.
-- An outdated **Run Flow** node with fields for the selected flow's inputs, or an outdated **MCP Tools** node with fields for the selected tool's arguments, reports as `outdated_breaking`. The editor's **Update** drops those generated fields and their connections. After you update such a node, select the flow or tool again, reconnect its inputs, and check the values of its fields.
+- The editor's **Update** regenerates **Run Flow** inputs and outputs from the selected flow, and **MCP Tools** arguments from the selected tool, carrying over saved values and compatible connections. The checker does not start the server's database services or permit network discovery. When it cannot verify those generated fields, it reports `could_not_verify` and the flow warns. A confirmed removed field, changed static input or output, or runtime refusal still makes the flow fail. Review the generated fields in the editor with the selected flow or tool available before upgrading.
 - A custom component whose update code calls the network reports as `could_not_verify`.
 
 ## See also
