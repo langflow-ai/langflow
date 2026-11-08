@@ -20,10 +20,32 @@ jest.mock("@/CustomNodes/helpers/check-code-validity", () => ({
   checkCodeValidity: jest.fn(),
 }));
 
-jest.mock("../../i18n", () => ({
-  __esModule: true,
-  default: { t: jest.fn((key: string) => key) },
-}));
+jest.mock("../../i18n", () => {
+  const i18n = jest
+    .requireActual<{
+      createInstance: () => import("react-i18next").I18nextProviderProps["i18n"];
+    }>("i18next")
+    .createInstance();
+  void i18n.init({
+    lng: "en",
+    fallbackLng: "en",
+    initImmediate: false,
+    resources: {
+      en: { translation: jest.requireActual("../../locales/en.json") },
+      fr: { translation: jest.requireActual("../../locales/fr.json") },
+    },
+    interpolation: { escapeValue: false },
+  });
+  return {
+    __esModule: true,
+    default: {
+      t: jest.fn((key: string, options?: Record<string, unknown>) =>
+        /^errors\.(retired|outdated)/.test(key) ? i18n.t(key, options) : key,
+      ),
+      changeLanguage: i18n.changeLanguage.bind(i18n),
+    },
+  };
+});
 
 jest.mock("@/customization/feature-flags", () => ({
   ENABLE_DATASTAX_LANGFLOW: false,
@@ -155,6 +177,8 @@ import { applyEdgeChanges } from "@xyflow/react";
 import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
 import type { LogsLogType, VertexBuildTypeAPI } from "@/types/api";
 import type { AllNodeType, EdgeType } from "@/types/flow";
+import i18n from "../../i18n";
+import fr from "../../locales/fr.json";
 import { scapedJSONStringfy } from "../../utils/reactflowUtils";
 import useAlertStore from "../alertStore";
 import useAuthStore from "../authStore";
@@ -249,6 +273,7 @@ describe("useFlowStore", () => {
   beforeEach(() => {
     // Clear all mocks
     jest.clearAllMocks();
+    void i18n.changeLanguage("en");
     queryClient.clear();
     mockGlobalVariablesEntries = undefined;
     mockUnavailableFields = undefined;
@@ -1114,6 +1139,96 @@ describe("useFlowStore", () => {
       );
     });
 
+    it.each(["structured", "escaped", "legacy"])(
+      "reports breaking nodes inside nested groups through %s proxy handles",
+      (handleFormat) => {
+        const leaf = {
+          ...updatedNode,
+          id: "parser-1",
+          data: {
+            ...updatedNode.data,
+            id: "parser-1",
+            type: "Parser",
+            node: {
+              ...updatedNode.data.node,
+              outputs: [],
+              template: {
+                code: { ...updatedCodeField, value: "old_code" },
+                input: {
+                  type: "other",
+                  input_types: ["Message", "Data"],
+                  show: true,
+                },
+              },
+            },
+          },
+        } as AllNodeType;
+        const group = (id: string, child: AllNodeType, field: string) =>
+          ({
+            id,
+            type: "genericNode",
+            position: { x: 0, y: 0 },
+            data: {
+              id,
+              type: "GroupNode",
+              node: {
+                template: {
+                  input: { proxy: { id: child.id, field } },
+                },
+                flow: { data: { nodes: [child], edges: [] } },
+              },
+            },
+          }) as unknown as AllNodeType;
+        const outer = group("outer", group("inner", leaf, "input"), "input");
+        const handle = {
+          id: "outer",
+          fieldName: "input",
+          type: "other",
+          proxy: { id: "inner", field: "input" },
+        };
+        const edge = {
+          id: "incoming",
+          source: "source",
+          target: "outer",
+          targetHandle:
+            handleFormat === "legacy"
+              ? "other|input|outer"
+              : scapedJSONStringfy(handle),
+          ...(handleFormat === "structured"
+            ? { data: { targetHandle: handle } }
+            : {}),
+        } as EdgeType;
+        mockTemplates = {
+          Parser: {
+            outputs: [],
+            template: {
+              code: updatedCodeField,
+              input: {
+                type: "other",
+                input_types: ["Message"],
+                show: true,
+              },
+            },
+          },
+        };
+        (checkCodeValidity as jest.Mock).mockImplementation(
+          jest.requireActual("@/CustomNodes/helpers/check-code-validity")
+            .checkCodeValidity,
+        );
+
+        useFlowStore.getState().updateComponentsToUpdate([outer], [edge]);
+
+        expect(useFlowStore.getState().componentsToUpdate).toEqual([
+          expect.objectContaining({ id: "parser-1", breakingChange: true }),
+        ]);
+
+        useFlowStore.getState().updateComponentsToUpdate([outer], []);
+        expect(useFlowStore.getState().componentsToUpdate).toEqual([
+          expect.objectContaining({ id: "parser-1", breakingChange: false }),
+        ]);
+      },
+    );
+
     it("recomputeComponentsToUpdateIfNeeded should skip recalculation when there are no nodes", () => {
       act(() => {
         useFlowStore.setState({
@@ -1835,6 +1950,44 @@ describe("useFlowStore", () => {
       },
     );
 
+    it.each([true, false])(
+      "translates the retirement alert with replacement available %s",
+      async (hasReplacement) => {
+        await i18n.changeLanguage("fr");
+        mockTemplates = {
+          ...retiredChromaTemplates,
+          Chroma: {
+            ...retiredChromaTemplates.Chroma,
+            replacement: hasReplacement
+              ? retiredChromaTemplates.Chroma.replacement
+              : [],
+          },
+        };
+        (checkCodeValidity as jest.Mock).mockImplementationOnce(
+          realCheckCodeValidity,
+        );
+        useFlowStore.setState({ nodes: [chromaNode("NEW")] });
+
+        await expect(useFlowStore.getState().buildFlow({})).rejects.toThrow(
+          fr["errors.retiredComponents"],
+        );
+
+        const message = hasReplacement
+          ? fr["errors.retiredComponentWithReplacement"]
+          : fr["errors.retiredComponentWithoutReplacement"];
+        expect(mockSetErrorData).toHaveBeenCalledWith({
+          title: fr["errors.retiredComponentsBeforeBuilding"],
+          list: [
+            message
+              .replace("{{component}}", "Chroma DB")
+              .replace("{{version}}", "1.13.0")
+              .replace("{{replacement}}", "Knowledge"),
+          ],
+        });
+        expect(mockedRunFlow).not.toHaveBeenCalled();
+      },
+    );
+
     it("names a retired component in the missing-fields alert", async () => {
       mockTemplates = retiredChromaTemplates;
       (checkCodeValidity as jest.Mock).mockImplementationOnce(
@@ -1947,6 +2100,43 @@ describe("useFlowStore", () => {
           expect.objectContaining({ id: "node-blocked", blocked: true }),
         ]);
       });
+
+      it.each([true, false])(
+        "checks blocked children only when their group is in the build (included=%s)",
+        async (included) => {
+          const group = {
+            id: "group",
+            type: "genericNode",
+            position: { x: 0, y: 0 },
+            data: {
+              id: "group",
+              type: "GroupNode",
+              node: {
+                template: {},
+                flow: { data: { nodes: [blockedNode], edges: [] } },
+              },
+            },
+          } as unknown as AllNodeType;
+          useFlowStore.setState({
+            nodes: [group, healthyNode],
+            edges: [{ ...edgeBlockedToHealthy, source: "group" }],
+          });
+
+          const build = useFlowStore
+            .getState()
+            .buildFlow({ startNodeId: included ? "group" : "node-healthy" });
+
+          if (included) {
+            await expect(build).rejects.toThrow(
+              "Components disabled by an administrator must be removed before building",
+            );
+            expect(mockedRunFlow).not.toHaveBeenCalled();
+          } else {
+            await build;
+            expect(mockedRunFlow).toHaveBeenCalled();
+          }
+        },
+      );
 
       it("runs an upstream build that stops before the blocked component", async () => {
         useFlowStore.setState({

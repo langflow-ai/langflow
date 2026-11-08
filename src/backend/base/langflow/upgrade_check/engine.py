@@ -53,6 +53,7 @@ if TYPE_CHECKING:
     from lfx.upgrade.checker import NodeStatus
 
     from langflow.upgrade_check.reader import SourceDatabase, SourceFlow
+    from langflow.upgrade_check.usage import FlowUsage
 
 DRY_RUN_SECONDS = 30.0
 REGISTRY_SECONDS = 30.0
@@ -227,9 +228,12 @@ class FlowResult:
     used_by: dict[str, list[str]] | None = None
     # Set when the saved data could not be read; the flow then has no nodes.
     error: str | None = None
+    usage: FlowUsage | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        result = asdict(self)
+        result["usage"] = self.usage.model_dump(mode="json") if self.usage else None
+        return result
 
 
 def check_source(source: SourceDatabase, target: Target) -> Iterator[FlowResult]:

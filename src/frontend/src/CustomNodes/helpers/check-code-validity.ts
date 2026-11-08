@@ -7,6 +7,7 @@ import type {
   APITemplateType,
   OutputFieldType,
 } from "@/types/api";
+import { canMigrateChatOutputInput } from "@/utils/chat-output-migration";
 import type { EdgeType, NodeDataType } from "../../types/flow";
 
 export type CodeValidityType = {
@@ -128,6 +129,7 @@ const codeHasBreakingChange = (
   userTemplate: APITemplateType | undefined,
   customFields: Set<string>,
   connectedFields: ReadonlySet<string> | undefined,
+  component: unknown,
 ): boolean => {
   // Without saved outputs nothing tells which outputs had edges, so assume they all did.
   if (!userOutputs && originalOutputs.length > 0) return true;
@@ -162,6 +164,7 @@ const codeHasBreakingChange = (
       userTemplate,
       connectedFields,
       inToolMode,
+      component,
     )
   ) {
     return true;
@@ -247,6 +250,7 @@ export const checkCodeValidity = (
         userTemplate,
         customFieldNames(data),
         connectedFields,
+        templates[data.type],
       )
     : false;
 
@@ -300,7 +304,8 @@ const holdsValue = (value: unknown): boolean =>
 // means the connections are unknown, so every field counts as connected.
 // - A changed field type is breaking when an edge goes into the field, because cleanEdges keeps
 //   an edge only when the handle's field type is equal. It is also breaking when the saved field
-//   holds a value, because the update copies a saved value only when the field type is equal.
+//   holds a value, because the update copies a saved value only when the field type is equal,
+//   except for the explicit ChatOutput string-to-handle migration.
 // - Every type a connected field accepted must still be accepted (aliases applied). Narrowing
 //   drops the saved edges, and an emptied input_types list means the field takes no connections
 //   at all. Widening is safe.
@@ -311,6 +316,7 @@ const sharedFieldsCompatible = (
   userTemplate: APITemplateType,
   connectedFields: ReadonlySet<string> | undefined,
   inToolMode: boolean,
+  component: unknown,
 ): boolean => {
   for (const key of Object.keys(userTemplate)) {
     if (!isStructuralTemplateKey(key) || !Object.hasOwn(originalTemplate, key))
@@ -327,7 +333,8 @@ const sharedFieldsCompatible = (
     const connected = !connectedFields || connectedFields.has(key);
     if (
       origField.type !== userField.type &&
-      (connected || holdsValue(userField.value))
+      (connected || holdsValue(userField.value)) &&
+      !canMigrateChatOutputInput(component, key, origField, userField)
     )
       return false;
     if (!connected) continue;

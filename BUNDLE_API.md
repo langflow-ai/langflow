@@ -224,6 +224,19 @@ the deserialize half is covered by
 
 ## Changelog
 
+- **Headless integration context checks (2026-10-28).** `Component` checks the
+  selected capability's declared deployment contexts before resolving a
+  connection or running an integration action. Unsupported headless actions
+  raise `IntegrationContextUnsupportedError` with the existing
+  `action-unsupported` code instead of suggesting credential setup. Supported
+  contexts and public signatures are unchanged, so `BUNDLE_API_VERSION` remains `1`.
+
+- **Decision model inputs (2026-10-22).** `ModelInput` accepts `model_type="decision"`:
+  such a field never connects other models (`input_types=[]`, no external options), and
+  `value="connect_other_models"` is refused. `FloatInput` gains `preserve_empty`
+  (default `False`); when `True`, a blank value stays `None` instead of becoming `0.0`,
+  and a Boolean is refused. Both are additive and existing defaults are unchanged, so
+  `BUNDLE_API_VERSION` remains `1`.
 - **Restricted-mode build note reads connections (2026-10-26).** When a build fails
   with custom components blocked, `Component.send_error` now passes the vertex's
   incoming connections to the compatibility rule, so its note about a saved

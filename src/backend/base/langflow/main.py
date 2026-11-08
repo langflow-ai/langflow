@@ -30,7 +30,6 @@ from lfx.observability import (
     start_event_loop_lag_monitor,
     stop_event_loop_lag_monitor,
 )
-from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -1033,9 +1032,9 @@ def create_app():
     app.add_middleware(
         ContentSizeLimitMiddleware,
     )
-    if FEATURE_FLAGS.instance_migration:
-        # Registered before CORS, which then wraps it: a browser on another origin can read the refusal.
-        app.add_middleware(MigrationPauseMiddleware)
+    # Database maintenance is independent of the instance migration feature.
+    # CORS wraps the refusal so a browser on another origin can read it.
+    app.add_middleware(MigrationPauseMiddleware)
 
     add_sentry_middleware(app)
 

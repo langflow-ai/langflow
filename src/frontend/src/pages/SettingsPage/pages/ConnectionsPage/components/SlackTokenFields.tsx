@@ -18,12 +18,14 @@ export interface SlackTokenFieldsProps {
 }
 
 export interface ConnectionMethodSelectProps {
+  providerName: string;
   method: ConnectionMethod;
   onMethodChange: (method: ConnectionMethod) => void;
 }
 
 /** Sign in through the provider, or paste a token. */
 export function ConnectionMethodSelect({
+  providerName,
   method,
   onMethodChange,
 }: ConnectionMethodSelectProps) {
@@ -40,7 +42,9 @@ export function ConnectionMethodSelect({
         }
         data-testid="connection-method"
       >
-        <option value="oauth">{t("connections.add.methodOauth")}</option>
+        <option value="oauth">
+          {t("connections.add.methodOauth", { provider: providerName })}
+        </option>
         <option value="token">{t("connections.add.methodToken")}</option>
       </select>
     </div>

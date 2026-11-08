@@ -1,6 +1,7 @@
 import {
   useInfiniteQuery,
   useMutation,
+  useQueries,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
@@ -15,6 +16,7 @@ import {
   getTriggerIngress,
   listAllTriggers,
   listTriggerEvents,
+  listTriggerSessions,
   listTriggers,
   replayTriggerEvent,
   rotateTriggerSigningSecret,
@@ -25,6 +27,7 @@ import type {
   TriggerBulkAction,
   TriggerBulkRequest,
   TriggerBulkResult,
+  TriggerEventFilterParam,
   TriggerEventRead,
   TriggerIngressRead,
   TriggerListParams,
@@ -67,7 +70,12 @@ export const useTriggersQuery = (
 
 export const useTriggerEventsQuery = (
   triggerId: string | undefined,
-  options?: { limit?: number; enabled?: boolean },
+  options?: {
+    limit?: number;
+    enabled?: boolean;
+    /** Filtered by the server, so older matches page in like any others. */
+    filter?: TriggerEventFilterParam;
+  },
 ) => {
   const interval = useTriggerPollingInterval();
   const limit = Math.min(
@@ -75,11 +83,16 @@ export const useTriggerEventsQuery = (
     Math.max(1, options?.limit ?? TRIGGER_EVENTS_PAGE_SIZE),
   );
   const query = useInfiniteQuery({
-    queryKey: [...triggersKeys.events(triggerId ?? "none"), limit],
+    queryKey: [
+      ...triggersKeys.events(triggerId ?? "none"),
+      limit,
+      options?.filter ?? "all",
+    ],
     queryFn: ({ pageParam }) =>
       listTriggerEvents(triggerId as string, {
         limit: limit + 1,
         offset: pageParam,
+        filter: options?.filter,
       }),
     initialPageParam: 0,
     getNextPageParam: (page, _pages, offset) =>
@@ -103,6 +116,49 @@ export const useTriggerEventsQuery = (
     [query.data, limit],
   );
   return { ...query, data };
+};
+
+/** Session ids a trigger run uses: `trigger:<trigger id>` or `trigger:<trigger id>:<event id>`. */
+export const isTriggerSessionId = (sessionId: string) =>
+  sessionId.startsWith("trigger:");
+
+/** Ids per request: each goes in the query string, so a long list is split. */
+export const TRIGGER_SESSIONS_BATCH_SIZE = 50;
+
+/**
+ * What started each trigger-run session among `sessionIds`, for the
+ * Playground's labels. Sessions are immutable once started, so each batch is
+ * fetched once and kept; loading more sessions only fetches the new batch.
+ */
+export const useTriggerSessionsQuery = (
+  flowId: string | undefined,
+  sessionIds: readonly string[],
+  enabled = true,
+) => {
+  const batches = useMemo(() => {
+    const ids = sessionIds.filter(isTriggerSessionId);
+    return Array.from(
+      { length: Math.ceil(ids.length / TRIGGER_SESSIONS_BATCH_SIZE) },
+      (_, index) =>
+        ids.slice(
+          index * TRIGGER_SESSIONS_BATCH_SIZE,
+          (index + 1) * TRIGGER_SESSIONS_BATCH_SIZE,
+        ),
+    );
+  }, [sessionIds]);
+  return useQueries({
+    queries: batches.map((batch) => ({
+      queryKey: triggersKeys.sessions(flowId ?? "none", batch),
+      queryFn: () => listTriggerSessions(flowId as string, batch),
+      enabled: enabled && Boolean(flowId),
+      staleTime: Number.POSITIVE_INFINITY,
+      retry: 1,
+    })),
+    combine: (results) => ({
+      data: results.flatMap((result) => result.data ?? []),
+      isLoading: results.some((result) => result.isLoading),
+    }),
+  });
 };
 
 export const useTriggerIngressQuery = (

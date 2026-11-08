@@ -82,7 +82,15 @@ def test_private_connection_inputs_cannot_add_provider_credentials(tmp_path):
 
 @pytest.mark.parametrize(
     "configuration",
-    ["environment", "default_passfile", "relative_passfile", "default_service", "relative_service", "url_precedence"],
+    [
+        "environment",
+        "default_passfile",
+        "relative_passfile",
+        "default_service",
+        "relative_service",
+        "url_precedence",
+        "serving_environment",
+    ],
 )
 def test_native_postgres_source_inputs_are_removed_before_callbacks(monkeypatch, tmp_path, configuration):
     raw = os.environ.get("LANGFLOW_TEST_POSTGRES_URL")
@@ -149,6 +157,8 @@ def test_native_postgres_source_inputs_are_removed_before_callbacks(monkeypatch,
         "json": True,
         "output": None,
     }
+    if configuration == "serving_environment":
+        options["serving_database_url"] = options["database_url"]
     selected = resolve_input_paths(options)
     private = selected.pop("_source_connection")
     observed = []
@@ -184,10 +194,19 @@ def test_native_postgres_source_inputs_are_removed_before_callbacks(monkeypatch,
                 "CREATE TABLE flow (id uuid, name text, data json, user_id uuid, folder_id uuid, "
                 "is_component boolean, updated_at timestamptz)"
             )
-            for _ in range(3):
+            flow_ids = [uuid4() for _ in range(3)]
+            for flow_id in flow_ids:
                 connection.exec_driver_sql(
                     "INSERT INTO flow (id, name, data, is_component) VALUES (%s, 'fixture', %s, false)",
-                    (uuid4(), json.dumps({"nodes": [], "edges": []})),
+                    (flow_id, json.dumps({"nodes": [], "edges": []})),
+                )
+            if configuration == "serving_environment":
+                connection.exec_driver_sql(
+                    "CREATE TABLE job (flow_id uuid, type text, status text, "
+                    "created_timestamp timestamptz DEFAULT CURRENT_TIMESTAMP)"
+                )
+                connection.exec_driver_sql(
+                    "INSERT INTO job (flow_id, type, status) VALUES (%s, 'workflow', 'completed')", (flow_ids[0],)
                 )
         monkeypatch.setattr(command, "load_upgrade_registry", discover)
         monkeypatch.setattr(command, "open_source", open_selected)
@@ -196,7 +215,7 @@ def test_native_postgres_source_inputs_are_removed_before_callbacks(monkeypatch,
         sa.event.listen(sa.engine.Engine, "do_connect", on_connect)
         with patch.dict(os.environ, child_environment(str(isolated), os.environ), clear=True):
             report, _ = command.run(selected, source_connection=private)
-        if configuration == "environment":
+        if configuration in {"environment", "serving_environment"}:
             script = (
                 "import os; from langflow.upgrade_check import command; "
                 "command.load_upgrade_registry = lambda **kwargs: {} "
@@ -223,6 +242,10 @@ def test_native_postgres_source_inputs_are_removed_before_callbacks(monkeypatch,
             assert events[-1]["report"]["summary"]["flows"]["ok"] == 3
         assert observed == ["clean"]
         assert report["summary"]["flows"]["ok"] == 3
+        if configuration == "serving_environment":
+            checked = next(flow for flow in report["flows"] if flow["id"] == str(flow_ids[0]))
+            assert checked["usage"]["serving"]["history"] == "retained_records"
+            assert checked["usage"]["serving"]["runs"] == 1
         assert password not in json.dumps(report)
         assert {path: path.read_bytes() for path in paths} == before
     finally:
