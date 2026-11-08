@@ -550,6 +550,8 @@ def _stop_midway(tmp_path, command: str, *args: str, signum: int) -> subprocess.
         source = f"sqlite:///{tmp_path / 'langflow.db'}"
         upgrade_to_head(source)
         args = (*args, "--source", source, "--target", silent)
+    elif command == "upgrade-check":
+        args = (*args, "--database-url", silent)
     else:
         env["LANGFLOW_DATABASE_URL"] = silent
     child = subprocess.Popen(  # noqa: S603 - the interpreter running the tests, fixed arguments
@@ -585,6 +587,7 @@ def _stop_midway(tmp_path, command: str, *args: str, signum: int) -> subprocess.
         ("convert-sqlite-to-postgres", [], signal.SIGINT),
         ("check-integrity", [], signal.SIGTERM),
         ("migration-preflight", [], signal.SIGINT),
+        ("upgrade-check", [], signal.SIGTERM),
     ],
 )
 def test_a_migration_command_stopped_by_a_signal_ends_its_stream_with_an_error(tmp_path, command, args, signum):

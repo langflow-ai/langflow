@@ -63,12 +63,16 @@ class SourceDatabaseError(RuntimeError):
 class SourceUser:
     id: str
     username: str
+    # In admin-only mode the server runs a regular user's flows under stricter rules.
+    is_superuser: bool
 
 
 @dataclass(frozen=True)
 class SourceProject:
     id: str
     name: str
+    # None for the projects Langflow itself owns, such as the starter projects.
+    user_id: str | None
 
 
 @dataclass(frozen=True)
@@ -80,7 +84,8 @@ class SourceFlow:
     data: dict | None
     user_id: str | None
     folder_id: str | None
-    is_component: bool
+    # None when the row left it unset; the server then infers it from ``data``.
+    is_component: bool | None
     updated_at: str | None
     # Set when ``data`` could not be read, so one bad row does not stop the whole check.
     data_error: str | None = None
@@ -142,7 +147,7 @@ class SourceDatabase:
                 name=row.name,
                 user_id=_uuid(row.user_id),
                 folder_id=_uuid(row.folder_id),
-                is_component=bool(row.is_component),
+                is_component=None if row.is_component is None else bool(row.is_component),
                 updated_at=_timestamp(row.updated_at),
                 **_flow_data(row.data),
             )
@@ -244,8 +249,14 @@ def read_connection(connection: sa.Connection) -> SourceDatabase:
         has_deployments={"deployment", "flow_version_deployment_attachment"} <= tables,
         has_policy_bundle={"policy_bundle_active", "policy_bundle_revision"} <= tables,
     )
-    source.users = [SourceUser(_uuid(row.id), row.username) for row in _select(connection, "user", "id", "username")]
-    source.projects = [SourceProject(_uuid(row.id), row.name) for row in _select(connection, "folder", "id", "name")]
+    source.users = [
+        SourceUser(_uuid(row.id), row.username, bool(row.is_superuser))
+        for row in _select(connection, "user", "id", "username", "is_superuser")
+    ]
+    source.projects = [
+        SourceProject(_uuid(row.id), row.name, _uuid(row.user_id))
+        for row in _select(connection, "folder", "id", "name", "user_id")
+    ]
     connection.rollback()
     return source
 
