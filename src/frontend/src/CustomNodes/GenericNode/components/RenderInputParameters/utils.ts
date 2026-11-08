@@ -1,9 +1,11 @@
 import type { Edge } from "@xyflow/react";
 import { LANGFLOW_SUPPORTED_TYPES } from "@/constants/constants";
+import { isConnectionRefField } from "@/utils/connection-ref-gate";
 import { scapedJSONStringfy } from "@/utils/reactflowUtils";
 
 export type DisplayHandleTemplate = {
   type?: string;
+  model_type?: string;
   input_types?: string[];
   refresh_button?: boolean;
   tool_mode?: boolean;
@@ -33,9 +35,16 @@ export const computeDisplayHandle = (
     Array.isArray(optionalHandle) &&
     optionalHandle.length > 0;
 
-  // Always show handle for model inputs
+  // A connection reference is set only through the connection picker; its
+  // value must never come from an edge, so it never gets a handle.
+  if (isConnectionRefField(template)) {
+    return false;
+  }
+
+  // Model inputs always get a handle, except decision models, which take no
+  // connections (the backend sends no input types for them).
   if (isModelInput) {
-    return true;
+    return template.model_type !== "decision";
   }
 
   return !!(

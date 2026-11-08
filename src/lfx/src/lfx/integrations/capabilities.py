@@ -7,6 +7,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, StrictStr, field_validator, model_validator
 
 from lfx.integrations.models import PROVIDER_ID_PATTERN
+from lfx.integrations.policy_constants import INTEGRATION_POLICY_DENY_ALL_PROVIDER_ID
 
 OAuthKind = Literal[
     "oauth2_authorization_code",
@@ -191,6 +192,14 @@ class IntegrationProvider(BaseModel):
     capabilities: tuple[IntegrationCapability, ...]
     docs_url: StrictStr | None = None
 
+    @field_validator("provider_id")
+    @classmethod
+    def _reject_reserved_policy_identity(cls, provider_id: str) -> str:
+        if provider_id == INTEGRATION_POLICY_DENY_ALL_PROVIDER_ID:
+            msg = "The integration deny-all identity is reserved for policy storage"
+            raise ValueError(msg)
+        return provider_id
+
     @model_validator(mode="after")
     def _references_known_profiles(self) -> IntegrationProvider:
         profile_ids = [profile.id for profile in self.auth_profiles]
@@ -268,7 +277,12 @@ class ScopeSet:
         """Compare provider scope aliases without conflating token identities."""
         normalized = scope.strip()
         if provider in {"google", "google_workspace"}:
-            normalized = normalized.removeprefix("https://www.googleapis.com/auth/")
+            normalized = normalized.removeprefix("https://www.googleapis.com/auth/").casefold()
+            # Google returns the userinfo aliases for OpenID Connect identity scopes.
+            if normalized == "userinfo.email":
+                return "email"
+            if normalized == "userinfo.profile":
+                return "profile"
         elif provider == "microsoft":
             normalized = normalized.removeprefix("https://graph.microsoft.com/")
         return normalized.casefold()

@@ -23,6 +23,7 @@ from lfx.io import (
 from lfx.log import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import Table
+from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 from opensearchpy import OpenSearch, helpers
 from opensearchpy.exceptions import OpenSearchException, RequestError
 
@@ -870,6 +871,7 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
             Configured OpenSearch client ready for operations
         """
         logger.debug("[OpenSearchMultimodel] Building OpenSearch client")
+        validate_connector_url_for_ssrf(self.opensearch_url)
         auth_kwargs = self._build_auth_kwargs()
         return OpenSearch(
             hosts=[self.opensearch_url],

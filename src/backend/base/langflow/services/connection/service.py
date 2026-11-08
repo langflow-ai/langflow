@@ -4,17 +4,24 @@ from __future__ import annotations
 
 import contextlib
 import json
+import secrets
+from dataclasses import replace
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID
 
+import httpx
 from lfx.integrations.capabilities import ScopeSet
 from lfx.integrations.errors import (
     AuthExpiredError,
     ConnectionNotAuthorizedError,
     ConnectionUnresolvedError,
     IntegrationError,
+    IntegrationNetworkError,
     IntegrationPolicyBlockedError,
+    InvalidRequestError,
+    ProviderUnavailableError,
+    RateLimitedError,
     ScopeMissingError,
 )
 from lfx.integrations.models import (
@@ -25,11 +32,13 @@ from lfx.integrations.models import (
 )
 from lfx.log.logger import logger
 from lfx.services.connection.base import BaseConnectionResolverService, ConnectionAccessPolicy
+from lfx.utils.ssrf_protection import SSRFProtectionError
 from pydantic import SecretStr
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import and_, col, false, or_, select
 
 from langflow.services.auth import utils as auth_utils
+from langflow.services.auth.context import current_auth_is_restricted_api_key
 from langflow.services.authorization import filter_visible_resources, visible_scope_prefilter
 from langflow.services.authorization.listing import (
     apply_owned_or_visible_scope_prefilter,
@@ -38,10 +47,15 @@ from langflow.services.authorization.listing import (
 from langflow.services.connection.oauth import broker
 from langflow.services.connection.oauth.config import OAuthError, deployment_context
 from langflow.services.connection.oauth.locking import lock_connection
+from langflow.services.connection.policy import provider_has_usable_action
 from langflow.services.connection.slack_credentials import (
+    APP_TOKEN_SCOPE,
+    PROVIDER_SLACK,
+    ManualCredentialError,
+    check_slack_web_token,
     is_app_token_connection,
-    prepare_manual_credential,
     refuse_outside_listener,
+    validate_manual_credential,
 )
 from langflow.services.database.models.connection import (
     Connection,
@@ -55,7 +69,8 @@ from langflow.services.database.models.connection import (
     ExecutingIdentityDescriptor,
     PersistedConnectionStatus,
 )
-from langflow.services.database.models.connection.schemas import ConnectionRevokeRead
+from langflow.services.database.models.connection.oauth import ConnectionOAuth
+from langflow.services.database.models.connection.schemas import ConnectionRevokeRead, ConnectionTokenRenewal
 from langflow.services.deps import get_authorization_service, get_settings_service, session_scope
 
 if TYPE_CHECKING:
@@ -232,6 +247,7 @@ async def enforce_integration_policy_for_provider(
     user_id: UUID | str | None,
     capability_ids: frozenset[str] = frozenset(),
     purpose: str = "use",
+    require_usable_action: bool = False,
 ) -> None:
     """Deny a governed provider or action before any credential work happens.
 
@@ -246,7 +262,7 @@ async def enforce_integration_policy_for_provider(
     )
 
     try:
-        await arequire_integration_actions(
+        policy = await arequire_integration_actions(
             user_id=user_id,
             provider_id=provider_key,
             policy_keys=(),
@@ -255,6 +271,60 @@ async def enforce_integration_policy_for_provider(
         )
     except IntegrationPolicyError as exc:
         raise IntegrationPolicyBlockedError(provider=provider_key, policy_key=exc.policy_key) from exc
+    if require_usable_action and not await provider_has_usable_action(provider_key, policy):
+        raise IntegrationPolicyBlockedError(provider=provider_key)
+
+
+async def _validate_manual_credentials(payload: ConnectionCreate) -> ConnectionCreate:
+    """Apply the same provider validation to creation and token renewal."""
+    payload = await validate_manual_credential(payload, context=deployment_context())
+    if payload.credentials is not None:
+        from langflow.services.triggers.providers.registry import get_provider
+
+        provider = get_provider(payload.provider_key)
+        if provider is not None:
+            if provider.validate_manual_credential is None:
+                msg = "This integration does not support manually entered credentials."
+                raise ManualCredentialError(msg)
+            if provider.manual_token_requires_expiry:
+                expiry = payload.credentials.expires_at
+                if expiry is None or expiry.tzinfo is None or expiry <= _utc_now():
+                    msg = "This integration requires a future token expiration time with a time zone."
+                    raise ManualCredentialError(msg)
+            original = (payload.provider_key, payload.name, payload.ownership_mode, payload.allow_non_interactive)
+            try:
+                payload = await provider.validate_manual_credential(payload, context=deployment_context())
+            except (ManualCredentialError, IntegrationPolicyBlockedError):
+                raise
+            except AuthExpiredError:
+                msg = "The provider rejected this token. Paste a valid token and try again."
+                raise ManualCredentialError(msg) from None
+            except (ConnectionNotAuthorizedError, ScopeMissingError):
+                msg = "The provider denied this token check. Check the token's permissions and account access."
+                raise ManualCredentialError(msg) from None
+            except RateLimitedError:
+                msg = "The provider rate limited this token check. Wait and try again."
+                raise ManualCredentialError(msg) from None
+            except (IntegrationNetworkError, SSRFProtectionError, httpx.RequestError):
+                msg = (
+                    "Langflow could not reach the provider. "
+                    "Check this server's outbound network and DNS settings, then try again."
+                )
+                raise ManualCredentialError(msg) from None
+            except (InvalidRequestError, ValueError):
+                msg = "The provider rejected this connection configuration. Check the setup guide and token settings."
+                raise ManualCredentialError(msg) from None
+            except IntegrationError:
+                msg = "The provider could not check this token. Try again."
+                raise ManualCredentialError(msg) from None
+            if (
+                not isinstance(payload, ConnectionCreate)
+                or (payload.provider_key, payload.name, payload.ownership_mode, payload.allow_non_interactive)
+                != original
+            ):
+                msg = "The integration credential validator changed the connection identity."
+                raise ManualCredentialError(msg)
+    return payload
 
 
 class DatabaseConnectionResolverService(BaseConnectionResolverService):
@@ -273,11 +343,9 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         user: User | UserRead,
         payload: ConnectionCreate,
     ) -> ConnectionRead:
-        # "Enable an integration within the operator ceiling" happens here:
-        # creating a connection for a provider outside the ceiling is refused
-        # before any credential material is encrypted or stored.
-        await enforce_integration_policy_for_provider(payload.provider_key, user_id=user.id)
-        payload = prepare_manual_credential(payload, context=deployment_context())
+        # Require an available action before encrypting or storing credentials.
+        await enforce_integration_policy_for_provider(payload.provider_key, user_id=user.id, require_usable_action=True)
+        payload = await _validate_manual_credentials(payload)
         owner_id = user.id if payload.ownership_mode == ConnectionOwnershipMode.USER else None
         now = _utc_now()
         raw_credentials = _credential_payload(payload)
@@ -360,7 +428,8 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         user: User | UserRead,
         provider_ids: frozenset[str] | None,
     ) -> list[Connection]:
-        is_superuser = bool(getattr(user, "is_superuser", False))
+        restricted_key = current_auth_is_restricted_api_key()
+        is_superuser = bool(getattr(user, "is_superuser", False)) and not restricted_key
         owner_clause = or_(
             Connection.owner_id == user.id,
             Connection.ownership_mode == ConnectionOwnershipMode.INSTANCE.value,
@@ -384,7 +453,7 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
                 stmt = stmt.where(owner_clause)
         stmt = stmt.order_by(col(Connection.display_name), col(Connection.id))
         rows = list((await session.exec(stmt)).all())
-        if not is_superuser and cross_user:
+        if not is_superuser and (cross_user or restricted_key):
             rows = await filter_visible_resources(
                 user,
                 resource_type="connection",
@@ -427,6 +496,64 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
 
     async def has_credentials(self, session: AsyncSession, connection_id: UUID) -> bool:
         return await session.get(ConnectionSecret, connection_id) is not None
+
+    async def renew_token(
+        self,
+        session: AsyncSession,
+        *,
+        row: Connection,
+        user: User | UserRead,
+        payload: ConnectionTokenRenewal,
+    ) -> ConnectionRead:
+        """Replace a validated manual credential under the caller's connection lock."""
+        from langflow.services.triggers.providers.registry import get_provider
+
+        provider = get_provider(row.provider_key)
+        if row.provider_key != PROVIDER_SLACK and (provider is None or provider.validate_manual_credential is None):
+            msg = "This integration does not support manual token renewal."
+            raise ManualCredentialError(msg)
+        await enforce_integration_policy_for_provider(row.provider_key, user_id=user.id, require_usable_action=True)
+        validated = await _validate_manual_credentials(
+            ConnectionCreate(
+                provider_key=row.provider_key,
+                name=row.name,
+                display_name=row.display_name,
+                ownership_mode=row.ownership_mode,
+                executing_identity=ExecutingIdentityDescriptor.model_validate(row.executing_identity),
+                allow_non_interactive=payload.allow_non_interactive,
+                credentials=payload.credentials,
+            )
+        )
+        if is_app_token_connection(row) and APP_TOKEN_SCOPE not in validated.granted_scopes:
+            msg = "This connection holds a Slack app-level token. Renew it with an app-level token (xapp-)."
+            raise ManualCredentialError(msg)
+        raw_credentials = _credential_payload(validated)
+        if raw_credentials is None:
+            msg = "The integration credential validator returned no token."
+            raise ManualCredentialError(msg)
+        encrypted_payload = _encrypt_credential_payload(raw_credentials)
+        # Manual renewal supersedes consent that may still be open in a browser.
+        binding = await session.get(ConnectionOAuth, row.id)
+        if binding is not None:
+            await session.delete(binding)
+        secret = await session.get(ConnectionSecret, row.id)
+        if secret is None:
+            secret = ConnectionSecret(connection_id=row.id, encrypted_payload=encrypted_payload)
+        else:
+            secret.encrypted_payload = encrypted_payload
+        secret.updated_at = _utc_now()
+        row.granted_scopes = list(validated.granted_scopes)
+        row.executing_identity = validated.executing_identity.model_dump(mode="json")
+        row.allow_non_interactive = validated.allow_non_interactive
+        _set_status(row, PersistedConnectionStatus.READY)
+        row.health = ConnectionHealth.UNKNOWN.value
+        row.health_checked_at = None
+        row.updated_at = secret.updated_at
+        session.add(secret)
+        session.add(row)
+        await session.flush()
+        await session.refresh(row)
+        return self.to_read(row, has_credentials=True)
 
     async def revoke(self, session: AsyncSession, row: Connection) -> ConnectionRevokeRead:
         provider_revocation = await broker.revoke(session, row)
@@ -584,6 +711,15 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
                     credential = await self._credential_from_row(
                         session, row=row, rejected_token_digest=request.rejected_token_digest
                     )
+                except AuthExpiredError as exc:
+                    _set_status(row, PersistedConnectionStatus.EXPIRED)
+                    row.health = ConnectionHealth.UNHEALTHY.value
+                    row.health_checked_at = _utc_now()
+                    row.updated_at = row.health_checked_at
+                    session.add(row)
+                    # Let the transaction commit the health change before the
+                    # run receives the error, as a manual health check would.
+                    resolution_error = exc
                 except IntegrationError as exc:
                     # A rotating refresh token may already have been exchanged. Keep
                     # that encrypted update; the base class checks scopes only after
@@ -679,7 +815,7 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         authz = get_authorization_service()
         if not settings.auth_settings.AUTHZ_ENABLED or not await authz.supports_cross_user_fetch():
             return None
-        context = {"execution_principal_kind": principal.kind}
+        context = {"execution_principal_kind": principal.kind, "execution_principal": principal}
         stmt = select(Connection).where(
             Connection.provider_key == request.ref.provider,
             Connection.name == request.ref.name,
@@ -785,6 +921,10 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
             await _audit_resolution_denial(request, row=row, error=denial)
             raise denial
         credential = await self._credential_from_row(session, row=row)
+        if row.provider_key == PROVIDER_SLACK:
+            scopes = await check_slack_web_token(credential.access_token.get_secret_value())
+            row.granted_scopes = scopes
+            credential = replace(credential, granted_scopes=frozenset(scopes))
         missing = ScopeSet.missing(
             provider=row.provider_key, required=required_scopes, granted=credential.granted_scopes
         )
@@ -817,9 +957,25 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
                 row.id,
             )
             raise ConnectionUnresolvedError(handle, provider=row.provider_key, reason="credential-undecryptable")
+        # Pasted tokens cannot refresh. Do not retry a token Slack already
+        # rejected, and do not expire a replacement after a stale rejection.
+        if (
+            row.provider_key == PROVIDER_SLACK
+            and not payload.get("oauth")
+            and rejected_token_digest is not None
+            and secrets.compare_digest(rejected_token_digest, broker.digest(payload["access_token"]))
+        ):
+            _set_status(row, PersistedConnectionStatus.EXPIRED)
+            row.health = ConnectionHealth.UNHEALTHY.value
+            row.health_checked_at = _utc_now()
+            row.updated_at = row.health_checked_at
+            session.add(row)
+            raise AuthExpiredError(provider=row.provider_key)
         try:
             payload = await broker.refresh_if_needed(session, row, payload, rejected_token_digest=rejected_token_digest)
         except OAuthError as exc:
+            if exc.reason == "provider-unavailable":
+                raise ProviderUnavailableError(provider=row.provider_key) from None
             if getattr(exc, "reason", None) == "registration-unavailable":
                 # The credential is fine and reconnecting would not help: this
                 # process cannot see the registration the connection was
@@ -865,7 +1021,7 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
                 # usable. Keep that attempt's outcome visible to the dialog.
                 "status_reason": row.status_reason
                 if row.status == PersistedConnectionStatus.ERROR.value
-                or row.status_reason in {"oauth-denied", "oauth-expired", "oauth-failed"}
+                or row.status_reason in {"oauth-denied", "oauth-expired", "oauth-failed", "oauth-refresh-token-missing"}
                 else None,
                 "has_credentials": has_credentials,
             }

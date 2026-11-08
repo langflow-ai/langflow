@@ -332,6 +332,11 @@ class SlackClient:
             msg = f"slack_sdk has no Web API method {method!r}"
             raise AttributeError(msg)
         try:
+            if method == "canvases_create":
+                # The SDK's convenience method adds title=None to the JSON
+                # body even when omitted. Slack accepts an absent title, but
+                # rejects null, so use the SDK's generic call with our payload.
+                return await client.api_call("canvases.create", json=kwargs)
             return await api_method(**kwargs)
         except Exception as exc:
             raise normalize_integration_error(exc, provider=PROVIDER_ID) from exc

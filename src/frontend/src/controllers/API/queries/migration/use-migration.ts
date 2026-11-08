@@ -17,7 +17,20 @@ import type {
 
 export const migrationKeys = {
   all: ["migration"] as const,
+  // Under `all`, so the page's reads of the record ask for it again as well.
+  pause: ["migration", "pause"] as const,
 };
+
+/** Whether this instance refuses changes now. Any signed-in user may ask: every page says so while it does. */
+export const useMigrationPauseQuery = (enabled: boolean) =>
+  useQuery<{ paused: boolean }>({
+    queryKey: migrationKeys.pause,
+    queryFn: async () =>
+      (await api.get(getURL("MIGRATION", { path: "pause" }))).data,
+    enabled,
+    // An admin can pause at any time, from another browser.
+    refetchInterval: 30000,
+  });
 
 export const useMigrationQuery = (enabled = true) =>
   useQuery<MigrationState>({
@@ -113,7 +126,11 @@ const useStepMutation = <Body, State extends MigrationState = MigrationState>(
   const client = useQueryClient();
   return useMutation<State, AxiosError<{ detail?: MigrationError }>, Body>({
     mutationFn: async (body) => (await request(body)).data,
-    onSuccess: (state) => client.setQueryData(migrationKeys.all, state),
+    onSuccess: (state) => {
+      client.setQueryData(migrationKeys.all, state);
+      // A step can pause or resume, which the notice on every page shows.
+      client.invalidateQueries({ queryKey: migrationKeys.pause });
+    },
     // A refusal can come with a change the answer doesn't carry, such as a step that reopened.
     onError: () => client.invalidateQueries({ queryKey: migrationKeys.all }),
   });

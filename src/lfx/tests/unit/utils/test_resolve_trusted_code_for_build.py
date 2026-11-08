@@ -79,7 +79,7 @@ def test_instantiate_class_marks_only_the_public_principal(monkeypatch, user_id,
             pass
 
     monkeypatch.setattr(flow_validation, "resolve_trusted_code_for_build", resolve)
-    monkeypatch.setattr(loading, "eval_custom_component_code", lambda _code: TestComponent)
+    monkeypatch.setattr(loading, "eval_custom_component_code", lambda _code, **_kwargs: TestComponent)
     vertex = SimpleNamespace(
         vertex_type="TestComponent",
         base_type="component",

@@ -437,8 +437,8 @@ export default function Page({
   useEffect(() => {
     useFlowStore.setState({ autoSaveFlow });
     return () => {
-      // Once unmounted, its save never settles (no mutation observer). Leave
-      // an autosave the version sidebar or a newer editor registered.
+      // An unmounted editor no longer owns the flow being shown. Leave an
+      // autosave the version sidebar or a newer editor registered.
       if (useFlowStore.getState().autoSaveFlow === autoSaveFlow) {
         useFlowStore.setState({ autoSaveFlow: undefined });
       }

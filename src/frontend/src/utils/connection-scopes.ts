@@ -33,7 +33,10 @@ const removePrefix = (value: string, prefix: string): string =>
 export function normalizeScope(provider: string | undefined, scope: string) {
   let normalized = scope.trim();
   if (provider === "google" || provider === "google_workspace") {
-    normalized = removePrefix(normalized, GOOGLE_SCOPE_PREFIX);
+    normalized = removePrefix(normalized, GOOGLE_SCOPE_PREFIX).toLowerCase();
+    // Google returns the userinfo aliases for OpenID Connect identity scopes.
+    if (normalized === "userinfo.email") return "email";
+    if (normalized === "userinfo.profile") return "profile";
   } else if (provider === "microsoft") {
     normalized = removePrefix(normalized, MICROSOFT_SCOPE_PREFIX);
   }

@@ -20,11 +20,13 @@ import { customMcpOpen } from "@/customization/utils/custom-mcp-open";
 import ApiModal from "@/modals/apiModal";
 import EmbedModal from "@/modals/EmbedModal/embed-modal";
 import ExportModal from "@/modals/exportModal";
+import { useCopyToClipboard } from "@/shared/hooks/use-copy-to-clipboard";
 import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { cn } from "@/utils/utils";
+import { buildShareablePlaygroundUrl } from "./shareable-playground-url";
 
 type PublishDropdownProps = {
   openApiModal: boolean;
@@ -37,8 +39,7 @@ export default function PublishDropdown({
   setOpenApiModal,
   children,
 }: PublishDropdownProps) {
-  const location = useHref("/");
-  const domain = window.location.origin + location;
+  const basePath = useHref("/");
   const [openEmbedModal, setOpenEmbedModal] = useState(false);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const flowId = currentFlow?.id;
@@ -51,6 +52,13 @@ export default function PublishDropdown({
   const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
   const pendingAutoSave = useFlowStore((state) => state.autoSaveFlow);
   const isPublished = currentFlow?.access_type === "PUBLIC";
+  const shareableUrl = buildShareablePlaygroundUrl(
+    window.location.origin,
+    basePath,
+    flowId ?? "",
+  );
+  const { copy: copyShareableUrl, isCopied: isShareableUrlCopied } =
+    useCopyToClipboard({ resetDelay: 2000 });
   const hasIO = useFlowStore((state) => state.hasIO);
   const isAuth = useAuthStore((state) => !!state.autoLogin);
   const { can } = usePermissions();
@@ -191,12 +199,12 @@ export default function PublishDropdown({
               <div className="flex w-full items-center justify-between">
                 <div className="flex items-center">
                   <ShadTooltipComponent
-                    styleClasses="truncate"
+                    styleClasses="break-all"
                     side="left"
                     content={
                       hasIO
                         ? isPublished
-                          ? encodeURI(`${domain}/playground/${flowId}`)
+                          ? shareableUrl
                           : t("misc.activateToShare")
                         : t("misc.addChatInputOutput")
                     }
@@ -237,6 +245,36 @@ export default function PublishDropdown({
                     void handlePublishedSwitch(isPublished);
                   }}
                 />
+              </div>
+            </DropdownMenuItem>
+          )}
+          {ENABLE_PUBLISH && isPublished && hasIO && (
+            <DropdownMenuItem
+              className="deploy-dropdown-item group items-start"
+              onSelect={(event) => {
+                // Stays open so the confirmation is seen next to the link.
+                event.preventDefault();
+                copyShareableUrl(shareableUrl);
+              }}
+              data-testid="copy-shareable-playground-url"
+            >
+              <IconComponent
+                name={isShareableUrlCopied ? "Check" : "Copy"}
+                className="icon-size mr-2 mt-0.5 shrink-0"
+              />
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span aria-live="polite">
+                  {isShareableUrlCopied
+                    ? t("misc.shareableLinkCopied")
+                    : t("misc.copyShareableLink")}
+                </span>
+                {/* Zero width keeps a long address from widening the menu; it wraps instead. */}
+                <span
+                  className="block w-0 min-w-full break-all text-xs text-muted-foreground"
+                  data-testid="shareable-playground-url"
+                >
+                  {shareableUrl}
+                </span>
               </div>
             </DropdownMenuItem>
           )}

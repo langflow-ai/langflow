@@ -7,9 +7,9 @@ and normalized documents to a private temporary SQLite database.
 
 This is not a snapshotter or a Chroma reader. A trusted upgrade coordinator
 must establish a consistent snapshot and supply its independently inventoried
-header. The helper must only write a terminal manifest after a successful
+header. The reader must only write a terminal manifest after a successful
 total read. Checksums detect corruption, not authenticity of an untrusted
-helper. Artifact verification and process isolation belong to the coordinator.
+reader. Snapshot consistency and routing activation belong to the coordinator.
 """
 
 from __future__ import annotations
@@ -45,7 +45,7 @@ class MigrationProtocolError(ValueError):
 
 
 class AutomaticMigrationLimitError(MigrationProtocolError):
-    """The bounded native reader requires an isolated managed helper for this store."""
+    """The bundled reader cannot migrate this store within its resource limits."""
 
 
 @dataclass(frozen=True)
@@ -92,7 +92,7 @@ class ExportManifest:
 
 
 def canonical_json(value: Any) -> bytes:
-    """Canonical bytes used by both helper and application qualification."""
+    """Canonical bytes used by both reader and application qualification."""
     return _json_bytes(value, sort_keys=True)
 
 

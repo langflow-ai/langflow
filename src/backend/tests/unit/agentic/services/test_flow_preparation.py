@@ -16,6 +16,9 @@ from langflow.agentic.services.flow_preparation import (
     inject_model_into_flow,
     load_and_prepare_flow,
 )
+from langflow.agentic.services.flow_types import FLOWS_BASE_PATH, LANGFLOW_ASSISTANT_FLOW
+from lfx.custom.eval import eval_custom_component_code
+from lfx.services.deps import get_settings_service
 
 import lfx
 
@@ -475,6 +478,36 @@ class TestInjectLfxComponentsPath:
         rewritten = result["data"]["nodes"][0]["data"]["node"]["template"]["path"]["value"]
         expected = str(Path(lfx.__file__).parent / "components")
         assert rewritten == expected
+
+    def test_shipped_assistant_directory_node_loads_components_from_any_working_dir(self, tmp_path, monkeypatch):
+        """The shipped flow's Directory node must load when the process does not run from the repo.
+
+        Langflow Desktop runs from its data dir, where the rewritten absolute path lies outside
+        the working root the Directory component trusts by default. Local file access stays
+        restricted, as it is by default.
+        """
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(get_settings_service().settings, "directory_component_allowed_roots", [])
+        monkeypatch.setattr(get_settings_service().settings, "restrict_local_file_access", True)
+
+        prepared = json.loads(load_and_prepare_flow(FLOWS_BASE_PATH / LANGFLOW_ASSISTANT_FLOW, None, None, None))
+        directory_nodes = [node for node in prepared["data"]["nodes"] if node["data"].get("type") == "Directory"]
+        assert directory_nodes
+        for node in directory_nodes:
+            template = node["data"]["node"]["template"]
+            component = eval_custom_component_code(template["code"]["value"])()
+            component.set_attributes(
+                {
+                    "path": template["path"]["value"],
+                    "types": template["types"]["value"],
+                    "depth": template["depth"]["value"],
+                    "recursive": template["recursive"]["value"],
+                    "use_multithreading": False,
+                    "silent_errors": False,
+                }
+            )
+
+            assert component.load_directory()
 
 
 def _make_filesystem_flow(root_path_value: str) -> dict:

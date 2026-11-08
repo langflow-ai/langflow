@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { useGetIngestionRun } from "@/controllers/API/queries/knowledge-bases/use-get-ingestion-run";
+import { parseApiTimestamp } from "@/utils/dateTime";
 
 interface IngestionRunDetailModalProps {
   kbName: string;
@@ -117,7 +118,7 @@ const IngestionRunDetailModal = ({
             {data && (
               <div className="text-xs text-muted-foreground">
                 {kbName} · {data.source_type} ·{" "}
-                {new Date(data.started_at).toLocaleString()}
+                {parseApiTimestamp(data.started_at)?.toLocaleString() ?? ""}
               </div>
             )}
           </div>

@@ -19,7 +19,7 @@ Each component has a **Microsoft Connection** field that holds a portable connec
 
 Before a component can run:
 
-1. An operator registers a Microsoft Entra application with Langflow. See [Register a Microsoft Entra application](../Develop/entra-app-registration.mdx) and [Configure connection OAuth](../Develop/connection-oauth.mdx).
+1. An operator registers a Microsoft Entra application with Langflow. See [Configure Langflow for Microsoft Entra](./entra-app-registration) and [Configure connection OAuth](./connection-oauth).
 2. A user connects their Microsoft account in **Settings**, granting the delegated permissions the selected actions need. See [Connections](./connections).
 3. The user selects that connection in the component's **Microsoft Connection** field.
 
@@ -175,7 +175,7 @@ for `404`, `405`, and `501`, `rate-limited` for `429` and `503`, and
 account setup first. A workload the tenant or user is not licensed for, and a
 mailbox Exchange Online cannot serve, also surface as `invalid-request`, with a
 hint naming the Microsoft 365 license to assign. See the
-[Entra registration prerequisites](../Develop/entra-app-registration.mdx#what-you-need).
+[Entra registration prerequisites](../Develop/entra-app-registration.mdx#prerequisites).
 Graph response bodies are never passed through verbatim.
 
 ## Rate limits

@@ -28,6 +28,7 @@ from langflow.services.database.models.auth import (
     AuthzTeamMember,
 )
 from langflow.services.database.models.flow.model import Flow, FlowType
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import session_scope
 from lfx.services.deps import get_settings_service
 
@@ -122,6 +123,53 @@ async def test_get_agent_card_returns_valid_card(client: AsyncClient, active_use
     async with session_scope() as session:
         flow = await session.get(Flow, flow_id)
         assert input_schema == json_schema_from_flow(flow, require_api_editable=False)
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+@pytest.mark.parametrize("admin_only", [False, True])
+async def test_agent_card_does_not_execute_stored_component_code(
+    client: AsyncClient, active_user, flow_data, tmp_path, monkeypatch, admin_only
+):
+    """The card is served to anonymous callers, so building its schema must not run stored source.
+
+    Discovery stays data-only even with the admin-only policy on and after the
+    non-admin owner is disabled. The marker exists only if a stored class body ran.
+    """
+    monkeypatch.setattr(get_settings_service().settings, "custom_component_admin_only", admin_only)
+    marker = tmp_path / "stored-code-executed"
+    payload = f"    _SCHEMA_PROBE = __import__('pathlib').Path({str(marker)!r}).write_text('executed')\n"
+    modified_nodes = 0
+    for node in flow_data["nodes"]:
+        code_field = node.get("data", {}).get("node", {}).get("template", {}).get("code")
+        if isinstance(code_field, dict) and isinstance(code_field.get("value"), str):
+            lines = code_field["value"].splitlines(keepends=True)
+            class_line = next(index for index, line in enumerate(lines) if line.startswith("class "))
+            lines.insert(class_line + 1, payload)
+            code_field["value"] = "".join(lines)
+            modified_nodes += 1
+    assert modified_nodes > 0
+    flow_id = await _create_flow(active_user.id, data=flow_data)
+
+    response = await client.get(_card_url(flow_id))
+
+    assert response.status_code == 200
+    assert "authorization" not in response.request.headers
+    assert "cookie" not in response.request.headers
+    assert not marker.exists()
+    schema = response.json()["skills"][0]["inputSchema"]
+    assert schema["properties"]["input_value"]["type"] == "string"
+    assert schema["properties"]["session_id"]["type"] == "string"
+
+    async with session_scope() as session:
+        owner = await session.get(User, active_user.id)
+        owner.is_active = False
+        await session.commit()
+
+    response = await client.get(_card_url(flow_id))
+
+    assert response.status_code == 200
+    assert response.json()["skills"][0]["inputSchema"] == schema
+    assert not marker.exists()
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
@@ -471,13 +519,25 @@ async def test_list_agents_includes_direct_team_and_scoped_grants(
 async def test_list_agents_scoped_api_key_does_not_inherit_owner_override(
     client: AsyncClient,
     active_user,
-    created_api_key,
     flow_data,
 ):
     """An API-key scope remains authoritative even for resources owned by the key's user."""
     scoped_folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "none"})
     scoped_flow = await _create_flow(active_user.id, data=flow_data, folder_id=scoped_folder_id)
     unscoped_flow = await _create_flow(active_user.id, data=flow_data)
+    key = await _create_api_key(
+        active_user.id,
+        permissions={
+            "restrictions": [
+                {
+                    "resource_type": "flow",
+                    "actions": ["read"],
+                    "domain_type": "project",
+                    "domain_id": str(scoped_folder_id),
+                }
+            ]
+        },
+    )
 
     async with session_scope() as session:
         role = AuthzRole(
@@ -500,7 +560,7 @@ async def test_list_agents_scoped_api_key_does_not_inherit_owner_override(
     with install_policy_authz(get_settings_service()):
         response = await client.get(
             "api/v1/a2a/agents",
-            headers={"x-api-key": created_api_key.api_key},
+            headers={"x-api-key": key},
         )
 
     assert response.status_code == 200
@@ -553,13 +613,19 @@ async def _jsonrpc(client: AsyncClient, flow_id, method, params, rpc_id=1, heade
     )
 
 
-async def _create_api_key(user_id):
+async def _create_api_key(user_id, *, permissions=None):
     """Create a real langflow API key for a user; returns the raw (unmasked) key."""
     from langflow.services.database.models.api_key.crud import create_api_key
-    from langflow.services.database.models.api_key.model import ApiKeyCreate
+    from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate
 
     async with session_scope() as session:
         unmasked = await create_api_key(session, ApiKeyCreate(name=f"a2a-key-{uuid.uuid4().hex[:8]}"), user_id)
+        if permissions is not None:
+            # Seed an existing restricted key; issuance validation belongs to the API-key tests.
+            key = await session.get(ApiKey, unmasked.id)
+            assert key is not None
+            key.permissions = permissions
+            session.add(key)
         await session.commit()
         return unmasked.api_key
 
@@ -1940,7 +2006,10 @@ async def test_apikey_folder_enforces_scoped_execute_permission(
     """An owner key is still subject to plugin API-key scope policy before dispatch."""
     folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "apikey"})
     flow_id = await _create_flow(active_user.id, data=echo_flow_data, folder_id=folder_id)
-    key = await _create_api_key(active_user.id)
+    key = await _create_api_key(
+        active_user.id,
+        permissions={"restrictions": [{"resource_type": "flow", "actions": ["execute"]}]},
+    )
     settings_service = get_settings_service()
 
     with install_policy_authz(settings_service):

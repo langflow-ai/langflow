@@ -39,6 +39,7 @@ from lfx.utils.file_path_security import (
     component_authenticated_user_scope,
     component_file_access_scopes,
     enforce_local_file_access,
+    storage_scope_id,
     validate_storage_key,
 )
 from lfx.utils.helpers import build_content_type_from_extension
@@ -60,12 +61,14 @@ def _log_abandoned_file_load(task: asyncio.Task) -> None:
         logger.error("File loader failed after its graph caller was cancelled", exc_info=error)
 
 
-def _read_structured_rows(source: Any, ext: str) -> list[dict] | None:
+def _read_structured_rows(source: Any, ext: str, *, encoding: str | None = None) -> list[dict] | None:
     reader_name = _STRUCTURED_READERS.get(ext)
     if reader_name is None:
         # TODO: sqlite and json support?
         return None
-    reader: Callable[[Any], pd.DataFrame] = getattr(pd, reader_name)
+    reader: Callable[..., pd.DataFrame] = getattr(pd, reader_name)
+    if ext == ".csv" and encoding is not None:
+        return reader(source, encoding=encoding).to_dict("records")
     return reader(source).to_dict("records")
 
 
@@ -308,7 +311,7 @@ class BaseFileComponent(Component, ABC):
         """Build a stable cache key for ``load_files_base`` from the current inputs.
 
         The key includes both the local ``path`` input and any server file paths from
-        ``file_path``, plus the ``markdown`` flag (which can change which content
+        ``file_path``, the text encoding, plus the ``markdown`` flag (which can change which content
         ``process_files`` produces). It is paths-keyed by design so different
         component executions or input changes never reuse another call's cache.
         """
@@ -331,7 +334,8 @@ class BaseFileComponent(Component, ABC):
                 file_path_part = (*file_path_part, str(sp))
 
         markdown_flag = getattr(self, "markdown", False)
-        return (paths_part, file_path_part, markdown_flag)
+        encoding = (getattr(self, "text_encoding", "") or "").strip()
+        return (paths_part, file_path_part, encoding, markdown_flag)
 
     @delegates_to("aload_files_base")
     def load_files_base(self) -> list[Data]:
@@ -362,7 +366,7 @@ class BaseFileComponent(Component, ABC):
             list[Data]: Parsed data from the processed files.
         """
         cache_key = self._load_files_paths_cache_key()
-        paths_subkey = cache_key[:-1]  # paths only, ignoring markdown flag
+        paths_subkey = cache_key[:-1]  # source paths and encoding, ignoring markdown flag
 
         await acquire_thread_lock(self._load_files_base_lock)
         work = asyncio.create_task(self._aload_files_base_locked(cache_key, paths_subkey))
@@ -450,6 +454,8 @@ class BaseFileComponent(Component, ABC):
             return
 
         settings = get_settings_service().settings
+        user_scope = component_authenticated_user_scope(self)
+        user_namespaces = {user_scope, storage_scope_id(user_scope)} if user_scope is not None else set()
         if settings.storage_type == "s3":
             parsed_path = parse_storage_path(str(file.path))
             if not parsed_path:
@@ -459,11 +465,7 @@ class BaseFileComponent(Component, ABC):
                 return
 
             namespace_id, file_name = parsed_path
-            if namespace_id != component_authenticated_user_scope(self):
-                # User-file and legacy flow-file objects share an untyped top-level
-                # namespace. Flow IDs are caller-selectable, so accepting a matching
-                # graph flow ID here could collide with another user's UUID. Only the
-                # authenticated user's namespace has unambiguous ownership.
+            if namespace_id not in user_namespaces:
                 self.log("Skipping S3 file cleanup outside the authenticated user's storage namespace.")
                 return
 
@@ -473,6 +475,20 @@ class BaseFileComponent(Component, ABC):
                 raise StorageServiceUnavailableError(msg)
             await storage_service.delete_file(namespace_id, file_name)
             return
+
+        if user_scope is not None:
+            config_dir = getattr(settings, "config_dir", None)
+            if config_dir is None:
+                self.log("Skipping local file cleanup because the storage directory is unavailable.")
+                return
+            try:
+                user_roots = [(Path(config_dir) / namespace).resolve() for namespace in user_namespaces]
+                owned_path = any(file.path.resolve().is_relative_to(root) for root in user_roots)
+            except (OSError, RuntimeError):
+                owned_path = False
+            if not owned_path:
+                self.log("Skipping local file cleanup outside the authenticated user's storage namespace.")
+                return
 
         await asyncio.to_thread(self._delete_local_path, file.path)
 
@@ -507,7 +523,7 @@ class BaseFileComponent(Component, ABC):
         cache_attr = f"_load_files_core_cache_{markdown_flag}"
         cache_paths_attr = f"_load_files_core_paths_{markdown_flag}"
 
-        current_paths = tuple(getattr(self, "path", []) or [])
+        current_paths = self._load_files_paths_cache_key()
         if hasattr(self, cache_attr) and getattr(self, cache_paths_attr, None) == current_paths:
             return getattr(self, cache_attr)
 
@@ -575,7 +591,7 @@ class BaseFileComponent(Component, ABC):
 
         # Copy additional metadata from data if available
         if hasattr(data_item, "data") and isinstance(data_item.data, dict):
-            metadata_fields = ["mimetype", "file_size", "created_time", "modified_time"]
+            metadata_fields = ["mimetype", "file_size", "created_time", "modified_time", "encoding"]
             for field in metadata_fields:
                 if field in data_item.data:
                     metadata[field] = data_item.data[field]
@@ -648,7 +664,10 @@ class BaseFileComponent(Component, ABC):
                 else:
                     if file_path:
                         source_file_indexes[file_path] = len(source_files)
-                    source_files.append({"file_path": file_path, "text": part})
+                    source_file = {"file_path": file_path, "text": part}
+                    if encoding := d.data.get("encoding"):
+                        source_file["encoding"] = encoding
+                    source_files.append(source_file)
 
         return sep.join(parts), source_files
 
@@ -686,14 +705,15 @@ class BaseFileComponent(Component, ABC):
             return None
 
         settings = get_settings_service().settings
+        encoding = (getattr(self, "text_encoding", "") or "").strip() or None
 
         # For S3 storage, download file bytes first; pandas parsing stays off the event loop.
         if settings.storage_type == "s3":
             content = await read_file_bytes(file_path)
-            return await asyncio.to_thread(_read_structured_rows, BytesIO(content), ext)
+            return await asyncio.to_thread(_read_structured_rows, BytesIO(content), ext, encoding=encoding)
 
         # Local storage - read directly from filesystem
-        return await asyncio.to_thread(_read_structured_rows, file_path, ext)
+        return await asyncio.to_thread(_read_structured_rows, file_path, ext, encoding=encoding)
 
     @delegates_to("aload_files_structured")
     def load_files_structured(self) -> DataFrame:

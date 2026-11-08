@@ -173,6 +173,10 @@ function Migration({ migration }: { migration: MigrationState }) {
     "access",
     "backup",
     "window",
+    // The pause and the passwords the admin enters hold for this server process only. Other instances can
+    // share a PostgreSQL database, and every worker of this one has its own memory.
+    instance.database.type !== "sqlite" && "alone",
+    "oneWorker",
   ].filter(Boolean);
 
   let number = 0;

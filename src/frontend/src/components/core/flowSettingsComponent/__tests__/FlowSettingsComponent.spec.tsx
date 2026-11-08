@@ -176,6 +176,7 @@ describe("FlowSettingsComponent", () => {
     await waitFor(() => {
       expect(mockAutoSaveEnqueue).toHaveBeenCalledWith(
         expect.objectContaining({ name: "New Name" }),
+        { metadataOnly: true },
       );
       expect(mockSetSuccessData).toHaveBeenCalledWith({
         title: "Changes saved successfully",
@@ -205,6 +206,7 @@ describe("FlowSettingsComponent", () => {
     await waitFor(() =>
       expect(mockAutoSaveEnqueue).toHaveBeenCalledWith(
         expect.objectContaining({ locked: true }),
+        { metadataOnly: true },
       ),
     );
     expect(onClose).not.toHaveBeenCalled();
@@ -229,14 +231,15 @@ describe("FlowSettingsComponent", () => {
     await waitFor(() => {
       expect(mockSave).toHaveBeenCalledWith(
         expect.objectContaining({ locked: true }),
+        { metadataOnly: true },
       );
       expect(onClose).toHaveBeenCalled();
     });
   });
 
   it("saves a flow card directly even when an editor autosave is registered", async () => {
-    // The registered autosave may belong to an editor that has unmounted; its
-    // save never settles, which left the home page modal spinning.
+    // The registered autosave may belong to an editor that is gone or holds a
+    // different flow, so the card saves through its own path.
     mockAutoSaving = true;
     mockSave.mockResolvedValueOnce(undefined);
     const onClose = jest.fn();
@@ -249,6 +252,7 @@ describe("FlowSettingsComponent", () => {
     await waitFor(() => {
       expect(mockSave).toHaveBeenCalledWith(
         expect.objectContaining({ name: "New Name" }),
+        { metadataOnly: true },
       );
       expect(onClose).toHaveBeenCalled();
     });

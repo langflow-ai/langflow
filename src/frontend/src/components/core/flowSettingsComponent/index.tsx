@@ -67,7 +67,7 @@ const FlowSettingsComponent = ({
   );
   const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
   // A flow card (`flowData`) must not use the registered autosave: it may
-  // belong to an unmounted editor, whose save never settles.
+  // belong to an editor that is gone or holds a different flow.
   const pendingAutoSave = useFlowStore((state) =>
     flowData ? undefined : state.autoSaveFlow,
   );
@@ -102,9 +102,9 @@ const FlowSettingsComponent = ({
           // Queue behind the editor's saves: a canvas save run alongside a
           // lock change carries the old lock state and the server rejects it.
           if (pendingAutoSave) {
-            await pendingAutoSave.enqueue(newFlow);
+            await pendingAutoSave.enqueue(newFlow, { metadataOnly: true });
           } else {
-            await saveFlow(newFlow);
+            await saveFlow(newFlow, { metadataOnly: true });
           }
           setIsSaving(false);
           setSuccessData({ title: t("success.changesSaved") });

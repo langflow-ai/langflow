@@ -17,6 +17,8 @@ let mockConnections: ConnectionRead[];
 let mockIntegrations: Record<string, unknown> = { data: { providers: [] } };
 const mockMutation = jest.fn();
 const mockSetErrorData = jest.fn();
+const mockSetSuccessData = jest.fn();
+const mockSetNoticeData = jest.fn();
 
 jest.mock("@/controllers/API/queries/connections", () => {
   const mutation = () => ({ mutate: jest.fn(), mutateAsync: mockMutation });
@@ -46,7 +48,11 @@ jest.mock("@/stores/authStore", () => ({
 jest.mock("@/stores/alertStore", () => ({
   __esModule: true,
   default: (selector: (state: unknown) => unknown) =>
-    selector({ setErrorData: mockSetErrorData, setSuccessData: jest.fn() }),
+    selector({
+      setErrorData: mockSetErrorData,
+      setSuccessData: mockSetSuccessData,
+      setNoticeData: mockSetNoticeData,
+    }),
 }));
 
 jest.mock("@/components/common/genericIconComponent", () => ({
@@ -85,6 +91,8 @@ describe("ConnectionsPage tabs", () => {
   beforeEach(() => {
     mockMutation.mockReset();
     mockSetErrorData.mockReset();
+    mockSetSuccessData.mockReset();
+    mockSetNoticeData.mockReset();
   });
 
   afterEach(async () => {
@@ -274,6 +282,69 @@ describe("ConnectionsPage tabs", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows the GitHub installation account and App-managed permissions without changing OAuth scope labels", () => {
+    mockUser = { id: SUPERUSER_ID, is_superuser: true };
+    mockConnections = [
+      connection({
+        id: "github-work",
+        provider_key: "github",
+        owner_id: SUPERUSER_ID,
+        executing_identity: {
+          identity: "service",
+          account: { id: "80", display: "installation-owner" },
+        },
+      }),
+      connection({ id: "google-empty", owner_id: SUPERUSER_ID }),
+      connection({
+        id: "google-scoped",
+        owner_id: SUPERUSER_ID,
+        granted_scopes: ["https://www.googleapis.com/auth/drive.readonly"],
+      }),
+    ];
+    mockIntegrations = {
+      data: {
+        providers: [
+          {
+            provider_id: "github",
+            display_name: "GitHub",
+            approved: true,
+            enabled: true,
+            connection_count: 1,
+            capabilities: [],
+            manual_token_profiles: [
+              {
+                id: "github-installation",
+                identity: "service",
+                required_scopes: [],
+              },
+            ],
+          },
+        ],
+      },
+    };
+    try {
+      render(<ConnectionsPage />);
+
+      const github = within(screen.getByTestId("connection-row-github_work"));
+      expect(github.getByText("installation-owner")).toBeInTheDocument();
+      expect(github.getByText("Ready")).toBeInTheDocument();
+      expect(github.getByText("Managed by the GitHub App")).toBeInTheDocument();
+      expect(github.queryByText("No scopes granted")).not.toBeInTheDocument();
+      expect(
+        within(screen.getByTestId("connection-row-google_empty")).getByText(
+          "No scopes granted",
+        ),
+      ).toBeInTheDocument();
+      expect(
+        within(screen.getByTestId("connection-row-google_scoped")).getByText(
+          "1 scope",
+        ),
+      ).toBeInTheDocument();
+    } finally {
+      mockIntegrations = { data: { providers: [] } };
+    }
+  });
+
   it("shows a denied reauthorization without hiding a still-ready credential", () => {
     mockUser = { id: SUPERUSER_ID, is_superuser: true };
     mockConnections = [
@@ -309,6 +380,44 @@ describe("ConnectionsPage tabs", () => {
     expect(screen.getByRole("menuitem", { name: "Delete" })).toBeEnabled();
   });
 
+  it("explains missing Jira refresh access while preserving a ready connection", () => {
+    mockUser = { id: SUPERUSER_ID, is_superuser: true };
+    mockConnections = [
+      connection({
+        id: "jira-ready",
+        owner_id: SUPERUSER_ID,
+        provider_key: "jira",
+        status_reason: "oauth-refresh-token-missing",
+      }),
+    ];
+    render(<ConnectionsPage />);
+    const row = within(screen.getByTestId("connection-row-jira_ready"));
+    expect(row.getByText("Ready")).toBeVisible();
+    expect(
+      row.getByText(/Every Jira connection requires offline_access/),
+    ).toBeVisible();
+  });
+
+  it.each(["confluence", "salesforce", "servicenow"])(
+    "explains a missing refresh token for %s without Jira-specific advice",
+    (provider) => {
+      mockUser = { id: SUPERUSER_ID, is_superuser: true };
+      mockConnections = [
+        connection({
+          id: "provider-ready",
+          owner_id: SUPERUSER_ID,
+          provider_key: provider,
+          status_reason: "oauth-refresh-token-missing",
+        }),
+      ];
+      render(<ConnectionsPage />);
+      const row = within(screen.getByTestId("connection-row-provider_ready"));
+      expect(row.getByText("Ready")).toBeVisible();
+      expect(row.getByText(/did not return a refresh token/)).toBeVisible();
+      expect(row.queryByText(/Jira|offline_access/)).not.toBeInTheDocument();
+    },
+  );
+
   it("gives a regular user no Other users tab and keeps shared rows under Mine", async () => {
     mockUser = { id: REGULAR_ID, is_superuser: false };
     // A regular user only ever receives another user's row when it was shared
@@ -322,6 +431,9 @@ describe("ConnectionsPage tabs", () => {
 
     expect(
       screen.queryByRole("tab", { name: "Other users" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("tab", { name: "Manage providers" }),
     ).not.toBeInTheDocument();
     expect(within(panel()).getByText("my-drive")).toBeInTheDocument();
     expect(within(panel()).getByText("shared-outlook")).toBeInTheDocument();
@@ -338,6 +450,9 @@ describe("ConnectionsPage tabs", () => {
     mockConnections = [];
     const { container } = render(<ConnectionsPage />);
 
+    expect(
+      screen.getByRole("tab", { name: "Manage providers" }),
+    ).toBeInTheDocument();
     for (const tab of screen.getAllByRole("tab")) {
       const controls = tab.getAttribute("aria-controls");
       expect(controls).toBeTruthy();
@@ -461,6 +576,38 @@ describe("ConnectionsPage tabs", () => {
           .getAllByTestId(/^connection-row-/)
           .map((row) => row.dataset.testid),
       ).toEqual(["connection-row-alpha", "connection-row-bravo"]);
+    }
+  });
+
+  it.each([
+    ["revoked", "Connection revoked and token revoked at the provider."],
+    [
+      "failed",
+      "Credential removed from Langflow, but provider revocation failed. Revoke the token in the provider's settings.",
+    ],
+    [
+      "unsupported",
+      "Credential removed from Langflow. The token may still be valid at the provider. Revoke it in the provider's settings.",
+    ],
+    [
+      "not_applicable",
+      "Credential removed from Langflow. The token may still be valid at the provider. Revoke it in the provider's settings.",
+    ],
+  ])("reports the provider revocation outcome %s", async (outcome, title) => {
+    mockUser = { id: REGULAR_ID, is_superuser: false };
+    mockConnections = [connection({ id: "slack", owner_id: REGULAR_ID })];
+    mockMutation.mockResolvedValueOnce({ provider_revocation: outcome });
+    const user = userEvent.setup();
+    render(<ConnectionsPage />);
+    await user.click(screen.getByTestId("connection-menu-slack"));
+    await user.click(screen.getByRole("menuitem", { name: "Revoke" }));
+    const expectedAlert =
+      outcome === "revoked" ? mockSetSuccessData : mockSetNoticeData;
+    await waitFor(() => expect(expectedAlert).toHaveBeenCalledWith({ title }));
+    expect(mockMutation).toHaveBeenCalledWith("slack");
+    expect(mockSetErrorData).not.toHaveBeenCalled();
+    if (outcome !== "revoked") {
+      expect(mockSetSuccessData).not.toHaveBeenCalled();
     }
   });
 

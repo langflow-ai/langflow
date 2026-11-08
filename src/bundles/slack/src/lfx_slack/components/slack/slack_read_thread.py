@@ -107,10 +107,12 @@ class SlackReadThreadComponent(SlackBaseComponent):
         body = await self._replies()
         messages = body.get("messages", [])
         results = [Data(data=message) for message in messages if isinstance(message, dict)]
-        self.status = f"{len(results)} message(s)"
+        self.status = results
         return results
 
     async def build_pagination(self) -> Data:
         """Return ``has_more`` and the cursor for the next page."""
         body = await self._replies()
-        return Data(data={"has_more": bool(body.get("has_more", False)), "next_cursor": next_cursor(body)})
+        data = Data(data={"has_more": bool(body.get("has_more", False)), "next_cursor": next_cursor(body)})
+        self.status = data
+        return data

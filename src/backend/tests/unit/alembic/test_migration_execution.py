@@ -1,10 +1,14 @@
+import ast
 import errno
+import io
 import os
 import re
 import shutil
 import subprocess
+import tarfile
 import tempfile
 import warnings
+from collections.abc import Iterable
 from pathlib import Path
 
 import pytest
@@ -121,87 +125,93 @@ def db_url(request):
         _drop_pg_test_database(base_url, db_name)
 
 
-def _parse_revision_values(line: str) -> list[str]:
-    """Extract revision ID(s) from a line like ``revision: str = "abc123"``.
+_VERSIONS_PATH = "src/backend/base/langflow/alembic/versions/"
+_REVISION_VARIABLES = frozenset({"revision", "down_revision"})
 
-    Handles single strings, tuples of strings, and None.  Returns a list of
-    zero or more revision ID strings.
+
+def _revision_identifiers(source: str) -> tuple[str, tuple[str, ...]] | None:
+    """Read ``(revision, down_revisions)`` from a migration module's source.
+
+    Walks the module's top-level assignments with ``ast`` instead of matching
+    lines, so bare and annotated assignments, multi-line ``down_revision``
+    tuples, inline comments, docstrings, and IDs that are not hex all read the
+    way Python (and therefore alembic) would see them; a later assignment
+    overrides an earlier one. Returns None for a module that defines no string
+    ``revision`` (e.g. a package marker).
     """
-    if "=" not in line:
-        return []
-    raw = line.split("=", 1)[1]
-    # Strip inline comments (e.g. "# pragma: allowlist secret")
-    if "#" in raw:
-        raw = raw[: raw.index("#")]
-    raw = raw.strip()
-    if raw == "None":
-        return []
-    # Extract all quoted strings from the value (handles both single values
-    # and tuples like ("abc", "def"))
-    return re.findall(r"""["']([a-f0-9]+)["']""", raw)
+    values: dict[str, object] = {}
+    for node in ast.parse(source).body:
+        if isinstance(node, ast.Assign):
+            names = {target.id for target in node.targets if isinstance(target, ast.Name)}
+        elif isinstance(node, ast.AnnAssign) and node.value is not None and isinstance(node.target, ast.Name):
+            names = {node.target.id}
+        else:
+            continue
+        for name in names & _REVISION_VARIABLES:
+            values[name] = ast.literal_eval(node.value)
+
+    revision = values.get("revision")
+    if not isinstance(revision, str):
+        return None
+    down_revision = values.get("down_revision")
+    if down_revision is None:
+        return revision, ()
+    if isinstance(down_revision, str):
+        return revision, (down_revision,)
+    return revision, tuple(down_revision)
+
+
+def _heads_from_sources(sources: Iterable[str]) -> set[str]:
+    """Head revisions of a set of migration modules: those no other module revises."""
+    identifiers = [ids for ids in map(_revision_identifiers, sources) if ids is not None]
+    revisions = {revision for revision, _ in identifiers}
+    referenced = {down for _, down_revisions in identifiers for down in down_revisions}
+    return revisions - referenced
+
+
+def _migration_sources_at(ref: str) -> list[str] | None:
+    """Source of every migration module at ``ref`` (None if git cannot read it)."""
+    git = shutil.which("git")
+    if git is None:
+        return None
+    try:
+        result = subprocess.run(  # noqa: S603
+            [git, "archive", "--format=tar", ref, "--", _VERSIONS_PATH],
+            capture_output=True,
+            check=True,
+            cwd=_WORKSPACE_ROOT,
+        )
+    except subprocess.CalledProcessError:
+        return None
+    except OSError as exc:
+        if exc.errno == errno.ENOENT:
+            return None
+        raise
+    with tarfile.open(fileobj=io.BytesIO(result.stdout)) as archive:
+        return [
+            archive.extractfile(member).read().decode("utf-8")
+            for member in archive.getmembers()
+            if member.isfile() and member.name.endswith(".py")
+        ]
 
 
 def _head_revision_at(ref: str) -> str | None:
     """Get the alembic head revision of the migration files at ``ref``.
 
-    Uses ``git grep`` to read the ``revision`` and ``down_revision`` variables
-    directly from the migration files at that ref, then walks the chain to find
-    the head revision.  This avoids relying on filename conventions (which may
-    not match the actual revision IDs inside the files) and works regardless of
-    whether the branch adds, modifies, or deletes migration files.
+    Reads the migration modules at that ref straight from git and parses their
+    ``revision`` / ``down_revision`` assignments, then takes the revisions no
+    other module revises as heads. This avoids relying on filename conventions
+    (which may not match the actual revision IDs inside the files), avoids
+    importing modules from another commit, and works regardless of whether the
+    branch adds, modifies, or deletes migration files.
 
     Returns None if git operations fail (e.g. shallow clone without origin/main).
     """
-    git = shutil.which("git")
-    if git is None:
+    sources = _migration_sources_at(ref)
+    if not sources:
         return None
 
-    def _git_grep(pattern: str) -> str | None:
-        try:
-            result = subprocess.run(  # noqa: S603
-                [
-                    git,
-                    "grep",
-                    "-h",
-                    pattern,
-                    ref,
-                    "--",
-                    "src/backend/base/langflow/alembic/versions/",
-                ],
-                capture_output=True,
-                text=True,
-                check=True,
-                cwd=_WORKSPACE_ROOT,
-            )
-        except subprocess.CalledProcessError:
-            return None
-        except OSError as exc:
-            if exc.errno == errno.ENOENT:
-                return None
-            raise
-        return result.stdout
-
-    # Extract all revision IDs from the ref's migration files
-    rev_output = _git_grep("^revision:")
-    if not rev_output:
-        return None
-
-    rev_ids: set[str] = set()
-    for line in rev_output.strip().splitlines():
-        rev_ids.update(_parse_revision_values(line))
-
-    if not rev_ids:
-        return None
-
-    # Extract all down_revision IDs to determine the chain
-    down_output = _git_grep("^down_revision:")
-    referenced: set[str] = set()
-    if down_output:
-        for line in down_output.strip().splitlines():
-            referenced.update(_parse_revision_values(line))
-
-    # Head = revisions not referenced as down_revision by any other revision
-    heads = rev_ids - referenced
+    heads = _heads_from_sources(sources)
 
     if len(heads) == 1:
         return heads.pop()
@@ -498,6 +508,86 @@ class TestFilterSsoExpandContractDiffs:
         assert flat_diffs[3][2:4] == ("sso_config", "slug")
         assert flat_diffs[4][2:4] == ("another_table", "slug")
         assert migration_script.downgrade_ops.as_diffs() == migration_script.upgrade_ops.reverse().as_diffs()
+
+
+# Migration headers in the formats found on main, which a line-based ``git grep``
+# over ``^revision:`` / ``^down_revision:`` misread as 10 separate heads.
+_BASE_MIGRATION = '''"""Base
+
+Revision ID: 0a0a0a0a0a0a
+Revises:
+"""
+
+revision: str = "0a0a0a0a0a0a"
+down_revision: str | None = None
+'''
+
+_ANNOTATED_CHILD = """revision: str = "1b1b1b1b1b1b"
+down_revision: str | None = "0a0a0a0a0a0a"
+"""
+
+_BARE_CHILD_WITH_NON_HEX_ID = """revision = "cp01a2b3c4d5"  # pragma: allowlist secret
+down_revision = "0a0a0a0a0a0a"  # pragma: allowlist secret
+"""
+
+_MULTILINE_MERGE = '''"""Merge heads
+
+revision: an older note mentioning "9f9f9f9f9f9f" must not count as a revision.
+"""
+
+revision: str = "2c2c2c2c2c2c"
+down_revision: tuple[str, str] = (
+    "1b1b1b1b1b1b",  # pragma: allowlist secret
+    "cp01a2b3c4d5",  # pragma: allowlist secret
+)
+'''
+
+_REASSIGNED_HEADER = """down_revision: str | None = "4e4e4e4e4e4e"
+
+revision = "3d3d3d3d3d3d"
+down_revision = "2c2c2c2c2c2c"
+"""
+
+
+class TestMigrationGraphParsing:
+    """Tests for the migration-header reader behind _head_revision_at."""
+
+    def test_annotated_assignments(self):
+        assert _revision_identifiers(_ANNOTATED_CHILD) == ("1b1b1b1b1b1b", ("0a0a0a0a0a0a",))
+
+    def test_base_revision_has_no_down_revisions(self):
+        assert _revision_identifiers(_BASE_MIGRATION) == ("0a0a0a0a0a0a", ())
+
+    def test_bare_assignments_with_non_hex_ids(self):
+        assert _revision_identifiers(_BARE_CHILD_WITH_NON_HEX_ID) == ("cp01a2b3c4d5", ("0a0a0a0a0a0a",))
+
+    def test_multiline_tuple_down_revision_ignores_docstring(self):
+        assert _revision_identifiers(_MULTILINE_MERGE) == ("2c2c2c2c2c2c", ("1b1b1b1b1b1b", "cp01a2b3c4d5"))
+
+    def test_last_assignment_wins(self):
+        assert _revision_identifiers(_REASSIGNED_HEADER) == ("3d3d3d3d3d3d", ("2c2c2c2c2c2c",))
+
+    def test_module_without_revision_is_skipped(self):
+        assert _revision_identifiers('"""Package marker."""\n') is None
+
+    def test_merged_branches_have_a_single_head(self):
+        sources = [_BASE_MIGRATION, _ANNOTATED_CHILD, _BARE_CHILD_WITH_NON_HEX_ID, _MULTILINE_MERGE, _REASSIGNED_HEADER]
+
+        assert _heads_from_sources(sources) == {"3d3d3d3d3d3d"}
+
+    def test_unmerged_branches_are_all_heads(self):
+        sources = [_BASE_MIGRATION, _ANNOTATED_CHILD, _BARE_CHILD_WITH_NON_HEX_ID]
+
+        assert _heads_from_sources(sources) == {"1b1b1b1b1b1b", "cp01a2b3c4d5"}
+
+    def test_agrees_with_alembic_on_checked_out_migrations(self):
+        from alembic.script import ScriptDirectory
+
+        cfg = Config()
+        cfg.set_main_option("script_location", str(_SCRIPT_LOCATION))
+        sources = [path.read_text(encoding="utf-8") for path in (_SCRIPT_LOCATION / "versions").glob("*.py")]
+
+        assert _heads_from_sources(sources) == set(ScriptDirectory.from_config(cfg).get_heads())
 
 
 def _engine_url(db_url: str) -> str:

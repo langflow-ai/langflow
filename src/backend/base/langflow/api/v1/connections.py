@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from datetime import datetime
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, Response, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.routing import APIRoute
 from lfx.integrations.errors import IntegrationPolicyBlockedError
@@ -18,11 +19,25 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from langflow.api.utils import CurrentActiveUser, DbSession, DbSessionReadOnly
 from langflow.api.utils.migration_pause import changes_the_instance
 from langflow.api.v1.model_provider_policy_scope import ProviderPolicyAttributesDependency
+from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.authorization import ConnectionAction, ensure_connection_permission
 from langflow.services.authorization.guards import audit_guard_in_transaction
 from langflow.services.connection import ConnectionConflictError, DatabaseConnectionResolverService
 from langflow.services.connection.oauth import broker as oauth_broker
+from langflow.services.connection.oauth.adapter import provider_adapter
 from langflow.services.connection.oauth.config import OAuthError, OAuthRegistration, get_oauth_settings
+from langflow.services.connection.oauth.stored_registrations import (
+    REGISTRATION_ID_PATTERN,
+    SECRET_FIELDS,
+    SavedRegistrationError,
+    apply_saved_registrations,
+    delete_registration,
+    read_saved_registrations,
+    registration_status,
+    removed_since_startup,
+    save_registration,
+)
+from langflow.services.connection.policy import providers_with_usable_actions
 from langflow.services.connection.service import enforce_integration_policy_for_provider
 from langflow.services.connection.slack_credentials import ManualCredentialError
 from langflow.services.database.models.connection import (
@@ -33,7 +48,8 @@ from langflow.services.database.models.connection import (
     ConnectionTestRequest,
     ConnectionUpdate,
 )
-from langflow.services.database.models.connection.schemas import ConnectionRevokeRead
+from langflow.services.database.models.connection.schemas import ConnectionRevokeRead, ConnectionTokenRenewal
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_connection_resolver_service, session_scope
 from langflow.services.rate_limit import (
     check_rate_limit,
@@ -103,6 +119,19 @@ _OAUTH_RESPONSE_HEADERS = {
 }
 
 
+def oauth_rate_limit_response(retry_after_seconds: int) -> HTMLResponse:
+    """Give browser consent requests the same recovery guidance as other OAuth errors."""
+    return HTMLResponse(
+        '<!doctype html><html lang="en"><head>'
+        '<meta charset="utf-8"><title>Too many OAuth attempts</title>'
+        "</head><body><h1>Too many OAuth attempts</h1>"
+        f"<p>Wait about {retry_after_seconds} seconds, then return to "
+        "Settings &rarr; Connections and start again.</p></body></html>",
+        status_code=429,
+        headers={**_OAUTH_RESPONSE_HEADERS, "Retry-After": str(retry_after_seconds)},
+    )
+
+
 class OAuthStartRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     registration_id: str = Field(min_length=1, max_length=120, pattern=r"^[a-z0-9][a-z0-9_-]*$")
@@ -132,11 +161,40 @@ class OAuthRegistrationRead(BaseModel):
     context: Literal["self_managed", "hosted", "desktop"]
     client_type: Literal["confidential", "public"]
     scopes: list[str] = Field(description="The operator's ceiling; a start request selects a nonempty subset.")
+    required_scopes: list[str] = Field(default_factory=list, description="Scopes every connection must request.")
     allowed_tenants: list[str] = Field(description="Workspaces or domains the provider account must belong to.")
 
 
 class OAuthRegistrationListRead(BaseModel):
     registrations: list[OAuthRegistrationRead]
+
+
+class SavedOAuthRegistrationRead(BaseModel):
+    """A registration saved from Settings > Connections, without its secrets."""
+
+    id: str
+    registration: dict[str, Any]
+    has_secret: bool
+    saved_by: str
+    updated_at: datetime | None = None
+    # active: in use since this server started; pending: saved since then, so processes
+    # started earlier (more workers, the trigger listener) wait for a restart; removed: no
+    # longer saved, but those processes use it until a restart; overridden: the environment
+    # defines the same ID.
+    status: Literal["active", "overridden", "pending", "removed"]
+
+
+class SavedOAuthRegistrationListRead(BaseModel):
+    registrations: list[SavedOAuthRegistrationRead]
+
+
+class SavedOAuthRegistrationWrite(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    registration: dict[str, Any]
+
+
+SavedRegistrationId = Annotated[str, Path(pattern=REGISTRATION_ID_PATTERN, max_length=120)]
 
 
 def _oauth_cookie(state_value: str) -> str:
@@ -317,7 +375,7 @@ async def test_connection(
     current_user: CurrentActiveUser,
     service: ConnectionService,
 ) -> ConnectionRead:
-    """Validate the local credential envelope and requested scope coverage."""
+    """Check stored credentials, including Slack validation, and requested scope coverage."""
     check_rate_limit(request, scope=_SCOPE_CONNECTION_TEST, key=get_user_limiter_key(current_user.id))
     row = await _authorized_row(
         service=service,
@@ -409,6 +467,42 @@ async def update_connection(
     return await service.update(session, row, payload)
 
 
+@router.post("/{connection_id}/token", response_model=ConnectionRead)
+async def renew_connection_token(
+    request: Request,
+    connection_id: UUID,
+    payload: ConnectionTokenRenewal,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+    service: ConnectionService,
+) -> ConnectionRead:
+    """Validate a replacement token and update the owner's existing connection."""
+    check_rate_limit(
+        request,
+        scope=_SCOPE_CONNECTIONS,
+        limit_per_minute=get_connection_write_limit(),
+        key=get_user_limiter_key(current_user.id),
+    )
+    row = await _authorized_row(
+        service=service,
+        session=session,
+        user=current_user,
+        connection_id=connection_id,
+        action=ConnectionAction.WRITE,
+        for_update=True,
+    )
+    if not _may_enable_non_interactive(current_user, row):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Only the connection owner may renew its token."
+        )
+    try:
+        return await service.renew_token(session, row=row, user=current_user, payload=payload)
+    except IntegrationPolicyBlockedError as exc:
+        raise _policy_blocked(exc) from exc
+    except ManualCredentialError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
+
+
 @router.post("/{connection_id}/revoke", response_model=ConnectionRevokeRead)
 async def revoke_connection(
     request: Request,
@@ -482,10 +576,12 @@ async def start_connection_oauth(
         action=ConnectionAction.WRITE,
         for_update=True,
     )
-    # A blocked provider must not reach the authorization screen: refuse before
-    # the broker mints state or sets a browser-binding cookie.
+    # Refuse consent when no action remains available, before the broker mints
+    # state or sets a browser-binding cookie.
     try:
-        await enforce_integration_policy_for_provider(row.provider_key, user_id=current_user.id)
+        await enforce_integration_policy_for_provider(
+            row.provider_key, user_id=current_user.id, require_usable_action=True
+        )
     except IntegrationPolicyBlockedError as exc:
         raise _policy_blocked(exc) from exc
     try:
@@ -590,13 +686,15 @@ async def list_oauth_registrations(
     if not available:
         return OAuthRegistrationListRead(registrations=[])
 
-    # A provider outside the operator's integration ceiling is refused at
-    # oauth/start, so it must not appear here either.
+    # Offer only providers that could pass the policy check at oauth/start.
     policy = await aresolve_integration_policy(
         user_id=current_user.id,
         provider_ids=frozenset(registration.provider for _, registration in available),
         purpose=IntegrationPolicyPurpose.DISCOVER,
         attributes=provider_policy_attributes,
+    )
+    available_providers = await providers_with_usable_actions(
+        frozenset(registration.provider for _, registration in available), policy
     )
     return OAuthRegistrationListRead(
         registrations=[
@@ -607,12 +705,100 @@ async def list_oauth_registrations(
                 context=registration.context,
                 client_type=registration.client_type,
                 scopes=list(registration.scopes),
+                required_scopes=sorted(adapter.required_scopes)
+                if (adapter := provider_adapter(registration.provider))
+                else [],
                 allowed_tenants=list(registration.allowed_tenants),
             )
             for registration_id, registration in available
-            if policy.allows_provider(registration.provider)
+            if registration.provider in available_providers
         ]
     )
+
+
+@router.get("/oauth/registrations/saved", response_model=SavedOAuthRegistrationListRead)
+async def list_saved_oauth_registrations(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_active_superuser)],
+    session: DbSessionReadOnly,
+    response: Response,
+) -> SavedOAuthRegistrationListRead:
+    """List registrations saved from the UI by any superuser, and what still waits for a restart."""
+    check_rate_limit(
+        request,
+        scope=_SCOPE_CONNECTIONS_READ,
+        limit_per_minute=get_metadata_read_limit(),
+        key=get_user_limiter_key(current_user.id),
+    )
+    response.headers["Cache-Control"] = "no-store"
+    saved = await read_saved_registrations(session)
+    removed = removed_since_startup(saved)
+    return SavedOAuthRegistrationListRead(
+        registrations=[
+            SavedOAuthRegistrationRead(
+                id=registration_id,
+                registration={key: value for key, value in entry.value.items() if key not in SECRET_FIELDS},
+                has_secret=any(entry.value.get(field) for field in SECRET_FIELDS),
+                saved_by=entry.saved_by,
+                updated_at=entry.updated_at,
+                status="removed" if registration_id in removed else registration_status(registration_id, entry),
+            )
+            for registration_id, entry in sorted({**saved, **removed}.items())
+        ]
+    )
+
+
+@router.put(
+    "/oauth/registrations/saved/{registration_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(changes_the_instance)],
+)
+async def save_oauth_registration(
+    request: Request,
+    registration_id: SavedRegistrationId,
+    payload: SavedOAuthRegistrationWrite,
+    current_user: Annotated[User, Depends(get_current_active_superuser)],
+    session: DbSession,
+) -> None:
+    """Save an instance registration and apply the resulting OAuth settings to this process."""
+    check_rate_limit(
+        request,
+        scope=_SCOPE_CONNECTIONS,
+        limit_per_minute=get_connection_write_limit(),
+        key=get_user_limiter_key(current_user.id),
+    )
+    try:
+        await save_registration(
+            session, user_id=current_user.id, registration_id=registration_id, registration=payload.registration
+        )
+    except SavedRegistrationError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from None
+    await session.commit()
+    apply_saved_registrations(await read_saved_registrations(session))
+
+
+@router.delete(
+    "/oauth/registrations/saved/{registration_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(changes_the_instance)],
+)
+async def delete_saved_oauth_registration(
+    request: Request,
+    registration_id: SavedRegistrationId,
+    current_user: Annotated[User, Depends(get_current_active_superuser)],
+    session: DbSession,
+) -> None:
+    """Remove a saved registration and refresh this process without overriding environment values."""
+    check_rate_limit(
+        request,
+        scope=_SCOPE_CONNECTIONS,
+        limit_per_minute=get_connection_write_limit(),
+        key=get_user_limiter_key(current_user.id),
+    )
+    if not await delete_registration(session, registration_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Saved OAuth registration not found.")
+    await session.commit()
+    apply_saved_registrations(await read_saved_registrations(session))
 
 
 @router.get("/oauth/{provider}/callback", response_class=HTMLResponse, dependencies=[Depends(changes_the_instance)])
@@ -642,8 +828,17 @@ async def complete_connection_oauth(provider: str, request: Request, service: Co
         await oauth_broker.complete(
             provider=provider, state=state_value, browser=browser, code=code, denied="error" in query
         )
-    except OAuthError:
+    except OAuthError as exc:
         response.status_code = 400
-        response.body = b"OAuth authorization failed. Return to connections and start again."
+        if exc.code == "oauth-refresh-token-missing":
+            adapter = provider_adapter(provider)
+            message = "The provider did not return a refresh token."
+            if adapter and adapter.required_scopes:
+                message += f" Reconnect with the required scopes {', '.join(adapter.required_scopes)}."
+            else:
+                message += " Check the provider's refresh-access settings and reconnect."
+            response.body = message.encode("utf-8")
+        else:
+            response.body = b"OAuth authorization failed. Return to connections and start again."
         response.headers["content-length"] = str(len(response.body))
     return response

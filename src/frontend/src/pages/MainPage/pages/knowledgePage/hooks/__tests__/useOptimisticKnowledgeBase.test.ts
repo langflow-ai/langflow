@@ -254,5 +254,42 @@ describe("useOptimisticKnowledgeBase", () => {
       });
       expect(secondCallReturn).toBe(false);
     });
+
+    it("updates the exact stored name without adding a normalized duplicate", () => {
+      const queryClient = new QueryClient();
+      queryClient.setQueryData<KnowledgeBaseInfo[]>(
+        ["useGetKnowledgeBases"],
+        [
+          makeKb({ id: "spaced", dir_name: "ui4 test", name: "ui4 test" }),
+          makeKb({ id: "underscored", dir_name: "ui4_test", name: "ui4_test" }),
+        ],
+      );
+      const wrapper = ({ children }: { children: React.ReactNode }) =>
+        React.createElement(
+          QueryClientProvider,
+          { client: queryClient },
+          children,
+        );
+      const { result } = renderHook(() => useOptimisticKnowledgeBase(), {
+        wrapper,
+      });
+
+      act(() => {
+        result.current.captureSubmit({
+          sourceName: "ui4 test",
+          dirName: "ui4 test",
+          files: [new File(["content"], "notes.txt")],
+          embeddingModel: null,
+        });
+        result.current.applyOptimisticUpdate();
+      });
+
+      expect(
+        queryClient.getQueryData<KnowledgeBaseInfo[]>(["useGetKnowledgeBases"]),
+      ).toEqual([
+        expect.objectContaining({ id: "spaced", status: "ingesting" }),
+        expect.objectContaining({ id: "underscored", status: "empty" }),
+      ]);
+    });
   });
 });

@@ -96,6 +96,7 @@ def test_start_settings_preserve_destination_policy_and_redact_opensearch_enviro
 
     source = {
         "LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED": "true",
+        "LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK": "false",
         "LANGFLOW_KB_ALLOWED_HOSTS": "search.internal",
         "LANGFLOW_SSRF_ALLOWED_HOSTS": "search.internal",
         "SEARCH_CLUSTER": "https://search.internal",
@@ -111,6 +112,7 @@ def test_start_settings_preserve_destination_policy_and_redact_opensearch_enviro
         opensearch_variables=["SEARCH_CLUSTER", "SEARCH_PASSWORD", "MISSING", "LANGFLOW_SECRET_KEY"],
     )
     printed = {setting["name"]: setting["value"] for setting in settings}
+    assert printed["LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK"] == "false"
     assert printed["SEARCH_CLUSTER"] == "<same value as this instance>"
     assert printed["SEARCH_PASSWORD"] == "<same value as this instance>"  # noqa: S105
     assert "MISSING" not in printed
@@ -360,6 +362,7 @@ def test_the_check_may_dial_the_stores_that_this_server_may_dial():
         "LANGFLOW_SSRF_PROTECTION_ENABLED": "true",
         "LANGFLOW_SSRF_ALLOWED_HOSTS": "10.0.3.7",
         "LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED": "true",
+        "LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK": "false",
         "LANGFLOW_KB_ALLOWED_HOSTS": "search.internal",
     }
     source_env = {**SOURCE_ENV, **allowed, "OPENSEARCH_URL": "https://10.0.3.7:9200"}

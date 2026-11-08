@@ -1,4 +1,5 @@
 import { useContext, useEffect, useState } from "react";
+import { ChangesPausedNotice } from "@/components/common/changesPausedNotice";
 import { AuthContext } from "@/contexts/authContext";
 import {
   useGetAuthSession,
@@ -64,5 +65,10 @@ export function PlaygroundAuthGate({
     return <LoadingPage />;
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      {isAuthenticated && <ChangesPausedNotice />}
+    </>
+  );
 }

@@ -32,6 +32,7 @@ from lfx.integrations.errors import (
     ConnectionNotAuthorizedError,
     ConnectionUnresolvedError,
     IncompatibleToolError,
+    IntegrationNetworkError,
     InvalidRequestError,
     RateLimitedError,
     ResourceNotFoundError,
@@ -61,6 +62,7 @@ HTTP_TOO_MANY_REQUESTS = 429
         (ScopeMissingError(frozenset({"calendar.write"}), provider="google"), "scope-missing"),
         (RateLimitedError(provider="google", retry_after=12.0), "rate-limited"),
         (IncompatibleToolError(provider="google"), "incompatible-tool"),
+        (IntegrationNetworkError(provider="google", reason="timeout"), "network-error"),
         (IntegrationPolicyError("google", IntegrationPolicyPurpose.USE), "policy-blocked"),
     ],
 )
@@ -144,6 +146,23 @@ def test_retry_after_survives_for_a_rate_limited_provider() -> None:
     assert details.as_client_body()["retry_after"] == 30.0
 
 
+def test_canvas_message_contains_network_cause_and_remedy_without_reading_the_hint() -> None:
+    error = IntegrationNetworkError(provider="google", reason="timeout", host="gmail.googleapis.com")
+    wrapped = ComponentBuildError(message="component failed", formatted_traceback="")
+    wrapped.__cause__ = error
+    body = error_details_for_client(wrapped, expose_details=True).as_client_body()
+
+    assert body["error_code"] == "network-error"
+    assert "gmail.googleapis.com" in body["message"]
+    assert "timed out" in body["message"]
+    assert "Check this server's outbound network access" in body["message"]
+    assert body["retryable"] is False
+    delegated = error_details_for_client(wrapped, expose_details=False).as_client_body()
+    assert delegated["message"] == SAFE_INTEGRATION_ERROR_MESSAGE
+    assert "host" not in delegated.get("details", {})
+    assert "outbound network access" in delegated["hint"]
+
+
 def test_error_for_client_returns_the_provider_status_not_a_generic_500() -> None:
     """An unauthorized connection is a 403, not a workflow crash."""
     for error, status in (
@@ -152,6 +171,8 @@ def test_error_for_client_returns_the_provider_status_not_a_generic_500() -> Non
         (InvalidRequestError(provider="google"), 400),
         (ResourceNotFoundError(provider="google"), 404),
         (RateLimitedError(provider="google", retry_after=1.0), HTTP_TOO_MANY_REQUESTS),
+        (IntegrationNetworkError(provider="google", reason="timeout"), 504),
+        (IntegrationNetworkError(provider="google", reason="dns"), 502),
         (IntegrationPolicyError("google", IntegrationPolicyPurpose.USE), HTTP_FORBIDDEN),
     ):
         client_error = error_for_client(error, expose_details=False)
@@ -301,6 +322,7 @@ async def test_real_graph_connection_failure_keeps_typed_client_errors(monkeypat
         RateLimitedError(provider="google", retry_after=12.0),
         ScopeMissingError(frozenset({"calendar.write"}), provider="google"),
         ConnectionUnresolvedError("google/work", provider="google"),
+        IntegrationNetworkError(provider="google", reason="timeout", host="gmail.googleapis.com"),
         IntegrationPolicyError("google", IntegrationPolicyPurpose.USE, policy_key="integrations.google.drive.delete"),
     ],
 )

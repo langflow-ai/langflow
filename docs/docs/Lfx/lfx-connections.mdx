@@ -185,7 +185,8 @@ Resolution failures are sanitized `IntegrationError` subclasses. Their string fo
 | `auth-expired` | The credential declares a past `expires_at`, or the provider rejected it. | Refresh the credential in the injecting system. |
 | `scope-missing` | Required scopes are unverified or the declared `scopes` do not cover them. | Supply verified scope metadata or re-grant with the missing scopes. |
 | `rate-limited` | The provider returned 429. | Retry after the provider's backoff. |
-| `provider-unavailable` | The provider failed or was unreachable. | Retry later. |
+| `provider-unavailable` | The provider failed or was temporarily unavailable. | Retry later. |
+| `network-error` | The server could not reach the provider because of a timeout, DNS, connection, or TLS failure. | Check the server's outbound network, DNS, proxy, and TLS settings. Check whether a write completed before retrying to avoid duplicate actions. |
 | `action-unsupported` | The provider does not support the action. | Use a different action. |
 | `invalid-request` | The action's inputs are invalid or were rejected by the provider. | Correct the inputs before retrying. |
 | `resource-not-found` | The requested provider resource was not found or is inaccessible. | Check the resource ID and the connected account's access before retrying. |

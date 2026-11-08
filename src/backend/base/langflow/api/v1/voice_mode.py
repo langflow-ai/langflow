@@ -28,6 +28,7 @@ from lfx.services.model_provider_policy import (
     ModelProviderPolicyPurpose,
     aresolve_model_provider_policy,
 )
+from lfx.services.variable.exceptions import RuntimeVariableError
 from lfx.utils.secrets import secret_value_to_str
 from sqlmodel import select
 from starlette.websockets import WebSocket, WebSocketDisconnect
@@ -587,6 +588,8 @@ async def get_or_create_elevenlabs_client(user_id=None):
                 session=session,
             )
         api_key = secret_value_to_str(api_key)
+    except RuntimeVariableError:
+        raise
     except (InvalidToken, ValueError) as e:
         await logger.aerror(f"Error with ElevenLabs API key: {e}")
         api_key = os.getenv("ELEVENLABS_API_KEY", "")

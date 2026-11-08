@@ -1,11 +1,19 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { api } from "@/controllers/API/api";
 import {
   type MigrationState,
   runSourceChecks,
   useMigrationQuery,
 } from "@/controllers/API/queries/migration";
+import useAuthStore from "@/stores/authStore";
 import { CheckStep } from "../CheckStep";
 
 const migration: MigrationState = {
@@ -125,12 +133,178 @@ it("says what to do about the 'langflow' account and names no later step", async
   );
 
   const row = await screen.findByTestId("migration-check-default superuser");
-  expect(row).toHaveTextContent("Before you pause changes");
+  expect(row).toHaveTextContent(
+    "Set a password for it before you pause changes",
+  );
   expect(row).not.toHaveTextContent("Handled in");
   // A warning that a later step deals with still names it.
   expect(
     screen.getByTestId("migration-check-role assignments"),
   ).toHaveTextContent("Handled in: Start the new instance");
+});
+
+describe("the 'langflow' account's password", () => {
+  // Under automatic sign-in nobody may know it, and the API was the only way to set it.
+  const warned: MigrationState = {
+    ...migration,
+    record: {
+      ...migration.record,
+      steps: {
+        check_source: {
+          ...migration.record.steps.check_source,
+          report: {
+            ok: true,
+            checks: [
+              {
+                name: "default superuser",
+                status: "warn",
+                summary: "'langflow' has signed in and AUTO_LOGIN is on",
+                problems: [],
+              },
+            ],
+          },
+        } as MigrationState["record"]["steps"]["check_source"],
+      },
+    },
+  };
+  const show = async (state = warned) => {
+    jest.spyOn(api, "get").mockResolvedValue({ data: state });
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <Subject />
+      </QueryClientProvider>,
+    );
+    return screen.findByTestId("migration-check-default superuser");
+  };
+
+  afterEach(() => useAuthStore.setState({ userData: null }));
+
+  it("is set from its row, once typed twice the same", async () => {
+    useAuthStore.setState({
+      userData: { id: "user-1", username: "langflow" } as never,
+    });
+    const patch = jest.spyOn(api, "patch").mockResolvedValue({ data: {} });
+    const row = await show();
+
+    await userEvent.type(
+      within(row).getByLabelText("New password"),
+      "a phrase I know",
+    );
+    await userEvent.type(
+      within(row).getByLabelText("New password again"),
+      "a phrase I knew",
+    );
+    await userEvent.click(
+      within(row).getByRole("button", { name: "Set password" }),
+    );
+    expect(within(row).getByRole("alert")).toHaveTextContent(
+      "Passwords do not match",
+    );
+    expect(patch).not.toHaveBeenCalled();
+
+    await userEvent.clear(within(row).getByLabelText("New password again"));
+    await userEvent.type(
+      within(row).getByLabelText("New password again"),
+      "a phrase I know",
+    );
+    await userEvent.click(
+      within(row).getByRole("button", { name: "Set password" }),
+    );
+
+    expect(await within(row).findByText("Password set.")).toBeInTheDocument();
+    expect(patch.mock.calls).toEqual([
+      [
+        expect.stringMatching(/\/users\/user-1$/),
+        { password: "a phrase I know" }, // pragma: allowlist secret
+      ],
+    ]);
+  });
+
+  // Sign-in refuses the account's old default password, and the login page trims what is typed.
+  it.each(["langflow", " padded "])(
+    "refuses %p, which could never sign in",
+    async (password) => {
+      useAuthStore.setState({
+        userData: { id: "user-1", username: "langflow" } as never,
+      });
+      const patch = jest.spyOn(api, "patch").mockResolvedValue({ data: {} });
+      const row = await show();
+
+      await userEvent.type(
+        within(row).getByLabelText("New password"),
+        password,
+      );
+      await userEvent.type(
+        within(row).getByLabelText("New password again"),
+        password,
+      );
+      await userEvent.click(
+        within(row).getByRole("button", { name: "Set password" }),
+      );
+
+      expect(within(row).getByRole("alert")).toHaveTextContent(
+        "Sign-in refuses 'langflow' and passwords that start or end with a space.",
+      );
+      expect(patch).not.toHaveBeenCalled();
+    },
+  );
+
+  it("says so when the password could not be set", async () => {
+    useAuthStore.setState({
+      userData: { id: "user-1", username: "langflow" } as never,
+    });
+    jest.spyOn(api, "patch").mockRejectedValue(new Error("Network Error"));
+    const row = await show();
+
+    await userEvent.type(
+      within(row).getByLabelText("New password"),
+      "a phrase I know",
+    );
+    await userEvent.type(
+      within(row).getByLabelText("New password again"),
+      "a phrase I know",
+    );
+    await userEvent.click(
+      within(row).getByRole("button", { name: "Set password" }),
+    );
+
+    expect(await within(row).findByRole("alert")).toHaveTextContent(
+      "Something went wrong. Try again.",
+    );
+    expect(within(row).queryByText("Password set.")).toBeNull();
+  });
+
+  // A pause refuses the change, so the form waits until changes are back on.
+  it.each(["pause", "pausing"])(
+    "is not offered while the record has a %s",
+    async (key) => {
+      useAuthStore.setState({
+        userData: { id: "user-1", username: "langflow" } as never,
+      });
+      const row = await show({
+        ...warned,
+        record: {
+          ...warned.record,
+          [key]: { frozen_at: "2026-10-06T12:02:00Z", frozen_by: "admin" },
+        },
+      });
+
+      expect(row).toHaveTextContent(
+        "Set a password for it before you pause changes",
+      );
+      expect(within(row).queryByLabelText("New password")).toBeNull();
+    },
+  );
+
+  // It sets the password of whoever is signed in, so it is there only while that is the 'langflow' account.
+  it("is not offered to another account", async () => {
+    useAuthStore.setState({
+      userData: { id: "user-2", username: "alice" } as never,
+    });
+    const row = await show();
+
+    expect(within(row).queryByLabelText("New password")).toBeNull();
+  });
 });
 
 it("offers no other check and no other word about one once the new instance has started", async () => {

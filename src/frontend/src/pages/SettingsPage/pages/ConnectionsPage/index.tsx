@@ -16,6 +16,7 @@ import {
   useUpdateConnectionMutation,
 } from "@/controllers/API/queries/connections";
 import CustomConnectionsTabs from "@/customization/components/custom-connections-tabs";
+import SettingsPageHeader from "@/pages/SettingsPage/components/SettingsPageHeader";
 import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import AddConnectionDialog from "./components/AddConnectionDialog";
@@ -23,6 +24,7 @@ import ConnectionsTable, {
   type ConnectionsSort,
   ownerKindOf,
 } from "./components/ConnectionsTable";
+import ManageProvidersPanel from "./components/ManageProvidersPanel";
 
 const EMPTY_CONNECTIONS: ConnectionRead[] = [];
 
@@ -35,6 +37,7 @@ export default function ConnectionsPage() {
   const { t } = useTranslation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setNoticeData = useAlertStore((state) => state.setNoticeData);
   const userData = useAuthStore((state) => state.userData);
   const isSuperuser = Boolean(userData?.is_superuser);
 
@@ -114,15 +117,19 @@ export default function ConnectionsPage() {
     return t("connections.emptyTab");
   };
 
-  const run = async (
+  const run = async <T,>(
     connection: ConnectionRead,
-    action: () => Promise<unknown>,
-    success: string,
+    action: () => Promise<T>,
+    success: string | ((result: T) => void),
   ) => {
     setBusyId(connection.id);
     try {
-      await action();
-      setSuccessData({ title: success });
+      const result = await action();
+      if (typeof success === "string") {
+        setSuccessData({ title: success });
+      } else {
+        success(result);
+      }
     } catch (error) {
       setErrorData({
         title: t("connections.errors.actionFailed"),
@@ -176,7 +183,19 @@ export default function ConnectionsPage() {
       run(
         connection,
         () => revoke.mutateAsync(connection.id),
-        t("connections.toast.revoked"),
+        (result) => {
+          if (result.provider_revocation === "revoked") {
+            setSuccessData({ title: t("connections.toast.revoked") });
+          } else {
+            setNoticeData({
+              title: t(
+                result.provider_revocation === "failed"
+                  ? "connections.toast.revokeFailed"
+                  : "connections.toast.revokedLocally",
+              ),
+            });
+          }
+        },
       ),
     onDelete: (connection: ConnectionRead) =>
       run(
@@ -232,14 +251,12 @@ export default function ConnectionsPage() {
 
   return (
     <div className="flex h-full w-full flex-col gap-6">
-      <div className="flex w-full items-start justify-between gap-4">
-        <div className="flex flex-col">
-          <h2 className="text-lg font-semibold">{t("connections.title")}</h2>
-          <p className="text-sm text-muted-foreground">
-            {t("connections.subtitle")}
-          </p>
-        </div>
+      <SettingsPageHeader
+        title={t("connections.title")}
+        description={t("connections.subtitle")}
+      >
         <Button
+          size="sm"
           onClick={() => {
             setReauthorizing(undefined);
             setDialogOpen(true);
@@ -249,10 +266,10 @@ export default function ConnectionsPage() {
           disabled={!integrationsQuery.isSuccess || noProviders}
           data-testid="add-connection"
         >
-          <ForwardedIconComponent name="Plus" className="mr-2 h-4 w-4" />
+          <ForwardedIconComponent name="Plus" className="h-4 w-4" />
           {t("connections.add.title")}
         </Button>
-      </div>
+      </SettingsPageHeader>
 
       {/* Always mounted: a status region inserted with its text already in
           place is not reliably announced. */}
@@ -294,6 +311,11 @@ export default function ConnectionsPage() {
               {t("connections.tabs.others")}
             </TabsTrigger>
           )}
+          {isSuperuser && (
+            <TabsTrigger value="providers">
+              {t("connections.tabs.providers")}
+            </TabsTrigger>
+          )}
           {extraTabs.map((tab) => (
             <TabsTrigger key={tab.value} value={tab.value}>
               {tab.label}
@@ -310,6 +332,16 @@ export default function ConnectionsPage() {
         {isSuperuser && (
           <TabsContent value="others" className="mt-0">
             {connectionsPanel}
+          </TabsContent>
+        )}
+        {isSuperuser && (
+          <TabsContent value="providers" className="mt-0">
+            {view === "providers" ? (
+              <ManageProvidersPanel
+                providers={integrationsQuery.data?.providers ?? []}
+                deploymentContext={integrationsQuery.data?.deployment_context}
+              />
+            ) : null}
           </TabsContent>
         )}
         {extraTabs.map((tab) => (

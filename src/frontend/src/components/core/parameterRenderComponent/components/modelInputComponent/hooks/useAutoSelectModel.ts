@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import type { ModelProviderWithStatus } from "@/controllers/API/queries/models/use-get-model-providers";
+import type { ModelType } from "@/types/models";
+import { isUserOwnedModelKind } from "@/utils/model-kind";
 import { matchesModelIdentity } from "../helpers/model-option-identity";
 import { providerNamesMatch } from "../helpers/provider-identity";
 import { isSavedModelUnavailable } from "../helpers/saved-model-availability";
@@ -20,6 +22,8 @@ export interface UseAutoSelectModelParams {
   modelStatusIsReliable: boolean;
   /** The user's enabled-models map; a model absent from it (and from the catalog) is restricted, not stale. */
   enabledModels?: Record<string, Record<string, boolean>>;
+  /** The field's kind; a decision field is never replaced (see isUserOwnedModelKind). */
+  modelType: ModelType;
 }
 
 /**
@@ -28,8 +32,9 @@ export interface UseAutoSelectModelParams {
  * empty value is left empty (LE-2168). A model that is no longer offered at
  * all — restricted by an administrator or removed from the catalog — is left
  * in place too, so the restriction stays visible instead of being papered
- * over by a silent swap (LE-1960). Extracted from ModelInputComponent
- * (LE-1736 W24).
+ * over by a silent swap (LE-1960). A decision field is never touched, not even
+ * for another provider's decision model (LE-3129). Extracted from
+ * ModelInputComponent (LE-1736 W24).
  */
 export function useAutoSelectModel({
   flatOptions,
@@ -39,9 +44,11 @@ export function useAutoSelectModel({
   providers,
   modelStatusIsReliable,
   enabledModels,
+  modelType,
 }: UseAutoSelectModelParams): void {
   useEffect(() => {
     if (
+      isUserOwnedModelKind(modelType) ||
       !modelStatusIsReliable ||
       flatOptions.length === 0 ||
       isConnectionMode
@@ -97,5 +104,6 @@ export function useAutoSelectModel({
     providers,
     modelStatusIsReliable,
     enabledModels,
+    modelType,
   ]);
 }

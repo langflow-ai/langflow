@@ -144,6 +144,48 @@ def opensearch_env_configured() -> bool:
     return bool(read_opensearch_url_from_env())
 
 
+async def validate_opensearch_url(url: str, url_variable: str, url_source: str) -> None:
+    """Check a resolved cluster URL against both destination gates before it is dialed.
+
+    The URL comes from a tenant-controlled Langflow variable (``backend_config``
+    only names the variable), and the client built from it makes server-side
+    connections whose outcome is echoed back by the test-connection route.
+    Without validation a tenant can probe cloud-metadata (169.254.169.254),
+    RFC1918, or loopback targets from the server's network position. Apply the
+    same connector SSRF policy every other tenant-URL sink uses (vector-store
+    components, MCP, model providers); operators reach legitimate internal
+    clusters via ``LANGFLOW_SSRF_ALLOWED_HOSTS``. ``resolve_hostname`` blocks,
+    so the check runs off the event loop.
+
+    This is the *only* place the cluster URL is validated. ``_resolve_secrets``
+    briefly called the validator itself as well, which resolved DNS twice per
+    KB and left the re-raise below unreachable. The production preflight calls
+    it too, so a boot never reports a cluster healthy that the runtime refuses.
+
+    Re-raised as ``SSRFProtectionError`` (which subclasses ``ValueError``, so every
+    existing ``except ValueError`` config path still catches it) rather than flattened
+    to a bare ``ValueError``: ``test_connection`` reports ``type(exc).__name__`` back to
+    the caller, and a blocked destination should not read as a typo in the index name.
+
+    The second gate is ``enforce_kb_destination``: opensearch-py re-resolves DNS when it
+    connects and offers no seam to pin the validated address (langchain's wrapper hands one
+    kwargs dict to both the urllib3 and aiohttp clients), so a tenant-written hostname is
+    additionally required to be one the operator approved. It runs first, and without a DNS
+    lookup, so a refused destination is never resolved on the tenant's behalf.
+    """
+    try:
+        enforce_kb_destination(url, source=url_source, description=f"Langflow variable {url_variable!r}")
+        await asyncio.to_thread(validate_connector_url_for_ssrf, url)
+    except ValueError as exc:
+        # Both URL parsing and policy errors can contain the resolved value.
+        # A variable may be usable by a tenant without being readable by them.
+        msg = (
+            f"OpenSearch URL from variable {url_variable!r} is not allowed. "
+            "Use an http(s) URL with an approved host and check the server's destination policy."
+        )
+        raise SSRFProtectionError(msg) from exc
+
+
 # LangChain's ``OpenSearchVectorSearch`` resolves ``vector_field`` from
 # per-call kwargs (default ``"vector_field"``) and ignores the value passed to
 # its constructor. This backend never passes a per-call override, so ingestion
@@ -361,37 +403,10 @@ class OpenSearchBackend(BaseVectorStoreBackend):
     async def _validate_url(url: str, url_variable: str, url_source: str) -> None:
         """Check the resolved cluster URL against both destination gates before use.
 
-        The URL comes from a tenant-controlled Langflow variable (``backend_config``
-        only names the variable), and the client built from it makes server-side
-        connections whose outcome is echoed back by the test-connection route.
-        Without validation a tenant can probe cloud-metadata (169.254.169.254),
-        RFC1918, or loopback targets from the server's network position. Apply the
-        same connector SSRF policy every other tenant-URL sink uses (vector-store
-        components, MCP, model providers); operators reach legitimate internal
-        clusters via ``LANGFLOW_SSRF_ALLOWED_HOSTS``. ``resolve_hostname`` blocks,
-        so the check runs off the event loop.
-
-        This is the *only* place the cluster URL is validated. ``_resolve_secrets``
-        briefly called the validator itself as well, which resolved DNS twice per
-        KB and left the re-raise below unreachable.
-
-        Re-raised as ``SSRFProtectionError`` (which subclasses ``ValueError``, so every
-        existing ``except ValueError`` config path still catches it) rather than flattened
-        to a bare ``ValueError``: ``test_connection`` reports ``type(exc).__name__`` back to
-        the caller, and a blocked destination should not read as a typo in the index name.
-
-        The second gate is ``enforce_kb_destination``: opensearch-py re-resolves DNS when it
-        connects and offers no seam to pin the validated address (langchain's wrapper hands one
-        kwargs dict to both the urllib3 and aiohttp clients), so a tenant-written hostname is
-        additionally required to be one the operator approved. It runs first, and without a DNS
-        lookup, so a refused destination is never resolved on the tenant's behalf.
+        See :func:`validate_opensearch_url`; this is the only call site on the
+        runtime path, so ``test_connection``, ingestion and retrieval all share it.
         """
-        enforce_kb_destination(url, source=url_source, description=f"Langflow variable {url_variable!r}")
-        try:
-            await asyncio.to_thread(validate_connector_url_for_ssrf, url)
-        except SSRFProtectionError as exc:
-            msg = f"OpenSearch URL from variable {url_variable!r} is not allowed: {exc}"
-            raise SSRFProtectionError(msg) from exc
+        await validate_opensearch_url(url, url_variable, url_source)
 
     def _build_vector_store(self) -> VectorStore:
         # Validate config before touching optional deps so missing
@@ -597,7 +612,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         except Exception as exc:  # noqa: BLE001
             return TestConnectionResult(
                 ok=False,
-                message=str(exc) or type(exc).__name__,
+                message="OpenSearch credential resolution failed.",
                 details={"type": type(exc).__name__},
             )
 
@@ -606,7 +621,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         except Exception as exc:  # noqa: BLE001
             return TestConnectionResult(
                 ok=False,
-                message=str(exc) or type(exc).__name__,
+                message="OpenSearch client setup failed. Check the backend configuration.",
                 details={"type": type(exc).__name__},
             )
 
@@ -644,13 +659,13 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         # to surface.
         try:
             info = await asyncio.to_thread(client.info)
-        except AuthenticationException as exc:
+        except AuthenticationException:
             return TestConnectionResult(
                 ok=False,
                 message="Authentication failed. Check the username and password variables.",
-                details={"type": "AuthenticationException", "error": str(exc)},
+                details={"type": "AuthenticationException"},
             )
-        except AuthorizationException as exc:
+        except AuthorizationException:
             # A 403 proves liveness: DNS, TLS, the connection, and credential
             # authentication all succeeded (a bad password raises 401
             # AuthenticationException instead) — the cluster only declined the
@@ -661,30 +676,30 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             return TestConnectionResult(
                 ok=True,
                 message="Connected to OpenSearch (cluster-monitor not permitted; liveness confirmed).",
-                details={"type": "AuthorizationException", "reachable": True, "error": str(exc)},
+                details={"type": "AuthorizationException", "reachable": True},
             )
-        except OpenSearchSSLError as exc:
+        except OpenSearchSSLError:
             return TestConnectionResult(
                 ok=False,
                 message=(
                     "TLS handshake failed. Verify the URL scheme matches the cluster, and "
                     "toggle 'Verify TLS cert' off if you are using a self-signed certificate."
                 ),
-                details={"type": "SSLError", "error": str(exc)},
+                details={"type": "SSLError"},
             )
-        except OpenSearchConnectionError as exc:
+        except OpenSearchConnectionError:
             return TestConnectionResult(
                 ok=False,
                 message=(
                     "Could not reach the cluster. Verify the URL, network access, and that "
                     "the 'Use TLS' toggle matches the cluster's scheme."
                 ),
-                details={"type": "ConnectionError", "error": str(exc)},
+                details={"type": "ConnectionError"},
             )
         except Exception as exc:  # noqa: BLE001
             return TestConnectionResult(
                 ok=False,
-                message=str(exc) or type(exc).__name__,
+                message="OpenSearch connection failed.",
                 details={"type": type(exc).__name__},
             )
 

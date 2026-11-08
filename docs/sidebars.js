@@ -134,6 +134,7 @@ module.exports = {
             "Develop/api-keys-and-authentication",
             "Develop/external-authentication",
             "Develop/authorization",
+            "Develop/audit-logging",
             "Develop/admin-api-cli",
             "Develop/connections",
             "Develop/connection-oauth",
@@ -212,7 +213,7 @@ module.exports = {
         {
           type: "doc",
           id: "Develop/concepts-voice-mode",
-          label: "Use voice mode"
+          label: "Use speech input"
         },
         {
           type: "doc",
@@ -230,6 +231,11 @@ module.exports = {
           type:"doc",
           id: "Deployment/deployment-overview",
           label: "Langflow deployment overview"
+        },
+        {
+          type: "doc",
+          id: "Deployment/instance-migration",
+          label: "Migrate to a new instance"
         },
         {
           type: "doc",
@@ -360,6 +366,11 @@ module.exports = {
           id: "Deployment/security",
           label: "Security",
         },
+        {
+          type: "doc",
+          id: "administration/secret-key-rotation",
+          label: "Offline secret-key audit and rotation",
+        },
       ],
     },
     {
@@ -485,6 +496,7 @@ module.exports = {
               label: "LLM Operations",
               items: [
                 "Components/batch-run",
+                "Components/decision-model",
                 "Components/guardrails",
                 "Components/policies",
                 "Components/llm-selector",
@@ -526,7 +538,6 @@ module.exports = {
             "Components/components-bundles",
             "Components/bundles-agentics",
             "Components/bundles-aiml",
-            "Components/bundles-altk",
             "Components/bundles-amazon",
             "Components/bundles-anthropic",
             "Components/bundles-apify",
@@ -536,7 +547,6 @@ module.exports = {
             "Components/bundles-baidu",
             "Components/bundles-bing",
             "Components/bundles-cassandra",
-            "Components/bundles-chroma",
             "Components/bundles-cleanlab",
             "Components/bundles-codeagents",
             "Components/bundles-clickhouse",
@@ -564,6 +574,8 @@ module.exports = {
             "Components/bundles-huggingface",
             "Components/bundles-ibm",
             "Components/bundles-icosacomputing",
+            "Components/bundles-jira",
+            "Components/bundles-keenable",
             "Components/bundles-langchain",
             "Components/bundles-lite-llm",
             "Components/bundles-lmstudio",
@@ -648,11 +660,6 @@ module.exports = {
           items: [
             "API-Reference/workflow-api-quickstart",
             "API-Reference/workflows-api",
-            {
-              type: "link",
-              label: "Workflow API specification (Beta)",
-              href: "/api/workflow",
-            },
           ],
         },
         "API-Reference/api-openai-responses",

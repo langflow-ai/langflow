@@ -7,6 +7,8 @@
  * them and drifting.
  */
 
+import type { ConditionalScopeRequirement } from "@/utils/connection-scopes";
+
 export type Iso8601 = string;
 
 export type ConnectionOwnershipMode = "user" | "instance";
@@ -23,6 +25,7 @@ export type ConnectionStatusReason =
   | "credential-undecryptable"
   | "oauth-denied"
   | "oauth-expired"
+  | "oauth-refresh-token-missing"
   | "oauth-failed";
 
 export type ConnectionHealth = "unknown" | "healthy" | "unhealthy";
@@ -95,6 +98,12 @@ export interface ConnectionCreate {
   credentials?: ConnectionCredentialWrite | null;
 }
 
+/** Write-only replacement for a provider-validated manual credential. */
+export interface ConnectionTokenRenewal {
+  credentials: ConnectionCredentialWrite;
+  allow_non_interactive: boolean;
+}
+
 /** Only these two change without re-authorizing the provider. */
 export interface ConnectionUpdate {
   display_name?: string;
@@ -113,6 +122,7 @@ export interface OAuthRegistrationRead {
   context: "self_managed" | "hosted" | "desktop";
   client_type: "confidential" | "public";
   scopes: string[];
+  required_scopes?: string[];
   allowed_tenants: string[];
 }
 
@@ -120,11 +130,28 @@ export interface OAuthRegistrationListRead {
   registrations: OAuthRegistrationRead[];
 }
 
+/** A registration a superuser saved from Settings; secrets are never returned. */
+export interface SavedOAuthRegistrationRead {
+  id: string;
+  registration: Record<string, unknown>;
+  has_secret: boolean;
+  saved_by: string;
+  updated_at?: Iso8601 | null;
+  /**
+   * active: in use since the server started; pending: saved since then and waits for a
+   * restart; removed: no longer saved, in use until a restart; overridden: the server
+   * environment defines the same ID.
+   */
+  status: "active" | "overridden" | "pending" | "removed";
+}
+
 export interface IntegrationCapabilityRead {
   id: string;
   display_name: string;
   policy_keys: string[];
   risk: string;
+  required_scopes?: string[];
+  conditional_scopes?: ConditionalScopeRequirement[];
   maturity: string;
   substrate: string;
   identity: IntegrationIdentity;
@@ -145,6 +172,14 @@ export interface IntegrationProviderRead {
   enabled: boolean;
   connection_count: number;
   capabilities: IntegrationCapabilityRead[];
+  manual_token_profiles?: ManualTokenProfileRead[];
+}
+
+export interface ManualTokenProfileRead {
+  id: string;
+  identity: IntegrationIdentity;
+  required_scopes: string[];
+  requires_expiry?: boolean;
 }
 
 /** Which deployment this instance is (`LANGFLOW_CONNECTION_OAUTH_CONTEXT`). */

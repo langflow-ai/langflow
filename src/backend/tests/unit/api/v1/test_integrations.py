@@ -47,6 +47,13 @@ def _manifest() -> IntegrationCapabilityManifest:
                 "auth_profile_id": "user",
                 "identity": "user_delegated",
                 "required_scopes": ["drive.file"],
+                "conditional_scopes": [
+                    {
+                        "scope": "drive.readonly",
+                        "role": "optional",
+                        "condition": {"kind": "input_truthy", "input": "include_shared"},
+                    }
+                ],
                 "policy_keys": [SEARCH_KEY],
                 "substrate": "sdk",
                 "maturity": "ga",
@@ -102,7 +109,11 @@ def integration_policy():
     bundle = get_policy_bundle_service()
     original = bundle.snapshot
 
-    def _publish(*, providers: frozenset[str] = frozenset(), actions: frozenset[str] = frozenset()) -> None:
+    def _publish(
+        *,
+        providers: frozenset[str] | None = None,
+        actions: frozenset[str] = frozenset(),
+    ) -> None:
         bundle.publish(
             replace(
                 original,
@@ -137,6 +148,18 @@ async def test_list_integrations_is_unrestricted_without_a_policy(
     assert entry["connection_count"] == 0
     assert {capability["id"] for capability in entry["capabilities"]} == {SEARCH_CAPABILITY, DELETE_CAPABILITY}
     assert all(capability["allowed"] for capability in entry["capabilities"])
+    for capability in entry["capabilities"]:
+        assert capability["required_scopes"] == ["drive.file"]
+        expected_conditional = [
+            {
+                "scope": "drive.readonly",
+                "role": "optional",
+                "condition": {"kind": "input_truthy", "input": "include_shared"},
+            }
+        ]
+        assert capability["conditional_scopes"] == (
+            expected_conditional if capability["id"] == SEARCH_CAPABILITY else []
+        )
 
 
 @pytest.mark.usefixtures("active_user", "loaded_integration")
@@ -152,6 +175,20 @@ async def test_list_integrations_omits_a_provider_outside_the_ceiling(
 
     assert response.status_code == 200, response.text
     assert [item["provider_id"] for item in response.json()["providers"]] == []
+
+
+@pytest.mark.usefixtures("active_user", "loaded_integration")
+async def test_list_integrations_allows_explicit_deny_all(
+    client: AsyncClient,
+    logged_in_headers: dict[str, str],
+    integration_policy,
+) -> None:
+    integration_policy(providers=frozenset())
+
+    response = await client.get("api/v1/integrations", headers=logged_in_headers)
+
+    assert response.status_code == 200, response.text
+    assert response.json()["providers"] == []
 
 
 @pytest.mark.usefixtures("active_user", "loaded_integration")

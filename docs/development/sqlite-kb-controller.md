@@ -1,9 +1,11 @@
 # Managed SQLite upgrade controller
 
-The 1.13 controller stages the signed one-time Chroma reader, stops the selected
-old worker family, verifies a metadata backup and maintenance receipt, starts the
-new application, and waits for its migration-aware readiness endpoint. Existing
-vectors are migrated automatically by the application's storage coordinator.
+The 1.13 controller stops the selected old worker family, verifies a metadata
+backup and maintenance receipt, starts the new application, and waits for its migration-aware readiness endpoint. Existing
+vectors are migrated automatically by the application's storage coordinator
+using the bundled reader. Docker, cosign and a separate helper release are not
+required. The controller uses the same supported formats and resource limits as
+the automatic upgrade.
 
 This controller supports one host, local storage and a SQLite application
 metadata database. Run it as the **non-root application account**, from outside
@@ -21,12 +23,7 @@ external manager will not recreate a terminated service. Do not point it at a
 shared login shell, a machine-wide service manager or an unrelated process.
 
 Install 1.13 into a clean environment, retaining the original data paths and
-application configuration. Provision Docker, the qualified cosign release and
-the helper release digest, as described in
-[the helper release instructions](../../tools/chroma_migration_helper/README.md).
-Offline kits must be loaded and verified using those instructions first. The
-controller checks signature verification and local image availability before
-stopping any worker. Root-owned private files must be transferred to the
+application configuration. Root-owned private files must be transferred to the
 application account through the deployment manager rather than made public.
 
 Obtain the old foreground supervisor PID from its deployment manager, then get
@@ -42,7 +39,6 @@ retain kernel start ticks and boot ID so clock adjustments cannot invalidate a
 paused family. Run the controller from the **new** environment:
 
 ```sh
-export LANGFLOW_KB_MIGRATION_HELPER_IMAGE=ghcr.io/langflow-ai/langflow-chroma-migration@sha256:<release-digest>
 /path/to/1.13/bin/python -m langflow.services.knowledge_base_storage.controller \
   --root /absolute/knowledge-bases \
   --database /absolute/langflow.db \
@@ -60,8 +56,8 @@ The command after `--` is an argument vector, executed directly without a shell.
 It must remain in the foreground and honor the existing instance configuration.
 Pass credentials through the application's normal private environment or secret
 configuration, not command arguments, because the private journal records argv.
-The controller explicitly sets the knowledge-base root, SQLite metadata URL,
-maintenance receipt and helper settings in the new process's environment.
+The controller explicitly sets the knowledge-base root, SQLite metadata URL and
+maintenance receipt in the new process's environment.
 Do not override those paths with CLI arguments or a different configuration file.
 
 Before shutdown, the controller suspends the exact supervisor, inventories and
@@ -83,16 +79,13 @@ response and a listening socket owned by that exact new supervisor's session.
 An unrelated healthy service on the port cannot satisfy the gate.
 
 A private `application.log` captures the new process output. Backup and source
-files remain retained. Helper cleanup is handled by the application coordinator
-when the migration batch finishes. A helper cleanup failure does not roll routing
-back to Chroma.
+files remain retained.
 
 ## Resume and forward repair
 
 Re-run the **same command with the same state directory** after interruption.
-The journal binds the host, old supervisor identity, data paths, command and
-helper settings. Completed shutdown and backup steps are reused. A running new
-application is observed instead of launched again. A readiness timeout leaves
+The journal binds the host, old supervisor identity, data paths and command.
+Completed shutdown and backup steps are reused. A running new application is observed instead of launched again. A readiness timeout leaves
 it available for the authenticated administration and migration retry APIs.
 Fix the reported issue and re-run the controller to observe readiness.
 

@@ -31,7 +31,6 @@ from langflow.api.utils import (
     CurrentActiveUser,
     DbSession,
     cascade_delete_flow,
-    normalize_code_for_import,
     validate_is_component,
 )
 from langflow.api.utils.core import strip_secret_field_values
@@ -53,6 +52,7 @@ from langflow.api.v1.flow_conflict import (
     ensure_version_precondition,
     parse_if_match,
 )
+from langflow.api.v1.flow_validation import flow_validation_error
 from langflow.api.v1.flows_helpers import (
     _build_flows_download_response,
     _canonicalize_flow_destination,
@@ -64,6 +64,7 @@ from langflow.api.v1.flows_helpers import (
     _save_flow_to_fs,
     _update_existing_flow,
     _validate_and_assign_folder,
+    _validate_new_flow_id,
     _verify_fs_path,
     destination_folder_owner_id,
 )
@@ -337,7 +338,7 @@ async def create_flow(
     try:
         catalog_policy_snapshot = get_catalog_policy_service().snapshot
         _validate_catalog_policy_for_write(flow.data, snapshot=catalog_policy_snapshot)
-        await persist_and_strip_mcp_secrets(flow.data, current_user.id, session)
+        await persist_and_strip_mcp_secrets(flow.data, current_user.id, session, flow_id=flow.id)
         # FastAPI builds the dependency's body model independently from the
         # handler's body model. Carry the exact destination that was authorized
         # into the row we persist so stale caller scope fields cannot retarget
@@ -699,7 +700,9 @@ async def update_flow(
         # only the reference it wrote itself and stage nothing. actor.id rather than
         # current_user.id: the rollback expires the ORM User.
         masked_targets: list[MCPSecretTarget] = []
-        carried_secrets, secret_variables = extract_and_strip_mcp_secrets(flow.data, masked_targets=masked_targets)
+        carried_secrets, secret_variables = extract_and_strip_mcp_secrets(
+            flow.data, masked_targets=masked_targets, flow_id=flow_id
+        )
 
         async def operation() -> FlowRead:
             # Re-load inside each attempt so retry after nested rollback never uses an expired ORM instance.
@@ -848,7 +851,9 @@ async def upsert_flow(
     # Extract once: a rollback between retry attempts discards the staged rows but not the
     # in-place rewrite, so a second extraction would find only its own reference.
     masked_targets: list[MCPSecretTarget] = []
-    carried_secrets, secret_variables = extract_and_strip_mcp_secrets(flow.data, masked_targets=masked_targets)
+    carried_secrets, secret_variables = extract_and_strip_mcp_secrets(
+        flow.data, masked_targets=masked_targets, flow_id=flow_id
+    )
 
     try:
         catalog_policy_snapshot = get_catalog_policy_service().snapshot
@@ -1147,8 +1152,9 @@ async def create_flows(
     # Validate the complete request before adding or flushing any rows. This
     # keeps a denial in a later item from partially applying an earlier item.
     for flow in flow_list.flows:
+        await _validate_new_flow_id(session, flow.id)
         _validate_catalog_policy_for_write(flow.data, snapshot=catalog_policy_snapshot)
-        await persist_and_strip_mcp_secrets(flow.data, current_user.id, session)
+        await persist_and_strip_mcp_secrets(flow.data, current_user.id, session, flow_id=flow.id)
         # This endpoint bypasses _new_flow, so the fs_path containment check
         # every sibling flow-write route applies must run here too. Without it
         # an absolute fs_path reaches the fs sync poller, which merges any
@@ -1260,8 +1266,6 @@ async def upload_file(
         except orjson.JSONDecodeError as e:
             raise HTTPException(status_code=400, detail=f"Invalid JSON file: {e}") from e
 
-    # Normalise code fields: if exported with code-as-lines format, rejoin to
-    # strings before creating the Pydantic models so the DB always stores strings.
     if not isinstance(data, dict):
         raise HTTPException(
             status_code=422,
@@ -1280,14 +1284,13 @@ async def upload_file(
                     status_code=422,
                     detail=f"Invalid JSON: flows[{non_dict[0]}] is not an object",
                 )
-            data = {**data, "flows": [normalize_code_for_import(f) for f in data["flows"]]}
             flow_list = FlowListCreate(**data)
         else:
-            flow_list = FlowListCreate(flows=[FlowCreate(**normalize_code_for_import(data))])
+            flow_list = FlowListCreate(flows=[FlowCreate(**data)])
     except HTTPException:
         raise
     except ValidationError as e:
-        raise HTTPException(status_code=422, detail=str(e)) from e
+        raise flow_validation_error(e) from e
 
     # TODO: Full-version import is planned as a follow-up feature.
     # When implemented, extract raw flow dicts here to read embedded "version"
@@ -1354,7 +1357,12 @@ async def upload_file(
         if effective_flow_data is None and existing_flow is not None and existing_flow.user_id == current_user.id:
             effective_flow_data = existing_flow.data
         _validate_catalog_policy_for_write(effective_flow_data, snapshot=catalog_policy_snapshot)
-        await persist_and_strip_mcp_secrets(flow.data, current_user.id, session)
+        await persist_and_strip_mcp_secrets(
+            flow.data,
+            current_user.id,
+            session,
+            flow_id=None if flow.id in foreign_existing_ids else flow.id,
+        )
 
     try:
         flow_reads: list[FlowRead] = []

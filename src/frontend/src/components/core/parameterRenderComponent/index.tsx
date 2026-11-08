@@ -180,6 +180,7 @@ export function ParameterRenderComponent({
             {...baseInputProps}
             id={`float_${id}`}
             rangeSpec={templateData.rangeSpec ?? templateData.range_spec}
+            preserveEmpty={templateData.preserve_empty === true}
           />
         );
       case "int":
@@ -382,6 +383,7 @@ export function ParameterRenderComponent({
         return (
           <ModelInputComponent
             {...baseInputProps}
+            fieldName={name}
             options={templateData?.options || []}
             placeholder={templateData?.placeholder}
             externalOptions={templateData?.external_options}

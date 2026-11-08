@@ -699,7 +699,8 @@ async def test_a_record_that_fails_to_save_does_not_leave_the_child_running(
         text=True,
         check=False,
     )
-    assert status.stdout.strip() in {"", "Z"}
+    # ps may append flags to the state, such as "Zl" for a multithreaded zombie on Linux.
+    assert status.stdout.strip()[:1] in {"", "Z"}
 
 
 async def test_an_unreadable_record_says_where_it_is(client, logged_in_headers_super_user, config_dir):
@@ -889,6 +890,27 @@ async def test_a_pause_refuses_changes_until_the_admin_resumes(client, logged_in
     assert (await client.post("api/v1/flows/", json=NEW_FLOW, headers=headers)).status_code == 201
     # Nothing to resume is not an error.
     assert (await client.delete(PAUSE, headers=headers)).status_code == 200
+
+
+async def test_any_signed_in_user_can_see_whether_changes_are_paused(
+    client, user_two_api_key, logged_in_headers_super_user, config_dir
+):
+    _checked(config_dir, [PASSING], **PREPARED)
+    # The client keeps the admin's sign-in cookie, which would answer for the user below.
+    client.cookies.clear()
+    user = {"x-api-key": user_two_api_key}
+    # Every page shows it, so every user can ask. Who paused and the rest of the record stay the admin's.
+    assert (await client.get(PAUSE, headers=user)).json() == {"paused": False}
+
+    paused = await client.post(PAUSE, headers=logged_in_headers_super_user)
+    assert paused.status_code == 200, paused.text
+
+    seen = await client.get(PAUSE, headers=user)
+    assert seen.status_code == 200, seen.text
+    assert seen.json() == {"paused": True}
+    await client.delete(PAUSE, headers=logged_in_headers_super_user)
+    assert (await client.get(PAUSE, headers=user)).json() == {"paused": False}
+    assert (await client.get(PAUSE)).status_code in (401, 403)
 
 
 async def test_each_pause_and_resume_is_logged(

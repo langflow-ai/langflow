@@ -1534,6 +1534,21 @@ class TestFileComponentAsyncLoaderChain:
         s3_storage.delete_file.assert_not_awaited()
 
     @pytest.mark.asyncio
+    async def test_s3_text_encoding_override_preserves_accents_and_metadata(self, s3_storage):
+        content = "Café résumé naïve"
+        s3_storage.objects[("user-id", "cafe.txt")] = content.encode("cp1252")
+        component = FileComponent()
+        component._user_id = "user-id"
+        component.path = ["user-id/cafe.txt"]
+        component.text_encoding = "cp1252"
+
+        message = await component.aload_files_message()
+
+        assert message.text == content
+        assert message.data["encoding"] == "cp1252"
+        s3_storage.get_file.assert_awaited_once_with("user-id", "cafe.txt")
+
+    @pytest.mark.asyncio
     async def test_s3_image_validation_awaits_storage_read(self, monkeypatch, s3_storage):
         from lfx.base.data.base_file import BaseFileComponent
         from lfx.schema.data import Data
@@ -1656,7 +1671,7 @@ class TestFileComponentAsyncLoaderChain:
                 second_started.set()
             return Data(data={"file_path": file_path, "text": Path(file_path).name})
 
-        async def fake_parse(file_path: str, *, silent_errors: bool) -> Data:  # noqa: ARG001
+        async def fake_parse(file_path: str, *, silent_errors: bool, encoding: str | None = None) -> Data:  # noqa: ARG001
             return await asyncio.to_thread(blocking_parse, file_path)
 
         monkeypatch.setattr(file_component_module, "aparse_text_file_to_data", fake_parse)

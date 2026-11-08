@@ -1,2 +1,0 @@
-# Separate one-time upgrade artifact. Not an application workspace dependency.
-chromadb==1.5.9

@@ -267,18 +267,30 @@ class TestRelocationWithoutATarget:
         assert (passed.code, passed.target_count) == (None, 4)
 
     @pytest.mark.parametrize(
-        ("backend_type", "backend_config", "storage_state", "expected"),
+        ("backend_type", "backend_config", "storage_state", "expected", "code"),
         [
             # Local Chroma the startup upgrade has not reached yet, or could not finish.
-            ("chroma", {"mode": "local"}, "ready", "storage upgrade to SQLite has not finished"),
-            ("chroma", {"mode": "local"}, "needs_attention", "storage upgrade to SQLite has not finished"),
-            ("sqlite", {}, "migrating", "storage upgrade to SQLite has not finished"),
-            ("chroma", {"mode": "cloud"}, "needs_attention", "Chroma Cloud"),
-            ("sqlite", {}, "deleting", "storage_state deleting"),
+            ("chroma", {"mode": "local"}, "ready", "storage upgrade to SQLite has not finished", "kb_upgrade_pending"),
+            (
+                "chroma",
+                {"mode": "local"},
+                "needs_attention",
+                "storage upgrade to SQLite has not finished",
+                "kb_upgrade_pending",
+            ),
+            ("sqlite", {}, "migrating", "storage upgrade to SQLite has not finished", "kb_upgrade_pending"),
+            # This version has no backend that reads Chroma Cloud, so no upgrade or retry gets past it.
+            ("chroma", {"mode": "cloud"}, "needs_attention", "Chroma Cloud", "kb_backend_missing"),
+            ("sqlite", {}, "deleting", "storage_state deleting", "kb_upgrade_pending"),
+            # A detached store is one this instance no longer serves, whatever its backend. The check of this
+            # instance leaves it out, so the copy says so instead of asking for an upgrade.
+            ("chroma", {"mode": "local"}, "detached", "detached", "kb_detached"),
+            ("chroma", {"mode": "cloud"}, "detached", "detached", "kb_detached"),
+            ("sqlite", {}, "detached", "detached", "kb_detached"),
         ],
     )
     async def test_kb_whose_storage_is_not_ready_is_refused_unread(
-        self, active_user, backend_type, backend_config, storage_state, expected
+        self, active_user, backend_type, backend_config, storage_state, expected, code
     ):
         # Reading any of these would fail some other way: nothing reads Chroma, and
         # the SQLite store is empty while its row records 3 chunks.
@@ -297,7 +309,7 @@ class TestRelocationWithoutATarget:
         result = next(r for r in results if r.kb_id == record.id)
         assert result.status == "failed"
         assert expected in result.reason
-        assert result.code == "kb_upgrade_pending"
+        assert result.code == code
         assert (result.copied, result.target_count) == (0, 0)
         row = await knowledge_base_service.get_by_id(record.id)
         assert (row.backend_type, row.storage_state) == (backend_type, storage_state)
@@ -432,9 +444,13 @@ class TestRelocationWithoutATarget:
         assert result.reason.startswith(f"ValueError: {needs}")
         assert result.code == "kb_target_unreachable"
 
-    async def test_source_that_cannot_be_opened_is_a_plain_failure(self, active_user):
-        # A row whose SQLite store was never created, or has been lost since.
-        record = KnowledgeBaseRecord(user_id=active_user.id, name="kb_lost", model_selection=MODEL, chunks=2)
+    @pytest.mark.parametrize("chunks", [2, 0])
+    async def test_source_that_cannot_be_opened_is_told_apart(self, active_user, chunks):
+        # A row whose SQLite store was never created, or has been lost since. The check of this instance does
+        # not count a row that records no chunks, so that row reaches the copy too.
+        record = KnowledgeBaseRecord(
+            user_id=active_user.id, name=f"kb_lost_{chunks}", model_selection=MODEL, chunks=chunks
+        )
         async with session_scope() as session:
             session.add(record)
             await session.commit()
@@ -444,7 +460,7 @@ class TestRelocationWithoutATarget:
         result = next(r for r in results if r.kb_id == record.id)
         assert result.status == "failed"
         assert result.reason == "FileNotFoundError: SQLite knowledge base storage is missing"
-        assert result.code == "kb_failed"
+        assert result.code == "kb_source_unreadable"
 
 
 @pytest.mark.parametrize(

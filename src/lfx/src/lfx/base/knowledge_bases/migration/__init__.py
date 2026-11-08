@@ -1,4 +1,4 @@
-"""Strict interchange for the separately isolated legacy-store migration helper."""
+"""Strict interchange for the bundled legacy-store migration reader."""
 
 from .importer import MigrationReceipt, import_qualified_export
 from .protocol import (

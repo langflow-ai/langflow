@@ -1,6 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import {
+  type FormEvent,
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -9,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useUpdateUser } from "@/controllers/API/queries/auth";
 import {
   type MigrationCheck,
   type MigrationError,
@@ -18,6 +25,7 @@ import {
   useAcceptFindingMutation,
   useWithdrawFindingMutation,
 } from "@/controllers/API/queries/migration";
+import useAuthStore from "@/stores/authStore";
 import { cn } from "@/utils/utils";
 import {
   acceptanceOf,
@@ -386,6 +394,11 @@ function CheckRow({
         title={checkTitle(t, check)}
         open={!known}
       />
+      {/* A pause refuses the change, and it is on from before the new instance starts until the end. */}
+      {known?.slug === "defaultSuperuser" &&
+        !(migration.record.pause ?? migration.record.pausing) && (
+          <AccountPassword />
+        )}
       {acceptable && (
         <div className="flex items-center gap-2 pt-1">
           {/* aria-disabled, since native disabled would drop the keyboard user's focus to <body>. */}
@@ -428,6 +441,121 @@ function CheckRow({
         {problem && t(`settings.migration.check.${problem}`)}
       </p>
     </li>
+  );
+}
+
+const PASSWORD_PROBLEMS: Record<string, string> = {
+  mismatch: "errors.passwordMismatch",
+  refused: "settings.migration.check.defaultSuperuser.refused",
+  failed: "settings.migration.failed",
+};
+
+/**
+ * Sets the 'langflow' account's password, which nobody may know while this instance signs people in by itself.
+ * It sets the password of whoever is signed in, so it shows only while that is the account.
+ */
+function AccountPassword() {
+  const { t } = useTranslation();
+  const user = useAuthStore((state) => state.userData);
+  const update = useUpdateUser();
+  const [password, setPassword] = useState("");
+  const [again, setAgain] = useState("");
+  const [result, setResult] = useState<
+    "mismatch" | "refused" | "failed" | "done"
+  >();
+  if (user?.username !== "langflow") return null;
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (password !== again) {
+      setResult("mismatch");
+      return;
+    }
+    // Sign-in refuses this account's old default password, and the login page trims what is typed.
+    if (password === "langflow" || password !== password.trim()) {
+      setResult("refused");
+      return;
+    }
+    setResult(undefined);
+    update.mutate(
+      { user_id: user.id, user: { password } },
+      {
+        onSuccess: () => {
+          setPassword("");
+          setAgain("");
+          setResult("done");
+        },
+        onError: () => setResult("failed"),
+      },
+    );
+  };
+
+  const problem = result && PASSWORD_PROBLEMS[result];
+  const fieldProps = {
+    type: "password",
+    autoComplete: "new-password",
+    // A password the admin has to keep, so a password manager may offer to save it.
+    allowAutofill: true,
+    required: true,
+    // Read-only, not disabled: a disabled field would drop the keyboard user's focus.
+    readOnly: update.isPending,
+    "aria-invalid": result === "mismatch" || result === "refused",
+    "aria-describedby": problem
+      ? "migration-account-password-problem"
+      : undefined,
+  };
+
+  return (
+    <form onSubmit={submit} className="flex max-w-sm flex-col gap-2 pt-1">
+      <Label htmlFor="migration-account-password">
+        {t("settings.migration.check.defaultSuperuser.first")}
+      </Label>
+      <Input
+        id="migration-account-password"
+        {...fieldProps}
+        value={password}
+        onChange={(event) => {
+          setPassword(event.target.value);
+          setResult(undefined);
+        }}
+      />
+      <Label htmlFor="migration-account-password-again">
+        {t("settings.migration.check.defaultSuperuser.again")}
+      </Label>
+      <Input
+        id="migration-account-password-again"
+        {...fieldProps}
+        value={again}
+        onChange={(event) => {
+          setAgain(event.target.value);
+          setResult(undefined);
+        }}
+      />
+      <Button
+        type="submit"
+        variant="outline"
+        size="sm"
+        className="w-fit"
+        loading={update.isPending}
+        ignoreTitleCase
+      >
+        {t("settings.migration.check.defaultSuperuser.set")}
+      </Button>
+      {problem && (
+        <p
+          id="migration-account-password-problem"
+          role="alert"
+          className="text-sm text-destructive"
+        >
+          {t(problem)}
+        </p>
+      )}
+      {/* Stays mounted while empty, so the result is announced when it comes. */}
+      <p role="status" className="text-sm text-muted-foreground empty:-mt-2">
+        {result === "done" &&
+          t("settings.migration.check.defaultSuperuser.done")}
+      </p>
+    </form>
   );
 }
 
