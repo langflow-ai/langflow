@@ -250,6 +250,25 @@ Before rolling back, stop Langflow and restore the database and application file
 Installing older packages does not undo database migrations.
 Keep a backup of the current installation before restoring the earlier backup.
 
+##### Restore before rolling back
+
+Langflow 1.14 refuses to start when the database records an unknown migration revision or overlapping revisions.
+This can happen when an older release starts on a database that a newer release migrated.
+Startup leaves that database unchanged and links to this procedure.
+
+Stop every Editor and Serving process, including workers and scheduled jobs, before restoring.
+Keep the current database, storage, and configuration backups separately.
+Restore the database backup taken with the release you will run.
+Restore its matching secret key, file storage, and knowledge-base storage.
+Install the matching packages or images and restore their configuration and provider dependencies.
+If the restored release provides `langflow check-integrity`, run it with that release.
+Verify saved flows before reopening access.
+Do not delete or edit `alembic_version` to bypass the refusal.
+
+Databases from Langflow 1.10.3 have a recognized migration side branch.
+Langflow 1.14 migrates that branch through its known branch point instead of treating it as an unknown revision.
+Back up the installation before upgrading it.
+
 For older releases, pin all three core packages together.
 Pinning only `langflow` can install a newer backend or execution engine.
 Before Langflow 1.12, the core packages could use different version numbers.
