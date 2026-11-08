@@ -24,6 +24,7 @@ import ConnectionsTable, {
   type ConnectionsSort,
   ownerKindOf,
 } from "./components/ConnectionsTable";
+import ManageProvidersPanel from "./components/ManageProvidersPanel";
 
 const EMPTY_CONNECTIONS: ConnectionRead[] = [];
 
@@ -310,6 +311,11 @@ export default function ConnectionsPage() {
               {t("connections.tabs.others")}
             </TabsTrigger>
           )}
+          {isSuperuser && (
+            <TabsTrigger value="providers">
+              {t("connections.tabs.providers")}
+            </TabsTrigger>
+          )}
           {extraTabs.map((tab) => (
             <TabsTrigger key={tab.value} value={tab.value}>
               {tab.label}
@@ -326,6 +332,16 @@ export default function ConnectionsPage() {
         {isSuperuser && (
           <TabsContent value="others" className="mt-0">
             {connectionsPanel}
+          </TabsContent>
+        )}
+        {isSuperuser && (
+          <TabsContent value="providers" className="mt-0">
+            {view === "providers" ? (
+              <ManageProvidersPanel
+                providers={integrationsQuery.data?.providers ?? []}
+                deploymentContext={integrationsQuery.data?.deployment_context}
+              />
+            ) : null}
           </TabsContent>
         )}
         {extraTabs.map((tab) => (

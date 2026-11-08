@@ -664,6 +664,9 @@ describe("ConnectionsPage tabs", () => {
     expect(
       screen.queryByRole("tab", { name: "Other users" }),
     ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("tab", { name: "Manage providers" }),
+    ).not.toBeInTheDocument();
     expect(within(panel()).getByText("my-drive")).toBeInTheDocument();
     expect(within(panel()).getByText("shared-outlook")).toBeInTheDocument();
     expect(
@@ -679,6 +682,9 @@ describe("ConnectionsPage tabs", () => {
     mockConnections = [];
     const { container } = render(<ConnectionsPage />);
 
+    expect(
+      screen.getByRole("tab", { name: "Manage providers" }),
+    ).toBeInTheDocument();
     for (const tab of screen.getAllByRole("tab")) {
       const controls = tab.getAttribute("aria-controls");
       expect(controls).toBeTruthy();
