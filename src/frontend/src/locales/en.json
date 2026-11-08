@@ -2416,6 +2416,8 @@
   "updateComponents.mustBeUpdated_other": "{{count}} components must be updated before this flow can run",
   "updateComponents.updatesAvailable_one": "Update is available for {{count}} component",
   "updateComponents.updatesAvailable_other": "Updates are available for {{count}} components",
+  "updateComponents.fieldsNotRestored": "Some fields could not be restored in {{component}}",
+  "updateComponents.fieldsRefreshFailed": "Could not refresh fields in {{component}}",
   "updateComponents.dismiss": "Dismiss",
   "updateComponents.dismissAll": "Dismiss All",
   "updateComponents.reviewAll": "Review All",

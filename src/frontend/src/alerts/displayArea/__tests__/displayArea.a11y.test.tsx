@@ -9,7 +9,14 @@ jest.mock("@/alerts/error", () => ({
 }));
 jest.mock("@/alerts/notice", () => ({
   __esModule: true,
-  default: ({ title }: { title: string }) => <div>{title}</div>,
+  default: ({ title, list = [] }: { title: string; list?: string[] }) => (
+    <div>
+      {title}
+      {list.map((item) => (
+        <p key={item}>{item}</p>
+      ))}
+    </div>
+  ),
 }));
 
 import AlertDisplayArea from "../index";
@@ -72,5 +79,21 @@ describe("AlertDisplayArea accessibility", () => {
 
     const alert = screen.getByRole("alert");
     expect(alert).toHaveTextContent("Build failed");
+  });
+
+  it("keeps notice details visible when a success follows", () => {
+    render(<AlertDisplayArea />);
+
+    act(() => {
+      useAlertStore.getState().setNoticeData({
+        title: "Some fields could not be restored in MCP Tools",
+        list: ["Name", "Times"],
+      });
+      useAlertStore.getState().setSuccessData({ title: "Component updated" });
+    });
+
+    expect(screen.getByText("Name")).toBeVisible();
+    expect(screen.getByText("Times")).toBeVisible();
+    expect(screen.getByText("Component updated")).toBeVisible();
   });
 });

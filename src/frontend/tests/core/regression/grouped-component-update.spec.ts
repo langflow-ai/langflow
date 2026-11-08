@@ -2,6 +2,8 @@ import type { APIClassType, APIObjectType } from "../../../src/types/api";
 import type { GenericNodeType } from "../../../src/types/flow";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TIMEOUTS } from "../../utils/constants/timeouts";
+import { waitForFlowEditorReady } from "../../utils/flow/wait-for-flow-editor-ready";
 
 function componentNode(
   id: string,
@@ -137,8 +139,34 @@ for (const scenario of [
       });
       expect(created.status()).toBe(201);
       const flowId = (await created.json()).id as string;
-      await page.goto(`/flow/${flowId}`);
+      await Promise.all([
+        page.waitForResponse(
+          (response) =>
+            response.request().method() === "GET" &&
+            new URL(response.url()).pathname === `/api/v1/flows/${flowId}` &&
+            response.ok(),
+          // Cold editor imports can consume the default action budget before
+          // the flow request starts; use the editor readiness budget here too.
+          { timeout: TIMEOUTS.standard },
+        ),
+        page.goto(`/flow/${flowId}`),
+      ]);
+      await waitForFlowEditorReady(page);
       await expect(page.getByTestId("update-all-button")).toBeVisible();
+      const persistedUpdate = Promise.all([
+        page.waitForResponse(
+          (response) =>
+            response.request().method() === "PATCH" &&
+            new URL(response.url()).pathname === `/api/v1/flows/${flowId}`,
+        ),
+        ...["/api/v1/flows/", "/api/v1/projects/"].map((pathname) =>
+          page.waitForResponse(
+            (response) =>
+              response.request().method() === "GET" &&
+              new URL(response.url()).pathname === pathname,
+          ),
+        ),
+      ]);
       if (breaking) {
         await expect(page.getByTestId("update-all-button")).toHaveText(
           "Review All",
@@ -165,6 +193,10 @@ for (const scenario of [
         await page.getByTestId("update-all-button").click();
       }
       await expect(page.getByTestId("update-all-button")).toHaveCount(0);
+      for (const response of await persistedUpdate) {
+        expect(response.ok()).toBeTruthy();
+        await response.finished();
+      }
       await expect
         .poll(async () => {
           const savedResponse = await page.request.get(
@@ -202,9 +234,18 @@ for (const scenario of [
         page.waitForResponse(
           (response) =>
             new URL(response.url()).pathname === "/api/v1/all" && response.ok(),
+          { timeout: TIMEOUTS.standard },
+        ),
+        page.waitForResponse(
+          (response) =>
+            response.request().method() === "GET" &&
+            new URL(response.url()).pathname === `/api/v1/flows/${flowId}` &&
+            response.ok(),
+          { timeout: TIMEOUTS.standard },
         ),
         page.reload(),
       ]);
+      await waitForFlowEditorReady(page);
       await expect(page.getByTestId("div-generic-node")).toHaveCount(2);
       await expect(
         page.getByRole("button", { name: "Input & Output", exact: true }),

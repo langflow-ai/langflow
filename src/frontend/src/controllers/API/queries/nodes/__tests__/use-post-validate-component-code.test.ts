@@ -1,3 +1,4 @@
+import useAlertStore from "@/stores/alertStore";
 import type { APIClassType, CustomComponentRequest } from "@/types/api";
 
 const mockApiPost = jest.fn();
@@ -15,6 +16,10 @@ jest.mock("@/controllers/API/api", () => ({
 
 jest.mock("@/controllers/API/helpers/constants", () => ({
   getURL: jest.fn(() => "/api/v1/custom_component"),
+}));
+
+jest.mock("@/utils/reactflowUtils", () => ({
+  customStringify: (value: unknown) => JSON.stringify(value),
 }));
 
 jest.mock("@/stores/flowsManagerStore", () => {
@@ -59,6 +64,7 @@ describe("usePostValidateComponentCode provider scope", () => {
     mockFlowState.currentFlowId = undefined;
     mockFlowState.currentFlow = undefined;
     mockApiPost.mockResolvedValue({ data: response });
+    useAlertStore.setState({ notificationList: [], tempNotificationList: [] });
   });
 
   it("appends the trusted current flow to component validation", async () => {
@@ -81,6 +87,131 @@ describe("usePostValidateComponentCode provider scope", () => {
       "/api/v1/custom_component",
       payload,
     );
+    expect(useAlertStore.getState().tempNotificationList).toEqual([]);
+  });
+
+  it("names unrestored fields and keeps the warning beside a later success", async () => {
+    const savedNode: APIClassType = {
+      ...frontendNode,
+      display_name: "Run Flow",
+      template: {
+        generated_input: {
+          type: "str",
+          required: false,
+          list: false,
+          show: true,
+          readonly: false,
+          display_name: "Input Text (Chat Input)",
+          value: "saved value",
+        },
+      },
+    };
+    mockApiPost.mockResolvedValueOnce({
+      data: {
+        ...response,
+        warnings: [
+          {
+            code: "generated_fields_not_restored",
+            fields: ["generated_input", "unlabeled_input", "generated_input"],
+            refresh_fields: ["flow_name_selected"],
+          },
+        ],
+      },
+    });
+
+    await usePostValidateComponentCode().mutateAsync({
+      ...payload,
+      frontend_node: savedNode,
+    });
+    useAlertStore.getState().setSuccessData({ title: "Updated 1 component" });
+
+    expect(useAlertStore.getState().tempNotificationList).toEqual([
+      expect.objectContaining({ type: "success" }),
+      expect.objectContaining({
+        type: "notice",
+        title: "Some fields could not be restored in Run Flow",
+        list: ["Input Text (Chat Input)", "unlabeled_input"],
+      }),
+    ]);
+  });
+
+  it("keeps each component's warning when bulk validation runs concurrently", async () => {
+    mockApiPost.mockResolvedValue({
+      data: {
+        ...response,
+        warnings: [
+          {
+            code: "generated_fields_not_restored",
+            fields: ["name"],
+            refresh_fields: ["tool"],
+          },
+        ],
+      },
+    });
+    const mutation = usePostValidateComponentCode();
+
+    await Promise.all(
+      ["First MCP Tools", "Second MCP Tools"].map((display_name) =>
+        mutation.mutateAsync({
+          ...payload,
+          frontend_node: { ...frontendNode, display_name },
+        }),
+      ),
+    );
+
+    expect(useAlertStore.getState().tempNotificationList).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          title: "Some fields could not be restored in First MCP Tools",
+        }),
+        expect.objectContaining({
+          title: "Some fields could not be restored in Second MCP Tools",
+        }),
+      ]),
+    );
+  });
+
+  it("names the refresh field when generated fields cannot be identified", async () => {
+    mockApiPost.mockResolvedValueOnce({
+      data: {
+        ...response,
+        warnings: [
+          {
+            code: "generated_fields_not_restored",
+            fields: [],
+            refresh_fields: ["tool"],
+          },
+        ],
+      },
+    });
+
+    await usePostValidateComponentCode().mutateAsync(payload);
+
+    expect(useAlertStore.getState().tempNotificationList).toEqual([
+      expect.objectContaining({
+        title: "Could not refresh fields in Test Component",
+        list: ["tool"],
+      }),
+    ]);
+  });
+
+  it("does not report an empty warning", async () => {
+    mockApiPost.mockResolvedValueOnce({
+      data: {
+        ...response,
+        warnings: [
+          {
+            code: "generated_fields_not_restored",
+            fields: [],
+            refresh_fields: [],
+          },
+        ],
+      },
+    });
+
+    await usePostValidateComponentCode().mutateAsync(payload);
+
+    expect(useAlertStore.getState().tempNotificationList).toEqual([]);
   });
 
   it("discards an unscoped response after navigation enters a flow", async () => {
@@ -97,9 +228,21 @@ describe("usePostValidateComponentCode provider scope", () => {
     await Promise.resolve();
     mockFlowState.currentFlowId = "flow-one";
     mockFlowState.currentFlow = { folder_id: "project-one" };
-    resolveResponse?.({ data: response });
+    resolveResponse?.({
+      data: {
+        ...response,
+        warnings: [
+          {
+            code: "generated_fields_not_restored",
+            fields: ["private_field"],
+            refresh_fields: ["tool"],
+          },
+        ],
+      },
+    });
 
     await expect(pending).resolves.toBeUndefined();
+    expect(useAlertStore.getState().tempNotificationList).toEqual([]);
   });
 
   it("does not start scoped validation after navigation changes the captured scope", async () => {
