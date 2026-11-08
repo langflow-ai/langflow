@@ -184,8 +184,9 @@ def test_retired_bundle_components_with_lfx_bundles_installed(tmp_path):
         env=env,
         capture_output=True,
         text=True,
-        check=True,
+        check=False,
     )
+    assert result.returncode == 0, result.stderr
 
     found = json.loads(result.stdout.strip().splitlines()[-1])
     assert {key: found[key][:2] for key in LFX_BUNDLES_NODES} == {

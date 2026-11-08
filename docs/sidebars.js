@@ -239,6 +239,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Deployment/upgrade-check",
+          label: "Check flows before an upgrade"
+        },
+        {
+          type: "doc",
           id: "Deployment/deployment-public-server",
           label: "Deploy a public Langflow server"
         },
