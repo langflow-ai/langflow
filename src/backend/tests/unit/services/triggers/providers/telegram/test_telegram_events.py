@@ -100,6 +100,17 @@ def test_invalid_configuration_is_rejected(raw):
         normalize_config("telegram.command", raw)
 
 
+@pytest.mark.parametrize("commands", [["Ping"], ["/ping"], ["a" * 33], ["ping", "ping"], ["ping-now"]])
+def test_invalid_command_filters_explain_supported_names(commands):
+    with pytest.raises(ValueError, match=r"unique.*1 to 32 lowercase letters, digits, or underscores"):
+        normalize_config("telegram.command", {"commands": commands})
+
+
+def test_command_filters_accept_supported_characters_and_maximum_length():
+    commands = ["ping_2", "a" * 32]
+    assert normalize_config("telegram.command", {"commands": commands})["commands"] == commands
+
+
 def test_configuration_remains_credential_free_and_manual_builds_allow_empty_chats():
     config = normalize_config("telegram.message", {"connection": "telegram/bot", "allowed_chats": [-1001234]})
     assert config["allowed_chats"] == ["-1001234"]

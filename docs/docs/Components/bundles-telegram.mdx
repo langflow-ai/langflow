@@ -27,9 +27,12 @@ Standalone actions require lfx and the bundle, without the Langflow server packa
 | --- | --- |
 | **Telegram: On Message** | Receives new text messages from explicitly allowed numeric chat IDs. An optional sender allowlist narrows delivery. |
 | **Telegram: On Command** | Receives leading bot commands from the allowed chats and senders. Commands addressed to another bot are ignored. |
-| **Telegram: Send Message** | Sends plain text to a numeric chat ID and optional topic ID. |
+| **Telegram: Send Message** | Sends plain text to a numeric chat ID and optional topic ID. Enable **Silent Notification** to send without sound. |
 | **Telegram: Reply to Message** | Replies to a recorded trigger event using its original bot, chat, topic, and message ID. |
-| **Telegram: Send Notification** | Sends plain text and defaults to a silent notification. |
+
+**Chat ID** and **Thread ID** accept text from upstream components, typed values, or global variables.
+**Telegram: Send Notification** is a legacy component hidden from the default palette.
+Existing flows keep its silent default. Use **Telegram: Send Message** with **Silent Notification** enabled for new flows.
 
 Bot tokens have no OAuth scopes or refresh tokens.
 Telegram privacy settings, group membership, and chat permissions determine which messages the bot can receive and send.

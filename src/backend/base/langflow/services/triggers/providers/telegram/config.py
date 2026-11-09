@@ -73,7 +73,10 @@ def normalize_config(kind: str, raw: dict[str, Any]) -> dict[str, Any]:
             )
             or len(set(commands)) != len(commands)
         ):
-            msg = "Telegram command filters need unique command names without a slash."
+            msg = (
+                "Telegram command filters need at most 100 unique names of 1 to 32 lowercase letters, "
+                "digits, or underscores, without a slash."
+            )
             raise ValueError(msg)
         config["commands"] = commands
     elif raw.get("commands"):

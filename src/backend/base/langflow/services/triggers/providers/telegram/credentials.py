@@ -4,12 +4,41 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from lfx.integrations.models import ConnectionAccount, ConnectionRef, CredentialLease, ResolvedCredential
+from lfx.integrations.models import (
+    ConnectionAccount,
+    ConnectionRef,
+    ConnectionResolutionRequest,
+    CredentialLease,
+    ResolvedCredential,
+)
 from lfx.services.authorization.base import ExecutionPrincipal
 from lfx_telegram._client import TelegramClient
 
 if TYPE_CHECKING:
     from langflow.services.database.models.connection.schemas import ConnectionCreate
+
+
+async def _bot_identity(credential: ResolvedCredential) -> dict[str, str]:
+    class Resolver:
+        async def resolve(self, _request):
+            return credential
+
+    lease = CredentialLease(
+        Resolver(),
+        ConnectionResolutionRequest(
+            ref=ConnectionRef(provider="telegram", name="credential_check"),
+            principal=ExecutionPrincipal(
+                kind="flow_owner", user_id="manual-check", actor_id="manual-check", interactive=True
+            ),
+        ),
+    )
+    async with TelegramClient(lease) as client:
+        return await client.identity()
+
+
+async def check_credential(credential: ResolvedCredential) -> None:
+    """Ask Telegram whether the saved bot token is still authorized."""
+    await _bot_identity(credential)
 
 
 async def validate_manual_credential(payload: ConnectionCreate, *, context: str) -> ConnectionCreate:
@@ -26,23 +55,9 @@ async def validate_manual_credential(payload: ConnectionCreate, *, context: str)
         msg = "Telegram requires your own bot connection with a BotFather token and no OAuth refresh settings."
         raise ValueError(msg)
 
-    class Resolver:
-        async def resolve(self, _request):
-            return ResolvedCredential(access_token=credentials.access_token, provider="telegram", identity="bot")
-
-    from lfx.integrations.models import ConnectionResolutionRequest
-
-    lease = CredentialLease(
-        Resolver(),
-        ConnectionResolutionRequest(
-            ref=ConnectionRef(provider="telegram", name=payload.name),
-            principal=ExecutionPrincipal(
-                kind="flow_owner", user_id="manual-check", actor_id="manual-check", interactive=True
-            ),
-        ),
+    bot = await _bot_identity(
+        ResolvedCredential(access_token=credentials.access_token, provider="telegram", identity="bot")
     )
-    async with TelegramClient(lease) as client:
-        bot = await client.identity()
     identity = payload.executing_identity.model_copy(
         update={"account": ConnectionAccount(id=bot["id"], display=bot["username"])}
     )

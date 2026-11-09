@@ -6,10 +6,14 @@ from pathlib import Path
 import lfx_telegram
 import pytest
 from conftest import BOT, BotTransport, component
+from lfx.components.input_output.text import TextInputComponent
 from lfx.extension import load_extension, validate_extension
+from lfx.graph import Graph
 from lfx.integrations.capabilities import IntegrationCapabilityManifest
 from lfx.integrations.errors import ConnectionNotAuthorizedError, InvalidRequestError
 from lfx.schema.data import Data
+from lfx.schema.message import Message
+from lfx.services.authorization.base import ExecutionPrincipal
 from lfx_telegram import (
     TelegramNotifyComponent,
     TelegramOnCommandTriggerComponent,
@@ -99,6 +103,36 @@ async def test_send_uses_verified_bot_and_one_send(monkeypatch, cls, silent):
         ("getMe", {}),
         ("sendMessage", {"chat_id": -1001234, "text": "hello", "message_thread_id": 4, "disable_notification": silent}),
     ]
+
+
+@pytest.mark.parametrize(("cls", "silent"), [(TelegramSendMessageComponent, False), (TelegramNotifyComponent, True)])
+@pytest.mark.usefixtures("resolver")
+async def test_send_accepts_upstream_chat_and_thread_outputs(monkeypatch, cls, silent):
+    transport = BotTransport([BOT, {"message_id": 7, "text": "hello"}]).install(monkeypatch)
+    target = TextInputComponent(_id="target", input_value="123")
+    action = cls(_id="telegram", connection="telegram/bot", text="hello").set(
+        chat_id=target.text_response, thread_id=target.text_response
+    )
+    graph = Graph(start=target, end=action)
+    graph.execution_principal = ExecutionPrincipal(kind="actor", user_id="test-user", interactive=True)
+
+    results = [result async for result in graph.async_start()]
+
+    assert len(results) == 3
+    assert transport.calls[-1] == (
+        "sendMessage",
+        {"chat_id": 123, "text": "hello", "message_thread_id": 123, "disable_notification": silent},
+    )
+
+
+@pytest.mark.parametrize("cls", [TelegramSendMessageComponent, TelegramNotifyComponent])
+@pytest.mark.parametrize(("field", "text"), [("chat_id", "@channel"), ("thread_id", "-1")])
+async def test_invalid_message_targets_are_rejected_before_io(cls, field, text):
+    value = component(cls, chat_id="-1001234", thread_id="4", text="hello")
+    value.set_attributes({field: Message(text=text)})
+
+    with pytest.raises(InvalidRequestError):
+        await value.build_message()
 
 
 @pytest.mark.usefixtures("resolver")

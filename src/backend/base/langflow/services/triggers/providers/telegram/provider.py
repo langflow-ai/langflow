@@ -2,7 +2,7 @@
 
 from langflow.services.triggers.providers.registry import TriggerKind, TriggerProvider
 from langflow.services.triggers.providers.telegram.config import normalize_config
-from langflow.services.triggers.providers.telegram.credentials import validate_manual_credential
+from langflow.services.triggers.providers.telegram.credentials import check_credential, validate_manual_credential
 from langflow.services.triggers.providers.telegram.ingress import verify
 from langflow.services.triggers.providers.telegram.lifecycle import ingress_secrets, prepare, provision, revoke
 from langflow.services.triggers.providers.telegram.polling import collect
@@ -40,4 +40,5 @@ PROVIDER = TriggerProvider(
     ingress_secrets=ingress_secrets,
     api_origins=("https://api.telegram.org",),
     validate_manual_credential=validate_manual_credential,
+    check_credential=check_credential,
 )

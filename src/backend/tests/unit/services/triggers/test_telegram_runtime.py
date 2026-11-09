@@ -5,11 +5,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from types import SimpleNamespace
+from uuid import uuid4
 
 import lfx_telegram
 import pytest
 from langflow.services.auth.utils import decrypt_api_key
 from langflow.services.connection.service import DatabaseConnectionResolverService
+from langflow.services.database.models.connection import Connection
 from langflow.services.database.models.connection.schemas import ConnectionCreate
 from langflow.services.database.models.trigger.model import Trigger, TriggerCleanup, TriggerEvent, TriggerSubscription
 from langflow.services.database.models.user.model import User
@@ -24,6 +26,9 @@ from langflow.services.triggers.service import TriggerService
 from langflow.services.triggers.source_delivery import append_and_advance
 from lfx.extension import bundle_registry, load_extension
 from lfx.extension.bundle_registry import BundleRecord, BundleRegistry
+from lfx.integrations.errors import AuthExpiredError
+from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest, CredentialLease
+from lfx.services.authorization.base import ExecutionPrincipal
 from sqlmodel import select
 
 from .providers.telegram.telegram_test_support import BOT, TOKEN, BotTransport
@@ -84,6 +89,104 @@ async def connection(owner_id, *, allow=True):
                 credentials={"access_token": TOKEN},
             ),
         )
+
+
+@pytest.mark.usefixtures("telegram_provider")
+@pytest.mark.parametrize("endpoint", ["health", "test"])
+async def test_telegram_credential_check_rejects_revoked_token(
+    active_user, logged_in_headers, client, monkeypatch, endpoint
+):
+    transport = BotTransport([BOT]).install(monkeypatch)
+    created = await connection(active_user.id)
+    # The provider accepts creation, then revokes the same saved token.
+    transport.responses = [(401, {"ok": False, "error_code": 401})] * 2
+    checked = await client.post(f"/api/v1/connections/{created.id}/{endpoint}", json={}, headers=logged_in_headers)
+    assert checked.status_code == 200, checked.text
+    assert (checked.json()["status"], checked.json()["health"]) == ("expired", "unhealthy")
+    assert TOKEN not in checked.text
+    async with session_scope() as session:
+        row = await session.get(Connection, created.id)
+        assert (row.status, row.health) == ("expired", "unhealthy")
+
+
+@pytest.mark.usefixtures("telegram_provider")
+@pytest.mark.parametrize("stale", [False, True])
+async def test_telegram_runtime_rejection_expires_only_the_rejected_saved_token(trigger_owner, monkeypatch, stale):
+    BotTransport([BOT]).install(monkeypatch)
+    created = await connection(trigger_owner)
+    service = DatabaseConnectionResolverService()
+    lease = CredentialLease(
+        service,
+        ConnectionResolutionRequest(
+            ref=ConnectionRef(provider="telegram", name="bot"),
+            principal=ExecutionPrincipal(kind="flow_owner", user_id=str(trigger_owner), interactive=False),
+        ),
+    )
+    assert await lease.get_token() == TOKEN
+    if stale:
+        from langflow.services.connection.service import _encrypt_credential_payload
+        from langflow.services.database.models.connection import ConnectionSecret
+
+        async with session_scope() as session:
+            secret = await session.get(ConnectionSecret, created.id)
+            secret.encrypted_payload = _encrypt_credential_payload(
+                json.dumps({"version": 1, "access_token": TOKEN.replace("a", "b")})
+            )
+            session.add(secret)
+        assert await lease.get_token_after_auth_error(AuthExpiredError(provider="telegram")) == TOKEN.replace("a", "b")
+    else:
+        with pytest.raises(AuthExpiredError):
+            await lease.get_token_after_auth_error(AuthExpiredError(provider="telegram"))
+    async with session_scope() as session:
+        row = await session.get(Connection, created.id)
+        assert row.status == ("ready" if stale else "expired")
+        assert row.health == ("unknown" if stale else "unhealthy")
+
+
+@pytest.mark.usefixtures("telegram_provider")
+async def test_telegram_health_authorizes_before_provider_check(trigger_owner, monkeypatch):
+    transport = BotTransport([BOT]).install(monkeypatch)
+    created = await connection(trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Connection, created.id)
+        checked = await DatabaseConnectionResolverService().check_health(
+            session,
+            row=row,
+            principal=ExecutionPrincipal(
+                kind="actor", user_id=str(uuid4()), interactive=True, allow_explicit_shares=False
+            ),
+        )
+    assert checked.health == "unhealthy"
+    assert transport.calls == [("getMe", {})]
+
+
+@pytest.mark.usefixtures("telegram_provider")
+@pytest.mark.parametrize(("response", "expected_health"), [(BOT, "healthy"), ((503, {"ok": False}), "unhealthy")])
+async def test_telegram_health_uses_provider_and_preserves_token_on_transient_failure(
+    active_user, logged_in_headers, client, monkeypatch, response, expected_health
+):
+    BotTransport([BOT, response]).install(monkeypatch)
+    created = await connection(active_user.id)
+    checked = await client.post(f"/api/v1/connections/{created.id}/health", headers=logged_in_headers)
+    assert checked.status_code == 200, checked.text
+    assert (checked.json()["status"], checked.json()["health"]) == ("ready", expected_health)
+
+
+@pytest.mark.usefixtures("telegram_provider")
+@pytest.mark.parametrize("previous_status", ["ready", "expired"])
+async def test_telegram_health_without_provider_checker_cannot_report_ready(
+    active_user, logged_in_headers, client, monkeypatch, previous_status
+):
+    BotTransport([BOT]).install(monkeypatch)
+    created = await connection(active_user.id)
+    async with session_scope() as session:
+        row = await session.get(Connection, created.id)
+        row.status = previous_status
+        session.add(row)
+    monkeypatch.setattr(registry, "get_provider", lambda _provider: None)
+    checked = await client.post(f"/api/v1/connections/{created.id}/health", headers=logged_in_headers)
+    assert checked.status_code == 200, checked.text
+    assert (checked.json()["status"], checked.json()["health"]) == (previous_status, "unhealthy")
 
 
 async def reconcile(flow_id, owner_id, *, delivery="push"):

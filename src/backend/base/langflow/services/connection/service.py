@@ -925,6 +925,14 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
             scopes = await check_slack_web_token(credential.access_token.get_secret_value())
             row.granted_scopes = scopes
             credential = replace(credential, granted_scopes=frozenset(scopes))
+        else:
+            from langflow.services.triggers.providers.registry import get_provider
+
+            provider = get_provider(row.provider_key)
+            if row.provider_key == "telegram" and (provider is None or provider.check_credential is None):
+                raise ProviderUnavailableError(provider=row.provider_key)
+            if provider is not None and provider.check_credential is not None:
+                await provider.check_credential(credential)
         missing = ScopeSet.missing(
             provider=row.provider_key, required=required_scopes, granted=credential.granted_scopes
         )
@@ -957,10 +965,10 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
                 row.id,
             )
             raise ConnectionUnresolvedError(handle, provider=row.provider_key, reason="credential-undecryptable")
-        # Pasted tokens cannot refresh. Do not retry a token Slack already
+        # Pasted tokens cannot refresh. Do not retry a token the provider already
         # rejected, and do not expire a replacement after a stale rejection.
         if (
-            row.provider_key == PROVIDER_SLACK
+            row.provider_key in {PROVIDER_SLACK, "telegram"}
             and not payload.get("oauth")
             and rejected_token_digest is not None
             and secrets.compare_digest(rejected_token_digest, broker.digest(payload["access_token"]))

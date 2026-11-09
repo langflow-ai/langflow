@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
     from datetime import datetime
 
-    from lfx.integrations.models import CredentialLease
+    from lfx.integrations.models import CredentialLease, ResolvedCredential
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.connection.oauth.adapter import OAuthAdapter
@@ -67,6 +67,7 @@ class TriggerProvider:
     ingress_is_hint: bool = False
     api_origins: tuple[str, ...] = ()
     validate_manual_credential: Callable[..., Awaitable[ConnectionCreate]] | None = None
+    check_credential: Callable[[ResolvedCredential], Awaitable[None]] | None = None
     manual_token_requires_expiry: bool = False
     oauth: OAuthAdapter | None = None
     prepare: Callable[[AsyncSession, Trigger], Awaitable[None]] | None = None

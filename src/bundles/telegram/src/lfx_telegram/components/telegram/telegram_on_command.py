@@ -19,6 +19,9 @@ class TelegramOnCommandTriggerComponent(TelegramTriggerComponent):
             display_name="Commands",
             is_list=True,
             value=[],
-            info="Command names without the leading slash. Empty means every command addressed to this bot.",
+            info=(
+                "Up to 100 unique names of 1 to 32 lowercase letters, digits, or underscores, without a slash. "
+                "Empty means every command addressed to this bot."
+            ),
         ),
     ]
