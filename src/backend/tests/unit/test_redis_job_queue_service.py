@@ -100,6 +100,20 @@ async def _stop_service(service: RedisJobQueueService) -> None:
     service._client = None
 
 
+@pytest.fixture(params=[0, 0.1], ids=["normal-admission", "delayed-admission"])
+def maintenance_admission_delay(request, monkeypatch):
+    """Exercise cancellation after normal or slow maintenance admission."""
+    from langflow.api.utils import migration_pause
+
+    write_refusal = migration_pause.write_refusal
+
+    async def delayed_write_refusal(*args, **kwargs):
+        await asyncio.sleep(request.param)
+        return await write_refusal(*args, **kwargs)
+
+    monkeypatch.setattr(migration_pause, "write_refusal", delayed_write_refusal)
+
+
 class _BlockingXaddClient:
     """Redis client wrapper that blocks inside xadd until the caller cancels it."""
 
@@ -666,6 +680,7 @@ async def test_streaming_disconnect_cancels_queue_wrapper_without_event_task():
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("maintenance_admission_delay")
 async def test_cross_worker_disconnect_publishes_signal_cancel():
     """Disconnect on a non-owner worker publishes signal_cancel so the producer worker cancels its task.
 
@@ -680,8 +695,10 @@ async def test_cross_worker_disconnect_publishes_signal_cancel():
         job_id = str(uuid.uuid4())
         svc_producer.create_queue(job_id)
         cancelled_event = asyncio.Event()
+        started = asyncio.Event()
 
         async def _long_running():
+            started.set()
             try:
                 await asyncio.Event().wait()
             except asyncio.CancelledError:
@@ -689,7 +706,7 @@ async def test_cross_worker_disconnect_publishes_signal_cancel():
                 raise
 
         svc_producer.start_job(job_id, _long_running())
-        await asyncio.sleep(0.05)
+        await asyncio.wait_for(started.wait(), timeout=2.0)
 
         # Cross-worker poll: consumer opens a Redis-backed queue wrapper.
         queue, *_ = svc_consumer.get_queue_data(job_id)
@@ -1378,6 +1395,7 @@ async def test_streaming_heartbeat_runs_independent_of_event_yield(monkeypatch):
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("maintenance_admission_delay")
 async def test_concurrent_cancels_from_multiple_workers_are_idempotent():
     """signal_cancel from two workers concurrently must produce exactly one cancel.
 
@@ -1396,8 +1414,10 @@ async def test_concurrent_cancels_from_multiple_workers_are_idempotent():
         job_id = str(uuid.uuid4())
         producer.create_queue(job_id)
         cancelled = asyncio.Event()
+        started = asyncio.Event()
 
         async def _long_running():
+            started.set()
             try:
                 await asyncio.Event().wait()
             except asyncio.CancelledError:
@@ -1405,7 +1425,7 @@ async def test_concurrent_cancels_from_multiple_workers_are_idempotent():
                 raise
 
         producer.start_job(job_id, _long_running())
-        await asyncio.sleep(0.05)
+        await asyncio.wait_for(started.wait(), timeout=2.0)
 
         # Two workers publish cancel at the same time.
         await asyncio.gather(pub_a.signal_cancel(job_id), pub_b.signal_cancel(job_id))
