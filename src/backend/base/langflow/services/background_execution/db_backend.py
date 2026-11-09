@@ -165,6 +165,7 @@ class DBBackgroundQueue:
             return None
 
         meta = job.job_metadata or {}
+        expected_lease = (meta.get("owner"), meta.get("heartbeat_at"))
         if meta.get("retry_safe"):
             attempt = int(meta.get("attempt", 1))
             max_attempts = int(meta.get("max_attempts", 1))
@@ -172,7 +173,9 @@ class DBBackgroundQueue:
                 # Atomic bump+flip guarded by attempt==expected AND
                 # status==IN_PROGRESS, so concurrent watchdogs cannot push a
                 # job past max_attempts (the loser sees rowcount 0).
-                if await self._job_service.retry_requeue_claim(job.job_id, expected_attempt=attempt):
+                if await self._job_service.retry_requeue_claim(
+                    job.job_id, expected_attempt=attempt, expected_lease=expected_lease
+                ):
                     requeued.append(str(job_id))
                 return None
         # Default at-most-once, or retries exhausted: fail worker_lost with
@@ -181,7 +184,9 @@ class DBBackgroundQueue:
         # in the same UPDATE) is the single-flight token: only the watchdog
         # whose UPDATE matched appends run_failed, so N concurrent watchdogs
         # cannot append duplicate terminal milestones.
-        if await self._job_service.fail_in_progress_job(job.job_id, error={"type": "worker_lost"}):
+        if await self._job_service.fail_in_progress_job(
+            job.job_id, error={"type": "worker_lost"}, expected_lease=expected_lease
+        ):
             await self._job_service.append_event(job.job_id, "run_failed", {"type": "worker_lost"})
         return requeued
 

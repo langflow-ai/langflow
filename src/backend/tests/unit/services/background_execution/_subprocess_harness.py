@@ -239,12 +239,12 @@ class WorkerHarness:
                 await self._db_service.teardown()
         if self._prior_db_service is not None:
             manager.services[ServiceType.DATABASE_SERVICE] = self._prior_db_service
-        if self._prior_settings_url is not None:
-            get_settings_service().settings.database_url = self._prior_settings_url
         if self._prior_db_env_set:
             os.environ["LANGFLOW_DATABASE_URL"] = self._prior_db_env  # type: ignore[assignment]
         else:
             os.environ.pop("LANGFLOW_DATABASE_URL", None)
+        if self._prior_settings_url is not None:
+            get_settings_service().settings.database_url = self._prior_settings_url
 
 
 async def setup_worker_harness(pg_uri: str) -> WorkerHarness:

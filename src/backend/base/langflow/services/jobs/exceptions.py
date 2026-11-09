@@ -45,8 +45,8 @@ class PauseRequested(JobError):  # noqa: N818
 
 
 class JobNotClaimable(JobError):  # noqa: N818
-    """This runner lost the row: it is no longer QUEUED, or it belongs to someone else.
+    """The job is terminal or belongs to another runner.
 
-    Raised before any work starts, so the caller must stop without writing a status.
-    Writing one would stamp a verdict onto a job another worker is running.
+    Raised when a start is rejected or a running lease cannot be renewed. The
+    caller must stop without writing a status or finalizing another owner's run.
     """

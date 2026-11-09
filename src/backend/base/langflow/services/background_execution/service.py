@@ -735,7 +735,7 @@ class BackgroundExecutionService(Service):
             rows = await job_service.read_events(job_id, after_seq=after_seq)
             return [LiveFrame(seq=r.seq, data=self._row_to_frame(r, protocol=protocol)) for r in rows]
 
-        # Terminal jobs must be answered from the DURABLE log alone. The live bus
+        # In-process terminal jobs must be answered from the DURABLE log alone. The live bus
         # is process-local: after a restart it is fresh and its ``_closed`` marker
         # is empty, so ``reattach`` would replay durable rows then block forever on
         # ``while True: queue.get()`` waiting for a live tail that will never come.
@@ -743,7 +743,9 @@ class BackgroundExecutionService(Service):
         # truth), replay, and return.
         # SUSPENDED is parked awaiting human input: no live tail to wait on, so answer
         # from the durable log alone (like a terminal status) instead of blocking.
-        if job.status in _TERMINAL_STATUSES or job.status == JobStatus.SUSPENDED:
+        # Scaled tails also use the durable log, but include a grace drain for
+        # terminal events appended after the status commits.
+        if not self._scaled and (job.status in _TERMINAL_STATUSES or job.status == JobStatus.SUSPENDED):
             for frame in await read_durable(last_seq):
                 yield frame.data
             return
@@ -904,9 +906,9 @@ class BackgroundExecutionService(Service):
         reconstructed request. Best-effort per job so one bad row can't block the
         rest. The scaled backend reconciles via its worker-side watchdog.
         """
+        await self.start()
         if self._is_scaled_configured:
             return
-        await self.start()
         job_service = get_job_service()
         lease_ttl = self._settings.background_lease_ttl_s
         # Single-flight the IN_PROGRESS reconcile: only the worker that wins the
