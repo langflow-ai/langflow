@@ -216,6 +216,13 @@ jobs:
         run: |
           source .venv/bin/activate
 
+          # Older selected nightlies still need migration validation even before this command existed.
+          python -m langflow --help > langflow-help.txt
+          if ! grep -Fq 'upgrade-check' langflow-help.txt; then
+            echo "Selected nightly predates upgrade-check; continuing with migration validation."
+            exit 0
+          fi
+
           # Exit 0 or 1 is a finished check (1 means a flow needs action). Exit 2 means it could not finish.
           status=0
           python -m langflow upgrade-check --database-url "$SOURCE_DATABASE_URL" --json \

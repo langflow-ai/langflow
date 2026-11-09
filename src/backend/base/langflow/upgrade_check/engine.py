@@ -93,6 +93,7 @@ _PROCESS_EVENTS = frozenset(
 # inside a server (the admin page), this would also refuse the server's own calls during a dry run;
 # gate per context then. Refusal stays active while a callback thread runs, including after its timeout.
 _dry_run_threads: set[int] = set()
+_timed_out_dry_runs: set[threading.Thread] = set()
 _refused_calls: list[str] = []
 
 
@@ -465,6 +466,15 @@ def _dry_run(
     The update runs in its own thread and event loop, so a time limit can stop waiting for it. A
     thread past the limit is left to end on its own; it is a daemon, so it never holds the process.
     """
+    # Refusals are process-wide because callbacks can use asyncio executor threads.
+    # Do not attribute an abandoned callback's later calls to another component.
+    for earlier in tuple(_timed_out_dry_runs):
+        if not earlier.is_alive():
+            _timed_out_dry_runs.discard(earlier)
+    if _timed_out_dry_runs:
+        return None, _reason(
+            "could_not_verify", None, "an earlier component update is still running after its time limit"
+        )
     outcome: dict[str, Any] = {}
 
     def run() -> None:
@@ -477,6 +487,8 @@ def _dry_run(
     thread = threading.Thread(target=run, name="upgrade-check-dry-run", daemon=True)
     thread.start()
     thread.join(DRY_RUN_SECONDS)
+    if thread.is_alive():
+        _timed_out_dry_runs.add(thread)
     if _refused_calls:
         # Completed partial rebuilds identify unverified fields through warnings filtered above.
         # A timeout has no completed outcome or warnings to identify which fields are missing.

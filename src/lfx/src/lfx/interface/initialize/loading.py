@@ -359,6 +359,7 @@ async def update_params_with_load_from_db_fields(
     load_from_db_fields,
     *,
     fallback_to_env_vars=False,
+    allow_missing: bool = False,
 ):
     async with session_scope() as session:
         settings_service = get_settings_service()
@@ -395,7 +396,7 @@ async def update_params_with_load_from_db_fields(
                 except ValueError as e:
                     if "User id is not set" in str(e):
                         raise
-                    if "variable not found." in str(e) and not fallback_to_env_vars:
+                    if "variable not found." in str(e) and not fallback_to_env_vars and not allow_missing:
                         raise
                     logger.debug(str(e))
                     key = None

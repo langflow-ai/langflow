@@ -821,7 +821,7 @@ class Vertex:
             mismatch = explain_restricted_component_mismatch(
                 self.data.get("type"),
                 self.data.get("node"),
-                {edge.target_param for edge in self.incoming_edges},
+                vertex=self,
             )
             if mismatch:
                 msg = f"{msg}\n\n{mismatch}"

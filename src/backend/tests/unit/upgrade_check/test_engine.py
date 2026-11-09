@@ -839,3 +839,43 @@ def test_customized_nodes_fail_when_their_edits_will_not_run(settings, runs, mes
     assert all(node.runs == runs for node in customized)
     assert all(node.reasons == [{"code": "customized", "field": None, "message": message}] for node in customized)
     assert flow_status(nodes) == status
+
+
+def test_later_dry_run_does_not_inherit_a_timed_out_nodes_refusal(monkeypatch):
+    release_first, first_done, second_started = threading.Event(), threading.Event(), threading.Event()
+    monkeypatch.setattr(engine, "DRY_RUN_SECONDS", 0.05)
+
+    async def update(entry, _saved, _user):
+        identity = threading.get_ident()
+        engine._dry_run_threads.add(identity)
+        try:
+            if entry.get("slow"):
+                assert release_first.wait(timeout=3)
+                try:
+                    engine._refuse_network("socket.getaddrinfo", ("earlier-node.invalid",))
+                finally:
+                    first_done.set()
+            else:
+                second_started.set()
+                release_first.set()
+                assert first_done.wait(timeout=3)
+                return engine._RebuildOutcome(node={"template": {}}, warnings=[])
+        finally:
+            engine._dry_run_threads.discard(identity)
+
+    monkeypatch.setattr(engine, "_update", update)
+    try:
+        rebuilt, failure = engine._dry_run({"slow": True}, {}, None)
+        assert rebuilt is None
+        assert "did not finish" in failure["message"]
+        rebuilt, failure = engine._dry_run({}, {}, None)
+        assert rebuilt is None
+        assert failure["code"] == "could_not_verify"
+        assert "earlier" in failure["message"]
+        assert "earlier-node.invalid" not in failure["message"]
+        assert not second_started.is_set()
+    finally:
+        release_first.set()
+        for thread in threading.enumerate():
+            if thread.name == "upgrade-check-dry-run":
+                thread.join(timeout=3)

@@ -193,3 +193,41 @@ async def test_generic_refresh_does_not_swallow_wrapped_authorization_refusals(*
     assert calls == [("selection", "saved selection", "saved selection")]
     if collect_warnings:
         assert warnings == []
+
+
+@pytest.mark.parametrize("fallback", [False, True])
+async def test_saved_refresh_honors_database_environment_fallback(monkeypatch, fallback):
+    from contextlib import asynccontextmanager
+
+    from lfx.interface.initialize import loading
+    from lfx.services.deps import get_settings_service
+
+    seen = []
+
+    class RefreshComponent(Component):
+        def update_build_config(self, build_config, field_value, field_name=None):  # noqa: ARG002
+            seen.append(self.credential)
+            build_config["selection"]["options"] = ["metadata refreshed"]
+            return build_config
+
+    @asynccontextmanager
+    async def database_session():
+        yield object()
+
+    missing = AsyncMock(side_effect=ValueError("variable not found."))
+    monkeypatch.setattr(RefreshComponent, "get_variable", missing)
+    monkeypatch.setattr(loading, "session_scope", database_session)
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "use_noop_database", False)
+    monkeypatch.setattr(settings, "fallback_to_env_var", fallback)
+    monkeypatch.setenv("UPGRADE_REPLAY_FIXTURE", "environment fixture value")
+    rebuilt = _refresh_node("new default")
+    rebuilt["template"]["credential"] = {"type": "str", "value": "", "load_from_db": False}
+    saved = _refresh_node("saved selection")
+    saved["template"]["credential"] = {"type": "str", "value": "UPGRADE_REPLAY_FIXTURE", "load_from_db": True}
+    warnings = []
+    updated = await update_rebuilt_node(RefreshComponent(), rebuilt, saved, warnings=warnings)
+    assert seen == ["environment fixture value" if fallback else None]
+    assert updated["template"]["selection"]["options"] == ["metadata refreshed"]
+    assert updated["template"]["credential"]["value"] == "UPGRADE_REPLAY_FIXTURE"
+    assert warnings == []
