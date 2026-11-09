@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import delete
+from sqlalchemy import delete, update
 from sqlmodel import and_, col, or_, select
 
 from langflow.services.data_subjects.audit_redaction import redact_audit_rows
@@ -32,7 +32,7 @@ from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.ingestion_run.model import IngestionRun
 from langflow.services.database.models.jobs.model import Job
-from langflow.services.database.models.maintenance import MaintenanceState
+from langflow.services.database.models.maintenance import MAINTENANCE_ID, MaintenanceState
 from langflow.services.database.models.mcp_server.model import MCPServer
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.policy_bundle.model import PolicyBundleRevision
@@ -147,6 +147,16 @@ async def erase_project_receipts(session: AsyncSession, ctx: EraseContext) -> in
     return result.rowcount or 0
 
 
+async def clear_maintenance_actor(session: AsyncSession, ctx: EraseContext) -> int:
+    """Clear the erased actor without overwriting a concurrent maintenance change."""
+    result = await session.exec(
+        update(MaintenanceState)
+        .where(MaintenanceState.id == MAINTENANCE_ID, MaintenanceState.set_by == ctx.subject_user_id)
+        .values(set_by=None)
+    )
+    return result.rowcount or 0
+
+
 async def erase_folders(session: AsyncSession, ctx: EraseContext) -> int:
     """Leaf folders first, so a parent is never deleted while a child still points at it."""
     uid = ctx.subject_user_id
@@ -194,7 +204,7 @@ BUILDER_ACCOUNT_STEPS: tuple[tuple[str, Step], ...] = (
     ("audit_subject", _clear_reference(AuthzAuditLog, AuthzAuditLog.user_id)),
     ("project_receipts", erase_project_receipts),
     ("folders", erase_folders),
-    ("maintenance_setter", _clear_reference(MaintenanceState, MaintenanceState.set_by)),
+    ("maintenance_setter", clear_maintenance_actor),
     ("upgrade_repair_author", _delete_by_user(UpgradeReportRepair, UpgradeReportRepair.created_by)),
     ("upgrade_reports", erase_upgrade_reports),
 )
