@@ -82,8 +82,10 @@
         "lfx-oracle",
         "lfx-servicenow",
         "lfx-slack",
+        "lfx-telegram",
         "lfx-toolguard",
-        "lfx-vllm"
+        "lfx-vllm",
+        "lfx-whatsapp"
       ],
       "forbidden_distributions_add": [
         "lfx-arxiv",
@@ -123,8 +125,10 @@
           "lfx-oracle",
           "lfx-servicenow",
           "lfx-slack",
+          "lfx-telegram",
           "lfx-toolguard",
-          "lfx-vllm"
+          "lfx-vllm",
+          "lfx-whatsapp"
         ],
         "lfx.bundles": []
       },
@@ -173,6 +177,16 @@
           "lfx_github/extension.json",
           "lfx_github/components/github/capabilities.v1.json",
           "lfx_github/components/github/issue_trigger.py"
+        ],
+        "lfx-telegram": [
+          "lfx_telegram/extension.json",
+          "lfx_telegram/components/telegram/capabilities.v1.json",
+          "lfx_telegram/components/telegram/telegram_reply.py"
+        ],
+        "lfx-whatsapp": [
+          "lfx_whatsapp/extension.json",
+          "lfx_whatsapp/components/whatsapp/capabilities.v1.json",
+          "lfx_whatsapp/components/whatsapp/whatsapp_on_event_trigger_component.py"
         ]
       },
       "module_checks": [
@@ -274,9 +288,11 @@
           "lfx-serply",
           "lfx-servicenow",
           "lfx-slack",
+          "lfx-telegram",
           "lfx-toolguard",
           "lfx-valkey",
-          "lfx-vllm"
+          "lfx-vllm",
+          "lfx-whatsapp"
         ],
         "lfx.bundles": [
           "lfx_bundles"
@@ -393,6 +409,16 @@
         "lfx-bundles": [
           "lfx_bundles/mongodb/mongodb_atlas.py",
           "lfx_bundles/youtube/starter_projects/Youtube Analysis.json"
+        ],
+        "lfx-telegram": [
+          "lfx_telegram/extension.json",
+          "lfx_telegram/components/telegram/capabilities.v1.json",
+          "lfx_telegram/components/telegram/telegram_reply.py"
+        ],
+        "lfx-whatsapp": [
+          "lfx_whatsapp/extension.json",
+          "lfx_whatsapp/components/whatsapp/capabilities.v1.json",
+          "lfx_whatsapp/components/whatsapp/whatsapp_on_event_trigger_component.py"
         ]
       },
       "module_checks": [

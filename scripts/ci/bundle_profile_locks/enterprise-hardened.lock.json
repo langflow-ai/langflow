@@ -203,6 +203,16 @@
       "resolved_version": "0.2.3"
     },
     {
+      "distribution": "lfx-telegram",
+      "extras": [],
+      "providers": [
+        "lfx-telegram"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-telegram==0.1.0",
+      "resolved_version": "0.1.0"
+    },
+    {
       "distribution": "lfx-toolguard",
       "extras": [],
       "providers": [
@@ -221,6 +231,16 @@
       "requested": ">=0.2.1,<1.0.0",
       "requirement": "lfx-vllm==0.2.1",
       "resolved_version": "0.2.1"
+    },
+    {
+      "distribution": "lfx-whatsapp",
+      "extras": [],
+      "providers": [
+        "lfx-whatsapp"
+      ],
+      "requested": ">=0.1.1,<1.0.0",
+      "requirement": "lfx-whatsapp==0.1.1",
+      "resolved_version": "0.1.1"
     }
   ],
   "image_families": [
@@ -230,7 +250,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:e543711d47b8d176",
+  "profile_digest": "sha256:d3759cd7f157e79c",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",
@@ -251,8 +271,10 @@
     "lfx-oracle",
     "lfx-servicenow",
     "lfx-slack",
+    "lfx-telegram",
     "lfx-toolguard",
-    "lfx-vllm"
+    "lfx-vllm",
+    "lfx-whatsapp"
   ],
   "python": ">=3.11,<3.16",
   "schema_version": 1
