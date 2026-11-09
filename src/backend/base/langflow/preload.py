@@ -166,8 +166,11 @@ async def initialize_environment_variables() -> None:
         return
 
     async def _initialize() -> None:
+        from langflow.services.connection.oauth.stored_registrations import load_stored_oauth_registrations
         from langflow.services.deps import get_variable_service
 
+        # A failed registration load must leave this step incomplete for workers to retry.
+        await load_stored_oauth_registrations()
         await get_variable_service().initialize_all_user_variables()
 
     await _best_effort(

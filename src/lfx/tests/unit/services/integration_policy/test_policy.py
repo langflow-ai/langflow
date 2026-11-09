@@ -141,15 +141,14 @@ def test_action_policy_supports_dotted_provider_ids_without_widening_a_parent_na
     assert not parent_only.allows_action("integrations.google.workspace.drive.search")
 
 
-def test_bundle_content_hash_is_stable_when_integration_sets_are_empty() -> None:
-    """QA: hash stability when integration sets are empty."""
+def test_bundle_content_hash_distinguishes_unrestricted_from_deny_all() -> None:
     legacy = policy_bundle_content_hash(
         approved_provider_ids=("openai",),
         blocked_component_keys=("Prompt",),
         blocked_template_keys=("basic_prompting",),
         blocked_model_keys=("openai::gpt-4",),
     )
-    with_defaults = policy_bundle_content_hash(
+    deny_all = policy_bundle_content_hash(
         approved_provider_ids=("openai",),
         blocked_component_keys=("Prompt",),
         blocked_template_keys=("basic_prompting",),
@@ -157,7 +156,7 @@ def test_bundle_content_hash_is_stable_when_integration_sets_are_empty() -> None
         approved_integration_provider_ids=(),
         blocked_integration_action_keys=(),
     )
-    assert legacy == with_defaults
+    assert legacy != deny_all
     # Captured from the canonical payload before integration fields existed.
     # Comparing two calls to today's function alone cannot detect hash drift.
     expected = "2579606fce91a3b6337addd363cc06935d87aa5b60449b65701f138f5e4406d1"  # pragma: allowlist secret
@@ -375,6 +374,26 @@ def test_oss_default_applies_the_bundle_ceiling_and_deny_list() -> None:
     assert snapshot.allows_action("integrations.google.drive.search")
     assert not snapshot.allows_action("integrations.google.drive.delete")
     assert not snapshot.allows_action("integrations.slack.chat.post")
+
+
+def test_oss_default_allows_an_explicit_empty_ceiling_to_deny_all() -> None:
+    bundle = PolicyBundleService()
+    bundle.publish(
+        PolicyBundleSnapshot(
+            revision=1,
+            initialized=True,
+            approved_integration_provider_ids=frozenset(),
+        )
+    )
+    service = IntegrationPolicyService(policy_bundle_service=bundle)
+
+    snapshot = service.resolve(
+        context=IntegrationPolicyContext(),
+        candidate_provider_ids=frozenset({"google", "slack"}),
+        purpose=IntegrationPolicyPurpose.USE,
+    )
+
+    assert snapshot.allowed_provider_ids == frozenset()
 
 
 def test_oss_default_fails_closed_only_while_a_ceiling_is_active() -> None:
