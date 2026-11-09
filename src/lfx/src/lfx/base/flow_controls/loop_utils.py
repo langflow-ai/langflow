@@ -207,6 +207,8 @@ async def execute_loop_body(
     start_edge,
     end_vertex_id: str | None,
     event_manager=None,
+    *,
+    user_id: str | None = None,
 ) -> list[Data]:
     """Execute loop body for each data item.
 
@@ -223,6 +225,7 @@ async def execute_loop_body(
             to find every edge from that output, so all fan-out branches receive the item
         end_vertex_id: The vertex ID that feeds back to the loop's item input
         event_manager: Optional event manager to pass to subgraph execution for UI events
+        user_id: The caller executing the Loop component and its body.
 
     Returns:
         List of Data objects containing results from each iteration
@@ -297,7 +300,9 @@ async def execute_loop_body(
             # aclosing guarantees the stream is finalized even when we raise mid-iteration
             # on an invalid result, so the underlying subgraph generator's cleanup runs.
             coordinator = await aget_default_coordinator()
-            async with aclosing(coordinator.stream(iteration_subgraph, event_manager=event_manager)) as stream:
+            async with aclosing(
+                coordinator.stream(iteration_subgraph, user_id=user_id, event_manager=event_manager)
+            ) as stream:
                 async for result in stream:
                     results.append(result)
                     # Stop all on error (as per design decision)

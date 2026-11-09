@@ -311,6 +311,24 @@ DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
     ("pandas.io.pickle", "read_pickle", "pandas.io.pickle.read_pickle() is forbidden — unsafe pickle deserialization"),
     ("pandas.io.api", "read_pickle", "pandas.io.api.read_pickle() is forbidden — unsafe pickle deserialization"),
     ("pandas", "eval", "pandas.eval() is forbidden in components (dynamic code execution)"),
+    # These APIs evaluate strings outside the generated component's AST.
+    *[
+        (module, member, f"{module}.{member}() is forbidden in components (dynamic code execution)")
+        for module, members in (
+            ("jinja2", ("Template", "Environment")),
+            ("jinja2.environment", ("Template", "Environment")),
+            ("jinja2.ext", ("Environment",)),
+            # Generated code can replace the sandbox policy before rendering.
+            ("jinja2.sandbox", ("Environment", "SandboxedEnvironment", "ImmutableSandboxedEnvironment")),
+            ("jinja2.nativetypes", ("Template", "Environment", "NativeTemplate", "NativeEnvironment")),
+            ("sympy", ("sympify", "S", "lambdify")),
+            ("sympy.core", ("sympify", "S")),
+            ("sympy.core.sympify", ("sympify", "kernS")),
+            ("sympy.parsing.sympy_parser", ("parse_expr", "eval_expr", "sympify")),
+            ("sympy.utilities.lambdify", ("lambdify",)),
+        )
+        for member in members
+    ],
 ]
 
 # NumPy's array readers are safe by default, but allow_pickle=True enables
@@ -364,6 +382,11 @@ DANGEROUS_IMPORTS: set[str] = {
     "codeop",
     "compileall",
     "importlib",
+    # Frozen importlib aliases and ZIP loaders execute code outside this AST.
+    "_frozen_importlib",
+    "_frozen_importlib_external",
+    "zipimport",
+    "zipfile",
     # These helpers expose live frames, arbitrary source files, or raw file readers.
     "inspect",
     "linecache",
@@ -418,6 +441,9 @@ DANGEROUS_IMPORTS: set[str] = {
     # module; the whole module is blocked, same as shutil. Components must
     # use Langflow's File components for file access.
     "pathlib",
+    # SQL can write files, load extensions, and issue network requests.
+    "duckdb",
+    "_duckdb",
 }
 
 # Dangerous *submodules* of packages that also expose safe siblings. Block the

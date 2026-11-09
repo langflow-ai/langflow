@@ -9,6 +9,7 @@ import re
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
+from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed
 from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
 from lfx.services.variable import VariableNotFoundError
@@ -568,10 +569,35 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             if not is_reasoning_model:
                 llm_kwargs["max_tokens"] = 1
             base_url = variables.get("OPENAI_BASE_URL")
+            if not base_url:
+                if is_env_fallback_disabled():
+                    base_url = "https://api.openai.com/v1"
+                else:
+                    try:
+                        from langchain_openai.chat_models.base import _resolve_gateway_config
+                    except ImportError:
+                        # Older SDKs do not route through the LangSmith gateway.
+                        base_url = os.getenv("OPENAI_API_BASE") or os.getenv("OPENAI_BASE_URL")
+                    else:
+                        # Use the SDK's resolver before construction so its gateway
+                        # destination receives the same credential policy check.
+                        base_url = _resolve_gateway_config(
+                            base_url=None,
+                            api_key=api_key,
+                            provider_path="openai/v1",
+                            base_url_env="OPENAI_API_BASE",
+                            api_key_env="OPENAI_API_KEY",  # pragma: allowlist secret
+                        ).base_url or os.getenv("OPENAI_BASE_URL")
             if base_url:
                 from lfx.utils.util import transform_localhost_url
 
                 transformed_base_url = transform_localhost_url(base_url)
+                ensure_credential_endpoint_allowed(
+                    api_key,
+                    transformed_base_url,
+                    default_url="https://api.openai.com/v1",
+                    sdk_env_fallback="OPENAI_API_KEY",
+                )
                 validate_connector_url_for_ssrf(transformed_base_url)
                 llm_kwargs["base_url"] = transformed_base_url
             llm = ChatOpenAI(**llm_kwargs)
