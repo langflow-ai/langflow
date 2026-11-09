@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AxiosError } from "axios";
 import { I18nextProvider } from "react-i18next";
@@ -29,6 +29,8 @@ const mockRegistrations = {
     },
   ],
   isSuccess: true,
+  isError: false,
+  error: null as unknown,
 };
 const mockTypesState = { data: {} };
 const mockPoll: { data: ConnectionRead | undefined } = { data: undefined };
@@ -78,7 +80,9 @@ jest.mock("@/customization/components/custom-connection-authorization", () => ({
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
-  default: () => null,
+  default: ({ name, ariaHidden }: { name: string; ariaHidden?: boolean }) => (
+    <span data-testid={`icon-${name}`} aria-hidden={ariaHidden} />
+  ),
 }));
 
 const google: IntegrationProviderRead = {
@@ -118,10 +122,17 @@ const fillDetails = async (user: ReturnType<typeof userEvent.setup>) => {
 };
 
 describe("AddConnectionDialog ownership", () => {
+  beforeAll(() => {
+    Element.prototype.hasPointerCapture ??= jest.fn(() => false);
+    Element.prototype.releasePointerCapture ??= jest.fn();
+    Element.prototype.scrollIntoView ??= jest.fn();
+  });
   beforeEach(() => {
     mockCreate.mockReset();
     mockPoll.data = undefined;
     mockRegistrations.isSuccess = true;
+    mockRegistrations.isError = false;
+    mockRegistrations.error = null;
     mockResolveRegistrationId.mockReturnValue("google-demo");
     // Consent opens in a popup the dialog creates on the click itself.
     jest.spyOn(window, "open").mockReturnValue({
@@ -154,6 +165,45 @@ describe("AddConnectionDialog ownership", () => {
     expect(
       screen.queryByText(/No OAuth registration is configured/i),
     ).not.toBeInTheDocument();
+  });
+
+  it("shows catalog icons beside provider names in the picker and selected value", async () => {
+    const user = userEvent.setup();
+    render(
+      <AddConnectionDialog
+        open
+        onOpenChange={jest.fn()}
+        providers={[
+          { ...google, icon: "Google" },
+          {
+            ...google,
+            provider_id: "confluence",
+            display_name: "Confluence Cloud",
+            icon: "Confluence",
+          },
+        ]}
+        canCreateInstance={false}
+      />,
+    );
+    const picker = screen.getByRole("combobox", { name: "Provider" });
+    expect(within(picker).getByTestId("icon-Google")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+    await user.click(picker);
+    const confluence = screen.getByRole("option", { name: "Confluence Cloud" });
+    expect(within(confluence).getByTestId("icon-Confluence")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+    expect(
+      within(screen.getByRole("option", { name: "Google" })).getByTestId(
+        "icon-Google",
+      ),
+    ).toBeInTheDocument();
+    await user.click(confluence);
+    expect(picker).toHaveTextContent("Confluence Cloud");
+    expect(within(picker).getByTestId("icon-Confluence")).toBeInTheDocument();
   });
 
   it("reports a missing registration up front when re-authorizing a provider policy removed", () => {
@@ -212,6 +262,72 @@ describe("AddConnectionDialog ownership", () => {
     );
     expect(screen.getByTestId("connection-continue")).toBeDisabled();
   });
+
+  it.each([false, true])(
+    "shows the site configuration error when reauthorizing is %s",
+    async (reauthorizing) => {
+      mockRegistrations.isSuccess = false;
+      mockRegistrations.isError = true;
+      mockRegistrations.error = {
+        isAxiosError: true,
+        response: {
+          data: {
+            detail: "The deployment Confluence Cloud site is not configured.",
+          },
+        },
+      };
+      const user = userEvent.setup();
+      render(
+        <AddConnectionDialog
+          open
+          onOpenChange={jest.fn()}
+          providers={[
+            {
+              ...google,
+              provider_id: "confluence",
+              display_name: "Confluence Cloud",
+              docs_url: "https://docs.langflow.org/bundles-confluence",
+            },
+          ]}
+          canCreateInstance={false}
+          reauthorize={
+            reauthorizing
+              ? {
+                  ...createdRow("user"),
+                  provider_key: "confluence",
+                  granted_scopes: ["read:page:confluence"],
+                }
+              : undefined
+          }
+        />,
+      );
+      if (!reauthorizing) {
+        await user.type(
+          screen.getByTestId("connection-name"),
+          "confluence_work",
+        );
+        await user.type(
+          screen.getByTestId("connection-display-name"),
+          "Confluence work",
+        );
+      }
+
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "The deployment Confluence Cloud site is not configured.",
+      );
+      expect(
+        screen.queryByText(/No OAuth registration is configured/i),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS/),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByTestId(
+          reauthorizing ? "connection-authorize" : "connection-continue",
+        ),
+      ).toBeDisabled();
+    },
+  );
 
   it("does not call a registration missing before discovery succeeds", () => {
     mockResolveRegistrationId.mockReturnValue(null);

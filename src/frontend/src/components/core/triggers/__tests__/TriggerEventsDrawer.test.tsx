@@ -91,6 +91,28 @@ describe("TriggerEventsDrawer", () => {
     expect(within(detail).getByText("3 of 3")).toBeInTheDocument();
   });
 
+  it.each([
+    [
+      "connection_unusable",
+      "This trigger's connection was revoked or has expired. Reconnect it, then resume the trigger.",
+      "The connection doesn't allow background runs.",
+    ],
+    [
+      "connection_not_authorized",
+      "The connection doesn't allow background runs.",
+      "This trigger's connection was revoked or has expired. Reconnect it, then resume the trigger.",
+    ],
+  ])("explains a failed event with %s", (error, message, unrelatedMessage) => {
+    mockEvents = [makeEvent({ state: "failed", error, job_id: null })];
+
+    open();
+
+    const detail = screen.getByTestId("trigger-event-detail");
+    expect(within(detail).getByText(message)).toBeInTheDocument();
+    expect(within(detail).getByText(error)).toBeInTheDocument();
+    expect(within(detail).queryByText(unrelatedMessage)).toBeNull();
+  });
+
   it("filters to tests and names an event without text by its origin", async () => {
     open();
     await userEvent.click(screen.getByTestId("trigger-event-failed"));
