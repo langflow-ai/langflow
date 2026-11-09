@@ -2700,6 +2700,8 @@
   "updateComponents.cannotRunDisabled_one": "{{count}} Benutzerdefinierte Komponenten können nicht ausgeführt werden, solange benutzerdefinierte Komponenten deaktiviert sind",
   "updateComponents.cannotRunDisabled_other": "{{count}} Benutzerdefinierte Komponenten können nicht ausgeführt werden, solange sie deaktiviert sind",
   "updateComponents.customComponentsDisabled": "Benutzerdefinierte Komponenten sind deaktiviert",
+  "updateComponents.fieldsNotRestored": "Einige Felder in {{component}} konnten nicht wiederhergestellt werden",
+  "updateComponents.fieldsRefreshFailed": "Felder in {{component}} konnten nicht aktualisiert werden",
   "updateComponents.dismiss": "Schließen",
   "updateComponents.dismissAll": "Alle verwerfen",
   "updateComponents.flowNeedsReview": "Der Ablauf muss überprüft werden",

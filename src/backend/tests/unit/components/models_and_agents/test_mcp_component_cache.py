@@ -511,7 +511,7 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
         }
         servers_cache = {cache_key: cached_entry}
         safe_cache_set(component._shared_component_cache, "servers", servers_cache)
-        safe_cache_set(component._shared_component_cache, "last_selected_server", "")
+        component._last_selected_server = ""
 
         fresh_tool = MagicMock()
         fresh_tool.name = "fresh_tool"

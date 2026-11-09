@@ -7,6 +7,7 @@ from collections.abc import Collection, Mapping
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
+from lfx.template.field_migrations import can_migrate_chat_output_input
 from lfx.utils.flow_code import normalize_code_for_import
 
 COMPONENTS_TO_IGNORE_UPDATE: frozenset[str] = frozenset({"CustomComponent"})
@@ -165,8 +166,9 @@ def _holds_value(field: Mapping[str, Any]) -> bool:
 def retyped_field_keys(registry_template: Mapping[str, Any], flow_template: Mapping[str, Any]) -> set[str]:
     """Return the fields both sides have whose ``type`` changed.
 
-    On a node the checker calls safe these fields are empty and unconnected, so
-    ``apply_safe_upgrades`` replaces each one with the registry's declaration, as the editor does.
+    On a safe node these fields are normally empty and unconnected. The explicit ChatOutput
+    migration also preserves strings and connections. ``apply_safe_upgrades`` replaces each
+    declaration and carries over the values that migration supports, as the editor does.
     """
     return {
         key
@@ -183,6 +185,7 @@ def _shared_fields_compatible(
     connected_fields: Collection[str] | None,
     *,
     in_tool_mode: bool = False,
+    component_class_name: str | None = None,
 ) -> bool:
     """Return True if every field both sides have keeps its saved edges and its saved value.
 
@@ -192,7 +195,8 @@ def _shared_fields_compatible(
     - A changed field ``type`` is breaking when an edge goes into the field, because the editor
       keeps an edge only when the handle's field ``type`` is equal. It is also breaking when the
       saved field holds a value, because an update copies a saved value only when the field
-      ``type`` is equal (``lfx.template.utils.update_template_field``).
+      ``type`` is equal (``lfx.template.utils.update_template_field``), except for the explicit
+      ChatOutput string-to-handle migration, which preserves strings and rewrites the handle.
     - Every type a connected field accepted must still be accepted (historical type names count
       as the same type). Narrowing breaks the saved edges, and an emptied ``input_types`` list
       means the field no longer takes connections at all. Widening is safe.
@@ -204,7 +208,11 @@ def _shared_fields_compatible(
         if not isinstance(registry_field, Mapping) or not isinstance(flow_field, Mapping):
             continue
         connected = connected_fields is None or key in connected_fields
-        if registry_field.get("type") != flow_field.get("type") and (connected or _holds_value(flow_field)):
+        if (
+            registry_field.get("type") != flow_field.get("type")
+            and (connected or _holds_value(flow_field))
+            and not can_migrate_chat_output_input(component_class_name, key, registry_field, flow_field)
+        ):
             return False
         if not connected:
             continue
@@ -293,7 +301,11 @@ def has_breaking_change(
     ):
         return True
     return bool(registry_template) and not _shared_fields_compatible(
-        registry_template, flow_template, connected_fields, in_tool_mode=in_tool_mode
+        registry_template,
+        flow_template,
+        connected_fields,
+        in_tool_mode=in_tool_mode,
+        component_class_name=(registry_entry.get("metadata") or {}).get("component_class_name"),
     )
 
 
