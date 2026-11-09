@@ -21,7 +21,7 @@ caller's effective flow permissions.
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
 from lfx.integrations.errors import IntegrationPolicyBlockedError
@@ -44,8 +44,9 @@ from langflow.services.database.models.connection.model import Connection, Conne
 from langflow.services.database.models.connection.schemas import PersistedConnectionStatus
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.folder.model import Folder
-from langflow.services.database.models.trigger.model import Trigger, TriggerCleanup
-from langflow.services.database.models.trigger.schemas import TriggerRead, TriggerReason, TriggerState
+from langflow.services.database.models.jobs.model import Job
+from langflow.services.database.models.trigger.model import Trigger, TriggerCleanup, TriggerEvent
+from langflow.services.database.models.trigger.schemas import TriggerEventRead, TriggerRead, TriggerReason, TriggerState
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service
 from langflow.services.triggers.capabilities import NO_ACCESS, TriggerCaller, trigger_capabilities
@@ -190,6 +191,53 @@ async def present(
             )
         )
     return responses
+
+
+def _whatsapp_job_error_detail(value: Any) -> str | None:
+    """Project fixed provider guidance without returning a job's private error text."""
+    try:
+        from lfx_whatsapp._client import PUBLIC_ERROR_MESSAGES
+    except ImportError:
+        return None
+
+    pending = [value]
+    for _ in range(64):
+        if not pending:
+            break
+        item = pending.pop()
+        if isinstance(item, str):
+            for message in PUBLIC_ERROR_MESSAGES:
+                if message in item[:8192]:
+                    return message
+        elif isinstance(item, dict):
+            pending.extend(list(item.values())[:16])
+        elif isinstance(item, list):
+            pending.extend(item[:16])
+    return None
+
+
+async def present_events(session: AsyncSession, trigger: Trigger, rows: list[TriggerEvent]) -> list[TriggerEventRead]:
+    """Add safe failure guidance after the route has authorized this trigger's flow."""
+    jobs = {}
+    job_ids = {
+        row.job_id for row in rows if row.state == "failed" and row.error == "job_failed" and row.job_id is not None
+    }
+    if trigger.kind == "whatsapp.event" and job_ids:
+        jobs = dict(
+            (
+                await session.exec(
+                    select(Job.job_id, Job.error).where(
+                        col(Job.job_id).in_(job_ids), Job.flow_id == trigger.flow_id, Job.user_id == trigger.user_id
+                    )
+                )
+            ).all()
+        )
+    return [
+        TriggerEventRead.model_validate(row).model_copy(
+            update={"error_detail": _whatsapp_job_error_detail(jobs[row.job_id]) if row.job_id in jobs else None}
+        )
+        for row in rows
+    ]
 
 
 async def _canvas_resume_blocks(

@@ -570,6 +570,10 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         row.updated_at = row.health_checked_at
         session.add(row)
         await session.flush()
+        if row.provider_key == "whatsapp":
+            from langflow.services.triggers.subscriptions import revoke_for_connection
+
+            await revoke_for_connection(session, connection_id=row.id)
         await session.refresh(row)
         return ConnectionRevokeRead(
             **self.to_read(row, has_credentials=False).model_dump(), provider_revocation=provider_revocation
