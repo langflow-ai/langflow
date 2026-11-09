@@ -21,6 +21,7 @@ from langflow.services.triggers.constants import (
     MECHANISM_GRAPH_NOTIFICATIONS,
     MICROSOFT_SOURCE_KINDS,
 )
+from langflow.services.triggers.error_codes import CodedTriggerError, TriggerErrorCode
 from langflow.services.triggers.ownership import UNUSABLE_CONNECTION_STATUSES
 from langflow.services.triggers.providers.registry import get_kind, source_kinds
 
@@ -159,7 +160,12 @@ async def resolve_arming(session: AsyncSession, *, kind: str, owner_id: UUID, co
         mechanism = extension.push_mechanism if available and delivery != "poll" else None
         if mechanism is None:
             mechanism = extension.poll_mechanism or extension.listener_mechanism
-        if mechanism is None or (context == "hosted" and mechanism != extension.push_mechanism):
+        if context == "hosted" and mechanism != extension.push_mechanism:
+            msg = extension.hosted_unsupported_message or (
+                "This source has no supported delivery mechanism on this deployment."
+            )
+            raise ValueError(msg)
+        if mechanism is None:
             msg = "This source has no supported delivery mechanism on this deployment."
             raise ValueError(msg)
         return SourceArming(connection_id=row.id, mechanism_id=mechanism)
@@ -227,10 +233,10 @@ async def check_ready(
     row = await session.get(Connection, arming.connection_id)
     if row is None or row.status in UNUSABLE_CONNECTION_STATUSES:
         msg = "This source connection was revoked or expired. Reconnect it before enabling the trigger."
-        raise ValueError(msg)
+        raise CodedTriggerError(TriggerErrorCode.CONNECTION_UNUSABLE, msg)
     if not row.allow_non_interactive:
         msg = "Turn on Allow background runs for this source connection."
-        raise ValueError(msg)
+        raise CodedTriggerError(TriggerErrorCode.BACKGROUND_RUNS_NOT_ALLOWED, msg)
     extension = get_kind(kind)
     if extension is not None:
         from lfx.integrations.capabilities import ScopeSet

@@ -17,6 +17,7 @@ from langflow.services.database.models.connection.model import Connection
 from langflow.services.database.models.trigger.model import Trigger, TriggerEvent
 from langflow.services.database.models.trigger.schemas import TriggerState
 from langflow.services.deps import session_scope
+from langflow.services.triggers.error_codes import CodedTriggerError, TriggerErrorCode
 from langflow.services.triggers.listeners import connection_leases
 from langflow.services.triggers.listeners.adapters import (
     ListenerContext,
@@ -214,6 +215,86 @@ async def test_a_revoked_connection_moves_its_triggers_to_needs_reconnect(
     assert "econnect" in (last_error or "")
 
 
+@pytest.mark.parametrize("timing", ["before_claim", "idle", "delivery_rejected"])
+@pytest.mark.parametrize("reconcile_order", ["holder_first", "peer_first"])
+async def test_withdrawing_background_consent_stops_listeners_without_restarting(
+    make_connection, make_trigger, adapter_registry, timing, reconcile_order
+) -> None:
+    emit_next = asyncio.Event()
+
+    class ConsentAdapter(RecordingAdapter):
+        async def start(self, ctx: ListenerContext) -> None:
+            self.start_count += 1
+            self.ctx = ctx
+            self.started.set()
+            await emit_next.wait()
+            await ctx.emit(trigger_id=ctx.triggers[0].id, dedupe_key="after-withdrawal", payload={})
+
+    adapter = adapter_registry(ConsentAdapter())
+    connection_id = await make_connection()
+    trigger_ids = [await make_trigger(kind=TEST_KIND, connection_id=connection_id) for _ in range(2)]
+    paused = await make_trigger(kind=TEST_KIND, connection_id=connection_id, state=TriggerState.PAUSED.value)
+    schedule = await make_trigger(kind="schedule", connection_id=connection_id)
+    first = ListenerSupervisor(holder="replica-a")
+    second = ListenerSupervisor(holder="replica-b")
+    try:
+        if timing != "before_claim":
+            await first.reconcile()
+            await asyncio.wait_for(adapter.started.wait(), timeout=5)
+            assert adapter.ctx is not None
+            assert await adapter.ctx.emit(trigger_id=trigger_ids[0], dedupe_key="before-withdrawal", payload={})
+
+        async with session_scope() as session:
+            connection = await session.get(Connection, connection_id)
+            connection.allow_non_interactive = False
+            session.add(connection)
+
+        if timing == "delivery_rejected":
+            task = first.workers[connection_id].task
+            assert task is not None
+            emit_next.set()
+            await asyncio.wait_for(task, timeout=5)
+            assert connection_id not in first.workers
+            async with session_scope() as session:
+                assert (
+                    await connection_leases.current_holder(session, connection_id=connection_id, ttl_s=300)
+                    == "replica-a"
+                )
+
+        if reconcile_order == "peer_first":
+            await second.reconcile()
+            for trigger_id in trigger_ids:
+                assert await _state(trigger_id) == (TriggerState.NEEDS_RECONNECT.value, "connection_not_authorized")
+            if timing == "delivery_rejected":
+                async with session_scope() as session:
+                    assert (
+                        await connection_leases.current_holder(session, connection_id=connection_id, ttl_s=300)
+                        == "replica-a"
+                    )
+
+        for _ in range(3):
+            await first.reconcile()
+            await second.reconcile()
+            assert first.workers == second.workers == {}
+        assert adapter.start_count == (0 if timing == "before_claim" else 1)
+        if timing != "before_claim":
+            assert adapter.stopped
+        for trigger_id in trigger_ids:
+            assert await _state(trigger_id) == (TriggerState.NEEDS_RECONNECT.value, "connection_not_authorized")
+        assert await _state(paused) == (TriggerState.PAUSED.value, None)
+        assert await _state(schedule) == (TriggerState.ACTIVE.value, None)
+        async with session_scope() as session:
+            for trigger_id in trigger_ids:
+                trigger = await session.get(Trigger, trigger_id)
+                assert trigger.provider_state["_connection_recovery"]["consent_required"] is True
+            assert await connection_leases.current_holder(session, connection_id=connection_id, ttl_s=300) is None
+            events = await session.exec(select(TriggerEvent).where(TriggerEvent.dedupe_key == "after-withdrawal"))
+            assert not events.all()
+    finally:
+        await first.stop()
+        await second.stop()
+
+
 async def test_an_auth_failure_stops_retrying_and_asks_for_a_reconnect(
     make_connection, make_trigger, adapter_registry
 ) -> None:
@@ -236,6 +317,40 @@ async def test_an_auth_failure_stops_retrying_and_asks_for_a_reconnect(
     assert state == TriggerState.NEEDS_RECONNECT.value
     async with session_scope() as session:
         assert await connection_leases.current_holder(session, connection_id=connection_id, ttl_s=300) is None
+
+
+@pytest.mark.parametrize(
+    ("code", "expected_state"),
+    [
+        (TriggerErrorCode.BACKGROUND_RUNS_NOT_ALLOWED, TriggerState.NEEDS_RECONNECT),
+        (TriggerErrorCode.SOURCE_SETTINGS_CHANGED, TriggerState.ACTIVE),
+    ],
+)
+async def test_coded_background_consent_failure_requires_owner_action(
+    make_connection, make_trigger, adapter_registry, code, expected_state
+) -> None:
+    adapter = adapter_registry(RecordingAdapter(fail_with=CodedTriggerError(code, "Source connection is unavailable.")))
+    connection_id = await make_connection()
+    trigger_id = await make_trigger(kind=TEST_KIND, connection_id=connection_id)
+    supervisor = ListenerSupervisor(holder="replica-consent-failure")
+    try:
+        await supervisor.reconcile()
+        worker = supervisor.workers[connection_id]
+        await asyncio.wait_for(adapter.started.wait(), timeout=5)
+        await asyncio.wait_for(asyncio.gather(worker.task, return_exceptions=True), timeout=5)
+        async with session_scope() as session:
+            trigger = await session.get(Trigger, trigger_id)
+            assert trigger.state == expected_state.value
+            if expected_state == TriggerState.NEEDS_RECONNECT:
+                assert trigger.last_error == "connection_not_authorized"
+                assert trigger.provider_state["_connection_recovery"]["consent_required"] is True
+                assert connection_id not in supervisor.workers
+                assert await connection_leases.current_holder(session, connection_id=connection_id, ttl_s=300) is None
+            else:
+                assert connection_id in supervisor.workers
+                assert worker.consecutive_failures == 1
+    finally:
+        await supervisor.stop()
 
 
 @pytest.mark.parametrize(

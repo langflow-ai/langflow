@@ -38,6 +38,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import and_, col, false, or_, select
 
 from langflow.services.auth import utils as auth_utils
+from langflow.services.auth.context import current_auth_is_restricted_api_key
 from langflow.services.authorization import filter_visible_resources, visible_scope_prefilter
 from langflow.services.authorization.listing import (
     apply_owned_or_visible_scope_prefilter,
@@ -48,6 +49,7 @@ from langflow.services.connection.oauth.config import OAuthError, deployment_con
 from langflow.services.connection.oauth.locking import lock_connection
 from langflow.services.connection.policy import provider_has_usable_action
 from langflow.services.connection.slack_credentials import (
+    APP_TOKEN_SCOPE,
     PROVIDER_SLACK,
     ManualCredentialError,
     check_slack_web_token,
@@ -67,14 +69,16 @@ from langflow.services.database.models.connection import (
     ExecutingIdentityDescriptor,
     PersistedConnectionStatus,
 )
+from langflow.services.database.models.connection.oauth import ConnectionOAuth
 from langflow.services.database.models.connection.schemas import ConnectionRevokeRead, ConnectionTokenRenewal
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_authorization_service, get_settings_service, session_scope
 
 if TYPE_CHECKING:
     from lfx.services.authorization.base import ExecutionPrincipal
     from sqlmodel.ext.asyncio.session import AsyncSession
 
-    from langflow.services.database.models.user.model import User, UserRead
+    from langflow.services.database.models.user.model import UserRead
 
 
 # Route families whose dependency principal is ``actor_or_explicit_share``
@@ -425,7 +429,8 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         user: User | UserRead,
         provider_ids: frozenset[str] | None,
     ) -> list[Connection]:
-        is_superuser = bool(getattr(user, "is_superuser", False))
+        restricted_key = current_auth_is_restricted_api_key()
+        is_superuser = bool(getattr(user, "is_superuser", False)) and not restricted_key
         owner_clause = or_(
             Connection.owner_id == user.id,
             Connection.ownership_mode == ConnectionOwnershipMode.INSTANCE.value,
@@ -449,7 +454,7 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
                 stmt = stmt.where(owner_clause)
         stmt = stmt.order_by(col(Connection.display_name), col(Connection.id))
         rows = list((await session.exec(stmt)).all())
-        if not is_superuser and cross_user:
+        if not is_superuser and (cross_user or restricted_key):
             rows = await filter_visible_resources(
                 user,
                 resource_type="connection",
@@ -505,7 +510,7 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         from langflow.services.triggers.providers.registry import get_provider
 
         provider = get_provider(row.provider_key)
-        if provider is None or provider.validate_manual_credential is None:
+        if row.provider_key != PROVIDER_SLACK and (provider is None or provider.validate_manual_credential is None):
             msg = "This integration does not support manual token renewal."
             raise ManualCredentialError(msg)
         await enforce_integration_policy_for_provider(row.provider_key, user_id=user.id, require_usable_action=True)
@@ -520,11 +525,18 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
                 credentials=payload.credentials,
             )
         )
+        if is_app_token_connection(row) and APP_TOKEN_SCOPE not in validated.granted_scopes:
+            msg = "This connection holds a Slack app-level token. Renew it with an app-level token (xapp-)."
+            raise ManualCredentialError(msg)
         raw_credentials = _credential_payload(validated)
         if raw_credentials is None:
             msg = "The integration credential validator returned no token."
             raise ManualCredentialError(msg)
         encrypted_payload = _encrypt_credential_payload(raw_credentials)
+        # Manual renewal supersedes consent that may still be open in a browser.
+        binding = await session.get(ConnectionOAuth, row.id)
+        if binding is not None:
+            await session.delete(binding)
         secret = await session.get(ConnectionSecret, row.id)
         if secret is None:
             secret = ConnectionSecret(connection_id=row.id, encrypted_payload=encrypted_payload)
@@ -648,11 +660,55 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
             explicit_share = row is None
             if explicit_share:
                 row = await self._authorized_share(session, request, user_id)
+            visible_denial = row is None and await self._has_visible_foreign_servicenow_connection(
+                session, request, user_id
+            )
+        if visible_denial:
+            denial = ConnectionNotAuthorizedError(provider=request.ref.provider)
+            await _audit_resolution_denial(request, row=None, error=denial)
+            raise denial
         if row is None:
             raise ConnectionUnresolvedError(request.ref.to_handle(), provider=request.ref.provider)
         policy = _access_policy(row, explicit_share_authorized=explicit_share)
         await self._refuse_denied_policy(request, row=row, policy=policy)
         return policy
+
+    @staticmethod
+    async def _has_visible_foreign_servicenow_connection(
+        session: AsyncSession, request: ConnectionResolutionRequest, user_id: UUID | None
+    ) -> bool:
+        """Distinguish an administrator's visible connection from a missing handle."""
+        if (
+            request.ref.provider != "servicenow"
+            or request.principal.kind != "actor"
+            or not request.principal.interactive
+            or user_id is None
+            or current_auth_is_restricted_api_key()
+        ):
+            return False
+        admin_id = (
+            await session.exec(
+                select(User.id).where(
+                    User.id == user_id, col(User.is_active).is_(True), col(User.is_superuser).is_(True)
+                )
+            )
+        ).first()
+        if admin_id is None:
+            return False
+        # Administrators can already see this metadata in Other users. Read only
+        # an id so a denied handle never loads another user's credential material.
+        return (
+            await session.exec(
+                select(Connection.id)
+                .where(
+                    Connection.provider_key == request.ref.provider,
+                    Connection.name == request.ref.name,
+                    Connection.ownership_mode == ConnectionOwnershipMode.USER.value,
+                    Connection.owner_id != user_id,
+                )
+                .limit(1)
+            )
+        ).first() is not None
 
     async def _refuse_denied_policy(
         self,
@@ -804,7 +860,7 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         authz = get_authorization_service()
         if not settings.auth_settings.AUTHZ_ENABLED or not await authz.supports_cross_user_fetch():
             return None
-        context = {"execution_principal_kind": principal.kind}
+        context = {"execution_principal_kind": principal.kind, "execution_principal": principal}
         stmt = select(Connection).where(
             Connection.provider_key == request.ref.provider,
             Connection.name == request.ref.name,

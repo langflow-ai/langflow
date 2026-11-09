@@ -198,6 +198,7 @@ class BaseAuthService(Service, abc.ABC):
         query_param: str | None,
         header_param: str | None,
         db: Any,
+        external_token: str | None = None,
     ) -> Any:
         """Get current user for MCP endpoints."""
 

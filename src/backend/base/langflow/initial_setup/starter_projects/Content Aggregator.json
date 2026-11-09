@@ -1594,7 +1594,7 @@
                   },
                   {
                     "name": "langgraph",
-                    "version": "1.2.14"
+                    "version": "1.2.19"
                   },
                   {
                     "name": "lfx",
@@ -2637,7 +2637,7 @@
                   },
                   {
                     "name": "boto3",
-                    "version": "1.43.46"
+                    "version": "1.43.117"
                   },
                   {
                     "name": "googleapiclient",
