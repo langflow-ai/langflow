@@ -8,12 +8,12 @@ from lfx.log import logger
 from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.utils.author_names import attach_usernames
 from langflow.api.utils.core import strip_secret_field_values
+from langflow.api.v1.authz_route_dependencies import get_authorized_flow_for_read
 from langflow.api.v1.flow_conflict import claim_version_token, ensure_version_precondition, parse_if_match
 from langflow.api.v1.flow_validation import flow_validation_error
 from langflow.api.v1.flows import _validate_catalog_policy_for_write
@@ -48,6 +48,7 @@ from langflow.services.database.models.flow_version.model import (
     FlowVersionRead,
     FlowVersionReadWithData,
 )
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_catalog_policy_service, get_settings_service
 
 router = APIRouter(prefix="/flows/{flow_id}/versions", tags=["Flow Versions"], include_in_schema=False)
@@ -90,12 +91,20 @@ def _version_to_read_full(
     return result
 
 
-async def _get_user_flow(session: AsyncSession, flow_id: UUID, user_id: UUID) -> Flow:
-    result = await session.exec(select(Flow).where(Flow.id == flow_id, Flow.user_id == user_id))
-    flow = result.first()
-    if not flow:
+async def _get_user_flow(session: AsyncSession, flow_id: UUID, user: User) -> Flow:
+    """Load a flow the caller may read, or 404.
+
+    Without an authorization plugin only the owner finds it. With one, the plugin
+    decides, so whoever the flow is shared with reaches its history as well.
+    """
+    return await get_authorized_flow_for_read(flow_id=flow_id, current_user=user, session=session)
+
+
+def _history_owner(flow: Flow) -> UUID:
+    """Versions are read as the flow's owner sees them; a flow without one has none to show."""
+    if flow.user_id is None:
         raise HTTPException(status_code=404, detail="Flow not found")
-    return flow
+    return flow.user_id
 
 
 def translate_version_error(exc: FlowVersionError) -> HTTPException:
@@ -133,7 +142,7 @@ async def list_flow_versions(
         Query(description=("Optional provider account ID for provider account-scoped deployment status.")),
     ] = None,
 ) -> FlowVersionListResponse:
-    await _get_user_flow(session, flow_id, current_user.id)
+    flow = await _get_user_flow(session, flow_id, current_user)
     _ensure_deployments_enabled_for_provider_id(deployment_provider_id)
 
     if deployment_provider_id is not None:
@@ -168,10 +177,12 @@ async def list_flow_versions(
         )
         entries = [_version_to_read(entry, is_deployed=is_deployed) for entry, is_deployed in rows]
     else:
+        # Reading the flow was settled above, so whoever may read it sees its whole
+        # history: the owner's view, not only the entries the caller wrote.
         rows_simple = await get_flow_version_list_simple(
             session,
             flow_id,
-            current_user.id,
+            _history_owner(flow),
             limit,
             offset,
         )
@@ -196,10 +207,10 @@ async def get_single_flow_version(
     current_user: CurrentActiveUser,
     session: DbSession,
 ) -> FlowVersionReadWithData:
-    await _get_user_flow(session, flow_id, current_user.id)
+    flow = await _get_user_flow(session, flow_id, current_user)
 
     try:
-        entry = await get_flow_version_entry_or_raise(session, version_id, current_user.id, flow_id=flow_id)
+        entry = await get_flow_version_entry_or_raise(session, version_id, _history_owner(flow), flow_id=flow_id)
     except FlowVersionNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Version entry not found") from exc
 
@@ -215,7 +226,7 @@ async def create_snapshot(
     session: DbSession,
     body: FlowVersionCreate | None = None,
 ) -> FlowVersionRead:
-    flow = await _get_user_flow(session, flow_id, current_user.id)
+    flow = await _get_user_flow(session, flow_id, current_user)
     await ensure_flow_permission(
         current_user,
         FlowAction.WRITE,
@@ -270,7 +281,7 @@ async def activate_version(
     save_draft: Annotated[bool, Query()] = True,
     if_match: Annotated[str | None, Header(alias="If-Match")] = None,
 ) -> FlowRead:
-    flow = await _get_user_flow(session, flow_id, current_user.id)
+    flow = await _get_user_flow(session, flow_id, current_user)
     expected = parse_if_match(if_match)
     await ensure_version_precondition(session, flow, expected)
     # The write below shares this transaction; a decision the audit writer commits
@@ -290,7 +301,9 @@ async def activate_version(
 
         # Verify version entry belongs to this flow
         try:
-            target_entry = await get_flow_version_entry_or_raise(session, version_id, current_user.id, flow_id=flow_id)
+            target_entry = await get_flow_version_entry_or_raise(
+                session, version_id, _history_owner(flow), flow_id=flow_id
+            )
         except FlowVersionNotFoundError as exc:
             raise HTTPException(status_code=404, detail="Version entry not found") from exc
 
@@ -387,7 +400,7 @@ async def delete_version_entry(
     current_user: CurrentActiveUser,
     session: DbSession,
 ) -> None:
-    flow = await _get_user_flow(session, flow_id, current_user.id)
+    flow = await _get_user_flow(session, flow_id, current_user)
     await ensure_flow_permission(
         current_user,
         FlowAction.DELETE,
@@ -399,8 +412,8 @@ async def delete_version_entry(
 
     # Verify entry belongs to this flow, then delete
     try:
-        await get_flow_version_entry_or_raise(session, version_id, current_user.id, flow_id=flow_id)
-        await delete_flow_version_entry(session, version_id, current_user.id)
+        await get_flow_version_entry_or_raise(session, version_id, _history_owner(flow), flow_id=flow_id)
+        await delete_flow_version_entry(session, version_id, _history_owner(flow))
     except FlowVersionError as exc:
         raise translate_version_error(exc) from exc
     await logger.adebug("Deleted version entry %s for flow %s", version_id, flow_id)
