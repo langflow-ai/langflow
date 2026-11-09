@@ -65,11 +65,12 @@ async def update_api_key_permissions_route(
     current_user: CurrentActiveUser,
     db: DbSession,
 ) -> ApiKeyRead:
+    user_id = current_user.id
     try:
         updated = await update_api_key_permissions(
             db,
             api_key_id=api_key_id,
-            user_id=current_user.id,
+            user_id=user_id,
             permissions=req.permissions.model_dump(mode="json", exclude_unset=True)
             if req.permissions is not None
             else None,
@@ -77,7 +78,7 @@ async def update_api_key_permissions_route(
     except PermissionError as exc:
         await db.rollback()
         await audit_decision(
-            user_id=current_user.id,
+            user_id=user_id,
             action="api_key:permissions_update",
             obj=f"api_key:{api_key_id}",
             result="deny",
@@ -91,8 +92,8 @@ async def update_api_key_permissions_route(
     mutation = AuthorizationMutation(
         kind=AuthorizationMutationKind.API_KEY_PERMISSIONS_UPDATED,
         entity_id=api_key_id,
-        actor_user_id=current_user.id,
-        affected_user_ids=(current_user.id,),
+        actor_user_id=user_id,
+        affected_user_ids=(user_id,),
         policy_relevant_fields=("permissions",),
     )
     authorization = get_authorization_service()
@@ -104,7 +105,7 @@ async def update_api_key_permissions_route(
         raise HTTPException(status_code=500, detail="Failed to update API key permissions") from exc
     await safe_identity_mutation_committed(authorization, mutation)
     await audit_decision(
-        user_id=current_user.id,
+        user_id=user_id,
         action="api_key:permissions_update",
         obj=f"api_key:{api_key_id}",
         result="allow",
