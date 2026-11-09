@@ -735,7 +735,7 @@
                 "display_name": "Decision Type",
                 "dynamic": false,
                 "external_options": {},
-                "info": "Choice picks one route. Boolean answers yes or no through Yes and No outputs. Score places the input on its own ordered Levels. Changing the type replaces the outputs and removes their connections; Else keeps its own.",
+                "info": "Choice picks one route. Noul answers yes or no through Yes and No outputs. Score places the input on its own ordered Levels. Changing the type replaces the outputs and removes their connections; Else keeps its own.",
                 "name": "decision_kind",
                 "options": [
                   "Choice",

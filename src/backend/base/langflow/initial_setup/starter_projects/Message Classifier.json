@@ -510,7 +510,7 @@
                     "metadata": {
                       "capabilities": [
                         "choice",
-                        "boolean",
+                        "noul",
                         "score"
                       ],
                       "created": 0,
@@ -632,7 +632,55 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": false,
                 "type": "decision_questions",
-                "value": []
+                "value": [
+                  {
+                    "name": "",
+                    "kind": "Choice",
+                    "question": "What kind of message is this?",
+                    "options": [
+                      {
+                        "description": "Asks how something works or how to do something",
+                        "id": "question",
+                        "label": "Question"
+                      },
+                      {
+                        "description": "Reports something broken, an error or unexpected behavior",
+                        "id": "bug",
+                        "label": "Bug report"
+                      },
+                      {
+                        "description": "Asks for something new or a change",
+                        "id": "feature",
+                        "label": "Feature request"
+                      },
+                      {
+                        "description": "Invoices, payments, refunds, plans or pricing",
+                        "id": "billing",
+                        "label": "Billing"
+                      }
+                    ],
+                    "levels": [
+                      {
+                        "id": "low",
+                        "label": "Low",
+                        "description": ""
+                      },
+                      {
+                        "id": "medium",
+                        "label": "Medium",
+                        "description": ""
+                      },
+                      {
+                        "id": "high",
+                        "label": "High",
+                        "description": ""
+                      }
+                    ],
+                    "yes_description": "",
+                    "no_description": "",
+                    "id": "1"
+                  }
+                ]
               },
               "questions_json": {
                 "_input_type": "MultilineInput",
