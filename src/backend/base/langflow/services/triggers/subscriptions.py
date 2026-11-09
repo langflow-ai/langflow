@@ -42,6 +42,7 @@ from langflow.services.database.models.trigger.schemas import TriggerState, Trig
 from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.triggers import leases
 from langflow.services.triggers.constants import (
+    AUDIT_SUBSCRIPTION_CREATE,
     AUDIT_SUBSCRIPTION_RENEW,
     AUDIT_SUBSCRIPTION_REVOKE,
     SUBSCRIPTION_LEASE_NAME,
@@ -238,6 +239,7 @@ async def upsert_subscription(
     )
     row = (await session.exec(statement)).first()
     now = _now()
+    created = row is None
     if row is None:
         row = TriggerSubscription(
             trigger_id=trigger_id,
@@ -254,6 +256,8 @@ async def upsert_subscription(
     session.add(row)
     await session.flush()
     await session.refresh(row)
+    if created:
+        await _audit_subscription(AUDIT_SUBSCRIPTION_CREATE, trigger_id=trigger_id, count=1, session=session)
     return row
 
 

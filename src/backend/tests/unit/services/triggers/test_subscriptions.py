@@ -18,6 +18,7 @@ from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.triggers import leases, subscriptions
 from langflow.services.triggers.constants import SUBSCRIPTION_LEASE_NAME
 from langflow.services.triggers.ingress.verifiers import state_digest
+from sqlmodel import select
 
 pytestmark = pytest.mark.no_blockbuster
 
@@ -638,3 +639,68 @@ async def test_a_renewal_pass_completes_with_durable_audit_on(make_subscription,
 
     assert renewed == 1
     assert (await _subscription(subscription_id)).expires_at.replace(tzinfo=timezone.utc) > _now() + timedelta(days=6)
+
+
+async def test_subscription_creation_is_audited_once_and_updates_are_not(make_subscription, monkeypatch):
+    from langflow.services.database.models.auth import AuthzAuditLog
+
+    settings = get_settings_service().auth_settings
+    monkeypatch.setattr(settings, "AUTHZ_AUDIT_ENABLED", True)
+    monkeypatch.setattr(settings, "AUTHZ_AUDIT_DURABLE", True)
+    trigger_id, connection_id, subscription_id, external_id = await make_subscription()
+    async with session_scope() as session:
+        updated = await subscriptions.upsert_subscription(
+            session,
+            trigger_id=trigger_id,
+            connection_id=connection_id,
+            provider=PROVIDER,
+            provider_subscription_id=external_id,
+            client_state_digest=state_digest("updated-client-state"),
+            expires_at=_now() + timedelta(days=8),
+            provider_state={"private": "provider-detail"},
+        )
+        assert updated.id == subscription_id
+    async with session_scope() as session:
+        rows = (
+            await session.exec(
+                select(AuthzAuditLog).where(
+                    AuthzAuditLog.resource_id == trigger_id, AuthzAuditLog.action == "trigger_subscription:create"
+                )
+            )
+        ).all()
+        assert len(rows) == 1
+        assert rows[0].details["subscriptions"] == 1
+        assert "provider-detail" not in str(rows[0].details)
+        assert "updated-client-state" not in str(rows[0].details)
+
+
+async def test_subscription_creation_and_its_durable_audit_roll_back_together(make_trigger, monkeypatch):
+    from langflow.services.authorization import audit
+    from langflow.services.database.models.auth import AuthzAuditLog
+
+    settings = get_settings_service().auth_settings
+    monkeypatch.setattr(settings, "AUTHZ_AUDIT_ENABLED", True)
+    monkeypatch.setattr(settings, "AUTHZ_AUDIT_DURABLE", True)
+    trigger_id = await make_trigger()
+
+    def fail_stage(*_args, **_kwargs):
+        message = "audit unavailable"
+        raise RuntimeError(message)
+
+    monkeypatch.setattr(audit, "_stage_audit_entries", fail_stage)
+    with pytest.raises(RuntimeError, match="audit unavailable"):
+        async with session_scope() as session:
+            await subscriptions.upsert_subscription(
+                session,
+                trigger_id=trigger_id,
+                connection_id=None,
+                provider=PROVIDER,
+                provider_subscription_id="new-subscription",
+                client_state_digest=None,
+                expires_at=_now() + timedelta(days=7),
+            )
+    async with session_scope() as session:
+        assert (
+            await session.exec(select(TriggerSubscription).where(TriggerSubscription.trigger_id == trigger_id))
+        ).all() == []
+        assert (await session.exec(select(AuthzAuditLog).where(AuthzAuditLog.resource_id == trigger_id))).all() == []

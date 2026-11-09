@@ -17,10 +17,11 @@ incident response. Every ``TriggerRead`` carries the server-computed
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from lfx.integrations.errors import IntegrationPolicyBlockedError
 
 from langflow.api.utils import CurrentActiveUser, DbSession, DbSessionReadOnly
 from langflow.api.v1.flows_helpers import _read_flow
@@ -54,6 +55,9 @@ from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_settings_service, get_trigger_service
 from langflow.services.triggers import ledger, operator
 from langflow.services.triggers.constants import (
+    AUDIT_PAUSE,
+    AUDIT_REPLAY,
+    AUDIT_RESUME,
     KIND_INBOUND_WEBHOOK,
     PROVIDER_WEBHOOK,
     TEST_DEDUPE_PREFIX,
@@ -65,6 +69,9 @@ from langflow.services.triggers.errors import (
     TriggerNotFoundError,
 )
 from langflow.services.triggers.service import TriggerService
+
+if TYPE_CHECKING:
+    from sqlmodel.ext.asyncio.session import AsyncSession
 
 router = APIRouter(prefix="/triggers", tags=["Triggers"])
 
@@ -170,6 +177,44 @@ async def _authorized_trigger(
         raise _not_found() from exc
     await _authorized_flow(session, user, row.flow_id, action)
     return row
+
+
+async def _stage_trigger_action(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    row: Trigger,
+    action: str,
+    details: dict[str, str] | None = None,
+    commit: bool = False,
+) -> None:
+    """Flush action evidence with its mutation; commit before provider I/O when requested."""
+    from langflow.services.authorization.audit import AUDIT_EVENT_MUTATION, AuditPersistenceError, stage_audit_decision
+
+    try:
+        stage_audit_decision(
+            session=session,
+            required=True,
+            user_id=user_id,
+            action=action,
+            obj=f"trigger:{row.id}",
+            result="allow",
+            details={
+                "event": AUDIT_EVENT_MUTATION,
+                "flow_id": str(row.flow_id),
+                "provider": row.provider,
+                **(details or {}),
+            },
+        )
+        # Force the audit INSERT inside this boundary rather than leaving it to
+        # request finalization, whose errors could expose private storage details.
+        await session.flush()
+        if commit:
+            await session.commit()
+    except Exception as exc:
+        # Storage/plugin failures must never become an owner-facing refusal or
+        # expose database or credential details through an error response.
+        raise AuditPersistenceError from exc
 
 
 @router.get("", response_model=list[TriggerRead])
@@ -379,7 +424,19 @@ async def enable_trigger(
         service=service, session=session, user=current_user, trigger_id=trigger_id, action=FlowAction.WRITE
     )
     try:
-        updated = await service.enable_and_activate(session, row=row)
+        updated = await service.enable(session, row=row)
+        await _stage_trigger_action(session, user_id=current_user.id, row=updated, action=AUDIT_RESUME, commit=True)
+        updated = await service.activate_push_source(session, row=updated)
+    except IntegrationPolicyBlockedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "error_code": exc.code,
+                "message": exc.safe_message,
+                "hint": exc.hint,
+                "provider": exc.provider,
+            },
+        ) from exc
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=refusal_detail(exc)) from exc
     return await present_one(session, current_user, updated)
@@ -399,6 +456,7 @@ async def disable_trigger(
         updated = await service.disable(session, row=row)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    await _stage_trigger_action(session, user_id=current_user.id, row=updated, action=AUDIT_PAUSE)
     return await present_one(session, current_user, updated)
 
 
@@ -459,7 +517,7 @@ async def replay_trigger_event(
     Replay costs a flow execution, so it needs flow execute — the same ceiling
     as pressing Run.
     """
-    await _authorized_trigger(
+    row = await _authorized_trigger(
         service=service, session=session, user=current_user, trigger_id=trigger_id, action=FlowAction.EXECUTE
     )
     settings = get_settings_service().settings
@@ -474,6 +532,13 @@ async def replay_trigger_event(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found") from exc
     except ReplayWindowExpiredError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    await _stage_trigger_action(
+        session,
+        user_id=current_user.id,
+        row=row,
+        action=AUDIT_REPLAY,
+        details={"original_event_id": str(payload.event_id), "replay_event_id": str(replay.id)},
+    )
     return TriggerEventRead.model_validate(replay)
 
 
