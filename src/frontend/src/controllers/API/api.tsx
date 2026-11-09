@@ -57,12 +57,6 @@ function ApiInterceptor() {
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const accessToken = useAuthStore((state) => state.accessToken);
-  const authenticationErrorCount = useAuthStore(
-    (state) => state.authenticationErrorCount,
-  );
-  const setAuthenticationErrorCount = useAuthStore(
-    (state) => state.setAuthenticationErrorCount,
-  );
 
   const { mutate: mutationLogout } = useLogout();
   const { mutateAsync: mutationRenewAccessToken } = useRefreshAccessToken();
@@ -129,8 +123,7 @@ function ApiInterceptor() {
             await clearBuildVerticesState(error);
             return Promise.reject(error);
           }
-          const stillRefresh = checkErrorCount();
-          if (!stillRefresh) {
+          if (isLoginPage) {
             return Promise.reject(error);
           }
 
@@ -247,20 +240,6 @@ function ApiInterceptor() {
     };
   }, [accessToken, setErrorData, customHeaders, autoLogin]);
 
-  function checkErrorCount(): boolean {
-    if (isLoginPage) return false;
-
-    setAuthenticationErrorCount(authenticationErrorCount + 1);
-
-    if (authenticationErrorCount > 3) {
-      setAuthenticationErrorCount(0);
-      mutationLogout();
-      return false;
-    }
-
-    return true;
-  }
-
   async function tryToRenewAccessToken(error: AxiosError) {
     if (isLoginPage) throw error;
     if (error.config?.headers) {
@@ -270,7 +249,6 @@ function ApiInterceptor() {
     }
     try {
       await mutationRenewAccessToken(undefined);
-      setAuthenticationErrorCount(0);
     } catch (refreshError) {
       console.error(refreshError);
       const isNetworkError =

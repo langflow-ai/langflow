@@ -917,6 +917,8 @@ When an access token expires, the client can use the refresh token to get a new 
 
 Starting with Langflow 1.13.2, each native refresh token can be exchanged once. A successful exchange invalidates it and returns a replacement. Concurrent exchanges of the same token allow only one request.
 
+The browser app shares concurrent refresh requests within a tab. HTTPS and localhost origins also serialize refresh and logout across tabs using Web Locks. On other HTTP origins, Web Locks are unavailable, so concurrent refreshes in multiple tabs can end the session and require signing in again. Custom clients must serialize refresh exchanges and replace the token after each successful exchange.
+
 Logout revokes the refresh token presented by that browser session. A captured copy of that token cannot create new access tokens after logout, including after a server restart. Other sessions with different refresh tokens remain active. Access tokens already issued remain valid until they expire.
 
 ```bash

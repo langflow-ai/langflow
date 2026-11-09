@@ -8,6 +8,7 @@ import { getCookiesInstance } from "@/utils/cookie-manager";
 import { getAuthCookie } from "@/utils/utils";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
+import { withAuthSessionLock } from "../../services/auth-session";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 export const useLogout: useMutationFunctionType<undefined, void> = (
@@ -29,7 +30,9 @@ export const useLogout: useMutationFunctionType<undefined, void> = (
     if (autoLogin) {
       return {};
     }
-    const res = await api.post(`${getURL("LOGOUT")}`);
+    const res = await withAuthSessionLock(() =>
+      api.post(`${getURL("LOGOUT")}`),
+    );
     return res.data;
   }
 

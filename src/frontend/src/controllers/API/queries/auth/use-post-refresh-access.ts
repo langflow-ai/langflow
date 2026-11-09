@@ -1,33 +1,20 @@
-import { IS_AUTO_LOGIN } from "@/constants/constants";
-import useAuthStore from "@/stores/authStore";
 import type { useMutationFunctionType } from "@/types/api";
-import { api } from "../../api";
-import { getURL } from "../../helpers/constants";
+import {
+  type RefreshAccessTokenResponse,
+  refreshAccessToken,
+} from "../../services/auth-session";
 import { UseRequestProcessor } from "../../services/request-processor";
-
-interface IRefreshAccessToken {
-  access_token: string;
-  refresh_token: string;
-  token_type: string;
-}
 
 export const useRefreshAccessToken: useMutationFunctionType<
   undefined,
   undefined | void,
-  IRefreshAccessToken
+  RefreshAccessTokenResponse
 > = (options?) => {
   const { mutate } = UseRequestProcessor();
-  const autoLogin = useAuthStore((state) => state.autoLogin);
 
-  async function refreshAccess(): Promise<IRefreshAccessToken> {
-    const res = await api.post<IRefreshAccessToken>(`${getURL("REFRESH")}`);
-    return res.data;
-  }
-
-  const mutation = mutate(["useRefreshAccessToken"], refreshAccess, {
+  return mutate(["useRefreshAccessToken"], refreshAccessToken, {
     ...options,
-    retry: IS_AUTO_LOGIN || autoLogin ? 0 : 2,
+    // A failed response can follow a committed one-use token exchange.
+    retry: false,
   });
-
-  return mutation;
 };
