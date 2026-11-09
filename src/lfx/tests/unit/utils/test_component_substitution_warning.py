@@ -237,3 +237,21 @@ def test_repeated_warnings_reuse_registry_but_refresh_after_publication(saved_ag
 
     components.component_cache.all_types_ready = False
     assert describe_component_code_substitution(saved_agent) is None
+
+
+async def test_lazy_hydration_refreshes_cached_retirement_policy(saved_agent, monkeypatch):
+    monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", True)
+    entry = components.component_cache.all_types_dict["models_and_agents"]["Agent"]
+    entry["lazy_loaded"] = True
+    assert describe_component_code_substitution(saved_agent) is None
+
+    hydrated = deepcopy(entry)
+    hydrated["retired_in"] = "1.14.0"
+    hydrated["replacement"] = ["models_and_agents.Replacement"]
+
+    async def load_component(*_args):
+        return hydrated
+
+    monkeypatch.setattr(components, "load_single_component", load_component)
+    await components.ensure_component_loaded("models_and_agents", "Agent", get_settings_service())
+    assert "was retired in 1.14.0" in describe_component_code_substitution(saved_agent)

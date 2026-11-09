@@ -1332,6 +1332,7 @@ def _publish_bundle_cache(bundle: str, bundle_dict: dict[str, Any]) -> bool:
         component_cache.code_by_hash = None
         component_cache.type_to_code = None
         component_cache.component_identity_index = None
+        component_cache.upgrade_registry = None
         return True
 
 
@@ -1556,6 +1557,7 @@ async def _initialize_component_cache(
                     cache.code_by_hash = code_by_hash
                     cache.type_to_code = type_to_code
                     cache.component_identity_index = identity_index
+                    cache.upgrade_registry = None
                     cache.initialization_future = None
                     cache.initialization_task = None
                     initialization_future.set_result(merged_types)
@@ -1617,6 +1619,7 @@ async def get_and_cache_all_types_dict(
             cache.code_by_hash = None
             cache.type_to_code = None
             cache.component_identity_index = None
+            cache.upgrade_registry = None
             initialization_task = asyncio.create_task(
                 _initialize_component_cache(cache, settings_service, telemetry_service, initialization_future),
                 name="lfx-component-cache-initialization",
@@ -1796,14 +1799,11 @@ async def ensure_component_loaded(component_type: str, component_name: str, sett
         )
 
         if full_component:
-            # Replace the stub with the fully loaded component
-            registry[component_type][component_name] = full_component
-            # Remove lazy_loaded flag if it exists
-            if "lazy_loaded" in registry[component_type][component_name]:
-                del registry[component_type][component_name]["lazy_loaded"]
-
-            # Mark as fully loaded
-            component_cache.fully_loaded_components[component_key] = True
+            with component_cache.state_lock:
+                registry[component_type][component_name] = full_component
+                registry[component_type][component_name].pop("lazy_loaded", None)
+                component_cache.upgrade_registry = None
+                component_cache.fully_loaded_components[component_key] = True
             await logger.adebug(f"Component {component_type}:{component_name} fully loaded")
         else:
             await logger.awarning(f"Failed to fully load component {component_type}:{component_name}")
