@@ -36,6 +36,7 @@ from langflow.services.database.models.memory_base.model import MemoryBase
 from langflow.services.database.models.user.model import User
 from langflow.services.database.models.variable.model import Variable
 from langflow.services.deps import get_authorization_service
+from langflow.services.variable.constants import is_oauth_registration_variable
 
 router = APIRouter(prefix="/authz/shares", tags=["Authorization"], include_in_schema=False)
 
@@ -73,6 +74,8 @@ async def _resolve_resource_owner(
         row = await session.get(MemoryBase, resource_id)
     if row is None:
         return None
+    if resource_type == "variable" and is_oauth_registration_variable(row.name):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
     return getattr(row, owner_attr, None)
 
 
