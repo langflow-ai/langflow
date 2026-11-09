@@ -177,22 +177,18 @@ wheels = [
 
 [[package]]
 name = "ag2"
-version = "1.0.0"
+version = "1.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
     { name = "fast-depends", extra = ["pydantic"] },
     { name = "httpx" },
-    { name = "packaging" },
     { name = "pydantic" },
-    { name = "python-dotenv" },
     { name = "pyyaml" },
-    { name = "termcolor" },
-    { name = "tiktoken" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/17/3c/a44ff158219ef59f0489c4d626490b2094fdf5769b06b565d837c4adc036/ag2-1.0.0.tar.gz", hash = "sha256:4d2c76c0d9033cf003358c5c43df4a284aa68e24c93d5ecf8a8d1c9b855b4fb4", size = 615710, upload-time = "2026-07-27T00:58:39.32Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e8/e0/6847e15292aabffdf8c4e4159d43225d4cc39a75129e85fd6986e70614c7/ag2-1.1.1.tar.gz", hash = "sha256:ff650770c2a3c8bc51220c4092a7b82f77da20c562ab8a38b5e0e79340981171", size = 842290, upload-time = "2026-09-29T20:49:42.141Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/75/e2/8c36c495ac250f0dfabfd0bea413927738805ccaf6cfb2c8ada94f572c38/ag2-1.0.0-py3-none-any.whl", hash = "sha256:6f0303ed31be2ce5940d37a9b4724a86b8dbd574c84240ba2aee9d47c581b5b6", size = 862722, upload-time = "2026-07-27T00:58:37.996Z" },
+    { url = "https://files.pythonhosted.org/packages/94/6f/aecf35a45b90fc2b50f1eacac52ce6c783873074bb29373a2ba9e89b6500/ag2-1.1.1-py3-none-any.whl", hash = "sha256:a7f8ecc60807ac1846455e64c14c5fd14b99502b22aeec15d6d4b7a9946808b9", size = 1123826, upload-time = "2026-09-29T20:49:40.596Z" },
 ]
 
 [[package]]
@@ -8928,7 +8924,7 @@ dev = [
 requires-dist = [
     { name = "a2a-sdk", specifier = ">=1.2.1,<2.0.0" },
     { name = "ag-ui-protocol", specifier = "==0.1.18" },
-    { name = "ag2", marker = "extra == 'ag2'", specifier = ">=0.1.0" },
+    { name = "ag2", marker = "extra == 'ag2'", specifier = ">=1.1.1" },
     { name = "aiobotocore", specifier = ">=3.7.0,<4.0.0" },
     { name = "aiobotocore", marker = "extra == 'aioboto3'", specifier = ">=3.7.0,<4.0.0" },
     { name = "aiobotocore", marker = "extra == 'aiobotocore'", specifier = ">=3.7.0,<4.0.0" },
