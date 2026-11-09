@@ -20,6 +20,10 @@
     {
       "provider_id": "servicenow",
       "contract": "contracts/servicenow.v1.json"
+    },
+    {
+      "provider_id": "telegram",
+      "contract": "contracts/telegram.v1.json"
     }
   ]
 }
