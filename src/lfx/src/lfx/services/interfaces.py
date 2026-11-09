@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     import asyncio
+    from collections.abc import Awaitable, Callable
     from uuid import UUID
 
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -62,6 +63,10 @@ class AuthUserProtocol(Protocol):
 
 class AuthServiceProtocol(Protocol):
     """Protocol for auth service (minimal surface for dependency injection)."""
+
+    def run_sync_validation(self, validate: Callable[[], Awaitable[None]]) -> None:
+        """Run host authorization checks from synchronous execution paths."""
+        ...
 
     async def validate_tool_call(
         self,
