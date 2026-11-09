@@ -59,7 +59,11 @@ class ComponentStructuredTool(StructuredTool):
         self._approval_actions = tuple(metadata.get("approval_actions") or ())
         self._metadata_configured = "approval_actions" in metadata
 
-    async def _validate_current_tool_policy(self) -> None:
+    def bind_component(self, component: Component) -> None:
+        self._component = component
+        self.capture_policy()
+
+    async def validate_current_tool_policy(self) -> None:
         from lfx.graph.graph.base import Graph
         from lfx.services.deps import get_auth_service
 
@@ -98,7 +102,7 @@ class ComponentStructuredTool(StructuredTool):
         run_manager: CallbackManagerForToolRun | None = None,
         **kwargs: Any,
     ) -> tuple[Any, Any | None]:
-        run_until_complete(self._validate_current_tool_policy())
+        run_until_complete(self.validate_current_tool_policy())
         content = super()._run(*args, config=config, run_manager=run_manager, **kwargs)
         return self._content_and_artifact(content)
 
@@ -114,7 +118,7 @@ class ComponentStructuredTool(StructuredTool):
             # StructuredTool falls back to self._run, which already returns the
             # content-and-artifact tuple. Wrapping it again would nest the tuple.
             return await super()._arun(*args, config=config, run_manager=run_manager, **kwargs)
-        await self._validate_current_tool_policy()
+        await self.validate_current_tool_policy()
         content = await super()._arun(*args, config=config, run_manager=run_manager, **kwargs)
         return self._content_and_artifact(content)
 
@@ -597,8 +601,10 @@ class ComponentToolkit:
         if isinstance(self.metadata, pd.DataFrame):
             metadata_dict = self.get_tools_metadata_dictionary()
             filtered_tools = []
-            for tool in tools:
-                if isinstance(tool, StructuredTool | BaseTool) and tool.tags:
+            for candidate in tools:
+                if isinstance(candidate, StructuredTool | BaseTool) and candidate.tags:
+                    tool = candidate.model_copy()
+                    tool.metadata = dict(tool.metadata or {})
                     try:
                         tag = tool.tags[0]
                     except IndexError:
@@ -623,7 +629,31 @@ class ComponentToolkit:
                                 )
                             filtered_tools.append(tool)
                 else:
-                    msg = f"Expected a StructuredTool or BaseTool, got {type(tool)}"
+                    msg = f"Expected a StructuredTool or BaseTool, got {type(candidate)}"
                     raise TypeError(msg)
-            return filtered_tools
-        return tools
+            return self.protect_tools(filtered_tools)
+        return self.protect_tools(tools)
+
+    def protect_tools(self, tools: list[BaseTool]) -> list[BaseTool]:
+        from lfx.base.tools.policy_tool import PolicyCheckedTool
+
+        protected = []
+        for tool in tools:
+            if isinstance(tool, ComponentStructuredTool):
+                tool.bind_component(self.component)
+                protected.append(tool)
+                continue
+            checker = ComponentStructuredTool(
+                name=tool.name,
+                description=tool.description,
+                args_schema=tool.args_schema or tool.get_input_schema(),
+                source_component=self.component,
+                tags=list(tool.tags or []),
+                metadata=dict(tool.metadata or {}),
+            )
+            checker.capture_policy()
+            if isinstance(tool, PolicyCheckedTool):
+                protected.append(tool.with_policy(checker.validate_current_tool_policy))
+            else:
+                protected.append(PolicyCheckedTool(tool, checker.validate_current_tool_policy))
+        return protected

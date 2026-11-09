@@ -2015,7 +2015,8 @@ class Component(CustomComponent):
             return self._update_tools_with_metadata(tools=tools, metadata=self.tools_metadata)
 
         # If no metadata exists yet, filter based on enabled_tools
-        return self._filter_tools_by_status(tools=tools, metadata=None)
+        component_toolkit: type[ComponentToolkit] = get_component_toolkit()
+        return component_toolkit(component=self).protect_tools(self._filter_tools_by_status(tools=tools, metadata=None))
 
     async def _get_tools(self) -> list[Tool]:
         """Get the list of tools for this component.

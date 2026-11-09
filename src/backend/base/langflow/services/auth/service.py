@@ -1323,6 +1323,8 @@ class AuthService(BaseAuthService):
         metadata_configured: bool,
     ) -> None:
         """Refuse stale tool permissions before the captured callable executes."""
+        from lfx.graph.graph.utils import process_flow
+
         from langflow.services.database.models.flow.model import Flow
 
         def deny() -> NoReturn:
@@ -1333,12 +1335,15 @@ class AuthService(BaseAuthService):
             flow = await session.get(Flow, UUID(flow_id))
             if flow is None or not isinstance(flow.data, dict):
                 deny()
-            nodes = flow.data.get("nodes") or []
+            nodes = process_flow(flow.data).get("nodes") or []
             matches = [node for node in nodes if isinstance(node, dict) and node.get("id") == component_id]
             if len(matches) != 1:
                 deny()
             node = matches[0]
-            template = ((node.get("data") or {}).get("node") or {}).get("template") or {}
+            node_info = (node.get("data") or {}).get("node") or {}
+            if node_info.get("tool_mode") is not True:
+                deny()
+            template = node_info.get("template") or {}
             field = template.get("tools_metadata")
             if field is None and not metadata_configured:
                 return

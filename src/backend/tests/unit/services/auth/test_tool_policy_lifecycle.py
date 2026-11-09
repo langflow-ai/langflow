@@ -7,9 +7,11 @@ from uuid import uuid4
 
 import pandas as pd
 import pytest
+from langchain_core.runnables import RunnableConfig
+from langchain_core.tools import BaseTool, StructuredTool
 from langflow.services.auth.service import AuthService
 from langflow.services.database.models.flow.model import Flow
-from lfx.base.tools.component_tool import ComponentToolkit, disambiguate_tool_names
+from lfx.base.tools.component_tool import disambiguate_tool_names
 from lfx.custom import Component
 from lfx.graph import Graph
 from lfx.io import Output
@@ -39,6 +41,8 @@ async def saved_flow_scope(tmp_path, monkeypatch):
 
 
 @pytest.mark.parametrize("asynchronous", [False, True])
+@pytest.mark.parametrize("tool_kind", ["generated", "structured", "base"])
+@pytest.mark.parametrize("grouped", [False, True])
 @pytest.mark.parametrize(
     "change",
     [
@@ -51,9 +55,14 @@ async def saved_flow_scope(tmp_path, monkeypatch):
         "already_gated",
         "disambiguated_unchanged",
         "metadata_tampered",
+        "tool_mode_off",
+        "metadata_added",
+        "metadata_removed",
     ],
 )
-async def test_tool_uses_current_saved_policy_before_side_effects(saved_flow_scope, asynchronous, change):
+async def test_tool_uses_current_saved_policy_before_side_effects(
+    saved_flow_scope, asynchronous, change, tool_kind, grouped
+):
     scope = saved_flow_scope
     effects = []
 
@@ -67,20 +76,73 @@ async def test_tool_uses_current_saved_policy_before_side_effects(saved_flow_sco
         async def aperform(self) -> str:
             return self.perform()
 
+        async def _get_tools(self):
+            if tool_kind == "generated":
+                return await super()._get_tools()
+            if tool_kind == "structured":
+                return [
+                    StructuredTool.from_function(
+                        func=self.perform,
+                        coroutine=self.aperform if asynchronous else None,
+                        name="perform",
+                        description="Count an invocation",
+                        tags=["perform"],
+                        handle_tool_error=True,
+                    )
+                ]
+
+            class NativeTool(BaseTool):
+                name: str = "perform"
+                description: str = "Count an invocation"
+
+                def _run(self, config: RunnableConfig) -> str:
+                    effects.append("called")
+                    assert config is not None
+                    return "ok"
+
+                async def _arun(self, config: RunnableConfig) -> str:
+                    return self._run(config)
+
+            return [NativeTool(tags=["perform"], handle_tool_error=True)]
+
     flow_id = uuid4()
     component = CountingTool(_id="counter")
     component.set_vertex(SimpleNamespace(graph=Graph(flow_id=str(flow_id))))
-    tool = ComponentToolkit(component).get_tools()[0]
+    tool = (await component._get_tools())[0]
     row = {
         "tags": list(tool.tags),
         "name": tool.name,
         "status": True,
         "approval_actions": ["approve", "reject"] if change == "already_gated" else [],
     }
-    tool = ComponentToolkit(component, metadata=pd.DataFrame([row])).update_tools_metadata([tool])[0]
+    if change != "metadata_added":
+        component.tools_metadata = pd.DataFrame([row])
+    tool = (await component.to_toolkit())[0]
     if change == "disambiguated_unchanged":
         tool = disambiguate_tool_names([tool, tool.model_copy()])[0]
-    data = {"nodes": [{"id": "counter", "data": {"node": {"template": {"tools_metadata": {"value": [row]}}}}}]}
+    node = component.to_frontend_node()
+    node["data"]["node"]["tool_mode"] = True
+    node["data"]["node"]["template"]["tools_metadata"] = {"value": [row]}
+    if change == "metadata_added":
+        node["data"]["node"]["template"].pop("tools_metadata")
+    data = {"nodes": [node], "edges": []}
+    if grouped:
+        data = {
+            "nodes": [
+                {
+                    "id": "group",
+                    "data": {
+                        "id": "group",
+                        "node": {
+                            "template": {},
+                            "flow": {"data": data},
+                            "outputs": [],
+                        },
+                    },
+                }
+            ],
+            "edges": [],
+        }
     async with scope() as session:
         session.add(Flow(id=flow_id, name="paused flow", data=data))
         await session.commit()
@@ -91,8 +153,10 @@ async def test_tool_uses_current_saved_policy_before_side_effects(saved_flow_sco
     assert await invoke() == "ok"
     assert effects == ["called"]
     changed = deepcopy(data)
-    current = changed["nodes"][0]["data"]["node"]["template"]["tools_metadata"]["value"]
-    if change in {"approval_added", "metadata_tampered"}:
+    executable = changed["nodes"][0]["data"]["node"]["flow"]["data"] if grouped else changed
+    current_node = executable["nodes"][0]["data"]["node"]
+    current = current_node["template"].setdefault("tools_metadata", {"value": [row]})["value"]
+    if change in {"approval_added", "metadata_tampered", "metadata_added"}:
         current[0]["approval_actions"] = ["approve", "reject"]
         if change == "metadata_tampered":
             tool.metadata["approval_actions"] = ["approve", "reject"]
@@ -101,9 +165,13 @@ async def test_tool_uses_current_saved_policy_before_side_effects(saved_flow_sco
     elif change == "removed_tool":
         current.clear()
     elif change == "removed_node":
-        changed["nodes"].clear()
+        executable["nodes"].clear()
     elif change == "renamed":
         current[0]["name"] = "renamed"
+    elif change == "tool_mode_off":
+        current_node["tool_mode"] = False
+    elif change == "metadata_removed":
+        current_node["template"].pop("tools_metadata")
     async with scope() as session:
         flow = await session.get(Flow, flow_id)
         flow.data = changed
