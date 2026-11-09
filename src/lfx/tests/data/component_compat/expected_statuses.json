@@ -131,6 +131,18 @@
       "utilities.PythonREPLComponent": "no_action"
     },
     "hard_flows": {
+      "altk_agent.json::ChatInput-347cc": "no_action",
+      "altk_agent.json::ChatOutput-991a2": "no_action",
+      "altk_agent.json::ext:altk:ALTKAgentComponent@official-e6331": "retired",
+      "chroma_ext_type.json::ChatInput-10ab8": "no_action",
+      "chroma_ext_type.json::ChatOutput-cd3c7": "no_action",
+      "chroma_ext_type.json::ext:chroma:ChromaVectorStoreComponent@official-51b51": "retired",
+      "chroma_legacy_type.json::ChatInput-1e6ab": "no_action",
+      "chroma_legacy_type.json::ChatOutput-fb895": "no_action",
+      "chroma_legacy_type.json::Chroma-9e7b2": "retired",
+      "local_db.json::ChatInput-83edb": "no_action",
+      "local_db.json::ChatOutput-4b040": "no_action",
+      "local_db.json::ext:chroma:LocalDBComponent@official-6852a": "retired",
       "mcp_tools_arguments.json::ChatOutput-hh63P": "no_action",
       "mcp_tools_arguments.json::MCPTools-BS8An": "no_action",
       "mcp_tools_arguments.json::ParserComponent-wiCP5": "no_action",

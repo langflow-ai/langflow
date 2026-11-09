@@ -52,6 +52,7 @@ Example output:
 | `[SAFE]` | Component code changed, and updating the component keeps every connection and saved value in your flow. `lfx upgrade --write` can apply this update automatically. | An output that previously emitted only `Message` now also supports `Data`, or the component gained an output or an optional input. |
 | `[BREAKING]` | Updating the component would drop a connection or a saved value, or needs an input that nobody gave. | A field or output your flow has was removed or renamed, or an input that accepted `Message` and `Data` now accepts only `Message` and your flow connects a `Data` component to it. |
 | `[BLOCKED]` | The component type no longer exists in this LFX build. | A bundle-only component is not installed in your environment. |
+| `[RETIRED]` | The component was retired and fails when the flow runs. The line names the release that retired it and its replacement. `lfx upgrade --write` leaves it unchanged, and the command exits non-zero. | Chroma DB, retired in 1.13.0, replaced by the Knowledge component. |
 
 To apply fixes or enforce stricter checks, run:
 
@@ -68,7 +69,7 @@ lfx upgrade my-flow.json --strict
 Both `lfx run` and `lfx serve` accept an `--upgrade-flow` option so you can apply compatibility checks at execution without a separate `lfx upgrade` step.
 
 ```bash
-# Check only — fail if any component is blocked
+# Check only: fail unless every component is up to date
 lfx run my-flow.json --upgrade-flow=check "Hello world"
 
 # Apply safe upgrades in memory, then run
@@ -80,8 +81,8 @@ lfx serve my-flow.json --upgrade-flow=safe
 
 | Mode | Behavior |
 |---|---|
-| `check` | Reports compatibility issues and exits non-zero if any component is blocked. No changes are written to disk. |
-| `safe` | Applies all safe upgrades in memory, then runs or serves the flow. Blocked components still cause a non-zero exit. |
+| `check` | Reports compatibility issues and exits non-zero unless every component is up to date. No changes are written to disk. |
+| `safe` | Applies all safe upgrades in memory, then runs or serves the flow. Breaking, blocked, and retired components cause a non-zero exit. |
 
 ## Pin versions
 

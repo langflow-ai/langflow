@@ -81,6 +81,21 @@ def test_safe_blocked_raises():
         apply_upgrade_gate(_flow(code=NODE_CODE, type_="Ghost"), {}, "safe")
 
 
+def _retired_registry():
+    registry = _registry()
+    entry = registry["Cat"]["MyComp"]
+    entry["retired_in"] = "1.13.0"
+    entry["replacement"] = ["models_and_agents.Agent"]
+    return registry
+
+
+@pytest.mark.parametrize("mode", ["check", "safe"])
+def test_retired_component_is_refused(mode):
+    """A retired component fails when the flow runs, so neither mode lets it through."""
+    with pytest.raises(UpgradeFlowError, match=r"My Component \(retired\)"):
+        apply_upgrade_gate(_flow(code=REGISTRY_CODE), _retired_registry(), mode)
+
+
 def test_unknown_mode_raises():
     with pytest.raises(UpgradeFlowError, match="Unknown --upgrade-flow"):
         apply_upgrade_gate(_flow(), _registry(), "typo")

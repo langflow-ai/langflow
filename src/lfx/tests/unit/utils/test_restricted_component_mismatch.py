@@ -12,6 +12,7 @@ These tests pin the diagnosis appended to such a failure, and the cases it must 
 
 import asyncio
 import json
+import pathlib
 from copy import deepcopy
 from importlib.resources import files
 from types import SimpleNamespace
@@ -22,6 +23,8 @@ from lfx.utils.flow_validation import (
     describe_restricted_component_mismatch,
     explain_restricted_component_mismatch,
 )
+
+HARD_FLOWS = pathlib.Path(__file__).parents[2] / "data" / "component_compat" / "hard_flows"
 
 SERVER_AGENT_CODE = "# Agent (this server)"
 
@@ -157,6 +160,32 @@ def test_connected_fields_decide_a_retyped_field_like_the_checker(monkeypatch):
 
     assert describe_restricted_component_mismatch("Agent", _agent_with_retyped_empty_prompt(), set()) is None
     assert describe_restricted_component_mismatch("Agent", _agent_with_retyped_empty_prompt(), {"system_prompt"})
+
+
+@pytest.mark.parametrize("allow_custom", [False, True], ids=["restricted", "permissive"])
+@pytest.mark.parametrize("drifted", [True, False], ids=["breaking", "current"])
+def test_retired_component_is_named_with_its_replacement(monkeypatch, drifted, allow_custom):
+    """Neither updating a retired component nor running its saved code helps, so the hint says it was retired."""
+    from lfx.components.chroma.chroma import ChromaVectorStoreComponent
+    from lfx.custom.utils import create_component_template
+
+    chroma = create_component_template(component_extractor=ChromaVectorStoreComponent())[0]
+    _restrict(monkeypatch, allow_custom=allow_custom, registry=lambda: {"chroma": {"Chroma": chroma}})
+    if drifted:
+        flow = json.loads((HARD_FLOWS / "v1.12.6" / "chroma_legacy_type.json").read_text(encoding="utf-8"))["data"]
+        saved = next(node for node in flow["nodes"] if node["data"]["type"] == "Chroma")["data"]["node"]
+        # A field the server's component does not have makes the saved node breaking.
+        saved["template"]["chroma_tenant"] = {"type": "str", "value": "tenant", "show": True}
+    else:
+        # Saved with this server's own component: nothing drifted, but it still fails when the flow runs.
+        saved = deepcopy(chroma)
+
+    hint = describe_restricted_component_mismatch("Chroma", saved)
+
+    assert hint == (
+        'Note: the "Chroma" component was retired in 1.13.0 and fails when the flow runs. '
+        "Replace it with files_and_knowledge.Knowledge."
+    )
 
 
 def test_explain_never_raises(monkeypatch):

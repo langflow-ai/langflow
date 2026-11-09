@@ -248,9 +248,9 @@ async def run_flow(
         user_id: Optional user ID for tracking purposes
         session_id: Optional session ID for memory isolation
         event_manager: Optional EventManager for streaming token events
-        upgrade_flow: Component compatibility mode. ``'check'`` refuses to run if any
-            component is outdated or blocked. ``'safe'`` auto-applies safe upgrades and
-            aborts on breaking or blocked components.
+        upgrade_flow: Component compatibility mode. ``'check'`` refuses to run unless every
+            component is up to date. ``'safe'`` auto-applies safe upgrades and aborts on
+            breaking, blocked, or retired components.
         human_input: Interactive human-in-the-loop. ``None`` (default) auto-enables it
             when the flow has a pausing node (e.g. HumanInput) and stdin is a TTY;
             ``True``/``False`` force it on/off. When active the flow runs via the

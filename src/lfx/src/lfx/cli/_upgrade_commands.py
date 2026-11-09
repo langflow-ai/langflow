@@ -26,7 +26,7 @@ def register(app: typer.Typer) -> None:
             "--strict",
             help=(
                 "Exit non-zero if any component is not up to date. Without --strict, pending "
-                "safe upgrades exit 0 (only breaking/blocked components fail the command)."
+                "safe upgrades exit 0 (only breaking, blocked, or retired components fail the command)."
             ),
         ),
     ) -> None:

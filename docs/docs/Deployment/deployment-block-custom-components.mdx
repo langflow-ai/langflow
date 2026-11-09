@@ -74,6 +74,14 @@ Flow build blocked: outdated components must be updated before running: <display
 
 To update those components, open each flow in the visual editor and apply the component update, or update flow files with `lfx upgrade <flow.json>`. This setting has no effect while `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` is `true`, since the flow's own code runs as authored.
 
+A retired component is refused with its own sentence instead, because the server's current copy of it fails when the flow runs, so updating it cannot help. The error names the release that retired the component and its replacement:
+
+```text
+Flow build blocked: <display_name> (<node_id>) was retired in <release> and fails when the flow runs. Replace it with <replacement>.
+```
+
+Neither the component update in the visual editor nor `lfx upgrade --write` fixes this: the editor offers no update for a retired component, and `lfx upgrade --write` leaves it unchanged. Replace the component in the flow with the one the error names.
+
 ## Custom components in publicly shared flows{#public-flow-custom-components}
 
 The [**Shareable Playground**](/concepts-playground#share-a-flows-playground) exposes a single flow at `/public_flow/$FLOW_ID` and runs it without authentication, as its owner. Because anyone holding the link can trigger that run, Langflow applies a stricter rule to public flow builds than to authenticated ones, and it applies regardless of how `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` is set.

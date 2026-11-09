@@ -48,12 +48,41 @@ describe("checkCodeValidity shared cases", () => {
       ? undefined
       : result.blocked
         ? "blocked"
-        : !result.outdated
-          ? "ok"
-          : result.breakingChange
-            ? "outdated_breaking"
-            : "outdated_safe";
+        : result.retired
+          ? "retired"
+          : !result.outdated
+            ? "ok"
+            : result.breakingChange
+              ? "outdated_breaking"
+              : "outdated_safe";
     expect(status).toBe(c.expected);
+  });
+});
+
+// The shared cases always use one code-bearing type. These pin the other early exits of
+// _classify_node in src/lfx/src/lfx/upgrade/checker.py: a node without code gets no status
+// there, and an ignored type is ok, so neither is retired.
+describe("checkCodeValidity retired", () => {
+  const retiredComponent = {
+    template: { code: { value: "NEW" } },
+    outputs: [],
+    retired_in: "1.13.0",
+    replacement: ["models_and_agents.Agent"],
+  } as unknown as CheckArgs[1][string];
+
+  it.each([
+    ["a node without code", "Retired", { template: {} }],
+    [
+      "an ignored type",
+      "CustomComponent",
+      { template: { code: { value: "OLD" } } },
+    ],
+  ])("is not set for %s", (_name, type, node) => {
+    const result = checkCodeValidity({ id: "n1", type, node } as CheckArgs[0], {
+      [type]: retiredComponent,
+    });
+
+    expect(result?.retired).toBe(false);
   });
 });
 
