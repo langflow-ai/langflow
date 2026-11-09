@@ -7,10 +7,8 @@ import httpx
 import pytest
 from lfx.components.processing.parser import ParserComponent
 from lfx.custom.utils import create_component_template
-from lfx.graph import Graph
 from lfx.integrations.errors import InvalidRequestError
 from lfx.schema.data import Data
-from lfx_gitlab.base import GitLabActionComponent
 from lfx_gitlab.client import GitLabClient
 from lfx_gitlab.components import gitlab
 
@@ -53,38 +51,6 @@ async def test_update_targets_the_item_from_parser_outputs(monkeypatch, lease, c
     expected_resource = "issues" if component_class.resource == "issue" else "merge_requests"
     assert requests[0].url.path == f"/api/v4/projects/80/{expected_resource}/4"
     assert json.loads(requests[0].content) == {"title": "Updated from an event"}
-
-
-async def test_issue_event_flows_through_parsers_into_update(monkeypatch, lease):
-    requests = []
-
-    def handle(request):
-        requests.append(request)
-        return httpx.Response(200, json={"id": 40, "iid": 4})
-
-    monkeypatch.setattr("lfx_gitlab.base.GitLabClient", partial(GitLabClient, transport=httpx.MockTransport(handle)))
-    monkeypatch.setattr(GitLabActionComponent, "resolve_connection", lambda _self, _field: lease)
-    trigger = gitlab.GitLabOnIssueTriggerComponent(
-        _id="issue_event",
-        connection="gitlab/work",
-        project_id=80,
-        event_payload=json.dumps({"project": {"id": 80}, "object_attributes": {"iid": 4, "title": "Event title"}}),
-    )
-    project = ParserComponent(_id="project", pattern="{project[id]}").set(input_data=trigger.build_event)
-    number = ParserComponent(_id="number", pattern="{object_attributes[iid]}").set(input_data=trigger.build_event)
-    title = ParserComponent(_id="title", pattern="{object_attributes[title]}").set(input_data=trigger.build_event)
-    update = gitlab.GitLabUpdateIssueComponent(_id="update", connection="gitlab/work").set(
-        project_id=project.parse_combined_text,
-        number=number.parse_combined_text,
-        title=title.parse_combined_text,
-    )
-    graph = Graph(start=trigger, end=update)
-    results = [result async for result in graph.async_start()]
-
-    assert results
-    assert graph.get_vertex("update").built_object["result"].data == {"id": 40, "iid": 4}
-    assert requests[0].url.path == "/api/v4/projects/80/issues/4"
-    assert json.loads(requests[0].content) == {"title": "Event title"}
 
 
 @pytest.mark.parametrize("value", [-1, 0, 2**63])

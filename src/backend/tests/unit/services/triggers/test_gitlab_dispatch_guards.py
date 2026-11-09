@@ -86,6 +86,10 @@ async def test_actor_lookup_failure_never_runs_a_flow(
         if status == 401:
             assert credential.status == "expired"
             assert row.state == "needs_reconnect"
+            assert credential.allow_non_interactive is True
+            assert row.last_error == "connection_unusable"
+            assert event.state == "failed"
+            assert event.error == "connection_unusable"
         else:
             assert row.state == "active"
             assert credential.status == "ready"
@@ -93,8 +97,8 @@ async def test_actor_lookup_failure_never_runs_a_flow(
             assert event.attempt == 1
 
 
-@pytest.mark.parametrize("detection", ["health", "action"])
-async def test_previously_detected_revocation_requires_reconnect_and_explicit_resume(
+@pytest.mark.parametrize("detection", ["health", "action", "delivery"])
+async def test_revocation_requires_reconnect_and_explicit_resume(
     gitlab,  # noqa: F811
     trigger_owner,
     owned_flow,
@@ -126,7 +130,7 @@ async def test_previously_detected_revocation_requires_reconnect_and_explicit_re
                 session, row=stored, principal=trigger_execution_principal(row)
             )
             assert result.status == "expired"
-        else:
+        elif detection == "action":
             lease = await source_lease(session, row, family="trigger_push")
             async with runtime.GitLabClient(lease) as provider:
                 with pytest.raises(AuthExpiredError):
@@ -140,8 +144,16 @@ async def test_previously_detected_revocation_requires_reconnect_and_explicit_re
     async with session_scope() as session:
         row = await session.get(Trigger, trigger.id)
         assert row.state == "needs_reconnect"
+        assert row.last_error == "connection_unusable"
+        event = (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == trigger.id))).one()
+        assert event.state == "failed"
+        assert event.error == "connection_unusable"
+        credential = await session.get(Connection, created.id)
+        assert credential.allow_non_interactive is True
         user = await session.get(User, trigger_owner)
-        assert (await present_one(session, user, row)).reason == "needs_reconnect"
+        shown = await present_one(session, user, row)
+        assert shown.reason == "needs_reconnect"
+        assert shown.last_error_code == "connection_unusable"
     gitlab.token_revoked = False
     async with session_scope() as session:
         stored = await session.get(Connection, created.id)

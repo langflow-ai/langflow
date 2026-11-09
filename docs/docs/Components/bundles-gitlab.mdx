@@ -50,6 +50,16 @@ Add a GitLab component to a flow and select the saved connection. Use the numeri
 
 Action inputs for Project ID, Issue Number or Merge Request Number, Title, and branch names accept connected Message outputs. Use Parser components to extract the project ID and item number from the trigger's Event output, then connect those parsed values to an action to update or comment on the item that fired the trigger.
 
+Connect the trigger's **Event** output to each Parser's **JSON or Table** input. The Event contains Langflow metadata such as `trigger_id` and `event_id`, with GitLab's fields under `payload.delivery`. Use these Parser templates for both issue and merge request events.
+
+| Action input | Parser template |
+| --- | --- |
+| Project ID | `{payload[delivery][project][id]}` |
+| Issue Number or Merge Request Number | `{payload[delivery][object_attributes][iid]}` |
+| Title | `{payload[delivery][object_attributes][title]} [handled]` |
+
+Connect each Parser's **Parsed Text** output to the matching action input. For example, connect the three Parsers above to **GitLab: Update Issue** to update the issue that fired **GitLab: On Issue**. Keep **Include Own Events** off when writing back to the same project to avoid a trigger loop. Templates such as `{project[id]}` do not match the Event output because the GitLab delivery is nested.
+
 | Component | Inputs and behavior |
 | --- | --- |
 | GitLab: Get Project | Read one numeric Project ID. |

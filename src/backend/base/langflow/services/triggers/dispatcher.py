@@ -55,6 +55,7 @@ from langflow.services.triggers.constants import (
     TRIGGER_EVENT_FIELD,
 )
 from langflow.services.triggers.correlation import derive_session_id
+from langflow.services.triggers.error_codes import CodedTriggerError, TriggerErrorCode
 from langflow.services.triggers.errors import BindingUnsupportedError
 from langflow.services.triggers.ledger import purge_events
 from langflow.services.triggers.principal import connection_preflight, family_for, provider_availability_denial
@@ -618,7 +619,6 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
 
         extension = get_provider(trigger.provider or "")
         if extension is not None and extension.prepare_delivery is not None:
-            from langflow.services.triggers.error_codes import CodedTriggerError, TriggerErrorCode
             from langflow.services.triggers.listeners.supervisor import is_local_configuration_failure
             from langflow.services.triggers.source_clients import source_lease
 
@@ -665,9 +665,14 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
             return
         # Fail closed, and say so on the trigger: an unattended run must never
         # fall back to a weaker identity when its connection refuses one.
-        await _terminalize(session, event=event, state=TriggerEventState.FAILED, error=CONNECTION_NOT_AUTHORIZED_ERROR)
+        error = (
+            TriggerErrorCode.CONNECTION_UNUSABLE.value
+            if isinstance(denial, AuthExpiredError)
+            else CONNECTION_NOT_AUTHORIZED_ERROR
+        )
+        await _terminalize(session, event=event, state=TriggerEventState.FAILED, error=error)
         trigger.state = TriggerState.NEEDS_RECONNECT.value
-        trigger.last_error = CONNECTION_NOT_AUTHORIZED_ERROR
+        trigger.last_error = error
         trigger.updated_at = datetime.now(timezone.utc)
         record_connection_failure(
             trigger,
@@ -678,9 +683,7 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
         )
         session.add(trigger)
         await session.flush()
-        await logger.awarning(
-            "Trigger %s cannot run unattended: its connection does not allow non-interactive use", trigger.id
-        )
+        await logger.awarning("Trigger %s cannot run unattended. Connection failure %s", trigger.id, error)
         return
 
     request = build_submit_request(trigger=trigger, event=event, binding_data=binding.data, family=family)
