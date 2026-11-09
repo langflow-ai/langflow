@@ -487,6 +487,53 @@ async def test_sync_flows_from_fs(client: AsyncClient, logged_in_headers):
             await flow_file.unlink(missing_ok=True)
 
 
+@pytest.mark.usefixtures("set_fs_flows_polling_interval")
+async def test_sync_flows_from_fs_applies_falsy_values(client: AsyncClient, logged_in_headers):
+    # The file is the source of truth, so an edit that sets a field to a falsy value — unlocking a flow or
+    # clearing its description — has to reach the database too.
+    flow_filename = f"{uuid.uuid4()}.json"
+    try:
+        basic_case = {
+            "name": "falsy sync",
+            "description": "initial description",
+            "data": {},
+            "locked": True,
+            "fs_path": flow_filename,
+        }
+        response = await client.post("api/v1/flows/", json=basic_case, headers=logged_in_headers)
+        assert response.status_code == 201, f"Failed to create flow: {response.text}"
+        created_flow = response.json()
+        flow_id = created_flow["id"]
+        user_id = created_flow["user_id"]
+
+        from langflow.services.deps import get_storage_service
+
+        storage_service = get_storage_service()
+        flow_file = storage_service.data_dir / "flows" / str(user_id) / flow_filename
+
+        fs_flow = orjson.loads(await flow_file.read_bytes())
+        assert fs_flow["locked"] is True
+        assert fs_flow["description"] == "initial description"
+
+        fs_flow.update(locked=False, description="")
+        await flow_file.write_bytes(orjson.dumps(fs_flow))
+
+        result = {}
+        for i in range(10):
+            response = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+            result = response.json()
+            if result["locked"] is False and result["description"] == "":
+                break
+            assert i != 9, f"the falsy file edits were never applied: {result}"
+            await asyncio.sleep(0.1)
+
+        assert result["locked"] is False
+        assert result["description"] == ""
+    finally:
+        if "flow_file" in locals():
+            await flow_file.unlink(missing_ok=True)
+
+
 # ==================== Profile Pictures Tests ====================
 
 

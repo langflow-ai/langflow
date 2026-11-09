@@ -1,6 +1,6 @@
 [project]
 name = "lfx-duckduckgo"
-version = "0.2.1"
+version = "0.3.0"
 description = "DuckDuckGo Search component as a standalone Langflow Extension Bundle."
 readme = "README.md"
 requires-python = ">=3.10,<3.16"
@@ -21,6 +21,8 @@ dependencies = [
     "lfx>=1.14.0.dev0,<2.0.0",
     "langchain-community>=0.4.1,<1.0.0",
     "ddgs>=9.0.0",
+    "brotli>=1.2.1",
+    "brotlicffi>=1.2.1.0; platform_python_implementation != 'CPython'",
 ]
 
 [project.urls]

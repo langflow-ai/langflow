@@ -124,7 +124,7 @@ async def _candidates(session: AsyncSession, *, registration_id: str, team_ids: 
             Trigger.state == TriggerState.ACTIVE.value,
             col(Trigger.kind).in_(SLACK_TRIGGER_KINDS),
             mechanism == MECHANISM_SLACK_EVENTS_API,
-            ConnectionOAuth.registration_id == registration_id,
+            ConnectionOAuth.completed_registration_id == registration_id,
             owned_by_trigger_owner(),
             col(Connection.status).not_in(UNUSABLE_CONNECTION_STATUSES),
             tenant.in_(sorted(team_ids)),

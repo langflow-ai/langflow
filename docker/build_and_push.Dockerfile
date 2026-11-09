@@ -5,7 +5,7 @@
 # so the base and full targets cannot silently resolve different build tools.
 ARG UV_VERSION=0.10.4
 ARG PYTHON_IMAGE=registry.access.redhat.com/ubi10/python-314-minimal
-ARG NODE_VERSION=24.21.0
+ARG NODE_VERSION=24.22.2
 
 FROM ghcr.io/astral-sh/uv:${UV_VERSION} AS uv-installer
 
@@ -32,6 +32,8 @@ RUN microdnf install -y \
         gcc \
         gcc-c++ \
         git \
+        libxml2-devel \
+        libxslt-devel \
         make \
         python3.14-devel \
         tar \
@@ -64,6 +66,7 @@ COPY ./src/lfx/pyproject.toml /app/src/lfx/pyproject.toml
 COPY ./src/sdk/README.md /app/src/sdk/README.md
 COPY ./src/sdk/pyproject.toml /app/src/sdk/pyproject.toml
 COPY ./scripts/ci/rewrite_langflow_base_constraint.sh /tmp/rewrite_langflow_base_constraint.sh
+COPY ./docker/build_lxml.sh /tmp/build_lxml.sh
 
 # Every directory under src/bundles is a uv workspace member. Copy the tree
 # once so adding a bundle does not also require another Dockerfile edit.
@@ -127,7 +130,8 @@ COPY ./scripts/ci/install_release_wheels.py /tmp/install_release_wheels.py
 RUN python3.14 /tmp/install_release_wheels.py /tmp/release-artifacts \
     --python /app/.venv/bin/python \
     --mode base \
-    --frontend-source /app/src/backend/base/langflow/frontend
+    --frontend-source /app/src/backend/base/langflow/frontend \
+    && sh /tmp/build_lxml.sh
 
 FROM full-dependencies AS full-builder
 
@@ -161,7 +165,8 @@ COPY ./scripts/ci/install_release_wheels.py /tmp/install_release_wheels.py
 RUN python3.14 /tmp/install_release_wheels.py /tmp/release-artifacts \
     --python /app/.venv/bin/python \
     --mode main \
-    --frontend-source /app/src/backend/base/langflow/frontend
+    --frontend-source /app/src/backend/base/langflow/frontend \
+    && sh /tmp/build_lxml.sh
 
 FROM full-builder AS full-bundles-builder
 
@@ -176,7 +181,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
         --mode main \
         --frontend-source /app/src/backend/base/langflow/frontend \
     && uv pip check --python /app/.venv/bin/python \
-    && /app/.venv/bin/python -c 'import importlib.metadata as m; from packaging.requirements import Requirement; names = {d.metadata["Name"].lower() for d in m.distributions()}; requirements = [Requirement(value) for value in (m.requires("langflow") or ())]; required = {requirement.name.lower() for requirement in requirements if requirement.marker is not None and requirement.marker.evaluate({"extra": "bundles"})}; missing = sorted(required - names); assert not missing, f"full-bundles image is missing distributions: {missing}"'
+    && /app/.venv/bin/python -c 'import importlib.metadata as m; from packaging.requirements import Requirement; names = {d.metadata["Name"].lower() for d in m.distributions()}; requirements = [Requirement(value) for value in (m.requires("langflow") or ())]; required = {requirement.name.lower() for requirement in requirements if requirement.marker is not None and requirement.marker.evaluate({"extra": "bundles"})}; missing = sorted(required - names); assert not missing, f"full-bundles image is missing distributions: {missing}"' \
+    && sh /tmp/build_lxml.sh
 
 ################################
 # SHARED RUNTIME
@@ -187,7 +193,12 @@ FROM ${PYTHON_IMAGE} AS runtime
 USER root
 
 RUN microdnf update -y \
-    && microdnf install -y curl git gnupg libpq shadow-utils tar xz \
+    && microdnf install -y curl git libpq libxml2 libxslt shadow-utils tar xz \
+    && useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data \
+    && mkdir -p /app/data /app/langflow \
+    && chown -R 1000:0 /app/data /app/langflow \
+    && chmod -R g+rwX /app/data /app/langflow \
+    && microdnf remove -y shadow-utils \
     && microdnf clean all
 
 RUN python3.14 -m pip install --no-cache-dir --upgrade "pip==26.2.1"
@@ -205,11 +216,6 @@ RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
     && ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
     && sh /tmp/install_hardened_npm.sh \
     && rm -f /tmp/install_hardened_npm.sh
-
-RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data \
-    && mkdir -p /app/data /app/langflow \
-    && chown -R 1000:0 /app/data /app/langflow \
-    && chmod -R g+rwX /app/data /app/langflow
 
 # Give uid 1000 a writable npm cache. The image ships Node so users can spawn
 # stdio MCP servers via npx, while the UBI HOME is not owned by that uid.
@@ -234,6 +240,8 @@ ENV PATH="/app/.venv/bin:$PATH" \
 # Keep auto-login disabled in every public target through the shared runtime stage.
 ENV LANGFLOW_AUTO_LOGIN=false
 
+COPY --chown=1000:0 ./scripts/ci/verify_lxml_runtime.py /tmp/verify_lxml_runtime.py
+
 USER user
 WORKDIR /app
 
@@ -246,6 +254,7 @@ CMD ["langflow", "run"]
 FROM runtime AS base
 
 COPY --from=base-builder --chown=1000:0 /app/.venv /app/.venv
+RUN /app/.venv/bin/python /tmp/verify_lxml_runtime.py && rm /tmp/verify_lxml_runtime.py
 LABEL org.opencontainers.image.title=langflow-base
 
 ################################
@@ -255,6 +264,7 @@ LABEL org.opencontainers.image.title=langflow-base
 FROM runtime AS full-bundles
 
 COPY --from=full-bundles-builder --chown=1000:0 /app/.venv /app/.venv
+RUN /app/.venv/bin/python /tmp/verify_lxml_runtime.py && rm /tmp/verify_lxml_runtime.py
 LABEL org.opencontainers.image.title=langflow-all
 
 ################################
@@ -264,4 +274,5 @@ LABEL org.opencontainers.image.title=langflow-all
 FROM runtime AS full
 
 COPY --from=full-builder --chown=1000:0 /app/.venv /app/.venv
+RUN /app/.venv/bin/python /tmp/verify_lxml_runtime.py && rm /tmp/verify_lxml_runtime.py
 LABEL org.opencontainers.image.title=langflow
