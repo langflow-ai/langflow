@@ -13,6 +13,8 @@ For actual S3 storage service testing, see:
 - tests/integration/storage/ - Integration tests with real AWS S3
 """
 
+import hashlib
+import io
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -241,6 +243,8 @@ class TestS3FileEndpoints:
             mock_file.filename = "upload.txt"
             mock_file.size = 1024
             mock_file.read = AsyncMock(return_value=b"file content")
+            # An UploadFile always has its spooled body here; S3 hashes it before the upload starts.
+            mock_file.file = io.BytesIO(b"file content")
 
             with patch("langflow.api.v2.files.upload_user_file"):
                 from langflow.api.v2.files import save_file_routine
@@ -250,4 +254,7 @@ class TestS3FileEndpoints:
                 # Verify storage service was called: streamed, never as one whole body
                 mock_storage_service.save_file.assert_not_called()
                 mock_storage_service.save_upload_stream.assert_called_once()
-                assert mock_storage_service.save_upload_stream.call_args.args[:2] == ("user-user_123", "upload.txt")
+                call = mock_storage_service.save_upload_stream.call_args
+                assert call.args[:2] == ("user-user_123", "upload.txt")
+                assert call.kwargs["md5"] == hashlib.md5(b"file content", usedforsecurity=False).hexdigest()
+                assert mock_file.file.tell() == 0  # rewound for the upload to read from the start

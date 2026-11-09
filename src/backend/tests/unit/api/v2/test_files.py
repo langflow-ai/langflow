@@ -160,6 +160,44 @@ async def test_upload_file(files_client, files_created_api_key):
     assert stored == b"test content"
 
 
+async def test_an_upload_that_loses_its_name_gets_409_and_leaves_the_winners_file(files_client, files_created_api_key):
+    """Before: both picked the name before either row existed, and the loser's cleanup deleted the file.
+
+    That left the winner's row pointing at nothing: a retry after a 504 on local disk lost the upload.
+    """
+    from langflow.services.database.models.file.model import File as UserFile
+    from langflow.services.deps import get_session_service, get_settings_service
+    from langflow.services.storage.local import LocalStorageService
+    from lfx.services.manager import get_service_manager
+    from lfx.services.schema import ServiceType
+
+    user_id = files_created_api_key.user_id
+
+    class OtherUploadFinishesFirst(LocalStorageService):
+        async def save_upload_stream(self, flow_id, file_name, chunks):
+            written = await super().save_upload_stream(flow_id, file_name, chunks)
+            async with session_scope() as session:
+                session.add(UserFile(user_id=user_id, name="race", path=f"{flow_id}/{file_name}", size=written))
+            return written
+
+    storage = OtherUploadFinishesFirst(get_session_service(), get_settings_service())
+    services = get_service_manager().services
+    usual = services[ServiceType.STORAGE_SERVICE]
+    services[ServiceType.STORAGE_SERVICE] = storage
+    try:
+        response = await files_client.post(
+            "api/v2/files",
+            files={"file": ("race.txt", b"same bytes")},
+            headers={"x-api-key": files_created_api_key.api_key},
+        )
+    finally:
+        services[ServiceType.STORAGE_SERVICE] = usual
+
+    assert response.status_code == 409, response.text
+    assert "Another upload named race.txt finished first" in response.json()["detail"]
+    assert await storage.get_file(flow_id=f"user-{user_id}", file_name="race.txt") == b"same bytes"
+
+
 async def test_should_not_persist_in_my_files_when_upload_is_ephemeral(files_client, files_created_api_key):
     """Ephemeral uploads save the file to storage but do NOT create a UserFile DB record.
 

@@ -307,7 +307,7 @@ def _recording_service(mock_session_service, mock_settings_service, client):
     service = S3StorageService(mock_session_service, mock_settings_service)
 
     @asynccontextmanager
-    async def _client():
+    async def _client(**_kwargs):
         yield client
 
     service._get_client = _client
@@ -487,6 +487,14 @@ class _SlowPartsClient(_RecordingS3Client):
         self.calls.append(("abort_multipart_upload", kwargs))
 
 
+class _ForgetfulSlowPartsClient(_RecordingS3Client):
+    """Parts take a moment each and are not kept, so what the upload itself holds can be measured."""
+
+    async def upload_part(self, **kwargs):
+        await asyncio.sleep(0.005)
+        return {"ETag": f'"{kwargs["PartNumber"]}"'}
+
+
 class TestPartsInFlight:
     """Before: one part at a time, so a 900 MB upload to AWS took 24-45 s and the route gave 504."""
 
@@ -540,6 +548,50 @@ class TestPartsInFlight:
         assert client.in_flight == 0
         assert len(client.named("abort_multipart_upload")) == 1
         assert client.named("complete_multipart_upload") == []
+
+    async def test_a_part_waiting_for_a_slot_is_held_once(
+        self, mock_session_service, mock_settings_service, monkeypatch
+    ):
+        """Before: the next part was cut before the wait, so the buffer and the cut copy both held it."""
+        import tracemalloc
+
+        from langflow.services.storage import s3
+
+        part = 1024 * 1024
+        monkeypatch.setattr(s3, "STREAM_PART_SIZE", part)
+        service = _recording_service(mock_session_service, mock_settings_service, _ForgetfulSlowPartsClient())
+
+        async def body():
+            for _ in range(12 * 16):
+                yield os.urandom(part // 16)
+
+        tracemalloc.start()
+        try:
+            await service.save_file_stream("ns", "big.pdf", body())
+            _, peak = tracemalloc.get_traced_memory()
+        finally:
+            tracemalloc.stop()
+
+        # The parts in flight plus the one filling; a second copy of that one adds a whole part.
+        assert peak < (s3.STREAM_PARTS_IN_FLIGHT + 1.5) * part, f"peak {peak / part:.2f} parts"
+
+    async def test_the_parts_go_on_a_client_of_their_own(self, mock_session_service, mock_settings_service):
+        """The shared client's 10 connections serve every other call; an upload must not take them."""
+        from contextlib import asynccontextmanager
+
+        service = S3StorageService(mock_session_service, mock_settings_service)
+        asked: list[dict] = []
+
+        @asynccontextmanager
+        async def _client(**kwargs):
+            asked.append(kwargs)
+            yield _RecordingS3Client()
+
+        service._get_client = _client
+
+        await service.save_file_stream("ns", "a.pdf", _chunks(b"a"))
+
+        assert asked == [{"shared": False}]
 
     async def test_a_known_md5_that_is_not_one_is_refused(self, mock_session_service, mock_settings_service):
         service = _recording_service(mock_session_service, mock_settings_service, _RecordingS3Client())

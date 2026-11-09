@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -192,6 +194,33 @@ class LocalStorageService(StorageService):
         except Exception:
             logger.exception(f"Error saving file {file_name} in flow {flow_id}")
             raise
+
+    async def save_upload_stream(self, flow_id: str, file_name: str, chunks: AsyncIterator[bytes]) -> int:
+        """Stream an upload into a file of its own, then rename it into place, and return its size.
+
+        Writing the live file chunk by chunk let two uploads of one name append into the same
+        file, and left half a file where an upload failed. A rename shows a reader the whole old
+        file or the whole new one, as ``move_file`` does: the last upload to finish wins whole,
+        as on S3. The partial file sits outside every namespace, so no listing shows it.
+        """
+        file_path = await self._validated_path(flow_id, file_name)
+        await (self.data_dir / flow_id).mkdir(parents=True, exist_ok=True)
+        partials = self.data_dir / ".uploads"
+        await partials.mkdir(exist_ok=True)
+        partial = partials / f"{uuid.uuid4().hex}.part"
+        written = 0
+        try:
+            async with aiofiles.open(str(partial), "wb") as f:
+                async for chunk in chunks:
+                    await f.write(chunk)
+                    written += len(chunk)
+            await partial.replace(file_path)
+        except BaseException:
+            with contextlib.suppress(OSError):
+                await partial.unlink()
+            raise
+        await logger.ainfo(f"File {file_name} saved successfully in flow {flow_id}.")
+        return written
 
     async def move_file(self, source_namespace: str, target_namespace: str, file_name: str) -> None:
         """Move a file between namespaces with a rename.

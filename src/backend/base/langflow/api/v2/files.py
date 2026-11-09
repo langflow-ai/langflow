@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from lfx.log.logger import logger
 from lfx.utils.file_path_security import user_storage_scope, user_storage_scope_for_path
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, select
 
 from langflow.api.schemas import UploadFileResponse
@@ -484,6 +485,13 @@ async def upload_user_file(
         try:
             await session.flush()
             await session.refresh(new_file)
+        except IntegrityError as db_err:
+            # Another upload of the same name finished first: both picked the name before either
+            # row existed, and the stored file is now that upload's, so it must stay.
+            raise HTTPException(
+                status_code=409,
+                detail=f"Another upload named {unique_filename} finished first. Upload again to save a new copy.",
+            ) from db_err
         except Exception as db_err:
             # Database insert failed - clean up the uploaded file to avoid orphaned files
             try:
@@ -492,9 +500,9 @@ async def upload_user_file(
                 #  If delete fails, just log the error
                 await logger.aerror(f"Failed to clean up uploaded file {stored_file_name}: {e}")
 
-            raise HTTPException(
-                status_code=500, detail=f"Error inserting file metadata into database: {db_err}"
-            ) from db_err
+            # The raw error carries the SQL and its parameters, the user's id and the file's path.
+            await logger.aexception("Error recording an upload")
+            raise HTTPException(status_code=500, detail="Error inserting file metadata into database") from db_err
     except HTTPException:
         # Re-raise HTTP exceptions (like 409 conflicts) without modification
         raise

@@ -22,8 +22,9 @@ from .service import StorageReadiness, StorageService, _refuse_bad_move, validat
 
 # S3 parts are 5 MiB at least, except the last one.
 STREAM_PART_SIZE = 8 * 1024 * 1024
-# Parts a streamed upload sends at once, each holding its 8 MiB. One at a time took a 900 MB
-# upload to AWS 24-45 s, past an OpenShift route's 30 s; 8 at once took 3.5-4.8 s.
+# Parts a streamed upload sends at once, each holding its 8 MiB; one more fills while they go.
+# One at a time took a 900 MB upload to AWS 24-45 s, past an OpenShift route's 30 s; 4 at once
+# took 11.5-12.3 s from a laptop, about what a single put took.
 STREAM_PARTS_IN_FLIGHT = 4
 # How long an upload link stays good for. Long enough for one large file over a slow link,
 # short enough that a leaked URL is not a standing write. The caller can ask for less.
@@ -711,11 +712,13 @@ class S3StorageService(StorageService):
     async def save_file_stream(
         self, flow_id: str, file_name: str, chunks: AsyncIterator[bytes], *, md5: str | None = None
     ) -> int:
-        """Save a file from a stream of chunks, holding at most ``STREAM_PARTS_IN_FLIGHT`` parts in memory.
+        """Save a file from a stream of chunks, holding ``STREAM_PARTS_IN_FLIGHT`` parts plus one filling.
 
         A body smaller than one part is a single ``put_object``; anything larger is a
         multipart upload, with up to ``STREAM_PARTS_IN_FLIGHT`` parts sent at once, aborted if
         any part fails so no partial object is left behind. Returns the number of bytes written.
+        The parts go on a client of their own, so an upload never takes the shared client's
+        connections from the calls beside it.
 
         The ``md5`` label goes on as ``save_file``'s does. A multipart upload fixes its metadata
         when it starts, so a caller that knows the body's MD5 passes it as ``md5`` and the label
@@ -735,7 +738,7 @@ class S3StorageService(StorageService):
         if self.tags:
             extra["Tagging"] = "&".join([f"{k}={v}" for k, v in self.tags.items()])
 
-        async with self._get_client() as s3_client:
+        async with self._get_client(shared=False) as s3_client:
             buffer = bytearray()
             written = 0
             digest = hashlib.md5(usedforsecurity=False)
@@ -758,8 +761,14 @@ class S3StorageService(StorageService):
                     for task in done:
                         task.result()
 
-            async def send(body: bytes) -> None:
+            async def send(size: int) -> None:
+                """Send the buffer's first ``size`` bytes as the next part, once a slot is free.
+
+                Cut only after the wait, so a part waiting for a slot is held once, in the buffer.
+                """
                 await settle(STREAM_PARTS_IN_FLIGHT - 1)
+                body = bytes(memoryview(buffer)[:size])
+                del buffer[:size]
                 in_flight.add(asyncio.create_task(upload_part(next(numbers), body)))
 
             try:
@@ -775,8 +784,7 @@ class S3StorageService(StorageService):
                                 Bucket=self.bucket_name, Key=key, **labelled, **extra
                             )
                             upload_id = created["UploadId"]
-                        await send(bytes(buffer[:STREAM_PART_SIZE]))
-                        del buffer[:STREAM_PART_SIZE]
+                        await send(STREAM_PART_SIZE)
                 label = {MD5_METADATA_KEY: md5 or digest.hexdigest()}
                 if upload_id is None:
                     await s3_client.put_object(
@@ -784,7 +792,7 @@ class S3StorageService(StorageService):
                     )
                     return written
                 if buffer:
-                    await send(bytes(buffer))
+                    await send(len(buffer))
                 await settle(0)
                 parts = [{"ETag": etags[number], "PartNumber": number} for number in sorted(etags)]
                 await s3_client.complete_multipart_upload(
