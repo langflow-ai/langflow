@@ -42,6 +42,29 @@ def test_validate_json_accepts_top_level_array():
 @pytest.mark.parametrize(
     ("json_str", "expected"),
     [
+        ('See note [1]: ["x", "y"]', ["x", "y"]),
+        ('See note [1]: ["x", "y"] (see [2])', ["x", "y"]),
+        ("See note [1]: [3, 4] (see [2])", [3, 4]),
+        ("See note [123]: [7] (see [2])", [7]),
+        ("See note [1]: [1] (see [2])", [1]),
+        ("[1]", [1]),
+        ("[1, 2]", [1, 2]),
+        ('Options ["first"]: ["x", "y"]', ["x", "y"]),
+        ("See note [1]: no later payload", [1]),
+        ("See note [1]: label [2]: no later payload", [1]),
+        ("[7]: see [2]", [7]),
+        (" \n [7]: see [2]", [7]),
+    ],
+)
+@pytest.mark.parametrize("validate_json", [False, True])
+def test_extracts_primitive_array_with_notes(json_str, expected, validate_json):
+    """Prefer payloads after prose labels while preserving leading arrays and fallback behavior."""
+    assert json.loads(_clean(json_str, validate_json=validate_json)) == expected
+
+
+@pytest.mark.parametrize(
+    ("json_str", "expected"),
+    [
         ('{"items": [1, 2]}', {"items": [1, 2]}),
         ('Result:\n```json\n{"a": "b"}\n```', {"a": "b"}),
         ('See note [1]: {"a": 1}', {"a": 1}),
