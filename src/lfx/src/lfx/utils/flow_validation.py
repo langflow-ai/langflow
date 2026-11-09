@@ -1964,20 +1964,13 @@ def _collect_dynamic_api_request_destinations(flow_data: dict, *, request_hashes
             if labels:
                 requests[node["id"]] = (labels[0], node["data"]["node"])
 
-        tool_destinations = {
-            node_id
-            for node_id, (_, node_info) in requests.items()
-            if any(
-                node_info.get("template", {}).get(name, {}).get("tool_mode", True) is not False
-                for name in API_REQUEST_DESTINATION_FIELDS
-            )
-        }
-        dynamic = {node_id for node_id in tool_destinations if requests[node_id][1].get("tool_mode")}
+        # Saved input flags do not override the runtime class's destination tool inputs.
+        dynamic = {node_id for node_id, (_, node_info) in requests.items() if node_info.get("tool_mode")}
         for edge in executable.get("edges", []):
             data = edge.get("data") or {}
             source_handle = data.get("sourceHandle", {})
             source = edge.get("source")
-            if source in tool_destinations and source_handle.get("name") == TOOL_OUTPUT_NAME:
+            if source in requests and source_handle.get("name") == TOOL_OUTPUT_NAME:
                 dynamic.add(source)
 
             target = edge.get("target")
@@ -2118,7 +2111,7 @@ def validate_public_flow_no_code_execution(
         message = (
             "Public flows cannot be built without authentication when they expose dynamic "
             f"API Request destinations: {', '.join(dynamic_requests)}. "
-            "Set a fixed URL and remove URL/cURL connections or destination tool arguments."
+            "Use API Request with a fixed URL and ordinary data outputs, without URL/cURL connections."
         )
         raise PublicFlowValidationError(message)
 

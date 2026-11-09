@@ -9,7 +9,12 @@ from unittest.mock import AsyncMock
 import pytest
 from lfx.base.tools.constants import TOOL_OUTPUT_NAME
 from lfx.components.data_source.api_request import APIRequestComponent
+from lfx.graph import Graph
 from lfx.graph.graph.utils import process_flow
+from lfx.services.model_provider_policy import (
+    reset_current_model_provider_policy_context,
+    set_current_model_provider_policy_context,
+)
 from lfx.utils import flow_validation as fv
 
 
@@ -139,15 +144,45 @@ def test_public_flow_blocks_api_request_tool_destination(request_flow):
         fv.validate_public_flow_no_code_execution(request_flow)
 
 
-def test_public_flow_keeps_api_request_tool_with_fixed_destination(request_flow):
+@pytest.mark.parametrize("ui_tool_mode", [False, True])
+async def test_public_flow_blocks_runtime_destination_tools_despite_saved_flags(request_flow, ui_tool_mode):
+    request = request_flow["nodes"][1]
+    node_info = request["data"]["node"]
+    node_info["tool_mode"] = ui_tool_mode
+    for name in ("url_input", "curl_input"):
+        node_info["template"][name]["tool_mode"] = False
+    node_info["template"]["headers"]["value"] = [{"key": "Authorization", "value": "test-credential"}]
+
+    token = set_current_model_provider_policy_context(user_id="local-admin", attributes={"is_superuser": True})
+    try:
+        graph = Graph.from_payload({"nodes": [copy.deepcopy(request)], "edges": []}, user_id="local-admin")
+        vertex = graph.get_vertex("request")
+        component = vertex.custom_component
+        component.set_attributes({name: value for name, value in vertex.params.items() if name != "code"})
+        tools = await component.to_toolkit()
+    finally:
+        reset_current_model_provider_policy_context(token)
+
+    assert tools
+    for tool in tools:
+        assert {"url_input", "curl_input"} <= tool.args.keys()
+    assert component.headers == [{"key": "Authorization", "value": "test-credential"}]
+
+    request_flow["nodes"].append(_node("agent", "Agent", {"template": {}}))
+    request_flow["edges"] = [_edge("request", "agent", "tools", TOOL_OUTPUT_NAME)]
+    with pytest.raises(fv.PublicFlowValidationError, match="API Request destinations"):
+        fv.validate_public_flow_no_code_execution(request_flow)
+
+
+def test_public_flow_blocks_tool_mode_without_a_connected_output(request_flow):
     node_info = request_flow["nodes"][1]["data"]["node"]
     node_info["tool_mode"] = True
     for name in ("url_input", "curl_input"):
         node_info["template"][name]["tool_mode"] = False
-    request_flow["nodes"].append(_node("agent", "Agent", {"template": {}}))
-    request_flow["edges"] = [_edge("request", "agent", "tools", TOOL_OUTPUT_NAME)]
+    request_flow["edges"] = []
 
-    fv.validate_public_flow_no_code_execution(request_flow)
+    with pytest.raises(fv.PublicFlowValidationError, match="API Request destinations"):
+        fv.validate_public_flow_no_code_execution(request_flow)
 
 
 def test_public_flow_checks_tool_output_even_without_ui_tool_mode(request_flow):
