@@ -157,6 +157,18 @@ def _enum_values(key: str, values: list[str], allowed_values: frozenset[Enum] | 
     return parsed
 
 
+def validate_identity_filter(values: dict[str, str], prefix: str) -> None:
+    issuer = f"{prefix}_issuer"
+    subject = f"{prefix}_subject"
+    for key in (issuer, subject):
+        if key in values and len(values[key]) > _TEXT_LIMITS[key]:
+            msg = f"{key} is longer than {_TEXT_LIMITS[key]} characters"
+            raise bad_request(msg)
+    if issuer in values and subject not in values:
+        msg = f"{issuer} must be paired with {subject}"
+        raise bad_request(msg)
+
+
 def parse_audit_query(
     request: Request,
     *,
@@ -170,14 +182,8 @@ def parse_audit_query(
     allowed = {id_param, *_REPEATABLE, *_SINGLE_UUIDS, *_TEXT_LIMITS, "since", "until", "cursor", "limit"}
     grouped = group_query_params(request, allowed)
     single = {key: values[0] for key, values in grouped.items() if key not in _REPEATABLE}
-    for key, limit in _TEXT_LIMITS.items():
-        if key in single and len(single[key]) > limit:
-            msg = f"{key} is longer than {limit} characters"
-            raise bad_request(msg)
     for prefix in ("acting", "represented"):
-        if f"{prefix}_issuer" in single and f"{prefix}_subject" not in single:
-            msg = f"{prefix}_issuer must be paired with {prefix}_subject"
-            raise bad_request(msg)
+        validate_identity_filter(single, prefix)
     since = parse_timestamp("since", single["since"]) if "since" in single else None
     until = parse_timestamp("until", single["until"]) if "until" in single else None
     if since is not None and until is not None and until <= since:
