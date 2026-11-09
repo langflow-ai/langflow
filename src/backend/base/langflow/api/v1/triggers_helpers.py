@@ -45,7 +45,7 @@ from langflow.services.database.models.connection.schemas import PersistedConnec
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.jobs.model import Job
-from langflow.services.database.models.trigger.model import Trigger, TriggerEvent
+from langflow.services.database.models.trigger.model import Trigger, TriggerCleanup, TriggerEvent
 from langflow.services.database.models.trigger.schemas import TriggerEventRead, TriggerRead, TriggerReason, TriggerState
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service
@@ -143,6 +143,20 @@ async def present(
         else {}
     )
     resume_blocks = await _canvas_resume_blocks(session, rows)
+    cleanup_errors: dict[UUID, str] = {}
+    if rows:
+        failures = (
+            await session.exec(
+                select(TriggerCleanup.trigger_id, TriggerCleanup.last_error)
+                .where(
+                    col(TriggerCleanup.trigger_id).in_([row.id for row, _flow, _owner in rows]),
+                    col(TriggerCleanup.last_error).is_not(None),
+                )
+                .order_by(col(TriggerCleanup.available_at).desc())
+            )
+        ).all()
+        for trigger_id, error in failures:
+            cleanup_errors.setdefault(trigger_id, f"Remote webhook cleanup is pending. {error}.")
     callers: dict[UUID, TriggerCaller] = {}
     responses: list[TriggerRead] = []
     for row, flow, owner_username in rows:
@@ -168,6 +182,7 @@ async def present(
                 update={
                     "reason": caps.reason,
                     "last_error_code": last_error_code(row.last_error),
+                    "last_error": " ".join(filter(None, (row.last_error, cleanup_errors.get(row.id)))) or None,
                     "allowed_actions": list(caps.allowed_actions),
                     "blocked_actions": dict(caps.blocked_actions),
                     "flow_name": flow.name if with_flow_name else None,

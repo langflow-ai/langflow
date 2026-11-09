@@ -181,11 +181,27 @@
           ]
         },
         {
+          "distribution": "lfx-gitlab",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-gitlab"
+          ]
+        },
+        {
           "distribution": "lfx-servicenow",
           "extras": [],
           "version": ">=0.1.0,<1.0.0",
           "providers": [
             "lfx-servicenow"
+          ]
+        },
+        {
+          "distribution": "lfx-telegram",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-telegram"
           ]
         },
         {

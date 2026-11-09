@@ -49,6 +49,7 @@ members = [
     "lfx-exa",
     "lfx-firecrawl",
     "lfx-github",
+    "lfx-gitlab",
     "lfx-google",
     "lfx-ibm",
     "lfx-jira",
@@ -63,6 +64,7 @@ members = [
     "lfx-serply",
     "lfx-servicenow",
     "lfx-slack",
+    "lfx-telegram",
     "lfx-toolguard",
     "lfx-valkey",
     "lfx-vllm",
@@ -8458,6 +8460,7 @@ dependencies = [
     { name = "lfx-datastax" },
     { name = "lfx-docling" },
     { name = "lfx-github" },
+    { name = "lfx-gitlab" },
     { name = "lfx-google" },
     { name = "lfx-ibm" },
     { name = "lfx-jira" },
@@ -8468,6 +8471,7 @@ dependencies = [
     { name = "lfx-oracle" },
     { name = "lfx-servicenow" },
     { name = "lfx-slack" },
+    { name = "lfx-telegram" },
     { name = "lfx-toolguard" },
     { name = "lfx-vllm" },
     { name = "lfx-whatsapp" },
@@ -8604,6 +8608,7 @@ requires-dist = [
     { name = "lfx-exa", marker = "extra == 'bundles'", editable = "src/bundles/exa" },
     { name = "lfx-firecrawl", marker = "extra == 'bundles'", editable = "src/bundles/firecrawl" },
     { name = "lfx-github", editable = "src/bundles/github" },
+    { name = "lfx-gitlab", editable = "src/bundles/gitlab" },
     { name = "lfx-google", editable = "src/bundles/google" },
     { name = "lfx-ibm", editable = "src/bundles/ibm" },
     { name = "lfx-jira", editable = "src/bundles/jira" },
@@ -8618,6 +8623,7 @@ requires-dist = [
     { name = "lfx-serply", marker = "extra == 'bundles'", editable = "src/bundles/serply" },
     { name = "lfx-servicenow", editable = "src/bundles/servicenow" },
     { name = "lfx-slack", editable = "src/bundles/slack" },
+    { name = "lfx-telegram", editable = "src/bundles/telegram" },
     { name = "lfx-toolguard", editable = "src/bundles/toolguard" },
     { name = "lfx-valkey", marker = "extra == 'bundles'", editable = "src/bundles/valkey" },
     { name = "lfx-vllm", editable = "src/bundles/vllm" },
@@ -10897,6 +10903,21 @@ requires-dist = [
 ]
 
 [[package]]
+name = "lfx-gitlab"
+version = "0.1.0"
+source = { editable = "src/bundles/gitlab" }
+dependencies = [
+    { name = "httpx" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.27,<1.0" },
+    { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
 name = "lfx-google"
 version = "0.4.0"
 source = { editable = "src/bundles/google" }
@@ -11151,6 +11172,21 @@ requires-dist = [
     { name = "aiohttp", specifier = ">=3.10.0,<4.0.0" },
     { name = "lfx", editable = "src/lfx" },
     { name = "slack-sdk", specifier = ">=3.33.0,<4.0.0" },
+]
+
+[[package]]
+name = "lfx-telegram"
+version = "0.1.0"
+source = { editable = "src/bundles/telegram" }
+dependencies = [
+    { name = "httpx" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.27.0,<1.0.0" },
+    { name = "lfx", editable = "src/lfx" },
 ]
 
 [[package]]

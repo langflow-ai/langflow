@@ -71,6 +71,7 @@
         "lfx-datastax",
         "lfx-docling",
         "lfx-github",
+        "lfx-gitlab",
         "lfx-google",
         "lfx-ibm",
         "lfx-jira",
@@ -81,6 +82,7 @@
         "lfx-oracle",
         "lfx-servicenow",
         "lfx-slack",
+        "lfx-telegram",
         "lfx-toolguard",
         "lfx-vllm",
         "lfx-whatsapp"
@@ -112,6 +114,7 @@
           "lfx-datastax",
           "lfx-docling",
           "lfx-github",
+          "lfx-gitlab",
           "lfx-google",
           "lfx-ibm",
           "lfx-jira",
@@ -122,6 +125,7 @@
           "lfx-oracle",
           "lfx-servicenow",
           "lfx-slack",
+          "lfx-telegram",
           "lfx-toolguard",
           "lfx-vllm",
           "lfx-whatsapp"
@@ -173,6 +177,11 @@
           "lfx_github/extension.json",
           "lfx_github/components/github/capabilities.v1.json",
           "lfx_github/components/github/issue_trigger.py"
+        ],
+        "lfx-telegram": [
+          "lfx_telegram/extension.json",
+          "lfx_telegram/components/telegram/capabilities.v1.json",
+          "lfx_telegram/components/telegram/telegram_reply.py"
         ],
         "lfx-whatsapp": [
           "lfx_whatsapp/extension.json",
@@ -264,6 +273,7 @@
           "lfx-exa",
           "lfx-firecrawl",
           "lfx-github",
+          "lfx-gitlab",
           "lfx-google",
           "lfx-ibm",
           "lfx-jira",
@@ -278,6 +288,7 @@
           "lfx-serply",
           "lfx-servicenow",
           "lfx-slack",
+          "lfx-telegram",
           "lfx-toolguard",
           "lfx-valkey",
           "lfx-vllm",
@@ -398,6 +409,11 @@
         "lfx-bundles": [
           "lfx_bundles/mongodb/mongodb_atlas.py",
           "lfx_bundles/youtube/starter_projects/Youtube Analysis.json"
+        ],
+        "lfx-telegram": [
+          "lfx_telegram/extension.json",
+          "lfx_telegram/components/telegram/capabilities.v1.json",
+          "lfx_telegram/components/telegram/telegram_reply.py"
         ],
         "lfx-whatsapp": [
           "lfx_whatsapp/extension.json",
