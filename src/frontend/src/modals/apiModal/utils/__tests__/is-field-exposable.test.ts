@@ -111,6 +111,24 @@ describe("isFieldExposable (LE-1810 single exposure predicate)", () => {
     const node = makeNode({});
     expect(isFieldExposable(node, "ghost", [])).toBe(false);
   });
+
+  it("stops exposing a question list once one of its questions is connected", () => {
+    const node = makeNode({
+      questions: {
+        ...exposedField,
+        type: "decision_questions",
+        connection_prefix: "question_input_",
+        value: [{ id: "1", name: "q1", kind: "Choice", question: "" }],
+      },
+      question_input_1: { show: false, type: "str", value: "" },
+    });
+    expect(isFieldExposable(node, "questions", [])).toBe(true);
+
+    const edges = [edgeInto("node-1", "question_input_1")];
+    expect(isFieldExposable(node, "questions", edges)).toBe(false);
+    const [copy] = getNodesWithDefaultValue([node], edges);
+    expect(copy.data.node?.template.questions.api_editable).toBe(false);
+  });
 });
 
 describe("getNodesWithDefaultValue exposure copy (LE-1810)", () => {

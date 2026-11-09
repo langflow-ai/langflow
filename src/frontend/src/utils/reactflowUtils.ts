@@ -407,6 +407,22 @@ export const questionConnections = (
     ] as [QuestionText, string | undefined][]
   ).flatMap(([text, fieldName]) => (fieldName ? [{ text, fieldName }] : []));
 
+// The fields whose edges drive a node field: the field itself and, for a question list, its
+// questions' hidden connection fields.
+export const fieldConnectionNames = (
+  name: string,
+  field: InputFieldType | undefined,
+): string[] => [
+  name,
+  ...(field?.type === "decision_questions" && Array.isArray(field.value)
+    ? field.value.flatMap((question) =>
+        questionConnections(question, field.connection_prefix).map(
+          ({ fieldName }) => fieldName,
+        ),
+      )
+    : []),
+];
+
 // A shown question list draws its questions' connection handles on its own rows, so those
 // fields stay hidden as rows but keep their edges.
 const isDrawnByQuestionList = (

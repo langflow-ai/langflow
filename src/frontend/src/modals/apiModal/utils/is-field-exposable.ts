@@ -1,5 +1,5 @@
 import type { AllNodeType, EdgeType } from "@/types/flow";
-import { scapeJSONParse } from "@/utils/reactflowUtils";
+import { fieldConnectionNames, scapeJSONParse } from "@/utils/reactflowUtils";
 import { isFieldTweakable } from "./api-exposure-rules";
 
 /**
@@ -33,10 +33,11 @@ export const isFieldExposable = (
   if ((node.data?.node?.tool_mode ?? false) && (template.tool_mode ?? false)) {
     return false;
   }
+  const connectionFields = fieldConnectionNames(name, template);
   return !edges.some(
     (edge) =>
       edge.target === node.id &&
       edge.targetHandle &&
-      scapeJSONParse(edge.targetHandle)?.fieldName === name,
+      connectionFields.includes(scapeJSONParse(edge.targetHandle)?.fieldName),
   );
 };

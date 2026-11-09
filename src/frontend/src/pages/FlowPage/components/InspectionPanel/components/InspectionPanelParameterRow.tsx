@@ -10,7 +10,7 @@ import { isFieldTweakable } from "@/modals/apiModal/utils/api-exposure-rules";
 import useFlowStore from "@/stores/flowStore";
 import { useTypesStore } from "@/stores/typesStore";
 import type { NodeDataType } from "@/types/flow";
-import { questionConnections, scapeJSONParse } from "@/utils/reactflowUtils";
+import { fieldConnectionNames, scapeJSONParse } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
 import { getDefaultDisplay, isValueEmpty } from "../utils";
 
@@ -47,17 +47,7 @@ export default function InspectionPanelParameterRow({
   // A question list's questions are connected through their own hidden fields, which leave the
   // canvas with the list.
   const connectionFields = useMemo(
-    () => [
-      name,
-      ...(template?.type === "decision_questions" &&
-      Array.isArray(template.value)
-        ? template.value.flatMap((question) =>
-            questionConnections(question, template.connection_prefix).map(
-              ({ fieldName }) => fieldName,
-            ),
-          )
-        : []),
-    ],
+    () => fieldConnectionNames(name, template),
     [name, template],
   );
   const isConnected = useFlowStore(
