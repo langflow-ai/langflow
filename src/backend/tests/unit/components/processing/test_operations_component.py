@@ -55,6 +55,39 @@ class TestOperationsComponent(ComponentTestBaseWithoutClient):
         """Return an empty list since this component doesn't have version-specific files."""
         return []
 
+    @pytest.mark.parametrize("component_type", [DataFrameOperationsComponent, OperationsComponent])
+    @pytest.mark.parametrize(
+        ("operator", "query", "expected_ids"),
+        [
+            ("contains", "nan", [0, 4]),
+            ("not contains", "nan", [1, 2, 3, 5, 6, 7]),
+            ("starts with", "nan", [4]),
+            ("ends with", "nan", [4]),
+            ("contains", "None", [5]),
+            ("contains", "<NA>", [6]),
+            ("contains", "123", [7]),
+            ("contains", "", [0, 4, 5, 6, 7]),
+            ("not contains", "", [1, 2, 3]),
+        ],
+    )
+    def test_text_filter_treats_missing_cells_as_nonmatches(self, component_type, operator, query, expected_ids):
+        """Distinguish missing cells from similarly spelled strings in both components."""
+        component = component_type()
+        values = pd.Series(["banana", None, float("nan"), pd.NA, "nan", "None", "<NA>", 123], dtype=object)
+        component.df = DataFrame(pd.DataFrame({"id": range(len(values)), "value": values}))
+        component.operation = [{"name": "Filter"}]
+        component.column_name = "value"
+        component.filter_operator = operator
+        component.filter_value = query
+
+        result = (
+            component.perform_operation()
+            if component_type is DataFrameOperationsComponent
+            else component.as_dataframe()
+        )
+
+        assert result["id"].tolist() == expected_ids
+
 
 @pytest.mark.parametrize(
     "legacy_component",
