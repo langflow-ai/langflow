@@ -570,11 +570,24 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
                 llm_kwargs["max_tokens"] = 1
             base_url = variables.get("OPENAI_BASE_URL")
             if not base_url:
-                base_url = (
-                    "https://api.openai.com/v1"
-                    if is_env_fallback_disabled()
-                    else os.getenv("OPENAI_API_BASE") or os.getenv("OPENAI_BASE_URL")
-                )
+                if is_env_fallback_disabled():
+                    base_url = "https://api.openai.com/v1"
+                else:
+                    try:
+                        from langchain_openai.chat_models.base import _resolve_gateway_config
+                    except ImportError:
+                        # Older SDKs do not route through the LangSmith gateway.
+                        base_url = os.getenv("OPENAI_API_BASE") or os.getenv("OPENAI_BASE_URL")
+                    else:
+                        # Use the SDK's resolver before construction so its gateway
+                        # destination receives the same credential policy check.
+                        base_url = _resolve_gateway_config(
+                            base_url=None,
+                            api_key=api_key,
+                            provider_path="openai/v1",
+                            base_url_env="OPENAI_API_BASE",
+                            api_key_env="OPENAI_API_KEY",  # pragma: allowlist secret
+                        ).base_url or os.getenv("OPENAI_BASE_URL")
             if base_url:
                 from lfx.utils.util import transform_localhost_url
 
