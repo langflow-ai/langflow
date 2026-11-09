@@ -141,6 +141,16 @@
       "url": "https://whatsapp.github.io/WhatsApp-Nodejs-SDK/api-reference/messages/template/",
       "title": "Meta template message parameters",
       "verified_on": "2026-10-22"
+    },
+    {
+      "url": "https://www.postman.com/meta/whatsapp-business-platform/request/qtgr0i7/get-all-templates-default-fields",
+      "title": "Meta approved-template discovery endpoint",
+      "verified_on": "2026-11-08"
+    },
+    {
+      "url": "https://github.com/facebook/facebook-python-business-sdk/blob/main/facebook_business/adobjects/whatsappbusinessaccount.py",
+      "title": "Meta template listing status and language filters",
+      "verified_on": "2026-11-08"
     }
   ],
   "transport_limitations": [
@@ -148,6 +158,8 @@
     "Text inbound messages and sent/delivered/read/failed/deleted status updates only. No media download or business-scoped user IDs.",
     "Customer-owned system-user tokens only. No Embedded Signup, OAuth refresh, Desktop, headless, or on-premises API.",
     "Approved templates support positional text body parameters only. Meta enforces consent, eligibility, messaging windows and limits.",
+    "Template discovery reads approved names, languages and positional body parameter counts through the configured connection. Custom names and languages remain available for dynamic flows.",
+    "New triggers receive messages by default. Delivery-status runs require explicit opt-in and separate routing before a reply action.",
     "Contract tests use synthetic HTTP responses. Live tenant acceptance is unverified."
   ],
   "evidence_paths": [

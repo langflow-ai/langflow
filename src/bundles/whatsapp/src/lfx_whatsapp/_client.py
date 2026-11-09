@@ -18,6 +18,17 @@ from lfx.integrations.errors import (
     RateLimitedError,
 )
 
+from lfx_whatsapp import _messages
+from lfx_whatsapp._messages import (
+    INVALID_ASSET_ID_MESSAGE,
+    MISSING_TEMPLATE_MESSAGE,
+    PHONE_MEMBERSHIP_HINT,
+    SERVER_CONFIGURATION_HINT,
+    SYSTEM_USER_HINT,
+)
+
+PUBLIC_ERROR_MESSAGES = _messages.PUBLIC_ERROR_MESSAGES
+
 if TYPE_CHECKING:
     from lfx.integrations.models import ResolvedCredential
 
@@ -31,12 +42,43 @@ MAX_TOKEN = 8192
 TOKEN_EXPIRED_CODE = 190
 MAX_TIMESTAMP = 253402300799
 MAX_CURSOR = 2048
+MAX_TEMPLATE_PAGES = 100
+TEMPLATE_PAGE_SIZE = 100
+MAX_TEMPLATE_PARAMETERS = 100
+TEMPLATE_NOT_FOUND_CODE = 132001
+MAX_TEMPLATE_BODY = 16384
+_TEMPLATE_NAME = re.compile(r"[a-z0-9_]{1,512}\Z")
+_TEMPLATE_LANGUAGE = re.compile(r"[a-z]{2,3}(?:_[A-Z]{2})?\Z")
+
+
+@dataclass(frozen=True)
+class ApprovedTemplate:
+    name: str
+    language: str
+    body_parameters: int | None
+
+
+def _body_parameter_count(components: Any) -> int | None:
+    if not isinstance(components, list) or any(not isinstance(item, dict) for item in components):
+        raise ProviderUnavailableError(provider="whatsapp")
+    bodies = [item for item in components if item.get("type") == "BODY"]
+    if len(bodies) != 1:
+        return None
+    text = bodies[0].get("text")
+    if not isinstance(text, str) or len(text) > MAX_TEMPLATE_BODY:
+        raise ProviderUnavailableError(provider="whatsapp")
+    placeholders = re.findall(r"{{\s*([^{}]+?)\s*}}", text)
+    if any(not re.fullmatch(r"[1-9][0-9]{0,2}", value) for value in placeholders):
+        return None
+    positions = {int(value) for value in placeholders}
+    if len(positions) > MAX_TEMPLATE_PARAMETERS or positions != set(range(1, len(positions) + 1)):
+        return None
+    return len(positions)
 
 
 def identifier(value: Any) -> str:
     if not isinstance(value, str) or not _ID.fullmatch(value):
-        msg = "Use a numeric WhatsApp asset ID."
-        raise ValueError(msg)
+        raise ValueError(INVALID_ASSET_ID_MESSAGE)
     return value
 
 
@@ -64,8 +106,7 @@ def settings() -> Settings:
         if not re.fullmatch(r"v[1-9][0-9]{0,2}\.0", version) or not re.fullmatch(r"[A-Fa-f0-9]{32}", secret):
             raise ValueError
     except ValueError:
-        msg = "Configure the WhatsApp app, app secret, WABA, phone ID and Graph API version on this server."
-        raise InvalidRequestError(msg, provider="whatsapp") from None
+        raise InvalidRequestError(SERVER_CONFIGURATION_HINT, provider="whatsapp") from None
     return Settings(app, waba, phone, version, secret)
 
 
@@ -105,6 +146,7 @@ class WhatsAppClient:
         allowed = {
             "debug_token",
             f"{self.config.waba_id}/phone_numbers",
+            f"{self.config.waba_id}/message_templates",
             f"{self.config.waba_id}/subscribed_apps",
             f"{self.config.phone_id}/messages",
         }
@@ -156,12 +198,18 @@ class WhatsAppClient:
             raise ProviderUnavailableError(provider="whatsapp", http_status=status)
         if status == httpx.codes.FORBIDDEN or code in {10, 200}:
             raise ConnectionNotAuthorizedError(provider="whatsapp", reason="provider")
+        if code == TEMPLATE_NOT_FOUND_CODE:
+            raise InvalidRequestError(
+                MISSING_TEMPLATE_MESSAGE,
+                provider="whatsapp",
+                hint="Refresh approved templates and choose the matching template language.",
+            )
         if status >= httpx.codes.MULTIPLE_CHOICES or error is not None:
             msg = "WhatsApp rejected the request. Check account access, recipients and message eligibility."
             raise InvalidRequestError(
                 msg,
                 provider="whatsapp",
-                http_status=status,
+                http_status=httpx.codes.BAD_REQUEST,
             )
         return result
 
@@ -178,9 +226,7 @@ class WhatsAppClient:
             or any(not isinstance(scope, str) for scope in debug["scopes"])
             or not set(SCOPES) <= set(debug["scopes"])
         ):
-            raise ConnectionNotAuthorizedError(
-                provider="whatsapp", hint="Use this app's system-user token with both WhatsApp permissions."
-            )
+            raise ConnectionNotAuthorizedError(provider="whatsapp", hint=SYSTEM_USER_HINT)
         expirations = []
         for field_name in ("expires_at", "data_access_expires_at"):
             value = debug.get(field_name, 0)
@@ -215,10 +261,56 @@ class WhatsAppClient:
         else:
             raise ProviderUnavailableError(provider="whatsapp")
         if not found:
-            raise ConnectionNotAuthorizedError(
-                provider="whatsapp", hint="The configured phone must belong to the configured WABA."
-            )
+            raise ConnectionNotAuthorizedError(provider="whatsapp", hint=PHONE_MEMBERSHIP_HINT)
         return frozenset(SCOPES), min(expirations) if expirations else None
+
+    async def approved_templates(self) -> list[ApprovedTemplate]:
+        """Return bounded display metadata using this connection's verified WABA."""
+        await self.verify_account()
+        after = None
+        seen = set()
+        templates: dict[tuple[str, str], ApprovedTemplate] = {}
+        for _ in range(MAX_TEMPLATE_PAGES):
+            params = {
+                "fields": "name,language,status,components",
+                "status": '["APPROVED"]',
+                "limit": TEMPLATE_PAGE_SIZE,
+            }
+            if after is not None:
+                params["after"] = after
+            page = await self.request("GET", f"{self.config.waba_id}/message_templates", params=params)
+            rows = page.get("data")
+            if (
+                not isinstance(rows, list)
+                or len(rows) > TEMPLATE_PAGE_SIZE
+                or any(not isinstance(row, dict) for row in rows)
+            ):
+                raise ProviderUnavailableError(provider="whatsapp")
+            for row in rows:
+                if row.get("status") != "APPROVED":
+                    continue
+                name, language = row.get("name"), row.get("language")
+                if (
+                    not isinstance(name, str)
+                    or not _TEMPLATE_NAME.fullmatch(name)
+                    or not isinstance(language, str)
+                    or not _TEMPLATE_LANGUAGE.fullmatch(language)
+                ):
+                    raise ProviderUnavailableError(provider="whatsapp")
+                templates[name, language] = ApprovedTemplate(
+                    name, language, _body_parameter_count(row.get("components"))
+                )
+            paging = page.get("paging", {})
+            if not isinstance(paging, dict):
+                raise ProviderUnavailableError(provider="whatsapp")
+            if not paging.get("next"):
+                return list(templates.values())
+            cursors = paging.get("cursors")
+            after = cursors.get("after") if isinstance(cursors, dict) else None
+            if not isinstance(after, str) or not after or len(after) > MAX_CURSOR or after in seen:
+                raise ProviderUnavailableError(provider="whatsapp")
+            seen.add(after)
+        raise ProviderUnavailableError(provider="whatsapp")
 
     async def send(self, payload: dict) -> dict:
         await self.verify_account()

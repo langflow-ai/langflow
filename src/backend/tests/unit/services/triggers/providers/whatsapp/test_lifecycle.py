@@ -53,6 +53,7 @@ async def saved_trigger(session):
         name="business",
         display_name="Business",
         status="ready",
+        allow_non_interactive=True,
         executing_identity={"identity": "service", "account": {"id": "333", "tenant_id": "111:222"}},
     )
     session.add(connection)
@@ -277,3 +278,23 @@ async def test_retained_adapter_rejects_a_foreign_provider_credential():
     wrapped = lifecycle._RetainedCleanupLease(OriginalLease(), ConnectionAccount(id="333", tenant_id="111:222"))
     with pytest.raises(ConnectionNotAuthorizedError):
         await wrapped.get_credential()
+
+
+@pytest.mark.usefixtures("callbacks")
+@pytest.mark.parametrize("failure", ["revoked", "background", "owner"])
+async def test_active_receiver_cannot_retain_ingress_secrets_after_connection_denial(database, failure):
+    async with AsyncSession(database, expire_on_commit=False) as session:
+        trigger = await saved_trigger(session)
+        await lifecycle.prepare(session, trigger)
+        conn = await session.get(Connection, trigger.connection_id)
+        if failure == "revoked":
+            conn.status = "revoked"
+        elif failure == "background":
+            conn.allow_non_interactive = False
+        else:
+            conn.owner_id = uuid4()
+        session.add(conn)
+        await session.flush()
+        proof = await lifecycle.ingress_secrets(session, trigger)
+        assert proof.signing_secret is None
+        assert proof.verification_token_digest is None

@@ -76,9 +76,9 @@ class GraphTransport:
         return httpx.Response(status, json=body)
 
     def install(self, monkeypatch):
-        monkeypatch.setattr(
-            "lfx_whatsapp._client.httpx.AsyncHTTPTransport", lambda **_kwargs: httpx.MockTransport(self.handler)
-        )
+        client_httpx = SimpleNamespace(**vars(httpx))
+        client_httpx.AsyncHTTPTransport = lambda **_kwargs: httpx.MockTransport(self.handler)
+        monkeypatch.setattr("lfx_whatsapp._client.httpx", client_httpx)
         return self
 
 

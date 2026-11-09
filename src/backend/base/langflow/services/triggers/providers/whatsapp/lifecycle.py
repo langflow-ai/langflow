@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from lfx.integrations.errors import ConnectionNotAuthorizedError
-from lfx.integrations.models import ConnectionAccount
+from lfx.integrations.models import ConnectionAccount, ConnectionRef
 from lfx_whatsapp._client import WhatsAppClient, settings
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
@@ -21,6 +22,8 @@ from langflow.services.triggers.source_errors import SourceConfigurationError
 from langflow.services.triggers.source_subscription import source_ingress_url
 
 if TYPE_CHECKING:
+    from uuid import UUID
+
     from lfx.integrations.models import CredentialLease, ResolvedCredential
     from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -28,6 +31,78 @@ if TYPE_CHECKING:
 
 
 MAX_CALLBACK = 200
+
+
+async def finish_pending_cleanup(trigger_id: UUID) -> None:
+    """Retry this owned app receiver before admitting its replacement."""
+    from langflow.services.database.models.trigger.model import Trigger
+    from langflow.services.deps import session_scope
+    from langflow.services.triggers.source_cleanup import run_cleanup_pass
+
+    config = settings()
+    identifiers = []
+    async with session_scope() as session:
+        trigger = await session.get(Trigger, trigger_id)
+        connection = await session.get(Connection, trigger.connection_id) if trigger and trigger.connection_id else None
+        if trigger is None or connection is None:
+            return
+        identity = connection.executing_identity or {}
+        account = identity.get("account") or {}
+        try:
+            ref = ConnectionRef.parse((trigger.config or {}).get("connection"))
+        except ValueError:
+            return
+        if (
+            trigger.provider != "whatsapp"
+            or trigger.kind != "whatsapp.event"
+            or connection.provider_key != "whatsapp"
+            or connection.owner_id != trigger.user_id
+            or connection.ownership_mode != "user"
+            or connection.status != "ready"
+            or not connection.allow_non_interactive
+            or identity.get("identity") != "service"
+            or not isinstance(account, dict)
+            or account.get("id") != config.phone_id
+            or account.get("tenant_id") != config.tenant
+            or ref.provider != "whatsapp"
+            or ref.name != connection.name
+        ):
+            return
+        tasks = (
+            await session.exec(
+                select(TriggerCleanup)
+                .where(
+                    TriggerCleanup.provider == "whatsapp",
+                    TriggerCleanup.kind == "whatsapp.event",
+                    TriggerCleanup.user_id == trigger.user_id,
+                    TriggerCleanup.provider_subscription_id == f"waba:{config.tenant}",
+                )
+                .limit(25)
+            )
+        ).all()
+        for task in tasks:
+            original = await session.get(Trigger, task.trigger_id)
+            state = task.provider_state or {}
+            if (
+                original is None
+                or original.user_id != trigger.user_id
+                or original.provider != "whatsapp"
+                or original.kind != "whatsapp.event"
+                or original.state in {"active", "pending"}
+                or state.get("app_id") != config.app_id
+                or state.get("waba_id") != config.waba_id
+                or state.get("phone_id") != config.phone_id
+                or not original.public_id
+                or state.get("callback_url") != await source_ingress_url(session, original)
+                or task.encrypted_credential is not None
+            ):
+                continue
+            task.connection_id = connection.id
+            task.available_at = datetime.now(timezone.utc)
+            session.add(task)
+            identifiers.append(task.id)
+    if identifiers:
+        await run_cleanup_pass(limit=len(identifiers), task_ids=identifiers)
 
 
 async def prepare(session: AsyncSession, trigger: Trigger) -> None:
@@ -191,8 +266,15 @@ async def ingress_secrets(session: AsyncSession, trigger: Trigger) -> IngressSec
     # lock. Reading the committed reservation must not wait for that POST.
     row = await subscription(session, trigger, lock=False)
     config = settings()
+    connection = await session.get(Connection, trigger.connection_id) if trigger.connection_id else None
     if (
         row is None
+        or connection is None
+        or connection.status != "ready"
+        or not connection.allow_non_interactive
+        or connection.provider_key != "whatsapp"
+        or connection.owner_id != trigger.user_id
+        or connection.ownership_mode != "user"
         or row.provider_subscription_id != f"waba:{config.tenant}"
         or row.provider_state.get("phone_id") != config.phone_id
         or not trigger.signing_secret_encrypted

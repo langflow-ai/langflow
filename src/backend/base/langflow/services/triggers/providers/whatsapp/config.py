@@ -29,7 +29,7 @@ def normalize_config(kind: str, config: dict) -> dict:
         raise ValueError(msg)
     senders = sorted({recipient(value) for value in senders})
     messages = config.get("receive_messages", True)
-    statuses = config.get("receive_statuses", True)
+    statuses = config.get("receive_statuses", False)
     if (
         type(messages) is not bool
         or type(statuses) is not bool

@@ -113,7 +113,7 @@ def test_oversized_batch_rejects_without_partial_delivery():
         verify(request(payload(messages=[MESSAGE] * (MAX_ITEMS + 1))), secrets(), tolerance_s=0)
 
 
-@pytest.mark.parametrize("scope", ["waba", "phone", "sender", "unsupported-type"])
+@pytest.mark.parametrize("scope", ["waba", "phone", "unsupported-type"])
 def test_unrelated_or_unsupported_events_acknowledge_without_flow_events(scope):
     body = copy.deepcopy(payload())
     config = dict(CONFIG)
@@ -121,13 +121,47 @@ def test_unrelated_or_unsupported_events_acknowledge_without_flow_events(scope):
         body["entry"][0]["id"] = "999"
     elif scope == "phone":
         body["entry"][0]["changes"][0]["value"]["metadata"]["phone_number_id"] = "999"
-    elif scope == "sender":
-        config["allowed_senders"] = ["15550000000"]
     else:
         body["entry"][0]["changes"][0]["value"]["messages"][0]["type"] = "image"
     result = verify(request(body), secrets(config), tolerance_s=0)
     assert result.source_items == ()
     assert result.response_status == 200
+
+
+def test_sender_filter_retains_safe_identity_and_reason_without_message_text():
+    result = verify(request(), secrets({**CONFIG, "allowed_senders": ["15550000000"]}), tolerance_s=0)
+    validate_source_items(result.source_items, provider="whatsapp")
+    (item,) = result.source_items
+    assert item["skip_reason"] == "sender_not_allowed"
+    assert item["data"]["sender"] == MESSAGE["from"]
+    assert item["data"]["event"] == "message"
+    assert "text" not in item["data"]
+
+
+@pytest.mark.parametrize("code", [131026, 131047, 130429, 131048, 131049, 999999, None])
+def test_failed_delivery_has_safe_reason_without_raw_provider_errors(code):
+    secret_detail = "Do not retain " + SECRET  # pragma: allowlist secret
+    status = {
+        **STATUS,
+        "status": "failed",
+        "errors": [{"code": code, "title": secret_detail, "error_data": {"details": secret_detail}}],
+    }
+    result = verify(request(payload(messages=[], statuses=[status])), secrets(), tolerance_s=0)
+    (item,) = result.source_items
+    assert item["data"]["status"] == "failed"
+    assert item["data"]["delivery_error"]
+    assert item["data"].get("delivery_error_code") == code
+    assert secret_detail not in json.dumps(item)
+    assert "errors" not in item["data"]
+    if code == 131026:
+        assert "recipient uses WhatsApp" in item["data"]["delivery_error"]
+
+
+def test_missing_status_option_defaults_to_message_events_only():
+    config = {"connection": CONFIG["connection"]}
+    assert normalize_config("whatsapp.event", config)["receive_statuses"] is False
+    result = verify(request(payload(messages=[], statuses=[STATUS])), secrets(config), tolerance_s=0)
+    assert result.source_items == ()
 
 
 def test_secrets_and_unknown_raw_fields_never_enter_canonical_payload():

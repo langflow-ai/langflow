@@ -14,17 +14,19 @@ import lfx_whatsapp
 import pytest
 from langflow.services.connection.service import DatabaseConnectionResolverService
 from langflow.services.database.models.connection.model import Connection, ConnectionSecret
-from langflow.services.database.models.connection.schemas import ConnectionCreate
+from langflow.services.database.models.connection.schemas import ConnectionCreate, ConnectionTokenRenewal
 from langflow.services.database.models.trigger.model import Trigger, TriggerCleanup, TriggerEvent
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, session_scope
-from langflow.services.triggers import dispatcher, source_cleanup, source_runtime
+from langflow.services.triggers import dispatcher, leases, ledger, source_cleanup, source_runtime
 from langflow.services.triggers.cleanup import delete_triggers
 from langflow.services.triggers.providers import registry
+from langflow.services.triggers.providers.whatsapp.lifecycle import finish_pending_cleanup
 from langflow.services.triggers.providers.whatsapp.provider import PROVIDER
 from langflow.services.triggers.reconciliation import reconcile_flow_triggers
 from langflow.services.triggers.service import TriggerService
 from langflow.services.triggers.source_cleanup import run_cleanup_pass
+from langflow.services.triggers.source_errors import SourceConfigurationError
 from lfx.extension import bundle_registry, load_extension
 from lfx.extension.bundle_registry import BundleRecord
 from lfx.integrations.errors import ConnectionNotAuthorizedError, IntegrationPolicyBlockedError
@@ -207,6 +209,196 @@ async def test_noninteractive_consent_is_required_before_callback_creation(insta
         with pytest.raises((ValueError, ConnectionNotAuthorizedError), match=r".+"):
             await TriggerService().enable_and_activate(session, row=row)
     assert installed["callback"] is None
+
+
+async def test_revoke_stops_ingress_and_marks_trigger_before_reconciliation(
+    installed, trigger_owner, owned_flow, client
+):
+    created = await connection(trigger_owner)
+    trigger = await reconcile(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+        public_id = row.public_id
+    assert installed["callback"].endswith(public_id)
+    async with session_scope() as session:
+        row = await session.get(Connection, created.id)
+        await DatabaseConnectionResolverService().revoke(session, row)
+        trigger_row = await session.get(Trigger, trigger.id, populate_existing=True)
+        assert trigger_row.state == "needs_reconnect"
+    body = json.dumps(payload()).encode()
+    signed = "sha256=" + hmac.new(SECRET.encode(), body, hashlib.sha256).hexdigest()
+    response = await client.post(
+        f"/api/v1/triggers/ingress/whatsapp/{public_id}",
+        content=body,
+        headers={"X-Hub-Signature-256": signed},
+    )
+    assert response.status_code == 404
+    async with session_scope() as session:
+        assert not (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == trigger.id))).all()
+
+
+async def test_resume_drains_only_its_backed_off_receiver_after_reconnect(installed, trigger_owner, owned_flow):
+    created = await connection(trigger_owner)
+    trigger = await reconcile(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().disable(session, row=row)
+        row.state = "error"
+        row.last_error = "The trigger node was removed from the flow."
+        task = (await session.exec(select(TriggerCleanup).where(TriggerCleanup.trigger_id == trigger.id))).one()
+        task.available_at = datetime.now(timezone.utc) + timedelta(hours=1)
+        task.attempt = 4
+        session.add(task)
+        cleanup_id = task.id
+        unrelated = TriggerCleanup(
+            id=uuid4(),
+            trigger_id=uuid4(),
+            user_id=trigger_owner,
+            connection_id=created.id,
+            provider="whatsapp",
+            kind="whatsapp.event",
+            provider_subscription_id="waba:111:999",
+            provider_state={"callback_url": "https://other.example/hook"},
+            available_at=datetime.now(timezone.utc) + timedelta(hours=1),
+        )
+        session.add(unrelated)
+        unrelated_id = unrelated.id
+        next_row = Trigger(
+            flow_id=owned_flow,
+            user_id=trigger_owner,
+            node_id="replacement-whatsapp-source",
+            provider="whatsapp",
+            kind="whatsapp.event",
+            name="WhatsApp replacement",
+            config=dict(row.config),
+            connection_id=created.id,
+            state="pending",
+        )
+        session.add(next_row)
+        await session.flush()
+        next_id = next_row.id
+        await DatabaseConnectionResolverService().revoke(session, await session.get(Connection, created.id))
+    async with session_scope() as session:
+        await DatabaseConnectionResolverService().renew_token(
+            session,
+            row=await session.get(Connection, created.id),
+            user=await session.get(User, trigger_owner),
+            payload=ConnectionTokenRenewal(
+                allow_non_interactive=True,
+                credentials={"access_token": "synthetic-system-user-token"},
+            ),
+        )
+    async with session_scope() as session:
+        row = await session.get(Trigger, next_id)
+        await TriggerService().enable_and_activate(session, row=row)
+        assert row.state == "active"
+        assert await session.get(TriggerCleanup, cleanup_id) is None
+        assert await session.get(TriggerCleanup, unrelated_id) is not None
+        assert installed["callback"].endswith(row.public_id)
+
+
+async def test_sender_filter_records_deduplicated_skipped_event_without_dispatch(
+    installed, trigger_owner, owned_flow, client, fake_background_service
+):
+    await connection(trigger_owner)
+    trigger = await reconcile(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        row.config = {**row.config, "allowed_senders": ["15550000000"]}
+        session.add(row)
+        await TriggerService().enable_and_activate(session, row=row)
+        public_id = row.public_id
+    assert installed["callback"].endswith(public_id)
+    body = json.dumps(payload()).encode()
+    signed = "sha256=" + hmac.new(SECRET.encode(), body, hashlib.sha256).hexdigest()
+    for _ in range(2):
+        response = await client.post(
+            f"/api/v1/triggers/ingress/whatsapp/{public_id}",
+            content=body,
+            headers={"X-Hub-Signature-256": signed},
+        )
+        assert response.status_code == 200
+    async with session_scope() as session:
+        event = (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == trigger.id))).one()
+        assert event.state == "skipped"
+        assert event.error == "sender_not_allowed"
+        assert "text" not in event.payload["data"]
+        replay = await ledger.replay_event(session, trigger_id=trigger.id, event_id=event.id, replay_window_days=1)
+        assert replay.state == "skipped"
+        assert replay.error == "sender_not_allowed"
+    assert await dispatcher.run_once(owner="whatsapp-skipped") == 0
+    assert fake_background_service.submits == []
+
+
+async def test_refused_receiver_persists_an_error_instead_of_pending(installed, trigger_owner, owned_flow):
+    created = await connection(trigger_owner)
+    trigger = await reconcile(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+        other = Trigger(
+            flow_id=owned_flow,
+            user_id=trigger_owner,
+            node_id="other-whatsapp-source",
+            provider="whatsapp",
+            kind="whatsapp.event",
+            name="Other receiver",
+            config=dict(row.config),
+            connection_id=created.id,
+            state="pending",
+        )
+        session.add(other)
+        await session.flush()
+        other_id = other.id
+    async with session_scope() as session:
+        other = await session.get(Trigger, other_id)
+        with pytest.raises(SourceConfigurationError, match="already has a receiver"):
+            await TriggerService().enable_and_activate(session, row=other)
+    async with session_scope() as session:
+        other = await session.get(Trigger, other_id)
+        assert other.state == "error"
+        assert "already has a receiver" in other.last_error
+        assert installed["callback"].endswith(trigger.public_id)
+
+
+@pytest.mark.parametrize("invalid", ["callback", "phone", "owner", "background", "active", "leased"])
+async def test_resume_cleanup_keeps_binding_consent_and_lease_guards(installed, trigger_owner, owned_flow, invalid):
+    created = await connection(trigger_owner)
+    trigger = await reconcile(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+        await TriggerService().disable(session, row=row)
+        task = (await session.exec(select(TriggerCleanup).where(TriggerCleanup.trigger_id == trigger.id))).one()
+        task.available_at = datetime.now(timezone.utc) + timedelta(hours=1)
+        task_id = task.id
+        if invalid == "callback":
+            task.provider_state = {**task.provider_state, "callback_url": "https://another.example/hook"}
+        elif invalid == "phone":
+            task.provider_state = {**task.provider_state, "phone_id": "999"}
+        elif invalid == "owner":
+            task.user_id = uuid4()
+        elif invalid == "background":
+            conn = await session.get(Connection, created.id)
+            conn.allow_non_interactive = False
+            session.add(conn)
+        elif invalid == "active":
+            row.state = "active"
+            session.add(row)
+        else:
+            assert await leases.acquire(session, name=f"trigger-cleanup:{task_id}", owner="other-cleaner", ttl_s=60)
+        session.add(task)
+    original = installed["callback"]
+    installed["requests"].clear()
+    await finish_pending_cleanup(trigger.id)
+    assert installed["requests"] == []
+    assert installed["callback"] == original
+    async with session_scope() as session:
+        assert await session.get(TriggerCleanup, task_id) is not None
 
 
 @pytest.mark.parametrize("failure", ["foreign-owner", "policy"])

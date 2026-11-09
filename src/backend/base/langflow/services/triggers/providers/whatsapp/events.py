@@ -26,6 +26,32 @@ MAX_ITEMS = 256
 MAX_VERIFY_TOKEN = 1024
 MAX_TEXT = 4096
 
+_DELIVERY_ERRORS = {
+    131026: "WhatsApp could not deliver this message. Check that the recipient uses WhatsApp and can receive messages.",
+    131047: "The conversation's 24-hour reply window closed. Send an approved template to start a new conversation.",
+    130429: "WhatsApp's sending rate limit was reached. Wait before sending again.",
+    131048: "WhatsApp restricted this message because of the business account's messaging quality limits.",
+    131049: "WhatsApp did not deliver this message under its recipient eligibility limits.",
+}
+
+
+def _delivery_failure(row: dict) -> dict:
+    errors = row.get("errors")
+    code = None
+    if isinstance(errors, list):
+        for error in errors:
+            if isinstance(error, dict) and type(error.get("code")) is int:
+                code = error["code"]
+                break
+    result = {
+        "delivery_error": _DELIVERY_ERRORS.get(
+            code, "WhatsApp could not deliver this message. Check recipient and account eligibility."
+        )
+    }
+    if code is not None:
+        result["delivery_error_code"] = code
+    return result
+
 
 def verify_get(request: IngressRequest, secrets: IngressSecrets, *, tolerance_s: int) -> Verified:  # noqa: ARG001
     supplied = request.query.get("hub.verify_token", "")
@@ -118,11 +144,6 @@ def verify(request: IngressRequest, secrets: IngressSecrets, *, tolerance_s: int
                         raise IngressRejected(msg)
                     if not isinstance(sender, str) or not _USER.fullmatch(sender):
                         continue
-                    if (
-                        secrets.target_config.get("allowed_senders")
-                        and sender not in secrets.target_config["allowed_senders"]
-                    ):
-                        continue
                     data = {
                         "provider": "whatsapp",
                         "event": event,
@@ -147,7 +168,7 @@ def verify(request: IngressRequest, secrets: IngressSecrets, *, tolerance_s: int
                         data["text"] = redact(text["body"], secrets.signing_secret)
                         version = "message"
                     else:
-                        if not secrets.target_config.get("receive_statuses", True):
+                        if not secrets.target_config.get("receive_statuses", False):
                             continue
                         status = row.get("status")
                         if not isinstance(status, str) or status not in {
@@ -159,7 +180,15 @@ def verify(request: IngressRequest, secrets: IngressSecrets, *, tolerance_s: int
                         }:
                             continue
                         data["status"] = status
+                        if status == "failed":
+                            data.update(_delivery_failure(row))
                         version = f"{status}:{timestamp}"
+                    filtered = bool(
+                        secrets.target_config.get("allowed_senders")
+                        and sender not in secrets.target_config["allowed_senders"]
+                    )
+                    if filtered:
+                        data.pop("text", None)
                     items.append(
                         {
                             "provider": "whatsapp",
@@ -168,6 +197,7 @@ def verify(request: IngressRequest, secrets: IngressSecrets, *, tolerance_s: int
                             "version": version,
                             "data": data,
                             "session_key": data["session_key"],
+                            **({"skip_reason": "sender_not_allowed"} if filtered else {}),
                         }
                     )
     return Verified(

@@ -41,7 +41,7 @@ def test_installed_bundle_loads_all_four_components():
     assert len(loaded.integrations[0].capability_manifest.capabilities) == 4
 
 
-@pytest.mark.parametrize("value", [None, 123, "0123456789", "+15551234567", "1/../../x", "x" * 20])
+@pytest.mark.parametrize("value", [None, 123, "0123456789", "1/../../x", "x" * 20])
 def test_recipient_rejects_ambiguous_or_url_targets(value):
     with pytest.raises(ValueError, match=r".+"):
         recipient(value)

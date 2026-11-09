@@ -668,6 +668,10 @@ class Component(CustomComponent):
             raise ValueError(msg)
         graph = getattr(self, "graph", None)
         principal = getattr(graph, "execution_principal", ExecutionPrincipal.unknown())
+        if self.get_vertex() is None:
+            from lfx.integrations.configuration import current_connection_configuration_principal
+
+            principal = current_connection_configuration_principal() or principal
         # Refuse before a lease exists: no credential is minted, decrypted, or
         # refreshed for a provider or action the deployment policy denies.
         capability_ids = self._require_integration_policy_for_input(input_model)

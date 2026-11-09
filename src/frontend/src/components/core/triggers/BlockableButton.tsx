@@ -28,7 +28,11 @@ export function BlockableButton({
   const blocked = Boolean(blockedReason);
   return (
     <>
-      <ShadTooltip content={blockedReason ?? tooltip}>
+      <ShadTooltip
+        content={blockedReason ?? tooltip}
+        avoidCollisions
+        styleClasses="max-w-[min(24rem,var(--radix-tooltip-content-available-width))] whitespace-normal break-words"
+      >
         <Button
           {...props}
           aria-disabled={blocked || undefined}

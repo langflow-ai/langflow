@@ -53,16 +53,20 @@ For triggers, configure public HTTPS ingress and workers as described in [Deploy
 1. Open **Settings > Connections** and select **Add connection**.
 2. Choose **WhatsApp Business**, give the connection a name such as `work`, and enter the system-user token. Create your own connection for the flow.
 3. Save the connection. Langflow checks the token's app, type, permissions, expiry, and WABA phone membership with Meta. The connection shows the verified business phone.
-4. Add **WhatsApp: Send Text**, select the connection, and set **Recipient** and **Text**. Recipient numbers contain digits only, including the country code.
+4. Add **WhatsApp: Send Text**, select the connection, and set **Recipient** and **Text**. Include the country code. The action removes a leading plus sign, spaces, dashes, and parentheses before validating the number.
 
-For **WhatsApp: Send Template**, provide the approved template name, language code, and positional body parameters in their defined order. This version supports text body parameters only. It does not create templates or support header, button, media, or named parameters.
+For **WhatsApp: Send Template**, select a connection and refresh **Approved Template Name** to load its WABA's approved templates. **Template Language** lists the languages available for the selected template, such as `en_US` or `pt_BR`. The body parameter help shows how many positional values that language expects. Enter those values in template order. Both dropdowns accept custom values for templates selected dynamically. Invalid names and languages identify the field to correct. A template that Meta cannot find or has not approved produces an action input error.
+
+This version supports text body parameters only. It does not create templates or support header, button, media, or named parameters. Template refresh reads only metadata through the authenticated connection. It does not send a message.
+
+The three action components support **Tool Mode**. The agent supplies the recipient and message or template inputs, while the connection stays configured on the component. **WhatsApp: Reply to Message** also accepts the inbound event as a tool input and preserves its sender and message context.
 
 ## Enable an event trigger
 
 1. Add **WhatsApp: On Message or Status** and select your connection.
-2. Choose **Receive Text Messages**, **Receive Delivery Statuses**, or both. **Allowed Sender Numbers** optionally restricts inbound senders and status recipients. An empty list allows all senders for the configured business phone.
-3. Save the flow. Allow background execution using **Allow background runs** on the connection input, or **Allow scheduled and deployed runs** in the connection's **Actions** menu.
-4. Open **Settings > Triggers** and enable the trigger. Langflow reserves the app and WABA receiver and installs its callback override. A different existing WABA override blocks setup.
+2. New triggers receive text messages by default. Turn on **Receive Delivery Statuses** when the flow should also process delivery updates. **Allowed Sender Numbers** optionally restricts inbound senders and status recipients. An empty list allows all senders for the configured business phone.
+3. Save the flow. Allow background execution using **Allow background runs** on the connection input, or **Allow scheduled and deployed runs** in the connection's **Actions** menu. A saved trigger shows **Ready to resume** until you start it.
+4. Select **Resume** on the trigger node or in **Settings > Triggers**. Langflow reserves the app and WABA receiver and installs its callback override. The trigger shows **Pending** while setup is running. A different existing WABA override blocks setup and leaves a visible error with the reason.
 5. Send a text message to the business phone or send an outbound message and inspect the trigger's event list for a delivery status.
 
 Incoming POST requests must have a valid Meta HMAC-SHA256 signature over the original request bytes. GET verification checks the generated verification token and responds to the numeric challenge without creating an event.
@@ -77,6 +81,8 @@ Normalized events contain the WABA, business phone, sender or status recipient, 
 
 **WhatsApp: Reply to Message** verifies that the selected connection still targets the original business phone and sends the received message ID as reply context. The event establishes routing context. Your flow remains responsible for recipient consent.
 
+For a message-to-reply flow, leave **Receive Delivery Statuses** off to avoid unnecessary runs. An existing flow keeps its saved event selections. **WhatsApp: Reply to Message** skips delivery statuses without resolving credentials or sending a reply, and stops its downstream graph branch. A flow that needs separate status handling can route `payload.data.event`. Pass `message` events to **WhatsApp: Reply to Message** and handle `status` events separately. The trigger node's run summary identifies received messages and individual delivery statuses.
+
 | Symptom | Recovery |
 | --- | --- |
 | Token expired or was revoked | Reconnect with a system-user token for the same app, WABA, and phone. If the trigger shows **Ready to resume**, select **Resume**. Tokens do not refresh automatically. |
@@ -90,5 +96,11 @@ The receiver does not periodically detect callback changes made outside Langflow
 Pause or disable the trigger and let receiver cleanup finish before changing its account binding or replacing it. Cleanup checks that the current WABA override still belongs to this receiver, then resets that override to the app default. It leaves unrelated replacement callbacks and app subscriptions intact. Pending cleanup blocks a replacement receiver.
 
 Outbound sends are not automatically retried after an uncertain network failure. Retrying a flow or action can send a duplicate. Use delivery status events to inspect the later result of an accepted send.
+
+The Events list identifies received messages and each delivery status. A failed delivery includes safe guidance and Meta's numeric error code. Acceptance by Meta does not establish delivery to the recipient. Known WhatsApp validation errors also appear in failed run details. Use **Open run** for other execution errors.
+
+A signed message from a sender outside **Allowed Sender Numbers** appears as **Skipped** with its reason. Its message text is not retained and its flow does not run. Replaying that skipped row keeps it skipped.
+
+Revoking a connection immediately disarms its receivers and stops new deliveries from entering Langflow. After reconnecting, **Resume** attempts the matching receiver cleanup before registering the callback again. Cleanup for other receivers and active cleanup leases keep their normal safeguards.
 
 See Meta's [token debugger](https://www.postman.com/meta/whatsapp-business-platform/request/i1mz7w8/debug-token), [send text endpoint](https://www.postman.com/meta/whatsapp-business-platform/request/8gvd47s/send-text-message), and [WABA callback override endpoint](https://www.postman.com/meta/whatsapp-business-platform/request/un84tul/override-callback-url) for the provider APIs used by this integration.

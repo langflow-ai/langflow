@@ -31,6 +31,7 @@ from langflow.services.triggers.lease_guard import run_guarded
 from langflow.services.triggers.ownership import is_owned_by
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
     from uuid import UUID
 
     from lfx.integrations.models import ConnectionStatus
@@ -291,13 +292,13 @@ async def with_mailbox_lease(key, work):
             await leases.forget(session, name=name, owner=owner)
 
 
-async def run_cleanup_pass(*, limit: int = 25) -> int:
+async def run_cleanup_pass(*, limit: int = 25, task_ids: Sequence[UUID] | None = None) -> int:
     """Retry cleanup without a trigger row or an open writer during provider I/O."""
     now = datetime.now(timezone.utc)
     async with session_scope() as session:
         # Purge independently of available_at: retry backoff must never extend
         # credential retention. The non-secret intent can await provider TTL.
-        await session.exec(
+        purge = (
             update(TriggerCleanup)
             .where(
                 col(TriggerCleanup.encrypted_credential).is_not(None),
@@ -305,43 +306,48 @@ async def run_cleanup_pass(*, limit: int = 25) -> int:
             )
             .values(encrypted_credential=None, credential_expires_at=None)
         )
+        if task_ids is not None:
+            purge = purge.where(col(TriggerCleanup.id).in_(task_ids))
+        await session.exec(purge)
         # Non-expiring receivers need a saved replacement connection to finish
         # the original callback's cleanup before the trigger can rearm.
-        replacements = (
-            await session.exec(
-                select(TriggerCleanup, Connection.id)
-                .select_from(TriggerCleanup)
-                .join(Trigger, TriggerCleanup.trigger_id == Trigger.id)
-                .join(Connection, Trigger.connection_id == Connection.id)
-                .where(
-                    col(TriggerCleanup.provider).in_(_REPLACEMENT_CLEANUP_PROVIDERS),
-                    Trigger.provider == TriggerCleanup.provider,
-                    Trigger.kind == TriggerCleanup.kind,
-                    Trigger.user_id == TriggerCleanup.user_id,
-                    Connection.provider_key == TriggerCleanup.provider,
-                    Connection.ownership_mode == "user",
-                    Connection.owner_id == TriggerCleanup.user_id,
-                    Connection.status == "ready",
-                    Connection.allow_non_interactive == True,  # noqa: E712
-                    col(TriggerCleanup.encrypted_credential).is_(None),
-                    or_(col(TriggerCleanup.connection_id).is_(None), TriggerCleanup.connection_id != Connection.id),
-                )
-                .limit(limit)
+        replacement_statement = (
+            select(TriggerCleanup, Connection.id)
+            .select_from(TriggerCleanup)
+            .join(Trigger, TriggerCleanup.trigger_id == Trigger.id)
+            .join(Connection, Trigger.connection_id == Connection.id)
+            .where(
+                col(TriggerCleanup.provider).in_(_REPLACEMENT_CLEANUP_PROVIDERS),
+                Trigger.provider == TriggerCleanup.provider,
+                Trigger.kind == TriggerCleanup.kind,
+                Trigger.user_id == TriggerCleanup.user_id,
+                Connection.provider_key == TriggerCleanup.provider,
+                Connection.ownership_mode == "user",
+                Connection.owner_id == TriggerCleanup.user_id,
+                Connection.status == "ready",
+                Connection.allow_non_interactive == True,  # noqa: E712
+                col(TriggerCleanup.encrypted_credential).is_(None),
+                or_(col(TriggerCleanup.connection_id).is_(None), TriggerCleanup.connection_id != Connection.id),
             )
-        ).all()
+            .limit(limit)
+        )
+        if task_ids is not None:
+            replacement_statement = replacement_statement.where(col(TriggerCleanup.id).in_(task_ids))
+        replacements = (await session.exec(replacement_statement)).all()
         for task, connection_id in replacements:
             task.connection_id = connection_id
             task.available_at = now
             session.add(task)
         await session.flush()
-        ids = (
-            await session.exec(
-                select(TriggerCleanup.id)
-                .where(TriggerCleanup.available_at <= now)
-                .order_by(col(TriggerCleanup.available_at))
-                .limit(limit)
-            )
-        ).all()
+        due_statement = (
+            select(TriggerCleanup.id)
+            .where(TriggerCleanup.available_at <= now)
+            .order_by(col(TriggerCleanup.available_at))
+            .limit(limit)
+        )
+        if task_ids is not None:
+            due_statement = due_statement.where(col(TriggerCleanup.id).in_(task_ids))
+        ids = (await session.exec(due_statement)).all()
     completed = 0
     for task_id in ids:
         owner = leases.new_owner_token("cleanup")

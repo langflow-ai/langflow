@@ -24,6 +24,7 @@ from lfx.custom.utils import (
 from lfx.exceptions.tweaks import TweakRefusedError
 from lfx.graph.graph.base import Graph
 from lfx.graph.schema import RunOutputs
+from lfx.integrations.configuration import connection_configuration_context
 from lfx.log.logger import logger
 from lfx.observability import execution_protocol
 from lfx.schema.legacy_render import project_payload_to_v1
@@ -1983,10 +1984,11 @@ async def custom_component(
                 parameters=_raw_component_parameters(current_template),
             )
         if raw_code.frontend_node is not None:
-            built_frontend_node = await component_instance.update_frontend_node(
-                built_frontend_node,
-                raw_code.frontend_node,
-            )
+            with connection_configuration_context(user_id=user.id):
+                built_frontend_node = await component_instance.update_frontend_node(
+                    built_frontend_node,
+                    raw_code.frontend_node,
+                )
 
         tool_mode: bool = built_frontend_node.get("tool_mode", False)
         if isinstance(component_instance, Component):
@@ -2120,12 +2122,13 @@ async def custom_component_update(
                 )
                 cc_instance.set_attributes(params)
         updated_build_config = code_request.get_template()
-        await update_component_build_config(
-            cc_instance,
-            build_config=updated_build_config,
-            field_value=code_request.field_value,
-            field_name=code_request.field,
-        )
+        with connection_configuration_context(user_id=user.id):
+            await update_component_build_config(
+                cc_instance,
+                build_config=updated_build_config,
+                field_value=code_request.field_value,
+                field_name=code_request.field,
+            )
         if "code" not in updated_build_config or not updated_build_config.get("code", {}).get("value"):
             updated_build_config = add_code_field_to_build_config(updated_build_config, effective_code)
         else:

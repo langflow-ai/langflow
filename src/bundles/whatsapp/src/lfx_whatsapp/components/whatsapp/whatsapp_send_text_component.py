@@ -21,8 +21,14 @@ class WhatsAppSendTextComponent(WhatsAppActionComponent):
     capability_id = "whatsapp.message.send"
     inputs = [
         connection_input(capability_id),
-        StrInput(name="to", display_name="Recipient", required=True),
-        MultilineInput(name="text", display_name="Text", required=True),
+        StrInput(
+            name="to",
+            display_name="Recipient",
+            required=True,
+            tool_mode=True,
+            info="Include the country code. A leading +, spaces, dashes, and parentheses are removed.",
+        ),
+        MultilineInput(name="text", display_name="Text", required=True, tool_mode=True),
     ]
     outputs = [Output(display_name="Accepted Message", name="message", method="build_message")]
 

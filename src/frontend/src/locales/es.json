@@ -3507,5 +3507,15 @@
   "decision.minimumProbability": "Probabilidad mínima",
   "decision.errorAction": "Ante un error de evaluación",
   "decision.requestId": "ID de solicitud del proveedor",
-  "decision.tone.answered": "Respondida"
+  "decision.tone.answered": "Respondida",
+  "triggers.events.whatsapp.message": "Mensaje recibido",
+  "triggers.events.whatsapp.sent": "Estado enviado",
+  "triggers.events.whatsapp.delivered": "Estado entregado",
+  "triggers.events.whatsapp.read": "Estado leído",
+  "triggers.events.whatsapp.failed": "Error de entrega",
+  "triggers.events.whatsapp.status": "Estado del mensaje",
+  "triggers.events.state.skipped": "Omitido",
+  "triggers.events.filters.skipped": "Omitidos",
+  "triggers.eventError.sender_not_allowed": "El remitente no está en la lista de números permitidos.",
+  "triggers.events.skippedCannotReplay": "Los eventos omitidos no se pueden repetir. Actualiza el filtro de remitentes y envía un mensaje nuevo."
 }
