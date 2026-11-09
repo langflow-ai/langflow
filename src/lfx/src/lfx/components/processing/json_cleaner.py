@@ -1,4 +1,5 @@
 import json
+import re
 import unicodedata
 
 from lfx.custom.custom_component.component import Component
@@ -57,11 +58,11 @@ class JSONCleaner(Component):
         normalize_unicode = self.normalize_unicode
         validate_json = self.validate_json
 
-        start = json_str.find("{")
-        end = json_str.rfind("}")
-        if start == -1 or end == -1:
-            msg = "Invalid JSON string: Missing '{' or '}'"
+        span = self._find_json_span(json_str)
+        if span is None:
+            msg = "Invalid JSON string: no JSON object or array found"
             raise ValueError(msg)
+        start, end = span
         try:
             json_str = json_str[start : end + 1]
 
@@ -80,6 +81,34 @@ class JSONCleaner(Component):
         except Exception as e:
             msg = f"Error cleaning JSON string: {e}"
             raise ValueError(msg) from e
+
+    @staticmethod
+    def _find_json_span(s: str) -> tuple[int, int] | None:
+        """Return the start and end index of the outermost JSON object or array in the string."""
+        object_span = (s.find("{"), s.rfind("}"))
+        has_object = -1 not in object_span
+        array_start = -1
+        depth = 0
+        quoted_string = re.compile(r"""(?<![\w\\])(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')""", re.DOTALL)
+        index = 0
+        while index < len(s):
+            if depth and (quoted := quoted_string.match(s, index)):
+                # Leave unmatched quotes and unquoted apostrophes for json_repair.
+                index = quoted.end()
+                continue
+            char = s[index]
+            if char == "[":
+                if depth == 0:
+                    array_start = index
+                depth += 1
+            elif char == "]" and depth:
+                depth -= 1
+                if depth == 0 and (not has_object or (array_start < object_span[0] and index > object_span[1])):
+                    return array_start, index
+            index += 1
+        if has_object:
+            return object_span
+        return None
 
     def _remove_control_characters(self, s: str) -> str:
         """Remove control characters from the string."""
