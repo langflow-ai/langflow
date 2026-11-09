@@ -19,6 +19,8 @@ REQUEST_KEY = {"OPENAI_API_KEY": "sk-caller-key"}  # pragma: allowlist secret
 def transport(monkeypatch):
     for name in ("OPENAI_BASE_URL", "OPENAI_API_BASE", "LANGFLOW_OPENAI_BASE_URL", "LANGFLOW_OPENAI_API_BASE"):
         monkeypatch.delenv(name, raising=False)
+    # Enabling the model validates credentials before the mocked provider call.
+    monkeypatch.setenv("OPENAI_API_KEY", REQUEST_KEY["OPENAI_API_KEY"])
     sent = Mock(
         return_value=DecisionResult(kind="boolean", provider="OpenAI", model="gpt-6-luna", probability_true=0.8)
     )
