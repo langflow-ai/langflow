@@ -25,6 +25,18 @@ class BaseAuthService(Service, abc.ABC):
 
     name = ServiceType.AUTH_SERVICE.value
 
+    async def validate_tool_call(
+        self,
+        *,
+        flow_id: str,
+        component_id: str,
+        tool_tag: str,
+        tool_name: str,
+        approval_actions: tuple[str, ...],
+        metadata_configured: bool,
+    ) -> None:
+        """Recheck current tool settings when the host maintains saved flows."""
+
     @abc.abstractmethod
     async def authenticate_with_credentials(
         self,

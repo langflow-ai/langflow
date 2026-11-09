@@ -63,6 +63,19 @@ class AuthUserProtocol(Protocol):
 class AuthServiceProtocol(Protocol):
     """Protocol for auth service (minimal surface for dependency injection)."""
 
+    async def validate_tool_call(
+        self,
+        *,
+        flow_id: str,
+        component_id: str,
+        tool_tag: str,
+        tool_name: str,
+        approval_actions: tuple[str, ...],
+        metadata_configured: bool,
+    ) -> None:
+        """Recheck current host tool settings before execution."""
+        ...
+
     @abstractmethod
     async def get_current_user(
         self,

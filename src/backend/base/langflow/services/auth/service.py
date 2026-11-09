@@ -8,7 +8,7 @@ import warnings
 from collections import OrderedDict
 from collections.abc import Awaitable, Callable, Coroutine, Iterable, Mapping
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NoReturn
 from uuid import UUID
 
 import jwt
@@ -1311,6 +1311,58 @@ class AuthService(BaseAuthService):
             return None
         set_current_model_provider_policy_context(user_id=current_user.id, attributes={"is_superuser": True})
         return current_user
+
+    async def validate_tool_call(
+        self,
+        *,
+        flow_id: str,
+        component_id: str,
+        tool_tag: str,
+        tool_name: str,
+        approval_actions: tuple[str, ...],
+        metadata_configured: bool,
+    ) -> None:
+        """Refuse stale tool permissions before the captured callable executes."""
+        from langflow.services.database.models.flow.model import Flow
+
+        def deny() -> NoReturn:
+            msg = "Stored tool settings no longer authorize this call"
+            raise PermissionError(msg)
+
+        async with session_scope() as session:
+            flow = await session.get(Flow, UUID(flow_id))
+            if flow is None or not isinstance(flow.data, dict):
+                deny()
+            nodes = flow.data.get("nodes") or []
+            matches = [node for node in nodes if isinstance(node, dict) and node.get("id") == component_id]
+            if len(matches) != 1:
+                deny()
+            node = matches[0]
+            template = ((node.get("data") or {}).get("node") or {}).get("template") or {}
+            field = template.get("tools_metadata")
+            if field is None and not metadata_configured:
+                return
+            rows = field.get("value") if isinstance(field, dict) else None
+            if not isinstance(rows, list):
+                deny()
+            matches = [
+                row
+                for row in rows
+                if isinstance(row, dict)
+                and isinstance(row.get("tags"), list)
+                and row["tags"]
+                and row["tags"][0] == tool_tag
+            ]
+            if len(matches) != 1:
+                deny()
+            row = matches[0]
+            if row.get("status", True) is not True:
+                deny()
+            if row.get("name") and row["name"] != tool_name:
+                deny()
+            actions = row.get("approval_actions") or []
+            if actions and set(actions) != set(approval_actions):
+                deny()
 
     async def get_webhook_user(self, flow_id: str, request: Request) -> UserRead:
         settings_service = self.settings
