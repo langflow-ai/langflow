@@ -5,6 +5,8 @@ from pathlib import Path
 from platformdirs import user_cache_dir
 
 from lfx.schema.data import Data
+from lfx.services.deps import get_settings_service
+from lfx.utils.file_path_security import enforce_storage_key_scope
 
 
 def raw_frontend_data_is_valid(raw_frontend_data):
@@ -12,27 +14,85 @@ def raw_frontend_data_is_valid(raw_frontend_data):
     return "template" in raw_frontend_data and "display_name" in raw_frontend_data
 
 
-def get_file_path_value(file_path):
-    """Get the file path value if the file exists, else return empty string."""
+def _get_storage_file_path_value(file_path, scope_ids) -> str:
+    """Return an uploaded file's storage key if it names a file in the caller's own folder, else "".
+
+    Uploads are saved as "<namespace>/<file_name>" keys relative to the local storage root
+    (``config_dir``), where the namespace is the uploading user's id. The key is kept only when
+    its namespace is one of ``scope_ids``, its file name has no separators or "..", the namespace
+    folder is a real folder (not a symlink), and the path the key resolves to (symlinks followed) is
+    a regular file inside that folder.
+    """
+    if not scope_ids or not isinstance(file_path, str):
+        return ""
+    try:
+        namespace, file_name = enforce_storage_key_scope(file_path, scope_ids)
+        settings = get_settings_service().settings
+        if settings.storage_type != "local":
+            return ""
+        storage_root = Path(settings.config_dir).resolve()
+        namespace_dir = storage_root / namespace
+        path = (namespace_dir / file_name).resolve()
+        # The namespace folder must resolve to itself: a folder that is a symlink (to anywhere, even
+        # another user's folder) would move the boundary. is_file can raise too, e.g. ENAMETOOLONG
+        # for a crafted key, so both checks stay inside the try.
+        if namespace_dir.resolve() != namespace_dir or not path.is_relative_to(namespace_dir) or not path.is_file():
+            return ""
+    except (AttributeError, OSError, RuntimeError, ValueError):
+        return ""
+    return file_path
+
+
+# A file input with list=True holds the files a user picked, a handful in practice. Each path costs
+# filesystem calls and the list comes from the client, so a longer list is cleared instead of checked.
+MAX_FILE_PATH_LIST_LENGTH = 10_000
+
+
+def get_file_path_value(file_path, scope_ids=None):
+    """Get the file path value if the file exists, else return empty string.
+
+    A list (a file input with ``list=True``) is kept only when every path in it is kept. Each
+    distinct path is checked once, and the check stops at the first path that is not kept.
+    """
+    if isinstance(file_path, list):
+        if not file_path or len(file_path) > MAX_FILE_PATH_LIST_LENGTH:
+            return ""
+        kept = {}
+        for path in file_path:
+            if not isinstance(path, str):
+                return ""
+            if path not in kept:
+                kept[path] = _get_single_file_path_value(path, scope_ids)
+                if not kept[path]:
+                    return ""
+        return [kept[path] for path in file_path]
+    return _get_single_file_path_value(file_path, scope_ids)
+
+
+def _get_single_file_path_value(file_path, scope_ids):
+    storage_key = _get_storage_file_path_value(file_path, scope_ids)
+    if storage_key:
+        return storage_key
+
     try:
         path = Path(file_path).resolve()
         cache_dir = Path(user_cache_dir("langflow", "langflow")).resolve()
+
+        # Check for safety
+        # If the path is not in the cache dir, return empty string
+        # This is to prevent access to files outside the cache dir
+        # If the path is not a file, return empty string
+        if not path.is_relative_to(cache_dir):
+            return ""
+
+        if not path.is_file():
+            return ""
     except (OSError, RuntimeError, TypeError, ValueError):
-        return ""
-
-    # Check for safety
-    # If the path is not in the cache dir, return empty string
-    # This is to prevent access to files outside the cache dir
-    # If the path is not a file, return empty string
-    if not path.is_relative_to(cache_dir):
-        return ""
-
-    if not path.is_file():
         return ""
     return str(path)
 
 
-def update_template_field(new_template, key, previous_value_dict) -> None:
+def update_template_field(new_template, key, previous_value_dict, scope_ids=None) -> None:
     """Updates a specific field in the frontend template."""
     template_field = new_template.get(key)
     if not template_field or template_field.get("type") != previous_value_dict.get("type"):
@@ -50,7 +110,7 @@ def update_template_field(new_template, key, previous_value_dict) -> None:
         template_field["value"] = previous_value
 
     if previous_value_dict.get("file_path"):
-        file_path_value = get_file_path_value(previous_value_dict["file_path"])
+        file_path_value = get_file_path_value(previous_value_dict["file_path"], scope_ids)
         if not file_path_value:
             # If the file does not exist, remove the value from the template_field["value"]
             template_field["value"] = ""
@@ -62,26 +122,54 @@ def is_valid_data(frontend_node, raw_frontend_data):
     return frontend_node and "template" in frontend_node and raw_frontend_data_is_valid(raw_frontend_data)
 
 
-def update_template_values(new_template, previous_template) -> None:
+def update_template_values(new_template, previous_template, scope_ids=None) -> None:
     """Updates the frontend template with values from the raw template."""
     for key, previous_value_dict in previous_template.items():
         if key == "code" or not isinstance(previous_value_dict, dict):
             continue
 
-        update_template_field(new_template, key, previous_value_dict)
+        update_template_field(new_template, key, previous_value_dict, scope_ids)
 
 
-def update_frontend_node_with_template_values(frontend_node, raw_frontend_node):
+def copy_saved_custom_field_values(frontend_node, raw_frontend_node, scope_ids=None) -> None:
+    """Gives the custom fields the update generated (a Prompt's variables) their saved values.
+
+    A component builds its custom fields from the saved template text in its own hook, which runs
+    after the generic value copy, so they come back empty. Only fields the updated node lists are
+    filled: a field the update did not generate is not brought back.
+    """
+    if not is_valid_data(frontend_node, raw_frontend_node):
+        return
+    custom_fields = frontend_node.get("custom_fields")
+    if not isinstance(custom_fields, dict):
+        return
+    template = frontend_node["template"]
+    saved_template = raw_frontend_node["template"]
+    names = {
+        name
+        for listed in custom_fields.values()
+        if isinstance(listed, list)
+        for name in listed
+        if isinstance(name, str) and name != "code"
+    }
+    for name in names:
+        saved_field = saved_template.get(name)
+        if name in template and isinstance(saved_field, dict):
+            update_template_field(template, name, saved_field, scope_ids)
+
+
+def update_frontend_node_with_template_values(frontend_node, raw_frontend_node, scope_ids=None):
     """Updates the given frontend node with values from the raw template data.
 
     :param frontend_node: A dict representing a built frontend node.
     :param raw_frontend_node: A dict representing raw template data.
+    :param scope_ids: Storage namespaces the caller owns; saved upload keys outside them are cleared.
     :return: Updated frontend node.
     """
     if not is_valid_data(frontend_node, raw_frontend_node):
         return frontend_node
 
-    update_template_values(frontend_node["template"], raw_frontend_node["template"])
+    update_template_values(frontend_node["template"], raw_frontend_node["template"], scope_ids)
 
     old_code = raw_frontend_node["template"]["code"]["value"]
     new_code = frontend_node["template"]["code"]["value"]
