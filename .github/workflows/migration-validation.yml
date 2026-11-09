@@ -21,6 +21,9 @@ on:
       - 'src/backend/tests/unit/services/database/models/flow_version/**'
       - 'src/backend/tests/unit/services/jobs/**'
 
+permissions:
+  contents: read
+
 jobs:
   model-migration-consistency:
     name: Model/Migration Consistency
