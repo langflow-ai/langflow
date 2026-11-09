@@ -384,7 +384,8 @@ export default function ConnectionsPage() {
           deploymentContext={integrationsQuery.data?.deployment_context}
           onConnected={(connection) => {
             const owner = ownerKindOf(connection, userData?.id);
-            setView(
+            setView("connections");
+            setOwnerFilter(
               owner === "instance"
                 ? "instance"
                 : owner === "other" && isSuperuser
