@@ -81,7 +81,9 @@ def test_litellm_dependent_extras_are_available_on_python_314() -> None:
 
     litellm = next(Requirement(spec) for spec in optional["litellm"] if Requirement(spec).name == "litellm")
     assert any(spec.operator == ">=" and spec.version == "1.103.10" for spec in litellm.specifier)
-    assert litellm.marker is None
+    assert litellm.marker is None or litellm.marker.evaluate(
+        {"python_version": "3.14", "python_full_version": "3.14.0"}
+    )
 
     opik = next(Requirement(spec) for spec in optional["opik"] if Requirement(spec).name == "opik")
     assert opik.marker is None
@@ -102,3 +104,9 @@ def test_litellm_constraint_requires_patched_versions_on_all_supported_pythons()
         assert Version("2.0.0") not in specifier
         for version in vulnerable_versions:
             assert not specifier.contains(version, prereleases=True)
+
+    # Python 3.15 needs litellm's 1.110 dev build, which dropped the removed sre_constants import.
+    specifier_315 = _active_litellm_constraint("3.15").specifier
+    assert specifier_315.contains("1.110.0.dev2", prereleases=True)
+    for version in (*vulnerable_versions, "1.107.0"):
+        assert not specifier_315.contains(version, prereleases=True)

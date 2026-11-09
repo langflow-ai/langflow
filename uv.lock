@@ -40,8 +40,8 @@ members = [
     "lfx-azure",
     "lfx-bundles",
     "lfx-cohere",
-    "lfx-confluent",
     "lfx-confluence",
+    "lfx-confluent",
     "lfx-datastax",
     "lfx-docling",
     "lfx-duckduckgo",
@@ -97,7 +97,8 @@ constraints = [
     { name = "langgraph-sdk", specifier = ">=0.4.6" },
     { name = "libcst", marker = "python_full_version >= '3.15'", specifier = ">=1.9.0" },
     { name = "line-profiler", marker = "python_full_version >= '3.15'", specifier = ">=5.1.0" },
-    { name = "litellm", specifier = ">=1.103.10,!=1.104.0rc1,<1.104.0,!=1.107.0" },
+    { name = "litellm", marker = "python_full_version < '3.15'", specifier = ">=1.103.10,!=1.104.0rc1,<1.104.0,!=1.107.0" },
+    { name = "litellm", marker = "python_full_version >= '3.15'", specifier = "==1.110.0.dev2" },
     { name = "lxml", marker = "python_full_version >= '3.15'", specifier = ">=6.1.2" },
     { name = "markupsafe", marker = "python_full_version >= '3.15'", specifier = ">=3.0.4" },
     { name = "mmh3", marker = "python_full_version >= '3.15'", specifier = ">=5.3.1" },
@@ -3270,7 +3271,7 @@ dependencies = [
     { name = "langchain-text-splitters" },
     { name = "langfuse" },
     { name = "langgraph" },
-    { name = "litellm" },
+    { name = "litellm", version = "1.103.10", source = { registry = "https://pypi.org/simple" } },
     { name = "loguru" },
     { name = "markdownify" },
     { name = "mcp", extra = ["cli"] },
@@ -8162,7 +8163,8 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
     { name = "langchain-core" },
-    { name = "litellm" },
+    { name = "litellm", version = "1.103.10", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.15'" },
+    { name = "litellm", version = "1.110.0.dev2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.15'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b1/fa/088dd2e3426aa413991afb67aef4c4e79ff3c0e4c25f753842bfaf4ec43f/langchain_litellm-0.5.1.tar.gz", hash = "sha256:1af5743c424456ce12c59cbf08b4774fbc9025124b6de8249713864242db57e1", size = 18869, upload-time = "2026-02-11T00:56:40.631Z" }
 wheels = [
@@ -8736,7 +8738,8 @@ dependencies = [
     { name = "langsmith" },
     { name = "langwatch", marker = "python_full_version < '3.14'" },
     { name = "lfx", extra = ["sqlite"] },
-    { name = "litellm" },
+    { name = "litellm", version = "1.103.10", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.15'" },
+    { name = "litellm", version = "1.110.0.dev2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.15'" },
     { name = "loguru" },
     { name = "mako" },
     { name = "mcp" },
@@ -8860,7 +8863,7 @@ cuga = [
     { name = "cuga", marker = "(python_full_version < '3.14' and platform_machine == 'arm64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
     { name = "fastmcp", marker = "(python_full_version < '3.14' and platform_machine == 'arm64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
     { name = "langchain-litellm" },
-    { name = "litellm", marker = "(python_full_version < '3.14' and platform_machine == 'arm64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
+    { name = "litellm", version = "1.103.10", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.14' and platform_machine == 'arm64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
 ]
 datasets = [
     { name = "datasets" },
@@ -8975,7 +8978,8 @@ lark = [
 litellm = [
     { name = "apscheduler" },
     { name = "cryptography" },
-    { name = "litellm" },
+    { name = "litellm", version = "1.103.10", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.15'" },
+    { name = "litellm", version = "1.110.0.dev2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.15'" },
 ]
 local = [
     { name = "ctransformers" },
@@ -9308,10 +9312,12 @@ requires-dist = [
     { name = "lfx", extras = ["sandbox"], marker = "extra == 'sandbox'", editable = "src/lfx" },
     { name = "lfx", extras = ["sqlite"], editable = "src/lfx" },
     { name = "lfx", extras = ["toolguard"], marker = "extra == 'toolguard'", editable = "src/lfx" },
-    { name = "litellm", specifier = ">=1.103.10,!=1.104.0rc1,<1.104.0,!=1.107.0" },
+    { name = "litellm", marker = "python_full_version < '3.15'", specifier = ">=1.103.10,!=1.104.0rc1,<1.104.0,!=1.107.0" },
+    { name = "litellm", marker = "python_full_version >= '3.15'", specifier = "==1.110.0.dev2" },
+    { name = "litellm", marker = "python_full_version >= '3.15' and extra == 'litellm'", specifier = "==1.110.0.dev2" },
+    { name = "litellm", marker = "python_full_version < '3.15' and extra == 'litellm'", specifier = ">=1.103.10,!=1.104.0rc1,<1.104.0,!=1.107.0" },
     { name = "litellm", marker = "python_full_version < '3.14' and platform_machine == 'arm64' and sys_platform == 'darwin' and extra == 'cuga'", specifier = ">=1.103.10,!=1.104.0rc1,<1.104.0,!=1.107.0" },
     { name = "litellm", marker = "python_full_version < '3.14' and sys_platform != 'darwin' and extra == 'cuga'", specifier = ">=1.103.10,!=1.104.0rc1,<1.104.0,!=1.107.0" },
-    { name = "litellm", marker = "extra == 'litellm'", specifier = ">=1.103.10,!=1.104.0rc1,<1.104.0,!=1.107.0" },
     { name = "loguru", specifier = ">=0.7.1,<1.0.0" },
     { name = "mako", specifier = ">=1.4.2,<2.0.0" },
     { name = "markdown", marker = "extra == 'markdown'", specifier = ">=3.8.0" },
@@ -10076,7 +10082,7 @@ all = [
     { name = "langchain-sambanova" },
     { name = "langchain-unstructured" },
     { name = "langchain-weaviate" },
-    { name = "litellm", marker = "(python_full_version < '3.14' and platform_machine == 'arm64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
+    { name = "litellm", version = "1.103.10", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.14' and platform_machine == 'arm64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
     { name = "markdown" },
     { name = "mem0ai" },
     { name = "mrscraper-sdk" },
@@ -10220,7 +10226,7 @@ cuga = [
     { name = "cuga", marker = "(python_full_version < '3.14' and platform_machine == 'arm64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
     { name = "fastmcp", marker = "(python_full_version < '3.14' and platform_machine == 'arm64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
     { name = "langchain-litellm" },
-    { name = "litellm", marker = "(python_full_version < '3.14' and platform_machine == 'arm64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
+    { name = "litellm", version = "1.103.10", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.14' and platform_machine == 'arm64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
 ]
 deepseek = [
     { name = "langchain-openai" },
@@ -10674,6 +10680,21 @@ requires-dist = [
 ]
 
 [[package]]
+name = "lfx-confluence"
+version = "0.1.0"
+source = { editable = "src/bundles/confluence" }
+dependencies = [
+    { name = "httpx" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.27,<1" },
+    { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
 name = "lfx-confluent"
 version = "0.3.1"
 source = { editable = "src/bundles/confluent" }
@@ -10693,21 +10714,6 @@ requires-dist = [
     { name = "pyarrow", marker = "python_full_version < '3.11'", specifier = ">=23.0.1,<24.0.0" },
     { name = "pyarrow", marker = "python_full_version >= '3.11'", specifier = ">=26.0.1,<27.0.0" },
     { name = "pyiceberg", specifier = ">=0.10,<1" },
-]
-
-[[package]]
-name = "lfx-confluence"
-version = "0.1.0"
-source = { editable = "src/bundles/confluence" }
-dependencies = [
-    { name = "httpx" },
-    { name = "lfx" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "httpx", specifier = ">=0.27,<1" },
-    { name = "lfx", editable = "src/lfx" },
 ]
 
 [[package]]
@@ -11193,7 +11199,8 @@ source = { editable = "src/bundles/toolguard" }
 dependencies = [
     { name = "fastmcp" },
     { name = "lfx" },
-    { name = "litellm" },
+    { name = "litellm", version = "1.103.10", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.15'" },
+    { name = "litellm", version = "1.110.0.dev2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.15'" },
     { name = "toolguard" },
 ]
 
@@ -11201,7 +11208,8 @@ dependencies = [
 requires-dist = [
     { name = "fastmcp", specifier = ">=3.4.10,<4.0.0" },
     { name = "lfx", editable = "src/lfx" },
-    { name = "litellm", specifier = ">=1.103.10,!=1.104.0rc1,<1.104.0,!=1.107.0" },
+    { name = "litellm", marker = "python_full_version < '3.15'", specifier = ">=1.103.10,!=1.104.0rc1,<1.104.0,!=1.107.0" },
+    { name = "litellm", marker = "python_full_version >= '3.15'", specifier = "==1.110.0.dev2" },
     { name = "toolguard", specifier = ">=0.2.20,<1.0.0" },
 ]
 
@@ -11593,6 +11601,23 @@ wheels = [
 name = "litellm"
 version = "1.103.10"
 source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version == '3.14.*' and sys_platform != 'darwin' and sys_platform != 'win32'",
+    "python_full_version == '3.14.*' and sys_platform == 'darwin'",
+    "python_full_version == '3.14.*' and sys_platform == 'win32'",
+    "python_full_version == '3.13.*' and sys_platform != 'darwin' and sys_platform != 'win32'",
+    "python_full_version == '3.13.*' and sys_platform == 'win32'",
+    "python_full_version == '3.13.*' and platform_machine == 'arm64' and sys_platform == 'darwin'",
+    "python_full_version == '3.13.*' and platform_machine != 'arm64' and sys_platform == 'darwin'",
+    "python_full_version == '3.12.*' and sys_platform != 'darwin' and sys_platform != 'win32'",
+    "python_full_version == '3.12.*' and sys_platform == 'win32'",
+    "python_full_version == '3.12.*' and platform_machine == 'arm64' and sys_platform == 'darwin'",
+    "python_full_version == '3.12.*' and platform_machine != 'arm64' and sys_platform == 'darwin'",
+    "python_full_version < '3.12' and sys_platform != 'darwin' and sys_platform != 'win32'",
+    "python_full_version < '3.12' and sys_platform == 'win32'",
+    "python_full_version < '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'",
+    "python_full_version < '3.12' and platform_machine != 'arm64' and sys_platform == 'darwin'",
+]
 dependencies = [
     { name = "aiohttp" },
     { name = "boto3" },
@@ -11604,12 +11629,10 @@ dependencies = [
     { name = "jinja2" },
     { name = "jsonschema" },
     { name = "openai" },
-    { name = "pydantic", version = "2.13.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.15'" },
-    { name = "pydantic", version = "2.14.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.15'" },
+    { name = "pydantic", version = "2.13.4", source = { registry = "https://pypi.org/simple" } },
     { name = "pydantic-settings" },
     { name = "python-dotenv" },
-    { name = "tiktoken", version = "0.13.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.15'" },
-    { name = "tiktoken", version = "0.14.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.15'" },
+    { name = "tiktoken", version = "0.13.0", source = { registry = "https://pypi.org/simple" } },
     { name = "tokenizers" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/fc/0d/4d210a75f88820903421d36d8160ed07e844e53941730433c294145d5b98/litellm-1.103.10.tar.gz", hash = "sha256:b1bf12810b6565156c6b23bda2ccaf115c6edafbbf92e98220ecbc73f89d6972", size = 18763166, upload-time = "2026-10-27T19:41:29.156Z" }
@@ -11621,6 +11644,53 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/b3/4c/7eedabeabf932658f31db95179607e31842e7e04e30be615d2233aa883df/litellm-1.103.10-cp310-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:5774a19560e93b1da1838b160d0ac4fec5238c11bde2cd2411422a06fb4f5e7f", size = 27463638, upload-time = "2026-10-27T19:41:21.225Z" },
     { url = "https://files.pythonhosted.org/packages/d0/5e/d044b5092079b76b509e29faf0bd2f7a66f4d0ecdd1ffe53d0a8dc9e694e/litellm-1.103.10-cp310-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:a7d2b6a0de7c0abfc97fe89184cb2b719a5f76170a4cac9ffd4d14e85fbb3b73", size = 28047479, upload-time = "2026-10-27T19:41:23.808Z" },
     { url = "https://files.pythonhosted.org/packages/0a/5b/8e011f2fed0a445b71b24a79cc426e30433e7435b684167c1953202a3a8a/litellm-1.103.10-cp310-abi3-win_amd64.whl", hash = "sha256:adbcbb663a9cc96331de0f6ddd60e81d883288b901b7a4f6fbbfeb66edb669cd", size = 27992824, upload-time = "2026-10-27T19:41:26.523Z" },
+]
+
+[[package]]
+name = "litellm"
+version = "1.110.0.dev2"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
+    "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
+    "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
+    "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
+    "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
+]
+dependencies = [
+    { name = "aiohttp" },
+    { name = "anyio" },
+    { name = "boto3" },
+    { name = "certifi" },
+    { name = "click" },
+    { name = "filelock" },
+    { name = "httpx", extra = ["http2"] },
+    { name = "huggingface-hub" },
+    { name = "importlib-metadata" },
+    { name = "jinja2" },
+    { name = "jsonschema" },
+    { name = "openai" },
+    { name = "packaging" },
+    { name = "pydantic", version = "2.14.1", source = { registry = "https://pypi.org/simple" } },
+    { name = "pydantic-settings" },
+    { name = "python-dotenv" },
+    { name = "pyyaml" },
+    { name = "tiktoken", version = "0.14.0", source = { registry = "https://pypi.org/simple" } },
+    { name = "tokenizers" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/77/0d/842ecc95e89dfdd62bc86920e661f10045e405b1bc3a021de85f491ed8fb/litellm-1.110.0.dev2.tar.gz", hash = "sha256:d29be59e6223151e0cfc3b8d6bb526c1f41f0d5a00ee1d919fb035029ac9100a", size = 25923586, upload-time = "2026-11-08T02:22:11.63Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/54/de/bff1d45ccbac824d53baebf7a1c4f538494ce3dad0e160712ad4b67cf238/litellm-1.110.0.dev2-cp310-abi3-macosx_10_12_x86_64.whl", hash = "sha256:60799bdf548f6fa4ed8a3e4aaa287cc6e8f6c7c2194d92e7403ad50375df4161", size = 43269622, upload-time = "2026-11-08T02:21:46.018Z" },
+    { url = "https://files.pythonhosted.org/packages/bd/f1/f44a51a594d55385a4560757dfb2dff85f5277420744643ded747289859b/litellm-1.110.0.dev2-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:06e8b20516b561b6d1c2616fbadffebdf1856d7bffdc1cc57ee345930d5042c0", size = 42388795, upload-time = "2026-11-08T02:21:50.526Z" },
+    { url = "https://files.pythonhosted.org/packages/92/b6/ac8a89804bb67f64271d73613c85b3958969dde9a6d2ba62c71a1bb94d88/litellm-1.110.0.dev2-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:cbbe03f32bbadbd04ca7e3e6821b3e3cefd9eceeb507f7586ee75b83307d7628", size = 42997660, upload-time = "2026-11-08T02:21:54.343Z" },
+    { url = "https://files.pythonhosted.org/packages/d0/bf/6d82e7cf7b7bba3d3f07de164380936244f4d2e9e286c4cfc0bcf934dfaf/litellm-1.110.0.dev2-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:063fe2dc6b2f1c0c6c87dc90813eba70822a5122fb1a56fb0beb779928f56e80", size = 43807366, upload-time = "2026-11-08T02:21:57.958Z" },
+    { url = "https://files.pythonhosted.org/packages/18/12/5a5f34ac8c1b2b24d65a34a4da12d547c988461d17236389f5fe5a9f8adf/litellm-1.110.0.dev2-cp310-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:54ef9a0590f34efa2937f2170a580e3e919f3c87f6f4a0015e5d133b52d666c0", size = 43095261, upload-time = "2026-11-08T02:22:01.394Z" },
+    { url = "https://files.pythonhosted.org/packages/ab/36/3c96825c2e760d2f1ba2124736dd61a3d0cabe93295f7c7de09c247b6f90/litellm-1.110.0.dev2-cp310-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:3dd0e5ed277e2c8050bd52968c5af0d543923960f70600566b3a1f9df5cc8e9d", size = 44009378, upload-time = "2026-11-08T02:22:05.053Z" },
+    { url = "https://files.pythonhosted.org/packages/75/ff/588d538d46785fc90655d4aee360bba8e3a0221a232ffa4a5fff69134d91/litellm-1.110.0.dev2-cp310-abi3-win_amd64.whl", hash = "sha256:aa552cc2dd06fcc1d108272f92d5f0f2902c345e529aa62a49930c5a0e2d880e", size = 45225210, upload-time = "2026-11-08T02:22:08.468Z" },
 ]
 
 [[package]]
@@ -14919,7 +14989,8 @@ dependencies = [
     { name = "click" },
     { name = "httpx" },
     { name = "jinja2" },
-    { name = "litellm" },
+    { name = "litellm", version = "1.103.10", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.15'" },
+    { name = "litellm", version = "1.110.0.dev2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.15'" },
     { name = "openai" },
     { name = "pydantic", version = "2.13.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.15'" },
     { name = "pydantic", version = "2.14.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.15'" },
@@ -21004,7 +21075,8 @@ dependencies = [
     { name = "datamodel-code-generator" },
     { name = "fastmcp" },
     { name = "langchain-core" },
-    { name = "litellm" },
+    { name = "litellm", version = "1.103.10", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.15'" },
+    { name = "litellm", version = "1.110.0.dev2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.15'" },
     { name = "loguru" },
     { name = "markdown" },
     { name = "pydantic", version = "2.13.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.15'" },

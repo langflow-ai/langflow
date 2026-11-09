@@ -148,7 +148,9 @@ dependencies = [
     "opik>=2.0.0,<3.0.0",
     # Opik installs LiteLLM even without the optional litellm extra.
     # Block the compromised 1.107.0 release in published wheel metadata.
-    "litellm>=1.103.10,<1.104.0,!=1.104.0rc1,!=1.107.0",
+    # litellm declares <3.15 and imports sre_constants (removed in 3.15) up to 1.108.x; only the 1.110.0 dev builds support 3.15.
+    "litellm>=1.103.10,<1.104.0,!=1.104.0rc1,!=1.107.0; python_version < '3.15'",
+    "litellm==1.110.0.dev2; python_version >= '3.15'",
     # Newer Opik releases cap LiteLLM below its security floor on Python 3.10.
     # Publish the compatible version constraint so fresh wheel installs stay valid.
     "opik==2.2.7; python_version < '3.11'",
@@ -359,7 +361,8 @@ pgvector = [
     "psycopg[binary]>=3.1,<4.0",
 ]
 litellm = [
-    "litellm>=1.103.10,<1.104.0,!=1.104.0rc1,!=1.107.0",
+    "litellm>=1.103.10,<1.104.0,!=1.104.0rc1,!=1.107.0; python_version < '3.15'",
+    "litellm==1.110.0.dev2; python_version >= '3.15'",
     # Runtime deps from litellm[proxy] that langflow-ide hits when logging
     # to langfuse via litellm.proxy.proxy_server (issue #12228). The full
     # Pull in only the modules Langflow uses from litellm[proxy] rather than

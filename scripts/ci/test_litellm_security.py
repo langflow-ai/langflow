@@ -21,6 +21,15 @@ MANIFESTS = [
 ]
 
 
+def _python_315_only(requirement: Requirement) -> bool:
+    marker = requirement.marker
+    return (
+        marker is not None
+        and marker.evaluate({"python_version": "3.15", "python_full_version": "3.15.0"})
+        and not marker.evaluate({"python_version": "3.14", "python_full_version": "3.14.0"})
+    )
+
+
 @pytest.fixture(params=MANIFESTS)
 def litellm_guard(request: pytest.FixtureRequest) -> Requirement:
     """Read the published LiteLLM guard without relying on the workspace lock."""
@@ -31,12 +40,20 @@ def litellm_guard(request: pytest.FixtureRequest) -> Requirement:
     guards = [Requirement(value) for value in dependencies if Requirement(value).name == "litellm"]
     assert guards, "Standalone installs need a published requirement, not just a workspace constraint"
     for guard in guards:
+        if project["name"] != "lfx-bundles" and _python_315_only(guard):
+            # litellm <=1.108 cannot import on Python 3.15; its 1.110 dev build can.
+            assert guard.specifier.contains("1.110.0.dev2", prereleases=True)
+            for version in ("1.103.2", "1.103.10", "1.107.0"):
+                assert not guard.specifier.contains(version, prereleases=True), str(guard)
+            continue
         assert "1.107.0" not in guard.specifier
         assert "1.103.0" not in guard.specifier
         assert "1.103.10" in guard.specifier
         assert "1.103.11" in guard.specifier, "Do not freeze installs to the current lockfile version"
         if project["name"] != "lfx-bundles":
-            assert guard.marker is None
+            assert guard.marker is None or guard.marker.evaluate(
+                {"python_version": "3.14", "python_full_version": "3.14.0"}
+            )
     # Exercise CUGA's version restriction independently of its platform markers.
     guard = guards[0]
     guard.marker = None
@@ -46,14 +63,16 @@ def litellm_guard(request: pytest.FixtureRequest) -> Requirement:
 def test_workspace_excludes_compromised_release_without_overriding_upstream_caps() -> None:
     settings = tomllib.loads((ROOT / "pyproject.toml").read_text())["tool"]["uv"]
     assert not any(Requirement(value).name == "litellm" for value in settings["override-dependencies"])
-    guard = next(
+    guards = [
         Requirement(value) for value in settings["constraint-dependencies"] if Requirement(value).name == "litellm"
-    )
-    assert "1.107.0" not in guard.specifier
+    ]
+    assert guards
+    assert all("1.107.0" not in guard.specifier for guard in guards)
     lock = tomllib.loads((ROOT / "uv.lock").read_text())
     versions = {package["version"] for package in lock["package"] if package["name"] == "litellm"}
     assert versions
-    assert all(version in guard.specifier for version in versions)
+    # Each locked version must satisfy the constraint of the Python range it was locked for.
+    assert all(any(guard.specifier.contains(version, prereleases=True) for guard in guards) for version in versions)
 
 
 @pytest.fixture
