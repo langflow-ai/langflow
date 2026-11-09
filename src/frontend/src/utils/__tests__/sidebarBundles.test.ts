@@ -116,6 +116,14 @@ describe("SIDEBAR_BUNDLES", () => {
   });
 });
 
+it("uses the GitLab logo for its integration palette group", () => {
+  expect(SIDEBAR_BUNDLES).toContainEqual({
+    display_name: "GitLab",
+    name: "gitlab",
+    icon: "Gitlab",
+  });
+});
+
 it("uses the Confluence logo for its integration palette group", () => {
   expect(SIDEBAR_BUNDLES).toContainEqual({
     display_name: "Confluence",
