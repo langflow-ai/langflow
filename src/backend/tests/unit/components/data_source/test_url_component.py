@@ -11,6 +11,7 @@ streams, so the real httpx streaming and decoding code runs.
 
 import gzip
 import socket
+import sys
 import zlib
 from types import SimpleNamespace
 
@@ -168,6 +169,7 @@ class TestURLComponent(ComponentTestBaseWithoutClient):
 
     @pytest.mark.asyncio
     @pytest.mark.usefixtures("disable_ssrf")
+    @pytest.mark.skipif(sys.version_info >= (3, 15), reason="markitdown does not support Python 3.15+")
     async def test_url_component_markdown_format(self, monkeypatch):
         """Markdown format converts HTML headings/paragraphs to markdown."""
         html = "<html><body><h1>Heading</h1><p>Hello world</p></body></html>"
