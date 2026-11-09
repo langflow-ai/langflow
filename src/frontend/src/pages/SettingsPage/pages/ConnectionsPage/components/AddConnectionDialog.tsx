@@ -36,7 +36,10 @@ import {
 } from "@/customization/components/custom-connection-authorization";
 import useAlertStore from "@/stores/alertStore";
 import { useTypesStore } from "@/stores/typesStore";
-import { uniqueNormalizedScopes } from "@/utils/connection-scopes";
+import {
+  normalizeScope,
+  uniqueNormalizedScopes,
+} from "@/utils/connection-scopes";
 import { cn } from "@/utils/utils";
 import {
   defaultScopesForNewConnection,
@@ -49,6 +52,7 @@ import {
 import { useSlackTokenConnection } from "../hooks/useSlackTokenConnection";
 import AuthorizeStatus, { type AuthorizeState } from "./AuthorizeStatus";
 import ConnectionSetupHelp from "./ConnectionSetupHelp";
+import ProviderSelect from "./ProviderSelect";
 import RegistrationSelect from "./RegistrationSelect";
 import ScopeChecklist from "./ScopeChecklist";
 import SlackTokenFields, { ConnectionMethodSelect } from "./SlackTokenFields";
@@ -73,8 +77,11 @@ export interface AddConnectionDialogProps {
   reauthorize?: ConnectionRead;
   /** Which deployment this is (`GET /integrations`); hosted offers no pasted tokens. */
   deploymentContext?: DeploymentContext;
+  /** Let the page reveal the successfully authorized row when the dialog closes. */
+  onConnected?: (connection: ConnectionRead) => void;
 }
 
+/** Create or reconnect a connection using OAuth consent or a supported pasted token. */
 export function AddConnectionDialog({
   open,
   onOpenChange,
@@ -82,6 +89,7 @@ export function AddConnectionDialog({
   canCreateInstance,
   reauthorize,
   deploymentContext,
+  onConnected,
 }: AddConnectionDialogProps) {
   const { t } = useTranslation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -103,6 +111,15 @@ export function AddConnectionDialog({
   const [authorize, setAuthorize] = useState<AuthorizeState | null>(null);
   const [baseline, setBaseline] = useState<ConnectionPollBaseline | null>(null);
   const [pendingRow, setPendingRow] = useState<ConnectionRead | null>(null);
+  const [isCleaningUp, setIsCleaningUp] = useState(false);
+  const createdConnectionId = useRef<string | null>(null);
+  const cleanupGeneration = useRef(0);
+  useEffect(
+    () => () => {
+      cleanupGeneration.current += 1;
+    },
+    [],
+  );
   const popupRef = useRef<Window | null>(null);
   const startedAt = useRef(0);
   // What the last authorization asked for, so "Try again" repeats it exactly
@@ -110,6 +127,9 @@ export function AddConnectionDialog({
   const requestedScopes = useRef<string[]>([]);
 
   const provider = providers.find((item) => item.provider_id === providerId);
+  // Every ServiceNow component requires a flow-owner connection. Instance
+  // sharing would create a connection none of those components can select.
+  const requiresUserOwnership = providerId === "servicenow";
   const manualTokenProfiles = provider?.manual_token_profiles ?? [];
   const tokenProfile =
     manualTokenProfiles.find((profile) => profile.identity === identity) ??
@@ -136,6 +156,7 @@ export function AddConnectionDialog({
     providerId,
     deploymentContext,
     reauthorizing: !!reauthorize,
+    reauthorizingIdentity: reauthorize?.executing_identity?.identity,
     initialAllowBackgroundRuns: reauthorize?.allow_non_interactive ?? false,
     create: (payload) =>
       reauthorize && payload.credentials
@@ -205,27 +226,54 @@ export function AddConnectionDialog({
     [provider, typesData],
   );
 
-  const ceiling = candidates.find(
+  const selectedRegistration = candidates.find(
     ({ id }) => id === resolvedRegistration,
-  )?.scopes;
-  const { requestable, unavailable } = useMemo(
+  );
+  const ceiling = selectedRegistration?.scopes;
+  const requiredScopes = useMemo(
+    () => selectedRegistration?.required_scopes ?? [],
+    [selectedRegistration],
+  );
+  const componentScopes = useMemo(
     () =>
-      scopesForRegistration(providerId, uniqueScopes(requirements), ceiling),
-    [providerId, requirements, ceiling],
+      uniqueNormalizedScopes(providerId, [
+        ...uniqueScopes(requirements),
+        ...requiredScopes,
+      ]),
+    [providerId, requirements, requiredScopes],
+  );
+  const { requestable, unavailable } = useMemo(
+    () => scopesForRegistration(providerId, componentScopes, ceiling),
+    [providerId, componentScopes, ceiling],
+  );
+  const requiredUnavailable = requiredScopes.filter(
+    (scope) =>
+      !requestable.some(
+        (option) =>
+          normalizeScope(providerId, option) ===
+          normalizeScope(providerId, scope),
+      ),
+  );
+  const requiredOptions = useMemo(
+    () =>
+      requestable.filter((option) =>
+        requiredScopes.some(
+          (scope) =>
+            normalizeScope(providerId, option) ===
+            normalizeScope(providerId, scope),
+        ),
+      ),
+    [providerId, requestable, requiredScopes],
   );
 
   useEffect(() => {
     if (!provider || reauthorize) return;
     setSelectedScopes(
       new Set(
-        defaultScopesForNewConnection(
-          providerId,
-          uniqueScopes(requirements),
-          requestable,
-        ),
+        defaultScopesForNewConnection(providerId, componentScopes, requestable),
       ),
     );
-  }, [provider, providerId, requirements, reauthorize, requestable]);
+  }, [provider, providerId, componentScopes, reauthorize, requestable]);
 
   // Re-authorizing offers the same requestable scopes plus everything the
   // connection already holds, checked, so adding a scope never drops one.
@@ -267,13 +315,47 @@ export function AddConnectionDialog({
       connectionId: reauthorizeId,
       registrationId: resolvedRegistration,
     };
-    setSelectedScopes(new Set(reauthorizeList.defaultSelected));
+    setSelectedScopes(
+      new Set([...reauthorizeList.defaultSelected, ...requiredOptions]),
+    );
   }, [
     reauthorizeId,
     reauthorizeList,
     registrations.isLoading,
     resolvedRegistration,
+    requiredOptions,
   ]);
+
+  const discardFailedNewConnection = useCallback(
+    (row: ConnectionRead) => {
+      if (reauthorize || createdConnectionId.current !== row.id) return;
+      createdConnectionId.current = null;
+      const generation = ++cleanupGeneration.current;
+      setPendingRow(null);
+      setBaseline(null);
+      setIsCleaningUp(true);
+      remove.mutate(row.id, {
+        onSuccess: () => {
+          if (cleanupGeneration.current === generation) setIsCleaningUp(false);
+        },
+        onError: () => {
+          if (cleanupGeneration.current === generation) {
+            createdConnectionId.current = row.id;
+            setPendingRow(row);
+            setIsCleaningUp(false);
+          }
+          setErrorData({
+            title: t("connections.add.cleanupFailed"),
+            list: [t("connections.add.cleanupFailedBody")],
+          });
+        },
+      });
+    },
+    [reauthorize, remove.mutate, setErrorData, t],
+  );
+
+  const requiredRefreshScopes =
+    selectedRegistration?.required_scopes?.join(", ") ?? "";
 
   // Consent lands on the server: only a row that moved on from the state it had
   // when consent started carries this authorization's outcome.
@@ -286,22 +368,40 @@ export function AddConnectionDialog({
       setPendingRow(row);
       if (row.status_reason?.startsWith("oauth-")) {
         const message =
-          row.status_reason === "oauth-denied"
-            ? t("connections.add.denied")
-            : row.status_reason === "oauth-expired"
-              ? t("connections.add.expired")
-              : t("connections.add.failed");
+          row.provider_key === "jira" &&
+          row.status_reason === "oauth-refresh-token-missing"
+            ? t("connections.add.jiraRefreshMissing")
+            : row.status_reason === "oauth-refresh-token-missing"
+              ? requiredRefreshScopes
+                ? t("connections.add.refreshMissingScopes", {
+                    scopes: requiredRefreshScopes,
+                  })
+                : t("connections.add.refreshMissing")
+              : row.status_reason === "oauth-denied"
+                ? t("connections.add.denied")
+                : row.status_reason === "oauth-expired"
+                  ? t("connections.add.expired")
+                  : t("connections.add.failed");
         setAuthorize({ kind: "failed", message });
+        discardFailedNewConnection(row);
       } else if (row.status === "ready" && row.has_credentials) {
         popupRef.current?.close();
         popupRef.current = null;
         setAuthorize({ kind: "connected", connection: row });
       } else {
         setAuthorize({ kind: "failed", message: t("connections.add.failed") });
+        discardFailedNewConnection(row);
       }
       return;
     }
-  }, [isAwaitingConsent, poll.data, baseline, t]);
+  }, [
+    isAwaitingConsent,
+    poll.data,
+    baseline,
+    discardFailedNewConnection,
+    requiredRefreshScopes,
+    t,
+  ]);
 
   // A provider's Cross-Origin-Opener-Policy can make an open popup report
   // `closed`. Keep polling the server and avoid inferring user cancellation.
@@ -341,7 +441,11 @@ export function AddConnectionDialog({
         });
         return;
       }
-      requestedScopes.current = scopes;
+      const requested = uniqueNormalizedScopes(providerId, [
+        ...scopes,
+        ...requiredOptions,
+      ]);
+      requestedScopes.current = requested;
       startedAt.current = Date.now();
       setStep("authorize");
       setAuthorize({ kind: "waiting" });
@@ -352,18 +456,30 @@ export function AddConnectionDialog({
         const { authorization_url } = await startOAuth.mutateAsync({
           id: connection.id,
           registrationId: registration,
-          scopes,
+          scopes: requested,
         });
         popupRef.current = openAuthorizationUrl(
           authorization_url,
           popupRef.current,
         );
-      } catch {
+      } catch (error) {
         popupRef.current?.close();
-        setAuthorize({ kind: "failed", message: t("connections.add.failed") });
+        setAuthorize({
+          kind: "failed",
+          message: getAxiosErrorDetail(error, t("connections.add.failed")),
+        });
+        discardFailedNewConnection(connection);
       }
     },
-    [registrations.data, registrationId, startOAuth, t],
+    [
+      registrations.data,
+      registrationId,
+      startOAuth,
+      providerId,
+      requiredOptions,
+      discardFailedNewConnection,
+      t,
+    ],
   );
 
   const reauthorizeOptions = reauthorizeList?.options ?? [];
@@ -375,7 +491,8 @@ export function AddConnectionDialog({
   const canAuthorize =
     reauthorizeSelection.length > 0 &&
     !noRegistration &&
-    !registrations.isLoading;
+    !registrations.isLoading &&
+    requiredUnavailable.length === 0;
   const notRequestable = uniqueNormalizedScopes(providerId, [
     ...unavailable,
     ...(reauthorizeList?.outsideCeiling ?? []),
@@ -388,15 +505,17 @@ export function AddConnectionDialog({
   };
 
   const onTryAgain = () => {
-    if (!pendingRow) return;
+    if (isCleaningUp || requiredUnavailable.length > 0) return;
     popupRef.current = openBlankConsentWindow();
-    void beginAuthorize(poll.data ?? pendingRow, requestedScopes.current);
+    if (pendingRow)
+      void beginAuthorize(poll.data ?? pendingRow, requestedScopes.current);
+    else if (!reauthorize) void createAndAuthorize(requestedScopes.current);
   };
 
   const toggleScope = (scope: string, checked: boolean) =>
     setSelectedScopes((current) => {
       const next = new Set(current);
-      if (checked) next.add(scope);
+      if (checked || requiredOptions.includes(scope)) next.add(scope);
       else next.delete(scope);
       return next;
     });
@@ -425,7 +544,7 @@ export function AddConnectionDialog({
         (providerId === "slack"
           ? slackToken.tokenKind !== null
           : slackToken.token.trim().length > 0)
-      : !noRegistration);
+      : !noRegistration && requiredUnavailable.length === 0);
 
   /** The server validates pasted tokens before returning the connection. */
   const onCreateWithToken = async () => {
@@ -441,6 +560,26 @@ export function AddConnectionDialog({
     }
   };
 
+  const createAndAuthorize = async (scopes: string[]) => {
+    if (!provider) return;
+    try {
+      const row = await create.mutateAsync({
+        provider_key: provider.provider_id,
+        name,
+        display_name: displayName.trim(),
+        ownership_mode: requiresUserOwnership ? "user" : ownership,
+        executing_identity: { identity },
+      });
+      createdConnectionId.current = row.id;
+      await beginAuthorize(row, scopes);
+    } catch (error) {
+      popupRef.current?.close();
+      const message = getAxiosErrorDetail(error, t("connections.add.failed"));
+      if (step === "authorize") setAuthorize({ kind: "failed", message });
+      else setFieldError(message);
+    }
+  };
+
   const onContinue = async () => {
     if (!provider || !canContinue) return;
     setFieldError(null);
@@ -450,23 +589,14 @@ export function AddConnectionDialog({
     }
     // Open on the click itself so popup blockers treat it as user-initiated.
     popupRef.current = openBlankConsentWindow();
-    try {
-      const row = await create.mutateAsync({
-        provider_key: provider.provider_id,
-        name,
-        display_name: displayName.trim(),
-        ownership_mode: ownership,
-        executing_identity: { identity },
-      });
-      await beginAuthorize(row, [...selectedScopes]);
-    } catch (error) {
-      popupRef.current?.close();
-      setFieldError(getAxiosErrorDetail(error, t("connections.add.failed")));
-    }
+    await createAndAuthorize([...selectedScopes]);
   };
 
   const close = (discardPending: boolean) => {
     const row = pendingRow;
+    if (authorize?.kind === "connected") {
+      onConnected?.(authorize.connection);
+    }
     if (
       discardPending &&
       row &&
@@ -488,6 +618,9 @@ export function AddConnectionDialog({
     setAuthorize(null);
     setBaseline(null);
     setPendingRow(null);
+    createdConnectionId.current = null;
+    cleanupGeneration.current += 1;
+    setIsCleaningUp(false);
     setName("");
     setDisplayName("");
     setFieldError(null);
@@ -507,6 +640,21 @@ export function AddConnectionDialog({
               : t("connections.add.title")}
           </DialogTitle>
         </DialogHeader>
+
+        {reauthorize &&
+          step !== "authorize" &&
+          slackToken.offersToken &&
+          !tokenOnly && (
+            <ConnectionMethodSelect
+              providerName={provider?.display_name ?? providerId}
+              method={slackToken.method}
+              onMethodChange={(method) => {
+                slackToken.setMethod(method);
+                setStep(method === "token" ? "details" : "scopes");
+                setFieldError(null);
+              }}
+            />
+          )}
 
         {step === "details" && noProviders && (
           <div
@@ -529,28 +677,16 @@ export function AddConnectionDialog({
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
               {!reauthorize && (
                 <>
-                  <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="connection-provider">
-                      {t("connections.add.provider")}
-                    </Label>
-                    <select
-                      id="connection-provider"
-                      className="h-9 rounded-md border border-border bg-background px-2 text-sm"
-                      value={providerId}
-                      onChange={(event) => {
-                        setProviderId(event.target.value);
-                        // A pasted token belongs to the provider it was pasted for.
-                        slackToken.reset();
-                      }}
-                      data-testid="connection-provider"
-                    >
-                      {providers.map((item) => (
-                        <option key={item.provider_id} value={item.provider_id}>
-                          {item.display_name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <ProviderSelect
+                    providers={providers}
+                    value={providerId}
+                    onChange={(next) => {
+                      setProviderId(next);
+                      setOwnership("user");
+                      // A pasted token belongs to the provider it was pasted for.
+                      slackToken.reset();
+                    }}
+                  />
 
                   {slackToken.offersToken && !tokenOnly && (
                     <ConnectionMethodSelect
@@ -721,7 +857,7 @@ export function AddConnectionDialog({
 
               {!usesToken && registrationSelect}
 
-              {!usesToken && canCreateInstance && (
+              {!usesToken && canCreateInstance && !requiresUserOwnership && (
                 <label className="flex items-center gap-2 text-sm">
                   <Checkbox
                     checked={ownership === "instance"}
@@ -732,6 +868,11 @@ export function AddConnectionDialog({
                   />
                   {t("connections.add.instanceOwned")}
                 </label>
+              )}
+              {!usesToken && requiresUserOwnership && (
+                <p className="text-xs text-muted-foreground">
+                  {t("connections.add.servicenowUserOwned")}
+                </p>
               )}
 
               {!usesToken && (
@@ -749,6 +890,7 @@ export function AddConnectionDialog({
                     requirements={requirements}
                     scopes={requestable}
                     selected={selectedScopes}
+                    requiredScopes={requiredScopes}
                     onToggle={toggleScope}
                   />
                   {unavailable.length > 0 && (
@@ -757,6 +899,13 @@ export function AddConnectionDialog({
                         scopes: unavailable.map(shortScope).join(", "),
                       })}
                     </span>
+                  )}
+                  {requiredUnavailable.length > 0 && (
+                    <p className="text-xs text-destructive" role="alert">
+                      {t("connections.add.requiredScopesUnavailable", {
+                        scopes: requiredUnavailable.map(shortScope).join(", "),
+                      })}
+                    </p>
                   )}
                 </div>
               )}
@@ -809,6 +958,7 @@ export function AddConnectionDialog({
                   requirements={requirements}
                   scopes={reauthorizeOptions}
                   selected={selectedScopes}
+                  requiredScopes={requiredScopes}
                   onToggle={toggleScope}
                   granted={grantedOptions}
                 />
@@ -818,6 +968,13 @@ export function AddConnectionDialog({
                       scopes: notRequestable.map(shortScope).join(", "),
                     })}
                   </span>
+                )}
+                {requiredUnavailable.length > 0 && (
+                  <p className="text-xs text-destructive" role="alert">
+                    {t("connections.add.requiredScopesUnavailable", {
+                      scopes: requiredUnavailable.map(shortScope).join(", "),
+                    })}
+                  </p>
                 )}
               </div>
             </div>
@@ -849,8 +1006,13 @@ export function AddConnectionDialog({
             <div className="flex justify-end gap-2">
               {(authorize?.kind === "failed" ||
                 authorize?.kind === "untracked") &&
-                pendingRow && (
+                (pendingRow || !reauthorize) && (
                   <Button
+                    disabled={
+                      isCleaningUp ||
+                      create.isPending ||
+                      requiredUnavailable.length > 0
+                    }
                     variant="outline"
                     onClick={onTryAgain}
                     data-testid="connection-try-again"

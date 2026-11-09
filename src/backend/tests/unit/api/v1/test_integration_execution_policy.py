@@ -39,7 +39,7 @@ def integration_policy():
     bundle = get_policy_bundle_service()
     original = bundle.snapshot
 
-    def _publish(*, providers: frozenset[str] = frozenset(), actions: frozenset[str] = frozenset()) -> None:
+    def _publish(*, providers: frozenset[str] | None = None, actions: frozenset[str] = frozenset()) -> None:
         from lfx.services.deps import get_integration_policy_service
 
         bundle.publish(

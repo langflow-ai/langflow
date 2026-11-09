@@ -9,7 +9,7 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
-interface IPostAddFlow {
+export interface IPostAddFlow {
   name: string;
   data: ReactFlowJsonObject;
   description: string;
@@ -23,9 +23,23 @@ interface IPostAddFlow {
   mcp_enabled: boolean | undefined;
 }
 
-interface PostAddFlowErrorResponse {
+export interface PostAddFlowErrorResponse {
   detail?: string | Array<{ type?: string }>;
 }
+
+export const getCreateFlowPayload = (payload: IPostAddFlow) => ({
+  name: payload.name,
+  data: payload.data,
+  description: payload.description,
+  is_component: payload.is_component,
+  folder_id: payload.folder_id || null,
+  icon: payload.icon || null,
+  gradient: payload.gradient || null,
+  endpoint_name: payload.endpoint_name || null,
+  tags: payload.tags || null,
+  locked: payload.locked ?? null,
+  mcp_enabled: payload.mcp_enabled || null,
+});
 
 export const usePostAddFlow: useMutationFunctionType<
   undefined,
@@ -37,19 +51,10 @@ export const usePostAddFlow: useMutationFunctionType<
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
 
   const postAddFlowFn = async (payload: IPostAddFlow): Promise<FlowType> => {
-    const response = await api.post<FlowType>(`${getURL("FLOWS")}/`, {
-      name: payload.name,
-      data: payload.data,
-      description: payload.description,
-      is_component: payload.is_component,
-      folder_id: payload.folder_id || null,
-      icon: payload.icon || null,
-      gradient: payload.gradient || null,
-      endpoint_name: payload.endpoint_name || null,
-      tags: payload.tags || null,
-      locked: payload.locked ?? null,
-      mcp_enabled: payload.mcp_enabled || null,
-    });
+    const response = await api.post<FlowType>(
+      `${getURL("FLOWS")}/`,
+      getCreateFlowPayload(payload),
+    );
     return response.data;
   };
 

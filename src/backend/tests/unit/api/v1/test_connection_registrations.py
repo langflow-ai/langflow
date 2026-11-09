@@ -107,6 +107,7 @@ async def test_lists_configured_registrations(client: AsyncClient, logged_in_hea
         "context": "self_managed",
         "client_type": "confidential",
         "scopes": _GOOGLE_SCOPES,
+        "required_scopes": [],
         "allowed_tenants": [],
     }
 

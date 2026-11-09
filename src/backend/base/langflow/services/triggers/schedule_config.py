@@ -8,6 +8,13 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from croniter import CroniterError, croniter
 
+from langflow.services.triggers.error_codes import (
+    CRON_NEVER_MATCHES_ERROR,
+    INVALID_CRON_ERROR,
+    TIMEZONE_REQUIRED_ERROR,
+    UNKNOWN_TIMEZONE_ERROR,
+)
+
 DEFAULT_TIMEZONE = "UTC"
 CRON_FIELD_COUNT = 5
 
@@ -24,24 +31,20 @@ def validate_schedule_config(config: dict[str, Any]) -> dict[str, Any]:
         or len(expression.split()) != CRON_FIELD_COUNT
         or not croniter.is_valid(expression)
     ):
-        msg = "Invalid cron expression: a valid five-field cron expression is required."
-        raise InvalidScheduleError(msg)
+        raise InvalidScheduleError(INVALID_CRON_ERROR)
     zone = config.get("timezone", DEFAULT_TIMEZONE)
     if not isinstance(zone, str) or not zone.strip():
-        msg = "A non-empty IANA timezone is required."
-        raise InvalidScheduleError(msg)
+        raise InvalidScheduleError(TIMEZONE_REQUIRED_ERROR)
     try:
         tzinfo = ZoneInfo(zone)
     except (ZoneInfoNotFoundError, ValueError) as exc:
-        msg = "Unknown timezone; use an IANA timezone name."
-        raise InvalidScheduleError(msg) from exc
+        raise InvalidScheduleError(UNKNOWN_TIMEZONE_ERROR) from exc
     # ``is_valid`` is syntactic: '0 0 31 2 *' passes it and then never fires.
     # Probe one fire time so "validates" means the tick producer can run it.
     try:
         croniter(expression, datetime.now(tzinfo)).get_next(datetime)
     except (CroniterError, ValueError, KeyError, OverflowError) as exc:
-        msg = "Invalid cron expression: it never matches a real date."
-        raise InvalidScheduleError(msg) from exc
+        raise InvalidScheduleError(CRON_NEVER_MATCHES_ERROR) from exc
     catchup = config.get("catchup_policy", "coalesce")
     if not isinstance(catchup, str) or catchup not in {"coalesce", "skip"}:
         msg = "catchup_policy must be 'coalesce' or 'skip'."

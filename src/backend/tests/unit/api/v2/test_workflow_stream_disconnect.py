@@ -184,6 +184,7 @@ async def test_disconnect_lets_the_job_row_reach_failed(monkeypatch):
         begin_live_job=begin_live_job,
         terminalize_live_job=terminalize_live_job,
         _terminalize_or_log=terminalize_or_log,
+        authorize_job_start=AsyncMock(return_value=None),
     )
 
     async def run_as_tracked_job() -> None:
