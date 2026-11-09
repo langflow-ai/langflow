@@ -317,6 +317,7 @@ DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
         for module, members in (
             ("jinja2", ("Template", "Environment")),
             ("jinja2.environment", ("Template", "Environment")),
+            ("jinja2.ext", ("Environment",)),
             # Generated code can replace the sandbox policy before rendering.
             ("jinja2.sandbox", ("Environment", "SandboxedEnvironment", "ImmutableSandboxedEnvironment")),
             ("jinja2.nativetypes", ("Template", "Environment", "NativeTemplate", "NativeEnvironment")),

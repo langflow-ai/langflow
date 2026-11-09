@@ -12,6 +12,7 @@ _EXECUTION_APIS = (
     ("jinja2", "Environment"),
     ("jinja2.environment", "Template"),
     ("jinja2.environment", "Environment"),
+    ("jinja2.ext", "Environment"),
     ("jinja2.sandbox", "Environment"),
     ("jinja2.sandbox", "SandboxedEnvironment"),
     ("jinja2.sandbox", "ImmutableSandboxedEnvironment"),
@@ -44,6 +45,7 @@ _EXECUTION_APIS = (
     ],
 )
 def test_rejects_library_execution_apis(module, member, source):
+    """Execution APIs stay blocked through imports, aliases, and indirect references."""
     result = scan_code_security(source.format(module=module, member=member))
     assert not result.is_safe
     assert any(member in violation for violation in result.violations)
@@ -52,6 +54,7 @@ def test_rejects_library_execution_apis(module, member, source):
 @pytest.mark.parametrize("module", ["duckdb", "_duckdb"])
 @pytest.mark.parametrize("source", ["import {module}", "import {module} as sql", "from {module} import connect"])
 def test_rejects_embedded_sql_execution_modules(module, source):
+    """Both DuckDB module names expose execution capabilities and are rejected."""
     result = scan_code_security(source.format(module=module))
     assert not result.is_safe
     assert any(module in violation for violation in result.violations)
@@ -66,6 +69,7 @@ def test_rejects_embedded_sql_execution_modules(module, source):
     ],
 )
 def test_preserves_symbolic_operations_and_template_configuration(source):
+    """Safe symbolic construction and template configuration remain available."""
     assert scan_code_security(source).is_safe
 
 
@@ -79,6 +83,7 @@ def test_preserves_symbolic_operations_and_template_configuration(source):
     ],
 )
 def test_rejects_mutable_sandbox_before_rendering_external_template(constructor, setup):
+    """A mutable sandbox cannot become a trusted route for rendering external templates."""
     code = (
         setup.format(constructor=constructor)
         + "\nenv.is_safe_attribute = lambda obj, attr, value: True"
@@ -102,6 +107,7 @@ def test_rejects_mutable_sandbox_before_rendering_external_template(constructor,
     ],
 )
 async def test_runtime_validation_blocks_sinks_before_component_construction(source, monkeypatch):
+    """Runtime validation rejects these APIs before constructing a component."""
     monkeypatch.setattr(
         "lfx.services.deps.get_settings_service",
         lambda: SimpleNamespace(settings=SimpleNamespace(allow_custom_components=True)),
