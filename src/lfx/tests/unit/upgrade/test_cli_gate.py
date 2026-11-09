@@ -196,3 +196,9 @@ def test_missing_bundled_registry_raises_upgrade_flow_error():
         pytest.raises(UpgradeFlowError, match="bundled component registry is empty or missing"),
     ):
         apply_upgrade_gate(_flow(), mode="check")
+
+
+def test_safe_customized_flow_fails_closed_when_settings_are_unavailable(monkeypatch):
+    monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: None)
+    with pytest.raises(UpgradeFlowError, match=r"settings.*unavailable"):
+        apply_upgrade_gate(_customized_flow(), _registry(), "safe")

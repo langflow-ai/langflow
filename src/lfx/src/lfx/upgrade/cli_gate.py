@@ -60,11 +60,14 @@ def _load_bundled_registry() -> dict[str, Any]:
 
 
 def _custom_components_allowed() -> bool:
-    """Read ``allow_custom_components``, treating missing settings as the ``True`` default."""
+    """Read the active policy without allowing customized code when settings are unavailable."""
     from lfx.services.deps import get_settings_service
 
     settings_service = get_settings_service()
-    return settings_service is None or getattr(settings_service.settings, "allow_custom_components", True)
+    if settings_service is None:
+        msg = "component settings are unavailable; customized code cannot be authorized"
+        raise UpgradeFlowError(msg)
+    return settings_service.settings.allow_custom_components
 
 
 def apply_upgrade_gate(
