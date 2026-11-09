@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import pytest
@@ -243,4 +244,134 @@ async def test_suspension_waits_for_an_in_flight_heartbeat_to_settle(jobs, monke
 
     assert (await jobs.get_job_by_job_id(job_id)).status == JobStatus.SUSPENDED
     assert settled.is_set()
+    assert bus.closed == []
+
+
+async def _reclaim_after_a_successful_heartbeat(jobs, job_id):
+    """Exercise the real retry and claim transitions after A's lease expires."""
+    stale = datetime.now(timezone.utc) - timedelta(minutes=5)
+    async with jobs_module.session_scope() as session:
+        job = await session.get(Job, job_id)
+        job.job_metadata = {**job.job_metadata, "heartbeat_at": stale.isoformat()}
+        job.lease_heartbeat_at = stale
+        session.add(job)
+    assert await jobs.retry_requeue_claim(job_id, expected_attempt=1)
+    assert await jobs.claim_queued_lease(job_id, owner="worker:b", lease_ttl_s=45)
+    assert await jobs.begin_live_job(job_id, owner="worker:b")
+
+
+@pytest.mark.parametrize("source_exit", ["end", "cancel"])
+async def test_accepted_runner_does_not_consume_a_reclaiming_owners_stop(jobs, monkeypatch, source_exit):
+    job_id = uuid4()
+    await jobs.create_job(job_id=job_id, flow_id=uuid4())
+    await jobs.update_job_metadata(job_id, {"owner": "worker:a", "attempt": 1})
+    renewed = asyncio.Event()
+    heartbeat = jobs.heartbeat
+
+    async def first_heartbeat(*args):
+        result = await heartbeat(*args)
+        assert result is True
+        renewed.set()
+        return result
+
+    monkeypatch.setattr(jobs, "heartbeat", first_heartbeat)
+
+    async def stale_source(**_kwargs):
+        await renewed.wait()
+        await _reclaim_after_a_successful_heartbeat(jobs, job_id)
+        await jobs.write_signal(job_id, SignalType.STOP)
+        if source_exit == "cancel":
+            reason = "LANGFLOW_USER_CANCELLED"
+            raise asyncio.CancelledError(reason)
+        if False:
+            yield b"", "end"
+
+    runner, bus = _runner(jobs, job_id, stale_source, owner="worker:a")
+    await runner.run(job_id=job_id, source_kwargs={})
+
+    job = await jobs.get_job_by_job_id(job_id)
+    assert job.status == JobStatus.IN_PROGRESS
+    assert job.job_metadata["owner"] == "worker:b"
+    assert [signal.signal_type for signal in await jobs.unconsumed_signals(job_id)] == [SignalType.STOP]
+    assert await jobs.read_events(job_id) == []
+    assert bus.closed == []
+
+
+@pytest.mark.parametrize(
+    ("new_status", "event_type"),
+    [(JobStatus.TIMED_OUT, "run_timed_out"), (JobStatus.CANCELLED, "run_cancelled")],
+)
+async def test_accepted_runner_does_not_finalize_a_new_owners_terminal_status(
+    jobs, monkeypatch, new_status, event_type
+):
+    job_id = uuid4()
+    await jobs.create_job(job_id=job_id, flow_id=uuid4())
+    await jobs.update_job_metadata(job_id, {"owner": "worker:a", "attempt": 1})
+    renewed = asyncio.Event()
+    heartbeat = jobs.heartbeat
+
+    async def first_heartbeat(*args):
+        result = await heartbeat(*args)
+        assert result is True
+        renewed.set()
+        return result
+
+    monkeypatch.setattr(jobs, "heartbeat", first_heartbeat)
+
+    async def stale_source(**_kwargs):
+        await renewed.wait()
+        await _reclaim_after_a_successful_heartbeat(jobs, job_id)
+        assert await jobs.terminalize_live_job(job_id, new_status, owner="worker:b", error={"type": "winner"})
+        await jobs.append_event(job_id, event_type, {"type": "winner"})
+        msg = "The old execution exits after its replacement has finished"
+        raise RuntimeError(msg)
+        yield b"", "end"
+
+    runner, bus = _runner(jobs, job_id, stale_source, owner="worker:a")
+    await runner.run(job_id=job_id, source_kwargs={})
+
+    job = await jobs.get_job_by_job_id(job_id)
+    assert job.status == new_status
+    assert job.error == {"type": "winner"}
+    assert [(event.event_type, event.payload) for event in await jobs.read_events(job_id)] == [
+        (event_type, {"type": "winner"})
+    ]
+    assert bus.closed == []
+
+
+@pytest.mark.parametrize("replacement", ["new_owner", "worker_lost"])
+@pytest.mark.parametrize("payload_kind", ["result", "error"])
+async def test_accepted_runner_does_not_replace_payload_after_losing_its_job(
+    jobs, monkeypatch, replacement, payload_kind
+):
+    job_id = uuid4()
+    await jobs.create_job(job_id=job_id, flow_id=uuid4())
+    await jobs.update_job_metadata(job_id, {"owner": "worker:a", "attempt": 1})
+    renewed = asyncio.Event()
+    heartbeat = jobs.heartbeat
+
+    async def first_heartbeat(*args):
+        result = await heartbeat(*args)
+        assert result is True
+        renewed.set()
+        return result
+
+    monkeypatch.setattr(jobs, "heartbeat", first_heartbeat)
+
+    async def stale_source(**_kwargs):
+        await renewed.wait()
+        if replacement == "new_owner":
+            await _reclaim_after_a_successful_heartbeat(jobs, job_id)
+        else:
+            assert await jobs.fail_in_progress_job(job_id, error={"type": "worker_lost"})
+        if payload_kind == "error":
+            yield json.dumps({"event": "error", "data": {"type": "stale_error"}}).encode(), "error"
+
+    runner, bus = _runner(jobs, job_id, stale_source, owner="worker:a")
+    await runner.run(job_id=job_id, source_kwargs={})
+
+    job = await jobs.get_job_by_job_id(job_id)
+    assert job.status == (JobStatus.IN_PROGRESS if replacement == "new_owner" else JobStatus.FAILED)
+    assert job.result is None
+    assert job.error == (None if replacement == "new_owner" else {"type": "worker_lost"})
     assert bus.closed == []

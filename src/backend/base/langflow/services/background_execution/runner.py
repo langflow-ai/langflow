@@ -159,9 +159,11 @@ class JobRunner:
                 with contextlib.suppress(Exception):
                     if await asyncio.shield(self._reconcile_stop(job_id)):
                         await logger.adebug(f"Background job {job_id} reconciled to CANCELLED after a racing stop")
+                finalized = False
                 with contextlib.suppress(Exception):
-                    await asyncio.shield(self._finalize_terminal_event(job_id))
-                await self._bus.close(str(job_id))
+                    finalized = await asyncio.shield(self._finalize_terminal_event(job_id))
+                if finalized:
+                    await self._bus.close(str(job_id))
 
     async def _suspend(self, job_id: UUID, exc: PauseRequested) -> None:
         """Suspend mechanics: durable pause event + SUSPENDED status, no finalization.
@@ -208,7 +210,7 @@ class JobRunner:
             with contextlib.suppress(asyncio.CancelledError, Exception):
                 await drive_task
 
-    async def _finalize_terminal_event(self, job_id: UUID) -> None:
+    async def _finalize_terminal_event(self, job_id: UUID) -> bool:
         """Backfill the error blob + terminal event for TIMED_OUT / CANCELLED.
 
         ``execute_with_status`` writes the TIMED_OUT/CANCELLED status but no
@@ -218,10 +220,13 @@ class JobRunner:
         that a racing completion left with a populated ``result``, clears the
         result and sets ``error={type: cancelled}`` so the terminal state is
         internally consistent (no CANCELLED row carrying a completed-run result).
+        Returns False when a newer owner must finalize the run and close its bus.
         """
         job = await self._jobs.get_job_by_job_id(job_id)
         if job is None:
-            return
+            return True
+        if self._owner is not None and (job.job_metadata or {}).get("owner") not in (None, self._owner):
+            return False
         if job.status == JobStatus.TIMED_OUT:
             if job.error is None:
                 await self._jobs.set_error(job_id, {"type": "timed_out"})
@@ -234,6 +239,7 @@ class JobRunner:
             if job.error is None:
                 await self._jobs.set_error(job_id, {"type": "cancelled"})
             await self._jobs.append_event(job_id, "run_cancelled", {"type": "cancelled"})
+        return True
 
     def _start_heartbeat(self, job_id: UUID) -> asyncio.Task | None:
         """Spawn the periodic heartbeat task for a run (None when owner unset).
@@ -284,11 +290,7 @@ class JobRunner:
         runner's ``finally`` (shielded), so it is the single point where a stop is
         finalized — the right place to mark it consumed.
         """
-        if not await self._stop_requested(job_id):
-            return False
-        await self._jobs.update_job_status(job_id, JobStatus.CANCELLED, finished_timestamp=True)
-        await self._jobs.consume_signals(job_id, SignalType.STOP)
-        return True
+        return await self._jobs.cancel_job_for_stop(job_id, owner=self._owner)
 
     async def _drive(self, *, job_id: UUID, source_kwargs: dict[str, Any]) -> None:
         """The wrapped coroutine: stream frames, persist, publish, finalize result/error."""
@@ -382,11 +384,19 @@ class JobRunner:
             raise self._user_cancelled()
 
         if errored_payload is not None:
-            await self._jobs.set_error(job_id, errored_payload.get("data", errored_payload))
+            if not await self._jobs.set_live_error(
+                job_id, errored_payload.get("data", errored_payload), owner=self._owner
+            ):
+                msg = f"Job {job_id} is no longer ours to fail"
+                raise JobNotClaimable(msg)
             # Surface as a failure so execute_with_status writes FAILED.
             msg = "Background job emitted a terminal error event"
             raise RuntimeError(msg)
-        await self._jobs.set_result(job_id, {"status": "completed", "outputs": self._dedup_outputs(output_events)})
+        if not await self._jobs.set_live_result(
+            job_id, {"status": "completed", "outputs": self._dedup_outputs(output_events)}, owner=self._owner
+        ):
+            msg = f"Job {job_id} is no longer ours to complete"
+            raise JobNotClaimable(msg)
 
     async def _load_pre_pause_outputs(self, job_id: UUID) -> list[dict[str, Any]]:
         """Return terminal outputs a prior suspend stashed in job_metadata, or [].
