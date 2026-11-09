@@ -1,33 +1,33 @@
-"""Add represented audit identity separately from authenticated acting identity.
+"""Add represented audit identity and retain names on pruned replacement receipts.
 
-Revision ID: a6f81c2d903b
-Revises: 1d8d193028c8
-Create Date: 2026-10-14
-
+Revision ID: 7fd2c80e5a39
+Revises: f4b8c1d2e3a6
 Phase: EXPAND
 
-Keep acting columns, constraints and history unchanged. Represented columns
-start null: acting identity cannot be used to infer represented identity.
-Bound both identity indexes, including indexes left by draft installations.
-Downgrade preserves the additive columns, safe indexes and all audit history.
+Keep existing acting identity and audit history. Bound both identity indexes.
+Retain the added columns during downgrade so older binaries can ignore them.
 """
 
 import sqlalchemy as sa
 from alembic import op
 from langflow.utils import migration
 
-revision = "a6f81c2d903b"  # pragma: allowlist secret
-down_revision = "1d8d193028c8"  # pragma: allowlist secret
+revision = "7fd2c80e5a39"  # pragma: allowlist secret
+down_revision = "f4b8c1d2e3a6"  # pragma: allowlist secret
 branch_labels = None
 depends_on = None
 
 TABLE = "audit_events"
 CHECK = "ck_audit_events_represented_pair"
+RECEIPTS = "project_replacement_operation"
 
 
 def upgrade() -> None:
     """Add the migration changes without rewriting existing audit history."""
     conn = op.get_bind()
+    if migration.table_exists(RECEIPTS, conn) and not migration.column_exists(RECEIPTS, "project_name", conn):
+        op.add_column(RECEIPTS, sa.Column("project_name", sa.String(), nullable=True))
+
     if not migration.table_exists(TABLE, conn):
         return
     missing = [
@@ -59,4 +59,4 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Old binaries ignore the added columns; retain them to preserve history."""
+    """Keep the audit history and receipt names for subsequent upgrades."""

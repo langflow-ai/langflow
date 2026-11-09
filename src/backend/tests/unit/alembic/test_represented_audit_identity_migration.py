@@ -30,8 +30,8 @@ from .test_migration_execution import (  # noqa: F401
 )
 
 OLD = importlib.import_module("langflow.alembic.versions.df1410b1eefa_add_audit_events")
-NEW = importlib.import_module("langflow.alembic.versions.a6f81c2d903b_add_represented_audit_identity")
-RELEASE = importlib.import_module("langflow.alembic.versions.1d8d193028c8_add_trigger_admin_paused_at")
+NEW = importlib.import_module("langflow.alembic.versions.7fd2c80e5a39_add_audit_identity_and_receipt_name")
+RECEIPT = importlib.import_module("langflow.alembic.versions.t194_atomic_project_replacement")
 
 
 def _upgrade(module, connection):
@@ -77,34 +77,45 @@ def _alembic_config(tmp_path, connection):
     return config
 
 
-@pytest.mark.parametrize("predecessor", ["e5a7c9b1d3f2", "1d8d193028c8"])
-def test_alembic_upgrade_from_both_release_predecessors(db_url, tmp_path, predecessor):  # noqa: F811
-    """Upgrade through the trigger revision when needed and stamp one audit head."""
+def test_alembic_upgrade_preserves_audits_and_replacement_receipts(db_url, tmp_path):  # noqa: F811
     engine = sa.create_engine(_engine_url(db_url))
     try:
         with engine.begin() as conn:
             _upgrade(OLD, conn)
-            trigger = sa.Table("trigger", sa.MetaData(), sa.Column("id", sa.Integer, primary_key=True))
-            trigger.create(conn)
-            conn.execute(sa.insert(trigger).values(id=1))
-            if predecessor == RELEASE.revision:
-                _upgrade(RELEASE, conn)
-            table = sa.Table("audit_events", sa.MetaData(), autoload_with=conn)
-            conn.execute(_event(table, acting_issuer="existing", acting_subject="history"))
+            _upgrade(RECEIPT, conn)
+            audit = sa.Table("audit_events", sa.MetaData(), autoload_with=conn)
+            receipts = sa.Table(
+                "project_replacement_operation",
+                sa.MetaData(),
+                sa.Column("project_id", sa.Uuid(), primary_key=True),
+                sa.Column("operation_id", sa.Uuid(), primary_key=True),
+                autoload_with=conn,
+            )
+            result = {"project": {"name": "original-project"}}
+            conn.execute(_event(audit, acting_issuer="existing", acting_subject="history"))
+            conn.execute(
+                sa.insert(receipts).values(
+                    project_id=uuid4(),
+                    operation_id=uuid4(),
+                    request_digest="digest",
+                    result=result,
+                    created_at=sa.func.now(),
+                )
+            )
             config = _alembic_config(tmp_path, conn)
-            command.stamp(config, predecessor)
+            command.stamp(config, NEW.down_revision)
             command.upgrade(config, "head")
             command.upgrade(config, "head")
             assert conn.scalar(sa.text("SELECT version_num FROM alembic_version")) == NEW.revision
-            assert "admin_paused_at" in {column["name"] for column in sa.inspect(conn).get_columns("trigger")}
-            table = sa.Table("audit_events", sa.MetaData(), autoload_with=conn)
-            row = conn.execute(sa.select(table)).one()
+            audit = sa.Table("audit_events", sa.MetaData(), autoload_with=conn)
+            row = conn.execute(sa.select(audit)).one()
             assert (row.acting_issuer, row.acting_subject) == ("existing", "history")
             assert row.represented_issuer is None
             assert row.represented_subject is None
-            indexes = {item["name"]: item["column_names"] for item in sa.inspect(conn).get_indexes("audit_events")}
-            for prefix in ("acting", "represented"):
-                assert indexes[f"ix_audit_events_{prefix}_timeline"] == [f"{prefix}_subject", "timestamp"]
+            receipts = sa.Table("project_replacement_operation", sa.MetaData(), autoload_with=conn)
+            receipt = conn.execute(sa.select(receipts)).one()
+            assert receipt.result == result
+            assert receipt.project_name is None
     finally:
         engine.dispose()
 
@@ -186,9 +197,8 @@ def test_maximum_unicode_identity_commits_with_mutation(db_url, schema, prefix):
         engine.dispose()
 
 
-@pytest.mark.parametrize("draft_revision", [None, "a6f81c2d903b", "c8f3e6a2b901", "d9a2c7e4f610"])
-def test_bounded_indexes_repair_draft_shapes_without_changing_history(db_url, tmp_path, draft_revision):  # noqa: F811
-    """Repair draft schemas, with an explicit stamp transition for previously applied drafts."""
+def test_bounded_indexes_repair_draft_shapes_without_changing_history(db_url):  # noqa: F811
+    """Repair old index shapes without changing either identity pair."""
     engine = sa.create_engine(_engine_url(db_url))
     try:
         with engine.begin() as conn:
@@ -210,24 +220,7 @@ def test_bounded_indexes_repair_draft_shapes_without_changing_history(db_url, tm
                     with pytest.raises(sa.exc.DBAPIError) as rejected, conn.begin_nested():
                         conn.execute(_event(table, **{f"{prefix}_issuer": issuer, f"{prefix}_subject": prefix}))
                     assert rejected.value.orig.sqlstate == "54000"
-            if draft_revision is not None:
-                trigger = sa.Table("trigger", sa.MetaData(), sa.Column("id", sa.Integer, primary_key=True))
-                trigger.create(conn)
-                if draft_revision != NEW.revision:
-                    _upgrade(RELEASE, conn)
-                config = _alembic_config(tmp_path, conn)
-                command.stamp(config, NEW.revision)
-                conn.execute(sa.text("UPDATE alembic_version SET version_num = :draft"), {"draft": draft_revision})
-                # Consolidating an unmerged draft does not automatically rerun an
-                # already stamped revision or recognize removed draft IDs. After
-                # checking its schema, explicitly restamp the common ancestor
-                # so the earliest draft also applies the release trigger change.
-                command.stamp(config, RELEASE.down_revision, purge=True)
-                command.upgrade(config, "head")
-                assert conn.scalar(sa.text("SELECT version_num FROM alembic_version")) == NEW.revision
-                assert "admin_paused_at" in {column["name"] for column in sa.inspect(conn).get_columns("trigger")}
-            else:
-                _upgrade(NEW, conn)
+            _upgrade(NEW, conn)
             _upgrade(NEW, conn)
             indexes = {item["name"]: item["column_names"] for item in sa.inspect(conn).get_indexes("audit_events")}
             for prefix in ("acting", "represented"):
@@ -264,13 +257,8 @@ def test_upgrade_completes_partial_draft_schema(db_url, column):  # noqa: F811
 
 
 def test_represented_identity_and_release_migrations_have_one_head():
-    """Apply one additive revision directly after the release trigger migration."""
     scripts = ScriptDirectory(str(Path(NEW.__file__).resolve().parents[1]))
-    head = scripts.get_current_head()
-    assert head is not None
-    revisions = {revision.revision for revision in scripts.iterate_revisions(head, "base")}
-    assert head == NEW.revision
-    assert NEW.down_revision == "1d8d193028c8"  # pragma: allowlist secret
-    assert "c8f3e6a2b901" not in revisions  # pragma: allowlist secret
-    assert "d9a2c7e4f610" not in revisions  # pragma: allowlist secret
-    assert "1d8d193028c8" in revisions  # pragma: allowlist secret
+    assert scripts.get_current_head() == NEW.revision
+    assert NEW.down_revision == "f4b8c1d2e3a6"  # pragma: allowlist secret
+    revisions = {revision.revision for revision in scripts.iterate_revisions(NEW.revision, "base")}
+    assert "c6a81d3e9502" in revisions  # pragma: allowlist secret
