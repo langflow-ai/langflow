@@ -18244,7 +18244,7 @@
               "dependencies": [
                 {
                   "name": "pydantic",
-                  "version": "2.13.5"
+                  "version": "2.13.4"
                 },
                 {
                   "name": "lfx",
@@ -33386,6 +33386,6 @@
     "num_components": 131,
     "num_modules": 17
   },
-  "sha256": "bc29ead50b477358ef7cd877d9efa19189fa40e475789778aaeec5c36853f2a3",
+  "sha256": "6a828da2b43810c1da02a1cd3f4e88b75217cee4e177274b66353c4027ab18af",
   "version": "1.14.0"
 }
