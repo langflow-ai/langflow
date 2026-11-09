@@ -11,6 +11,15 @@
         "research_agent.json": "Research Agent.json",
         "sequential_tasks_agents.json": "Sequential Tasks Agents.json"
       }
+    },
+    {
+      "tag": "v1.11.6",
+      "repo": "langflow-ai/langflow",
+      "source_dir": "src/backend/base/langflow/initial_setup/starter_projects",
+      "files": {
+        "seo_keyword_generator.json": "SEO Keyword Generator.json",
+        "twitter_thread_generator.json": "Twitter Thread Generator.json"
+      }
     }
   ]
 }
