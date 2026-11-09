@@ -415,6 +415,36 @@ class TestNonFiniteNumpySerialization:
         assert result == [[1.5, None], [None, None]]
         json.dumps(result, allow_nan=False)
 
+    @pytest.mark.parametrize("limits", [{}, {"max_length": 3, "max_items": 1}], ids=["default", "limited"])
+    @pytest.mark.parametrize(
+        ("values", "expected"),
+        [
+            ([np.nan, 1.0, np.inf, -np.inf], [None, 1.0, None, None]),
+            ([[np.float32(np.nan), np.float16(1.5)], [np.inf, "abcdef"]], [[None, 1.5], [None, "abcdef"]]),
+            ([], []),
+        ],
+        ids=["vector", "matrix", "empty"],
+    )
+    def test_non_finite_object_arrays(
+        self, serializer: Callable[..., Any], values: list, expected: list, limits: dict[str, int]
+    ) -> None:
+        """Sanitize object arrays without truncating their dimensions or strings."""
+        result = serializer(np.array(values, dtype=object), **limits)
+        assert isinstance(result, list)
+        assert result == expected
+        json.dumps(result, allow_nan=False)
+
+    def test_nested_object_array(self, serializer: Callable[..., Any]) -> None:
+        """Sanitize nested object-array values while preserving container types."""
+        array = np.array(
+            [{"scores": [np.float32(np.nan), np.float16(1.5)], "bounds": (np.float32(np.inf), -np.inf)}, "abcdef"],
+            dtype=object,
+        )
+        result = serializer(array, max_length=3, max_items=1)
+        assert isinstance(result, list)
+        assert result == [{"scores": [None, 1.5], "bounds": (None, None)}, "abcdef"]
+        json.dumps(result, allow_nan=False)
+
     @pytest.mark.parametrize("dtype", [np.float16, np.float32, np.float64])
     def test_non_finite_series(self, serializer: Callable[..., Any], dtype: Any) -> None:
         """Sanitize Series values using the same float rules as scalar output."""

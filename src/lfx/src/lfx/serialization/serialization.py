@@ -192,8 +192,8 @@ def _serialize_numpy_type(obj: Any, max_length: int | None, max_items: int | Non
             return _serialize_str(str(obj), max_length, max_items)
         if np.issubdtype(obj.dtype, np.bytes_) and hasattr(obj, "tobytes"):
             return _serialize_bytes(obj.tobytes(), max_length, max_items)
-        if np.issubdtype(obj.dtype, np.object_) and hasattr(obj, "item"):
-            return _serialize_instance(obj.item(), max_length, max_items)
+        if np.issubdtype(obj.dtype, np.object_):
+            return _sanitize_non_finite(obj.tolist())
     except Exception:  # noqa: BLE001
         return UNSERIALIZABLE_SENTINEL
     return UNSERIALIZABLE_SENTINEL
