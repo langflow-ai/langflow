@@ -8,8 +8,10 @@ from langchain_core.messages import HumanMessage
 from langflow.memory import LCBuiltinChatMemory
 from lfx.memory.flow_context import (
     reset_current_flow_id,
+    reset_current_message_executor_id,
     reset_current_message_owner_id,
     set_current_flow_id,
+    set_current_message_executor_id,
     set_current_message_owner_id,
 )
 
@@ -21,16 +23,18 @@ def _executing(flow_id: UUID, owner_id: UUID):
     """Bind the flow and message owner a trigger dispatch gives the graph it runs."""
     flow_token = set_current_flow_id(flow_id)
     owner_token = set_current_message_owner_id(owner_id)
+    executor_token = set_current_message_executor_id(owner_id)
     try:
         yield
     finally:
+        reset_current_message_executor_id(executor_token)
         reset_current_message_owner_id(owner_token)
         reset_current_flow_id(flow_token)
 
 
-async def test_provider_session_memory_is_scoped_for_reads_writes_and_clear(client):  # noqa: ARG001
+async def test_provider_session_memory_is_scoped_for_reads_writes_and_clear(client, active_user):  # noqa: ARG001
     session_id = f"slack:shared:{uuid4()}"
-    owner_id, first_flow, second_flow = uuid4(), uuid4(), uuid4()
+    owner_id, first_flow, second_flow = active_user.id, uuid4(), uuid4()
     first = LCBuiltinChatMemory(str(first_flow), session_id, user_id=owner_id)
     second = LCBuiltinChatMemory(str(second_flow), session_id, user_id=owner_id)
     with _executing(first_flow, owner_id):
@@ -48,9 +52,9 @@ async def test_provider_session_memory_is_scoped_for_reads_writes_and_clear(clie
         assert [message.content for message in await second.aget_messages()] == ["second flow"]
 
 
-async def test_provider_session_memory_is_scoped_to_the_executing_owner(client):  # noqa: ARG001
+async def test_provider_session_memory_is_scoped_to_the_executing_owner(client, active_user, user_two):  # noqa: ARG001
     flow_id, session_id = uuid4(), f"slack:shared-owner:{uuid4()}"
-    first_owner, second_owner = uuid4(), uuid4()
+    first_owner, second_owner = active_user.id, user_two.id
     first = LCBuiltinChatMemory(str(flow_id), session_id, user_id=first_owner)
     second = LCBuiltinChatMemory(str(flow_id), session_id, user_id=second_owner)
     with _executing(flow_id, first_owner):

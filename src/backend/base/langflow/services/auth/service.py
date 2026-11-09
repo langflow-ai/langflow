@@ -7,8 +7,9 @@ import time
 import warnings
 from collections import OrderedDict
 from collections.abc import Awaitable, Callable, Coroutine, Iterable, Mapping
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NoReturn
 from uuid import UUID
 
 import jwt
@@ -16,6 +17,7 @@ from fastapi import HTTPException, Request, WebSocketException, status
 from jwt import InvalidTokenError
 from lfx.log.logger import logger
 from lfx.services.auth.base import BaseAuthService
+from lfx.services.auth.utils import is_sync_auth_validation
 from lfx.services.model_provider_policy import set_current_model_provider_policy_context
 from lfx.services.settings.constants import DEFAULT_SUPERUSER, LEGACY_DEFAULT_SUPERUSER_PASSWORD
 from sqlalchemy.exc import IntegrityError
@@ -59,7 +61,7 @@ from langflow.services.database.models.user.crud import (
     update_user_last_login_at,
 )
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import session_scope
+from langflow.services.deps import get_db_service, session_scope
 from langflow.services.schema import ServiceType
 
 _MAX_EXTERNAL_AUTHORIZATION_GROUPS = 500
@@ -295,8 +297,19 @@ async def _safe_audit_directory_reconciliation(
 
 if TYPE_CHECKING:
     from cryptography.fernet import Fernet, MultiFernet
+    from lfx.services.authorization.base import ExecutionPrincipal
     from lfx.services.settings.service import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
+
+
+@asynccontextmanager
+async def _runtime_validation_scope():
+    if is_sync_auth_validation():
+        async with get_db_service().session_scope_for_sync_validation() as session:
+            yield session
+    else:
+        async with session_scope() as session:
+            yield session
 
 
 class AuthService(BaseAuthService):
@@ -1312,6 +1325,102 @@ class AuthService(BaseAuthService):
             return None
         set_current_model_provider_policy_context(user_id=current_user.id, attributes={"is_superuser": True})
         return current_user
+
+    async def validate_tool_call(
+        self,
+        *,
+        flow_id: str,
+        component_id: str,
+        tool_tag: str,
+        tool_name: str,
+        approval_actions: tuple[str, ...],
+        metadata_configured: bool,
+    ) -> None:
+        """Refuse stale tool permissions before the captured callable executes."""
+        from lfx.graph.graph.utils import process_flow
+
+        from langflow.services.database.models.flow.model import Flow
+
+        def deny() -> NoReturn:
+            msg = "Stored tool settings no longer authorize this call"
+            raise PermissionError(msg)
+
+        async with _runtime_validation_scope() as session:
+            flow = await session.get(Flow, UUID(flow_id))
+            if flow is None or not isinstance(flow.data, dict):
+                deny()
+            nodes = process_flow(flow.data).get("nodes") or []
+            matches = [node for node in nodes if isinstance(node, dict) and node.get("id") == component_id]
+            if len(matches) != 1:
+                deny()
+            node = matches[0]
+            node_info = (node.get("data") or {}).get("node") or {}
+            if node_info.get("tool_mode") is not True:
+                deny()
+            template = node_info.get("template") or {}
+            field = template.get("tools_metadata")
+            if field is None and not metadata_configured:
+                return
+            rows = field.get("value") if isinstance(field, dict) else None
+            if not isinstance(rows, list):
+                deny()
+            matches = [
+                row
+                for row in rows
+                if isinstance(row, dict)
+                and isinstance(row.get("tags"), list)
+                and row["tags"]
+                and row["tags"][0] == tool_tag
+            ]
+            if len(matches) != 1:
+                deny()
+            row = matches[0]
+            if row.get("status", True) is not True:
+                deny()
+            if row.get("name") and row["name"] != tool_name:
+                deny()
+            actions = row.get("approval_actions") or []
+            if actions and set(actions) != set(approval_actions):
+                deny()
+
+    async def validate_execution_user(
+        self,
+        user_id: str | UUID | None,
+        *,
+        principal: ExecutionPrincipal | None = None,
+        db: AsyncSession | None = None,
+    ) -> None:
+        from lfx.services.authorization.base import PUBLIC_ANONYMOUS_ACTOR_ID
+        from sqlmodel import select
+
+        if (
+            principal is not None
+            and principal.kind == "anonymous_public"
+            and principal.user_id is None
+            and principal.actor_id == str(PUBLIC_ANONYMOUS_ACTOR_ID)
+            and str(user_id) == str(PUBLIC_ANONYMOUS_ACTOR_ID)
+        ):
+            return
+        identities = {user_id}
+        if principal is not None and principal.kind != "anonymous_public":
+            identities.update((principal.user_id, principal.actor_id))
+        try:
+            ids = {UUID(str(identity)) for identity in identities if identity is not None}
+        except ValueError as exc:
+            raise HTTPException(status_code=401, detail="Invalid execution user") from exc
+        if not ids:
+            raise HTTPException(status_code=401, detail="Execution user is required")
+
+        async def validate(session: AsyncSession) -> None:
+            result = await session.exec(select(User.id).where(User.id.in_(ids), User.is_active == True))  # noqa: E712
+            if set(result.all()) != ids:
+                raise HTTPException(status_code=401, detail="Execution user is inactive or no longer exists")
+
+        if db is not None:
+            await validate(db)
+        else:
+            async with _runtime_validation_scope() as session:
+                await validate(session)
 
     async def get_webhook_user(self, flow_id: str, request: Request) -> UserRead:
         clear_current_auth_context()
