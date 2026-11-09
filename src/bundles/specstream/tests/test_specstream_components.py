@@ -56,8 +56,18 @@ ROWS_PAGE = {
 class FakeSpecStream:
     """Routes the SpecStream endpoints and records every call."""
 
-    def __init__(self, *, maximum_cents: int = 300, existing: dict | None = None, runnable: bool = True) -> None:
+    def __init__(
+        self,
+        *,
+        maximum_cents: int = 300,
+        existing: dict | None = None,
+        runnable: bool = True,
+        quote: dict | None = None,
+        rows_page: dict | None = None,
+    ) -> None:
         self.maximum_cents = maximum_cents
+        self.quote = quote
+        self.rows_page = rows_page
         self.existing = existing
         self.runnable = runnable
         self.calls: list[tuple[str, str, Any]] = []
@@ -72,11 +82,13 @@ class FakeSpecStream:
                 return _ok({"status": "needs_edit", "canonical_sentence": "Roofing companies"})
             return _ok({"status": "runnable", "ast_hash": "ast_1"})
         if method == "POST" and path == "/v1/capacity/quotes":
+            if self.quote is not None:
+                return _ok(self.quote)
             return _ok({"quote_id": "q_1", "quote_hash": "h_1", "maximum_cents": self.maximum_cents})
         if method == "POST" and path == "/v1/capacity/executions":
             return _ok({"find_id": FIND_ID})
         if method == "GET" and path.startswith(f"/v1/finds/{FIND_ID}/rows"):
-            return _ok(ROWS_PAGE)
+            return _ok(self.rows_page or ROWS_PAGE)
         msg = f"unexpected call {method} {path}"
         raise AssertionError(msg)
 
@@ -116,6 +128,12 @@ class TestFlattenRow:
         row = flatten_row(FIND_ID, ROWS_PAGE["rows"][1])
 
         assert row["Company"] == "Buckeye Roofs"
+        assert row["source_url"] == ""
+
+    def test_skips_cells_that_are_not_objects(self) -> None:
+        row = flatten_row(FIND_ID, {"ordinal": 3, "cells": ["oops", {"label": "A", "display": "1", "provenance": "x"}]})
+
+        assert row["A"] == "1"
         assert row["source_url"] == ""
 
 
@@ -299,6 +317,36 @@ class TestErrors:
             pytest.raises(SpecStreamError, match="couldn't read"),
         ):
             _component().find_list_dataframe()
+
+    @pytest.mark.parametrize(
+        ("quote", "message"),
+        [
+            ({"quote_id": "q_1", "quote_hash": "h_1"}, "maximum_cents"),
+            ({"quote_id": "q_1", "quote_hash": "h_1", "maximum_cents": 0}, "maximum_cents"),
+            ({"quote_hash": "h_1", "maximum_cents": 300}, "missing 'quote_id'"),
+        ],
+    )
+    def test_malformed_quote_runs_nothing(self, quote: dict, message: str) -> None:
+        fake = FakeSpecStream(quote=quote)
+        with patch.object(httpx.Client, "request", side_effect=fake), pytest.raises(SpecStreamError, match=message):
+            _component().find_list_dataframe()
+
+        assert "POST /v1/capacity/executions" not in fake.paths()
+
+    def test_stopped_run_with_no_rows_raises(self) -> None:
+        fake = FakeSpecStream(rows_page={"status": "failed", "rows": [], "next_cursor": None})
+        with (
+            patch.object(httpx.Client, "request", side_effect=fake),
+            pytest.raises(SpecStreamError, match="ended as failed with no rows"),
+        ):
+            _component().find_list_dataframe()
+
+    def test_stopped_run_keeps_the_rows_it_found(self) -> None:
+        fake = FakeSpecStream(rows_page={**ROWS_PAGE, "status": "cancelled"})
+        with patch.object(httpx.Client, "request", side_effect=fake):
+            table = _component().find_list_dataframe()
+
+        assert len(table) == 2
 
     def test_timeout_and_connection_errors(self) -> None:
         with (

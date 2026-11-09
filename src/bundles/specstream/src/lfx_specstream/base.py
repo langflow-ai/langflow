@@ -50,11 +50,29 @@ def _dollars(cents: int) -> str:
     return f"${cents / 100:.2f}"
 
 
+def _field(data: dict[str, Any], key: str) -> Any:
+    value = data.get(key)
+    if not value:
+        msg = f"SpecStream returned a response this component couldn't read (missing '{key}')."
+        raise SpecStreamError(msg)
+    return value
+
+
+def _quoted_cents(data: dict[str, Any]) -> int:
+    value = data.get("maximum_cents")
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        msg = "SpecStream returned a quote this component couldn't read (no 'maximum_cents'). Nothing ran."
+        raise SpecStreamError(msg)
+    return value
+
+
 def flatten_row(find_id: str, record: dict[str, Any]) -> dict[str, Any]:
     """Return one row as flat fields: each column's label holds what the list shows, plus where it was read."""
     row: dict[str, Any] = {"list_id": find_id, "position": record.get("ordinal")}
     source: dict[str, Any] | None = None
     for cell in record.get("details") or record.get("cells") or []:
+        if not isinstance(cell, dict):
+            continue
         label = str(cell.get("label") or cell.get("column_id") or "").strip()
         if not label:
             continue
@@ -67,8 +85,12 @@ def flatten_row(find_id: str, record: dict[str, Any]) -> dict[str, Any]:
         else:
             value = cell.get("value") if cell.get("value") is not None else ""
         row[label] = value
-        provenance = cell.get("provenance") or {}
-        if source is None and str(provenance.get("source_url") or "").startswith("http"):
+        provenance = cell.get("provenance")
+        if (
+            source is None
+            and isinstance(provenance, dict)
+            and str(provenance.get("source_url") or "").startswith("http")
+        ):
             source = provenance
     row["source_url"] = source.get("source_url", "") if source else ""
     row["checked_at"] = source.get("observed_at", "") if source else ""
@@ -157,7 +179,7 @@ class SpecStreamClient:
             path = f"/v1/finds/{quote(find_id, safe='')}/rows?{urlencode(query)}"
             page = self.request("GET", path) or {}
             status = page.get("status") or status
-            rows.extend(flatten_row(find_id, record) for record in page.get("rows") or [])
+            rows.extend(flatten_row(find_id, record) for record in page.get("rows") or [] if isinstance(record, dict))
             cursor = page.get("next_cursor")
             if not cursor:
                 break
@@ -178,7 +200,8 @@ class SpecStreamClient:
 
         Raises:
             SpecStreamError: If nothing could be run: the request is unclear, the quote is above the
-                ceiling, or SpecStream refused a call. In the first two cases nothing ran.
+                ceiling, SpecStream refused a call or sent a reply this component cannot read, or the run
+                stopped with no rows. In the first two cases nothing ran.
         """
         q = (request or "").strip()
         if not q:
@@ -233,11 +256,11 @@ class SpecStreamClient:
                 self.request(
                     "POST",
                     "/v1/capacity/quotes",
-                    {"ast_hash": reading["ast_hash"], "operation": "find", "requested_units": max_results},
+                    {"ast_hash": _field(reading, "ast_hash"), "operation": "find", "requested_units": max_results},
                 )
                 or {}
             )
-            maximum_cents = int(priced.get("maximum_cents") or 0)
+            maximum_cents = _quoted_cents(priced)
             if maximum_cents > max_cents:
                 msg = (
                     f"Nothing ran: this list can cost up to {_dollars(maximum_cents)}, above the maximum of "
@@ -249,15 +272,15 @@ class SpecStreamClient:
                     "POST",
                     "/v1/capacity/executions",
                     {
-                        "quote_id": priced["quote_id"],
-                        "quote_hash": priced["quote_hash"],
+                        "quote_id": _field(priced, "quote_id"),
+                        "quote_hash": _field(priced, "quote_hash"),
                         "confirm_max_cents": maximum_cents,
                         "idempotency_key": candidates[0],
                     },
                 )
                 or {}
             )
-            find_id = run["find_id"]
+            find_id = _field(run, "find_id")
 
         deadline = time.monotonic() + max(0.0, float(wait_seconds))
         while True:
@@ -265,5 +288,8 @@ class SpecStreamClient:
             if result["status"] in FINISHED | STOPPED or time.monotonic() >= deadline:
                 break
             time.sleep(poll_interval)
+        if result["status"] in STOPPED and not result["rows"]:
+            msg = f"The SpecStream run ended as {result['status']} with no rows. List: {result['list_link']}"
+            raise SpecStreamError(msg)
         result.update({"request": q, "maximum_price_usd": maximum_cents / 100})
         return result
