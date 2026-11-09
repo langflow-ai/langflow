@@ -35,7 +35,7 @@ Configure recipients or the chat ID in your flow. Both components expose the mes
 
 ## Receive and reply
 
-The extension's [gateway example](https://github.com/linq-team/linq-examples/tree/main/langflow/examples) receives signed Linq webhooks, runs a saved Langflow text-generation flow, and replies to the verified originating chat. The gateway is a separate service, not a built-in Langflow trigger component. Its README explains signing-secret configuration, duplicate-event handling, deployment limits, and retention considerations.
+The extension's [gateway example](https://github.com/linq-team/linq-examples/blob/main/langflow/README.md) receives signed Linq webhooks, runs a saved Langflow text-generation flow, and replies to the verified originating chat. The gateway is a separate service, not a built-in Langflow trigger component. Its README explains signing-secret configuration, duplicate-event handling, deployment limits, and retention considerations.
 
 Message content is sent to Linq and can also pass through Langflow and any model provider configured in the flow. Review each service's retention settings before using sensitive data.
 
