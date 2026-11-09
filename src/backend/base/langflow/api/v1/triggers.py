@@ -179,16 +179,15 @@ async def _authorized_trigger(
     return row
 
 
-async def _stage_trigger_action(
+async def _commit_trigger_action(
     session: AsyncSession,
     *,
     user_id: UUID,
     row: Trigger,
     action: str,
     details: dict[str, str] | None = None,
-    commit: bool = False,
 ) -> None:
-    """Flush action evidence with its mutation; commit before provider I/O when requested."""
+    """Commit each action and its required audit inside one sanitized error boundary."""
     from langflow.services.authorization.audit import AUDIT_EVENT_MUTATION, AuditPersistenceError, stage_audit_decision
 
     try:
@@ -206,11 +205,10 @@ async def _stage_trigger_action(
                 **(details or {}),
             },
         )
-        # Force the audit INSERT inside this boundary rather than leaving it to
-        # request finalization, whose errors could expose private storage details.
+        # Keep both the audit INSERT and transaction commit inside this boundary;
+        # request finalization could otherwise expose private storage details.
         await session.flush()
-        if commit:
-            await session.commit()
+        await session.commit()
     except Exception as exc:
         # Storage/plugin failures must never become an owner-facing refusal or
         # expose database or credential details through an error response.
@@ -425,7 +423,7 @@ async def enable_trigger(
     )
     try:
         updated = await service.enable(session, row=row)
-        await _stage_trigger_action(session, user_id=current_user.id, row=updated, action=AUDIT_RESUME, commit=True)
+        await _commit_trigger_action(session, user_id=current_user.id, row=updated, action=AUDIT_RESUME)
         updated = await service.activate_push_source(session, row=updated)
     except IntegrationPolicyBlockedError as exc:
         raise HTTPException(
@@ -456,8 +454,9 @@ async def disable_trigger(
         updated = await service.disable(session, row=row)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
-    await _stage_trigger_action(session, user_id=current_user.id, row=updated, action=AUDIT_PAUSE)
-    return await present_one(session, current_user, updated)
+    response = await present_one(session, current_user, updated)
+    await _commit_trigger_action(session, user_id=current_user.id, row=updated, action=AUDIT_PAUSE)
+    return response
 
 
 @router.post("/{trigger_id}/pin", response_model=TriggerRead)
@@ -532,14 +531,15 @@ async def replay_trigger_event(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found") from exc
     except ReplayWindowExpiredError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
-    await _stage_trigger_action(
+    response = TriggerEventRead.model_validate(replay)
+    await _commit_trigger_action(
         session,
         user_id=current_user.id,
         row=row,
         action=AUDIT_REPLAY,
         details={"original_event_id": str(payload.event_id), "replay_event_id": str(replay.id)},
     )
-    return TriggerEventRead.model_validate(replay)
+    return response
 
 
 @router.post("/{trigger_id}/test", response_model=TriggerEventRead, status_code=status.HTTP_202_ACCEPTED)

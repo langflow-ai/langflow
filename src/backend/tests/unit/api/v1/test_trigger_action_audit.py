@@ -260,9 +260,10 @@ async def test_required_audit_insert_failure_returns_safe_http_error_and_rolls_b
     assert await _mutation_rows(trigger_id) == []
 
 
+@pytest.mark.parametrize("endpoint", ["enable", "disable", "replay"])
 @pytest.mark.parametrize("error_type", [RuntimeError, ValueError])
-async def test_required_resume_commit_failure_returns_safe_http_error_and_rolls_back(
-    client, logged_in_headers, audited_trigger, error_type
+async def test_required_action_commit_failure_returns_safe_http_error_and_rolls_back(
+    client, logged_in_headers, audited_trigger, error_type, endpoint
 ):
     from httpx import ASGITransport, AsyncClient
     from sqlalchemy import event as sqlalchemy_event
@@ -280,7 +281,11 @@ async def test_required_resume_commit_failure_returns_safe_http_error_and_rolls_
             transport=ASGITransport(app=client._transport.app, raise_app_exceptions=False),
             base_url=client.base_url,
         ) as http_client:
-            response = await http_client.post(f"api/v1/triggers/{trigger_id}/enable", headers=logged_in_headers)
+            response = await http_client.post(
+                f"api/v1/triggers/{trigger_id}/{endpoint}",
+                headers=logged_in_headers,
+                json={"event_id": str(event_id)} if endpoint == "replay" else None,
+            )
     finally:
         sqlalchemy_event.remove(Session, "before_commit", fail_commit)
     assert response.status_code == 500, response.text
