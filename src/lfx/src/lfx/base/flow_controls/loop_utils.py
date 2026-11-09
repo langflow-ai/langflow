@@ -132,12 +132,13 @@ def get_loop_body_start_edge(vertex: "Vertex", loop_output_name: str = "item"):
     return None
 
 
-def extract_loop_output(results: list, end_vertex_id: str | None) -> Data:
+def extract_loop_output(results: list, end_vertex_id: str | None, output_name: str | None = None) -> Data:
     """Extract the output from subgraph execution results.
 
     Args:
         results: List of VertexBuildResult objects from subgraph execution
         end_vertex_id: The vertex ID that feeds back to the item input (end of loop body)
+        output_name: Source output connected to the feedback edge, if known
 
     Returns:
         Data object containing the loop iteration output
@@ -153,14 +154,18 @@ def extract_loop_output(results: list, end_vertex_id: str | None) -> Data:
         if hasattr(result, "vertex") and result.vertex.id == end_vertex_id and hasattr(result, "result_dict"):
             result_dict = result.result_dict
             if result_dict.outputs:
-                # Get first output value
-                first_output = next(iter(result_dict.outputs.values()))
+                # The feedback edge can select any output of the end vertex.
+                selected_output = (
+                    result_dict.outputs.get(output_name)
+                    if output_name is not None
+                    else next(iter(result_dict.outputs.values()))
+                )
                 # Handle both dict (from model_dump()) and object formats
                 message = None
-                if isinstance(first_output, dict) and "message" in first_output:
-                    message = first_output["message"]
-                elif hasattr(first_output, "message"):
-                    message = first_output.message
+                if isinstance(selected_output, dict) and "message" in selected_output:
+                    message = selected_output["message"]
+                elif hasattr(selected_output, "message"):
+                    message = selected_output.message
 
                 if message is not None:
                     # If message is a dict, wrap it in a Data object
@@ -243,6 +248,18 @@ async def execute_loop_body(
                 raise ValueError(msg)
             injections.append((edge.target_id, edge.target_handle.field_name))
 
+    output_name = None
+    if start_edge and end_vertex_id:
+        loop_vertex = graph.get_vertex(start_edge.source_id)
+        output_name = next(
+            (
+                edge.source_handle.name
+                for edge in loop_vertex.incoming_edges
+                if edge.source_id == end_vertex_id and edge.target_param == start_edge.source_handle.name
+            ),
+            None,
+        )
+
     aggregated_results = []
 
     for item in data_list:
@@ -284,7 +301,7 @@ async def execute_loop_body(
                         raise RuntimeError(msg)
 
             # Extract output from final result
-            output = extract_loop_output(results, end_vertex_id)
+            output = extract_loop_output(results, end_vertex_id, output_name)
             aggregated_results.append(output)
 
     return aggregated_results
