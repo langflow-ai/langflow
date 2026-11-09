@@ -28,6 +28,8 @@ from lfx.components.files_and_knowledge.memory_retrieval import (
     _to_python_scalar,
 )
 
+from tests.base import ComponentTestBaseWithoutClient
+
 
 def _make_component(
     *,
@@ -951,59 +953,117 @@ class TestMemoryBaseRetrievalBehavior:
         json.dumps(row)
 
 
-@pytest.mark.parametrize("selected", ["customer-history", "technical-notes", None, ""])
-async def test_tool_description_identifies_selected_memory_base(selected):
-    component = _make_component(flow_id=uuid.uuid4(), session_id="session", selected=selected)
-    component.set(tool_mode=True)
-    tools = await component._get_tools()
-    assert tools
-    for tool in tools:
-        if selected:
-            assert f"Memory Base: {selected!r}." in tool.description
-            assert tool.metadata["display_description"] == tool.description
-        else:
-            assert "Memory Base:" not in tool.description
+class TestMemoryBaseTools(ComponentTestBaseWithoutClient):
+    """Exercise real tool conversion and saved action metadata."""
 
+    @pytest.fixture
+    def component_class(self):
+        """Return the memory retrieval component."""
+        return MemoryBaseComponent
 
-async def test_tool_description_tracks_selection_without_accumulating_names():
-    component = _make_component(flow_id=uuid.uuid4(), session_id="session", selected="first-base")
-    component.set(tool_mode=True)
-    first = await component._get_tools()
-    component.memory_base = "second-base"
-    second = await component._get_tools()
-    assert "first-base" in first[0].description
-    assert "second-base" in second[0].description
-    assert "first-base" not in second[0].description
+    @pytest.fixture
+    def default_kwargs(self):
+        """Keep generic construction independent of stored memory bases."""
+        return {}
 
+    @pytest.fixture
+    def skipped_outputs(self):
+        """Retrieval requires a persisted owner and attached memory base."""
+        return {"retrieve_data": "Requires a persisted owner and attached memory base; covered by retrieval tests."}
 
-async def test_toolkit_uses_current_selection_with_saved_tool_metadata():
-    """Saved tool descriptions must not bring back a previous memory source."""
-    from lfx.schema.dataframe import DataFrame
+    @pytest.fixture
+    def file_names_mapping(self):
+        """No historical component snapshots are needed."""
+        return []
 
-    component = _make_component(flow_id=uuid.uuid4(), session_id="session", selected="old-base")
-    component.set(tool_mode=True)
-    old_tools = await component._get_tools()
-    component.tools_metadata = DataFrame([component._build_tool_data(tool) for tool in old_tools])
-    component.memory_base = "current-base"
-    tools = await component.to_toolkit()
-    assert tools
-    for tool in tools:
-        assert "current-base" in tool.description
-        assert "old-base" not in tool.description
+    @pytest.mark.parametrize("selected", ["customer-history", "technical-notes", None, ""])
+    async def test_tool_description_identifies_selected_memory_base(self, selected):
+        """Expose only a nonempty selected memory name."""
+        component = _make_component(flow_id=uuid.uuid4(), session_id="session", selected=selected)
+        component.set(tool_mode=True)
+        tools = await component._get_tools()
+        assert tools
+        for tool in tools:
+            if selected:
+                assert f"Memory Base: {selected!r}." in tool.description
+                assert tool.metadata["display_description"] == tool.description
+            else:
+                assert "Memory Base:" not in tool.description
 
+    async def test_tool_description_tracks_selection_without_accumulating_names(self):
+        """Rebuilding tools replaces the prior selected name."""
+        component = _make_component(flow_id=uuid.uuid4(), session_id="session", selected="first-base")
+        component.set(tool_mode=True)
+        first = await component._get_tools()
+        component.memory_base = "second-base"
+        second = await component._get_tools()
+        assert "first-base" in first[0].description
+        assert "second-base" in second[0].description
+        assert "first-base" not in second[0].description
 
-async def test_toolkit_preserves_custom_description_with_saved_metadata():
-    """A user-authored tool description remains an intentional override."""
-    from lfx.schema.dataframe import DataFrame
+    async def test_toolkit_uses_current_selection_with_saved_tool_metadata(self):
+        """Saved tool descriptions must not bring back a previous memory source."""
+        from lfx.schema.dataframe import DataFrame
 
-    component = _make_component(flow_id=uuid.uuid4(), session_id="session", selected="old-base")
-    component.set(tool_mode=True)
-    old_tools = await component._get_tools()
-    rows = [component._build_tool_data(tool) for tool in old_tools]
-    for row in rows:
-        row["description"] = "Look up customer preferences."
-    component.tools_metadata = DataFrame(rows)
-    component.memory_base = "current-base"
-    tools = await component.to_toolkit()
-    assert tools
-    assert all(tool.description == "Look up customer preferences." for tool in tools)
+        component = _make_component(flow_id=uuid.uuid4(), session_id="session", selected="old-base")
+        component.set(tool_mode=True)
+        old_tools = await component._get_tools()
+        component.tools_metadata = DataFrame([component._build_tool_data(tool) for tool in old_tools])
+        component.memory_base = "current-base"
+        tools = await component.to_toolkit()
+        assert tools
+        for tool in tools:
+            assert "current-base" in tool.description
+            assert "old-base" not in tool.description
+
+    async def test_toolkit_preserves_custom_description_with_saved_metadata(self):
+        """A user-authored tool description remains an intentional override."""
+        from lfx.schema.dataframe import DataFrame
+
+        component = _make_component(flow_id=uuid.uuid4(), session_id="session", selected="old-base")
+        component.set(tool_mode=True)
+        old_tools = await component._get_tools()
+        rows = [component._build_tool_data(tool) for tool in old_tools]
+        for row in rows:
+            row["description"] = "Look up customer preferences."
+        component.tools_metadata = DataFrame(rows)
+        component.memory_base = "current-base"
+        tools = await component.to_toolkit()
+        assert tools
+        assert all(tool.description == "Look up customer preferences." for tool in tools)
+
+    async def test_metadata_with_extra_tags_uses_current_name(self):
+        """Additional saved tags do not change the tool's primary identity."""
+        component = _make_component(flow_id=uuid.uuid4(), session_id="session", selected="old-base")
+        component.set(tool_mode=True)
+        rows = [component._build_tool_data(tool) for tool in await component._get_tools()]
+        for row in rows:
+            row["tags"] = [*row["tags"], "extra"]
+        from lfx.schema.dataframe import DataFrame
+
+        component.tools_metadata = DataFrame(rows)
+        component.memory_base = "current-base"
+        tools = await component.to_toolkit()
+        assert tools
+        assert all("current-base" in tool.description and "old-base" not in tool.description for tool in tools)
+
+    async def test_list_metadata_does_not_crash(self):
+        """Design-time list metadata retains the parent fallback behavior."""
+        component = _make_component(flow_id=uuid.uuid4(), session_id="session", selected="current-base")
+        component.set(tool_mode=True)
+        component.tools_metadata = [component._build_tool_data(tool) for tool in await component._get_tools()]
+        tools = await component.to_toolkit()
+        assert tools
+        assert all("current-base" in tool.description for tool in tools)
+
+    async def test_refresh_uses_incoming_selection(self):
+        """A new dropdown value takes precedence over the old template snapshot."""
+        component = _make_component(flow_id=uuid.uuid4(), session_id="session", selected="old-base")
+        component.set(tool_mode=True)
+        component._get_runtime_or_frontend_node_attr = MagicMock(return_value=str(uuid.uuid4()))
+        cfg = {"memory_base": {"options": [], "value": "old-base"}}
+        with _patched_session_scope(_exec_returning([SimpleNamespace(name="current-base")])):
+            await component.update_build_config(cfg, "current-base", "memory_base")
+        tools = await component._get_tools()
+        assert cfg["memory_base"]["value"] == "current-base"
+        assert all("current-base" in tool.description and "old-base" not in tool.description for tool in tools)

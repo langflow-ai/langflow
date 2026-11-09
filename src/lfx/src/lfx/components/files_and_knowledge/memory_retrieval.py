@@ -15,6 +15,7 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
+import pandas as pd
 
 from lfx.custom import Component
 from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output
@@ -143,14 +144,15 @@ class MemoryBaseComponent(Component):
 
     def _update_tools_with_metadata(self, tools, metadata):
         """Refresh generated descriptions while preserving user-authored overrides."""
-        if metadata is not None:
+        if isinstance(metadata, pd.DataFrame):
             metadata = metadata.copy(deep=True)
             for index, row in metadata.iterrows():
                 if row.get("description") != row.get("display_description"):
                     continue
                 for tool in tools:
-                    if tool.tags and row.get("tags") == tool.tags:
-                        metadata.at[index, "description"] = tool.description
+                    saved_tags = row.get("tags")
+                    if isinstance(saved_tags, list) and saved_tags and tool.tags and saved_tags[0] == tool.tags[0]:
+                        metadata.loc[index, "description"] = tool.description
                         break
         return super()._update_tools_with_metadata(tools, metadata)
 
@@ -245,16 +247,19 @@ class MemoryBaseComponent(Component):
 
         return predicates or None
 
-    async def update_build_config(self, build_config, field_value, field_name=None):  # noqa: ARG002
+    async def update_build_config(self, build_config, field_value, field_name=None):
         """Populate Memory selections from the current developer's stored Memory Bases."""
         if field_name != "memory_base":
             return build_config
 
+        self.memory_base = field_value
+        build_config["memory_base"]["value"] = field_value
         flow_id = _coerce_uuid(self._get_runtime_or_frontend_node_attr("flow_id"))
         user_uuid = _coerce_uuid(self.user_id)
         if flow_id is None or user_uuid is None:
             build_config["memory_base"]["options"] = []
             build_config["memory_base"]["value"] = None
+            self.memory_base = None
             return build_config
 
         from langflow.services.database.models.memory_base.model import MemoryBase
@@ -274,6 +279,7 @@ class MemoryBaseComponent(Component):
         build_config["memory_base"]["options"] = options
         if build_config["memory_base"].get("value") not in options:
             build_config["memory_base"]["value"] = None
+        self.memory_base = build_config["memory_base"]["value"]
         return build_config
 
     async def _resolve_attached_mb(
