@@ -107,8 +107,8 @@ async def relocate_files(
     target bucket cannot be used.
 
     Up to ``concurrency`` files are copied at once. Each streams across holding at
-    most one multipart part (8 MiB) in memory, so memory scales with ``concurrency``
-    alone.
+    most ``STREAM_PARTS_IN_FLIGHT`` multipart parts plus one filling (40 MiB), so
+    memory scales with ``concurrency`` alone.
 
     ``on_result`` is given each file's result as that file finishes, and ``on_progress``
     the files finished, the files in all and the bytes copied so far, the first time
