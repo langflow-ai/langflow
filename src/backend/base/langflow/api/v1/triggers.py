@@ -21,6 +21,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from lfx.integrations.errors import IntegrationPolicyBlockedError
 
 from langflow.api.utils import CurrentActiveUser, DbSession, DbSessionReadOnly
 from langflow.api.v1.flows_helpers import _read_flow
@@ -386,6 +387,16 @@ async def enable_trigger(
     )
     try:
         updated = await service.enable_and_activate(session, row=row)
+    except IntegrationPolicyBlockedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "error_code": exc.code,
+                "message": exc.safe_message,
+                "hint": exc.hint,
+                "provider": exc.provider,
+            },
+        ) from exc
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=refusal_detail(exc)) from exc
     return await present_one(session, current_user, updated)

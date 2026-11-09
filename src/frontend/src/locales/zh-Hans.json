@@ -997,6 +997,8 @@
   "flow.statusBuild": "构建以验证状态。",
   "flow.statusBuilding": "正在加载...",
   "flow.statusInactive": "执行被阻止",
+  "flow.statusBranchNotTaken": "未选择此分支",
+  "flow.statusBranchTakenTo": "{{component}} 已将输入发送到 {{outputs}}。",
   "flow.statusMissingFieldsError": "请填写所有必填项。",
   "flow.toAvoidLosingProgress": "以免进度丢失。",
   "flow.tooltipHiddenOutputsCollapse": "折叠隐藏的输出",
