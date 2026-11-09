@@ -1,0 +1,212 @@
+{
+  "schema_version": 1,
+  "provider_id": "confluence",
+  "distribution": "lfx-confluence",
+  "manifest": {
+    "schema_version": 1,
+    "provider_id": "confluence",
+    "display_name": "Confluence Cloud",
+    "icon": "Confluence",
+    "docs_url": "https://docs.langflow.org/next/bundles-confluence",
+    "auth_profiles": [
+      {
+        "id": "user",
+        "kind": "oauth2_authorization_code",
+        "identity": "user_delegated",
+        "supports_pkce": false,
+        "supports_refresh": true,
+        "default_scopes": [
+          "offline_access",
+          "read:confluence-user",
+          "read:page:confluence",
+          "write:page:confluence"
+        ],
+        "client_type_by_context": {
+          "hosted": "confidential",
+          "self_managed": "confidential"
+        },
+        "owner_by_context": {
+          "hosted": "either",
+          "self_managed": "customer"
+        }
+      }
+    ],
+    "capabilities": [
+      {
+        "id": "confluence.page.search",
+        "display_name": "Confluence: Search Pages",
+        "auth_profile_id": "user",
+        "identity": "user_delegated",
+        "required_scopes": [
+          "read:page:confluence",
+          "read:confluence-user"
+        ],
+        "policy_keys": [
+          "integrations.confluence.page.search"
+        ],
+        "substrate": "rest",
+        "maturity": "preview",
+        "deployment_contexts": [
+          "hosted",
+          "self_managed"
+        ],
+        "risk": "read",
+        "component_ref": "ConfluenceSearchPagesComponent"
+      },
+      {
+        "id": "confluence.page.read",
+        "display_name": "Confluence: Read Page",
+        "auth_profile_id": "user",
+        "identity": "user_delegated",
+        "required_scopes": [
+          "read:page:confluence",
+          "read:confluence-user"
+        ],
+        "policy_keys": [
+          "integrations.confluence.page.read"
+        ],
+        "substrate": "rest",
+        "maturity": "preview",
+        "deployment_contexts": [
+          "hosted",
+          "self_managed"
+        ],
+        "risk": "read",
+        "component_ref": "ConfluenceReadPageComponent"
+      },
+      {
+        "id": "confluence.page.create",
+        "display_name": "Confluence: Create Page",
+        "auth_profile_id": "user",
+        "identity": "user_delegated",
+        "required_scopes": [
+          "read:page:confluence",
+          "write:page:confluence",
+          "read:confluence-user"
+        ],
+        "policy_keys": [
+          "integrations.confluence.page.create"
+        ],
+        "substrate": "rest",
+        "maturity": "preview",
+        "deployment_contexts": [
+          "hosted",
+          "self_managed"
+        ],
+        "risk": "write",
+        "component_ref": "ConfluenceCreatePageComponent"
+      },
+      {
+        "id": "confluence.page.update",
+        "display_name": "Confluence: Update Page",
+        "auth_profile_id": "user",
+        "identity": "user_delegated",
+        "required_scopes": [
+          "read:page:confluence",
+          "write:page:confluence",
+          "read:confluence-user"
+        ],
+        "policy_keys": [
+          "integrations.confluence.page.update"
+        ],
+        "substrate": "rest",
+        "maturity": "preview",
+        "deployment_contexts": [
+          "hosted",
+          "self_managed"
+        ],
+        "risk": "write",
+        "component_ref": "ConfluenceUpdatePageComponent"
+      },
+      {
+        "id": "confluence.trigger.created",
+        "display_name": "Confluence: On Page Created",
+        "auth_profile_id": "user",
+        "identity": "user_delegated",
+        "required_scopes": [
+          "read:page:confluence",
+          "offline_access",
+          "read:confluence-user"
+        ],
+        "policy_keys": [
+          "integrations.confluence.trigger.created"
+        ],
+        "substrate": "rest",
+        "maturity": "preview",
+        "deployment_contexts": [
+          "self_managed"
+        ],
+        "risk": "read",
+        "component_ref": "ConfluenceOnPageCreatedTriggerComponent"
+      },
+      {
+        "id": "confluence.trigger.updated",
+        "display_name": "Confluence: On Page Updated",
+        "auth_profile_id": "user",
+        "identity": "user_delegated",
+        "required_scopes": [
+          "read:page:confluence",
+          "offline_access",
+          "read:confluence-user"
+        ],
+        "policy_keys": [
+          "integrations.confluence.trigger.updated"
+        ],
+        "substrate": "rest",
+        "maturity": "preview",
+        "deployment_contexts": [
+          "self_managed"
+        ],
+        "risk": "read",
+        "component_ref": "ConfluenceOnPageUpdatedTriggerComponent"
+      }
+    ]
+  },
+  "sources": [
+    {
+      "url": "https://developer.atlassian.com/cloud/confluence/rest/v2/api-group-page/",
+      "title": "Confluence Cloud REST v2 page API",
+      "verified_on": "2026-10-22"
+    },
+    {
+      "url": "https://developer.atlassian.com/cloud/confluence/oauth-2-3lo-apps/",
+      "title": "Confluence Cloud OAuth 2.0 3LO apps",
+      "verified_on": "2026-10-22"
+    },
+    {
+      "url": "https://developer.atlassian.com/cloud/confluence/rest/v1/api-group-users/#api-wiki-rest-api-user-current-get",
+      "title": "Confluence current user API",
+      "verified_on": "2026-10-22"
+    },
+    {
+      "url": "https://developer.atlassian.com/cloud/confluence/rate-limiting/",
+      "title": "Confluence Cloud rate limits",
+      "verified_on": "2026-10-30"
+    }
+  ],
+  "transport_limitations": [
+    "One operator-configured Confluence Cloud site and approved numeric spaces only.",
+    "Hosted actions and self-managed actions and polling are preview. Hosted triggers, Data Center, Desktop, headless manual credentials and webhooks are unsupported.",
+    "Polls observe latest versions after a silent baseline. They can miss intermediate edits, deletions, short-lived pages and access gaps.",
+    "Original createdAt separates newly created pages from old pages moved into a space. Newly visible existing pages are not update events until a later version is observed.",
+    "Each source retains at most 5000 distinct observed IDs and completes at most 50 requests of 100 pages. Partial snapshots never advance cursors. These Langflow bounds are independent of provider rate limits.",
+    "Confluence Cloud applies hourly points quotas and separate burst limits. Quotas depend on the app tier and tenant allocation. Consult the official rate-limit source for current values.",
+    "HTTP 429 produces a rate-limit error with numeric Retry-After seconds bounded to 0 through 86400. Missing, invalid or non-finite values use 60 seconds.",
+    "Polling stays armed after HTTP 429 and uses the greater of exponential backoff and the Retry-After delay before applying random jitter. Actions surface the error without automatically repeating the request."
+  ],
+  "evidence_paths": [
+    "docs/docs/Components/bundles-confluence.mdx",
+    "src/bundles/confluence/tests/test_contract.py",
+    "src/backend/tests/unit/services/triggers/test_confluence_provider.py",
+    "src/backend/tests/unit/services/triggers/test_confluence_lifecycle.py",
+    "src/bundles/confluence/src/lfx_confluence/client.py",
+    "src/backend/base/langflow/services/triggers/listeners/supervisor.py",
+    "src/bundles/confluence/scripts/verify_wheel.py",
+    "src/bundles/confluence/README.md",
+    "design/provider-integrations/confluence.md"
+  ],
+  "owner_acceptance": {
+    "status": "pending",
+    "note": "Platform and release owners still need to review this preview. Operator app registration, provider distribution requirements, real tenant authorization, live content writes and production delivery acceptance remain unverified."
+  }
+}
