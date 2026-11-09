@@ -6,7 +6,7 @@ import type { DecisionFormatters } from "./decision-outcome";
 // The Decision Type options as the node shows them; component options aren't translated.
 const KIND_LABEL: Record<DecisionKind, string> = {
   choice: "Choice",
-  boolean: "Boolean",
+  noul: "Noul",
   score: "Score",
 };
 
@@ -73,7 +73,7 @@ export function DecisionFacts({ evidence, format }: DecisionFactsProps) {
           {evidence.question}
         </Fact>
       )}
-      {evidence.kind === "boolean" && (
+      {evidence.kind === "noul" && (
         <Fact
           label={t("decision.probabilityTrue")}
           testId="decision-probability-true"

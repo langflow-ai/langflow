@@ -12,7 +12,7 @@
  * is missing instead of showing it as false or zero.
  */
 
-export type DecisionKind = "choice" | "boolean" | "score";
+export type DecisionKind = "choice" | "noul" | "score";
 
 export type DecisionReason =
   | "accepted"
@@ -75,7 +75,7 @@ export const ELSE_BRANCH = "default_result";
 /** The log entry the Smart Router writes, also kept when the run stops. */
 export const DECISION_EVIDENCE_LOG = "Decision evidence";
 
-const KINDS: readonly DecisionKind[] = ["choice", "boolean", "score"];
+const KINDS: readonly DecisionKind[] = ["choice", "noul", "score"];
 const REASONS: readonly DecisionReason[] = [
   "accepted",
   "below_minimum_probability",
@@ -106,8 +106,15 @@ const probability = (value: unknown): number | null => {
   return number !== null && number >= 0 && number <= 1 ? number : null;
 };
 
-const isKind = (value: unknown): value is DecisionKind =>
-  KINDS.includes(value as DecisionKind);
+// Component code saved before the Boolean -> Noul rename still reports "boolean".
+const kindOf = (value: unknown): DecisionKind | null =>
+  value === "boolean"
+    ? "noul"
+    : KINDS.includes(value as DecisionKind)
+      ? (value as DecisionKind)
+      : null;
+
+const isKind = (value: unknown): boolean => kindOf(value) !== null;
 
 function probabilityMap(value: unknown): Record<string, number> | null {
   if (!isRecord(value)) return null;
@@ -183,10 +190,10 @@ function fromRouter(evidence: UnknownRecord): DecisionEvidence {
     ? (evidence.reason as DecisionReason)
     : null;
   return {
-    kind: evidence.kind as DecisionKind,
+    kind: kindOf(evidence.kind) as DecisionKind,
     question: null,
     ...answer,
-    // Boolean routes on P(yes) and P(no), which the router derives and reports.
+    // Noul routes on P(yes) and P(no), which the router derives and reports.
     probabilities:
       probabilityMap(evidence.route_probabilities) ?? answer.probabilities,
     candidates: candidatesOf(evidence.options),
@@ -205,7 +212,7 @@ function fromRouter(evidence: UnknownRecord): DecisionEvidence {
 
 function fromDecisionModel(result: UnknownRecord): DecisionEvidence {
   const request = result.request as UnknownRecord;
-  const kind = result.kind as DecisionKind;
+  const kind = kindOf(result.kind) as DecisionKind;
   return {
     kind,
     question: text(request.question),

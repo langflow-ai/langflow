@@ -3,9 +3,9 @@ import { describeDecisionOutcome } from "../decision-outcome";
 import {
   acceptedChoice,
   belowThreshold,
-  booleanAccepted,
   decisionModelScore,
   malformedToElse,
+  noulAccepted,
   refusedToElse,
   scoreAccepted,
   tied,
@@ -74,8 +74,8 @@ describe("findDecisionEvidence", () => {
     expect(findDecisionEvidence(spanOutputs)?.policy?.reason).toBe("accepted");
   });
 
-  it("uses the router's Boolean route probabilities and keeps P(true)", () => {
-    const evidence = findDecisionEvidence(booleanAccepted);
+  it("uses the router's Noul route probabilities and keeps P(true)", () => {
+    const evidence = findDecisionEvidence(noulAccepted);
 
     expect(evidence?.probabilityTrue).toBe(0.98);
     expect(evidence?.probabilities).toEqual({
@@ -83,6 +83,17 @@ describe("findDecisionEvidence", () => {
       no_result: 0.02,
     });
     expect(evidence?.confidence).toBeNull();
+  });
+
+  it("reads evidence from component code saved before the Noul rename", () => {
+    const evidence = findDecisionEvidence({
+      ...noulAccepted,
+      kind: "boolean",
+      result: { ...noulAccepted.result, kind: "boolean" },
+    });
+
+    expect(evidence?.kind).toBe("noul");
+    expect(evidence?.probabilityTrue).toBe(0.98);
   });
 
   it("reads a standalone Decision Model result with its question and levels", () => {

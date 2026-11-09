@@ -78,8 +78,8 @@ export const tied = {
   reason: "tied_top_probability",
 };
 
-export const booleanAccepted = {
-  kind: "boolean",
+export const noulAccepted = {
+  kind: "noul",
   options: [
     { id: "yes_result", label: "Yes", description: "" },
     { id: "no_result", label: "No", description: "" },
@@ -89,7 +89,7 @@ export const booleanAccepted = {
   activated_branch: "yes_result",
   error_action: "Stop with error",
   result: {
-    kind: "boolean",
+    kind: "noul",
     provider: "OpenAI",
     model: "gpt-6-luna",
     model_source: "response",
@@ -186,12 +186,12 @@ export const decisionModelScore = {
   },
 };
 
-export const decisionModelBooleanRefusal = {
-  kind: "boolean",
+export const decisionModelNoulRefusal = {
+  kind: "noul",
   provider: "TypeSafe",
   model: "jev-latest",
   model_source: "response",
   status: "refusal",
   refusal: "<img src=x onerror=alert(1)> I can't judge this content.",
-  request: { kind: "boolean", question: "Is this safe?" },
+  request: { kind: "noul", question: "Is this safe?" },
 };
