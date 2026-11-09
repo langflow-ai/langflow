@@ -1639,10 +1639,7 @@ async def experimental_run_flow(
             client_error = error_for_client(exc, expose_details=expose_error_details)
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(client_error)) from exc
         graph, _artifacts = session_data or (None, None)
-        if graph is None:
-            msg = f"Session {session_id} not found"
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=msg)
-        if not _graph_executes_as_actor(graph, api_key_user, flow_id=flow.id):
+        if graph is not None and not _graph_executes_as_actor(graph, api_key_user, flow_id=flow.id):
             # Cache keys are legacy and not actor-scoped. Reusing an instantiated
             # graph across principals would retain the first actor's component
             # credentials, variables, files, and tweaks. Rebuild the immutable
