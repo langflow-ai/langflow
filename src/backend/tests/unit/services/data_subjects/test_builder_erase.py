@@ -22,7 +22,7 @@ from langflow.services.database.models.transactions.model import TransactionTabl
 from langflow.services.database.models.user.model import User
 from langflow.services.database.models.variable.model import Variable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
-from langflow.services.deps import session_scope
+from langflow.services.deps import get_storage_service, session_scope
 from sqlalchemy import func
 from sqlmodel import col, select
 
@@ -48,6 +48,9 @@ async def _request_and_approve(subject_id, admin_id):
 async def test_should_leave_no_rows_or_files_when_builder_erase_completes():
     seeded = await seed_builder()
     admin_id = await create_user("dsr-admin", superuser=True)
+    storage = get_storage_service()
+    await storage.save_file(f"user-{seeded.user_id}", "typed-user.txt", b"typed user")
+    await storage.save_file(f"flow-{seeded.flow_id}", "typed-flow.txt", b"typed flow")
 
     request_id = await _request_and_approve(seeded.user_id, admin_id)
     status = await run_request(request_id)
@@ -79,6 +82,45 @@ async def test_should_leave_no_rows_or_files_when_builder_erase_completes():
         assert await _count(session, Flow, Flow.id == seeded.colleague_flow_id) == 1
         assert await _count(session, MessageTable, MessageTable.user_id == seeded.colleague_id) == 1
     assert not seeded.file_path.exists()
+    assert not await (storage.data_dir / f"user-{uid}").exists()
+    assert not await (storage.data_dir / f"flow-{flow_id}").exists()
+
+
+@pytest.mark.usefixtures("client")
+async def test_should_preserve_another_users_flow_when_its_id_collides_with_the_builder():
+    from langflow.services.data_subjects.storage_steps import KIND_SKIPPED
+
+    seeded = await seed_builder("collision-subject")
+    admin_id = await create_user("dsr-collision-admin", superuser=True)
+    async with session_scope() as session:
+        session.add(
+            Flow(
+                id=seeded.user_id,
+                user_id=seeded.colleague_id,
+                name="Flow sharing the builder's raw storage ID",
+                data={"nodes": [], "edges": []},
+            )
+        )
+        await session.commit()
+    storage = get_storage_service()
+    await storage.save_file(str(seeded.user_id), "other-flow.txt", b"colleague attachment")
+
+    request_id = await _request_and_approve(seeded.user_id, admin_id)
+    async with session_scope() as session:
+        request = await session.get(DataSubjectRequest, request_id)
+        approved_plan = list(request.pending_paths or [])
+    status = await run_request(request_id)
+
+    assert status == DataSubjectRequestStatus.DONE.value
+    assert {
+        "kind": KIND_SKIPPED,
+        "value": "builder_user_namespace_collides_with_flow",
+    } in approved_plan
+    assert await storage.get_file(str(seeded.user_id), "other-flow.txt") == b"colleague attachment"
+    async with session_scope() as session:
+        preserved_flow = await session.get(Flow, seeded.user_id)
+        assert preserved_flow is not None
+        assert preserved_flow.user_id == seeded.colleague_id
 
 
 @pytest.mark.usefixtures("client")

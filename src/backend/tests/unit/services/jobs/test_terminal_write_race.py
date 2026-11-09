@@ -140,3 +140,35 @@ async def test_a_stalled_worker_cannot_fail_a_job_another_worker_completed():
 
     job = await service.get_job_by_job_id(job_id)
     assert job.status == JobStatus.COMPLETED, "a terminal verdict must not be overwritten by a loser"
+
+
+@pytest.mark.usefixtures("client")
+@pytest.mark.parametrize("lost_to", ["completed", "reclaimed"])
+async def test_authorization_denial_cannot_overwrite_a_job_after_ownership_is_lost(monkeypatch, lost_to):
+    from unittest.mock import AsyncMock
+
+    from langflow.services.jobs import api_key_authorization
+
+    service = JobService()
+    job_id = uuid4()
+    owner = "worker:1:aaaa"
+    await service.create_job(job_id=job_id, flow_id=uuid4(), job_type=JobType.WORKFLOW, user_id=uuid4())
+    await service.update_job_metadata(job_id, {"owner": owner})
+
+    async def lose_ownership_then_deny(_job):
+        if lost_to == "completed":
+            assert await service.complete_live_job(job_id, owner=owner)
+        else:
+            await service.update_job_metadata(job_id, {"owner": "worker:2:bbbb"})
+        raise api_key_authorization.JobAuthorizationError
+
+    monkeypatch.setattr(api_key_authorization, "_revalidate_job", lose_ownership_then_deny)
+    callback = AsyncMock()
+    with pytest.raises(api_key_authorization.JobAuthorizationError):
+        await service.execute_with_status(job_id, callback, owner=owner)
+
+    callback.assert_not_awaited()
+    job = await service.get_job_by_job_id(job_id)
+    assert job.status == (JobStatus.COMPLETED if lost_to == "completed" else JobStatus.IN_PROGRESS)
+    assert job.error is None
+    assert job.job_metadata["owner"] == (owner if lost_to == "completed" else "worker:2:bbbb")

@@ -64,3 +64,63 @@ it("lists each action for a shared scope and distinguishes conditional use", () 
     true,
   );
 });
+
+it("keeps connection scopes checked and explains that they are required", () => {
+  const toggle = jest.fn();
+  render(
+    <ScopeChecklist
+      providerId="jira"
+      scopes={["offline_access"]}
+      selected={new Set()}
+      requiredScopes={["offline_access"]}
+      onToggle={toggle}
+      requirements={[
+        {
+          capabilityId: "jira.issue.created",
+          displayName: "On Issue Created",
+          risk: "read",
+          requiredScopes: ["offline_access"],
+          conditionalScopes: [],
+        },
+      ]}
+    />,
+  );
+  const scope = screen.getByTestId("connection-scope-offline_access");
+  expect(scope).toBeChecked();
+  expect(scope).toBeDisabled();
+  expect(screen.getByText("Required for this connection")).toBeVisible();
+  expect(screen.queryByText("On Issue Created")).not.toBeInTheDocument();
+  fireEvent.click(scope);
+  expect(toggle).not.toHaveBeenCalled();
+});
+
+it("describes ServiceNow permissions while keeping identifiers secondary", () => {
+  const toggle = jest.fn();
+  render(
+    <ScopeChecklist
+      providerId="servicenow"
+      scopes={["langflow_table_read", "langflow_table_write"]}
+      selected={new Set()}
+      requiredScopes={["langflow_table_read"]}
+      onToggle={toggle}
+      requirements={[]}
+    />,
+  );
+
+  const read = screen.getByTestId("connection-scope-langflow_table_read");
+  const readRow = within(read.closest("label")!);
+  expect(read).toBeChecked();
+  expect(read).toBeDisabled();
+  expect(readRow.getByText("Read tickets")).toBeVisible();
+  expect(readRow.getByText("Required for this connection")).toBeVisible();
+  expect(readRow.getByText("langflow_table_read")).toHaveClass("font-mono");
+
+  const write = screen.getByTestId("connection-scope-langflow_table_write");
+  const writeRow = within(write.closest("label")!);
+  expect(write).not.toBeChecked();
+  expect(write).toBeEnabled();
+  expect(writeRow.getByText("Create and update tickets")).toBeVisible();
+  expect(writeRow.getByText("langflow_table_write")).toHaveClass("font-mono");
+  fireEvent.click(write);
+  expect(toggle).toHaveBeenCalledWith("langflow_table_write", true);
+});

@@ -10,12 +10,14 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+
+    from langflow.services.auth.context import AuthCredentialContext
 from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
 from lfx.graph.exceptions import GraphPausedException
 from lfx.observability import inject_trace_carrier
-from sqlalchemy import false, update
+from sqlalchemy import false, or_, update
 from sqlalchemy.exc import DataError, DBAPIError, IntegrityError, OperationalError, StatementError
 from sqlmodel import col, func, select
 
@@ -279,7 +281,16 @@ class JobService(Service):
                     msg = f"A non-retryable job with dedupe_key={dedupe_key!r} already exists"
                     raise DuplicateJobError(msg)
 
-            metadata = dict(initial_metadata or {})
+            from langflow.services.jobs.api_key_authorization import stamp_api_key_job_authorization
+
+            metadata = await stamp_api_key_job_authorization(
+                session,
+                metadata=dict(initial_metadata or {}),
+                flow_id=flow_id,
+                job_type=job_type,
+                asset_id=asset_id,
+                asset_type=asset_type,
+            )
             if end_user_id:
                 metadata["end_user_id"] = end_user_id
             if heartbeat:
@@ -363,12 +374,9 @@ class JobService(Service):
             job = await session.get(Job, job_id)
             if job is None:
                 return None
-            if replace or job.job_metadata is None:
-                job.job_metadata = dict(patch)
-            else:
-                # Shallow merge — callers wanting deep-merge own the
-                # composition. This keeps the helper predictable.
-                job.job_metadata = {**job.job_metadata, **patch}
+            from langflow.services.jobs.api_key_authorization import preserve_api_key_job_authorization
+
+            job.job_metadata = preserve_api_key_job_authorization(job.job_metadata, patch, replace=replace)
             session.add(job)
             await session.flush()
             return job
@@ -387,7 +395,9 @@ class JobService(Service):
             job = await session.get(Job, job_id)
             if job is None:
                 return None
-            job.job_metadata = {**(job.job_metadata or {}), **metadata}
+            from langflow.services.jobs.api_key_authorization import preserve_api_key_job_authorization
+
+            job.job_metadata = preserve_api_key_job_authorization(job.job_metadata, metadata)
             job.status = JobStatus.SUSPENDED
             session.add(job)
             await session.flush()
@@ -1041,7 +1051,9 @@ class JobService(Service):
             await session.flush()
             return result.rowcount == 1
 
-    async def terminalize_live_job(self, job_id: UUID, status: JobStatus, *, owner: str | None = None) -> bool:
+    async def terminalize_live_job(
+        self, job_id: UUID, status: JobStatus, *, owner: str | None = None, error: dict | None = None
+    ) -> bool:
         """Atomically flip a still-live job to COMPLETED. Returns True if we won.
 
         The success write used to be unconditional while the watchdog's failure
@@ -1061,6 +1073,9 @@ class JobService(Service):
         worker now owns. Callers outside the fleet pass None and get the status
         guard alone, which is all a single-runner path can race against.
 
+        ``error`` is written in the same conditional update when supplied, so a
+        stale runner cannot replace another worker's error or terminal verdict.
+
         An absent owner passes the guard, because the owner is written by the
         heartbeat rather than at claim time: a run short enough to finish before
         its first beat has nobody's name on its row, and must still be allowed to
@@ -1075,6 +1090,8 @@ class JobService(Service):
             conditions.append(or_(owner_expr.is_(None), owner_expr == owner))
         async with session_scope() as session:
             stmt = update(Job).where(*conditions).values(status=status, finished_timestamp=datetime.now(timezone.utc))
+            if error is not None:
+                stmt = stmt.values(error=dict(error))
             result = await session.exec(stmt)  # type: ignore[call-overload]
             await session.flush()
             return result.rowcount == 1
@@ -1430,6 +1447,10 @@ class JobService(Service):
         path heartbeated, during a rolling upgrade, so a sweep after startup must not
         read that as death.
 
+        ``deployment_copy`` jobs are never swept. No worker owns them and they never
+        heartbeat: each deploy request advances its copy and the client's resend picks it
+        up again, so a missing heartbeat is their normal state, not a lost owner.
+
         Returns the ids of the jobs transitioned to FAILED.
         """
         from sqlmodel import update
@@ -1437,7 +1458,10 @@ class JobService(Service):
         error_payload = {"type": "worker_lost"}
         reconciled: list[UUID] = []
         async with session_scope() as session:
-            stmt = select(Job).where(Job.status == JobStatus.IN_PROGRESS)
+            stmt = select(Job).where(
+                Job.status == JobStatus.IN_PROGRESS,
+                or_(col(Job.type).is_(None), Job.type != JobType.DEPLOYMENT_COPY),
+            )
             result = await session.exec(stmt)
             in_progress = list(result.all())
             now = datetime.now(timezone.utc)
@@ -1590,6 +1614,7 @@ class JobService(Service):
         mark_in_progress: bool = True,
         keep_alive: bool = False,
         owner: str | None = None,
+        created_job: Job | None = None,
         **kwargs,
     ):
         """Wrapper that manages job status lifecycle around a coroutine.
@@ -1617,6 +1642,9 @@ class JobService(Service):
                 waits one interval. The heartbeat stops before the terminal status write,
                 and on a pause, which leaves the row IN_PROGRESS. run_coro_func must not
                 write ``job_metadata``. Keyword-only, and not passed on to run_coro_func.
+            created_job: The server-created row for a run starting immediately in this
+                request. Reuses its admission metadata when ``mark_in_progress=False``.
+                Queued, retried, or resumed work must load the current row instead.
             **kwargs: Keyword arguments to pass to run_coro_func
 
         Returns:
@@ -1627,8 +1655,11 @@ class JobService(Service):
         """
         from lfx.log import logger
 
+        from langflow.services.auth.context import get_current_auth_context, set_current_auth_context
+
         await logger.ainfo(f"Starting job execution: job_id={job_id}")
 
+        previous_context = get_current_auth_context()
         try:
             if mark_in_progress:
                 await logger.adebug(f"Updating job {job_id} status to IN_PROGRESS")
@@ -1640,6 +1671,12 @@ class JobService(Service):
                 if not await self.begin_live_job(job_id, owner=owner):
                     msg = f"Job {job_id} is no longer claimable"
                     raise JobNotClaimable(msg)
+                authorization_job = None
+            else:
+                authorization_job = created_job
+            authorized_context = await self.authorize_job_start(job_id, job=authorization_job, owner=owner)
+            if authorized_context is not None:
+                set_current_auth_context(authorized_context)
 
             if keep_alive:
                 await self.start_keep_alive(job_id, beat_now=False)
@@ -1699,6 +1736,16 @@ class JobService(Service):
                     f"Job {job_id} finished but its row was no longer live; leaving the terminal status already written"
                 )
             return result
+        finally:
+            set_current_auth_context(previous_context)
+
+    async def authorize_job_start(
+        self, job_id: UUID, *, job: Job | None = None, owner: str | None = None
+    ) -> AuthCredentialContext | None:
+        """Revalidate originating database credentials before starting queued work."""
+        from langflow.services.jobs.api_key_authorization import authorize_job_start
+
+        return await authorize_job_start(self, job_id, job=job, owner=owner)
 
     async def _validate_ownership(self, job_id: UUID, user_id: UUID) -> Job:
         """Verify that a job exists and belongs to the specified user.

@@ -190,6 +190,7 @@ async def test_v1_run_rejects_variable_override_before_streaming(
     monkeypatch: pytest.MonkeyPatch,
     source: str,
 ) -> None:
+    """Reject secret-variable overrides before committing to a streaming response."""
     from langflow.api.v1 import endpoints
 
     flow = _flow()
@@ -204,7 +205,6 @@ async def test_v1_run_rejects_variable_override_before_streaming(
 
     with pytest.raises(HTTPException) as error:
         await _run_flow_internal(
-            background_tasks=BackgroundTasks(),
             flow=flow,
             input_request=SimplifiedAPIRequest(input_value="hello"),
             stream=True,

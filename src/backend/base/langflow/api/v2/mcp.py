@@ -30,14 +30,24 @@ from langflow.services.auth.mcp_encryption import (
     restore_mcp_config_secrets,
 )
 from langflow.services.database.models import MCPServer
+from langflow.services.database.models.api_key.policy import ensure_api_key_management_allowed
 from langflow.services.deps import get_settings_service, get_shared_component_cache_service, get_storage_service
 from langflow.services.settings.service import SettingsService
 from langflow.services.storage.service import StorageService
+from langflow.services.variable.constants import is_oauth_registration_variable
 
 router = APIRouter(tags=["MCP"], prefix="/mcp")
 
 # Retry budget for the version-guarded merge-PATCH path (only same-server merges consume it).
 _MAX_UPSERT_RETRIES = 12
+
+
+def _ensure_mcp_management_allowed() -> None:
+    """Keep credential-bearing server management outside restricted-key access."""
+    try:
+        ensure_api_key_management_allowed()
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
 
 
 def is_mcp_servers_locked(settings: object) -> bool:
@@ -114,6 +124,7 @@ async def upload_server_config(
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
     settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ):
+    _ensure_mcp_management_allowed()
     content_str = json.dumps(server_config)
     content_bytes = content_str.encode("utf-8")  # Convert to bytes
     file_obj = BytesIO(content_bytes)  # Use BytesIO for binary data
@@ -143,6 +154,7 @@ async def get_server_list(
     stays a runnable ``mcpServers`` map. ``storage_service`` / ``settings_service``
     are retained for signature compatibility with every caller.
     """
+    _ensure_mcp_management_allowed()
     # Order by created_at so the list is stable and preserves insertion order, matching
     # the legacy file (a dict) that callers and the UI relied on (e.g. the starter
     # project server stays first).
@@ -169,6 +181,7 @@ async def _read_legacy_mcp_file(
     (used by the backfill) returns an empty config instead of writing a new empty file
     for users who never configured MCP.
     """
+    _ensure_mcp_management_allowed()
     # Backwards compatibility with old format file name
     mcp_file = await get_mcp_file(current_user)
     old_format_config_file = await get_file_by_name(MCP_SERVERS_FILE, current_user, session)
@@ -242,6 +255,7 @@ async def get_server(
     server_list: dict | None = None,
 ):
     """Get a specific server's config (decrypted), or ``None`` if it doesn't exist."""
+    _ensure_mcp_management_allowed()
     if server_list is not None:
         return server_list["mcpServers"].get(server_name)
 
@@ -292,7 +306,7 @@ async def get_servers(
             stmt = select(Variable).where(Variable.user_id == current_user.id)
             variables = list((await session.exec(stmt)).all())
             for variable in variables:
-                if variable.name and variable.value:
+                if variable.name and variable.value and not is_oauth_registration_variable(variable.name):
                     # Legacy Generic rows may still be encrypted. Preserve the
                     # historical discovery behavior for unmanaged accounts.
                     try:
@@ -306,6 +320,10 @@ async def get_servers(
         raise HTTPException(status_code=409, detail="Deployment variable resolution failed") from None
     except Exception as e:  # noqa: BLE001
         await logger.awarning(f"Failed to load global variables for MCP server test: {e}")
+
+    request_variables = {
+        name: value for name, value in request_variables.items() if not is_oauth_registration_variable(name)
+    }
 
     async def check_server(server_name: str) -> dict:
         server_info: dict[str, str | int | None] = {"name": server_name, "mode": None, "toolsCount": None}
@@ -461,6 +479,7 @@ async def update_server(
     write visible to the rest of the caller's transaction while leaving commit/rollback
     to whoever opened it.
     """
+    _ensure_mcp_management_allowed()
     user_id = current_user.id
     settings = getattr(settings_service, "settings", None)
     if not delete:

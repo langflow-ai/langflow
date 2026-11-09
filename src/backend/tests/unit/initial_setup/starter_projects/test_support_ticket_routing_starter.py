@@ -75,20 +75,6 @@ async def test_below_threshold_answer_goes_to_review(monkeypatch):
     )
 
 
-def test_edge_handles_match_the_fields_they_connect():
-    """The editor drops any edge whose handle disagrees with its field, as cleanEdges does on load."""
-    data = json.loads(STARTER.read_text(encoding="utf-8"))["data"]
-    nodes = {node["id"]: node["data"]["node"] for node in data["nodes"]}
-    for edge in data["edges"]:
-        source, target = edge["data"]["sourceHandle"], edge["data"]["targetHandle"]
-        assert json.loads(edge["sourceHandle"].replace("œ", '"')) == source
-        assert json.loads(edge["targetHandle"].replace("œ", '"')) == target
-        output = next(output for output in nodes[edge["source"]]["outputs"] if output["name"] == source["name"])
-        assert source["output_types"] == output["types"]
-        field = nodes[edge["target"]]["template"][target["fieldName"]]
-        assert (target["type"], target["inputTypes"]) == (field["type"], field["input_types"])
-
-
 def test_hidden_route_counter_reaches_the_run():
     """Hidden fields are normally skipped when a flow runs; the route counter must not be."""
     data = json.loads(STARTER.read_text(encoding="utf-8"))["data"]

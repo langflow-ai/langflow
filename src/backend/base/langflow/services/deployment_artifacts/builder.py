@@ -42,6 +42,7 @@ from langflow.services.database.models.variable.model import Variable
 from langflow.services.deps import get_settings_service, get_variable_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 from langflow.utils.canonical_json import canonical_json_bytes
+from langflow.utils.flow_files import FileKeyCollisionError, rewrite_flow_file_keys_in_place
 from langflow.utils.flow_secrets import strip_secret_field_values_in_place
 from langflow.utils.mcp_config_secrets import (
     MCP_SECRET_CONFIG_MAPS,
@@ -1066,6 +1067,7 @@ def _normalized_flow_data(
     keep_mcp_config: bool = False,
     known_variable_names: Collection[str] | None = None,
     registered_mcp_servers: Mapping[str, dict[str, Any]] | None = None,
+    rewrite_file_keys: bool = False,
 ) -> tuple[
     dict[str, Any],
     tuple[str, ...],
@@ -1114,6 +1116,15 @@ def _normalized_flow_data(
     if strict_secret_safety and scrubbed.get("data") != snapshot.payload.get("data"):
         msg = f"flow file {snapshot.flow_id} contains values that cannot be safely captured"
         raise ProjectArtifactError(msg)
+    if rewrite_file_keys:
+        # After the equality check above, which this changes the data for on purpose. Only
+        # the travelling copy is rewritten: ``scrubbed`` is a deep copy, so the flow and its
+        # versions keep the keys they were saved with. See ``flow_file_target_key``.
+        try:
+            rewrite_flow_file_keys_in_place(scrubbed.get("data"), str(snapshot.flow_id))
+        except FileKeyCollisionError as exc:
+            msg = f"flow {snapshot.flow_id} cannot be deployed: {exc}"
+            raise ProjectArtifactError(msg) from exc
     # Deployment packages retain runtime-native code strings. Strict snapshots
     # also retain every graph field after the scrub equality check so a serving
     # baseline can be replayed without false drift from editor-only metadata.
@@ -1140,6 +1151,7 @@ def _normalized_flow_bytes(
     strict_secret_safety: bool = False,
     known_variable_names: Collection[str] | None = None,
     registered_mcp_servers: Mapping[str, dict[str, Any]] | None = None,
+    rewrite_file_keys: bool = False,
 ) -> tuple[
     bytes,
     tuple[str, ...],
@@ -1152,6 +1164,7 @@ def _normalized_flow_bytes(
         strict_secret_safety=strict_secret_safety,
         known_variable_names=known_variable_names,
         registered_mcp_servers=registered_mcp_servers,
+        rewrite_file_keys=rewrite_file_keys,
     )
     return (
         canonical_json_bytes(scrubbed),
@@ -1324,6 +1337,7 @@ def _build_archive(
     known_variable_names: Collection[str] | None = None,
     variable_kinds: Mapping[str, Literal["secret", "plain"] | None] | None = None,
     registered_mcp_servers: Mapping[str, dict[str, Any]] | None = None,
+    rewrite_file_keys: bool = False,
 ) -> ProjectArtifact:
     flow_entries: list[ProjectArtifactFlow] = []
     files: list[tuple[str, bytes]] = []
@@ -1356,6 +1370,7 @@ def _build_archive(
             strict_secret_safety=strict_secret_safety,
             known_variable_names=known_variable_names,
             registered_mcp_servers=registered_mcp_servers,
+            rewrite_file_keys=rewrite_file_keys,
         )
         size = len(content)
         if size > limits.max_flow_bytes:
@@ -1579,6 +1594,7 @@ async def _build_archive_non_abandoning(
     known_variable_names: Collection[str] | None = None,
     variable_kinds: Mapping[str, Literal["secret", "plain"] | None] | None = None,
     registered_mcp_servers: Mapping[str, dict[str, Any]] | None = None,
+    rewrite_file_keys: bool = False,
 ) -> ProjectArtifact:
     """Build an archive without outliving its caller's capacity lease."""
     return await _run_sync_non_abandoning(
@@ -1594,6 +1610,7 @@ async def _build_archive_non_abandoning(
             known_variable_names=known_variable_names,
             variable_kinds=variable_kinds,
             registered_mcp_servers=registered_mcp_servers,
+            rewrite_file_keys=rewrite_file_keys,
         )
     )
 
@@ -2181,12 +2198,18 @@ async def build_project_artifact(
     limits: ProjectArtifactLimits | None = None,
     strict_snapshot: bool = False,
     flow_versions: Mapping[UUID, UUID] | None = None,
+    rewrite_file_keys: bool = False,
 ) -> ProjectArtifact:
     """Package selected readable flows, or every flow assigned to the project, into a zip.
 
     ``flow_versions`` packages a flow from one of its saved versions instead of its
     live graph. See ``_prepare_project_snapshot_data`` for the shared authorization,
     revision-consistency, and dependency-resolution behavior.
+
+    ``rewrite_file_keys`` is for a package being deployed. It moves every stored-file key
+    a flow reads into that flow's own namespace, which is the namespace the serving side
+    can read under its single service account; see ``flow_file_target_key``. Off by
+    default, so an export to a file keeps the keys the editor saved.
     """
     effective_limits = limits or ProjectArtifactLimits()
     prepared = await _prepare_project_snapshot_data(
@@ -2218,6 +2241,7 @@ async def build_project_artifact(
         known_variable_names=known_variable_names,
         variable_kinds=variable_kinds,
         registered_mcp_servers=registered_mcp_servers,
+        rewrite_file_keys=rewrite_file_keys,
     )
     if strict_snapshot:
         await _verify_project_identity_unchanged(

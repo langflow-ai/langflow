@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import type { TriggerRead } from "@/controllers/API/queries/triggers";
+import { lastErrorText } from "./helpers/trigger-error-text";
 import { inlineFixOf, reasonKey } from "./helpers/trigger-presentation";
 import TriggerStateBadge from "./TriggerStateBadge";
 
@@ -24,6 +25,7 @@ export function TriggerStatusSummary({
 }: TriggerStatusSummaryProps) {
   const { t } = useTranslation();
   const fix = onFix ? inlineFixOf(trigger) : null;
+  const lastError = lastErrorText(trigger, t);
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-2">
@@ -46,13 +48,13 @@ export function TriggerStatusSummary({
           {t(reasonKey(trigger))}
         </span>
       )}
-      {trigger.last_error && (
+      {lastError && (
         <span
           className="line-clamp-2 max-w-[16rem] break-words text-xs text-muted-foreground"
-          title={trigger.last_error}
+          title={lastError}
           data-testid="trigger-last-error"
         >
-          {trigger.last_error}
+          {lastError}
         </span>
       )}
     </div>

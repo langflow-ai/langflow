@@ -153,7 +153,10 @@ jobs:
           # shared runners have twice pushed a locally-seconds test past 90s.
           LANGFLOW_TEST_HARD_TIMEOUT: "200"
         run: |
-          uv run pytest src/backend/tests/unit/background_execution -m real_services -x -v --timeout=180
+          uv run pytest \
+            src/backend/tests/unit/background_execution \
+            src/backend/tests/unit/services/background_execution \
+            -m real_services -x -v --timeout=180
 
   validate-migration:
     name: Migration Pattern Validation
