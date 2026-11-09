@@ -11,13 +11,15 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from sqlalchemy.sql.elements import ColumnElement
+
     from langflow.services.auth.context import AuthCredentialContext
 from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
 from lfx.graph.exceptions import GraphPausedException
 from lfx.observability import inject_trace_carrier
-from sqlalchemy import false, or_, update
+from sqlalchemy import and_, false, or_, update
 from sqlalchemy.exc import DataError, DBAPIError, IntegrityError, OperationalError, StatementError
 from sqlmodel import col, func, select
 
@@ -80,6 +82,17 @@ _RETAINABLE_STATUSES = (JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELL
 # Floor for a keep-alive's heartbeat interval, matching the background runner's,
 # so a tiny configured interval cannot turn heartbeats into a write loop.
 _MIN_HEARTBEAT_INTERVAL_S = 0.1
+
+
+def _lease_guard(expected_lease: tuple[str | None, str | None]) -> ColumnElement[bool]:
+    """Match the exact lease observed before a read-modify-write transition."""
+    owner, heartbeat_at = expected_lease
+    owner_expr = col(Job.job_metadata)["owner"].as_string()
+    heartbeat_expr = col(Job.job_metadata)["heartbeat_at"].as_string()
+    return and_(
+        owner_expr.is_(None) if owner is None else owner_expr == owner,
+        heartbeat_expr.is_(None) if heartbeat_at is None else heartbeat_expr == heartbeat_at,
+    )
 
 
 def _unwrap_pause_payload(payload: dict | None) -> dict | None:
@@ -381,27 +394,78 @@ class JobService(Service):
             await session.flush()
             return job
 
-    async def suspend_job(self, job_id: UUID, metadata: dict) -> Job | None:
-        """Atomically merge pause metadata and transition a job to ``SUSPENDED``.
+    async def suspend_job(
+        self,
+        job_id: UUID,
+        metadata: dict,
+        *,
+        owner: str | None = None,
+        event_payload: dict | None = None,
+    ) -> Job | None:
+        """Suspend live work with its pause metadata and optional event atomically.
 
-        Resume-critical metadata must become visible in the same transaction as
-        the status transition. Otherwise a status reader can observe
-        ``SUSPENDED`` before ``pending_request_id`` or ``pre_pause_outputs`` is
-        committed and return an incomplete pause response.
+        A stale runner must not reopen a terminal job or pause another owner's
+        run. The lease comparison also fences a claim racing the metadata read.
+        Event sequence collisions retry the entire transaction, so neither the
+        SUSPENDED row nor its human-input event can commit alone.
 
-        Returns the updated Job, or ``None`` if the row does not exist.
+        Returns the updated Job, or ``None`` when the live/lease guard loses.
         """
-        async with session_scope() as session:
-            job = await session.get(Job, job_id)
-            if job is None:
-                return None
-            from langflow.services.jobs.api_key_authorization import preserve_api_key_job_authorization
+        from langflow.services.jobs.api_key_authorization import preserve_api_key_job_authorization
 
-            job.job_metadata = preserve_api_key_job_authorization(job.job_metadata, metadata)
-            job.status = JobStatus.SUSPENDED
-            session.add(job)
-            await session.flush()
-            return job
+        last_exc: Exception | None = None
+        for attempt in range(_APPEND_EVENT_MAX_RETRIES):
+            try:
+                async with session_scope() as session:
+                    job = await session.get(Job, job_id)
+                    if job is None:
+                        return None
+                    merged = preserve_api_key_job_authorization(job.job_metadata, metadata)
+                    if job.status not in (JobStatus.QUEUED, JobStatus.IN_PROGRESS):
+                        return None
+                    prior = job.job_metadata or {}
+                    if owner is not None and prior.get("owner") not in (None, owner):
+                        return None
+                    result = await session.exec(
+                        update(Job)
+                        .where(
+                            Job.job_id == job_id,
+                            col(Job.status).in_((JobStatus.QUEUED, JobStatus.IN_PROGRESS)),
+                            _lease_guard((prior.get("owner"), prior.get("heartbeat_at"))),
+                        )
+                        .values(
+                            status=JobStatus.SUSPENDED,
+                            job_metadata=merged,
+                        )
+                        .execution_options(synchronize_session=False)
+                    )
+                    if result.rowcount != 1:
+                        return None
+                    if event_payload is not None:
+                        current_max = (
+                            await session.exec(select(func.max(JobEvent.seq)).where(JobEvent.job_id == job_id))
+                        ).one()
+                        session.add(
+                            JobEvent(
+                                job_id=job_id,
+                                seq=(current_max or 0) + 1,
+                                event_type=HUMAN_INPUT_REQUIRED_EVENT,
+                                payload=dict(event_payload),
+                            )
+                        )
+                    await session.flush()
+                    await session.refresh(job)
+                    return job
+            except IntegrityError as exc:
+                last_exc = exc
+            except OperationalError as exc:
+                if "lock" not in str(exc).lower() and "busy" not in str(exc).lower():
+                    raise
+                last_exc = exc
+            await asyncio.sleep(min(0.05, 0.002 * (attempt + 1)))
+
+        msg = f"suspend_job exhausted {_APPEND_EVENT_MAX_RETRIES} retries for job {job_id}"
+        raise RuntimeError(msg) from last_exc
 
     async def set_result(self, job_id: UUID, result: dict | None) -> Job | None:
         """Persist the durable terminal result blob for a job.
@@ -695,8 +759,8 @@ class JobService(Service):
             await session.flush()
             return len(rows)
 
-    async def heartbeat(self, job_id: UUID, owner: str) -> None:
-        """Stamp the running owner + a fresh heartbeat on the job row.
+    async def heartbeat(self, job_id: UUID, owner: str) -> bool:
+        """Renew this owner's live lease, returning False if it was lost.
 
         This is the liveness signal a reconciler reads to tell a live in-flight
         run from a genuinely orphaned one: only the running owner refreshes it,
@@ -713,12 +777,25 @@ class JobService(Service):
         now = datetime.now(timezone.utc)
         async with session_scope() as session:
             job = await session.get(Job, job_id)
-            if job is None:
-                return
-            job.job_metadata = {**(job.job_metadata or {}), "owner": owner, "heartbeat_at": now.isoformat()}
-            job.lease_heartbeat_at = now
-            session.add(job)
+            if job is None or job.status not in (JobStatus.QUEUED, JobStatus.IN_PROGRESS):
+                return False
+            prior = job.job_metadata or {}
+            if prior.get("owner") not in (None, owner):
+                return False
+            result = await session.exec(
+                update(Job)
+                .where(
+                    Job.job_id == job_id,
+                    col(Job.status).in_((JobStatus.QUEUED, JobStatus.IN_PROGRESS)),
+                    _lease_guard((prior.get("owner"), prior.get("heartbeat_at"))),
+                )
+                .values(
+                    job_metadata={**prior, "owner": owner, "heartbeat_at": now.isoformat()},
+                    lease_heartbeat_at=now,
+                )
+            )
             await session.flush()
+            return result.rowcount == 1
 
     @staticmethod
     def is_lease_stale(job: Job, *, lease_ttl_s: float) -> bool:
@@ -844,7 +921,13 @@ class JobService(Service):
             await session.flush()
             return result.rowcount == 1
 
-    async def retry_requeue_claim(self, job_id: UUID, *, expected_attempt: int) -> bool:
+    async def retry_requeue_claim(
+        self,
+        job_id: UUID,
+        *,
+        expected_attempt: int,
+        expected_lease: tuple[str | None, str | None] | None = None,
+    ) -> bool:
         """Atomically bump ``attempt`` AND flip IN_PROGRESS->QUEUED for a retry requeue.
 
         A SINGLE conditional UPDATE guarded by BOTH ``attempt == expected_attempt``
@@ -870,15 +953,10 @@ class JobService(Service):
             # would widen this UPDATE beyond the attempt CAS. Do not key off
             # ``owner`` on a QUEUED row — it can name a dead worker.
             merged = {**(job.job_metadata or {}), "attempt": expected_attempt + 1}
-            stmt = (
-                update(Job)
-                .where(
-                    Job.job_id == job_id,
-                    attempt_expr == expected_attempt,
-                    Job.status == JobStatus.IN_PROGRESS,
-                )
-                .values(job_metadata=merged, status=JobStatus.QUEUED)
-            )
+            conditions = [Job.job_id == job_id, attempt_expr == expected_attempt, Job.status == JobStatus.IN_PROGRESS]
+            if expected_lease is not None:
+                conditions.append(_lease_guard(expected_lease))
+            stmt = update(Job).where(*conditions).values(job_metadata=merged, status=JobStatus.QUEUED)
             result = await session.exec(stmt)  # type: ignore[call-overload]
             await session.flush()
             return result.rowcount == 1
@@ -998,7 +1076,9 @@ class JobService(Service):
                 return job_id
         return None
 
-    async def fail_in_progress_job(self, job_id: UUID, *, error: dict) -> bool:
+    async def fail_in_progress_job(
+        self, job_id: UUID, *, error: dict, expected_lease: tuple[str | None, str | None] | None = None
+    ) -> bool:
         """Atomically flip an IN_PROGRESS job to FAILED with its error blob. Returns True if we won.
 
         Single-flight guard for the worker_lost reconcile: a conditional
@@ -1014,10 +1094,13 @@ class JobService(Service):
         """
         from sqlmodel import update
 
+        conditions = [Job.job_id == job_id, Job.status == JobStatus.IN_PROGRESS]
+        if expected_lease is not None:
+            conditions.append(_lease_guard(expected_lease))
         async with session_scope() as session:
             stmt = (
                 update(Job)
-                .where(Job.job_id == job_id, Job.status == JobStatus.IN_PROGRESS)
+                .where(*conditions)
                 .values(status=JobStatus.FAILED, error=dict(error), finished_timestamp=datetime.now(timezone.utc))
             )
             result = await session.exec(stmt)  # type: ignore[call-overload]
@@ -1687,6 +1770,10 @@ class JobService(Service):
             finally:
                 if keep_alive:
                     await self.stop_keep_alive(job_id)
+
+        except JobNotClaimable:
+            # Claim loss is a handoff, not this runner's terminal verdict.
+            raise
 
         except (PauseRequested, GraphPausedException):
             # A producer paused the run for human input. The runner suspends it

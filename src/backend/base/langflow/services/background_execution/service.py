@@ -33,7 +33,7 @@ from filelock import FileLock, Timeout
 from lfx.log.logger import logger
 
 from langflow.services.background_execution.executor import InProcessExecutor
-from langflow.services.background_execution.live_bus import InMemoryLiveBus, LiveFrame
+from langflow.services.background_execution.live_bus import InMemoryLiveBus
 from langflow.services.base import Service
 from langflow.services.database.models.jobs.model import JobStatus, JobType, SignalType
 from langflow.services.deps import get_job_service
@@ -705,29 +705,11 @@ class BackgroundExecutionService(Service):
         user: UserRead,
     ) -> AsyncIterator[bytes]:
         job = await self._validate(job_id, user)
-        job_service = get_job_service()
         last_seq = self._parse_last_event_id(last_event_id)
         # The durable replay must serialize with the SAME separators the live
         # adapter used (agui = compact, langflow = spaced) so replayed bytes are
         # byte-identical. The protocol is on the persisted submit request.
         protocol = self._job_protocol(job)
-
-        async def read_durable(after_seq: int) -> list[LiveFrame]:
-            rows = await job_service.read_events(job_id, after_seq=after_seq)
-            return [LiveFrame(seq=r.seq, data=self._row_to_frame(r, protocol=protocol)) for r in rows]
-
-        # Terminal jobs must be answered from the DURABLE log alone. The live bus
-        # is process-local: after a restart it is fresh and its ``_closed`` marker
-        # is empty, so ``reattach`` would replay durable rows then block forever on
-        # ``while True: queue.get()`` waiting for a live tail that will never come.
-        # Decide "finished" off the persisted status (the cross-restart source of
-        # truth), replay, and return.
-        # SUSPENDED is parked awaiting human input: no live tail to wait on, so answer
-        # from the durable log alone (like a terminal status) instead of blocking.
-        if job.status in _TERMINAL_STATUSES or job.status == JobStatus.SUSPENDED:
-            for frame in await read_durable(last_seq):
-                yield frame.data
-            return
 
         # Live tail is the backend's transport: the in-memory bus for the
         # in-process path, durable-row replay + poll off the shared DB for
@@ -866,9 +848,9 @@ class BackgroundExecutionService(Service):
         reconstructed request. Best-effort per job so one bad row can't block the
         rest. The scaled backend reconciles via its worker-side watchdog.
         """
+        await self.start()
         if self._scaled:
             return
-        await self.start()
         job_service = get_job_service()
         lease_ttl = self._settings.background_lease_ttl_s
         # Single-flight the IN_PROGRESS reconcile: only the worker that wins the

@@ -284,7 +284,9 @@ async def run_worker_loop(
             # have not yet flipped to IN_PROGRESS. Best-effort.
             if job_service is not None and owner is not None:
                 with contextlib.suppress(Exception):
-                    await job_service.heartbeat(_coerce_uuid(job_id), owner)
+                    if await job_service.heartbeat(_coerce_uuid(job_id), owner) is False:
+                        await logger.awarning(f"Worker: job {job_id} lost its claim before starting; skipping")
+                        continue
             try:
                 await runner.run(job_id)
             except asyncio.CancelledError:
