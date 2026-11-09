@@ -29,7 +29,7 @@ _SUBSCRIBER_MAXSIZE = 1000
 # live tail that will never produce. The map is evicted eagerly when a job's last
 # subscriber drops; this LRU cap is the backstop for jobs that close and are
 # never reattached, so a long-lived API process cannot leak one key per job
-# without bound. The facade also gates terminal jobs on the persisted JobStatus,
+# without bound. The backend also gates terminal jobs on the persisted JobStatus,
 # so an evicted marker never causes a missed/blocked production reattach.
 _CLOSED_MARKER_MAXSIZE = 4096
 
@@ -101,7 +101,7 @@ class InMemoryLiveBus:
         the finished job terminates instead of blocking on a tail that will never
         produce. The OrderedDict is the LRU: re-mark moves the key to the end, and
         the oldest entry is dropped once the cap is exceeded. Eviction of a very
-        old marker is safe — the facade gates terminal jobs on the persisted
+        old marker is safe because the backend gates terminal jobs on the persisted
         JobStatus, so a production reattach never depends on this in-process flag.
         """
         self._closed[job_id] = True

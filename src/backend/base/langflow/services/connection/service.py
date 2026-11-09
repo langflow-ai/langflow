@@ -1036,11 +1036,7 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
                     expires_at=validated.credentials.expires_at,
                 )
                 manual_credential_validated = True
-            if (
-                provider is not None
-                and provider.check_credential is not None
-                and not manual_credential_validated
-            ):
+            if provider is not None and provider.check_credential is not None and not manual_credential_validated:
                 await provider.check_credential(credential)
         missing = ScopeSet.missing(
             provider=row.provider_key, required=required_scopes, granted=credential.granted_scopes
