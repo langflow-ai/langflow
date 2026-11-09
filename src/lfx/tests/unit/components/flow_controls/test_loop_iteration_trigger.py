@@ -198,8 +198,7 @@ async def test_item_and_another_branch_in_one_list_input_both_reach_it():
     """A list input fed by Loop.item and by another loop-body branch gets both values.
 
     The injected item used to replace the whole list, so the other branch's output was dropped
-    and Combine failed with "'JSON' object is not subscriptable". The values follow the graph's
-    edge order, which is not fixed across processes, so only the values are compared.
+    and Combine failed with "'JSON' object is not subscriptable".
     """
     loop = LoopComponent(_id="loop")
     loop.set(data=DataFrame([Data(text="Q001"), Data(text="Q002")]))
@@ -214,7 +213,7 @@ async def test_item_and_another_branch_in_one_list_input_both_reach_it():
     graph = Graph(loop, merge)
     [r async for r in graph.async_start()]
 
-    assert [sorted(d.data["text"]) for d in loop.ctx["loop_aggregated"]] == [
+    assert [d.data["text"] for d in loop.ctx["loop_aggregated"]] == [
         ["Q001", "Q001-tagged"],
         ["Q002", "Q002-tagged"],
     ]
@@ -254,7 +253,7 @@ async def test_item_and_two_outputs_of_one_branch_in_one_list_input_all_reach_it
     graph = Graph(loop, merge)
     [r async for r in graph.async_start()]
 
-    assert [sorted(d.data["text"]) for d in loop.ctx["loop_aggregated"]] == [
+    assert [d.data["text"] for d in loop.ctx["loop_aggregated"]] == [
         ["Q001", "Q001-first", "Q001-second"],
         ["Q002", "Q002-first", "Q002-second"],
     ]

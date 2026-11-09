@@ -1698,4 +1698,4 @@ async def test_two_outputs_of_one_component_into_one_list_input_both_arrive():
     graph = Graph(source, join)
     [r async for r in graph.async_start()]
 
-    assert sorted(graph.get_vertex("join").built_object["joined"].text.split("+")) == ["first", "second"]
+    assert graph.get_vertex("join").built_object["joined"].text == "first+second"
