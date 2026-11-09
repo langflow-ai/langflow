@@ -3,6 +3,14 @@ import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getAxiosErrorDetail } from "@/controllers/API/helpers/get-axios-error-message";
 import type { ConnectionRead } from "@/controllers/API/queries/connections";
@@ -24,6 +32,7 @@ import ConnectionsTable, {
   type ConnectionsSort,
   ownerKindOf,
 } from "./components/ConnectionsTable";
+
 import ManageProvidersPanel from "./components/ManageProvidersPanel";
 
 const EMPTY_CONNECTIONS: ConnectionRead[] = [];
@@ -42,7 +51,8 @@ export default function ConnectionsPage() {
   const isSuperuser = Boolean(userData?.is_superuser);
 
   const [search, setSearch] = useState("");
-  const [view, setView] = useState("mine");
+  const [view, setView] = useState("connections");
+  const [ownerFilter, setOwnerFilter] = useState("mine");
   const [sort, setSort] = useState<ConnectionsSort>({
     column: "connection",
     direction: "ascending",
@@ -86,20 +96,20 @@ export default function ConnectionsPage() {
   // the same as "mine" for them: the rest belong to other people and are only
   // visible for administration. Other authorized rows stay under Mine for
   // regular users; ownership alone does not tell us how access was granted.
-  const tabConnections = useMemo(
+  const filteredConnections = useMemo(
     () =>
       connections.filter((connection) => {
         const owner = ownerKindOf(connection, userData?.id);
-        if (owner === "instance") return view === "instance";
-        if (owner === "other" && isSuperuser) return view === "others";
-        return view === "mine";
+        if (owner === "instance") return ownerFilter === "instance";
+        if (owner === "other" && isSuperuser) return ownerFilter === "others";
+        return ownerFilter === "mine";
       }),
-    [connections, isSuperuser, userData?.id, view],
+    [connections, isSuperuser, userData?.id, ownerFilter],
   );
   const visible = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    if (!needle) return tabConnections;
-    return tabConnections.filter((connection) => {
+    if (!needle) return filteredConnections;
+    return filteredConnections.filter((connection) => {
       const account = connection.executing_identity?.account;
       return [
         connection.display_name,
@@ -108,13 +118,13 @@ export default function ConnectionsPage() {
         account?.id ?? "",
       ].some((value) => value.toLowerCase().includes(needle));
     });
-  }, [tabConnections, search]);
+  }, [filteredConnections, search]);
   const getEmptyMessage = () => {
     if (connections.length === 0) return t("connections.empty");
-    if (tabConnections.length > 0) return t("connections.noMatches");
-    if (view === "instance") return t("connections.emptyInstance");
-    if (view === "others") return t("connections.emptyOthers");
-    return t("connections.emptyTab");
+    if (filteredConnections.length > 0) return t("connections.noMatches");
+    if (ownerFilter === "instance") return t("connections.emptyInstance");
+    if (ownerFilter === "others") return t("connections.emptyOthers");
+    return t("connections.emptyMine");
   };
 
   const run = async <T,>(
@@ -212,17 +222,47 @@ export default function ConnectionsPage() {
   }).filter((tab) => !tab.hidden);
   const activeExtra = extraTabs.find((tab) => tab.value === view);
 
-  // One panel body for every built-in tab: `visible` is already filtered by
-  // `view`, and Radix only renders the children of the selected TabsContent.
   const connectionsPanel = (
-    <div className="flex flex-col gap-6">
-      <Input
-        placeholder={t("connections.search")}
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
-        className="max-w-sm"
-        data-testid="connections-search"
-      />
+    <div className="flex flex-col gap-6" data-testid="connections-list">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="w-full max-w-sm">
+          <Input
+            aria-label={t("connections.search")}
+            placeholder={t("connections.search")}
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            data-testid="connections-search"
+          />
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <Label htmlFor="connections-owner-filter">
+            {t("connections.filters.owner")}
+          </Label>
+          <Select value={ownerFilter} onValueChange={setOwnerFilter}>
+            <SelectTrigger
+              id="connections-owner-filter"
+              aria-label={t("connections.filters.owner")}
+              className="w-full sm:w-44"
+              data-testid="connections-owner-filter"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="mine">
+                {t("connections.filters.mine")}
+              </SelectItem>
+              <SelectItem value="instance">
+                {t("connections.filters.instance")}
+              </SelectItem>
+              {isSuperuser && (
+                <SelectItem value="others">
+                  {t("connections.filters.others")}
+                </SelectItem>
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
       {connectionsQuery.isLoading ? (
         <p className="text-sm text-muted-foreground">
           {t("connections.loading")}
@@ -285,72 +325,51 @@ export default function ConnectionsPage() {
         {noProviders ? t("connections.noProviders") : ""}
       </p>
 
-      {/*
-        Every trigger needs a TabsContent with the matching value: Radix points
-        each trigger's aria-controls at the panel id it derives from that value,
-        so a panel the page never mounts leaves the reference dangling.
+      {isSuperuser || extraTabs.length > 0 ? (
+        <Tabs
+          value={view}
+          onValueChange={setView}
+          className="flex w-full flex-col gap-6"
+        >
+          <TabsList aria-label={t("connections.tabs.label")}>
+            <TabsTrigger value="connections">
+              {t("connections.tabs.connections")}
+            </TabsTrigger>
+            {isSuperuser && (
+              <TabsTrigger value="providers">
+                {t("connections.tabs.providers")}
+              </TabsTrigger>
+            )}
+            {extraTabs.map((tab) => (
+              <TabsTrigger key={tab.value} value={tab.value}>
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
 
-        Radix keeps the unselected panels mounted and marks them `hidden`, so no
-        `display` utility may sit on TabsContent itself - a class beats the
-        `[hidden] { display: none }` UA rule and would put an empty panel back
-        into the layout and the accessibility tree. Panel bodies bring their own
-        wrapper instead.
-      */}
-      <Tabs
-        value={view}
-        onValueChange={setView}
-        className="flex w-full flex-col gap-6"
-      >
-        <TabsList aria-label={t("connections.tabs.label")}>
-          <TabsTrigger value="mine">{t("connections.tabs.mine")}</TabsTrigger>
-          <TabsTrigger value="instance">
-            {t("connections.tabs.instance")}
-          </TabsTrigger>
-          {isSuperuser && (
-            <TabsTrigger value="others">
-              {t("connections.tabs.others")}
-            </TabsTrigger>
-          )}
-          {isSuperuser && (
-            <TabsTrigger value="providers">
-              {t("connections.tabs.providers")}
-            </TabsTrigger>
-          )}
-          {extraTabs.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value}>
-              {tab.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-
-        <TabsContent value="mine" className="mt-0">
-          {connectionsPanel}
-        </TabsContent>
-        <TabsContent value="instance" className="mt-0">
-          {connectionsPanel}
-        </TabsContent>
-        {isSuperuser && (
-          <TabsContent value="others" className="mt-0">
+          <TabsContent value="connections" className="mt-0">
             {connectionsPanel}
           </TabsContent>
-        )}
-        {isSuperuser && (
-          <TabsContent value="providers" className="mt-0">
-            {view === "providers" ? (
-              <ManageProvidersPanel
-                providers={integrationsQuery.data?.providers ?? []}
-                deploymentContext={integrationsQuery.data?.deployment_context}
-              />
-            ) : null}
-          </TabsContent>
-        )}
-        {extraTabs.map((tab) => (
-          <TabsContent key={tab.value} value={tab.value} className="mt-0">
-            {/* The seam contract says render() only runs for the active tab. */}
-            {activeExtra?.value === tab.value ? tab.render() : null}
-          </TabsContent>
-        ))}
-      </Tabs>
+          {isSuperuser && (
+            <TabsContent value="providers" className="mt-0">
+              {view === "providers" ? (
+                <ManageProvidersPanel
+                  providers={integrationsQuery.data?.providers ?? []}
+                  deploymentContext={integrationsQuery.data?.deployment_context}
+                />
+              ) : null}
+            </TabsContent>
+          )}
+          {extraTabs.map((tab) => (
+            <TabsContent key={tab.value} value={tab.value} className="mt-0">
+              {/* The seam contract says render() only runs for the active tab. */}
+              {activeExtra?.value === tab.value ? tab.render() : null}
+            </TabsContent>
+          ))}
+        </Tabs>
+      ) : (
+        connectionsPanel
+      )}
 
       {dialogOpen && (
         <AddConnectionDialog
@@ -363,6 +382,18 @@ export default function ConnectionsPage() {
           canCreateInstance={isSuperuser}
           reauthorize={reauthorizing}
           deploymentContext={integrationsQuery.data?.deployment_context}
+          onConnected={(connection) => {
+            const owner = ownerKindOf(connection, userData?.id);
+            setView("connections");
+            setOwnerFilter(
+              owner === "instance"
+                ? "instance"
+                : owner === "other" && isSuperuser
+                  ? "others"
+                  : "mine",
+            );
+            setSearch("");
+          }}
         />
       )}
     </div>

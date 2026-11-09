@@ -165,6 +165,14 @@
           ]
         },
         {
+          "distribution": "lfx-confluence",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-confluence"
+          ]
+        },
+        {
           "distribution": "lfx-jira",
           "extras": [],
           "version": ">=0.1.0,<1.0.0",
@@ -178,6 +186,14 @@
           "version": ">=0.1.0,<1.0.0",
           "providers": [
             "lfx-gitlab"
+          ]
+        },
+        {
+          "distribution": "lfx-servicenow",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-servicenow"
           ]
         }
       ]

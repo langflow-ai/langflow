@@ -99,6 +99,79 @@ async def test_permission_patch_rejects_empty_policy(client, logged_in_headers):
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize("unavailable", ["role", "project"])
+async def test_permission_patch_refusal_preserves_key_and_audits_denial(
+    client, logged_in_headers, active_user, monkeypatch, unavailable
+):
+    from uuid import UUID, uuid4
+
+    from langflow.services.database.models.api_key.model import ApiKey
+    from langflow.services.database.models.auth import AuthzAuditLog
+    from langflow.services.deps import get_settings_service, session_scope
+    from sqlmodel import select
+
+    auth_settings = get_settings_service().auth_settings
+    monkeypatch.setattr(auth_settings, "AUTHZ_ENABLED", True)
+    monkeypatch.setattr(auth_settings, "API_KEY_SCOPES_ENABLED", True)
+    validate = AsyncMock()
+    plugin = SimpleNamespace(
+        supports_api_key_scopes=AsyncMock(return_value=True), validate_api_key_permissions=validate
+    )
+    monkeypatch.setattr("langflow.services.database.models.api_key.crud.get_authorization_service", lambda: plugin)
+    original_policy = {"restrictions": [{"resource_type": "flow", "actions": ["read"]}]}
+    created = await client.post(
+        "api/v1/api_key/",
+        json={"name": "Unchanged on refusal", "permissions": original_policy},
+        headers=logged_in_headers,
+    )
+    assert created.status_code == 200
+    key_id = UUID(created.json()["id"])
+    async with session_scope() as session:
+        key = await session.get(ApiKey, key_id)
+        original_secret, original_hash = key.api_key, key.api_key_hash
+    detail = (
+        "Role is not available for this API key"
+        if unavailable == "role"
+        else "Project is not available for this API key"
+    )
+    validate.side_effect = PermissionError(detail)
+    refused_policy = (
+        {"roles": [{"role_id": str(uuid4()), "domain_type": "global"}]}
+        if unavailable == "role"
+        else {
+            "restrictions": [
+                {"resource_type": "flow", "actions": ["read"], "domain_type": "project", "domain_id": str(uuid4())}
+            ]
+        }
+    )
+    monkeypatch.setattr(auth_settings, "AUTHZ_AUDIT_ENABLED", True)
+    monkeypatch.setattr(auth_settings, "AUTHZ_AUDIT_DURABLE", True)
+
+    refused = await client.patch(
+        f"api/v1/api_key/{key_id}/permissions", json={"permissions": refused_policy}, headers=logged_in_headers
+    )
+
+    assert refused.status_code == 403
+    assert refused.json() == {"detail": detail}
+    async with session_scope() as session:
+        key = await session.get(ApiKey, key_id)
+        assert key.permissions == original_policy
+        assert (key.api_key, key.api_key_hash) == (original_secret, original_hash)
+        events = (
+            await session.exec(
+                select(AuthzAuditLog).where(
+                    AuthzAuditLog.resource_id == key_id, AuthzAuditLog.action == "api_key:permissions_update"
+                )
+            )
+        ).all()
+    assert len(events) == 1
+    assert events[0].user_id == active_user.id
+    assert events[0].result == "deny"
+    assert events[0].details["reason"] == "permission_policy_refused"
+    assert original_secret not in str(events[0].model_dump())
+
+
+@pytest.mark.anyio
 async def test_restricted_key_cannot_modify_its_owner_profile(client, logged_in_headers, active_user, monkeypatch):
     from langflow.services.deps import get_settings_service
 

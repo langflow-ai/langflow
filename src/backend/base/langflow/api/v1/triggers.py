@@ -384,7 +384,13 @@ async def enable_trigger(
     except IntegrationPolicyBlockedError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail={"code": exc.code, "message": exc.safe_message},
+            detail={
+                "code": exc.code,
+                "error_code": exc.code,
+                "message": exc.safe_message,
+                "hint": exc.hint,
+                "provider": exc.provider,
+            },
         ) from exc
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=refusal_detail(exc)) from exc
