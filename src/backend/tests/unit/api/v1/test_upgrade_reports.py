@@ -164,6 +164,9 @@ async def test_admin_reports_work_during_database_maintenance(client, logged_in_
     response = await client.post(URL, content=FIXTURE.read_bytes(), headers=admin_headers)
     assert response.status_code == 201, response.text
     assert (await client.get(f"{URL}/{response.json()['id']}", headers=admin_headers)).status_code == 200
+    exported = await client.get(f"{URL}/{response.json()['id']}/export", headers=admin_headers)
+    assert exported.status_code == 200, exported.text
+    assert exported.content == FIXTURE.read_bytes()
     assert (await client.post(URL, content=FIXTURE.read_bytes(), headers=logged_in_headers)).status_code == 503
 
 

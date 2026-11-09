@@ -14,6 +14,7 @@ import os
 import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
@@ -64,7 +65,6 @@ from tests.unit.api.v1 import test_connection_oauth as oauth
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Awaitable, Callable
-    from pathlib import Path
 
 RECORD = {"target": {}, "steps": {}, "accepted_findings": []}
 PAUSED = {**RECORD, "pause": {"frozen_at": "2026-10-05T12:00:00+00:00", "frozen_by": "admin"}}
@@ -77,6 +77,7 @@ CHANGES = {
     # Each adds a row to the audit log, which says who read a person's data.
     "/api/v1/data-subjects/end-users",
     "/api/v1/data-subjects/requests/{request_id}/export",
+    "/api/v1/upgrade-reports/{report_id}/export",
     "/api/v1/users/me/data-export",
 }
 # Every other path that answers a GET or a HEAD. Each was read to its end, with what it depends on, and
@@ -250,6 +251,9 @@ READS = frozenset(
         "/api/v1/triggers/{trigger_id}",
         "/api/v1/triggers/{trigger_id}/events",
         "/api/v1/triggers/{trigger_id}/ingress",
+        "/api/v1/upgrade-reports",
+        "/api/v1/upgrade-reports/{report_id}",
+        "/api/v1/upgrade-reports/{report_id}/repairs",
         "/api/v1/users/",
         "/api/v1/users/me/deletion-request",
         "/api/v1/users/whoami",
@@ -640,6 +644,44 @@ async def test_a_data_subject_read_that_records_who_read_is_refused_while_paused
     _write_record(config_dir, RECORD)
     assert (await client.get(path, headers=logged_in_headers_super_user)).status_code == answer_after
     assert await recorded() == rows_after
+
+
+async def test_an_upgrade_report_export_is_refused_without_an_audit_write_while_paused(
+    client, logged_in_headers_super_user, config_dir, monkeypatch
+):
+    auth_settings = get_settings_service().auth_settings
+    monkeypatch.setattr(auth_settings, "AUTHZ_AUDIT_ENABLED", True)
+    monkeypatch.setattr(auth_settings, "AUTHZ_AUDIT_DURABLE", True)
+    document = (Path(__file__).parents[1] / "v1" / "fixtures" / "upgrade-report-v1.json").read_bytes()
+    imported = await client.post("api/v1/upgrade-reports", content=document, headers=logged_in_headers_super_user)
+    assert imported.status_code == 201, imported.text
+    report_id = imported.json()["id"]
+    report_path = f"api/v1/upgrade-reports/{report_id}"
+
+    async def exports_recorded() -> int:
+        async with session_scope() as session:
+            rows = await session.exec(
+                select(AuthzAuditLog).where(
+                    AuthzAuditLog.action == "upgrade-report:export", AuthzAuditLog.resource_id == UUID(report_id)
+                )
+            )
+            return len(rows.all())
+
+    _write_record(config_dir, PAUSED)
+    for path in ("api/v1/upgrade-reports", report_path, f"{report_path}/repairs"):
+        response = await client.get(path, headers=logged_in_headers_super_user)
+        assert response.status_code == 200, response.text
+
+    refused = await client.get(f"{report_path}/export", headers=logged_in_headers_super_user)
+    assert refused.status_code == 503, refused.text
+    assert refused.json() == REFUSAL
+    assert await exports_recorded() == 0
+
+    _write_record(config_dir, RECORD)
+    exported = await client.get(f"{report_path}/export", headers=logged_in_headers_super_user)
+    assert exported.status_code == 200, exported.text
+    assert exported.content == document
+    assert await exports_recorded() == 1
 
 
 async def test_a_lock_that_cannot_be_taken_stops_no_change(client, logged_in_headers, config_dir):

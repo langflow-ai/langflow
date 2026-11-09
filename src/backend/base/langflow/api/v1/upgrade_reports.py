@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, JsonValue, ValidationError
 
 from langflow.api.utils import DbSession, DbSessionReadOnly
+from langflow.api.utils.migration_pause import changes_the_instance
 from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.authorization.audit import audit_decision
 from langflow.services.database.models.upgrade_report import UpgradeReport
@@ -103,7 +104,7 @@ async def detail(report_id: UUID, _admin: Superuser, session: DbSessionReadOnly,
     return ReportDetail(**entry(row).model_dump(), document=json.loads(row.document_json))
 
 
-@router.get("/{report_id}/export")
+@router.get("/{report_id}/export", dependencies=[Depends(changes_the_instance)])
 async def export(report_id: UUID, admin: Superuser, session: DbSessionReadOnly) -> Response:
     row = await read_row(session, report_id)
     await audit_decision(
