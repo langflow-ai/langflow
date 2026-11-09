@@ -7,8 +7,11 @@ stale-leased QUEUED job is simply claimable again (covered in test_db_backend).
 from __future__ import annotations
 
 import uuid
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
+from langflow.services.background_execution import db_backend
 from langflow.services.background_execution.db_backend import DBBackgroundQueue
 from langflow.services.database.models.jobs.model import JobStatus
 from langflow.services.deps import get_job_service
@@ -155,3 +158,46 @@ async def test_retry_safe_exhausted_fails(active_user):
     assert refreshed.status == JobStatus.FAILED
     err = refreshed.error or {}
     assert err.get("type") == "worker_lost"
+
+
+@pytest.mark.usefixtures("client")
+@pytest.mark.parametrize("malformed_field", ["attempt", "max_attempts"])
+async def test_malformed_retry_metadata_does_not_abandon_later_orphans(active_user, monkeypatch, malformed_field):
+    metadata = {"retry_safe": True, "max_attempts": 3, "attempt": 1, malformed_field: "not-a-number"}
+    jobs, malformed_id = await _make_job(
+        uuid.uuid4(), status=JobStatus.IN_PROGRESS, user_id=active_user.id, metadata=metadata
+    )
+    _, healthy_id = await _make_job(uuid.uuid4(), status=JobStatus.IN_PROGRESS, user_id=active_user.id)
+    list_in_progress = jobs.in_progress_workflow_job_ids
+
+    async def malformed_first():
+        # The query has no ordering guarantee, so put the malformed row first.
+        job_ids = await list_in_progress()
+        return sorted(job_ids, key=lambda job_id: job_id != malformed_id)
+
+    monkeypatch.setattr(jobs, "in_progress_workflow_job_ids", malformed_first)
+    log_exception = AsyncMock()
+    monkeypatch.setattr(db_backend, "logger", SimpleNamespace(aexception=log_exception))
+    backend = DBBackgroundQueue(job_service=jobs)
+
+    assert await backend.requeue_lost() == []
+
+    log_exception.assert_awaited_once()
+    assert str(malformed_id) in log_exception.await_args.args[0]
+    malformed = await jobs.get_job_by_job_id(malformed_id)
+    assert malformed.status == JobStatus.IN_PROGRESS
+    assert malformed.job_metadata[malformed_field] == "not-a-number"
+    assert malformed.error is None
+    assert await jobs.read_events(malformed_id) == []
+    healthy = await jobs.get_job_by_job_id(healthy_id)
+    assert healthy.status == JobStatus.FAILED
+    assert healthy.error == {"type": "worker_lost"}
+    events = await jobs.read_events(healthy_id)
+    assert [event.event_type for event in events] == ["run_failed"]
+
+    assert await backend.requeue_lost() == []
+
+    assert log_exception.await_count == 2
+    assert str(malformed_id) in log_exception.await_args.args[0]
+    events = await jobs.read_events(healthy_id)
+    assert [event.event_type for event in events] == ["run_failed"]
