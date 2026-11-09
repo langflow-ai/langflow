@@ -257,7 +257,7 @@ async def upsert_subscription(
     await session.flush()
     await session.refresh(row)
     if created:
-        await _audit_subscription(AUDIT_SUBSCRIPTION_CREATE, trigger_id=trigger_id, count=1, session=session)
+        await _audit_subscription_creation(session, trigger_id=trigger_id)
     return row
 
 
@@ -679,13 +679,41 @@ def _defer_audit(session: AsyncSession, action: str, *, trigger_id: UUID, count:
     session.info.setdefault(_DEFERRED_AUDITS_KEY, []).append((action, trigger_id, count, result))
 
 
+async def _audit_subscription_creation(session: AsyncSession, *, trigger_id: UUID) -> None:
+    """Keep best-effort creation evidence inside the subscription transaction."""
+    settings = get_settings_service().auth_settings
+    if not settings.AUTHZ_AUDIT_ENABLED:
+        return
+    if settings.AUTHZ_AUDIT_DURABLE:
+        await _audit_subscription(AUDIT_SUBSCRIPTION_CREATE, trigger_id=trigger_id, count=1, session=session)
+        return
+    try:
+        # An independent writer could commit a create audit after this transaction
+        # rolls back. The savepoint keeps the row atomic without making an audit
+        # failure abort the subscription in best-effort mode.
+        async with session.begin_nested():
+            await _audit_subscription(
+                AUDIT_SUBSCRIPTION_CREATE, trigger_id=trigger_id, count=1, session=session, required=True
+            )
+            await session.flush()
+    except Exception as exc:  # noqa: BLE001 - best-effort audit failure must not abort subscription creation
+        await logger.awarning("Subscription creation audit failed for trigger %s (%s)", trigger_id, type(exc).__name__)
+
+
 async def _audit_subscription(
-    action: str, *, trigger_id: UUID, count: int, result: str = "allow", session: AsyncSession | None = None
+    action: str,
+    *,
+    trigger_id: UUID,
+    count: int,
+    result: str = "allow",
+    session: AsyncSession | None = None,
+    required: bool = False,
 ) -> None:
     from langflow.services.authorization.audit import audit_decision, stage_audit_decision
 
     if session is not None and stage_audit_decision(
         session=session,
+        required=required,
         user_id=None,
         action=action,
         obj=f"trigger:{trigger_id}",

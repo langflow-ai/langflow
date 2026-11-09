@@ -19,7 +19,12 @@ subscription row. Refreshing the same provider subscription does not emit a
 second create row. Creation uses the existing subscription lifecycle audit
 settings, as renewal and revocation do. With `LANGFLOW_AUTHZ_AUDIT_ENABLED=true`
 and `LANGFLOW_AUTHZ_AUDIT_DURABLE=true`, the creation audit shares the subscription
-transaction. These background lifecycle rows have no authenticated user actor.
+transaction. With durable mode off, creation stages a best-effort audit in a
+savepoint of that same transaction. This adds a savepoint and audit write during
+creation; an audit insert failure rolls back only that savepoint. Rolling back
+the subscription also removes its creation audit, and no independent writer can
+retain a create row for a rolled-back subscription. These background lifecycle
+rows have no authenticated user actor.
 
 ## List replays from the last thirty days
 
