@@ -19,8 +19,9 @@ Connect its tool output to the Agent component's Tools input.
 The agent supplies action arguments, such as search terms, message text, resource IDs, and pagination options.
 JSON payloads, such as Slack blocks and ServiceNow ticket fields, are also available as tool arguments.
 
-Tool Mode is available on the dedicated actions for [Google Workspace](/bundles-google), [Microsoft 365](/bundles-microsoft), [Slack](/bundles-slack), GitHub, [GitLab](/bundles-gitlab), [Jira](/bundles-jira), [Confluence](/bundles-confluence), and [ServiceNow](/bundles-servicenow).
+Tool Mode is available on the dedicated actions for [Google Workspace](/bundles-google), [Microsoft 365](/bundles-microsoft), [Slack](/bundles-slack), GitHub, [GitLab](/bundles-gitlab), [Jira](/bundles-jira), [Confluence](/bundles-confluence), [ServiceNow](/bundles-servicenow), and [Telegram](/bundles-telegram).
 Connections and uploaded mail attachments stay configured on the component.
+Telegram Reply to Message also keeps its trigger event configured so the reply uses that event's bot, chat, and topic.
 The connected account and the provider's existing permission checks still determine what the action can access.
 
 Components with separate results and pagination outputs expose both as separate tool actions.
