@@ -142,6 +142,9 @@ def extract_loop_output(results: list, end_vertex_id: str | None, output_name: s
 
     Returns:
         Data object containing the loop iteration output
+
+    Raises:
+        ValueError: If the selected feedback output is missing from the end vertex result
     """
     if not results:
         return Data(text="")
@@ -153,6 +156,9 @@ def extract_loop_output(results: list, end_vertex_id: str | None, output_name: s
     for result in results:
         if hasattr(result, "vertex") and result.vertex.id == end_vertex_id and hasattr(result, "result_dict"):
             result_dict = result.result_dict
+            if output_name is not None and output_name not in result_dict.outputs:
+                msg = f"Loop feedback output {output_name!r} not found on {end_vertex_id}"
+                raise ValueError(msg)
             if result_dict.outputs:
                 # The feedback edge can select any output of the end vertex.
                 selected_output = (
@@ -278,6 +284,10 @@ async def execute_loop_body(
 
             # Prepare the subgraph - components will be built with the injected data
             iteration_subgraph.prepare()
+
+            # The feedback edge leaves the subgraph, but its output must still be built.
+            if output_name is not None and end_vertex_id:
+                iteration_subgraph.get_vertex(end_vertex_id).required_output_names.add(output_name)
 
             # CRITICAL: Also set the value in the vertex's raw_params
             # Fields with type="other" (like HandleInput) are skipped during field param processing
