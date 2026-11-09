@@ -114,6 +114,10 @@ Exported flows contain only its handle, such as `salesforce/work`.
 Each destination Langflow server needs its own authorized connection with that handle.
 Headless lfx cannot use this connection through an environment token.
 
+## Tool Mode
+
+Enable Tool Mode on a record action and connect its tool output to an Agent component. The agent supplies the object, record ID, selected fields, or field values that the action accepts. Keep the Salesforce connection configured on the component. Field values use JSON objects. The supported object and field lists, account permissions, and configured org still apply. The record change trigger does not use Tool Mode.
+
 ## Enable a record change trigger
 
 Run `langflow listeners` alongside the self-managed API, or set `LANGFLOW_LISTENERS_MODE=subprocess` before starting Langflow.

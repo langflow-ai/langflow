@@ -12,9 +12,9 @@ class SalesforceUpdateRecordComponent(SalesforceActionComponent):
     capability_id = "salesforce.record.update"
     inputs = [
         connection_input(capability_id),
-        DropdownInput(name="object_name", display_name="Object", options=list(FIELDS), value="Account"),
-        MessageTextInput(name="record_id", display_name="Record ID", required=True),
-        DataInput(name="record_values", display_name="Field Values", required=True),
+        DropdownInput(name="object_name", display_name="Object", options=list(FIELDS), value="Account", tool_mode=True),
+        MessageTextInput(name="record_id", display_name="Record ID", required=True, tool_mode=True),
+        DataInput(name="record_values", display_name="Field Values", required=True, tool_mode=True),
     ]
     outputs = [Output(display_name="Result", name="result", method="update_record")]
 
