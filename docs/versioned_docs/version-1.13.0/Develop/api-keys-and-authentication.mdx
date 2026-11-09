@@ -34,7 +34,7 @@ By default, most Langflow API endpoints, such as `/v1/run/$FLOW_ID`, require aut
 Langflow validates API keys against keys stored in the database, but you can configure Langflow to validate API keys against an environment variable instead.
 For more information, see [`LANGFLOW_API_KEY_SOURCE`](#langflow-api-key-source).
 
-Webhook endpoints require an API key belonging to the flow owner. See [Require authentication for webhooks](/webhook#require-authentication-for-webhooks) for configuration and upgrade instructions.
+In Langflow 1.13.2 and later, webhook endpoints require an API key belonging to the flow owner. Earlier 1.13.x releases permit unauthenticated requests when `LANGFLOW_WEBHOOK_AUTH_ENABLE=False`. See [Require authentication for webhooks](/webhook#require-authentication-for-webhooks) for configuration and upgrade instructions.
 To configure authentication for Langflow MCP servers, see [Use Langflow as an MCP server](/mcp-server).
 
 ### Langflow API key permissions
@@ -706,11 +706,11 @@ External tracing integrations such as Langfuse and Arize are _process-wide_, not
 
 ### LANGFLOW_WEBHOOK_AUTH_ENABLE {#langflow-webhook-auth-enable}
 
-This deprecated variable remains accepted for configuration compatibility. Webhook endpoints always require API key authentication.
+Starting in Langflow 1.13.2, this deprecated variable remains accepted for configuration compatibility and webhook endpoints always require API key authentication. Earlier 1.13.x releases allow unauthenticated webhook requests when it is `False`.
 
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
-| `LANGFLOW_WEBHOOK_AUTH_ENABLE` | Boolean | `True` | Deprecated. Webhook endpoints require an API key belonging to the flow owner, including when this variable is `False`. |
+| `LANGFLOW_WEBHOOK_AUTH_ENABLE` | Boolean | `True` | Deprecated in 1.13.2. In 1.13.2 and later, webhook endpoints require an API key belonging to the flow owner, including when this variable is `False`. Earlier 1.13.x releases permit unauthenticated requests when it is `False`. |
 
 Starting in 1.13.2, deployments that previously set this variable to `False` must configure webhook senders to include the flow owner's API key. Requests without a key receive HTTP 403. For configuration and migration details, see [Require authentication for webhooks](/webhook#require-authentication-for-webhooks).
 
