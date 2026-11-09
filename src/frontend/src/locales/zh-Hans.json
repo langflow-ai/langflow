@@ -1849,7 +1849,7 @@
   "playgroundComponent.clearChat": "清除交谈",
   "playgroundComponent.clearSession": "清除会话",
   "playgroundComponent.closeAndGoBack": "关闭并返回流程",
-  "playgroundComponent.deleteFile": "删除文件",
+  "playgroundComponent.deleteFile": "删除 {{name}}",
   "playgroundComponent.deleteSession": "删除会话",
   "playgroundComponent.enterFullscreen": "进入全屏模式",
   "playgroundComponent.focusChatInput": "聚焦聊天输入",

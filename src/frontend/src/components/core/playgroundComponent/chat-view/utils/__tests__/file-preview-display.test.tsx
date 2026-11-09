@@ -40,6 +40,32 @@ describe("FilePreviewDisplay", () => {
     expect(screen.getByText("custom...csv")).toBeInTheDocument();
   });
 
+  it("names the attachment each delete button removes", () => {
+    renderPreview(
+      <>
+        <FilePreviewDisplay
+          file={attached("notes.txt")}
+          variant="compact"
+          showDelete
+          onDelete={jest.fn()}
+        />
+        <FilePreviewDisplay
+          file={attached("customer_list_export.csv")}
+          variant="compact"
+          showDelete
+          onDelete={jest.fn()}
+        />
+      </>,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Delete notes.txt" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Delete customer_list_export.csv" }),
+    ).toBeInTheDocument();
+  });
+
   it("shows the full name when hovering an attachment in the chat input", async () => {
     const user = userEvent.setup();
     renderPreview(

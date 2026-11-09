@@ -122,6 +122,9 @@ test(
       });
       const truncated = page.getByText("custom...txt", { exact: true });
       await expect(truncated).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Delete customer_list_export.txt" }),
+      ).toBeVisible();
       await page.runA11yScan("playground-attachments-in-input");
       await truncated.hover();
       await expect(page.getByRole("tooltip")).toHaveText(

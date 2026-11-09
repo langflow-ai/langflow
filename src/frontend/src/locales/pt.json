@@ -1849,7 +1849,7 @@
   "playgroundComponent.clearChat": "Limpar o chat",
   "playgroundComponent.clearSession": "Limpar sessão",
   "playgroundComponent.closeAndGoBack": "Fechar e voltar ao fluxo",
-  "playgroundComponent.deleteFile": "Excluir arquivo",
+  "playgroundComponent.deleteFile": "Excluir {{name}}",
   "playgroundComponent.deleteSession": "Excluir sessão",
   "playgroundComponent.enterFullscreen": "Entrar em tela cheia",
   "playgroundComponent.focusChatInput": "Foco na entrada do chat",

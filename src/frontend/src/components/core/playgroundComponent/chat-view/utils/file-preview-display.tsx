@@ -124,7 +124,9 @@ export default function FilePreviewDisplay({
                 onClick={onDelete}
                 className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 type="button"
-                aria-label={t("playgroundComponent.deleteFile")}
+                aria-label={t("playgroundComponent.deleteFile", {
+                  name: fileInfo.name,
+                })}
               >
                 <ForwardedIconComponent name="X" className="h-3.5 w-3.5" />
               </button>
@@ -175,7 +177,9 @@ export default function FilePreviewDisplay({
             onClick={onDelete}
             className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
             type="button"
-            aria-label={t("playgroundComponent.deleteFile")}
+            aria-label={t("playgroundComponent.deleteFile", {
+              name: fileInfo.name,
+            })}
           >
             <ForwardedIconComponent name="X" className="h-3 w-3" />
           </button>

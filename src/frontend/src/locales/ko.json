@@ -1838,7 +1838,7 @@
   "playgroundComponent.enterFullscreen": "전체 화면으로 보기",
   "playgroundComponent.closeAndGoBack": "닫고 Flow로 돌아가기",
   "playgroundComponent.chatSessions": "채팅 세션",
-  "playgroundComponent.deleteFile": "파일 삭제",
+  "playgroundComponent.deleteFile": "{{name}} 삭제",
   "playgroundComponent.moreOptions": "옵션 더 보기",
   "playgroundComponent.rename": "이름 바꾸기",
   "playgroundComponent.messageLogs": "메시지 로그",
