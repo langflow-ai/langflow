@@ -58,6 +58,7 @@ from langflow.api.v1.knowledge_base_storage import router as knowledge_base_stor
 from langflow.api.v1.voice_mode import router as voice_mode_router
 from langflow.api.v2 import files_router as files_router_v2
 from langflow.api.v2 import mcp_router as mcp_router_v2
+from langflow.api.v2 import policy_bundle_router as policy_bundle_router_v2
 from langflow.api.v2 import registration_router as registration_router_v2
 from langflow.api.v2 import workflow_background_router as workflow_background_router_v2
 from langflow.api.v2 import workflow_public_router as workflow_public_router_v2
@@ -172,6 +173,7 @@ _include_agentic_router()
 
 router_v2.include_router(files_router_v2)
 router_v2.include_router(mcp_router_v2)
+router_v2.include_router(policy_bundle_router_v2)
 router_v2.include_router(registration_router_v2)
 
 # POST /api/v2/workflows runs through the shared lfx router bound to the
