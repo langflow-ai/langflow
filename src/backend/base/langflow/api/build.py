@@ -613,7 +613,7 @@ async def _generate_flow_events(
             # or expired checkpoint is unrecoverable, so surface a clean 404 instead.
             raise HTTPException(status_code=404, detail="Checkpoint expired or not found; cannot resume this run.")
         graph = LfxGraph.resume_from_checkpoint(checkpoint, checkpoint_store=store)
-        # The checkpoint holds the untweaked flow, so re-apply the run's tweaks as the fresh path does.
+        # A background checkpoint holds the untweaked flow, so re-apply the run's tweaks as the fresh path does.
         if tweaks:
             process_tweaks_on_graph(graph, tweaks)
         # A checkpoint stores flow payload + user_id and deliberately never persists an
