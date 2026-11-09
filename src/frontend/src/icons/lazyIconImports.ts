@@ -1,8 +1,11 @@
 // Export the lazy loading mapping for icons
 export const lazyIconsMapping = {
+  ServiceNow: () =>
+    import("@/icons/ServiceNow").then((mod) => ({
+      default: mod.ServiceNowIcon,
+    })),
   Telegram: () =>
     import("@/icons/Telegram").then((mod) => ({ default: mod.TelegramIcon })),
-
   AIML: () => import("@/icons/AIML").then((mod) => ({ default: mod.AIMLIcon })),
   Agentics: () =>
     import("@/icons/Agentics").then((mod) => ({

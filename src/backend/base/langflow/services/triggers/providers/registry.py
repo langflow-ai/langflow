@@ -47,6 +47,7 @@ class TriggerKind:
     push_mechanism: str | None = None
     listener_factory: Callable[[ListenerTrigger], ListenerAdapter] | None = None
     listener_mechanism: str | None = None
+    hosted_unsupported_message: str | None = None
 
 
 @dataclass(frozen=True)
@@ -71,6 +72,7 @@ class TriggerProvider:
     manual_token_requires_expiry: bool = False
     oauth: OAuthAdapter | None = None
     prepare: Callable[[AsyncSession, Trigger], Awaitable[None]] | None = None
+    prepare_delivery: Callable[[Trigger, CredentialLease, dict[str, Any]], Awaitable[bool]] | None = None
 
     def __post_init__(self) -> None:
         if (
@@ -129,6 +131,7 @@ class TriggerProvider:
 _cache_key: tuple[tuple[str, int], ...] | None = None
 _cache_records: tuple[object, ...] = ()
 _providers: dict[str, TriggerProvider] = {}
+_unavailable_providers: frozenset[str] = frozenset()
 
 
 def _distribution_name(value: str) -> str:
@@ -139,7 +142,7 @@ def all_providers() -> tuple[TriggerProvider, ...]:
     """Discover hooks only for successfully loaded integration owners."""
     from lfx.extension.bundle_registry import get_default_registry
 
-    global _cache_key, _cache_records, _providers  # noqa: PLW0603
+    global _cache_key, _cache_records, _providers, _unavailable_providers  # noqa: PLW0603
     snapshot = get_default_registry().snapshot()
     key = tuple(sorted((name, id(record)) for name, record in snapshot.items()))
     if key == _cache_key:
@@ -186,6 +189,7 @@ def all_providers() -> tuple[TriggerProvider, ...]:
             conflicts.add(provider.provider_id)
         discovered[provider.provider_id] = provider
     _providers = {name: provider for name, provider in discovered.items() if name not in conflicts}
+    _unavailable_providers = frozenset(conflicts)
     _cache_key = key
     # Retain records so a later reload cannot reuse their object ids.
     _cache_records = tuple(snapshot.values())
@@ -194,6 +198,12 @@ def all_providers() -> tuple[TriggerProvider, ...]:
 
 def get_provider(provider_id: str) -> TriggerProvider | None:
     return next((provider for provider in all_providers() if provider.provider_id == provider_id), None)
+
+
+def is_provider_unavailable(provider_id: str) -> bool:
+    """Distinguish an unavailable owned runtime from a provider with no trigger hooks."""
+    all_providers()
+    return provider_id in _unavailable_providers
 
 
 def get_kind(kind: str) -> TriggerKind | None:
