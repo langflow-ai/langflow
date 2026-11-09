@@ -50,7 +50,7 @@ from langflow.services.auth.external import (
     resolve_external_identity,
     set_current_external_access_context,
 )
-from langflow.services.auth.refresh_tokens import refresh_session_id, register_refresh_session
+from langflow.services.auth.refresh_tokens import create_refresh_session, refresh_session_id, register_refresh_session
 from langflow.services.database.models.api_key.crud import authenticate_api_key
 from langflow.services.database.models.user.crud import (
     get_user_by_id,
@@ -1477,7 +1477,12 @@ class AuthService(BaseAuthService):
             return UUID(int=0)
 
     async def create_user_tokens(self, user_id: UUID, db: AsyncSession, *, update_last_login: bool = False) -> dict:
-        tokens = self._create_session_tokens(user_id, secrets.token_urlsafe(32))
+        session_id = secrets.token_urlsafe(32)
+        tokens = self._create_session_tokens(user_id, session_id)
+        expires_at = datetime.now(timezone.utc) + timedelta(
+            seconds=self.settings.auth_settings.REFRESH_TOKEN_EXPIRE_SECONDS
+        )
+        await create_refresh_session(session_id, str(user_id), expires_at, db)
         if update_last_login:
             await update_user_last_login_at(user_id, db)
         return tokens

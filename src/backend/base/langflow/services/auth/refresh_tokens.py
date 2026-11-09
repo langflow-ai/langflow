@@ -3,15 +3,13 @@
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 import jwt
 from jwt import InvalidTokenError
-from sqlalchemy import case, delete
-from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy import case, delete, insert, update
 from sqlmodel import col, select
 
 from langflow.services.database.models.auth.refresh_token import RefreshTokenSession
@@ -37,26 +35,35 @@ def _session_digest(session_id: str, user_id: str) -> str:
     return hashlib.sha256(f"{UUID(user_id)}:{session_id}".encode()).hexdigest()
 
 
+async def create_refresh_session(session_id: str, user_id: str, expires_at: datetime, db: AsyncSession) -> None:
+    """Persist a new login session before its first refresh token is issued."""
+    await db.execute(
+        insert(RefreshTokenSession).values(
+            session_digest=_session_digest(session_id, user_id), expires_at=expires_at, revoked=False
+        )
+    )
+
+
 async def register_refresh_session(session_id: str, user_id: str, expires_at: datetime, db: AsyncSession) -> bool:
     """Extend a live session atomically without consuming any refresh token.
 
     Logout and refresh write the same row. Once logout commits, even a refresh
-    already in progress cannot clear its revocation or issue a usable descendant.
+    already in progress cannot clear its revocation or recreate a pruned session.
     """
-    insert = pg_insert if db.get_bind().dialect.name == "postgresql" else sqlite_insert
-    statement = insert(RefreshTokenSession).values(
-        session_digest=_session_digest(session_id, user_id), expires_at=expires_at, revoked=False
-    )
-    statement = statement.on_conflict_do_update(
-        index_elements=["session_digest"],
-        set_={
-            "expires_at": case(
-                (col(RefreshTokenSession.expires_at) < statement.excluded.expires_at, statement.excluded.expires_at),
+    statement = (
+        update(RefreshTokenSession)
+        .where(
+            col(RefreshTokenSession.session_digest) == _session_digest(session_id, user_id),
+            col(RefreshTokenSession.revoked).is_(False),
+        )
+        .values(
+            expires_at=case(
+                (col(RefreshTokenSession.expires_at) < expires_at, expires_at),
                 else_=col(RefreshTokenSession.expires_at),
             )
-        },
-        where=col(RefreshTokenSession.revoked).is_(False),
-    ).returning(col(RefreshTokenSession.session_digest))
+        )
+        .returning(col(RefreshTokenSession.session_digest))
+    )
     result = await db.execute(statement)
     live = result.scalar_one_or_none() is not None
     if live:
@@ -80,21 +87,23 @@ async def revoke_refresh_token(token: str, db: AsyncSession, settings: SettingsS
         if payload.get("type") != "refresh":
             return
         digest = _session_digest(refresh_session_id(payload), payload["sub"])
-        expires_at = datetime.fromtimestamp(float(payload["exp"]), timezone.utc)
+        expires_at = max(
+            datetime.fromtimestamp(float(payload["exp"]), timezone.utc),
+            datetime.now(timezone.utc) + timedelta(seconds=settings.auth_settings.REFRESH_TOKEN_EXPIRE_SECONDS),
+        )
     except (InvalidTokenError, KeyError, TypeError, ValueError, OverflowError):
         return
 
-    insert = pg_insert if db.get_bind().dialect.name == "postgresql" else sqlite_insert
-    statement = insert(RefreshTokenSession).values(session_digest=digest, expires_at=expires_at, revoked=True)
-    statement = statement.on_conflict_do_update(
-        index_elements=["session_digest"],
-        set_={
-            "revoked": True,
-            "expires_at": case(
-                (col(RefreshTokenSession.expires_at) < statement.excluded.expires_at, statement.excluded.expires_at),
+    statement = (
+        update(RefreshTokenSession)
+        .where(col(RefreshTokenSession.session_digest) == digest)
+        .values(
+            revoked=True,
+            expires_at=case(
+                (col(RefreshTokenSession.expires_at) < expires_at, expires_at),
                 else_=col(RefreshTokenSession.expires_at),
             ),
-        },
+        )
     )
     await db.execute(statement)
     await _prune_expired_sessions(db)

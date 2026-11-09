@@ -62,7 +62,7 @@ async def test_revocation_survives_new_service_and_database_session(token_store)
         with pytest.raises(HTTPException) as exc:
             await restarted.create_refresh_token(first["refresh_token"], db)
         assert exc.value.status_code == 401
-        rows = (await db.exec(select(RefreshTokenSession))).all()
+        rows = (await db.exec(select(RefreshTokenSession).where(RefreshTokenSession.revoked))).all()
         assert len(rows) == 1
         assert rows[0].session_digest == hashlib.sha256(f"{user.id}:{first_claims['sid']}".encode()).hexdigest()
         assert rows[0].revoked is True
@@ -179,6 +179,9 @@ async def test_revocation_storage_failure_cannot_issue_tokens(token_store):
     async with AsyncSession(engine) as db:
         with pytest.raises(OperationalError):
             await service.create_refresh_token(token, db)
+    async with AsyncSession(engine) as db:
+        with pytest.raises(OperationalError):
+            await service.create_user_tokens(user.id, db)
 
 
 @pytest.mark.parametrize("revoke_variant", [False, True])
@@ -238,6 +241,7 @@ async def test_concurrent_refresh_requests_keep_the_same_session(token_store):
     service = AuthService(settings)
     async with AsyncSession(engine) as db:
         token = (await service.create_user_tokens(user.id, db))["refresh_token"]
+        await db.commit()
 
     async def exchange(candidate):
         async with AsyncSession(engine) as db:
@@ -265,6 +269,7 @@ async def test_failed_rotation_leaves_session_retryable(token_store, monkeypatch
     service = AuthService(settings)
     async with AsyncSession(engine) as db:
         token = (await service.create_user_tokens(user.id, db))["refresh_token"]
+        await db.commit()
     async with AsyncSession(engine) as db:
         with monkeypatch.context() as patch:
             patch.setattr(service, "_create_session_tokens", Mock(side_effect=RuntimeError("issuance failed")))
@@ -272,7 +277,9 @@ async def test_failed_rotation_leaves_session_retryable(token_store, monkeypatch
                 await service.create_refresh_token(token, db)
             await db.rollback()
     async with AsyncSession(engine) as db:
-        assert not (await db.exec(select(RefreshTokenSession))).all()
+        rows = (await db.exec(select(RefreshTokenSession))).all()
+        assert len(rows) == 1
+        assert rows[0].revoked is False
         assert (await service.create_refresh_token(token, db))["access_token"]
 
 
@@ -302,6 +309,7 @@ async def test_logout_wins_over_refresh_already_preparing_tokens(token_store, mo
     service = AuthService(settings)
     async with AsyncSession(engine) as db:
         original = (await service.create_user_tokens(user.id, db))["refresh_token"]
+        await db.commit()
     prepared = asyncio.Event()
     continue_refresh = asyncio.Event()
     register = auth_module.register_refresh_session
@@ -328,6 +336,91 @@ async def test_logout_wins_over_refresh_already_preparing_tokens(token_store, mo
     finally:
         continue_refresh.set()
         await pending
+
+
+@pytest.mark.parametrize("prune_tombstone", [False, True])
+async def test_first_refresh_cannot_revive_session_after_expired_logout(token_store, monkeypatch, prune_tombstone):
+    """A paused first refresh cannot recreate a logged-out session after expiry and cleanup."""
+    import langflow.services.auth.refresh_tokens as refresh_module
+    import langflow.services.auth.service as auth_module
+
+    engine, settings, user = token_store
+    service = AuthService(settings)
+    monkeypatch.setattr(settings.auth_settings, "REFRESH_TOKEN_EXPIRE_SECONDS", 60)
+    async with AsyncSession(engine) as db:
+        original = (await service.create_user_tokens(user.id, db))["refresh_token"]
+        await db.commit()
+    claims = jwt.decode(original, options={"verify_signature": False})
+    digest = hashlib.sha256(f"{user.id}:{claims['sid']}".encode()).hexdigest()
+    prepared = asyncio.Event()
+    continue_refresh = asyncio.Event()
+    register = auth_module.register_refresh_session
+    issue_tokens = service._create_session_tokens
+    minted_tokens = []
+
+    def capture_tokens(*args):
+        tokens = issue_tokens(*args)
+        minted_tokens.append(tokens["refresh_token"])
+        return tokens
+
+    async def paused_register(*args):
+        prepared.set()
+        await asyncio.wait_for(continue_refresh.wait(), timeout=5)
+        return await register(*args)
+
+    monkeypatch.setattr(service, "_create_session_tokens", capture_tokens)
+    monkeypatch.setattr(auth_module, "register_refresh_session", paused_register)
+    monkeypatch.setattr(settings.auth_settings, "REFRESH_TOKEN_EXPIRE_SECONDS", 3600)
+
+    async def exchange():
+        async with AsyncSession(engine) as db:
+            with pytest.raises(HTTPException) as exc:
+                await service.create_refresh_token(original, db)
+            assert exc.value.status_code == 401
+
+    pending = asyncio.create_task(exchange())
+    try:
+        await asyncio.wait_for(prepared.wait(), timeout=5)
+        logout_time = datetime.fromtimestamp(claims["exp"] + 1, timezone.utc)
+        clock_time = logout_time
+
+        class ControlledClock(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return clock_time.astimezone(tz)
+
+        monkeypatch.setattr(refresh_module, "datetime", ControlledClock)
+        # The pending replacement used a longer TTL than the logout request.
+        monkeypatch.setattr(settings.auth_settings, "REFRESH_TOKEN_EXPIRE_SECONDS", 600)
+        async with AsyncSession(engine) as db:
+            await revoke_refresh_token(original, db, settings)
+            await db.commit()
+            row = await db.get(RefreshTokenSession, digest)
+            assert row.revoked is True
+            retained_until = row.expires_at.replace(tzinfo=timezone.utc)
+            assert retained_until >= logout_time + timedelta(seconds=600)
+
+        if prune_tombstone:
+            clock_time = retained_until + timedelta(seconds=1)
+            monkeypatch.setattr(settings.auth_settings, "REFRESH_TOKEN_EXPIRE_SECONDS", 7200)
+            monkeypatch.setattr(auth_module, "register_refresh_session", register)
+            async with AsyncSession(engine) as db:
+                unrelated = (await service.create_user_tokens(user.id, db))["refresh_token"]
+                await db.commit()
+                # Another live session triggers the real bounded cleanup query.
+                assert (await service.create_refresh_token(unrelated, db))["access_token"]
+                await db.commit()
+                assert await db.get(RefreshTokenSession, digest) is None
+    finally:
+        continue_refresh.set()
+        await pending
+
+    monkeypatch.setattr(auth_module, "register_refresh_session", register)
+    async with AsyncSession(engine) as db:
+        # The replacement is cryptographically valid but its session stays revoked or absent.
+        with pytest.raises(HTTPException) as exc:
+            await service.create_refresh_token(minted_tokens[0], db)
+        assert exc.value.status_code == 401
 
 
 @pytest.mark.parametrize(("initial_ttl", "replacement_ttl"), [(600, 3600), (3600, 600)])
