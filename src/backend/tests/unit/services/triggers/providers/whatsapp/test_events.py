@@ -138,6 +138,28 @@ def test_sender_filter_retains_safe_identity_and_reason_without_message_text():
     assert "text" not in item["data"]
 
 
+@pytest.mark.parametrize("senders", [[], [""], [" ", "\t"]])
+def test_cleared_sender_filter_accepts_inbound_messages(senders):
+    config = normalize_config("whatsapp.event", {**CONFIG, "allowed_senders": senders})
+    assert config["allowed_senders"] == []
+    (item,) = verify(request(), secrets(config), tolerance_s=0).source_items
+    assert "skip_reason" not in item
+    assert item["data"]["text"] == MESSAGE["text"]["body"]
+
+
+def test_blank_sender_entries_preserve_the_remaining_allowlist():
+    config = normalize_config("whatsapp.event", {**CONFIG, "allowed_senders": ["", "15550000000", " ", "15550000000"]})
+    assert config["allowed_senders"] == ["15550000000"]
+    (item,) = verify(request(), secrets(config), tolerance_s=0).source_items
+    assert item["skip_reason"] == "sender_not_allowed"
+
+
+@pytest.mark.parametrize("sender", [None, False, 0, 15551234567, {}, [], "invalid", "1555+1234567"])
+def test_blank_sender_entries_do_not_hide_invalid_senders(sender):
+    with pytest.raises(ValueError, match="recipient phone number"):
+        normalize_config("whatsapp.event", {**CONFIG, "allowed_senders": ["", sender]})
+
+
 @pytest.mark.parametrize("code", [131026, 131047, 130429, 131048, 131049, 999999, None])
 def test_failed_delivery_has_safe_reason_without_raw_provider_errors(code):
     secret_detail = "Do not retain " + SECRET  # pragma: allowlist secret

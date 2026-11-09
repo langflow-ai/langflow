@@ -27,7 +27,7 @@ def normalize_config(kind: str, config: dict) -> dict:
     if not isinstance(senders, list) or len(senders) > MAX_SENDERS:
         msg = "Provide at most 1000 allowed WhatsApp senders."
         raise ValueError(msg)
-    senders = sorted({recipient(value) for value in senders})
+    senders = sorted({recipient(value) for value in senders if not isinstance(value, str) or value.strip()})
     messages = config.get("receive_messages", True)
     statuses = config.get("receive_statuses", False)
     if (

@@ -15,6 +15,7 @@ import pytest
 from langflow.services.connection.service import DatabaseConnectionResolverService
 from langflow.services.database.models.connection.model import Connection, ConnectionSecret
 from langflow.services.database.models.connection.schemas import ConnectionCreate, ConnectionTokenRenewal
+from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.trigger.model import Trigger, TriggerCleanup, TriggerEvent
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, session_scope
@@ -118,8 +119,10 @@ async def connection(owner_id, *, allow=True):
         )
 
 
-async def reconcile(flow_id, owner_id, *, include_delivery=True):
+async def reconcile(flow_id, owner_id, *, include_delivery=True, allowed_senders=None):
     fields = dict(CONFIG)
+    if allowed_senders is not None:
+        fields["allowed_senders"] = allowed_senders
     if include_delivery:
         fields["delivery_mode"] = "push"
     data = {
@@ -135,6 +138,9 @@ async def reconcile(flow_id, owner_id, *, include_delivery=True):
         "edges": [],
     }
     async with session_scope() as session:
+        flow = await session.get(Flow, flow_id)
+        flow.data = data
+        session.add(flow)
         await reconcile_flow_triggers(session, flow_id=flow_id, owner_id=owner_id, flow_data=data)
     async with session_scope() as session:
         return (await session.exec(select(Trigger).where(Trigger.flow_id == flow_id))).one()
@@ -151,6 +157,53 @@ async def test_saved_trigger_without_hidden_delivery_uses_push(installed, trigge
         assert row.state == "active"
         assert row.config["mechanism_id"] == "whatsapp.webhook"
     assert installed["callback"].endswith(trigger.public_id)
+
+
+@pytest.mark.parametrize("legacy_config", [False, True], ids=["saved-clear", "legacy-clear"])
+async def test_cleared_sender_allowlist_resumes_and_accepts_other_senders(
+    installed, trigger_owner, owned_flow, client, legacy_config
+):
+    await connection(trigger_owner)
+    trigger = await reconcile(owned_flow, trigger_owner, allowed_senders=["5500000000001"])
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+        assert row.state == "active"
+
+    trigger = await reconcile(owned_flow, trigger_owner, allowed_senders=[""])
+    assert trigger.state == "paused"
+    assert trigger.config["allowed_senders"] == []
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().disable(session, row=row)
+        if legacy_config:
+            row.config = {**row.config, "allowed_senders": [""]}
+            row.connection_id = None
+            session.add(row)
+    if legacy_config:
+        assert await run_cleanup_pass() == 1
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+        assert row.state == "active"
+        assert row.config["allowed_senders"] == []
+        public_id = row.public_id
+    assert installed["callback"].endswith(public_id)
+
+    body = json.dumps(payload()).encode()
+    signed = "sha256=" + hmac.new(SECRET.encode(), body, hashlib.sha256).hexdigest()
+    response = await client.post(
+        f"/api/v1/triggers/ingress/whatsapp/{public_id}",
+        content=body,
+        headers={"X-Hub-Signature-256": signed},
+    )
+    assert response.status_code == 200, response.text
+    async with session_scope() as session:
+        event = (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == trigger.id))).one()
+        assert event.state == "pending"
+        assert event.error is None
+        assert event.payload["data"]["sender"] == "15551234567"
+        assert event.payload["data"]["text"] == "Hello"
 
 
 async def test_real_owner_discovery_enable_batch_intake_dedupe_dispatch_and_cleanup(
