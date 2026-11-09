@@ -48,6 +48,7 @@ TABLE_POLICY: dict[str, str] = {
     "job_events": ERASED_WITH_FLOW,
     "knowledge_base": BUILDER_ROWS,
     "knowledge_base_storage_migration": "builder rows matched by the `<username>/` storage directory they name",
+    "maintenance_state": REFERENCE_CLEARED,
     "mcp_server": BUILDER_ROWS,
     "memory_base": ERASED_WITH_FLOW,
     "memory_base_preprocessing_output": END_USER_ROWS,
