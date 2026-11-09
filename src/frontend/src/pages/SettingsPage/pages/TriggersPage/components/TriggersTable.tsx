@@ -109,6 +109,9 @@ export function TriggersTable({
                         {t("triggers.connection.unavailable")}
                       </span>
                     ))
+                  ) : typeof trigger.config?.connection === "string" &&
+                    trigger.config.connection ? (
+                    trigger.config.connection
                   ) : (
                     <span className="text-muted-foreground">
                       {t("triggers.connection.notNeeded")}

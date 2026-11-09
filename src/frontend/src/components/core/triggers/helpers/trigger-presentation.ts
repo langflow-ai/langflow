@@ -174,6 +174,7 @@ export const transportOf = (
     if (PUSH_MECHANISMS.has(mechanism)) return "push";
     if (SOCKET_MECHANISMS.has(mechanism)) return "socket";
   }
+  if (trigger.config?.delivery_mode === "push") return "push";
   return "poll";
 };
 
@@ -285,6 +286,8 @@ const KNOWN_EVENT_ERRORS = new Set([
 
 export const eventErrorKeyOf = (error: string | null): string | null => {
   if (!error) return null;
+  if (error === "connection_unusable")
+    return "triggers.serverError.connection_unusable";
   if (KNOWN_EVENT_ERRORS.has(error)) return `triggers.eventError.${error}`;
   if (error.startsWith("job_")) return "triggers.eventError.job";
   if (error.startsWith("submit_failed")) return "triggers.eventError.submit";

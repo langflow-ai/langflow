@@ -35,7 +35,7 @@ from lfx.services.connection.base import BaseConnectionResolverService, Connecti
 from lfx.utils.ssrf_protection import SSRFProtectionError
 from pydantic import SecretStr
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import and_, col, false, or_, select
+from sqlmodel import and_, col, false, or_, select, update
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.auth.context import current_auth_is_restricted_api_key
@@ -280,9 +280,12 @@ async def _validate_manual_credentials(payload: ConnectionCreate) -> ConnectionC
     """Apply the same provider validation to creation and token renewal."""
     payload = await validate_manual_credential(payload, context=deployment_context())
     if payload.credentials is not None:
-        from langflow.services.triggers.providers.registry import get_provider
+        from langflow.services.triggers.providers.registry import get_provider, is_provider_unavailable
 
         provider = get_provider(payload.provider_key)
+        if provider is None and is_provider_unavailable(payload.provider_key):
+            msg = "This integration could not validate the token. Ask an administrator to check its configuration."
+            raise ManualCredentialError(msg)
         if provider is not None:
             if provider.validate_manual_credential is None:
                 msg = "This integration does not support manually entered credentials."
@@ -965,11 +968,66 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         if denial is not None:
             await _audit_resolution_denial(request, row=row, error=denial)
             raise denial
-        credential = await self._credential_from_row(session, row=row)
+        credential = await self._credential_from_row(session, row=row, allow_expired=True)
         if row.provider_key == PROVIDER_SLACK:
             scopes = await check_slack_web_token(credential.access_token.get_secret_value())
             row.granted_scopes = scopes
             credential = replace(credential, granted_scopes=frozenset(scopes))
+        else:
+            from langflow.services.triggers.providers.registry import get_provider
+
+            provider = get_provider(row.provider_key)
+            if (
+                provider is not None
+                and provider.validate_manual_credential is not None
+                and await session.get(ConnectionOAuth, row.id) is None
+            ):
+                try:
+                    validated = await provider.validate_manual_credential(
+                        ConnectionCreate(
+                            provider_key=row.provider_key,
+                            name=row.name,
+                            display_name=row.display_name,
+                            ownership_mode=row.ownership_mode,
+                            executing_identity=ExecutingIdentityDescriptor.model_validate(row.executing_identity),
+                            allow_non_interactive=row.allow_non_interactive,
+                            credentials={
+                                "access_token": credential.access_token,
+                                "token_type": credential.token_type,
+                                "expires_at": credential.expires_at,
+                            },
+                        ),
+                        context=deployment_context(),
+                    )
+                except (ManualCredentialError, ValueError):
+                    raise InvalidRequestError(provider=row.provider_key) from None
+                if not isinstance(validated, ConnectionCreate) or validated.credentials is None:
+                    raise ProviderUnavailableError(provider=row.provider_key)
+                row.granted_scopes = list(validated.granted_scopes)
+                row.executing_identity = validated.executing_identity.model_dump(mode="json")
+                if validated.credentials.expires_at != credential.expires_at:
+                    secret = await session.get(ConnectionSecret, row.id)
+                    payload = _decrypt_credential_payload(secret.encrypted_payload)
+                    payload["expires_at"] = (
+                        validated.credentials.expires_at.isoformat()
+                        if validated.credentials.expires_at is not None
+                        else None
+                    )
+                    await session.exec(
+                        update(ConnectionSecret)
+                        .where(ConnectionSecret.connection_id == row.id)
+                        .values(
+                            encrypted_payload=_encrypt_credential_payload(json.dumps(payload)),
+                            updated_at=secret.updated_at,
+                        )
+                    )
+                credential = replace(
+                    credential,
+                    granted_scopes=frozenset(validated.granted_scopes),
+                    account=validated.executing_identity.account,
+                    identity=validated.executing_identity.identity,
+                    expires_at=validated.credentials.expires_at,
+                )
         missing = ScopeSet.missing(
             provider=row.provider_key, required=required_scopes, granted=credential.granted_scopes
         )
@@ -978,11 +1036,20 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         return credential
 
     async def _credential_from_row(
-        self, session: AsyncSession, *, row: Connection, rejected_token_digest: str | None = None
+        self,
+        session: AsyncSession,
+        *,
+        row: Connection,
+        rejected_token_digest: str | None = None,
+        allow_expired: bool = False,
     ) -> ResolvedCredential:
+        from langflow.services.triggers.providers.registry import is_provider_unavailable
+
         handle = ConnectionRef(provider=row.provider_key, name=row.name).to_handle()
         if row.status == PersistedConnectionStatus.REVOKED.value:
             raise ConnectionUnresolvedError(handle, provider=row.provider_key)
+        if is_provider_unavailable(row.provider_key):
+            raise ProviderUnavailableError(provider=row.provider_key)
         # Before anything is decrypted: a Slack app-level token never leaves the
         # listener process (``slack_credentials``).
         refuse_outside_listener(row)
@@ -1002,11 +1069,12 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
                 row.id,
             )
             raise ConnectionUnresolvedError(handle, provider=row.provider_key, reason="credential-undecryptable")
-        # Pasted tokens cannot refresh. Do not retry a token Slack already
+        if row.status == PersistedConnectionStatus.EXPIRED.value and not payload.get("oauth") and not allow_expired:
+            raise AuthExpiredError(provider=row.provider_key)
+        # Pasted tokens cannot refresh. Do not retry a token the provider already
         # rejected, and do not expire a replacement after a stale rejection.
         if (
-            row.provider_key == PROVIDER_SLACK
-            and not payload.get("oauth")
+            not payload.get("oauth")
             and rejected_token_digest is not None
             and secrets.compare_digest(rejected_token_digest, broker.digest(payload["access_token"]))
         ):

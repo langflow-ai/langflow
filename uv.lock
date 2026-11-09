@@ -49,6 +49,7 @@ members = [
     "lfx-exa",
     "lfx-firecrawl",
     "lfx-github",
+    "lfx-gitlab",
     "lfx-google",
     "lfx-ibm",
     "lfx-jira",
@@ -8457,6 +8458,7 @@ dependencies = [
     { name = "lfx-datastax" },
     { name = "lfx-docling" },
     { name = "lfx-github" },
+    { name = "lfx-gitlab" },
     { name = "lfx-google" },
     { name = "lfx-ibm" },
     { name = "lfx-jira" },
@@ -8602,6 +8604,7 @@ requires-dist = [
     { name = "lfx-exa", marker = "extra == 'bundles'", editable = "src/bundles/exa" },
     { name = "lfx-firecrawl", marker = "extra == 'bundles'", editable = "src/bundles/firecrawl" },
     { name = "lfx-github", editable = "src/bundles/github" },
+    { name = "lfx-gitlab", editable = "src/bundles/gitlab" },
     { name = "lfx-google", editable = "src/bundles/google" },
     { name = "lfx-ibm", editable = "src/bundles/ibm" },
     { name = "lfx-jira", editable = "src/bundles/jira" },
@@ -10888,6 +10891,21 @@ requires-dist = [
 name = "lfx-github"
 version = "0.1.0"
 source = { editable = "src/bundles/github" }
+dependencies = [
+    { name = "httpx" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.27,<1.0" },
+    { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-gitlab"
+version = "0.1.0"
+source = { editable = "src/bundles/gitlab" }
 dependencies = [
     { name = "httpx" },
     { name = "lfx" },
