@@ -181,11 +181,17 @@ async def test_should_keep_building_normally_under_a_permissive_policy(
     client: AsyncClient,
     added_flow_webhook_test,
     logged_in_headers,
+    monkeypatch: pytest.MonkeyPatch,
 ):
     """The control: with the policy off the seam behaves exactly as before.
 
     A refusal for everyone would be a denial of service, not a fix.
     """
+    from langflow.services.deps import get_settings_service
+
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "allow_custom_components", True)
+    monkeypatch.setattr(settings, "custom_component_admin_only", False)
     flow_id = added_flow_webhook_test["id"]
     vertex_id = added_flow_webhook_test["data"]["nodes"][0]["id"]
 

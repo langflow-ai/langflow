@@ -351,6 +351,9 @@ async def test_v1_advanced_non_owner_tweaks_are_hidden_as_not_found(monkeypatch:
 
 async def test_v1_advanced_owner_tweaks_do_not_mutate_loaded_flow_data(monkeypatch: pytest.MonkeyPatch) -> None:
     from langflow.api.v1 import endpoints
+    from langflow.services.deps import get_settings_service
+
+    monkeypatch.setattr(get_settings_service().settings, "custom_component_admin_only", False)
 
     owner_id = uuid4()
     flow = _flow(

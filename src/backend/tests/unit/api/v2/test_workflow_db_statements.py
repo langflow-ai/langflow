@@ -110,6 +110,8 @@ def serving_settings(client, monkeypatch):  # noqa: ARG001
     monkeypatch.setattr(settings, "transactions_storage_enabled", False)
     monkeypatch.setattr(settings, "vertex_builds_storage_enabled", False)
     monkeypatch.setattr(settings, "disable_track_apikey_usage", True)
+    # Preserve the trusted deployment's original code policy and measured execution path.
+    monkeypatch.setattr(settings, "custom_component_admin_only", False)
 
 
 _SIMPLE_CHAT = Path(__file__).parents[5] / "lfx" / "tests" / "data" / "simple_chat_no_llm.json"

@@ -9,6 +9,20 @@ from lfx.components.tools.python_repl import PythonREPLToolComponent
 from lfx.components.tools.search_api import SearchAPIComponent
 from lfx.components.tools.serp_api import SerpAPIComponent
 from lfx.components.tools.wikidata_api import WikidataAPIComponent, WikidataAPIWrapper
+from lfx.services.model_provider_policy import (
+    reset_current_model_provider_policy_context,
+    set_current_model_provider_policy_context,
+)
+
+
+@pytest.fixture
+def administrator_execution_context():
+    """Bind an explicit administrator so the Python REPL tool runs under the admin-only default."""
+    token = set_current_model_provider_policy_context(user_id="local-admin", attributes={"is_superuser": True})
+    try:
+        yield
+    finally:
+        reset_current_model_provider_policy_context(token)
 
 
 class _RecordingCallback(BaseCallbackHandler):
@@ -23,6 +37,7 @@ class _RecordingCallback(BaseCallbackHandler):
     "component_class",
     [PythonREPLToolComponent, SearchAPIComponent, SerpAPIComponent, WikidataAPIComponent],
 )
+@pytest.mark.usefixtures("administrator_execution_context")
 def test_standalone_tool_output_keeps_workflow_callback(component_class, monkeypatch):
     callback = _RecordingCallback()
     monkeypatch.setattr(component_class, "get_langchain_callbacks", lambda _self: [callback])

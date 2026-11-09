@@ -48,6 +48,7 @@ async def _assert_authenticated_config(project_id: UUID, owner) -> str:
 
 
 @pytest.mark.parametrize("creation", ["post", "upsert", "upload", "replacement"])
+@pytest.mark.usefixtures("administrator_user")
 async def test_auto_login_project_clients_authenticate_without_skip_auth(
     client: AsyncClient, logged_in_headers, active_user, monkeypatch, creation
 ):
@@ -85,6 +86,7 @@ async def test_auto_login_project_clients_authenticate_without_skip_auth(
     await _assert_authenticated_config(project_id, active_user)
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_explicit_public_project_stays_public_under_auto_login(
     client: AsyncClient, logged_in_headers, active_user, monkeypatch
 ):
@@ -105,6 +107,7 @@ async def test_explicit_public_project_stays_public_under_auto_login(
 
 
 @pytest.mark.parametrize("owns_superuser", [False, True])
+@pytest.mark.usefixtures("administrator_user")
 async def test_skip_auth_default_only_applies_to_the_configured_superuser(
     client: AsyncClient, logged_in_headers, active_user, monkeypatch, owns_superuser
 ):
@@ -125,6 +128,7 @@ async def test_skip_auth_default_only_applies_to_the_configured_superuser(
 
 
 @pytest.mark.parametrize("existing_auth_type", [None, "oauth"])
+@pytest.mark.usefixtures("administrator_user")
 async def test_startup_repairs_keyless_client_once(
     client: AsyncClient, logged_in_headers, active_user, monkeypatch, existing_auth_type
 ):

@@ -81,6 +81,7 @@ async def test_webhook_endpoint_requires_api_key_when_auto_login_false(client, a
         settings_service.auth_settings.WEBHOOK_AUTH_ENABLE = original_webhook_auth_enable
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_webhook_endpoint_with_valid_api_key(client, added_webhook_test, created_api_key):
     """Test that webhook works when valid API key is provided."""
     endpoint_name = added_webhook_test["endpoint_name"]
@@ -130,6 +131,7 @@ async def test_webhook_endpoint_unauthorized_user_flow(client, added_webhook_tes
         settings_service.auth_settings.WEBHOOK_AUTH_ENABLE = original_webhook_auth_enable
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_webhook_flow_on_run_endpoint(client, added_webhook_test, created_api_key):
     endpoint_name = added_webhook_test["endpoint_name"]
     endpoint = f"api/v1/run/{endpoint_name}?stream=false"
@@ -375,6 +377,7 @@ async def test_webhook_with_special_characters_in_payload(client, added_webhook_
 # =============================================================================
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_webhook_creates_vertex_builds(client, added_webhook_test, created_api_key):
     """Test that webhook execution creates vertex builds in the database."""
     flow_id = added_webhook_test["id"]
@@ -432,6 +435,7 @@ async def test_webhook_vertex_builds_contain_expected_data(client, added_webhook
             assert str(build["flow_id"]) == flow_id
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_webhook_multiple_executions_create_multiple_builds(client, added_webhook_test, created_api_key):
     """Test that multiple webhook executions create multiple vertex builds."""
     flow_id = added_webhook_test["id"]
