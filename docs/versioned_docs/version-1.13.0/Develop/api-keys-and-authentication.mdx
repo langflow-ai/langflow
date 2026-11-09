@@ -913,6 +913,8 @@ Access tokens authenticate API requests and typically expire within 15 minutes t
 Refresh tokens obtain new access tokens without requiring the user to log in again and typically expire within 7 to 30 days.
 When an access token expires, the client can use the refresh token to get a new one from `/api/v1/refresh`.
 
+Starting with Langflow 1.13.2, logout revokes the refresh token presented by that browser session. A captured copy of that token cannot create new access tokens after logout, including after a server restart. Other sessions remain active. Access tokens already issued remain valid until they expire.
+
 ```bash
 LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS=3600    # 1 hour
 LANGFLOW_REFRESH_TOKEN_EXPIRE_SECONDS=604800 # 7 days

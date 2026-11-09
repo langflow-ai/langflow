@@ -844,6 +844,7 @@ async def test_create_refresh_token_valid(auth_service: AuthService):
     """Test creating new tokens from a valid refresh token."""
     user_id = uuid4()
     db = AsyncMock()
+    db.get.return_value = None
     refresh_token = auth_service.create_token({"sub": str(user_id), "type": "refresh"}, timedelta(minutes=5))
     fake_user = _dummy_user(user_id)
 
