@@ -6,7 +6,7 @@ import asyncio
 import contextlib
 import hashlib
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -499,6 +499,31 @@ class JobService(Service):
             await session.flush()
             return job
 
+    async def set_live_result(self, job_id: UUID, result: dict | None, *, owner: str | None = None) -> bool:
+        """Persist a runner result only while this owner still has live work."""
+        return await self._set_live_payload(job_id, "result", result, owner=owner)
+
+    async def set_live_error(self, job_id: UUID, error: dict, *, owner: str | None = None) -> bool:
+        """Persist a runner error only while this owner still has live work."""
+        return await self._set_live_payload(job_id, "error", error, owner=owner)
+
+    async def _set_live_payload(
+        self,
+        job_id: UUID,
+        field: Literal["result", "error"],
+        value: dict | None,
+        *,
+        owner: str | None,
+    ) -> bool:
+        owner_expr = col(Job.job_metadata)["owner"].as_string()
+        conditions = [Job.job_id == job_id, col(Job.status).in_((JobStatus.QUEUED, JobStatus.IN_PROGRESS))]
+        if owner is not None:
+            conditions.append(or_(owner_expr.is_(None), owner_expr == owner))
+        async with session_scope() as session:
+            result = await session.exec(update(Job).where(*conditions).values(**{field: value}))
+            await session.flush()
+            return result.rowcount == 1
+
     async def save_checkpoint(self, job_id: UUID, kind: str, blob: str) -> None:
         """Upsert the durable checkpoint blob for ``(job_id, kind)``.
 
@@ -758,6 +783,60 @@ class JobService(Service):
                 session.add(row)
             await session.flush()
             return len(rows)
+
+    async def cancel_job_for_stop(self, job_id: UUID, *, owner: str | None = None) -> bool:
+        """Cancel this owner's job and consume its pending STOP atomically.
+
+        A late STOP may supersede completion, but never another owner's lease.
+        Comparing the observed lease in the UPDATE closes the read-to-write
+        race, and consuming the signal in the same transaction means a stale
+        runner cannot take the new owner's stop away.
+        """
+        pending_stop = (
+            select(ExecutionSignal.id)
+            .where(
+                ExecutionSignal.job_id == job_id,
+                ExecutionSignal.signal_type == SignalType.STOP,
+                col(ExecutionSignal.consumed_at).is_(None),
+            )
+            .exists()
+        )
+        async with session_scope() as session:
+            job = await session.get(Job, job_id)
+            if job is None:
+                return False
+            prior = job.job_metadata or {}
+            if owner is not None and prior.get("owner") not in (None, owner):
+                return False
+            now = datetime.now(timezone.utc)
+            cancelled = await session.exec(
+                update(Job)
+                .where(
+                    Job.job_id == job_id,
+                    _lease_guard((prior.get("owner"), prior.get("heartbeat_at"))),
+                    pending_stop,
+                )
+                .values(status=JobStatus.CANCELLED, finished_timestamp=now)
+                .execution_options(synchronize_session=False)
+            )
+            if cancelled.rowcount != 1:
+                return False
+            consumed = await session.exec(
+                update(ExecutionSignal)
+                .where(
+                    ExecutionSignal.job_id == job_id,
+                    ExecutionSignal.signal_type == SignalType.STOP,
+                    col(ExecutionSignal.consumed_at).is_(None),
+                )
+                .values(consumed_at=now)
+            )
+            if consumed.rowcount == 0:
+                # Another stopper can consume the signal while our UPDATE waits
+                # for its job-row lock. It owns the cancellation and finalization.
+                await session.rollback()
+                return False
+            await session.flush()
+            return True
 
     async def heartbeat(self, job_id: UUID, owner: str) -> bool:
         """Renew this owner's live lease, returning False if it was lost.

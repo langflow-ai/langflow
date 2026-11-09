@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
@@ -9,7 +10,7 @@ from uuid import uuid4
 
 import pytest
 from langflow.services.background_execution.db_backend import DBBackgroundQueue
-from langflow.services.database.models.jobs.model import Job, JobEvent, JobStatus
+from langflow.services.database.models.jobs.model import ExecutionSignal, Job, JobEvent, JobStatus, SignalType
 from langflow.services.jobs import service as jobs_module
 from langflow.services.jobs.exceptions import HUMAN_INPUT_REQUIRED_EVENT, JobNotClaimable
 from langflow.services.jobs.service import JobService
@@ -45,7 +46,7 @@ async def lease_database(request, tmp_path, monkeypatch):
     monkeypatch.setattr(jobs_module, "session_scope", session_scope)
     try:
         async with engine.begin() as connection:
-            for model in (Job, JobEvent):
+            for model in (Job, JobEvent, ExecutionSignal):
                 await connection.run_sync(model.__table__.create)
         yield JobService()
     finally:
@@ -256,3 +257,135 @@ async def test_claim_loss_while_running_does_not_write_a_terminal_status(lease_d
     current = await service.get_job_by_job_id(job_id)
     assert current.status == JobStatus.IN_PROGRESS
     assert current.finished_timestamp is None
+
+
+async def test_cancel_stop_requires_a_pending_stop(lease_database):
+    service = lease_database
+    job_id = await _job(service)
+    await service.write_signal(job_id, SignalType.RESUME)
+
+    assert await service.cancel_job_for_stop(job_id, owner="worker:a") is False
+
+    current = await service.get_job_by_job_id(job_id)
+    assert current.status == JobStatus.IN_PROGRESS
+    assert [signal.signal_type for signal in await service.unconsumed_signals(job_id)] == [SignalType.RESUME]
+
+
+@pytest.mark.parametrize("owner", [None, "worker:a"])
+async def test_cancel_stop_allows_a_same_owner_late_stop_over_completion(lease_database, owner):
+    service = lease_database
+    job_id = await _job(service, status=JobStatus.COMPLETED, owner=owner)
+    await service.write_signal(job_id, SignalType.STOP)
+
+    assert await service.cancel_job_for_stop(job_id, owner="worker:a") is True
+
+    current = await service.get_job_by_job_id(job_id)
+    assert current.status == JobStatus.CANCELLED
+    assert current.finished_timestamp is not None
+    assert await service.unconsumed_signals(job_id) == []
+    assert await service.cancel_job_for_stop(job_id, owner="worker:a") is False
+
+
+async def test_cancel_stop_does_not_cancel_or_consume_a_newer_owners_stop(lease_database):
+    service = lease_database
+    job_id = await _job(service, owner="worker:b")
+    await service.write_signal(job_id, SignalType.STOP)
+
+    assert await service.cancel_job_for_stop(job_id, owner="worker:a") is False
+
+    current = await service.get_job_by_job_id(job_id)
+    assert current.status == JobStatus.IN_PROGRESS
+    assert [signal.signal_type for signal in await service.unconsumed_signals(job_id)] == [SignalType.STOP]
+
+
+async def test_cancel_stop_loses_when_the_owner_changes_after_its_read(lease_database, monkeypatch):
+    service = lease_database
+    job_id = await _job(service)
+    await service.write_signal(job_id, SignalType.STOP)
+    real_exec = AsyncSession.exec
+    change_owner = True
+
+    async def exec_after_reclaim(session, statement, *args, **kwargs):
+        nonlocal change_owner
+        if change_owner and statement.is_update:
+            change_owner = False
+            await service.update_job_metadata(job_id, {"owner": "worker:b"})
+        return await real_exec(session, statement, *args, **kwargs)
+
+    monkeypatch.setattr(AsyncSession, "exec", exec_after_reclaim)
+
+    assert await service.cancel_job_for_stop(job_id, owner="worker:a") is False
+
+    current = await service.get_job_by_job_id(job_id)
+    assert current.status == JobStatus.IN_PROGRESS
+    assert current.job_metadata["owner"] == "worker:b"
+    assert [signal.signal_type for signal in await service.unconsumed_signals(job_id)] == [SignalType.STOP]
+
+
+async def test_cancel_stop_rolls_back_status_if_signal_consumption_fails(lease_database, monkeypatch):
+    service = lease_database
+    job_id = await _job(service)
+    await service.write_signal(job_id, SignalType.STOP)
+    real_exec = AsyncSession.exec
+
+    async def exec_failing_signal_update(session, statement, *args, **kwargs):
+        if statement.is_update and statement.table.name == ExecutionSignal.__tablename__:
+            message = "signal consumption failed"
+            raise RuntimeError(message)
+        return await real_exec(session, statement, *args, **kwargs)
+
+    monkeypatch.setattr(AsyncSession, "exec", exec_failing_signal_update)
+
+    with pytest.raises(RuntimeError, match="signal consumption failed"):
+        await service.cancel_job_for_stop(job_id, owner="worker:a")
+
+    current = await service.get_job_by_job_id(job_id)
+    assert current.status == JobStatus.IN_PROGRESS
+    assert current.finished_timestamp is None
+    assert [signal.signal_type for signal in await service.unconsumed_signals(job_id)] == [SignalType.STOP]
+
+
+async def test_cancel_stop_has_one_winner(lease_database):
+    service = lease_database
+    job_id = await _job(service)
+    await service.write_signal(job_id, SignalType.STOP)
+
+    results = await asyncio.gather(*(service.cancel_job_for_stop(job_id, owner="worker:a") for _ in range(6)))
+
+    assert results.count(True) == 1
+    assert (await service.get_job_by_job_id(job_id)).status == JobStatus.CANCELLED
+    assert await service.unconsumed_signals(job_id) == []
+
+
+@pytest.mark.parametrize("field", ["result", "error"])
+@pytest.mark.parametrize(
+    ("status", "owner"),
+    [(JobStatus.IN_PROGRESS, "worker:b"), (JobStatus.FAILED, "worker:a"), (JobStatus.COMPLETED, "worker:a")],
+)
+async def test_live_payload_rejects_reclaimed_or_finished_jobs(lease_database, field, status, owner):
+    service = lease_database
+    job_id = await _job(service, status=status, owner=owner)
+    await getattr(service, f"set_{field}")(job_id, {"existing": "verdict"})
+
+    assert await getattr(service, f"set_live_{field}")(job_id, {"stale": "verdict"}, owner="worker:a") is False
+
+    current = await service.get_job_by_job_id(job_id)
+    assert current.status == status
+    assert current.job_metadata["owner"] == owner
+    assert getattr(current, field) == {"existing": "verdict"}
+
+
+@pytest.mark.parametrize("field", ["result", "error"])
+@pytest.mark.parametrize("owner", [None, "worker:a"])
+async def test_live_payload_writes_own_live_job(lease_database, field, owner):
+    service = lease_database
+    job_id = await _job(service, owner=owner)
+    other_field = "error" if field == "result" else "result"
+    await getattr(service, f"set_{other_field}")(job_id, {"other": "preserved"})
+
+    assert await getattr(service, f"set_live_{field}")(job_id, {"current": "verdict"}, owner="worker:a") is True
+
+    current = await service.get_job_by_job_id(job_id)
+    assert current.status == JobStatus.IN_PROGRESS
+    assert getattr(current, field) == {"current": "verdict"}
+    assert getattr(current, other_field) == {"other": "preserved"}
