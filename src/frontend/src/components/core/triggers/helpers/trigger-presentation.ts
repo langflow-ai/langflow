@@ -209,7 +209,7 @@ export const sourceIconOf = (
     case "salesforce":
       return "Cloud";
     case "servicenow":
-      return "Server";
+      return "ServiceNow";
     case "jira":
       return "Jira";
     case "confluence":

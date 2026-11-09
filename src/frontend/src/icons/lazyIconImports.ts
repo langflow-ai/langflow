@@ -2,7 +2,10 @@
 export const lazyIconsMapping = {
   WhatsApp: () =>
     import("@/icons/WhatsApp").then((mod) => ({ default: mod.WhatsAppIcon })),
-
+  ServiceNow: () =>
+    import("@/icons/ServiceNow").then((mod) => ({
+      default: mod.ServiceNowIcon,
+    })),
   AIML: () => import("@/icons/AIML").then((mod) => ({ default: mod.AIMLIcon })),
   Agentics: () =>
     import("@/icons/Agentics").then((mod) => ({

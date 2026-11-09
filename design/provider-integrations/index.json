@@ -10,6 +10,10 @@
       "contract": "contracts/jira.v1.json"
     },
     {
+      "provider_id": "servicenow",
+      "contract": "contracts/servicenow.v1.json"
+    },
+    {
       "provider_id": "whatsapp",
       "contract": "contracts/whatsapp.v1.json"
     }

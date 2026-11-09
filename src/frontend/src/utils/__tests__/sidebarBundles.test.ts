@@ -123,3 +123,11 @@ it("uses the WhatsApp logo for its integration palette group", () => {
     icon: "WhatsApp",
   });
 });
+
+it("uses the ServiceNow logo for its integration palette group", () => {
+  expect(SIDEBAR_BUNDLES).toContainEqual({
+    display_name: "ServiceNow",
+    name: "servicenow",
+    icon: "ServiceNow",
+  });
+});

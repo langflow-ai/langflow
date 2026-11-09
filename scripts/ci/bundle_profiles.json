@@ -173,6 +173,14 @@
           ]
         },
         {
+          "distribution": "lfx-servicenow",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-servicenow"
+          ]
+        },
+        {
           "distribution": "lfx-whatsapp",
           "extras": [],
           "version": ">=0.1.1,<1.0.0",
