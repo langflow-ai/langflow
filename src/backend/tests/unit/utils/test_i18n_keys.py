@@ -51,7 +51,7 @@ def test_content_hash_changes_with_string():
 
 
 def test_content_hash_matches_sha256_prefix():
-    assert content_hash("Hello") == hashlib.sha256("Hello".encode()).hexdigest()[:8]
+    assert content_hash("Hello") == hashlib.sha256(b"Hello").hexdigest()[:8]
 
 
 def test_component_field_key_format():
