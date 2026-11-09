@@ -19,6 +19,7 @@ from lfx.services.telemetry.base import BaseTelemetryService
 from lfx.services.telemetry.constants import (
     DEFAULT_SEGMENT_WRITE_KEY,
     IBM_PRODUCT_PROPERTIES,
+    SUB_PRODUCT_MCP,
     Edition,
     get_ibm_common_event,
 )
@@ -67,9 +68,9 @@ class TelemetryService(BaseTelemetryService):
         self._start_time = datetime.now(timezone.utc)
 
         self._common_fields = {
-            "langflow_version": self._get_version(),
-            "platform": "mcp",
-            "os": platform.system().lower(),
+            "productVersion": self._get_version(),
+            "subProductTitle": SUB_PRODUCT_MCP,
+            "osName": platform.system().lower(),
         }
         self.set_ready()
 
@@ -122,8 +123,8 @@ class TelemetryService(BaseTelemetryService):
             return
         try:
             properties = get_safe_payload_properties(payload)
-            if not isinstance(payload, VersionPayload):
-                properties.update(self._common_fields)
+            for key, value in self._common_fields.items():
+                properties.setdefault(key, value)
             properties.update(IBM_PRODUCT_PROPERTIES)
             properties["productPlanName"] = self.edition
             properties["instanceId"] = self.anonymous_id
@@ -172,7 +173,7 @@ class TelemetryService(BaseTelemetryService):
             platform=platform.platform(),
             python=python_version,
             arch=platform.machine(),
-            client_type="mcp",
+            client_type=SUB_PRODUCT_MCP,
         )
         await self._enqueue(payload, None)
 
