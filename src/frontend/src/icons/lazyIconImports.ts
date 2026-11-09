@@ -4,6 +4,8 @@ export const lazyIconsMapping = {
     import("@/icons/ServiceNow").then((mod) => ({
       default: mod.ServiceNowIcon,
     })),
+  Telegram: () =>
+    import("@/icons/Telegram").then((mod) => ({ default: mod.TelegramIcon })),
   AIML: () => import("@/icons/AIML").then((mod) => ({ default: mod.AIMLIcon })),
   Agentics: () =>
     import("@/icons/Agentics").then((mod) => ({
