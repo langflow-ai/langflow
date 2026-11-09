@@ -55,7 +55,7 @@
         {
           "distribution": "lfx-toolguard",
           "extras": [],
-          "version": ">=0.3.0,<1.0.0",
+          "version": ">=0.3.1,<1.0.0",
           "providers": [
             "lfx-toolguard"
           ]
@@ -165,11 +165,27 @@
           ]
         },
         {
+          "distribution": "lfx-confluence",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-confluence"
+          ]
+        },
+        {
           "distribution": "lfx-jira",
           "extras": [],
           "version": ">=0.1.0,<1.0.0",
           "providers": [
             "lfx-jira"
+          ]
+        },
+        {
+          "distribution": "lfx-servicenow",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-servicenow"
           ]
         }
       ]

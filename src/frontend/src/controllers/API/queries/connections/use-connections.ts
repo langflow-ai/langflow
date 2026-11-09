@@ -4,12 +4,15 @@ import {
   checkConnectionHealth,
   createConnection,
   deleteConnection,
+  deleteSavedOAuthRegistration,
   getConnection,
   getEffectiveIntegrationPolicy,
   listIntegrations,
   listOAuthRegistrations,
+  listSavedOAuthRegistrations,
   renewConnectionToken,
   revokeConnection,
+  saveOAuthRegistration,
   startOAuth,
   testConnection,
   updateConnection,
@@ -26,6 +29,7 @@ import type {
   Iso8601,
   OAuthRegistrationRead,
   OAuthStartResponse,
+  SavedOAuthRegistrationRead,
 } from "./types";
 
 export const useInvalidateConnections = () => {
@@ -71,6 +75,37 @@ export const useOAuthRegistrationsQuery = (
     staleTime: 60_000,
     retry: 1,
   });
+
+/** Load secret-free saved registrations for the superuser management panel. */
+export const useSavedOAuthRegistrationsQuery = () =>
+  useQuery<SavedOAuthRegistrationRead[]>({
+    queryKey: connectionsKeys.savedRegistrations(),
+    queryFn: listSavedOAuthRegistrations,
+    retry: 1,
+  });
+
+/** Refresh saved and active provider metadata after a registration changes. */
+export const useSaveOAuthRegistrationMutation = () => {
+  const invalidate = useInvalidateConnections();
+  return useMutation<
+    void,
+    unknown,
+    { id: string; registration: Record<string, unknown> }
+  >({
+    mutationFn: ({ id, registration }) =>
+      saveOAuthRegistration(id, registration),
+    onSuccess: invalidate,
+  });
+};
+
+/** Refresh provider metadata after removing a saved registration. */
+export const useDeleteSavedOAuthRegistrationMutation = () => {
+  const invalidate = useInvalidateConnections();
+  return useMutation<void, unknown, string>({
+    mutationFn: deleteSavedOAuthRegistration,
+    onSuccess: invalidate,
+  });
+};
 
 export const useCreateConnectionMutation = () => {
   const invalidate = useInvalidateConnections();

@@ -5,7 +5,7 @@ import type {
 } from "./types";
 
 /**
- * Builds the body for `PUT /api/v1/policy-bundle`.
+ * Builds the body for `PUT /api/v2/policy-bundle`.
  *
  * The PUT is a complete replacement: a list left out of the body is cleared, not
  * kept. Two panels edit this bundle — the catalog (components, templates,
@@ -42,10 +42,10 @@ export function buildPolicyBundleUpdate(
       "blocked_model_keys",
       bundle.blocked_model_keys ?? [],
     ),
-    approved_integration_provider_ids: current(
-      "approved_integration_provider_ids",
-      bundle.approved_integration_provider_ids ?? [],
-    ),
+    approved_integration_provider_ids:
+      changes.approved_integration_provider_ids === undefined
+        ? (bundle.approved_integration_provider_ids ?? null)
+        : changes.approved_integration_provider_ids,
     blocked_integration_action_keys: current(
       "blocked_integration_action_keys",
       bundle.blocked_integration_action_keys ?? [],

@@ -81,8 +81,15 @@ describe("buildPolicyBundleUpdate", () => {
     // @ts-expect-error - same.
     legacy.blocked_integration_action_keys = undefined;
     const update = buildPolicyBundleUpdate(legacy);
-    expect(update.approved_integration_provider_ids).toEqual([]);
+    expect(update.approved_integration_provider_ids).toBeNull();
     expect(update.blocked_integration_action_keys).toEqual([]);
+  });
+
+  it("preserves an explicit empty integration ceiling", () => {
+    const update = buildPolicyBundleUpdate(
+      bundle({ approved_integration_provider_ids: [] }),
+    );
+    expect(update.approved_integration_provider_ids).toEqual([]);
   });
 
   it("sends a reason only when one is given", () => {
