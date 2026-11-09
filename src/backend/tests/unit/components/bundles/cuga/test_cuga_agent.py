@@ -8,6 +8,10 @@ import pytest
 pytest.importorskip("lfx_bundles")
 
 from lfx.components.tools.calculator import CalculatorToolComponent
+from lfx.services.model_provider_policy import (
+    reset_current_model_provider_policy_context,
+    set_current_model_provider_policy_context,
+)
 from lfx_bundles.cuga.cuga_agent import (
     _CUGA_CODE_AGENT_GUARD_ATTR,
     CugaComponent,
@@ -19,6 +23,18 @@ from tests.base import ComponentTestBaseWithClient, ComponentTestBaseWithoutClie
 from tests.unit.mock_language_model import MockLanguageModel
 
 # Load environment variables from .env file
+
+
+@pytest.fixture(autouse=True)
+def _trusted_version_check_context(request):
+    if request.node.name != "test_latest_version":
+        yield
+        return
+    token = set_current_model_provider_policy_context(user_id=uuid4(), attributes={"is_superuser": True})
+    try:
+        yield
+    finally:
+        reset_current_model_provider_policy_context(token)
 
 
 def _get_cuga_code_agent_security_classes() -> tuple[Any, Any]:

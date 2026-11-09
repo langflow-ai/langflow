@@ -59,6 +59,7 @@ from langflow.api.v1.schemas.replacement_operations import (
     ProjectReplacementRequest,
     ProjectReplacementResult,
 )
+from langflow.api.v2.mcp import mcp_stdio_restricted_for_user
 from langflow.initial_setup.constants import ASSISTANT_FOLDER_NAME, STARTER_FOLDER_NAME
 from langflow.services.audit import vocabulary as audit_vocab
 from langflow.services.audit.operations import (
@@ -319,7 +320,9 @@ async def _new_project(
     await session.refresh(new_project)
 
     # Auto-register MCP server for this project with configured default auth
-    if get_settings_service().settings.add_projects_to_mcp_servers:
+    if settings_service.settings.add_projects_to_mcp_servers and not mcp_stdio_restricted_for_user(
+        current_user, settings_service.settings
+    ):
         try:
             await register_mcp_servers_for_project(
                 new_project, mcp_auth, current_user, session, owns_transaction=owns_transaction
@@ -1214,7 +1217,9 @@ async def _replace_project_operation_once(
             session.add(project)
             await session.flush()
             newly_created_project = project
-            if settings_service.settings.add_projects_to_mcp_servers:
+            if settings_service.settings.add_projects_to_mcp_servers and not mcp_stdio_restricted_for_user(
+                current_user, settings_service.settings
+            ):
                 try:
                     await register_mcp_servers_for_project(
                         project,

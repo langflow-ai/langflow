@@ -27,6 +27,8 @@ Custom component code runs on the Langflow server at flow-build time. In a trust
 
 Starting in 1.13.2, custom component creation and code editing require a superuser by default. Regular users can continue using built-in components. Existing flows with custom source require an administrator to review and install the component as a trusted server template before regular users can execute them.
 
+Regular users can still create projects. Optional local MCP server registration is skipped when the caller's code policy prohibits local processes. The project's HTTP MCP endpoint remains available.
+
 An upgrade also applies this default to existing installations. For a trusted deployment where every user may execute Python on the server, explicitly set `LANGFLOW_CUSTOM_COMPONENT_ADMIN_ONLY=false` to preserve the earlier behavior. This opt-out grants regular users code execution with the server process's permissions. Keep `LANGFLOW_AUTO_LOGIN=false` to require sign-in.
 
 When a deployment runs in multi-user mode with custom components still enabled for everyone, Langflow logs a warning at startup:
