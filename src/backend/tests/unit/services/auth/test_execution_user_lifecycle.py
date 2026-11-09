@@ -13,18 +13,22 @@ from langflow.services.auth.service import AuthService
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.user.model import User
 from lfx.base.tools.component_tool import _build_output_async_function, _build_output_function
+from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.custom import Component
 from lfx.graph import Graph
 from lfx.io import Output
 from lfx.memory.flow_context import (
+    get_current_message_execution_principal,
     reset_current_flow_id,
+    reset_current_message_execution_principal,
     reset_current_message_executor_id,
     reset_current_message_owner_id,
     set_current_flow_id,
+    set_current_message_execution_principal,
     set_current_message_executor_id,
     set_current_message_owner_id,
 )
-from lfx.services.authorization.base import ExecutionPrincipal
+from lfx.services.authorization.base import PUBLIC_ANONYMOUS_ACTOR_ID, ExecutionPrincipal
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel, select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -145,3 +149,66 @@ async def test_inactive_actor_cannot_keep_using_an_active_owners_credentials(nat
             user_id,
             principal=ExecutionPrincipal(kind="flow_owner", user_id=str(user_id), actor_id=str(actor_id)),
         )
+
+
+async def test_public_marker_only_skips_native_lookup_with_its_trusted_principal(native_auth):
+    auth, _user_id, _scope = native_auth
+    public = ExecutionPrincipal(kind="anonymous_public", actor_id=str(PUBLIC_ANONYMOUS_ACTOR_ID))
+    await auth.validate_execution_user(PUBLIC_ANONYMOUS_ACTOR_ID, principal=public)
+    with pytest.raises(HTTPException, match="no longer exists"):
+        await auth.validate_execution_user(PUBLIC_ANONYMOUS_ACTOR_ID)
+    with pytest.raises(HTTPException, match="no longer exists"):
+        await auth.validate_execution_user(
+            PUBLIC_ANONYMOUS_ACTOR_ID,
+            principal=ExecutionPrincipal(kind="actor", user_id=str(PUBLIC_ANONYMOUS_ACTOR_ID)),
+        )
+    with pytest.raises(HTTPException, match="no longer exists"):
+        await auth.validate_execution_user(uuid4(), principal=public)
+
+
+async def test_public_chat_graph_remains_executable_and_ephemeral(native_auth, monkeypatch):
+    _auth, _user_id, scope = native_auth
+    monkeypatch.setattr("langflow.memory.session_scope", scope)
+    chat_input = ChatInput(_id="chat_input")
+    chat_input.set(input_value="public chat still works")
+    chat_output = ChatOutput(_id="chat_output")
+    chat_output.set(input_value=chat_input.message_response)
+    graph = Graph(chat_input, chat_output, flow_id=str(uuid4()), user_id=str(PUBLIC_ANONYMOUS_ACTOR_ID))
+    graph.execution_principal = ExecutionPrincipal(kind="anonymous_public", actor_id=str(PUBLIC_ANONYMOUS_ACTOR_ID))
+    graph.session_id = "public-session"
+    assert get_current_message_execution_principal() is None
+    async for _ in graph.async_start():
+        pass
+    assert get_current_message_execution_principal() is None
+    async with scope() as session:
+        messages = (await session.exec(select(MessageTable))).all()
+    rendered = chat_output.get_output_by_method(chat_output.message_response).value
+    assert rendered.text == "public chat still works"
+    assert messages == []
+
+
+async def test_message_guard_receives_the_trusted_public_principal(native_auth):
+    _auth, _user_id, scope = native_auth
+    flow_token = set_current_flow_id(uuid4())
+    executor_token = set_current_message_executor_id(PUBLIC_ANONYMOUS_ACTOR_ID)
+    principal_token = set_current_message_execution_principal(
+        ExecutionPrincipal(kind="anonymous_public", actor_id=str(PUBLIC_ANONYMOUS_ACTOR_ID))
+    )
+    try:
+        async with scope() as session:
+            await aadd_messagetables(
+                [
+                    MessageTable(
+                        text="public",
+                        sender="Machine",
+                        sender_name="AI",
+                        session_id="public",
+                        user_id=PUBLIC_ANONYMOUS_ACTOR_ID,
+                    )
+                ],
+                session,
+            )
+    finally:
+        reset_current_message_execution_principal(principal_token)
+        reset_current_message_executor_id(executor_token)
+        reset_current_flow_id(flow_token)

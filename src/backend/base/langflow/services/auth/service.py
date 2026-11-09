@@ -1320,8 +1320,17 @@ class AuthService(BaseAuthService):
         principal: ExecutionPrincipal | None = None,
         db: AsyncSession | None = None,
     ) -> None:
+        from lfx.services.authorization.base import PUBLIC_ANONYMOUS_ACTOR_ID
         from sqlmodel import select
 
+        if (
+            principal is not None
+            and principal.kind == "anonymous_public"
+            and principal.user_id is None
+            and principal.actor_id == str(PUBLIC_ANONYMOUS_ACTOR_ID)
+            and str(user_id) == str(PUBLIC_ANONYMOUS_ACTOR_ID)
+        ):
+            return
         identities = {user_id}
         if principal is not None and principal.kind != "anonymous_public":
             identities.update((principal.user_id, principal.actor_id))

@@ -87,12 +87,18 @@ def _bound_message_scope() -> tuple[UUID, UUID] | None:
 
 
 async def _validate_message_executor(session: AsyncSession) -> None:
-    from lfx.memory.flow_context import get_current_message_executor_id, has_current_flow_scope
+    from lfx.memory.flow_context import (
+        get_current_message_execution_principal,
+        get_current_message_executor_id,
+        has_current_flow_scope,
+    )
 
     if has_current_flow_scope():
         from langflow.services.deps import get_auth_service
 
-        await get_auth_service().validate_execution_user(get_current_message_executor_id(), db=session)
+        await get_auth_service().validate_execution_user(
+            get_current_message_executor_id(), principal=get_current_message_execution_principal(), db=session
+        )
 
 
 def _get_variable_query(
