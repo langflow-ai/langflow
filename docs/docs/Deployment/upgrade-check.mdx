@@ -20,7 +20,7 @@ Starter projects are skipped, because Langflow recreates them at startup.
 
 For each node, the command reports the following:
 
-- The node's status uses the same rule as [`lfx upgrade`](/lfx-compatibility#check-and-upgrade-flows-with-lfx-upgrade), with `ok`, `outdated_safe`, `outdated_breaking`, `retired`, `customized`, or `blocked`. The checker also reports `could_not_verify` when an outdated node's generated fields cannot be verified and no independent breaking change is confirmed.
+- The node's status uses the same rule as [`lfx upgrade`](/lfx-compatibility#check-and-upgrade-flows-with-lfx-upgrade), with `ok`, `outdated_safe`, `outdated_breaking`, `retired`, `customized`, or `blocked`. The checker also reports `could_not_verify` when an outdated node's generated fields or saved file references cannot be verified and no independent breaking change is confirmed.
 - For an outdated node, the result of a dry run of the visual editor's **Update**. The node is rebuilt from the new release's code with its saved values, and nothing is saved. A completed dry run is breaking when it drops a connection, a value, a field, or an output. An incomplete update records uncertainty, and any independent breaking finding still takes precedence.
 - What the upgraded server runs for the node under the settings you pass: its saved code (`saved_code`), the server's own code (`server_code`), or nothing (`refused`). The catalog rules saved in the database apply too.
 

@@ -207,12 +207,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         }
       }
       if (node.type === "genericNode") {
+        const fields = connectedFields?.get(node.id);
         const codeValidity = checkCodeValidity(
           node.data,
           templates,
           allowCustomComponents,
-          connectedFields
-            ? (connectedFields.get(node.id) ?? new Set())
+          connectedFields && fields !== null
+            ? (fields ?? new Set())
             : undefined,
         );
         if (

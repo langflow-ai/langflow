@@ -49,10 +49,14 @@ def _all_types(index_blob: dict) -> dict:
 @pytest.mark.parametrize("case", CASES, ids=[case["name"] for case in CASES])
 def test_shared_case(case):
     node = {"id": "n1", "data": {"id": "n1", "type": "TestComponent", "node": case["saved_node"]}}
-    edges = [
-        {"source": "other", "target": "n1", "data": {"targetHandle": {"fieldName": field_name, "id": "n1"}}}
-        for field_name in case["connected_fields"]
-    ]
+    edges = (
+        case.get("edges")
+        if "edges" in case
+        else [
+            {"source": "other", "target": "n1", "data": {"targetHandle": {"fieldName": field_name, "id": "n1"}}}
+            for field_name in case["connected_fields"]
+        ]
+    )
     all_types = {"Test": {"TestComponent": case["component"]}} if case["component"] else {}
 
     report = check_flow_compatibility({"nodes": [node], "edges": edges}, all_types)

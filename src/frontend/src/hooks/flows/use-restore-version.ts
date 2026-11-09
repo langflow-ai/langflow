@@ -66,7 +66,14 @@ export default function useRestoreVersion(
         // biome-ignore lint/suspicious/noExplicitAny: legacy
       } catch (err: any) {
         const apiDetail = err?.response?.data?.detail;
-        const message = apiDetail ?? err?.message ?? "Unknown error";
+        const detailMessage =
+          typeof apiDetail === "string" ? apiDetail : apiDetail?.message;
+        const message =
+          typeof detailMessage === "string"
+            ? detailMessage
+            : typeof err?.message === "string"
+              ? err.message
+              : t("errors.generic");
         setErrorData({
           title: t("errors.failedToRestoreVersion"),
           list: [message],
@@ -97,6 +104,7 @@ export default function useRestoreVersion(
       clearPreview,
       setSuccessData,
       setErrorData,
+      t,
     ],
   );
 

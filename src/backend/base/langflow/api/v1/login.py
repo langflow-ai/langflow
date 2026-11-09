@@ -10,7 +10,7 @@ from langflow.api.utils import DbSession
 from langflow.api.v1.schemas import Token
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.auth.cookies import auth_cookie_name
-from langflow.services.auth.exceptions import AuthenticationError
+from langflow.services.auth.exceptions import AuthBackendUnavailableError, AuthenticationError
 from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_auth_service, get_settings_service, get_variable_service
@@ -232,7 +232,7 @@ async def get_session(
     It does not raise an error if unauthenticated, allowing the frontend to gracefully
     handle the session state.
     """
-    from langflow.services.auth.utils import _get_external_token, oauth2_login
+    from langflow.services.auth.utils import _auth_error_to_http, _get_external_token, oauth2_login
 
     # Try to get the token from the request (cookie or Authorization header)
     try:
@@ -255,6 +255,8 @@ async def get_session(
             authenticated=True,
             user=UserRead.model_validate(user, from_attributes=True),
         )
+    except AuthBackendUnavailableError as exc:
+        raise _auth_error_to_http(exc) from exc
     except (AuthenticationError, HTTPException, ValueError) as _:
         # Any authentication error means not authenticated
         return SessionResponse(authenticated=False)

@@ -1380,6 +1380,21 @@ describe("useFlowStore", () => {
       expect(breakingChange()).toBe(true);
     });
 
+    it("requires review for a live edge with incomplete cached handle metadata", () => {
+      const edge = {
+        ...edgeIntoInp,
+        data: { targetHandle: {} },
+      } as EdgeType;
+      act(() => {
+        useFlowStore
+          .getState()
+          .setNodesAndEdges([sourceNode, savedNode()], [edge]);
+      });
+
+      expect(useFlowStore.getState().edges).toHaveLength(1);
+      expect(breakingChange()).toBe(true);
+    });
+
     it("deleting the edge makes the update safe again", () => {
       act(() => {
         useFlowStore

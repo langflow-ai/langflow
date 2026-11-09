@@ -371,8 +371,20 @@ def _node_result(
     elif status.status != "ok":
         rebuilt, failure = _dry_run(entry, node_info, user_id)
         unverified = [warning for warning in rebuilt.warnings if warning.get("unverified", False)] if rebuilt else []
-        if rebuilt is not None and unverified:
-            reasons = [asdict(reason) for reason in breaking_reasons(rebuilt.node, node_info, connected_fields)]
+        reasons = (
+            [asdict(reason) for reason in breaking_reasons(rebuilt.node, node_info, connected_fields)]
+            if rebuilt
+            else []
+        )
+        state_reasons = _saved_value_reasons(rebuilt.node, node_info) if rebuilt else []
+        uncertain_values = [reason for reason in state_reasons if reason["code"] == "could_not_verify"]
+        known_fields = {reason["field"] for reason in reasons}
+        reasons += [
+            reason
+            for reason in state_reasons
+            if reason["code"] != "could_not_verify" and reason["field"] not in known_fields
+        ]
+        if rebuilt is not None and (unverified or uncertain_values):
             unresolved = {
                 name for warning in unverified if warning.get("inputs_unverified", False) for name in warning["fields"]
             }
@@ -395,10 +407,11 @@ def _node_result(
                 )
             ]
             result.status = "outdated_breaking" if reasons else "could_not_verify"
-            result.reasons = [
-                *reasons,
-                failure or _reason("could_not_verify", None, "the update could not verify the generated fields"),
-            ]
+            if failure or unverified:
+                uncertain_values.append(
+                    failure or _reason("could_not_verify", None, "the update could not verify the generated fields")
+                )
+            result.reasons = [*reasons, *uncertain_values]
             result.dry_run = {"result": "could_not_verify"}
         elif failure is not None:
             # The rule's own verdict stands, and the node says why the dry run could not decide.
@@ -406,11 +419,38 @@ def _node_result(
             result.reasons = [*reasons, failure]
             result.dry_run = {"result": failure["code"]}
         else:
-            reasons = [asdict(reason) for reason in breaking_reasons(rebuilt.node, node_info, connected_fields)]
             result.status = "outdated_breaking" if reasons else "outdated_safe"
             result.reasons = reasons
             result.dry_run = {"result": "loses" if reasons else "keeps"}
     return result
+
+
+def _saved_value_reasons(rebuilt_node: dict, saved_node: dict) -> list[dict[str, str | None]]:
+    """Check the state actually carried through an update, beyond its field declarations."""
+    rebuilt_template = rebuilt_node.get("template", {})
+    reasons = []
+    for name, saved_field in saved_node.get("template", {}).items():
+        rebuilt_field = rebuilt_template.get(name)
+        if name == "code" or not isinstance(saved_field, dict) or not isinstance(rebuilt_field, dict):
+            # The structural rule already reports fields the update removes.
+            continue
+        if saved_field.get("file_path") and saved_field["file_path"] != rebuilt_field.get("file_path"):
+            # The isolated checker cannot prove whether the source installation's upload exists.
+            reasons.append(
+                _reason("could_not_verify", name, f"the update could not verify {name}'s saved file reference")
+            )
+        elif (
+            "value" in saved_field
+            and saved_field["value"] is not None
+            and (
+                saved_field["value"] != rebuilt_field.get("value")
+                or bool(saved_field.get("load_from_db")) != bool(rebuilt_field.get("load_from_db"))
+            )
+        ):
+            reasons.append(
+                _reason("value_dropped", name, f"the update does not preserve {name}'s saved value or reference")
+            )
+    return reasons
 
 
 _EDITS_DO_NOT_RUN = "the saved edits will not run: this server runs its own code for this component"

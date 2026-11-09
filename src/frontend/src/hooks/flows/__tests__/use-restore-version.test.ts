@@ -166,28 +166,59 @@ describe("useRestoreVersion", () => {
     }
   });
 
-  it("should leave the canvas unchanged when the persisted token is stale", async () => {
-    apiPostMock.mockRejectedValueOnce({
-      response: { status: 409, data: { detail: "Flow changed since review" } },
-    });
-    const onSuccess = jest.fn();
-    const { result } = renderHook(() =>
-      useRestoreVersion("flow-1", "stale-token"),
-    );
+  it.each([
+    [409, "flow_version_conflict", "Flow changed since review"],
+    [428, "flow_version_required", "Reload the flow before restoring it"],
+  ])(
+    "shows structured %s conflicts and leaves the canvas unchanged",
+    async (status, code, message) => {
+      apiPostMock.mockRejectedValueOnce({
+        response: {
+          status,
+          data: { detail: { code, message, flow_id: "flow-1" } },
+        },
+      });
+      const onSuccess = jest.fn();
+      const { result } = renderHook(() =>
+        useRestoreVersion("flow-1", "stale-token"),
+      );
 
-    await act(async () => {
-      await result.current.restore("historical-entry", { onSuccess });
-    });
+      await act(async () => {
+        await result.current.restore("historical-entry", { onSuccess });
+      });
 
-    expect(apiPostMock).toHaveBeenCalledTimes(1);
-    expect(applyFlowToCanvasMock).not.toHaveBeenCalled();
-    expect(clearPreviewMock).not.toHaveBeenCalled();
-    expect(onSuccess).not.toHaveBeenCalled();
-    expect(setErrorDataMock).toHaveBeenCalledWith({
-      title: "Failed to restore version",
-      list: ["Flow changed since review"],
-    });
-  });
+      expect(apiPostMock).toHaveBeenCalledTimes(1);
+      expect(applyFlowToCanvasMock).not.toHaveBeenCalled();
+      expect(clearPreviewMock).not.toHaveBeenCalled();
+      expect(onSuccess).not.toHaveBeenCalled();
+      expect(setErrorDataMock).toHaveBeenCalledWith({
+        title: "Failed to restore version",
+        list: [message],
+      });
+    },
+  );
+
+  it.each([
+    { response: { data: { detail: {} } } },
+    { response: { data: { detail: { message: 42 } } } },
+    { response: { data: { detail: ["invalid detail"] } } },
+  ])(
+    "shows a translated fallback for malformed error detail (%p)",
+    async (error) => {
+      apiPostMock.mockRejectedValueOnce(error);
+      const { result } = renderHook(() => useRestoreVersion("flow-1"));
+
+      await act(async () => {
+        await result.current.restore("historical-entry");
+      });
+
+      expect(setErrorDataMock).toHaveBeenCalledWith({
+        title: "Failed to restore version",
+        list: ["Something went wrong, please try again"],
+      });
+      expect(applyFlowToCanvasMock).not.toHaveBeenCalled();
+    },
+  );
 
   it.each([undefined, null])(
     "should preserve legacy activation when the token is %s",
@@ -326,7 +357,7 @@ describe("useRestoreVersion", () => {
     expect(onSuccessMock).not.toHaveBeenCalled();
   });
 
-  it("falls back to 'Unknown error' when error has no message or API detail", async () => {
+  it("uses a translated fallback when error has no message or API detail", async () => {
     apiPostMock.mockRejectedValueOnce({});
 
     const { result } = renderHook(() => useRestoreVersion("flow-1"));
@@ -337,7 +368,7 @@ describe("useRestoreVersion", () => {
 
     expect(setErrorDataMock).toHaveBeenCalledWith({
       title: "Failed to restore version",
-      list: ["Unknown error"],
+      list: ["Something went wrong, please try again"],
     });
   });
 });
