@@ -82,7 +82,8 @@ def register(app: typer.Typer) -> None:
             help=(
                 "Component compatibility mode. "
                 "'check' refuses to run unless every component is up to date. "
-                "'safe' auto-applies safe upgrades; aborts on breaking, blocked, or retired components."
+                "'safe' auto-applies safe upgrades; aborts on breaking, blocked, or retired components, "
+                "and on customized components when custom components are blocked."
             ),
         ),
         human_input: bool | None = typer.Option(
@@ -190,7 +191,8 @@ def register(app: typer.Typer) -> None:
             help=(
                 "Component compatibility mode before serving. "
                 "'check' refuses to serve unless every component is up to date. "
-                "'safe' auto-applies safe upgrades; aborts on breaking, blocked, or retired components."
+                "'safe' auto-applies safe upgrades; aborts on breaking, blocked, or retired components, "
+                "and on customized components when custom components are blocked."
             ),
         ),
         no_env_fallback: bool = typer.Option(

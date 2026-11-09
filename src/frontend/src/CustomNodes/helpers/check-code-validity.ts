@@ -235,7 +235,7 @@ export const checkCodeValidity = (
       outdated: false,
       blocked: true,
       breakingChange: false,
-      userEdited: data.node?.edited ?? false,
+      userEdited: data.node?.edited === true,
       retired: false,
     };
   }
@@ -258,7 +258,7 @@ export const checkCodeValidity = (
     outdated: isOutdated,
     blocked: false,
     breakingChange: hasBreakingChange,
-    userEdited: data.node?.edited ?? false,
+    userEdited: data.node?.edited === true,
     retired: !!retiredIn,
     ...(retiredIn && {
       retiredIn,

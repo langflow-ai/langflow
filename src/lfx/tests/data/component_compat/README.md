@@ -15,7 +15,7 @@ Each case holds:
 - `saved_node`: the node as a flow saves it (`data.node`).
 - `connected_fields`: the fields of the saved node that an edge goes into. A narrowed or emptied input is breaking only when it is connected, and so is a field that, on a node in tool mode, the component now marks `tool_mode`. A field whose type changed is breaking when it is connected or holds a value. Both tests turn this list into edges.
 - `component`: the current component (its registry or template entry), or `null` when no component has that type.
-- `expected`: the status `lfx upgrade` reports, one of `ok`, `outdated_safe`, `outdated_breaking`, `blocked`, `retired`.
+- `expected`: the status `lfx upgrade` reports, one of `ok`, `outdated_safe`, `outdated_breaking`, `blocked`, `retired`, `customized`.
 
 The editor returns flags instead of a status. The Jest test maps them like this, and the first row that applies wins:
 
@@ -24,8 +24,11 @@ The editor returns flags instead of a status. The Jest test maps them like this,
 | `blocked` | `blocked` |
 | `retired` | `retired` |
 | not `outdated` | `ok` |
+| `outdated` and `userEdited` | `customized` |
 | `outdated` and `breakingChange` | `outdated_breaking` |
 | `outdated`, no `breakingChange` | `outdated_safe` |
+
+A retired component the user edited is retired, not customized, whatever its code. An edit usually keeps the retired imports or base class, and a dismissed update keeps shipped code that the runtime maps to the retired class, so it still fails when the flow runs.
 
 ## `expected_statuses.json`
 
@@ -65,3 +68,5 @@ The saved code of most hard-flow nodes equals the bundled code, so `expected_sta
 - `type_names.json`: edges whose handles carry `Data`, `JSON`, `DataFrame` and `Table`.
 
 `v1.12.6` also holds four flows saved with lfx-bundles 1.1.38 installed, one per component that 1.13 retired: `altk_agent.json`, `chroma_ext_type.json`, `chroma_legacy_type.json` (the older `Chroma` type) and `local_db.json`. The core index leaves these components out, because lfx-bundles discovers them at runtime. The test builds their templates from lfx's own classes, so these nodes read as retired instead of blocked.
+
+`v1.12.6/customized.json` holds a URL component whose code the user edited through the code editor's request, and an Agent from a 1.11.6 flow whose update the user dismissed. Both carry the saved `edited` flag, so they read as customized.

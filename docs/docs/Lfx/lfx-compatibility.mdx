@@ -52,7 +52,8 @@ Example output:
 | `[SAFE]` | Component code changed, and updating the component keeps every connection and saved value in your flow. `lfx upgrade --write` can apply this update automatically. | An output that previously emitted only `Message` now also supports `Data`, or the component gained an output or an optional input. |
 | `[BREAKING]` | Updating the component would drop a connection or a saved value, or needs an input that nobody gave. | A field or output your flow has was removed or renamed, or an input that accepted `Message` and `Data` now accepts only `Message` and your flow connects a `Data` component to it. |
 | `[BLOCKED]` | The component type no longer exists in this LFX build. | A bundle-only component is not installed in your environment. |
-| `[RETIRED]` | The component was retired and fails when the flow runs. The line names the release that retired it and its replacement. `lfx upgrade --write` leaves it unchanged, and the command exits non-zero. | Chroma DB, retired in 1.13.0, replaced by the Knowledge component. |
+| `[CUSTOMIZED]` | Someone edited this component's code in the flow, or dismissed an update for it in the visual editor. `lfx upgrade --write` leaves it unchanged, and it makes the command fail only with `--strict`. | A component whose code was changed in the visual editor's code editor. |
+| `[RETIRED]` | The component was retired and fails when the flow runs, even if someone edited its code in the flow. The line names the release that retired it and its replacement. `lfx upgrade --write` leaves it unchanged, and the command exits non-zero. | Chroma DB, retired in 1.13.0, replaced by the Knowledge component. |
 
 To apply fixes or enforce stricter checks, run:
 
@@ -60,7 +61,7 @@ To apply fixes or enforce stricter checks, run:
 # Apply all safe upgrades and overwrite the file
 lfx upgrade my-flow.json --write
 
-# Fail if any safe upgrades are still pending (use after a dry run before running `--write`)
+# Fail if any safe upgrades are still pending or any component is customized (use after a dry run before running `--write`)
 lfx upgrade my-flow.json --strict
 ```
 
@@ -82,7 +83,7 @@ lfx serve my-flow.json --upgrade-flow=safe
 | Mode | Behavior |
 |---|---|
 | `check` | Reports compatibility issues and exits non-zero unless every component is up to date. No changes are written to disk. |
-| `safe` | Applies all safe upgrades in memory, then runs or serves the flow. Breaking, blocked, and retired components cause a non-zero exit. |
+| `safe` | Applies all safe upgrades in memory, then runs or serves the flow. Customized components run as saved. Breaking, blocked, and retired components cause a non-zero exit, and so do customized components when `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false`, because their edited code cannot run. To fix that, allow custom components with `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=true`, or update the component in the visual editor to use the current code, which discards the edits. |
 
 ## Pin versions
 
