@@ -27,6 +27,11 @@ import { ToolOutputDisplay } from "./ToolOutputDisplay";
 import { ToolSection } from "./ToolSection";
 import { safeUrl } from "./url";
 
+/**
+ * Render a chat content block according to its type, including text, media,
+ * tool results, and human input requests. Text supports explicit double-dollar
+ * math while preserving single-dollar currency and literal code snippets.
+ */
 export default function ContentDisplay({
   content,
   chatId,

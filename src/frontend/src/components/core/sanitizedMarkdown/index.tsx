@@ -19,8 +19,9 @@ type SanitizedMarkdownProps = {
 };
 
 /**
- * Shared component for rendering sanitized markdown content
- * Uses rehype-sanitize to prevent XSS attacks while allowing safe HTML/markdown
+ * Render chat Markdown after sanitizing raw HTML, then typeset explicit math
+ * with untrusted KaTeX commands disabled. Preserve single-dollar currency and
+ * show a warning when sanitization removes all visible message content.
  */
 export const SanitizedMarkdown = ({
   chatMessage,
