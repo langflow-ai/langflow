@@ -212,3 +212,61 @@ async def test_rejects_an_invalid_provider_filter(client: AsyncClient, logged_in
     response = await client.get("api/v1/connections/oauth/registrations?provider=Google", headers=logged_in_headers)
 
     assert response.status_code == 422
+
+
+@pytest.mark.parametrize("site", [None, "https://confluence.example.com"])
+async def test_reports_invalid_confluence_site_for_provider_discovery(
+    client: AsyncClient, logged_in_headers, registrations, monkeypatch, site
+):
+    from langflow.services.connection.oauth import adapter
+    from langflow.services.triggers.providers.confluence.oauth import OAUTH
+    from lfx_confluence.schema import SCOPES
+
+    original = adapter.provider_adapter
+    monkeypatch.setattr(adapter, "provider_adapter", lambda name: OAUTH if name == "confluence" else original(name))
+    if site is None:
+        monkeypatch.delenv("LANGFLOW_CONFLUENCE_CLOUD_ID", raising=False)
+    else:
+        monkeypatch.setenv("LANGFLOW_CONFLUENCE_CLOUD_ID", site)
+    registrations(
+        {
+            "confluence-work": _google(
+                provider="confluence",
+                tenant="01234567-89ab-4cde-8f01-234567890abc",
+                redirect_uri="https://langflow.example/api/v1/connections/oauth/confluence/callback",
+                scopes=sorted(SCOPES),
+            )
+        }
+    )
+
+    response = await client.get("api/v1/connections/oauth/registrations?provider=confluence", headers=logged_in_headers)
+
+    assert response.status_code == 400, response.text
+    assert response.json() == {"detail": "The deployment Confluence Cloud site is not configured."}
+    assert response.headers["cache-control"] == "no-store"
+    assert "google-client-secret" not in response.text
+    unfiltered = await client.get("api/v1/connections/oauth/registrations", headers=logged_in_headers)
+    assert unfiltered.json() == {"registrations": []}
+
+
+async def test_provider_discovery_does_not_expose_blocked_registration_errors(
+    client: AsyncClient, logged_in_headers, registrations, integration_policy
+):
+    registrations({"google-broken": {"provider": "google"}})
+    integration_policy("slack")
+
+    response = await client.get("api/v1/connections/oauth/registrations?provider=google", headers=logged_in_headers)
+
+    assert response.status_code == 200, response.text
+    assert response.json() == {"registrations": []}
+
+
+async def test_provider_discovery_keeps_valid_registration_when_another_is_invalid(
+    client: AsyncClient, logged_in_headers, registrations
+):
+    registrations({"google-broken": {"provider": "google"}, "google-work": _google()})
+
+    response = await client.get("api/v1/connections/oauth/registrations?provider=google", headers=logged_in_headers)
+
+    assert response.status_code == 200, response.text
+    assert [entry["id"] for entry in response.json()["registrations"]] == ["google-work"]
