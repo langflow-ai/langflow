@@ -12,6 +12,21 @@ You add them to your flows and configure them in the same way as Langflow's core
 
 To browse bundles, click <Icon name="Blocks" aria-hidden="true" /> **Bundles** in the visual editor.
 
+## Use dedicated integrations as agent tools
+
+Choose a connection on a dedicated integration action, then enable Tool Mode in the component's header menu.
+Connect its tool output to the Agent component's Tools input.
+The agent supplies action arguments, such as search terms, message text, resource IDs, and pagination options.
+JSON payloads, such as Slack blocks and ServiceNow ticket fields, are also available as tool arguments.
+
+Tool Mode is available on the dedicated actions for [Google Workspace](/bundles-google), [Microsoft 365](/bundles-microsoft), [Slack](/bundles-slack), GitHub, [GitLab](/bundles-gitlab), [Jira](/bundles-jira), [Confluence](/bundles-confluence), and [ServiceNow](/bundles-servicenow).
+Connections and uploaded mail attachments stay configured on the component.
+The connected account and the provider's existing permission checks still determine what the action can access.
+
+Components with separate results and pagination outputs expose both as separate tool actions.
+Each tool action makes its own provider request, so use matching search and page arguments when retrieving pagination.
+Event triggers keep their existing setup and start flows when provider events arrive.
+
 ## Bundle maintenance and documentation
 
 Many bundled components are developed by third-party contributors to the Langflow codebase.
