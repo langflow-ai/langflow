@@ -134,7 +134,7 @@ def test_canvas_summary_identifies_the_firing_event(event, status, label):
     [
         (WhatsAppSendTextComponent, {"to", "text"}),
         (WhatsAppSendTemplateComponent, {"to", "template_name", "language", "body_parameters"}),
-        (WhatsAppReplyComponent, {"event", "text"}),
+        (WhatsAppReplyComponent, {"text"}),
     ],
 )
 def test_action_tools_expose_content_inputs_but_keep_the_connection_fixed(cls, expected):
