@@ -31,6 +31,8 @@ def test_job_metrics_and_release_have_single_head():
         "f194a1b2c3d4",  # pragma: allowlist secret
         "a6d8e0f2b4c7",  # pragma: allowlist secret
         "b5d8e2a4c617",  # pragma: allowlist secret
+        "f1a7c3e95d82",  # pragma: allowlist secret
+        "f4b8c1d2e3a6",  # pragma: allowlist secret
     ],
 )
 def test_job_metrics_and_release_upgrade_to_single_head(db_url, prior_revision):  # noqa: F811
@@ -53,7 +55,8 @@ def test_job_metrics_and_release_upgrade_to_single_head(db_url, prior_revision):
         with engine.connect() as connection:
             inspector = inspect(connection)
             indexes = {index["name"] for index in inspector.get_indexes("job")}
-            assert {"ix_job_status_created", "ix_job_finished_timestamp"} <= indexes
+            assert {"ix_job_status_created", "ix_job_finished_timestamp", "ix_job_claim_scan"} <= indexes
+            assert "lease_heartbeat_at" in {column["name"] for column in inspector.get_columns("job")}
             assert "is_personal" in {column["name"] for column in inspector.get_columns("folder")}
             assert "version_token" in {column["name"] for column in inspector.get_columns("flow")}
             assert "retired_at" in {column["name"] for column in inspector.get_columns("user")}
