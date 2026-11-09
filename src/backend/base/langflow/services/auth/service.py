@@ -1529,7 +1529,7 @@ class AuthService(BaseAuthService):
 
             try:
                 user_id = UUID(user_id)
-                session_id = refresh_session_id(refresh_token, payload)
+                session_id = refresh_session_id(payload)
                 original_expires_at = datetime.fromtimestamp(float(payload["exp"]), timezone.utc)
             except (TypeError, ValueError, OverflowError) as exc:
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token") from exc

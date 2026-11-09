@@ -1,9 +1,11 @@
 """Logout invalidates captured native refresh tokens from the browser's session."""
 
+from datetime import timedelta
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 from langflow.main import setup_app
-from langflow.services.deps import get_settings_service
+from langflow.services.deps import get_auth_service, get_settings_service
 
 
 @pytest.mark.parametrize("refresh_first", [False, True])
@@ -27,3 +29,27 @@ async def test_logged_out_refresh_token_cannot_be_replayed(client, active_user, 
             browser.cookies.set("refresh_token_lf", token)
             response = await browser.post("/api/v1/refresh")
             assert response.status_code == 401
+
+
+async def test_legacy_refresh_cookie_requires_fresh_sign_in(client, active_user, monkeypatch):  # noqa: ARG001
+    """Upgrade rejects old refresh cookies, logout remains idempotent, and sign-in restores refresh."""
+    monkeypatch.setattr(get_settings_service().auth_settings, "AUTO_LOGIN", False)
+    app = setup_app(backend_only=True)
+    legacy = get_auth_service().create_token({"sub": str(active_user.id), "type": "refresh"}, timedelta(minutes=5))
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as browser:
+        browser.cookies.set("refresh_token_lf", legacy)
+        response = await browser.post("/api/v1/refresh")
+        assert response.status_code == 401
+        for _ in range(2):
+            response = await browser.post("/api/v1/logout")
+            assert response.status_code == 200
+            assert any(
+                "refresh_token_lf=" in value and "Max-Age=0" in value
+                for value in response.headers.get_list("set-cookie")
+            )
+        response = await browser.post(
+            "/api/v1/login",
+            data={"username": active_user.username, "password": "testpassword"},  # pragma: allowlist secret
+        )
+        assert response.status_code == 200
+        assert (await browser.post("/api/v1/refresh")).status_code == 200

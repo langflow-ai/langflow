@@ -9,7 +9,6 @@ from uuid import UUID
 
 import jwt
 from jwt import InvalidTokenError
-from jwt.utils import base64url_decode, base64url_encode
 from sqlalchemy import case, delete
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
@@ -25,16 +24,13 @@ _EXPIRED_SESSION_BATCH_SIZE = 100
 _MAX_SESSION_ID_LENGTH = 128
 
 
-def refresh_session_id(token: str, payload: dict[str, Any]) -> str:
-    """Resolve a verified native JWT's session, including tokens issued before session IDs."""
+def refresh_session_id(payload: dict[str, Any]) -> str:
+    """Require a session identifier on a previously verified native refresh JWT."""
     session_id = payload.get("sid")
-    if session_id is not None:
-        if not isinstance(session_id, str) or not session_id or len(session_id) > _MAX_SESSION_ID_LENGTH:
-            msg = "Invalid refresh session"
-            raise ValueError(msg)
-        return session_id
-    canonical = b".".join(base64url_encode(base64url_decode(segment)) for segment in token.split("."))
-    return hashlib.sha256(canonical).hexdigest()
+    if not isinstance(session_id, str) or not session_id or len(session_id) > _MAX_SESSION_ID_LENGTH:
+        msg = "Invalid refresh session"
+        raise ValueError(msg)
+    return session_id
 
 
 def _session_digest(session_id: str, user_id: str) -> str:
@@ -83,7 +79,7 @@ async def revoke_refresh_token(token: str, db: AsyncSession, settings: SettingsS
         )
         if payload.get("type") != "refresh":
             return
-        digest = _session_digest(refresh_session_id(token, payload), payload["sub"])
+        digest = _session_digest(refresh_session_id(payload), payload["sub"])
         expires_at = datetime.fromtimestamp(float(payload["exp"]), timezone.utc)
     except (InvalidTokenError, KeyError, TypeError, ValueError, OverflowError):
         return

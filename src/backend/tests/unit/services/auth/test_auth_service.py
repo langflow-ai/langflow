@@ -844,7 +844,7 @@ async def test_create_refresh_token_valid(auth_service: AuthService):
     """Test creating new tokens from a valid refresh token."""
     user_id = uuid4()
     db = AsyncMock()
-    refresh_token = auth_service.create_token({"sub": str(user_id), "type": "refresh"}, timedelta(minutes=5))
+    refresh_token = (await auth_service.create_user_tokens(user_id, db))["refresh_token"]
     fake_user = _dummy_user(user_id)
 
     with (
@@ -862,7 +862,7 @@ async def test_create_refresh_token_user_not_found(auth_service: AuthService):
     """Test refresh token fails when user doesn't exist."""
     user_id = uuid4()
     db = AsyncMock()
-    refresh_token = auth_service.create_token({"sub": str(user_id), "type": "refresh"}, timedelta(minutes=5))
+    refresh_token = (await auth_service.create_user_tokens(user_id, db))["refresh_token"]
 
     with (
         patch("langflow.services.auth.service.get_user_by_id", new=AsyncMock(return_value=None)),
@@ -878,7 +878,7 @@ async def test_create_refresh_token_inactive_user(auth_service: AuthService):
     """Test refresh token fails for inactive user."""
     user_id = uuid4()
     db = AsyncMock()
-    refresh_token = auth_service.create_token({"sub": str(user_id), "type": "refresh"}, timedelta(minutes=5))
+    refresh_token = (await auth_service.create_user_tokens(user_id, db))["refresh_token"]
     inactive_user = _dummy_user(user_id, active=False)
 
     with (
