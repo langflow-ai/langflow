@@ -47,6 +47,7 @@ dependencies = [
     "lfx-jira>=0.1.0,<1.0.0",
     "lfx-slack>=0.2.3,<1.0.0",
     "lfx-confluence>=0.1.0,<1.0.0",
+    "lfx-servicenow>=0.1.0,<1.0.0",
     "lfx-github>=0.1.0,<1.0.0",
     # langflow-extensions:bundle-deps-end
 ]
@@ -137,6 +138,7 @@ lfx-microsoft = { workspace = true }
 lfx-jira = { workspace = true }
 lfx-slack = { workspace = true }
 lfx-confluence = { workspace = true }
+lfx-servicenow = { workspace = true }
 lfx-github = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
@@ -180,6 +182,7 @@ members = [
     "src/bundles/jira",
     "src/bundles/slack",
     "src/bundles/confluence",
+    "src/bundles/servicenow",
     "src/bundles/github",
     # langflow-extensions:bundle-members-end
 ]

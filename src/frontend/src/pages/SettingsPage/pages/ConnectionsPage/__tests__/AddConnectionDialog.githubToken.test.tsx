@@ -10,6 +10,7 @@ import { axe } from "@/utils/a11y-test";
 import manifest from "../../../../../../../bundles/github/src/lfx_github/components/github/capabilities.v1.json";
 import dialogPayload from "../../../../../../../bundles/github/tests/fixtures/manual-token-dialog.json";
 import AddConnectionDialog from "../components/AddConnectionDialog";
+import { selectProvider } from "./provider-select-utils";
 
 jest.unmock("react-i18next");
 
@@ -144,16 +145,12 @@ it("updates setup guidance when the selected provider changes", async () => {
     "href",
     manifest.docs_url,
   );
-  await user.click(screen.getByTestId("connection-provider"));
-  await user.click(screen.getByRole("option", { name: other.display_name }));
+  await selectProvider(user, other.display_name);
   expect(screen.getByRole("link", { name: "Setup guide" })).toHaveAttribute(
     "href",
     other.docs_url,
   );
-  await user.click(screen.getByTestId("connection-provider"));
-  await user.click(
-    screen.getByRole("option", { name: undocumented.display_name }),
-  );
+  await selectProvider(user, undocumented.display_name);
   expect(
     screen.queryByRole("link", { name: "Setup guide" }),
   ).not.toBeInTheDocument();

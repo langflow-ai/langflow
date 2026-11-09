@@ -8,6 +8,7 @@ import type {
 } from "@/controllers/API/queries/connections";
 import i18n, { loadLanguage } from "@/i18n";
 import AddConnectionDialog from "../components/AddConnectionDialog";
+import { selectProvider } from "./provider-select-utils";
 
 jest.unmock("react-i18next");
 
@@ -32,7 +33,7 @@ const mockRegistrations = {
   error: null as unknown,
 };
 const mockTypesState = { data: {} };
-const mockPoll = { data: undefined };
+const mockPoll: { data: ConnectionRead | undefined } = { data: undefined };
 const mockResolveRegistrationId = jest.fn<string | null, []>(
   () => "google-demo",
 );
@@ -128,6 +129,7 @@ describe("AddConnectionDialog ownership", () => {
   });
   beforeEach(() => {
     mockCreate.mockReset();
+    mockPoll.data = undefined;
     mockRegistrations.isSuccess = true;
     mockRegistrations.isError = false;
     mockRegistrations.error = null;
@@ -250,8 +252,7 @@ describe("AddConnectionDialog ownership", () => {
         canCreateInstance={false}
       />,
     );
-    await user.click(screen.getByTestId("connection-provider"));
-    await user.click(screen.getByRole("option", { name: "Microsoft 365" }));
+    await selectProvider(user, "Microsoft 365");
     expect(screen.getByRole("link", { name: "Setup guide" })).toHaveAttribute(
       "href",
       "https://docs.langflow.org/entra-app-registration",
@@ -518,6 +519,74 @@ describe("AddConnectionDialog ownership", () => {
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({ ownership_mode: "user" }),
     );
+  });
+
+  it("does not offer instance sharing for ServiceNow or retain it from another provider", async () => {
+    mockCreate.mockResolvedValue({
+      ...createdRow("user"),
+      provider_key: "servicenow",
+    });
+    const user = userEvent.setup();
+    render(
+      <AddConnectionDialog
+        open
+        onOpenChange={jest.fn()}
+        providers={[
+          google,
+          { ...google, provider_id: "servicenow", display_name: "ServiceNow" },
+        ]}
+        canCreateInstance
+      />,
+    );
+    await user.click(screen.getByTestId("connection-instance-owned"));
+    await selectProvider(user, "ServiceNow");
+    expect(
+      screen.queryByTestId("connection-instance-owned"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/cannot be shared with the instance/),
+    ).toBeVisible();
+    await fillDetails(user);
+    await user.click(screen.getByTestId("connection-continue"));
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider_key: "servicenow",
+        ownership_mode: "user",
+      }),
+    );
+  });
+
+  it("reports the authorized row when Done closes the dialog", async () => {
+    const pending = createdRow("instance");
+    const ready: ConnectionRead = {
+      ...pending,
+      status: "ready",
+      has_credentials: true,
+      updated_at: "2026-09-18T00:01:00Z",
+    };
+    mockCreate.mockResolvedValue(pending);
+    const onConnected = jest.fn();
+    const onOpenChange = jest.fn();
+    const dialog = () => (
+      <AddConnectionDialog
+        open
+        onOpenChange={onOpenChange}
+        onConnected={onConnected}
+        providers={[google]}
+        canCreateInstance
+      />
+    );
+    const { rerender } = render(dialog());
+    const user = userEvent.setup();
+    await fillDetails(user);
+    await user.click(screen.getByTestId("connection-instance-owned"));
+    await user.click(screen.getByTestId("connection-continue"));
+    mockPoll.data = ready;
+    rerender(dialog());
+    expect(await screen.findByText("Connected")).toBeVisible();
+    await user.click(screen.getByTestId("connection-done"));
+    expect(onConnected).toHaveBeenCalledWith(ready);
+    expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
   it("offers a non-superuser no share box and always creates user-owned", async () => {

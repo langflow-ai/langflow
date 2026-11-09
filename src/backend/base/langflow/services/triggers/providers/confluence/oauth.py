@@ -1,6 +1,7 @@
 """Atlassian 3LO bound to the deployment's approved Confluence Cloud site."""
 
 import re
+from http import HTTPStatus
 
 from lfx.integrations.errors import IntegrationError
 from lfx_confluence.client import http_client, send
@@ -112,6 +113,11 @@ async def parse_token(registration, body, *, refresh):
     return token, identity
 
 
+def refresh_rejected(status_code: int, body: dict) -> bool:
+    """Recognize the rejected stored grant returned after Confluence app removal."""
+    return status_code == HTTPStatus.BAD_REQUEST and body.get("error") == "invalid_request"
+
+
 OAUTH = OAuthAdapter(
     endpoints=endpoints,
     allowed_origins=("https://auth.atlassian.com",),
@@ -122,5 +128,6 @@ OAUTH = OAuthAdapter(
     supports_pkce=False,
     required_scopes=("offline_access",),
     refresh_rejection_errors=frozenset({"unauthorized_client"}),
+    refresh_rejection_response=refresh_rejected,
     limit_refresh_scopes_to_previous=True,
 )

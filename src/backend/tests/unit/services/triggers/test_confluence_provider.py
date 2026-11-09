@@ -325,7 +325,8 @@ async def test_missing_refresh_token_explains_required_consent(monkeypatch, refr
 
 
 @pytest.mark.parametrize("refresh", [False, True])
-async def test_atlassian_unauthorized_client_requires_reconnect_only_on_refresh(monkeypatch, refresh):
+@pytest.mark.parametrize(("status_code", "error"), [(403, "unauthorized_client"), (400, "invalid_request")])
+async def test_atlassian_rejected_grant_requires_reconnect_only_on_refresh(monkeypatch, refresh, status_code, error):
     from langflow.services.connection.oauth import providers
     from langflow.services.connection.oauth.config import OAuthRegistration
     from langflow.services.triggers.providers import registry
@@ -340,7 +341,7 @@ async def test_atlassian_unauthorized_client_requires_reconnect_only_on_refresh(
         scopes=list(SCOPES),
     )
     real_client = httpx.AsyncClient
-    transport = httpx.MockTransport(lambda _request: httpx.Response(403, json={"error": "unauthorized_client"}))
+    transport = httpx.MockTransport(lambda _request: httpx.Response(status_code, json={"error": error}))
     monkeypatch.setattr(providers.httpx, "AsyncClient", lambda **kwargs: real_client(transport=transport, **kwargs))
     with pytest.raises(OAuthError) as caught:
         await providers.exchange(
@@ -350,6 +351,32 @@ async def test_atlassian_unauthorized_client_requires_reconnect_only_on_refresh(
             previous_scopes=list(SCOPES),
         )
     assert caught.value.reason == (None if refresh else "provider-unavailable")
+
+
+@pytest.mark.parametrize("status_code", [200, 401, 403, 408, 429, 500, 503])
+async def test_ambiguous_refresh_errors_do_not_expire_credentials_on_other_statuses(monkeypatch, status_code):
+    """A rate limit, outage, or differently shaped refusal cannot revoke a grant."""
+    from langflow.services.connection.oauth import providers
+    from langflow.services.connection.oauth.config import OAuthRegistration
+    from langflow.services.triggers.providers import registry
+
+    monkeypatch.setattr(registry, "all_providers", lambda: (PROVIDER,))
+    real_client = httpx.AsyncClient
+    transport = httpx.MockTransport(lambda _request: httpx.Response(status_code, json={"error": "invalid_request"}))
+    monkeypatch.setattr(providers.httpx, "AsyncClient", lambda **kwargs: real_client(transport=transport, **kwargs))
+    selected = OAuthRegistration(
+        provider="confluence",
+        client_id="operator-app",
+        client_secret="synthetic-client-secret",  # noqa: S106  # pragma: allowlist secret
+        redirect_uri="https://langflow.example/api/v1/connections/oauth/confluence/callback",
+        tenant=SITE,
+        scopes=list(SCOPES),
+    )
+
+    with pytest.raises(OAuthError) as caught:
+        await providers.exchange(selected, refresh_token="synthetic-previous", previous_scopes=list(SCOPES))  # noqa: S106
+
+    assert caught.value.reason == "provider-unavailable"
 
 
 @pytest.mark.parametrize(

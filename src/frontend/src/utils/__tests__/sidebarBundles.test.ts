@@ -123,3 +123,11 @@ it("uses the Confluence logo for its integration palette group", () => {
     icon: "Confluence",
   });
 });
+
+it("uses the ServiceNow logo for its integration palette group", () => {
+  expect(SIDEBAR_BUNDLES).toContainEqual({
+    display_name: "ServiceNow",
+    name: "servicenow",
+    icon: "ServiceNow",
+  });
+});

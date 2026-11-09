@@ -13,6 +13,7 @@ import type { ConnectionRead } from "@/controllers/API/queries/connections";
 
 export interface ConnectionRowMenuProps {
   connection: ConnectionRead;
+  canAuthorize: boolean;
   /** Only the owner (a superuser, for an instance row) may widen unattended use. */
   canAllowUnattended: boolean;
   busy: boolean;
@@ -26,6 +27,7 @@ export interface ConnectionRowMenuProps {
 
 export function ConnectionRowMenu({
   connection,
+  canAuthorize,
   canAllowUnattended,
   busy,
   onTest,
@@ -67,12 +69,14 @@ export function ConnectionRowMenu({
           <ForwardedIconComponent name="Activity" className="mr-2 h-4 w-4" />
           {t("connections.actions.test")}
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onAuthorize(connection)}>
-          <ForwardedIconComponent name="RefreshCw" className="mr-2 h-4 w-4" />
-          {status === "pending"
-            ? t("connections.actions.authorize")
-            : t("connections.actions.reauthorize")}
-        </DropdownMenuItem>
+        {canAuthorize && (
+          <DropdownMenuItem onSelect={() => onAuthorize(connection)}>
+            <ForwardedIconComponent name="RefreshCw" className="mr-2 h-4 w-4" />
+            {status === "pending"
+              ? t("connections.actions.authorize")
+              : t("connections.actions.reauthorize")}
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem onSelect={() => onRename(connection)}>
           <ForwardedIconComponent name="Pencil" className="mr-2 h-4 w-4" />
           {t("connections.actions.rename")}

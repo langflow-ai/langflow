@@ -110,6 +110,95 @@ async def connection(owner_id, *, allow=True, identity="user_delegated"):
         return row.id
 
 
+@pytest.mark.usefixtures("confluence")
+@pytest.mark.parametrize("operation", ["resolve", "health"])
+async def test_removed_atlassian_access_expires_connection_and_requests_reconnect(
+    client, active_user, logged_in_headers, monkeypatch, respx_mock, operation
+):
+    """Confluence's refused refresh expires the grant for actions and credential checks."""
+    import json
+    from datetime import datetime, timedelta, timezone
+
+    from langflow.services.connection.oauth.config import OAuthRegistration
+    from langflow.services.database.models.connection.oauth import ConnectionOAuth
+    from langflow.services.deps import get_connection_resolver_service
+    from lfx.integrations.errors import AuthExpiredError
+    from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest
+    from lfx.services.authorization.base import ExecutionPrincipal
+    from lfx_confluence.schema import SCOPES
+
+    registration = OAuthRegistration(
+        provider="confluence",
+        client_id="operator-app",
+        client_secret="synthetic-client-secret",  # noqa: S106  # pragma: allowlist secret
+        redirect_uri="https://langflow.example/api/v1/connections/oauth/confluence/callback",
+        tenant=SITE,
+        scopes=sorted(SCOPES),
+    )
+    monkeypatch.setenv(
+        "LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS",
+        json.dumps(
+            {
+                "confluence-work": registration.model_dump(mode="json", exclude={"client_secret"})
+                | {"client_secret": "synthetic-client-secret"}  # pragma: allowlist secret
+            }
+        ),
+    )
+    connection_id = await connection(active_user.id)
+    async with session_scope() as session:
+        row = await session.get(Connection, connection_id)
+        binding = ConnectionOAuth(
+            connection_id=connection_id,
+            user_id=active_user.id,
+            registration_id="confluence-work",
+            config_digest=registration.fingerprint(),
+            scopes=sorted(SCOPES),
+            expires_at=datetime.now(timezone.utc),
+        )
+        session.add(binding)
+        await session.flush()
+        await store_tokens(
+            session,
+            row,
+            {
+                "version": 1,
+                "access_token": "synthetic-confluence-access",
+                "refresh_token": "synthetic-confluence-refresh",
+                "expires_at": (datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat(),
+                "oauth": {
+                    "registration_id": "confluence-work",
+                    "config_digest": registration.fingerprint(),
+                    "generation": str(binding.generation),
+                },
+            },
+            sorted(SCOPES),
+        )
+    refused = respx_mock.post("https://auth.atlassian.com/oauth/token").mock(
+        return_value=httpx.Response(400, json={"error": "invalid_request"})
+    )
+    if operation == "health":
+        checked = await client.post(f"api/v1/connections/{connection_id}/health", headers=logged_in_headers)
+        assert checked.status_code == 200, checked.text
+        assert checked.json()["status"] == "expired"
+    else:
+        request = ConnectionResolutionRequest(
+            ref=ConnectionRef(provider="confluence", name="work"),
+            principal=ExecutionPrincipal(
+                kind="actor", user_id=str(active_user.id), actor_id=str(active_user.id), interactive=True
+            ),
+        )
+        with pytest.raises(AuthExpiredError) as caught:
+            await get_connection_resolver_service().resolve(request)
+        assert caught.value.hint == "Reconnect the integration and try again."
+    assert refused.call_count == 1
+    assert json.loads(refused.calls[0].request.content)["grant_type"] == "refresh_token"
+    visible = await client.get("api/v1/connections", headers=logged_in_headers)
+    assert visible.status_code == 200, visible.text
+    result = next(item for item in visible.json() if item["id"] == str(connection_id))
+    assert (result["status"], result["health"]) == ("expired", "unhealthy")
+    assert "synthetic-" not in visible.text
+
+
 @pytest.mark.parametrize("narrowed_scopes", [False, True])
 @pytest.mark.usefixtures("confluence")
 async def test_refresh_persists_rotated_grant_without_product_api_availability(
@@ -176,6 +265,7 @@ async def test_refresh_persists_rotated_grant_without_product_api_availability(
             user_id=trigger_owner,
             registration_id="confluence-work",
             config_digest=registration.fingerprint(),
+            scopes=sorted(previous_scopes),
             expires_at=datetime.now(timezone.utc),
         )
         session.add(binding)

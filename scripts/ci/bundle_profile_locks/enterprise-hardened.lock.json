@@ -173,6 +173,16 @@
       "resolved_version": "0.4.0"
     },
     {
+      "distribution": "lfx-servicenow",
+      "extras": [],
+      "providers": [
+        "lfx-servicenow"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-servicenow==0.1.0",
+      "resolved_version": "0.1.0"
+    },
+    {
       "distribution": "lfx-slack",
       "extras": [],
       "providers": [
@@ -210,7 +220,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:52513f24dfc09cf5",
+  "profile_digest": "sha256:72711e109063bd99",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",
@@ -228,6 +238,7 @@
     "lfx-openai",
     "lfx-openai-compatible",
     "lfx-oracle",
+    "lfx-servicenow",
     "lfx-slack",
     "lfx-toolguard",
     "lfx-vllm"

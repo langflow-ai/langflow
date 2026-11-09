@@ -12,13 +12,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { getAxiosErrorDetail } from "@/controllers/API/helpers/get-axios-error-message";
 import {
   CONNECTION_NAME_MAX_LENGTH,
@@ -59,6 +52,7 @@ import {
 import { useSlackTokenConnection } from "../hooks/useSlackTokenConnection";
 import AuthorizeStatus, { type AuthorizeState } from "./AuthorizeStatus";
 import ConnectionSetupHelp from "./ConnectionSetupHelp";
+import ProviderSelect from "./ProviderSelect";
 import RegistrationSelect from "./RegistrationSelect";
 import ScopeChecklist from "./ScopeChecklist";
 import SlackTokenFields, { ConnectionMethodSelect } from "./SlackTokenFields";
@@ -83,6 +77,8 @@ export interface AddConnectionDialogProps {
   reauthorize?: ConnectionRead;
   /** Which deployment this is (`GET /integrations`); hosted offers no pasted tokens. */
   deploymentContext?: DeploymentContext;
+  /** Let the page reveal the successfully authorized row when the dialog closes. */
+  onConnected?: (connection: ConnectionRead) => void;
 }
 
 /** Create or reconnect a connection using OAuth consent or a supported pasted token. */
@@ -93,6 +89,7 @@ export function AddConnectionDialog({
   canCreateInstance,
   reauthorize,
   deploymentContext,
+  onConnected,
 }: AddConnectionDialogProps) {
   const { t } = useTranslation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -130,6 +127,9 @@ export function AddConnectionDialog({
   const requestedScopes = useRef<string[]>([]);
 
   const provider = providers.find((item) => item.provider_id === providerId);
+  // Every ServiceNow component requires a flow-owner connection. Instance
+  // sharing would create a connection none of those components can select.
+  const requiresUserOwnership = providerId === "servicenow";
   const manualTokenProfiles = provider?.manual_token_profiles ?? [];
   const tokenProfile =
     manualTokenProfiles.find((profile) => profile.identity === identity) ??
@@ -573,7 +573,7 @@ export function AddConnectionDialog({
         provider_key: provider.provider_id,
         name,
         display_name: displayName.trim(),
-        ownership_mode: ownership,
+        ownership_mode: requiresUserOwnership ? "user" : ownership,
         executing_identity: { identity },
       });
       createdConnectionId.current = row.id;
@@ -600,6 +600,9 @@ export function AddConnectionDialog({
 
   const close = (discardPending: boolean) => {
     const row = pendingRow;
+    if (authorize?.kind === "connected") {
+      onConnected?.(authorize.connection);
+    }
     if (
       discardPending &&
       row &&
@@ -680,47 +683,16 @@ export function AddConnectionDialog({
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
               {!reauthorize && (
                 <>
-                  <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="connection-provider">
-                      {t("connections.add.provider")}
-                    </Label>
-                    <Select
-                      value={providerId}
-                      onValueChange={(value) => {
-                        setProviderId(value);
-                        // A pasted token belongs to the provider it was pasted for.
-                        slackToken.reset();
-                      }}
-                    >
-                      <SelectTrigger
-                        id="connection-provider"
-                        className="h-9 w-full"
-                        data-testid="connection-provider"
-                      >
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {providers.map((item) => (
-                          <SelectItem
-                            key={item.provider_id}
-                            value={item.provider_id}
-                            textValue={item.display_name}
-                          >
-                            <span className="flex items-center gap-2">
-                              {item.icon && (
-                                <ForwardedIconComponent
-                                  name={item.icon}
-                                  className="h-4 w-4 shrink-0"
-                                  ariaHidden
-                                />
-                              )}
-                              {item.display_name}
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <ProviderSelect
+                    providers={providers}
+                    value={providerId}
+                    onChange={(next) => {
+                      setProviderId(next);
+                      setOwnership("user");
+                      // A pasted token belongs to the provider it was pasted for.
+                      slackToken.reset();
+                    }}
+                  />
 
                   {slackToken.offersToken && !tokenOnly && (
                     <ConnectionMethodSelect
@@ -893,7 +865,7 @@ export function AddConnectionDialog({
 
               {!usesToken && registrationSelect}
 
-              {!usesToken && canCreateInstance && (
+              {!usesToken && canCreateInstance && !requiresUserOwnership && (
                 <label className="flex items-center gap-2 text-sm">
                   <Checkbox
                     checked={ownership === "instance"}
@@ -904,6 +876,11 @@ export function AddConnectionDialog({
                   />
                   {t("connections.add.instanceOwned")}
                 </label>
+              )}
+              {!usesToken && requiresUserOwnership && (
+                <p className="text-xs text-muted-foreground">
+                  {t("connections.add.servicenowUserOwned")}
+                </p>
               )}
 
               {!usesToken && (

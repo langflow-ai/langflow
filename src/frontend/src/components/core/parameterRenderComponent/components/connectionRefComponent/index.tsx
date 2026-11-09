@@ -130,7 +130,11 @@ export default function ConnectionRefComponent({
           <span className="flex w-full items-center gap-2 overflow-hidden">
             {selected && (
               <ForwardedIconComponent
-                name={STATUS_ICON[selected.connection.status] ?? "Plug"}
+                name={
+                  isUnavailableServiceNow(selected)
+                    ? "CircleOff"
+                    : (STATUS_ICON[selected.connection.status] ?? "Plug")
+                }
                 className={cn(
                   "h-4 w-4 flex-shrink-0",
                   selected.usable
@@ -251,6 +255,13 @@ export default function ConnectionRefComponent({
   );
 }
 
+function isUnavailableServiceNow(option: ConnectionOption): boolean {
+  return (
+    option.connection.provider_key === "servicenow" &&
+    option.unusableReason === "userOwnedRequired"
+  );
+}
+
 function ConnectionOptionItem({
   option,
   selected,
@@ -262,6 +273,7 @@ function ConnectionOptionItem({
 }) {
   const { t } = useTranslation();
   const { connection, usable, unusableReason } = option;
+  const unavailable = isUnavailableServiceNow(option);
   const reason =
     unusableReason === "status"
       ? t(`connections.status.${connection.status}`)
@@ -283,7 +295,11 @@ function ConnectionOptionItem({
     >
       <div className="flex w-full items-center gap-2">
         <ForwardedIconComponent
-          name={STATUS_ICON[connection.status] ?? "Plug"}
+          name={
+            unavailable
+              ? "CircleOff"
+              : (STATUS_ICON[connection.status] ?? "Plug")
+          }
           className={cn(
             "ml-2 h-4 w-4 shrink-0",
             usable ? "text-accent-emerald-foreground" : "text-muted-foreground",
@@ -304,7 +320,9 @@ function ConnectionOptionItem({
                 className="max-w-[50%] shrink-0 whitespace-nowrap text-xs"
                 title={reason}
               >
-                <span className="truncate">{reason}</span>
+                <span className="truncate">
+                  {unavailable ? t("connections.status.unavailable") : reason}
+                </span>
               </Badge>
             )}
           </div>

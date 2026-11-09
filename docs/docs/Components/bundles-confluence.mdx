@@ -121,6 +121,7 @@ These are observations of current state. Several edits between polls can produce
 | Authorization fails because no refresh token was returned | Reconnect and approve required `offline_access`. Confirm the app and registration scopes. |
 | App access was revoked or the connection needs reauthorization | Reconnect in **Settings > Connections**. Then open **Settings > Triggers** and select **Resume** for each **Ready to resume** trigger. Reconnect alone does not resume it. |
 | Background execution is denied | Allow scheduled and deployed runs on the connection, then resume the trigger. |
+| Resume is blocked by integration policy | Ask an administrator to approve the integration or unblock the trigger action, then resume it. |
 | Space ID is invalid or unapproved | Enter a numeric Space ID in the operator's allowlist. Space keys and URLs are rejected. |
 | Space exceeds a scan or retained-ID limit | Choose a smaller approved space or re-enable the trigger for a fresh baseline where appropriate. |
 | Provider outage or rate limit | Wait for retry and restore provider access. These failures alone do not mean the grant was revoked. |

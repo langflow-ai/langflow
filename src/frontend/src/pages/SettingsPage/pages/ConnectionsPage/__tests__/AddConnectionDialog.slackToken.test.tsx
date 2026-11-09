@@ -9,6 +9,7 @@ import type {
 import i18n from "@/i18n";
 import { axe } from "@/utils/a11y-test";
 import AddConnectionDialog from "../components/AddConnectionDialog";
+import { selectProvider } from "./provider-select-utils";
 
 jest.unmock("react-i18next");
 
@@ -471,11 +472,9 @@ describe("AddConnectionDialog: pasted Slack tokens", () => {
     fireEvent.change(screen.getByLabelText("Token expiration"), {
       target: { value: "2100-06-15T12:30" },
     });
-    await user.click(screen.getByTestId("connection-provider"));
-    await user.click(screen.getByRole("option", { name: "Slack" }));
+    await selectProvider(user, slack.display_name);
     expect(screen.queryByLabelText("Token expiration")).not.toBeInTheDocument();
-    await user.click(screen.getByTestId("connection-provider"));
-    await user.click(screen.getByRole("option", { name: "Pilot" }));
+    await selectProvider(user, pilot.display_name);
     expect(screen.getByLabelText("Token expiration")).toHaveValue("");
   });
 

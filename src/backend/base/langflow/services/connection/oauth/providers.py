@@ -19,6 +19,8 @@ _MAX_TOKEN_LIFETIME_SECONDS = 31536000
 _CREDENTIAL_REJECTION_ERRORS = frozenset({"invalid_grant", "invalid_refresh_token", "token_expired", "token_revoked"})
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from langflow.services.connection.oauth.config import OAuthRegistration
 
 
@@ -102,6 +104,7 @@ async def _request(
     allow_empty: bool = False,
     json_body: bool = False,
     rejections: frozenset[str] = _CREDENTIAL_REJECTION_ERRORS,
+    refresh_rejection_response: Callable[[int, dict], bool] | None = None,
 ) -> dict:
     """Send an OAuth request without mistaking provider failures for rejected credentials."""
     # No redirects or response text in errors: provider responses may echo codes/tokens.
@@ -127,7 +130,9 @@ async def _request(
         raise OAuthError(unavailable, reason="provider-unavailable")
     if response.status_code != httpx.codes.OK or body.get("error") or body.get("ok") is False:
         error = body.get("error")
-        if isinstance(error, str) and error in rejections:
+        if (isinstance(error, str) and error in rejections) or (
+            refresh_rejection_response is not None and refresh_rejection_response(response.status_code, body)
+        ):
             msg = "OAuth provider rejected the request. Reconnect the connection."
             raise OAuthError(msg)
         raise OAuthError(unavailable, reason="provider-unavailable")
@@ -164,7 +169,13 @@ async def exchange(
         # Provider-specific codes apply only to a stored grant. During consent the
         # same code can describe the app registration, which reconnecting cannot fix.
         rejections |= adapter.refresh_rejection_errors
-    body = await _request(endpoints(registration)[1], data, json_body=json_body, rejections=rejections)
+    body = await _request(
+        endpoints(registration)[1],
+        data,
+        json_body=json_body,
+        rejections=rejections,
+        refresh_rejection_response=adapter.refresh_rejection_response if refresh_token and adapter else None,
+    )
     token = body
     account = None
     if adapter is not None:
