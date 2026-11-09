@@ -378,18 +378,17 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Evaluate a choice, probability, or ordered score",
+            "description": "Evaluate one or more choices, probabilities, or ordered scores",
             "display_name": "Decision Model",
             "documentation": "",
             "edited": false,
             "field_order": [
               "model",
-              "kind",
+              "question_mode",
+              "questions_json",
               "context",
-              "question",
-              "candidates",
-              "yes_description",
-              "no_description",
+              "questions",
+              "question_input_1",
               "structured_context",
               "timeout"
             ],
@@ -397,16 +396,20 @@
             "icon": "Split",
             "legacy": false,
             "metadata": {
-              "code_hash": "3acf902d431b",
+              "code_hash": "552ddc3aa439",
               "component_class_name": "DecisionModelComponent",
               "dependencies": {
                 "dependencies": [
+                  {
+                    "name": "pydantic",
+                    "version": "2.13.5"
+                  },
                   {
                     "name": "lfx",
                     "version": null
                   }
                 ],
-                "total_dependencies": 1
+                "total_dependencies": 2
               },
               "module": "lfx.components.llm_operations.decision_model.DecisionModelComponent"
             },
@@ -431,76 +434,6 @@
             "pinned": false,
             "template": {
               "_type": "Component",
-              "candidates": {
-                "_input_type": "TableInput",
-                "advanced": false,
-                "api_editable": false,
-                "display_name": "Options",
-                "dynamic": false,
-                "info": "The options to choose between, 2 to 255. ID is a short unique key the result uses, such as refund; Label is the name the model reads.",
-                "input_types": [],
-                "is_list": true,
-                "list_add_label": "Add More",
-                "name": "candidates",
-                "override_skip": false,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "table_icon": "Table",
-                "table_schema": [
-                  {
-                    "description": "A short unique key, such as refund. The result uses it.",
-                    "display_name": "ID",
-                    "edit_mode": "inline",
-                    "name": "id",
-                    "type": "str"
-                  },
-                  {
-                    "description": "The name the model reads. Labels must differ, ignoring case.",
-                    "display_name": "Label",
-                    "edit_mode": "inline",
-                    "name": "label",
-                    "type": "str"
-                  },
-                  {
-                    "default": "",
-                    "description": "Optional: more about when this one applies.",
-                    "display_name": "Description",
-                    "edit_mode": "popover",
-                    "name": "description",
-                    "type": "str"
-                  }
-                ],
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": false,
-                "trigger_icon": "Table",
-                "trigger_text": "Open table",
-                "type": "table",
-                "value": [
-                  {
-                    "description": "Asks how something works or how to do something",
-                    "id": "question",
-                    "label": "Question"
-                  },
-                  {
-                    "description": "Reports something broken, an error or unexpected behavior",
-                    "id": "bug",
-                    "label": "Bug report"
-                  },
-                  {
-                    "description": "Asks for something new or a change",
-                    "id": "feature",
-                    "label": "Feature request"
-                  },
-                  {
-                    "description": "Invoices, payments, refunds, plans or pricing",
-                    "id": "billing",
-                    "label": "Billing"
-                  }
-                ]
-              },
               "code": {
                 "advanced": true,
                 "api_editable": false,
@@ -518,7 +451,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from lfx.base.models.decisions.runtime import decision_token_usage, evaluate_decision, request_variables_of\nfrom lfx.base.models.decisions.schema import DecisionConfigurationError, decision_request\nfrom lfx.base.models.unified_models import handle_model_input_update\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.io import DropdownInput, FloatInput, HandleInput, MessageTextInput, ModelInput, Output, TableInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.table import EditMode\n\n_KINDS = (\"Choice\", \"Boolean\", \"Score\")\n# The table's name and help follow the Decision Type.\n_TABLE = {\n    \"Choice\": (\n        \"Options\",\n        \"The options to choose between, 2 to 255. ID is a short unique key the result uses, such as refund; \"\n        \"Label is the name the model reads.\",\n    ),\n    \"Score\": (\n        \"Levels\",\n        \"Levels ordered from lowest to highest, 2 to 10. The model scores the input from 0 (the first level) up \"\n        \"to one less than the number of levels. ID is a short unique key the result uses; Label is the name the \"\n        \"model reads.\",\n    ),\n}\n# What an agent learns about this component when it is a tool.\n_RESULT_INFO = (\n    \"Answers this component's fixed question about the text you pass as context, and returns JSON. Choice gives \"\n    \"probabilities by option ID and, when the provider names one, selected_option (otherwise take the most \"\n    \"probable option); Boolean gives probability_true, the \"\n    \"probability the answer is yes, from 0 to 1; Score gives score, from 0 (the first level) up to one less than \"\n    \"the number of levels, and probabilities by level ID. confidence is the provider's own measure, not an \"\n    \"option's probability.\"\n)\n\n# Follow-ups, deferred until there is demand:\n# - Several named questions in one request, answered as one typed object. All three providers take\n#   them, but Perplexity's full model answers grouped questions jointly (an answer can change with\n#   its group) and its flash model bills the context once per question, so keep it opt-in.\n# - Images: TypeSafe `assets` behind its TypeSafe-Danger-Zone-Images header, Perplexity image parts\n#   in `state`, OpenAI image inputs. Needs size limits and SSRF checks for each format.\n# - Pinned model versions, such as pplx-decider-v1.2: policy allows models by name, so each version\n#   needs its own catalog and policy entry.\n\n\nclass DecisionModelComponent(Component):\n    \"\"\"Evaluates one judgment through the same runtime as the Smart Router.\"\"\"\n\n    display_name = \"Decision Model\"\n    description = \"Evaluate a choice, probability, or ordered score\"\n    name = \"DecisionModel\"\n    icon = \"Split\"\n\n    inputs = [\n        ModelInput(\n            model_type=\"decision\", name=\"model\", display_name=\"Decision Model\", required=True, real_time_refresh=True\n        ),\n        DropdownInput(\n            name=\"kind\",\n            display_name=\"Decision Type\",\n            options=list(_KINDS),\n            value=\"Choice\",\n            info=\"Choice picks one option. Boolean answers yes or no. Score places the input on ordered levels.\",\n            real_time_refresh=True,\n        ),\n        MessageTextInput(\n            name=\"context\",\n            display_name=\"Context\",\n            info=\"The text the question is about, such as a message or a document.\",\n            tool_mode=True,\n        ),\n        MessageTextInput(\n            name=\"question\",\n            display_name=\"Question\",\n            info='What to decide about the Context, such as \"Which team should handle this message?\"',\n            required=True,\n        ),\n        TableInput(\n            name=\"candidates\",\n            display_name=_TABLE[\"Choice\"][0],\n            # Options are typed in, not connected: connected rows arrive with NaN cells and number IDs.\n            input_types=[],\n            value=[\n                {\"id\": \"low\", \"label\": \"Low\", \"description\": \"\"},\n                {\"id\": \"medium\", \"label\": \"Medium\", \"description\": \"\"},\n                {\"id\": \"high\", \"label\": \"High\", \"description\": \"\"},\n            ],\n            info=_TABLE[\"Choice\"][1],\n            table_schema=[\n                {\n                    \"name\": \"id\",\n                    \"display_name\": \"ID\",\n                    \"type\": \"str\",\n                    \"description\": \"A short unique key, such as refund. The result uses it.\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n                {\n                    \"name\": \"label\",\n                    \"display_name\": \"Label\",\n                    \"type\": \"str\",\n                    \"description\": \"The name the model reads. Labels must differ, ignoring case.\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n                {\n                    \"name\": \"description\",\n                    \"display_name\": \"Description\",\n                    \"type\": \"str\",\n                    \"description\": \"Optional: more about when this one applies.\",\n                    \"edit_mode\": EditMode.POPOVER,\n                    \"default\": \"\",\n                },\n            ],\n        ),\n        MessageTextInput(\n            name=\"yes_description\",\n            display_name=\"What Yes Means (Optional)\",\n            info=(\n                \"Optional: what a Yes answer means. Some decision models don't accept this; if yours \"\n                \"doesn't, the run stops and asks you to clear it.\"\n            ),\n            show=False,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"no_description\",\n            display_name=\"What No Means (Optional)\",\n            info=(\n                \"Optional: what a No answer means. Some decision models don't accept this; if yours \"\n                \"doesn't, the run stops and asks you to clear it.\"\n            ),\n            show=False,\n            advanced=True,\n        ),\n        HandleInput(\n            name=\"structured_context\",\n            display_name=\"Structured Context\",\n            info=(\n                \"Optional: JSON to judge in place of Context, such as a record from another component. \"\n                \"Use Context or Structured Context, not both.\"\n            ),\n            input_types=[\"Data\", \"JSON\"],\n            advanced=True,\n        ),\n        FloatInput(\n            name=\"timeout\",\n            display_name=\"Timeout (seconds)\",\n            info=\"How long to wait for the decision model: more than 0 and at most 300 seconds.\",\n            value=60,\n            advanced=True,\n        ),\n    ]\n    outputs = [Output(name=\"result\", display_name=\"Decision Result\", method=\"evaluate\", info=_RESULT_INFO)]\n\n    def _context(self) -> str | dict:\n        \"\"\"Context as text, or Structured Context as JSON; exactly one of them.\"\"\"\n        text = str(self.context or \"\").strip()\n        structured = self.structured_context\n        # An unconnected handle holds an empty string.\n        connected = structured not in (None, \"\")\n        if isinstance(structured, Data):\n            structured = structured.data\n        # Empty JSON gives the model nothing to judge.\n        if not structured:\n            structured = None\n        if structured is None:\n            if connected or not text:\n                msg = (\n                    \"Structured Context is empty. Give the component it comes from at least one field, or use Context.\"\n                    if connected\n                    else \"Enter a Context, or connect a Structured Context.\"\n                )\n                raise DecisionConfigurationError(msg)\n            return self.context\n        if text:\n            msg = \"Use Context or Structured Context, not both.\"\n            raise DecisionConfigurationError(msg)\n        return structured\n\n    def evaluate(self) -> Data:\n        # A tweak can send anything here; the dropdown only offers these three.\n        if self.kind not in _KINDS:\n            msg = \"Pick a Decision Type: Choice, Boolean or Score.\"\n            raise DecisionConfigurationError(msg)\n        kind = self.kind.lower()\n        boolean = kind == \"boolean\"\n        request = decision_request(\n            kind=kind,\n            question=self.question,\n            context=self._context(),\n            options=self.candidates if kind == \"choice\" else (),\n            levels=self.candidates if kind == \"score\" else (),\n            # Hidden for other types, so a value left from Boolean never applies to them.\n            yes_description=(self.yes_description or \"\") if boolean else \"\",\n            no_description=(self.no_description or \"\") if boolean else \"\",\n        )\n        result = evaluate_decision(\n            request,\n            model=self.model,\n            user_id=self.user_id,\n            request_variables=request_variables_of(self),\n            timeout=self.timeout,\n        )\n        self._token_usage = decision_token_usage(result)\n        # Only what this decision returned and asked: no empty fields from the other types.\n        data = Data(\n            data={\n                **result.model_dump(mode=\"json\", exclude_none=True),\n                \"request\": request.model_dump(mode=\"json\", exclude={\"context\"}, exclude_defaults=True),\n            }\n        )\n        self.status = data\n        return data\n\n    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"Re-apply the saved Decision Type's fields after a code update.\n\n        Update rebuilds the node from the class, which shows Choice's fields, and copies only values back.\n        Without this a Boolean node came back with What Yes Means and What No Means hidden, so the run\n        dropped them.\n        \"\"\"\n        await super().update_frontend_node(new_frontend_node, current_frontend_node)\n        template = new_frontend_node.get(\"template\", {})\n        self._show_fields(template, (template.get(\"kind\") or {}).get(\"value\", \"Choice\"))\n        return new_frontend_node\n\n    def update_build_config(self, build_config: dict, field_value, field_name: str | None = None) -> dict:\n        config = handle_model_input_update(self, build_config, field_value, field_name)\n        self._show_fields(\n            config, field_value if field_name == \"kind\" else config.get(\"kind\", {}).get(\"value\", \"Choice\")\n        )\n        return config\n\n    @staticmethod\n    def _show_fields(config: dict, kind: str) -> None:\n        \"\"\"Show the table and the Yes/No meanings for this Decision Type, and name the table for it.\"\"\"\n        config[\"candidates\"][\"show\"] = kind != \"Boolean\"\n        if kind in _TABLE:\n            config[\"candidates\"][\"display_name\"], config[\"candidates\"][\"info\"] = _TABLE[kind]\n        for name in (\"yes_description\", \"no_description\"):\n            if name in config:\n                config[name][\"show\"] = kind == \"Boolean\"\n"
+                "value": "import json\nfrom copy import deepcopy\n\nfrom pydantic import ValidationError\n\nfrom lfx.base.models.decisions.providers import unique_json_object\nfrom lfx.base.models.decisions.runtime import decision_token_usage, evaluate_decision, request_variables_of\nfrom lfx.base.models.decisions.schema import (\n    DecisionBatchRequest,\n    DecisionConfigurationError,\n    DecisionQuestion,\n    configuration_summary,\n    decision_request,\n    validation_summary,\n)\nfrom lfx.base.models.unified_models import handle_model_input_update\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.io import (\n    DecisionQuestionsInput,\n    FloatInput,\n    HandleInput,\n    MessageTextInput,\n    ModelInput,\n    MultilineInput,\n    Output,\n    TabInput,\n)\nfrom lfx.schema.data import Data\nfrom lfx.schema.message import Message\n\n_KINDS = (\"Choice\", \"Noul\", \"Score\")\n_FORM, _JSON = \"Form\", \"JSON\"\n# Text fields a node held before the question list, which could be bound to a global variable.\n_LEGACY_LABELS = {\"question\": \"Question\", \"yes_description\": \"What Yes Means\", \"no_description\": \"What No Means\"}\n# Question X's text can be connected through the hidden field <prefix>X.\n_CONNECTION_PREFIX = \"question_input_\"\n# What Add question appends; a node starts with none.\n_NEW_QUESTION = {\n    \"name\": \"\",\n    \"kind\": \"Choice\",\n    \"question\": \"\",\n    \"options\": [\n        {\"id\": \"a\", \"label\": \"Option A\", \"description\": \"\"},\n        {\"id\": \"b\", \"label\": \"Option B\", \"description\": \"\"},\n    ],\n    \"levels\": [\n        {\"id\": \"low\", \"label\": \"Low\", \"description\": \"\"},\n        {\"id\": \"medium\", \"label\": \"Medium\", \"description\": \"\"},\n        {\"id\": \"high\", \"label\": \"High\", \"description\": \"\"},\n    ],\n    \"yes_description\": \"\",\n    \"no_description\": \"\",\n}\n\n# What an agent learns about this component when it is a tool.\n_RESULT_INFO = (\n    \"Answers the configured questions about the context and returns JSON. Several questions return an answers \"\n    \"object keyed by question name, with shared usage counted once. Choice gives \"\n    \"probabilities by option ID and, when the provider names one, selected_option (otherwise take the most \"\n    \"probable option); Noul gives probability_true, the \"\n    \"probability the answer is yes, from 0 to 1; Score gives score, from 0 (the first level) up to one less than \"\n    \"the number of levels, and probabilities by level ID. confidence is the provider's own measure, not an \"\n    \"option's probability.\"\n)\n\n# Follow-ups, deferred until there is demand:\n# - Images: TypeSafe `assets` behind its TypeSafe-Danger-Zone-Images header, Perplexity image parts\n#   in `state`, OpenAI image inputs. Needs size limits and SSRF checks for each format.\n# - Pinned model versions, such as pplx-decider-v1.2: policy allows models by name, so each version\n#   needs its own catalog and policy entry.\n\n\nclass DecisionModelComponent(Component):\n    \"\"\"Evaluates named judgments through the same runtime as the Smart Router.\"\"\"\n\n    display_name = \"Decision Model\"\n    description = \"Evaluate one or more choices, probabilities, or ordered scores\"\n    name = \"DecisionModel\"\n    icon = \"Split\"\n\n    inputs = [\n        ModelInput(\n            model_type=\"decision\", name=\"model\", display_name=\"Decision Model\", required=True, real_time_refresh=True\n        ),\n        TabInput(\n            name=\"question_mode\",\n            display_name=\"Questions Mode\",\n            options=[_FORM, _JSON],\n            value=_FORM,\n            real_time_refresh=True,\n            info=\"Fill in the questions here, or paste Questions JSON. All questions share the same Context.\",\n        ),\n        MultilineInput(\n            name=\"questions_json\",\n            display_name=\"Questions JSON\",\n            advanced=True,\n            show=False,\n            value=\"\",\n            info=\"In JSON mode, paste an object keyed by question name. Each value uses kind (choice, noul, \"\n            \"score), question, and options or levels as arrays of {id, label, description}. Noul descriptions \"\n            'are optional. Example: {\"urgent\":{\"kind\":\"noul\",\"question\":\"Is this urgent?\"}}. '\n            \"This replaces the form for this run; its values are preserved.\",\n        ),\n        MessageTextInput(\n            name=\"context\",\n            display_name=\"Context\",\n            info=\"The text the questions are about, such as a message or a document.\",\n            tool_mode=True,\n        ),\n        DecisionQuestionsInput(\n            name=\"questions\",\n            display_name=\"Questions\",\n            value=[],\n            new_question=_NEW_QUESTION,\n            connection_prefix=_CONNECTION_PREFIX,\n            info=\"Each question has its own Decision Type: Choice picks one option, Noul answers yes or no, and \"\n            \"Score places the input on ordered levels. With more than one question, they are sent in one call and \"\n            \"the result holds each answer under its Name, which defaults to q1, q2 and so on.\",\n        ),\n        # The connection of a question migrated from the single-question fields (id \"1\"), and the field\n        # the editor copies for each question it adds; the handle is drawn on that question's row.\n        MessageTextInput(\n            name=f\"{_CONNECTION_PREFIX}1\",\n            display_name=\"Question 1\",\n            info=\"Connect a component to supply this question's text.\",\n            input_types=[\"Message\"],\n            show=False,\n        ),\n        HandleInput(\n            name=\"structured_context\",\n            display_name=\"Structured Context\",\n            info=(\n                \"Optional: JSON to judge in place of Context, such as a record from another component. \"\n                \"Use Context or Structured Context, not both.\"\n            ),\n            input_types=[\"Data\", \"JSON\"],\n            advanced=True,\n        ),\n        FloatInput(\n            name=\"timeout\",\n            display_name=\"Timeout (seconds)\",\n            info=\"How long to wait for the decision model: more than 0 and at most 300 seconds.\",\n            value=60,\n            advanced=True,\n        ),\n    ]\n    outputs = [Output(name=\"result\", display_name=\"Decision Result\", method=\"evaluate\", info=_RESULT_INFO)]\n\n    def _context(self) -> str | dict:\n        \"\"\"Context as text, or Structured Context as JSON; exactly one of them.\"\"\"\n        text = str(self.context or \"\").strip()\n        structured = self.structured_context\n        # An unconnected handle holds an empty string.\n        connected = structured not in (None, \"\")\n        if isinstance(structured, Data):\n            structured = structured.data\n        # Empty JSON gives the model nothing to judge.\n        if not structured:\n            structured = None\n        if structured is None:\n            if connected or not text:\n                msg = (\n                    \"Structured Context is empty. Give the component it comes from at least one field, or use Context.\"\n                    if connected\n                    else \"Enter a Context, or connect a Structured Context.\"\n                )\n                raise DecisionConfigurationError(msg)\n            return self.context\n        if text:\n            msg = \"Use Context or Structured Context, not both.\"\n            raise DecisionConfigurationError(msg)\n        return structured\n\n    def _json_request(self, context: str | dict) -> DecisionBatchRequest:\n        try:\n            questions = json.loads(self.questions_json or \"\", object_pairs_hook=unique_json_object)\n        except (ValueError, TypeError) as exc:\n            msg = f\"Questions JSON must be a valid JSON object keyed by question name: {exc}\"\n            raise DecisionConfigurationError(msg) from None\n        try:\n            return DecisionBatchRequest(context=context, questions=questions)\n        except ValidationError as exc:\n            msg = f\"Check Questions: {validation_summary(exc)}\"\n            raise DecisionConfigurationError(msg) from None\n\n    def _connected_text(self, field: str) -> str | None:\n        \"\"\"The text a component connected to this hidden field sends, if any.\"\"\"\n        value = self._attributes.get(field)\n        if value in (None, \"\"):\n            return None\n        return value.text if isinstance(value, Message) else str(value)\n\n    def _question_fields(self, item, number: int) -> dict:\n        \"\"\"One question's fields, only those its Decision Type uses.\"\"\"\n        # A tweak can send anything here; the editor only offers these three types.\n        kind = item.get(\"kind\") if isinstance(item, dict) else None\n        if kind not in _KINDS:\n            msg = f\"Pick a Decision Type for Question {number}: Choice, Noul or Score.\"\n            raise DecisionConfigurationError(msg)\n        kind = kind.lower()\n        noul = kind == \"noul\"\n        connected = {text: self._connected_text(field) for text, field in _connection_fields(item).items()}\n        item = {**item, **{text: value for text, value in connected.items() if value is not None}}\n        # A migrated field still holding the name of the global variable it was bound to; see _legacy_question.\n        for field, variable in (item.get(\"global_variables\") or {}).items():\n            if (field == \"question\" or noul) and item.get(field) == variable:\n                msg = (\n                    f\"Question {number}'s {_LEGACY_LABELS.get(field, field)} was read from the global variable \"\n                    f\"{variable!r}, which question cards can't use. Type the text into the card, or clear it.\"\n                )\n                raise DecisionConfigurationError(msg)\n        return {\n            \"kind\": kind,\n            \"question\": item.get(\"question\"),\n            \"options\": (item.get(\"options\") or ()) if kind == \"choice\" else (),\n            \"levels\": (item.get(\"levels\") or ()) if kind == \"score\" else (),\n            # Ignored for other types, so a value left from Noul never applies to them.\n            \"yes_description\": (item.get(\"yes_description\") or \"\") if noul else \"\",\n            \"no_description\": (item.get(\"no_description\") or \"\") if noul else \"\",\n        }\n\n    def _request(self):\n        context = self._context()\n        if self.question_mode == _JSON:\n            return self._json_request(context)\n        if self.question_mode != _FORM:\n            msg = \"Pick a Questions Mode: Form or JSON.\"\n            raise DecisionConfigurationError(msg)\n        items = self.questions\n        if not isinstance(items, list) or not items:\n            msg = \"Add a question.\"\n            raise DecisionConfigurationError(msg)\n        if len(items) == 1:\n            return decision_request(context=context, **self._question_fields(items[0], 1))\n        questions = {}\n        for number, item in enumerate(items, start=1):\n            fields = self._question_fields(item, number)\n            name = str(item.get(\"name\") or \"\").strip() or f\"q{number}\"\n            if name in questions:\n                msg = f\"Two questions are named {name!r}. Give each question a different Name.\"\n                raise DecisionConfigurationError(msg)\n            try:\n                questions[name] = DecisionQuestion(**fields)\n            except ValidationError as exc:\n                msg = f\"Question {number}: {configuration_summary(exc)}\"\n                raise DecisionConfigurationError(msg) from None\n        try:\n            return DecisionBatchRequest(context=context, questions=questions)\n        except ValidationError as exc:\n            raise DecisionConfigurationError(configuration_summary(exc)) from None\n\n    def evaluate(self) -> Data:\n        request = self._request()\n        result = evaluate_decision(\n            request,\n            model=self.model,\n            user_id=self.user_id,\n            request_variables=request_variables_of(self),\n            timeout=self.timeout,\n        )\n        self._token_usage = decision_token_usage(result)\n        # Only what this decision returned and asked: no empty fields from the other types.\n        data = Data(\n            data={\n                **result.model_dump(mode=\"json\", exclude_none=True),\n                \"request\": request.model_dump(mode=\"json\", exclude={\"context\"}, exclude_defaults=True),\n            }\n        )\n        self.status = data\n        return data\n\n    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"Carry a node saved before the question list over to it, then show the saved mode's fields.\n\n        Update rebuilds the node from the class and copies back only values whose field names match.\n        \"\"\"\n        await super().update_frontend_node(new_frontend_node, current_frontend_node)\n        template = new_frontend_node.get(\"template\", {})\n        saved = current_frontend_node.get(\"template\", {})\n        if (saved.get(\"questions\") or {}).get(\"type\") != \"decision_questions\":\n            template[\"questions\"][\"value\"] = [_legacy_question(saved)] if \"question\" in saved else []\n            if \"question\" in saved:\n                # The old fields keep their names as the migrated question's connections, so an edge\n                # wired into one stays connected.\n                for text, name in _connection_fields(template[\"questions\"][\"value\"][0]).items():\n                    template[name] = {\n                        **deepcopy(template[f\"{_CONNECTION_PREFIX}1\"]),\n                        \"name\": name,\n                        \"display_name\": \"Question 1\" if text == \"question\" else _LEGACY_LABELS[text],\n                    }\n        for item in template[\"questions\"][\"value\"]:\n            if isinstance(item, dict) and item.get(\"kind\") == \"Boolean\":\n                # The yes-or-no type was renamed Noul, the providers' own name for it.\n                item[\"kind\"] = \"Noul\"\n        # Each question's connection fields live on the node; the class has only the one to copy.\n        for item in template[\"questions\"][\"value\"]:\n            for name in _connection_fields(item).values() if isinstance(item, dict) else ():\n                if name not in template and name in saved:\n                    template[name] = deepcopy(saved[name])\n        if template[\"question_mode\"][\"value\"] not in {_FORM, _JSON}:\n            template[\"question_mode\"][\"value\"] = _FORM\n        self._show_fields(template)\n        return new_frontend_node\n\n    def update_build_config(self, build_config: dict, field_value, field_name: str | None = None) -> dict:\n        config = handle_model_input_update(self, build_config, field_value, field_name)\n        if field_name == \"question_mode\":\n            config[\"question_mode\"][\"value\"] = field_value\n        self._show_fields(config)\n        return config\n\n    @staticmethod\n    def _show_fields(config: dict) -> None:\n        \"\"\"Show the question list in Form mode and Questions JSON in JSON mode, keeping both values.\"\"\"\n        form = config.get(\"question_mode\", {}).get(\"value\", _FORM) != _JSON\n        if \"questions\" in config:\n            config[\"questions\"][\"show\"] = form\n        if \"questions_json\" in config:\n            config[\"questions_json\"][\"show\"] = not form\n            config[\"questions_json\"][\"advanced\"] = form\n\n\ndef _connection_fields(item: dict) -> dict[str, str]:\n    \"\"\"The hidden node fields a question's texts can be connected through, keyed by the text each supplies.\n\n    Its question text's is the field it names or <prefix><id>; a Noul migrated from the old fields\n    also names its What Yes Means and What No Means fields.\n    \"\"\"\n    fields = {\n        \"question\": item.get(\"input_field\") or (f\"{_CONNECTION_PREFIX}{item['id']}\" if item.get(\"id\") else None),\n        \"yes_description\": item.get(\"yes_input_field\"),\n        \"no_description\": item.get(\"no_input_field\"),\n    }\n    return {text: field for text, field in fields.items() if field}\n\n\ndef _legacy_question(saved: dict) -> dict:\n    \"\"\"The one question a node held in separate fields before the question list.\n\n    A question card has no global variables, so a field bound to one keeps the variable's name and\n    records the binding; the run refuses it until the card holds real text.\n    \"\"\"\n\n    def value(name: str, default):\n        return deepcopy((saved.get(name) or {}).get(\"value\", default))\n\n    bound = {\n        name: value(name, \"\")\n        for name in _LEGACY_LABELS\n        if (saved.get(name) or {}).get(\"load_from_db\") and value(name, \"\")\n    }\n\n    kind = value(\"kind\", \"Choice\")\n    kind = \"Noul\" if kind == \"Boolean\" else kind\n    connections = {\"input_field\": \"question\"}\n    if kind == \"Noul\":\n        # What Yes Means and What No Means showed, and could be connected, only on a yes-or-no node.\n        for answer in (\"yes\", \"no\"):\n            if f\"{answer}_description\" in saved:\n                connections[f\"{answer}_input_field\"] = f\"{answer}_description\"\n    options = value(\"candidates\", _NEW_QUESTION[\"options\"])\n    levels = value(\"levels\", _NEW_QUESTION[\"levels\"])\n    if \"levels\" not in saved and kind == \"Score\":\n        # Older Score nodes stored their rubric in the shared candidates field.\n        options, levels = deepcopy(_NEW_QUESTION[\"options\"]), options\n    return {\n        **deepcopy(_NEW_QUESTION),\n        \"id\": \"1\",\n        **connections,\n        \"kind\": kind,\n        \"question\": value(\"question\", \"\"),\n        \"options\": options,\n        \"levels\": levels,\n        \"yes_description\": value(\"yes_description\", \"\"),\n        \"no_description\": value(\"no_description\", \"\"),\n        **({\"global_variables\": bound} if bound else {}),\n    }\n"
               },
               "context": {
                 "_input_type": "MessageTextInput",
@@ -526,7 +459,7 @@
                 "api_editable": false,
                 "display_name": "Context",
                 "dynamic": false,
-                "info": "The text the question is about, such as a message or a document.",
+                "info": "The text the questions are about, such as a message or a document.",
                 "input_types": [
                   "Message"
                 ],
@@ -545,36 +478,6 @@
                 "track_in_telemetry": false,
                 "type": "str",
                 "value": ""
-              },
-              "kind": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "api_editable": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Decision Type",
-                "dynamic": false,
-                "external_options": {},
-                "info": "Choice picks one option. Boolean answers yes or no. Score places the input on ordered levels.",
-                "name": "kind",
-                "options": [
-                  "Choice",
-                  "Boolean",
-                  "Score"
-                ],
-                "options_metadata": [],
-                "override_skip": false,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "toggle": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "str",
-                "value": "Choice"
               },
               "model": {
                 "_input_type": "ModelInput",
@@ -626,20 +529,20 @@
                   }
                 ]
               },
-              "no_description": {
+              "question_input_1": {
                 "_input_type": "MessageTextInput",
-                "advanced": true,
+                "advanced": false,
                 "api_editable": false,
-                "display_name": "What No Means (Optional)",
+                "display_name": "Question 1",
                 "dynamic": false,
-                "info": "Optional: what a No answer means. Some decision models don't accept this; if yours doesn't, the run stops and asks you to clear it.",
+                "info": "Connect a component to supply this question's text.",
                 "input_types": [
                   "Message"
                 ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
-                "name": "no_description",
+                "name": "question_input_1",
                 "override_skip": false,
                 "placeholder": "",
                 "required": false,
@@ -652,31 +555,114 @@
                 "type": "str",
                 "value": ""
               },
-              "question": {
-                "_input_type": "MessageTextInput",
+              "question_mode": {
+                "_input_type": "TabInput",
                 "advanced": false,
                 "api_editable": false,
-                "display_name": "Question",
+                "display_name": "Questions Mode",
                 "dynamic": false,
-                "info": "What to decide about the Context, such as \"Which team should handle this message?\"",
+                "info": "Fill in the questions here, or paste Questions JSON. All questions share the same Context.",
+                "name": "question_mode",
+                "options": [
+                  "Form",
+                  "JSON"
+                ],
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "tab",
+                "value": "Form"
+              },
+              "questions": {
+                "_input_type": "DecisionQuestionsInput",
+                "advanced": false,
+                "api_editable": false,
+                "connection_prefix": "question_input_",
+                "display_name": "Questions",
+                "dynamic": false,
+                "info": "Each question has its own Decision Type: Choice picks one option, Noul answers yes or no, and Score places the input on ordered levels. With more than one question, they are sent in one call and the result holds each answer under its Name, which defaults to q1, q2 and so on.",
+                "name": "questions",
+                "new_question": {
+                  "kind": "Choice",
+                  "levels": [
+                    {
+                      "description": "",
+                      "id": "low",
+                      "label": "Low"
+                    },
+                    {
+                      "description": "",
+                      "id": "medium",
+                      "label": "Medium"
+                    },
+                    {
+                      "description": "",
+                      "id": "high",
+                      "label": "High"
+                    }
+                  ],
+                  "name": "",
+                  "no_description": "",
+                  "options": [
+                    {
+                      "description": "",
+                      "id": "a",
+                      "label": "Option A"
+                    },
+                    {
+                      "description": "",
+                      "id": "b",
+                      "label": "Option B"
+                    }
+                  ],
+                  "question": "",
+                  "yes_description": ""
+                },
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "decision_questions",
+                "value": []
+              },
+              "questions_json": {
+                "_input_type": "MultilineInput",
+                "advanced": true,
+                "ai_enabled": false,
+                "api_editable": false,
+                "copy_field": false,
+                "display_name": "Questions JSON",
+                "dynamic": false,
+                "info": "In JSON mode, paste an object keyed by question name. Each value uses kind (choice, noul, score), question, and options or levels as arrays of {id, label, description}. Noul descriptions are optional. Example: {\"urgent\":{\"kind\":\"noul\",\"question\":\"Is this urgent?\"}}. This replaces the form for this run; its values are preserved.",
                 "input_types": [
                   "Message"
                 ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
-                "name": "question",
+                "multiline": true,
+                "name": "questions_json",
                 "override_skip": false,
+                "password": false,
                 "placeholder": "",
-                "required": true,
-                "show": true,
+                "required": false,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "track_in_telemetry": false,
                 "type": "str",
-                "value": "What kind of message is this?"
+                "value": ""
               },
               "structured_context": {
                 "_input_type": "HandleInput",
@@ -723,32 +709,6 @@
                 "track_in_telemetry": true,
                 "type": "float",
                 "value": 60.0
-              },
-              "yes_description": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "api_editable": false,
-                "display_name": "What Yes Means (Optional)",
-                "dynamic": false,
-                "info": "Optional: what a Yes answer means. Some decision models don't accept this; if yours doesn't, the run stops and asks you to clear it.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "yes_description",
-                "override_skip": false,
-                "placeholder": "",
-                "required": false,
-                "show": false,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "track_in_telemetry": false,
-                "type": "str",
-                "value": ""
               }
             },
             "tool_mode": false
