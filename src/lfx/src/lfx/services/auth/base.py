@@ -19,11 +19,26 @@ if TYPE_CHECKING:
     from datetime import timedelta
     from uuid import UUID
 
+    from lfx.services.authorization.base import ExecutionPrincipal
+
 
 class BaseAuthService(Service, abc.ABC):
     """Abstract base class for authentication services."""
 
     name = ServiceType.AUTH_SERVICE.value
+
+    async def validate_execution_user(
+        self,
+        user_id: str | UUID | None,
+        *,
+        principal: ExecutionPrincipal | None = None,
+        db: Any | None = None,
+    ) -> None:
+        """Recheck a running identity when the host maintains a user store.
+
+        Standalone LFX has no user lifecycle to enforce. Hosts with native users
+        override this check before tool calls and persistent side effects.
+        """
 
     @abc.abstractmethod
     async def authenticate_with_credentials(

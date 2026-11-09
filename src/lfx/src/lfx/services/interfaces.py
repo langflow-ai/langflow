@@ -63,6 +63,12 @@ class AuthUserProtocol(Protocol):
 class AuthServiceProtocol(Protocol):
     """Protocol for auth service (minimal surface for dependency injection)."""
 
+    async def validate_execution_user(
+        self, user_id: str | UUID | None, *, principal: Any = None, db: Any = None
+    ) -> None:
+        """Recheck the host's persisted execution identity before side effects."""
+        ...
+
     @abstractmethod
     async def get_current_user(
         self,

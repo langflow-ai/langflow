@@ -294,6 +294,7 @@ async def _safe_audit_directory_reconciliation(
 
 if TYPE_CHECKING:
     from cryptography.fernet import Fernet, MultiFernet
+    from lfx.services.authorization.base import ExecutionPrincipal
     from lfx.services.settings.service import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -1311,6 +1312,36 @@ class AuthService(BaseAuthService):
             return None
         set_current_model_provider_policy_context(user_id=current_user.id, attributes={"is_superuser": True})
         return current_user
+
+    async def validate_execution_user(
+        self,
+        user_id: str | UUID | None,
+        *,
+        principal: ExecutionPrincipal | None = None,
+        db: AsyncSession | None = None,
+    ) -> None:
+        from sqlmodel import select
+
+        identities = {user_id}
+        if principal is not None and principal.kind != "anonymous_public":
+            identities.update((principal.user_id, principal.actor_id))
+        try:
+            ids = {UUID(str(identity)) for identity in identities if identity is not None}
+        except ValueError as exc:
+            raise HTTPException(status_code=401, detail="Invalid execution user") from exc
+        if not ids:
+            raise HTTPException(status_code=401, detail="Execution user is required")
+
+        async def validate(session: AsyncSession) -> None:
+            result = await session.exec(select(User.id).where(User.id.in_(ids), User.is_active == True))  # noqa: E712
+            if set(result.all()) != ids:
+                raise HTTPException(status_code=401, detail="Execution user is inactive or no longer exists")
+
+        if db is not None:
+            await validate(db)
+        else:
+            async with session_scope() as session:
+                await validate(session)
 
     async def get_webhook_user(self, flow_id: str, request: Request) -> UserRead:
         settings_service = self.settings

@@ -20,6 +20,7 @@ from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.message import Message
 from lfx.serialization.serialization import serialize
+from lfx.utils.async_helpers import run_until_complete
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -137,6 +138,11 @@ def _build_output_function(
     _tool_input_names = [inp.name for inp in component.inputs if getattr(inp, "tool_mode", False)]
 
     def output_function(*args, **kwargs):
+        try:
+            run_until_complete(_validate_execution_user(component))
+        except Exception as exc:
+            msg = "Execution user is inactive or unavailable"
+            raise ToolException(msg) from exc
         # Map positional args to keyword args using tool_mode input names
         if args:
             for i, val in enumerate(args):
@@ -199,6 +205,11 @@ def _build_output_async_function(
     _tool_input_names = [inp.name for inp in component.inputs if getattr(inp, "tool_mode", False)]
 
     async def output_function(*args, **kwargs):
+        try:
+            await _validate_execution_user(component)
+        except Exception as exc:
+            msg = "Execution user is inactive or unavailable"
+            raise ToolException(msg) from exc
         # Map positional args to keyword args using tool_mode input names
         if args:
             for i, val in enumerate(args):
@@ -244,6 +255,18 @@ def _build_output_async_function(
         return serialize(result)
 
     return output_function
+
+
+async def _validate_execution_user(component: Component) -> None:
+    from lfx.graph.graph.base import Graph
+    from lfx.services.deps import get_auth_service
+
+    graph = getattr(component, "graph", None)
+    if not isinstance(graph, Graph):
+        return
+    auth = get_auth_service()
+    if auth is not None:
+        await auth.validate_execution_user(graph.user_id, principal=getattr(graph, "execution_principal", None))
 
 
 def _format_tool_name(name: str):
