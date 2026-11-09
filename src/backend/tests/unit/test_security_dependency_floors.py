@@ -199,7 +199,7 @@ def test_workspace_security_overrides_enforce_current_python_floors() -> None:
     overrides = project["tool"]["uv"]["override-dependencies"]
 
     oauthlib = _requirement(constraints, "oauthlib")
-    _assert_floor(oauthlib, "4.0.0")
+    _assert_floor(oauthlib, "4.0.1")
     _assert_specifier(oauthlib, "<", "5.0.0")
 
     pyjwt = _requirement(overrides, "PyJWT")
@@ -222,7 +222,7 @@ def test_workspace_security_overrides_enforce_current_python_floors() -> None:
     with (REPO_ROOT / "uv.lock").open("rb") as lock_file:
         packages = tomllib.load(lock_file)["package"]
     for name, minimum in (
-        ("oauthlib", "4.0.0"),
+        ("oauthlib", "4.0.1"),
         ("pyjwt", "2.15.1"),
         ("urllib3", "2.8.0"),
         ("litellm", "1.103.10"),
@@ -245,11 +245,11 @@ def test_published_packages_enforce_current_python_floors() -> None:
     google_dependencies = _load_pyproject("src/bundles/google/pyproject.toml")["project"]["dependencies"]
 
     oauthlib = _requirement(root_dependencies, "oauthlib")
-    _assert_floor(oauthlib, "4.0.0")
+    _assert_floor(oauthlib, "4.0.1")
     _assert_specifier(oauthlib, "<", "5.0.0")
 
     google_oauthlib = _requirement(google_dependencies, "oauthlib")
-    _assert_floor(google_oauthlib, "4.0.0")
+    _assert_floor(google_oauthlib, "4.0.1")
     _assert_specifier(google_oauthlib, "<", "5.0.0")
 
     for requirements in (base_project["dependencies"], lfx_dependencies):
