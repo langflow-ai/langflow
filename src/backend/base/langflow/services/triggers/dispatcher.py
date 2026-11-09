@@ -27,6 +27,13 @@ from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 from uuid import NAMESPACE_URL, uuid5
 
+from lfx.integrations.errors import (
+    AuthExpiredError,
+    ConnectionNotAuthorizedError,
+    ConnectionUnresolvedError,
+    IntegrationPolicyBlockedError,
+    ProviderUnavailableError,
+)
 from lfx.log.logger import logger
 from sqlmodel import col, func, select, update
 
@@ -40,18 +47,19 @@ from langflow.services.database.models.trigger.schemas import (
 from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.triggers import leases
 from langflow.services.triggers.binding import resolve_binding
+from langflow.services.triggers.connection_recovery import record_connection_failure
 from langflow.services.triggers.constants import (
+    CONNECTION_NOT_AUTHORIZED_ERROR,
     DISPATCHER_LEASE_NAME,
     FAMILY_TRIGGER_LISTENER,
-    GOOGLE_SOURCE_KINDS,
-    MICROSOFT_SOURCE_KINDS,
-    PUSH_MECHANISMS,
     TRIGGER_EVENT_FIELD,
 )
 from langflow.services.triggers.correlation import derive_session_id
+from langflow.services.triggers.error_codes import CodedTriggerError, TriggerErrorCode
 from langflow.services.triggers.errors import BindingUnsupportedError
 from langflow.services.triggers.ledger import purge_events
-from langflow.services.triggers.principal import connection_preflight, family_for
+from langflow.services.triggers.principal import connection_preflight, family_for, provider_availability_denial
+from langflow.services.triggers.providers.registry import collecting_kinds, push_mechanisms, source_kinds
 from langflow.services.triggers.source_delivery import SOURCE_HINT_FIELD
 
 if TYPE_CHECKING:
@@ -128,7 +136,7 @@ async def _due_trigger_ids(session: AsyncSession, *, limit: int, source_hints: b
     # Pending source activations may receive hints, but cannot execute until
     # baseline collection and watch creation have both committed.
     statement = statement.where(
-        ~col(Trigger.kind).in_(MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS)
+        ~col(Trigger.kind).in_(source_kinds())
         | ~col(Trigger.state).in_(
             [TriggerState.PENDING.value, TriggerState.ERROR.value, TriggerState.NEEDS_RECONNECT.value]
         )
@@ -218,7 +226,7 @@ async def claim_batch(
         trigger = await _lock_trigger(session, trigger_id)
         if trigger is None:  # pragma: no cover - FK cascade makes this unreachable
             continue
-        if trigger.kind in MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS and trigger.state in {
+        if trigger.kind in source_kinds() and trigger.state in {
             TriggerState.PENDING.value,
             TriggerState.ERROR.value,
             TriggerState.NEEDS_RECONNECT.value,
@@ -459,6 +467,8 @@ async def _record_dispatched(
     event.lease_expires_at = None
     event.updated_at = _now()
     trigger.last_fired_at = _now()
+    if trigger.last_error in {IntegrationPolicyBlockedError.code, ProviderUnavailableError.code}:
+        trigger.last_error = None
     session.add_all([event, trigger])
     await session.flush()
 
@@ -534,7 +544,7 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
     if await _recover_submitted_job(session, trigger=trigger, event=event):
         return
 
-    if trigger.kind in MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS and trigger.state in {
+    if trigger.kind in source_kinds() and trigger.state in {
         TriggerState.PENDING.value,
         TriggerState.ERROR.value,
         TriggerState.NEEDS_RECONNECT.value,
@@ -554,6 +564,10 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
     owner = await session.get(User, trigger.user_id)
     if owner is None or not owner.is_active:
         await _terminalize(session, event=event, state=TriggerEventState.FAILED, error="owner_inactive")
+        return
+
+    if provider_availability_denial(trigger) is not None:
+        await _defer_unavailable_provider(session, trigger=trigger, event=event)
         return
 
     if (event.payload or {}).get(SOURCE_HINT_FIELD):
@@ -583,6 +597,9 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
             return
         await _fence_event(session, event)
         await _terminalize(session, event=event, state=TriggerEventState.COMPLETED)
+        if trigger.last_error == ProviderUnavailableError.code:
+            trigger.last_error = None
+            session.add(trigger)
         return
 
     try:
@@ -597,17 +614,76 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
         return
 
     denial = await connection_preflight(session, trigger, family=family)
+    if denial is None:
+        from langflow.services.triggers.providers.registry import get_provider
+
+        extension = get_provider(trigger.provider or "")
+        if extension is not None and extension.prepare_delivery is not None:
+            from langflow.services.triggers.listeners.supervisor import is_local_configuration_failure
+            from langflow.services.triggers.source_clients import source_lease
+
+            try:
+                lease = await source_lease(session, trigger, family=family)
+                accepted = await extension.prepare_delivery(trigger, lease, (event.payload or {}).get("delivery") or {})
+                if type(accepted) is not bool:
+                    raise TypeError
+            except (AuthExpiredError, ConnectionNotAuthorizedError, IntegrationPolicyBlockedError) as exc:
+                denial = exc
+            except Exception as exc:  # noqa: BLE001 - provider checks must preserve retryable deliveries
+                if isinstance(exc, ConnectionUnresolvedError) and not is_local_configuration_failure(exc):
+                    denial = exc
+                elif isinstance(exc, CodedTriggerError) and exc.code == TriggerErrorCode.CONNECTION_UNUSABLE.value:
+                    denial = AuthExpiredError(provider=trigger.provider)
+                else:
+                    await _fence_event(session, event)
+                    await _schedule_retry(
+                        session,
+                        event=event,
+                        max_attempts=trigger.max_attempts,
+                        error=f"delivery_check_failed:{type(exc).__name__}",
+                        retry_after=getattr(exc, "retry_after", None),
+                    )
+                    return
+            else:
+                if not accepted:
+                    await _fence_event(session, event)
+                    await _terminalize(session, event=event, state=TriggerEventState.COMPLETED)
+                    return
     if denial is not None:
+        await _fence_event(session, event)
+        if isinstance(denial, ProviderUnavailableError):
+            await _defer_unavailable_provider(session, trigger=trigger, event=event)
+            return
+        if isinstance(denial, IntegrationPolicyBlockedError):
+            # Policy approval cannot be repaired by reconnecting credentials.
+            # Refuse this event but leave the trigger armed so later deliveries
+            # resume after the operator unblocks its capability.
+            await _terminalize(session, event=event, state=TriggerEventState.FAILED, error=denial.code)
+            trigger.last_error = denial.code
+            session.add(trigger)
+            await session.flush()
+            return
         # Fail closed, and say so on the trigger: an unattended run must never
         # fall back to a weaker identity when its connection refuses one.
-        await _terminalize(session, event=event, state=TriggerEventState.FAILED, error="connection_not_authorized")
+        error = (
+            TriggerErrorCode.CONNECTION_UNUSABLE.value
+            if isinstance(denial, AuthExpiredError)
+            else CONNECTION_NOT_AUTHORIZED_ERROR
+        )
+        await _terminalize(session, event=event, state=TriggerEventState.FAILED, error=error)
         trigger.state = TriggerState.NEEDS_RECONNECT.value
-        trigger.last_error = "connection_not_authorized"
+        trigger.last_error = error
+        trigger.updated_at = datetime.now(timezone.utc)
+        record_connection_failure(
+            trigger,
+            failed_at=trigger.updated_at,
+            consent_required=(
+                isinstance(denial, ConnectionNotAuthorizedError) and denial.reason == "non-interactive-opt-in-required"
+            ),
+        )
         session.add(trigger)
         await session.flush()
-        await logger.awarning(
-            "Trigger %s cannot run unattended: its connection does not allow non-interactive use", trigger.id
-        )
+        await logger.awarning("Trigger %s cannot run unattended. Connection failure %s", trigger.id, error)
         return
 
     request = build_submit_request(trigger=trigger, event=event, binding_data=binding.data, family=family)
@@ -634,6 +710,20 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
 
     await _fence_event(session, event)
     await _record_dispatched(session, trigger=trigger, event=event, job_id=job_id, session_id=session_id)
+
+
+async def _defer_unavailable_provider(session: AsyncSession, *, trigger: Trigger, event: TriggerEvent) -> None:
+    """Keep queued work while an operator reloads the provider, without consuming attempts."""
+    await _fence_event(session, event)
+    event.state = TriggerEventState.PENDING.value
+    event.error = ProviderUnavailableError.code
+    event.lease_owner = None
+    event.lease_expires_at = None
+    event.available_at = _now() + timedelta(seconds=30)
+    event.updated_at = _now()
+    trigger.last_error = ProviderUnavailableError.code
+    session.add_all([event, trigger])
+    await session.flush()
 
 
 async def run_once(*, owner: str, source_hints: bool | None = None) -> int:
@@ -666,8 +756,13 @@ async def run_once(*, owner: str, source_hints: bool | None = None) -> int:
 async def reconcile_push_sources(*, limit: int = 5) -> int:
     """Scan due push sources even when the provider sent no notification."""
     from langflow.services.database.models.trigger.schemas import TriggerSubscriptionState
-    from langflow.services.triggers.source_runtime import reconcile_source, source_failure_detail
+    from langflow.services.triggers.source_runtime import (
+        mark_interrupted_activations,
+        reconcile_source,
+        source_failure_detail,
+    )
 
+    await mark_interrupted_activations(limit=limit)
     now = _now()
     async with session_scope() as session:
         due = (
@@ -676,9 +771,9 @@ async def reconcile_push_sources(*, limit: int = 5) -> int:
                 .outerjoin(TriggerSubscription, TriggerSubscription.trigger_id == Trigger.id)
                 .where(
                     Trigger.state == TriggerState.ACTIVE.value,
-                    col(Trigger.kind).in_(MICROSOFT_SOURCE_KINDS | GOOGLE_SOURCE_KINDS),
+                    col(Trigger.kind).in_(collecting_kinds()),
                     (col(TriggerSubscription.state) == TriggerSubscriptionState.ACTIVE.value)
-                    | Trigger.config["mechanism_id"].as_string().in_(PUSH_MECHANISMS),
+                    | Trigger.config["mechanism_id"].as_string().in_(push_mechanisms()),
                     (col(Trigger.next_fire_at).is_(None)) | (Trigger.next_fire_at <= now),
                 )
                 .group_by(Trigger.id, Trigger.next_fire_at)

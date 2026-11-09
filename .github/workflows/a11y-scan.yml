@@ -32,7 +32,7 @@ env:
   # Define the directory where Playwright browsers will be installed.
   # This path is used for caching across workflows
   PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/ms-playwright
-  PLAYWRIGHT_VERSION: "1.60.0"
+  PLAYWRIGHT_VERSION: "1.64.1"
 
 jobs:
   resolve-ref:
@@ -77,7 +77,7 @@ jobs:
   a11y-scan:
     name: Playwright scan runner (shard ${{ matrix.shardIndex }})
     needs: resolve-ref
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     permissions:
       contents: read

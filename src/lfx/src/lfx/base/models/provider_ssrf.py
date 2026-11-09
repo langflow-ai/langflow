@@ -247,13 +247,13 @@ def openai_compatible_client_kwargs(base_url: str | None, *, default_url: str | 
 
 
 def is_env_sourced_credential(value: Any) -> bool:
-    """Whether ``value`` exactly matches a value held in the server process environment.
+    """Whether ``value`` matches a raw or trimmed server environment value.
 
     Both routes that put an operator-provisioned provider key into a tenant's flow — the
     seeded credential variables (``store_environment_variables``) and the load-from-DB
     environment fallback (``fallback_to_env_var``) — copy the value verbatim out of
-    ``os.environ``, so an exact value match identifies the credential as the operator's
-    regardless of which route delivered it. A tenant cannot arrange a false positive
+    ``os.environ``. Unified model resolution also trims surrounding whitespace, so both
+    forms identify the credential as the operator's. A tenant cannot arrange a false positive
     without already knowing the value they are not allowed to read.
 
     Every non-empty environment value counts, with no minimum length. A short
@@ -268,7 +268,7 @@ def is_env_sourced_credential(value: Any) -> bool:
     text = secret_value_to_str(value)
     if not text:
         return False
-    return any(text == env_value for env_value in os.environ.values())
+    return any(text in (env_value, env_value.strip()) for env_value in os.environ.values())
 
 
 def get_provider_credential_allowed_hosts() -> list[str]:

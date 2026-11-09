@@ -29,6 +29,7 @@ from langflow.services.deps import get_connection_resolver_service, get_settings
 from langflow.services.triggers import leases
 from langflow.services.triggers.lease_guard import run_guarded
 from langflow.services.triggers.ownership import is_owned_by
+from langflow.services.triggers.source_runtime import source_failure_detail
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -38,6 +39,9 @@ if TYPE_CHECKING:
 
 # Cleanup never retains refresh tokens or extends the deleted owner's access.
 _CREDENTIAL_RETENTION = timedelta(hours=1)
+
+# These adapters verify the original account and callback before remote deletion.
+_REPLACEMENT_CLEANUP_PROVIDERS = frozenset({"github", "gitlab", "telegram", "whatsapp"})
 
 
 def _aware(value: datetime) -> datetime:
@@ -211,6 +215,18 @@ async def _revoke(task: TriggerCleanup) -> None:
 
 
 async def _revoke_existing(task: TriggerCleanup) -> None:
+    from langflow.services.triggers.providers.registry import get_provider
+
+    extension = get_provider(task.provider)
+    if extension is not None:
+        if extension.revoke is None:
+            msg = "The trigger provider cannot revoke this subscription."
+            raise ValueError(msg)
+        await extension.revoke(task, await _cleanup_lease(task))
+        return
+    if task.provider not in {"microsoft", "google"}:
+        msg = "The trigger provider required for subscription cleanup is unavailable."
+        raise ValueError(msg)
     from langflow.services.triggers.source_clients import (
         GOOGLE_CALENDAR_ORIGIN,
         GOOGLE_DRIVE_ORIGIN,
@@ -290,6 +306,35 @@ async def run_cleanup_pass(*, limit: int = 25) -> int:
             )
             .values(encrypted_credential=None, credential_expires_at=None)
         )
+        # Non-expiring receivers need a saved replacement connection to finish
+        # the original callback's cleanup before the trigger can rearm.
+        replacements = (
+            await session.exec(
+                select(TriggerCleanup, Connection.id)
+                .select_from(TriggerCleanup)
+                .join(Trigger, TriggerCleanup.trigger_id == Trigger.id)
+                .join(Connection, Trigger.connection_id == Connection.id)
+                .where(
+                    col(TriggerCleanup.provider).in_(_REPLACEMENT_CLEANUP_PROVIDERS),
+                    Trigger.provider == TriggerCleanup.provider,
+                    Trigger.kind == TriggerCleanup.kind,
+                    Trigger.user_id == TriggerCleanup.user_id,
+                    Connection.provider_key == TriggerCleanup.provider,
+                    Connection.ownership_mode == "user",
+                    Connection.owner_id == TriggerCleanup.user_id,
+                    Connection.status == "ready",
+                    Connection.allow_non_interactive == True,  # noqa: E712
+                    col(TriggerCleanup.encrypted_credential).is_(None),
+                    or_(col(TriggerCleanup.connection_id).is_(None), TriggerCleanup.connection_id != Connection.id),
+                )
+                .limit(limit)
+            )
+        ).all()
+        for task, connection_id in replacements:
+            task.connection_id = connection_id
+            task.available_at = now
+            session.add(task)
+        await session.flush()
         ids = (
             await session.exec(
                 select(TriggerCleanup.id)
@@ -324,7 +369,7 @@ async def run_cleanup_pass(*, limit: int = 25) -> int:
                 current = await session.get(TriggerCleanup, task_id)
                 if current is not None:
                     current.attempt += 1
-                    current.last_error = type(exc).__name__
+                    current.last_error = source_failure_detail(exc)[:128]
                     current.available_at = datetime.now(timezone.utc) + timedelta(
                         seconds=min(60 * 2 ** min(current.attempt, 6), 3600)
                     )

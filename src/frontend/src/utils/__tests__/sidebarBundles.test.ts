@@ -102,4 +102,40 @@ describe("SIDEBAR_BUNDLES", () => {
       ]),
     );
   });
+
+  it("classifies Keenable as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "Keenable",
+          icon: "Keenable",
+          name: "keenable",
+        }),
+      ]),
+    );
+  });
+});
+
+it("uses the GitLab logo for its integration palette group", () => {
+  expect(SIDEBAR_BUNDLES).toContainEqual({
+    display_name: "GitLab",
+    name: "gitlab",
+    icon: "Gitlab",
+  });
+});
+
+it("uses the Confluence logo for its integration palette group", () => {
+  expect(SIDEBAR_BUNDLES).toContainEqual({
+    display_name: "Confluence",
+    name: "confluence_integrations",
+    icon: "Confluence",
+  });
+});
+
+it("uses the ServiceNow logo for its integration palette group", () => {
+  expect(SIDEBAR_BUNDLES).toContainEqual({
+    display_name: "ServiceNow",
+    name: "servicenow",
+    icon: "ServiceNow",
+  });
 });

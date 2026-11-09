@@ -180,11 +180,15 @@ async def _measure(client: AsyncClient, api_key: str, flow_id, mode: str) -> _Re
 
 
 # Statements and pool checkouts for one run, per flow and mode. Update these
-# on purpose: a new round trip on this path costs every workflow run.
+# on purpose: a new round trip on this path costs every workflow run. The user
+# lookup prevents a legacy flow storage namespace from colliding with a user ID.
 _ROUND_TRIPS = {
-    "memory_chatbot": {"sync": (9, 8), "stream": (12, 11)},
-    "simple_chat": {"sync": (10, 8), "stream": (13, 11)},
+    "memory_chatbot": {"sync": (10, 9), "stream": (13, 12)},
+    "simple_chat": {"sync": (11, 9), "stream": (14, 12)},
 }
+# Admission reads the originating key inside the existing job transaction.
+# Execution reloads key, owner, and flow together in one additional checkout.
+_JOB_KEY_AUTHORIZATION_ROUND_TRIPS = (4, 1)
 
 
 def _follows(statements: list[str], first: str, then: str) -> bool:
@@ -204,7 +208,12 @@ async def test_run_db_round_trips(client: AsyncClient, created_api_key, chat_flo
         # The sync job row is created IN_PROGRESS and written once more when it ends.
         assert [s for s in statements if s.endswith(" job")] == ["INSERT job", "UPDATE job"], statements
     flow_name = request.node.callspec.params["chat_flow"]
-    assert (len(statements), recorder.checkouts) == _ROUND_TRIPS[flow_name][mode], statements
+    base_statements, base_checkouts = _ROUND_TRIPS[flow_name][mode]
+    key_statements, key_checkouts = _JOB_KEY_AUTHORIZATION_ROUND_TRIPS
+    assert (len(statements), recorder.checkouts) == (
+        base_statements + key_statements,
+        base_checkouts + key_checkouts,
+    ), statements
 
 
 @pytest.mark.usefixtures("client")

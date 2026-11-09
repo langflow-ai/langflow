@@ -35,6 +35,13 @@ export const ownerKindOf = (
     : "other";
 };
 
+const isUnavailable = (
+  connection: ConnectionRead,
+  currentUserId: string | undefined,
+): boolean =>
+  connection.provider_key === "servicenow" &&
+  ownerKindOf(connection, currentUserId) !== "you";
+
 const SORT_COLUMNS = [
   "connection",
   "owner",
@@ -75,7 +82,7 @@ export interface ConnectionsTableProps {
   busyId: string | null;
   actions: Omit<
     ConnectionRowMenuProps,
-    "connection" | "canAllowUnattended" | "busy"
+    "connection" | "canAuthorize" | "canAllowUnattended" | "busy"
   >;
 }
 
@@ -130,7 +137,9 @@ export function ConnectionsTable({
         case "account":
           return account?.display ?? account?.id ?? "";
         case "status":
-          return t(`connections.status.${connection.status}`);
+          return t(
+            `connections.status.${isUnavailable(connection, currentUserId) ? "unavailable" : connection.status}`,
+          );
         case "scopes":
           return connection.granted_scopes?.length ?? 0;
         case "lastCheck":
@@ -215,9 +224,18 @@ export function ConnectionsTable({
         <TableBody>
           {sortedConnections.map((connection) => {
             const owner = ownerKindOf(connection, currentUserId);
+            const canAuthorize = !isUnavailable(connection, currentUserId);
             const account = connection.executing_identity?.account;
             const identity = connection.executing_identity?.identity;
             const scopes = connection.granted_scopes ?? [];
+            const provider = providers.get(connection.provider_key);
+            const usesGitHubAppPermissions =
+              connection.provider_key === "github" &&
+              provider?.manual_token_profiles?.some(
+                (profile) =>
+                  profile.id === "github-installation" &&
+                  profile.required_scopes.length === 0,
+              );
 
             return (
               <TableRow
@@ -229,7 +247,7 @@ export function ConnectionsTable({
                   <div className="flex items-center gap-3">
                     <ProviderMark
                       providerKey={connection.provider_key}
-                      provider={providers.get(connection.provider_key)}
+                      provider={provider}
                     />
                     <div className="flex min-w-0 flex-col">
                       <span className="truncate text-sm font-medium">
@@ -293,13 +311,16 @@ export function ConnectionsTable({
                 <TableCell>
                   <ConnectionStatusBadge
                     connection={connection}
-                    onAuthorize={actions.onAuthorize}
+                    unavailable={!canAuthorize}
+                    onAuthorize={canAuthorize ? actions.onAuthorize : undefined}
                   />
                 </TableCell>
                 <TableCell>
                   {scopes.length === 0 ? (
                     <span className="text-xs text-muted-foreground">
-                      {t("connections.scopes.none")}
+                      {usesGitHubAppPermissions
+                        ? t("connections.scopes.githubApp")
+                        : t("connections.scopes.none")}
                     </span>
                   ) : (
                     <ShadTooltip
@@ -352,6 +373,7 @@ export function ConnectionsTable({
                 <TableCell className="text-right">
                   <ConnectionRowMenu
                     connection={connection}
+                    canAuthorize={canAuthorize}
                     canAllowUnattended={
                       owner === "you" || (owner === "instance" && isSuperuser)
                     }

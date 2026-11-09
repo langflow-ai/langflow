@@ -1,12 +1,15 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useTranslation } from "react-i18next";
+import { useShallow } from "zustand/react/shallow";
+import { getBranchSkip } from "@/CustomNodes/helpers/get-branch-skip";
 import { getSpecificClassFromBuildStatus } from "@/CustomNodes/helpers/get-class-from-build-status";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import useIconStatus from "@/CustomNodes/hooks/use-icons-status";
 import useUpdateValidationStatus from "@/CustomNodes/hooks/use-update-validation-status";
 import useValidationStatusString from "@/CustomNodes/hooks/use-validation-status-string";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { TriggerNodeStatus } from "@/components/core/triggers/TriggerNodeBadge";
 import { Button } from "@/components/ui/button";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { BuildStatus } from "@/constants/enums";
@@ -15,6 +18,7 @@ import {
   usePermissions,
 } from "@/contexts/permissionsContext";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
+import { ENABLE_TRIGGERS } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import useAlertStore from "@/stores/alertStore";
@@ -26,6 +30,7 @@ import type { VertexBuildTypeAPI } from "@/types/api";
 import type { NodeDataType } from "@/types/flow";
 import { formatTokenCount } from "@/utils/format-token-count";
 import { findLastNode } from "@/utils/reactflowUtils";
+import { isTriggerComponent } from "@/utils/trigger-component";
 import { classNames, cn } from "@/utils/utils";
 import IconComponent from "../../../../components/common/genericIconComponent";
 import HumanInputNodeBadge, {
@@ -104,6 +109,28 @@ export default function NodeStatus({
 
   const lastRunTime = useFlowStore(
     (state) => state.flowBuildStatus[nodeId_]?.timestamp,
+  );
+  // Selected from the store so renaming or rewiring the router updates the text.
+  const branchComponent = useFlowStore((state) =>
+    conditionInactive
+      ? getBranchSkip(nodeId_, state.flowBuildStatus, state.nodes)?.component
+      : undefined,
+  );
+  const branchOutputs = useFlowStore(
+    useShallow(
+      (state) =>
+        (conditionInactive &&
+          getBranchSkip(nodeId_, state.flowBuildStatus, state.nodes)
+            ?.outputs) ||
+        [],
+    ),
+  );
+  const branchSkip = useMemo(
+    () =>
+      branchComponent === undefined
+        ? null
+        : { component: branchComponent, outputs: branchOutputs },
+    [branchComponent, branchOutputs],
   );
   const iconStatus = useIconStatus(buildStatus);
   const buildFlow = useFlowStore((state) => state.buildFlow);
@@ -444,6 +471,7 @@ export default function NodeStatus({
                   validationStatus={validationStatus}
                   validationString={validationString}
                   lastRunTime={lastRunTime}
+                  branchSkip={branchSkip}
                 />
               }
               side="bottom"
@@ -547,6 +575,9 @@ export default function NodeStatus({
             </ShadTooltip>
           )}
         </div>
+      )}
+      {ENABLE_TRIGGERS && showNode && isTriggerComponent(data.node) && (
+        <TriggerNodeStatus nodeId={nodeId} />
       )}
       {awaitingHumanInput ? (
         <HumanInputNodeBadge nodeId={nodeId} />

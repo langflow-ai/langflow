@@ -1,3 +1,4 @@
+import platform
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -45,6 +46,80 @@ async def test_sends_segment_track_event() -> None:
     assert call.kwargs["json"]["properties"]["object"] == "exception"
     assert call.kwargs["json"]["properties"]["processType"] == "Langflow Exception"
     assert "timestamp" in call.kwargs["json"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("argument", "environment", "expected"),
+    [
+        (None, None, "opensource"),
+        (None, "enterprise", "enterprise"),
+        ("enterprise", None, "enterprise"),
+        (None, "premium", "opensource"),
+    ],
+)
+async def test_sends_edition_as_product_plan_name(monkeypatch, argument, environment, expected) -> None:
+    if environment is None:
+        monkeypatch.delenv("LANGFLOW_EDITION", raising=False)
+    else:
+        monkeypatch.setenv("LANGFLOW_EDITION", environment)
+    service = TelemetryService(
+        base_url="https://api.segment.test/v1/track", write_key="test-key", do_not_track=False, edition=argument
+    )
+    service.anonymous_id = "test-installation"
+    service._client = AsyncMock()
+    service._client.post.return_value.status_code = 200
+
+    await service.send_telemetry_data(BasePayload(), "mcp_tool")
+
+    assert service._client.post.await_args.kwargs["json"]["properties"]["productPlanName"] == expected
+
+
+@pytest.mark.asyncio
+async def test_identifies_mcp_events_with_a_sub_product_title() -> None:
+    service = TelemetryService(base_url="https://api.segment.test/v1/track", write_key="test-key", do_not_track=False)
+    service.anonymous_id = "test-installation"
+    service._client = AsyncMock()
+    service._client.post.return_value.status_code = 200
+
+    await service.send_telemetry_data(BasePayload(), "mcp_tool")
+
+    properties = service._client.post.await_args.kwargs["json"]["properties"]
+    assert properties["subProductTitle"] == "Langflow MCP"
+    assert "platform" not in properties
+    assert "clientType" not in properties
+
+
+@pytest.mark.asyncio
+async def test_reports_the_version_and_os_with_accepted_names() -> None:
+    service = TelemetryService(base_url="https://api.segment.test/v1/track", write_key="test-key", do_not_track=False)
+    service.anonymous_id = "test-installation"
+    service._client = AsyncMock()
+    service._client.post.return_value.status_code = 200
+
+    await service.send_telemetry_data(BasePayload(), "mcp_tool")
+
+    properties = service._client.post.await_args.kwargs["json"]["properties"]
+    assert properties["productVersion"] == service._get_version()
+    assert "langflow_version" not in properties
+    assert properties["osName"] == platform.system().lower()
+    assert "os" not in properties
+
+
+@pytest.mark.asyncio
+async def test_reports_version_and_os_on_the_version_event() -> None:
+    service = TelemetryService(base_url="https://api.segment.test/v1/track", write_key="test-key", do_not_track=False)
+    service.anonymous_id = "test-installation"
+    service._client = AsyncMock()
+    service._client.post.return_value.status_code = 200
+
+    await service.log_package_version()
+    await service.send_telemetry_data(*await service._queue.get())
+
+    properties = service._client.post.await_args.kwargs["json"]["properties"]
+    assert properties["subProductTitle"] == "Langflow MCP"
+    assert properties["productVersion"] == service._get_version()
+    assert properties["osName"] == platform.system().lower()
 
 
 @pytest.mark.parametrize(

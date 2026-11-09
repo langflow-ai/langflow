@@ -140,6 +140,7 @@ class Graph:
         context: dict[str, Any] | None = None,
         *,
         instantiate_components: bool = True,
+        authorized_legacy_flow_ids: set[str] | frozenset[str] | None = None,
     ) -> None:
         """Initializes a new Graph instance.
 
@@ -161,6 +162,7 @@ class Graph:
         # Server-set provenance for a public flow whose execution uses a virtual
         # flow_id. Request data must never populate this storage scope.
         self.source_flow_id: str | None = None
+        self.authorized_legacy_flow_ids = frozenset(authorized_legacy_flow_ids or ())
         self.flow_name = flow_name
         self.description = description
         self.user_id = user_id
@@ -214,6 +216,7 @@ class Graph:
         # Conditional routing system (separate from ACTIVE/INACTIVE cycle management)
         self.conditionally_excluded_vertices: set = set()  # Vertices excluded by conditional routing
         self.conditional_exclusion_sources: dict[str, set[str]] = {}  # Maps source vertex -> excluded vertices
+        self.conditional_exclusion_outputs: dict[str, set[str]] = {}  # Maps source vertex -> excluded outputs
         self.edges: list[CycleEdge] = []
         self.vertices: list[Vertex] = []
         self.run_manager = RunnableVerticesManager()
@@ -1549,7 +1552,9 @@ class Graph:
             for held_vertex_id in branch_vertices & self._held_branch_inactivations():
                 self.mark_vertex(held_vertex_id, VertexStates.INACTIVE)
 
-    def _replace_conditional_exclusions(self, vertex_id: str, excluded: set[str]) -> None:
+    def _replace_conditional_exclusions(
+        self, vertex_id: str, excluded: set[str], output_names: set[str] | None = None
+    ) -> None:
         """Replace ``vertex_id``'s conditional exclusions with ``excluded``.
 
         Any vertices this source previously excluded are cleared first so the routing
@@ -1561,6 +1566,33 @@ class Graph:
         self.conditionally_excluded_vertices.update(excluded)
         if excluded:
             self.conditional_exclusion_sources[vertex_id] = excluded
+        if output_names is None:
+            self.conditional_exclusion_outputs.pop(vertex_id, None)
+        else:
+            self.conditional_exclusion_outputs[vertex_id] = output_names
+
+    def branch_skips(self) -> dict[str, dict[str, Any]]:
+        """Map each conditionally excluded vertex to its router and the outputs that router took.
+
+        A whole-branch exclusion records no outputs, so it reports no taken outputs.
+        """
+        skips: dict[str, dict[str, Any]] = {}
+        excluded_outputs = getattr(self, "conditional_exclusion_outputs", {})
+        for source_id, excluded in getattr(self, "conditional_exclusion_sources", {}).items():
+            stopped = excluded_outputs.get(source_id)
+            source = self.get_vertex(source_id)
+            taken = (
+                [
+                    output["name"]
+                    for output in source.outputs
+                    if isinstance(output, dict) and output.get("name") and output["name"] not in stopped
+                ]
+                if stopped is not None
+                else []
+            )
+            for vertex_id in excluded:
+                skips[vertex_id] = {"skipped_by": source_id, "taken_outputs": taken}
+        return skips
 
     def exclude_branch_conditionally(self, vertex_id: str, output_name: str | None = None) -> None:
         """Marks a branch as conditionally excluded (for conditional routing).
@@ -1612,7 +1644,7 @@ class Graph:
         for output_name in output_names:
             excluded.update(self._collect_branch_vertices(vertex_id, {output_name}))
         excluded -= self._get_vertices_reachable_from_other_outputs(vertex_id, output_names_set)
-        self._replace_conditional_exclusions(vertex_id, excluded)
+        self._replace_conditional_exclusions(vertex_id, excluded, output_names_set)
 
     def get_edge(self, source_id: str, target_id: str) -> CycleEdge | None:
         """Returns the edge between two vertices."""
@@ -1642,6 +1674,7 @@ class Graph:
             "edges": self.edges,
             "flow_id": self.flow_id,
             "source_flow_id": self.source_flow_id,
+            "authorized_legacy_flow_ids": self.authorized_legacy_flow_ids,
             "flow_name": self.flow_name,
             "description": self.description,
             "user_id": self.user_id,
@@ -1702,6 +1735,7 @@ class Graph:
                 description=copy.deepcopy(self.description, memo),
                 user_id=user_id,
                 instantiate_components=instantiate_components,
+                authorized_legacy_flow_ids=self.authorized_legacy_flow_ids,
             )
             if before_initialize is not None:
                 before_initialize(new_graph)
@@ -1715,6 +1749,7 @@ class Graph:
                 description=copy.deepcopy(self.description, memo),
                 user_id=user_id,
                 instantiate_components=instantiate_components,
+                authorized_legacy_flow_ids=self.authorized_legacy_flow_ids,
             )
             # add_nodes_and_edges synchronously builds FileInput parameters, so
             # trusted public-flow provenance must exist before reconstruction.
@@ -1795,6 +1830,7 @@ class Graph:
         # Graphs cached before source-flow provenance was introduced remain
         # loadable and simply have no additional trusted storage namespace.
         state.setdefault("source_flow_id", None)
+        state.setdefault("authorized_legacy_flow_ids", frozenset())
         state.setdefault("execution_principal", ExecutionPrincipal.unknown())
         state.setdefault("_headless_filesystem_user_id", None)
         state.setdefault("branch_inactivation_sources", {})
@@ -1822,6 +1858,7 @@ class Graph:
         *,
         instantiate_components: bool = True,
         emit_extension_events: bool = True,
+        authorized_legacy_flow_ids: set[str] | frozenset[str] | None = None,
     ) -> Graph:
         """Creates a graph from a payload.
 
@@ -1837,6 +1874,8 @@ class Graph:
             emit_extension_events: Whether migration reports should be published
                 to the extension event service. Background warm parsing disables
                 this because it is not scoped to an active caller.
+            authorized_legacy_flow_ids: Server-authorized non-colliding flow IDs
+                whose raw legacy storage namespaces remain readable.
 
         Returns:
             Graph: The created graph.
@@ -1965,6 +2004,7 @@ class Graph:
                 user_id=user_id,
                 context=context,
                 instantiate_components=instantiate_components,
+                authorized_legacy_flow_ids=authorized_legacy_flow_ids,
             )
             graph.add_nodes_and_edges(vertices, edges)
             graph.requires_extension_event_replay = bool(migration_report.any_rewritten or migration_report.errors)
@@ -3263,6 +3303,7 @@ class Graph:
             flow_name=f"{self.flow_name}_subgraph" if self.flow_name else "subgraph",
             user_id=self.user_id,
             context=dict(self.context) if self.context else None,
+            authorized_legacy_flow_ids=self.authorized_legacy_flow_ids,
         )
 
         # Inherit parent's tracing context - subgraph is an extension of parent's execution

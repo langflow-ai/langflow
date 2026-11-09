@@ -78,6 +78,8 @@ export type ToolsComponentType = {
 
 export type FloatComponentType = {
   rangeSpec: RangeSpecType;
+  /** A blank field stays blank instead of becoming 0 (backend `preserve_empty`). */
+  preserveEmpty?: boolean;
 };
 
 export type IntComponentType = {
