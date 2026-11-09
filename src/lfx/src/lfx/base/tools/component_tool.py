@@ -21,7 +21,7 @@ from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.message import Message
 from lfx.serialization.serialization import serialize
-from lfx.utils.async_helpers import run_until_complete
+from lfx.services.auth.utils import run_sync_auth_validation
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -109,7 +109,7 @@ class ComponentStructuredTool(StructuredTool):
         run_manager: CallbackManagerForToolRun | None = None,
         **kwargs: Any,
     ) -> tuple[Any, Any | None]:
-        run_until_complete(self.validate_runtime_authorization())
+        run_sync_auth_validation(self.validate_runtime_authorization)
         content = super()._run(*args, config=config, run_manager=run_manager, **kwargs)
         return self._content_and_artifact(content)
 
@@ -196,7 +196,7 @@ def _build_output_function(
 
     def output_function(*args, **kwargs):
         try:
-            run_until_complete(_validate_execution_user(component))
+            run_sync_auth_validation(lambda: _validate_execution_user(component))
         except Exception as exc:
             msg = "Execution user is inactive or unavailable"
             raise ToolException(msg) from exc

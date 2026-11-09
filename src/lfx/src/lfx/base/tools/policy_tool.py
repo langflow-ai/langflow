@@ -12,7 +12,7 @@ from langchain_core.tools.base import _get_runnable_config_param
 from pydantic import PrivateAttr
 from typing_extensions import override
 
-from lfx.utils.async_helpers import run_until_complete
+from lfx.services.auth.utils import run_sync_auth_validation
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -78,7 +78,7 @@ class PolicyCheckedTool(BaseTool):
     def _run(
         self, *args: Any, config: RunnableConfig, run_manager: CallbackManagerForToolRun | None = None, **kwargs: Any
     ) -> Any:
-        run_until_complete(self._validate())
+        run_sync_auth_validation(self._validate)
         method = self._original._run  # noqa: SLF001
         kwargs.update(self._injected_kwargs(method, config, run_manager))
         return method(*args, **kwargs)

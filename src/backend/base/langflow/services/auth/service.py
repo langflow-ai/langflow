@@ -7,6 +7,7 @@ import time
 import warnings
 from collections import OrderedDict
 from collections.abc import Awaitable, Callable, Coroutine, Iterable, Mapping
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, NoReturn
 from uuid import UUID
@@ -16,6 +17,7 @@ from fastapi import HTTPException, Request, WebSocketException, status
 from jwt import InvalidTokenError
 from lfx.log.logger import logger
 from lfx.services.auth.base import BaseAuthService
+from lfx.services.auth.utils import is_sync_auth_validation
 from lfx.services.model_provider_policy import set_current_model_provider_policy_context
 from lfx.services.settings.constants import DEFAULT_SUPERUSER, LEGACY_DEFAULT_SUPERUSER_PASSWORD
 from sqlalchemy.exc import IntegrityError
@@ -58,7 +60,7 @@ from langflow.services.database.models.user.crud import (
     update_user_last_login_at,
 )
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import session_scope
+from langflow.services.deps import get_db_service, session_scope
 from langflow.services.schema import ServiceType
 
 _MAX_EXTERNAL_AUTHORIZATION_GROUPS = 500
@@ -297,6 +299,16 @@ if TYPE_CHECKING:
     from lfx.services.authorization.base import ExecutionPrincipal
     from lfx.services.settings.service import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
+
+
+@asynccontextmanager
+async def _runtime_validation_scope():
+    if is_sync_auth_validation():
+        async with get_db_service().session_scope_for_sync_validation() as session:
+            yield session
+    else:
+        async with session_scope() as session:
+            yield session
 
 
 class AuthService(BaseAuthService):
@@ -1332,7 +1344,7 @@ class AuthService(BaseAuthService):
             msg = "Stored tool settings no longer authorize this call"
             raise PermissionError(msg)
 
-        async with session_scope() as session:
+        async with _runtime_validation_scope() as session:
             flow = await session.get(Flow, UUID(flow_id))
             if flow is None or not isinstance(flow.data, dict):
                 deny()
@@ -1406,7 +1418,7 @@ class AuthService(BaseAuthService):
         if db is not None:
             await validate(db)
         else:
-            async with session_scope() as session:
+            async with _runtime_validation_scope() as session:
                 await validate(session)
 
     async def get_webhook_user(self, flow_id: str, request: Request) -> UserRead:

@@ -15,7 +15,7 @@ from lfx.services.base import Service
 from lfx.services.schema import ServiceType
 
 if TYPE_CHECKING:
-    from collections.abc import Coroutine
+    from collections.abc import Awaitable, Callable, Coroutine
     from datetime import timedelta
     from uuid import UUID
 
@@ -26,6 +26,17 @@ class BaseAuthService(Service, abc.ABC):
     """Abstract base class for authentication services."""
 
     name = ServiceType.AUTH_SERVICE.value
+
+    def run_sync_validation(self, validate: Callable[[], Awaitable[None]]) -> None:
+        """Let hosts keep synchronous checks separate from their async database pool."""
+        from lfx.services.auth.utils import sync_auth_validation
+        from lfx.utils.async_helpers import run_until_complete
+
+        async def check() -> None:
+            with sync_auth_validation():
+                await validate()
+
+        run_until_complete(check())
 
     async def validate_tool_call(
         self,

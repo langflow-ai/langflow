@@ -57,6 +57,10 @@ async def native_auth(tmp_path, monkeypatch):
 
     auth = AuthService(SimpleNamespace())
     monkeypatch.setattr("langflow.services.auth.service.session_scope", scope)
+    monkeypatch.setattr(
+        "langflow.services.auth.service.get_db_service",
+        lambda: SimpleNamespace(session_scope_for_sync_validation=scope),
+    )
     monkeypatch.setattr("lfx.services.deps.get_auth_service", lambda: auth)
     monkeypatch.setattr("langflow.services.deps.get_auth_service", lambda: auth)
     try:
