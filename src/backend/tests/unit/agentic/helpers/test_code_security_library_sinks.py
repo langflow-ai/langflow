@@ -13,6 +13,8 @@ _EXECUTION_APIS = (
     ("jinja2.environment", "Template"),
     ("jinja2.environment", "Environment"),
     ("jinja2.sandbox", "Environment"),
+    ("jinja2.sandbox", "SandboxedEnvironment"),
+    ("jinja2.sandbox", "ImmutableSandboxedEnvironment"),
     ("jinja2.nativetypes", "NativeTemplate"),
     ("jinja2.nativetypes", "NativeEnvironment"),
     ("sympy", "sympify"),
@@ -58,21 +60,43 @@ def test_rejects_embedded_sql_execution_modules(module, source):
 @pytest.mark.parametrize(
     "source",
     [
-        "from jinja2.sandbox import SandboxedEnvironment\nresult = SandboxedEnvironment().from_string(source).render()",
-        "from jinja2.sandbox import ImmutableSandboxedEnvironment\nresult = ImmutableSandboxedEnvironment()",
         "from sympy import Symbol\nx = Symbol('x')\nresult = x + 1",
         "import sympy as sp\nresult = sp.Symbol('x') + sp.Integer(2)",
         "from jinja2 import select_autoescape\nresult = select_autoescape()",
     ],
 )
-def test_preserves_sandboxed_templates_and_symbolic_operations(source):
+def test_preserves_symbolic_operations_and_template_configuration(source):
     assert scan_code_security(source).is_safe
+
+
+@pytest.mark.parametrize("constructor", ["SandboxedEnvironment", "ImmutableSandboxedEnvironment"])
+@pytest.mark.parametrize(
+    "setup",
+    [
+        "from jinja2.sandbox import {constructor} as Environment\nenv = Environment()",
+        "import jinja2.sandbox as sandbox\nenv = sandbox.{constructor}()",
+        "import jinja2.sandbox as sandbox\nconstructors = [sandbox.{constructor}]\nenv = constructors[0]()",
+    ],
+)
+def test_rejects_mutable_sandbox_before_rendering_external_template(constructor, setup):
+    code = (
+        setup.format(constructor=constructor)
+        + "\nenv.is_safe_attribute = lambda obj, attr, value: True"
+        + "\nresult = env.from_string(source).render()"
+    )
+
+    result = scan_code_security(code)
+
+    assert not result.is_safe
+    assert any(constructor in violation for violation in result.violations)
 
 
 @pytest.mark.parametrize(
     "source",
     [
         "import jinja2\nresult = jinja2.Template(source)",
+        "from jinja2.sandbox import SandboxedEnvironment\nenv = SandboxedEnvironment()",
+        "from jinja2.sandbox import ImmutableSandboxedEnvironment\nenv = ImmutableSandboxedEnvironment()",
         "import sympy\nresult = sympy.sympify(source)",
         "import duckdb\nresult = duckdb.sql(source)",
     ],
