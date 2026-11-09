@@ -18,24 +18,24 @@ def test_revocation_table_upgrade_and_downgrade(db_url):  # noqa: F811
         command.upgrade(config, _REVISION)
         with engine.begin() as connection:
             schema = inspect(connection)
-            columns = {column["name"] for column in schema.get_columns("revoked_refresh_token")}
-            assert columns == {"token_digest", "expires_at"}
-            assert "ix_revoked_refresh_token_expires_at" in {
-                index["name"] for index in schema.get_indexes("revoked_refresh_token")
+            columns = {column["name"] for column in schema.get_columns("refresh_token_session")}
+            assert columns == {"session_digest", "expires_at", "revoked"}
+            assert "ix_refresh_token_session_expires_at" in {
+                index["name"] for index in schema.get_indexes("refresh_token_session")
             }
             connection.execute(
-                text("INSERT INTO revoked_refresh_token (token_digest, expires_at) VALUES (:digest, :expires)"),
+                text("INSERT INTO refresh_token_session (session_digest, expires_at) VALUES (:digest, :expires)"),
                 {"digest": "a" * 64, "expires": "2030-01-01 00:00:00"},
             )
         command.downgrade(config, _PREVIOUS_REVISION)
         with engine.connect() as connection:
-            assert not inspect(connection).has_table("revoked_refresh_token")
+            assert not inspect(connection).has_table("refresh_token_session")
             assert inspect(connection).has_table("user")
 
         # Fresh installs may create model tables before Alembic applies revisions.
-        from langflow.services.database.models.auth.refresh_token import RevokedRefreshToken
+        from langflow.services.database.models.auth.refresh_token import RefreshTokenSession
 
-        RevokedRefreshToken.__table__.create(engine)
+        RefreshTokenSession.__table__.create(engine)
         command.upgrade(config, _REVISION)
     finally:
         engine.dispose()

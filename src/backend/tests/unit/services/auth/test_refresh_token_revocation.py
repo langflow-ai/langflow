@@ -4,7 +4,7 @@ import asyncio
 import hashlib
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import Mock
 from uuid import uuid4
 
 import jwt
@@ -12,7 +12,7 @@ import pytest
 from fastapi import HTTPException
 from langflow.services.auth.refresh_tokens import revoke_refresh_token
 from langflow.services.auth.service import AuthService
-from langflow.services.database.models.auth.refresh_token import RevokedRefreshToken
+from langflow.services.database.models.auth.refresh_token import RefreshTokenSession
 from langflow.services.database.models.user.model import User
 from lfx.services.settings.auth import AuthSettings
 from pydantic import SecretStr
@@ -51,6 +51,7 @@ async def test_revocation_survives_new_service_and_database_session(token_store)
         first_claims = jwt.decode(first["refresh_token"], options={"verify_signature": False})
         second_claims = jwt.decode(second["refresh_token"], options={"verify_signature": False})
         assert first_claims["jti"] != second_claims["jti"]
+        assert first_claims["sid"] != second_claims["sid"]
         await revoke_refresh_token(first["refresh_token"], db, settings)
         await revoke_refresh_token(first["refresh_token"], db, settings)
         await db.commit()
@@ -61,9 +62,10 @@ async def test_revocation_survives_new_service_and_database_session(token_store)
         with pytest.raises(HTTPException) as exc:
             await restarted.create_refresh_token(first["refresh_token"], db)
         assert exc.value.status_code == 401
-        rows = (await db.exec(select(RevokedRefreshToken))).all()
+        rows = (await db.exec(select(RefreshTokenSession))).all()
         assert len(rows) == 1
-        assert rows[0].token_digest == hashlib.sha256(first["refresh_token"].encode()).hexdigest()
+        assert rows[0].session_digest == hashlib.sha256(f"{user.id}:{first_claims['sid']}".encode()).hexdigest()
+        assert rows[0].revoked is True
         assert first["refresh_token"] not in str(rows[0].model_dump())
         assert (await restarted.create_refresh_token(second["refresh_token"], db))["access_token"]
 
@@ -81,7 +83,10 @@ async def test_legacy_refresh_token_without_jti_can_be_revoked(token_store):
         assert exc.value.status_code == 401
 
 
-@pytest.mark.parametrize("case", ["malformed", "access", "expired", "wrong-signature", "missing-exp", "invalid-sub"])
+@pytest.mark.parametrize(
+    "case",
+    ["malformed", "access", "expired", "wrong-signature", "missing-exp", "invalid-sub", "invalid-session"],
+)
 async def test_invalid_cookies_do_not_create_revocation_records(token_store, case):
     """Logout ignores invalid native cookies without trusting their claims."""
     engine, settings, user = token_store
@@ -100,11 +105,13 @@ async def test_invalid_cookies_do_not_create_revocation_records(token_store, cas
             del claims["exp"]
         elif case == "invalid-sub":
             claims["sub"] = "not-a-user-id"
+        elif case == "invalid-session":
+            claims["sid"] = ["not-a-session-id"]
         token = jwt.encode(claims, key, algorithm=settings.auth_settings.ALGORITHM)
     async with AsyncSession(engine) as db:
         await revoke_refresh_token(token, db, settings)
         await db.commit()
-        assert not (await db.exec(select(RevokedRefreshToken))).all()
+        assert not (await db.exec(select(RefreshTokenSession))).all()
 
 
 async def test_logout_cleanup_is_bounded_and_preserves_live_revocations(token_store):
@@ -115,19 +122,19 @@ async def test_logout_cleanup_is_bounded_and_preserves_live_revocations(token_st
     async with AsyncSession(engine) as db:
         db.add_all(
             [
-                RevokedRefreshToken(token_digest=f"{number:064x}", expires_at=now - timedelta(minutes=1))
+                RefreshTokenSession(session_digest=f"{number:064x}", expires_at=now - timedelta(minutes=1))
                 for number in range(201)
             ]
         )
         future_digest = "f" * 64
-        db.add(RevokedRefreshToken(token_digest=future_digest, expires_at=now + timedelta(days=1)))
+        db.add(RefreshTokenSession(session_digest=future_digest, expires_at=now + timedelta(days=1), revoked=True))
         await db.commit()
         token = (await service.create_user_tokens(user.id, db))["refresh_token"]
         await revoke_refresh_token(token, db, settings)
         await db.commit()
-        rows = (await db.exec(select(RevokedRefreshToken))).all()
+        rows = (await db.exec(select(RefreshTokenSession))).all()
         assert len(rows) == 103
-        assert await db.get(RevokedRefreshToken, future_digest) is not None
+        assert await db.get(RefreshTokenSession, future_digest) is not None
 
 
 async def test_revocation_storage_failure_cannot_issue_tokens(token_store):
@@ -136,7 +143,7 @@ async def test_revocation_storage_failure_cannot_issue_tokens(token_store):
     service = AuthService(settings)
     async with AsyncSession(engine) as db:
         token = (await service.create_user_tokens(user.id, db))["refresh_token"]
-        await db.execute(text("DROP TABLE revoked_refresh_token"))
+        await db.execute(text("DROP TABLE refresh_token_session"))
         await db.commit()
     async with AsyncSession(engine) as db:
         with pytest.raises(OperationalError):
@@ -172,12 +179,13 @@ async def test_equivalent_token_encodings_share_revocation(token_store, legacy, 
             assert exc.value.status_code == 401
         await revoke_refresh_token(original if revoke_variant else equivalent, db, settings)
         await db.commit()
-        assert len((await db.exec(select(RevokedRefreshToken))).all()) == 1
+        assert len((await db.exec(select(RefreshTokenSession))).all()) == 1
 
 
 @pytest.mark.parametrize("legacy", [False, True])
-async def test_rotation_then_logout_rejects_old_and_current_tokens(token_store, legacy):
-    """A refresh token can be exchanged once and its replacement honors logout."""
+@pytest.mark.parametrize("logout_original", [False, True])
+async def test_rotation_then_logout_rejects_old_and_current_tokens(token_store, legacy, logout_original):
+    """Logout revokes every generation and sibling while independent logins remain valid."""
     engine, settings, user = token_store
     service = AuthService(settings)
     async with AsyncSession(engine) as db:
@@ -187,43 +195,56 @@ async def test_rotation_then_logout_rejects_old_and_current_tokens(token_store, 
         else:
             original = (await service.create_user_tokens(user.id, db))["refresh_token"]
         replacement = (await service.create_refresh_token(original, db))["refresh_token"]
+        sibling = (await service.create_refresh_token(original + "=", db))["refresh_token"]
+        descendant = (await service.create_refresh_token(replacement, db))["refresh_token"]
+        for token in (replacement, sibling, descendant):
+            assert (
+                jwt.decode(token, options={"verify_signature": False})["sid"]
+                == jwt.decode(replacement, options={"verify_signature": False})["sid"]
+            )
         await db.commit()
-        for token in (original, original + "="):
-            with pytest.raises(HTTPException) as exc:
-                await service.create_refresh_token(token, db)
-            assert exc.value.status_code == 401
-        await revoke_refresh_token(replacement, db, settings)
+        await revoke_refresh_token(original if logout_original else descendant, db, settings)
         await db.commit()
-        for token in (original, replacement, replacement + "="):
+        for token in (original, original + "=", replacement, replacement + "=", sibling, descendant):
             with pytest.raises(HTTPException) as exc:
                 await service.create_refresh_token(token, db)
             assert exc.value.status_code == 401
         assert (await service.create_refresh_token(independent, db))["access_token"]
 
 
-async def test_only_one_concurrent_refresh_can_exchange_the_token(token_store):
-    """The unique digest allows only one concurrent exchange to commit."""
+@pytest.mark.parametrize("legacy", [False, True])
+async def test_concurrent_refresh_requests_keep_the_same_session(token_store, legacy):
+    """Browser tabs and API clients can exchange the same token concurrently."""
     engine, settings, user = token_store
     service = AuthService(settings)
     async with AsyncSession(engine) as db:
-        token = (await service.create_user_tokens(user.id, db))["refresh_token"]
+        token = (
+            service.create_token({"sub": str(user.id), "type": "refresh"}, timedelta(minutes=5))
+            if legacy
+            else (await service.create_user_tokens(user.id, db))["refresh_token"]
+        )
 
     async def exchange(candidate):
         async with AsyncSession(engine) as db:
-            try:
-                await service.create_refresh_token(candidate, db)
-                await db.commit()
-            except HTTPException as exc:
-                await db.rollback()
-                return exc.status_code
-            return 200
+            tokens = await service.create_refresh_token(candidate, db)
+            await db.commit()
+            return tokens["refresh_token"]
 
-    assert sorted(await asyncio.gather(exchange(token), exchange(token + "="))) == [200, 401]
+    first, second = await asyncio.gather(exchange(token), exchange(token + "="))
+    assert first != second
     async with AsyncSession(engine) as db:
-        assert len((await db.exec(select(RevokedRefreshToken))).all()) == 1
+        rows = (await db.exec(select(RefreshTokenSession))).all()
+        assert len(rows) == 1
+        assert rows[0].revoked is False
+        await revoke_refresh_token(first, db, settings)
+        await db.commit()
+        for candidate in (token, first, second):
+            with pytest.raises(HTTPException) as exc:
+                await service.create_refresh_token(candidate, db)
+            assert exc.value.status_code == 401
 
 
-async def test_failed_rotation_rolls_back_consumption(token_store, monkeypatch):
+async def test_failed_rotation_leaves_session_retryable(token_store, monkeypatch):
     """Failure to issue replacement tokens leaves the original exchange retryable."""
     engine, settings, user = token_store
     service = AuthService(settings)
@@ -231,10 +252,107 @@ async def test_failed_rotation_rolls_back_consumption(token_store, monkeypatch):
         token = (await service.create_user_tokens(user.id, db))["refresh_token"]
     async with AsyncSession(engine) as db:
         with monkeypatch.context() as patch:
-            patch.setattr(service, "create_user_tokens", AsyncMock(side_effect=RuntimeError("issuance failed")))
+            patch.setattr(service, "_create_session_tokens", Mock(side_effect=RuntimeError("issuance failed")))
             with pytest.raises(RuntimeError, match="issuance failed"):
                 await service.create_refresh_token(token, db)
             await db.rollback()
     async with AsyncSession(engine) as db:
-        assert not (await db.exec(select(RevokedRefreshToken))).all()
+        assert not (await db.exec(select(RefreshTokenSession))).all()
         assert (await service.create_refresh_token(token, db))["access_token"]
+
+
+async def test_expired_ancestor_logout_revokes_still_live_descendants(token_store):
+    """An expired cookie cannot miss a replacement issued by an overlapping refresh."""
+    engine, settings, user = token_store
+    service = AuthService(settings)
+    async with AsyncSession(engine) as db:
+        original = (await service.create_user_tokens(user.id, db))["refresh_token"]
+        descendant = (await service.create_refresh_token(original, db))["refresh_token"]
+        claims = jwt.decode(original, options={"verify_signature": False})
+        expired_ancestor = service.create_token(
+            {"sub": str(user.id), "type": "refresh", "sid": claims["sid"]}, timedelta(seconds=-1)
+        )
+        await revoke_refresh_token(expired_ancestor, db, settings)
+        await db.commit()
+        with pytest.raises(HTTPException) as exc:
+            await service.create_refresh_token(descendant, db)
+        assert exc.value.status_code == 401
+
+
+@pytest.mark.parametrize("legacy", [False, True])
+async def test_logout_wins_over_refresh_already_preparing_tokens(token_store, monkeypatch, legacy):
+    """A refresh admitted before logout cannot revive its session after logout commits."""
+    import langflow.services.auth.service as auth_module
+
+    engine, settings, user = token_store
+    service = AuthService(settings)
+    async with AsyncSession(engine) as db:
+        original = (
+            service.create_token({"sub": str(user.id), "type": "refresh"}, timedelta(minutes=5))
+            if legacy
+            else (await service.create_user_tokens(user.id, db))["refresh_token"]
+        )
+    prepared = asyncio.Event()
+    continue_refresh = asyncio.Event()
+    register = auth_module.register_refresh_session
+
+    async def paused_register(*args):
+        prepared.set()
+        await asyncio.wait_for(continue_refresh.wait(), timeout=5)
+        return await register(*args)
+
+    monkeypatch.setattr(auth_module, "register_refresh_session", paused_register)
+
+    async def exchange():
+        async with AsyncSession(engine) as db:
+            with pytest.raises(HTTPException) as exc:
+                await service.create_refresh_token(original, db)
+            assert exc.value.status_code == 401
+
+    pending = asyncio.create_task(exchange())
+    try:
+        await asyncio.wait_for(prepared.wait(), timeout=5)
+        async with AsyncSession(engine) as db:
+            await revoke_refresh_token(original, db, settings)
+            await db.commit()
+    finally:
+        continue_refresh.set()
+        await pending
+
+
+@pytest.mark.parametrize(("initial_ttl", "replacement_ttl"), [(600, 3600), (3600, 600)])
+async def test_logout_retains_revocation_until_longest_family_expiry(
+    token_store, monkeypatch, initial_ttl, replacement_ttl
+):
+    """A TTL change cannot delete a session tombstone while an older generation remains usable."""
+    import langflow.services.auth.refresh_tokens as refresh_module
+
+    engine, settings, user = token_store
+    service = AuthService(settings)
+    monkeypatch.setattr(settings.auth_settings, "REFRESH_TOKEN_EXPIRE_SECONDS", initial_ttl)
+    async with AsyncSession(engine) as db:
+        original = (await service.create_user_tokens(user.id, db))["refresh_token"]
+        monkeypatch.setattr(settings.auth_settings, "REFRESH_TOKEN_EXPIRE_SECONDS", replacement_ttl)
+        replacement = (await service.create_refresh_token(original, db))["refresh_token"]
+        await revoke_refresh_token(replacement, db, settings)
+        await db.commit()
+        row = (await db.exec(select(RefreshTokenSession))).one()
+        longest_expiry = max(
+            jwt.decode(token, options={"verify_signature": False})["exp"] for token in (original, replacement)
+        )
+        assert row.expires_at.replace(tzinfo=timezone.utc).timestamp() >= longest_expiry
+
+    class Later(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return (datetime.now(timezone.utc) + timedelta(seconds=1200)).astimezone(tz)
+
+    monkeypatch.setattr(refresh_module, "datetime", Later)
+    async with AsyncSession(engine) as db:
+        unrelated = (await service.create_user_tokens(user.id, db))["refresh_token"]
+        await revoke_refresh_token(unrelated, db, settings)
+        await db.commit()
+        for token in (original, replacement):
+            with pytest.raises(HTTPException) as exc:
+                await service.create_refresh_token(token, db)
+            assert exc.value.status_code == 401

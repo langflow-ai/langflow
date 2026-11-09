@@ -50,7 +50,7 @@ from langflow.services.auth.external import (
     resolve_external_identity,
     set_current_external_access_context,
 )
-from langflow.services.auth.refresh_tokens import consume_refresh_token
+from langflow.services.auth.refresh_tokens import refresh_session_id, register_refresh_session
 from langflow.services.database.models.api_key.crud import authenticate_api_key
 from langflow.services.database.models.user.crud import (
     get_user_by_id,
@@ -1477,6 +1477,13 @@ class AuthService(BaseAuthService):
             return UUID(int=0)
 
     async def create_user_tokens(self, user_id: UUID, db: AsyncSession, *, update_last_login: bool = False) -> dict:
+        tokens = self._create_session_tokens(user_id, secrets.token_urlsafe(32))
+        if update_last_login:
+            await update_user_last_login_at(user_id, db)
+        return tokens
+
+    def _create_session_tokens(self, user_id: UUID, session_id: str) -> dict:
+        """Issue a token pair belonging to one native login session."""
         settings_service = self.settings
 
         access_token_expires = timedelta(seconds=settings_service.auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS)
@@ -1487,12 +1494,9 @@ class AuthService(BaseAuthService):
 
         refresh_token_expires = timedelta(seconds=settings_service.auth_settings.REFRESH_TOKEN_EXPIRE_SECONDS)
         refresh_token = self.create_token(
-            data={"sub": str(user_id), "type": "refresh", "jti": secrets.token_urlsafe(32)},
+            data={"sub": str(user_id), "type": "refresh", "jti": secrets.token_urlsafe(32), "sid": session_id},
             expires_delta=refresh_token_expires,
         )
-
-        if update_last_login:
-            await update_user_last_login_at(user_id, db)
 
         return {
             "access_token": access_token,
@@ -1524,7 +1528,9 @@ class AuthService(BaseAuthService):
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
 
             try:
-                expires_at = datetime.fromtimestamp(float(payload["exp"]), timezone.utc)
+                user_id = UUID(user_id)
+                session_id = refresh_session_id(refresh_token, payload)
+                original_expires_at = datetime.fromtimestamp(float(payload["exp"]), timezone.utc)
             except (TypeError, ValueError, OverflowError) as exc:
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token") from exc
 
@@ -1536,10 +1542,16 @@ class AuthService(BaseAuthService):
             if not user_exists.is_active:
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User account is inactive")
 
-            if not await consume_refresh_token(refresh_token, expires_at, db):
+            tokens = self._create_session_tokens(user_id, session_id)
+            # Compute this upper bound after minting to cover the replacement's
+            # full lifetime, including when the configured TTL changes.
+            expires_at = max(
+                original_expires_at,
+                datetime.now(timezone.utc)
+                + timedelta(seconds=settings_service.auth_settings.REFRESH_TOKEN_EXPIRE_SECONDS),
+            )
+            if not await register_refresh_session(session_id, str(user_id), expires_at, db):
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
-
-            return await self.create_user_tokens(user_id, db)
 
         except InvalidTokenError as e:
             logger.exception("JWT decoding error")
@@ -1547,6 +1559,8 @@ class AuthService(BaseAuthService):
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid refresh token",
             ) from e
+        else:
+            return tokens
 
     async def authenticate_user(
         self, username: str, password: str, db: AsyncSession, request: Request | None = None

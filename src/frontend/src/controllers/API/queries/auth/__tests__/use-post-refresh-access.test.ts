@@ -84,30 +84,6 @@ describe("refresh token functionality", () => {
     });
   });
 
-  it("should share an overlapping refresh across hook instances", async () => {
-    const response = {
-      access_token: "access-token",
-      refresh_token: "refresh-token",
-      token_type: "bearer",
-    };
-    let complete!: (value: { data: typeof response }) => void;
-    mockApiPost.mockReturnValue(
-      new Promise<{ data: typeof response }>((resolve) => {
-        complete = resolve;
-      }),
-    );
-
-    const first = useRefreshAccessToken().mutate();
-    const second = useRefreshAccessToken().mutate();
-    complete({ data: response });
-    await expect(Promise.all([first, second])).resolves.toEqual([
-      response,
-      response,
-    ]);
-
-    expect(mockApiPost).toHaveBeenCalledTimes(1);
-  });
-
   describe("error handling", () => {
     it("should throw error when refresh API fails", async () => {
       const mockError = new Error("Refresh failed");

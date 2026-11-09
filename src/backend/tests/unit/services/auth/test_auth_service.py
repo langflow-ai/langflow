@@ -849,7 +849,7 @@ async def test_create_refresh_token_valid(auth_service: AuthService):
 
     with (
         patch("langflow.services.auth.service.get_user_by_id", new=AsyncMock(return_value=fake_user)),
-        patch("langflow.services.auth.service.consume_refresh_token", new=AsyncMock(return_value=True)),
+        patch("langflow.services.auth.service.register_refresh_session", new=AsyncMock(return_value=True)),
     ):
         result = await auth_service.create_refresh_token(refresh_token, db)
 
