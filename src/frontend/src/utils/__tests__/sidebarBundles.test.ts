@@ -124,6 +124,14 @@ it("registers the Fortytwo bundle", () => {
   );
 });
 
+it("uses the WhatsApp logo for its integration palette group", () => {
+  expect(SIDEBAR_BUNDLES).toContainEqual({
+    display_name: "WhatsApp",
+    name: "whatsapp",
+    icon: "WhatsApp",
+  });
+});
+
 it("uses the GitLab logo for its integration palette group", () => {
   expect(SIDEBAR_BUNDLES).toContainEqual({
     display_name: "GitLab",
@@ -145,5 +153,13 @@ it("uses the ServiceNow logo for its integration palette group", () => {
     display_name: "ServiceNow",
     name: "servicenow",
     icon: "ServiceNow",
+  });
+});
+
+it("uses the Telegram logo for its integration palette group", () => {
+  expect(SIDEBAR_BUNDLES).toContainEqual({
+    display_name: "Telegram",
+    name: "telegram",
+    icon: "Telegram",
   });
 });

@@ -535,6 +535,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Spider", name: "spider", icon: "Spider" },
   { display_name: "Supabase", name: "supabase", icon: "Supabase" },
   { display_name: "Tavily", name: "tavily", icon: "TavilyIcon" },
+  { display_name: "Telegram", name: "telegram", icon: "Telegram" },
   { display_name: "ToolGuard", name: "toolguard", icon: "ShieldCheck" },
   { display_name: "TwelveLabs", name: "twelvelabs", icon: "TwelveLabs" },
   { display_name: "Unstructured", name: "unstructured", icon: "Unstructured" },
@@ -546,6 +547,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "vLLM", name: "vllm", icon: "vLLM" },
   { display_name: "Weaviate", name: "weaviate", icon: "Weaviate" },
   { display_name: "Vertex AI", name: "vertexai", icon: "VertexAI" },
+  { display_name: "WhatsApp", name: "whatsapp", icon: "WhatsApp" },
   { display_name: "Wikipedia", name: "wikipedia", icon: "Wikipedia" },
   {
     display_name: "WolframAlpha",
