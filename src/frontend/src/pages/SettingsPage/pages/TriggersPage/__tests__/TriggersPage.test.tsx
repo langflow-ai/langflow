@@ -145,6 +145,28 @@ describe("TriggersPage", () => {
     expect(screen.getByTestId("trigger-row-b")).toBeInTheDocument();
   });
 
+  it.each(["pending", "paused", "error", "needs_reconnect"] as const)(
+    "shows configured GitLab delivery and connection while %s",
+    (state) => {
+      mockMine = [
+        makeTrigger({
+          id: "gitlab",
+          kind: "gitlab.issue",
+          provider: "gitlab",
+          connection_id: null,
+          config: { delivery_mode: "push", connection: "gitlab/work" },
+          state,
+        }),
+      ];
+      render(<TriggersPage />);
+
+      const row = screen.getByTestId("trigger-row-gitlab");
+      expect(within(row).getByText("Push")).toBeInTheDocument();
+      expect(within(row).getByText("gitlab/work")).toBeInTheDocument();
+      expect(within(row).queryByText("Not needed")).not.toBeInTheDocument();
+    },
+  );
+
   it.each(["reader", "writer"] as const)(
     "renders a shared trigger using the server's %s permissions",
     async (role) => {

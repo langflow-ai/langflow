@@ -174,6 +174,7 @@ export const transportOf = (
     if (PUSH_MECHANISMS.has(mechanism)) return "push";
     if (SOCKET_MECHANISMS.has(mechanism)) return "socket";
   }
+  if (trigger.config?.delivery_mode === "push") return "push";
   return "poll";
 };
 

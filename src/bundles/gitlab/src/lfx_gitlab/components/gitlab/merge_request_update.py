@@ -1,6 +1,6 @@
 """Update one GitLab merge request using a connection."""
 
-from lfx.io import DropdownInput, IntInput, MultilineInput, Output, StrInput
+from lfx.io import DropdownInput, IntInput, MessageTextInput, MultilineInput, Output
 
 from lfx_gitlab.base import GitLabActionComponent, connection_input, project_input
 
@@ -15,8 +15,8 @@ class GitLabUpdateMergeRequestComponent(GitLabActionComponent):
     inputs = [
         connection_input(capability_id),
         project_input(),
-        IntInput(name="number", display_name="Issue or Merge Request Number", required=True),
-        StrInput(name="title", display_name="Title", value="", info="Leave blank to keep the existing title."),
+        IntInput(name="number", display_name="Merge Request Number", required=True, input_types=["Message"]),
+        MessageTextInput(name="title", display_name="Title", value="", info="Leave blank to keep the existing title."),
         MultilineInput(
             name="body_content",
             display_name="Description",

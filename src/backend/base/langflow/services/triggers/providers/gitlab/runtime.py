@@ -29,6 +29,7 @@ from langflow.services.triggers.providers.gitlab.credentials import validate_man
 from langflow.services.triggers.providers.gitlab.events import signing_token, verify
 from langflow.services.triggers.providers.registry import TriggerKind, TriggerProvider
 from langflow.services.triggers.source_clients import source_lease
+from langflow.services.triggers.source_errors import SourceConfigurationError
 from langflow.services.triggers.source_subscription import source_ingress_url
 from langflow.services.triggers.subscriptions import upsert_subscription
 
@@ -55,12 +56,12 @@ async def _callback_hooks(request, path, state):
                 continue
             if hook.get("description") != state["ownership_tag"]:
                 msg = "The GitLab callback has no matching ownership proof and needs administrator review."
-                raise ValueError(msg)
+                raise SourceConfigurationError(msg)
             matches[positive_id(hook.get("id"))] = hook
         if len(hooks) < WEBHOOK_PAGE_SIZE:
             return matches
     msg = "The project webhook list exceeded the bounded setup scan."
-    raise ValueError(msg)
+    raise SourceConfigurationError(msg)
 
 
 async def prepare(session, trigger):
@@ -74,7 +75,7 @@ async def prepare(session, trigger):
     ).first()
     if pending_cleanup is not None:
         msg = "Finish the previous GitLab webhook cleanup before enabling this trigger again."
-        raise ValueError(msg)
+        raise SourceConfigurationError(msg)
     project_id = positive_id(trigger.config["project_id"])
     callback = await source_ingress_url(session, trigger)
     connection = await session.get(Connection, trigger.connection_id)
@@ -107,7 +108,7 @@ async def prepare(session, trigger):
             existing.provider_state.get(key) != value for key, value in state.items() if key != "hook_id"
         ):
             msg = "Clean up the original GitLab callback before changing its connection or project."
-            raise ValueError(msg)
+            raise SourceConfigurationError(msg)
         return
     reservation = await upsert_subscription(
         session,
@@ -136,19 +137,19 @@ async def provision(session, trigger):
     ).first()
     if reservation is None or reservation.connection_id != trigger.connection_id:
         msg = "Enable the GitLab trigger to reserve its callback before provisioning."
-        raise ValueError(msg)
+        raise SourceConfigurationError(msg)
     state = dict(reservation.provider_state)
     project_id = positive_id(state["project_id"])
     address = state["callback"]
     if state["origin"] != api_origin() or project_id != positive_id(trigger.config["project_id"]):
         msg = "The original GitLab callback settings changed before provisioning."
-        raise ValueError(msg)
+        raise SourceConfigurationError(msg)
     if not trigger.signing_secret_encrypted:
         msg = "The GitLab signing secret has not been initialized."
-        raise ValueError(msg)
+        raise SourceConfigurationError(msg)
     if state["ownership_tag"] != _ownership_tag(decrypt_api_key(trigger.signing_secret_encrypted), project_id, address):
         msg = "The GitLab callback ownership proof changed before provisioning."
-        raise ValueError(msg)
+        raise SourceConfigurationError(msg)
     lease = await source_lease(session, trigger, family=FAMILY_TRIGGER_PUSH)
     credential = await lease.get_credential()
     if credential.account is None or credential.account.id != state["account_id"]:
@@ -159,14 +160,14 @@ async def provision(session, trigger):
         match = re.match(r"^(\d+)\.(\d+)\.", version.get("version", "")) if isinstance(version, dict) else None
         if not match or tuple(map(int, match.groups())) < (19, 1):
             msg = "Signed GitLab project triggers require GitLab 19.1 or newer."
-            raise ValueError(msg)
+            raise SourceConfigurationError(msg)
         project = await client.request("GET", path)
         if not isinstance(project, dict) or project.get("id") != project_id:
             raise ProviderUnavailableError(provider="gitlab")
         matches = await _callback_hooks(client.request, path, state)
         if len(matches) > 1:
             msg = "Duplicate GitLab callbacks require administrator cleanup before rearming."
-            raise ValueError(msg)
+            raise SourceConfigurationError(msg)
         hook_id = next(iter(matches), None)
         body = {
             "url": address,
@@ -234,22 +235,35 @@ async def ingress_secrets(session, trigger):
     )
 
 
+async def prepare_delivery(trigger, lease, delivery):
+    """Read authoritative bot status after signature verification and durable intake."""
+    user = delivery.get("user")
+    if not isinstance(user, dict):
+        raise ProviderUnavailableError(provider="gitlab")
+    actor_id = positive_id(user.get("id"))
+    async with GitLabClient(lease) as client:
+        actor = await client.request("GET", f"/users/{actor_id}")
+    if not isinstance(actor, dict) or actor.get("id") != actor_id or type(actor.get("bot")) is not bool:
+        raise ProviderUnavailableError(provider="gitlab")
+    return not actor["bot"] or trigger.config.get("include_bot_events", False)
+
+
 async def revoke(task, lease):
     state = task.provider_state
     if state.get("origin") != api_origin():
         msg = "Restore the original configured GitLab origin before remote cleanup."
-        raise ValueError(msg)
+        raise SourceConfigurationError(msg)
     project_id = positive_id(state["project_id"])
     hook_id = positive_id(state["hook_id"]) if state.get("hook_id") is not None else None
     account_id = str(positive_id(state["account_id"]))
     expected_id = f"{project_id}:{hook_id}" if hook_id else _intent_id(task.trigger_id)
     if task.provider_subscription_id != expected_id or not isinstance(state.get("ownership_tag"), str):
         msg = "The GitLab cleanup identity is invalid."
-        raise ValueError(msg)
+        raise SourceConfigurationError(msg)
     async with session_scope_readonly() as session:
         if await leases.holder(session, name=f"trigger-source:{task.trigger_id}") is not None:
             msg = "The GitLab activation is still in progress. Cleanup will retry after it stops."
-            raise ValueError(msg)
+            raise SourceConfigurationError(msg)
     credential = await lease.get_credential()
     snapshot = task.encrypted_credential is not None
     if credential.provider != "gitlab" or (
@@ -286,7 +300,7 @@ async def revoke(task, lease):
                     or hook.get("description") != state["ownership_tag"]
                 ):
                     msg = "The GitLab callback ownership changed and requires administrator cleanup."
-                    raise ValueError(msg)
+                    raise SourceConfigurationError(msg)
                 await request("DELETE", path)
     except ResourceNotFoundError:
         return
@@ -324,6 +338,7 @@ PROVIDER = TriggerProvider(
     ),
     normalize_config=normalize_config,
     prepare=prepare,
+    prepare_delivery=prepare_delivery,
     provision=provision,
     revoke=revoke,
     verify=verify,

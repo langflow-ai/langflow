@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 
-from lfx.integrations.errors import InvalidRequestError
+from lfx.integrations.errors import AuthExpiredError, InvalidRequestError
 from lfx.integrations.models import (
     ConnectionAccount,
     ConnectionRef,
@@ -56,6 +56,8 @@ async def validate_manual_credential(payload, *, context):
     async with GitLabClient(lease) as client:
         info = await client.request("GET", "/personal_access_tokens/self")
         user = await client.request("GET", "/user")
+    if isinstance(info, dict) and (info.get("active") is False or info.get("revoked") is True):
+        raise AuthExpiredError(provider="gitlab")
     if (
         not isinstance(info, dict)
         or not isinstance(user, dict)
@@ -78,8 +80,7 @@ async def validate_manual_credential(payload, *, context):
         msg = "The GitLab token must have a provider expiration date."
         raise InvalidRequestError(msg, provider="gitlab") from None
     if expiry <= datetime.now(timezone.utc):
-        msg = "The GitLab personal access token has expired."
-        raise InvalidRequestError(msg, provider="gitlab")
+        raise AuthExpiredError(provider="gitlab")
     if credentials.expires_at is not None:
         supplied = credentials.expires_at
         if supplied.tzinfo is None or supplied <= datetime.now(timezone.utc):

@@ -255,9 +255,12 @@ async def test_manual_token_uses_actual_scope_identity_origin_and_expiry(monkeyp
         partial(GitLabClient, transport=httpx.MockTransport(handle)),
     )
     if fault is not None:
-        from lfx.integrations.errors import IntegrationNetworkError
+        from lfx.integrations.errors import AuthExpiredError, IntegrationNetworkError
 
-        with pytest.raises((InvalidRequestError, IntegrationNetworkError)) as caught:
+        expected = (
+            AuthExpiredError if fault in {"expired", "revoked"} else (InvalidRequestError, IntegrationNetworkError)
+        )
+        with pytest.raises(expected) as caught:
             await validate_manual_credential(token_payload(), context="self_managed")
         assert "test-personal-token" not in str(caught.value)
     else:

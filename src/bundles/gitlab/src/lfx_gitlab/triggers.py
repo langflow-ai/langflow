@@ -12,7 +12,7 @@ MR_ACTIONS = ["open", "update", "close", "reopen", "merge", "approved", "unappro
 def trigger_inputs(resource):
     return [
         connection_input(f"gitlab.trigger.{resource}"),
-        project_input(),
+        project_input(connectable=False),
         MultiselectInput(
             name="actions",
             display_name="Events",

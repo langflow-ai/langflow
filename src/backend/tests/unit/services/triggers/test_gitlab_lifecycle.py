@@ -75,12 +75,17 @@ def gitlab(monkeypatch, client):  # noqa: ARG001
         timeout_once=False,
         version="19.1.0",
         duplicate=False,
+        actor_bot=False,
+        actor_status=200,
+        token_revoked=False,
     )
 
     def handle(request):
         remote.requests.append(request)
         assert request.url.host == "gitlab.com"
         assert request.headers["private-token"] == "synthetic-gitlab-token"
+        if remote.token_revoked:
+            return httpx.Response(401)
         path = request.url.path.removeprefix("/api/v4")
         if path == "/personal_access_tokens/self":
             return httpx.Response(
@@ -98,6 +103,8 @@ def gitlab(monkeypatch, client):  # noqa: ARG001
             return httpx.Response(
                 200, json={"id": remote.account_id, "username": "owner", "bot": False, "state": "active"}
             )
+        if path == "/users/11":
+            return httpx.Response(remote.actor_status, json={"id": 11, "bot": remote.actor_bot})
         if path == "/version":
             return httpx.Response(200, json={"version": remote.version})
         if path == "/projects/80":

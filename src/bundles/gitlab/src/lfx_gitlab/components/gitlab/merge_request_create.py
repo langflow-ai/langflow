@@ -1,6 +1,6 @@
 """Create one GitLab merge request using a connection."""
 
-from lfx.io import MultilineInput, Output, StrInput
+from lfx.io import MessageTextInput, MultilineInput, Output
 
 from lfx_gitlab.base import GitLabActionComponent, connection_input, project_input
 
@@ -15,9 +15,9 @@ class GitLabCreateMergeRequestComponent(GitLabActionComponent):
     inputs = [
         connection_input(capability_id),
         project_input(),
-        StrInput(name="title", display_name="Title", required=True),
+        MessageTextInput(name="title", display_name="Title", required=True),
         MultilineInput(name="body_content", display_name="Description", value=""),
-        StrInput(name="source_branch", display_name="Source Branch", required=True),
-        StrInput(name="target_branch", display_name="Target Branch", required=True),
+        MessageTextInput(name="source_branch", display_name="Source Branch", required=True),
+        MessageTextInput(name="target_branch", display_name="Target Branch", required=True),
     ]
     outputs = [Output(display_name="Result", name="result", method="build_result")]

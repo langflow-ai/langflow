@@ -18,6 +18,8 @@ Install `lfx-gitlab` with a matching Langflow release that includes the connecti
 
 GitLab.com and public self-managed instances use the API v4 contract. Webhook triggers require GitLab 19.1 or later for signing tokens. Private-only instances, path-prefix installations, IP addresses, and custom ports are outside this preview. GitLab Dedicated and custom network topologies have not been validated.
 
+All actions and subscriptions are scoped to one numeric project ID. A personal token can access projects its user is permitted to use, including projects in groups. Group-level actions, group webhooks, and subscriptions spanning multiple projects are unavailable. Configure a separate trigger for each project.
+
 ## Configure the instance and create a token
 
 The deployment operator sets `LANGFLOW_GITLAB_ORIGIN` before startup. It defaults to `https://gitlab.com`. For a self-managed instance, provide one public HTTPS DNS origin, such as `https://gitlab.example.com`. Do not include `/api/v4`, a path prefix, or credentials. Requests reject redirects and private network destinations.
@@ -34,8 +36,9 @@ The `api` scope is required for this preview. Project and group access tokens, d
 ## Add the connection
 
 1. Open **Settings > Connections**, select **Add connection**, and choose GitLab.
-2. Choose the API token option, enter a connection name such as `work`, and paste the personal access token.
-3. Save the connection and confirm its status is ready.
+2. Enter a **Handle** such as `work`, an optional **Display name**, and the personal access token in **Token**.
+3. If the connection will run triggers, select **Allow background runs**.
+4. Save the connection and confirm its status is ready.
 
 Langflow verifies the token through GitLab's token-self and current-user endpoints. It records the actual user, instance, scope, and expiration. Entered identity or scope claims do not replace this verification. The displayed account uses the verified GitLab username. The [personal access token API](https://docs.gitlab.com/api/personal_access_tokens/) describes the token metadata.
 
@@ -44,6 +47,8 @@ The saved `gitlab/work` reference contains no token. Keep server processes on th
 ## Run actions
 
 Add a GitLab component to a flow and select the saved connection. Use the numeric **Project ID**, not its URL or `group/project` path. Issue and merge request numbers are the project-local numbers shown in GitLab, rather than global database IDs.
+
+Action inputs for Project ID, Issue Number or Merge Request Number, Title, and branch names accept connected Message outputs. Use Parser components to extract the project ID and item number from the trigger's Event output, then connect those parsed values to an action to update or comment on the item that fired the trigger.
 
 | Component | Inputs and behavior |
 | --- | --- |
@@ -69,7 +74,7 @@ Trigger setup requires Maintainer or Owner access to the target project. GitLab 
 2. Start `langflow listeners`, or configure `LANGFLOW_LISTENERS_MODE=subprocess`. The API and listeners need the same GitLab origin, database, and `LANGFLOW_SECRET_KEY`.
 3. Save a flow with **GitLab: On Issue** or **GitLab: On Merge Request**. Select its connection and numeric Project ID.
 4. Choose the event actions that should run the flow. The default selection is open, close, and reopen.
-5. Allow background execution with **Allow background runs** in the trigger, or **Settings > Connections > Actions > Allow scheduled and deployed runs**.
+5. Allow background execution on the connection. Select **Allow background runs** when adding it, or choose **Allow scheduled and deployed runs** from its menu under **Settings > Connections**.
 6. Enable the trigger and check its status under **Settings > Triggers**.
 
 Langflow creates and owns a separate project webhook for each trigger. It supplies the callback and signing token automatically. Do not create a secret-header-only webhook by hand. The receiver requires Standard Webhooks HMAC-SHA256 signatures over the delivery ID, timestamp, and raw body.
@@ -77,6 +82,10 @@ Langflow creates and owns a separate project webhook for each trigger. It suppli
 Issue triggers support open, update, close, and reopen. Merge request triggers also support merge, approved, unapproved, approval, and unapproval. The receiver checks the project, event type, and selected actions. Merge requests must target the configured project. Confidential issue events are excluded.
 
 Events by the connection owner and actors marked as bots are excluded by default. Keep those exclusions when the flow writes back to GitLab. You can change **Include Own Events** and **Include Bot Events** in advanced settings, but GitLab does not identify every automation account as a bot.
+
+GitLab's webhook user object does not identify bots. Before dispatching a flow with **Include Bot Events** off, Langflow checks the actor through GitLab's Users API. Bot deliveries remain visible in event history but do not run the flow. Temporary lookup failures retry the recorded event instead of treating an unknown actor as human.
+
+Changing **Events**, **Include Own Events**, or **Include Bot Events** applies the new filters without pausing an active trigger or replacing its webhook. Changing the project, connection, or delivery settings requires subscribing again.
 
 These triggers receive webhooks and have no polling interval. `LANGFLOW_LISTENER_POLL_INTERVAL_S` does not create a GitLab polling fallback.
 
@@ -101,3 +110,9 @@ Personal access tokens are not refreshed automatically. Before a planned token r
 | Rate limit or provider outage | Restore provider access and wait for retry. Check write results before manually retrying a mutation. |
 
 Keep the original GitLab origin available until its old webhooks are removed. Changing the deployment origin before cleanup can leave remote subscriptions behind.
+
+## Rate limits and retries
+
+GitLab REST and webhook limits vary by instance and endpoint. See [REST API rate limits](https://docs.gitlab.com/api/rest/#rate-limits) and [webhook limits](https://docs.gitlab.com/user/project/integrations/webhooks/#webhook-limits). Self-managed administrators can configure their own limits.
+
+An HTTP 429 response produces a rate-limit error with GitLab's numeric `Retry-After` delay. If that header is absent or invalid, the client reports 60 seconds. Actions return the error without automatically retrying the request. Check GitLab for an uncertain write result before retrying manually. Failed activation requires another **Resume** attempt after the limit clears. Background event processing uses bounded retries and honors the reported delay. Remote cleanup retries with increasing delays capped at one hour.

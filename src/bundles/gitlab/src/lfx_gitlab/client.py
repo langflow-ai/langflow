@@ -26,10 +26,22 @@ from lfx.utils.ssrf_protection import SSRFProtectionError
 from lfx.utils.url_redaction import suppress_sensitive_http_logs
 
 _PATH = re.compile(
-    r"/(?:user|version|personal_access_tokens/self|projects/[1-9][0-9]*(?:/(?:hooks|issues|merge_requests)(?:/[1-9][0-9]*(?:/notes)?)?)?)\Z"
+    r"/(?:user|users/[1-9][0-9]*|version|personal_access_tokens/self|projects/[1-9][0-9]*(?:/(?:hooks|issues|merge_requests)(?:/[1-9][0-9]*(?:/notes)?)?)?)\Z"
 )
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 MAX_REQUEST_BYTES = 64 * 1024
+
+
+class GitLabAuthExpiredError(AuthExpiredError):
+    """Keep reconnect guidance visible in canvas errors as well as structured hints."""
+
+    def __init__(self):
+        super().__init__(provider="gitlab")
+        self.message = (
+            "The GitLab credential is expired or was rejected. Reconnect the GitLab connection and try again."
+        )
+        self.safe_message = self.message
+        self.args = (self.safe_message,)
 
 
 def api_origin() -> str:
@@ -61,28 +73,29 @@ def api_origin() -> str:
     return "https://" + host.lower()
 
 
-def positive_id(value) -> int:
+def positive_id(value, *, field="ID") -> int:
+    msg = f"{field} must be an integer from 1 to 9223372036854775807 (the signed 64-bit range)."
     if isinstance(value, bool):
-        msg = "Use a positive integer ID."
         raise InvalidRequestError(msg, provider="gitlab")
     try:
         number = int(value)
     except (TypeError, ValueError, OverflowError):
-        msg = "Use a positive integer ID."
         raise InvalidRequestError(msg, provider="gitlab") from None
     if str(number) != str(value) or not 1 <= number <= 2**63 - 1:
-        msg = "Use a positive integer ID."
         raise InvalidRequestError(msg, provider="gitlab")
     return number
 
 
-def bounded_text(value, *, required: bool = False, maximum: int = 60000) -> str:
+def bounded_text(value, *, required: bool = False, maximum: int = 60000, field="Text") -> str:
+    if required and isinstance(value, str) and not value.strip():
+        msg = f"{field} must contain non-whitespace text."
+        raise InvalidRequestError(msg, provider="gitlab")
     try:
         valid = isinstance(value, str) and len(value.encode()) <= maximum and (not required or bool(value.strip()))
     except UnicodeEncodeError:
         valid = False
     if not valid:
-        msg = "Provide text within the documented size limit."
+        msg = f"{field} must be text containing at most {maximum} UTF-8 bytes."
         raise InvalidRequestError(msg, provider="gitlab")
     return value
 
@@ -113,7 +126,7 @@ def _safe_output(value):
 def response_error(response: httpx.Response):
     status = response.status_code
     if status == httpx.codes.UNAUTHORIZED:
-        return AuthExpiredError(provider="gitlab")
+        return GitLabAuthExpiredError()
     if status == httpx.codes.TOO_MANY_REQUESTS:
         try:
             delay = float(response.headers.get("retry-after", "60"))
@@ -162,7 +175,10 @@ class GitLabClient:
         if content is not None and len(content) > MAX_REQUEST_BYTES:
             msg = "The GitLab request exceeds 64 KiB."
             raise InvalidRequestError(msg, provider="gitlab")
-        credential = await self.lease.get_credential()
+        try:
+            credential = await self.lease.get_credential()
+        except AuthExpiredError:
+            raise GitLabAuthExpiredError from None
         if (
             credential.provider != "gitlab"
             or credential.identity != "user_delegated"
@@ -176,10 +192,19 @@ class GitLabClient:
             )
         expiry = credential.expires_at
         if expiry is None or expiry.tzinfo is None or expiry <= datetime.now(timezone.utc):
-            raise AuthExpiredError(provider="gitlab")
+            raise GitLabAuthExpiredError
         token = credential.access_token.get_secret_value()
         try:
-            return await asyncio.wait_for(self._request(method, path, content, params, token), timeout=25)
+            try:
+                return await asyncio.wait_for(self._request(method, path, content, params, token), timeout=25)
+            except AuthExpiredError as error:
+                try:
+                    replacement = await self.lease.get_token_after_auth_error(error, rejected_token=token)
+                except AuthExpiredError:
+                    raise GitLabAuthExpiredError from None
+                if replacement == token:
+                    raise
+                return await self.request(method, path, body=body, params=params)
         except (asyncio.TimeoutError, httpx.TimeoutException):
             raise IntegrationNetworkError(
                 reason="timeout", provider="gitlab", host=urlsplit(self.origin).hostname

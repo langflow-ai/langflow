@@ -81,6 +81,10 @@ def test_id_rejects_paths_and_non_integer_values(value):
         "/projects/1?x=2",
         "/projects/%31",
         "/projects/1/hooks/2/events",
+        "/users/0",
+        "/users/me",
+        "/users/1/../2",
+        "/users/1?private_token=x",
     ],
 )
 async def test_client_rejects_arbitrary_paths_before_credentials(lease, path):
@@ -91,6 +95,18 @@ async def test_client_rejects_arbitrary_paths_before_credentials(lease, path):
     async with GitLabClient(lease, transport=httpx.MockTransport(lambda _r: pytest.fail("HTTP"))) as client:
         with pytest.raises(InvalidRequestError):
             await client.request("GET", path)
+
+
+async def test_client_allows_numeric_actor_lookup(lease):
+    requests = []
+
+    def handle(request):
+        requests.append(request)
+        return httpx.Response(200, json={"id": 12, "bot": True})
+
+    async with GitLabClient(lease, transport=httpx.MockTransport(handle)) as client:
+        assert await client.request("GET", "/users/12") == {"id": 12, "bot": True}
+    assert requests[0].url.path == "/api/v4/users/12"
 
 
 @pytest.mark.parametrize("fault", ["identity", "origin", "scope", "unverified", "expiry"])

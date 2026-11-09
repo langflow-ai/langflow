@@ -28,7 +28,9 @@ from typing import TYPE_CHECKING, Any
 from uuid import NAMESPACE_URL, uuid5
 
 from lfx.integrations.errors import (
+    AuthExpiredError,
     ConnectionNotAuthorizedError,
+    ConnectionUnresolvedError,
     IntegrationPolicyBlockedError,
     ProviderUnavailableError,
 )
@@ -611,7 +613,44 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
         return
 
     denial = await connection_preflight(session, trigger, family=family)
+    if denial is None:
+        from langflow.services.triggers.providers.registry import get_provider
+
+        extension = get_provider(trigger.provider or "")
+        if extension is not None and extension.prepare_delivery is not None:
+            from langflow.services.triggers.error_codes import CodedTriggerError, TriggerErrorCode
+            from langflow.services.triggers.listeners.supervisor import is_local_configuration_failure
+            from langflow.services.triggers.source_clients import source_lease
+
+            try:
+                lease = await source_lease(session, trigger, family=family)
+                accepted = await extension.prepare_delivery(trigger, lease, (event.payload or {}).get("delivery") or {})
+                if type(accepted) is not bool:
+                    raise TypeError
+            except (AuthExpiredError, ConnectionNotAuthorizedError, IntegrationPolicyBlockedError) as exc:
+                denial = exc
+            except Exception as exc:  # noqa: BLE001 - provider checks must preserve retryable deliveries
+                if isinstance(exc, ConnectionUnresolvedError) and not is_local_configuration_failure(exc):
+                    denial = exc
+                elif isinstance(exc, CodedTriggerError) and exc.code == TriggerErrorCode.CONNECTION_UNUSABLE.value:
+                    denial = AuthExpiredError(provider=trigger.provider)
+                else:
+                    await _fence_event(session, event)
+                    await _schedule_retry(
+                        session,
+                        event=event,
+                        max_attempts=trigger.max_attempts,
+                        error=f"delivery_check_failed:{type(exc).__name__}",
+                        retry_after=getattr(exc, "retry_after", None),
+                    )
+                    return
+            else:
+                if not accepted:
+                    await _fence_event(session, event)
+                    await _terminalize(session, event=event, state=TriggerEventState.COMPLETED)
+                    return
     if denial is not None:
+        await _fence_event(session, event)
         if isinstance(denial, ProviderUnavailableError):
             await _defer_unavailable_provider(session, trigger=trigger, event=event)
             return
