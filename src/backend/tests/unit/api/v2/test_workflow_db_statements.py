@@ -190,6 +190,10 @@ _ROUND_TRIPS = {
 # Execution reloads key, owner, and flow together in one additional checkout.
 _JOB_KEY_AUTHORIZATION_ROUND_TRIPS = (4, 1)
 
+# Shared maintenance is checked at request entry, hook admission, and hook start.
+# Each check uses a fresh read-only session so pods see each other's changes.
+_MAINTENANCE_ROUND_TRIPS = (3, 3)
+
 
 def _follows(statements: list[str], first: str, then: str) -> bool:
     return any(a == first and b == then for a, b in pairwise(statements))
@@ -210,9 +214,11 @@ async def test_run_db_round_trips(client: AsyncClient, created_api_key, chat_flo
     flow_name = request.node.callspec.params["chat_flow"]
     base_statements, base_checkouts = _ROUND_TRIPS[flow_name][mode]
     key_statements, key_checkouts = _JOB_KEY_AUTHORIZATION_ROUND_TRIPS
+    maintenance_statements, maintenance_checkouts = _MAINTENANCE_ROUND_TRIPS
+    assert statements.count("SELECT maintenance_state") == maintenance_statements, statements
     assert (len(statements), recorder.checkouts) == (
-        base_statements + key_statements,
-        base_checkouts + key_checkouts,
+        base_statements + key_statements + maintenance_statements,
+        base_checkouts + key_checkouts + maintenance_checkouts,
     ), statements
 
 
@@ -283,5 +289,8 @@ async def test_run_task_wait_includes_delayed_child_sql():
             measurement.cancel()
         await asyncio.gather(measurement, return_exceptions=True)
 
-    assert recorder.statements == ["SELECT", "SELECT"]
-    assert recorder.checkouts == 2
+    # Each task checks maintenance before admission and again before it starts.
+    maintenance_statements = [s for s in recorder.statements if s == "SELECT maintenance_state"]
+    assert maintenance_statements == ["SELECT maintenance_state"] * 4
+    assert [s for s in recorder.statements if s != "SELECT maintenance_state"] == ["SELECT", "SELECT"]
+    assert recorder.checkouts == 2 + len(maintenance_statements)
