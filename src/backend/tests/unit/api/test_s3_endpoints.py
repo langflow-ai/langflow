@@ -13,6 +13,8 @@ For actual S3 storage service testing, see:
 - tests/integration/storage/ - Integration tests with real AWS S3
 """
 
+import hashlib
+import io
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -33,6 +35,7 @@ class TestS3FileEndpoints:
         service.get_file = AsyncMock(return_value=b"test file content")
         service.get_file_stream = MagicMock(return_value=iter([b"chunk1", b"chunk2", b"chunk3"]))
         service.save_file = AsyncMock()
+        service.save_upload_stream = AsyncMock()
         service.delete_file = AsyncMock()
         service.get_file_size = AsyncMock(return_value=1024)
         return service
@@ -240,13 +243,18 @@ class TestS3FileEndpoints:
             mock_file.filename = "upload.txt"
             mock_file.size = 1024
             mock_file.read = AsyncMock(return_value=b"file content")
+            # An UploadFile always has its spooled body here; S3 hashes it before the upload starts.
+            mock_file.file = io.BytesIO(b"file content")
 
             with patch("langflow.api.v2.files.upload_user_file"):
                 from langflow.api.v2.files import save_file_routine
 
                 await save_file_routine(mock_file, mock_storage_service, mock_user, file_name="upload.txt")
 
-                # Verify storage service was called
-                mock_storage_service.save_file.assert_called_once_with(
-                    flow_id="user-user_123", file_name="upload.txt", data=b"file content", append=False
-                )
+                # Verify storage service was called: streamed, never as one whole body
+                mock_storage_service.save_file.assert_not_called()
+                mock_storage_service.save_upload_stream.assert_called_once()
+                call = mock_storage_service.save_upload_stream.call_args
+                assert call.args[:2] == ("user-user_123", "upload.txt")
+                assert call.kwargs["md5"] == hashlib.md5(b"file content", usedforsecurity=False).hexdigest()
+                assert mock_file.file.tell() == 0  # rewound for the upload to read from the start

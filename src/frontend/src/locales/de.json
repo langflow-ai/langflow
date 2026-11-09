@@ -1003,6 +1003,8 @@
   "flow.statusBuild": "Erstellen, um den Status zu überprüfen.",
   "flow.statusBuilding": "Wird geladen...",
   "flow.statusInactive": "Ausführung gesperrt",
+  "flow.statusBranchNotTaken": "Zweig nicht gewählt",
+  "flow.statusBranchTakenTo": "{{component}} hat die Eingabe an {{outputs}} gesendet.",
   "flow.statusMissingFieldsError": "Bitte füllen Sie alle Pflichtfelder aus.",
   "flow.toAvoidLosingProgress": "um den Fortschritt nicht zu verlieren.",
   "flow.tooltipHiddenOutputsCollapse": "Ausgeblendete Ausgaben ausblenden",

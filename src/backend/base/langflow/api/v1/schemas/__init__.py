@@ -334,6 +334,8 @@ class ResultDataResponse(BaseModel):
 class VertexBuildResponse(BaseModel):
     id: str | None = None
     inactivated_vertices: list[str] | None = None
+    branch_skips: dict[str, dict[str, Any]] | None = None
+    """Router that excluded each inactivated vertex and the outputs it took instead."""
     next_vertices_ids: list[str] | None = None
     top_level_vertices: list[str] | None = None
     valid: bool
