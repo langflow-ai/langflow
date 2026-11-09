@@ -28,6 +28,14 @@ from langflow.services.job_queue.service import (
     RedisQueueWrapper,
 )
 
+
+@pytest.fixture(autouse=True)
+def unpaused_database(monkeypatch):
+    # These tests own FakeRedis, not an application database. Keep admission
+    # explicit so a global database left by another test cannot hold their jobs.
+    monkeypatch.setattr("langflow.api.utils.migration_pause._database_pause_status", AsyncMock(return_value=False))
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -472,7 +480,9 @@ async def test_redis_service_cleanup_swallows_redis_delete_error():
             await asyncio.sleep(0)
 
         service.start_job(job_id, _noop())
-        await asyncio.sleep(0.05)
+        task = service._queues[job_id][2]
+        assert task is not None
+        await asyncio.wait_for(task, timeout=2.0)
 
         # Must not raise — the warning path absorbs the Redis error and the
         # rest of cleanup_job (local state, super().cleanup_job) still runs.
@@ -831,8 +841,10 @@ async def test_redis_service_same_worker_cancel_wakes_active_consumer_before_fir
         job_id = str(uuid.uuid4())
         svc.create_queue(job_id)
         cancelled_event = asyncio.Event()
+        producer_started = asyncio.Event()
 
         async def _long_running():
+            producer_started.set()
             try:
                 await asyncio.Event().wait()
             except asyncio.CancelledError:
@@ -840,7 +852,7 @@ async def test_redis_service_same_worker_cancel_wakes_active_consumer_before_fir
                 raise
 
         svc.start_job(job_id, _long_running())
-        await asyncio.sleep(0.05)
+        await asyncio.wait_for(producer_started.wait(), timeout=2.0)
 
         queue, _, event_task, _ = svc.get_queue_data(job_id)
         assert event_task is not None

@@ -1,4 +1,4 @@
-"""The deployment_copy job type and the release must reach one head from either side."""
+"""Release and feature migrations must reach one head without losing jobs or maintenance state."""
 
 from uuid import uuid4
 
@@ -43,6 +43,8 @@ def test_deployment_copy_and_release_have_single_head():
         "f4b8c1d2e3a6",  # pragma: allowlist secret
         "8f1a2b3c4d5e",  # pragma: allowlist secret
         "e6f8a0b2c4d6",  # pragma: allowlist secret
+        "d8e2f4a6c9b1",  # pragma: allowlist secret
+        "a8c2e6f4b9d1",  # pragma: allowlist secret
     ],
 )
 def test_upgrading_from_either_side_keeps_jobs_and_accepts_a_copy_job(db_url, prior_revision):  # noqa: F811
@@ -64,13 +66,44 @@ def test_upgrading_from_either_side_keeps_jobs_and_accepts_a_copy_job(db_url, pr
                 ScriptDirectory.from_config(config).get_heads()
             )
             assert "permissions" in {column["name"] for column in inspect(connection).get_columns("apikey")}
+            assert connection.execute(text("SELECT id, enabled, reason FROM maintenance_state")).one() == (
+                1,
+                False,
+                None,
+            )
+    finally:
+        engine.dispose()
+
+
+@pytest.mark.parametrize("release_applied", [False, True])
+def test_upgrading_maintenance_preserves_existing_state(db_url, release_applied):  # noqa: F811
+    """Merging either maintenance alone or both old heads preserves an active freeze."""
+    config = _make_alembic_cfg(db_url)
+    command.upgrade(config, "4d6e8f0a2b3c")  # pragma: allowlist secret
+    engine = create_engine(_engine_url(db_url))
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                text("UPDATE maintenance_state SET enabled = :enabled, reason = :reason WHERE id = 1"),
+                {"enabled": True, "reason": "Upgrade rehearsal"},
+            )
+            state = connection.execute(text("SELECT * FROM maintenance_state")).one()
+        if release_applied:
+            command.upgrade(config, "f4b8c1d2e3a6")  # pragma: allowlist secret
+        command.upgrade(config, "head")
+        command.upgrade(config, "head")
+        with engine.connect() as connection:
+            assert connection.execute(text("SELECT * FROM maintenance_state")).one() == state
+            assert MigrationContext.configure(connection).get_current_heads() == tuple(
+                ScriptDirectory.from_config(config).get_heads()
+            )
     finally:
         engine.dispose()
 
 
 def test_report_merge_downgrade_and_upgrade_keep_existing_rows(db_url):  # noqa: F811
     config = _make_alembic_cfg(db_url)
-    command.upgrade(config, "head")
+    command.upgrade(config, "d8e2f4a6c9b1")  # pragma: allowlist secret
     engine = create_engine(_engine_url(db_url))
     report_id = str(uuid4())
     try:
@@ -95,9 +128,41 @@ def test_report_merge_downgrade_and_upgrade_keep_existing_rows(db_url):  # noqa:
             assert connection.execute(text("SELECT COUNT(*) FROM job")).scalar() == 1
         command.upgrade(config, "head")
         with engine.connect() as connection:
-            assert MigrationContext.configure(connection).get_current_heads() == (
-                "d8e2f4a6c9b1",  # pragma: allowlist secret
+            assert MigrationContext.configure(connection).get_current_heads() == tuple(
+                ScriptDirectory.from_config(config).get_heads()
             )
             assert connection.execute(text("SELECT document_json FROM upgrade_report")).scalar() == '{"retained": true}'
+    finally:
+        engine.dispose()
+
+
+def test_qa_merge_downgrade_and_upgrade_keep_existing_state(db_url):  # noqa: F811
+    """The final no-op join preserves rows and the active freeze in either direction."""
+    config = _make_alembic_cfg(db_url)
+    command.upgrade(config, "head")
+    engine = create_engine(_engine_url(db_url))
+    try:
+        with engine.begin() as connection:
+            _insert_job(connection, "workflow")
+            connection.execute(
+                text("UPDATE maintenance_state SET enabled = :enabled, reason = :reason WHERE id = 1"),
+                {"enabled": True, "reason": "QA rehearsal"},
+            )
+            state = connection.execute(text("SELECT * FROM maintenance_state")).one()
+        command.downgrade(config, "d8e2f4a6c9b1")  # pragma: allowlist secret
+        with engine.connect() as connection:
+            assert set(MigrationContext.configure(connection).get_current_heads()) == {
+                "d8e2f4a6c9b1",  # pragma: allowlist secret
+                "a8c2e6f4b9d1",  # pragma: allowlist secret
+            }
+            assert connection.execute(text("SELECT * FROM maintenance_state")).one() == state
+            assert connection.execute(text("SELECT COUNT(*) FROM job")).scalar() == 1
+        command.upgrade(config, "head")
+        with engine.connect() as connection:
+            assert MigrationContext.configure(connection).get_current_heads() == tuple(
+                ScriptDirectory.from_config(config).get_heads()
+            )
+            assert connection.execute(text("SELECT * FROM maintenance_state")).one() == state
+            assert connection.execute(text("SELECT COUNT(*) FROM job")).scalar() == 1
     finally:
         engine.dispose()

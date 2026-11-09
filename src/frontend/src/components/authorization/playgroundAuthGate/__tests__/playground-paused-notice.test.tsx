@@ -119,3 +119,31 @@ it("keeps the notice empty when migration is disabled and no pause is active", a
   expect(screen.getByRole("main")).toHaveTextContent("Playground");
   expect(screen.getByRole("status")).toBeEmptyDOMElement();
 });
+
+it("keeps the file pause notice until migration ends when both pauses are active", async () => {
+  mockGet.mockResolvedValue({
+    data: { paused: true, maintenance: true, migration: true },
+  });
+  showPlayground();
+
+  await waitFor(() =>
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Changes are paused on this instance while it moves to a new one",
+    ),
+  );
+  expect(screen.getByRole("status")).not.toHaveTextContent(
+    "Administrators can still make changes",
+  );
+
+  mockGet.mockResolvedValue({
+    data: { paused: true, maintenance: true, migration: false },
+  });
+  await act(async () => {
+    await client.invalidateQueries({ queryKey: migrationKeys.pause });
+  });
+  await waitFor(() =>
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Ordinary changes and flow runs are paused for maintenance",
+    ),
+  );
+});
