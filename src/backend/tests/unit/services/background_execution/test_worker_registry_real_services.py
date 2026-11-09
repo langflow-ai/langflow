@@ -27,6 +27,7 @@ import os
 import signal
 import time
 from datetime import datetime, timedelta, timezone
+from uuid import uuid4
 
 import pytest
 from langflow.services.database.models.jobs.model import Job, JobStatus
@@ -106,7 +107,10 @@ async def test_real_worker_registers_runs_and_deregisters():
         # long enough to observe (a single sub-second job's BUSY window can slip
         # between polls; a backlog keeps it busy for several seconds). The row
         # flips to BUSY with a current_job_id drawn from what we submitted.
-        job_ids = {await harness.submit_job(flow_id=flow_id, user_id=user_id) for _ in range(6)}
+        # Separate conversations keep stored output from feeding back across the backlog.
+        job_ids = {
+            await harness.submit_job(flow_id=flow_id, user_id=user_id, session_id=str(uuid4())) for _ in range(6)
+        }
 
         async def _busy_with_submitted_job():
             rows = await _registry_rows()
