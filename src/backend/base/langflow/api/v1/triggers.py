@@ -385,7 +385,6 @@ async def enable_trigger(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={
-                "code": exc.code,
                 "error_code": exc.code,
                 "message": exc.safe_message,
                 "hint": exc.hint,
