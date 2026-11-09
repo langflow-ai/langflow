@@ -182,6 +182,11 @@ class NotDiamondComponent(Component):
             runnable=chosen_model,
             input_value=input_value,
             system_message=system_message,
+            config={
+                "display_name": self.display_name,
+                "get_project_name": self.get_project_name,
+                "get_langchain_callbacks": self.get_langchain_callbacks,
+            },
             token_usage_callback=lambda msg: setattr(
                 self, "_token_usage", accumulate_usage(self._token_usage, extract_usage_from_message(msg))
             ),
