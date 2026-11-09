@@ -80,7 +80,7 @@ async def test_policy_denial_is_a_client_refusal(gitlab, trigger_owner, owned_fl
             with pytest.raises(HTTPException) as refusal:
                 await enable_trigger(trigger.id, session, user, TriggerService())
             assert refusal.value.status_code == 403
-            assert refusal.value.detail["code"] == "policy-blocked"
+            assert refusal.value.detail["error_code"] == "policy-blocked"
             assert "integration policy" in refusal.value.detail["message"]
         assert gitlab.created == 0
     finally:
