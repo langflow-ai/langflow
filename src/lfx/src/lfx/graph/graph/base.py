@@ -2909,14 +2909,15 @@ class Graph:
         return self._cycle_vertices
 
     def _build_edges(self) -> list[CycleEdge]:
-        """Builds the edges of the graph."""
+        """Builds the edges of the graph, in the flow's edge order, without duplicates."""
         # Edge takes two vertices as arguments, so we need to build the vertices first
         # and then build the edges
         # if we can't find a vertex, we raise an error
-        edges: set[CycleEdge | Edge] = set()
+        # A dict, not a set: a set's order follows the hash seed, and list inputs read this order.
+        edges: dict[CycleEdge | Edge, None] = {}
         for edge in self._edges:
             new_edge = self.build_edge(edge)
-            edges.add(new_edge)
+            edges.setdefault(new_edge, None)
         if self.vertices and not edges:
             logger.warning("Graph has vertices but no edges")
         return list(cast("Iterable[CycleEdge]", edges))
