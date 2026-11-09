@@ -844,11 +844,13 @@ async def test_create_refresh_token_valid(auth_service: AuthService):
     """Test creating new tokens from a valid refresh token."""
     user_id = uuid4()
     db = AsyncMock()
-    db.get.return_value = None
     refresh_token = auth_service.create_token({"sub": str(user_id), "type": "refresh"}, timedelta(minutes=5))
     fake_user = _dummy_user(user_id)
 
-    with patch("langflow.services.auth.service.get_user_by_id", new=AsyncMock(return_value=fake_user)):
+    with (
+        patch("langflow.services.auth.service.get_user_by_id", new=AsyncMock(return_value=fake_user)),
+        patch("langflow.services.auth.service.consume_refresh_token", new=AsyncMock(return_value=True)),
+    ):
         result = await auth_service.create_refresh_token(refresh_token, db)
 
     assert "access_token" in result

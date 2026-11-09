@@ -50,7 +50,7 @@ from langflow.services.auth.external import (
     resolve_external_identity,
     set_current_external_access_context,
 )
-from langflow.services.auth.refresh_tokens import is_refresh_token_revoked
+from langflow.services.auth.refresh_tokens import consume_refresh_token
 from langflow.services.database.models.api_key.crud import authenticate_api_key
 from langflow.services.database.models.user.crud import (
     get_user_by_id,
@@ -1515,12 +1515,18 @@ class AuthService(BaseAuthService):
                     refresh_token,
                     verification_key,
                     algorithms=[algorithm],
+                    options={"require": ["exp", "sub"]},
                 )
             user_id: UUID = payload.get("sub")  # type: ignore[assignment]
             token_type: str = payload.get("type")  # type: ignore[assignment]
 
             if user_id is None or token_type != "refresh":  # noqa: S105
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+
+            try:
+                expires_at = datetime.fromtimestamp(float(payload["exp"]), timezone.utc)
+            except (TypeError, ValueError, OverflowError) as exc:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token") from exc
 
             user_exists = await get_user_by_id(db, user_id)
 
@@ -1530,7 +1536,7 @@ class AuthService(BaseAuthService):
             if not user_exists.is_active:
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User account is inactive")
 
-            if await is_refresh_token_revoked(refresh_token, db):
+            if not await consume_refresh_token(refresh_token, expires_at, db):
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
 
             return await self.create_user_tokens(user_id, db)
