@@ -34,6 +34,7 @@ import re
 import secrets
 from typing import TYPE_CHECKING, Any
 
+from croniter import croniter
 from lfx.log.logger import logger
 from sqlalchemy.exc import DBAPIError
 
@@ -48,6 +49,14 @@ from langflow.services.triggers.constants import (
     PROVIDER_SLACK,
     SLACK_TRIGGER_KINDS,
 )
+from langflow.services.triggers.error_codes import (
+    MULTIPLE_TRIGGERS_ERROR,
+    NODE_REMOVED_ERROR,
+    SOURCE_SETTINGS_CHANGED_ERROR,
+    CodedTriggerError,
+    TriggerErrorCode,
+)
+from langflow.services.triggers.locking import lock_trigger
 from langflow.services.triggers.providers.registry import component_kind, get_kind, source_kinds
 from langflow.services.triggers.schedule_config import (
     InvalidScheduleError,
@@ -179,16 +188,6 @@ def normalize_webhook_config(config: dict[str, Any]) -> dict[str, Any]:
     return normalized
 
 
-#: Why a trigger whose node left the canvas was paused. Reconciliation owns this
-#: reason, and a clean save must not erase it: re-adding the node leaves the
-#: trigger paused, and the reason is still the explanation.
-NODE_REMOVED_ERROR = "trigger node removed from the flow"
-
-#: Why an armed Microsoft or Google source was paused by a save that changed its
-#: settings: the provider subscription was retired with the old settings, so it
-#: takes an explicit enable to subscribe again with the new ones.
-SOURCE_SETTINGS_CHANGED_ERROR = "Source settings changed. Enable the trigger again to resubscribe."
-
 #: States whose ``last_error`` a schedule verdict owns. The provider states and
 #: the terminal ``dead`` state carry reasons that a schedule edit cannot fix.
 _VERDICT_STATES = frozenset(
@@ -199,6 +198,13 @@ _VERDICT_STATES = frozenset(
         TriggerState.ERROR.value,
     }
 )
+
+
+def trigger_node_on_canvas(row: Trigger, flow_data: dict[str, Any] | None) -> bool:
+    """Whether ``row``'s node is on ``flow_data``'s canvas; a trigger made without a node always is."""
+    if row.node_id is None:
+        return True
+    return any(node.get("id") == row.node_id for node in (flow_data or {}).get("nodes", []) or [])
 
 
 def apply_config_verdict(row: Trigger, error: str | None) -> bool:
@@ -279,11 +285,54 @@ def _node_kind(node_type: Any) -> str | None:
     )
 
 
+def validate_single_trigger_per_flow(flow_data: dict[str, Any] | None) -> None:
+    """Reject extra canvas triggers before saving or enabling the flow."""
+    nodes = (flow_data or {}).get("nodes")
+    if not isinstance(nodes, list):
+        return
+    count = 0
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        node_data = node.get("data")
+        if not isinstance(node_data, dict) or _node_kind(node_data.get("type")) is None:
+            continue
+        count += 1
+        if count > 1:
+            raise CodedTriggerError(TriggerErrorCode.MULTIPLE_TRIGGERS, MULTIPLE_TRIGGERS_ERROR)
+
+
 def _display_name(config: dict[str, Any], kind: str) -> str:
     if kind == "schedule" and config.get("cron"):
         return f"Schedule {config['cron']}"
     extension = get_kind(kind)
     return extension.display_name if extension else _KIND_DISPLAY_NAMES.get(kind) or kind.replace("_", " ").title()
+
+
+def _is_generated_name(name: str, kind: str, config: dict[str, Any]) -> bool:
+    """Whether ``name`` is one the server made from the config, not one the owner chose."""
+    if name in {_display_name(config, kind), _display_name({}, kind)}:
+        return True
+    # Saves before names followed the config left a schedule named for the cron
+    # it was created with.
+    prefix = "Schedule "
+    return kind == "schedule" and name.startswith(prefix) and croniter.is_valid(name.removeprefix(prefix))
+
+
+def sync_display_name(row: Trigger, config: dict[str, Any] | None) -> bool:
+    """Keep a generated name in step with ``config``; ``None`` is a config that does not validate.
+
+    Settings and the events drawer show the name, so a schedule must not keep
+    the cron it no longer fires on. A name the owner chose stays theirs.
+    Call before ``row.config`` changes. Returns whether the name changed.
+    """
+    if not _is_generated_name(row.name, row.kind, row.config or {}):
+        return False
+    name = _display_name(config or {}, row.kind)
+    if name == row.name:
+        return False
+    row.name = name
+    return True
 
 
 async def _reconcile_slack(
@@ -447,13 +496,19 @@ async def reconcile_flow_triggers(
             row.public_id = secrets.token_urlsafe(24)
             session.add(row)
             touched += 1
+        renamed = sync_display_name(row, config if error is None else None)
         config_changed = row.config != config
-        changed = config_changed or row.session_policy != session_policy
+        changed = config_changed or row.session_policy != session_policy or renamed
         if changed:
             if schedule_timing_changed(row.config or {}, config):
                 row.next_fire_at = None
             row.config = config
             row.session_policy = session_policy
+        if row.last_error == NODE_REMOVED_ERROR:
+            # The node is back, so the removal no longer explains the pause. The
+            # trigger stays paused: arming it again is still the owner's act.
+            row.last_error = None
+            changed = True
         moved = False
         if provider is not None:
             if row.provider != provider:
@@ -469,6 +524,16 @@ async def reconcile_flow_triggers(
                     row.connection_id = connection_id
                     row.provider_state = {}
             changed = changed or moved
+        if moved and row.state == TriggerState.NEEDS_RECONNECT.value:
+            from langflow.services.triggers.subscriptions import revoke_for_trigger
+
+            await revoke_for_trigger(session, trigger_id=row.id)
+            row.state = TriggerState.PAUSED.value
+            row.last_error = error or SOURCE_SETTINGS_CHANGED_ERROR
+            row.provider_state = {}
+            session.add(row)
+            touched += 1
+            continue
         # Evaluated on every save, not only when the config changed, so a row an
         # earlier save left in ``error`` with an already-valid config heals.
         if kind == "schedule":
@@ -485,7 +550,11 @@ async def reconcile_flow_triggers(
                 row.last_error = error or SOURCE_SETTINGS_CHANGED_ERROR
                 row.provider_state = {}
                 changed = True
-            elif row.last_error != error and row.state != TriggerState.ACTIVE.value:
+            elif (
+                row.last_error != error
+                and row.state != TriggerState.ACTIVE.value
+                and (row.state != TriggerState.ERROR.value or error is not None or config_changed or moved)
+            ):
                 row.last_error = error
                 changed = True
         if changed:
@@ -496,18 +565,29 @@ async def reconcile_flow_triggers(
     # registry, which imports this module back.
     from langflow.services.triggers.subscriptions import revoke_for_trigger
 
-    for node_id, row in existing.items():
-        if node_id in nodes or row.state == TriggerState.DEAD.value:
+    for node_id, stale in existing.items():
+        if node_id in nodes:
             continue
-        if node_id in unclassified_bundle_nodes and "." in row.kind and row.kind not in known_sources:
+        if node_id in unclassified_bundle_nodes and "." in stale.kind and stale.kind not in known_sources:
             # Missing runtime metadata cannot prove that an existing bundle
             # node was deleted. Preserve its last known binding and remote
             # subscription until it can be classified again.
             continue
+        # Decide from the locked, current row, under the lock ``enable`` takes:
+        # an enable that committed after the read above must not be overwritten
+        # with a stale paused state, leaving the row active with no node.
+        row = await lock_trigger(session, stale.id)
+        if row is None or row.state == TriggerState.DEAD.value:
+            continue
         # A pause the owner chose stays theirs. An operator's pause does not:
         # removing the node is the owner's own off switch, and the operator's
-        # bulk resume must not re-arm a trigger whose node is gone.
+        # bulk resume must not re-arm a trigger whose node is gone. Either way
+        # the reason records the removal, so the owner cannot resume it either.
         if row.state == TriggerState.PAUSED.value and row.admin_paused_at is None:
+            if row.last_error != NODE_REMOVED_ERROR:
+                row.last_error = NODE_REMOVED_ERROR
+                session.add(row)
+                touched += 1
             continue
         row.state = TriggerState.PAUSED.value
         row.admin_paused_at = None
@@ -562,6 +642,9 @@ async def reconcile_flow_triggers_safely(
     if owner_id is None:
         return
     try:
+        # Legacy graphs remain editable, but a metadata save cannot restart
+        # their stopped triggers before the extra canvas nodes are removed.
+        validate_single_trigger_per_flow(flow_data)
         async with session.begin_nested():
             await reconcile_flow_triggers(session, flow_id=flow_id, owner_id=owner_id, flow_data=flow_data)
     except DBAPIError:

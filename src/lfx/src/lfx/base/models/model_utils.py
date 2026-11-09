@@ -28,6 +28,7 @@ from lfx.base.models.watsonx_constants import (
 )
 from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
+from lfx.services.variable.exceptions import RuntimeVariableError
 from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.secrets import unwrap_secret_value
 from lfx.utils.ssrf_httpx import ssrf_safe_httpx_get
@@ -490,12 +491,21 @@ def get_provider_variable_value(user_id: UUID | str | None, variable_key: str) -
                     field="",
                     session=session,
                 )
+            except RuntimeVariableError:
+                raise
             except ValueError:
                 # ``get_variable_object`` raises ValueError on missing var;
                 # treat absence as "no value" rather than propagating.
                 return None
 
-    return _to_str(run_until_complete(_get_variable())) or _environment_variable_value(variable_key)
+    try:
+        value = run_until_complete(_get_variable())
+    except RuntimeVariableError as exc:
+        if exc.reason not in {"absent", "variable_not_approved"}:
+            raise
+        # An account policy's absence must not resolve from a shared environment.
+        return None
+    return _to_str(value) or _environment_variable_value(variable_key)
 
 
 def fetch_live_ollama_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:

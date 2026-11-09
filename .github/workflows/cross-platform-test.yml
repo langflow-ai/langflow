@@ -158,7 +158,7 @@ jobs:
           - os: linux
             arch: amd64
             runner: ubuntu-latest
-            python-version: "3.10"
+            python-version: "3.11"
           - os: linux
             arch: amd64
             runner: ubuntu-latest
@@ -172,7 +172,7 @@ jobs:
           - os: macos
             arch: arm64
             runner: macos-latest
-            python-version: "3.10"
+            python-version: "3.11"
           - os: macos
             arch: arm64
             runner: macos-latest
@@ -181,16 +181,13 @@ jobs:
           - os: windows
             arch: amd64
             runner: windows-latest
-            python-version: "3.10"
+            python-version: "3.11"
           - os: windows
             arch: amd64
             runner: windows-latest
             python-version: "3.12"
-          # Python 3.13 - graduated from experimental to stable (blocking).
-          # macOS Intel (amd64) is intentionally omitted here: like 3.10/3.12 above
-          # it stays on the costly macos-latest-large runner only at 3.12. Intel
-          # coverage for newer Python continues (non-blocking) in the experimental
-          # 3.14 set below.
+          # Python 3.13 is stable and required to pass.
+          # macOS Intel stays on Python 3.12 to limit runner cost.
           - os: linux
             arch: amd64
             runner: ubuntu-latest
@@ -203,6 +200,21 @@ jobs:
             arch: amd64
             runner: windows-latest
             python-version: "3.13"
+          # Python 3.14 is stable and required to pass.
+          # macOS Intel stays on Python 3.12. The required onnxruntime>=1.26
+          # has no macOS Intel wheels for Python 3.14.
+          - os: linux
+            arch: amd64
+            runner: ubuntu-latest
+            python-version: "3.14"
+          - os: windows
+            arch: amd64
+            runner: windows-latest
+            python-version: "3.14"
+          - os: macos
+            arch: arm64
+            runner: macos-latest
+            python-version: "3.14"
 
     steps:
       - name: Checkout authentication smoke check
@@ -467,29 +479,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Python 3.14 - Experimental (non-blocking) to monitor ecosystem readiness.
-          # macOS Intel (x86_64) is intentionally omitted: langflow requires
-          # onnxruntime>=1.26 on Python >=3.14 (pyproject.toml), but onnxruntime
-          # dropped macOS x86_64 wheels at 1.24 — so macOS Intel + py3.14 is
-          # permanently unsatisfiable (older onnxruntime that still ships macOS
-          # x86_64 wheels has no cp314 ABI). macOS Intel resolves fine through 3.13;
-          # arm64 has cp314 wheels. Running it would only burn the costly
-          # macos-latest-large runner on a guaranteed, no-signal failure.
-          - os: linux
-            arch: amd64
-            runner: ubuntu-latest
-            python-version: "3.14"
-          - os: windows
-            arch: amd64
-            runner: windows-latest
-            python-version: "3.14"
-          - os: macos
-            arch: arm64
-            runner: macos-latest
-            python-version: "3.14"
-          # Python 3.15 - Preview (non-blocking). macOS Intel is omitted for the same
-          # onnxruntime reason as 3.14. Expect failures until upstream packages ship
-          # cp315 wheels (ormsgpack, via langgraph-checkpoint, blocks installation today).
+          # Python 3.15 is experimental and does not block releases.
+          # macOS Intel is omitted for the same onnxruntime reason as 3.14.
           - os: linux
             arch: amd64
             runner: ubuntu-latest
@@ -508,7 +499,9 @@ jobs:
         uses: actions/checkout@v7
         with:
           path: auth-smoke
-          sparse-checkout: scripts/ci/check_authentication.py
+          sparse-checkout: |
+            scripts/ci/check_authentication.py
+            .github/actions/setup-python-preview
           sparse-checkout-cone-mode: false
           persist-credentials: false
 
@@ -541,6 +534,9 @@ jobs:
           version: latest-known
           enable-cache: false
           ignore-empty-workdir: true
+
+      - name: Set up Python preview builds
+        uses: ./auth-smoke/.github/actions/setup-python-preview
 
       - name: Install Protocol Buffers (macOS AMD64)
         if: matrix.os == 'macos' && matrix.arch == 'amd64'
@@ -1041,7 +1037,7 @@ jobs:
             exit 0
           fi
 
-          # Stable platforms must succeed. The experimental (Python 3.14/3.15) job runs with
+          # Stable platforms must succeed. The experimental (Python 3.15) job runs with
           # continue-on-error, so its result reads "success" even when a leg fails; report it
           # as non-blocking rather than claiming those versions passed.
           if [ "$stable_result" = "success" ]; then
@@ -1054,10 +1050,10 @@ jobs:
             else
               echo "✅ Cross-platform tests passed on the stable platforms - PyPI upload can proceed"
             fi
-            echo "ℹ️ Python 3.14/3.15 experimental results are non-blocking; check the (Experimental) jobs for their outcome"
+            echo "ℹ️ Python 3.15 experimental results are non-blocking; check the (Experimental) jobs for their outcome"
           elif [ "$stable_result" = "failure" ]; then
             echo "❌ Critical platform tests failed - blocking release"
-            echo "Stable platforms (Python 3.10, 3.12, 3.13) must pass for release"
+            echo "Stable platforms (Python 3.11, 3.12, 3.13, 3.14) must pass for release"
             exit 1
           elif [ "$stable_result" = "cancelled" ]; then
             echo "❌ Critical platform tests were cancelled"

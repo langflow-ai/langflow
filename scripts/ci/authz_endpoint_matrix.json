@@ -482,6 +482,25 @@
       ]
     },
     {
+      "family": "connection_oauth_registrations",
+      "source": "api/v1/connections.py",
+      "resource": "oauth_registration (superuser-only instance configuration)",
+      "domain": "instance-wide superuser scope",
+      "privacy": "all routes require an active superuser and return 403 to regular users. Lists never return client secrets, private keys, or signing secrets",
+      "side_effects": "require a superuser before reading or changing encrypted registrations. Writes honor the migration pause and environment precedence",
+      "frontend": "the Manage providers tab is visible only to superusers and never receives saved secrets",
+      "personas": "public_or_conditional",
+      "test_references": [
+        "src/backend/tests/unit/services/connection/test_stored_registrations.py::test_superuser_saves_lists_and_removes_without_exposing_secrets",
+        "src/backend/tests/unit/services/connection/test_stored_registrations.py::test_regular_user_cannot_use_the_saved_registration_routes"
+      ],
+      "routes": [
+        "GET|/oauth/registrations/saved|list_saved_oauth_registrations|read|authenticated",
+        "PUT|/oauth/registrations/saved/{registration_id}|save_oauth_registration|write|authenticated",
+        "DELETE|/oauth/registrations/saved/{registration_id}|delete_saved_oauth_registration|delete|authenticated"
+      ]
+    },
+    {
       "family": "integrations",
       "source": "api/v1/integrations.py",
       "resource": "integration",
@@ -539,10 +558,12 @@
         "src/backend/tests/unit/api/v1/test_trigger_settings_api.py::test_the_all_users_view_is_superuser_only",
         "src/backend/tests/unit/api/v1/test_trigger_settings_api.py::test_a_collaborator_is_offered_exactly_what_their_role_allows",
         "src/backend/tests/unit/api/v1/test_trigger_settings_api.py::test_bulk_pause_and_resume_are_superuser_only",
-        "src/backend/tests/unit/api/v1/test_trigger_settings_api.py::test_bulk_resume_rearms_only_what_an_administrator_paused"
+        "src/backend/tests/unit/api/v1/test_trigger_settings_api.py::test_bulk_resume_rearms_only_what_an_administrator_paused",
+        "src/backend/tests/unit/api/v1/test_trigger_settings_api.py::test_trigger_session_labels_need_read_access_to_the_flow"
       ],
       "routes": [
         "GET||list_triggers|read|authenticated",
+        "GET|/sessions|list_trigger_sessions|read|authenticated",
         "POST||create_trigger|write|authenticated",
         "POST|/bulk/pause|bulk_pause_triggers|write|authenticated",
         "POST|/bulk/resume|bulk_resume_triggers|write|authenticated",

@@ -24,6 +24,14 @@ class OAuthAdapter:
     scope_separator: str = " "
     token_encoding: Literal["form", "json"] = "form"  # noqa: S105 - serialization format
     supports_pkce: bool = True
+    required_scopes: tuple[str, ...] = ()
+    # Error codes this provider uses, besides the shared ones, to reject a stored refresh token.
+    refresh_rejection_errors: frozenset[str] = frozenset()
+    # Some providers return account-wide scopes for a grant verified against one site.
+    limit_refresh_scopes_to_previous: bool = False
+    # Some providers qualify an otherwise ambiguous error with its HTTP status
+    # and description. This hook is only consulted for a stored refresh grant.
+    refresh_rejection_response: Callable[[int, dict], bool] | None = None
 
     def checked_endpoints(self, registration: OAuthRegistration) -> tuple[str, str]:
         """Reject a provider endpoint outside its declared credential hosts."""

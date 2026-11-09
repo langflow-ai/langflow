@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { AxiosError } from "axios";
 import { I18nextProvider } from "react-i18next";
 import type { ConnectionRead } from "@/controllers/API/queries/connections";
+import type { ConnectionsTabDefinition } from "@/customization/components/custom-connections-tabs";
 import i18n, { loadLanguage } from "@/i18n";
 import ConnectionsPage from "../index";
 
@@ -19,6 +20,22 @@ const mockMutation = jest.fn();
 const mockSetErrorData = jest.fn();
 const mockSetSuccessData = jest.fn();
 const mockSetNoticeData = jest.fn();
+const mockCreate = jest.fn();
+const mockPoll: { data: ConnectionRead | undefined } = { data: undefined };
+const mockRegistrations = {
+  data: [
+    {
+      id: "google-demo",
+      provider: "google",
+      profile: "user",
+      context: "self_managed",
+      client_type: "confidential",
+      scopes: [] as string[],
+    },
+  ],
+  isSuccess: true,
+};
+let mockExtraTabs: ConnectionsTabDefinition[] = [];
 
 jest.mock("@/controllers/API/queries/connections", () => {
   const mutation = () => ({ mutate: jest.fn(), mutateAsync: mockMutation });
@@ -31,12 +48,32 @@ jest.mock("@/controllers/API/queries/connections", () => {
     useUpdateConnectionMutation: mutation,
     useRevokeConnectionMutation: mutation,
     useDeleteConnectionMutation: mutation,
+    useCreateConnectionMutation: () => ({ mutateAsync: mockCreate }),
+    useRenewConnectionTokenMutation: mutation,
+    useStartOAuthMutation: () => ({
+      mutateAsync: jest.fn().mockResolvedValue({
+        authorization_url: "https://idp.test/consent",
+      }),
+    }),
+    usePendingConnectionPoll: () => mockPoll,
+    useOAuthRegistrationsQuery: () => mockRegistrations,
   };
 });
 
+jest.mock("@/controllers/API/queries/flows/use-get-types", () => ({
+  useGetTypes: jest.fn(),
+}));
+
+jest.mock("@/customization/components/custom-connection-authorization", () => ({
+  ...jest.requireActual(
+    "@/customization/components/custom-connection-authorization",
+  ),
+  openAuthorizationUrl: jest.fn(),
+}));
+
 jest.mock("@/customization/components/custom-connections-tabs", () => ({
   __esModule: true,
-  default: () => [],
+  default: () => mockExtraTabs,
 }));
 
 jest.mock("@/stores/authStore", () => ({
@@ -81,23 +118,228 @@ const connection = (
   ...overrides,
 });
 
-const panel = () => screen.getByRole("tabpanel");
+const panel = () => screen.getByTestId("connections-list");
 
-const openTab = async (name: string) => {
-  await userEvent.setup().click(screen.getByRole("tab", { name }));
+const filterByOwner = async (name: string) => {
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("combobox", { name: "Owner" }));
+  await user.click(screen.getByRole("option", { name }));
 };
 
-describe("ConnectionsPage tabs", () => {
+describe("ConnectionsPage", () => {
+  beforeAll(() => {
+    // Radix Select uses browser APIs that jsdom does not implement.
+    Element.prototype.hasPointerCapture ??= jest.fn(() => false);
+    Element.prototype.setPointerCapture ??= jest.fn();
+    Element.prototype.releasePointerCapture ??= jest.fn();
+    Element.prototype.scrollIntoView ??= jest.fn();
+  });
+
   beforeEach(() => {
     mockMutation.mockReset();
     mockSetErrorData.mockReset();
     mockSetSuccessData.mockReset();
     mockSetNoticeData.mockReset();
+    mockCreate.mockReset();
+    mockPoll.data = undefined;
+    mockRegistrations.data[0].scopes = [];
+    mockExtraTabs = [];
   });
 
   afterEach(async () => {
+    jest.restoreAllMocks();
     await act(() => i18n.changeLanguage("en"));
   });
+
+  it.each(["instance", "user"] as const)(
+    "reveals a newly authorized %s connection and clears the old search",
+    async (ownership) => {
+      mockUser = { id: SUPERUSER_ID, is_superuser: true };
+      mockConnections = [];
+      mockIntegrations = {
+        data: {
+          providers: [
+            {
+              provider_id: "google",
+              display_name: "Google",
+              capabilities: [],
+            },
+          ],
+        },
+        isSuccess: true,
+      };
+      const ready = connection({
+        id: "new-connection",
+        owner_id: ownership === "user" ? SUPERUSER_ID : null,
+        ownership_mode: ownership,
+        display_name: "New connection",
+        updated_at: "2026-09-18T00:01:00Z",
+      });
+      mockCreate.mockResolvedValue({
+        ...ready,
+        status: "pending",
+        has_credentials: false,
+        updated_at: "2026-09-18T00:00:00Z",
+      });
+      jest.spyOn(window, "open").mockReturnValue({
+        close: jest.fn(),
+        closed: false,
+      } as unknown as Window);
+      const { rerender } = render(<ConnectionsPage />);
+      const user = userEvent.setup();
+      if (ownership === "user") await filterByOwner("Instance");
+      await user.type(screen.getByTestId("connections-search"), "old search");
+      await user.click(screen.getByTestId("add-connection"));
+      await user.type(screen.getByTestId("connection-name"), "new_connection");
+      await user.type(
+        screen.getByTestId("connection-display-name"),
+        "New connection",
+      );
+      if (ownership === "instance") {
+        await user.click(screen.getByTestId("connection-instance-owned"));
+      }
+      await user.click(screen.getByTestId("connection-continue"));
+      mockConnections = [ready];
+      mockPoll.data = ready;
+      rerender(<ConnectionsPage />);
+      expect(await screen.findByText("Connected")).toBeVisible();
+      await user.click(screen.getByTestId("connection-done"));
+      expect(screen.getByRole("combobox", { name: "Owner" })).toHaveTextContent(
+        ownership === "instance" ? "Instance" : "Mine",
+      );
+      expect(screen.getByTestId("connections-search")).toHaveValue("");
+      expect(screen.getByTestId("connection-row-new_connection")).toBeVisible();
+      mockIntegrations = { data: { providers: [] } };
+    },
+  );
+
+  it("keeps a superuser's reauthorized connection visible under Other users", async () => {
+    mockUser = { id: SUPERUSER_ID, is_superuser: true };
+    const previous = connection({
+      id: "other",
+      owner_id: OTHER_ID,
+      granted_scopes: ["openid"],
+    });
+    const ready = { ...previous, updated_at: "2026-09-18T00:01:00Z" };
+    mockConnections = [previous];
+    mockRegistrations.data[0].scopes = ["openid"];
+    jest.spyOn(window, "open").mockReturnValue({
+      close: jest.fn(),
+      closed: false,
+    } as unknown as Window);
+    const { rerender } = render(<ConnectionsPage />);
+    const user = userEvent.setup();
+    await filterByOwner("Other users");
+    await user.click(screen.getByTestId("connection-menu-other"));
+    await user.click(screen.getByRole("menuitem", { name: "Reconnect" }));
+    await user.click(screen.getByTestId("connection-authorize"));
+    mockConnections = [ready];
+    mockPoll.data = ready;
+    rerender(<ConnectionsPage />);
+    expect(await screen.findByText("Connected")).toBeVisible();
+    await user.click(screen.getByTestId("connection-done"));
+    expect(screen.getByRole("combobox", { name: "Owner" })).toHaveTextContent(
+      "Other users",
+    );
+    expect(screen.getByTestId("connection-row-other")).toBeVisible();
+  });
+
+  it.each(["ready", "pending", "expired", "revoked", "error"] as const)(
+    "shows another user's %s ServiceNow connection as unavailable",
+    async (status) => {
+      mockUser = { id: SUPERUSER_ID, is_superuser: true };
+      mockConnections = [
+        connection({
+          id: "other_servicenow",
+          provider_key: "servicenow",
+          owner_id: OTHER_ID,
+          status,
+        }),
+      ];
+      const user = userEvent.setup();
+      render(<ConnectionsPage />);
+
+      await filterByOwner("Other users");
+      const row = screen.getByTestId("connection-row-other_servicenow");
+      expect(within(row).getByText("Unavailable")).toBeVisible();
+      expect(
+        within(row).getByText(
+          "Only the connection owner can authorize and use this ServiceNow connection.",
+        ),
+      ).toBeVisible();
+      expect(
+        screen.queryByTestId("authorize-other_servicenow"),
+      ).not.toBeInTheDocument();
+      await user.click(screen.getByTestId("connection-menu-other_servicenow"));
+
+      expect(
+        screen.queryByRole("menuitem", { name: /^(Authorize|Reconnect)$/ }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByRole("menuitem", { name: "Rename" })).toBeVisible();
+    },
+  );
+
+  it("does not offer authorization for a legacy instance ServiceNow connection", async () => {
+    mockUser = { id: SUPERUSER_ID, is_superuser: true };
+    mockConnections = [
+      connection({
+        id: "instance_servicenow",
+        provider_key: "servicenow",
+        ownership_mode: "instance",
+        status: "pending",
+      }),
+    ];
+    const user = userEvent.setup();
+    render(<ConnectionsPage />);
+
+    await filterByOwner("Instance");
+    expect(
+      within(
+        screen.getByTestId("connection-row-instance_servicenow"),
+      ).getByText("Unavailable"),
+    ).toBeVisible();
+    expect(
+      screen.queryByTestId("authorize-instance_servicenow"),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByTestId("connection-menu-instance_servicenow"));
+
+    expect(
+      screen.queryByRole("menuitem", { name: "Authorize" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it.each(["menu", "status"] as const)(
+    "lets a ServiceNow owner open authorization from the %s action",
+    async (entryPoint) => {
+      mockUser = { id: SUPERUSER_ID, is_superuser: true };
+      mockConnections = [
+        connection({
+          id: "my_servicenow",
+          provider_key: "servicenow",
+          owner_id: SUPERUSER_ID,
+          status: "pending",
+        }),
+      ];
+      const user = userEvent.setup();
+      render(<ConnectionsPage />);
+
+      expect(
+        within(screen.getByTestId("connection-row-my_servicenow")).getByText(
+          "Pending",
+        ),
+      ).toBeVisible();
+
+      if (entryPoint === "menu") {
+        await user.click(screen.getByTestId("connection-menu-my_servicenow"));
+        await user.click(screen.getByRole("menuitem", { name: "Authorize" }));
+      } else {
+        await user.click(screen.getByTestId("authorize-my_servicenow"));
+      }
+
+      expect(screen.getByRole("dialog")).toBeVisible();
+      expect(screen.getByTestId("connection-authorize")).toBeInTheDocument();
+    },
+  );
 
   it("disables Add connection and explains why when policy leaves no provider", () => {
     mockIntegrations = { data: { providers: [] }, isSuccess: true };
@@ -149,25 +391,30 @@ describe("ConnectionsPage tabs", () => {
   });
 
   it.each([
-    ["Mine", "No connections in this tab yet.", "instance"],
+    ["Mine", "No connections match this owner filter.", "instance"],
     ["Instance", "No instance connections yet.", "user"],
     ["Other users", "No connections from other users yet.", "user"],
-  ] as const)("describes an empty %s tab", async (tab, message, ownership) => {
-    mockUser = { id: SUPERUSER_ID, is_superuser: true };
-    mockConnections = [
-      connection({
-        id: "existing",
-        owner_id: SUPERUSER_ID,
-        ownership_mode: ownership,
-      }),
-    ];
-    render(<ConnectionsPage />);
-    await openTab(tab);
+  ] as const)(
+    "describes an empty %s filter",
+    async (owner, message, ownership) => {
+      mockUser = { id: SUPERUSER_ID, is_superuser: true };
+      mockConnections = [
+        connection({
+          id: "existing",
+          owner_id: SUPERUSER_ID,
+          ownership_mode: ownership,
+        }),
+      ];
+      render(<ConnectionsPage />);
+      await filterByOwner(owner);
 
-    expect(screen.getByTestId("connections-empty")).toHaveTextContent(message);
-  });
+      expect(screen.getByTestId("connections-empty")).toHaveTextContent(
+        message,
+      );
+    },
+  );
 
-  it("distinguishes search misses from an empty tab and restores rows when cleared", async () => {
+  it("distinguishes search misses from an empty owner filter and restores rows when cleared", async () => {
     mockUser = { id: SUPERUSER_ID, is_superuser: true };
     mockConnections = [connection({ id: "my-gmail", owner_id: SUPERUSER_ID })];
     const user = userEvent.setup();
@@ -178,18 +425,18 @@ describe("ConnectionsPage tabs", () => {
       "No connections match your search.",
     );
 
-    await openTab("Instance");
+    await filterByOwner("Instance");
     expect(screen.getByTestId("connections-empty")).toHaveTextContent(
       "No instance connections yet.",
     );
 
-    await openTab("Mine");
+    await filterByOwner("Mine");
     await user.clear(screen.getByTestId("connections-search"));
     expect(within(panel()).getByText("my-gmail")).toBeInTheDocument();
     expect(screen.queryByTestId("connections-empty")).not.toBeInTheDocument();
   });
 
-  it("keeps other users' private connections out of a superuser's Mine tab", async () => {
+  it("keeps other users' private connections out of a superuser's Mine filter", async () => {
     mockUser = { id: SUPERUSER_ID, is_superuser: true };
     mockConnections = [
       connection({ id: "admin-gmail", owner_id: SUPERUSER_ID }),
@@ -207,13 +454,13 @@ describe("ConnectionsPage tabs", () => {
       within(panel()).queryByText("team-calendar"),
     ).not.toBeInTheDocument();
 
-    await openTab("Other users");
+    await filterByOwner("Other users");
     expect(within(panel()).getByText("bob-slack")).toBeInTheDocument();
     expect(within(panel()).getByText("Other user")).toBeInTheDocument();
     expect(within(panel()).queryByText("Shared")).not.toBeInTheDocument();
     expect(within(panel()).queryByText("admin-gmail")).not.toBeInTheDocument();
 
-    await openTab("Instance");
+    await filterByOwner("Instance");
     expect(within(panel()).getByText("team-calendar")).toBeInTheDocument();
     expect(within(panel()).queryByText("bob-slack")).not.toBeInTheDocument();
   });
@@ -380,7 +627,45 @@ describe("ConnectionsPage tabs", () => {
     expect(screen.getByRole("menuitem", { name: "Delete" })).toBeEnabled();
   });
 
-  it("gives a regular user no Other users tab and keeps shared rows under Mine", async () => {
+  it("explains missing Jira refresh access while preserving a ready connection", () => {
+    mockUser = { id: SUPERUSER_ID, is_superuser: true };
+    mockConnections = [
+      connection({
+        id: "jira-ready",
+        owner_id: SUPERUSER_ID,
+        provider_key: "jira",
+        status_reason: "oauth-refresh-token-missing",
+      }),
+    ];
+    render(<ConnectionsPage />);
+    const row = within(screen.getByTestId("connection-row-jira_ready"));
+    expect(row.getByText("Ready")).toBeVisible();
+    expect(
+      row.getByText(/Every Jira connection requires offline_access/),
+    ).toBeVisible();
+  });
+
+  it.each(["confluence", "salesforce", "servicenow"])(
+    "explains a missing refresh token for %s without Jira-specific advice",
+    (provider) => {
+      mockUser = { id: SUPERUSER_ID, is_superuser: true };
+      mockConnections = [
+        connection({
+          id: "provider-ready",
+          owner_id: SUPERUSER_ID,
+          provider_key: provider,
+          status_reason: "oauth-refresh-token-missing",
+        }),
+      ];
+      render(<ConnectionsPage />);
+      const row = within(screen.getByTestId("connection-row-provider_ready"));
+      expect(row.getByText("Ready")).toBeVisible();
+      expect(row.getByText(/did not return a refresh token/)).toBeVisible();
+      expect(row.queryByText(/Jira|offline_access/)).not.toBeInTheDocument();
+    },
+  );
+
+  it("gives a regular user no Other users filter and keeps shared rows under Mine", async () => {
     mockUser = { id: REGULAR_ID, is_superuser: false };
     // A regular user only ever receives another user's row when it was shared
     // with them, so it belongs with their own.
@@ -394,21 +679,51 @@ describe("ConnectionsPage tabs", () => {
     expect(
       screen.queryByRole("tab", { name: "Other users" }),
     ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("tab", { name: "Manage providers" }),
+    ).not.toBeInTheDocument();
     expect(within(panel()).getByText("my-drive")).toBeInTheDocument();
     expect(within(panel()).getByText("shared-outlook")).toBeInTheDocument();
     expect(
       within(panel()).queryByText("team-calendar"),
     ).not.toBeInTheDocument();
 
-    await openTab("Instance");
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("combobox", { name: "Owner" }));
+    expect(
+      screen.queryByRole("option", { name: "Other users" }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole("option", { name: "Instance" }));
     expect(within(panel()).getByText("team-calendar")).toBeInTheDocument();
   });
 
-  it("gives every tab trigger a mounted panel so aria-controls resolves", () => {
-    mockUser = { id: SUPERUSER_ID, is_superuser: true };
+  it("shows a single list without ownership tabs", () => {
+    mockUser = { id: REGULAR_ID, is_superuser: false };
     mockConnections = [];
+    render(<ConnectionsPage />);
+
+    expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Owner" })).toHaveTextContent(
+      "Mine",
+    );
+    expect(screen.getByRole("textbox", { name: /search name/i })).toBeVisible();
+  });
+
+  it("preserves separate policy tabs and restores the list's search and owner filter", async () => {
+    mockUser = { id: SUPERUSER_ID, is_superuser: true };
+    mockConnections = [connection({ id: "bob-slack", owner_id: OTHER_ID })];
+    const renderPolicy = jest.fn(() => <p>Integration policy</p>);
+    mockExtraTabs = [
+      { value: "policy", label: "Policy", render: renderPolicy },
+    ];
+    const user = userEvent.setup();
     const { container } = render(<ConnectionsPage />);
 
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      "Connections",
+      "Manage providers",
+      "Policy",
+    ]);
     for (const tab of screen.getAllByRole("tab")) {
       const controls = tab.getAttribute("aria-controls");
       expect(controls).toBeTruthy();
@@ -416,6 +731,25 @@ describe("ConnectionsPage tabs", () => {
         container.ownerDocument.getElementById(controls as string),
       ).not.toBeNull();
     }
+    expect(renderPolicy).not.toHaveBeenCalled();
+    await filterByOwner("Other users");
+    await user.type(
+      screen.getByRole("textbox", { name: /search name/i }),
+      "slack",
+    );
+    await user.click(screen.getByRole("tab", { name: "Policy" }));
+    expect(screen.getByText("Integration policy")).toBeVisible();
+    expect(
+      screen.queryByRole("combobox", { name: "Owner" }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Connections" }));
+    expect(screen.getByRole("combobox", { name: "Owner" })).toHaveTextContent(
+      "Other users",
+    );
+    expect(screen.getByRole("textbox", { name: /search name/i })).toHaveValue(
+      "slack",
+    );
+    expect(within(panel()).getByText("bob-slack")).toBeVisible();
   });
 
   it("sorts other users' connections by status and actual health-check time using the keyboard", async () => {
@@ -443,7 +777,7 @@ describe("ConnectionsPage tabs", () => {
     const original = [...mockConnections];
     const user = userEvent.setup();
     render(<ConnectionsPage />);
-    await openTab("Other users");
+    await filterByOwner("Other users");
     const order = () =>
       within(panel())
         .getAllByTestId(/^connection-row-/)
@@ -502,8 +836,8 @@ describe("ConnectionsPage tabs", () => {
       screen.getByTestId("connections-sort-lastCheck").closest("th"),
     ).toHaveAttribute("aria-sort", "descending");
 
-    await openTab("Instance");
-    await openTab("Other users");
+    await filterByOwner("Instance");
+    await filterByOwner("Other users");
     expect(order()).toEqual([
       "connection-row-alpha",
       "connection-row-charlie",
@@ -522,7 +856,7 @@ describe("ConnectionsPage tabs", () => {
     ];
     const user = userEvent.setup();
     render(<ConnectionsPage />);
-    await openTab("Other users");
+    await filterByOwner("Other users");
     const ownerSort = screen.getByTestId("connections-sort-owner");
     for (const direction of ["ascending", "descending"]) {
       await user.click(ownerSort);

@@ -9,6 +9,10 @@ Langflow must be reachable over public HTTPS. If it is not, use [trigger listene
 
 The request records the event and returns. It does not run the flow. The flow runs afterward, as the trigger's owner.
 
+Each saved flow canvas supports one trigger node. API saves and imports reject canvases with multiple trigger nodes.
+Remove the extra nodes before saving. An existing canvas with multiple trigger nodes can still be opened and repaired,
+but its triggers cannot be activated until the extra nodes are removed.
+
 ## Prerequisites
 
 1. Langflow is reachable at a public HTTPS URL.
@@ -84,6 +88,10 @@ Each provider proves the delivery in its own way:
 
 A failed check returns `404` with the same body every time. The reason is in the authorization audit log. Turn that on with `LANGFLOW_AUTHZ_AUDIT_ENABLED=true`.
 
+Rejected requests do not appear in the trigger's event history. That history contains accepted events only.
+A superuser can inspect recorded rejection reasons through `GET /api/v1/authz/audit` when auditing is enabled.
+Some provider requests are rejected before Langflow can identify a trusted trigger or owner.
+
 Microsoft's subscription handshake is the exception. It returns `200` and echoes `validationToken` before Langflow looks up the trigger.
 
 ## Troubleshoot
@@ -95,7 +103,11 @@ Check, in order: the trigger is enabled, the URL's provider matches the trigger,
 Slack retries when it does not get a success response in three seconds. Langflow answers after the event is saved, so a slow database or a proxy in front of Langflow makes Slack retry. The flow still runs once.
 
 **Events stopped, and the trigger looks fine.**
-If the state is **Needs reconnect**, reconnect the connection. If the trigger is still active, the subscription may have expired while the API was down. Enable the trigger again to subscribe.
+If the state is **Needs reconnect**, read the reason shown on the trigger. If **Allow background runs** is off, choose **Reconnect** on the trigger, then **Allow and resume** in the consent dialog. Only the connection owner can grant this permission. Langflow then tries to activate the trigger and reports any remaining error.
+
+If the provider revoked or expired the credential, open **Settings → Connections** and reauthorize the connection. Return to the trigger and choose **Resume** when it shows **Ready to resume**. Reauthorization does not start the trigger automatically.
+
+If the trigger is still active, the subscription may have expired while the API was down. Enable the trigger again to subscribe.
 
 **One event ran the flow twice.**
 Two triggers are armed on the same source. One trigger does not run twice for one provider event.
