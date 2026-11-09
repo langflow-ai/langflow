@@ -62,6 +62,27 @@ async def test_worker_runs_each_claimed_job():
     assert runner.ran == ["j1", "j2"]
 
 
+async def test_worker_skips_a_claim_when_its_lease_was_taken_by_another_worker():
+    stop_event = asyncio.Event()
+    backend = _FlakyBackend(fail_times=0, ids=["lost-claim"], stop_event=stop_event)
+    runner = _RecordingRunner()
+
+    class LostLeaseStore:
+        async def heartbeat(self, _job_id, _owner):
+            return False
+
+    await run_worker_loop(
+        backend,
+        runner,
+        stop_event=stop_event,
+        idle_block_ms=1,
+        job_service=LostLeaseStore(),
+        owner="worker:stale",
+    )
+
+    assert runner.ran == []
+
+
 @pytest.mark.asyncio
 async def test_worker_survives_a_runner_crash_and_keeps_claiming():
     backend = _FakeBackend(["boom", "j2"])

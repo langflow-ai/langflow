@@ -114,7 +114,7 @@ class InProcessBackend:
     # ------------------------------------------------------------- event tail
 
     async def tail(self, job_id: str, *, last_seq: int, frame_row: Callable[[Any], bytes]) -> AsyncIterator[bytes]:
-        """Replay durable rows then follow the live in-memory bus."""
+        """Replay finished jobs from storage and follow live jobs on the bus."""
         from uuid import UUID
 
         from langflow.services.background_execution.live_bus import LiveFrame
@@ -122,6 +122,15 @@ class InProcessBackend:
 
         job_service = get_job_service()
         durable_id = UUID(job_id)
+        job = await job_service.get_job_by_job_id(durable_id)
+        if job is None:
+            return
+        if job.status in _TAIL_END_STATUSES:
+            # A restarted process has no bus-close marker for durable terminal
+            # history. Suspended jobs also have no live frames until resumed.
+            for row in await job_service.read_events(durable_id, after_seq=last_seq):
+                yield frame_row(row)
+            return
 
         async def read_durable(after_seq: int) -> list[LiveFrame]:
             rows = await job_service.read_events(durable_id, after_seq=after_seq)
@@ -131,7 +140,7 @@ class InProcessBackend:
             # SUSPENDED ends the tail too: a run that connected while IN_PROGRESS
             # and then suspended has no live tail to wait on.
             current = await job_service.get_job_by_job_id(durable_id)
-            return current is not None and current.status in _TAIL_END_STATUSES
+            return current is None or current.status in _TAIL_END_STATUSES
 
         async for frame in self._bus.reattach(job_id, last_seq=last_seq, read_durable=read_durable, is_done=_is_done):
             yield frame.data

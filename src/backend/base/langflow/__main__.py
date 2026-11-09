@@ -1020,8 +1020,9 @@ def worker(
     """
     if env_file:
         load_dotenv(env_file, override=True)
-    if log_level:
-        configure(log_level=log_level)
+    log_level = (log_level or os.environ.get("LANGFLOW_LOG_LEVEL") or "info").lower()
+    os.environ["LANGFLOW_LOG_LEVEL"] = log_level
+    configure(log_level=log_level)
 
     async def _run_worker() -> None:
         from langflow.services.background_execution.worker import (

@@ -89,33 +89,35 @@ class JobRunner:
 
     async def run(self, *, job_id: UUID, source_kwargs: dict[str, Any]) -> None:
         """Execute one background job to a terminal state."""
+        heartbeat_task = None
 
         async def _wrapped() -> None:
+            nonlocal heartbeat_task
+            # Start renewing only after execute_with_status has accepted this owner.
+            heartbeat_task = self._start_heartbeat(job_id)
             # Per-pass clock: paused time never accrues here (resume re-enqueues a fresh
             # run). The suspend-window budget is the separate input deadline (LE-1452).
             job = await self._jobs.get_job_by_job_id(job_id)
             user_id = (job.job_metadata or {}).get("telemetry_user_id") if job is not None else None
             with telemetry_user_context(user_id):
+                drive = self._drive_with_lease(
+                    job_id=job_id, source_kwargs=source_kwargs, heartbeat_task=heartbeat_task
+                )
                 if self._job_timeout is not None:
-                    await asyncio.wait_for(
-                        self._drive(job_id=job_id, source_kwargs=source_kwargs),
-                        timeout=self._job_timeout,
-                    )
+                    await asyncio.wait_for(drive, timeout=self._job_timeout)
                 else:
-                    await self._drive(job_id=job_id, source_kwargs=source_kwargs)
+                    await drive
 
-        heartbeat_task = self._start_heartbeat(job_id)
         paused = False
+        lease_lost = False
         try:
             await self._jobs.execute_with_status(job_id, _wrapped, owner=self._owner)
         except JobNotClaimable:
             # Another worker owns this row. Stop without writing a status, closing the
             # bus as a failure or appending a terminal event: all of those would stamp
             # this process's verdict onto a run somebody else is executing.
-            await self._stop_heartbeat(heartbeat_task)
-            heartbeat_task = None
+            lease_lost = True
             await logger.awarning(f"Worker: job {job_id} was claimed by another worker; standing down")
-            return
         except PauseRequested as exc:
             # Stop the heartbeat BEFORE stamping suspend metadata: both are whole-blob
             # read-modify-writes, so a beat racing the stamp would clobber the request id.
@@ -123,17 +125,24 @@ class JobRunner:
             heartbeat_task = None
             try:
                 await self._suspend(job_id, exc)
+            except JobNotClaimable:
+                lease_lost = True
+                await logger.awarning(f"Worker: job {job_id} lost its lease before suspension; standing down")
             except Exception as suspend_exc:  # noqa: BLE001
                 # Why: a failed suspend must not leave the job paused-but-broken with an open bus and a
                 # hanging client; mark FAILED and leave paused=False so the finally closes the bus.
                 await logger.aerror(f"Background job {job_id} failed to suspend: {suspend_exc}", exc_info=True)
+                # If that write also fails, ownership is unknown. Leave cleanup to
+                # the current owner or watchdog rather than consuming their STOP.
+                lease_lost = True
                 with contextlib.suppress(Exception):
-                    await self._jobs.update_job_status(job_id, JobStatus.FAILED, finished_timestamp=True)
-                with contextlib.suppress(Exception):
-                    await self._jobs.set_error(
+                    failed = await self._jobs.terminalize_live_job(
                         job_id,
-                        {"type": "suspend_failed", "detail": "Workflow suspension failed."},
+                        JobStatus.FAILED,
+                        owner=self._owner,
+                        error={"type": "suspend_failed", "detail": "Workflow suspension failed."},
                     )
+                    lease_lost = not failed
             else:
                 paused = True
                 await logger.adebug(f"Background job {job_id} suspended for human input")
@@ -146,13 +155,15 @@ class JobRunner:
             await logger.aerror(f"Background job {job_id} runner error: {exc}", exc_info=True)
         finally:
             await self._stop_heartbeat(heartbeat_task)
-            if not paused:  # a suspended run is resumable: keep the bus open, skip terminal reconcile
+            if not paused and not lease_lost:
                 with contextlib.suppress(Exception):
                     if await asyncio.shield(self._reconcile_stop(job_id)):
                         await logger.adebug(f"Background job {job_id} reconciled to CANCELLED after a racing stop")
+                finalized = False
                 with contextlib.suppress(Exception):
-                    await asyncio.shield(self._finalize_terminal_event(job_id))
-                await self._bus.close(str(job_id))
+                    finalized = await asyncio.shield(self._finalize_terminal_event(job_id))
+                if finalized:
+                    await self._bus.close(str(job_id))
 
     async def _suspend(self, job_id: UUID, exc: PauseRequested) -> None:
         """Suspend mechanics: durable pause event + SUSPENDED status, no finalization.
@@ -161,7 +172,6 @@ class JobRunner:
         Deliberately does NOT call ``set_result``/``set_error``, the terminal-event
         finalizer, or close the live bus — the run is resumable.
         """
-        await self._jobs.append_event(job_id, HUMAN_INPUT_REQUIRED_EVENT, exc.payload)
         metadata: dict[str, Any] = {}
         if exc.request_id is not None:
             metadata["pending_request_id"] = exc.request_id
@@ -176,9 +186,31 @@ class JobRunner:
         # Publish SUSPENDED only when the resume guard and pre-pause captures are
         # visible in the same committed row. Otherwise a racing resume can claim
         # the job between separate status and metadata transactions.
-        await self._jobs.suspend_job(job_id, metadata)
+        if await self._jobs.suspend_job(job_id, metadata, owner=self._owner, event_payload=exc.payload) is None:
+            msg = f"Job {job_id} is no longer ours to suspend"
+            raise JobNotClaimable(msg)
 
-    async def _finalize_terminal_event(self, job_id: UUID) -> None:
+    async def _drive_with_lease(
+        self, *, job_id: UUID, source_kwargs: dict[str, Any], heartbeat_task: asyncio.Task | None
+    ) -> None:
+        """Stop execution when renewal proves this process no longer owns the job."""
+        if heartbeat_task is None:
+            await self._drive(job_id=job_id, source_kwargs=source_kwargs)
+            return
+        drive_task = asyncio.create_task(self._drive(job_id=job_id, source_kwargs=source_kwargs))
+        try:
+            done, _pending = await asyncio.wait({drive_task, heartbeat_task}, return_when=asyncio.FIRST_COMPLETED)
+            if heartbeat_task in done and heartbeat_task.result() is False:
+                msg = f"Job {job_id} lost its lease while running"
+                raise JobNotClaimable(msg)
+            await drive_task
+        finally:
+            if not drive_task.done():
+                drive_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError, Exception):
+                await drive_task
+
+    async def _finalize_terminal_event(self, job_id: UUID) -> bool:
         """Backfill the error blob + terminal event for TIMED_OUT / CANCELLED.
 
         ``execute_with_status`` writes the TIMED_OUT/CANCELLED status but no
@@ -188,10 +220,13 @@ class JobRunner:
         that a racing completion left with a populated ``result``, clears the
         result and sets ``error={type: cancelled}`` so the terminal state is
         internally consistent (no CANCELLED row carrying a completed-run result).
+        Returns False when a newer owner must finalize the run and close its bus.
         """
         job = await self._jobs.get_job_by_job_id(job_id)
         if job is None:
-            return
+            return True
+        if self._owner is not None and (job.job_metadata or {}).get("owner") not in (None, self._owner):
+            return False
         if job.status == JobStatus.TIMED_OUT:
             if job.error is None:
                 await self._jobs.set_error(job_id, {"type": "timed_out"})
@@ -204,21 +239,36 @@ class JobRunner:
             if job.error is None:
                 await self._jobs.set_error(job_id, {"type": "cancelled"})
             await self._jobs.append_event(job_id, "run_cancelled", {"type": "cancelled"})
+        return True
 
     def _start_heartbeat(self, job_id: UUID) -> asyncio.Task | None:
         """Spawn the periodic heartbeat task for a run (None when owner unset).
 
-        The task writes the owner + a fresh timestamp immediately, then refreshes
-        on the interval until cancelled in ``run``'s finally. A heartbeat write
-        failure is swallowed so a transient DB hiccup never kills the run.
+        The task renews the lease immediately, then on the interval until stopped.
+        A rejected renewal returns False so the drive stops without finalizing
+        another owner's run. A transient DB error does not end the heartbeat.
         """
         if self._owner is None:
             return None
 
-        async def _beat() -> None:
+        async def _beat() -> bool:
             while True:
                 with contextlib.suppress(Exception):
-                    await self._jobs.heartbeat(job_id, self._owner)
+                    renewal = asyncio.create_task(self._jobs.heartbeat(job_id, self._owner))
+                    try:
+                        renewed = await asyncio.shield(renewal)
+                    except asyncio.CancelledError:
+                        # A pause writes the same metadata immediately after stopping
+                        # the heartbeat. Let its DB transaction settle before that
+                        # write. Canceling a driver call can leave its writer active.
+                        while not renewal.done():
+                            with contextlib.suppress(asyncio.CancelledError, Exception):
+                                await asyncio.shield(renewal)
+                        if not renewal.cancelled():
+                            renewal.exception()
+                        raise
+                    if renewed is False:
+                        return False
                 await asyncio.sleep(self._heartbeat_interval_s)
 
         return asyncio.create_task(_beat())
@@ -240,11 +290,7 @@ class JobRunner:
         runner's ``finally`` (shielded), so it is the single point where a stop is
         finalized — the right place to mark it consumed.
         """
-        if not await self._stop_requested(job_id):
-            return False
-        await self._jobs.update_job_status(job_id, JobStatus.CANCELLED, finished_timestamp=True)
-        await self._jobs.consume_signals(job_id, SignalType.STOP)
-        return True
+        return await self._jobs.cancel_job_for_stop(job_id, owner=self._owner)
 
     async def _drive(self, *, job_id: UUID, source_kwargs: dict[str, Any]) -> None:
         """The wrapped coroutine: stream frames, persist, publish, finalize result/error."""
@@ -338,11 +384,19 @@ class JobRunner:
             raise self._user_cancelled()
 
         if errored_payload is not None:
-            await self._jobs.set_error(job_id, errored_payload.get("data", errored_payload))
+            if not await self._jobs.set_live_error(
+                job_id, errored_payload.get("data", errored_payload), owner=self._owner
+            ):
+                msg = f"Job {job_id} is no longer ours to fail"
+                raise JobNotClaimable(msg)
             # Surface as a failure so execute_with_status writes FAILED.
             msg = "Background job emitted a terminal error event"
             raise RuntimeError(msg)
-        await self._jobs.set_result(job_id, {"status": "completed", "outputs": self._dedup_outputs(output_events)})
+        if not await self._jobs.set_live_result(
+            job_id, {"status": "completed", "outputs": self._dedup_outputs(output_events)}, owner=self._owner
+        ):
+            msg = f"Job {job_id} is no longer ours to complete"
+            raise JobNotClaimable(msg)
 
     async def _load_pre_pause_outputs(self, job_id: UUID) -> list[dict[str, Any]]:
         """Return terminal outputs a prior suspend stashed in job_metadata, or [].
