@@ -8,13 +8,13 @@ MAX_TELEMETRY_PAYLOAD_SIZE = 30 * 1024
 
 
 class BasePayload(BaseModel):
-    client_type: str | None = Field(default=None, serialization_alias="clientType")
+    client_type: str | None = Field(default=None, serialization_alias="subProductTitle")
 
 
 class RunPayload(BasePayload):
     run_is_webhook: bool = Field(default=False, serialization_alias="runIsWebhook")
     run_seconds: int = Field(serialization_alias="runSeconds")
-    run_success: bool = Field(serialization_alias="runSuccess")
+    run_success: bool = Field(serialization_alias="successFlag")
     run_error_message: str = Field("", serialization_alias="runErrorMessage")
     run_id: str | None = Field(None, serialization_alias="runId")
     # Set at the run-event boundary for local consumers; never exported as telemetry.
