@@ -1,5 +1,6 @@
 """Standalone tool outputs retain workflow callbacks on real LangChain tools."""
 
+import sys
 from types import SimpleNamespace
 
 import pytest
@@ -35,6 +36,21 @@ def test_standalone_tool_output_keeps_workflow_callback(component_class, monkeyp
 
     component = component_class()
     if component_class is PythonREPLToolComponent:
+        # Keep the real tool and callback path without the optional interpreter package.
+        class _FakePythonREPL:
+            def __init__(self, _globals=None):
+                pass
+
+            @staticmethod
+            def sanitize_input(code):
+                return code.strip()
+
+            def run(self, _code):
+                return "fixture result"
+
+        utilities = SimpleNamespace(PythonREPL=_FakePythonREPL)
+        monkeypatch.setitem(sys.modules, "langchain_experimental", SimpleNamespace(utilities=utilities))
+        monkeypatch.setitem(sys.modules, "langchain_experimental.utilities", utilities)
         component.python_code = "print('fixture result')"
     elif component_class is WikidataAPIComponent:
         component.query = "fixture query"
