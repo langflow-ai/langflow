@@ -133,6 +133,7 @@ class TestMCPServerValidationResult:
         assert result.should_proceed is True
 
 
+@pytest.mark.usefixtures("administrator_user")
 class TestValidateMcpServerForProject:
     """Test the validate_mcp_server_for_project function using real API calls."""
 
@@ -395,7 +396,12 @@ class TestAutoConfigureStarterProjectsMcp:
 
         async with session_scope() as session:
             # Create user
-            user = User(id=user_id, username=f"test_starter_user_{user_id}", password="hashed_password")  # noqa: S106
+            user = User(
+                id=user_id,
+                username=f"test_starter_user_{user_id}",
+                password="hashed_password",  # noqa: S106  # pragma: allowlist secret
+                is_superuser=True,
+            )
             session.add(user)
 
             # Create starter folder
@@ -651,7 +657,12 @@ class TestAutoConfigureStarterProjectsMcp:
                 settings_service.settings.add_projects_to_mcp_servers = True
 
                 # Create user without starter folder
-                user = User(id=user_id, username="user_no_starter", password="hashed_password")  # noqa: S106
+                user = User(
+                    id=user_id,
+                    username="user_no_starter",
+                    password="hashed_password",  # noqa: S106  # pragma: allowlist secret
+                    is_superuser=True,
+                )
                 session.add(user)
                 await session.commit()
 
@@ -680,9 +691,17 @@ class TestMultiUserMCPServerAccess:
         client: AsyncClient,
         user_one_api_key: str,
         user_two_api_key: str,
+        active_user,
+        user_two,
+        monkeypatch,
         transport,
     ):
         """Verify that users cannot access or modify each other's MCP servers,even if they have the same name."""
+        from langflow.services.deps import get_settings_service
+
+        assert active_user.is_superuser is False
+        assert user_two.is_superuser is False
+        monkeypatch.setattr(get_settings_service().settings, "custom_component_admin_only", False)
         server_name = f"shared-server-name-{uuid4()}"
         if transport == "streamable":
             config_one = {
@@ -946,7 +965,12 @@ class TestMCPWithDefaultFolderName:
 
         async with session_scope() as session:
             # Create user
-            user = User(id=user_id, username=f"test_default_folder_{user_id}", password="hashed_password")  # noqa: S106
+            user = User(
+                id=user_id,
+                username=f"test_default_folder_{user_id}",
+                password="hashed_password",  # noqa: S106  # pragma: allowlist secret
+                is_superuser=True,
+            )
             session.add(user)
 
             # Create folder with DEFAULT_FOLDER_NAME (should match current setting)
@@ -1013,7 +1037,12 @@ class TestMCPWithDefaultFolderName:
 
         async with session_scope() as session:
             # Create user
-            user = User(id=user_id, username=f"test_migrated_{user_id}", password="hashed_password")  # noqa: S106
+            user = User(
+                id=user_id,
+                username=f"test_migrated_{user_id}",
+                password="hashed_password",  # noqa: S106  # pragma: allowlist secret
+                is_superuser=True,
+            )
             session.add(user)
 
             # Create folder with legacy name that will be migrated
@@ -1085,7 +1114,12 @@ class TestMCPWithDefaultFolderName:
 
         async with session_scope() as session:
             # Create user
-            user = User(id=user_id, username=f"test_wrong_folder_{user_id}", password="hashed_password")  # noqa: S106
+            user = User(
+                id=user_id,
+                username=f"test_wrong_folder_{user_id}",
+                password="hashed_password",  # noqa: S106  # pragma: allowlist secret
+                is_superuser=True,
+            )
             session.add(user)
 
             # Create folder with different name
