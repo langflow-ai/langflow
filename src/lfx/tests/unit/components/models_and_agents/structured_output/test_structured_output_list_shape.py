@@ -57,7 +57,7 @@ class _ListAwareLLM:
         outer = self
 
         class _Runnable:
-            async def ainvoke(self, _messages: Any) -> Any:
+            async def ainvoke(self, _messages: Any, **_kwargs) -> Any:
                 outer.received_schema = model_cls.model_json_schema()
                 fields = model_cls.model_fields
                 if len(fields) == 1:
@@ -165,7 +165,7 @@ async def test_a_single_record_keeps_its_flat_shape():
     class _SingleRecordLLM:
         def with_structured_output(self, model_cls: type[BaseModel]):
             class _Runnable:
-                async def ainvoke(self, _messages: Any) -> Any:
+                async def ainvoke(self, _messages: Any, **_kwargs) -> Any:
                     fields = model_cls.model_fields
                     if len(fields) == 1:
                         (only_name, _) = next(iter(fields.items()))

@@ -9771,7 +9771,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-bundles"
-version = "1.2.8"
+version = "1.2.9"
 source = { editable = "src/bundles/lfx-bundles" }
 dependencies = [
     { name = "lfx" },
@@ -10450,7 +10450,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-datastax"
-version = "0.2.0"
+version = "0.2.2"
 source = { editable = "src/bundles/datastax" }
 dependencies = [
     { name = "astrapy" },
@@ -10856,7 +10856,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-toolguard"
-version = "0.2.3"
+version = "0.2.4"
 source = { editable = "src/bundles/toolguard" }
 dependencies = [
     { name = "fastmcp" },
