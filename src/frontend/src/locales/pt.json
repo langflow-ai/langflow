@@ -1003,6 +1003,8 @@
   "flow.statusBuild": "Compilar para verificar o status.",
   "flow.statusBuilding": "Carregando...",
   "flow.statusInactive": "Execução bloqueada",
+  "flow.statusBranchNotTaken": "Ramo não seguido",
+  "flow.statusBranchTakenTo": "{{component}} enviou a entrada para {{outputs}}.",
   "flow.statusMissingFieldsError": "Preencha todos os campos obrigatórios.",
   "flow.toAvoidLosingProgress": "para não perder o progresso.",
   "flow.tooltipHiddenOutputsCollapse": "Ocultar resultados",

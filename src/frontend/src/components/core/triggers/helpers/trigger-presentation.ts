@@ -211,7 +211,7 @@ export const sourceIconOf = (
     case "jira":
       return "Jira";
     case "confluence":
-      return "BookOpen";
+      return "Confluence";
     default:
       return trigger.kind === "inbound_webhook" ? "Webhook" : "Clock";
   }

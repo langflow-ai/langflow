@@ -1003,6 +1003,8 @@
   "flow.statusBuild": "ステータスを確認するためにビルドする。",
   "flow.statusBuilding": "ビルド中...",
   "flow.statusInactive": "実行がブロックされました",
+  "flow.statusBranchNotTaken": "選択されなかった分岐",
+  "flow.statusBranchTakenTo": "{{component}} は入力を {{outputs}} に送りました。",
   "flow.statusMissingFieldsError": "必須項目はすべてご記入ください。",
   "flow.toAvoidLosingProgress": "進捗が失われないようにするため。",
   "flow.tooltipHiddenOutputsCollapse": "非表示の出力を折りたたむ",
