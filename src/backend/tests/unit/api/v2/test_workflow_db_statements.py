@@ -182,9 +182,10 @@ async def _measure(client: AsyncClient, api_key: str, flow_id, mode: str) -> _Re
 # Statements and pool checkouts for one run, per flow and mode. Update these
 # on purpose: a new round trip on this path costs every workflow run. The user
 # lookup prevents a legacy flow storage namespace from colliding with a user ID.
+# Each message write also rechecks the execution user's active status in its existing session.
 _ROUND_TRIPS = {
-    "memory_chatbot": {"sync": (10, 9), "stream": (13, 12)},
-    "simple_chat": {"sync": (11, 9), "stream": (14, 12)},
+    "memory_chatbot": {"sync": (12, 9), "stream": (15, 12)},
+    "simple_chat": {"sync": (13, 9), "stream": (16, 12)},
 }
 
 
@@ -197,6 +198,8 @@ def _follows(statements: list[str], first: str, then: str) -> bool:
 async def test_run_db_round_trips(client: AsyncClient, created_api_key, chat_flow, mode, request):
     recorder = await _measure(client, created_api_key.api_key, chat_flow, mode)
     statements = recorder.statements
+    # Two authentication reads and one lifecycle read for each of the two message writes.
+    assert statements.count("SELECT user") == 4, statements
 
     # A job status change returns the row it wrote instead of reading it back.
     assert not _follows(statements, "UPDATE job", "SELECT job"), statements
