@@ -95,6 +95,7 @@ class LangChainHubPromptComponent(Component):
     async def build_prompt(
         self,
     ) -> Message:
+        """Format the Hub template with configured inputs and workflow callbacks."""
         # Fetch the template
         template = self._fetch_langchain_hub_template()
 

@@ -97,6 +97,7 @@ class SerpAPIComponent(LCToolComponent):
         return tool
 
     def run_model(self) -> list[Data]:
+        """Run a SerpAPI search with workflow callbacks and return results or an error."""
         tool = self.build_tool()
         try:
             results = tool.run(

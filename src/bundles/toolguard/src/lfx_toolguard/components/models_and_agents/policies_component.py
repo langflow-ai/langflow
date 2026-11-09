@@ -294,6 +294,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         return updated_frontend_node
 
     async def _generate_guard_specs(self) -> list[ToolGuardSpec]:
+        """Generate guard specifications from the policies and tools with workflow callbacks."""
         tg = self._import_toolguard()
         logger.debug("Starting step 1")
         logger.debug(f"model = {self.model}")
@@ -312,6 +313,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         return specs
 
     async def _generate_guard_code(self, specs: list[ToolGuardSpec]) -> ToolGuardsCodeGenerationResult:
+        """Generate guard code from the specifications with workflow callbacks."""
         tg = self._import_toolguard()
         logger.debug("Starting step 2")
         out_dir = self.work_dir / STEP2

@@ -72,6 +72,7 @@ class SearchAPIComponent(LCToolComponent):
         return tool
 
     def run_model(self) -> list[Data]:
+        """Run the search with workflow callbacks and return the result snippets as data."""
         tool = self.build_tool()
         results = tool.run(
             {

@@ -18,7 +18,8 @@ keywords = ["langflow", "lfx", "extension", "bundle", "datastax"]
 # floor through scripts/ci/sync_bundle_lfx_pin.py. BUNDLE_API compatibility
 # is enforced via extension.json's lfx.compat list against BUNDLE_API_VERSION.
 dependencies = [
-    # Keep this 1.13 backport from replacing the bundle published for 1.14.
+    # Limit this backport to LFX 1.13 in constrained installs.
+    # Publish a higher DataStax bundle for LFX 1.14 before releasing 0.2.2.
     "lfx>=1.13.0.dev0,<1.14.0.dev0",
     "langchain-astradb~=1.0.0",
     "langchain-community>=0.4.1,<1.0.0",

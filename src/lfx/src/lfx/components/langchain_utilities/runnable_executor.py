@@ -115,6 +115,7 @@ class RunnableExecComponent(Component):
         return input_dict, status
 
     async def build_executor(self) -> Message:
+        """Run the agent or stream its output while forwarding workflow callbacks."""
         input_dict, status = self.get_input_dict(self.runnable, self.input_key, self.input_value)
         if not isinstance(self.runnable, AgentExecutor):
             msg = "The runnable must be an AgentExecutor"
@@ -130,6 +131,7 @@ class RunnableExecComponent(Component):
         return result_value
 
     async def astream_events(self, runnable_input):
+        """Yield chat model chunks from the agent with workflow callbacks attached."""
         async for event in self.runnable.astream_events(
             runnable_input, config={"callbacks": self.get_langchain_callbacks()}, version="v1"
         ):

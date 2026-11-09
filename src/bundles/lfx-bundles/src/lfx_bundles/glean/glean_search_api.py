@@ -136,6 +136,7 @@ class GleanSearchAPIComponent(LCToolComponent):
         return self.fetch_content_dataframe()
 
     def fetch_content(self) -> list[Data]:
+        """Run a Glean search with workflow callbacks and return each result as data."""
         tool = self.build_tool()
 
         results = tool.run(

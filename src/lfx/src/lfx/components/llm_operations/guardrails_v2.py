@@ -1776,6 +1776,7 @@ JSON:"""
         return result
 
     def _run_llm(self, findings: dict[str, dict[str, Any]]) -> tuple[dict[str, dict[str, Any]], str | None]:
+        """Return model scores or a reason the optional second opinion could not run."""
         if self._llm_mode == "off":
             return {}, "disabled"
         if not self._should_call_llm(findings):
