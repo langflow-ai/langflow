@@ -16,7 +16,7 @@ class DiscordReplyComponent(DiscordActionComponent):
     inputs = [
         connection_input(capability_id),
         DataInput(name="event", display_name="Trigger Event", required=True),
-        MultilineInput(name="text", display_name="Text", required=True),
+        MultilineInput(name="text", display_name="Text", required=True, tool_mode=True),
     ]
     outputs = [Output(display_name="Sent Message", name="message", method="build_message")]
 

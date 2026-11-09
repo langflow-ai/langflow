@@ -13,9 +13,9 @@ class DiscordSendMessageComponent(DiscordActionComponent):
     capability_id = "discord.bot.send"
     inputs = [
         connection_input(capability_id),
-        StrInput(name="guild_id", display_name="Guild ID", required=True),
-        StrInput(name="channel_id", display_name="Channel or Thread ID", required=True),
-        MultilineInput(name="text", display_name="Text", required=True),
+        StrInput(name="guild_id", display_name="Guild ID", required=True, tool_mode=True),
+        StrInput(name="channel_id", display_name="Channel or Thread ID", required=True, tool_mode=True),
+        MultilineInput(name="text", display_name="Text", required=True, tool_mode=True),
     ]
     outputs = [Output(display_name="Sent Message", name="message", method="build_message")]
 
