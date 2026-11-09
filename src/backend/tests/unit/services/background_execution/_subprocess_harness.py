@@ -108,7 +108,9 @@ class WorkerHarness:
             await session.commit()
         return user_id, flow_id
 
-    async def submit_job(self, *, flow_id: uuid.UUID, user_id: uuid.UUID, input_value: str = "hello") -> uuid.UUID:
+    async def submit_job(
+        self, *, flow_id: uuid.UUID, user_id: uuid.UUID, input_value: str = "hello", session_id: str | None = None
+    ) -> uuid.UUID:
         """Persist a QUEUED job + its request. The row IS the queue entry.
 
         Mirrors exactly what the scaled facade ``submit`` does (create_job +
@@ -118,6 +120,8 @@ class WorkerHarness:
         job_id = uuid.uuid4()
         await self.job_service.create_job(job_id=job_id, flow_id=flow_id, user_id=user_id)
         request = {"flow_id": str(flow_id), "stream_protocol": "langflow", "input_value": input_value}
+        if session_id is not None:
+            request["session_id"] = session_id
         await self.job_service.update_job_metadata(job_id, {"request": request})
         return job_id
 

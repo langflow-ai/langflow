@@ -24,6 +24,10 @@
     {
       "provider_id": "telegram",
       "contract": "contracts/telegram.v1.json"
+    },
+    {
+      "provider_id": "whatsapp",
+      "contract": "contracts/whatsapp.v1.json"
     }
   ]
 }

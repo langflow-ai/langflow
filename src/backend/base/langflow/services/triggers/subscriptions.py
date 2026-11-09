@@ -344,6 +344,29 @@ async def revoke_for_trigger(session: AsyncSession, *, trigger_id: UUID) -> int:
     return len(rows)
 
 
+async def revoke_for_connection(session: AsyncSession, *, connection_id: UUID) -> int:
+    """Disarm this connection's receivers in the same transaction as revocation."""
+    from langflow.services.triggers.locking import lock_trigger
+
+    identifiers = (
+        await session.exec(select(Trigger.id).where(Trigger.connection_id == connection_id).order_by(Trigger.id))
+    ).all()
+    retired = 0
+    for identifier in identifiers:
+        row = await lock_trigger(session, identifier)
+        if row is None or row.connection_id != connection_id:
+            continue
+        retired += await revoke_for_trigger(session, trigger_id=identifier)
+        if row.state in {TriggerState.ACTIVE.value, TriggerState.PENDING.value}:
+            await _set_trigger_state(
+                session,
+                trigger_id=identifier,
+                state=TriggerState.NEEDS_RECONNECT.value,
+                reason=_NEEDS_RECONNECT_REASON,
+            )
+    return retired
+
+
 async def revoke_unusable_connections(session: AsyncSession) -> int:
     """Retire subscriptions whose connection the owner revoked or let expire.
 
