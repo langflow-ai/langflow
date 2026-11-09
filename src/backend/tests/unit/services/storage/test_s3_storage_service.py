@@ -458,6 +458,95 @@ class TestNetworkErrorsKeepTheirType:
             await service.get_file_size("ns", "a.pdf")
 
 
+class _SlowPartsClient(_RecordingS3Client):
+    """Parts take a moment each, so overlapping ones show; ``fail_part`` makes that part fail."""
+
+    def __init__(self, fail_part: int | None = None):
+        super().__init__()
+        self.in_flight = 0
+        self.most_in_flight = 0
+        self.cancelled = 0
+        self._fail_part = fail_part
+
+    async def upload_part(self, **kwargs):
+        self.in_flight += 1
+        self.most_in_flight = max(self.most_in_flight, self.in_flight)
+        try:
+            if kwargs["PartNumber"] == self._fail_part:  # at once, while the others are still going
+                msg = "part failed"
+                raise RuntimeError(msg)
+            await asyncio.sleep(0.02)
+            return await super().upload_part(**kwargs)
+        except asyncio.CancelledError:
+            self.cancelled += 1
+            raise
+        finally:
+            self.in_flight -= 1
+
+    async def abort_multipart_upload(self, **kwargs):
+        self.calls.append(("abort_multipart_upload", kwargs))
+
+
+class TestPartsInFlight:
+    """Before: one part at a time, so a 900 MB upload to AWS took 24-45 s and the route gave 504."""
+
+    async def test_parts_overlap_up_to_the_limit_and_complete_in_order(
+        self, mock_session_service, mock_settings_service, monkeypatch
+    ):
+        from langflow.services.storage import s3
+
+        monkeypatch.setattr(s3, "STREAM_PART_SIZE", 4)
+        client = _SlowPartsClient()
+        service = _recording_service(mock_session_service, mock_settings_service, client)
+        body = b"abcd" * 10 + b"z"
+
+        written = await service.save_file_stream("ns", "big.pdf", _chunks(body))
+
+        assert written == len(body)
+        assert client.most_in_flight == s3.STREAM_PARTS_IN_FLIGHT
+        parts = client.named("complete_multipart_upload")[0]["MultipartUpload"]["Parts"]
+        assert [part["PartNumber"] for part in parts] == list(range(1, 12))
+        assert [part["ETag"] for part in parts] == [f'"{number}"' for number in range(1, 12)]
+        sent = {call["PartNumber"]: call["Body"] for call in client.named("upload_part")}
+        assert b"".join(sent[number] for number in sorted(sent)) == body
+
+    async def test_a_known_md5_labels_the_upload_as_it_starts_and_skips_the_copy(
+        self, mock_session_service, mock_settings_service, monkeypatch
+    ):
+        from langflow.services.storage import s3
+
+        monkeypatch.setattr(s3, "STREAM_PART_SIZE", 4)
+        client = _SlowPartsClient()
+        service = _recording_service(mock_session_service, mock_settings_service, client)
+
+        await service.save_file_stream("ns", "big.pdf", _chunks(b"abcdefghij"), md5=MD5)
+
+        assert client.named("create_multipart_upload")[0]["Metadata"] == {"md5": MD5}
+        assert client.named("copy_object") == []
+
+    async def test_a_failed_part_cancels_the_rest_and_aborts(
+        self, mock_session_service, mock_settings_service, monkeypatch
+    ):
+        from langflow.services.storage import s3
+
+        monkeypatch.setattr(s3, "STREAM_PART_SIZE", 4)
+        client = _SlowPartsClient(fail_part=2)
+        service = _recording_service(mock_session_service, mock_settings_service, client)
+
+        with pytest.raises(RuntimeError, match="part failed"):
+            await service.save_file_stream("ns", "big.pdf", _chunks(b"abcd" * 10))
+
+        assert client.cancelled > 0
+        assert client.in_flight == 0
+        assert len(client.named("abort_multipart_upload")) == 1
+        assert client.named("complete_multipart_upload") == []
+
+    async def test_a_known_md5_that_is_not_one_is_refused(self, mock_session_service, mock_settings_service):
+        service = _recording_service(mock_session_service, mock_settings_service, _RecordingS3Client())
+        with pytest.raises(ValueError, match="md5"):
+            await service.save_file_stream("ns", "a.pdf", _chunks(b"a"), md5="nope")
+
+
 class TestSaveUploadStream:
     async def test_it_streams_and_labels_the_file(self, mock_session_service, mock_settings_service):
         client = _RecordingS3Client()

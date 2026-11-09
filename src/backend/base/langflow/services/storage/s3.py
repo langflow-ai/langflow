@@ -10,6 +10,7 @@ import asyncio
 import base64
 import contextlib
 import hashlib
+import itertools
 import os
 import re
 from http import HTTPStatus
@@ -21,6 +22,9 @@ from .service import StorageReadiness, StorageService, _refuse_bad_move, validat
 
 # S3 parts are 5 MiB at least, except the last one.
 STREAM_PART_SIZE = 8 * 1024 * 1024
+# Parts a streamed upload sends at once, each holding its 8 MiB. One at a time took a 900 MB
+# upload to AWS 24-45 s, past an OpenShift route's 30 s; 8 at once took 3.5-4.8 s.
+STREAM_PARTS_IN_FLIGHT = 4
 # How long an upload link stays good for. Long enough for one large file over a slow link,
 # short enough that a leaked URL is not a standing write. The caller can ask for less.
 UPLOAD_LINK_TTL = 3600
@@ -704,18 +708,28 @@ class S3StorageService(StorageService):
             raise
         return md5_from_head(response)
 
-    async def save_file_stream(self, flow_id: str, file_name: str, chunks: AsyncIterator[bytes]) -> int:
-        """Save a file from a stream of chunks, holding one part in memory at a time.
+    async def save_file_stream(
+        self, flow_id: str, file_name: str, chunks: AsyncIterator[bytes], *, md5: str | None = None
+    ) -> int:
+        """Save a file from a stream of chunks, holding at most ``STREAM_PARTS_IN_FLIGHT`` parts in memory.
 
         A body smaller than one part is a single ``put_object``; anything larger is a
-        multipart upload, aborted if any part fails so no partial object is left behind.
-        Returns the number of bytes written.
+        multipart upload, with up to ``STREAM_PARTS_IN_FLIGHT`` parts sent at once, aborted if
+        any part fails so no partial object is left behind. Returns the number of bytes written.
 
         The ``md5`` label goes on as ``save_file``'s does. A multipart upload fixes its metadata
-        when it starts, before the checksum is known, so it is set afterwards by a server-side
-        copy of the object onto itself; if that copy fails the file stays, unlabelled.
+        when it starts, so a caller that knows the body's MD5 passes it as ``md5`` and the label
+        goes on then; it is trusted, not checked against the body. Without it the checksum is
+        known only at the end, and the label is set by a server-side copy of the object onto
+        itself, which takes about as long again; if that copy fails the file stays, unlabelled.
+
+        Raises:
+            ValueError: If ``md5`` is not 32 lowercase hex digits.
         """
         self._validate_identifiers(flow_id, file_name)
+        if md5 is not None and not _MD5_PATTERN.fullmatch(md5):
+            msg = f"Invalid md5 for {file_name}: expected 32 lowercase hex digits"
+            raise ValueError(msg)
         key = self.build_full_path(flow_id, file_name)
         extra: dict[str, Any] = {}
         if self.tags:
@@ -726,41 +740,66 @@ class S3StorageService(StorageService):
             written = 0
             digest = hashlib.md5(usedforsecurity=False)
             upload_id: str | None = None
-            parts: list[dict[str, Any]] = []
+            numbers = itertools.count(1)
+            etags: dict[int, str] = {}
+            in_flight: set[asyncio.Task[None]] = set()
 
-            async def upload_part(body: bytes) -> None:
+            async def upload_part(number: int, body: bytes) -> None:
                 response = await s3_client.upload_part(
-                    Bucket=self.bucket_name, Key=key, UploadId=upload_id, PartNumber=len(parts) + 1, Body=body
+                    Bucket=self.bucket_name, Key=key, UploadId=upload_id, PartNumber=number, Body=body
                 )
-                parts.append({"ETag": response["ETag"], "PartNumber": len(parts) + 1})
+                etags[number] = response["ETag"]
+
+            async def settle(limit: int) -> None:
+                """Wait until at most ``limit`` parts are in flight, raising the first that failed."""
+                while len(in_flight) > limit:
+                    done, _ = await asyncio.wait(in_flight, return_when=asyncio.FIRST_COMPLETED)
+                    in_flight.difference_update(done)
+                    for task in done:
+                        task.result()
+
+            async def send(body: bytes) -> None:
+                await settle(STREAM_PARTS_IN_FLIGHT - 1)
+                in_flight.add(asyncio.create_task(upload_part(next(numbers), body)))
 
             try:
                 async for chunk in chunks:
                     buffer += chunk
                     written += len(chunk)
-                    digest.update(chunk)
+                    if md5 is None:
+                        digest.update(chunk)
                     while len(buffer) >= STREAM_PART_SIZE:
                         if upload_id is None:
-                            created = await s3_client.create_multipart_upload(Bucket=self.bucket_name, Key=key, **extra)
+                            labelled = {"Metadata": {MD5_METADATA_KEY: md5}} if md5 else {}
+                            created = await s3_client.create_multipart_upload(
+                                Bucket=self.bucket_name, Key=key, **labelled, **extra
+                            )
                             upload_id = created["UploadId"]
-                        await upload_part(bytes(buffer[:STREAM_PART_SIZE]))
+                        await send(bytes(buffer[:STREAM_PART_SIZE]))
                         del buffer[:STREAM_PART_SIZE]
-                label = {MD5_METADATA_KEY: digest.hexdigest()}
+                label = {MD5_METADATA_KEY: md5 or digest.hexdigest()}
                 if upload_id is None:
                     await s3_client.put_object(
                         Bucket=self.bucket_name, Key=key, Body=bytes(buffer), Metadata=label, **extra
                     )
                     return written
                 if buffer:
-                    await upload_part(bytes(buffer))
+                    await send(bytes(buffer))
+                await settle(0)
+                parts = [{"ETag": etags[number], "PartNumber": number} for number in sorted(etags)]
                 await s3_client.complete_multipart_upload(
                     Bucket=self.bucket_name, Key=key, UploadId=upload_id, MultipartUpload={"Parts": parts}
                 )
             except BaseException:
+                for task in in_flight:
+                    task.cancel()
+                await asyncio.gather(*in_flight, return_exceptions=True)
                 if upload_id is not None:
                     with contextlib.suppress(Exception):
                         await s3_client.abort_multipart_upload(Bucket=self.bucket_name, Key=key, UploadId=upload_id)
                 raise
+            if md5 is not None:
+                return written
             try:
                 await s3_client.copy_object(
                     Bucket=self.bucket_name,
@@ -777,10 +816,12 @@ class S3StorageService(StorageService):
                 )
         return written
 
-    async def save_upload_stream(self, flow_id: str, file_name: str, chunks: AsyncIterator[bytes]) -> int:
+    async def save_upload_stream(
+        self, flow_id: str, file_name: str, chunks: AsyncIterator[bytes], *, md5: str | None = None
+    ) -> int:
         """``save_file_stream``, failing the way ``save_file`` fails, as the upload routes expect."""
         try:
-            return await self.save_file_stream(flow_id, file_name, chunks)
+            return await self.save_file_stream(flow_id, file_name, chunks, md5=md5)
         except Exception as e:  # noqa: BLE001 - _raise_save_error always raises
             self._raise_save_error(e, flow_id, file_name)
 

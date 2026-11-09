@@ -1,3 +1,5 @@
+import asyncio
+import hashlib
 import io
 import re
 import unicodedata
@@ -30,6 +32,7 @@ from langflow.services.authorization.listing import (
 from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.settings.service import SettingsService
+from langflow.services.storage.s3 import S3StorageService
 from langflow.services.storage.service import StorageService
 
 router = APIRouter(tags=["Files"], prefix="/files")
@@ -230,6 +233,16 @@ async def _upload_chunks(file) -> AsyncIterator[bytes]:
         yield chunk
 
 
+def _spooled_md5(handle) -> str:
+    """The MD5 of an upload's spooled body, read from its start and rewound for the save."""
+    digest = hashlib.md5(usedforsecurity=False)
+    handle.seek(0)
+    while chunk := handle.read(UPLOAD_READ_CHUNK):
+        digest.update(chunk)
+    handle.seek(0)
+    return digest.hexdigest()
+
+
 async def save_file_routine(
     file,
     storage_service,
@@ -252,7 +265,14 @@ async def save_file_routine(
     # shortcut: an append still reads the whole body. Local disk could stream it too, if a
     # large append ever needs to.
     if not file_content and not append:
-        await storage_service.save_upload_stream(flow_id, file_name, _upload_chunks(file))
+        if isinstance(storage_service, S3StorageService):
+            # S3 labels each object with its MD5. Known before the upload starts, the label goes
+            # on with it; known only at the end, it costs a copy of the whole object, which took
+            # a 900 MB upload past an OpenShift route's 30 s. Reading the spooled body is local.
+            md5 = await asyncio.to_thread(_spooled_md5, file.file)
+            await storage_service.save_upload_stream(flow_id, file_name, _upload_chunks(file), md5=md5)
+        else:
+            await storage_service.save_upload_stream(flow_id, file_name, _upload_chunks(file))
         return file_id, file_name
 
     await storage_service.save_file(

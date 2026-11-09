@@ -1735,6 +1735,36 @@ async def test_appending_still_adds_to_the_end(tmp_path):
     assert stored == b"oldnew"
 
 
+async def test_an_s3_upload_passes_its_md5_so_no_label_copy_is_needed():
+    """Before: S3 learned the MD5 only at the end and copied the whole object to label it."""
+    import hashlib
+    from types import SimpleNamespace
+
+    from langflow.api.v2.files import UPLOAD_READ_CHUNK, save_file_routine
+    from langflow.services.storage.s3 import S3StorageService
+    from starlette.datastructures import UploadFile as StarletteUpload
+
+    data = b"y" * (UPLOAD_READ_CHUNK * 2 + 7)
+    spooled = tempfile.SpooledTemporaryFile(max_size=1024)  # noqa: SIM115 - the UploadFile owns it
+    spooled.write(data)
+    spooled.seek(0)
+    upload = StarletteUpload(file=spooled, filename="big.bin")
+    seen: dict = {}
+
+    async def save_upload_stream(_flow_id, _file_name, chunks, *, md5=None):
+        seen["md5"] = md5
+        seen["body"] = b"".join([chunk async for chunk in chunks])
+        return len(seen["body"])
+
+    storage = MagicMock(spec=S3StorageService)
+    storage.save_upload_stream = save_upload_stream
+
+    await save_file_routine(upload, storage, SimpleNamespace(id="u1"), file_name="big.bin", namespace="ns")
+
+    assert seen["md5"] == hashlib.md5(data, usedforsecurity=False).hexdigest()
+    assert seen["body"] == data  # rewound after hashing, so the save still sends every byte
+
+
 async def test_a_storage_failure_on_upload_names_no_address():
     from types import SimpleNamespace
     from unittest.mock import AsyncMock, MagicMock
