@@ -78,6 +78,13 @@ def _customized_agent() -> dict:
     )
 
 
+def _agent_with_retyped_empty_prompt() -> dict:
+    """An Agent whose empty ``system_prompt`` was saved with another type: safe unless an edge goes into it."""
+    node_info = _saved_agent()
+    node_info["template"]["system_prompt"] = {"required": False, "value": "", "show": True, "type": "dict"}
+    return node_info
+
+
 def _restrict(monkeypatch, *, allow_custom=False, registry=_registry, ready=True) -> None:
     monkeypatch.setattr(
         "lfx.services.deps.get_settings_service",
@@ -144,6 +151,14 @@ def test_breaking_outputs_are_reported_without_a_missing_input_clause(monkeypatc
     assert "missing required input" not in hint
 
 
+def test_connected_fields_decide_a_retyped_field_like_the_checker(monkeypatch):
+    """The checker and the editor call an empty, unconnected retyped field safe, so it is not blamed."""
+    _restrict(monkeypatch)
+
+    assert describe_restricted_component_mismatch("Agent", _agent_with_retyped_empty_prompt(), set()) is None
+    assert describe_restricted_component_mismatch("Agent", _agent_with_retyped_empty_prompt(), {"system_prompt"})
+
+
 def test_explain_never_raises(monkeypatch):
     """The only caller is an error handler: a raising diagnosis would mask the real failure."""
 
@@ -156,7 +171,8 @@ def test_explain_never_raises(monkeypatch):
     assert explain_restricted_component_mismatch("Agent", _customized_agent()) is None
 
 
-async def test_build_error_carries_the_diagnosis(monkeypatch):
+@pytest.mark.parametrize("broken_edges", [False, True])
+async def test_build_error_carries_the_diagnosis(monkeypatch, broken_edges):
     """The failure a user actually sees names the policy, not just the stock component's complaint."""
     from lfx.exceptions.component import ComponentBuildError
     from lfx.graph.vertex.base import Vertex
@@ -172,7 +188,14 @@ async def test_build_error_carries_the_diagnosis(monkeypatch):
     vertex = Vertex.__new__(Vertex)
     vertex.display_name = "Agent"
     vertex.data = {"type": "Agent", "node": _customized_agent()}
-    vertex.graph = SimpleNamespace(flow_id=None)
+
+    def unreadable_edges(_vertex):
+        msg = "edge lookup unavailable"
+        raise RuntimeError(msg)
+
+    vertex.id = "Agent-review"
+    vertex.graph = SimpleNamespace(flow_id=None, get_vertex_edges=unreadable_edges)
+    vertex._incoming_edges = None if broken_edges else []
 
     with pytest.raises(ComponentBuildError) as excinfo:
         await vertex._build_results(custom_component=None, custom_params={}, base_type="component")
@@ -183,9 +206,35 @@ async def test_build_error_carries_the_diagnosis(monkeypatch):
     assert "missing required input: model" in message
 
 
+@pytest.mark.parametrize(("incoming_fields", "expect_hint"), [((), False), (("system_prompt",), True)])
+async def test_build_error_reads_the_vertex_edges(monkeypatch, incoming_fields, expect_hint):
+    """The build path passes the fields the vertex's edges go into, so it agrees with the checker."""
+    from lfx.exceptions.component import ComponentBuildError
+    from lfx.graph.vertex.base import Vertex
+
+    _restrict(monkeypatch)
+
+    async def _raise(**_kwargs):
+        msg = "unrelated failure"
+        raise ValueError(msg)
+
+    monkeypatch.setattr("lfx.interface.initialize.loading.get_instance_results", _raise)
+
+    vertex = Vertex.__new__(Vertex)
+    vertex.display_name = "Agent"
+    vertex.data = {"type": "Agent", "node": _agent_with_retyped_empty_prompt()}
+    vertex.graph = SimpleNamespace(flow_id=None)
+    vertex._incoming_edges = [SimpleNamespace(target_param=field) for field in incoming_fields]
+
+    with pytest.raises(ComponentBuildError) as excinfo:
+        await vertex._build_results(custom_component=None, custom_params={}, base_type="component")
+
+    assert ("LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false" in str(excinfo.value)) is expect_hint
+
+
 @pytest.mark.parametrize(
     ("allow_custom", "customized", "expect_hint"),
-    [(False, True, True), (False, False, False), (True, True, False)],
+    [(False, True, True), (False, False, False), (True, True, False), (False, "retyped prompt", False)],
 )
 async def test_first_streamed_error_carries_the_diagnosis(monkeypatch, allow_custom, customized, expect_hint):
     """The real Agent emits an error before the vertex wraps it; AG-UI stops on that first event."""
@@ -207,7 +256,11 @@ async def test_first_streamed_error_carries_the_diagnosis(monkeypatch, allow_cus
     monkeypatch.setattr(settings, "allow_custom_components", allow_custom)
     monkeypatch.setattr(settings, "substitute_outdated_component_code", True)
     saved = deepcopy(registry["models_and_agents"]["Agent"])
-    if customized:
+    if customized == "retyped prompt":
+        # Empty and unconnected, so the checker calls the retyped field safe and the error must not blame it.
+        saved["template"]["system_prompt"]["type"] = "dict"
+        saved["template"]["system_prompt"]["value"] = ""
+    elif customized:
         saved["template"].pop("model")
         saved["template"]["code"]["value"] += "\n# Customized Agent\n"
         saved["template"]["provider"] = {

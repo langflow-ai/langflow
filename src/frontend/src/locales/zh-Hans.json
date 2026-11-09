@@ -2702,6 +2702,8 @@
   "updateComponents.cannotRunDisabled_one": "{{count}} 当自定义组件被禁用时，自定义组件无法运行",
   "updateComponents.cannotRunDisabled_other": "{{count}} 当自定义组件被禁用时，自定义组件无法运行",
   "updateComponents.customComponentsDisabled": "自定义组件已禁用",
+  "updateComponents.fieldsNotRestored": "无法恢复 {{component}} 中的某些字段",
+  "updateComponents.fieldsRefreshFailed": "无法刷新 {{component}} 中的字段",
   "updateComponents.dismiss": "退出",
   "updateComponents.dismissAll": "全部关闭",
   "updateComponents.flowNeedsReview": "流程需要审核",

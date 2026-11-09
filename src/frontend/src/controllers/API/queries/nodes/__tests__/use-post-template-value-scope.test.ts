@@ -82,6 +82,50 @@ describe("usePostTemplateValue scope continuity", () => {
       expect.any(String),
       expect.objectContaining({
         frontend_node: { metadata: { component_class_name: "Second" } },
+        template: expect.objectContaining({
+          _frontend_node_id: { value: "shared-node" },
+          _frontend_node_flow_id: { value: "flow-one" },
+        }),
+      }),
+    );
+  });
+
+  it("sends the previous MCP server separately from the edited template", async () => {
+    const savedNode = {
+      ...node,
+      template: {
+        ...node.template,
+        mcp_server: { value: { name: "old-server" } },
+      },
+    } as unknown as APIClassType;
+    mockApiPost.mockResolvedValueOnce({ data: savedNode });
+    const mutation = usePostTemplateValue({
+      parameterId: "mcp_server",
+      nodeId: "shared-node",
+      node: savedNode,
+    });
+
+    await mutation.mutateAsync({
+      value: { name: "new-server" },
+      template: {
+        ...savedNode.template,
+        mcp_server: {
+          ...savedNode.template.mcp_server,
+          value: { name: "new-server" },
+        },
+      },
+    });
+
+    expect(mockApiPost).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        field_value: { name: "new-server" },
+        template: expect.objectContaining({
+          mcp_server: expect.objectContaining({
+            value: { name: "new-server" },
+          }),
+          _frontend_node_previous_mcp_server: { value: "old-server" },
+        }),
       }),
     );
   });
