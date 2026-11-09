@@ -1313,21 +1313,8 @@ class AuthService(BaseAuthService):
         return current_user
 
     async def get_webhook_user(self, flow_id: str, request: Request) -> UserRead:
-        settings_service = self.settings
         clear_current_auth_context()
         clear_current_external_access_context()
-
-        if not settings_service.auth_settings.WEBHOOK_AUTH_ENABLE:
-            try:
-                flow_owner = await get_user_by_flow_id_or_endpoint_name(flow_id)
-                # A deactivated owner (including one whose erase is in progress) must not keep running flows.
-                if flow_owner is None or not flow_owner.is_active:
-                    raise HTTPException(status_code=404, detail="Flow not found")
-                return flow_owner  # noqa: TRY300
-            except HTTPException:
-                raise
-            except Exception as exc:
-                raise HTTPException(status_code=404, detail="Flow not found") from exc
 
         api_key_header_val = request.headers.get("x-api-key")
         api_key_query_val = request.query_params.get("x-api-key")

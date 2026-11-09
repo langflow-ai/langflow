@@ -216,6 +216,9 @@ const ModelSelection = ({
   } = useGetEnabledModels({ flowId, projectId, purpose: "configure" });
   const [modelQuery, setModelQuery] = useState<string>("");
   const [showDeprecated, setShowDeprecated] = useState<boolean>(false);
+  const [collapsedSections, setCollapsedSections] = useState<
+    Partial<Record<ModelType, boolean>>
+  >({});
   const canUseEnabledModels =
     !!enabledModelsData &&
     isEnabledModelsSuccess &&
@@ -223,12 +226,11 @@ const ModelSelection = ({
     isEnabledModelsFetchedAfterMount &&
     enabledModelsFetchStatus === "idle";
 
-  // Reset both the search and the deprecated disclosure when the selected
-  // provider changes so neither state leaks across providers
-  // (OpenRouter → Anthropic, etc.).
+  // Start each provider with an unfiltered catalog and expanded model sections.
   useEffect(() => {
     setModelQuery("");
     setShowDeprecated(false);
+    setCollapsedSections({});
   }, [providerName]);
 
   const isModelEnabled = (
@@ -401,10 +403,31 @@ const ModelSelection = ({
     if (models.length === 0) return null;
     const [activeModels, deprecatedModels] = partitionDeprecated(models);
     return (
-      <div data-testid={`${selectedModelType}-models-section`}>
-        <div className="text-[13px] font-semibold text-muted-foreground">
+      <details
+        key={`${providerName}-${selectedModelType}`}
+        className="group/models"
+        data-testid={`${selectedModelType}-models-section`}
+        open={!collapsedSections[selectedModelType]}
+        onToggle={(event) => {
+          const isCollapsed = !event.currentTarget.open;
+          setCollapsedSections((previous) =>
+            !!previous[selectedModelType] === isCollapsed
+              ? previous
+              : { ...previous, [selectedModelType]: isCollapsed },
+          );
+        }}
+      >
+        <summary
+          className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-sm text-[13px] font-semibold text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden"
+          data-testid={`${selectedModelType}-models-summary`}
+        >
           {title}
-        </div>
+          <ForwardedIconComponent
+            name="ChevronDown"
+            ariaHidden
+            className="h-4 w-4 shrink-0 transition-transform group-open/models:rotate-180"
+          />
+        </summary>
         <div className="flex flex-col gap-2 pt-4">
           {activeModels.map((model) =>
             renderModelRow(model, selectedModelType),
@@ -441,7 +464,7 @@ const ModelSelection = ({
             </div>
           </details>
         )}
-      </div>
+      </details>
     );
   };
 
