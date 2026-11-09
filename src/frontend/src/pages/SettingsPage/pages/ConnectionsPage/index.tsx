@@ -382,6 +382,17 @@ export default function ConnectionsPage() {
           canCreateInstance={isSuperuser}
           reauthorize={reauthorizing}
           deploymentContext={integrationsQuery.data?.deployment_context}
+          onConnected={(connection) => {
+            const owner = ownerKindOf(connection, userData?.id);
+            setView(
+              owner === "instance"
+                ? "instance"
+                : owner === "other" && isSuperuser
+                  ? "others"
+                  : "mine",
+            );
+            setSearch("");
+          }}
         />
       )}
     </div>

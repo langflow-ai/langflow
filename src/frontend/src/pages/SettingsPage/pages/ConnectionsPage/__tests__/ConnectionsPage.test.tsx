@@ -20,6 +20,21 @@ const mockMutation = jest.fn();
 const mockSetErrorData = jest.fn();
 const mockSetSuccessData = jest.fn();
 const mockSetNoticeData = jest.fn();
+const mockCreate = jest.fn();
+const mockPoll: { data: ConnectionRead | undefined } = { data: undefined };
+const mockRegistrations = {
+  data: [
+    {
+      id: "google-demo",
+      provider: "google",
+      profile: "user",
+      context: "self_managed",
+      client_type: "confidential",
+      scopes: [] as string[],
+    },
+  ],
+  isSuccess: true,
+};
 let mockExtraTabs: ConnectionsTabDefinition[] = [];
 
 jest.mock("@/controllers/API/queries/connections", () => {
@@ -33,8 +48,28 @@ jest.mock("@/controllers/API/queries/connections", () => {
     useUpdateConnectionMutation: mutation,
     useRevokeConnectionMutation: mutation,
     useDeleteConnectionMutation: mutation,
+    useCreateConnectionMutation: () => ({ mutateAsync: mockCreate }),
+    useRenewConnectionTokenMutation: mutation,
+    useStartOAuthMutation: () => ({
+      mutateAsync: jest.fn().mockResolvedValue({
+        authorization_url: "https://idp.test/consent",
+      }),
+    }),
+    usePendingConnectionPoll: () => mockPoll,
+    useOAuthRegistrationsQuery: () => mockRegistrations,
   };
 });
+
+jest.mock("@/controllers/API/queries/flows/use-get-types", () => ({
+  useGetTypes: jest.fn(),
+}));
+
+jest.mock("@/customization/components/custom-connection-authorization", () => ({
+  ...jest.requireActual(
+    "@/customization/components/custom-connection-authorization",
+  ),
+  openAuthorizationUrl: jest.fn(),
+}));
 
 jest.mock("@/customization/components/custom-connections-tabs", () => ({
   __esModule: true,
@@ -105,12 +140,209 @@ describe("ConnectionsPage", () => {
     mockSetErrorData.mockReset();
     mockSetSuccessData.mockReset();
     mockSetNoticeData.mockReset();
+    mockCreate.mockReset();
+    mockPoll.data = undefined;
+    mockRegistrations.data[0].scopes = [];
     mockExtraTabs = [];
   });
 
   afterEach(async () => {
+    jest.restoreAllMocks();
     await act(() => i18n.changeLanguage("en"));
   });
+
+  it.each(["instance", "user"] as const)(
+    "reveals a newly authorized %s connection and clears the old search",
+    async (ownership) => {
+      mockUser = { id: SUPERUSER_ID, is_superuser: true };
+      mockConnections = [];
+      mockIntegrations = {
+        data: {
+          providers: [
+            {
+              provider_id: "google",
+              display_name: "Google",
+              capabilities: [],
+            },
+          ],
+        },
+        isSuccess: true,
+      };
+      const ready = connection({
+        id: "new-connection",
+        owner_id: ownership === "user" ? SUPERUSER_ID : null,
+        ownership_mode: ownership,
+        display_name: "New connection",
+        updated_at: "2026-09-18T00:01:00Z",
+      });
+      mockCreate.mockResolvedValue({
+        ...ready,
+        status: "pending",
+        has_credentials: false,
+        updated_at: "2026-09-18T00:00:00Z",
+      });
+      jest.spyOn(window, "open").mockReturnValue({
+        close: jest.fn(),
+        closed: false,
+      } as unknown as Window);
+      const { rerender } = render(<ConnectionsPage />);
+      const user = userEvent.setup();
+      if (ownership === "user") await openTab("Instance");
+      await user.type(screen.getByTestId("connections-search"), "old search");
+      await user.click(screen.getByTestId("add-connection"));
+      await user.type(screen.getByTestId("connection-name"), "new_connection");
+      await user.type(
+        screen.getByTestId("connection-display-name"),
+        "New connection",
+      );
+      if (ownership === "instance") {
+        await user.click(screen.getByTestId("connection-instance-owned"));
+      }
+      await user.click(screen.getByTestId("connection-continue"));
+      mockConnections = [ready];
+      mockPoll.data = ready;
+      rerender(<ConnectionsPage />);
+      expect(await screen.findByText("Connected")).toBeVisible();
+      await user.click(screen.getByTestId("connection-done"));
+      expect(
+        screen.getByRole("tab", {
+          name: ownership === "instance" ? "Instance" : "Mine",
+        }),
+      ).toHaveAttribute("aria-selected", "true");
+      expect(screen.getByTestId("connections-search")).toHaveValue("");
+      expect(screen.getByTestId("connection-row-new_connection")).toBeVisible();
+      mockIntegrations = { data: { providers: [] } };
+    },
+  );
+
+  it("keeps a superuser's reauthorized connection visible under Other users", async () => {
+    mockUser = { id: SUPERUSER_ID, is_superuser: true };
+    const previous = connection({
+      id: "other",
+      owner_id: OTHER_ID,
+      granted_scopes: ["openid"],
+    });
+    const ready = { ...previous, updated_at: "2026-09-18T00:01:00Z" };
+    mockConnections = [previous];
+    mockRegistrations.data[0].scopes = ["openid"];
+    jest.spyOn(window, "open").mockReturnValue({
+      close: jest.fn(),
+      closed: false,
+    } as unknown as Window);
+    const { rerender } = render(<ConnectionsPage />);
+    const user = userEvent.setup();
+    await openTab("Other users");
+    await user.click(screen.getByTestId("connection-menu-other"));
+    await user.click(screen.getByRole("menuitem", { name: "Reconnect" }));
+    await user.click(screen.getByTestId("connection-authorize"));
+    mockConnections = [ready];
+    mockPoll.data = ready;
+    rerender(<ConnectionsPage />);
+    expect(await screen.findByText("Connected")).toBeVisible();
+    await user.click(screen.getByTestId("connection-done"));
+    expect(screen.getByRole("tab", { name: "Other users" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByTestId("connection-row-other")).toBeVisible();
+  });
+
+  it.each(["ready", "pending", "expired", "revoked", "error"] as const)(
+    "shows another user's %s ServiceNow connection as unavailable",
+    async (status) => {
+      mockUser = { id: SUPERUSER_ID, is_superuser: true };
+      mockConnections = [
+        connection({
+          id: "other_servicenow",
+          provider_key: "servicenow",
+          owner_id: OTHER_ID,
+          status,
+        }),
+      ];
+      const user = userEvent.setup();
+      render(<ConnectionsPage />);
+
+      await openTab("Other users");
+      const row = screen.getByTestId("connection-row-other_servicenow");
+      expect(within(row).getByText("Unavailable")).toBeVisible();
+      expect(
+        within(row).getByText(
+          "Only the connection owner can authorize and use this ServiceNow connection.",
+        ),
+      ).toBeVisible();
+      expect(
+        screen.queryByTestId("authorize-other_servicenow"),
+      ).not.toBeInTheDocument();
+      await user.click(screen.getByTestId("connection-menu-other_servicenow"));
+
+      expect(
+        screen.queryByRole("menuitem", { name: /^(Authorize|Reconnect)$/ }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByRole("menuitem", { name: "Rename" })).toBeVisible();
+    },
+  );
+
+  it("does not offer authorization for a legacy instance ServiceNow connection", async () => {
+    mockUser = { id: SUPERUSER_ID, is_superuser: true };
+    mockConnections = [
+      connection({
+        id: "instance_servicenow",
+        provider_key: "servicenow",
+        ownership_mode: "instance",
+        status: "pending",
+      }),
+    ];
+    const user = userEvent.setup();
+    render(<ConnectionsPage />);
+
+    await openTab("Instance");
+    expect(
+      within(
+        screen.getByTestId("connection-row-instance_servicenow"),
+      ).getByText("Unavailable"),
+    ).toBeVisible();
+    expect(
+      screen.queryByTestId("authorize-instance_servicenow"),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByTestId("connection-menu-instance_servicenow"));
+
+    expect(
+      screen.queryByRole("menuitem", { name: "Authorize" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it.each(["menu", "status"] as const)(
+    "lets a ServiceNow owner open authorization from the %s action",
+    async (entryPoint) => {
+      mockUser = { id: SUPERUSER_ID, is_superuser: true };
+      mockConnections = [
+        connection({
+          id: "my_servicenow",
+          provider_key: "servicenow",
+          owner_id: SUPERUSER_ID,
+          status: "pending",
+        }),
+      ];
+      const user = userEvent.setup();
+      render(<ConnectionsPage />);
+
+      expect(
+        within(screen.getByTestId("connection-row-my_servicenow")).getByText(
+          "Pending",
+        ),
+      ).toBeVisible();
+
+      if (entryPoint === "menu") {
+        await user.click(screen.getByTestId("connection-menu-my_servicenow"));
+        await user.click(screen.getByRole("menuitem", { name: "Authorize" }));
+      } else {
+        await user.click(screen.getByTestId("authorize-my_servicenow"));
+      }
+
+      expect(screen.getByRole("dialog")).toBeVisible();
+      expect(screen.getByTestId("connection-authorize")).toBeInTheDocument();
+    },
+  );
 
   it("disables Add connection and explains why when policy leaves no provider", () => {
     mockIntegrations = { data: { providers: [] }, isSuccess: true };
