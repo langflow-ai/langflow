@@ -1488,9 +1488,13 @@ def _registry_lookup() -> dict[str, dict]:
 
     with component_cache.state_lock:
         all_types_dict = component_cache.all_types_dict if component_cache.all_types_ready else None
-    if not all_types_dict:
-        return {}
-    return build_registry_lookup(all_types_dict)
+        if not all_types_dict:
+            return {}
+        cached = component_cache.upgrade_registry
+        if cached is None or cached[0] is not all_types_dict:
+            cached = (all_types_dict, build_registry_lookup(all_types_dict))
+            component_cache.upgrade_registry = cached
+        return cached[1]
 
 
 def _registry_entry_for_component_type(component_type: str) -> Mapping[str, Any] | None:

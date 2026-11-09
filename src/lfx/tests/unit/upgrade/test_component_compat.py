@@ -241,3 +241,36 @@ def test_hard_flow_status_after_a_component_change(release, flow_name, component
     report = check_flow_compatibility(flow, {}, registry={**lookup, component_type: entry})
 
     assert {node.status for node in report.nodes if node.component_type == component_type} == {expected}
+
+
+@pytest.mark.parametrize("handle", [None, "not-a-handle", "null", '{"fieldName": 9}'])
+@pytest.mark.parametrize("unknown_first", [False, True])
+def test_unreadable_target_handle_requires_review_only_for_its_target(handle, unknown_first):
+    """An existing edge cannot become an unconnected safe update when its handle is unreadable."""
+    case = next(case for case in CASES if case["name"] == "input_types narrowed, connected")
+    nodes = [
+        {"id": node_id, "data": {"id": node_id, "type": "TestComponent", "node": copy.deepcopy(case["saved_node"])}}
+        for node_id in ("connected", "unconnected")
+    ]
+    unreadable = {"source": "other", "target": "connected", "targetHandle": handle}
+    readable = {"source": "other", "target": "connected", "data": {"targetHandle": {"fieldName": "another_field"}}}
+    edges = [unreadable, readable] if unknown_first else [readable, unreadable]
+    report = check_flow_compatibility({"nodes": nodes, "edges": edges}, {"Test": {"TestComponent": case["component"]}})
+    assert {node.node_id: node.status for node in report.nodes} == {
+        "connected": "outdated_breaking",
+        "unconnected": "outdated_safe",
+    }
+
+
+def test_unreadable_edge_into_group_keeps_nested_connectivity_unknown():
+    case = next(case for case in CASES if case["name"] == "input_types narrowed, connected")
+    child = {"id": "child", "data": {"id": "child", "type": "TestComponent", "node": case["saved_node"]}}
+    group = {
+        "id": "group",
+        "data": {"node": {"flow": {"data": {"nodes": [child], "edges": []}}, "template": {}}},
+    }
+    report = check_flow_compatibility(
+        {"nodes": [group], "edges": [{"source": "other", "target": "group", "targetHandle": "unreadable"}]},
+        {"Test": {"TestComponent": case["component"]}},
+    )
+    assert next(node for node in report.nodes if node.node_id == "child").status == "outdated_breaking"

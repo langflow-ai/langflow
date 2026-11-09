@@ -277,7 +277,7 @@ class BackgroundExecutionService(Service):
 
             await asyncio.sleep(lease_ttl_s)
             while await writes_paused():  # noqa: ASYNC110
-                await asyncio.sleep(0.1)
+                await asyncio.sleep(1)
             try:
                 async with async_writing(name="background_lease_expiry") as let_in:
                     if let_in:
@@ -912,6 +912,23 @@ class BackgroundExecutionService(Service):
 
     # ----------------------------------------------------------- startup sweep
 
+    def _schedule_maintenance_recovery(self) -> None:
+        """Retry interrupted startup work after maintenance ends, with one waiting task."""
+        task = self._maintenance_recovery_task
+        if task is not None and not task.done() and task is not asyncio.current_task():
+            return
+
+        async def recover_after_maintenance() -> None:
+            from langflow.api.utils.migration_pause import writes_paused
+
+            while await writes_paused():  # noqa: ASYNC110
+                await asyncio.sleep(1)
+            await self.sweep_orphans_on_startup()
+
+        # A recovering task can observe a new pause in its next sweep. Replace
+        # that current task rather than losing the remaining queued work.
+        self._maintenance_recovery_task = asyncio.create_task(recover_after_maintenance())
+
     async def sweep_orphans_on_startup(self) -> None:
         """Reconcile jobs left mid-flight by a crashed process.
 
@@ -937,14 +954,7 @@ class BackgroundExecutionService(Service):
 
         await self.start()
         if await writes_paused():
-            if self._maintenance_recovery_task is None or self._maintenance_recovery_task.done():
-
-                async def recover_after_maintenance():
-                    while await writes_paused():  # noqa: ASYNC110
-                        await asyncio.sleep(0.1)
-                    await self.sweep_orphans_on_startup()
-
-                self._maintenance_recovery_task = asyncio.create_task(recover_after_maintenance())
+            self._schedule_maintenance_recovery()
             return
         job_service = get_job_service()
         lease_ttl = self._settings.background_lease_ttl_s
@@ -976,6 +986,7 @@ class BackgroundExecutionService(Service):
         # the real QUEUED->IN_PROGRESS flip once it actually starts emitting.
         for job in await self._queued_workflow_jobs():
             if await writes_paused():
+                self._schedule_maintenance_recovery()
                 return
             lease_heartbeat = datetime.now(timezone.utc).isoformat()
             if not await job_service.claim_queued_lease(

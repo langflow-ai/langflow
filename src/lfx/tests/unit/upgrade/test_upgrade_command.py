@@ -133,7 +133,7 @@ def test_upgrade_reports_retired_with_replacement_and_leaves_it(flow_file, capsy
     with pytest.raises(typer.Exit) as exc_info:
         upgrade_command(flow_file, write=True, registry=registry)
 
-    assert exc_info.value.exit_code != 0
+    assert exc_info.value.exit_code == 1
     out = capsys.readouterr().out
     assert "[RETIRED] My Component (MyComp)" in out
     assert "retired in 1.13.0, replace with: models_and_agents.Agent" in out
@@ -307,7 +307,7 @@ def test_strict_exits_nonzero_on_customized(customized_flow_file, capsys, write)
     before = customized_flow_file.read_text()
     with pytest.raises(typer.Exit) as exc_info:
         upgrade_command(customized_flow_file, write=write, strict=True, registry=_registry())
-    assert exc_info.value.exit_code != 0
+    assert exc_info.value.exit_code == 1
     assert "customized components" in capsys.readouterr().err
     assert customized_flow_file.read_text() == before
 

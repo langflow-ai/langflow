@@ -206,3 +206,34 @@ async def test_code_only_edit_warns_when_server_component_succeeds(monkeypatch, 
         result = await component.message_response()
         assert result.text == "Server component completed"
         assert "CUSTOM_CODE_RAN" in saved["template"]["code"]["value"]
+
+
+def test_repeated_warnings_reuse_registry_but_refresh_after_publication(saved_agent, monkeypatch):
+    """Repeated run warnings do not rebuild the registry, and a reload cannot retain old retirement policy."""
+    from lfx.upgrade import checker
+
+    monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", True)
+    original = checker.build_registry_lookup
+    builds = 0
+
+    def tracked_registry(all_types):
+        nonlocal builds
+        builds += 1
+        return original(all_types)
+
+    monkeypatch.setattr(checker, "build_registry_lookup", tracked_registry)
+    assert describe_component_code_substitution(saved_agent) is None
+    assert describe_component_code_substitution(saved_agent) is None
+    assert builds == 1
+
+    updated = deepcopy(components.component_cache.all_types_dict)
+    updated["models_and_agents"]["Agent"]["retired_in"] = "1.14.0"
+    updated["models_and_agents"]["Agent"]["replacement"] = ["models_and_agents.Replacement"]
+    components.component_cache.all_types_dict = updated
+    warning = describe_component_code_substitution(saved_agent)
+    assert "was retired in 1.14.0" in warning
+    assert "models_and_agents.Replacement" in warning
+    assert builds == 2
+
+    components.component_cache.all_types_ready = False
+    assert describe_component_code_substitution(saved_agent) is None

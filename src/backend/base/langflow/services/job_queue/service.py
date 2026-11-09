@@ -379,7 +379,7 @@ class JobQueueService(Service):
             # The request already owns the file pause's drain slot. Database
             # maintenance is checked again when the queued coroutine can start.
             while await write_refusal(maintenance_caller, check_file=False):  # noqa: ASYNC110
-                await asyncio.sleep(0.1)
+                await asyncio.sleep(1)
             await task_coro
         except asyncio.CancelledError:
             raise

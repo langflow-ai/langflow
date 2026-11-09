@@ -30,7 +30,7 @@ async function unusedPort(): Promise<number> {
 }
 
 async function stopServer(server: ChildProcess | undefined) {
-  if (!server || server.exitCode !== null) return;
+  if (!server || server.exitCode !== null || server.signalCode !== null) return;
   await new Promise<void>((resolve) => {
     server.once("exit", () => resolve());
     server.kill("SIGTERM");
@@ -100,7 +100,7 @@ test.beforeAll(async () => {
     await expect
       .poll(
         async () => {
-          if (mcpServer?.exitCode !== null)
+          if (mcpServer?.exitCode !== null || mcpServer?.signalCode !== null)
             throw new Error("MCP fixture exited before startup");
           try {
             return (await fetch(mcpUrl)).status;

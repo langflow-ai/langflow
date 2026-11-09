@@ -3,7 +3,7 @@ title: Review upgrade reports
 slug: /upgrade-reports
 ---
 
-Open **Settings > Upgrade reports** as an administrator and import the JSON file produced by `langflow upgrade-check` in the target release. The report is stored in the instance database and remains available after a reload. **Export original report** downloads the exact imported document, including additional metadata. Reports can contain private flow metadata and should be handled with the same care as database backups. The import limit is 20 MiB.
+Open **Settings > Upgrade reports** as an administrator and import the JSON file produced by [`langflow upgrade-check`](/upgrade-check) in the target release. The report is stored in the instance database and remains available after a reload. **Export original report** downloads the exact imported document, including additional metadata. Reports can contain private flow metadata and should be handled with the same care as database backups. The import limit is 20 MiB.
 
 The page shows the source, target, report age, saved versions, deployments, findings, and retained execution history. Missing metadata stays unknown. Older reports may omit flows whose components were already current. The page identifies that incomplete coverage. An absent job record does not prove that a flow never ran. Editor and Serving history remain separate, with their observed periods and retention limits.
 

@@ -403,15 +403,20 @@ def _target_handle(edge: Mapping[str, Any]) -> Mapping[str, Any] | None:
     return handle if isinstance(handle, Mapping) else None
 
 
-def _connected_fields_by_node(edges: list[dict] | None) -> dict[str, set[str]] | None:
+def _connected_fields_by_node(edges: list[dict] | None) -> dict[str, set[str] | None] | None:
     """Map each node id to the fields a connection goes into. ``None`` when the edges are unknown."""
     if edges is None:
         return None
-    connected: dict[str, set[str]] = {}
+    connected: dict[str, set[str] | None] = {}
     for edge in edges:
+        target = edge.get("target")
+        if not isinstance(target, str):
+            return None
         field_name = (_target_handle(edge) or {}).get("fieldName")
-        if field_name:
-            connected.setdefault(edge.get("target"), set()).add(field_name)
+        if not isinstance(field_name, str) or not field_name:
+            connected[target] = None
+        elif (fields := connected.setdefault(target, set())) is not None:
+            fields.add(field_name)
     return connected
 
 
@@ -444,7 +449,11 @@ def _classify_nodes_recursive(
         nested = nested_flow.get("nodes")
         if nested:
             nested_edges = None
-            if edges is not None and nested_flow.get("edges") is not None:
+            if (
+                connected is not None
+                and connected.get(node_id, set()) is not None
+                and nested_flow.get("edges") is not None
+            ):
                 nested_edges = list(nested_flow["edges"])
                 for edge in edges:
                     handle = _target_handle(edge) if edge.get("target") == node_id else None

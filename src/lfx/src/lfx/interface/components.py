@@ -84,6 +84,9 @@ class ComponentCache:
         # Collision-aware canonical registry identity lookup used by catalog
         # palette and runtime policy enforcement.
         self.component_identity_index: ComponentIdentityIndex | None = None
+        # The upgrade lookup belongs to an exact published registry object.
+        # Reloads publish a replacement, so readers rebuild lazily on identity change.
+        self.upgrade_registry: tuple[dict[str, Any], dict[str, dict]] | None = None
         # Registry publication and every process-wide derived lookup share one
         # lock. Hot reload builds templates outside the lock, then swaps the
         # registry and invalidates its derived indexes atomically.

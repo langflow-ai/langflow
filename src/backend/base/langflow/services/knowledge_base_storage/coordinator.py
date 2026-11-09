@@ -921,7 +921,7 @@ def schedule_upgrade(*, retry: bool = False) -> asyncio.Task:
 
         while True:
             while await writes_paused():  # noqa: ASYNC110
-                await asyncio.sleep(0.1)
+                await asyncio.sleep(1)
             from langflow.api.utils import knowledge_base_service
 
             # Startup may have deferred these adoptions while maintenance was on.
