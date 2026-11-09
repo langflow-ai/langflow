@@ -3936,6 +3936,7 @@ class TestMemoryBaseDBDriven:
 
         create_row = AsyncMock()
         with (
+            patch("langflow.api.utils.migration_pause.writes_paused", AsyncMock(return_value=False)),
             patch("langflow.api.utils.knowledge_base_service.session_scope", self._fake_scope(mock_session)),
             patch("langflow.api.utils.knowledge_base_service.create_record", create_row),
         ):
@@ -3949,6 +3950,22 @@ class TestMemoryBaseDBDriven:
         assert kwargs["backend_type"] == "chroma"
         assert kwargs["source_types"] == ["memory"]
         assert kwargs["model_selection"]["name"] == "text-embedding-3-small"
+
+    @pytest.mark.asyncio
+    async def test_backfill_skips_memory_bases_when_writes_are_paused(self):
+        """Maintenance prevents even the orphan lookup from running."""
+        from langflow.api.utils import knowledge_base_service
+
+        with (
+            patch("langflow.api.utils.migration_pause.writes_paused", AsyncMock(return_value=True)),
+            patch("langflow.api.utils.knowledge_base_service.session_scope") as session,
+            patch("langflow.api.utils.knowledge_base_service.create_record", AsyncMock()) as create_row,
+        ):
+            inserted = await knowledge_base_service.backfill_memory_base_rows()
+
+        assert inserted == 0
+        session.assert_not_called()
+        create_row.assert_not_awaited()
 
 
 class TestSelectEmbeddingProvider:
