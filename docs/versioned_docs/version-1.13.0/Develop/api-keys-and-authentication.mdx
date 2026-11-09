@@ -915,7 +915,7 @@ When an access token expires, the client can use the refresh token to get a new 
 
 Starting with Langflow 1.13.2, logout revokes the native login session on the server. Captured refresh tokens from that session, including earlier tokens and tokens returned by concurrent refresh requests, cannot create new access tokens after logout. Revocation persists across server restarts. Other login sessions remain active, and concurrent refresh requests within an active session continue to work. Access tokens already issued remain valid until they expire.
 
-The database upgrade adds a refresh-session table containing only hashed session identifiers, expiration times, and revocation state. After upgrading to 1.13.2, users must sign in again: refresh tokens issued before the upgrade lack session identifiers and are rejected. Previously issued access tokens remain valid until they expire.
+The database upgrade adds a refresh-session table containing the account ID, hashed session identifiers, expiration times, and revocation state. Account erasure deletes these records. After upgrading to 1.13.2, users must sign in again: refresh tokens issued before the upgrade lack session identifiers and are rejected. Previously issued access tokens remain valid until they expire.
 
 ```bash
 LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS=3600    # 1 hour

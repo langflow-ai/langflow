@@ -16,7 +16,7 @@ from langflow.services.database.models.auth.refresh_token import RefreshTokenSes
 from langflow.services.database.models.user.model import User
 from lfx.services.settings.auth import AuthSettings
 from pydantic import SecretStr
-from sqlalchemy import text
+from sqlalchemy import delete, text, update
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel, select
@@ -66,6 +66,7 @@ async def test_revocation_survives_new_service_and_database_session(token_store)
         assert len(rows) == 1
         assert rows[0].session_digest == hashlib.sha256(f"{user.id}:{first_claims['sid']}".encode()).hexdigest()
         assert rows[0].revoked is True
+        assert rows[0].user_id == user.id
         assert first["refresh_token"] not in str(rows[0].model_dump())
         assert (await restarted.create_refresh_token(second["refresh_token"], db))["access_token"]
 
@@ -150,12 +151,18 @@ async def test_logout_cleanup_is_bounded_and_preserves_live_revocations(token_st
     async with AsyncSession(engine) as db:
         db.add_all(
             [
-                RefreshTokenSession(session_digest=f"{number:064x}", expires_at=now - timedelta(minutes=1))
+                RefreshTokenSession(
+                    session_digest=f"{number:064x}", user_id=user.id, expires_at=now - timedelta(minutes=1)
+                )
                 for number in range(201)
             ]
         )
         future_digest = "f" * 64
-        db.add(RefreshTokenSession(session_digest=future_digest, expires_at=now + timedelta(days=1), revoked=True))
+        db.add(
+            RefreshTokenSession(
+                session_digest=future_digest, user_id=user.id, expires_at=now + timedelta(days=1), revoked=True
+            )
+        )
         await db.commit()
         token = (await service.create_user_tokens(user.id, db))["refresh_token"]
         await revoke_refresh_token(token, db, settings)
@@ -182,6 +189,115 @@ async def test_revocation_storage_failure_cannot_issue_tokens(token_store):
     async with AsyncSession(engine) as db:
         with pytest.raises(OperationalError):
             await service.create_user_tokens(user.id, db)
+
+
+async def test_builder_erasure_batches_sessions_without_removing_other_users(token_store):
+    from langflow.services.data_subjects.builder_account_steps import erase_refresh_sessions
+    from langflow.services.data_subjects.context import EraseContext
+
+    engine, _settings, user = token_store
+    other_id = uuid4()
+    other = User(id=other_id, username="other-session-owner", password="unused", is_active=True)  # noqa: S106
+    async with AsyncSession(engine) as db:
+        db.add(other)
+        await db.flush()
+        db.add_all(
+            RefreshTokenSession(
+                session_digest=f"{number:064x}",
+                user_id=user.id if number < 501 else other_id,
+                expires_at=datetime.now(timezone.utc) + timedelta(days=1),
+                revoked=bool(number % 2),
+            )
+            for number in range(502)
+        )
+        await db.commit()
+        context = EraseContext(request_id=uuid4(), subject_user_id=user.id)
+        assert await erase_refresh_sessions(db, context) == 500
+        assert await erase_refresh_sessions(db, context) == 1
+        assert await erase_refresh_sessions(db, context) == 0
+        await db.commit()
+        remaining = (await db.exec(select(RefreshTokenSession))).one()
+        assert remaining.user_id == other_id
+
+
+async def test_new_user_session_uses_the_login_transaction(token_store):
+    """JIT users may be flushed but uncommitted when the login issues tokens."""
+    engine, settings, _user = token_store
+    service = AuthService(settings)
+    user_id = uuid4()
+    async with AsyncSession(engine) as db:
+        pending_user = User(
+            id=user_id,
+            username="pending-login-user",
+            password="unused",  # noqa: S106  # pragma: allowlist secret
+            is_active=True,
+        )
+        db.add(pending_user)
+        await db.flush()
+        tokens = await asyncio.wait_for(service.create_user_tokens(user_id, db, update_last_login=True), timeout=5)
+        assert tokens["refresh_token"]
+        session = (await db.exec(select(RefreshTokenSession).where(RefreshTokenSession.user_id == user_id))).one()
+        assert session.revoked is False
+        assert pending_user.last_login_at is not None
+        await db.rollback()
+
+    async with AsyncSession(engine) as db:
+        assert await db.get(User, user_id) is None
+        assert not (await db.exec(select(RefreshTokenSession).where(RefreshTokenSession.user_id == user_id))).all()
+
+
+@pytest.mark.parametrize("delete_owner", [False, True])
+async def test_paused_login_cannot_recreate_sessions_after_builder_erasure(token_store, monkeypatch, delete_owner):
+    import langflow.services.auth.service as auth_module
+    from langflow.services.data_subjects.builder_account_steps import erase_refresh_sessions
+    from langflow.services.data_subjects.context import EraseContext
+
+    engine, settings, user = token_store
+    service = AuthService(settings)
+    user_id = user.id
+    async with AsyncSession(engine) as db:
+        await service.create_user_tokens(user_id, db)
+        await db.commit()
+    ready, resume = asyncio.Event(), asyncio.Event()
+    create_session = auth_module.create_refresh_session
+
+    async def paused_create(*args):
+        ready.set()
+        await asyncio.wait_for(resume.wait(), timeout=5)
+        return await create_session(*args)
+
+    monkeypatch.setattr(auth_module, "create_refresh_session", paused_create)
+
+    async def login():
+        async with AsyncSession(engine) as db:
+            with pytest.raises(HTTPException) as exc:
+                await service.create_user_tokens(user_id, db, update_last_login=True)
+            assert exc.value.status_code == 401
+            await db.commit()
+
+    pending = asyncio.create_task(login())
+    try:
+        await asyncio.wait_for(ready.wait(), timeout=5)
+        async with AsyncSession(engine) as db:
+            await db.exec(update(User).where(User.id == user_id).values(is_active=False))
+            await db.commit()
+            context = EraseContext(request_id=uuid4(), subject_user_id=user_id)
+            assert await erase_refresh_sessions(db, context) == 1
+            assert await erase_refresh_sessions(db, context) == 0
+            if delete_owner:
+                await db.exec(delete(User).where(User.id == user_id))
+            await db.commit()
+    finally:
+        resume.set()
+        await pending
+
+    async with AsyncSession(engine) as db:
+        assert not (await db.exec(select(RefreshTokenSession))).all()
+        owner = await db.get(User, user_id)
+        if delete_owner:
+            assert owner is None
+        else:
+            assert owner.is_active is False
 
 
 @pytest.mark.parametrize("revoke_variant", [False, True])

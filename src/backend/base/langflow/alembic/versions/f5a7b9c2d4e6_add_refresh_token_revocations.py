@@ -22,10 +22,12 @@ def upgrade() -> None:
     op.create_table(
         "refresh_token_session",
         sa.Column("session_digest", sa.String(64), primary_key=True),
+        sa.Column("user_id", sa.Uuid(), sa.ForeignKey("user.id", ondelete="CASCADE"), nullable=False),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("revoked", sa.Boolean(), nullable=False, server_default=sa.false()),
     )
     op.create_index("ix_refresh_token_session_expires_at", "refresh_token_session", ["expires_at"])
+    op.create_index("ix_refresh_token_session_user_id", "refresh_token_session", ["user_id"])
 
 
 def downgrade() -> None:

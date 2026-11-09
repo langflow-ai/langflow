@@ -9,10 +9,11 @@ from uuid import UUID
 
 import jwt
 from jwt import InvalidTokenError
-from sqlalchemy import case, delete, insert, update
+from sqlalchemy import case, delete, false, insert, literal, update
 from sqlmodel import col, select
 
 from langflow.services.database.models.auth.refresh_token import RefreshTokenSession
+from langflow.services.database.models.user.model import User
 
 if TYPE_CHECKING:
     from lfx.services.settings.service import SettingsService
@@ -35,13 +36,23 @@ def _session_digest(session_id: str, user_id: str) -> str:
     return hashlib.sha256(f"{UUID(user_id)}:{session_id}".encode()).hexdigest()
 
 
-async def create_refresh_session(session_id: str, user_id: str, expires_at: datetime, db: AsyncSession) -> None:
-    """Persist a new login session before its first refresh token is issued."""
-    await db.execute(
-        insert(RefreshTokenSession).values(
-            session_digest=_session_digest(session_id, user_id), expires_at=expires_at, revoked=False
+async def create_refresh_session(session_id: str, user_id: str, expires_at: datetime, db: AsyncSession) -> bool:
+    """Persist a login only while its native owner remains active in this transaction."""
+    statement = (
+        insert(RefreshTokenSession)
+        .from_select(
+            ["session_digest", "user_id", "expires_at", "revoked"],
+            select(
+                literal(_session_digest(session_id, user_id)),
+                col(User.id),
+                literal(expires_at, type_=RefreshTokenSession.__table__.c.expires_at.type),
+                false(),
+            ).where(User.id == UUID(user_id), col(User.is_active).is_(True)),
         )
+        .returning(col(RefreshTokenSession.session_digest))
     )
+    result = await db.execute(statement)
+    return result.scalar_one_or_none() is not None
 
 
 async def register_refresh_session(session_id: str, user_id: str, expires_at: datetime, db: AsyncSession) -> bool:

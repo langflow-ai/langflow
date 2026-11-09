@@ -1482,7 +1482,8 @@ class AuthService(BaseAuthService):
         expires_at = datetime.now(timezone.utc) + timedelta(
             seconds=self.settings.auth_settings.REFRESH_TOKEN_EXPIRE_SECONDS
         )
-        await create_refresh_session(session_id, str(user_id), expires_at, db)
+        if not await create_refresh_session(session_id, str(user_id), expires_at, db):
+            raise HTTPException(status_code=401, detail="User account is inactive or no longer exists")
         if update_last_login:
             await update_user_last_login_at(user_id, db)
         return tokens
