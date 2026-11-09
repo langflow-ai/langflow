@@ -1649,7 +1649,9 @@ async def experimental_run_flow(
                 flow.id,
             )
             graph = None
-        elif admin_only_build_required(is_superuser=bool(getattr(api_key_user, "is_superuser", False))):
+        elif graph is not None and admin_only_build_required(
+            is_superuser=bool(getattr(api_key_user, "is_superuser", False))
+        ):
             # The cached graph was compiled under whatever component policy was in force when
             # it was cached. Session cache keys carry no policy generation, so a graph cached
             # while admin-only mode was off still embeds the caller's own component source and
