@@ -29,6 +29,7 @@ from langflow.services.deps import get_connection_resolver_service, get_settings
 from langflow.services.triggers import leases
 from langflow.services.triggers.lease_guard import run_guarded
 from langflow.services.triggers.ownership import is_owned_by
+from langflow.services.triggers.source_runtime import source_failure_detail
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -368,7 +369,7 @@ async def run_cleanup_pass(*, limit: int = 25) -> int:
                 current = await session.get(TriggerCleanup, task_id)
                 if current is not None:
                     current.attempt += 1
-                    current.last_error = type(exc).__name__
+                    current.last_error = source_failure_detail(exc)[:128]
                     current.available_at = datetime.now(timezone.utc) + timedelta(
                         seconds=min(60 * 2 ** min(current.attempt, 6), 3600)
                     )
