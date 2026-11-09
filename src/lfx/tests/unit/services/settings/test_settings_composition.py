@@ -52,6 +52,23 @@ def test_segment_has_no_write_key_in_source_checkout() -> None:
     assert Settings().segment_write_key == DEFAULT_SEGMENT_WRITE_KEY
 
 
+def test_edition_defaults_to_opensource(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("LANGFLOW_EDITION", raising=False)
+    assert Settings(_env_file=None).edition == "opensource"
+
+
+def test_edition_reads_operator_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LANGFLOW_EDITION", "enterprise")
+    assert Settings(_env_file=None).edition == "enterprise"
+
+
+@pytest.mark.parametrize("edition", ["premium", ""])
+def test_edition_defaults_for_unsupported_values(monkeypatch: pytest.MonkeyPatch, edition: str) -> None:
+    """An unsupported telemetry edition must not prevent settings initialization."""
+    monkeypatch.setenv("LANGFLOW_EDITION", edition)
+    assert Settings(_env_file=None).edition == "opensource"
+
+
 # Every field the composed Settings must expose: the original monolith fields
 # plus the settings added in 1.10.0 (folded into the mixins during the release
 # back-merge). Asserted as a set so a missing group in the inheritance chain —
@@ -77,6 +94,7 @@ EXPECTED_FIELDS = {
     "backend_only",
     "ssl_cert_file",
     "ssl_key_file",
+    "ssl_cert_hostname",
     "root_path",
     "user_agent",
     # DatabaseSettings
@@ -129,6 +147,7 @@ EXPECTED_FIELDS = {
     "do_not_track",
     "segment_write_key",
     "segment_api_url",
+    "edition",
     "transactions_storage_enabled",
     "vertex_builds_storage_enabled",
     "sync_result_storage_enabled",
@@ -203,6 +222,7 @@ EXPECTED_FIELDS = {
     "variable_store",
     "fallback_to_env_var",
     "store_environment_variables",
+    "deployment_typed_variables_enabled",
     "variables_to_get_from_environment",
     "agentic_experience",
     "developer_api_enabled",
@@ -371,6 +391,7 @@ def test_critical_defaults_unchanged():
     settings = Settings()
     assert settings.host == "localhost"
     assert settings.port == 7860
+    assert settings.ssl_cert_hostname is None
     assert settings.workers == 1
     assert settings.knowledge_base_auto_migrate is True
     assert settings.cache_type == "async"
@@ -565,6 +586,7 @@ def test_yaml_round_trip():
     ("env_var", "env_value", "field", "expected"),
     [
         ("LANGFLOW_HOST", "0.0.0.0", "host", "0.0.0.0"),
+        ("LANGFLOW_SSL_CERT_HOSTNAME", "backend.internal", "ssl_cert_hostname", "backend.internal"),
         ("LANGFLOW_PORT", "8080", "port", 8080),
         ("LANGFLOW_WORKERS", "2", "workers", 2),
         ("LANGFLOW_KNOWLEDGE_BASE_AUTO_MIGRATE", "false", "knowledge_base_auto_migrate", False),

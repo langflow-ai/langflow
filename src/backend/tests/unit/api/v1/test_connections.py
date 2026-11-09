@@ -458,6 +458,25 @@ async def test_only_the_owner_may_enable_non_interactive_use(
     assert by_owner.status_code == 200, by_owner.text
     assert by_owner.json()["allow_non_interactive"] is True
 
+    renewed_by_admin = await client.post(
+        f"{connection_url}/token", json={"credentials": _payload()["credentials"]}, headers=admin_headers
+    )
+    assert renewed_by_admin.status_code == 403, renewed_by_admin.text
+
+
+async def test_oauth_connection_does_not_accept_manual_token_renewal(
+    client: AsyncClient, logged_in_headers: dict[str, str]
+):
+    created = await client.post("api/v1/connections", json=_payload(), headers=logged_in_headers)
+    assert created.status_code == 201, created.text
+    response = await client.post(
+        f"api/v1/connections/{created.json()['id']}/token",
+        json={"credentials": _payload()["credentials"]},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["detail"] == "This integration does not support manual token renewal."
+
 
 @pytest.mark.usefixtures("active_super_user")
 async def test_instance_connections_are_changed_only_by_superusers(
@@ -489,9 +508,12 @@ async def test_instance_connections_are_changed_only_by_superusers(
                 headers=member_headers,
             ),
             await client.post(f"{connection_url}/revoke", headers=member_headers),
+            await client.post(
+                f"{connection_url}/token", json={"credentials": _payload()["credentials"]}, headers=member_headers
+            ),
             await client.delete(connection_url, headers=member_headers),
         ]
-    assert [response.status_code for response in denied] == [403, 403, 403, 403, 403]
+    assert [response.status_code for response in denied] == [403, 403, 403, 403, 403, 403]
     assert locks == []
     unchanged = (await client.get("api/v1/connections", headers=member_headers)).json()[0]
     assert (unchanged["display_name"], unchanged["allow_non_interactive"], unchanged["status"]) == (

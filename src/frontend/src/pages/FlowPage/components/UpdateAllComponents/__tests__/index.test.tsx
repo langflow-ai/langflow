@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
+import type { ComponentsToUpdateType } from "@/types/zustand/flow";
 import UpdateAllComponents from "../index";
 
 const mockAddDismissedNodes = jest.fn();
@@ -13,7 +14,9 @@ const mockUpdateAllNodes = jest.fn();
 const mockValidateComponentCode = jest.fn();
 const mockProcessNodeAdvancedFields = jest.fn();
 
-let flowStoreState: Record<string, unknown>;
+let flowStoreState: Record<string, unknown> & {
+  componentsToUpdate: ComponentsToUpdateType[];
+};
 let mockTemplates: Record<
   string,
   { template: { code?: { value: string } }; outputs?: unknown[] }
@@ -256,7 +259,7 @@ describe("UpdateAllComponents", () => {
     flowStoreState = {
       ...flowStoreState,
       componentsToUpdate: [
-        ...(flowStoreState.componentsToUpdate as unknown[]),
+        ...flowStoreState.componentsToUpdate,
         {
           id: "chroma-1",
           display_name: "Chroma DB",

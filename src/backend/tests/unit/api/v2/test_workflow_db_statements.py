@@ -180,10 +180,11 @@ async def _measure(client: AsyncClient, api_key: str, flow_id, mode: str) -> _Re
 
 
 # Statements and pool checkouts for one run, per flow and mode. Update these
-# on purpose: a new round trip on this path costs every workflow run.
+# on purpose: a new round trip on this path costs every workflow run. The user
+# lookup prevents a legacy flow storage namespace from colliding with a user ID.
 _ROUND_TRIPS = {
-    "memory_chatbot": {"sync": (9, 8), "stream": (12, 11)},
-    "simple_chat": {"sync": (10, 8), "stream": (13, 11)},
+    "memory_chatbot": {"sync": (10, 9), "stream": (13, 12)},
+    "simple_chat": {"sync": (11, 9), "stream": (14, 12)},
 }
 
 

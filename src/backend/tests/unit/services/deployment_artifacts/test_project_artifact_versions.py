@@ -14,12 +14,14 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.knowledge_base.model import KnowledgeBaseRecord
+from langflow.services.database.models.variable.model import Variable
 from langflow.services.deployment_artifacts import (
     ProjectArtifactError,
     ProjectArtifactLimits,
     ProjectArtifactNotFoundError,
     build_project_artifact,
 )
+from langflow.services.variable.constants import CREDENTIAL_TYPE
 
 MODULE = "langflow.services.deployment_artifacts.builder"
 
@@ -40,7 +42,11 @@ async def _project(session):
     picked.data = _graph("DRAFT_KEY")
     other = Flow(id=uuid4(), name="FAQ", user_id=owner_id, folder_id=project.id, data=_graph("FAQ_KEY"))
     version = FlowVersion(flow_id=picked.id, user_id=owner_id, version_number=1, data=_graph("SAVED_KEY"))
-    session.add_all([project, picked, other, version])
+    variables = [
+        Variable(name=name, value="test-value", type=CREDENTIAL_TYPE, user_id=owner_id)
+        for name in ("DRAFT_KEY", "SAVED_KEY", "FAQ_KEY")
+    ]
+    session.add_all([project, picked, other, version, *variables])
     await session.commit()
     # Reload so updated_at matches what the packager's revision query returns.
     await session.refresh(picked)
@@ -164,7 +170,11 @@ async def test_picks_resolve_on_every_page(async_session) -> None:
         FlowVersion(flow_id=flow.id, user_id=user.id, version_number=1, data=_graph(f"SAVED_{index}"))
         for index, flow in enumerate(flows)
     ]
-    async_session.add_all([*flows, *versions])
+    variables = [
+        Variable(name=f"SAVED_{index}", value="test-value", type=CREDENTIAL_TYPE, user_id=user.id)
+        for index in range(len(flows))
+    ]
+    async_session.add_all([*flows, *versions, *variables])
     await async_session.commit()
     for flow in flows:
         await async_session.refresh(flow)

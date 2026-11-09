@@ -12,14 +12,16 @@ export default function ConnectionSetupHelp({
   providerId,
   noRegistration,
   usesToken = false,
+  docsUrl,
 }: {
   providerId: string;
   noRegistration: boolean;
   usesToken?: boolean;
+  docsUrl?: string | null;
 }) {
   const { t } = useTranslation();
   const [copyState, setCopyState] = useState<"copied" | "failed" | null>(null);
-  const guide = connectionSetupGuide(providerId, usesToken);
+  const guide = connectionSetupGuide(providerId, usesToken, docsUrl);
   const { host, protocol } = customGetHostProtocol();
   const callbackUrl = suggestedCallbackUrl(providerId, `${protocol}//${host}`);
   const needsSetup = noRegistration && !usesToken;

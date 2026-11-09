@@ -1488,9 +1488,13 @@ def _registry_lookup() -> dict[str, dict]:
 
     with component_cache.state_lock:
         all_types_dict = component_cache.all_types_dict if component_cache.all_types_ready else None
-    if not all_types_dict:
-        return {}
-    return build_registry_lookup(all_types_dict)
+        if not all_types_dict:
+            return {}
+        cached = component_cache.upgrade_registry
+        if cached is None or cached[0] is not all_types_dict:
+            cached = (all_types_dict, build_registry_lookup(all_types_dict))
+            component_cache.upgrade_registry = cached
+        return cached[1]
 
 
 def _registry_entry_for_component_type(component_type: str) -> Mapping[str, Any] | None:
@@ -1575,7 +1579,11 @@ def describe_restricted_component_mismatch(
 
 
 def explain_restricted_component_mismatch(
-    component_type: Any, node_info: Any, connected_fields: Collection[str] | None = None
+    component_type: Any,
+    node_info: Any,
+    connected_fields: Collection[str] | None = None,
+    *,
+    vertex: Any = None,
 ) -> str | None:
     """Never-raising wrapper for :func:`describe_restricted_component_mismatch`.
 
@@ -1583,6 +1591,11 @@ def explain_restricted_component_mismatch(
     component's real error with an unrelated one.
     """
     try:
+        if vertex is not None:
+            try:
+                connected_fields = {edge.target_param for edge in vertex.incoming_edges}
+            except Exception:  # noqa: BLE001 -- unreadable edges mean connections are unknown
+                connected_fields = None
         return describe_restricted_component_mismatch(component_type, node_info, connected_fields)
     except Exception:  # noqa: BLE001 -- diagnosis is best effort; never mask the original failure
         logger.debug("Could not diagnose restricted-mode component mismatch", exc_info=True)
@@ -2125,6 +2138,26 @@ def validate_public_flow_no_code_execution(
             f"MCP server process (stdio transport): {blocked_names}"
         )
         raise PublicFlowValidationError(message)
+
+
+def flow_has_connection_refs(target: Mapping[str, Any] | Any) -> bool:
+    """Identify flows whose connection checks need installed integration metadata."""
+    if isinstance(target, Mapping):
+        data = _normalize_flow_data(target) or {}
+        node_data = [node.get("data", {}) for node in data.get("nodes", []) if isinstance(node, Mapping)]
+    else:
+        node_data = [vertex.data for vertex in getattr(target, "vertices", ())]
+    for data in node_data:
+        node = data.get("node", {})
+        if any(
+            isinstance(field, Mapping) and field.get("type") == "connection_ref"
+            for field in node.get("template", {}).values()
+        ):
+            return True
+        nested = node.get("flow")
+        if isinstance(nested, Mapping) and flow_has_connection_refs(nested):
+            return True
+    return False
 
 
 async def ensure_component_hash_lookups_loaded(*, force: bool = False) -> dict[str, set[str]] | None:

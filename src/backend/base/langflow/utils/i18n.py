@@ -142,6 +142,18 @@ def translate_flow_notes(nodes: list[dict], locale: str) -> list[dict]:
     return result
 
 
+def _locale_key_name(comp_name: str, node: dict[str, Any]) -> str:
+    """The normalized name a component's locale keys are filed under.
+
+    The extractor keys a component by its ``name`` (its class name when it has
+    none). The registry can file it under another key: an extension bundle's
+    component is registered as ``ext:<bundle>:<Class>@<slot>``. The node carries
+    the ``name``, so look keys up by that and fall back to the registry key.
+    """
+    name = node.get("name")
+    return normalize_component_key(name if isinstance(name, str) and name else comp_name)
+
+
 def build_component_display_names(all_types_en: dict[str, Any]) -> dict[str, dict[str, Any]]:
     """Build the set of all known translations for display_name and description per component.
 
@@ -168,6 +180,7 @@ def build_component_display_names(all_types_en: dict[str, Any]) -> dict[str, dic
     for components in all_types_en.values():
         for name, data in components.items():
             norm = normalize_component_key(name)
+            key_norm = _locale_key_name(name, data)
             if norm not in result:
                 result[norm] = {"display_name": set(), "description": set(), "fields": {}}
 
@@ -175,7 +188,7 @@ def build_component_display_names(all_types_en: dict[str, Any]) -> dict[str, dic
             desc_en = data.get("description", "")
 
             if dn_en:
-                key = component_field_key(norm, "display_name", dn_en)
+                key = component_field_key(key_norm, "display_name", dn_en)
                 result[norm]["display_name"].add(dn_en)
                 for locale_dict in _translations.values():
                     val = locale_dict.get(key)
@@ -183,7 +196,7 @@ def build_component_display_names(all_types_en: dict[str, Any]) -> dict[str, dic
                         result[norm]["display_name"].add(val)
 
             if desc_en:
-                key = component_field_key(norm, "description", desc_en)
+                key = component_field_key(key_norm, "description", desc_en)
                 result[norm]["description"].add(desc_en)
                 for locale_dict in _translations.values():
                     val = locale_dict.get(key)
@@ -200,7 +213,7 @@ def build_component_display_names(all_types_en: dict[str, Any]) -> dict[str, dic
                     continue
                 if field_name not in result[norm]["fields"]:
                     result[norm]["fields"][field_name] = {"display_name": set()}
-                field_key = component_field_key(norm, f"inputs.{field_name}.display_name", field_dn_en)
+                field_key = component_field_key(key_norm, f"inputs.{field_name}.display_name", field_dn_en)
                 result[norm]["fields"][field_name]["display_name"].add(field_dn_en)
                 for locale_dict in _translations.values():
                     val = locale_dict.get(field_key)
@@ -230,7 +243,7 @@ def translate_component_node(comp_name: str, node: dict[str, Any], locale: str) 
     unchanged.  Never mutates the input dict.
     """
     translated: dict[str, Any] = {**node}
-    norm = normalize_component_key(comp_name)
+    norm = _locale_key_name(comp_name, node)
 
     # Tier 1 — component-level strings
     for field in ("display_name", "description"):
