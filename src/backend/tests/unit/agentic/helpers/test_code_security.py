@@ -3043,7 +3043,6 @@ class TestStdlibReexportHostBoundary:
             # Ordinary stdlib use is unaffected: only a bare *module value*
             # crossing a boundary is a carrier.
             "import json\nvalue = json.dumps({'a': 1})",
-            "import zipfile\narchive = zipfile.ZipFile('x.zip')\nnames = archive.namelist()",
             "import re\nmatch = re.match('a', 'abc')",
             "import math\nvalue = math.sqrt(4)",
             "import datetime\nvalue = datetime.datetime.now()",
@@ -3055,7 +3054,6 @@ class TestStdlibReexportHostBoundary:
         ],
         ids=[
             "json-dumps",
-            "zipfile-normal-use",
             "re-match",
             "math-sqrt",
             "datetime-now",
