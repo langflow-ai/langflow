@@ -239,6 +239,16 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Deployment/upgrade-check",
+          label: "Check flows before an upgrade"
+        },
+        {
+          type: "doc",
+          id: "Deployment/maintenance-mode",
+          label: "Maintenance mode"
+        },
+        {
+          type: "doc",
           id: "Deployment/deployment-public-server",
           label: "Deploy a public Langflow server"
         },
@@ -694,6 +704,7 @@ module.exports = {
         "Contributing/contributing-components",
         "Contributing/contributing-bundles",
         "Contributing/contributing-component-tests",
+        "Contributing/contributing-component-compatibility",
         "Contributing/contributing-templates",
       ],
     },

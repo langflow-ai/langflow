@@ -846,3 +846,28 @@ async def test_ingestion_snapshot_cannot_follow_a_reused_knowledge_base_name(dat
     with pytest.raises(runtime.StorageUnavailableError):
         await backend_for_name(original.user_id, original.name, expected_record=original)
     assert replacement.id != original.id
+
+
+@pytest.mark.parametrize("failed_step", ["disk", "memory", "fence"])
+async def test_deferred_startup_failure_still_resumes_registered_bases(monkeypatch, failed_step):
+    from unittest.mock import AsyncMock
+
+    from langflow.api.utils import knowledge_base_service, migration_pause
+
+    calls = {name: AsyncMock() for name in ("disk", "memory", "fence")}
+    calls[failed_step].side_effect = RuntimeError("transient storage discovery failure")
+    pending = AsyncMock()
+    monkeypatch.setattr(migration_pause, "writes_paused", AsyncMock(return_value=False))
+    monkeypatch.setattr(knowledge_base_service, "backfill_all_users_from_disk", calls["disk"])
+    monkeypatch.setattr(knowledge_base_service, "backfill_memory_base_rows", calls["memory"])
+    monkeypatch.setattr(coordinator, "fence_legacy_records", calls["fence"])
+    monkeypatch.setattr(coordinator, "run_pending", pending)
+    monkeypatch.setattr(
+        coordinator,
+        "get_settings_service",
+        lambda: SimpleNamespace(settings=SimpleNamespace(kb_disk_reconcile_enabled=True)),
+    )
+    monkeypatch.setattr(coordinator, "_tasks", set())
+    monkeypatch.setattr(coordinator, "_retry_requested", False)
+    await coordinator.schedule_upgrade()
+    pending.assert_awaited_once()

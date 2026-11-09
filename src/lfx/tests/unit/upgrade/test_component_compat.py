@@ -19,7 +19,7 @@ from importlib.resources import files
 
 import pytest
 from lfx.graph.edge.base import TYPE_MIGRATIONS
-from lfx.upgrade.checker import build_registry_lookup, check_flow_compatibility
+from lfx.upgrade.checker import breaking_reasons, build_registry_lookup, check_flow_compatibility
 
 DATA_DIR = pathlib.Path(__file__).parents[2] / "data" / "component_compat"
 CASES = json.loads((DATA_DIR / "cases.json").read_text(encoding="utf-8"))
@@ -58,6 +58,17 @@ def test_shared_case(case):
     report = check_flow_compatibility({"nodes": [node], "edges": edges}, all_types)
 
     assert report.nodes[0].status == case["expected"], case["description"]
+
+
+UPDATE_CASES = [case for case in CASES if case["expected"] in {"outdated_safe", "outdated_breaking"}]
+
+
+@pytest.mark.parametrize("case", UPDATE_CASES, ids=[case["name"] for case in UPDATE_CASES])
+def test_shared_case_reasons(case):
+    """``breaking_reasons`` finds a reason exactly for the shared cases that are breaking."""
+    reasons = breaking_reasons(case["component"], case["saved_node"], case["connected_fields"])
+
+    assert bool(reasons) == (case["expected"] == "outdated_breaking"), case["description"]
 
 
 def _git(*args: str) -> subprocess.CompletedProcess:

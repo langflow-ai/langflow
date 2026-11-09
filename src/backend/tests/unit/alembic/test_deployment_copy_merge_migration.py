@@ -39,6 +39,10 @@ def test_deployment_copy_and_release_have_single_head():
         "f2d6b8c4a901",  # pragma: allowlist secret
         "c4e6f8a0b2d9",  # pragma: allowlist secret
         "b7e1d4a92c60",  # pragma: allowlist secret
+        "4d6e8f0a2b3c",  # pragma: allowlist secret
+        "f4b8c1d2e3a6",  # pragma: allowlist secret
+        "8f1a2b3c4d5e",  # pragma: allowlist secret
+        "e6f8a0b2c4d6",  # pragma: allowlist secret
     ],
 )
 def test_upgrading_from_either_side_keeps_jobs_and_accepts_a_copy_job(db_url, prior_revision):  # noqa: F811
@@ -60,5 +64,40 @@ def test_upgrading_from_either_side_keeps_jobs_and_accepts_a_copy_job(db_url, pr
                 ScriptDirectory.from_config(config).get_heads()
             )
             assert "permissions" in {column["name"] for column in inspect(connection).get_columns("apikey")}
+    finally:
+        engine.dispose()
+
+
+def test_report_merge_downgrade_and_upgrade_keep_existing_rows(db_url):  # noqa: F811
+    config = _make_alembic_cfg(db_url)
+    command.upgrade(config, "head")
+    engine = create_engine(_engine_url(db_url))
+    report_id = str(uuid4())
+    try:
+        with engine.begin() as connection:
+            _insert_job(connection, "workflow")
+            connection.execute(
+                text(
+                    "INSERT INTO upgrade_report "
+                    "(id, created_at, generated_at, target_version, flow_count, warning_count, "
+                    "failing_count, content_sha256, document_json) "
+                    "VALUES (:id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, '1.14.0', 0, 0, 0, :digest, :document)"
+                ),
+                {"id": report_id, "digest": "0" * 64, "document": '{"retained": true}'},
+            )
+        command.downgrade(config, "8f1a2b3c4d5e")  # pragma: allowlist secret
+        with engine.connect() as connection:
+            assert set(MigrationContext.configure(connection).get_current_heads()) == {
+                "8f1a2b3c4d5e",  # pragma: allowlist secret
+                "e6f8a0b2c4d6",  # pragma: allowlist secret
+            }
+            assert connection.execute(text("SELECT document_json FROM upgrade_report")).scalar() == '{"retained": true}'
+            assert connection.execute(text("SELECT COUNT(*) FROM job")).scalar() == 1
+        command.upgrade(config, "head")
+        with engine.connect() as connection:
+            assert MigrationContext.configure(connection).get_current_heads() == (
+                "d8e2f4a6c9b1",  # pragma: allowlist secret
+            )
+            assert connection.execute(text("SELECT document_json FROM upgrade_report")).scalar() == '{"retained": true}'
     finally:
         engine.dispose()

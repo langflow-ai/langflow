@@ -830,9 +830,12 @@ async def _replay_saved_refreshes(
     try:
         if global_fields:
             from lfx.interface.initialize.loading import update_params_with_load_from_db_fields
+            from lfx.services.deps import get_settings_service
 
+            settings_service = get_settings_service()
+            fallback = bool(settings_service and settings_service.settings.fallback_to_env_var)
             params = await update_params_with_load_from_db_fields(
-                component, params, global_fields, fallback_to_env_vars=True
+                component, params, global_fields, fallback_to_env_vars=fallback, allow_missing=True
             )
         component.set_attributes(params)
     except Exception as exc:  # noqa: BLE001

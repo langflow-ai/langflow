@@ -134,7 +134,14 @@ jobs:
       - name: Run LFX tests
         run: |
           cd src/lfx
-          make test
+          make test args="--deselect=tests/unit/upgrade/test_component_compat.py::test_source_release_statuses"
+
+      - name: Enforce exact historical LFX pins
+        run: >-
+          uv run --project src/lfx --no-sync python scripts/ci/historical_compatibility_gate.py
+          --ledger scripts/ci/historical_compatibility_limitations.json --output src/lfx/historical-pins.json
+        env:
+          DO_NOT_TRACK: true
 
       - name: Test CLI installation
         run: |

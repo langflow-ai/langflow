@@ -174,7 +174,8 @@ def test_report_api_does_not_import_checker_engine():
             "-c",
             "import sys; import langflow.api.v1.upgrade_reports; "
             "assert 'langflow.upgrade_check.engine' not in sys.modules; "
-            "assert 'langflow.upgrade_check.command' not in sys.modules",
+            "assert 'langflow.upgrade_check.command' not in sys.modules; "
+            "assert 'langflow.upgrade_check.reader' not in sys.modules",
         ],
         capture_output=True,
         text=True,
@@ -234,3 +235,46 @@ async def test_utc_unrepresentable_timestamp_is_rejected_without_saving(client, 
     assert response.status_code == 422
     assert response.json()["detail"]["code"] == "invalid_upgrade_report"
     assert (await client.get(URL, headers=admin_headers)).json()["total"] == 0
+
+
+async def test_installed_checker_report_round_trips_through_admin_api(client, admin_headers, tmp_path):
+    """The shipped command produces the document that the administrator imports and exports."""
+    import asyncio
+    import hashlib
+
+    from tests.unit.upgrade_check.test_reader import _load
+
+    database = await asyncio.to_thread(_load, "1.13.0", tmp_path)
+    source_digest = hashlib.sha256(database.read_bytes()).hexdigest()
+    output = tmp_path / "report.json"
+    process = await asyncio.create_subprocess_exec(
+        sys.executable,
+        "-m",
+        "langflow",
+        "upgrade-check",
+        "--database-url",
+        f"sqlite:///{database}",
+        "--json",
+        "--output",
+        str(output),
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    try:
+        _stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=90)
+    finally:
+        if process.returncode is None:
+            process.kill()
+            await process.wait()
+    assert process.returncode in {0, 1}, stderr.decode()[-4000:]
+    assert hashlib.sha256(database.read_bytes()).hexdigest() == source_digest
+    original = output.read_bytes()
+    document = json.loads(original)
+    imported = await client.post(URL, content=original, headers=admin_headers)
+    assert imported.status_code == 201, imported.text
+    assert imported.json()["document"] == document
+    report_id = imported.json()["id"]
+    detail = await client.get(f"{URL}/{report_id}", headers=admin_headers)
+    assert detail.json()["document"] == document
+    exported = await client.get(f"{URL}/{report_id}/export", headers=admin_headers)
+    assert exported.content == original
