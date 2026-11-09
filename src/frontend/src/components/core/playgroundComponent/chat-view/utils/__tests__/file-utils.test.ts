@@ -603,3 +603,34 @@ describe("file-utils", () => {
     });
   });
 });
+
+describe("extractFileInfo names an uploaded attachment as the user did", () => {
+  it("drops the upload timestamp from a stored path", () => {
+    const stored = "flow-1/2026-11-09_10-02-11_meeting-notes-final-v2.txt";
+
+    expect(extractFileInfo(stored).name).toBe("meeting-notes-final-v2.txt");
+    expect(extractFileInfo({ path: stored }).name).toBe(
+      "meeting-notes-final-v2.txt",
+    );
+    expect(extractFileInfo(stored).path).toBe(stored);
+  });
+
+  it("keeps a date that is part of the uploaded name", () => {
+    const stored =
+      "flow-1/2026-11-09_10-02-10_2026-11-08_quarterly_report.json";
+
+    expect(extractFileInfo(stored).name).toBe(
+      "2026-11-08_quarterly_report.json",
+    );
+  });
+
+  it("leaves names without the upload timestamp untouched", () => {
+    expect(extractFileInfo("flow-1/report.json").name).toBe("report.json");
+    expect(
+      extractFileInfo({ path: "flow-1/2026-11-09_10-02-11_a.txt", name: "b" })
+        .name,
+    ).toBe("b");
+    const browserFile = new File(["x"], "2026-11-09_10-02-11_a.txt");
+    expect(extractFileInfo(browserFile).name).toBe("2026-11-09_10-02-11_a.txt");
+  });
+});
