@@ -22,6 +22,7 @@ from langflow.api.v1.mcp_projects import (
 from langflow.api.v2.mcp import is_mcp_servers_locked
 from langflow.services.auth.utils import create_user_longterm_token, get_password_hash
 from langflow.services.database.models.api_key.model import ApiKey
+from langflow.services.database.models.api_key.policy import ApiKeyIssuanceDeniedError
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.folder import Folder
 from langflow.services.database.models.user.model import User
@@ -1636,6 +1637,51 @@ async def test_init_mcp_servers_rolls_back_auth_update_when_reconciliation_fails
         project = await session.get(Folder, user_test_project.id)
         assert project is not None
         assert project.auth_settings is None
+
+
+async def test_init_mcp_servers_logs_denial_reason_not_missing_greenlet(
+    user_test_project,
+    monkeypatch,
+):
+    """A denied API key issuance must be logged as itself, not as MissingGreenlet.
+
+    The savepoint rollback triggered by the denial expires the project's
+    attributes; logging project.id afterward used to lazy-load outside the
+    async greenlet context and raise MissingGreenlet, clobbering the original
+    denial in the log.
+    """
+    project_sse_transports.clear()
+    project_mcp_servers.clear()
+    _set_startup_mcp_settings(
+        monkeypatch,
+        auto_login=False,
+        mcp_composer_enabled=False,
+        add_projects_to_mcp_servers=True,
+    )
+
+    async with session_scope() as session:
+        project = await session.get(Folder, user_test_project.id)
+        assert project is not None
+        project.auth_settings = None
+        session.add(project)
+
+    with (
+        patch("langflow.api.v1.mcp_projects.get_project_sse"),
+        patch("langflow.api.v1.mcp_projects.get_project_mcp_server"),
+        patch("langflow.api.v1.mcp_projects.auto_configure_starter_projects_mcp", new=AsyncMock()),
+        patch(
+            "langflow.api.v1.projects_mcp_helpers.create_api_key",
+            new=AsyncMock(side_effect=ApiKeyIssuanceDeniedError("account requires SSO")),
+        ),
+        patch("langflow.api.v1.mcp_projects.logger.aexception", new=AsyncMock()) as mock_log_exception,
+    ):
+        await init_mcp_servers()
+
+    mock_log_exception.assert_awaited_once()
+    logged_message = mock_log_exception.await_args.args[0]
+    assert str(user_test_project.id) in logged_message
+    assert "account requires SSO" in logged_message
+    assert "MissingGreenlet" not in logged_message
 
 
 async def test_list_project_tools_with_mcp_enabled_filter(

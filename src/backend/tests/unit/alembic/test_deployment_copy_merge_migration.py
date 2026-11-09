@@ -6,7 +6,7 @@ import pytest
 from alembic import command
 from alembic.migration import MigrationContext
 from alembic.script import ScriptDirectory
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, inspect, text
 
 from .test_migration_execution import _engine_url, _make_alembic_cfg, db_url  # noqa: F401
 
@@ -37,6 +37,8 @@ def test_deployment_copy_and_release_have_single_head():
         "base",
         "c14fe0b7508c",  # pragma: allowlist secret
         "f2d6b8c4a901",  # pragma: allowlist secret
+        "c4e6f8a0b2d9",  # pragma: allowlist secret
+        "b7e1d4a92c60",  # pragma: allowlist secret
     ],
 )
 def test_upgrading_from_either_side_keeps_jobs_and_accepts_a_copy_job(db_url, prior_revision):  # noqa: F811
@@ -57,5 +59,6 @@ def test_upgrading_from_either_side_keeps_jobs_and_accepts_a_copy_job(db_url, pr
             assert MigrationContext.configure(connection).get_current_heads() == tuple(
                 ScriptDirectory.from_config(config).get_heads()
             )
+            assert "permissions" in {column["name"] for column in inspect(connection).get_columns("apikey")}
     finally:
         engine.dispose()
