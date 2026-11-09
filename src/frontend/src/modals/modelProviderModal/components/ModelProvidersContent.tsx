@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import type { ProviderScopeParams } from "@/controllers/API/helpers/provider-scope";
@@ -29,6 +29,13 @@ const ModelProvidersContent = ({
     null,
   );
   const [providerQuery, setProviderQuery] = useState<string>("");
+  const providerContentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (providerContentRef.current) {
+      providerContentRef.current.scrollTop = 0;
+    }
+  }, [selectedProvider?.provider]);
 
   // Use the custom hook for provider configuration logic
   const {
@@ -138,6 +145,8 @@ const ModelProvidersContent = ({
       </div>
 
       <div
+        ref={providerContentRef}
+        data-testid="provider-content-scroll"
         className={cn(
           "min-h-0 overflow-y-auto transition-all duration-300 ease-in-out",
           syncedSelectedProvider
