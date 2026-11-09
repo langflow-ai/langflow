@@ -19,7 +19,7 @@ class WhatsAppReplyComponent(WhatsAppActionComponent):
     capability_id = "whatsapp.message.reply"
     inputs = [
         connection_input(capability_id),
-        DataInput(name="event", display_name="Inbound Event", required=True, tool_mode=True),
+        DataInput(name="event", display_name="Inbound Event", required=True),
         MultilineInput(name="text", display_name="Reply", required=True, tool_mode=True),
     ]
     outputs = [Output(display_name="Accepted Message", name="message", method="build_message")]
