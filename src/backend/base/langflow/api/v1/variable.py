@@ -37,7 +37,7 @@ from langflow.services.authorization.listing import filter_visible_resources, vi
 from langflow.services.database.models.flow_version.crud import get_flow_version_entries_by_ids
 from langflow.services.database.models.variable.model import Variable, VariableCreate, VariableRead, VariableUpdate
 from langflow.services.deps import get_variable_service
-from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
+from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE, is_oauth_registration_variable
 from langflow.services.variable.service import DatabaseVariableService, has_variable_value
 
 router = APIRouter(prefix="/variables", tags=["Variables"])
@@ -195,6 +195,8 @@ async def create_variable(
     checked_model_type: Annotated[Literal["decision"] | None, Query()] = None,
 ):
     """Create a new variable."""
+    if is_oauth_registration_variable(variable.name):
+        raise HTTPException(status_code=422, detail="OAuth registrations must be managed from Connections settings.")
     await _guard_credential_mutation(current_user, VariableAction.CREATE, variable, session=session)
     await ensure_variable_permission(
         current_user,
@@ -376,8 +378,12 @@ async def update_variable(
             owner_column=Variable.user_id,
             owner_id=current_user.id,
         )
-        if existing_variable is None:
+        if existing_variable is None or is_oauth_registration_variable(existing_variable.name):
             raise HTTPException(status_code=404, detail="Variable not found")
+        if is_oauth_registration_variable(variable.name):
+            raise HTTPException(
+                status_code=422, detail="OAuth registrations must be managed from Connections settings."
+            )
         if current_auth_is_restricted_api_key():
             session.expunge(existing_variable)
             await session.rollback()
@@ -493,7 +499,7 @@ async def delete_variable(
             owner_column=Variable.user_id,
             owner_id=current_user.id,
         )
-        if variable_to_delete is None:
+        if variable_to_delete is None or is_oauth_registration_variable(variable_to_delete.name):
             raise HTTPException(status_code=404, detail="Variable not found")
         if current_auth_is_restricted_api_key():
             session.expunge(variable_to_delete)

@@ -496,6 +496,7 @@ module.exports = {
               label: "LLM Operations",
               items: [
                 "Components/batch-run",
+                "Components/decision-model",
                 "Components/guardrails",
                 "Components/policies",
                 "Components/llm-selector",
@@ -554,6 +555,7 @@ module.exports = {
             "Components/bundles-cometapi",
             "Components/bundles-composio",
             "Components/bundles-confluent",
+            "Components/bundles-confluence",
             "Components/bundles-couchbase",
             "Components/bundles-cuga",
             "Components/bundles-datastax",
@@ -607,6 +609,7 @@ module.exports = {
             "Components/bundles-serper",
             "Components/bundles-serpingapi",
             "Components/bundles-serply",
+            "Components/bundles-servicenow",
             "Components/bundles-slack",
             "Components/bundles-supabase",
             "Components/bundles-upstash",
