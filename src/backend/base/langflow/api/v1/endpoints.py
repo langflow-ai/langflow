@@ -1567,8 +1567,6 @@ async def experimental_run_flow(
 ) -> RunResponse:
     """Executes a specified flow by ID with optional input values, output selection, tweaks, and streaming capability.
 
-    This endpoint supports running flows with caching to enhance performance and efficiency.
-
     ### Parameters:
     - `flow` (Flow): The flow object to be executed, resolved via dependency injection.
     - `inputs` (List[InputValueRequest], optional): A list of inputs specifying the input values and components
@@ -1579,8 +1577,8 @@ async def experimental_run_flow(
       The tweaks can be used to modify the flow's parameters and components.
       Tweaks can be overridden by the input values.
     - `stream` (bool, optional): Specifies whether the results should be streamed. Defaults to False.
-    - `session_id` (Union[None, str], optional): An optional session ID to utilize existing session data for the flow
-      execution.
+    - `session_id` (Union[None, str], optional): The chat-memory session for the run, as on `/run`. A new ID
+      starts a new session.
     - `api_key_user` (User): The user associated with the current API key. Automatically resolved from the API key.
 
     ### Returns:
@@ -1639,28 +1637,27 @@ async def experimental_run_flow(
             client_error = error_for_client(exc, expose_details=expose_error_details)
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(client_error)) from exc
         graph, _artifacts = session_data or (None, None)
-        if graph is not None and not _graph_executes_as_actor(graph, api_key_user, flow_id=flow.id):
-            # Cache keys are legacy and not actor-scoped. Reusing an instantiated
-            # graph across principals would retain the first actor's component
-            # credentials, variables, files, and tweaks. Rebuild the immutable
-            # stored flow under the current actor instead.
-            await logger.awarning(
-                "Ignoring advanced-run graph cached under another execution principal for flow %s",
-                flow.id,
-            )
-            graph = None
-        elif graph is not None and admin_only_build_required(
-            is_superuser=bool(getattr(api_key_user, "is_superuser", False))
-        ):
-            # The cached graph was compiled under whatever component policy was in force when
-            # it was cached. Session cache keys carry no policy generation, so a graph cached
-            # while admin-only mode was off still embeds the caller's own component source and
-            # would execute it unchecked. Rebuild from stored data through the policy instead.
-            await logger.awarning(
-                "Ignoring advanced-run cached graph that predates the admin-only component policy for flow %s",
-                flow.id,
-            )
-            graph = None
+        if graph is not None:
+            if not _graph_executes_as_actor(graph, api_key_user, flow_id=flow.id):
+                # Cache keys are legacy and not actor-scoped. Reusing an instantiated
+                # graph across principals would retain the first actor's component
+                # credentials, variables, files, and tweaks. Rebuild the immutable
+                # stored flow under the current actor instead.
+                await logger.awarning(
+                    "Ignoring advanced-run graph cached under another execution principal for flow %s",
+                    flow.id,
+                )
+                graph = None
+            elif admin_only_build_required(is_superuser=bool(getattr(api_key_user, "is_superuser", False))):
+                # The cached graph was compiled under whatever component policy was in force when
+                # it was cached. Session cache keys carry no policy generation, so a graph cached
+                # while admin-only mode was off still embeds the caller's own component source and
+                # would execute it unchecked. Rebuild from stored data through the policy instead.
+                await logger.awarning(
+                    "Ignoring advanced-run cached graph that predates the admin-only component policy for flow %s",
+                    flow.id,
+                )
+                graph = None
 
     if graph is None:
         if flow.data is None:
