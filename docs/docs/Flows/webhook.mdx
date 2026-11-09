@@ -90,11 +90,14 @@ To learn about triggering flows with payloads from external applications, see th
 
 ## Require authentication for webhooks {#require-authentication-for-webhooks}
 
-By default, webhooks require API key authentication (`LANGFLOW_WEBHOOK_AUTH_ENABLE=True`).
+Webhooks require a Langflow API key belonging to the flow owner with every request.
 
-To allow webhooks to run without authentication (not recommended; use only in trusted environments), in your Langflow `.env` file, set `LANGFLOW_WEBHOOK_AUTH_ENABLE=False`. When disabled, requests to the webhook endpoint are treated as being sent by the flow owner.
-
-When webhook authentication is enabled, you must provide a Langflow API key with each webhook request.
+Starting in 1.13.2, `LANGFLOW_WEBHOOK_AUTH_ENABLE=False` no longer disables authentication.
+The setting remains accepted for configuration compatibility.
+Before upgrading, create an API key as the flow owner and configure each webhook sender to include it.
+Senders that omit the key receive HTTP 403, whether they use the flow UUID or endpoint name.
+If a sender cannot include a key, put a gateway that validates the sender's credentials in front of Langflow and have it add the owner's key.
+Keep the key on that gateway and forward only requests that pass its validation.
 
 To include the API key with a request as an HTTP header:
 ```bash
