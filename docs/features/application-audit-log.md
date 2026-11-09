@@ -295,6 +295,7 @@ store is left out of the read rather than the filter being ignored:
 | `result` | `allow`, `deny`, `succeeded`, `failed` | `allow`, `deny`, `owner_override`, `skip` |
 | `actor_type=unknown` | `actor_type = unknown` | also rows written before actor attribution (`NULL`) |
 | `request_id` | `request_id` | `details.request_id`, written from the same server-generated id |
+| `represented_subject`, `represented_issuer` | Exact match on the represented identity. An issuer requires a subject. | No match |
 
 **Paging.** Each store is read by `(timestamp DESC, id DESC)` from the cursor for
 `limit + 1` rows, and the server keeps the newest `limit` of the candidates. A
@@ -328,7 +329,8 @@ walk with a timestamp inside the window is included, and one the retention sweep
 deletes during the walk is not. CSV starts with the columns the Admin
 Console export already used (`timestamp`, `user_id`, `actor_type`, `actor_id`,
 `action`, `resource_type`, `resource_id`, `result`, `details`), followed by
-`source`, `kind`, `resource_name`, `operation`, `error_code` and `request_id`;
+`source`, `kind`, `resource_name`, `operation`, `error_code`, `request_id`,
+`id`, `represented_issuer` and `represented_subject`;
 its `timestamp` is UTC to the second (`2026-01-01T12:00:00Z`), while NDJSON keeps
 the microseconds the feed returns; `details` is JSON with sorted keys, and a cell starting with `=`, `+`, `-` or
 `@` is prefixed with `'`.
