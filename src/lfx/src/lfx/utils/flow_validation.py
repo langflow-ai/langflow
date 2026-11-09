@@ -1496,7 +1496,11 @@ def describe_restricted_component_mismatch(
 
 
 def explain_restricted_component_mismatch(
-    component_type: Any, node_info: Any, connected_fields: Collection[str] | None = None
+    component_type: Any,
+    node_info: Any,
+    connected_fields: Collection[str] | None = None,
+    *,
+    vertex: Any = None,
 ) -> str | None:
     """Never-raising wrapper for :func:`describe_restricted_component_mismatch`.
 
@@ -1504,6 +1508,11 @@ def explain_restricted_component_mismatch(
     component's real error with an unrelated one.
     """
     try:
+        if vertex is not None:
+            try:
+                connected_fields = {edge.target_param for edge in vertex.incoming_edges}
+            except Exception:  # noqa: BLE001 -- unreadable edges mean connections are unknown
+                connected_fields = None
         return describe_restricted_component_mismatch(component_type, node_info, connected_fields)
     except Exception:  # noqa: BLE001 -- diagnosis is best effort; never mask the original failure
         logger.debug("Could not diagnose restricted-mode component mismatch", exc_info=True)
