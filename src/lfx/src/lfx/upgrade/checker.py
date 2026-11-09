@@ -194,8 +194,9 @@ def _holds_value(field: Mapping[str, Any]) -> bool:
 def retyped_field_keys(registry_template: Mapping[str, Any], flow_template: Mapping[str, Any]) -> set[str]:
     """Return the fields both sides have whose ``type`` changed.
 
-    On a node the checker calls safe these fields are empty and unconnected, so
-    ``apply_safe_upgrades`` replaces each one with the registry's declaration, as the editor does.
+    On a safe node these fields are normally empty and unconnected. The explicit ChatOutput
+    migration also preserves strings and connections. ``apply_safe_upgrades`` replaces each
+    declaration and carries over the values that migration supports, as the editor does.
     """
     return {
         key
@@ -223,7 +224,8 @@ def _shared_field_reasons(
     - A changed field ``type`` is breaking when an edge goes into the field, because the editor
       keeps an edge only when the handle's field ``type`` is equal. It is also breaking when the
       saved field holds a value, because an update copies a saved value only when the field
-      ``type`` is equal (``lfx.template.utils.update_template_field``).
+      ``type`` is equal (``lfx.template.utils.update_template_field``), except for the explicit
+      ChatOutput string-to-handle migration, which preserves strings and rewrites the handle.
     - Every type a connected field accepted must still be accepted (historical type names count
       as the same type). Narrowing breaks the saved edges, and an emptied ``input_types`` list
       means the field no longer takes connections at all. Widening is safe.
