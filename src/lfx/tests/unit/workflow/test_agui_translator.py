@@ -1476,3 +1476,31 @@ def test_warning_survives_opt_out():
     events = translator.translate("warning", {"message": "Saved component code was replaced."})
 
     assert [e.name for e in events] == ["langflow.warning"]
+
+
+def test_end_vertex_sends_the_router_and_taken_outputs_of_each_skipped_vertex():
+    """Each skipped vertex names its own router, even with two routers in one delta."""
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    out = t.translate(
+        "end_vertex",
+        {
+            "build_data": {
+                "id": "router-a",
+                "valid": True,
+                "data": None,
+                "inactivated_vertices": ["skipped-by-a", "skipped-by-b", "loop-body"],
+                "branch_skips": {
+                    "skipped-by-a": {"skipped_by": "router-a", "taken_outputs": ["true_result"]},
+                    "skipped-by-b": {"skipped_by": "router-b", "taken_outputs": ["category_2_result"]},
+                },
+            }
+        },
+    )
+
+    values = {op["path"]: op["value"] for op in out[1].delta}
+    assert values["/nodes/skipped-by-a"]["skipped_by"] == "router-a"
+    assert values["/nodes/skipped-by-a"]["taken_outputs"] == ["true_result"]
+    assert values["/nodes/skipped-by-b"]["skipped_by"] == "router-b"
+    assert values["/nodes/loop-body"] == {"status": "inactive", "output": None}

@@ -15,7 +15,7 @@ Three safeguards:
    facade recovers and re-runs it.
 3. Single-flight sweep claim. OFF (unconditional re-enqueue) -> two startup
    sweepers both run a QUEUED job, DOUBLE side effect; ON
-   (``claim_queued_job`` conditional UPDATE) -> exactly once.
+   (``claim_queued_lease`` conditional UPDATE) -> exactly once.
 
 Real ``InProcessExecutor`` and real ``JobService`` on real SQLite + Postgres.
 """

@@ -21,10 +21,17 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from lfx.integrations.errors import IntegrationPolicyBlockedError
 
 from langflow.api.utils import CurrentActiveUser, DbSession, DbSessionReadOnly
 from langflow.api.v1.flows_helpers import _read_flow
-from langflow.api.v1.triggers_helpers import list_all_triggers, list_visible_triggers, present, present_one
+from langflow.api.v1.triggers_helpers import (
+    list_all_triggers,
+    list_visible_triggers,
+    present,
+    present_events,
+    present_one,
+)
 from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.authorization.fetch import deny_to_404
@@ -380,6 +387,16 @@ async def enable_trigger(
     )
     try:
         updated = await service.enable_and_activate(session, row=row)
+    except IntegrationPolicyBlockedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "error_code": exc.code,
+                "message": exc.safe_message,
+                "hint": exc.hint,
+                "provider": exc.provider,
+            },
+        ) from exc
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=refusal_detail(exc)) from exc
     return await present_one(session, current_user, updated)
@@ -437,13 +454,13 @@ async def list_trigger_events(
     offset: Annotated[int, Query(ge=0)] = 0,
     event_filter: Annotated[TriggerEventFilter | None, Query(alias="filter")] = None,
 ) -> list[TriggerEventRead]:
-    await _authorized_trigger(
+    trigger = await _authorized_trigger(
         service=service, session=session, user=current_user, trigger_id=trigger_id, action=FlowAction.READ
     )
     rows = await ledger.list_events(
         session, trigger_id=trigger_id, limit=limit, offset=offset, event_filter=event_filter
     )
-    return [TriggerEventRead.model_validate(row) for row in rows]
+    return await present_events(session, trigger, rows)
 
 
 @router.post("/{trigger_id}/replay", response_model=TriggerEventRead, status_code=status.HTTP_202_ACCEPTED)
