@@ -866,7 +866,7 @@ class BackgroundExecutionService(Service):
         reconstructed request. Best-effort per job so one bad row can't block the
         rest. The scaled backend reconciles via its worker-side watchdog.
         """
-        if self._is_scaled_configured:
+        if self._scaled:
             return
         await self.start()
         job_service = get_job_service()
