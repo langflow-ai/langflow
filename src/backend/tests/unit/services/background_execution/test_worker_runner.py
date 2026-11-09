@@ -10,12 +10,14 @@ from __future__ import annotations
 
 import json
 import uuid
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
 import pytest
 from langflow.services.background_execution.worker import WorkerJobRunner
 from langflow.services.database.models.jobs.model import JobStatus
 from langflow.services.deps import get_job_service, get_settings_service
+from langflow.services.jobs.exceptions import HUMAN_INPUT_REQUIRED_EVENT
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -72,6 +74,55 @@ async def test_worker_runner_runs_durable_job_to_completion(active_user):
     assert "build_start" in types
     assert "end_vertex" in types
     assert bus.closed == [str(job_id)]
+
+
+async def test_scaled_worker_suspended_job_expires_at_configured_input_deadline(active_user, monkeypatch):
+    """A scaled worker must stamp the deadline that expires its suspended job."""
+    from langflow.services.jobs import service as jobs_module
+
+    jobs = get_job_service()
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "background_backend", "scaled")
+    monkeypatch.setattr(settings, "background_input_deadline_s", 60.0)
+    job_id = uuid.uuid4()
+    await jobs.create_job(job_id=job_id, flow_id=uuid.uuid4(), user_id=active_user.id)
+    await jobs.update_job_metadata(job_id, {"request": {"stream_protocol": "langflow"}})
+    pause = {"reason": HUMAN_INPUT_REQUIRED_EVENT, "request_id": "worker-deadline", "options": ["approve"]}
+
+    async def pause_source(**_kwargs):
+        yield json.dumps(pause).encode(), HUMAN_INPUT_REQUIRED_EVENT
+
+    runner = WorkerJobRunner(
+        settings=settings,
+        live_bus=_RecordingBus(),
+        frame_source_factory=lambda **_kwargs: pause_source,
+    )
+    before_run = datetime.now(timezone.utc)
+    await runner.run(str(job_id))
+
+    suspended = await jobs.get_job_by_job_id(job_id)
+    assert suspended.status == JobStatus.SUSPENDED
+    assert suspended.job_metadata["pending_request_id"] == "worker-deadline"
+    deadline = datetime.fromisoformat(suspended.job_metadata["input_deadline_at"])
+    assert before_run + timedelta(seconds=60) <= deadline <= datetime.now(timezone.utc) + timedelta(seconds=60)
+    assert job_id not in await jobs.sweep_input_deadlines()
+
+    class AfterDeadline(datetime):
+        @classmethod
+        def now(cls, tz=None):  # noqa: ARG003
+            return deadline + timedelta(seconds=1)
+
+    with monkeypatch.context() as clock:
+        clock.setattr(jobs_module, "datetime", AfterDeadline)
+        assert job_id in await jobs.sweep_input_deadlines()
+
+    expired = await jobs.get_job_by_job_id(job_id)
+    assert expired.status == JobStatus.FAILED
+    assert expired.error == {"type": "input_timed_out"}
+    assert expired.finished_timestamp is not None
+    events = await jobs.read_events(job_id)
+    assert [event.event_type for event in events].count("input_timed_out") == 1
+    assert job_id not in await jobs.sweep_input_deadlines()
 
 
 def test_worker_adapter_honors_expose_graph_state():

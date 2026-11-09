@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+from types import SimpleNamespace
 
 import pytest
+from langflow.services.background_execution import worker as worker_module
 from langflow.services.background_execution.worker import (
     _CLAIM_BACKOFF_CAP_S,
     _claim_backoff_s,
@@ -272,3 +274,132 @@ def test_claim_backoff_grows_then_settles_at_the_cap():
 
     assert early == sorted(early), "backoff must grow while the database is down"
     assert _claim_backoff_s(idle_block_ms=1000, failures=50) == _CLAIM_BACKOFF_CAP_S
+
+
+class _RecordingLogger:
+    def __init__(self):
+        self.exceptions: list[str] = []
+        self.errors: list[str] = []
+
+    async def aexception(self, message):
+        self.exceptions.append(message)
+
+    async def aerror(self, message):
+        self.errors.append(message)
+
+
+class _AdvancingWaits:
+    """Advance the worker's timer waits while leaving the test's timeout real."""
+
+    def __init__(self, stop_event):
+        self.stop_event = stop_event
+        self.delays: list[float] = []
+
+    def __getattr__(self, name):
+        return getattr(asyncio, name)
+
+    async def wait_for(self, awaitable, *, timeout):
+        self.delays.append(timeout)
+        if self.stop_event.is_set():
+            return await awaitable
+        awaitable.close()
+        await asyncio.sleep(0)
+        raise asyncio.TimeoutError
+
+
+async def test_watchdog_logs_a_failed_pass_and_reconciles_on_the_next_tick(monkeypatch):
+    stop_event = asyncio.Event()
+    clock = _AdvancingWaits(stop_event)
+    recording_logger = _RecordingLogger()
+    monkeypatch.setattr(worker_module, "asyncio", clock)
+    monkeypatch.setattr(worker_module, "logger", recording_logger)
+    monkeypatch.setattr(worker_module, "random", SimpleNamespace(uniform=lambda _low, _high: 1.0))
+
+    class _RecoveringBackend:
+        def __init__(self):
+            self.calls: list[float] = []
+            self.reconciled: list[str] = []
+
+        async def requeue_lost(self, *, lease_ttl_s):
+            self.calls.append(lease_ttl_s)
+            if len(self.calls) == 1:
+                msg = "connection reset during watchdog pass"
+                raise ConnectionError(msg)
+            self.reconciled.append("orphan")
+            stop_event.set()
+            return self.reconciled
+
+    backend = _RecoveringBackend()
+    await asyncio.wait_for(
+        worker_module._watchdog_loop(backend, stop_event=stop_event, lease_ttl_s=45.0, interval_s=15.0),
+        timeout=5,
+    )
+
+    assert backend.calls == [45.0, 45.0]
+    assert backend.reconciled == ["orphan"]
+    assert recording_logger.exceptions == ["Worker: lease watchdog pass failed; retrying next tick"]
+
+
+async def test_unavailable_request_backoff_grows_caps_and_resets_after_a_successful_run(monkeypatch):
+    stop_event = asyncio.Event()
+    clock = _AdvancingWaits(stop_event)
+    recording_logger = _RecordingLogger()
+    monkeypatch.setattr(worker_module, "asyncio", clock)
+    monkeypatch.setattr(worker_module, "logger", recording_logger)
+    monkeypatch.setattr(worker_module, "random", SimpleNamespace(uniform=lambda _low, _high: 1.0))
+    failed_ids = [f"bad-{number}" for number in range(7)]
+    backend = _FakeBackend([*failed_ids, "recovered", "bad-after-recovery", "done"])
+
+    class _UnavailableThenRecoveredRunner:
+        def __init__(self):
+            self.completed: list[str] = []
+
+        async def run(self, job_id):
+            if job_id.startswith("bad-"):
+                raise worker_module.RequestOverridesUnavailableError
+            self.completed.append(job_id)
+            if job_id == "done":
+                stop_event.set()
+
+    runner = _UnavailableThenRecoveredRunner()
+    await asyncio.wait_for(run_worker_loop(backend, runner, stop_event=stop_event, idle_block_ms=1000), timeout=5)
+
+    assert runner.completed == ["recovered", "done"]
+    assert clock.delays == [2.0, 4.0, 8.0, 16.0, 30.0, 30.0, 30.0, 2.0]
+    assert len(recording_logger.errors) == 8
+    assert all("LANGFLOW_SECRET_KEY" in message for message in recording_logger.errors)
+
+
+async def test_stop_interrupts_an_unavailable_request_backoff(monkeypatch):
+    stop_event = asyncio.Event()
+    failure_logged = asyncio.Event()
+
+    class _FailureLogger(_RecordingLogger):
+        async def aerror(self, message):
+            await super().aerror(message)
+            failure_logged.set()
+
+    class _UnavailableRunner:
+        def __init__(self):
+            self.ran: list[str] = []
+
+        async def run(self, job_id):
+            self.ran.append(job_id)
+            raise worker_module.RequestOverridesUnavailableError
+
+    monkeypatch.setattr(worker_module, "logger", _FailureLogger())
+    monkeypatch.setattr(worker_module, "random", SimpleNamespace(uniform=lambda _low, _high: 1.0))
+    backend = _FakeBackend(["bad-request", "must-not-run"])
+    runner = _UnavailableRunner()
+    task = asyncio.create_task(run_worker_loop(backend, runner, stop_event=stop_event, idle_block_ms=60_000))
+    try:
+        await asyncio.wait_for(failure_logged.wait(), timeout=5)
+        stop_event.set()
+        await asyncio.wait_for(task, timeout=5)
+    finally:
+        stop_event.set()
+        if not task.done():
+            task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+
+    assert runner.ran == ["bad-request"]
