@@ -79,7 +79,8 @@ class SearchAPIComponent(LCToolComponent):
                 "params": self.search_params or {},
                 "max_results": self.max_results,
                 "max_snippet_length": self.max_snippet_length,
-            }
+            },
+            callbacks=self.get_langchain_callbacks(),
         )
 
         data_list = [Data(data=result, text=result.get("snippet", "")) for result in results]

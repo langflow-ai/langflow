@@ -171,5 +171,5 @@ class PythonREPLToolComponent(LCToolComponent):
     def run_model(self) -> list[Data]:
         tool = self.build_tool()
         code_input = "" if self.python_code is None else self.python_code
-        result = tool.run({"code": code_input})
+        result = tool.run({"code": code_input}, callbacks=self.get_langchain_callbacks())
         return [Data(data={"result": result})]

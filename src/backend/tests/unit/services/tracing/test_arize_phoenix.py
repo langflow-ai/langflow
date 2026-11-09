@@ -174,7 +174,8 @@ def _spans_by_project(exporters):
 
 
 @pytest.mark.usefixtures("_stub_http_instrumentation", "_phoenix_local_env")
-async def test_langchain_spans_stay_isolated_across_concurrent_workflows(monkeypatch):
+@pytest.mark.parametrize("batch", [False, True])
+async def test_langchain_spans_stay_isolated_across_concurrent_workflows(monkeypatch, batch):
     """Regression test for langflow-ai/langflow#15555.
 
     Each workflow owns a provider bound to a distinct Phoenix project. The two workflows
@@ -185,11 +186,13 @@ async def test_langchain_spans_stay_isolated_across_concurrent_workflows(monkeyp
     pytest.importorskip("langchain_core")
     pytest.importorskip("openinference.instrumentation.langchain")
     import phoenix.otel as phoenix_otel
+    from langchain_core.language_models.fake_chat_models import FakeListChatModel
     from langchain_core.runnables import RunnableLambda
     from langchain_core.tools import tool
     from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
     exporters = []
+    monkeypatch.setenv("ARIZE_PHOENIX_BATCH", str(batch))
 
     def _in_memory_exporter(**_kwargs):
         """Exporter stub that captures spans in memory instead of shipping them to Phoenix."""
@@ -228,7 +231,7 @@ async def test_langchain_spans_stay_isolated_across_concurrent_workflows(monkeyp
         if project == "workflow-b":
             b_started.set()
             await a_ended.wait()
-        return project
+        return (await FakeListChatModel(responses=[project]).ainvoke("Read the fixture record.")).content
 
     async def _body_a(value):
         """Hold workflow A's chain open until workflow B has started."""
@@ -258,8 +261,36 @@ async def test_langchain_spans_stay_isolated_across_concurrent_workflows(monkeyp
     assert set(spans_by_project) == {"workflow-a", "workflow-b"}
     assert spans_by_project["workflow-a"]["chain-a"] == ["CHAIN"]
     assert spans_by_project["workflow-a"]["read_record"] == ["TOOL"]
+    assert spans_by_project["workflow-a"]["FakeListChatModel"] == ["LLM"]
     # Workflow B's tool span is emitted after workflow A tears its tracer down.
     assert spans_by_project["workflow-b"]["read_record"] == ["TOOL"]
+    assert spans_by_project["workflow-b"]["FakeListChatModel"] == ["LLM"]
     assert spans_by_project["workflow-b"]["chain-b-after-a-end"] == ["CHAIN"]
     assert "chain-b-after-a-end" not in spans_by_project.get("workflow-a", {})
     assert "chain-a" not in spans_by_project.get("workflow-b", {})
+
+
+@pytest.mark.parametrize("legacy", [True, False])
+def test_callback_supports_openinference_constructor_versions(tracer, monkeypatch, legacy):
+    """Accept both the supported pre-0.1.38 and current callback constructors."""
+    from openinference.instrumentation.langchain import _tracer
+    from opentelemetry.sdk.trace import TracerProvider
+
+    class LegacyCallback:
+        def __init__(self, wrapped_tracer):
+            self.tracer = wrapped_tracer
+
+    class CurrentCallback:
+        def __init__(self, wrapped_tracer, separate_trace_from_runtime_context):
+            self.tracer = wrapped_tracer
+            self.separate_trace_from_runtime_context = separate_trace_from_runtime_context
+
+    callback_type = LegacyCallback if legacy else CurrentCallback
+    monkeypatch.setattr(_tracer, "OpenInferenceTracer", callback_type)
+    tracer.tracer_provider = TracerProvider()
+
+    callback = tracer._create_langchain_callback()
+
+    assert isinstance(callback, callback_type)
+    if not legacy:
+        assert callback.separate_trace_from_runtime_context is False

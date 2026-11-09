@@ -1800,7 +1800,7 @@ JSON:"""
         try:
             prompt = self._build_llm_prompt()
             if hasattr(llm, "invoke"):
-                response = llm.invoke(prompt)
+                response = llm.invoke(prompt, config={"callbacks": self.get_langchain_callbacks()})
                 self._token_usage = accumulate_usage(self._token_usage, extract_usage_from_message(response))
                 # LangChain messages may carry text alongside non-text blocks.
                 # Its text accessor joins only text content, excluding reasoning.

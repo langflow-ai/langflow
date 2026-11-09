@@ -297,7 +297,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         tg = self._import_toolguard()
         logger.debug("Starting step 1")
         logger.debug(f"model = {self.model}")
-        llm = tg["LangchainModelWrapper"](self.build_model())
+        llm = tg["LangchainModelWrapper"](self.build_model(), callbacks=self.get_langchain_callbacks())
         out_dir = self.work_dir / STEP1
         if out_dir.exists():
             shutil.rmtree(out_dir)
@@ -317,7 +317,7 @@ Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
         out_dir = self.work_dir / STEP2
         if out_dir.exists():
             shutil.rmtree(out_dir)
-        llm = tg["LangchainModelWrapper"](self.build_model())
+        llm = tg["LangchainModelWrapper"](self.build_model(), callbacks=self.get_langchain_callbacks())
         app_name = self._to_snake_case(self.project)
         open_api = tg["langchain_tools_to_openapi"](self.in_tools)
 

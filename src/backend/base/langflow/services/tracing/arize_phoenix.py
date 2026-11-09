@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import json
 import math
 import os
@@ -430,7 +431,10 @@ class ArizePhoenixTracer(BaseTracer):
             self.tracer_provider.get_tracer(__name__),
             config=TraceConfig(),
         )
-        return OpenInferenceTracer(tracer, separate_trace_from_runtime_context=False)
+        # Versions before 0.1.38 inherit runtime context without this keyword.
+        if "separate_trace_from_runtime_context" in inspect.signature(OpenInferenceTracer).parameters:
+            return OpenInferenceTracer(tracer, separate_trace_from_runtime_context=False)
+        return OpenInferenceTracer(tracer)
 
     def close(self):
         """Flush tracer provider spans safely before shutdown."""

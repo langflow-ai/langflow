@@ -143,7 +143,8 @@ class GleanSearchAPIComponent(LCToolComponent):
                 "query": self.query,
                 "page_size": self.page_size,
                 "request_options": self.request_options,
-            }
+            },
+            callbacks=self.get_langchain_callbacks(),
         )
 
         # Build the data
