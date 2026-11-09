@@ -11,7 +11,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from sqlalchemy.exc import IntegrityError
 
 from langflow.api.utils import CurrentActiveUser, DbSession
@@ -24,6 +24,7 @@ from langflow.api.v1.flow_conflict import (
     parse_if_match,
 )
 from langflow.api.v1.flow_fork import FlowFork, build_fork_payload
+from langflow.api.v1.flow_validation import flow_validation_error
 from langflow.api.v1.flows import _validate_catalog_policy_for_write
 from langflow.api.v1.flows_helpers import _new_flow, _patch_flow
 from langflow.services.database.models.flow.model import FlowRead, FlowUpdate
@@ -63,7 +64,10 @@ async def fork_flow(
     conflict dialog's only exit without protecting anything. The copy is owned by
     whoever forked it and inherits no exposure from the source.
     """
-    payload = build_fork_payload(flow, fork)
+    try:
+        payload = build_fork_payload(flow, fork)
+    except ValidationError as exc:
+        raise flow_validation_error(exc) from exc
     _validate_catalog_policy_for_write(payload.data, snapshot=get_catalog_policy_service().snapshot)
     await persist_and_strip_mcp_secrets(payload.data, current_user.id, session)
 
@@ -132,7 +136,11 @@ async def overwrite_flow(
                 "Without it this write would silently discard anyone who saved in the meantime."
             ),
         )
-    _validate_catalog_policy_for_write(overwrite.data, snapshot=get_catalog_policy_service().snapshot)
+    try:
+        update = FlowUpdate(data=overwrite.data)
+    except ValidationError as exc:
+        raise flow_validation_error(exc) from exc
+    _validate_catalog_policy_for_write(update.data, snapshot=get_catalog_policy_service().snapshot)
 
     try:
         replaced_data = copy.deepcopy(flow.data)
@@ -155,11 +163,11 @@ async def overwrite_flow(
     except FlowVersionError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    await persist_and_strip_mcp_secrets(overwrite.data, current_user.id, session, flow_id=flow.id)
+    await persist_and_strip_mcp_secrets(update.data, current_user.id, session, flow_id=flow.id)
     return await _patch_flow(
         session=session,
         db_flow=flow,
-        flow=FlowUpdate(data=overwrite.data),
+        flow=update,
         user_id=current_user.id,
         storage_service=storage_service,
         expected_version_token=claimed,

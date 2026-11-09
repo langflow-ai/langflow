@@ -200,7 +200,8 @@ def test_explain_never_raises(monkeypatch):
     assert explain_restricted_component_mismatch("Agent", _customized_agent()) is None
 
 
-async def test_build_error_carries_the_diagnosis(monkeypatch):
+@pytest.mark.parametrize("broken_edges", [False, True])
+async def test_build_error_carries_the_diagnosis(monkeypatch, broken_edges):
     """The failure a user actually sees names the policy, not just the stock component's complaint."""
     from lfx.exceptions.component import ComponentBuildError
     from lfx.graph.vertex.base import Vertex
@@ -216,8 +217,14 @@ async def test_build_error_carries_the_diagnosis(monkeypatch):
     vertex = Vertex.__new__(Vertex)
     vertex.display_name = "Agent"
     vertex.data = {"type": "Agent", "node": _customized_agent()}
-    vertex.graph = SimpleNamespace(flow_id=None)
-    vertex._incoming_edges = []
+
+    def unreadable_edges(_vertex):
+        msg = "edge lookup unavailable"
+        raise RuntimeError(msg)
+
+    vertex.id = "Agent-review"
+    vertex.graph = SimpleNamespace(flow_id=None, get_vertex_edges=unreadable_edges)
+    vertex._incoming_edges = None if broken_edges else []
 
     with pytest.raises(ComponentBuildError) as excinfo:
         await vertex._build_results(custom_component=None, custom_params={}, base_type="component")
