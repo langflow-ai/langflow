@@ -1143,13 +1143,15 @@ async def _replace_project_operation_once(
                     denied_error_code=_REPLACEMENT_PROJECT_NOT_FOUND_CODE,
                 )
                 if (audited := current_operation()) is not None:
-                    name = (
-                        await session.exec(
-                            select(Folder.name).where(
-                                Folder.id == project_id, Folder.user_id == receipt.project_user_id
+                    name = receipt.project_name
+                    if name is None:
+                        name = (
+                            await session.exec(
+                                select(Folder.name).where(
+                                    Folder.id == project_id, Folder.user_id == receipt.project_user_id
+                                )
                             )
-                        )
-                    ).first()
+                        ).first()
                     if name is None:
                         # The receipt can outlive the project. Reuse a committed
                         # audit name rather than the retry's caller-supplied name.
@@ -1658,14 +1660,9 @@ async def _replace_project_operation_once(
         session.add(receipt)
         await session.flush()
 
-        # Prune old receipts for this project in the same transaction as the
-        # new one, keeping only the newest _MAX_REPLACEMENT_RECEIPTS_PER_PROJECT
-        # readable. A pruned row is tombstoned (its result cleared) rather than
-        # deleted: the row, digest, and owner/workspace survive so a retry against
-        # it - even one whose body still matches the original digest - gets an
-        # explicit 410 instead of silently re-executing and overwriting newer
-        # content with a stale one. created_at ties (possible with low-resolution
-        # clocks) break on operation_id for a deterministic ordering.
+        # Keep the newest receipts readable. For older receipts, clear the result
+        # and keep the Project name, digest, owner and workspace. A retry returns
+        # 410 and cannot overwrite newer content. Break timestamp ties by operation ID.
         #
         # Ranking (and therefore the offset boundary) includes the just-inserted
         # receipt like every other row - excluding it from the ranking itself
@@ -1692,8 +1689,12 @@ async def _replace_project_operation_once(
                 .where(
                     ProjectReplacementOperation.project_id == project_id,
                     ProjectReplacementOperation.operation_id.in_(stale_receipt_ids),
+                    ProjectReplacementOperation.result.is_not(None),
                 )
-                .values(result=null())
+                .values(
+                    project_name=ProjectReplacementOperation.result["project"]["name"].as_string(),
+                    result=null(),
+                )
             )
 
         for stale_flow in stale_flows:
