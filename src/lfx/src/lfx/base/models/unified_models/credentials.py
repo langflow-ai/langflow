@@ -29,6 +29,8 @@ from .provider_queries import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Collection
+
     from lfx.services.model_provider_policy import ModelProviderPolicySnapshot
 
 MODEL_STATUS_KEY_SEPARATOR = "::"
@@ -231,9 +233,17 @@ def provider_variable_from_env(var_key: str) -> str | None:
 
 
 def get_all_variables_for_provider(
-    user_id: UUID | str | None, provider: str, *, include_secrets: bool = True
+    user_id: UUID | str | None,
+    provider: str,
+    *,
+    include_secrets: bool = True,
+    exclude: Collection[str] = (),
 ) -> dict[str, str]:
-    """Get configured provider variables, optionally resolving only non-secret settings."""
+    """Get configured provider variables, optionally resolving only non-secret settings.
+
+    ``exclude`` names variables the caller is about to replace: they are never read, so a stored
+    value that can no longer be decrypted doesn't block saving a new one.
+    """
     result: dict[str, str] = {}
     account_absences: set[str] = set()
 
@@ -241,6 +251,8 @@ def get_all_variables_for_provider(
     provider_vars = get_provider_all_variables(provider)
     if not include_secrets:
         provider_vars = [variable for variable in provider_vars if not variable.get("is_secret")]
+    if exclude:
+        provider_vars = [variable for variable in provider_vars if variable.get("variable_key") not in exclude]
     if not provider_vars:
         return result
 
