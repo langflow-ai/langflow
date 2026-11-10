@@ -200,8 +200,9 @@ _JOB_KEY_AUTHORIZATION_ROUND_TRIPS = {"sync": (4, 1), "stream": (5, 2)}
 async def test_run_db_round_trips(client: AsyncClient, created_api_key, chat_flow, mode, request):
     recorder = await _measure(client, created_api_key.api_key, chat_flow, mode)
     statements = recorder.statements
-    # Two authentication reads and one lifecycle read for each of the two message writes.
-    assert statements.count("SELECT user") == 4, statements
+    # One read each for request authentication, legacy storage isolation, and job credential
+    # revalidation, plus one lifecycle check for each of the two message writes.
+    assert statements.count("SELECT user") == 5, statements
 
     if mode == "sync":
         # The sync job row is created IN_PROGRESS and written once more when it ends.
