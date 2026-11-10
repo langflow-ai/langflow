@@ -22,8 +22,9 @@ class CostlyRepresentation:
         return f"value-{sum(range(1000))}"
 
 
+# isolate logging assertions from logger instances cached by earlier tests
 @pytest.fixture(params=[logging.INFO, logging.DEBUG], ids=["info", "debug"])
-def debug_logs(request):
+def debug_logs(request, monkeypatch):
     config = structlog.get_config().copy()
     records = []
 
@@ -42,6 +43,7 @@ def debug_logs(request):
         ],
         cache_logger_on_first_use=False,
     )
+    monkeypatch.setattr("lfx.graph.graph.base.logger", structlog.get_logger())
     try:
         with structlog.contextvars.bound_contextvars(flow_id="flow-logging"):
             yield request.param, records
