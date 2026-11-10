@@ -33,6 +33,7 @@ def project_input(*, connectable=True):
         required=True,
         input_types=["Message"] if connectable else [],
         info="Numeric GitLab project ID. Project paths and URLs are unavailable.",
+        tool_mode=connectable,
     )
 
 

@@ -244,6 +244,9 @@ const ModelSelection = ({
   } = useGetEnabledModels({ flowId, projectId, purpose: "configure" });
   const [modelQuery, setModelQuery] = useState<string>("");
   const [showDeprecated, setShowDeprecated] = useState<boolean>(false);
+  const [collapsedSections, setCollapsedSections] = useState<
+    Partial<Record<ModelType, boolean>>
+  >({});
   const canUseEnabledModels =
     !!enabledModelsData &&
     isEnabledModelsSuccess &&
@@ -251,12 +254,11 @@ const ModelSelection = ({
     isEnabledModelsFetchedAfterMount &&
     enabledModelsFetchStatus === "idle";
 
-  // Reset both the search and the deprecated disclosure when the selected
-  // provider changes so neither state leaks across providers
-  // (OpenRouter → Anthropic, etc.).
+  // Start each provider with an unfiltered catalog and expanded model sections.
   useEffect(() => {
     setModelQuery("");
     setShowDeprecated(false);
+    setCollapsedSections({});
   }, [providerName]);
 
   const isModelEnabled = (
@@ -424,17 +426,33 @@ const ModelSelection = ({
     // gpt-6-luna is both a language and a decision model.
     const headingId = `${sectionIdPrefix}-${selectedModelType}`;
     return (
-      <div
+      <details
+        key={`${providerName}-${selectedModelType}`}
+        className="group/models"
         data-testid={`${selectedModelType}-models-section`}
         role="group"
         aria-labelledby={headingId}
+        open={!collapsedSections[selectedModelType]}
+        onToggle={(event) => {
+          const isCollapsed = !event.currentTarget.open;
+          setCollapsedSections((previous) =>
+            !!previous[selectedModelType] === isCollapsed
+              ? previous
+              : { ...previous, [selectedModelType]: isCollapsed },
+          );
+        }}
       >
-        <div
-          id={headingId}
-          className="text-[13px] font-semibold text-muted-foreground"
+        <summary
+          className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-sm text-[13px] font-semibold text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden"
+          data-testid={`${selectedModelType}-models-summary`}
         >
-          {title}
-        </div>
+          <span id={headingId}>{title}</span>
+          <ForwardedIconComponent
+            name="ChevronDown"
+            ariaHidden
+            className="h-4 w-4 shrink-0 transition-transform group-open/models:rotate-180"
+          />
+        </summary>
         {selectedModelType === "decision" && (
           <p className="pt-1 text-xs text-muted-foreground">
             {t("modelProviders.decisionModelsNote")}
@@ -476,7 +494,7 @@ const ModelSelection = ({
             </div>
           </details>
         )}
-      </div>
+      </details>
     );
   };
 

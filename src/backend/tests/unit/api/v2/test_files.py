@@ -764,6 +764,11 @@ async def test_upload_files_with_different_extensions_same_name(files_client, fi
 
 async def test_mcp_servers_file_replacement(files_client, files_created_api_key, files_active_user):
     """Test that _mcp_servers file gets replaced instead of creating unique names."""
+    async with session_scope() as session:
+        user = await session.get(User, files_active_user.id)
+        user.is_superuser = True
+        session.add(user)
+    files_active_user.is_superuser = True
     headers = {"x-api-key": files_created_api_key.api_key}
 
     mcp_file_ext = await get_mcp_file(files_active_user, extension=True)
@@ -1720,6 +1725,9 @@ class _Upload:
         piece, self._data = self._data[:size], self._data[size:]
         return piece
 
+    async def close(self) -> None:
+        pass
+
 
 def _local_storage(tmp_path):
     from unittest.mock import MagicMock
@@ -1815,7 +1823,7 @@ async def test_a_storage_failure_on_upload_names_no_address():
     storage.save_upload_stream = AsyncMock(side_effect=RuntimeError(f"Could not connect to the endpoint URL: {url}"))
     session = MagicMock()
     session.exec = AsyncMock(return_value=MagicMock(all=list, first=lambda: None))
-    upload = SimpleNamespace(filename="upload.bin", size=1, read=AsyncMock(return_value=b""))
+    upload = SimpleNamespace(filename="upload.bin", size=1, read=AsyncMock(return_value=b""), close=AsyncMock())
 
     with pytest.raises(HTTPException) as raised:
         await upload_user_file(

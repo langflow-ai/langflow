@@ -13,9 +13,9 @@ class GitHubCreatePullRequestComponent(GitHubActionComponent):
     inputs = [
         connection_input("github.pull_request_create"),
         repository_input(),
-        StrInput(name="title", display_name="Title", required=True),
-        MultilineInput(name="body", display_name="Body", value="", info="At most 60,000 UTF-8 bytes."),
-        StrInput(name="head", display_name="Head Branch", required=True),
-        StrInput(name="base", display_name="Base Branch", required=True),
+        StrInput(name="title", display_name="Title", required=True, tool_mode=True),
+        MultilineInput(name="body", display_name="Body", value="", info="At most 60,000 UTF-8 bytes.", tool_mode=True),
+        StrInput(name="head", display_name="Head Branch", required=True, tool_mode=True),
+        StrInput(name="base", display_name="Base Branch", required=True, tool_mode=True),
     ]
     outputs = [Output(display_name="Result", name="result", method="build_result")]

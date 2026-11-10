@@ -1,6 +1,7 @@
 import random
 
 import pytest
+from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.vectorstores.in_memory import InMemoryVectorStore
@@ -128,6 +129,7 @@ class TestGraphRAGComponent:
         embedding: _DeterministicEmbeddings,
         vector_store: InMemoryVectorStore,
         default_kwargs,
+        monkeypatch,
     ):
         """Test GraphRAGComponent's document search functionality.
 
@@ -145,6 +147,16 @@ class TestGraphRAGComponent:
         """
         component = component_class()
 
+        class RecordingCallback(BaseCallbackHandler):
+            def __init__(self):
+                self.retriever_runs = []
+
+            def on_retriever_start(self, _serialized, _query, *, run_id, **_kwargs):
+                self.retriever_runs.append(run_id)
+
+        callback = RecordingCallback()
+        monkeypatch.setattr(component_class, "get_langchain_callbacks", lambda _self: [callback])
+
         component.set_attributes(
             {
                 "embedding_model": embedding,
@@ -160,6 +172,7 @@ class TestGraphRAGComponent:
 
         # Quantity of documents
         assert len(results) == 10
+        assert len(callback.retriever_runs) == 1
 
         # Ensures all the k-start_k documents returned via traversal have the same metadata as the
         # ones returned via the similarity search
