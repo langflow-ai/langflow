@@ -997,6 +997,8 @@
   "flow.statusBuild": "Compiler pour vérifier l'état.",
   "flow.statusBuilding": "Chantier...",
   "flow.statusInactive": "Exécution bloquée",
+  "flow.statusBranchNotTaken": "Branche non empruntée",
+  "flow.statusBranchTakenTo": "{{component}} a envoyé l'entrée vers {{outputs}}.",
   "flow.statusMissingFieldsError": "Veuillez remplir tous les champs obligatoires.",
   "flow.toAvoidLosingProgress": "pour ne pas perdre ce que vous avez accompli.",
   "flow.tooltipHiddenOutputsCollapse": "Réduire les sorties masquées",
@@ -3519,5 +3521,15 @@
   "decision.minimumProbability": "Probabilité minimale",
   "decision.errorAction": "En cas d’erreur d’évaluation",
   "decision.requestId": "ID de requête du fournisseur",
-  "decision.tone.answered": "Répondue"
+  "decision.tone.answered": "Répondue",
+  "triggers.events.whatsapp.message": "Message reçu",
+  "triggers.events.whatsapp.sent": "Statut envoyé",
+  "triggers.events.whatsapp.delivered": "Statut distribué",
+  "triggers.events.whatsapp.read": "Statut lu",
+  "triggers.events.whatsapp.failed": "Échec de la distribution",
+  "triggers.events.whatsapp.status": "Statut du message",
+  "triggers.events.state.skipped": "Ignoré",
+  "triggers.events.filters.skipped": "Ignorés",
+  "triggers.eventError.sender_not_allowed": "L’expéditeur ne figure pas dans la liste des numéros autorisés.",
+  "triggers.events.skippedCannotReplay": "Les événements ignorés ne peuvent pas être rejoués. Modifiez le filtre des expéditeurs et envoyez un nouveau message."
 }

@@ -21,6 +21,7 @@ const STYLE: Record<
     icon: "CircleCheck",
     className: "bg-accent-emerald text-accent-emerald-foreground",
   },
+  skipped: { icon: "SkipForward", className: "bg-muted text-muted-foreground" },
   failed: {
     icon: "CircleX",
     className: "bg-error-background text-error-foreground",

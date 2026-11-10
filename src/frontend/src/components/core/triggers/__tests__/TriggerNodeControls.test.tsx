@@ -133,6 +133,63 @@ describe("TriggerNodeControls", () => {
     expect(mockDisable).toHaveBeenCalledWith("trg-1");
   });
 
+  it("offers WhatsApp Resume directly after background consent instead of an Enabled toggle", async () => {
+    mockTrigger = makeTrigger({
+      provider: "whatsapp",
+      state: "pending",
+      reason: "ready_to_resume",
+      allowed_actions: ["resume"],
+    });
+    mockConnections = [connection(true)];
+    mockEnable.mockResolvedValue({});
+    render(<TriggerNodeControls nodeId="n1" />);
+
+    expect(screen.queryByRole("switch", { name: "Enabled" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Resume" }));
+    expect(mockEnable).toHaveBeenCalledWith("trg-1");
+  });
+
+  it("keeps WhatsApp Resume blocked until background consent is granted", async () => {
+    mockTrigger = makeTrigger({
+      provider: "whatsapp",
+      state: "pending",
+      reason: "ready_to_resume",
+      allowed_actions: ["resume"],
+    });
+    mockConnections = [connection(false)];
+    render(<TriggerNodeControls nodeId="n1" />);
+    const resume = screen.getByRole("button", { name: "Resume" });
+
+    expect(resume).toHaveAccessibleDescription("Allow background runs first.");
+    await userEvent.click(resume);
+    expect(mockEnable).not.toHaveBeenCalled();
+  });
+
+  it("preserves the canvas Pause action for an active WhatsApp trigger", async () => {
+    mockTrigger = makeTrigger({ provider: "whatsapp" });
+    mockConnections = [connection(true)];
+    mockDisable.mockResolvedValue({});
+    render(<TriggerNodeControls nodeId="n1" />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Pause" }));
+    expect(mockDisable).toHaveBeenCalledWith("trg-1");
+  });
+
+  it("offers Resume again when the server permits retry after a WhatsApp refusal", async () => {
+    mockTrigger = makeTrigger({
+      provider: "whatsapp",
+      state: "error",
+      reason: "error",
+      allowed_actions: ["pause", "resume"],
+    });
+    mockConnections = [connection(true)];
+    mockEnable.mockResolvedValue({});
+    render(<TriggerNodeControls nodeId="n1" />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Resume" }));
+    expect(mockEnable).toHaveBeenCalledWith("trg-1");
+  });
+
   it("tells a non-owner who can grant consent instead of offering the switch", () => {
     mockTrigger = makeTrigger();
     mockConnections = [];

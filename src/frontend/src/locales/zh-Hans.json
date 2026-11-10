@@ -997,6 +997,8 @@
   "flow.statusBuild": "构建以验证状态。",
   "flow.statusBuilding": "正在加载...",
   "flow.statusInactive": "执行被阻止",
+  "flow.statusBranchNotTaken": "未选择此分支",
+  "flow.statusBranchTakenTo": "{{component}} 已将输入发送到 {{outputs}}。",
   "flow.statusMissingFieldsError": "请填写所有必填项。",
   "flow.toAvoidLosingProgress": "以免进度丢失。",
   "flow.tooltipHiddenOutputsCollapse": "折叠隐藏的输出",
@@ -3518,5 +3520,15 @@
   "decision.minimumProbability": "最低概率",
   "decision.errorAction": "评估出错时",
   "decision.requestId": "提供方请求 ID",
-  "decision.tone.answered": "已回答"
+  "decision.tone.answered": "已回答",
+  "triggers.events.whatsapp.message": "已收到消息",
+  "triggers.events.whatsapp.sent": "已发送",
+  "triggers.events.whatsapp.delivered": "已送达",
+  "triggers.events.whatsapp.read": "已读",
+  "triggers.events.whatsapp.failed": "送达失败",
+  "triggers.events.whatsapp.status": "消息状态",
+  "triggers.events.state.skipped": "已跳过",
+  "triggers.events.filters.skipped": "已跳过",
+  "triggers.eventError.sender_not_allowed": "发送者不在允许的发送者号码列表中。",
+  "triggers.events.skippedCannotReplay": "无法重放已跳过的事件。请更新发送者筛选条件并发送新消息。"
 }

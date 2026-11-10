@@ -15,7 +15,6 @@ import re
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
-from itertools import pairwise
 from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import uuid4
@@ -188,7 +187,7 @@ _ROUND_TRIPS = {
 }
 # Admission reads the originating key inside the existing job transaction.
 # Execution reloads key, owner, and flow together in one additional checkout.
-_JOB_KEY_AUTHORIZATION_ROUND_TRIPS = (4, 1)
+_JOB_KEY_AUTHORIZATION_ROUND_TRIPS = {"sync": (4, 1), "stream": (5, 2)}
 
 
 def _assert_round_trips(recorder: _Recorder, expected: tuple[int, int], *, maintenance_reads: int) -> None:
@@ -201,25 +200,23 @@ def _assert_round_trips(recorder: _Recorder, expected: tuple[int, int], *, maint
     ), recorder.statements
 
 
-def _follows(statements: list[str], first: str, then: str) -> bool:
-    return any(a == first and b == then for a, b in pairwise(statements))
-
-
 @pytest.mark.parametrize("mode", ["sync", "stream"])
 @pytest.mark.usefixtures("serving_settings")
 async def test_run_db_round_trips(client: AsyncClient, created_api_key, chat_flow, mode, request):
     recorder = await _measure(client, created_api_key.api_key, chat_flow, mode)
     statements = recorder.statements
 
-    # A job status change returns the row it wrote instead of reading it back.
-    assert not _follows(statements, "UPDATE job", "SELECT job"), statements
-
     if mode == "sync":
         # The sync job row is created IN_PROGRESS and written once more when it ends.
-        assert [s for s in statements if s.endswith(" job")] == ["INSERT job", "UPDATE job"], statements
+        expected_job_statements = ["INSERT job", "UPDATE job"]
+    else:
+        # The first read checks for an existing job. The second reloads credential
+        # provenance after the conditional start, rather than reading back status.
+        expected_job_statements = ["SELECT job", "INSERT job", "UPDATE job", "SELECT job", "UPDATE job"]
+    assert [s for s in statements if s.endswith(" job")] == expected_job_statements, statements
     flow_name = request.node.callspec.params["chat_flow"]
     base_statements, base_checkouts = _ROUND_TRIPS[flow_name][mode]
-    key_statements, key_checkouts = _JOB_KEY_AUTHORIZATION_ROUND_TRIPS
+    key_statements, key_checkouts = _JOB_KEY_AUTHORIZATION_ROUND_TRIPS[mode]
     # One HTTP admission, then submission and start of the memory-base output
     # hook. The queued start must recheck a freeze set after submission.
     _assert_round_trips(
