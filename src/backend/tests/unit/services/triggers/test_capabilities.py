@@ -133,6 +133,16 @@ def test_every_state_maps_to_one_stable_reason(state, last_error, expected) -> N
     assert trigger_reason(_row(state, last_error=last_error)) is expected
 
 
+def test_whatsapp_waiting_for_manual_resume_is_not_a_pending_subscription() -> None:
+    row = _row("pending", kind="whatsapp.event", public_id="saved-before-resume")
+    caps = trigger_capabilities(row, caller=FULL)
+    assert caps.reason is R.READY_TO_RESUME
+    assert A.RESUME in caps.allowed_actions
+    assert trigger_reason(_row("pending", kind="whatsapp.event", last_error="invalid sender")) is R.CONFIG_INVALID
+    row.signing_secret_encrypted = "encrypted-activation-proof"  # noqa: S105  # pragma: allowlist secret
+    assert trigger_reason(row) is R.PENDING
+
+
 def test_missing_consent_routes_to_reconnect_not_an_oauth_loop() -> None:
     """``consent_required`` tells the UI to open the background-runs switch (B9)."""
     caps = trigger_capabilities(_slack("needs_reconnect", last_error="connection_not_authorized"), caller=FULL)

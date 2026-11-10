@@ -17,6 +17,7 @@ from langflow.services.database.models.connection.model import Connection
 from langflow.services.database.models.trigger.model import Trigger, TriggerEvent
 from langflow.services.database.models.trigger.schemas import TriggerState
 from langflow.services.deps import session_scope
+from langflow.services.triggers.error_codes import CodedTriggerError, TriggerErrorCode
 from langflow.services.triggers.listeners import connection_leases
 from langflow.services.triggers.listeners.adapters import (
     ListenerContext,
@@ -316,6 +317,40 @@ async def test_an_auth_failure_stops_retrying_and_asks_for_a_reconnect(
     assert state == TriggerState.NEEDS_RECONNECT.value
     async with session_scope() as session:
         assert await connection_leases.current_holder(session, connection_id=connection_id, ttl_s=300) is None
+
+
+@pytest.mark.parametrize(
+    ("code", "expected_state"),
+    [
+        (TriggerErrorCode.BACKGROUND_RUNS_NOT_ALLOWED, TriggerState.NEEDS_RECONNECT),
+        (TriggerErrorCode.SOURCE_SETTINGS_CHANGED, TriggerState.ACTIVE),
+    ],
+)
+async def test_coded_background_consent_failure_requires_owner_action(
+    make_connection, make_trigger, adapter_registry, code, expected_state
+) -> None:
+    adapter = adapter_registry(RecordingAdapter(fail_with=CodedTriggerError(code, "Source connection is unavailable.")))
+    connection_id = await make_connection()
+    trigger_id = await make_trigger(kind=TEST_KIND, connection_id=connection_id)
+    supervisor = ListenerSupervisor(holder="replica-consent-failure")
+    try:
+        await supervisor.reconcile()
+        worker = supervisor.workers[connection_id]
+        await asyncio.wait_for(adapter.started.wait(), timeout=5)
+        await asyncio.wait_for(asyncio.gather(worker.task, return_exceptions=True), timeout=5)
+        async with session_scope() as session:
+            trigger = await session.get(Trigger, trigger_id)
+            assert trigger.state == expected_state.value
+            if expected_state == TriggerState.NEEDS_RECONNECT:
+                assert trigger.last_error == "connection_not_authorized"
+                assert trigger.provider_state["_connection_recovery"]["consent_required"] is True
+                assert connection_id not in supervisor.workers
+                assert await connection_leases.current_holder(session, connection_id=connection_id, ttl_s=300) is None
+            else:
+                assert connection_id in supervisor.workers
+                assert worker.consecutive_failures == 1
+    finally:
+        await supervisor.stop()
 
 
 @pytest.mark.parametrize(
