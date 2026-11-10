@@ -2272,7 +2272,7 @@
             "legacy": false,
             "lf_version": "1.10.0",
             "metadata": {
-              "code_hash": "48c364e00433",
+              "code_hash": "80ab01abfdf7",
               "component_class_name": "MemoryBaseComponent",
               "dependencies": {
                 "dependencies": [
