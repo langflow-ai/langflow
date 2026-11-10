@@ -41,6 +41,8 @@ def test_deployment_copy_and_release_have_single_head():
         "b7e1d4a92c60",  # pragma: allowlist secret
         "4d6e8f0a2b3c",  # pragma: allowlist secret
         "f4b8c1d2e3a6",  # pragma: allowlist secret
+        "e6f8a0b2c4d6",  # pragma: allowlist secret
+        "f6a2c8e4b901",  # pragma: allowlist secret
     ],
 )
 def test_upgrading_from_either_side_keeps_jobs_and_accepts_a_copy_job(db_url, prior_revision):  # noqa: F811
@@ -62,5 +64,6 @@ def test_upgrading_from_either_side_keeps_jobs_and_accepts_a_copy_job(db_url, pr
                 ScriptDirectory.from_config(config).get_heads()
             )
             assert "permissions" in {column["name"] for column in inspect(connection).get_columns("apikey")}
+            assert {"maintenance_state", "worker_registry"} <= set(inspect(connection).get_table_names())
     finally:
         engine.dispose()

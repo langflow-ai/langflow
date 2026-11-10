@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Collection, Iterator, Mapping
+from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
@@ -450,6 +451,33 @@ def _connected_fields_by_node(edges: list[dict] | None) -> dict[str, set[str]] |
     return connected
 
 
+def node_with_group_values(node: dict, group_template: Mapping[str, Any]) -> dict:
+    """Project the group's saved values onto a child without changing its saved contract.
+
+    The runtime applies exposed inputs before ungrouping. Their value and source mode
+    override the child's potentially stale copy; the frontend uses the same three properties.
+    """
+    result = node
+    node_id = flow_node_id(node)
+    for field_data in group_template.values():
+        if not isinstance(field_data, Mapping):
+            continue
+        proxy = field_data.get("proxy")
+        if not isinstance(proxy, Mapping) or proxy.get("id") != node_id:
+            continue
+        template = result.get("data", {}).get("node", {}).get("template", {})
+        name = proxy.get("field")
+        if not isinstance(template.get(name), Mapping):
+            continue
+        if result is node:
+            result = deepcopy(node)
+        child_field = result["data"]["node"]["template"][name]
+        for key in ("value", "load_from_db", "file_path"):
+            if key in field_data:
+                child_field[key] = deepcopy(field_data[key])
+    return result
+
+
 def iter_flow_nodes(
     nodes: list[dict], edges: list[dict] | None, group_path: tuple[str, ...] = ()
 ) -> Iterator[tuple[dict, set[str] | None, tuple[str, ...]]]:
@@ -464,6 +492,7 @@ def iter_flow_nodes(
     fields are ``None`` too. A nested level uses the edges of its own flow, plus each edge into the
     group: it reaches the inner field that the edge's own ``proxy`` names, or the group field's
     ``proxy`` when the edge has none, as ``lfx.graph.graph.utils.update_target_handle`` resolves it.
+    Each child's values also include its group's exposed inputs, outermost values winning.
     """
     connected = _connected_fields_by_node(edges)
     for node in nodes:
@@ -488,7 +517,8 @@ def iter_flow_nodes(
                         nested_edges.append(
                             {"target": proxy.get("id"), "data": {"targetHandle": {"fieldName": proxy.get("field")}}}
                         )
-            yield from iter_flow_nodes(nested, nested_edges, (*group_path, node_id))
+            effective_nodes = [node_with_group_values(child, node_info.get("template", {})) for child in nested]
+            yield from iter_flow_nodes(effective_nodes, nested_edges, (*group_path, node_id))
 
 
 def check_flow_compatibility(
