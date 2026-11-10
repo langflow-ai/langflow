@@ -13,6 +13,7 @@ from langflow.services.database.models.trigger.model import Trigger, TriggerClea
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import session_scope
 from langflow.services.triggers.listeners.adapters import ListenerTrigger, build_adapter
+from langflow.services.triggers.ownership import TriggerConnectionNotOwnedError
 from langflow.services.triggers.providers import registry
 from langflow.services.triggers.providers.discord.gateway import DiscordGatewayAdapter
 from langflow.services.triggers.providers.discord.lifecycle import revoke
@@ -373,7 +374,7 @@ async def test_cross_owner_connection_is_rejected(trigger_owner, owned_flow, mon
     async with session_scope() as session:
         row = await session.get(Trigger, row.id)
         row.user_id = uuid4()
-        with pytest.raises(ValueError, match="connection its owner owns"):
+        with pytest.raises(TriggerConnectionNotOwnedError):
             await TriggerService().enable(session, row=row)
 
 

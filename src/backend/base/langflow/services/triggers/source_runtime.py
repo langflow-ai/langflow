@@ -154,6 +154,9 @@ async def ensure_subscription(trigger_id: UUID) -> None:
 
 async def initialize_source(trigger_id: UUID) -> None:
     """Finish a persisted pending activation; failed stages remain retryable."""
+    from langflow.services.triggers.locking import lock_trigger
+    from langflow.services.triggers.providers.registry import get_provider
+
     owner = leases.new_owner_token("source-enable")
     name = f"trigger-source:{trigger_id}"
     ttl = get_settings_service().settings.trigger_lease_ttl_s
@@ -168,11 +171,12 @@ async def initialize_source(trigger_id: UUID) -> None:
             return
         expected = dict(row.config or {})
         expected_connection_id = row.connection_id
+        extension = get_provider(row.provider or "")
+        validate_source = extension.validate_source if extension is not None else None
 
     async def initialize():
         nonlocal connection_version
         from langflow.services.database.models.connection.model import Connection
-        from langflow.services.triggers.providers.registry import get_provider
         from langflow.services.triggers.source_clients import source_lease
 
         async with session_scope_readonly() as session:
@@ -184,16 +188,15 @@ async def initialize_source(trigger_id: UUID) -> None:
             ):
                 msg = "Source settings or state changed during activation. Enable it again."
                 raise SourceConfigurationError(msg)
-            extension = get_provider(current.provider or "") if current is not None else None
-            if current is not None and extension is not None and extension.validate_source is not None:
+            if validate_source is not None:
                 credential = await source_lease(session, current, family=FAMILY_TRIGGER_LISTENER)
                 connection = await session.get(Connection, current.connection_id)
                 connection_version = connection.updated_at if connection is not None else None
                 snapshot = Trigger(**current.model_dump())
             else:
                 credential = None
-        if credential is not None:
-            await extension.validate_source(snapshot, credential)
+        if validate_source is not None and credential is not None:
+            await validate_source(snapshot, credential)
         await sync_source(trigger_id)
         await ensure_subscription(trigger_id)
         await sync_source(trigger_id)
@@ -220,15 +223,23 @@ async def initialize_source(trigger_id: UUID) -> None:
         auth_message = "The connection is no longer authorized. Reconnect it to resume this trigger."
         async with session_scope() as session:
             owned = await leases.fence(session, name=name, owner=owner)
-            row = await session.get(Trigger, trigger_id)
-            if (
-                owned
-                and row is not None
-                and row.state == "pending"
-                and row.config == expected
-                and row.connection_id == expected_connection_id
-            ):
-                if isinstance(exc, AuthExpiredError) and connection_version is not None:
+            row = None
+            if owned:
+                # Push errors can be recorded under the trigger lock. Credential
+                # rejection follows the connection-before-trigger lock order.
+                row = (
+                    await lock_trigger(session, trigger_id)
+                    if validate_source is None
+                    else await session.get(Trigger, trigger_id)
+                )
+            if row is not None and row.state == "pending" and row.connection_id == expected_connection_id:
+                if row.config != expected:
+                    # Push setup can leave a remote subscription to recover on retry.
+                    # Report the interrupted setup without carrying over an old provider error.
+                    if validate_source is None and row.last_error is None:
+                        row.state = "error"
+                        row.last_error = "Source settings changed during activation. Enable the trigger to retry."
+                elif isinstance(exc, AuthExpiredError) and connection_version is not None:
                     from langflow.services.connection.health import mark_credential_rejected
                     from langflow.services.triggers.connection_recovery import record_connection_failure
 
