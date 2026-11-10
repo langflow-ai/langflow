@@ -227,14 +227,6 @@ async def test_run_db_round_trips(client: AsyncClient, created_api_key, chat_flo
     flow_name = request.node.callspec.params["chat_flow"]
     base_statements, base_checkouts = _ROUND_TRIPS[flow_name][mode]
     key_statements, key_checkouts = _JOB_KEY_AUTHORIZATION_ROUND_TRIPS[mode]
-<<<<<<< HEAD
-    maintenance_statements, maintenance_checkouts = _MAINTENANCE_ROUND_TRIPS
-    assert statements.count("SELECT maintenance_state") == maintenance_statements, statements
-    assert (len(statements), recorder.checkouts) == (
-        base_statements + key_statements + maintenance_statements,
-        base_checkouts + key_checkouts + maintenance_checkouts,
-    ), statements
-=======
     # One HTTP admission, then submission and start of the memory-base output
     # hook. The queued start must recheck a freeze set after submission.
     _assert_round_trips(
@@ -242,7 +234,6 @@ async def test_run_db_round_trips(client: AsyncClient, created_api_key, chat_flo
         (base_statements + key_statements, base_checkouts + key_checkouts),
         maintenance_reads=3,
     )
->>>>>>> origin/release-1.14.0
 
 
 @pytest.mark.usefixtures("client")
@@ -312,13 +303,6 @@ async def test_run_task_wait_includes_delayed_child_sql():
             measurement.cancel()
         await asyncio.gather(measurement, return_exceptions=True)
 
-<<<<<<< HEAD
-    # Each task checks maintenance before admission and again before it starts.
-    maintenance_statements = [s for s in recorder.statements if s == "SELECT maintenance_state"]
-    assert maintenance_statements == ["SELECT maintenance_state"] * 4
-    assert [s for s in recorder.statements if s != "SELECT maintenance_state"] == ["SELECT", "SELECT"]
-    assert recorder.checkouts == 2 + len(maintenance_statements)
-=======
     assert [statement for statement in recorder.statements if statement != "SELECT maintenance_state"] == [
         "SELECT",
         "SELECT",
@@ -326,4 +310,3 @@ async def test_run_task_wait_includes_delayed_child_sql():
     # Both the parent hook and its child check admission when submitted and
     # again when the queue starts them. Their own two statements remain counted.
     _assert_round_trips(recorder, (2, 2), maintenance_reads=4)
->>>>>>> origin/release-1.14.0

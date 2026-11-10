@@ -33425,10 +33425,6 @@
     "num_components": 131,
     "num_modules": 17
   },
-<<<<<<< HEAD
-  "sha256": "6e9f322231d267797eaa1041091b4e54c68633cc0270ff5f037fde4597287eea",
-=======
-  "sha256": "0d2338fd3d89d94ba708117d0bacaf7a49645dfca668f3ca2b57d48f153c1b95",
->>>>>>> origin/release-1.14.0
+  "sha256": "9b3a35e76f8f36305b8202e1d4b43ec09ff49400c12a39918d90dd47260649a6",
   "version": "1.14.0"
 }

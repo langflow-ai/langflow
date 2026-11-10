@@ -921,8 +921,7 @@ def schedule_upgrade(*, retry: bool = False) -> asyncio.Task:
 
         while True:
             while await writes_paused():  # noqa: ASYNC110
-<<<<<<< HEAD
-                await asyncio.sleep(1)
+                await asyncio.sleep(0.1)
             from langflow.api.utils import knowledge_base_service
 
             # A failed adoption must not strand migrations of already registered bases.
@@ -940,16 +939,6 @@ def schedule_upgrade(*, retry: bool = False) -> asyncio.Task:
                     await callback()
                 except Exception:  # noqa: BLE001 -- resume registered bases despite transient discovery failures
                     await logger.awarning("Deferred storage %s failed. Resuming registered knowledge bases.", step)
-=======
-                await asyncio.sleep(0.1)
-            from langflow.api.utils import knowledge_base_service
-
-            # Startup may have deferred these adoptions while maintenance was on.
-            if get_settings_service().settings.kb_disk_reconcile_enabled:
-                await knowledge_base_service.backfill_all_users_from_disk()
-            await knowledge_base_service.backfill_memory_base_rows()
-            await fence_legacy_records()
->>>>>>> origin/release-1.14.0
             await run_pending()
             if await writes_paused():
                 continue

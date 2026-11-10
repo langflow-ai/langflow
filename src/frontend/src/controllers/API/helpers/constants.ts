@@ -50,11 +50,8 @@ export const URLs = {
   POLICY_BUNDLE: `policy-bundle`,
   MIGRATION: `migration`,
   MAINTENANCE: `maintenance`,
-<<<<<<< HEAD
   UPGRADE_REPORTS: `upgrade-reports`,
   UPGRADE_REPAIRS: `upgrade-repairs`,
-=======
->>>>>>> origin/release-1.14.0
   CONNECTIONS: `connections`,
   TRIGGERS: `triggers`,
   INTEGRATIONS: `integrations`,

@@ -48,11 +48,7 @@ TABLE_POLICY: dict[str, str] = {
     "job_events": ERASED_WITH_FLOW,
     "knowledge_base": BUILDER_ROWS,
     "knowledge_base_storage_migration": "builder rows matched by the `<username>/` storage directory they name",
-<<<<<<< HEAD
     "maintenance_state": "setter reference cleared; shared operational reason and maintenance switch retained",
-=======
-    "maintenance_state": REFERENCE_CLEARED,
->>>>>>> origin/release-1.14.0
     "mcp_server": BUILDER_ROWS,
     "memory_base": ERASED_WITH_FLOW,
     "memory_base_preprocessing_output": END_USER_ROWS,
