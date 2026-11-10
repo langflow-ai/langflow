@@ -99,7 +99,7 @@ export function DropdownTrigger({
               ) : (
                 <>
                   {
-                    options?.includes(value) ? (
+                    (combobox && value) || options?.includes(value) ? (
                       value
                     ) : // this logic is used for the agents component, if you update make sure to test the agent component
                     sourceOptions?.fields?.data?.node?.name ===

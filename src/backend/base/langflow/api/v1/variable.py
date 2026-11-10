@@ -14,6 +14,7 @@ from lfx.base.models.unified_models import (
     validate_model_provider_key,
 )
 from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+from lfx.services.settings.constants import AGENTIC_VARIABLES
 from sqlalchemy.exc import NoResultFound
 
 from langflow.api.utils import CurrentActiveUser, DbSession
@@ -313,7 +314,7 @@ async def read_variables(
             user_id=current_user.id,
             session=session,
             visibility=visibility,
-            include_empty_names=resettable_provider_variables,
+            include_empty_names=resettable_provider_variables | set(AGENTIC_VARIABLES),
         )
         if visibility is None and current_auth_is_restricted_api_key():
             all_variables = await filter_visible_resources(
