@@ -253,10 +253,10 @@ export const eventOriginOf = (
   return "event";
 };
 
-/** claimed and dispatched are both in flight; the UI calls it Running. */
+/** A claim is queued; dispatch confirms submission, not execution start. */
 export type TriggerEventDisplayState =
   | "queued"
-  | "running"
+  | "submitted"
   | "completed"
   | "skipped"
   | "failed"
@@ -267,10 +267,10 @@ export const eventDisplayStateOf = (
 ): TriggerEventDisplayState => {
   switch (event.state) {
     case "pending":
-      return "queued";
     case "claimed":
+      return "queued";
     case "dispatched":
-      return "running";
+      return "submitted";
     default:
       return event.state;
   }
