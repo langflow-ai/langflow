@@ -135,7 +135,7 @@
         {
           "distribution": "lfx-google",
           "extras": [],
-          "version": ">=0.4.0,<1.0.0",
+          "version": ">=0.4.1,<1.0.0",
           "providers": [
             "lfx-google"
           ]
@@ -143,7 +143,7 @@
         {
           "distribution": "lfx-microsoft",
           "extras": [],
-          "version": ">=0.1.5,<1.0.0",
+          "version": ">=0.2.0,<1.0.0",
           "providers": [
             "lfx-microsoft"
           ]
@@ -151,7 +151,7 @@
         {
           "distribution": "lfx-slack",
           "extras": [],
-          "version": ">=0.2.3,<1.0.0",
+          "version": ">=0.3.0,<1.0.0",
           "providers": [
             "lfx-slack"
           ]
@@ -159,7 +159,7 @@
         {
           "distribution": "lfx-github",
           "extras": [],
-          "version": ">=0.1.0,<1.0.0",
+          "version": ">=0.1.1,<1.0.0",
           "providers": [
             "lfx-github"
           ]
@@ -167,7 +167,7 @@
         {
           "distribution": "lfx-confluence",
           "extras": [],
-          "version": ">=0.1.0,<1.0.0",
+          "version": ">=0.1.1,<1.0.0",
           "providers": [
             "lfx-confluence"
           ]
@@ -175,7 +175,7 @@
         {
           "distribution": "lfx-jira",
           "extras": [],
-          "version": ">=0.1.0,<1.0.0",
+          "version": ">=0.1.1,<1.0.0",
           "providers": [
             "lfx-jira"
           ]
@@ -183,7 +183,7 @@
         {
           "distribution": "lfx-gitlab",
           "extras": [],
-          "version": ">=0.1.0,<1.0.0",
+          "version": ">=0.1.1,<1.0.0",
           "providers": [
             "lfx-gitlab"
           ]
@@ -191,7 +191,7 @@
         {
           "distribution": "lfx-servicenow",
           "extras": [],
-          "version": ">=0.1.0,<1.0.0",
+          "version": ">=0.1.1,<1.0.0",
           "providers": [
             "lfx-servicenow"
           ]
@@ -199,7 +199,7 @@
         {
           "distribution": "lfx-telegram",
           "extras": [],
-          "version": ">=0.1.0,<1.0.0",
+          "version": ">=0.1.1,<1.0.0",
           "providers": [
             "lfx-telegram"
           ]
