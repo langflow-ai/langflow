@@ -167,10 +167,10 @@ async def test_racing_resume_cannot_claim_before_suspend_metadata_is_ready(
     allow_suspend = asyncio.Event()
     original_suspend = job_service.suspend_job
 
-    async def _gated_suspend(gated_job_id, metadata):
+    async def _gated_suspend(gated_job_id, metadata, **kwargs):
         entered_suspend.set()
         await allow_suspend.wait()
-        return await original_suspend(gated_job_id, metadata)
+        return await original_suspend(gated_job_id, metadata, **kwargs)
 
     monkeypatch.setattr(job_service, "suspend_job", _gated_suspend)
     output = {
