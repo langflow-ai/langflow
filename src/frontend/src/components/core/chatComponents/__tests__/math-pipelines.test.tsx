@@ -49,6 +49,8 @@ for (const [name, renderer] of Object.entries(renderers)) {
       );
       expect(container.querySelector(".katex-display")).not.toBeNull();
       expect(container.querySelector(".katex a")).toBeNull();
+      expect(container.querySelector('a[href^="javascript:"]')).toBeNull();
+      expect(container).toHaveTextContent("click");
     });
   });
 }
