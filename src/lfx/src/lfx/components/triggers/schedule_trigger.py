@@ -6,17 +6,27 @@ from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from lfx.base.triggers.base import BaseTriggerComponent
-from lfx.io import BoolInput, DropdownInput, MessageTextInput
+from lfx.base.triggers.schedule import (
+    FIELDS_BY_TYPE,
+    INTERVALS,
+    MONTH_DAYS,
+    PICKER_FIELDS,
+    SCHEDULE_CUSTOM,
+    SCHEDULE_TYPES,
+    SCHEDULE_WEEKLY,
+    TIMES_OF_DAY,
+    WEEKDAYS,
+    ScheduleTriggerError,
+    picker_cron,
+    timezone_options,
+)
+from lfx.io import BoolInput, DropdownInput, MessageTextInput, MultiselectInput
 
 #: Catch-up policies, mirroring ``TriggerCatchupPolicy`` on the server.
 CATCHUP_COALESCE = "coalesce"
 CATCHUP_SKIP = "skip"
 
 _CRON_FIELD_COUNT = 5
-
-
-class ScheduleTriggerError(ValueError):
-    """The schedule cannot be armed as configured."""
 
 
 def validate_cron_expression(expression: str) -> str:
@@ -60,7 +70,7 @@ def validate_timezone(name: str) -> str:
 
 class ScheduleTriggerComponent(BaseTriggerComponent):
     display_name = "Schedule"
-    description = "Run this flow on a cron schedule, evaluated in a timezone you choose."
+    description = "Run this flow on a schedule, evaluated in a timezone you choose."
     documentation: str = "https://docs.langflow.org/triggers"
     name = "ScheduleTrigger"
     icon = "Clock"
@@ -68,6 +78,47 @@ class ScheduleTriggerComponent(BaseTriggerComponent):
     trigger_kind = "schedule"
 
     inputs = [
+        DropdownInput(
+            name="schedule_type",
+            display_name="Schedule type",
+            options=SCHEDULE_TYPES,
+            value=SCHEDULE_WEEKLY,
+            info="How often the flow runs. Pick Custom (cron) to write a cron expression.",
+            real_time_refresh=True,
+        ),
+        DropdownInput(
+            name="interval",
+            display_name="Every",
+            options=list(INTERVALS),
+            value="15 minutes",
+            real_time_refresh=True,
+            show=False,
+        ),
+        MultiselectInput(
+            name="days_of_week",
+            display_name="Days of the week",
+            options=list(WEEKDAYS),
+            value=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+            real_time_refresh=True,
+        ),
+        MultiselectInput(
+            name="days_of_month",
+            display_name="Days of the month",
+            options=MONTH_DAYS,
+            value=["1"],
+            info="A month without the picked day is skipped.",
+            real_time_refresh=True,
+            show=False,
+        ),
+        DropdownInput(
+            name="time_of_day",
+            display_name="Time of day",
+            options=TIMES_OF_DAY,
+            value="08:00",
+            info="24-hour time in the timezone below. Type another time, such as 08:15, to use it.",
+            combobox=True,
+            real_time_refresh=True,
+        ),
         MessageTextInput(
             name="cron_expression",
             display_name="Cron expression",
@@ -78,16 +129,14 @@ class ScheduleTriggerComponent(BaseTriggerComponent):
             ),
             input_types=[],
             required=True,
+            show=False,
         ),
-        MessageTextInput(
+        DropdownInput(
             name="timezone",
             display_name="Timezone",
+            options=timezone_options(),
             value="UTC",
-            info=(
-                "IANA timezone the expression is evaluated in, for example 'Europe/Lisbon'. "
-                "Daylight-saving changes are applied, so 08:00 stays 08:00 local."
-            ),
-            input_types=[],
+            info="The schedule runs in this timezone. Daylight-saving changes are applied, so 08:00 stays 08:00 local.",
             required=True,
         ),
         DropdownInput(
@@ -114,6 +163,18 @@ class ScheduleTriggerComponent(BaseTriggerComponent):
         ),
     ]
 
+    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
+        """Show the fields the schedule type needs and keep the cron the server reads in step."""
+        if field_name in build_config:
+            build_config[field_name]["value"] = field_value
+        return _sync_picker(build_config, field_name)
+
+    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):
+        """On a component update, open a node saved before the picker on its own cron."""
+        node = await super().update_frontend_node(new_frontend_node, current_frontend_node)
+        _sync_picker(node["template"], None)
+        return node
+
     def trigger_config(self) -> dict[str, Any]:
         """The JSON the flow-save reconciler copies onto the trigger row."""
         return {
@@ -122,3 +183,28 @@ class ScheduleTriggerComponent(BaseTriggerComponent):
             "catchup_policy": self.catchup_policy or CATCHUP_COALESCE,
             "share_session": bool(self.share_session),
         }
+
+
+def _sync_picker(build_config: dict, field_name: str | None) -> dict:
+    values = {name: (build_config.get(name) or {}).get("value") for name in PICKER_FIELDS}
+    if field_name in PICKER_FIELDS:
+        cron = picker_cron(values)
+        if cron is not None:
+            build_config["cron_expression"]["value"] = cron
+    elif values["schedule_type"] != SCHEDULE_CUSTOM and _picker_disagrees(values, build_config):
+        # A node saved before the picker existed keeps its cron; show it rather than a guess.
+        build_config["schedule_type"]["value"] = SCHEDULE_CUSTOM
+    shown = FIELDS_BY_TYPE.get(build_config["schedule_type"]["value"], FIELDS_BY_TYPE[SCHEDULE_CUSTOM])
+    for name in {field for fields in FIELDS_BY_TYPE.values() for field in fields}:
+        if name in build_config:
+            build_config[name]["show"] = name in shown
+    return build_config
+
+
+def _picker_disagrees(values: dict[str, Any], build_config: dict) -> bool:
+    try:
+        cron = picker_cron(values)
+    except ScheduleTriggerError:
+        return True
+    stored = (build_config.get("cron_expression") or {}).get("value") or ""
+    return cron is not None and " ".join(stored.split()) != cron
