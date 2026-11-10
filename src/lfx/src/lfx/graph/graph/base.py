@@ -2749,7 +2749,7 @@ class Graph:
             # This could usually happen with input vertices like ChatInput
             self.run_manager.remove_vertex_from_runnables(v.id)
 
-            await logger.adebug(f"Vertex {v.id}, result: {v.built_result}, object: {v.built_object}")
+            await logger.adebug("Vertex %s, result: %s, object: %s", v.id, v.built_result, v.built_object)
 
         for v in vertices:
             next_runnable_vertices = await self.get_next_runnable_vertices(lock, vertex=v, cache=False)
