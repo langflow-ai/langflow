@@ -628,7 +628,7 @@ async def test_restore_creates_project_and_receipt_survives_project_deletion(
         "get_settings_service",
         lambda: SimpleNamespace(
             settings=SimpleNamespace(add_projects_to_mcp_servers=False),
-            auth_settings=SimpleNamespace(AUTO_LOGIN=True),
+            auth_settings=SimpleNamespace(AUTO_LOGIN=True, skip_auth_auto_login=False),
         ),
     )
     project_id = str(uuid4())
@@ -654,15 +654,14 @@ async def test_restore_creates_project_and_receipt_survives_project_deletion(
     assert receipt.json() == created.json()
 
 
+@pytest.mark.parametrize("auto_login", [False, True])
 async def test_restore_creates_project_without_mcp_server_when_api_key_issuance_is_denied(
-    client: AsyncClient, logged_in_headers: dict[str, str], monkeypatch
+    client: AsyncClient, logged_in_headers: dict[str, str], monkeypatch, auto_login
 ):
     """Mirrors _new_project's denial handling.
 
-    AUTO_LOGIN=false always auto-chooses apikey auth here (there is no
-    caller-supplied auth_settings on a replacement request), so a denied
-    issuance must not fail the create — it drops the MCP server and clears
-    auth_settings instead.
+    A default API key refused by deployment policy should not fail project creation.
+    It drops the MCP server and clears auth_settings instead.
     """
     from langflow.api.v1 import projects as projects_module
     from langflow.services.database.models.api_key.policy import (
@@ -676,7 +675,7 @@ async def test_restore_creates_project_without_mcp_server_when_api_key_issuance_
         "get_settings_service",
         lambda: SimpleNamespace(
             settings=SimpleNamespace(add_projects_to_mcp_servers=True),
-            auth_settings=SimpleNamespace(AUTO_LOGIN=False),
+            auth_settings=SimpleNamespace(AUTO_LOGIN=auto_login, skip_auth_auto_login=False),
         ),
     )
     previous_policy = get_api_key_issuance_policy()

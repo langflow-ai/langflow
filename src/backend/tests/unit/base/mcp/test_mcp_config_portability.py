@@ -15,6 +15,7 @@ from lfx.services.variable.exceptions import RuntimeVariableError
 @pytest.mark.parametrize("location", ["url", "headers", "env"])
 @pytest.mark.parametrize("reference", ["{{MISSING}}", "MCP_MISSING_1234ABCD", "MCP_private-token-canary"])
 async def test_account_bound_missing_variable_fails_before_connecting(variables, location, reference):
+    """Reject unresolved account references before connecting without exposing secret values."""
     from unittest.mock import AsyncMock
 
     client = AsyncMock()
@@ -47,6 +48,7 @@ async def test_account_bound_missing_variable_fails_before_connecting(variables,
 
 
 def test_account_bound_substitution_preserves_opaque_values():
+    """Keep placeholder-like text inside a resolved secret unchanged."""
     assert util._process_headers(
         {"Authorization": "Bearer {{TOKEN}}"},
         {"TOKEN": "opaque-{{MISSING}}"},

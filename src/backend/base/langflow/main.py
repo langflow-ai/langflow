@@ -1141,7 +1141,10 @@ def create_app():
             return await call_next(request)
 
         prefix = request.headers.get("X-Forwarded-Prefix", "").rstrip("/")
-        if prefix and prefix.startswith("/") and "://" not in prefix and "?" not in prefix and "#" not in prefix:
+        # Restrict transport URLs to path segments that cannot change their origin.
+        if re.fullmatch(r"(?:/[a-zA-Z0-9._~-]+)+", prefix) and not any(
+            part in {".", ".."} for part in prefix.split("/")
+        ):
             request.scope["root_path"] = prefix
         return await call_next(request)
 

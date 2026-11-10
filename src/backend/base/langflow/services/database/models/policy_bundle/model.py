@@ -48,6 +48,7 @@ class PolicyBundleRevision(SQLModel, table=True):  # type: ignore[call-arg]
         default_factory=list,
         sa_column=sa.Column(sa.JSON, nullable=True, server_default=sa.text("'[]'")),
     )
+    approved_trigger_kinds: list[str] | None = Field(default=None, sa_column=sa.Column(sa.JSON, nullable=True))
     content_hash: str = Field(sa_column=sa.Column(sa.String(64), nullable=False))
     source: str = Field(
         default="api",

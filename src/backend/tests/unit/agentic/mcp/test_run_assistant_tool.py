@@ -35,6 +35,15 @@ RUNNER_MODULE = "langflow.agentic.utils.assistant_runner"
 
 NEW_FLOW_DATA = {"nodes": [{"id": "ChatInput-abc"}], "edges": []}
 
+
+@pytest.fixture(autouse=True)
+def _trusted_assistant_authoring(monkeypatch):
+    """Exercise assistant operations in a deployment that permits this test author's code."""
+    from langflow.services.deps import get_settings_service
+
+    monkeypatch.setattr(get_settings_service().settings, "custom_component_admin_only", False)
+
+
 EVENTS_WITH_FLOW = [
     {"event": "progress", "step": "generating_flow"},
     {"event": "flow_update", "action": "set_flow", "flow": {"name": "Simple Chat Flow", "data": NEW_FLOW_DATA}},

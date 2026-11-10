@@ -16,6 +16,7 @@ from uuid import UUID
 import nanoid
 import pandas as pd
 import yaml
+from langchain_core.messages import BaseMessage
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, ValidationError
 
@@ -1997,7 +1998,8 @@ class Component(CustomComponent):
             return self._update_tools_with_metadata(tools=tools, metadata=self.tools_metadata)
 
         # If no metadata exists yet, filter based on enabled_tools
-        return self._filter_tools_by_status(tools=tools, metadata=None)
+        component_toolkit: type[ComponentToolkit] = get_component_toolkit()
+        return component_toolkit(component=self).protect_tools(self._filter_tools_by_status(tools=tools, metadata=None))
 
     async def _get_tools(self) -> list[Tool]:
         """Get the list of tools for this component.
@@ -2501,7 +2503,11 @@ class Component(CustomComponent):
             usage_data: Usage | None = None
             for chunk in iterator:
                 complete_message = await self._process_chunk(
-                    chunk.content, complete_message, message_id, message, first_chunk=first_chunk
+                    chunk.text if isinstance(chunk, BaseMessage) else chunk.content,
+                    complete_message,
+                    message_id,
+                    message,
+                    first_chunk=first_chunk,
                 )
                 first_chunk = False
                 chunk_usage = extract_usage_from_chunk(chunk)
@@ -2519,7 +2525,11 @@ class Component(CustomComponent):
         usage_data: Usage | None = None
         async for chunk in iterator:
             complete_message = await self._process_chunk(
-                chunk.content, complete_message, message_id, message, first_chunk=first_chunk
+                chunk.text if isinstance(chunk, BaseMessage) else chunk.content,
+                complete_message,
+                message_id,
+                message,
+                first_chunk=first_chunk,
             )
             first_chunk = False
             chunk_usage = extract_usage_from_chunk(chunk)
