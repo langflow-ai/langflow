@@ -168,6 +168,30 @@ describe("TriggerEventsDrawer", () => {
     expect(within(detail).getByText("3 of 3")).toBeInTheDocument();
   });
 
+  it("resets the payload tree when selecting a different event", async () => {
+    const user = userEvent.setup();
+    mockEvents = [
+      makeEvent({ id: "first", payload: { data: { text: "First payload" } } }),
+      makeEvent({
+        id: "second",
+        payload: { data: { text: "Second payload" } },
+      }),
+    ];
+    open();
+    await user.click(screen.getByText("data", { exact: true }));
+    expect(await screen.findByText('\"First payload\"')).toBeInTheDocument();
+
+    await user.click(screen.getByTestId("trigger-event-second"));
+
+    const payload = screen.getByTestId("trigger-event-payload");
+    expect(within(payload).queryByText('\"First payload\"')).toBeNull();
+    expect(within(payload).queryByText('\"Second payload\"')).toBeNull();
+    await user.click(within(payload).getByText("data", { exact: true }));
+    expect(
+      await within(payload).findByText('\"Second payload\"'),
+    ).toBeInTheDocument();
+  });
+
   it("shows the safe run failure detail beside its error code", () => {
     mockEvents = [
       makeEvent({

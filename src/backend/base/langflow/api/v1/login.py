@@ -11,6 +11,7 @@ from langflow.api.v1.schemas import Token
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.auth.cookies import auth_cookie_name
 from langflow.services.auth.exceptions import AuthenticationError
+from langflow.services.auth.refresh_tokens import revoke_refresh_token
 from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_auth_service, get_settings_service, get_variable_service
@@ -260,8 +261,12 @@ async def get_session(
 
 
 @router.post("/logout", include_in_schema=False)
-async def logout(request: Request, response: Response):
-    auth_settings = get_settings_service().auth_settings
+async def logout(request: Request, response: Response, db: DbSession):
+    settings = get_settings_service()
+    auth_settings = settings.auth_settings
+    token = request.cookies.get(auth_cookie_name("refresh_token_lf", request))
+    if token:
+        await revoke_refresh_token(token, db, settings)
 
     response.delete_cookie(
         auth_cookie_name("refresh_token_lf", request),
