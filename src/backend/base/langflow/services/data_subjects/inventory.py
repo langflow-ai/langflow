@@ -71,6 +71,7 @@ TABLE_POLICY: dict[str, str] = {
     "trigger_event": "deleted with its trigger",
     "trigger_lease": NOT_PERSONAL,
     "trigger_listener_lease": NOT_PERSONAL,
+    "trigger_renewal_observation": "deleted with its trigger when the erase is approved",
     "trigger_source_version": "deleted with its trigger when the erase is approved",
     "trigger_subscription": "deleted with its trigger",
     "user": "deleted last, through the identity-mutation protocol",

@@ -38,7 +38,6 @@ from langflow.services.triggers.error_codes import CodedTriggerError, TriggerErr
 from langflow.services.triggers.errors import TriggerNotFoundError
 from langflow.services.triggers.locking import lock_trigger, lock_trigger_for_admission
 from langflow.services.triggers.ownership import require_owned_connection
-from langflow.services.triggers.policy import TriggerPolicyContext, TriggerPolicyPurpose, require_trigger_allowed
 from langflow.services.triggers.providers.registry import canvas_only_kinds, push_mechanisms, source_kinds
 from langflow.services.triggers.reconciliation import (
     NODE_REMOVED_ERROR,
@@ -53,6 +52,8 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from sqlmodel.ext.asyncio.session import AsyncSession
+
+    from langflow.services.triggers.policy import TriggerPolicyContext
 
 #: Bytes of entropy behind a trigger's public ingress address. The address is
 #: unauthenticated and guessable-by-brute-force is the failure to avoid, so it
@@ -201,6 +202,12 @@ class TriggerService(Service):
             msg = f"A {payload.kind!r} trigger is created by adding its component to the flow, not through this API."
             raise ValueError(msg)
         if payload.state is TriggerState.ACTIVE:
+            from langflow.services.triggers.policy import (
+                TriggerPolicyContext,
+                TriggerPolicyPurpose,
+                require_trigger_allowed,
+            )
+
             await require_trigger_allowed(
                 TriggerPolicyContext(
                     user_id=owner_id, flow_id=payload.flow_id, kind=payload.kind, purpose=TriggerPolicyPurpose.ENABLE
@@ -293,6 +300,12 @@ class TriggerService(Service):
         if row.state not in _ENABLEABLE_STATES:
             msg = f"Trigger in state {row.state!r} cannot be enabled."
             raise ValueError(msg)
+        from langflow.services.triggers.policy import (
+            TriggerPolicyContext,
+            TriggerPolicyPurpose,
+            require_trigger_allowed,
+        )
+
         await require_trigger_allowed(
             TriggerPolicyContext(
                 user_id=row.user_id, flow_id=row.flow_id, kind=row.kind, purpose=TriggerPolicyPurpose.ENABLE
