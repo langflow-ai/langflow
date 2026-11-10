@@ -10679,7 +10679,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-confluence"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/confluence" }
 dependencies = [
     { name = "httpx" },
@@ -10890,7 +10890,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-github"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/github" }
 dependencies = [
     { name = "httpx" },
@@ -10905,7 +10905,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-gitlab"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/gitlab" }
 dependencies = [
     { name = "httpx" },
@@ -10988,7 +10988,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-jira"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/jira" }
 dependencies = [
     { name = "httpx" },
@@ -11003,7 +11003,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-microsoft"
-version = "0.1.5"
+version = "0.2.0"
 source = { editable = "src/bundles/microsoft" }
 dependencies = [
     { name = "lfx" },
@@ -11149,7 +11149,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-servicenow"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/servicenow" }
 dependencies = [
     { name = "lfx" },
@@ -11160,7 +11160,7 @@ requires-dist = [{ name = "lfx", editable = "src/lfx" }]
 
 [[package]]
 name = "lfx-slack"
-version = "0.2.3"
+version = "0.3.0"
 source = { editable = "src/bundles/slack" }
 dependencies = [
     { name = "aiohttp" },
@@ -11177,7 +11177,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-telegram"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/telegram" }
 dependencies = [
     { name = "httpx" },
@@ -11211,11 +11211,11 @@ requires-dist = [
 
 [[package]]
 name = "lfx-valkey"
-version = "0.2.1"
+version = "0.3.0"
 source = { editable = "src/bundles/valkey" }
 dependencies = [
     { name = "langchain-aws" },
-    { name = "langchain-aws", extra = ["valkey"], marker = "sys_platform != 'win32'" },
+    { name = "langchain-aws", extra = ["valkey"], marker = "python_full_version < '3.15' and sys_platform != 'win32'" },
     { name = "langchain-community" },
     { name = "lfx" },
     { name = "redis" },
@@ -11224,8 +11224,8 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "langchain-aws", marker = "sys_platform == 'win32'", specifier = ">=1.4.1,<2.0.0" },
-    { name = "langchain-aws", extras = ["valkey"], marker = "sys_platform != 'win32'", specifier = ">=1.4.1,<2.0.0" },
+    { name = "langchain-aws", marker = "python_full_version >= '3.15' or sys_platform == 'win32'", specifier = ">=1.4.1,<2.0.0" },
+    { name = "langchain-aws", extras = ["valkey"], marker = "python_full_version < '3.15' and sys_platform != 'win32'", specifier = ">=1.4.1,<2.0.0" },
     { name = "langchain-community", specifier = ">=0.4.1,<1.0.0" },
     { name = "lfx", editable = "src/lfx" },
     { name = "redis", specifier = ">=7.4.0,<8.0.0" },
