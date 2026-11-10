@@ -173,14 +173,14 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
             store = CassandraGraphVectorStore.from_documents(
                 documents=documents,
                 embedding=self.embedding,
-                node_table=self.table_name,
+                table_name=self.table_name,
                 keyspace=self.keyspace,
             )
         else:
             self.log("No documents to add to the Vector Store.")
             store = CassandraGraphVectorStore(
                 embedding=self.embedding,
-                node_table=self.table_name,
+                table_name=self.table_name,
                 keyspace=self.keyspace,
                 setup_mode=setup_mode,
             )
@@ -201,9 +201,17 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
         self.log(f"Number of results: {self.number_of_results}")
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
+            search_type = self._map_search_type()
+            if search_type == "similarity_score_threshold":
+                # CassandraGraphVectorStore has no relevance score function; langchain raises a bare
+                # NotImplementedError that the UI shows as an unknown error.
+                msg = (
+                    "Cassandra Graph doesn't support 'Similarity with score threshold'. "
+                    "Use 'Similarity' or 'MMR traversal'."
+                )
+                raise ValueError(msg)
             try:
-                search_type = self._map_search_type()
-                search_args = self._build_search_args()
+                search_args = self._build_search_args(search_type)
 
                 self.log(f"Search args: {search_args}")
 
@@ -224,12 +232,17 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
             return data
         return []
 
-    def _build_search_args(self):
+    def _build_search_args(self, search_type: str) -> dict:
         args = {
             "k": self.number_of_results,
-            "score_threshold": self.search_score_threshold,
-            "depth": self.depth,
+            # mmr_traversal starts its candidates at depth 0 and only follows edges while
+            # depth + 1 < limit, so it needs one more than traversal for the same hop count.
+            "depth": self.depth + 1 if search_type == "mmr_traversal" else self.depth,
         }
+        # mmr_traversal also uses score_threshold as an MMR-score cutoff, so a default of 0
+        # silently drops results; the input only promises it for this search type.
+        if search_type == "similarity_score_threshold":
+            args["score_threshold"] = self.search_score_threshold
 
         if self.search_filter:
             clean_filter = {k: v for k, v in self.search_filter.items() if k and v}
@@ -238,8 +251,8 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
         return args
 
     def get_retriever_kwargs(self):
-        search_args = self._build_search_args()
+        search_type = self._map_search_type()
         return {
-            "search_type": self._map_search_type(),
-            "search_kwargs": search_args,
+            "search_type": search_type,
+            "search_kwargs": self._build_search_args(search_type),
         }
