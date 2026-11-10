@@ -187,7 +187,7 @@ describe("ConnectionsPage", () => {
       } as unknown as Window);
       const { rerender } = render(<ConnectionsPage />);
       const user = userEvent.setup();
-      if (ownership === "user") await openTab("Instance");
+      if (ownership === "user") await filterByOwner("Instance");
       await user.type(screen.getByTestId("connections-search"), "old search");
       await user.click(screen.getByTestId("add-connection"));
       await user.type(screen.getByTestId("connection-name"), "new_connection");
@@ -204,11 +204,9 @@ describe("ConnectionsPage", () => {
       rerender(<ConnectionsPage />);
       expect(await screen.findByText("Connected")).toBeVisible();
       await user.click(screen.getByTestId("connection-done"));
-      expect(
-        screen.getByRole("tab", {
-          name: ownership === "instance" ? "Instance" : "Mine",
-        }),
-      ).toHaveAttribute("aria-selected", "true");
+      expect(screen.getByRole("combobox", { name: "Owner" })).toHaveTextContent(
+        ownership === "instance" ? "Instance" : "Mine",
+      );
       expect(screen.getByTestId("connections-search")).toHaveValue("");
       expect(screen.getByTestId("connection-row-new_connection")).toBeVisible();
       mockIntegrations = { data: { providers: [] } };
@@ -231,7 +229,7 @@ describe("ConnectionsPage", () => {
     } as unknown as Window);
     const { rerender } = render(<ConnectionsPage />);
     const user = userEvent.setup();
-    await openTab("Other users");
+    await filterByOwner("Other users");
     await user.click(screen.getByTestId("connection-menu-other"));
     await user.click(screen.getByRole("menuitem", { name: "Reconnect" }));
     await user.click(screen.getByTestId("connection-authorize"));
@@ -240,9 +238,8 @@ describe("ConnectionsPage", () => {
     rerender(<ConnectionsPage />);
     expect(await screen.findByText("Connected")).toBeVisible();
     await user.click(screen.getByTestId("connection-done"));
-    expect(screen.getByRole("tab", { name: "Other users" })).toHaveAttribute(
-      "aria-selected",
-      "true",
+    expect(screen.getByRole("combobox", { name: "Owner" })).toHaveTextContent(
+      "Other users",
     );
     expect(screen.getByTestId("connection-row-other")).toBeVisible();
   });
@@ -262,7 +259,7 @@ describe("ConnectionsPage", () => {
       const user = userEvent.setup();
       render(<ConnectionsPage />);
 
-      await openTab("Other users");
+      await filterByOwner("Other users");
       const row = screen.getByTestId("connection-row-other_servicenow");
       expect(within(row).getByText("Unavailable")).toBeVisible();
       expect(
@@ -295,7 +292,7 @@ describe("ConnectionsPage", () => {
     const user = userEvent.setup();
     render(<ConnectionsPage />);
 
-    await openTab("Instance");
+    await filterByOwner("Instance");
     expect(
       within(
         screen.getByTestId("connection-row-instance_servicenow"),

@@ -14,6 +14,7 @@ next to the route it protects.
 from __future__ import annotations
 
 import secrets
+from copy import deepcopy
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
@@ -352,7 +353,36 @@ class TriggerService(Service):
         This commits ``session``. Raises ``ValueError`` with an owner-facing
         reason when the trigger cannot be enabled.
         """
-        return await self.activate_push_source(session, row=await self.enable(session, row=row))
+        from langflow.services.triggers.source_errors import SourceConfigurationError
+
+        identifier = row.id
+        observed = (row.user_id, row.flow_id, row.provider, row.kind, deepcopy(row.config), row.state)
+        if row.provider == "whatsapp" and row.state in _ENABLEABLE_STATES:
+            from langflow.services.triggers.providers.whatsapp.lifecycle import finish_pending_cleanup
+
+            # Provider cleanup uses independent leased transactions, like activation.
+            await session.commit()
+            await finish_pending_cleanup(identifier)
+        try:
+            return await self.activate_push_source(session, row=await self.enable(session, row=row))
+        except SourceConfigurationError as exc:
+            if observed[2] != "whatsapp":
+                raise
+            await session.rollback()
+            current = await lock_trigger(session, identifier)
+            if (
+                current is not None
+                and (current.user_id, current.flow_id, current.provider, current.kind, current.config, current.state)
+                == observed
+            ):
+                current.state = TriggerState.ERROR.value
+                current.last_error = (
+                    f"Source activation failed: {str(exc).removesuffix('.')}. Enable the trigger to retry."
+                )
+                current.updated_at = datetime.now(timezone.utc)
+                session.add(current)
+                await session.commit()
+            raise
 
     async def activate_push_source(self, session: AsyncSession, *, row: Trigger) -> Trigger:
         """Finish a push source's activation after :meth:`enable`; any other trigger is returned as is.

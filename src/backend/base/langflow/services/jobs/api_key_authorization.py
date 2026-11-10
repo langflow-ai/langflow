@@ -221,7 +221,7 @@ async def _revalidate_job(job: Job) -> AuthCredentialContext | None:
 
 
 async def authorize_job_start(
-    service: JobService, job_id: UUID, *, job: Job | None = None
+    service: JobService, job_id: UUID, *, job: Job | None = None, owner: str | None = None
 ) -> AuthCredentialContext | None:
     """Recheck before components run and durably refuse invalid queued admission."""
     if job is None or job.job_id != job_id:
@@ -233,8 +233,7 @@ async def authorize_job_start(
     except Exception as exc:
         from langflow.services.authorization.audit import AUDIT_EVENT_DECISION, audit_decision
 
-        await service.set_error(job_id, dict(JOB_AUTHORIZATION_ERROR))
-        await service.update_job_status(job_id, JobStatus.FAILED, finished_timestamp=True)
+        await service.terminalize_live_job(job_id, JobStatus.FAILED, owner=owner, error=JOB_AUTHORIZATION_ERROR)
         metadata = job.job_metadata if isinstance(job.job_metadata, dict) else {}
         principal = None
         details = {"event": AUDIT_EVENT_DECISION, "reason": "job_credential_authorization_invalid"}

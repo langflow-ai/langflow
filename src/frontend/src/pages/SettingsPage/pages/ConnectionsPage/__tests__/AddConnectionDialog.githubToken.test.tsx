@@ -13,6 +13,12 @@ import AddConnectionDialog from "../components/AddConnectionDialog";
 import { selectProvider } from "./provider-select-utils";
 
 jest.unmock("react-i18next");
+
+beforeAll(() => {
+  Element.prototype.hasPointerCapture ??= jest.fn(() => false);
+  Element.prototype.releasePointerCapture ??= jest.fn();
+  Element.prototype.scrollIntoView ??= jest.fn();
+});
 const mockCreate = jest.fn();
 const mockRenew = jest.fn();
 const mockStartOAuth = jest.fn();
