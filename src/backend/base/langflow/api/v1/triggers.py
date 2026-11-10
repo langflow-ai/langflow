@@ -74,6 +74,7 @@ from langflow.services.triggers.errors import (
     TriggerEventNotFoundError,
     TriggerNotFoundError,
 )
+from langflow.services.triggers.policy import TriggerPolicyError, TriggerPolicyPurpose, stage_policy_denial
 from langflow.services.triggers.service import TriggerService
 
 if TYPE_CHECKING:
@@ -346,8 +347,24 @@ async def create_trigger(
     """
     flow = await _authorized_flow(session, current_user, payload.flow_id, FlowAction.WRITE)
     _reject_unsupported_binding(payload.binding_target, payload.deployment_id)
+    actor_id = current_user.id
     try:
         row = await service.create(session, payload=payload, owner_id=flow.user_id)
+    except TriggerPolicyError as exc:
+        from langflow.services.authorization.audit import stage_audit_decision
+
+        await session.rollback()
+        stage_audit_decision(
+            session=session,
+            required=True,
+            user_id=actor_id,
+            action="trigger:policy_denied",
+            obj=f"flow:{payload.flow_id}",
+            result="deny",
+            details={"kind": payload.kind, "purpose": TriggerPolicyPurpose.ENABLE.value},
+        )
+        await session.commit()
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=refusal_detail(exc)) from exc
     except FlowVersionNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except ValueError as exc:
@@ -427,10 +444,19 @@ async def enable_trigger(
     row = await _authorized_trigger(
         service=service, session=session, user=current_user, trigger_id=trigger_id, action=FlowAction.WRITE
     )
+    actor_id = current_user.id
     try:
         updated = await service.enable(session, row=row)
         await _commit_trigger_action(session, user_id=current_user.id, row=updated, action=AUDIT_RESUME)
         updated = await service.activate_push_source(session, row=updated)
+    except TriggerPolicyError as exc:
+        # Release admission's write lock before a denied action is committed.
+        # The original state is restored, while the denial remains queryable.
+        await session.rollback()
+        row = await service.get(session, trigger_id)
+        stage_policy_denial(session, row=row, purpose=TriggerPolicyPurpose.ENABLE, actor_user_id=actor_id)
+        await session.commit()
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=refusal_detail(exc)) from exc
     except IntegrationPolicyBlockedError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
