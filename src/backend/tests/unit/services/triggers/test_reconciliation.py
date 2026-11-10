@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import subprocess
+import sys
 from typing import Any
 
 import pytest
@@ -89,6 +91,15 @@ async def test_an_unusable_pick_reports_what_to_fix_not_the_hidden_cron(trigger_
     rows = await _triggers(owned_flow)
     assert rows[0].last_error == "Pick at least one day of the week."
     assert "schedule_error" not in rows[0].config
+
+
+def test_loading_langflow_before_lfx_components_keeps_component_importable() -> None:
+    """The reconciler's lfx import must not run while ``lfx.inputs`` is half loaded."""
+    code = "import langflow.utils.i18n_keys\nfrom lfx.custom.custom_component.component import Component"
+    result = subprocess.run(  # noqa: S603
+        [sys.executable, "-c", code], capture_output=True, text=True, encoding="utf-8", check=False, timeout=300
+    )
+    assert result.returncode == 0, result.stderr[-2000:]
 
 
 def test_missing_template_fields_fall_back_rather_than_crash() -> None:

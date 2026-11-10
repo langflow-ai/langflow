@@ -35,7 +35,6 @@ import secrets
 from typing import TYPE_CHECKING, Any
 
 from croniter import croniter
-from lfx.base.triggers.schedule import PICKER_FIELDS, ScheduleTriggerError, schedule_cron
 from lfx.log.logger import logger
 from sqlalchemy.exc import DBAPIError
 
@@ -283,6 +282,10 @@ def _apply_schedule_pick(node_data: dict[str, Any], config: dict[str, Any]) -> N
     An unusable pick blanks the cron so the old schedule stops, and keeps the
     picker's message: the cron field is hidden, so a cron error would not say what to fix.
     """
+    # Imported here: ``lfx.base.triggers`` loads Component, and this module is
+    # reached while ``lfx.inputs`` is still importing (lfx.helpers -> langflow).
+    from lfx.base.triggers.schedule import PICKER_FIELDS, ScheduleTriggerError, schedule_cron
+
     values = {name: _template_value(node_data, name, None) for name in PICKER_FIELDS}
     try:
         config["cron"] = schedule_cron(values, config["cron"])
