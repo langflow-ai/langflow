@@ -212,12 +212,16 @@ def _delivery_problem(session, signal: str) -> str | None:
     if response.history:
         chain = " -> ".join(str(r.status_code) for r in response.history)
         return (
-            f"the request was redirected ({chain}) to {response.url} and the payload was dropped; "
-            f"redirects turn the POST into a GET, so nothing was delivered"
+            f"the request was redirected ({chain}) to {response.url}, so delivery to the "
+            f"configured collector was not confirmed"
         )
 
     if HTTPStatus.MULTIPLE_CHOICES <= response.status_code < HTTPStatus.BAD_REQUEST:
-        return f"the endpoint redirected the request ({response.status_code}) and did not accept the payload"
+        target = response.headers.get("Location", "an unspecified location")
+        return (
+            f"the endpoint redirected the request ({response.status_code}) to {target}; "
+            f"the redirect was not followed, so delivery was not confirmed"
+        )
 
     body = response.content
     if not body:
@@ -394,7 +398,7 @@ def _check_signal(signal: str, resource, timeout: float | None) -> SignalReport:
         )
     except Exception as exc:  # noqa: BLE001
         # Endpoint and protocol belong on every failure line, not only the ones that reached the
-        # wire: a malformed OTEL_EXPORTER_OTLP_TIMEOUT raises here, before any request exists, and
+        # wire: a malformed gRPC OTEL_EXPORTER_OTLP_TIMEOUT raises before any request exists, and
         # "which end is wrong" is still the question. (A bad certificate path does not: both
         # transports construct fine and fail later, which the export branch below covers.)
         report.status = FAILED
@@ -454,9 +458,8 @@ def _check_signal(signal: str, resource, timeout: float | None) -> SignalReport:
     report.exporter_logs = capture.messages
     # Every signal's export result enum spells success as a member named SUCCESS.
     if getattr(result, "name", "") == "SUCCESS":
-        # SUCCESS only means the exporter saw a status under 400. It never checks whether it was
-        # redirected away from the collector, and never reads the response body, so several
-        # "delivered nothing" cases reach here looking identical to a real success.
+        # SUCCESS only means the exporter saw a status under 400. It never checks redirects or
+        # reads the response body, so "delivered nothing" can look identical to a real success.
         problem = _delivery_problem(session, signal) if session is not None else None
         if problem:
             report.status = FAILED

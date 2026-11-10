@@ -4,12 +4,14 @@ import IconComponent from "@/components/common/genericIconComponent";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useUpdateUser } from "@/controllers/API/queries/auth";
 import CustomGetStartedProgress from "@/customization/components/custom-get-started-progress";
+import { useCustomNewProjectButton } from "@/customization/hooks/use-custom-new-project-button";
 import useAuthStore from "@/stores/authStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { cn } from "@/utils/utils";
 import { AddFolderButton } from "./add-folder-button";
 import { UploadFolderButton } from "./upload-folder-button";
 
+// Header of the project sidebar: title, upload and new-project buttons.
 export const HeaderButtons = ({
   handleUploadFlowsToFolder,
   isUpdatingFolder,
@@ -33,6 +35,8 @@ export const HeaderButtons = ({
   const hideNewProjectButton = useUtilityStore(
     (state) => state.hideNewProjectButton,
   );
+
+  const newProjectButton = useCustomNewProjectButton();
 
   const [isDismissedDialog, setIsDismissedDialog] = useState(
     userData?.optins?.dialog_dismissed,
@@ -104,10 +108,16 @@ export const HeaderButtons = ({
               onClick={addNewFolder}
               disabled={isUpdatingFolder}
               loading={isPending}
+              blockedReason={newProjectButton.blockedReason}
             />
           )}
         </div>
       </div>
+      {!hideNewProjectButton && newProjectButton.blockedReason && (
+        <p aria-hidden="true" className="text-xs text-muted-foreground">
+          {newProjectButton.blockedHint || newProjectButton.blockedReason}
+        </p>
+      )}
     </>
   );
 };

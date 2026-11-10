@@ -135,3 +135,90 @@ async def test_reattach_keeps_ephemeral_frames_sharing_last_durable_seq():
     got = [(await asyncio.wait_for(stream.__anext__(), timeout=2)).data for _ in range(3)]
     assert got == [b"tok-a", b"tok-b", b"milestone-2"]
     await bus.close("job-1")
+
+
+class _DurableLog:
+    """A durable store the runner writes to before it publishes each milestone."""
+
+    def __init__(self) -> None:
+        self.frames: list[LiveFrame] = []
+
+    def persist(self, seq: int) -> LiveFrame:
+        frame = LiveFrame(seq=seq, data=f"milestone {seq}".encode())
+        self.frames.append(frame)
+        return frame
+
+    async def read(self, after_seq: int) -> list[LiveFrame]:
+        return [f for f in self.frames if f.seq > after_seq]
+
+
+def _token(seq: int) -> LiveFrame:
+    return LiveFrame(seq=seq, data=b"token", durable=False)
+
+
+async def _next(stream) -> LiveFrame:
+    return await asyncio.wait_for(stream.__anext__(), timeout=2)
+
+
+async def _rest(stream) -> list[LiveFrame]:
+    frames = []
+    while True:
+        try:
+            frames.append(await _next(stream))
+        except StopAsyncIteration:
+            return frames
+
+
+@pytest.fixture
+def small_queue(monkeypatch):
+    monkeypatch.setattr("langflow.services.background_execution.live_bus._SUBSCRIBER_MAXSIZE", 2)
+
+
+@pytest.mark.usefixtures("small_queue")
+async def test_reattach_recovers_milestones_a_slow_subscriber_lost_to_overflow():
+    bus = InMemoryLiveBus()
+    log = _DurableLog()
+    log.persist(1)
+    stream = bus.reattach("job-1", last_seq=0, read_durable=log.read)
+    assert (await _next(stream)).seq == 1
+
+    for seq in (2, 3, 4):
+        await bus.publish("job-1", log.persist(seq))
+
+    assert [(await _next(stream)).seq for _ in range(3)] == [2, 3, 4]
+    await bus.close("job-1")
+    assert await _rest(stream) == []
+
+
+@pytest.mark.usefixtures("small_queue")
+async def test_reattach_recovers_a_milestone_tokens_evicted_before_yielding_them():
+    bus = InMemoryLiveBus()
+    log = _DurableLog()
+    log.persist(1)
+    stream = bus.reattach("job-1", last_seq=0, read_durable=log.read)
+    assert (await _next(stream)).seq == 1
+
+    await bus.publish("job-1", log.persist(2))
+    await bus.publish("job-1", _token(2))
+    await bus.publish("job-1", _token(2))
+
+    frames = [await _next(stream) for _ in range(3)]
+    assert [(f.seq, f.durable) for f in frames] == [(2, True), (2, False), (2, False)]
+
+
+@pytest.mark.usefixtures("small_queue")
+async def test_reattach_ends_with_the_last_milestone_when_close_finds_the_queue_full():
+    bus = InMemoryLiveBus()
+    log = _DurableLog()
+    log.persist(1)
+    stream = bus.reattach("job-1", last_seq=0, read_durable=log.read)
+    assert (await _next(stream)).seq == 1
+
+    await bus.publish("job-1", log.persist(2))
+    await bus.publish("job-1", _token(2))
+    await bus.publish("job-1", _token(2))
+    log.persist(3)
+    await bus.close("job-1")
+
+    frames = await _rest(stream)
+    assert [(f.seq, f.durable) for f in frames] == [(2, True), (2, False), (2, False), (3, True)]
