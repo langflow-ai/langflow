@@ -41,6 +41,7 @@ class InProcessExecutor(Executor):
             max_iterations=opts.get("max_iterations"),
             config=opts.get("config"),
             event_manager=opts.get("event_manager"),
+            user_id=opts.get("user_id"),
             reset_output_values=opts.get("reset_output_values", True),
             fallback_to_env_vars=opts.get("fallback_to_env_vars", False),
             # Defaults True, so a consumer that has not been converted still gets a span.

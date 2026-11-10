@@ -207,6 +207,8 @@ async def execute_loop_body(
     start_edge,
     end_vertex_id: str | None,
     event_manager=None,
+    *,
+    user_id: str | None = None,
 ) -> list[Data]:
     """Execute loop body for each data item.
 
@@ -223,6 +225,7 @@ async def execute_loop_body(
             to find every edge from that output, so all fan-out branches receive the item
         end_vertex_id: The vertex ID that feeds back to the loop's item input
         event_manager: Optional event manager to pass to subgraph execution for UI events
+        user_id: The caller executing the Loop component and its body.
 
     Returns:
         List of Data objects containing results from each iteration
@@ -233,6 +236,8 @@ async def execute_loop_body(
     # Loop.item can fan out to several branches, so inject into every edge that
     # shares start_edge's source output, not only the one passed in.
     injections: list[tuple[str, str]] = []
+    # Keep sources in edge order, using None for the current loop item.
+    list_sources: dict[tuple[str, str], list[str | None]] = {}
     if start_vertex_id and start_edge:
         loop_vertex = graph.get_vertex(start_edge.source_id)
         for edge in loop_vertex.outgoing_edges:
@@ -242,6 +247,17 @@ async def execute_loop_body(
                 msg = f"Edge target_handle missing field_name attribute for loop item injection: {edge}"
                 raise ValueError(msg)
             injections.append((edge.target_id, edge.target_handle.field_name))
+        for target_id, target_param in injections:
+            sources: list[str | None] = []
+            for edge in graph.get_vertex(target_id).incoming_edges:
+                if getattr(edge.target_handle, "field_name", None) != target_param:
+                    continue
+                if edge.source_id == loop_vertex.id and edge.source_handle.name == start_edge.source_handle.name:
+                    sources.append(None)
+                elif edge.source_id in loop_body_vertex_ids:
+                    sources.append(edge.source_id)
+            if len(sources) > 1:
+                list_sources[(target_id, target_param)] = sources
 
     aggregated_results = []
 
@@ -266,8 +282,17 @@ async def execute_loop_body(
             # Fields with type="other" (like HandleInput) are skipped during field param processing
             # They normally get values from edges, but we filtered out the Loop->Parser edge
             # So we must inject the value directly into raw_params
+            # Preserve the other sources when the item feeds a list input.
             for target_id, target_param in injections:
-                iteration_subgraph.get_vertex(target_id).update_raw_params({target_param: item}, overwrite=True)
+                sources = list_sources.get((target_id, target_param))
+                value = (
+                    item
+                    if sources is None
+                    else [
+                        item if source_id is None else iteration_subgraph.get_vertex(source_id) for source_id in sources
+                    ]
+                )
+                iteration_subgraph.get_vertex(target_id).update_raw_params({target_param: value}, overwrite=True)
 
             # Execute subgraph and collect results
             # Pass event_manager so UI receives events from subgraph execution
@@ -275,7 +300,9 @@ async def execute_loop_body(
             # aclosing guarantees the stream is finalized even when we raise mid-iteration
             # on an invalid result, so the underlying subgraph generator's cleanup runs.
             coordinator = await aget_default_coordinator()
-            async with aclosing(coordinator.stream(iteration_subgraph, event_manager=event_manager)) as stream:
+            async with aclosing(
+                coordinator.stream(iteration_subgraph, user_id=user_id, event_manager=event_manager)
+            ) as stream:
                 async for result in stream:
                     results.append(result)
                     # Stop all on error (as per design decision)
