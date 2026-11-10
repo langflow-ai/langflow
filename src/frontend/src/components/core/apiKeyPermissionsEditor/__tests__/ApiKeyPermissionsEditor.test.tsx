@@ -333,7 +333,60 @@ describe("API key permissions editor", () => {
     ]);
   });
 
-  it("preserves and edits a workspace identifier", async () => {
+  it("offers only global and project scopes for new policies", async () => {
+    const user = userEvent.setup();
+    render(<Editor />);
+    await user.click(screen.getByRole("button", { name: /^Use a role$/i }));
+    expect(screen.queryByRole("option", { name: "Workspace" })).toBeNull();
+    await user.click(
+      screen.getByRole("button", { name: /^Further limit access$/i }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: /^Choose specific access$/i }),
+    );
+    expect(screen.queryByRole("option", { name: "Workspace" })).toBeNull();
+    expect(screen.getByLabelText("Scope for role 1")).toHaveValue("global");
+    expect(screen.getByLabelText("Scope for restriction 1")).toHaveValue(
+      "global",
+    );
+  });
+
+  it("shows product names for built-in roles and preserves custom names", async () => {
+    const user = userEvent.setup();
+    render(
+      <Editor
+        metadata={{
+          ...options,
+          roles: [
+            { id: "admin-id", name: "admin", permissions: [] },
+            { id: "developer-id", name: "developer", permissions: [] },
+            { id: "viewer-id", name: "viewer", permissions: [] },
+            { id: "custom-id", name: "Developer Tools", permissions: [] },
+          ],
+        }}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: /^Use a role$/i }));
+
+    expect(screen.getByRole("option", { name: "Admin" })).toHaveValue(
+      "admin-id",
+    );
+    expect(screen.getByRole("option", { name: "Editor" })).toHaveValue(
+      "developer-id",
+    );
+    expect(screen.getByRole("option", { name: "Viewer" })).toHaveValue(
+      "viewer-id",
+    );
+    expect(screen.getByRole("option", { name: "Developer Tools" })).toHaveValue(
+      "custom-id",
+    );
+    await user.selectOptions(screen.getByLabelText("Role 1"), "developer-id");
+    expect(
+      JSON.parse(screen.getByTestId("policy").textContent!).roles[0].role_id,
+    ).toBe("developer-id");
+  });
+
+  it("preserves an existing workspace scope without offering to edit its identifier", async () => {
     const user = userEvent.setup();
     render(
       <Editor
@@ -351,10 +404,104 @@ describe("API key permissions editor", () => {
     );
     const workspace = screen.getByLabelText("Workspace ID for role 1");
     expect(workspace).toHaveValue("workspace-a");
-    await user.clear(workspace);
-    await user.type(workspace, "workspace-b");
+    expect(workspace).toHaveAttribute("readonly");
+    expect(screen.getByRole("option", { name: "Workspace" })).toBeDisabled();
     expect(
       JSON.parse(screen.getByTestId("policy").textContent!).roles[0].domain_id,
-    ).toBe("workspace-b");
+    ).toBe("workspace-a");
+
+    await user.selectOptions(
+      screen.getByLabelText("Scope for role 1"),
+      "project",
+    );
+    expect(screen.queryByLabelText("Workspace ID for role 1")).toBeNull();
+    expect(screen.queryByRole("option", { name: "Workspace" })).toBeNull();
+    expect(
+      JSON.parse(screen.getByTestId("policy").textContent!).roles[0],
+    ).toEqual({
+      role_id: "viewer",
+      domain_type: "project",
+      domain_id: null,
+    });
+  });
+
+  it.each([
+    { scopes: [] },
+    { scopes: ["global", "workspace", "project"] },
+  ] as const)(
+    "preserves an existing workspace restriction when available scopes are %j",
+    ({ scopes }) => {
+      const initial: ApiKeyPermissionPolicy = {
+        roles: [],
+        restrictions: [
+          {
+            resource_type: "flow",
+            actions: ["read"],
+            domain_type: "workspace",
+            domain_id: "workspace-a",
+            resource_ids: null,
+          },
+        ],
+      };
+      render(
+        <Editor
+          initial={initial}
+          metadata={{ ...options, scope_types: { flow: [...scopes] } }}
+        />,
+      );
+
+      expect(screen.getByLabelText("Scope for restriction 1")).toHaveValue(
+        "workspace",
+      );
+      expect(screen.getByRole("option", { name: "Workspace" })).toBeDisabled();
+      expect(
+        screen.getByLabelText("Workspace ID for restriction 1"),
+      ).toHaveValue("workspace-a");
+      expect(JSON.parse(screen.getByTestId("policy").textContent!)).toEqual(
+        initial,
+      );
+    },
+  );
+
+  it("requires a new action selection after changing the resource family of a workspace restriction", async () => {
+    const user = userEvent.setup();
+    const metadata: ApiKeyPermissionOptions = {
+      ...options,
+      resource_actions: { ...options.resource_actions, file: ["read"] },
+      scope_types: { ...options.scope_types, file: ["global"] },
+    };
+    render(
+      <Editor
+        metadata={metadata}
+        initial={{
+          roles: [],
+          restrictions: [
+            {
+              resource_type: "flow",
+              actions: ["read"],
+              domain_type: "workspace",
+              domain_id: "workspace-a",
+              resource_ids: ["flow-a"],
+            },
+          ],
+        }}
+      />,
+    );
+
+    await user.selectOptions(
+      screen.getByLabelText("Resource type for restriction 1"),
+      "file",
+    );
+
+    const policy = JSON.parse(screen.getByTestId("policy").textContent!);
+    expect(policy.restrictions[0]).toEqual({
+      resource_type: "file",
+      actions: [],
+      domain_type: "global",
+      domain_id: null,
+      resource_ids: null,
+    });
+    expect(isApiKeyPermissionPolicyValid(policy, metadata)).toBe(false);
+    expect(screen.queryByRole("option", { name: "Workspace" })).toBeNull();
   });
 });
