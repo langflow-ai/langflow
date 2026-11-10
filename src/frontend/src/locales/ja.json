@@ -3160,6 +3160,7 @@
   "triggers.empty.noMatch": "これらの条件に一致するトリガーはありません。",
   "triggers.errors.load": "トリガーを読み込めませんでした。",
   "triggers.errors.unknown": "問題が発生しました。もう一度お試しください。",
+  "triggers.serverError.policy_blocked": "トリガーポリシーによってブロックされています。管理者にこの種類のトリガーの承認を依頼してください。",
   "triggers.serverError.multiple_triggers": "フローに設定できるトリガーは1つだけです。余分なトリガーを削除して、もう一度お試しください。",
   "triggers.serverError.node_removed": "トリガーノードがフローから削除されました。トリガーを再開するにはノードを戻してください。",
   "triggers.serverError.source_settings_changed": "ソースの設定が変更されました。再度サブスクライブするにはトリガーを再開してください。",

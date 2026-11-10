@@ -52,6 +52,7 @@ from .trigger import (
     TriggerEvent,
     TriggerLease,
     TriggerListenerLease,
+    TriggerRenewalObservation,
     TriggerSourceVersion,
     TriggerSubscription,
 )
@@ -125,6 +126,7 @@ __all__ = [
     "TriggerEvent",
     "TriggerLease",
     "TriggerListenerLease",
+    "TriggerRenewalObservation",
     "TriggerSourceVersion",
     "TriggerSubscription",
     "User",

@@ -13,7 +13,11 @@ from lfx.log.logger import logger
 from lfx.services.integration_policy import normalize_integration_policy_key
 from lfx.services.model_provider_policy import ModelProviderPolicyService, normalize_blocked_model_key
 from lfx.services.policy_bundle import PolicyBundleSnapshot, policy_bundle_content_hash
-from lfx.services.policy_bundle.base import decode_integration_provider_ids, encode_integration_provider_ids
+from lfx.services.policy_bundle.base import (
+    decode_integration_provider_ids,
+    encode_integration_provider_ids,
+    normalize_trigger_kind,
+)
 from sqlalchemy import update
 from sqlmodel import col, select
 
@@ -159,6 +163,7 @@ def _snapshot_from_row(row: PolicyBundleRevision, *, initialized: bool | None = 
         blocked_model_keys=frozenset(row.blocked_model_keys or []),
         approved_integration_provider_ids=decode_integration_provider_ids(row.approved_integration_provider_ids),
         blocked_integration_action_keys=frozenset(row.blocked_integration_action_keys or []),
+        approved_trigger_kinds=None if row.approved_trigger_kinds is None else frozenset(row.approved_trigger_kinds),
         content_hash=row.content_hash,
         created_at=row.created_at,
         created_by=row.created_by,
@@ -291,6 +296,7 @@ async def replace_policy_bundle_state(
     blocked_model_keys: Collection[str] = (),
     approved_integration_provider_ids: Collection[str] | None = None,
     blocked_integration_action_keys: Collection[str] = (),
+    approved_trigger_kinds: Collection[str] | None = None,
     actor_user_id: UUID | None,
     reason: str | None = None,
     rollback_of_revision: int | None = None,
@@ -308,6 +314,9 @@ async def replace_policy_bundle_state(
         else _normalize_integration_provider_ids(approved_integration_provider_ids)
     )
     integration_actions = _normalize_integration_action_keys(blocked_integration_action_keys)
+    trigger_kinds = (
+        None if approved_trigger_kinds is None else frozenset(map(normalize_trigger_kind, approved_trigger_kinds))
+    )
     normalized_reason = _normalize_reason(reason)
     normalized_source = _normalize_source(source)
     new_revision = expected_revision + 1
@@ -345,6 +354,7 @@ async def replace_policy_bundle_state(
         blocked_model_keys=models,
         approved_integration_provider_ids=integration_providers,
         blocked_integration_action_keys=integration_actions,
+        approved_trigger_kinds=trigger_kinds,
         content_hash=policy_bundle_content_hash(
             approved_provider_ids=providers,
             blocked_component_keys=components,
@@ -352,6 +362,7 @@ async def replace_policy_bundle_state(
             blocked_model_keys=models,
             approved_integration_provider_ids=integration_providers,
             blocked_integration_action_keys=integration_actions,
+            approved_trigger_kinds=trigger_kinds,
         ),
         created_at=created_at,
         created_by=actor_user_id,
@@ -370,6 +381,9 @@ async def replace_policy_bundle_state(
                 snapshot.approved_integration_provider_ids
             ),
             blocked_integration_action_keys=sorted(snapshot.blocked_integration_action_keys),
+            approved_trigger_kinds=None
+            if snapshot.approved_trigger_kinds is None
+            else sorted(snapshot.approved_trigger_kinds),
             content_hash=snapshot.content_hash,
             source=normalized_source,
             created_at=created_at,
@@ -402,6 +416,7 @@ async def rollback_policy_bundle_state(
         blocked_model_keys=target.blocked_model_keys,
         approved_integration_provider_ids=target.approved_integration_provider_ids,
         blocked_integration_action_keys=target.blocked_integration_action_keys,
+        approved_trigger_kinds=target.approved_trigger_kinds,
         actor_user_id=actor_user_id,
         reason=reason or f"Rollback to policy bundle revision {target_revision}",
         rollback_of_revision=target_revision,
@@ -418,6 +433,7 @@ async def bootstrap_policy_bundle_if_pristine(
     blocked_model_keys: Collection[str] = (),
     approved_integration_provider_ids: Collection[str] | None = None,
     blocked_integration_action_keys: Collection[str] = (),
+    approved_trigger_kinds: Collection[str] | None = None,
     reason: str | None = None,
 ) -> tuple[PolicyBundleSnapshot, bool]:
     """Initialize a migration-created pristine bundle exactly once.
@@ -438,6 +454,7 @@ async def bootstrap_policy_bundle_if_pristine(
             blocked_model_keys=blocked_model_keys,
             approved_integration_provider_ids=approved_integration_provider_ids,
             blocked_integration_action_keys=blocked_integration_action_keys,
+            approved_trigger_kinds=approved_trigger_kinds,
             actor_user_id=None,
             reason=reason or "Bootstrap policy bundle from deployment environment",
             source="environment",

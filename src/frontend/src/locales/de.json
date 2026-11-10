@@ -3160,6 +3160,7 @@
   "triggers.empty.noMatch": "Keine Trigger entsprechen diesen Filtern.",
   "triggers.errors.load": "Trigger konnten nicht geladen werden.",
   "triggers.errors.unknown": "Etwas ist schiefgelaufen. Versuchen Sie es erneut.",
+  "triggers.serverError.policy_blocked": "Durch die Trigger-Richtlinie blockiert. Bitten Sie einen Administrator, diesen Trigger-Typ zu genehmigen.",
   "triggers.serverError.multiple_triggers": "Ein Flow kann nur einen Trigger haben. Entfernen Sie die zusätzlichen Trigger und versuchen Sie es erneut.",
   "triggers.serverError.node_removed": "Der Trigger-Node wurde aus dem Flow entfernt. Fügen Sie ihn wieder hinzu, um den Trigger fortzusetzen.",
   "triggers.serverError.source_settings_changed": "Die Quelleinstellungen haben sich geändert. Setzen Sie den Trigger fort, um erneut zu abonnieren.",

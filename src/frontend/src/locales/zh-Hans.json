@@ -3159,6 +3159,7 @@
   "triggers.empty.noMatch": "没有与这些筛选条件匹配的触发器。",
   "triggers.errors.load": "无法加载触发器。",
   "triggers.errors.unknown": "出了点问题。请重试。",
+  "triggers.serverError.policy_blocked": "已被触发器策略阻止。请联系管理员批准此触发器类型。",
   "triggers.serverError.multiple_triggers": "一个流程只能有一个触发器。请移除多余的触发器后重试。",
   "triggers.serverError.node_removed": "触发器节点已从流程中移除。请将其添加回来以恢复触发器。",
   "triggers.serverError.source_settings_changed": "来源设置已更改。请恢复触发器以重新订阅。",
