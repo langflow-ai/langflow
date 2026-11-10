@@ -109,8 +109,11 @@ const RenderInputParameters = ({
   // A question list draws its questions' handles on its cards, which a minimized node hides,
   // so there they join the node's other handles.
   const questionHandles = useMemo(
-    () => (showNode ? [] : questionConnectionFields(data.node?.template ?? {})),
-    [showNode, data.node?.template],
+    () =>
+      showNode
+        ? []
+        : questionConnectionFields(data.node?.template ?? {}, isToolMode),
+    [showNode, data.node?.template, isToolMode],
   );
 
   // LE-1810 (T8): a minimized node still shows ALL its input handles —

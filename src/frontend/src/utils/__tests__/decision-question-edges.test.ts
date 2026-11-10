@@ -95,4 +95,10 @@ describe("the connection fields a question list draws", () => {
   it("are none while the question cards are hidden", () => {
     expect(questionConnectionFields(template(false))).toEqual([]);
   });
+
+  it("are none while the question list is off the canvas", () => {
+    const offCanvas = template(true);
+    offCanvas.questions = { ...offCanvas.questions, advanced: true };
+    expect(questionConnectionFields(offCanvas)).toEqual([]);
+  });
 });

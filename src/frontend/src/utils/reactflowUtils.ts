@@ -23,6 +23,7 @@ import {
 } from "@xyflow/react";
 import { cloneDeep } from "lodash";
 import ShortUniqueId from "short-unique-id";
+import { isCanvasVisible } from "@/CustomNodes/helpers/parameter-filtering";
 import {
   getLeftHandleId,
   getRightHandleId,
@@ -443,13 +444,15 @@ const isDrawnByQuestionList = (
           ))),
   );
 
-// The connection fields a shown question list draws handles for, with each question's number.
+// The connection fields a question list on the canvas draws handles for, with each question's
+// number. A list taken off the canvas draws none, minimized or not.
 export const questionConnectionFields = (
   template: APITemplateType,
+  isToolMode = false,
 ): { text: QuestionText; fieldName: string; number: number }[] =>
   Object.values(template).flatMap((field) =>
     field?.type === "decision_questions" &&
-    field.show &&
+    isCanvasVisible(field, isToolMode) &&
     Array.isArray(field.value)
       ? field.value.flatMap((question, index) =>
           questionConnections(question, field.connection_prefix)
