@@ -60,6 +60,7 @@ Use a bot token, not a user token or an OAuth client secret.
 2. Add **Discord: Send Message** to a flow and select the connection in **Discord Connection**.
 3. Set **Guild ID**, **Channel or Thread ID**, and **Text**, then run the flow.
    The saved connection handle is `discord/work`.
+   Both ID fields also accept Message connections from upstream components.
 
 For a headless action flow, provide the same bot token through `LF_CONNECTION__DISCORD__WORK` or the configured connection resolver.
 Populate the environment from your secret manager instead of embedding the token in the flow.
@@ -80,6 +81,7 @@ Public ingress, an interactions URL, and a webhook callback are not required.
 3. Save the flow and enable **Allow background runs** in the trigger node controls.
    You can also enable **Allow scheduled and deployed runs** in the connection's **Actions** menu under **Settings**, **Connections**.
 4. Enable the trigger, or select **Resume** in **Settings**, **Triggers**.
+   Langflow verifies the bot, target channels, and required Message Content Intent before marking it active.
    Send a matching message and inspect the trigger's event list.
 
 One active trigger owns each verified bot in a Langflow database, even if several connections use its token.
@@ -102,7 +104,9 @@ The normalized event contains the verified bot, guild, channel or thread, author
 After a connection is restored, open **Settings**, **Triggers**, and select **Resume** for each trigger showing **Ready to resume**.
 Reconnect alone does not restart listening.
 If the token was reset, reconnect using the replacement token for the same bot first.
-Fix disallowed intents or missing permissions in Discord before reconnecting and resuming.
+An authentication rejection marks the connection as expired and the trigger as needing reconnect.
+If Message Content Intent is disabled or lacks required approval, enable it in Discord and resume the trigger.
+Restore missing channel permissions in Discord before resuming.
 
 A listener handover preserves the saved Gateway session and attempts Discord Resume using the last committed sequence.
 An explicit pause followed by enabling starts a fresh receiver and clears the saved session.
@@ -110,6 +114,8 @@ Discord can invalidate a session or discard its replay window.
 A new Identify starts with current events, without backfilling missed history after long downtime, pause, or bot removal.
 
 The trigger's event list can replay an event already recorded by Langflow.
+Its receipt status shows that Langflow received the event, while the run status shows whether the flow completed.
+Flow owners can inspect the run's error message when execution fails.
 It cannot reconstruct a message absent from both the ledger and Discord's available Gateway replay.
 See [Discord Gateway reconnect behavior](https://docs.discord.com/developers/events/gateway#resuming).
 

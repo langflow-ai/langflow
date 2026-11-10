@@ -124,7 +124,8 @@ async def test_reply_tool_preserves_bot_and_guild_validation(monkeypatch, record
 
     refused = await tool.ainvoke({"text": "wrong target"})
 
-    assert "not authorized" in refused.lower()
+    expected = "not authorized" if mismatch == "bot" else "configured guild"
+    assert expected in refused.lower()
     assert all(call[0] == "GET" for call in transport.calls)
     assert len(transport.calls) == (2 if mismatch == "bot" else 3)
     assert recording_resolver.calls[0].principal.user_id == "test-user"

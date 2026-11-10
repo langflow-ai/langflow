@@ -9,6 +9,7 @@ from langflow.services.triggers.listeners.adapters import ListenerContext, Liste
 from langflow.services.triggers.providers.discord.config import normalize_config
 from langflow.services.triggers.providers.discord.events import normalize
 from langflow.services.triggers.providers.discord.gateway import DiscordGatewayAdapter, gateway_url
+from langflow.services.triggers.source_errors import SourceConfigurationError
 from lfx.integrations.errors import ConnectionNotAuthorizedError, ProviderUnavailableError, RateLimitedError
 
 from .support import APP, BOT, CHANNEL, GATEWAY, TOKEN, BotTransport, Resolver
@@ -185,9 +186,31 @@ async def test_missing_message_content_intent_fails_before_socket(monkeypatch):
     adapter, ctx, _socket, _events, _saved, _order, dialed, _ = await execute(
         monkeypatch, [], responses=[BOT, {**APP, "flags": 0}, CHANNEL]
     )
-    with pytest.raises(ConnectionNotAuthorizedError, match="not authorized"):
+    with pytest.raises(SourceConfigurationError, match="Message Content Intent"):
         await adapter.start(ctx)
     assert not dialed
+
+
+@pytest.mark.parametrize("close_code", [4004, 4014])
+async def test_gateway_close_distinguishes_rejected_token_from_disallowed_intents(monkeypatch, close_code):
+    from lfx.integrations.errors import AuthExpiredError
+    from websockets.exceptions import ConnectionClosedError
+    from websockets.frames import Close
+
+    adapter, ctx, socket, *_ = await execute(monkeypatch, [])
+    receive = socket.recv
+
+    async def recv():
+        if not socket.frames.empty():
+            return await receive()
+        raise ConnectionClosedError(Close(close_code, ""), None)
+
+    monkeypatch.setattr(socket, "recv", recv)
+    error = AuthExpiredError if close_code == 4004 else SourceConfigurationError
+    with pytest.raises(error) as result:
+        await adapter.start(ctx)
+    if close_code == 4014:
+        assert "Message Content Intent" in str(result.value)
 
 
 async def test_mention_receiver_does_not_request_privileged_content(monkeypatch):

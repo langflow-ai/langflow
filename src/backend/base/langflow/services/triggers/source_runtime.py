@@ -5,14 +5,14 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
-from lfx.integrations.errors import ConnectionUnresolvedError
+from lfx.integrations.errors import AuthExpiredError, ConnectionUnresolvedError
 from lfx.services.deps import session_scope_readonly
 from sqlmodel import update
 
 from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.triggers import leases
-from langflow.services.triggers.constants import FAMILY_TRIGGER_PUSH
+from langflow.services.triggers.constants import FAMILY_TRIGGER_LISTENER, FAMILY_TRIGGER_PUSH
 from langflow.services.triggers.lease_guard import LeaseLostError, run_guarded
 from langflow.services.triggers.listeners.supervisor import is_local_configuration_failure
 from langflow.services.triggers.source_errors import SourceConfigurationError
@@ -157,6 +157,7 @@ async def initialize_source(trigger_id: UUID) -> None:
     owner = leases.new_owner_token("source-enable")
     name = f"trigger-source:{trigger_id}"
     ttl = get_settings_service().settings.trigger_lease_ttl_s
+    connection_version = None
     async with session_scope() as session:
         if not await leases.acquire(session, name=name, owner=owner, ttl_s=ttl):
             msg = "This source is already being enabled. Check its status before retrying."
@@ -166,8 +167,33 @@ async def initialize_source(trigger_id: UUID) -> None:
             await leases.forget(session, name=name, owner=owner)
             return
         expected = dict(row.config or {})
+        expected_connection_id = row.connection_id
 
     async def initialize():
+        nonlocal connection_version
+        from langflow.services.database.models.connection.model import Connection
+        from langflow.services.triggers.providers.registry import get_provider
+        from langflow.services.triggers.source_clients import source_lease
+
+        async with session_scope_readonly() as session:
+            current = await session.get(Trigger, trigger_id)
+            if current is None or (
+                current.state != "pending"
+                or current.config != expected
+                or current.connection_id != expected_connection_id
+            ):
+                msg = "Source settings or state changed during activation. Enable it again."
+                raise SourceConfigurationError(msg)
+            extension = get_provider(current.provider or "") if current is not None else None
+            if current is not None and extension is not None and extension.validate_source is not None:
+                credential = await source_lease(session, current, family=FAMILY_TRIGGER_LISTENER)
+                connection = await session.get(Connection, current.connection_id)
+                connection_version = connection.updated_at if connection is not None else None
+                snapshot = Trigger(**current.model_dump())
+            else:
+                credential = None
+        if credential is not None:
+            await extension.validate_source(snapshot, credential)
         await sync_source(trigger_id)
         await ensure_subscription(trigger_id)
         await sync_source(trigger_id)
@@ -176,7 +202,12 @@ async def initialize_source(trigger_id: UUID) -> None:
                 msg = "Source activation lost its lease."
                 raise LeaseLostError(msg)
             row = await session.get(Trigger, trigger_id, populate_existing=True, with_for_update=True)
-            if row is None or row.config != expected or row.state != "pending":
+            if (
+                row is None
+                or row.config != expected
+                or row.connection_id != expected_connection_id
+                or row.state != "pending"
+            ):
                 msg = "Source settings or state changed during activation. Enable it again."
                 raise SourceConfigurationError(msg)
             row.state = "active"
@@ -186,16 +217,47 @@ async def initialize_source(trigger_id: UUID) -> None:
     try:
         await run_guarded(initialize(), name=name, owner=owner, ttl_s=ttl)
     except Exception as exc:
+        auth_message = "The connection is no longer authorized. Reconnect it to resume this trigger."
         async with session_scope() as session:
             owned = await leases.fence(session, name=name, owner=owner)
             row = await session.get(Trigger, trigger_id)
-            if owned and row is not None and row.state == "pending":
-                row.state = "error"
-                row.last_error = f"Source activation failed: {source_failure_detail(exc)}. Enable the trigger to retry."
+            if (
+                owned
+                and row is not None
+                and row.state == "pending"
+                and row.config == expected
+                and row.connection_id == expected_connection_id
+            ):
+                if isinstance(exc, AuthExpiredError) and connection_version is not None:
+                    from langflow.services.connection.health import mark_credential_rejected
+                    from langflow.services.triggers.connection_recovery import record_connection_failure
+
+                    rejected = await mark_credential_rejected(
+                        session, connection_id=row.connection_id, observed_updated_at=connection_version
+                    )
+                    if rejected:
+                        row.state = "needs_reconnect"
+                        row.last_error = auth_message
+                        row.updated_at = datetime.now(timezone.utc)
+                        record_connection_failure(row, failed_at=row.updated_at)
+                    else:
+                        auth_message = "The connection changed while enabling. Resume the trigger again."
+                        row.last_error = auth_message
+                elif isinstance(exc, SourceConfigurationError) and exc.terminal:
+                    row.last_error = str(exc)
+                else:
+                    row.state = "error"
+                    row.last_error = (
+                        f"Source activation failed: {source_failure_detail(exc)}. Enable the trigger to retry."
+                    )
                 session.add(row)
         if isinstance(exc, ValueError):
             raise
-        msg = "Source activation failed. Check the trigger status and retry."
+        msg = (
+            auth_message
+            if isinstance(exc, AuthExpiredError)
+            else "Source activation failed. Check the trigger status and retry."
+        )
         raise ValueError(msg) from exc
     finally:
         async with session_scope() as session:
@@ -203,14 +265,22 @@ async def initialize_source(trigger_id: UUID) -> None:
 
 
 async def mark_interrupted_activations(*, limit: int = 5) -> None:
-    """Expose abandoned push setup without arming nodes that were only saved."""
+    """Expose abandoned provider setup without arming nodes that were only saved."""
     from sqlmodel import col, select
 
     from langflow.services.database.models.trigger.model import TriggerSubscription
-    from langflow.services.triggers.providers.registry import push_mechanisms, source_kinds
+    from langflow.services.triggers.providers.registry import all_providers, push_mechanisms, source_kinds
 
     ttl = get_settings_service().settings.trigger_lease_ttl_s
     stale_before = datetime.now(timezone.utc) - timedelta(seconds=ttl)
+    activation_mechanisms = push_mechanisms() | {
+        mechanism
+        for provider in all_providers()
+        if provider.validate_source is not None
+        for kind in provider.kinds
+        for mechanism in (kind.listener_mechanism, kind.poll_mechanism, kind.push_mechanism)
+        if mechanism is not None
+    }
     async with session_scope_readonly() as session:
         ids = (
             await session.exec(
@@ -218,8 +288,9 @@ async def mark_interrupted_activations(*, limit: int = 5) -> None:
                 .join(TriggerSubscription, TriggerSubscription.trigger_id == Trigger.id)
                 .where(
                     Trigger.state == "pending",
+                    col(Trigger.last_error).is_(None),
                     col(Trigger.kind).in_(source_kinds()),
-                    Trigger.config["mechanism_id"].as_string().in_(push_mechanisms()),
+                    Trigger.config["mechanism_id"].as_string().in_(activation_mechanisms),
                     TriggerSubscription.provider == Trigger.provider,
                     col(TriggerSubscription.state).in_({"pending", "active"}),
                     Trigger.updated_at <= stale_before,
@@ -236,7 +307,12 @@ async def mark_interrupted_activations(*, limit: int = 5) -> None:
                 continue
             await session.exec(
                 update(Trigger)
-                .where(Trigger.id == trigger_id, Trigger.state == "pending", Trigger.updated_at <= stale_before)
+                .where(
+                    Trigger.id == trigger_id,
+                    Trigger.state == "pending",
+                    col(Trigger.last_error).is_(None),
+                    Trigger.updated_at <= stale_before,
+                )
                 .values(state="error", last_error="Source activation was interrupted. Enable the trigger to retry.")
                 .execution_options(synchronize_session=False)
             )

@@ -25,7 +25,7 @@ from lfx.extension import bundle_registry, load_extension
 from lfx.extension.bundle_registry import BundleRecord, BundleRegistry
 from sqlmodel import select
 
-from .providers.discord.support import APP, BOT, TOKEN, BotTransport
+from .providers.discord.support import APP, BOT, CHANNEL, TOKEN, BotTransport
 
 pytestmark = pytest.mark.no_blockbuster
 
@@ -110,7 +110,7 @@ async def reconcile(flow_id, owner_id, *, name="bot"):
 async def test_enable_pause_pending_cleanup_then_reenable_does_not_delete_replacement(
     trigger_owner, owned_flow, monkeypatch
 ):
-    transport = BotTransport([BOT, APP]).install(monkeypatch)
+    transport = BotTransport([BOT, APP, BOT, APP, CHANNEL]).install(monkeypatch)
     await connection(trigger_owner)
     row = await reconcile(owned_flow, trigger_owner)
     async with session_scope() as session:
@@ -142,6 +142,193 @@ async def test_enable_pause_pending_cleanup_then_reenable_does_not_delete_replac
         assert new.state == "active"
         await revoke(task_copy, None)
         assert new.state == "active"
+    assert len(transport.calls) == 5
+
+
+@pytest.mark.usefixtures("discord_provider")
+async def test_resume_without_message_content_intent_never_activates(trigger_owner, owned_flow, monkeypatch):
+    from langflow.services.triggers.capabilities import trigger_reason
+
+    BotTransport([BOT, APP, BOT, {**APP, "flags": 0}, CHANNEL]).install(monkeypatch)
+    await connection(trigger_owner)
+    trigger = await reconcile(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        with pytest.raises(ValueError, match="Message Content Intent"):
+            await TriggerService().enable_and_activate(session, row=row)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        assert row.state == "pending"
+        assert trigger_reason(row).value == "config_invalid"
+        assert row.last_error == "Enable and, when required, obtain approval for Message Content Intent."
+
+
+@pytest.mark.usefixtures("discord_provider")
+async def test_resume_with_reset_bot_token_updates_connection_and_trigger(trigger_owner, owned_flow, monkeypatch):
+    from langflow.services.database.models.connection.model import Connection
+
+    BotTransport([BOT, APP, (401, {})]).install(monkeypatch)
+    saved = await connection(trigger_owner)
+    trigger = await reconcile(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        with pytest.raises(ValueError, match="Reconnect"):
+            await TriggerService().enable_and_activate(session, row=row)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        connection_row = await session.get(Connection, saved.id)
+        assert row.state == "needs_reconnect"
+        assert connection_row.status == "expired"
+        assert connection_row.health == "unhealthy"
+
+
+@pytest.mark.parametrize("reset_token", [False, True])
+@pytest.mark.usefixtures("discord_provider")
+async def test_listener_failure_distinguishes_intent_from_rejected_token(
+    trigger_owner, owned_flow, monkeypatch, reset_token
+):
+    import asyncio
+
+    from langflow.services.database.models.connection.model import Connection
+    from langflow.services.triggers.listeners.supervisor import ListenerSupervisor
+
+    rejection = [(401, {})] if reset_token else [BOT, {**APP, "flags": 0}, CHANNEL]
+    BotTransport([BOT, APP, BOT, APP, CHANNEL, *rejection]).install(monkeypatch)
+    saved = await connection(trigger_owner)
+    trigger = await reconcile(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable_and_activate(session, row=row)
+        assert row.state == "active"
+    supervisor = ListenerSupervisor()
+    try:
+        await supervisor.reconcile()
+        worker = supervisor.workers[saved.id]
+        await asyncio.wait_for(worker.task, timeout=5)
+        async with session_scope() as session:
+            row = await session.get(Trigger, trigger.id)
+            saved = await session.get(Connection, saved.id)
+            assert row.state == ("needs_reconnect" if reset_token else "pending")
+            assert saved.status == ("expired" if reset_token else "ready")
+            if not reset_token:
+                assert row.last_error == "Enable and, when required, obtain approval for Message Content Intent."
+    finally:
+        await supervisor.stop()
+
+
+@pytest.mark.usefixtures("discord_provider")
+async def test_old_provider_failure_does_not_expire_a_reconnected_bot(trigger_owner, monkeypatch):
+    from datetime import timedelta
+
+    from langflow.services.connection.health import mark_credential_rejected
+    from langflow.services.database.models.connection.model import Connection
+
+    BotTransport([BOT, APP]).install(monkeypatch)
+    saved = await connection(trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Connection, saved.id)
+        observed = row.updated_at
+        row.updated_at += timedelta(seconds=1)
+        session.add(row)
+    async with session_scope() as session:
+        assert not await mark_credential_rejected(session, connection_id=saved.id, observed_updated_at=observed)
+        row = await session.get(Connection, saved.id)
+        assert row.status == "ready"
+
+
+@pytest.mark.parametrize("during_activation", [False, True])
+@pytest.mark.usefixtures("discord_provider")
+async def test_reconnect_during_provider_request_does_not_get_invalidated(
+    trigger_owner, owned_flow, monkeypatch, during_activation
+):
+    import asyncio
+    from dataclasses import replace
+    from datetime import timedelta
+
+    from langflow.services.database.models.connection.model import Connection
+    from langflow.services.triggers.listeners.supervisor import ListenerSupervisor
+    from lfx.integrations.errors import AuthExpiredError
+
+    BotTransport([BOT, APP, BOT, APP, CHANNEL]).install(monkeypatch)
+    saved = await connection(trigger_owner)
+    trigger = await reconcile(owned_flow, trigger_owner)
+
+    async def reconnect_then_reject():
+        async with session_scope() as session:
+            row = await session.get(Connection, saved.id)
+            row.updated_at += timedelta(seconds=1)
+            session.add(row)
+        raise AuthExpiredError(provider="discord")
+
+    if during_activation:
+
+        async def validate_source(_trigger, lease):
+            await lease.get_credential()
+            await reconnect_then_reject()
+
+        monkeypatch.setitem(registry._providers, "discord", replace(PROVIDER, validate_source=validate_source))
+        async with session_scope() as session:
+            row = await session.get(Trigger, trigger.id)
+            with pytest.raises(ValueError, match="connection changed"):
+                await TriggerService().enable_and_activate(session, row=row)
+    else:
+        async with session_scope() as session:
+            row = await session.get(Trigger, trigger.id)
+            await TriggerService().enable_and_activate(session, row=row)
+
+        async def start(_adapter, ctx):
+            await ctx.resolve_credential(trigger_id=trigger.id)
+            await reconnect_then_reject()
+
+        monkeypatch.setattr(DiscordGatewayAdapter, "start", start)
+        supervisor = ListenerSupervisor()
+        try:
+            await supervisor.reconcile()
+            worker = supervisor.workers[saved.id]
+            await asyncio.wait_for(worker.task, timeout=5)
+            assert saved.id not in supervisor.workers
+        finally:
+            await supervisor.stop()
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        saved = await session.get(Connection, saved.id)
+        assert row.state == ("pending" if during_activation else "active")
+        assert "_connection_recovery" not in row.provider_state
+        assert saved.status == "ready"
+
+
+@pytest.mark.parametrize("activation", ["abandoned", "live", "saved", "missing-intent"])
+@pytest.mark.usefixtures("discord_provider")
+async def test_maintenance_only_marks_abandoned_discord_preflight(trigger_owner, owned_flow, monkeypatch, activation):
+    from datetime import datetime, timedelta, timezone
+
+    from langflow.services.triggers import leases, source_runtime
+    from langflow.services.triggers.providers.discord.lifecycle import MESSAGE_CONTENT_REQUIRED
+
+    transport = BotTransport([BOT, APP]).install(monkeypatch)
+    await connection(trigger_owner)
+    trigger = await reconcile(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        if activation != "saved":
+            await TriggerService().enable(session, row=row)
+        if activation == "missing-intent":
+            row.last_error = MESSAGE_CONTENT_REQUIRED
+        row.updated_at = datetime.now(timezone.utc) - timedelta(hours=2)
+        session.add(row)
+        if activation == "live":
+            assert await leases.acquire(
+                session, name=f"trigger-source:{row.id}", owner="live-discord-setup", ttl_s=3600
+            )
+    await source_runtime.mark_interrupted_activations()
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        if activation == "abandoned":
+            assert row.state == "error"
+            assert row.last_error == "Source activation was interrupted. Enable the trigger to retry."
+        else:
+            assert row.state == "pending"
+            assert row.last_error == (MESSAGE_CONTENT_REQUIRED if activation == "missing-intent" else None)
     assert len(transport.calls) == 2
 
 

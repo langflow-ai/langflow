@@ -15,6 +15,7 @@ from lfx.integrations.errors import (
     RateLimitedError,
 )
 from lfx.schema.data import Data
+from lfx.schema.message import Message
 from lfx_discord import (
     DiscordOnMentionTriggerComponent,
     DiscordOnMessageTriggerComponent,
@@ -141,9 +142,27 @@ async def test_reply_preserves_channel_thread_and_bot_identity(monkeypatch):
 @pytest.mark.usefixtures("resolver")
 async def test_cross_guild_channel_is_rejected_before_send(monkeypatch):
     transport = BotTransport([BOT, APP, {**CHANNEL, "guild_id": "999"}]).install(monkeypatch)
-    with pytest.raises(ConnectionNotAuthorizedError):
+    with pytest.raises(
+        InvalidRequestError, match=r"Choose an accessible text channel or thread in the configured guild\."
+    ) as result:
         await component(DiscordSendMessageComponent, guild_id="222", channel_id="333", text="hello").build_message()
+    assert result.value.code == "invalid-request"
     assert all(method != "POST" for method, *_ in transport.calls)
+
+
+@pytest.mark.usefixtures("resolver")
+async def test_send_accepts_message_handles_for_guild_and_channel(monkeypatch):
+    transport = BotTransport([BOT, APP, CHANNEL, {"id": "444", "channel_id": "333", "content": "hello"}]).install(
+        monkeypatch
+    )
+    value = component(DiscordSendMessageComponent, text="hello")
+    value.set_attributes({"guild_id": Message(text="222"), "channel_id": Message(text="333")})
+    assert value.get_input("guild_id").input_types == ["Message"]
+    assert value.get_input("channel_id").input_types == ["Message"]
+    result = await value.build_message()
+    assert result.data["guild_id"] == "222"
+    assert result.data["channel_id"] == "333"
+    assert transport.calls[-1][0] == "POST"
 
 
 @pytest.mark.parametrize("text", ["", " ", "x" * 2001, "😀" * 1001])

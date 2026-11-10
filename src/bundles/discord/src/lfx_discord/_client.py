@@ -70,9 +70,12 @@ class DiscordClient:
             raise InvalidRequestError(msg, provider="discord")
         credential = await self.lease.get_credential()
         token = credential.access_token.get_secret_value()
+        # Environment credentials carry no identity metadata. Actions verify
+        # the bot against Discord before accessing a channel or sending.
+        unverified_env = credential.owner_kind == "env" and credential.identity is None
         if (
             credential.provider != "discord"
-            or credential.identity != "bot"
+            or (credential.identity != "bot" and not unverified_env)
             or not token
             or any(c.isspace() for c in token)
         ):
@@ -137,7 +140,6 @@ class DiscordClient:
             or channel.get("guild_id") != snowflake(guild_id)
             or channel.get("type") not in {0, 5, 10, 11, 12}
         ):
-            raise ConnectionNotAuthorizedError(
-                provider="discord", hint="Choose an accessible text channel or thread in the configured guild."
-            )
+            msg = "Choose an accessible text channel or thread in the configured guild."
+            raise InvalidRequestError(msg, provider="discord")
         return channel

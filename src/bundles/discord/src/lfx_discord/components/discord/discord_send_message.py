@@ -1,6 +1,6 @@
 """Send a text message through a saved bot connection."""
 
-from lfx.io import MultilineInput, Output, StrInput
+from lfx.io import MessageTextInput, MultilineInput, Output
 from lfx.schema.data import Data
 
 from lfx_discord._base import DiscordActionComponent, connection_input
@@ -13,8 +13,8 @@ class DiscordSendMessageComponent(DiscordActionComponent):
     capability_id = "discord.bot.send"
     inputs = [
         connection_input(capability_id),
-        StrInput(name="guild_id", display_name="Guild ID", required=True, tool_mode=True),
-        StrInput(name="channel_id", display_name="Channel or Thread ID", required=True, tool_mode=True),
+        MessageTextInput(name="guild_id", display_name="Guild ID", required=True, tool_mode=True),
+        MessageTextInput(name="channel_id", display_name="Channel or Thread ID", required=True, tool_mode=True),
         MultilineInput(name="text", display_name="Text", required=True, tool_mode=True),
     ]
     outputs = [Output(display_name="Sent Message", name="message", method="build_message")]

@@ -81,6 +81,7 @@ from langflow.services.triggers.listeners.adapters import (
 )
 from langflow.services.triggers.ownership import UNUSABLE_CONNECTION_STATUSES, is_owned_by, owned_by_trigger_owner
 from langflow.services.triggers.principal import trigger_execution_principal
+from langflow.services.triggers.source_errors import SourceConfigurationError
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -282,6 +283,7 @@ class ConnectionWorker:
     last_error: str | None = None
     last_renewed_at: datetime = field(default_factory=_now)
     succeeded_since_failure: bool = False
+    connection_updated_at: datetime | None = None
 
     @property
     def running(self) -> bool:
@@ -612,6 +614,20 @@ class ListenerSupervisor:
                 await self._needs_reconnect(worker, exc)
             else:
                 await self._failed(worker, exc)
+        except SourceConfigurationError as exc:
+            if not exc.terminal:
+                await self._failed(worker, exc)
+                return
+            with contextlib.suppress(ListenerDeliveryRejectedError):
+                for trigger in ctx.triggers:
+                    await ctx.source_failed(
+                        trigger_id=trigger.id,
+                        message=str(exc),
+                        expected_config=trigger.config,
+                        expected_kind=trigger.kind,
+                        configuration_invalid=True,
+                    )
+            await self._drop(worker.connection_id)
         except _NEEDS_RECONNECT_ERRORS as exc:
             if is_local_configuration_failure(exc):
                 await self._failed(worker, exc)
@@ -866,6 +882,7 @@ class ListenerSupervisor:
             if row is None or trigger_row is None:
                 handle = f"connection:{worker.connection_id}"
                 raise ConnectionUnresolvedError(handle)
+            worker.connection_updated_at = row.updated_at
             try:
                 request = ConnectionResolutionRequest(
                     ref=ConnectionRef(provider=row.provider_key, name=row.name),
@@ -894,13 +911,16 @@ class ListenerSupervisor:
             expected_config: dict[str, Any],
             expected_kind: str,
             terminal: bool = False,
+            configuration_invalid: bool = False,
         ) -> None:
             async with session_scope() as session:
                 row = await lock_target(
                     session, trigger_id=trigger_id, expected_config=expected_config, expected_kind=expected_kind
                 )
-                row.last_error = f"{_SOURCE_POLLING_ERROR_PREFIX}{message}"
-                if terminal:
+                row.last_error = message if configuration_invalid else f"{_SOURCE_POLLING_ERROR_PREFIX}{message}"
+                if configuration_invalid:
+                    row.state = TriggerState.PENDING.value
+                elif terminal:
                     row.state = TriggerState.ERROR.value
                 row.updated_at = _now()
                 session.add(row)
@@ -1014,22 +1034,38 @@ class ListenerSupervisor:
         )
         with contextlib.suppress(Exception):
             async with session_scope() as session:
+                credentials_changed = False
+                if isinstance(exc, AuthExpiredError) and worker.connection_updated_at is not None:
+                    from langflow.services.connection.health import mark_credential_rejected
+                    from langflow.services.triggers.connection_recovery import as_utc
+
+                    connection = await lock_connection(session, worker.connection_id)
+                    credentials_changed = connection is not None and (
+                        as_utc(connection.updated_at) != as_utc(worker.connection_updated_at)
+                    )
+                    if not credentials_changed:
+                        await mark_credential_rejected(
+                            session,
+                            connection_id=worker.connection_id,
+                            observed_updated_at=worker.connection_updated_at,
+                        )
                 consent_required = (
                     isinstance(exc, ConnectionNotAuthorizedError) and exc.reason == "non-interactive-opt-in-required"
                 ) or (
                     isinstance(exc, CodedTriggerError)
                     and exc.code == TriggerErrorCode.BACKGROUND_RUNS_NOT_ALLOWED.value
                 )
-                await mark_needs_reconnect(
-                    session,
-                    trigger_ids=[t.id for t in worker.triggers],
-                    reason=(
-                        CONNECTION_NOT_AUTHORIZED_ERROR
-                        if consent_required
-                        else "The connection is no longer authorized. Reconnect it to resume this trigger."
-                    ),
-                    consent_required=consent_required,
-                )
+                if not credentials_changed:
+                    await mark_needs_reconnect(
+                        session,
+                        trigger_ids=[t.id for t in worker.triggers],
+                        reason=(
+                            CONNECTION_NOT_AUTHORIZED_ERROR
+                            if consent_required
+                            else "The connection is no longer authorized. Reconnect it to resume this trigger."
+                        ),
+                        consent_required=consent_required,
+                    )
         await self._drop(worker.connection_id)
 
     # ------------------------------------------------------------------ #

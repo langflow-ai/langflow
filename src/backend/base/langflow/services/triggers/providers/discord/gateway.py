@@ -24,6 +24,8 @@ from websockets.asyncio.client import connect as ws_connect
 from websockets.exceptions import ConnectionClosed
 
 from langflow.services.triggers.providers.discord.events import normalize
+from langflow.services.triggers.providers.discord.lifecycle import MESSAGE_CONTENT_REQUIRED
+from langflow.services.triggers.source_errors import SourceConfigurationError
 
 # Gateway frames contain bot credentials and private message content.
 # Keep this logger private and detached from application logging settings.
@@ -36,6 +38,7 @@ OP_HEARTBEAT_ACK = 11
 OP_RECONNECT = 7
 OP_INVALID_SESSION = 9
 AUTH_FAILED = 4004
+DISALLOWED_INTENTS = 4014
 MIN_HEARTBEAT_MS = 1000
 MAX_HEARTBEAT_MS = 120000
 MAX_SESSION_LENGTH = 256
@@ -127,9 +130,7 @@ class DiscordGatewayAdapter:
             for channel_id in config["channel_ids"]:
                 await client.channel(config["guild_id"], channel_id)
             if trigger.kind == "discord.message" and not bot["content_enabled"]:
-                raise ConnectionNotAuthorizedError(
-                    provider="discord", hint="Enable and, when required, obtain approval for Message Content Intent."
-                )
+                raise SourceConfigurationError(MESSAGE_CONTENT_REQUIRED, terminal=True)
             credential = await lease.get_credential()
             token = credential.access_token.get_secret_value()
             resume = bool(
@@ -207,10 +208,11 @@ class DiscordGatewayAdapter:
                     await self._save(ctx, trigger)
                 if code == AUTH_FAILED:
                     raise AuthExpiredError(provider="discord") from None
-                if code in {4010, 4011, 4012, 4013, 4014}:
-                    raise ConnectionNotAuthorizedError(
-                        provider="discord", hint="Check the bot intents and single-shard configuration."
-                    ) from None
+                if code == DISALLOWED_INTENTS:
+                    raise SourceConfigurationError(MESSAGE_CONTENT_REQUIRED, terminal=True) from None
+                if code in {4010, 4011, 4012, 4013}:
+                    msg = "Check the bot intents and single-shard configuration."
+                    raise SourceConfigurationError(msg, terminal=True) from None
                 raise ProviderUnavailableError(provider="discord") from None
             except (OSError, ValueError, TimeoutError):
                 raise ProviderUnavailableError(provider="discord") from None

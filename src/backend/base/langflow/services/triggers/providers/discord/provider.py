@@ -3,7 +3,7 @@
 from langflow.services.triggers.providers.discord.config import FIELDS, normalize_config
 from langflow.services.triggers.providers.discord.credentials import validate_manual_credential
 from langflow.services.triggers.providers.discord.gateway import DiscordGatewayAdapter
-from langflow.services.triggers.providers.discord.lifecycle import prepare, revoke
+from langflow.services.triggers.providers.discord.lifecycle import prepare, revoke, validate_source
 from langflow.services.triggers.providers.registry import TriggerKind, TriggerProvider
 
 
@@ -28,6 +28,7 @@ PROVIDER = TriggerProvider(
     ),
     normalize_config=normalize_config,
     prepare=prepare,
+    validate_source=validate_source,
     revoke=revoke,
     api_origins=("https://discord.com",),
     validate_manual_credential=validate_manual_credential,

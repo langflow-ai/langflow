@@ -1,5 +1,6 @@
 """Validate a bounded guild receiver without credential-bearing settings."""
 
+from lfx.integrations.errors import InvalidRequestError
 from lfx.integrations.models import ConnectionRef
 from lfx_discord._client import snowflake
 
@@ -20,14 +21,18 @@ def normalize_config(kind: str, config: dict) -> dict:
     if not isinstance(channels, list) or not 1 <= len(channels) <= MAX_CHANNELS:
         msg = "Choose between 1 and 100 explicit Discord channel or thread IDs."
         raise ValueError(msg)
-    channels = sorted({snowflake(value) for value in channels})
+    try:
+        channels = sorted({snowflake(value) for value in channels})
+        guild_id = snowflake(config.get("guild_id"))
+    except InvalidRequestError as exc:
+        raise ValueError(str(exc)) from None
     scope = config.get("session_scope") or "channel"
     if scope not in {"channel", "sender"} or (config.get("delivery_mode") or "auto") != "auto":
         msg = "Discord supports the supervised Gateway transport and channel or sender sessions."
         raise ValueError(msg)
     return {
         "connection": str(ref),
-        "guild_id": snowflake(config.get("guild_id")),
+        "guild_id": guild_id,
         "channel_ids": channels,
         "session_scope": scope,
         "delivery_mode": "auto",
