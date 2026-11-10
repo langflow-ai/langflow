@@ -9,7 +9,7 @@ from lfx.components.processing.combine_text import CombineTextComponent
 from lfx.custom.custom_component.component import Component
 from lfx.graph import Graph
 from lfx.graph.graph.constants import Finish
-from lfx.io import MessageTextInput, Output, SecretStrInput
+from lfx.io import HandleInput, MessageTextInput, Output, SecretStrInput
 from lfx.schema.message import Message
 from lfx.schema.schema import INPUT_FIELD_NAME
 
@@ -31,6 +31,15 @@ class SecretEcho(Component):
     def echo(self) -> Message:
         self.received_value = self.value
         return Message(text=self.value)
+
+
+class JoinMessages(Component):
+    display_name = "Join Messages"
+    inputs = [HandleInput(name="messages", display_name="Messages", input_types=["Message"], is_list=True)]
+    outputs = [Output(name="message", method="join")]
+
+    def join(self) -> Message:
+        return Message(text="".join(message.text for message in self.messages))
 
 
 @pytest.mark.asyncio
@@ -63,6 +72,23 @@ async def test_graph_with_edge():
     assert graph.vertices[1].id == output_id
     assert graph.edges[0].source_id == input_id
     assert graph.edges[0].target_id == output_id
+
+
+@pytest.mark.asyncio
+async def test_list_input_gets_values_in_connection_order():
+    """A list input fed by several components gets their values in the order they were connected.
+
+    Graph._build_edges used to collect edges in a set, whose order changes with the process's
+    hash seed, so the same flow joined these in a different order from one process to another.
+    """
+    texts = [TextInputComponent(_id=f"text-{letter}", input_value=letter) for letter in "ABCDEFGH"]
+    join = JoinMessages(_id="join")
+    join.set(messages=[text.text_response for text in texts])
+
+    graph = Graph(texts[0], join)
+    [r async for r in graph.async_start()]
+
+    assert graph.get_vertex("join").built_object["message"].text == "ABCDEFGH"
 
 
 @pytest.mark.asyncio
