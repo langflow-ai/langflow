@@ -1,19 +1,23 @@
+import asyncio
+import hashlib
 import io
 import re
 import unicodedata
 import uuid
 import zipfile
-from collections.abc import AsyncGenerator, AsyncIterable
+from collections.abc import AsyncGenerator, AsyncIterable, AsyncIterator
 from datetime import datetime
 from http import HTTPStatus
 from pathlib import Path
 from typing import Annotated
 from zoneinfo import ZoneInfo
 
+import anyio
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from lfx.log.logger import logger
 from lfx.utils.file_path_security import user_storage_scope, user_storage_scope_for_path
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, select
 
 from langflow.api.schemas import UploadFileResponse
@@ -30,6 +34,7 @@ from langflow.services.authorization.listing import (
 from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.settings.service import SettingsService
+from langflow.services.storage.s3 import S3StorageService
 from langflow.services.storage.service import StorageService
 
 router = APIRouter(tags=["Files"], prefix="/files")
@@ -38,6 +43,7 @@ router = APIRouter(tags=["Files"], prefix="/files")
 MCP_SERVERS_FILE = "_mcp_servers"
 SAMPLE_DATA_DIR = Path(__file__).parent / "sample_data"
 MAX_FILENAME_BYTES = 255
+UPLOAD_READ_CHUNK = 1024 * 1024
 _UNSAFE_ARCHIVE_NAME_CHARS = re.compile(r'[\\/\x00-\x1f\x7f-\x9f<>:"|?*]')
 _WINDOWS_DEVICE_NAME = re.compile(
     r"^(?:CON|PRN|AUX|NUL|CONIN\$|CONOUT\$|COM[0-9¹²³]|LPT[0-9¹²³])(?=[ .]|$)",
@@ -224,6 +230,24 @@ def _user_file_namespace(path: str, owner_id: uuid.UUID) -> str:
     return user_storage_scope_for_path(path, owner_id)
 
 
+async def _upload_chunks(file) -> AsyncIterator[bytes]:
+    while chunk := await file.read(UPLOAD_READ_CHUNK):
+        yield chunk
+    # Write File can upload the destination itself. Windows requires its read
+    # handle to be closed before local storage replaces it with the staged file.
+    await file.close()
+
+
+def _spooled_md5(handle) -> str:
+    """The MD5 of an upload's spooled body, read from its start and rewound for the save."""
+    digest = hashlib.md5(usedforsecurity=False)
+    handle.seek(0)
+    while chunk := handle.read(UPLOAD_READ_CHUNK):
+        digest.update(chunk)
+    handle.seek(0)
+    return digest.hexdigest()
+
+
 async def save_file_routine(
     file,
     storage_service,
@@ -234,18 +258,37 @@ async def save_file_routine(
     append: bool = False,
     namespace: str | None = None,
 ):
-    """Routine to save the file content to the storage service."""
+    """Save file content to storage, consuming and closing streamed uploads."""
     file_id = uuid.uuid4()
 
-    if not file_content:
-        file_content = await file.read()
     if not file_name:
         file_name = file.filename
+    flow_id = namespace or user_storage_scope(current_user.id)
+
+    # Read in pieces: FastAPI has the body on disk by now, and reading it whole is what takes
+    # an Editor down once an upload is bigger than its memory.
+    # shortcut: an append still reads the whole body. Local disk could stream it too, if a
+    # large append ever needs to.
+    if not file_content and not append:
+        try:
+            if isinstance(storage_service, S3StorageService):
+                # S3 labels each object with its MD5. Known before the upload starts, the label goes
+                # on with it; known only at the end, it costs a copy of the whole object, which took
+                # a 900 MB upload past an OpenShift route's 30 s. Reading the spooled body is local.
+                md5 = await asyncio.to_thread(_spooled_md5, file.file)
+                await storage_service.save_upload_stream(flow_id, file_name, _upload_chunks(file), md5=md5)
+            else:
+                await storage_service.save_upload_stream(flow_id, file_name, _upload_chunks(file))
+        finally:
+            # Storage and checksum failures can happen before the first chunk is requested.
+            with anyio.CancelScope(shield=True):
+                await file.close()
+        return file_id, file_name
 
     await storage_service.save_file(
-        flow_id=namespace or user_storage_scope(current_user.id),
+        flow_id=flow_id,
         file_name=file_name,
-        data=file_content,
+        data=file_content or await file.read(),
         append=append,
     )
 
@@ -421,8 +464,9 @@ async def upload_user_file(
             # Access denied or invalid credentials - return 500 as this is a server config issue
             raise HTTPException(status_code=500, detail="Error accessing storage") from e
         except Exception as e:
-            # General error saving file or getting file size
-            raise HTTPException(status_code=500, detail=f"Error accessing file: {e}") from e
+            # The raw error can name the storage's address, which is no use to whoever uploaded.
+            await logger.aexception("Error saving an upload to storage")
+            raise HTTPException(status_code=500, detail="Error accessing storage") from e
 
         if ephemeral:
             # Ephemeral uploads: file is saved to storage (servable for chat history)
@@ -450,6 +494,13 @@ async def upload_user_file(
         try:
             await session.flush()
             await session.refresh(new_file)
+        except IntegrityError as db_err:
+            # Another upload of the same name finished first: both picked the name before either
+            # row existed, and the stored file is now that upload's, so it must stay.
+            raise HTTPException(
+                status_code=409,
+                detail=f"Another upload named {unique_filename} finished first. Upload again to save a new copy.",
+            ) from db_err
         except Exception as db_err:
             # Database insert failed - clean up the uploaded file to avoid orphaned files
             try:
@@ -458,9 +509,9 @@ async def upload_user_file(
                 #  If delete fails, just log the error
                 await logger.aerror(f"Failed to clean up uploaded file {stored_file_name}: {e}")
 
-            raise HTTPException(
-                status_code=500, detail=f"Error inserting file metadata into database: {db_err}"
-            ) from db_err
+            # The raw error carries the SQL and its parameters, the user's id and the file's path.
+            await logger.aexception("Error recording an upload")
+            raise HTTPException(status_code=500, detail="Error inserting file metadata into database") from db_err
     except HTTPException:
         # Re-raise HTTP exceptions (like 409 conflicts) without modification
         raise

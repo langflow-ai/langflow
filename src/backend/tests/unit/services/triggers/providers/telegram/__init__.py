@@ -1,0 +1,1 @@
+"""Telegram trigger provider contracts."""
