@@ -265,7 +265,11 @@ class BackgroundExecutionService(Service):
 
             await asyncio.sleep(lease_ttl_s)
             while await writes_paused():  # noqa: ASYNC110
+<<<<<<< HEAD
                 await asyncio.sleep(1)
+=======
+                await asyncio.sleep(0.1)
+>>>>>>> origin/release-1.14.0
             try:
                 async with async_writing(name="background_lease_expiry") as let_in:
                     if let_in:
@@ -891,7 +895,18 @@ class BackgroundExecutionService(Service):
 
         await self.start()
         if await writes_paused():
+<<<<<<< HEAD
             self._schedule_maintenance_recovery()
+=======
+            if self._maintenance_recovery_task is None or self._maintenance_recovery_task.done():
+
+                async def recover_after_maintenance():
+                    while await writes_paused():  # noqa: ASYNC110
+                        await asyncio.sleep(0.1)
+                    await self.sweep_orphans_on_startup()
+
+                self._maintenance_recovery_task = asyncio.create_task(recover_after_maintenance())
+>>>>>>> origin/release-1.14.0
             return
         if self._scaled:
             return
@@ -921,7 +936,10 @@ class BackgroundExecutionService(Service):
         # the real QUEUED->IN_PROGRESS flip once it actually starts emitting.
         for job in await self._queued_workflow_jobs():
             if await writes_paused():
+<<<<<<< HEAD
                 self._schedule_maintenance_recovery()
+=======
+>>>>>>> origin/release-1.14.0
                 return
             lease_heartbeat = datetime.now(timezone.utc).isoformat()
             if not await job_service.claim_queued_lease(

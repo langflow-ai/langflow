@@ -24,6 +24,7 @@ from langflow.services.database.models.user.model import User
 from langflow.services.database.models.variable.model import Variable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.deps import get_storage_service, session_scope
+from langflow.services.maintenance.state import maintenance_status, set_maintenance
 from sqlalchemy import func
 from sqlmodel import col, select
 
@@ -187,6 +188,28 @@ async def test_should_delete_access_exceptions_naming_the_builder_and_keep_ones_
         assert kept.user_id == seeded.colleague_id
         assert kept.created_by is None
         assert await _count(session, AuthzAccessException, AuthzAccessException.user_id == seeded.user_id) == 0
+
+
+@pytest.mark.usefixtures("client")
+@pytest.mark.parametrize("erase_setter", [True, False], ids=["setter", "other-account"])
+async def test_should_clear_erased_maintenance_setter_and_preserve_active_maintenance(erase_setter):
+    setter_id = await create_user("maintenance-setter", superuser=True)
+    admin_id = await create_user("maintenance-erase-admin", superuser=True)
+    subject_id = setter_id if erase_setter else await create_user("maintenance-erase-other")
+    async with session_scope() as session:
+        await set_maintenance(session, enabled=True, reason="Database backup", actor_id=setter_id)
+        before = await maintenance_status(session)
+        assert before.set_by == setter_id
+
+    assert await run_request(await _request_and_approve(subject_id, admin_id)) == DataSubjectRequestStatus.DONE.value
+
+    async with session_scope() as session:
+        assert await session.get(User, subject_id) is None
+        after = await maintenance_status(session)
+        assert after.maintenance is True
+        assert after.set_by == (None if erase_setter else setter_id)
+        assert after.reason == before.reason
+        assert after.set_at == before.set_at
 
 
 @pytest.mark.usefixtures("client")

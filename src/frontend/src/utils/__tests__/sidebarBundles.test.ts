@@ -163,3 +163,11 @@ it("uses the Telegram logo for its integration palette group", () => {
     icon: "Telegram",
   });
 });
+
+it("uses the Discord logo for its integration palette group", () => {
+  expect(SIDEBAR_BUNDLES).toContainEqual({
+    display_name: "Discord",
+    name: "discord",
+    icon: "discord",
+  });
+});

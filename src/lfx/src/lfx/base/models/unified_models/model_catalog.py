@@ -583,3 +583,17 @@ def get_decision_model_options(
                 }
             )
     return options
+
+
+def is_decision_model_switched_off(user_id: UUID | str | None, provider: str, model_name: str) -> bool:
+    """Whether the user switched this decision model off in Model Providers.
+
+    Only an explicit switch-off counts: a model never switched on can still run with a key sent in
+    the request, as without saved settings.
+    """
+    if isinstance(user_id, str) and user_id == "None":
+        user_id = None
+    if not user_id or not _keeps_model_settings():
+        return False
+    disabled, _enabled = run_until_complete(_get_model_status(user_id, strict=True))
+    return model_status_contains(disabled, provider, model_name, model_type="decision")

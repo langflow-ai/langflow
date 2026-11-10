@@ -1431,10 +1431,17 @@ async def test_concurrent_cancels_from_multiple_workers_are_idempotent():
         job_id = str(uuid.uuid4())
         producer.create_queue(job_id)
         cancelled = asyncio.Event()
+<<<<<<< HEAD
         started = asyncio.Event()
 
         async def _long_running():
             started.set()
+=======
+        producer_started = asyncio.Event()
+
+        async def _long_running():
+            producer_started.set()
+>>>>>>> origin/release-1.14.0
             try:
                 await asyncio.Event().wait()
             except asyncio.CancelledError:
@@ -1442,7 +1449,11 @@ async def test_concurrent_cancels_from_multiple_workers_are_idempotent():
                 raise
 
         producer.start_job(job_id, _long_running())
+<<<<<<< HEAD
         await asyncio.wait_for(started.wait(), timeout=2.0)
+=======
+        await asyncio.wait_for(producer_started.wait(), timeout=2.0)
+>>>>>>> origin/release-1.14.0
 
         # Two workers publish cancel at the same time.
         await asyncio.gather(pub_a.signal_cancel(job_id), pub_b.signal_cancel(job_id))

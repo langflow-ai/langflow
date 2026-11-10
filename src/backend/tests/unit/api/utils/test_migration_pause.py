@@ -251,8 +251,16 @@ READS = frozenset(
         "/api/v1/triggers/{trigger_id}",
         "/api/v1/triggers/{trigger_id}/events",
         "/api/v1/triggers/{trigger_id}/ingress",
+<<<<<<< HEAD
         "/api/v1/upgrade-reports",
         "/api/v1/upgrade-reports/{report_id}",
+=======
+        # These return stored reports/results; export only emits the allowed
+        # authorization audit record and never executes the imported report.
+        "/api/v1/upgrade-reports",
+        "/api/v1/upgrade-reports/{report_id}",
+        "/api/v1/upgrade-reports/{report_id}/export",
+>>>>>>> origin/release-1.14.0
         "/api/v1/upgrade-reports/{report_id}/repairs",
         "/api/v1/users/",
         "/api/v1/users/me/deletion-request",
