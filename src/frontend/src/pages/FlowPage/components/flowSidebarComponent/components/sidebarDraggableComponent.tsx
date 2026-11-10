@@ -28,6 +28,7 @@ import {
   downloadNode,
   getNodeId,
 } from "@/utils/reactflowUtils";
+import { isTriggerComponent } from "@/utils/trigger-component";
 import { cn, removeCountFromString } from "@/utils/utils";
 
 export const SidebarDraggableComponent = forwardRef(
@@ -223,6 +224,13 @@ export const SidebarDraggableComponent = forwardRef(
                 className="h-[18px] w-[18px] shrink-0"
               />
               <div className="flex flex-1 items-center overflow-hidden">
+                {isTriggerComponent(apiClass) && (
+                  <ForwardedIconComponent
+                    name="Zap"
+                    className="mr-1 h-3.5 w-3.5 shrink-0"
+                    dataTestId="sidebar-trigger-icon"
+                  />
+                )}
                 <ShadTooltip content={display_name} styleClasses="z-50">
                   <span
                     data-testid="display-name"
@@ -272,10 +280,6 @@ export const SidebarDraggableComponent = forwardRef(
                 </Button>
               )}
               <div ref={popoverRef}>
-                <ForwardedIconComponent
-                  name="GripVertical"
-                  className="h-4 w-4 shrink-0 text-muted-foreground group-hover/draggable:text-primary"
-                />
                 <SelectTrigger
                   variant="plain"
                   tabIndex={-1}

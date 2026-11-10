@@ -60,6 +60,7 @@
     "basic-ftp": "^6.2.1",
     "source-map-js": "^1.2.2",
     "shell-quote": "^1.9.0",
+    "modern-tar": "^0.8.6",
     "websocket-driver": "^0.7.5",
     "brace-expansion@^1": "^1.1.21",
     "brace-expansion@^2": "^2.1.7",

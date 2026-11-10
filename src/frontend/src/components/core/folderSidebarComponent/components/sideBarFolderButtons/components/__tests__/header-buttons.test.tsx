@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { HeaderButtons } from "../header-buttons";
@@ -37,12 +37,15 @@ jest.mock("@/stores/authStore", () => ({
   default: () => mockUserData,
 }));
 
-jest.mock("../add-folder-button", () => ({
-  AddFolderButton: ({ disabled }: { disabled?: boolean }) => (
-    <button data-testid="add-folder-btn" disabled={disabled}>
-      Add folder
-    </button>
-  ),
+let mockNewProjectButton: {
+  blockedReason: string | null;
+  blockedHint?: string | null;
+} = {
+  blockedReason: null,
+};
+
+jest.mock("@/customization/hooks/use-custom-new-project-button", () => ({
+  useCustomNewProjectButton: () => mockNewProjectButton,
 }));
 
 jest.mock("../upload-folder-button", () => ({
@@ -72,6 +75,7 @@ describe("HeaderButtons", () => {
 
   afterEach(() => {
     mockUserData = undefined;
+    mockNewProjectButton = { blockedReason: null };
     act(() => {
       useUtilityStore.setState({
         hideGettingStartedProgress: false,
@@ -80,20 +84,76 @@ describe("HeaderButtons", () => {
     });
   });
 
-  it("shows add folder button when hideNewProjectButton is false", () => {
+  it("shows an unblocked add button with no inline reason by default", () => {
     render(<HeaderButtons {...props} />);
 
-    expect(screen.getByTestId("add-folder-btn")).toBeInTheDocument();
+    const btn = screen.getByTestId("add-project-button");
+    expect(btn).not.toHaveAttribute("aria-disabled");
+    expect(screen.queryByText("Plan limit reached")).not.toBeInTheDocument();
   });
 
-  it("hides add folder button when hideNewProjectButton is true", () => {
+  it("blocks the button, keeps it focusable and shows the reason", () => {
+    mockNewProjectButton = { blockedReason: "Plan limit reached" };
+
+    render(<HeaderButtons {...props} />);
+
+    const btn = screen.getByTestId("add-project-button");
+    expect(btn).toHaveAttribute("aria-disabled", "true");
+    expect(btn).not.toBeDisabled();
+    expect(btn).toHaveAccessibleDescription("Plan limit reached");
+    expect(
+      screen
+        .getAllByText("Plan limit reached")
+        .some((el) => el.tagName === "P"),
+    ).toBe(true);
+
+    fireEvent.click(btn);
+    expect(props.addNewFolder).not.toHaveBeenCalled();
+  });
+
+  it("shows the hint inline and keeps the full reason as description", () => {
+    mockNewProjectButton = {
+      blockedReason: "Full reason",
+      blockedHint: "3 of 3 used",
+    };
+
+    const { container } = render(<HeaderButtons {...props} />);
+
+    expect(container.querySelector("p")).toHaveTextContent("3 of 3 used");
+    expect(
+      screen.getByTestId("add-project-button"),
+    ).toHaveAccessibleDescription("Full reason");
+  });
+
+  it("falls back to the reason when the hint is empty", () => {
+    mockNewProjectButton = { blockedReason: "Full reason", blockedHint: "" };
+
+    const { container } = render(<HeaderButtons {...props} />);
+
+    expect(container.querySelector("p")).toHaveTextContent("Full reason");
+  });
+
+  it("treats an empty reason as not blocked", () => {
+    mockNewProjectButton = { blockedReason: "" };
+
+    const { container } = render(<HeaderButtons {...props} />);
+
+    expect(screen.getByTestId("add-project-button")).not.toHaveAttribute(
+      "aria-disabled",
+    );
+    expect(container.querySelector("p")).not.toBeInTheDocument();
+  });
+
+  it("hides the button and inline reason when hideNewProjectButton is true", () => {
+    mockNewProjectButton = { blockedReason: "Plan limit reached" };
     act(() => {
       useUtilityStore.setState({ hideNewProjectButton: true });
     });
 
     render(<HeaderButtons {...props} />);
 
-    expect(screen.queryByTestId("add-folder-btn")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("add-project-button")).not.toBeInTheDocument();
+    expect(screen.queryByText("Plan limit reached")).not.toBeInTheDocument();
     expect(screen.getByTestId("upload-folder-btn")).toBeInTheDocument();
   });
 
