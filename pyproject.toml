@@ -47,6 +47,7 @@ dependencies = [
     "lfx-microsoft>=0.2.0,<1.0.0",
     "lfx-jira>=0.1.1,<1.0.0",
     "lfx-slack>=0.3.0,<1.0.0",
+    "lfx-salesforce>=0.1.0,<1.0.0",
     "lfx-confluence>=0.1.1,<1.0.0",
     "lfx-servicenow>=0.1.1,<1.0.0",
     "lfx-telegram>=0.1.1,<1.0.0",
@@ -141,6 +142,7 @@ lfx-gitlab = { workspace = true }
 lfx-microsoft = { workspace = true }
 lfx-jira = { workspace = true }
 lfx-slack = { workspace = true }
+lfx-salesforce = { workspace = true }
 lfx-confluence = { workspace = true }
 lfx-servicenow = { workspace = true }
 lfx-telegram = { workspace = true }
@@ -188,6 +190,7 @@ members = [
     "src/bundles/microsoft",
     "src/bundles/jira",
     "src/bundles/slack",
+    "src/bundles/salesforce",
     "src/bundles/confluence",
     "src/bundles/servicenow",
     "src/bundles/telegram",

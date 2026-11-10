@@ -3547,6 +3547,7 @@
   "settings.upgrade.unmatchedServing": "No retained Serving record matched this Editor flow ID. Other deployment history may be unavailable.",
   "settings.upgrade.unclassifiedJobs": "Some jobs could not be classified or linked. Counts may be incomplete.",
   "connections.add.servicenowUserOwned": "ServiceNow connections belong to an individual user and cannot be shared with the instance.",
+  "connections.add.salesforceUserOwned": "Salesforce connections belong to an individual user and cannot be shared with the instance.",
   "apiKey.permissions.title": "Permissions",
   "apiKey.permissions.restricted": "Restricted access",
   "apiKey.permissions.fullAccess": "Full owner access",

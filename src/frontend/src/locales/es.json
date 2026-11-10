@@ -3548,6 +3548,7 @@
   "settings.upgrade.unmatchedServing": "Ningún registro conservado de Serving coincide con este ID de flujo de Editor. Es posible que falte otro historial de despliegues.",
   "settings.upgrade.unclassifiedJobs": "No se pudieron clasificar o vincular algunos trabajos. Los recuentos pueden estar incompletos.",
   "connections.add.servicenowUserOwned": "Las conexiones de ServiceNow pertenecen a un usuario individual y no se pueden compartir con la instancia.",
+  "connections.add.salesforceUserOwned": "Las conexiones de Salesforce pertenecen a un usuario individual y no se pueden compartir con la instancia.",
   "apiKey.permissions.title": "Permisos",
   "apiKey.permissions.restricted": "Acceso restringido",
   "apiKey.permissions.fullAccess": "Acceso completo del propietario",

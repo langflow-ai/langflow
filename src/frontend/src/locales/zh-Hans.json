@@ -3547,6 +3547,7 @@
   "settings.upgrade.unmatchedServing": "没有保留的 Serving 记录与此 Editor 流程 ID 匹配。其他部署历史可能不可用。",
   "settings.upgrade.unclassifiedJobs": "部分作业无法分类或关联。计数可能不完整。",
   "connections.add.servicenowUserOwned": "ServiceNow 连接属于单个用户，不能与整个实例共享。",
+  "connections.add.salesforceUserOwned": "Salesforce 连接属于单个用户，不能与整个实例共享。",
   "apiKey.permissions.title": "权限",
   "apiKey.permissions.restricted": "受限访问",
   "apiKey.permissions.fullAccess": "所有者的全部访问权限",

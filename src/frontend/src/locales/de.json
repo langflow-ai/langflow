@@ -3548,6 +3548,7 @@
   "settings.upgrade.unmatchedServing": "Kein aufbewahrter Serving-Datensatz passt zu dieser Editor-Flow-ID. Weitere Bereitstellungsverläufe sind möglicherweise nicht verfügbar.",
   "settings.upgrade.unclassifiedJobs": "Einige Jobs konnten nicht zugeordnet oder klassifiziert werden. Die Zahlen können unvollständig sein.",
   "connections.add.servicenowUserOwned": "ServiceNow-Verbindungen gehören einem einzelnen Benutzer und können nicht mit der Instanz geteilt werden.",
+  "connections.add.salesforceUserOwned": "Salesforce-Verbindungen gehören einem einzelnen Benutzer und können nicht mit der Instanz geteilt werden.",
   "apiKey.permissions.title": "Berechtigungen",
   "apiKey.permissions.restricted": "Eingeschränkter Zugriff",
   "apiKey.permissions.fullAccess": "Vollständiger Zugriff des Besitzers",

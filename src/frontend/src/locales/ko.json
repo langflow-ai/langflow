@@ -3547,6 +3547,7 @@
   "settings.upgrade.unmatchedServing": "이 Editor Flow ID와 일치하는 Serving 기록이 남아 있지 않습니다. 다른 배포 기록을 확인할 수 없을 수 있습니다.",
   "settings.upgrade.unclassifiedJobs": "일부 작업을 분류하거나 연결하지 못해 집계에서 빠졌을 수 있습니다.",
   "connections.add.servicenowUserOwned": "ServiceNow 연결은 개별 사용자에게 속하며 인스턴스 전체와 공유할 수 없습니다.",
+  "connections.add.salesforceUserOwned": "Salesforce 연결은 개별 사용자에게 속하며 인스턴스 전체와 공유할 수 없습니다.",
   "apiKey.permissions.title": "권한",
   "apiKey.permissions.restricted": "제한된 액세스",
   "apiKey.permissions.fullAccess": "소유자의 전체 액세스 권한",

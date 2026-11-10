@@ -3548,6 +3548,7 @@
   "settings.upgrade.unmatchedServing": "Aucun enregistrement Serving conservé ne correspond à cet ID de flux Editor. D’autres historiques de déploiement peuvent être indisponibles.",
   "settings.upgrade.unclassifiedJobs": "Certaines tâches n’ont pas pu être classées ou reliées. Les nombres peuvent être incomplets.",
   "connections.add.servicenowUserOwned": "Les connexions ServiceNow appartiennent à un utilisateur et ne peuvent pas être partagées avec toute l’instance.",
+  "connections.add.salesforceUserOwned": "Les connexions Salesforce appartiennent à un utilisateur et ne peuvent pas être partagées avec toute l’instance.",
   "apiKey.permissions.title": "Autorisations",
   "apiKey.permissions.restricted": "Accès restreint",
   "apiKey.permissions.fullAccess": "Accès complet du propriétaire",
