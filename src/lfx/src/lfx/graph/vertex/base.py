@@ -606,7 +606,7 @@ class Vertex:
                     key,
                     value,
                 )
-            elif isinstance(value, list) and self._is_list_of_vertices(value):
+            elif isinstance(value, list) and any(self._is_vertex(item) for item in value):
                 await self._build_list_of_vertices_and_update_params(key, value)
             elif isinstance(value, dict):
                 await self._build_dict_and_update_params(
@@ -638,20 +638,22 @@ class Vertex:
         """Checks if the provided value is an instance of Vertex."""
         return isinstance(value, Vertex)
 
-    def _is_list_of_vertices(self, value):
-        """Checks if the provided value is a list of Vertex instances."""
-        return all(self._is_vertex(vertex) for vertex in value)
-
-    async def get_result(self, requester: Vertex, target_handle_name: str | None = None) -> Any:
+    async def get_result(
+        self,
+        requester: Vertex,
+        target_handle_name: str | None = None,
+        source_handle_name: str | None = None,
+    ) -> Any:
         """Retrieves the result of the vertex.
 
         This is a read-only method so it raises an error if the vertex has not been built yet.
+        ``source_handle_name`` picks the output when this vertex feeds the input through several.
 
         Returns:
             The result of the vertex.
         """
         async with self.lock:
-            result = await self._get_result(requester, target_handle_name)
+            result = await self._get_result(requester, target_handle_name, source_handle_name)
             requester._inherit_secret_values(self)
             return result
 
@@ -689,6 +691,7 @@ class Vertex:
         self,
         requester: Vertex,  # noqa: ARG002
         target_handle_name: str | None = None,  # noqa: ARG002
+        source_handle_name: str | None = None,  # noqa: ARG002
     ) -> Any:
         """Retrieves the result of the built component.
 
@@ -714,11 +717,26 @@ class Vertex:
     async def _build_list_of_vertices_and_update_params(
         self,
         key,
-        vertices: list[Vertex],
+        vertices: list[Any],
     ) -> None:
-        """Iterates over a list of vertices, builds each and updates the params dictionary."""
+        """Iterates over a list of vertices, builds each and updates the params dictionary.
+
+        An entry that is not a vertex stays as it is, in its place: like a plain value in a dict
+        param, e.g. the item a Loop injects into a list input that loop-body vertices also feed.
+        """
         self.params[key] = []
+        # A vertex that feeds this input through several of its outputs is listed once per edge,
+        # in edge order; give each entry its own edge's output, not the first matching edge's.
+        source_handles: dict[str, list[str]] = {}
+        for edge in self.incoming_edges:
+            if edge.target_param == key:
+                source_handles.setdefault(edge.source_id, []).append(edge.source_handle.name)
         for vertex in vertices:
+            if not self._is_vertex(vertex):
+                self.params[key].append(vertex)
+                continue
+            handles = source_handles.get(vertex.id)
+            source_handle_name = handles.pop(0) if handles else None
             # A conditionally-excluded predecessor that never built contributes nothing to a
             # list input. Pulling a result for it would return this input's template default
             # (e.g. an empty Message) and inject a stray element next to the real branch's
@@ -726,7 +744,7 @@ class Vertex:
             # single-value case, which is wrong for a merged list.
             if not vertex.built and vertex.id in self.graph.conditionally_excluded_vertices:
                 continue
-            result = await vertex.get_result(self, target_handle_name=key)
+            result = await vertex.get_result(self, target_handle_name=key, source_handle_name=source_handle_name)
             # Weird check to see if the params[key] is a list
             # because sometimes it is a Data and breaks the code
             if not isinstance(self.params[key], list):
