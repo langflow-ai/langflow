@@ -5280,6 +5280,31 @@
       "bare_class_name": "KeenableSearchComponent",
       "target": "ext:keenable:KeenableSearchComponent@official",
       "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "GenMagicImageGenerationComponent",
+      "target": "ext:genmagic:GenMagicImageGenerationComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "GenMagicModelComponent",
+      "target": "ext:genmagic:GenMagicModelComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "GenMagicTextToSpeechComponent",
+      "target": "ext:genmagic:GenMagicTextToSpeechComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "GenMagicVideoGenerationComponent",
+      "target": "ext:genmagic:GenMagicVideoGenerationComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "GenMagicVideoStatusComponent",
+      "target": "ext:genmagic:GenMagicVideoStatusComponent@official",
+      "added_in": "1.14.0"
     }
   ],
   "ambiguous_bare_names": [

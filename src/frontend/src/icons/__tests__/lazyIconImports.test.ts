@@ -1,6 +1,7 @@
 const mockVllmIcon = jest.fn();
 const mockOpenRAGIcon = jest.fn();
 const mockFigraniumIcon = jest.fn();
+const mockGenMagicIcon = jest.fn();
 const mockKeenableIcon = jest.fn();
 
 jest.mock("@/icons/vLLM", () => ({
@@ -13,6 +14,10 @@ jest.mock("@/icons/OpenRAG", () => ({
 
 jest.mock("@/icons/Figranium", () => ({
   FigraniumIcon: mockFigraniumIcon,
+}));
+
+jest.mock("@/icons/GenMagic", () => ({
+  GenMagicIcon: mockGenMagicIcon,
 }));
 
 jest.mock("@/icons/Keenable", () => ({
@@ -38,6 +43,12 @@ describe("lazyIconsMapping", () => {
     const { default: icon } = await lazyIconsMapping.Figranium();
 
     expect(icon).toBe(mockFigraniumIcon);
+  });
+
+  it("loads the GenMagic bundle icon", async () => {
+    const { default: icon } = await lazyIconsMapping.GenMagic();
+
+    expect(icon).toBe(mockGenMagicIcon);
   });
 
   it("loads the Keenable bundle icon", async () => {
