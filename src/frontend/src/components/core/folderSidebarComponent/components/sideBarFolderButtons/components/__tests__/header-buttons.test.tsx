@@ -37,7 +37,10 @@ jest.mock("@/stores/authStore", () => ({
   default: () => mockUserData,
 }));
 
-let mockNewProjectButton: { blockedReason: string | null } = {
+let mockNewProjectButton: {
+  blockedReason: string | null;
+  blockedHint?: string | null;
+} = {
   blockedReason: null,
 };
 
@@ -106,6 +109,28 @@ describe("HeaderButtons", () => {
 
     fireEvent.click(btn);
     expect(props.addNewFolder).not.toHaveBeenCalled();
+  });
+
+  it("shows the hint inline and keeps the full reason as description", () => {
+    mockNewProjectButton = {
+      blockedReason: "Full reason",
+      blockedHint: "3 of 3 used",
+    };
+
+    const { container } = render(<HeaderButtons {...props} />);
+
+    expect(container.querySelector("p")).toHaveTextContent("3 of 3 used");
+    expect(
+      screen.getByTestId("add-project-button"),
+    ).toHaveAccessibleDescription("Full reason");
+  });
+
+  it("falls back to the reason when the hint is empty", () => {
+    mockNewProjectButton = { blockedReason: "Full reason", blockedHint: "" };
+
+    const { container } = render(<HeaderButtons {...props} />);
+
+    expect(container.querySelector("p")).toHaveTextContent("Full reason");
   });
 
   it("treats an empty reason as not blocked", () => {

@@ -115,7 +115,7 @@ export const HeaderButtons = ({
       </div>
       {!hideNewProjectButton && newProjectButton.blockedReason && (
         <p aria-hidden="true" className="text-xs text-muted-foreground">
-          {newProjectButton.blockedReason}
+          {newProjectButton.blockedHint || newProjectButton.blockedReason}
         </p>
       )}
     </>
