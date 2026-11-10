@@ -38,7 +38,7 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.api.utils.migration_pause import writing
+from langflow.api.utils.migration_pause import async_writing
 from langflow.initial_setup.constants import (
     ASSISTANT_FOLDER_DESCRIPTION,
     ASSISTANT_FOLDER_NAME,
@@ -1623,10 +1623,10 @@ async def sync_flows_from_fs():
             # A paused instance takes no change from disk. A file that changed is read once the pause ends.
             # A pass holds a place among the changes a pause waits for, so one that began just before
             # a pause is waited for and does not write after it.
-            place = contextlib.ExitStack()
+            place = contextlib.AsyncExitStack()
             try:
-                if not place.enter_context(writing(name="flow_sync")):
-                    place.close()
+                if not await place.enter_async_context(async_writing(name="flow_sync")):
+                    await place.aclose()
                     await asyncio.sleep(fs_flows_polling_interval)
                     continue
                 async with session_scope() as session:
@@ -1686,7 +1686,7 @@ async def sync_flows_from_fs():
                 await logger.aexception("Error while syncing flows from database")
                 break
             finally:
-                place.close()
+                await place.aclose()
 
             await asyncio.sleep(fs_flows_polling_interval)
     except asyncio.CancelledError:

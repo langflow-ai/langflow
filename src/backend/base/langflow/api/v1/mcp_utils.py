@@ -31,7 +31,7 @@ from sqlmodel import SQLModel, select
 from langflow.api.utils.core import strip_secret_field_values
 from langflow.api.utils.execution_principal import FAMILY_LEGACY_MCP, FAMILY_MCP_PROJECTS
 from langflow.api.utils.flow_utils import compute_virtual_flow_id, scope_session_to_namespace
-from langflow.api.utils.migration_pause import REFUSAL, writing
+from langflow.api.utils.migration_pause import write_admission
 from langflow.api.v1.endpoints import simple_run_flow
 from langflow.api.v1.files import (
     _get_file_with_legacy_fallback,
@@ -684,9 +684,9 @@ async def handle_call_tool(
     # Over the SSE transport the POST that carries a call answers before the call runs, in the task
     # of the stream. So the call holds a place of its own among the changes a migration pause waits
     # for, and is refused when the pause came first.
-    with writing("task", name="mcp_tool_call") as let_in:
-        if not let_in:
-            raise RuntimeError(REFUSAL)
+    async with write_admission("task", name="mcp_tool_call", caller_id=authenticated_caller_ctx.get()) as refusal:
+        if refusal is not None:
+            raise RuntimeError(refusal)
         try:
             return await with_db_session(execute_tool)
         except Exception as e:
