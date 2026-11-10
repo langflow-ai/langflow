@@ -456,6 +456,13 @@ def test_openai_refusal_keeps_provider_reason():
     assert (result.status, result.refusal) == ("refusal", "Policy reason")
 
 
+def test_openrouter_refusal_is_a_refusal_without_a_reason():
+    payload = response_for("OpenRouter", "choice")
+    payload["answers"]["decision"] = {"type": "refusal"}
+    result = providers.parse_response("OpenRouter", request_for("choice"), payload)
+    assert (result.status, result.refusal) == ("refusal", None)
+
+
 @pytest.mark.parametrize("provider", ["TypeSafe", "Perplexity"])
 def test_undocumented_refusal_type_is_invalid_not_refusal(provider):
     payload = response_for(provider, "choice")
@@ -743,7 +750,8 @@ OVERSIZED_INPUT_BODIES = {
 }
 
 
-@pytest.mark.parametrize("provider", PROVIDERS)
+# OpenRouter's answer to an oversized input has not been captured yet, so it is not listed.
+@pytest.mark.parametrize("provider", OVERSIZED_INPUT_BODIES)
 def test_each_providers_oversized_input_answer_follows_the_error_action(monkeypatch, provider):
     response = httpx.Response(400, json=OVERSIZED_INPUT_BODIES[provider])
     monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: response)

@@ -278,9 +278,9 @@ def parse_response(
             "usage": _token_usage(payload.get("usage")),
             "request_id": request_id,
         }
-        # Only OpenAI documents a refusal answer. TypeSafe and Perplexity always answer with the
-        # requested type, so any other type there is an invalid response, never a refusal.
-        if provider == "OpenAI" and answer["type"] == "refusal":
+        # OpenAI and OpenRouter document a refusal answer (OpenRouter's carries no reason). TypeSafe and
+        # Perplexity always answer with the requested type, so any other type there is invalid, never a refusal.
+        if provider in {"OpenAI", "OpenRouter"} and answer["type"] == "refusal":
             reason = answer.get("refusal")
             refusal = reason if isinstance(reason, str) and reason.strip() else None
             return DecisionResult(**common, status="refusal", refusal=refusal)
