@@ -1,9 +1,10 @@
-"""
-Security regression test for langflow-ai/langflow (CWE-94 / CWE-918 · CVSS 8.8):
+"""Security regression test for langflow-ai/langflow (CWE-94 / CWE-918 · CVSS 8.8):
 Ensures /api/v1/validate/code rejects top-level arbitrary expressions/calls and
 dangerous module imports before executing or compiling user-supplied component code.
 """
+
 import ast
+
 import pytest
 
 FORBIDDEN_IMPORTS = {"subprocess", "pty", "ctypes", " builtins"}
