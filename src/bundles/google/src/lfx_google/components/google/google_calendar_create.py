@@ -51,8 +51,9 @@ class GoogleCalendarCreateComponent(Component):
             display_name="Calendar ID",
             info="Calendar to write to. 'primary' is the connected account's own calendar.",
             value="primary",
+            tool_mode=True,
         ),
-        MessageTextInput(name="summary", display_name="Title", required=True),
+        MessageTextInput(name="summary", display_name="Title", required=True, tool_mode=True),
         # Named start_time/end_time/event_description rather than the matrix's
         # start/end/description: `Component.start` and `Component.description` already
         # exist on the base class, and a class attribute wins over `Component.__getattr__`,
@@ -64,27 +65,32 @@ class GoogleCalendarCreateComponent(Component):
             display_name="Start",
             info="RFC 3339 timestamp, or a bare YYYY-MM-DD date for an all-day event.",
             required=True,
+            tool_mode=True,
         ),
         MessageTextInput(
             name="end_time",
             display_name="End",
             info="RFC 3339 timestamp, or a bare YYYY-MM-DD date for an all-day event.",
             required=True,
+            tool_mode=True,
         ),
-        MessageTextInput(name="event_description", display_name="Description", advanced=True),
+        MessageTextInput(name="event_description", display_name="Description", advanced=True, tool_mode=True),
         MessageTextInput(
             name="time_zone",
             display_name="Time Zone",
             info="IANA time zone, for example America/Los_Angeles. Required for recurring events.",
             advanced=True,
+            tool_mode=True,
         ),
-        MessageTextInput(name="location", display_name="Location", advanced=True),
+        MessageTextInput(name="location", display_name="Location", advanced=True, tool_mode=True),
         MessageTextInput(
             name="attendees",
             display_name="Attendees",
             info="Email addresses to invite.",
             is_list=True,
+            value=[],
             advanced=True,
+            tool_mode=True,
         ),
         DropdownInput(
             name="send_updates",
@@ -93,13 +99,16 @@ class GoogleCalendarCreateComponent(Component):
             value="none",
             info="Who receives invitation email for this event.",
             advanced=True,
+            tool_mode=True,
         ),
         MessageTextInput(
             name="recurrence",
             display_name="Recurrence",
             info="RRULE lines, for example 'RRULE:FREQ=WEEKLY;COUNT=4'.",
             is_list=True,
+            value=[],
             advanced=True,
+            tool_mode=True,
         ),
         IntInput(
             name="conference_data_version",
@@ -107,6 +116,7 @@ class GoogleCalendarCreateComponent(Component):
             info=("Controls conference-data processing. Setting this to 1 does not create a Google Meet link."),
             value=0,
             advanced=True,
+            tool_mode=True,
         ),
     ]
 

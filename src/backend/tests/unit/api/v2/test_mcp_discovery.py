@@ -7,11 +7,14 @@ from uuid import uuid4
 
 import mcp.client.stdio
 import pytest
-from fastapi import HTTPException
+from fastapi import FastAPI, HTTPException
+from httpx import ASGITransport, AsyncClient
 from langflow.api.utils.mcp.discovery import MAX_CONCURRENT_CHECKS
-from langflow.api.v2.mcp import get_servers
+from langflow.api.v2.mcp import get_servers, router
+from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models import MCPServer
-from langflow.services.deps import get_settings_service
+from langflow.services.deps import get_settings_service, get_storage_service
+from lfx.services.deps import injectable_session_scope
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -121,6 +124,77 @@ async def test_bound_account_denial_precedes_mcp_discovery(discovery_db, server_
         await get_servers(user, discovery_db, None, get_settings_service(), action_count=True)
     assert caught.value.status_code == 409
     assert processes[0] == []
+
+
+@pytest.mark.parametrize(
+    ("account_variables", "expected_token"),
+    [
+        pytest.param({"MCP_TOKEN": "approved-canary"}, "approved-canary", id="authoritative-resolved"),
+        pytest.param({"UNRELATED": "approved-canary"}, None, id="authoritative-missing"),
+        pytest.param({}, None, id="authoritative-empty"),
+        pytest.param(None, "stored-canary", id="unmanaged-fallback"),
+    ],
+)
+async def test_discovery_endpoint_respects_authoritative_variables(
+    discovery_db, processes, monkeypatch, tmp_path, account_variables, expected_token
+):
+    """Resolve approved MCP variables or refuse discovery before starting a process."""
+    from langflow.services.database.models.variable.model import Variable
+    from langflow.services.variable import runtime_policy
+
+    user = SimpleNamespace(id=uuid4(), is_superuser=False)
+    script = tmp_path / "variable_server.py"
+    script.write_text(f"import os\nassert os.environ['MCP_TOKEN'] == {expected_token!r}\n" + SERVER)
+    discovery_db.add(
+        Variable(
+            user_id=user.id,
+            name="MCP_TOKEN",
+            value=auth_utils.encrypt_api_key("stored-canary"),
+            type="Credential",
+        )
+    )
+    discovery_db.add(
+        MCPServer(
+            user_id=user.id,
+            name="bound-server",
+            config={"command": sys.executable, "args": [str(script)], "env": {"MCP_TOKEN": "{{MCP_TOKEN}}"}},
+            transport="stdio",
+        )
+    )
+    await discovery_db.commit()
+
+    async def resolve_account(**_context):
+        """Return this account's deployment policy without replacing runtime resolution."""
+        return account_variables
+
+    async def db_session():
+        """Keep endpoint queries in the isolated test database."""
+        yield discovery_db
+
+    monkeypatch.setattr(runtime_policy, "_bulk_resolver", resolve_account)
+    app = FastAPI()
+    app.include_router(router, prefix="/api/v2")
+    app.dependency_overrides[auth_utils.get_current_active_user] = lambda: user
+    app.dependency_overrides[injectable_session_scope] = db_session
+    app.dependency_overrides[get_storage_service] = lambda: None
+    async with AsyncClient(transport=ASGITransport(app), base_url="http://testserver") as client:
+        response = await client.get("/api/v2/mcp/servers", params={"action_count": "true"})
+
+    assert response.status_code == 200
+    if expected_token is None:
+        assert response.json() == [
+            {
+                "name": "bound-server",
+                "mode": None,
+                "toolsCount": None,
+                "error": "Configuration error: Deployment variables are unavailable (MCP_TOKEN)",
+            }
+        ]
+        assert processes[0] == []
+    else:
+        assert response.json() == [{"name": "bound-server", "mode": "stdio", "toolsCount": 1}]
+        assert len(processes[0]) == 1
+        assert processes[0][0].returncode is not None
 
 
 async def test_successful_counts_reap_processes_and_manager_tasks(discovery_db, server_scripts, processes):

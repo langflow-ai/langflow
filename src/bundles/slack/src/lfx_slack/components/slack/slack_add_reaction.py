@@ -31,12 +31,14 @@ class SlackAddReactionComponent(SlackBaseComponent):
             display_name="Channel ID",
             required=True,
             info="Conversation ID holding the message, for example C0SLACKDEMO.",
+            tool_mode=True,
         ),
         StrInput(
             name="timestamp",
             display_name="Message timestamp",
             required=True,
             info="Timestamp of the message to react to, for example 1700000000.000100.",
+            tool_mode=True,
         ),
         # The matrix names this input ``name``; ``Component.name`` is the
         # registry-name override, so an input called ``name`` would be shadowed
@@ -47,6 +49,7 @@ class SlackAddReactionComponent(SlackBaseComponent):
             display_name="Emoji name",
             required=True,
             info="Emoji name without colons, for example 'thumbsup'.",
+            tool_mode=True,
         ),
     ]
 

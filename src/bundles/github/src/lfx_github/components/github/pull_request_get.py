@@ -13,6 +13,6 @@ class GitHubGetPullRequestComponent(GitHubActionComponent):
     inputs = [
         connection_input("github.pull_request_read"),
         repository_input(),
-        IntInput(name="number", display_name="Issue or Pull Request Number", required=True, value=1),
+        IntInput(name="number", display_name="Issue or Pull Request Number", required=True, value=1, tool_mode=True),
     ]
     outputs = [Output(display_name="Result", name="result", method="build_result")]
