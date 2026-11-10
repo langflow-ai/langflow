@@ -91,6 +91,117 @@ describe("TriggerEventsDrawer", () => {
     expect(within(detail).getByText("3 of 3")).toBeInTheDocument();
   });
 
+  it("shows the safe run failure detail beside its error code", () => {
+    mockEvents = [
+      makeEvent({
+        state: "failed",
+        error: "job_failed",
+        error_detail: "Use a WhatsApp inbound message event.",
+      }),
+    ];
+    open();
+
+    expect(screen.getByTestId("trigger-event-detail")).toHaveTextContent(
+      "Use a WhatsApp inbound message event.",
+    );
+    expect(screen.getByTestId("trigger-event-detail")).toHaveTextContent(
+      "job_failed",
+    );
+  });
+
+  it("shows a failed delivery separately from the completed flow run", () => {
+    mockEvents = [
+      makeEvent({
+        payload: {
+          provider: "whatsapp",
+          data: {
+            event: "status",
+            status: "failed",
+            delivery_error:
+              "The message could not be delivered to this recipient.",
+            delivery_error_code: 131026,
+          },
+        },
+      }),
+    ];
+    open();
+
+    const detail = screen.getByTestId("trigger-event-detail");
+    expect(
+      within(detail).getByTestId("trigger-event-delivery-error"),
+    ).toHaveTextContent(
+      "The message could not be delivered to this recipient.",
+    );
+    expect(
+      within(detail).getAllByTestId("trigger-event-state")[0],
+    ).toHaveTextContent("Completed");
+  });
+
+  it("shows a skipped sender without offering a replay that bypasses its filter", async () => {
+    mockEvents = [
+      makeEvent({
+        state: "skipped",
+        error: "sender_not_allowed",
+        job_id: null,
+        payload: { provider: "whatsapp", data: { event: "message" } },
+      }),
+    ];
+    open();
+
+    const detail = screen.getByTestId("trigger-event-detail");
+    expect(
+      within(detail).getAllByTestId("trigger-event-state")[0],
+    ).toHaveTextContent("Skipped");
+    expect(detail).toHaveTextContent(
+      "The sender is not in Allowed Sender Numbers.",
+    );
+    const replay = screen.getByTestId("trigger-event-replay");
+    expect(replay).toHaveAttribute("aria-disabled", "true");
+    await userEvent.click(replay);
+    expect(screen.queryByTestId("trigger-replay-dialog")).toBeNull();
+  });
+
+  it("filters skipped senders across the server's event history", async () => {
+    mockFiltered.skipped = [
+      makeEvent({
+        id: "skipped",
+        state: "skipped",
+        error: "sender_not_allowed",
+      }),
+    ];
+    open();
+
+    await userEvent.click(screen.getByTestId("trigger-events-filter-skipped"));
+
+    expect(mockEventsQuery).toHaveBeenLastCalledWith("trg-1", {
+      filter: "skipped",
+      enabled: true,
+    });
+    expect(screen.getByTestId("trigger-event-skipped")).toHaveTextContent(
+      "Skipped",
+    );
+    expect(screen.queryByTestId("trigger-event-failed")).toBeNull();
+  });
+
+  it("renders failure details as text and preserves accessible replay guidance", async () => {
+    mockEvents = [
+      makeEvent({
+        error_detail: '<img src=x onerror="alert(1)">',
+        error: "job_failed",
+        state: "failed",
+      }),
+    ];
+    open();
+
+    expect(screen.getByTestId("trigger-event-detail")).toHaveTextContent(
+      '<img src=x onerror="alert(1)">',
+    );
+    expect(
+      screen.getByTestId("trigger-event-detail").querySelector("img"),
+    ).toBeNull();
+    expect(await axe(document.body)).toHaveNoViolations();
+  });
+
   it.each([
     [
       "connection_unusable",

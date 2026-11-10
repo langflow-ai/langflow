@@ -84,7 +84,8 @@
         "lfx-slack",
         "lfx-telegram",
         "lfx-toolguard",
-        "lfx-vllm"
+        "lfx-vllm",
+        "lfx-whatsapp"
       ],
       "forbidden_distributions_add": [
         "lfx-arxiv",
@@ -126,7 +127,8 @@
           "lfx-slack",
           "lfx-telegram",
           "lfx-toolguard",
-          "lfx-vllm"
+          "lfx-vllm",
+          "lfx-whatsapp"
         ],
         "lfx.bundles": []
       },
@@ -180,6 +182,11 @@
           "lfx_telegram/extension.json",
           "lfx_telegram/components/telegram/capabilities.v1.json",
           "lfx_telegram/components/telegram/telegram_reply.py"
+        ],
+        "lfx-whatsapp": [
+          "lfx_whatsapp/extension.json",
+          "lfx_whatsapp/components/whatsapp/capabilities.v1.json",
+          "lfx_whatsapp/components/whatsapp/whatsapp_on_event_trigger_component.py"
         ]
       },
       "module_checks": [
@@ -284,7 +291,8 @@
           "lfx-telegram",
           "lfx-toolguard",
           "lfx-valkey",
-          "lfx-vllm"
+          "lfx-vllm",
+          "lfx-whatsapp"
         ],
         "lfx.bundles": [
           "lfx_bundles"
@@ -406,6 +414,11 @@
           "lfx_telegram/extension.json",
           "lfx_telegram/components/telegram/capabilities.v1.json",
           "lfx_telegram/components/telegram/telegram_reply.py"
+        ],
+        "lfx-whatsapp": [
+          "lfx_whatsapp/extension.json",
+          "lfx_whatsapp/components/whatsapp/capabilities.v1.json",
+          "lfx_whatsapp/components/whatsapp/whatsapp_on_event_trigger_component.py"
         ]
       },
       "module_checks": [

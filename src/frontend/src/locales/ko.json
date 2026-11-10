@@ -3529,5 +3529,15 @@
   "decision.minimumProbability": "최소 확률",
   "decision.errorAction": "평가 오류 시",
   "decision.requestId": "Provider 요청 ID",
-  "decision.tone.answered": "답변됨"
+  "decision.tone.answered": "답변됨",
+  "triggers.events.whatsapp.message": "메시지 수신",
+  "triggers.events.whatsapp.sent": "전송됨",
+  "triggers.events.whatsapp.delivered": "전달됨",
+  "triggers.events.whatsapp.read": "읽음",
+  "triggers.events.whatsapp.failed": "전달 실패",
+  "triggers.events.whatsapp.status": "메시지 상태",
+  "triggers.events.state.skipped": "건너뜀",
+  "triggers.events.filters.skipped": "건너뜀",
+  "triggers.eventError.sender_not_allowed": "발신자가 허용된 발신자 번호 목록에 없습니다.",
+  "triggers.events.skippedCannotReplay": "건너뛴 이벤트는 다시 실행할 수 없습니다. 발신자 필터를 수정하고 새 메시지를 보내세요."
 }

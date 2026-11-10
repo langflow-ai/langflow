@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Annotated
 from zoneinfo import ZoneInfo
 
+import anyio
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from lfx.log.logger import logger
@@ -232,6 +233,9 @@ def _user_file_namespace(path: str, owner_id: uuid.UUID) -> str:
 async def _upload_chunks(file) -> AsyncIterator[bytes]:
     while chunk := await file.read(UPLOAD_READ_CHUNK):
         yield chunk
+    # Write File can upload the destination itself. Windows requires its read
+    # handle to be closed before local storage replaces it with the staged file.
+    await file.close()
 
 
 def _spooled_md5(handle) -> str:
@@ -254,7 +258,7 @@ async def save_file_routine(
     append: bool = False,
     namespace: str | None = None,
 ):
-    """Routine to save the file content to the storage service."""
+    """Save file content to storage, consuming and closing streamed uploads."""
     file_id = uuid.uuid4()
 
     if not file_name:
@@ -266,14 +270,19 @@ async def save_file_routine(
     # shortcut: an append still reads the whole body. Local disk could stream it too, if a
     # large append ever needs to.
     if not file_content and not append:
-        if isinstance(storage_service, S3StorageService):
-            # S3 labels each object with its MD5. Known before the upload starts, the label goes
-            # on with it; known only at the end, it costs a copy of the whole object, which took
-            # a 900 MB upload past an OpenShift route's 30 s. Reading the spooled body is local.
-            md5 = await asyncio.to_thread(_spooled_md5, file.file)
-            await storage_service.save_upload_stream(flow_id, file_name, _upload_chunks(file), md5=md5)
-        else:
-            await storage_service.save_upload_stream(flow_id, file_name, _upload_chunks(file))
+        try:
+            if isinstance(storage_service, S3StorageService):
+                # S3 labels each object with its MD5. Known before the upload starts, the label goes
+                # on with it; known only at the end, it costs a copy of the whole object, which took
+                # a 900 MB upload past an OpenShift route's 30 s. Reading the spooled body is local.
+                md5 = await asyncio.to_thread(_spooled_md5, file.file)
+                await storage_service.save_upload_stream(flow_id, file_name, _upload_chunks(file), md5=md5)
+            else:
+                await storage_service.save_upload_stream(flow_id, file_name, _upload_chunks(file))
+        finally:
+            # Storage and checksum failures can happen before the first chunk is requested.
+            with anyio.CancelScope(shield=True):
+                await file.close()
         return file_id, file_name
 
     await storage_service.save_file(

@@ -58,6 +58,7 @@ from .trigger import (
 )
 from .user import User
 from .variable import Variable
+from .worker_registry import WorkerRegistry, WorkerState
 
 __all__ = [
     "A2ACheckpoint",
@@ -130,6 +131,8 @@ __all__ = [
     "TriggerSubscription",
     "User",
     "Variable",
+    "WorkerRegistry",
+    "WorkerState",
     "decrypt_sso_client_secret",
     "encrypt_sso_client_secret",
     "is_sso_client_secret_envelope",
