@@ -52,6 +52,7 @@ import {
 import { useSlackTokenConnection } from "../hooks/useSlackTokenConnection";
 import AuthorizeStatus, { type AuthorizeState } from "./AuthorizeStatus";
 import ConnectionSetupHelp from "./ConnectionSetupHelp";
+import ProviderSelect from "./ProviderSelect";
 import RegistrationSelect from "./RegistrationSelect";
 import ScopeChecklist from "./ScopeChecklist";
 import SlackTokenFields, { ConnectionMethodSelect } from "./SlackTokenFields";
@@ -76,6 +77,8 @@ export interface AddConnectionDialogProps {
   reauthorize?: ConnectionRead;
   /** Which deployment this is (`GET /integrations`); hosted offers no pasted tokens. */
   deploymentContext?: DeploymentContext;
+  /** Let the page reveal the successfully authorized row when the dialog closes. */
+  onConnected?: (connection: ConnectionRead) => void;
 }
 
 /** Create or reconnect a connection using OAuth consent or a supported pasted token. */
@@ -86,6 +89,7 @@ export function AddConnectionDialog({
   canCreateInstance,
   reauthorize,
   deploymentContext,
+  onConnected,
 }: AddConnectionDialogProps) {
   const { t } = useTranslation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -123,6 +127,9 @@ export function AddConnectionDialog({
   const requestedScopes = useRef<string[]>([]);
 
   const provider = providers.find((item) => item.provider_id === providerId);
+  // Every ServiceNow component requires a flow-owner connection. Instance
+  // sharing would create a connection none of those components can select.
+  const requiresUserOwnership = providerId === "servicenow";
   const manualTokenProfiles = provider?.manual_token_profiles ?? [];
   const tokenProfile =
     manualTokenProfiles.find((profile) => profile.identity === identity) ??
@@ -167,6 +174,9 @@ export function AddConnectionDialog({
   const { usesToken } = slackToken;
 
   const registrations = useOAuthRegistrationsQuery(providerId, open);
+  const registrationError = registrations.isError
+    ? getAxiosErrorDetail(registrations.error, t("connections.add.failed"))
+    : null;
   const candidates = useMemo(
     () =>
       (registrations.data ?? []).filter(
@@ -484,6 +494,7 @@ export function AddConnectionDialog({
   const canAuthorize =
     reauthorizeSelection.length > 0 &&
     !noRegistration &&
+    !registrations.isError &&
     !registrations.isLoading &&
     requiredUnavailable.length === 0;
   const notRequestable = uniqueNormalizedScopes(providerId, [
@@ -537,7 +548,9 @@ export function AddConnectionDialog({
         (providerId === "slack"
           ? slackToken.tokenKind !== null
           : slackToken.token.trim().length > 0)
-      : !noRegistration && requiredUnavailable.length === 0);
+      : !noRegistration &&
+        !registrations.isError &&
+        requiredUnavailable.length === 0);
 
   /** The server validates pasted tokens before returning the connection. */
   const onCreateWithToken = async () => {
@@ -560,7 +573,7 @@ export function AddConnectionDialog({
         provider_key: provider.provider_id,
         name,
         display_name: displayName.trim(),
-        ownership_mode: ownership,
+        ownership_mode: requiresUserOwnership ? "user" : ownership,
         executing_identity: { identity },
       });
       createdConnectionId.current = row.id;
@@ -587,6 +600,9 @@ export function AddConnectionDialog({
 
   const close = (discardPending: boolean) => {
     const row = pendingRow;
+    if (authorize?.kind === "connected") {
+      onConnected?.(authorize.connection);
+    }
     if (
       discardPending &&
       row &&
@@ -667,28 +683,16 @@ export function AddConnectionDialog({
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
               {!reauthorize && (
                 <>
-                  <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="connection-provider">
-                      {t("connections.add.provider")}
-                    </Label>
-                    <select
-                      id="connection-provider"
-                      className="h-9 rounded-md border border-border bg-background px-2 text-sm"
-                      value={providerId}
-                      onChange={(event) => {
-                        setProviderId(event.target.value);
-                        // A pasted token belongs to the provider it was pasted for.
-                        slackToken.reset();
-                      }}
-                      data-testid="connection-provider"
-                    >
-                      {providers.map((item) => (
-                        <option key={item.provider_id} value={item.provider_id}>
-                          {item.display_name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <ProviderSelect
+                    providers={providers}
+                    value={providerId}
+                    onChange={(next) => {
+                      setProviderId(next);
+                      setOwnership("user");
+                      // A pasted token belongs to the provider it was pasted for.
+                      slackToken.reset();
+                    }}
+                  />
 
                   {slackToken.offersToken && !tokenOnly && (
                     <ConnectionMethodSelect
@@ -705,6 +709,7 @@ export function AddConnectionDialog({
                     key={`${providerId}:${usesToken}`}
                     providerId={providerId}
                     noRegistration={noRegistration}
+                    registrationError={registrationError}
                     usesToken={usesToken}
                     docsUrl={provider?.docs_url}
                   />
@@ -805,6 +810,7 @@ export function AddConnectionDialog({
                   key={`${providerId}:${usesToken}`}
                   providerId={providerId}
                   noRegistration={noRegistration}
+                  registrationError={registrationError}
                   usesToken={usesToken}
                   docsUrl={provider?.docs_url}
                 />
@@ -859,7 +865,7 @@ export function AddConnectionDialog({
 
               {!usesToken && registrationSelect}
 
-              {!usesToken && canCreateInstance && (
+              {!usesToken && canCreateInstance && !requiresUserOwnership && (
                 <label className="flex items-center gap-2 text-sm">
                   <Checkbox
                     checked={ownership === "instance"}
@@ -870,6 +876,11 @@ export function AddConnectionDialog({
                   />
                   {t("connections.add.instanceOwned")}
                 </label>
+              )}
+              {!usesToken && requiresUserOwnership && (
+                <p className="text-xs text-muted-foreground">
+                  {t("connections.add.servicenowUserOwned")}
+                </p>
               )}
 
               {!usesToken && (
@@ -937,6 +948,7 @@ export function AddConnectionDialog({
                 key={providerId}
                 providerId={providerId}
                 noRegistration={noRegistration}
+                registrationError={registrationError}
                 docsUrl={provider?.docs_url}
               />
               {registrationSelect}

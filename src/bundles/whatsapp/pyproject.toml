@@ -1,0 +1,25 @@
+[project]
+name = "lfx-whatsapp"
+version = "0.1.1"
+description = "WhatsApp Business Cloud API actions and webhook triggers backed by customer-owned connections."
+readme = "README.md"
+requires-python = ">=3.10,<3.16"
+license = { text = "MIT" }
+dependencies = ["lfx>=1.14.0.dev0,<2.0.0", "httpx>=0.27.2,<1.0.0"]
+
+[project.entry-points."langflow.extensions"]
+lfx-whatsapp = "lfx_whatsapp"
+
+[project.entry-points."langflow.trigger_providers"]
+whatsapp = "langflow.services.triggers.providers.whatsapp.provider:PROVIDER"
+
+[build-system]
+requires = ["hatchling==1.31.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lfx_whatsapp"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

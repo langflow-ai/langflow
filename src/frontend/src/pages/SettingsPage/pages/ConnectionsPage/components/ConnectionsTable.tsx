@@ -35,6 +35,13 @@ export const ownerKindOf = (
     : "other";
 };
 
+const isUnavailable = (
+  connection: ConnectionRead,
+  currentUserId: string | undefined,
+): boolean =>
+  connection.provider_key === "servicenow" &&
+  ownerKindOf(connection, currentUserId) !== "you";
+
 const SORT_COLUMNS = [
   "connection",
   "owner",
@@ -75,7 +82,7 @@ export interface ConnectionsTableProps {
   busyId: string | null;
   actions: Omit<
     ConnectionRowMenuProps,
-    "connection" | "canAllowUnattended" | "busy"
+    "connection" | "canAuthorize" | "canAllowUnattended" | "busy"
   >;
 }
 
@@ -130,7 +137,9 @@ export function ConnectionsTable({
         case "account":
           return account?.display ?? account?.id ?? "";
         case "status":
-          return t(`connections.status.${connection.status}`);
+          return t(
+            `connections.status.${isUnavailable(connection, currentUserId) ? "unavailable" : connection.status}`,
+          );
         case "scopes":
           return connection.granted_scopes?.length ?? 0;
         case "lastCheck":
@@ -215,6 +224,7 @@ export function ConnectionsTable({
         <TableBody>
           {sortedConnections.map((connection) => {
             const owner = ownerKindOf(connection, currentUserId);
+            const canAuthorize = !isUnavailable(connection, currentUserId);
             const account = connection.executing_identity?.account;
             const identity = connection.executing_identity?.identity;
             const scopes = connection.granted_scopes ?? [];
@@ -301,7 +311,8 @@ export function ConnectionsTable({
                 <TableCell>
                   <ConnectionStatusBadge
                     connection={connection}
-                    onAuthorize={actions.onAuthorize}
+                    unavailable={!canAuthorize}
+                    onAuthorize={canAuthorize ? actions.onAuthorize : undefined}
                   />
                 </TableCell>
                 <TableCell>
@@ -362,6 +373,7 @@ export function ConnectionsTable({
                 <TableCell className="text-right">
                   <ConnectionRowMenu
                     connection={connection}
+                    canAuthorize={canAuthorize}
                     canAllowUnattended={
                       owner === "you" || (owner === "instance" && isSuperuser)
                     }
