@@ -125,7 +125,6 @@ class ScheduleTriggerComponent(BaseTriggerComponent):
             value=["08:00"],
             info="In the timezone below. Add more times to run the flow several times a day.",
             is_list=True,
-            list_add_label="Add time",
             real_time_refresh=True,
         ),
         MessageTextInput(

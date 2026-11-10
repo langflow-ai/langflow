@@ -214,7 +214,6 @@ def test_the_time_fields_tell_the_canvas_how_to_show_them() -> None:
 
     assert template["times_of_day"]["input_format"] == "time"
     assert template["times_of_day"]["list"] is True
-    assert template["times_of_day"]["list_add_label"] == "Add time"
     assert template["run_at"]["input_format"] == "datetime"
 
 
