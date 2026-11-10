@@ -3395,6 +3395,7 @@
   "triggers.secret.isSet": "已设置。仅在创建或轮换时显示。",
   "triggers.secret.notSet": "未设置。在你创建之前，请求会被拒绝。",
   "connections.add.servicenowUserOwned": "ServiceNow 连接属于单个用户，不能与整个实例共享。",
+  "connections.add.salesforceUserOwned": "Salesforce 连接属于单个用户，不能与整个实例共享。",
   "apiKey.permissions.title": "权限",
   "apiKey.permissions.restricted": "受限访问",
   "apiKey.permissions.fullAccess": "所有者的全部访问权限",

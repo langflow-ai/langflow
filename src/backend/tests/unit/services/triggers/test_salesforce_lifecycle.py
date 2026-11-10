@@ -27,7 +27,7 @@ from lfx.extension.bundle_registry import BundleRecord
 from lfx.integrations.errors import IntegrationPolicyBlockedError, ProviderUnavailableError
 from lfx.services.deps import get_integration_policy_service, get_policy_bundle_service
 from lfx_salesforce.client import SalesforceClient
-from lfx_salesforce.schema import FIELDS, SYSTEM_FIELDS, iso
+from lfx_salesforce.schema import FIELDS, SYSTEM_FIELDS, iso, timestamp
 from sqlmodel import select
 
 pytestmark = pytest.mark.no_blockbuster
@@ -73,7 +73,7 @@ def salesforce(monkeypatch, client):  # noqa: ARG001
         if kwargs.get("group") == registry.ENTRY_POINT_GROUP
         else original(**kwargs),
     )
-    state = SimpleNamespace(version="2026-10-22T12:00:00.000Z", covered=None, fail=False, requests=[])
+    state = SimpleNamespace(version="2026-10-22T12:00:00.000Z", changed_at=None, covered=None, fail=False, requests=[])
 
     def handle(request):
         state.requests.append(request)
@@ -86,8 +86,15 @@ def salesforce(monkeypatch, client):  # noqa: ARG001
                 },
             )
         if request.url.path.endswith("updated/"):
+            in_window = state.changed_at is None or (
+                timestamp(request.url.params["start"]) <= state.changed_at <= timestamp(request.url.params["end"])
+            )
             return httpx.Response(
-                200, json={"ids": [RECORD], "latestDateCovered": state.covered or request.url.params["end"]}
+                200,
+                json={
+                    "ids": [RECORD] if in_window else [],
+                    "latestDateCovered": state.covered or request.url.params["end"],
+                },
             )
         if state.fail:
             return httpx.Response(503, json={"message": "synthetic-access"})
@@ -220,6 +227,40 @@ async def test_lagging_baseline_recovers_and_delivers_a_change_once(salesforce, 
     async with session_scope() as session:
         events = (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == trigger.id))).all()
         assert len(events) == 1
+
+
+async def test_old_replication_watermark_delivers_current_creates_and_updates_once(
+    monkeypatch, salesforce, trigger_owner, owned_flow
+):
+    from langflow.services.triggers.providers.salesforce import collector
+
+    now = datetime(2026, 11, 10, 15, 47, tzinfo=timezone.utc)
+    clock = SimpleNamespace(now=now)
+    monkeypatch.setattr(collector, "datetime", SimpleNamespace(now=lambda _zone: clock.now))
+    salesforce.covered = iso(now - timedelta(hours=11))
+    salesforce.changed_at = now + timedelta(minutes=1)
+    await connection(trigger_owner)
+    trigger = await reconcile(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable(session, row=row)
+    assert await source_runtime.sync_source(trigger.id) == 0
+
+    for minute in (2, 4):
+        clock.now = now + timedelta(minutes=minute)
+        salesforce.changed_at = clock.now - timedelta(minutes=1)
+        salesforce.version = iso(salesforce.changed_at)
+        assert await source_runtime.sync_source(trigger.id) == 1
+        assert await source_runtime.sync_source(trigger.id) == 0
+        async with session_scope() as session:
+            row = await session.get(Trigger, trigger.id)
+            assert row.provider_state == {"latest_date_covered": salesforce.covered, "baseline_complete": True}
+    async with session_scope() as session:
+        events = (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == trigger.id))).all()
+        assert len(events) == 2
+    replication_requests = [request for request in salesforce.requests if request.url.path.endswith("updated/")]
+    assert replication_requests[-1].url.params["start"] == salesforce.covered
+    assert replication_requests[-1].url.params["end"] == iso(clock.now)
 
 
 async def test_failed_fetch_and_stale_replica_cannot_advance_cursor(salesforce, trigger_owner, owned_flow):

@@ -103,7 +103,7 @@ def token(**changes):
     }
 
 
-def test_authorization_requests_explicit_consent_with_existing_grants(monkeypatch):
+def test_authorization_requests_login_and_explicit_consent_with_existing_grants(monkeypatch):
     from dataclasses import replace
 
     from langflow.services.connection.oauth import adapter, providers
@@ -113,7 +113,7 @@ def test_authorization_requests_explicit_consent_with_existing_grants(monkeypatc
     url = providers.authorization_url(reg, state="synthetic-state", verifier="synthetic-verifier", scopes=reg.scopes)
     assert url.startswith(ORG + "/services/oauth2/authorize?")
     params = parse_qs(urlsplit(url).query)
-    assert params["prompt"] == ["consent"]
+    assert params["prompt"] == ["login consent"]
     assert params["scope"] == ["api id refresh_token"]
     assert params["state"] == ["synthetic-state"]
     assert params["code_challenge_method"] == ["S256"]
@@ -126,7 +126,12 @@ async def test_oauth_start_requires_connection_scopes_before_persisting(monkeypa
     reg = registration()
     monkeypatch.setattr(broker, "get_oauth_settings", lambda: SimpleNamespace(registration=lambda _id: reg))
     monkeypatch.setattr(broker, "provider_adapter", lambda _provider: oauth.OAUTH)
-    row = SimpleNamespace(provider_key="salesforce", executing_identity={"identity": "user_delegated"})
+    row = SimpleNamespace(
+        provider_key="salesforce",
+        ownership_mode="user",
+        owner_id=None,
+        executing_identity={"identity": "user_delegated"},
+    )
     with pytest.raises(OAuthError, match=f"Requested scopes must include {missing}"):
         await broker.start(
             SimpleNamespace(),
@@ -432,7 +437,7 @@ async def test_next_round_overlap_and_complete_cursor(monkeypatch, source_trigge
 @pytest.mark.parametrize("baseline", [True, False])
 async def test_replication_watermark_before_start_is_retained_for_the_next_poll(monkeypatch, source_trigger, baseline):
     now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
-    covered = iso(now - timedelta(minutes=3))
+    covered = iso(now - timedelta(hours=11))
     if not baseline:
         source_trigger.provider_state = {
             "latest_date_covered": iso(now - timedelta(minutes=1)),
@@ -449,6 +454,7 @@ async def test_replication_watermark_before_start_is_retained_for_the_next_poll(
     source_trigger.provider_state = result.cursor
     next_round = await collector.collect(source_trigger, lease)
     assert requests[-1].url.params["start"] == covered
+    assert requests[-1].url.params["end"] == iso(now)
     assert not next_round.baseline
 
 

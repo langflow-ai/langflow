@@ -110,6 +110,9 @@ See [Configure connection OAuth](../Develop/connection-oauth.mdx) for shared set
 5. Run the flow to check account access before configuring writes or a trigger.
 
 The connection displays the verified Salesforce account name when available.
+Each Add connection and Re-authorize requests a fresh Salesforce login and consent, including previously authorized accounts.
+Salesforce connections belong to an individual user and cannot be shared with the instance.
+Replace an existing shared connection with a personal connection and select it in affected components.
 Exported flows contain only its handle, such as `salesforce/work`.
 Each destination Langflow server needs its own authorized connection with that handle.
 Headless lfx cannot use this connection through an environment token.
@@ -140,11 +143,11 @@ Provider rate limits, backlog, and listener retries can delay delivery.
 ## Event identity and recovery
 
 The initial poll establishes a baseline without emitting the records it finds.
-Later polls request up to five minutes of replication history and fetch the latest visible state of each changed record.
+Later polls request replication history through the current minute and fetch the latest visible state of each changed record.
 Salesforce can return a replication watermark before the requested start while a long transaction is open.
-The next poll starts from that watermark so changes remain available after the transaction completes.
+The next poll starts from that watermark and still ends at the current minute, so current changes remain visible while earlier transactions finish.
 The source accepts at most 5000 changed IDs per round and fetches records in batches of 200.
-It advances only to Salesforce's `latestDateCovered` after the whole round succeeds.
+It saves Salesforce's `latestDateCovered` only after the whole round succeeds.
 See [Salesforce Get Updated](https://developer.salesforce.com/docs/platform/api-rest/guide/resources-getupdated.html).
 
 Within each trigger, the provider, object, record ID, and `SystemModstamp` identify an event.

@@ -18,7 +18,6 @@ if TYPE_CHECKING:
     from langflow.services.database.models.trigger.model import Trigger
 
 MAX_IDS = 5000
-WINDOW = timedelta(minutes=5)
 
 
 def normalize_config(kind: str, config: dict[str, Any]) -> dict[str, Any]:
@@ -61,7 +60,7 @@ async def collect(trigger: Trigger, lease: CredentialLease) -> SourceRound:
     if previous > now or previous < now - timedelta(days=29):
         msg = "The Salesforce replication cursor expired or is invalid. Disable and re-enable the source."
         raise invalid(msg)
-    end = min(now, start + WINDOW)
+    end = now
     result = SourceRound(
         items=[],
         cursor=state,

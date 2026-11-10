@@ -160,5 +160,5 @@ OAUTH = OAuthAdapter(
     parse_token=parse_token,
     supports_pkce=True,
     required_scopes=("api", "id", "refresh_token"),
-    authorization_params=lambda _registration: {"prompt": "consent"},
+    authorization_params=lambda _registration: {"prompt": "login consent"},
 )
