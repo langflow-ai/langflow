@@ -3415,6 +3415,7 @@
   "triggers.secret.isSet": "설정됨. 생성하거나 교체할 때만 표시됩니다.",
   "triggers.secret.notSet": "설정되지 않음. 생성하기 전까지 요청이 거부됩니다.",
   "connections.add.servicenowUserOwned": "ServiceNow 연결은 개별 사용자에게 속하며 인스턴스 전체와 공유할 수 없습니다.",
+  "connections.add.salesforceUserOwned": "Salesforce 연결은 개별 사용자에게 속하며 인스턴스 전체와 공유할 수 없습니다.",
   "apiKey.permissions.title": "권한",
   "apiKey.permissions.restricted": "제한된 액세스",
   "apiKey.permissions.fullAccess": "소유자의 전체 액세스 권한",

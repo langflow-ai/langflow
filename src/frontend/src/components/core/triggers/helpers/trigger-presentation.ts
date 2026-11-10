@@ -208,7 +208,7 @@ export const sourceIconOf = (
     case "telegram":
       return "Telegram";
     case "salesforce":
-      return "Cloud";
+      return "Salesforce";
     case "servicenow":
       return "ServiceNow";
     case "jira":

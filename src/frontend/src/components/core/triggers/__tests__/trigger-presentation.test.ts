@@ -165,7 +165,7 @@ describe("sourceKeyOf", () => {
     ["whatsapp", "WhatsApp"],
     ["discord", "discord"],
     ["telegram", "Telegram"],
-    ["salesforce", "Cloud"],
+    ["salesforce", "Salesforce"],
     ["servicenow", "ServiceNow"],
     ["jira", "Jira"],
     ["confluence", "Confluence"],

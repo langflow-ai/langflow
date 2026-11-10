@@ -3415,6 +3415,7 @@
   "triggers.secret.isSet": "Set. Shown only when created or rotated.",
   "triggers.secret.notSet": "Not set. Requests are refused until you create one.",
   "connections.add.servicenowUserOwned": "ServiceNow connections belong to an individual user and cannot be shared with the instance.",
+  "connections.add.salesforceUserOwned": "Salesforce connections belong to an individual user and cannot be shared with the instance.",
   "apiKey.permissions.title": "Permissions",
   "apiKey.permissions.restricted": "Restricted access",
   "apiKey.permissions.fullAccess": "Full owner access",
