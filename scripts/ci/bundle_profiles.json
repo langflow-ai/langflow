@@ -29,43 +29,11 @@
       },
       "bundles": [
         {
-          "distribution": "lfx-ibm",
-          "extras": [],
-          "version": ">=0.4.0,<1.0.0",
-          "providers": [
-            "lfx-ibm"
-          ]
-        },
-        {
-          "distribution": "lfx-docling",
+          "distribution": "lfx-amazon",
           "extras": [],
           "version": ">=0.3.0,<1.0.0",
           "providers": [
-            "lfx-docling"
-          ]
-        },
-        {
-          "distribution": "lfx-datastax",
-          "extras": [],
-          "version": ">=0.2.1,<1.0.0",
-          "providers": [
-            "lfx-datastax"
-          ]
-        },
-        {
-          "distribution": "lfx-toolguard",
-          "extras": [],
-          "version": ">=0.3.1,<1.0.0",
-          "providers": [
-            "lfx-toolguard"
-          ]
-        },
-        {
-          "distribution": "lfx-openai",
-          "extras": [],
-          "version": ">=0.2.1,<1.0.0",
-          "providers": [
-            "lfx-openai"
+            "lfx-amazon"
           ]
         },
         {
@@ -85,22 +53,6 @@
           ]
         },
         {
-          "distribution": "lfx-ollama",
-          "extras": [],
-          "version": ">=0.2.1,<1.0.0",
-          "providers": [
-            "lfx-ollama"
-          ]
-        },
-        {
-          "distribution": "lfx-amazon",
-          "extras": [],
-          "version": ">=0.3.0,<1.0.0",
-          "providers": [
-            "lfx-amazon"
-          ]
-        },
-        {
           "distribution": "lfx-cohere",
           "extras": [],
           "version": ">=0.2.1,<1.0.0",
@@ -109,51 +61,35 @@
           ]
         },
         {
-          "distribution": "lfx-oracle",
+          "distribution": "lfx-confluence",
           "extras": [],
-          "version": ">=0.4.0,<1.0.0",
+          "version": ">=0.1.0,<1.0.0",
           "providers": [
-            "lfx-oracle"
+            "lfx-confluence"
           ]
         },
         {
-          "distribution": "lfx-vllm",
+          "distribution": "lfx-datastax",
           "extras": [],
           "version": ">=0.2.1,<1.0.0",
           "providers": [
-            "lfx-vllm"
+            "lfx-datastax"
           ]
         },
         {
-          "distribution": "lfx-openai-compatible",
+          "distribution": "lfx-discord",
           "extras": [],
-          "version": ">=0.2.1,<1.0.0",
+          "version": ">=0.1.0,<1.0.0",
           "providers": [
-            "lfx-openai-compatible"
+            "lfx-discord"
           ]
         },
         {
-          "distribution": "lfx-google",
+          "distribution": "lfx-docling",
           "extras": [],
-          "version": ">=0.4.0,<1.0.0",
+          "version": ">=0.3.0,<1.0.0",
           "providers": [
-            "lfx-google"
-          ]
-        },
-        {
-          "distribution": "lfx-microsoft",
-          "extras": [],
-          "version": ">=0.1.5,<1.0.0",
-          "providers": [
-            "lfx-microsoft"
-          ]
-        },
-        {
-          "distribution": "lfx-slack",
-          "extras": [],
-          "version": ">=0.2.3,<1.0.0",
-          "providers": [
-            "lfx-slack"
+            "lfx-docling"
           ]
         },
         {
@@ -165,6 +101,30 @@
           ]
         },
         {
+          "distribution": "lfx-gitlab",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-gitlab"
+          ]
+        },
+        {
+          "distribution": "lfx-google",
+          "extras": [],
+          "version": ">=0.4.0,<1.0.0",
+          "providers": [
+            "lfx-google"
+          ]
+        },
+        {
+          "distribution": "lfx-ibm",
+          "extras": [],
+          "version": ">=0.4.0,<1.0.0",
+          "providers": [
+            "lfx-ibm"
+          ]
+        },
+        {
           "distribution": "lfx-jira",
           "extras": [],
           "version": ">=0.1.0,<1.0.0",
@@ -173,11 +133,91 @@
           ]
         },
         {
-          "distribution": "lfx-discord",
+          "distribution": "lfx-microsoft",
+          "extras": [],
+          "version": ">=0.1.5,<1.0.0",
+          "providers": [
+            "lfx-microsoft"
+          ]
+        },
+        {
+          "distribution": "lfx-ollama",
+          "extras": [],
+          "version": ">=0.2.1,<1.0.0",
+          "providers": [
+            "lfx-ollama"
+          ]
+        },
+        {
+          "distribution": "lfx-openai",
+          "extras": [],
+          "version": ">=0.2.1,<1.0.0",
+          "providers": [
+            "lfx-openai"
+          ]
+        },
+        {
+          "distribution": "lfx-openai-compatible",
+          "extras": [],
+          "version": ">=0.2.1,<1.0.0",
+          "providers": [
+            "lfx-openai-compatible"
+          ]
+        },
+        {
+          "distribution": "lfx-oracle",
+          "extras": [],
+          "version": ">=0.4.0,<1.0.0",
+          "providers": [
+            "lfx-oracle"
+          ]
+        },
+        {
+          "distribution": "lfx-servicenow",
           "extras": [],
           "version": ">=0.1.0,<1.0.0",
           "providers": [
-            "lfx-discord"
+            "lfx-servicenow"
+          ]
+        },
+        {
+          "distribution": "lfx-slack",
+          "extras": [],
+          "version": ">=0.2.3,<1.0.0",
+          "providers": [
+            "lfx-slack"
+          ]
+        },
+        {
+          "distribution": "lfx-telegram",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-telegram"
+          ]
+        },
+        {
+          "distribution": "lfx-toolguard",
+          "extras": [],
+          "version": ">=0.3.1,<1.0.0",
+          "providers": [
+            "lfx-toolguard"
+          ]
+        },
+        {
+          "distribution": "lfx-vllm",
+          "extras": [],
+          "version": ">=0.2.1,<1.0.0",
+          "providers": [
+            "lfx-vllm"
+          ]
+        },
+        {
+          "distribution": "lfx-whatsapp",
+          "extras": [],
+          "version": ">=0.1.1,<1.0.0",
+          "providers": [
+            "lfx-whatsapp"
           ]
         }
       ]

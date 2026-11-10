@@ -19,7 +19,8 @@ export const badgeStateOf = (
   state: TriggerState,
   reason?: TriggerRead["reason"],
 ): TriggerBadgeState =>
-  state === "needs_reconnect" && reason === "ready_to_resume"
+  (state === "needs_reconnect" || state === "pending") &&
+  reason === "ready_to_resume"
     ? "ready_to_resume"
     : state === "pending" && reason === "config_invalid"
       ? "blocked"
@@ -174,6 +175,7 @@ export const transportOf = (
     if (PUSH_MECHANISMS.has(mechanism)) return "push";
     if (SOCKET_MECHANISMS.has(mechanism)) return "socket";
   }
+  if (trigger.config?.delivery_mode === "push") return "push";
   return "poll";
 };
 
@@ -200,19 +202,19 @@ export const sourceIconOf = (
     case "gitlab":
       return "Gitlab";
     case "whatsapp":
-      return "MessageCircle";
+      return "WhatsApp";
     case "discord":
       return "discord";
     case "telegram":
-      return "Send";
+      return "Telegram";
     case "salesforce":
       return "Cloud";
     case "servicenow":
-      return "Server";
+      return "ServiceNow";
     case "jira":
       return "Jira";
     case "confluence":
-      return "BookOpen";
+      return "Confluence";
     default:
       return trigger.kind === "inbound_webhook" ? "Webhook" : "Clock";
   }
@@ -256,6 +258,7 @@ export type TriggerEventDisplayState =
   | "queued"
   | "running"
   | "completed"
+  | "skipped"
   | "failed"
   | "dead";
 
@@ -282,10 +285,13 @@ const KNOWN_EVENT_ERRORS = new Set([
   "owner_inactive",
   "connection_not_authorized",
   "lease_expired",
+  "sender_not_allowed",
 ]);
 
 export const eventErrorKeyOf = (error: string | null): string | null => {
   if (!error) return null;
+  if (error === "connection_unusable")
+    return "triggers.serverError.connection_unusable";
   if (KNOWN_EVENT_ERRORS.has(error)) return `triggers.eventError.${error}`;
   if (error.startsWith("job_")) return "triggers.eventError.job";
   if (error.startsWith("submit_failed")) return "triggers.eventError.submit";
