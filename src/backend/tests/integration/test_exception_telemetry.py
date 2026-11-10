@@ -30,9 +30,8 @@ class TestExceptionTelemetryIntegration:
         telemetry_service.client_type = "oss"
         telemetry_service.edition = "opensource"
         telemetry_service.common_telemetry_fields = {
-            "langflow_version": "1.0.0",
-            "platform": "python_package",
-            "os": "darwin",
+            "productVersion": "1.0.0",
+            "osName": "darwin",
         }
 
         # Mock successful response
@@ -92,9 +91,8 @@ class TestExceptionTelemetryIntegration:
         telemetry_service.client_type = "oss"
         telemetry_service.edition = "opensource"
         telemetry_service.common_telemetry_fields = {
-            "langflow_version": "1.0.0",
-            "platform": "python_package",
-            "os": "darwin",
+            "productVersion": "1.0.0",
+            "osName": "darwin",
         }
 
         # Mock the async queue and HTTP client
@@ -187,7 +185,7 @@ class TestTelemetryPayloadValidation:
             "componentSeconds": 42,
             "componentSuccess": True,
             "componentErrorMessage": "Test error",
-            "clientType": "oss",
+            "subProductTitle": "oss",
             "componentRunId": None,
         }
         assert serialized == expected
@@ -237,7 +235,7 @@ class TestTelemetryPayloadValidation:
             "componentId": "OpenAIModel-xyz789",
             "componentName": "OpenAIModel",
             "componentInputs": {"temperature": 0.7, "model": "gpt-4"},
-            "clientType": None,
+            "subProductTitle": None,
             "chunkIndex": None,
             "totalChunks": None,
         }
@@ -265,7 +263,7 @@ class TestTelemetryPayloadValidation:
             "playgroundComponentCount": 8,
             "playgroundSuccess": True,
             "playgroundErrorMessage": "",
-            "clientType": "desktop",
+            "subProductTitle": "desktop",
             "playgroundRunId": None,
         }
         assert serialized == expected
@@ -289,9 +287,9 @@ class TestTelemetryPayloadValidation:
         expected = {
             "runIsWebhook": True,
             "runSeconds": 300,
-            "runSuccess": False,
+            "successFlag": False,
             "runErrorMessage": "Connection timeout",
-            "clientType": "oss",
+            "subProductTitle": "oss",
             "runId": None,
         }
         assert serialized == expected
@@ -340,7 +338,7 @@ class TestTelemetryPayloadValidation:
             "cacheType": "redis",
             "backendOnly": True,
             "databaseDialect": "postgresql",
-            "clientType": "oss",
+            "subProductTitle": "oss",
         }
         assert serialized == expected
 
@@ -352,7 +350,7 @@ class TestTelemetryPayloadValidation:
         assert payload.client_type == "desktop"
 
         serialized = payload.model_dump(by_alias=True)
-        expected = {"timeRunning": 3600, "clientType": "desktop"}
+        expected = {"timeRunning": 3600, "subProductTitle": "desktop"}
         assert serialized == expected
 
     def test_exception_payload_creation_and_serialization(self):
@@ -376,7 +374,7 @@ class TestTelemetryPayloadValidation:
             "exceptionMessage": "Invalid input parameter",
             "exceptionContext": "handler",
             "stackTraceHash": "abc123def456",  # pragma: allowlist secret
-            "clientType": "oss",
+            "subProductTitle": "oss",
         }
         assert serialized == expected
 
@@ -430,7 +428,7 @@ class TestTelemetryPayloadValidation:
 
             # Should serialize with alias
             serialized = payload.model_dump(by_alias=True, include={"client_type"})
-            assert serialized.get("clientType") == "test_client"
+            assert serialized.get("subProductTitle") == "test_client"
 
     def test_payload_serialization_exclude_unset_fields(self):
         """Test that payloads can exclude unset fields during serialization."""
@@ -450,11 +448,11 @@ class TestTelemetryPayloadValidation:
         # Exclude unset should only include explicitly set fields
         exclude_unset = payload.model_dump(by_alias=True, exclude_unset=True)
         assert "runSeconds" in exclude_unset
-        assert "runSuccess" in exclude_unset
+        assert "successFlag" in exclude_unset
         # These have defaults but weren't set explicitly, so they're excluded
         assert "runIsWebhook" not in exclude_unset
         assert "runErrorMessage" not in exclude_unset
-        assert "clientType" not in exclude_unset
+        assert "subProductTitle" not in exclude_unset
 
 
 class TestComponentInputTelemetry:

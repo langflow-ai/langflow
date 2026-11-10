@@ -326,7 +326,10 @@ test.describe("Triggers route accessibility", () => {
     { tag: ["@release", "@workspace"] },
     async ({ page }) => {
       await openTriggersRoute(page);
-      await page.getByRole("tab", { name: "All triggers" }).click();
+      await page.getByRole("combobox", { name: "Scope", exact: true }).click();
+      await page
+        .getByRole("option", { name: "All triggers", exact: true })
+        .click();
       await page.getByTestId("triggers-provider-filter").click();
       await page.getByRole("option", { name: "Slack" }).click();
       await page.getByTestId("triggers-bulk-pause").click();

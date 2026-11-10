@@ -4,6 +4,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { normalizeScope } from "@/utils/connection-scopes";
 import { type ScopeRequirement, shortScope } from "../helpers/scopes";
 
+const SERVICENOW_PERMISSION_KEYS: Record<string, string> = {
+  langflow_table_read: "connections.scope.servicenow.read",
+  langflow_table_write: "connections.scope.servicenow.write",
+};
+
 export interface ScopeChecklistProps {
   providerId: string;
   requirements: ScopeRequirement[];
@@ -33,6 +38,10 @@ export function ScopeChecklist({
           normalizeScope(providerId, value) ===
           normalizeScope(providerId, scope);
         const required = requiredScopes.some(matches);
+        const permissionKey =
+          providerId === "servicenow"
+            ? SERVICENOW_PERMISSION_KEYS[normalizeScope(providerId, scope)]
+            : undefined;
         const actions = required
           ? []
           : requirements.filter(
@@ -52,8 +61,15 @@ export function ScopeChecklist({
               data-testid={`connection-scope-${scope}`}
             />
             <span className="flex min-w-0 flex-1 flex-col gap-1">
+              {permissionKey && (
+                <span className="font-medium">{t(permissionKey)}</span>
+              )}
               {required && (
-                <span className="font-medium">
+                <span
+                  className={
+                    permissionKey ? "text-muted-foreground" : "font-medium"
+                  }
+                >
                   {t("connections.scope.required")}
                 </span>
               )}
