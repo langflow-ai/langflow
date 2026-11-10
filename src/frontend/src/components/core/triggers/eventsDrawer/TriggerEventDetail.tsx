@@ -11,7 +11,11 @@ import {
   eventErrorKeyOf,
   parseServerTime,
 } from "../helpers/trigger-presentation";
-import { lineageOf, openRunBlockedKeyOf } from "./event-helpers";
+import {
+  deliveryErrorOf,
+  lineageOf,
+  openRunBlockedKeyOf,
+} from "./event-helpers";
 import TriggerEventStateBadge from "./TriggerEventStateBadge";
 
 export interface TriggerEventDetailProps {
@@ -36,7 +40,15 @@ export function TriggerEventDetail({
   const { t, i18n } = useTranslation();
   const time = parseServerTime(event.created_at);
   const errorKey = eventErrorKeyOf(event.error);
+  const errorDetail = event.error_detail?.trim();
+  const deliveryError = deliveryErrorOf(event);
   const replay = availabilityOf(trigger, "replay");
+  const replayBlockedReason =
+    event.state === "skipped"
+      ? t("triggers.events.skippedCannotReplay")
+      : replay?.blockedReason
+        ? t(blockedReasonKey(replay.blockedReason))
+        : undefined;
   const openRunBlockedKey = openRunBlockedKeyOf(event);
   const { parent, replays } = lineageOf(event, events);
   const when = (row: TriggerEventRead) => {
@@ -60,12 +72,22 @@ export function TriggerEventDetail({
               </span>
             )}
           </div>
-          {errorKey && (
+          {(errorDetail || errorKey) && (
             <p className="text-sm text-muted-foreground">
-              {t(errorKey)}{" "}
-              <code className="rounded bg-muted px-1 text-xs">
-                {event.error}
-              </code>
+              {errorDetail || (errorKey ? t(errorKey) : null)}{" "}
+              {event.error && (
+                <code className="rounded bg-muted px-1 text-xs">
+                  {event.error}
+                </code>
+              )}
+            </p>
+          )}
+          {deliveryError && (
+            <p
+              className="text-sm text-destructive"
+              data-testid="trigger-event-delivery-error"
+            >
+              {t("triggers.events.whatsapp.failed")}. {deliveryError}
             </p>
           )}
         </div>
@@ -82,11 +104,7 @@ export function TriggerEventDetail({
           {replay && (
             <BlockableButton
               size="sm"
-              blockedReason={
-                replay.blockedReason
-                  ? t(blockedReasonKey(replay.blockedReason))
-                  : undefined
-              }
+              blockedReason={replayBlockedReason}
               loading={replaying}
               onClick={() => onReplay(event)}
               data-testid="trigger-event-replay"
