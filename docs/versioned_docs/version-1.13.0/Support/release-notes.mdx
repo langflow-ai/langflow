@@ -13,6 +13,11 @@ Due to strict SemVer requirements, Langflow Desktop can have different patch ver
 
 ## Prepare to upgrade
 
+For an existing 1.11.x Python installation, follow [Upgrade from Langflow 1.11.x](/get-started-installation#upgrade-from-langflow-111).
+An in-place package upgrade can retain incompatible optional providers from the old full installation.
+The procedure uses a new environment with the `bundles` extra and preserves the instance's database, encryption key, files, and knowledge storage.
+Keep backups taken before the first new-version startup so you can restore them if needed.
+
 :::warning
 Whenever possible, the Langflow team recommends installing new Langflow versions in a new virtual environment or VM before upgrading your primary installation.
 This allows you to [import flows](/concepts-flows-import#import-a-flow) from your existing installation and test them in the new version without disrupting your existing installation.
