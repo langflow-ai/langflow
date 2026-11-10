@@ -72,11 +72,23 @@ def test_the_picked_schedule_is_compiled_whatever_cron_the_node_carries(picked, 
     [
         {"schedule_type": "Weekly", "time_of_day": "08:00", "days_of_week": []},
         {"schedule_type": "Daily", "time_of_day": "8:5x"},
+        {"schedule_type": "Daily", "time_of_day": 1730},
     ],
 )
 def test_an_unusable_pick_stops_the_old_schedule_instead_of_keeping_it(picked) -> None:
     _node_id, _kind, config = find_trigger_nodes(_flow_data(_picked_schedule_node("0 8 * * 1-5", **picked)))[0]
     assert config["cron"] == ""
+
+
+async def test_an_unusable_pick_reports_what_to_fix_not_the_hidden_cron(trigger_owner, owned_flow) -> None:
+    empty_week = _picked_schedule_node("0 8 * * 1-5", schedule_type="Weekly", time_of_day="08:00", days_of_week=[])
+    async with session_scope() as session:
+        await reconcile_flow_triggers(
+            session, flow_id=owned_flow, owner_id=trigger_owner, flow_data=_flow_data(empty_week)
+        )
+    rows = await _triggers(owned_flow)
+    assert rows[0].last_error == "Pick at least one day of the week."
+    assert "schedule_error" not in rows[0].config
 
 
 def test_missing_template_fields_fall_back_rather_than_crash() -> None:

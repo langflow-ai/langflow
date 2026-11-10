@@ -18,9 +18,7 @@ interface MockButtonProps extends Record<string, unknown> {
   children: ReactNode;
 }
 
-interface MockStoreSelectorFn<T> {
-  (state: T): unknown;
-}
+type MockStoreSelectorFn<T> = (state: T) => unknown;
 
 let mockCurrentFlowId = "flow-one";
 
@@ -233,6 +231,32 @@ describe("Dropdown value reset bug", () => {
       />,
     );
 
+    expect(mockOnSelect).not.toHaveBeenCalledWith("", undefined, true);
+  });
+
+  it("should_show_a_saved_combobox_value_that_is_not_an_option", () => {
+    const mockOnSelect = jest.fn();
+
+    render(
+      <Dropdown
+        value="08:15"
+        options={["08:00", "09:00"]}
+        combobox
+        onSelect={mockOnSelect}
+        name="time_of_day"
+        nodeId="test-node"
+        nodeClass={mockNodeClass}
+        handleNodeClass={jest.fn()}
+        id="test-dropdown"
+        editNode={false}
+        handleOnNewValue={jest.fn()}
+        disabled={false}
+      />,
+    );
+
+    expect(
+      screen.getByTestId("value-dropdown-test-dropdown"),
+    ).toHaveTextContent("08:15");
     expect(mockOnSelect).not.toHaveBeenCalledWith("", undefined, true);
   });
 });

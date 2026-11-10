@@ -238,6 +238,10 @@ def apply_config_verdict(row: Trigger, error: str | None) -> bool:
     return (row.state, row.last_error, row.next_fire_at) != before
 
 
+#: Config key carrying an unusable pick's message from the node scan to the verdict.
+SCHEDULE_PICK_ERROR = "schedule_error"
+
+
 def _template_value(node_data: dict[str, Any], field: str, default: Any) -> Any:
     template = node_data.get("node", {}).get("template", {})
     entry = template.get(field)
@@ -268,18 +272,23 @@ def find_trigger_nodes(flow_data: dict[str, Any] | None) -> list[tuple[str, str,
         )
         config = {key: _template_value(node_data, field, default) for field, key, default in fields}
         if kind == "schedule":
-            config["cron"] = _schedule_node_cron(node_data, config["cron"])
+            _apply_schedule_pick(node_data, config)
         found.append((node_id, kind, config))
     return found
 
 
-def _schedule_node_cron(node_data: dict[str, Any], stored_cron: str) -> str:
-    """Compile the picked schedule; an unusable pick yields "" so the trigger is marked invalid."""
+def _apply_schedule_pick(node_data: dict[str, Any], config: dict[str, Any]) -> None:
+    """Compile the picked schedule into ``config``.
+
+    An unusable pick blanks the cron so the old schedule stops, and keeps the
+    picker's message: the cron field is hidden, so a cron error would not say what to fix.
+    """
     values = {name: _template_value(node_data, name, None) for name in PICKER_FIELDS}
     try:
-        return schedule_cron(values, stored_cron)
-    except ScheduleTriggerError:
-        return ""
+        config["cron"] = schedule_cron(values, config["cron"])
+    except ScheduleTriggerError as exc:
+        config["cron"] = ""
+        config[SCHEDULE_PICK_ERROR] = str(exc)
 
 
 def _node_kind(node_type: Any) -> str | None:
@@ -468,10 +477,11 @@ async def reconcile_flow_triggers(
             except ValueError as exc:
                 error = str(exc)
         elif kind == "schedule":
+            pick_error = config.pop(SCHEDULE_PICK_ERROR, None)
             try:
                 config = validate_schedule_config(config)
             except InvalidScheduleError as exc:
-                error = str(exc)
+                error = pick_error or str(exc)
         elif kind == KIND_INBOUND_WEBHOOK:
             try:
                 config = normalize_webhook_config(config)

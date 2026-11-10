@@ -145,9 +145,11 @@ export function useDropdownOptions({
 
   useEffect(() => {
     if (open) {
-      // Check if filteredOptions contains any custom values not in validOptions
+      // A saved custom value has no search text after a reload; keep it too.
       const customValuesInFiltered = filteredOptions.filter(
-        (option) => !validOptions.includes(option) && option === customValue,
+        (option) =>
+          !validOptions.includes(option) &&
+          (option === customValue || option === value),
       );
 
       // If there are custom values, preserve them when resetting filtered options

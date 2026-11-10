@@ -143,6 +143,24 @@ def test_an_interval_outside_the_list_is_refused() -> None:
         picker_cron({"schedule_type": "At regular intervals", "interval": "45 minutes"})
 
 
+def test_days_saved_as_numbers_are_still_picked() -> None:
+    values = {"schedule_type": "Monthly", "time_of_day": "08:00", "days_of_month": ["1", 15]}
+    assert picker_cron(values) == "0 8 1,15 * *"
+
+
+@pytest.mark.parametrize(
+    "values",
+    [
+        {"schedule_type": "Daily", "time_of_day": 1730},
+        {"schedule_type": "At regular intervals", "interval": ["15 minutes"]},
+        {"schedule_type": "Monthly", "time_of_day": "08:00", "days_of_month": 15},
+    ],
+)
+def test_a_value_that_is_not_text_is_refused_not_crashed_on(values) -> None:
+    with pytest.raises(ScheduleTriggerError):
+        picker_cron(values)
+
+
 def test_the_timezone_is_picked_from_real_iana_zones_utc_first() -> None:
     zones = timezone_options()
 

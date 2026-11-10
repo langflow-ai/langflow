@@ -71,8 +71,8 @@ def timezone_options() -> list[str]:
     return ["UTC", *zones]
 
 
-def _time_fields(time_of_day: str) -> tuple[int, int]:
-    match = _TIME_OF_DAY.match((time_of_day or "").strip())
+def _time_fields(time_of_day: object) -> tuple[int, int]:
+    match = _TIME_OF_DAY.match(str(time_of_day or "").strip())
     if not match:
         msg = f"Time of day must be HH:MM in 24-hour time, for example '08:30'; got {time_of_day!r}."
         raise ScheduleTriggerError(msg)
@@ -98,8 +98,9 @@ def _cron_list(numbers: set[int]) -> str:
     return ",".join(parts)
 
 
-def _day_list(days: list[str], numbers: dict[str, int], noun: str) -> str:
-    picked = {numbers[day] for day in days or [] if day in numbers}
+def _day_list(days: object, numbers: dict[str, int], noun: str) -> str:
+    items = days if isinstance(days, list) else []
+    picked = {numbers[str(day)] for day in items if str(day) in numbers}
     if not picked:
         msg = f"Pick at least one day of the {noun}."
         raise ScheduleTriggerError(msg)
@@ -111,7 +112,7 @@ def picker_cron(values: dict[str, Any]) -> str | None:
     schedule_type = values.get("schedule_type") or SCHEDULE_CUSTOM
     if schedule_type == SCHEDULE_INTERVAL:
         interval = values.get("interval")
-        if interval not in INTERVALS:
+        if not isinstance(interval, str) or interval not in INTERVALS:
             msg = f"Pick an interval from the list; got {interval!r}."
             raise ScheduleTriggerError(msg)
         return INTERVALS[interval]

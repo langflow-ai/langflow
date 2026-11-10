@@ -59,3 +59,46 @@ test(
     await expect(cron).toHaveValue("0 8 * * 1-5");
   },
 );
+
+test(
+  "a typed time survives a reload and opening the list",
+  { tag: ["@release", "@workspace", "@api"] },
+  async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem("langflow-assistant-discovered", "true");
+    });
+    await awaitBootstrapTest(page);
+    await page.getByTestId("blank-flow").click();
+    await searchPalette(page, "schedule");
+    await page.getByTestId("add-component-button-schedule").click();
+    await adjustScreenView(page);
+    const flowId = new URL(page.url()).pathname.match(/\/flow\/([^/]+)/)?.[1];
+    expect(flowId, "flow id should be in the URL").toBeTruthy();
+    const triggerCron = async () => {
+      const response = await page.request.get(
+        `/api/v1/triggers?flow_id=${flowId}`,
+      );
+      const [trigger] = await response.json();
+      return trigger?.config?.cron;
+    };
+    const shownTime = page.getByTestId(
+      "value-dropdown-dropdown_str_time_of_day",
+    );
+
+    await page.getByTestId("dropdown_str_time_of_day").click();
+    await page.getByTestId("dropdown_search_input").fill("08:15");
+    await page.getByTestId("08:15-0-option").click();
+    await expect(shownTime).toHaveText("08:15");
+    await expect.poll(triggerCron, { timeout: 30_000 }).toBe("15 8 * * 1-5");
+
+    await page.reload();
+    await adjustScreenView(page);
+    await expect(shownTime).toHaveText("08:15");
+    await page.getByTestId("dropdown_str_time_of_day").click();
+    await page.keyboard.press("Escape");
+    await expect(shownTime).toHaveText("08:15");
+    // Give autosave the time it would take to store a cleared value.
+    await page.waitForTimeout(3_000);
+    expect(await triggerCron()).toBe("15 8 * * 1-5");
+  },
+);
