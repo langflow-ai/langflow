@@ -1122,6 +1122,9 @@ class TestMCPComponentGlobalVariableResolution:
                     await component._get_tools()
                 assert mock_update_tools.await_count == 1
 
+        assert mock_update_tools.call_args.kwargs["strict_variables"] is (
+            getattr(type(variable_service), "get_account_bound_variables", None) is not None
+        )
         return mock_update_tools.call_args.kwargs["request_variables"], variable_service
 
     @pytest.mark.asyncio

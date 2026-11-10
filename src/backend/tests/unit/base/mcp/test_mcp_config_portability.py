@@ -8,6 +8,50 @@ id. A flow therefore had to be edited by hand on every promotion between planes.
 import httpx
 import pytest
 from lfx.base.mcp import util
+from lfx.services.variable.exceptions import RuntimeVariableError
+
+
+@pytest.mark.parametrize("variables", [None, {}, {"OTHER": "private-value"}])
+@pytest.mark.parametrize("location", ["url", "headers", "env"])
+@pytest.mark.parametrize("reference", ["{{MISSING}}", "MCP_MISSING_1234ABCD", "MCP_private-token-canary"])
+async def test_account_bound_missing_variable_fails_before_connecting(variables, location, reference):
+    from unittest.mock import AsyncMock
+
+    client = AsyncMock()
+    config = {"url": "https://example.com/mcp"}
+    if location == "url":
+        config["url"] = reference
+    elif location == "headers":
+        config["headers"] = {"Authorization": reference}
+    else:
+        config = {"command": "test-mcp", "env": {"TOKEN": reference}}
+
+    with pytest.raises(RuntimeVariableError) as caught:
+        await util.update_tools(
+            "test",
+            config,
+            mcp_stdio_client=client,
+            mcp_streamable_http_client=client,
+            request_variables=variables,
+            url_variables=variables,
+            strict_variables=True,
+        )
+
+    assert caught.value.reason == "absent"
+    assert "private-value" not in str(caught.value)
+    if reference.startswith("MCP_"):
+        assert reference not in str(caught.value)
+    else:
+        assert "MISSING" in str(caught.value)
+    client.connect_to_server.assert_not_called()
+
+
+def test_account_bound_substitution_preserves_opaque_values():
+    assert util._process_headers(
+        {"Authorization": "Bearer {{TOKEN}}"},
+        {"TOKEN": "opaque-{{MISSING}}"},
+        strict_variables=True,
+    ) == {"authorization": "Bearer opaque-{{MISSING}}"}
 
 
 class TestUrlVariableResolution:

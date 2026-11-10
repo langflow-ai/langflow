@@ -8,7 +8,7 @@ and ``variable`` grows without bound on a serving plane that never cleans it up.
 from uuid import uuid4
 
 import pytest
-from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_user_variables
+from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_global_variables, initialize_agentic_user_variables
 from langflow.services.database.models.user.model import User
 from langflow.services.database.models.variable.model import Variable
 from lfx.services.settings.constants import AGENTIC_VARIABLES
@@ -68,3 +68,14 @@ async def test_should_stay_flat_across_repeated_restarts(async_session):
 
     names = await _variable_names(async_session, user.id)
     assert len(names) == len(AGENTIC_VARIABLES)
+
+
+@pytest.mark.asyncio
+async def test_global_startup_keeps_empty_generic_defaults_across_restarts(async_session):
+    user = await _seed_user(async_session)
+
+    for _ in range(3):
+        await initialize_agentic_global_variables(async_session)
+        await async_session.commit()
+
+    assert sorted(await _variable_names(async_session, user.id)) == ["COMPONENT_ID", "FIELD_NAME", "FLOW_ID"]

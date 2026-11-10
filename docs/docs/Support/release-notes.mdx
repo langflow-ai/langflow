@@ -46,6 +46,17 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 
     If you made changes to your flows in the isolated installation, you might want to export and import those flows back to your upgraded primary installation so you don't have to repeat the component upgrade process.
 
+## 1.14.x
+
+### Deployment variables
+
+Set `LANGFLOW_DEPLOYMENT_TYPED_VARIABLES_ENABLED=true` to include secret and plain variable declarations in version 7 deployment artifacts.
+The destination must support this format. Packages carry names and kinds without source values, and packaging refuses unresolved kinds.
+For details, see [Deployment variable declarations](/environment-variables#deployment-variable-declarations).
+
+When an extension binds a deployment to an execution account, unresolved MCP variable placeholders fail before an outbound connection.
+Restarting an instance also preserves existing empty assistant variables instead of adding duplicate default rows.
+
 ## 1.13.x
 
 Highlights of this release include the following changes. For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases/latest).

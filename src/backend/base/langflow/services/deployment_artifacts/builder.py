@@ -1354,6 +1354,14 @@ def _build_archive(
     )
     for snapshot in snapshots:
         path = f"flows/{snapshot.flow_id}.json"
+        if variable_kinds is not None:
+            referenced_names: set[str] = set()
+            strip_secret_field_values_in_place(
+                deepcopy(snapshot.payload.get("data")), variable_references=referenced_names
+            )
+            if referenced_names - variable_kinds.keys() - literal_mcp_names:
+                msg = f"Cannot resolve a deployment variable kind in flow {snapshot.flow_id}"
+                raise ProjectArtifactError(msg)
         # Read from the payload as saved, before scrubbing: the packaged graph below
         # keeps only the server's name, so this is the one place the configuration is
         # still here to be handed on.
@@ -1381,6 +1389,17 @@ def _build_archive(
             msg = f"artifact expanded size exceeds the {limits.max_expanded_bytes}-byte limit"
             raise ProjectArtifactLimitError(msg)
         files.append((path, content))
+        declarations = _variable_declarations(
+            (*required_variables, *mcp_requirements.variables),
+            variable_kinds,
+            literal_mcp_names=literal_mcp_names,
+        )
+        unresolved = [item.name for item in declarations if item.kind is None]
+        if unresolved:
+            known = sorted(set(unresolved) & (variable_kinds or {}).keys())
+            subject = ", ".join(known) if known else f"Flow {snapshot.flow_id}"
+            msg = f"{subject} has an unresolved deployment variable kind"
+            raise ProjectArtifactError(msg)
         flow_entries.append(
             ProjectArtifactFlow(
                 flow_id=snapshot.flow_id,
@@ -1395,11 +1414,7 @@ def _build_archive(
                 unresolved_model_fields=model_requirements.unresolved_fields,
                 required_mcp_variables=mcp_requirements.variables,
                 required_mcp_projects=mcp_requirements.projects,
-                required_variable_declarations=_variable_declarations(
-                    (*required_variables, *mcp_requirements.variables),
-                    variable_kinds,
-                    literal_mcp_names=literal_mcp_names,
-                ),
+                required_variable_declarations=declarations,
                 version_id=snapshot.version_id,
             )
         )
