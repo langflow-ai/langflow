@@ -158,9 +158,9 @@
       "providers": [
         "lfx-openai"
       ],
-      "requested": ">=0.2.1,<1.0.0",
-      "requirement": "lfx-openai==0.2.1",
-      "resolved_version": "0.2.1"
+      "requested": ">=0.3.0,<1.0.0",
+      "requirement": "lfx-openai==0.3.0",
+      "resolved_version": "0.3.0"
     },
     {
       "distribution": "lfx-openai-compatible",
@@ -250,7 +250,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:d3759cd7f157e79c",
+  "profile_digest": "sha256:438a6d9610be60f7",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",
