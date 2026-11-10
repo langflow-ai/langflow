@@ -217,6 +217,41 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
             upload_file = mock_upload.call_args[1]["file"]
             assert upload_file.filename == "test_output.csv"
 
+    @pytest.mark.parametrize("fmt", ["csv", "excel", "markdown"])
+    def test_save_flat_json_record(self, component_class, tmp_path, fmt):
+        component = component_class()
+        record = {"name": "Ada", "score": 12, "active": True}
+        extension = "xlsx" if fmt == "excel" else fmt
+        path = tmp_path / f"record.{extension}"
+
+        component._save_data(Data(data=record), path, fmt)
+
+        if fmt == "markdown":
+            rows = path.read_text(encoding="utf-8").splitlines()
+            assert [cell.strip() for cell in rows[0].strip("|").split("|")] == list(record)
+            assert [cell.strip() for cell in rows[2].strip("|").split("|")] == ["Ada", "12", "True"]
+        else:
+            result = pd.read_csv(path) if fmt == "csv" else pd.read_excel(path)
+            pd.testing.assert_frame_equal(result, pd.DataFrame([record]))
+
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            {"name": ["Ada", "Bob"], "score": [12, 13]},
+            {"name": ["Ada", "Bob"], "score": 12},
+            {"name": {"a": "Ada", "b": "Bob"}, "score": {"a": 12, "b": 13}},
+            {},
+        ],
+    )
+    def test_save_json_preserves_column_oriented_csv(self, component_class, tmp_path, payload):
+        component = component_class()
+        path = tmp_path / "columns.csv"
+
+        component._save_data(Data(data=payload), path, "csv")
+
+        expected = pd.DataFrame(payload).to_csv(index=False)
+        assert path.read_bytes() == expected.encode("utf-8")
+
     @pytest.mark.asyncio
     async def test_save_data_to_json(self, component_class):
         """Test saving Data to JSON format - only mock upload."""
