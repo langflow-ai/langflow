@@ -328,6 +328,7 @@ async def get_servers(
     }
 
     async def check_server(server_name: str) -> dict:
+        """Discover one server using the current account's resolved variable map."""
         server_info: dict[str, str | int | None] = {"name": server_name, "mode": None, "toolsCount": None}
         async with discovery_clients() as (mcp_stdio_client, mcp_streamable_http_client):
             try:

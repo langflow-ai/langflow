@@ -426,6 +426,7 @@ class MCPToolsComponent(ComponentWithCache):
         return server_name, server_config
 
     async def update_tool_list(self, mcp_server_value=None):
+        """Resolve account variables and refresh the selected server's available tools."""
         # Accepts mcp_server_value as dict {name, config} or uses self.mcp_server
         mcp_server = mcp_server_value if mcp_server_value is not None else getattr(self, "mcp_server", None)
         server_name, server_config_from_value = self._normalize_mcp_server_value(mcp_server)

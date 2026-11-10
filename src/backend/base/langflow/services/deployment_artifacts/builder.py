@@ -1339,6 +1339,7 @@ def _build_archive(
     registered_mcp_servers: Mapping[str, dict[str, Any]] | None = None,
     rewrite_file_keys: bool = False,
 ) -> ProjectArtifact:
+    """Validate flow requirements and package scrubbed flows with their manifest."""
     flow_entries: list[ProjectArtifactFlow] = []
     files: list[tuple[str, bytes]] = []
     expanded_size = 0
@@ -1359,7 +1360,7 @@ def _build_archive(
             strip_secret_field_values_in_place(
                 deepcopy(snapshot.payload.get("data")), variable_references=referenced_names
             )
-            if referenced_names - variable_kinds.keys() - literal_mcp_names:
+            if referenced_names - variable_kinds.keys():
                 msg = f"Cannot resolve a deployment variable kind in flow {snapshot.flow_id}"
                 raise ProjectArtifactError(msg)
         # Read from the payload as saved, before scrubbing: the packaged graph below

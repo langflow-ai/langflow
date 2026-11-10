@@ -585,6 +585,7 @@ class DatabaseVariableService(VariableService, Service):
         return variable
 
     async def list_variables(self, user_id: UUID | str, session: AsyncSession) -> list[str | None]:
+        """List variable names, including empty assistant defaults for startup checks."""
         variables = await self.get_all(user_id=user_id, session=session, include_empty_names=set(AGENTIC_VARIABLES))
         return [variable.name for variable in variables if variable]
 

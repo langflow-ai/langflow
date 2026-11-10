@@ -986,9 +986,9 @@ def _substitute_global_variables(
 ) -> str:
     """Resolve a whole-value variable name, or ``{{NAME}}`` placeholders inside a value.
 
-    Whole-value matching alone cannot compose a value, so a base URL could not be varied
-    per environment while keeping a project id. An unknown placeholder is left verbatim:
-    blanking it would build a URL that looks valid and points somewhere else.
+    Strict resolution rejects references absent from the authoritative variable map.
+    Otherwise, unknown placeholders remain verbatim so missing values cannot silently
+    change the connection target. Substituted values are opaque and are not expanded again.
     """
     if not value:
         return value

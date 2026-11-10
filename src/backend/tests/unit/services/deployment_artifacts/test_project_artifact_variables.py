@@ -113,6 +113,7 @@ def _manifest(artifact):
 
 @pytest.mark.asyncio
 async def test_typed_artifact_has_deterministic_declarations_and_keeps_legacy_names():
+    """Typed declarations remain stable across flow and variable ordering."""
     owner_id = uuid4()
     project = Folder(id=uuid4(), name="Typed requirements", user_id=owner_id)
     first = _bound_flow(owner_id, project.id, ["SECRET_KEY", "PLAIN_URL", "LEGACY_NAME", "SECRET_KEY"])
@@ -141,6 +142,7 @@ async def test_typed_artifact_has_deterministic_declarations_and_keeps_legacy_na
 
 @pytest.mark.asyncio
 async def test_typed_snapshot_and_artifact_declarations_match_through_route():
+    """The snapshot route exposes the same typed requirements as the artifact."""
     owner_id = uuid4()
     project = Folder(id=uuid4(), name="Snapshot requirements", user_id=owner_id)
     flow = _bound_flow(owner_id, project.id, ["OWNER_KEY", "OWNER_URL", "UNKNOWN_KIND"])
@@ -207,6 +209,7 @@ async def test_typed_metadata_without_owner_does_not_query():
 
 @pytest.mark.asyncio
 async def test_typed_artifact_rejects_unknown_bound_variable_instead_of_downgrading():
+    """Missing database bindings fail without exposing their stored field values."""
     owner_id = uuid4()
     project = Folder(id=uuid4(), name="Unknown variable kind", user_id=owner_id)
     flow = _bound_flow(owner_id, project.id, ["UNKNOWN_NAME_OR_LITERAL_SECRET"])
@@ -219,7 +222,25 @@ async def test_typed_artifact_rejects_unknown_bound_variable_instead_of_downgrad
 
 
 @pytest.mark.asyncio
+async def test_typed_artifact_rejects_missing_bound_variable_matching_literal_mcp_alias():
+    """A generated MCP alias cannot satisfy a missing database binding."""
+    owner_id = uuid4()
+    project = Folder(id=uuid4(), name="Missing bound MCP alias", user_id=owner_id)
+    alias = variable_name_for("demo", "Authorization")
+    flow = _bound_flow(owner_id, project.id, [alias])
+    flow.data["nodes"][0]["data"]["node"]["template"]["mcp_server"] = {"type": "mcp", "value": {"name": "demo"}}
+    registered = {"demo": {"url": "https://example.com/mcp", "headers": {"Authorization": "literal-credential"}}}
+
+    with pytest.raises(builder.ProjectArtifactError, match="variable kind") as caught:
+        await _typed_export(project, [flow], {}, registered_mcp_servers=registered)
+
+    assert str(flow.id) in str(caught.value)
+    assert alias not in str(caught.value)
+
+
+@pytest.mark.asyncio
 async def test_typed_artifact_rejects_known_variable_with_unresolved_kind():
+    """Refuse a stored variable whose type cannot be declared in the artifact."""
     owner_id = uuid4()
     project = Folder(id=uuid4(), name="Unknown stored variable kind", user_id=owner_id)
     flow = _bound_flow(owner_id, project.id, ["KNOWN_NAME"])
@@ -259,6 +280,7 @@ def test_typed_declarations_keep_unknown_mcp_names_unresolved():
 @pytest.mark.asyncio
 @pytest.mark.parametrize("snapshot", [False, True])
 async def test_typed_export_declares_literal_mcp_credentials_without_values(snapshot):
+    """Both export paths declare literal credentials without exporting their values."""
     owner_id = uuid4()
     project = Folder(id=uuid4(), name="Literal MCP requirements", user_id=owner_id)
     flow = _bound_flow(owner_id, project.id, [])
