@@ -34,6 +34,7 @@ from langflow.services.database.models.api_key.policy import ensure_api_key_mana
 from langflow.services.deps import get_settings_service, get_shared_component_cache_service, get_storage_service
 from langflow.services.settings.service import SettingsService
 from langflow.services.storage.service import StorageService
+from langflow.services.variable.constants import is_oauth_registration_variable
 
 router = APIRouter(tags=["MCP"], prefix="/mcp")
 
@@ -305,7 +306,7 @@ async def get_servers(
             stmt = select(Variable).where(Variable.user_id == current_user.id)
             variables = list((await session.exec(stmt)).all())
             for variable in variables:
-                if variable.name and variable.value:
+                if variable.name and variable.value and not is_oauth_registration_variable(variable.name):
                     # Legacy Generic rows may still be encrypted. Preserve the
                     # historical discovery behavior for unmanaged accounts.
                     try:
@@ -319,6 +320,10 @@ async def get_servers(
         raise HTTPException(status_code=409, detail="Deployment variable resolution failed") from None
     except Exception as e:  # noqa: BLE001
         await logger.awarning(f"Failed to load global variables for MCP server test: {e}")
+
+    request_variables = {
+        name: value for name, value in request_variables.items() if not is_oauth_registration_variable(name)
+    }
 
     async def check_server(server_name: str) -> dict:
         server_info: dict[str, str | int | None] = {"name": server_name, "mode": None, "toolsCount": None}

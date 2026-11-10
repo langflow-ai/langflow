@@ -27,6 +27,7 @@ from langflow.services.triggers.schedule_config import InvalidScheduleError, val
         (NODE_REMOVED_ERROR, "node_removed"),
         (SOURCE_SETTINGS_CHANGED_ERROR, "source_settings_changed"),
         (CONNECTION_NOT_AUTHORIZED_ERROR, "connection_not_authorized"),
+        ("connection_unusable", "connection_unusable"),
         (INVALID_CRON_ERROR, "invalid_cron"),
         (CRON_NEVER_MATCHES_ERROR, "cron_never_matches"),
         (TIMEZONE_REQUIRED_ERROR, "timezone_required"),

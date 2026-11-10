@@ -110,6 +110,7 @@ class TriggerEventState(str, Enum):
     CLAIMED = "claimed"
     DISPATCHED = "dispatched"
     COMPLETED = "completed"
+    SKIPPED = "skipped"
     FAILED = "failed"
     DEAD = "dead"
 
@@ -118,13 +119,19 @@ class TriggerEventFilter(str, Enum):
     """The events drawer's filters, applied by the server so they search every event, not one page."""
 
     FAILED = "failed"  # failed or dead
+    SKIPPED = "skipped"
     REPLAYS = "replays"  # a replay of another event
     TESTS = "tests"  # a test event, not a replay of one
 
 
 #: Rows that no dispatcher will ever pick up again.
 TERMINAL_EVENT_STATES = frozenset(
-    {TriggerEventState.COMPLETED.value, TriggerEventState.FAILED.value, TriggerEventState.DEAD.value}
+    {
+        TriggerEventState.COMPLETED.value,
+        TriggerEventState.SKIPPED.value,
+        TriggerEventState.FAILED.value,
+        TriggerEventState.DEAD.value,
+    }
 )
 #: Rows that count against a trigger's concurrency cap.
 IN_FLIGHT_EVENT_STATES = frozenset({TriggerEventState.CLAIMED.value, TriggerEventState.DISPATCHED.value})
@@ -358,6 +365,7 @@ class TriggerEventRead(BaseModel):
     job_id: UUID | None
     replay_of_event_id: UUID | None
     error: str | None
+    error_detail: str | None = None
     created_at: datetime | None
     updated_at: datetime | None
 
