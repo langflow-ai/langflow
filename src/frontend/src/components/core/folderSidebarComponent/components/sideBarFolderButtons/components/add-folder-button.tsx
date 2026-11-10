@@ -12,7 +12,7 @@ export const AddFolderButton = ({
   onClick: () => void;
   disabled: boolean;
   loading: boolean;
-  blockedReason?: string;
+  blockedReason?: string | null;
 }) => {
   const { t } = useTranslation();
   return (
@@ -24,7 +24,7 @@ export const AddFolderButton = ({
       data-testid="add-project-button"
       aria-label={t("folder.createNewProject")}
       tooltip={t("folder.createNewProject")}
-      blockedReason={blockedReason || undefined}
+      blockedReason={blockedReason}
       disabled={disabled}
       loading={loading}
     >

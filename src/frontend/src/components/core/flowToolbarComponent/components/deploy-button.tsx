@@ -41,7 +41,7 @@ function DeployButtonInner() {
       <BlockableButton
         type="button"
         unstyled
-        blockedReason={deployButton.blockedReason || undefined}
+        blockedReason={deployButton.blockedReason}
         onClick={handleDeploy}
         disabled={
           isPreparingDeploy ||
@@ -50,7 +50,7 @@ function DeployButtonInner() {
           !currentFlowId ||
           !canDeploy
         }
-        className="relative inline-flex h-8 items-center justify-start gap-1.5 rounded bg-primary px-2 text-sm font-normal text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+        className="relative inline-flex h-8 items-center justify-start gap-1.5 rounded bg-primary px-2 text-sm font-normal text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:opacity-50"
         data-testid="deploy-btn-flow"
       >
         <ForwardedIconComponent

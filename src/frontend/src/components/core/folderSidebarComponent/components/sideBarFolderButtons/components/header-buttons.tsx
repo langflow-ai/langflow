@@ -108,7 +108,7 @@ export const HeaderButtons = ({
               onClick={addNewFolder}
               disabled={isUpdatingFolder}
               loading={isPending}
-              blockedReason={newProjectButton.blockedReason ?? undefined}
+              blockedReason={newProjectButton.blockedReason}
             />
           )}
         </div>
