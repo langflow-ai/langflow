@@ -5280,6 +5280,36 @@
       "bare_class_name": "KeenableSearchComponent",
       "target": "ext:keenable:KeenableSearchComponent@official",
       "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "SequenzyAddSubscriberComponent",
+      "target": "ext:sequenzy:SequenzyAddSubscriberComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "SequenzyGetSubscriberComponent",
+      "target": "ext:sequenzy:SequenzyGetSubscriberComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "SequenzyListCampaignsComponent",
+      "target": "ext:sequenzy:SequenzyListCampaignsComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "SequenzySendEmailComponent",
+      "target": "ext:sequenzy:SequenzySendEmailComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "SequenzyTagSubscriberComponent",
+      "target": "ext:sequenzy:SequenzyTagSubscriberComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "SequenzyTriggerEventComponent",
+      "target": "ext:sequenzy:SequenzyTriggerEventComponent@official",
+      "added_in": "1.14.0"
     }
   ],
   "ambiguous_bare_names": [

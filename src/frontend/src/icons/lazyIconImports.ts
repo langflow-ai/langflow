@@ -467,6 +467,8 @@ export const lazyIconsMapping = {
     })),
   Searx: () =>
     import("@/icons/Searx").then((mod) => ({ default: mod.SearxIcon })),
+  Sequenzy: () =>
+    import("@/icons/Sequenzy").then((mod) => ({ default: mod.SequenzyIcon })),
   SerpSearch: () =>
     import("@/icons/SerpSearch").then((mod) => ({
       default: mod.SerpSearchIcon,
