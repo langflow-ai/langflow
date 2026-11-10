@@ -53,6 +53,16 @@
       "resolved_version": "0.2.1"
     },
     {
+      "distribution": "lfx-confluence",
+      "extras": [],
+      "providers": [
+        "lfx-confluence"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-confluence==0.1.0",
+      "resolved_version": "0.1.0"
+    },
+    {
       "distribution": "lfx-datastax",
       "extras": [],
       "providers": [
@@ -80,6 +90,16 @@
       ],
       "requested": ">=0.1.0,<1.0.0",
       "requirement": "lfx-github==0.1.0",
+      "resolved_version": "0.1.0"
+    },
+    {
+      "distribution": "lfx-gitlab",
+      "extras": [],
+      "providers": [
+        "lfx-gitlab"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-gitlab==0.1.0",
       "resolved_version": "0.1.0"
     },
     {
@@ -183,6 +203,16 @@
       "resolved_version": "0.2.3"
     },
     {
+      "distribution": "lfx-telegram",
+      "extras": [],
+      "providers": [
+        "lfx-telegram"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-telegram==0.1.0",
+      "resolved_version": "0.1.0"
+    },
+    {
       "distribution": "lfx-toolguard",
       "extras": [],
       "providers": [
@@ -201,6 +231,16 @@
       "requested": ">=0.2.1,<1.0.0",
       "requirement": "lfx-vllm==0.2.1",
       "resolved_version": "0.2.1"
+    },
+    {
+      "distribution": "lfx-whatsapp",
+      "extras": [],
+      "providers": [
+        "lfx-whatsapp"
+      ],
+      "requested": ">=0.1.1,<1.0.0",
+      "requirement": "lfx-whatsapp==0.1.1",
+      "resolved_version": "0.1.1"
     }
   ],
   "image_families": [
@@ -210,15 +250,17 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:07e3a0c37e254d91",
+  "profile_digest": "sha256:3a5a1bb8b3462c14",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",
     "lfx-azure",
     "lfx-cohere",
+    "lfx-confluence",
     "lfx-datastax",
     "lfx-docling",
     "lfx-github",
+    "lfx-gitlab",
     "lfx-google",
     "lfx-ibm",
     "lfx-jira",
@@ -229,8 +271,10 @@
     "lfx-oracle",
     "lfx-servicenow",
     "lfx-slack",
+    "lfx-telegram",
     "lfx-toolguard",
-    "lfx-vllm"
+    "lfx-vllm",
+    "lfx-whatsapp"
   ],
   "python": ">=3.11,<3.16",
   "schema_version": 1

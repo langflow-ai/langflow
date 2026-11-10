@@ -190,3 +190,23 @@ describe.each(providers)("$provider_id manual connections", (provider) => {
     expect(mockStartOAuth).not.toHaveBeenCalled();
   });
 });
+
+it.each([
+  "Use this app's system-user token with both WhatsApp permissions.",
+  "The configured phone must belong to the configured WABA.",
+])("shows the actionable WhatsApp token rejection %s", async (detail) => {
+  const provider = providers.find((row) => row.provider_id === "whatsapp")!;
+  mockRenew.mockRejectedValueOnce({
+    isAxiosError: true,
+    response: { status: 422, data: { detail } },
+  });
+  renderDialog(provider, existingConnection(provider, true));
+  await userEvent.type(
+    screen.getByTestId("connection-token"),
+    "rejected-token",
+  );
+  await userEvent.click(screen.getByTestId("connection-continue"));
+
+  expect(await screen.findByText(detail)).toBeVisible();
+  expect(screen.queryByTestId("connection-done")).toBeNull();
+});

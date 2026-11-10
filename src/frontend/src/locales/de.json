@@ -997,6 +997,8 @@
   "flow.statusBuild": "Erstellen, um den Status zu überprüfen.",
   "flow.statusBuilding": "Wird geladen...",
   "flow.statusInactive": "Ausführung gesperrt",
+  "flow.statusBranchNotTaken": "Zweig nicht gewählt",
+  "flow.statusBranchTakenTo": "{{component}} hat die Eingabe an {{outputs}} gesendet.",
   "flow.statusMissingFieldsError": "Bitte füllen Sie alle Pflichtfelder aus.",
   "flow.toAvoidLosingProgress": "um den Fortschritt nicht zu verlieren.",
   "flow.tooltipHiddenOutputsCollapse": "Ausgeblendete Ausgaben ausblenden",
@@ -3516,5 +3518,15 @@
   "decision.minimumProbability": "Mindestwahrscheinlichkeit",
   "decision.errorAction": "Bei Auswertungsfehler",
   "decision.requestId": "Anfrage-ID des Providers",
-  "decision.tone.answered": "Beantwortet"
+  "decision.tone.answered": "Beantwortet",
+  "triggers.events.whatsapp.message": "Nachricht empfangen",
+  "triggers.events.whatsapp.sent": "Status gesendet",
+  "triggers.events.whatsapp.delivered": "Status zugestellt",
+  "triggers.events.whatsapp.read": "Status gelesen",
+  "triggers.events.whatsapp.failed": "Zustellung fehlgeschlagen",
+  "triggers.events.whatsapp.status": "Nachrichtenstatus",
+  "triggers.events.state.skipped": "Übersprungen",
+  "triggers.events.filters.skipped": "Übersprungen",
+  "triggers.eventError.sender_not_allowed": "Der Absender steht nicht in der Liste der zulässigen Absendernummern.",
+  "triggers.events.skippedCannotReplay": "Übersprungene Ereignisse können nicht erneut ausgeführt werden. Aktualisieren Sie den Absenderfilter und senden Sie eine neue Nachricht."
 }

@@ -149,6 +149,28 @@ describe("TriggersPage", () => {
     expect(screen.getByTestId("trigger-row-b")).toBeInTheDocument();
   });
 
+  it.each(["pending", "paused", "error", "needs_reconnect"] as const)(
+    "shows configured GitLab delivery and connection while %s",
+    (state) => {
+      mockMine = [
+        makeTrigger({
+          id: "gitlab",
+          kind: "gitlab.issue",
+          provider: "gitlab",
+          connection_id: null,
+          config: { delivery_mode: "push", connection: "gitlab/work" },
+          state,
+        }),
+      ];
+      render(<TriggersPage />);
+
+      const row = screen.getByTestId("trigger-row-gitlab");
+      expect(within(row).getByText("Push")).toBeInTheDocument();
+      expect(within(row).getByText("gitlab/work")).toBeInTheDocument();
+      expect(within(row).queryByText("Not needed")).not.toBeInTheDocument();
+    },
+  );
+
   it.each(["reader", "writer"] as const)(
     "renders a shared trigger using the server's %s permissions",
     async (role) => {
@@ -230,6 +252,51 @@ describe("TriggersPage", () => {
     expect(mockNavigate).toHaveBeenCalledWith("/settings/connections");
     expect(mockEnable).not.toHaveBeenCalled();
   });
+
+  it.each([
+    [
+      "connection_unusable",
+      "needs_reconnect",
+      "The connection was revoked or expired. Reconnect, then resume.",
+      "This trigger's connection was revoked or has expired. Reconnect it, then resume the trigger.",
+      "This connection doesn't allow background runs.",
+    ],
+    [
+      "connection_not_authorized",
+      "consent_required",
+      "Allow background runs is off for this connection.",
+      "Allow background runs is off for this connection.",
+      "This trigger's connection was revoked or has expired. Reconnect it, then resume the trigger.",
+    ],
+  ] as const)(
+    "shows the GitLab connection failure %s without an unrelated cause",
+    (code, reason, guidance, message, unrelatedMessage) => {
+      mockMine = [
+        makeTrigger({
+          id: "gitlab-reconnect",
+          name: "GitLab: On Issue",
+          provider: "gitlab",
+          kind: "gitlab.issue",
+          config: { mechanism_id: "gitlab.project_webhook" },
+          state: "needs_reconnect",
+          reason,
+          last_error: code,
+          last_error_code: code,
+          allowed_actions: ["pause", "reconnect", "delete"],
+        }),
+      ];
+
+      render(<TriggersPage />);
+
+      const row = screen.getByTestId("trigger-row-gitlab-reconnect");
+      expect(within(row).getByText(guidance)).toBeInTheDocument();
+      expect(within(row).getByText(message)).toBeInTheDocument();
+      expect(within(row).queryByText(unrelatedMessage)).toBeNull();
+      expect(
+        within(row).getByRole("button", { name: "Reconnect GitLab: On Issue" }),
+      ).toBeInTheDocument();
+    },
+  );
 
   it("resumes a reconnected Jira trigger only after its inline fix is clicked", async () => {
     mockMine = [
