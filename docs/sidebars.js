@@ -661,7 +661,7 @@ module.exports = {
         },
         {
           type: "category",
-          label: "Developer API (Beta)",
+          label: "Developer API",
           items: [
             "API-Reference/workflow-api-quickstart",
             "API-Reference/workflows-api",
