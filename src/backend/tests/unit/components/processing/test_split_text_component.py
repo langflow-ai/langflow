@@ -2,6 +2,7 @@ import pytest
 from lfx.components.data import URLComponent
 from lfx.components.processing import SplitTextComponent
 from lfx.schema import Data, DataFrame
+from lfx.schema.message import Message
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -327,6 +328,257 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         assert "Second line" in results["text"][1], f"Expected 'Second line', got '{results['text'][1]}'"
         assert "Another text" in results["text"][2], f"Expected 'Another text', got '{results['text'][2]}'"
         assert "Another line" in results["text"][3], f"Expected 'Another line', got '{results['text'][3]}'"
+
+    @pytest.mark.parametrize("clean_output", [False, True])
+    def test_split_text_list_uses_configured_text_key(self, clean_output):
+        """Test that Text Key selects the text field of every record in a list, without changing the records."""
+        records = [
+            Data(data={"body": "Alpha\nBeta", "source": "memo"}),
+            Data(data={"body": "Gamma", "source": "note"}),
+        ]
+        component = SplitTextComponent()
+        component.set_attributes(
+            {
+                "data_inputs": records,
+                "text_key": "body",
+                "chunk_overlap": 0,
+                "chunk_size": 5,
+                "separator": "\n",
+                "clean_output": clean_output,
+            }
+        )
+
+        results = component.split_text()
+
+        assert results["text"].tolist() == ["Alpha", "Beta", "Gamma"]
+        if clean_output:
+            assert list(results.columns) == ["text"]
+        else:
+            assert results["source"].tolist() == ["memo", "memo", "note"]
+        assert [(record.text_key, record.data) for record in records] == [
+            ("text", {"body": "Alpha\nBeta", "source": "memo"}),
+            ("text", {"body": "Gamma", "source": "note"}),
+        ]
+
+    def test_split_text_list_skips_records_without_text_key(self):
+        """Test that a record lacking the configured Text Key contributes no chunk."""
+        component = SplitTextComponent()
+        component.set_attributes(
+            {
+                "data_inputs": [Data(data={"body": "Alpha"}), Data(data={"text": "Gamma"})],
+                "text_key": "body",
+                "chunk_overlap": 0,
+                "chunk_size": 5,
+                "separator": "\n",
+            }
+        )
+
+        results = component.split_text()
+
+        assert results["text"].tolist() == ["Alpha"]
+
+    @pytest.mark.parametrize("text_key", ["text", "body"])
+    @pytest.mark.parametrize("as_list", [False, True])
+    def test_split_text_message_ignores_text_key(self, text_key, as_list):
+        """Test that Message input splits its own text whatever Text Key is set to."""
+        message = Message(text="Alpha\nBeta")
+        component = SplitTextComponent()
+        component.set_attributes(
+            {
+                "data_inputs": [message] if as_list else message,
+                "text_key": text_key,
+                "chunk_overlap": 0,
+                "chunk_size": 5,
+                "separator": "\n",
+            }
+        )
+
+        results = component.split_text()
+
+        assert results["text"].tolist() == ["Alpha", "Beta"]
+
+    @pytest.mark.parametrize("clean_output", [False, True])
+    @pytest.mark.parametrize("input_shape", ["list", "single", "table"])
+    def test_split_text_chunk_replaces_record_text_field(self, input_shape, clean_output):
+        """Test that each chunk's text replaces a record's own "text" field when Text Key names another field."""
+        record = {"body": "Alpha\nBeta", "text": "OLD", "source": "memo"}
+        data_inputs = {
+            "list": [Data(data=dict(record))],
+            "single": Data(data=dict(record)),
+            "table": DataFrame([record]),
+        }[input_shape]
+        component = SplitTextComponent()
+        component.set_attributes(
+            {
+                "data_inputs": data_inputs,
+                "text_key": "body",
+                "chunk_overlap": 0,
+                "chunk_size": 5,
+                "separator": "\n",
+                "clean_output": clean_output,
+            }
+        )
+
+        results = component.split_text()
+
+        assert results["text"].tolist() == ["Alpha", "Beta"]
+        if not clean_output:
+            assert results["source"].tolist() == ["memo", "memo"]
+
+    def test_split_text_chunk_replaces_text_field_when_record_has_own_text_key(self):
+        """Test that a record's leftover "text" field gives way to the chunk under the default Text Key."""
+        component = SplitTextComponent()
+        component.set_attributes(
+            {
+                "data_inputs": [
+                    Data(text_key="content", data={"content": "Alpha\nBeta", "text": "OLD", "source": "memo"})
+                ],
+                "chunk_overlap": 0,
+                "chunk_size": 5,
+                "separator": "\n",
+            }
+        )
+
+        results = component.split_text()
+
+        assert results.to_dict("records") == [
+            {"text": "Alpha", "source": "memo"},
+            {"text": "Beta", "source": "memo"},
+        ]
+
+    def test_split_text_table_chunk_replaces_partial_text_column(self):
+        """Test that a Table whose "text" column is only partly filled still returns every chunk, not NaN."""
+        component = SplitTextComponent()
+        component.set_attributes(
+            {
+                "data_inputs": DataFrame(
+                    [{"body": "Alpha\nBeta", "source": "memo"}, {"body": "Gamma", "text": "OLD", "source": "note"}]
+                ),
+                "text_key": "body",
+                "chunk_overlap": 0,
+                "chunk_size": 5,
+                "separator": "\n",
+            }
+        )
+
+        results = component.split_text()
+
+        assert results.to_dict("records") == [
+            {"text": "Alpha", "source": "memo"},
+            {"text": "Beta", "source": "memo"},
+            {"text": "Gamma", "source": "note"},
+        ]
+
+    def test_split_text_list_keeps_record_text_key_with_default_text_key(self):
+        """Test that records carrying their own text_key keep it when Text Key is left at its default."""
+        component = SplitTextComponent()
+        component.set_attributes(
+            {
+                "data_inputs": [Data(text_key="content", data={"content": "Alpha\nBeta", "source": "memo"})],
+                "chunk_overlap": 0,
+                "chunk_size": 5,
+                "separator": "\n",
+            }
+        )
+
+        results = component.split_text()
+
+        assert results["text"].tolist() == ["Alpha", "Beta"]
+        assert results["source"].tolist() == ["memo", "memo"]
+
+    def test_split_text_list_keeps_record_text_key_when_text_key_is_empty(self):
+        """Test that an empty Text Key leaves each record's own text_key in charge."""
+        component = SplitTextComponent()
+        component.set_attributes(
+            {
+                "data_inputs": [Data(data={"text": "Alpha\nBeta"})],
+                "text_key": "",
+                "chunk_overlap": 0,
+                "chunk_size": 5,
+                "separator": "\n",
+            }
+        )
+
+        results = component.split_text()
+
+        assert results["text"].tolist() == ["Alpha", "Beta"]
+
+    def test_split_text_mixed_list_reads_message_text_and_record_text_key(self):
+        """Test that a list mixing a Message and a record splits each by its own text field."""
+        component = SplitTextComponent()
+        component.set_attributes(
+            {
+                "data_inputs": [Message(text="Alpha\nBeta"), Data(data={"body": "Gamma", "source": "note"})],
+                "text_key": "body",
+                "chunk_overlap": 0,
+                "chunk_size": 5,
+                "separator": "\n",
+            }
+        )
+
+        results = component.split_text()
+
+        assert results["text"].tolist() == ["Alpha", "Beta", "Gamma"]
+        assert results["source"].tolist()[2] == "note"
+
+    def test_split_text_single_record_uses_configured_text_key(self):
+        """Test that a single record is split on the configured Text Key."""
+        component = SplitTextComponent()
+        component.set_attributes(
+            {
+                "data_inputs": Data(data={"body": "Alpha\nBeta", "source": "memo"}),
+                "text_key": "body",
+                "chunk_overlap": 0,
+                "chunk_size": 5,
+                "separator": "\n",
+            }
+        )
+
+        results = component.split_text()
+
+        assert results["text"].tolist() == ["Alpha", "Beta"]
+        assert results["source"].tolist() == ["memo", "memo"]
+
+    def test_split_text_dataframe_uses_configured_text_key(self):
+        """Test that a Table input is split on the configured Text Key column."""
+        component = SplitTextComponent()
+        component.set_attributes(
+            {
+                "data_inputs": DataFrame([{"body": "Alpha\nBeta", "source": "memo"}, {"body": "Gamma"}]),
+                "text_key": "body",
+                "chunk_overlap": 0,
+                "chunk_size": 5,
+                "separator": "\n",
+            }
+        )
+
+        results = component.split_text()
+
+        assert results["text"].tolist() == ["Alpha", "Beta", "Gamma"]
+
+    @pytest.mark.parametrize(
+        ("data_inputs", "error"),
+        [
+            ([], "No data inputs provided"),
+            (["plain string", 42], "No valid Data inputs found"),
+            (DataFrame([]), "DataFrame is empty"),
+        ],
+    )
+    def test_split_text_raises_type_error_when_input_has_no_records(self, data_inputs, error):
+        """Test that inputs without any record raise a TypeError naming the problem."""
+        component = SplitTextComponent()
+        component.set_attributes(
+            {
+                "data_inputs": data_inputs,
+                "text_key": "body",
+                "chunk_overlap": 0,
+                "chunk_size": 5,
+                "separator": "\n",
+            }
+        )
+
+        with pytest.raises(TypeError, match=error):
+            component.split_text()
 
     async def test_with_url_loader(self):
         """Test splitting text with URL loader."""

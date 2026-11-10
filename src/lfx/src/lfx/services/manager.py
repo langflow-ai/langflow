@@ -552,6 +552,12 @@ class ServiceManager:
             object_key=service_key,
         )
         if service_class is None:
+            if service_type == ServiceType.AUTHORIZATION_SERVICE:
+                msg = (
+                    "Configured authorization service could not be loaded; "
+                    "refusing to start with the OSS allow-all fallback"
+                )
+                raise RuntimeError(msg)
             if service_type == ServiceType.CONNECTION_RESOLVER_SERVICE:
                 msg = (
                     "Configured connection resolver service could not be loaded; "
@@ -578,6 +584,12 @@ class ServiceManager:
                 raise RuntimeError(msg)
             return
 
+        if service_type == ServiceType.AUTHORIZATION_SERVICE:
+            from lfx.services.authorization.base import BaseAuthorizationService
+
+            if not isinstance(service_class, type) or not issubclass(service_class, BaseAuthorizationService):
+                msg = "Configured authorization service must subclass BaseAuthorizationService"
+                raise RuntimeError(msg)
         if service_type == ServiceType.CONNECTION_RESOLVER_SERVICE:
             from lfx.services.connection.base import BaseConnectionResolverService
 

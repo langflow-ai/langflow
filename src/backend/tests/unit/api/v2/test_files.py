@@ -726,6 +726,11 @@ async def test_upload_files_with_different_extensions_same_name(files_client, fi
 
 async def test_mcp_servers_file_replacement(files_client, files_created_api_key, files_active_user):
     """Test that _mcp_servers file gets replaced instead of creating unique names."""
+    async with session_scope() as session:
+        user = await session.get(User, files_active_user.id)
+        user.is_superuser = True
+        session.add(user)
+    files_active_user.is_superuser = True
     headers = {"x-api-key": files_created_api_key.api_key}
 
     mcp_file_ext = await get_mcp_file(files_active_user, extension=True)
