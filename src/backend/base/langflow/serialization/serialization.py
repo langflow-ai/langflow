@@ -157,7 +157,7 @@ def _serialize_series(obj: pd.Series, max_length: int | None, max_items: int | N
     """Serialize pandas Series to a dictionary format."""
     if max_items is not None and len(obj) > max_items:
         obj = obj.head(max_items)
-    return {index: _truncate_value(value, max_length, max_items) for index, value in obj.items()}
+    return {index: _sanitize_non_finite(_truncate_value(value, max_length, max_items)) for index, value in obj.items()}
 
 
 def _is_numpy_type(obj: Any) -> bool:
@@ -165,16 +165,29 @@ def _is_numpy_type(obj: Any) -> bool:
     return hasattr(type(obj), "__module__") and type(obj).__module__ == np.__name__
 
 
+def _sanitize_non_finite(value: Any) -> Any:
+    """Normalize floats while preserving container shapes and truncation."""
+    if isinstance(value, float | np.floating):
+        return _serialize_primitive(float(value))
+    if isinstance(value, list):
+        return [_sanitize_non_finite(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_sanitize_non_finite(item) for item in value)
+    if isinstance(value, dict):
+        return {key: _sanitize_non_finite(item) for key, item in value.items()}
+    return value
+
+
 def _serialize_numpy_type(obj: Any, max_length: int | None, max_items: int | None) -> Any:
     """Serialize numpy types."""
     try:
         # For single-element arrays
         if obj.size == 1 and hasattr(obj, "item"):
-            return obj.item()
+            return _sanitize_non_finite(obj.item())
 
         # For multi-element arrays
         if np.issubdtype(obj.dtype, np.number):
-            return obj.tolist()  # Convert to Python list
+            return _sanitize_non_finite(obj.tolist())  # Convert to Python list
         if np.issubdtype(obj.dtype, np.bool_):
             return bool(obj)
         if np.issubdtype(obj.dtype, np.complexfloating):
@@ -183,8 +196,8 @@ def _serialize_numpy_type(obj: Any, max_length: int | None, max_items: int | Non
             return _serialize_str(str(obj), max_length, max_items)
         if np.issubdtype(obj.dtype, np.bytes_) and hasattr(obj, "tobytes"):
             return _serialize_bytes(obj.tobytes(), max_length, max_items)
-        if np.issubdtype(obj.dtype, np.object_) and hasattr(obj, "item"):
-            return _serialize_instance(obj.item(), max_length, max_items)
+        if np.issubdtype(obj.dtype, np.object_):
+            return _sanitize_non_finite(obj.tolist())
     except Exception as e:  # noqa: BLE001
         logger.debug(f"Cannot serialize numpy array: {e!s}")
         return UNSERIALIZABLE_SENTINEL

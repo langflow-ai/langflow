@@ -8,6 +8,8 @@ from lfx.schema.message import Message
 
 from tests.base import ComponentTestBaseWithoutClient
 
+pytestmark = pytest.mark.usefixtures("administrator_execution_context")
+
 
 class TestLambdaFilterComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
