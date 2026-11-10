@@ -570,6 +570,37 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
         await _defer_unavailable_provider(session, trigger=trigger, event=event)
         return
 
+    from langflow.services.triggers.policy import (
+        TriggerPolicyContext,
+        TriggerPolicyError,
+        TriggerPolicyPurpose,
+        require_trigger_allowed,
+        require_trigger_policy,
+        stage_policy_denial,
+    )
+
+    context = TriggerPolicyContext(
+        user_id=trigger.user_id,
+        flow_id=trigger.flow_id,
+        event_id=event.id,
+        kind=trigger.kind,
+        purpose=TriggerPolicyPurpose.DISPATCH,
+    )
+
+    async def policy_denied(exc: TriggerPolicyError) -> None:
+        await _fence_event(session, event)
+        trigger.state = TriggerState.PAUSED.value
+        trigger.last_error = str(exc)
+        session.add(trigger)
+        await _terminalize(session, event=event, state=TriggerEventState.FAILED, error="policy_blocked")
+        stage_policy_denial(session, row=trigger, purpose=TriggerPolicyPurpose.DISPATCH)
+
+    try:
+        await require_trigger_policy(context)
+    except TriggerPolicyError as exc:
+        await policy_denied(exc)
+        return
+
     if (event.payload or {}).get(SOURCE_HINT_FIELD):
         # A thin Graph/Google notification is a durable wakeup. Expanding it
         # through the owner's connection produces canonical ledger rows; it
@@ -684,6 +715,14 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
         session.add(trigger)
         await session.flush()
         await logger.awarning("Trigger %s cannot run unattended. Connection failure %s", trigger.id, error)
+        return
+
+    # Only a canonical delivery that survived provider filtering may reserve a
+    # run quota. Reconciliation hints and no-run deliveries never invoke it.
+    try:
+        await require_trigger_allowed(context)
+    except TriggerPolicyError as exc:
+        await policy_denied(exc)
         return
 
     request = build_submit_request(trigger=trigger, event=event, binding_data=binding.data, family=family)

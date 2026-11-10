@@ -53,6 +53,8 @@ if TYPE_CHECKING:
 
     from sqlmodel.ext.asyncio.session import AsyncSession
 
+    from langflow.services.triggers.policy import TriggerPolicyContext
+
 #: Bytes of entropy behind a trigger's public ingress address. The address is
 #: unauthenticated and guessable-by-brute-force is the failure to avoid, so it
 #: is a random 256-bit value rendered URL-safe, not a sequence or a UUID.
@@ -134,6 +136,15 @@ class TriggerService(Service):
     def __init__(self) -> None:
         self.set_ready()
 
+    async def authorize_trigger(self, *, context: TriggerPolicyContext) -> None:
+        """Enterprise approval/quota hook; OSS adds no restrictions.
+
+        Raise TriggerPolicyError to refuse. Discovery is read-only. Dispatch
+        retries carry one stable event id for idempotent quota checks. The
+        shared provider/kind ceiling runs first and cannot be widened here.
+        """
+        _ = context
+
     async def get(self, session: AsyncSession, trigger_id: UUID) -> Trigger:
         row = await session.get(Trigger, trigger_id)
         if row is None:
@@ -191,6 +202,18 @@ class TriggerService(Service):
             msg = f"A {payload.kind!r} trigger is created by adding its component to the flow, not through this API."
             raise ValueError(msg)
         if payload.state is TriggerState.ACTIVE:
+            from langflow.services.triggers.policy import (
+                TriggerPolicyContext,
+                TriggerPolicyPurpose,
+                require_trigger_allowed,
+            )
+
+            await require_trigger_allowed(
+                TriggerPolicyContext(
+                    user_id=owner_id, flow_id=payload.flow_id, kind=payload.kind, purpose=TriggerPolicyPurpose.ENABLE
+                ),
+                service=self,
+            )
             await self._validate_saved_canvas(session, payload.flow_id)
         _reject_mechanism(payload.config)
         await self._validate_flow_version(session, flow_id=payload.flow_id, flow_version_id=payload.flow_version_id)
@@ -277,6 +300,18 @@ class TriggerService(Service):
         if row.state not in _ENABLEABLE_STATES:
             msg = f"Trigger in state {row.state!r} cannot be enabled."
             raise ValueError(msg)
+        from langflow.services.triggers.policy import (
+            TriggerPolicyContext,
+            TriggerPolicyPurpose,
+            require_trigger_allowed,
+        )
+
+        await require_trigger_allowed(
+            TriggerPolicyContext(
+                user_id=row.user_id, flow_id=row.flow_id, kind=row.kind, purpose=TriggerPolicyPurpose.ENABLE
+            ),
+            service=self,
+        )
         flow = await self._validate_saved_canvas(session, row.flow_id)
         # Arming a trigger whose node is gone runs a flow with no trigger in it,
         # so every event fails. Removing a node pauses its trigger, so only a

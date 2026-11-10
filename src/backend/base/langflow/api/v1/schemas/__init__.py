@@ -561,7 +561,7 @@ class ConfigResponse(BaseConfigResponse):
             voice_mode_available=settings.voice_mode_available,
             mcp_base_url=settings.mcp_base_url,
             enable_extension_reload=settings.enable_extension_reload,
-            webhook_auth_enable=auth_settings.WEBHOOK_AUTH_ENABLE,
+            webhook_auth_enable=True,
             default_folder_name=DEFAULT_FOLDER_NAME,
             hide_getting_started_progress=settings.hide_getting_started_progress,
             allow_custom_components=settings.allow_custom_components,
