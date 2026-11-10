@@ -3163,6 +3163,7 @@
   "triggers.empty.noMatch": "Nenhum gatilho corresponde a estes filtros.",
   "triggers.errors.load": "Não foi possível carregar os gatilhos.",
   "triggers.errors.unknown": "Algo deu errado. Tente novamente.",
+  "triggers.serverError.policy_blocked": "Bloqueado pela política de gatilhos. Peça a um administrador para aprovar este tipo de gatilho.",
   "triggers.serverError.multiple_triggers": "Um fluxo pode ter apenas um gatilho. Remova os gatilhos extras e tente novamente.",
   "triggers.serverError.node_removed": "O nó do gatilho foi removido do fluxo. Adicione-o de volta para retomar o gatilho.",
   "triggers.serverError.source_settings_changed": "As configurações da origem mudaram. Retome o gatilho para assinar novamente.",
