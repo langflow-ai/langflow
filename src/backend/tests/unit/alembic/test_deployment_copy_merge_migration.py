@@ -1,4 +1,4 @@
-"""The deployment_copy job type and the release must reach one head from either side."""
+"""Release and feature migrations must reach one head without losing jobs or maintenance state."""
 
 from uuid import uuid4
 
@@ -44,6 +44,8 @@ def test_deployment_copy_and_release_have_single_head():
         "e6f8a0b2c4d6",  # pragma: allowlist secret
         "f6a2c8e4b901",  # pragma: allowlist secret
         "2a4c6e8f0b1d",  # pragma: allowlist secret
+        "a8c2e6f4b9d1",  # pragma: allowlist secret
+        "d7e9a1c3f5b8",  # pragma: allowlist secret
         "53e9b7a2c614",  # pragma: allowlist secret
         "e9c5a1b7d3f6",  # pragma: allowlist secret
     ],
@@ -68,5 +70,39 @@ def test_upgrading_from_either_side_keeps_jobs_and_accepts_a_copy_job(db_url, pr
             )
             assert "permissions" in {column["name"] for column in inspect(connection).get_columns("apikey")}
             assert {"maintenance_state", "worker_registry"} <= set(inspect(connection).get_table_names())
+            assert connection.execute(text("SELECT id, enabled, reason FROM maintenance_state")).one() == (
+                1,
+                False,
+                None,
+            )
+    finally:
+        engine.dispose()
+
+
+@pytest.mark.parametrize(
+    "intermediate_revision",
+    [None, "f4b8c1d2e3a6", "a8c2e6f4b9d1"],  # pragma: allowlist secret
+)
+def test_upgrading_maintenance_preserves_existing_state(db_url, intermediate_revision):  # noqa: F811
+    """Upgrading from maintenance alone or with earlier release migrations preserves an active freeze."""
+    config = _make_alembic_cfg(db_url)
+    command.upgrade(config, "4d6e8f0a2b3c")  # pragma: allowlist secret
+    engine = create_engine(_engine_url(db_url))
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                text("UPDATE maintenance_state SET enabled = :enabled, reason = :reason WHERE id = 1"),
+                {"enabled": True, "reason": "Upgrade rehearsal"},
+            )
+            state = connection.execute(text("SELECT * FROM maintenance_state")).one()
+        if intermediate_revision is not None:
+            command.upgrade(config, intermediate_revision)
+        command.upgrade(config, "head")
+        command.upgrade(config, "head")
+        with engine.connect() as connection:
+            assert connection.execute(text("SELECT * FROM maintenance_state")).one() == state
+            assert MigrationContext.configure(connection).get_current_heads() == tuple(
+                ScriptDirectory.from_config(config).get_heads()
+            )
     finally:
         engine.dispose()

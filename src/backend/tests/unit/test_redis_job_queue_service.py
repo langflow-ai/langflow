@@ -846,8 +846,10 @@ async def test_redis_service_same_worker_cancel_wakes_active_consumer_before_fir
         job_id = str(uuid.uuid4())
         svc.create_queue(job_id)
         cancelled_event = asyncio.Event()
+        producer_started = asyncio.Event()
 
         async def _long_running():
+            producer_started.set()
             try:
                 await asyncio.Event().wait()
             except asyncio.CancelledError:
@@ -855,7 +857,7 @@ async def test_redis_service_same_worker_cancel_wakes_active_consumer_before_fir
                 raise
 
         svc.start_job(job_id, _long_running())
-        await asyncio.sleep(0.05)
+        await asyncio.wait_for(producer_started.wait(), timeout=2.0)
 
         queue, _, event_task, _ = svc.get_queue_data(job_id)
         assert event_task is not None
@@ -1429,10 +1431,10 @@ async def test_concurrent_cancels_from_multiple_workers_are_idempotent():
         job_id = str(uuid.uuid4())
         producer.create_queue(job_id)
         cancelled = asyncio.Event()
-        started = asyncio.Event()
+        producer_started = asyncio.Event()
 
         async def _long_running():
-            started.set()
+            producer_started.set()
             try:
                 await asyncio.Event().wait()
             except asyncio.CancelledError:
@@ -1440,7 +1442,7 @@ async def test_concurrent_cancels_from_multiple_workers_are_idempotent():
                 raise
 
         producer.start_job(job_id, _long_running())
-        await asyncio.wait_for(started.wait(), timeout=2.0)
+        await asyncio.wait_for(producer_started.wait(), timeout=2.0)
 
         # Two workers publish cancel at the same time.
         await asyncio.gather(pub_a.signal_cancel(job_id), pub_b.signal_cancel(job_id))

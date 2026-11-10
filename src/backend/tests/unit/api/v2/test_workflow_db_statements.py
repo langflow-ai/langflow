@@ -192,11 +192,20 @@ _ROUND_TRIPS = {
 # Execution reloads key, owner, and flow together in one additional checkout.
 # Shared maintenance is checked at request entry, hook admission, and hook start.
 # Each check uses a fresh read-only session so pods see each other's changes.
-_MAINTENANCE_ROUND_TRIPS = (3, 3)
 
 # Streaming also reloads the job's persisted credential provenance after the
 # conditional start; sync reuses the row it created IN_PROGRESS.
 _JOB_KEY_AUTHORIZATION_ROUND_TRIPS = {"sync": (4, 1), "stream": (5, 2)}
+
+
+def _assert_round_trips(recorder: _Recorder, expected: tuple[int, int], *, maintenance_reads: int) -> None:
+    # Every admission reads the shared flag through its own read-only session.
+    # Keep this exact cost visible without relaxing the existing execution budget.
+    assert recorder.statements.count("SELECT maintenance_state") == maintenance_reads, recorder.statements
+    assert (len(recorder.statements), recorder.checkouts) == (
+        expected[0] + maintenance_reads,
+        expected[1] + maintenance_reads,
+    ), recorder.statements
 
 
 @pytest.mark.parametrize("mode", ["sync", "stream"])
@@ -219,12 +228,13 @@ async def test_run_db_round_trips(client: AsyncClient, created_api_key, chat_flo
     flow_name = request.node.callspec.params["chat_flow"]
     base_statements, base_checkouts = _ROUND_TRIPS[flow_name][mode]
     key_statements, key_checkouts = _JOB_KEY_AUTHORIZATION_ROUND_TRIPS[mode]
-    maintenance_statements, maintenance_checkouts = _MAINTENANCE_ROUND_TRIPS
-    assert statements.count("SELECT maintenance_state") == maintenance_statements, statements
-    assert (len(statements), recorder.checkouts) == (
-        base_statements + key_statements + maintenance_statements,
-        base_checkouts + key_checkouts + maintenance_checkouts,
-    ), statements
+    # One HTTP admission, then submission and start of the memory-base output
+    # hook. The queued start must recheck a freeze set after submission.
+    _assert_round_trips(
+        recorder,
+        (base_statements + key_statements, base_checkouts + key_checkouts),
+        maintenance_reads=3,
+    )
 
 
 @pytest.mark.usefixtures("client")
@@ -294,8 +304,10 @@ async def test_run_task_wait_includes_delayed_child_sql():
             measurement.cancel()
         await asyncio.gather(measurement, return_exceptions=True)
 
-    # Each task checks maintenance before admission and again before it starts.
-    maintenance_statements = [s for s in recorder.statements if s == "SELECT maintenance_state"]
-    assert maintenance_statements == ["SELECT maintenance_state"] * 4
-    assert [s for s in recorder.statements if s != "SELECT maintenance_state"] == ["SELECT", "SELECT"]
-    assert recorder.checkouts == 2 + len(maintenance_statements)
+    assert [statement for statement in recorder.statements if statement != "SELECT maintenance_state"] == [
+        "SELECT",
+        "SELECT",
+    ]
+    # Both the parent hook and its child check admission when submitted and
+    # again when the queue starts them. Their own two statements remain counted.
+    _assert_round_trips(recorder, (2, 2), maintenance_reads=4)

@@ -718,3 +718,83 @@ def test_a_key_with_a_line_break_is_refused_not_sent(monkeypatch):
 def test_a_boolean_timeout_is_refused():
     with pytest.raises(DecisionConfigurationError, match="Timeout"):
         providers.evaluate_provider("TypeSafe", "jev-latest", request_for("boolean"), api_key="k", timeout=True)
+
+
+# The bodies each provider actually sent for a ~300k-token input (LE-3117 QA, F1).
+OVERSIZED_INPUT_BODIES = {
+    "OpenAI": {
+        "error": {
+            "message": "Decision input exceeds the token limit.",
+            "type": "invalid_request_error",
+            "param": None,
+            "code": None,
+        }
+    },
+    "TypeSafe": {"detail": {"error_type": "max_tokens_exceeded"}},
+    "Perplexity": {
+        "error": {
+            "message": (
+                "Decision question requires 300087 tokens with context, exceeding maximum context length (262144)"
+            ),
+            "type": "invalid_request",
+            "code": "400",
+        }
+    },
+}
+
+
+@pytest.mark.parametrize("provider", PROVIDERS)
+def test_each_providers_oversized_input_answer_follows_the_error_action(monkeypatch, provider):
+    response = httpx.Response(400, json=OVERSIZED_INPUT_BODIES[provider])
+    monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: response)
+    with pytest.raises(DecisionEvaluationError, match="too large") as caught:
+        providers.evaluate_provider(provider, DEFAULT_MODELS[provider], request_for("choice"), api_key="key")
+    assert caught.value.category == "input_too_large"
+    assert "Shorten the input." in str(caught.value)
+    assert "300087" not in str(caught.value)
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        # The provider's sentence inside other text, as when a message quotes the input, is not the sentence.
+        "Invalid value: 'Decision input exceeds the token limit.'",
+        "Decision input exceeds the token limit. Also: private user content",
+        "Decision question requires many tokens with context, exceeding maximum context length (262144)",
+    ],
+)
+def test_only_the_providers_whole_oversized_input_sentence_counts(monkeypatch, message):
+    body = {"error": {"message": message, "type": "invalid_request_error", "code": None}}
+    monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: httpx.Response(400, json=body))
+    with pytest.raises(DecisionConfigurationError) as caught:
+        providers.evaluate_provider("OpenAI", "gpt-6-luna", request_for("choice"), api_key="key")
+    assert "private" not in str(caught.value)
+
+
+def test_an_oversized_input_sentence_on_another_status_is_not_an_oversized_input(monkeypatch):
+    response = httpx.Response(422, json=OVERSIZED_INPUT_BODIES["OpenAI"])
+    monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: response)
+    with pytest.raises(DecisionConfigurationError):
+        providers.evaluate_provider("OpenAI", "gpt-6-luna", request_for("choice"), api_key="key")
+
+
+@pytest.mark.parametrize(
+    ("body", "reference"),
+    [
+        # Perplexity's code only repeats the status; its type says more (F2).
+        ({"error": {"type": "invalid_request", "code": "400"}}, "(HTTP 400, invalid_request, request ID req_1)"),
+        ({"error": {"code": "400"}}, "(HTTP 400, request ID req_1)"),
+        (
+            {"error": {"type": "invalid_request_error", "code": None}},
+            "(HTTP 400, invalid_request_error, request ID req_1)",
+        ),
+        ({"detail": {"error_type": "invalid_schema"}}, "(HTTP 400, invalid_schema, request ID req_1)"),
+        ({"error": "a string, not an object"}, "(HTTP 400, request ID req_1)"),
+    ],
+)
+def test_the_error_reference_names_a_code_only_when_it_adds_to_the_status(monkeypatch, body, reference):
+    response = httpx.Response(400, json=body, headers={"x-request-id": "req_1"})
+    monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: response)
+    with pytest.raises(DecisionConfigurationError) as caught:
+        providers.evaluate_provider("Perplexity", "pplx-decider-flash-latest", request_for("choice"), api_key="key")
+    assert f"couldn't accept this decision request {reference}." in str(caught.value)

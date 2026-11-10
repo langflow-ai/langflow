@@ -265,7 +265,7 @@ class BackgroundExecutionService(Service):
 
             await asyncio.sleep(lease_ttl_s)
             while await writes_paused():  # noqa: ASYNC110
-                await asyncio.sleep(1)
+                await asyncio.sleep(0.1)
             try:
                 async with async_writing(name="background_lease_expiry") as let_in:
                     if let_in:
@@ -890,6 +890,16 @@ class BackgroundExecutionService(Service):
         from langflow.api.utils.migration_pause import writes_paused
 
         await self.start()
+        if await writes_paused():
+            if self._maintenance_recovery_task is None or self._maintenance_recovery_task.done():
+
+                async def recover_after_maintenance():
+                    while await writes_paused():  # noqa: ASYNC110
+                        await asyncio.sleep(0.1)
+                    await self.sweep_orphans_on_startup()
+
+                self._maintenance_recovery_task = asyncio.create_task(recover_after_maintenance())
+            return
         if self._scaled:
             return
         if await writes_paused():
