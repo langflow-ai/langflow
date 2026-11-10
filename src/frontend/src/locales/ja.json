@@ -3424,6 +3424,7 @@
   "triggers.secret.isSet": "設定済み。作成時またはローテーション時にのみ表示されます。",
   "triggers.secret.notSet": "未設定。作成するまでリクエストは拒否されます。",
   "connections.add.servicenowUserOwned": "ServiceNow 接続は個々のユーザーに属し、インスタンス全体で共有することはできません。",
+  "connections.add.salesforceUserOwned": "Salesforce 接続は個々のユーザーに属し、インスタンス全体で共有することはできません。",
   "apiKey.permissions.title": "権限",
   "apiKey.permissions.restricted": "制限付きアクセス",
   "apiKey.permissions.fullAccess": "所有者のすべてのアクセス権",

@@ -112,6 +112,8 @@ jobs:
   background-real-service:
     name: Background Execution Real-Service Tests (real Postgres)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     services:
       postgres:

@@ -60,6 +60,7 @@ members = [
     "lfx-openai-compatible",
     "lfx-oracle",
     "lfx-paddle",
+    "lfx-salesforce",
     "lfx-serpingapi",
     "lfx-serply",
     "lfx-servicenow",
@@ -8466,6 +8467,7 @@ dependencies = [
     { name = "lfx-openai" },
     { name = "lfx-openai-compatible" },
     { name = "lfx-oracle" },
+    { name = "lfx-salesforce" },
     { name = "lfx-servicenow" },
     { name = "lfx-slack" },
     { name = "lfx-telegram" },
@@ -8616,6 +8618,7 @@ requires-dist = [
     { name = "lfx-openai-compatible", editable = "src/bundles/openai-compatible" },
     { name = "lfx-oracle", editable = "src/bundles/oracle" },
     { name = "lfx-paddle", marker = "extra == 'bundles'", editable = "src/bundles/paddle" },
+    { name = "lfx-salesforce", editable = "src/bundles/salesforce" },
     { name = "lfx-serpingapi", marker = "extra == 'bundles'", editable = "src/bundles/serpingapi" },
     { name = "lfx-serply", marker = "extra == 'bundles'", editable = "src/bundles/serply" },
     { name = "lfx-servicenow", editable = "src/bundles/servicenow" },
@@ -11116,6 +11119,17 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.24.0,<1.0.0" },
     { name = "lfx", editable = "src/lfx" },
 ]
+
+[[package]]
+name = "lfx-salesforce"
+version = "0.1.0"
+source = { editable = "src/bundles/salesforce" }
+dependencies = [
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "lfx", editable = "src/lfx" }]
 
 [[package]]
 name = "lfx-serpingapi"
