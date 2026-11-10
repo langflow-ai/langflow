@@ -44,7 +44,8 @@ WEEKDAYS: dict[str, int] = {
     "Sunday": 0,
 }
 
-MONTH_DAYS = [str(day) for day in range(1, 32)]
+#: Month-day label -> cron day-of-month number.
+MONTH_DAYS: dict[str, int] = {str(day): day for day in range(1, 32)}
 TIMES_OF_DAY = [f"{hour:02d}:{minute:02d}" for hour in range(24) for minute in (0, 30)]
 
 #: Field shown for each schedule type; every other picker field is hidden.
@@ -97,20 +98,12 @@ def _cron_list(numbers: set[int]) -> str:
     return ",".join(parts)
 
 
-def _weekday_numbers(days: list[str]) -> str:
-    numbers = {WEEKDAYS[day] for day in days or [] if day in WEEKDAYS}
-    if not numbers:
-        msg = "Pick at least one day of the week."
+def _day_list(days: list[str], numbers: dict[str, int], noun: str) -> str:
+    picked = {numbers[day] for day in days or [] if day in numbers}
+    if not picked:
+        msg = f"Pick at least one day of the {noun}."
         raise ScheduleTriggerError(msg)
-    return _cron_list(numbers)
-
-
-def _month_day_numbers(days: list[str]) -> str:
-    numbers = {int(day) for day in days or [] if day in MONTH_DAYS}
-    if not numbers:
-        msg = "Pick at least one day of the month."
-        raise ScheduleTriggerError(msg)
-    return _cron_list(numbers)
+    return _cron_list(picked)
 
 
 def picker_cron(values: dict[str, Any]) -> str | None:
@@ -126,7 +119,18 @@ def picker_cron(values: dict[str, Any]) -> str | None:
         return None
     hour, minute = _time_fields(values.get("time_of_day") or "")
     if schedule_type == SCHEDULE_WEEKLY:
-        return f"{minute} {hour} * * {_weekday_numbers(values.get('days_of_week') or [])}"
+        return f"{minute} {hour} * * {_day_list(values.get('days_of_week') or [], WEEKDAYS, 'week')}"
     if schedule_type == SCHEDULE_MONTHLY:
-        return f"{minute} {hour} {_month_day_numbers(values.get('days_of_month') or [])} * *"
+        return f"{minute} {hour} {_day_list(values.get('days_of_month') or [], MONTH_DAYS, 'month')} * *"
     return f"{minute} {hour} * * *"
+
+
+def schedule_cron(values: dict[str, Any], stored_cron: str) -> str:
+    """The cron a trigger runs on: the picked schedule, or the stored cron for Custom and older nodes.
+
+    A node saved before the picker has no ``schedule_type`` and keeps its stored cron.
+    """
+    if not values.get("schedule_type"):
+        return stored_cron
+    cron = picker_cron(values)
+    return stored_cron if cron is None else cron

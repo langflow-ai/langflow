@@ -1,9 +1,9 @@
-"""The Schedule component's guided picker: which fields it shows and the cron it writes."""
+"""The Schedule component's guided picker: which fields it shows and the cron it runs on."""
 
 from __future__ import annotations
 
 import pytest
-from lfx.base.triggers.schedule import INTERVALS, ScheduleTriggerError, picker_cron, timezone_options
+from lfx.base.triggers.schedule import INTERVALS, ScheduleTriggerError, picker_cron, schedule_cron, timezone_options
 from lfx.components.triggers import ScheduleTriggerComponent
 from lfx.components.triggers.schedule_trigger import validate_cron_expression
 
@@ -59,18 +59,26 @@ def test_each_schedule_type_shows_only_the_fields_it_needs(schedule_type, shown)
     assert _shown(_pick(_build_config(), "schedule_type", schedule_type)) == shown
 
 
-def test_picking_a_daily_time_writes_the_cron_the_server_reads() -> None:
-    config = _pick(_build_config(schedule_type="Daily"), "time_of_day", "17:45")
+def _component(**values) -> ScheduleTriggerComponent:
+    component = ScheduleTriggerComponent()
+    defaults = {entry.name: entry.value for entry in ScheduleTriggerComponent.inputs}
+    for name, value in {**defaults, **values}.items():
+        setattr(component, name, value)
+    return component
 
-    assert config["cron_expression"]["value"] == "45 17 * * *"
+
+def test_the_trigger_runs_on_the_picked_schedule_not_the_stored_cron() -> None:
+    component = _component(schedule_type="Daily", time_of_day="17:45", cron_expression="0 8 * * 1-5")
+
+    assert component.trigger_config()["cron"] == "45 17 * * *"
 
 
 def test_weekly_and_monthly_days_become_cron_lists() -> None:
-    weekly = _pick(_build_config(time_of_day="09:30"), "days_of_week", ["Sunday", "Wednesday"])
-    monthly = _pick(_build_config(schedule_type="Monthly", time_of_day="06:00"), "days_of_month", ["15", "1"])
+    weekly = {"schedule_type": "Weekly", "time_of_day": "09:30", "days_of_week": ["Sunday", "Wednesday"]}
+    monthly = {"schedule_type": "Monthly", "time_of_day": "06:00", "days_of_month": ["15", "1"]}
 
-    assert weekly["cron_expression"]["value"] == "30 9 * * 0,3"
-    assert monthly["cron_expression"]["value"] == "0 6 1,15 * *"
+    assert picker_cron(weekly) == "30 9 * * 0,3"
+    assert picker_cron(monthly) == "0 6 1,15 * *"
 
 
 def test_runs_of_three_or_more_days_are_written_as_ranges() -> None:
@@ -83,37 +91,38 @@ def test_runs_of_three_or_more_days_are_written_as_ranges() -> None:
 
 @pytest.mark.parametrize(("interval", "cron"), list(INTERVALS.items()))
 def test_every_interval_compiles_to_a_five_field_cron(interval, cron) -> None:
-    config = _pick(_build_config(schedule_type="At regular intervals"), "interval", interval)
-
-    assert config["cron_expression"]["value"] == cron
+    assert picker_cron({"schedule_type": "At regular intervals", "interval": interval}) == cron
     assert validate_cron_expression(cron) == cron
 
 
-def test_switching_to_custom_keeps_the_last_picked_schedule_as_the_starting_cron() -> None:
-    config = _pick(_build_config(schedule_type="Daily"), "time_of_day", "07:15")
+def test_a_pick_never_overwrites_a_hand_written_cron() -> None:
+    """Custom, then Weekly, then Custom again must still show the cron the user typed."""
+    config = _build_config(schedule_type="Custom (cron)", cron_expression="*/7 * * * *")
+
+    config = _pick(config, "schedule_type", "Weekly")
+    config = _pick(config, "days_of_week", ["Monday"])
     config = _pick(config, "schedule_type", "Custom (cron)")
 
-    assert config["cron_expression"]["value"] == "15 7 * * *"
+    assert config["cron_expression"]["value"] == "*/7 * * * *"
     assert config["cron_expression"]["show"] is True
 
 
-def test_a_custom_cron_is_never_rewritten_by_the_picker() -> None:
-    config = _build_config(schedule_type="Custom (cron)", cron_expression="0 3 * * *")
+def test_an_unusable_pick_still_shows_the_fields_to_fix_it() -> None:
+    config = _pick(_build_config(days_of_week=[]), "schedule_type", "Weekly")
 
-    config = _pick(config, "cron_expression", "*/7 * * * *")
-
-    assert config["cron_expression"]["value"] == "*/7 * * * *"
+    assert _shown(config) == {"days_of_week", "time_of_day"}
 
 
-def test_a_node_saved_before_the_picker_shows_its_own_cron() -> None:
-    """The picker's defaults must not hide a cron the trigger still fires on."""
-    config = _build_config(cron_expression="0 3 * * *")
-
-    config = _pick(config, "timezone", "Europe/Lisbon")
-
-    assert config["schedule_type"]["value"] == "Custom (cron)"
-    assert config["cron_expression"]["value"] == "0 3 * * *"
-    assert _shown(config) == {"cron_expression"}
+@pytest.mark.parametrize(
+    ("values", "cron"),
+    [
+        ({"schedule_type": "Custom (cron)", "time_of_day": "09:00"}, "*/7 * * * *"),
+        ({}, "*/7 * * * *"),
+        ({"schedule_type": "Daily", "time_of_day": "09:00"}, "0 9 * * *"),
+    ],
+)
+def test_custom_and_pre_picker_nodes_run_on_their_stored_cron(values, cron) -> None:
+    assert schedule_cron(values, "*/7 * * * *") == cron
 
 
 @pytest.mark.parametrize("time_of_day", ["8", "24:00", "08:60", "eight", ""])
@@ -155,6 +164,20 @@ async def test_updating_a_node_saved_before_the_picker_opens_it_on_its_own_cron(
     assert template["cron_expression"]["value"] == "0 3 * * *"
     assert template["cron_expression"]["show"] is True
     assert template["days_of_week"]["show"] is False
+
+
+async def test_updating_a_picker_node_keeps_its_pick() -> None:
+    """Only nodes saved before the picker fall back to Custom; a pick with a stale stored cron stays."""
+    component = ScheduleTriggerComponent()
+    new_node = component.to_frontend_node()["data"]["node"]
+    saved_node = _saved_node(cron="0 8 * * 1-5", timezone="UTC")
+    saved_node["template"]["schedule_type"] = {"type": "str", "value": "Daily"}
+    saved_node["template"]["time_of_day"] = {"type": "str", "value": "17:30"}
+
+    node = await component.update_frontend_node(new_node, saved_node)
+
+    assert node["template"]["schedule_type"]["value"] == "Daily"
+    assert node["template"]["time_of_day"]["value"] == "17:30"
 
 
 async def test_updating_a_node_on_the_old_default_cron_keeps_the_weekly_picker() -> None:

@@ -35,6 +35,7 @@ import secrets
 from typing import TYPE_CHECKING, Any
 
 from croniter import croniter
+from lfx.base.triggers.schedule import PICKER_FIELDS, ScheduleTriggerError, schedule_cron
 from lfx.log.logger import logger
 from sqlalchemy.exc import DBAPIError
 
@@ -266,8 +267,19 @@ def find_trigger_nodes(flow_data: dict[str, Any] | None) -> list[tuple[str, str,
             else _CONFIG_FIELDS.get(kind, ())
         )
         config = {key: _template_value(node_data, field, default) for field, key, default in fields}
+        if kind == "schedule":
+            config["cron"] = _schedule_node_cron(node_data, config["cron"])
         found.append((node_id, kind, config))
     return found
+
+
+def _schedule_node_cron(node_data: dict[str, Any], stored_cron: str) -> str:
+    """Compile the picked schedule; an unusable pick yields "" so the trigger is marked invalid."""
+    values = {name: _template_value(node_data, name, None) for name in PICKER_FIELDS}
+    try:
+        return schedule_cron(values, stored_cron)
+    except ScheduleTriggerError:
+        return ""
 
 
 def _node_kind(node_type: Any) -> str | None:

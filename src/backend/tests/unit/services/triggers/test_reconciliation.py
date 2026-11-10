@@ -45,6 +45,40 @@ def test_only_trigger_nodes_are_recognised() -> None:
     assert found[0][2]["cron"] == "0 8 * * 1-5"
 
 
+def _picked_schedule_node(cron: str, **picked: Any) -> dict:
+    node = _schedule_node(cron=cron)
+    node["data"]["node"]["template"].update({name: {"value": value} for name, value in picked.items()})
+    return node
+
+
+@pytest.mark.parametrize(
+    ("picked", "cron"),
+    [
+        ({"schedule_type": "Daily", "time_of_day": "09:00"}, "0 9 * * *"),
+        ({"schedule_type": "Weekly", "time_of_day": "17:30", "days_of_week": ["Saturday"]}, "30 17 * * 6"),
+        ({"schedule_type": "At regular intervals", "interval": "15 minutes"}, "*/15 * * * *"),
+        ({"schedule_type": "Custom (cron)", "time_of_day": "09:00"}, "0 8 * * 1-5"),
+        ({}, "0 8 * * 1-5"),
+    ],
+)
+def test_the_picked_schedule_is_compiled_whatever_cron_the_node_carries(picked, cron) -> None:
+    """A save that skipped the canvas refresh (API, import, Assistant) still runs what the node shows."""
+    _node_id, _kind, config = find_trigger_nodes(_flow_data(_picked_schedule_node("0 8 * * 1-5", **picked)))[0]
+    assert config["cron"] == cron
+
+
+@pytest.mark.parametrize(
+    "picked",
+    [
+        {"schedule_type": "Weekly", "time_of_day": "08:00", "days_of_week": []},
+        {"schedule_type": "Daily", "time_of_day": "8:5x"},
+    ],
+)
+def test_an_unusable_pick_stops_the_old_schedule_instead_of_keeping_it(picked) -> None:
+    _node_id, _kind, config = find_trigger_nodes(_flow_data(_picked_schedule_node("0 8 * * 1-5", **picked)))[0]
+    assert config["cron"] == ""
+
+
 def test_missing_template_fields_fall_back_rather_than_crash() -> None:
     node = {"id": "ScheduleTrigger-x", "data": {"type": "ScheduleTrigger", "node": {}}}
     _node_id, _kind, config = find_trigger_nodes(_flow_data(node))[0]

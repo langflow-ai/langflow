@@ -54,7 +54,8 @@ test(
       )
       .toMatchObject({ cron: "30 17 * * *", timezone: "Europe/Lisbon" });
 
+    // The server compiles the pick; the cron field keeps the expression the user last typed.
     await pickOption(page, "schedule_type", "Custom (cron)");
-    await expect(cron).toHaveValue("30 17 * * *");
+    await expect(cron).toHaveValue("0 8 * * 1-5");
   },
 );

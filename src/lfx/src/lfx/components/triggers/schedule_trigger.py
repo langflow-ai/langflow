@@ -18,6 +18,7 @@ from lfx.base.triggers.schedule import (
     WEEKDAYS,
     ScheduleTriggerError,
     picker_cron,
+    schedule_cron,
     timezone_options,
 )
 from lfx.io import BoolInput, DropdownInput, MessageTextInput, MultiselectInput
@@ -104,7 +105,7 @@ class ScheduleTriggerComponent(BaseTriggerComponent):
         MultiselectInput(
             name="days_of_month",
             display_name="Days of the month",
-            options=MONTH_DAYS,
+            options=list(MONTH_DAYS),
             value=["1"],
             info="A month without the picked day is skipped.",
             real_time_refresh=True,
@@ -136,6 +137,7 @@ class ScheduleTriggerComponent(BaseTriggerComponent):
             display_name="Timezone",
             options=timezone_options(),
             value="UTC",
+            combobox=True,
             info="The schedule runs in this timezone. Daylight-saving changes are applied, so 08:00 stays 08:00 local.",
             required=True,
         ),
@@ -164,36 +166,35 @@ class ScheduleTriggerComponent(BaseTriggerComponent):
     ]
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
-        """Show the fields the schedule type needs and keep the cron the server reads in step."""
+        """Show the fields the schedule type needs; the server compiles the cron from them."""
         if field_name in build_config:
             build_config[field_name]["value"] = field_value
-        return _sync_picker(build_config, field_name)
+        return _show_picker_fields(build_config)
 
     async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):
         """On a component update, open a node saved before the picker on its own cron."""
         node = await super().update_frontend_node(new_frontend_node, current_frontend_node)
-        _sync_picker(node["template"], None)
+        template = node["template"]
+        saved_before_picker = "schedule_type" not in (current_frontend_node.get("template") or {})
+        if saved_before_picker and "schedule_type" in template and _picker_disagrees(template):
+            template["schedule_type"]["value"] = SCHEDULE_CUSTOM
+        _show_picker_fields(template)
         return node
 
     def trigger_config(self) -> dict[str, Any]:
         """The JSON the flow-save reconciler copies onto the trigger row."""
+        values = {name: getattr(self, name, None) for name in PICKER_FIELDS}
         return {
-            "cron": validate_cron_expression(self.cron_expression or ""),
+            "cron": validate_cron_expression(schedule_cron(values, self.cron_expression or "")),
             "timezone": validate_timezone(self.timezone or ""),
             "catchup_policy": self.catchup_policy or CATCHUP_COALESCE,
             "share_session": bool(self.share_session),
         }
 
 
-def _sync_picker(build_config: dict, field_name: str | None) -> dict:
-    values = {name: (build_config.get(name) or {}).get("value") for name in PICKER_FIELDS}
-    if field_name in PICKER_FIELDS:
-        cron = picker_cron(values)
-        if cron is not None:
-            build_config["cron_expression"]["value"] = cron
-    elif values["schedule_type"] != SCHEDULE_CUSTOM and _picker_disagrees(values, build_config):
-        # A node saved before the picker existed keeps its cron; show it rather than a guess.
-        build_config["schedule_type"]["value"] = SCHEDULE_CUSTOM
+def _show_picker_fields(build_config: dict) -> dict:
+    if "schedule_type" not in build_config:
+        return build_config
     shown = FIELDS_BY_TYPE.get(build_config["schedule_type"]["value"], FIELDS_BY_TYPE[SCHEDULE_CUSTOM])
     for name in {field for fields in FIELDS_BY_TYPE.values() for field in fields}:
         if name in build_config:
@@ -201,10 +202,11 @@ def _sync_picker(build_config: dict, field_name: str | None) -> dict:
     return build_config
 
 
-def _picker_disagrees(values: dict[str, Any], build_config: dict) -> bool:
+def _picker_disagrees(template: dict) -> bool:
+    values = {name: (template.get(name) or {}).get("value") for name in PICKER_FIELDS}
     try:
         cron = picker_cron(values)
     except ScheduleTriggerError:
         return True
-    stored = (build_config.get("cron_expression") or {}).get("value") or ""
+    stored = (template.get("cron_expression") or {}).get("value") or ""
     return cron is not None and " ".join(stored.split()) != cron
