@@ -17,7 +17,7 @@ incident response. Every ``TriggerRead`` carries the server-computed
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
@@ -25,7 +25,13 @@ from lfx.integrations.errors import IntegrationPolicyBlockedError
 
 from langflow.api.utils import CurrentActiveUser, DbSession, DbSessionReadOnly
 from langflow.api.v1.flows_helpers import _read_flow
-from langflow.api.v1.triggers_helpers import list_all_triggers, list_visible_triggers, present, present_one
+from langflow.api.v1.triggers_helpers import (
+    list_all_triggers,
+    list_visible_triggers,
+    present,
+    present_events,
+    present_one,
+)
 from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.authorization.fetch import deny_to_404
@@ -55,6 +61,9 @@ from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_settings_service, get_trigger_service
 from langflow.services.triggers import ledger, operator
 from langflow.services.triggers.constants import (
+    AUDIT_PAUSE,
+    AUDIT_REPLAY,
+    AUDIT_RESUME,
     KIND_INBOUND_WEBHOOK,
     PROVIDER_WEBHOOK,
     TEST_DEDUPE_PREFIX,
@@ -66,6 +75,9 @@ from langflow.services.triggers.errors import (
     TriggerNotFoundError,
 )
 from langflow.services.triggers.service import TriggerService
+
+if TYPE_CHECKING:
+    from sqlmodel.ext.asyncio.session import AsyncSession
 
 router = APIRouter(prefix="/triggers", tags=["Triggers"])
 
@@ -171,6 +183,42 @@ async def _authorized_trigger(
         raise _not_found() from exc
     await _authorized_flow(session, user, row.flow_id, action)
     return row
+
+
+async def _commit_trigger_action(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    row: Trigger,
+    action: str,
+    details: dict[str, str] | None = None,
+) -> None:
+    """Commit each action and its required audit inside one sanitized error boundary."""
+    from langflow.services.authorization.audit import AUDIT_EVENT_MUTATION, AuditPersistenceError, stage_audit_decision
+
+    try:
+        stage_audit_decision(
+            session=session,
+            required=True,
+            user_id=user_id,
+            action=action,
+            obj=f"trigger:{row.id}",
+            result="allow",
+            details={
+                "event": AUDIT_EVENT_MUTATION,
+                "flow_id": str(row.flow_id),
+                "provider": row.provider,
+                **(details or {}),
+            },
+        )
+        # Keep both the audit INSERT and transaction commit inside this boundary;
+        # request finalization could otherwise expose private storage details.
+        await session.flush()
+        await session.commit()
+    except Exception as exc:
+        # Storage/plugin failures must never become an owner-facing refusal or
+        # expose database or credential details through an error response.
+        raise AuditPersistenceError from exc
 
 
 @router.get("", response_model=list[TriggerRead])
@@ -380,7 +428,9 @@ async def enable_trigger(
         service=service, session=session, user=current_user, trigger_id=trigger_id, action=FlowAction.WRITE
     )
     try:
-        updated = await service.enable_and_activate(session, row=row)
+        updated = await service.enable(session, row=row)
+        await _commit_trigger_action(session, user_id=current_user.id, row=updated, action=AUDIT_RESUME)
+        updated = await service.activate_push_source(session, row=updated)
     except IntegrationPolicyBlockedError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -410,7 +460,9 @@ async def disable_trigger(
         updated = await service.disable(session, row=row)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
-    return await present_one(session, current_user, updated)
+    response = await present_one(session, current_user, updated)
+    await _commit_trigger_action(session, user_id=current_user.id, row=updated, action=AUDIT_PAUSE)
+    return response
 
 
 @router.post("/{trigger_id}/pin", response_model=TriggerRead)
@@ -448,13 +500,13 @@ async def list_trigger_events(
     offset: Annotated[int, Query(ge=0)] = 0,
     event_filter: Annotated[TriggerEventFilter | None, Query(alias="filter")] = None,
 ) -> list[TriggerEventRead]:
-    await _authorized_trigger(
+    trigger = await _authorized_trigger(
         service=service, session=session, user=current_user, trigger_id=trigger_id, action=FlowAction.READ
     )
     rows = await ledger.list_events(
         session, trigger_id=trigger_id, limit=limit, offset=offset, event_filter=event_filter
     )
-    return [TriggerEventRead.model_validate(row) for row in rows]
+    return await present_events(session, trigger, rows)
 
 
 @router.post("/{trigger_id}/replay", response_model=TriggerEventRead, status_code=status.HTTP_202_ACCEPTED)
@@ -470,7 +522,7 @@ async def replay_trigger_event(
     Replay costs a flow execution, so it needs flow execute — the same ceiling
     as pressing Run.
     """
-    await _authorized_trigger(
+    row = await _authorized_trigger(
         service=service, session=session, user=current_user, trigger_id=trigger_id, action=FlowAction.EXECUTE
     )
     settings = get_settings_service().settings
@@ -485,7 +537,15 @@ async def replay_trigger_event(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found") from exc
     except ReplayWindowExpiredError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
-    return TriggerEventRead.model_validate(replay)
+    response = TriggerEventRead.model_validate(replay)
+    await _commit_trigger_action(
+        session,
+        user_id=current_user.id,
+        row=row,
+        action=AUDIT_REPLAY,
+        details={"original_event_id": str(payload.event_id), "replay_event_id": str(replay.id)},
+    )
+    return response
 
 
 @router.post("/{trigger_id}/test", response_model=TriggerEventRead, status_code=status.HTTP_202_ACCEPTED)

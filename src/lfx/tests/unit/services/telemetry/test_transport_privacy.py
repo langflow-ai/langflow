@@ -1,13 +1,14 @@
 """LFX product telemetry excludes free-form errors at the HTTP boundary."""
 
 import json
+import platform
 from uuid import uuid4
 
 import httpx
 import pytest
 from lfx.services.telemetry.identity import get_installation_user_id, is_installation_user_id
 from lfx.services.telemetry.privacy import get_safe_payload_properties
-from lfx.services.telemetry.schema import ComponentPayload, ExceptionPayload, MCPToolPayload, RunPayload
+from lfx.services.telemetry.schema import ComponentPayload, ExceptionPayload, MCPToolPayload, RunPayload, VersionPayload
 from lfx.services.telemetry.service import TelemetryService
 from pydantic import BaseModel, Field
 
@@ -28,7 +29,7 @@ ERROR_TEXT = "synthetic-private-input; SQL parameters: synthetic@example.test"
             "exception",
             {"exceptionType": "ValueError", "stackTraceHash": "abc123"},
         ),
-        (RunPayload(run_seconds=2, run_success=False, run_error_message=ERROR_TEXT), "run", {"runSuccess": False}),
+        (RunPayload(run_seconds=2, run_success=False, run_error_message=ERROR_TEXT), "run", {"successFlag": False}),
         (
             ComponentPayload(
                 component_name="Test", component_seconds=2, component_success=False, component_error_message=ERROR_TEXT
@@ -67,6 +68,33 @@ async def test_outbound_errors_are_removed(tmp_path, monkeypatch, payload, path,
         assert body["properties"][key] == value
     assert body["properties"]["productTitle"] == "Langflow"
     assert payload.model_dump() == before
+
+
+@pytest.mark.asyncio
+async def test_startup_event_carries_the_accepted_common_fields(tmp_path, monkeypatch):
+    monkeypatch.setenv("LANGFLOW_CONFIG_DIR", str(tmp_path))
+    service = TelemetryService(
+        base_url="https://segment.example.test/v1/track", write_key="test-key", do_not_track=False
+    )
+    requests = []
+
+    def capture(request):
+        requests.append(request)
+        return httpx.Response(200)
+
+    payload = VersionPayload(
+        package="lfx", version="0.0.1-payload", platform="payload-platform", python="3.12", arch="arm64"
+    )
+    async with httpx.AsyncClient(transport=httpx.MockTransport(capture)) as client:
+        service._client = client
+        await service.send_telemetry_data(payload, None)
+
+    properties = json.loads(requests[0].content)["properties"]
+    assert properties["subProductTitle"] == "Langflow MCP"
+    assert properties["productVersion"] == service._get_version()
+    assert properties["osName"] == platform.system().lower()
+    assert properties["version"] == "0.0.1-payload"
+    assert properties["platform"] == "payload-platform"
 
 
 def test_new_error_fields_are_excluded_but_safe_codes_remain():
