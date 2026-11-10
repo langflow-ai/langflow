@@ -29,7 +29,9 @@ def _catalog() -> list[dict]:
             if not isinstance(row, dict) or not isinstance(row.get("id"), str) or not row["id"].strip():
                 raise ValueError
             modalities = (row.get("architecture") or {}).get("output_modalities", [])
-            if "decisions" not in modalities:
+            # The decisions modality also includes models that only support extractions.
+            endpoints = row.get("endpoints") or []
+            if "decisions" not in modalities or "/api/alpha/decisions" not in endpoints:
                 continue
             # Capabilities describe the gateway's request types, not a per-model guarantee.
             models[row["id"]] = decision_model_metadata("OpenRouter", row["id"], "OpenRouter", default=True)

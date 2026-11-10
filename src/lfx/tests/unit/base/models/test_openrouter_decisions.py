@@ -30,7 +30,11 @@ def policy(*, blocked=()):
 def public_catalog(monkeypatch):
     openrouter._catalog.cache_clear()
     rows = [
-        {"id": name, "architecture": {"output_modalities": ["decisions"]}}
+        {
+            "id": name,
+            "architecture": {"output_modalities": ["decisions"]},
+            "endpoints": ["/api/alpha/decisions"],
+        }
         for name in ["new-author/new-model", "~typesafe/jev-latest", "baseten/mammoth-1:free"]
     ]
     get = Mock(
@@ -87,6 +91,37 @@ def test_standalone_picker_lists_all_gateway_models(monkeypatch):
     options = get_decision_model_options(provider_policy=policy())
     assert len(options) == 3
     assert all(o["provider"] == "OpenRouter" for o in options)
+
+
+def test_picker_excludes_extraction_only_models(monkeypatch, public_catalog):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "own-key")
+    rows = public_catalog.return_value.json()["data"]
+    rows.extend(
+        [
+            {
+                "id": "cloudflare/clairic",
+                "architecture": {"output_modalities": ["decisions"]},
+                "endpoints": ["/api/alpha/extractions"],
+            },
+            {
+                "id": "author/decisions-and-extractions",
+                "architecture": {"output_modalities": ["decisions"]},
+                "endpoints": ["/api/alpha/extractions", "/api/alpha/decisions"],
+            },
+        ]
+    )
+    public_catalog.return_value = httpx.Response(
+        200, json={"data": rows}, request=httpx.Request("GET", "https://openrouter.ai")
+    )
+
+    options = get_decision_model_options(provider_policy=policy())
+
+    assert {option["name"] for option in options} == {
+        "new-author/new-model",
+        "~typesafe/jev-latest",
+        "baseten/mammoth-1:free",
+        "author/decisions-and-extractions",
+    }
 
 
 def test_standalone_picker_without_key_never_fetches(monkeypatch, public_catalog):
