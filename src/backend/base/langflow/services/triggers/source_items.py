@@ -43,6 +43,9 @@ def validate_source_items(items: Any, *, provider: str | None = None) -> None:
         if "session_key" in item and (not isinstance(item["session_key"], str) or not item["session_key"]):
             msg = "A source item has an invalid session key."
             raise InvalidSourceItemError(msg)
+        if "skip_reason" in item and item["skip_reason"] != "sender_not_allowed":
+            msg = "A source item has an invalid skip reason."
+            raise InvalidSourceItemError(msg)
         try:
             json.dumps(item, allow_nan=False)
         except (TypeError, ValueError, OverflowError, RecursionError) as exc:
