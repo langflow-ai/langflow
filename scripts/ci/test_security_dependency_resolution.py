@@ -181,6 +181,14 @@ def test_published_security_floors_reject_affected_versions(
     assert requirements, f"{manifest} must declare its {dependency} security floor"
     for requirement in requirements:
         assert affected not in requirement.specifier, str(requirement)
+        if (
+            requirement.marker is not None
+            and requirement.marker.evaluate({"python_version": "3.15", "python_full_version": "3.15.0"})
+            and not requirement.marker.evaluate({"python_version": "3.14", "python_full_version": "3.14.0"})
+        ):
+            # Python-3.15-only pin (litellm's 1.110 dev build); the stable floor below applies to older Pythons.
+            assert not requirement.specifier.contains("1.107.0", prereleases=True), str(requirement)
+            continue
         assert patched in requirement.specifier, str(requirement)
         if dependency == "litellm":
             assert "1.104.0rc1" not in requirement.specifier

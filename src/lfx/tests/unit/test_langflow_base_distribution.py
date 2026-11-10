@@ -62,10 +62,22 @@ def test_langflow_base_default_is_service_complete_without_extensions_or_torch()
     assert requirement_names.isdisjoint({"torch", "torchvision", "chromadb", "langchain-chroma", "altk"})
 
     # Opik brings in LiteLLM, so the default metadata must publish its security guard.
+    # The stable guard covers Python <3.15; litellm only supports 3.15 from its 1.110 dev builds.
     litellm = next(requirement for requirement in requirements if requirement.name == "litellm")
-    assert litellm.marker is None
+    assert litellm.marker is None or litellm.marker.evaluate(
+        {"python_version": "3.14", "python_full_version": "3.14.0"}
+    )
     assert "1.107.0" not in litellm.specifier
     assert "1.103.10" in litellm.specifier
+    litellm_315 = next(
+        r
+        for r in requirements
+        if r.name == "litellm"
+        and r.marker
+        and r.marker.evaluate({"python_version": "3.15", "python_full_version": "3.15.0"})
+    )
+    assert litellm_315.specifier.contains("1.110.0.dev2", prereleases=True)
+    assert not litellm_315.specifier.contains("1.107.0", prereleases=True)
 
 
 def test_full_langflow_consumes_base_workspace_distribution():

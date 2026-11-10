@@ -22,12 +22,23 @@ def _load_pyproject(relative_path: str) -> dict:
         return tomllib.load(pyproject_file)
 
 
-def _requirement(requirements: list[str], name: str) -> Requirement:
-    """Find the unconditional security floor, allowing extra Python-specific constraints."""
+def _requirement(requirements: list[str], name: str, python_version: str | None = None) -> Requirement:
+    """Find the unconditional security floor, allowing extra Python-specific constraints.
+
+    With ``python_version`` set, pick the single requirement whose marker applies to that Python instead.
+    """
+
+    def applies(requirement: Requirement) -> bool:
+        if python_version is None:
+            return requirement.marker is None
+        return requirement.marker is None or requirement.marker.evaluate(
+            {"python_version": python_version, "python_full_version": f"{python_version}.0"}
+        )
+
     matches = [
         requirement
         for spec in requirements
-        if (requirement := Requirement(spec)).name.lower() == name.lower() and requirement.marker is None
+        if (requirement := Requirement(spec)).name.lower() == name.lower() and applies(requirement)
     ]
     assert len(matches) == 1, f"Expected one unconditional {name} requirement, found {matches}"
     return matches[0]
@@ -217,7 +228,7 @@ def test_workspace_security_overrides_enforce_current_python_floors() -> None:
     for name, minimum in (("authlib", "1.8.0"), ("virtualenv", "21.14.2"), ("Werkzeug", "3.1.9")):
         _assert_floor(_requirement(overrides, name), minimum)
 
-    litellm = _requirement(constraints, "litellm")
+    litellm = _requirement(constraints, "litellm", python_version="3.14")
     _assert_floor(litellm, "1.103.10")
     _assert_specifier(litellm, "!=", "1.104.0rc1")
     _assert_specifier(litellm, "!=", "1.107.0")
@@ -269,7 +280,7 @@ def test_published_packages_enforce_current_python_floors() -> None:
     _assert_floor(urllib3, "2.8.0")
     _assert_specifier(urllib3, "<", "3.0.0")
 
-    litellm = _requirement(base_project["optional-dependencies"]["litellm"], "litellm")
+    litellm = _requirement(base_project["optional-dependencies"]["litellm"], "litellm", python_version="3.14")
     _assert_floor(litellm, "1.103.10")
     _assert_specifier(litellm, "!=", "1.104.0rc1")
     _assert_specifier(litellm, "!=", "1.107.0")
@@ -287,3 +298,14 @@ def test_published_packages_enforce_current_python_floors() -> None:
 
     generator = runpy.run_path(str(REPO_ROOT / "scripts/migrate/consolidate_bundles.py"))
     assert generator["PROVIDER_DEPS"]["cuga"] == bundle_extras["cuga"]
+
+
+def test_litellm_python_315_uses_the_release_that_supports_it() -> None:
+    """LiteLLM <=1.108 declares Python <3.15 and imports the removed sre_constants; only 1.110 dev builds work."""
+    base = _load_pyproject("src/backend/base/pyproject.toml")["project"]
+    constraints = _load_pyproject("pyproject.toml")["tool"]["uv"]["constraint-dependencies"]
+    for requirements in (constraints, base["optional-dependencies"]["litellm"]):
+        litellm = _requirement(requirements, "litellm", python_version="3.15")
+        assert litellm.specifier.contains("1.110.0.dev2", prereleases=True)
+        for version in ("1.103.2", "1.103.10", "1.107.0"):
+            assert not litellm.specifier.contains(version, prereleases=True), litellm
