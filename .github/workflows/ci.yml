@@ -323,6 +323,7 @@ jobs:
     with:
       tests_folder: ${{ inputs.frontend-tests-folder }}
       release: ${{ inputs.release || false }}
+      # Pin the default PR runner to a version supported by Playwright 1.60.
       runs-on: ${{ inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-24.04' }}
       ref: ${{ inputs.ref || github.ref }}
   test-docs-build:

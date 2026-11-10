@@ -33,6 +33,7 @@ class Second(Component):
 
 
 @pytest.mark.parametrize("endpoint", ["custom_component", "custom_component/update"])
+@pytest.mark.usefixtures("administrator_user")
 async def test_should_preserve_selected_class_through_editor_requests(client, logged_in_headers, endpoint):
     component = eval_custom_component_code(SOURCE, class_name="Second")(_code=SOURCE)
     template, _ = create_component_template(component_extractor=component)

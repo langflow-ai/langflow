@@ -71,6 +71,7 @@ def task_service():
 def _fake_backend() -> MagicMock:
     backend = MagicMock()
     backend.add_documents = AsyncMock()
+    backend.get_documents_by_ids = AsyncMock(return_value=[])
     backend.ensure_ready = AsyncMock()
     backend.storage_size_bytes = AsyncMock(return_value=1234)
     backend.teardown = AsyncMock()

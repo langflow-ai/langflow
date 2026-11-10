@@ -361,34 +361,14 @@ async def handle_on_tool_end(
         # execution time and must not inflate the duration shown to clients.
         duration = _calculate_duration(start_time)
 
-        # Call send_message_callback first to get the updated message structure
+        # Complete the run's own block before publishing, so the publication
+        # carries it. Matching by name and input instead cannot tell apart
+        # parallel calls with the same arguments.
+        tool_content.duration = duration
+        tool_content.header = {"title": f"Executed **{tool_content.name}**", "icon": "Hammer"}
+        tool_content.output = event["data"].get("output")
         agent_message = await send_message_callback(message=agent_message, skip_db_update=True)
-        new_start_time = perf_counter()
-
-        # Now find and update the tool content in the current message. With
-        # flat content_blocks we walk the list directly instead of indexing
-        # into a single group's .contents.
-        updated_tool_content = None
-        for content in agent_message.content_blocks or []:
-            if (
-                isinstance(content, ToolContent)
-                and content.name == tool_name
-                and content.tool_input == tool_content.tool_input
-                and content.output is None
-            ):
-                updated_tool_content = content
-                break
-
-        # Update the tool content that's actually in the message
-        if updated_tool_content:
-            updated_tool_content.duration = duration
-            updated_tool_content.header = {"title": f"Executed **{updated_tool_content.name}**", "icon": "Hammer"}
-            updated_tool_content.output = event["data"].get("output")
-
-            # Update the map reference
-            tool_blocks_map[tool_key] = updated_tool_content
-
-        return agent_message, new_start_time
+        return agent_message, perf_counter()
     return agent_message, start_time
 
 
@@ -531,19 +511,33 @@ async def process_agent_events(
     get_pending_interrupt: GetPendingInterrupt | None = None,
 ) -> Message:
     """Process agent events and return the final output."""
+    tool_blocks_map: dict[str, ToolContent] = {}
+
+    async def publish(message: Message, **kwargs: Any) -> Message:
+        # The callback returns a new Message rebuilt from its dump, so the blocks
+        # bound to running tools go stale. content_blocks only grows, so rebind
+        # each run to the block at the same position.
+        positions = {id(block): index for index, block in enumerate(message.content_blocks or [])}
+        bound = {key: positions[id(block)] for key, block in tool_blocks_map.items() if id(block) in positions}
+        published = await send_message_callback(message=message, **kwargs)
+        blocks = published.content_blocks or []
+        for key, index in bound.items():
+            if index < len(blocks) and isinstance(blocks[index], ToolContent):
+                tool_blocks_map[key] = blocks[index]
+        return published
+
     if isinstance(agent_message.properties, dict):
         agent_message.properties.update({"icon": "Bot", "state": "partial"})
     else:
         agent_message.properties.icon = "Bot"
         agent_message.properties.state = "partial"
     # Store the initial message and capture the message id
-    agent_message = await send_message_callback(message=agent_message)
+    agent_message = await publish(message=agent_message)
     # Capture the original message id - this must stay consistent throughout if streaming
     # Message may not contain id if the Agent is not connected to a Chat Output (_should_skip_message is True)
     initial_message_id = agent_message.get_id()
     try:
         # Track tool content and start times by the same name + run_id key.
-        tool_blocks_map: dict[str, ToolContent] = {}
         tool_start_times: dict[str, float] = {}
         had_streaming = False
         start_time = perf_counter()
@@ -555,12 +549,12 @@ async def process_agent_events(
                 # Use skip_db_update=True during streaming to avoid DB round-trips
                 if event["event"] == "on_tool_start":
                     agent_message, tool_start_times[tool_key] = await tool_handler(
-                        event, agent_message, tool_blocks_map, send_message_callback, start_time
+                        event, agent_message, tool_blocks_map, publish, start_time
                     )
                 else:
                     tool_start_time = tool_start_times.pop(tool_key, start_time)
                     agent_message, _ = await tool_handler(
-                        event, agent_message, tool_blocks_map, send_message_callback, tool_start_time
+                        event, agent_message, tool_blocks_map, publish, tool_start_time
                     )
                     # Start timing the next model round after terminal handling and result publication.
                     # A fresh clock also avoids rewinding to tool_start_time when no ToolContent was bound.
@@ -574,7 +568,7 @@ async def process_agent_events(
                     agent_message, start_time = await chain_handler(
                         event,
                         agent_message,
-                        send_message_callback,
+                        publish,
                         send_token_callback,
                         start_time,
                         had_streaming=had_streaming,
@@ -582,7 +576,7 @@ async def process_agent_events(
                     )
                 else:
                     agent_message, start_time = await chain_handler(
-                        event, agent_message, send_message_callback, None, start_time, had_streaming=had_streaming
+                        event, agent_message, publish, None, start_time, had_streaming=had_streaming
                     )
 
         # A tool-approval interrupt ends the loop without completing: suspend, don't finalize.
@@ -593,7 +587,7 @@ async def process_agent_events(
 
         agent_message.properties.state = "complete"
         # Final DB update with the complete message (skip_db_update=False by default)
-        agent_message = await send_message_callback(message=agent_message)
+        agent_message = await publish(message=agent_message)
     except AgentPausedError:
         raise
     except Exception as e:
