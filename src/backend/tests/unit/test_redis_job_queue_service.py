@@ -28,6 +28,14 @@ from langflow.services.job_queue.service import (
     RedisQueueWrapper,
 )
 
+
+@pytest.fixture(autouse=True)
+def unpaused_database(monkeypatch):
+    # These tests own FakeRedis, not an application database. Keep admission
+    # explicit so a global database left by another test cannot hold their jobs.
+    monkeypatch.setattr("langflow.api.utils.migration_pause._database_pause_status", AsyncMock(return_value=False))
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -424,6 +432,8 @@ async def test_redis_service_cleanup_deletes_redis_keys_when_cancelled():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("maintenance_admission_delay", [0, 0.4], indirect=True)
+@pytest.mark.usefixtures("maintenance_admission_delay")
 async def test_redis_service_cleanup_swallows_redis_delete_error():
     """cleanup_job must not raise when Redis DEL fails.
 
@@ -458,7 +468,9 @@ async def test_redis_service_cleanup_swallows_redis_delete_error():
             await asyncio.sleep(0)
 
         service.start_job(job_id, _noop())
-        await asyncio.sleep(0.05)
+        task = service._queues[job_id][2]
+        assert task is not None
+        await asyncio.wait_for(task, timeout=2.0)
 
         # Must not raise — the warning path absorbs the Redis error and the
         # rest of cleanup_job (local state, super().cleanup_job) still runs.
@@ -564,6 +576,8 @@ async def test_redis_service_get_job_owner_returns_none_for_unknown_job():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("maintenance_admission_delay", [0, 0.4], indirect=True)
+@pytest.mark.usefixtures("maintenance_admission_delay")
 async def test_redis_service_bridge_publishes_sentinel_on_end():
     """The bridge task publishes the end-of-stream sentinel when the build ends."""
     service, fake_client = await _make_service()
@@ -576,8 +590,9 @@ async def test_redis_service_bridge_publishes_sentinel_on_end():
 
         service.start_job(job_id, _build())
 
-        # Wait long enough for the bridge to publish.
-        await asyncio.sleep(0.2)
+        # Admission may wait for maintenance checks before the producer runs.
+        # The bridge finishes only after publishing the end-of-stream sentinel.
+        await asyncio.wait_for(service._bridge_tasks[job_id], timeout=2.0)
 
         stream_key = f"langflow:queue:{job_id}"
         messages = await fake_client.xrange(stream_key)
