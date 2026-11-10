@@ -186,7 +186,7 @@
   "components.amazonbedrockconversemodel.inputs.max_tokens.display_name.c18e6c7f": "Max Tokens",
   "components.amazonbedrockconversemodel.inputs.max_tokens.info.761e48f3": "Maximum number of tokens to generate.",
   "components.amazonbedrockconversemodel.inputs.model_id.display_name.089ef2b6": "Model ID",
-  "components.amazonbedrockconversemodel.inputs.model_id.info.c18a400a": "List of available model IDs to choose from.",
+  "components.amazonbedrockconversemodel.inputs.model_id.info.6a45b90d": "Choose a model ID or enter a custom model or inference profile ID.",
   "components.amazonbedrockconversemodel.inputs.region_name.display_name.b2655f9a": "Region Name",
   "components.amazonbedrockconversemodel.inputs.region_name.info.ed502d9e": "The AWS region where your Bedrock resources are located.",
   "components.amazonbedrockconversemodel.inputs.stream.display_name.1eec3071": "Stream",
