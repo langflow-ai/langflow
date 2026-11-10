@@ -214,18 +214,18 @@ async def cascade_delete_flow(
     return result.rowcount == 1
 
 
-# Public flow file paths must be ``{source_flow_id}/{safe_basename}`` — uploads
-# under that namespace are the only legitimate inputs for an unauthenticated
-# build. Anything else (absolute paths, traversal, foreign flow_ids) is a
-# probe at the arbitrary-file-read class of bug (GHSA-rcjh-r59h-gq37).
+# Public flow file paths must be ``flow-{source_flow_id}/{basename}`` (or legacy
+# ``{source_flow_id}/{basename}``) — uploads under that namespace are the only
+# legitimate inputs for an unauthenticated build. Anything else is a probe at
+# the arbitrary-file-read class of bug (GHSA-rcjh-r59h-gq37).
 _PUBLIC_FILE_PATH_RE = re.compile(
-    r"^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/([^/\\]+)$"
+    r"^(?:flow-)?([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/([^/\\]+)$"
 )
 _PUBLIC_FILE_REJECTED_SUBSTRINGS = ("\x00", "..", "\\")
 
 
 def validate_public_files(files: list[str] | None, source_flow_id: uuid.UUID) -> None:
-    """Reject file references that aren't ``{source_flow_id}/{basename}``.
+    """Reject file references outside ``flow-{source_flow_id}/`` or legacy ``{source_flow_id}/``.
 
     Mitigates GHSA-rcjh-r59h-gq37: an unauthenticated build must not be
     able to address files outside its own flow's storage namespace.

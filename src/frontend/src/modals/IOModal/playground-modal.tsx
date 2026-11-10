@@ -381,10 +381,10 @@ export default function IOModal({
                 )}
               >
                 <div className="flex items-center justify-between gap-2 pb-8 align-middle">
-                  <div className="flex items-center gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
                     <div
                       className={cn(
-                        `flex rounded p-1`,
+                        `flex shrink-0 rounded p-1`,
                         swatchColors[swatchIndex],
                       )}
                     >
@@ -410,7 +410,7 @@ export default function IOModal({
                   >
                     <Button
                       variant="ghost"
-                      className="flex h-8 w-8 items-center justify-center !p-0"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center !p-0"
                       onClick={() => setSidebarOpen(!sidebarOpen)}
                       aria-label={
                         sidebarOpen
