@@ -3509,6 +3509,7 @@
   "apiKey.permissions.combineRole": "Mit einer Rolle kombinieren",
   "apiKey.permissions.specificSummary": "Eingeschränkt: {{resource}} · {{actions}} · {{scope}}",
   "decision.title": "Entscheidung",
+  "decision.titleNamed": "Entscheidung: {{name}}",
   "decision.tone.accepted": "Akzeptiert",
   "decision.tone.uncertain": "Unsicher",
   "decision.tone.refused": "Abgelehnt",

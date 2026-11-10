@@ -3509,6 +3509,7 @@
   "apiKey.permissions.combineRole": "ロールと組み合わせる",
   "apiKey.permissions.specificSummary": "制限付き: {{resource}} · {{actions}} · {{scope}}",
   "decision.title": "判定",
+  "decision.titleNamed": "判定: {{name}}",
   "decision.tone.accepted": "採用",
   "decision.tone.uncertain": "不確実",
   "decision.tone.refused": "拒否",

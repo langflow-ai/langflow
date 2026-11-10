@@ -1,8 +1,12 @@
-import { findDecisionEvidence } from "../decision-evidence";
+import {
+  findAllDecisionEvidence,
+  findDecisionEvidence,
+} from "../decision-evidence";
 import { describeDecisionOutcome } from "../decision-outcome";
 import {
   acceptedChoice,
   belowThreshold,
+  decisionModelBatch,
   decisionModelScore,
   malformedToElse,
   noulAccepted,
@@ -110,6 +114,22 @@ describe("findDecisionEvidence", () => {
       "medium",
       "high",
     ]);
+  });
+
+  it("pairs each answer of a batch with its own question", () => {
+    const evidence = findAllDecisionEvidence({ message: decisionModelBatch });
+
+    expect(evidence.map((e) => [e.name, e.kind, e.question, e.status])).toEqual(
+      [
+        ["team", "choice", "Which team should take this?", "success"],
+        ["urgent", "noul", "Is this urgent?", "refusal"],
+      ],
+    );
+    expect(evidence[0].candidates.map((c) => c.id)).toEqual([
+      "billing",
+      "support",
+    ]);
+    expect(evidence[0].probabilities).toEqual({ billing: 0.9, support: 0.1 });
   });
 
   it("marks a model the provider didn't report", () => {

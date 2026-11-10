@@ -48,6 +48,8 @@ export interface DecisionPolicy {
 }
 
 export interface DecisionEvidence {
+  /** The question's name when a Decision Model answered several at once. */
+  name?: string;
   kind: DecisionKind;
   question: string | null;
   provider: string | null;
@@ -224,10 +226,30 @@ function fromDecisionModel(result: UnknownRecord): DecisionEvidence {
   };
 }
 
-function parse(value: UnknownRecord): DecisionEvidence | null {
-  if (isRouterEvidence(value)) return fromRouter(value);
-  if (isDecisionModelResult(value)) return fromDecisionModel(value);
-  return null;
+// Several questions answer under `answers.<name>` and are asked under `request.questions.<name>`.
+const isBatchResult = (value: UnknownRecord): boolean =>
+  isRecord(value.answers) &&
+  isRecord(value.request) &&
+  isRecord(value.request.questions);
+
+function fromBatch(value: UnknownRecord): DecisionEvidence[] {
+  const questions = (value.request as UnknownRecord).questions as UnknownRecord;
+  return Object.entries(value.answers as UnknownRecord).flatMap(
+    ([name, answer]) => {
+      if (!isRecord(answer)) return [];
+      const paired = { ...answer, request: questions[name] };
+      return isDecisionModelResult(paired)
+        ? [{ ...fromDecisionModel(paired), name }]
+        : [];
+    },
+  );
+}
+
+function parse(value: UnknownRecord): DecisionEvidence[] {
+  if (isRouterEvidence(value)) return [fromRouter(value)];
+  if (isDecisionModelResult(value)) return [fromDecisionModel(value)];
+  if (isBatchResult(value)) return fromBatch(value);
+  return [];
 }
 
 /**
@@ -235,22 +257,27 @@ function parse(value: UnknownRecord): DecisionEvidence | null {
  * span output, searched breadth first so the outermost evidence wins.
  */
 export function findDecisionEvidence(value: unknown): DecisionEvidence | null {
+  return findAllDecisionEvidence(value)[0] ?? null;
+}
+
+/** Every answer of the first decision found: one per question for a batch, otherwise one. */
+export function findAllDecisionEvidence(value: unknown): DecisionEvidence[] {
   let queue: unknown[] = [value];
   let visits = 0;
   for (let depth = 0; depth <= MAX_DEPTH && queue.length > 0; depth++) {
     const next: unknown[] = [];
     for (const item of queue) {
-      if (++visits > MAX_VISITS) return null;
+      if (++visits > MAX_VISITS) return [];
       if (Array.isArray(item)) {
         next.push(...item);
         continue;
       }
       if (!isRecord(item)) continue;
       const evidence = parse(item);
-      if (evidence) return evidence;
+      if (evidence.length > 0) return evidence;
       next.push(...Object.values(item));
     }
     queue = next;
   }
-  return null;
+  return [];
 }

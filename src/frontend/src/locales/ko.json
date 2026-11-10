@@ -3508,6 +3508,7 @@
   "apiKey.permissions.combineRole": "역할과 결합",
   "apiKey.permissions.specificSummary": "제한됨: {{resource}} · {{actions}} · {{scope}}",
   "decision.title": "판정",
+  "decision.titleNamed": "판정: {{name}}",
   "decision.tone.accepted": "채택",
   "decision.tone.uncertain": "불확실",
   "decision.tone.refused": "거부됨",

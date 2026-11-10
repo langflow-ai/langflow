@@ -195,3 +195,41 @@ export const decisionModelNoulRefusal = {
   refusal: "<img src=x onerror=alert(1)> I can't judge this content.",
   request: { kind: "noul", question: "Is this safe?" },
 };
+
+// A Decision Model asked two questions at once, as the backend serializes it.
+export const decisionModelBatch = {
+  answers: {
+    team: {
+      kind: "choice",
+      provider: "OpenRouter",
+      model: "typesafe/jev-latest",
+      model_source: "response",
+      status: "success",
+      probabilities: { billing: 0.9, support: 0.1 },
+      selected_option: "billing",
+      request_id: "gen-1",
+    },
+    urgent: {
+      kind: "noul",
+      provider: "OpenRouter",
+      model: "typesafe/jev-latest",
+      model_source: "response",
+      status: "refusal",
+      request_id: "gen-1",
+    },
+  },
+  request_id: "gen-1",
+  request: {
+    questions: {
+      team: {
+        kind: "choice",
+        question: "Which team should take this?",
+        options: [
+          { id: "billing", label: "Billing" },
+          { id: "support", label: "Support" },
+        ],
+      },
+      urgent: { kind: "noul", question: "Is this urgent?" },
+    },
+  },
+};

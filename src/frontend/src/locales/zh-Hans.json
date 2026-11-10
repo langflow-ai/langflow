@@ -3508,6 +3508,7 @@
   "apiKey.permissions.combineRole": "与角色结合",
   "apiKey.permissions.specificSummary": "受限：{{resource}} · {{actions}} · {{scope}}",
   "decision.title": "决策",
+  "decision.titleNamed": "决策：{{name}}",
   "decision.tone.accepted": "已采纳",
   "decision.tone.uncertain": "不确定",
   "decision.tone.refused": "已拒绝",
