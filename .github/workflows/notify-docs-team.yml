@@ -1,7 +1,10 @@
+# Runs in the base repository context so a fork pull request can receive the
+# notice and a review request. The job only calls the GitHub API and filters
+# changed files below. Do not check out or run code from the pull request.
 name: Notify docs team
 
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, synchronize, reopened]
     paths:
       - "docs/**"

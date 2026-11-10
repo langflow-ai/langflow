@@ -96,10 +96,41 @@ function splitFrontmatter(text) {
   return { data, body: text.slice(end + 4).replace(/^\n/, "") };
 }
 
+function fenceMarker(line) {
+  const match = /^\s*(`{3,}|~{3,})/.exec(line);
+  return match ? match[1] : null;
+}
+
+function forEachLine(text, visit) {
+  let fence = null;
+  for (const line of text.split("\n")) {
+    const marker = fenceMarker(line);
+    if (!fence && marker) {
+      fence = { token: marker[0], size: marker.length };
+      visit(line, false);
+      continue;
+    }
+    if (fence && marker && marker[0] === fence.token && marker.length >= fence.size) {
+      fence = null;
+      visit(line, false);
+      continue;
+    }
+    visit(line, fence !== null);
+  }
+}
+
+function outsideFences(text) {
+  const lines = [];
+  forEachLine(text, (line, inFence) => {
+    lines.push(inFence || fenceMarker(line) ? "" : line);
+  });
+  return lines.join("\n");
+}
+
 function parseImports(text) {
   const imports = [];
   const pattern = /import\s+(?:(\w+)|\{([^}]+)\})\s+from\s+['"]([^'"]+)['"]/g;
-  for (const match of text.matchAll(pattern)) {
+  for (const match of outsideFences(text).matchAll(pattern)) {
     if (match[1]) {
       imports.push({ local: match[1], spec: match[3] });
     }
@@ -116,26 +147,122 @@ function parseImports(text) {
 }
 
 function stripImports(text) {
-  const lines = text.split("\n");
   const kept = [];
   let skipping = false;
-  for (const line of lines) {
-    if (!skipping && /^\s*import\s/.test(line)) {
-      if (/from\s+['"][^'"]+['"]\s*;?\s*$/.test(line)) {
-        continue;
+  forEachLine(text, (line, inFence) => {
+    if (inFence) {
+      kept.push(line);
+      return;
+    }
+    if (!skipping && /^import\s/.test(line)) {
+      if (/from\s+['"][^'"]+['"]\s*;?\s*$/.test(line) || /^import\s+['"]/.test(line)) {
+        return;
       }
-      skipping = true;
-      continue;
+      if (line.includes("{") && !line.includes("}")) {
+        skipping = true;
+        return;
+      }
     }
     if (skipping) {
       if (/from\s+['"][^'"]+['"]\s*;?\s*$/.test(line)) {
         skipping = false;
       }
-      continue;
+      return;
     }
     kept.push(line);
-  }
+  });
   return kept.join("\n");
+}
+
+const MDX_EXPORT = /^export\s+(?:const|function|async|default|class|let|var|\{|\*)/;
+
+function hasMdxExport(text) {
+  let found = false;
+  forEachLine(text, (line, inFence) => {
+    if (!inFence && MDX_EXPORT.test(line)) {
+      found = true;
+    }
+  });
+  return found;
+}
+
+const LANGUAGE_BY_EXTENSION = {
+  ".py": "python",
+  ".js": "javascript",
+  ".jsx": "jsx",
+  ".ts": "typescript",
+  ".tsx": "tsx",
+  ".sh": "bash",
+  ".bash": "bash",
+  ".json": "json",
+  ".toml": "toml",
+  ".yml": "yaml",
+  ".yaml": "yaml",
+  ".md": "markdown",
+  ".mdx": "markdown",
+  ".txt": "text",
+};
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function quotedAttribute(attrs, name) {
+  const match = new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`).exec(attrs);
+  return match ? match[1] ?? match[2] : "";
+}
+
+function codeFence(content, language) {
+  const runs = content.match(/`{3,}/g) || [];
+  const width = runs.reduce((longest, run) => Math.max(longest, run.length), 2) + 1;
+  const fence = "`".repeat(Math.max(3, width));
+  const info = /^[\w#+.-]+$/.test(language) ? language : "";
+  return `${fence}${info}\n${content.replace(/\s+$/, "")}\n${fence}`;
+}
+
+function findDocsRoot(start) {
+  let current = path.resolve(start);
+  while (true) {
+    if (fs.existsSync(path.join(current, "docusaurus.config.js"))) {
+      return current;
+    }
+    const parent = path.dirname(current);
+    if (parent === current) {
+      return null;
+    }
+    current = parent;
+  }
+}
+
+function resolveRawLoader(spec, versionDir) {
+  const target = spec.slice("!!raw-loader!".length);
+  if (target.startsWith("@site/docs/")) {
+    return path.join(versionDir, target.slice("@site/docs/".length));
+  }
+  if (target.startsWith("@langflow/")) {
+    const docsRoot = findDocsRoot(versionDir);
+    if (!docsRoot) {
+      return null;
+    }
+    return path.resolve(docsRoot, "..", target.slice("@langflow/".length));
+  }
+  return null;
+}
+
+function inlineRawLoader(body, imported, versionDir) {
+  const filePath = resolveRawLoader(imported.spec, versionDir);
+  if (!filePath || !fs.existsSync(filePath)) {
+    return body;
+  }
+  const content = fs.readFileSync(filePath, "utf8");
+  const name = escapeRegExp(imported.local);
+  const pattern = new RegExp(`<CodeBlock\\b([^>]*)>\\s*\\{\\s*${name}\\s*\\}\\s*</CodeBlock>`, "g");
+  return body.replace(pattern, (_match, attrs) => {
+    const language = quotedAttribute(attrs, "language") || LANGUAGE_BY_EXTENSION[path.extname(filePath)] || "";
+    const title = quotedAttribute(attrs, "title");
+    const fence = codeFence(content, language);
+    return title ? `${title}\n\n${fence}` : fence;
+  });
 }
 
 function findDocFile(versionDir, id) {
@@ -159,6 +286,10 @@ function renderMarkdown(filePath, versionDir, stack) {
     const imports = parseImports(source);
     let body = stripImports(splitFrontmatter(source).body);
     for (const imported of imports) {
+      if (imported.spec.startsWith("!!raw-loader!")) {
+        body = inlineRawLoader(body, imported, versionDir);
+        continue;
+      }
       if (!imported.spec.startsWith("@site/docs/")) {
         continue;
       }
@@ -167,12 +298,12 @@ function renderMarkdown(filePath, versionDir, stack) {
         continue;
       }
       const partialSource = fs.readFileSync(partialPath, "utf8");
-      if (partialSource.includes("export ")) {
+      if (hasMdxExport(partialSource)) {
         continue;
       }
       const partialBody = renderMarkdown(partialPath, versionDir, stack).trim();
-      const tag = new RegExp(`<${imported.local}(\\s[^/>]*)?/>`, "g");
-      body = body.replace(tag, partialBody);
+      const tag = new RegExp(`<${escapeRegExp(imported.local)}(\\s[^/>]*)?/>`, "g");
+      body = body.replace(tag, () => partialBody);
     }
     return body.replace(/\n{3,}/g, "\n\n").trim();
   } finally {

@@ -70,8 +70,9 @@ test("component catalog omits hidden fields and source code", () => {
   assert.match(catalog.markdown, /If-Else \(`ConditionalRouterComponent`\)/);
 });
 
-test("llms files map sidebar pages and inline partials", () => {
+test("llms files map sidebar pages and inline partials", (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "langflow-llms-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const versionDir = path.join(root, "versioned_docs", "version-1.14.0");
   fs.mkdirSync(versionDir, { recursive: true });
   fs.writeFileSync(
@@ -121,6 +122,126 @@ Install Langflow, then start it.
   writeProseFiles({ version: "1.14.0", docsPath: "", versionDir, sidebarPath, outputDir });
   assert.equal(fs.existsSync(path.join(outputDir, "llms.txt")), true);
   assert.equal(fs.existsSync(path.join(outputDir, "llms-full.txt")), true);
+});
+
+test("fenced code keeps imports and the following sections", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "langflow-llms-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const versionDir = path.join(root, "docs");
+  fs.mkdirSync(versionDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(versionDir, "interpreter.mdx"),
+    `---
+title: Python Interpreter
+slug: /python-interpreter
+---
+
+import Icon from "@site/src/components/icon";
+
+## Use the Python Interpreter in a flow
+
+\`\`\`python
+import os
+print(os.name)
+\`\`\`
+
+    \`\`\`python
+    import requests
+    \`\`\`
+
+## Python Interpreter parameters
+`,
+  );
+  const llmsFull = buildLlmsFull({
+    version: "1.14.0",
+    docsPath: "",
+    versionDir,
+    sidebar: { docs: [{ type: "doc", id: "interpreter" }] },
+  });
+  assert.match(llmsFull, /import os/);
+  assert.match(llmsFull, /import requests/);
+  assert.match(llmsFull, /## Python Interpreter parameters/);
+  assert.equal(llmsFull.includes("import Icon"), false);
+});
+
+test("raw-loader examples become code blocks", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "langflow-llms-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const versionDir = path.join(root, "docs");
+  const exampleDir = path.join(versionDir, "API-Reference", "python-examples");
+  fs.mkdirSync(exampleDir, { recursive: true });
+  fs.writeFileSync(path.join(exampleDir, "run-flow.py"), 'import requests\nurl = f"{base}/run/$FLOW_ID"\nprint("$$")\n');
+  fs.writeFileSync(
+    path.join(versionDir, "run.mdx"),
+    `---
+title: Run flow
+slug: /api-flows-run
+---
+
+import CodeBlock from "@theme/CodeBlock";
+import exampleRunFlow from "!!raw-loader!@site/docs/API-Reference/python-examples/run-flow.py";
+
+## Run flow
+
+<CodeBlock language="python" title="run-flow.py">{exampleRunFlow}</CodeBlock>
+`,
+  );
+  const llmsFull = buildLlmsFull({
+    version: "1.14.0",
+    docsPath: "",
+    versionDir,
+    sidebar: { docs: [{ type: "doc", id: "run" }] },
+  });
+  assert.match(llmsFull, /run-flow\.py/);
+  assert.match(llmsFull, /```python\nimport requests/);
+  assert.match(llmsFull, /\$FLOW_ID/);
+  assert.match(llmsFull, /\$\$/);
+  assert.equal(llmsFull.includes("<CodeBlock"), false);
+  assert.equal(llmsFull.includes("exampleRunFlow"), false);
+});
+
+test("shell exports stay in partials and MDX exports stay out", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "langflow-llms-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const versionDir = path.join(root, "docs");
+  fs.mkdirSync(versionDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(versionDir, "_partial-categories.mdx"),
+    `\`\`\`bash
+export LANGFLOW_COMPONENT_CATEGORY_ALLOWLIST="openai"
+echo "$10"
+\`\`\`
+`,
+  );
+  fs.writeFileSync(
+    path.join(versionDir, "_partial-widget.mdx"),
+    `export const Widget = () => "secret-widget-body";
+`,
+  );
+  fs.writeFileSync(
+    path.join(versionDir, "serve.mdx"),
+    `---
+title: Serve
+slug: /lfx-serve
+---
+
+import Categories from "@site/docs/_partial-categories.mdx";
+import Widget from "@site/docs/_partial-widget.mdx";
+
+<Categories />
+
+<Widget />
+`,
+  );
+  const llmsFull = buildLlmsFull({
+    version: "1.14.0",
+    docsPath: "",
+    versionDir,
+    sidebar: { docs: [{ type: "doc", id: "serve" }] },
+  });
+  assert.match(llmsFull, /LANGFLOW_COMPONENT_CATEGORY_ALLOWLIST/);
+  assert.match(llmsFull, /\$10/);
+  assert.equal(llmsFull.includes("secret-widget-body"), false);
 });
 
 test("an archived release is linked under its version path", () => {
