@@ -106,7 +106,10 @@ def test_alembic_upgrade_preserves_audits_and_replacement_receipts(db_url, tmp_p
             command.stamp(config, NEW.down_revision)
             command.upgrade(config, "head")
             command.upgrade(config, "head")
-            assert conn.scalar(sa.text("SELECT version_num FROM alembic_version")) == NEW.revision
+            assert (
+                conn.scalar(sa.text("SELECT version_num FROM alembic_version"))
+                == ScriptDirectory.from_config(config).get_current_head()
+            )
             audit = sa.Table("audit_events", sa.MetaData(), autoload_with=conn)
             row = conn.execute(sa.select(audit)).one()
             assert (row.acting_issuer, row.acting_subject) == ("existing", "history")
@@ -258,7 +261,8 @@ def test_upgrade_completes_partial_draft_schema(db_url, column):  # noqa: F811
 
 def test_represented_identity_and_release_migrations_have_one_head():
     scripts = ScriptDirectory(str(Path(NEW.__file__).resolve().parents[1]))
-    assert scripts.get_current_head() == NEW.revision
-    assert NEW.down_revision == "f4b8c1d2e3a6"  # pragma: allowlist secret
-    revisions = {revision.revision for revision in scripts.iterate_revisions(NEW.revision, "base")}
-    assert "c6a81d3e9502" in revisions  # pragma: allowlist secret
+    head = scripts.get_current_head()
+    assert head == NEW.revision
+    assert NEW.down_revision == "9c4b7e2a6d10"  # pragma: allowlist secret
+    revisions = {revision.revision for revision in scripts.iterate_revisions(head, "base")}
+    assert {NEW.revision, "c6a81d3e9502", "f6a2c8e4b901"} <= revisions  # pragma: allowlist secret
