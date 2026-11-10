@@ -423,6 +423,17 @@ async def test_trigger_routes_enforce_partial_flow_permissions(
     assert fired.status_code == execute_status, fired.text
     replayed = await client.post(f"{url}/replay", json={"event_id": str(event_id)}, headers=logged_in_headers)
     assert replayed.status_code == execute_status, replayed.text
+    from langflow.services.database.models.auth import AuthzAuditLog
+
+    async with session_scope() as session:
+        audits = (await session.exec(select(AuthzAuditLog).where(AuthzAuditLog.resource_id == trigger_id))).all()
+        mutations = [entry for entry in audits if (entry.details or {}).get("event") == "mutation"]
+        expected_actions = ({"trigger:resume", "trigger:pause"} if management_status == 200 else set()) | (
+            {"trigger:replay"} if execute_status == 202 else set()
+        )
+        assert {entry.action for entry in mutations} == expected_actions
+        assert all(entry.user_id == active_user.id and entry.actor_id == active_user.id for entry in mutations)
+        assert all(entry.user_id != owner.id for entry in mutations)
     deleted = await client.delete(url, headers=logged_in_headers)
     assert deleted.status_code == (204 if management_status == 200 else management_status), deleted.text
 
