@@ -105,8 +105,13 @@ INGRESS_DEDUPE_PREFIX = "ingress"
 #: someone is probing it.
 AUDIT_INGRESS_ACCEPT = "trigger_ingress:accept"
 AUDIT_INGRESS_REJECT = "trigger_ingress:reject"
+AUDIT_SUBSCRIPTION_CREATE = "trigger_subscription:create"
 AUDIT_SUBSCRIPTION_RENEW = "trigger_subscription:renew"
 AUDIT_SUBSCRIPTION_REVOKE = "trigger_subscription:revoke"
+#: An authenticated caller's actions on a flow they may manage or execute.
+AUDIT_PAUSE = "trigger:pause"
+AUDIT_RESUME = "trigger:resume"
+AUDIT_REPLAY = "trigger:replay"
 #: An operator's bulk pause or resume, one audit row per trigger it changed.
 AUDIT_ADMIN_PAUSE = "trigger:admin_pause"
 AUDIT_ADMIN_RESUME = "trigger:admin_resume"
