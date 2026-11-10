@@ -1,0 +1,27 @@
+[project]
+name = "lfx-arcmira"
+version = "0.2.0"
+description = "Find the moment something was said on YouTube, including podcasts on YouTube: the exact quote, often who said it, the channel, the date and a watch link cued to the second. Filter by who is speaking, by the person or company discussed, and by sponsored or organic passages. Use one topic per call, and resolve names to ids before filtering. An empty result does not prove something was never said."
+keywords = ["youtube-transcript-search", "podcast-transcript-search", "langflow", "arcmira", "transcript-api"]
+readme = "README.md"
+requires-python = ">=3.11,<3.16"
+license = {text = "Apache-2.0"}
+dependencies = ["lfx>=1.14.0.dev0,<2.0.0", "httpx>=0.28.1,<1"]
+
+[project.urls]
+Homepage = "https://arcmira.com"
+Documentation = "https://arcmira.com/docs"
+Repository = "https://github.com/arcmira/integrations"
+
+[project.entry-points."langflow.extensions"]
+lfx-arcmira = "lfx_arcmira"
+
+[build-system]
+requires = ["hatchling==1.31.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lfx_arcmira"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/lfx_arcmira", "README.md", "LICENSE", "pyproject.toml"]
