@@ -256,13 +256,15 @@ async def read_effective_integration_policy(
     )
     service = get_integration_policy_service()
     external = service.external_approved_integration_provider_ids
-    configured_ceiling = external if external is not None else getattr(service, "approved_provider_ids", frozenset())
+    configured_ceiling = external if external is not None else getattr(service, "approved_provider_ids", None)
     is_operator = current_user.is_superuser
     return EffectiveIntegrationPolicyRead(
         approved_provider_ids=sorted(policy.allowed_provider_ids),
         blocked_action_keys=sorted(policy.blocked_action_keys) if is_operator else [],
         loaded_provider_ids=sorted(loaded_provider_ids if is_operator else policy.allowed_provider_ids),
-        unrestricted=external is None and not configured_ceiling and policy.allowed_provider_ids == loaded_provider_ids,
+        unrestricted=(
+            external is None and configured_ceiling is None and policy.allowed_provider_ids == loaded_provider_ids
+        ),
         managed_externally=external is not None,
         policy_revision=getattr(service, "policy_version", None),
     )
