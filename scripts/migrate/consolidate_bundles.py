@@ -49,7 +49,7 @@ MIGRATION_RELEASE = "1.11.0"
 # that introduced them (one ``bare_class_name`` row per component).  They stay in
 # ``PROVIDER_DEPS`` so re-running the script keeps their extras managed, but the
 # move + migration-discovery steps are skipped for them.
-PRE_CONSOLIDATED_PROVIDERS: frozenset[str] = frozenset({"figranium", "keenable", "mrscraper"})
+PRE_CONSOLIDATED_PROVIDERS: frozenset[str] = frozenset({"bhived", "figranium", "keenable", "mrscraper"})
 
 # Shared spec for providers whose components go through langchain_community
 # wrappers (the wrapper itself; whatever SDK the wrapper lazy-imports at
@@ -96,6 +96,7 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     # --- tranche 2: tools / memory / data ---
     "apify": ["apify-client>=1.8.1"],
     "assemblyai": ["assemblyai>=0.33.0,<1.0.0"],
+    "bhived": ["bhived>=0.1.0,<0.2"],  # new in 1.14.0, never lived under lfx.components
     "confluence": ["atlassian-python-api==3.41.16", _LC_COMMUNITY],
     "firecrawl": ["firecrawl-py>=1.0.16,<2.0.0"],
     "git": ["GitPython>=3.2.1", _LC_COMMUNITY],

@@ -445,6 +445,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "AssemblyAI", name: "assemblyai", icon: "AssemblyAI" },
   { display_name: "Azure", name: "azure", icon: "Azure" },
   { display_name: "Baidu", name: "baidu", icon: "BaiduQianfan" },
+  { display_name: "bhived", name: "bhived", icon: "Bhived" },
   { display_name: "Bing", name: "bing", icon: "Bing" },
   { display_name: "Cassandra", name: "cassandra", icon: "Cassandra" },
   { display_name: "Chroma", name: "chroma", icon: "Chroma" },
