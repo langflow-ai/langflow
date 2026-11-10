@@ -25,6 +25,18 @@ describe("SIDEBAR_BUNDLES", () => {
     );
   });
 
+  it("classifies Bowmark as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "Bowmark",
+          icon: "Globe",
+          name: "bowmark",
+        }),
+      ]),
+    );
+  });
+
   it("classifies Serping API as a sidebar bundle", () => {
     expect(SIDEBAR_BUNDLES).toEqual(
       expect.arrayContaining([
