@@ -14,6 +14,7 @@ class FlowAction(str, Enum):
     DELETE = "delete"
     EXECUTE = "execute"
     DEPLOY = "deploy"
+    AUDIT_READ = "audit_read"
 
 
 class DeploymentAction(str, Enum):
@@ -33,6 +34,7 @@ class ProjectAction(str, Enum):
     WRITE = "write"
     CREATE = "create"
     DELETE = "delete"
+    AUDIT_READ = "audit_read"
 
 
 class KnowledgeBaseAction(str, Enum):
@@ -72,6 +74,16 @@ class ProviderAccountAction(str, Enum):
     DELETE = "delete"
 
 
+class ConnectionAction(str, Enum):
+    """Actions authorized on a persisted integration connection."""
+
+    READ = "read"
+    WRITE = "write"
+    CREATE = "create"
+    DELETE = "delete"
+    EXECUTE = "execute"
+
+
 class VoiceAction(str, Enum):
     """Actions authorized on credential-backed voice resources."""
 
@@ -85,3 +97,9 @@ class ShareAction(str, Enum):
     CREATE = "create"
     DELETE = "delete"
     UPDATE = "update"
+
+
+class AdministrationAction(str, Enum):
+    """Actions authorized on user, team, and role administration resources."""
+
+    MANAGE = "manage"

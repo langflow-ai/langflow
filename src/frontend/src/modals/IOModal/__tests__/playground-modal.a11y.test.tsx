@@ -100,7 +100,7 @@ jest.mock("@/customization/feature-flags", () => ({
 // and spin into a "Maximum update depth exceeded" loop.
 const messagesQueryResult = { isFetched: true, refetch: jest.fn() };
 const deleteSessionResult = { mutate: jest.fn() };
-const sessionsFromFlowData = { sessions: [] as string[] };
+const sessionsFromFlowData: string[] = [];
 const sessionsFromFlowResult = {
   data: sessionsFromFlowData,
   isLoading: false,

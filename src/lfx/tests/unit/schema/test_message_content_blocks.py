@@ -496,6 +496,31 @@ class TestBackwardsCompatibility:
         error_contents = [c for c in error_blocks[0].contents if isinstance(c, ErrorContent)]
         assert len(error_contents) == 1
 
+    def test_error_message_shows_integration_guidance_in_solution(self):
+        from lfx.integrations.errors import InvalidRequestError
+
+        exc = InvalidRequestError(
+            "Microsoft Graph cannot reach this user's mailbox.",
+            hint="Assign the user a Microsoft 365 license that includes Exchange Online.",
+            provider="microsoft",
+        )
+        err_msg = ErrorMessage(exception=exc)
+
+        [error_block] = [block for block in err_msg.content_blocks if isinstance(block, ContentBlock)]
+        [error_content] = [content for content in error_block.contents if isinstance(content, ErrorContent)]
+        assert error_content.solution == exc.hint
+        assert exc.hint in err_msg.model_dump_json()
+
+    def test_error_message_preserves_legacy_solution(self):
+        class LegacyError(Exception):
+            solution = "Change the input and retry."
+
+        err_msg = ErrorMessage(exception=LegacyError("invalid input"))
+
+        [error_block] = [block for block in err_msg.content_blocks if isinstance(block, ContentBlock)]
+        [error_content] = [content for content in error_block.contents if isinstance(content, ErrorContent)]
+        assert error_content.solution == LegacyError.solution
+
     def test_error_message_renders_complete_os_error(self):
         """OS errors must show their message and path instead of only the numeric errno."""
         exc = PermissionError(13, "Permission denied", "tmp_toolguard")

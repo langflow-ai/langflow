@@ -381,6 +381,40 @@ async def test_shared_project_flow_listing_uses_project_workspace_for_both_respo
             assert canonical_visible in visible_ids
 
 
+async def test_shared_project_flow_listing_excludes_personal_projects_for_both_response_shapes(client):
+    """Both response shapes use the parent marker for broad flow visibility."""
+    settings = get_settings_service()
+    username = f"viewer_{uuid4().hex}"
+    await _make_user(username)
+    other_id = await _make_user(f"other_{uuid4().hex}")
+    headers = await _login(client, username)
+    project_ids: dict[bool, UUID] = {}
+    flow_ids: dict[bool, UUID] = {}
+    for is_personal in (True, False):
+        async with session_scope() as session:
+            folder = Folder(name=f"project_{uuid4().hex}", user_id=other_id, is_personal=is_personal)
+            session.add(folder)
+            await session.flush()
+            project_ids[is_personal] = folder.id
+            await session.commit()
+        flow_ids[is_personal] = await _make_flow(
+            f"flow_{uuid4().hex}", user_id=other_id, folder_id=project_ids[is_personal]
+        )
+    scope = ResourceVisibilityScope(all_resources=True, exclude_personal_projects=True)
+
+    with _install_prefilter_authz(settings, {}, scope_by_type={"flow": scope}):
+        for paginated, params in ((False, {}), (True, {"page": 1, "size": 50})):
+            for is_personal in (True, False):
+                response = await client.get(
+                    f"api/v1/projects/{project_ids[is_personal]}", headers=headers, params=params
+                )
+                visible = _project_flow_ids(response, paginated=paginated)
+                expected = set() if is_personal else {flow_ids[is_personal]}
+                assert visible == expected, (paginated, is_personal)
+                if paginated:
+                    assert response.json()["flows"]["total"] == len(expected)
+
+
 async def test_shared_unassigned_project_pagination_compiles_safely_for_asyncpg(client):
     from langflow.api.v1 import projects as projects_module
 

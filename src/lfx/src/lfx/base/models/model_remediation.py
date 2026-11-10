@@ -58,11 +58,32 @@ REMEDIATIONS: tuple[Remediation, ...] = (
         providers=("OpenAI",),
     ),
     Remediation(
-        # Claude 5 rejects a temperature its 4.x siblings accept (GH-14291); markers
-        # stay narrow so an out-of-range value, which only the user can fix, surfaces.
+        # Models that only accept the default temperature reject an explicitly set
+        # one at call time: Claude 5 calls it "deprecated" (GH-14291), while OpenAI
+        # and Azure reasoning models (o-series, gpt-5*) answer with "'temperature'
+        # is not supported with this model" or "'temperature' does not support
+        # <value> ... Only the default (1) value is supported". Dropping temperature
+        # (→ provider default) is the fix for all of them. Markers stay narrow so a
+        # genuine out-of-range value ("temperature must be between 0 and 2"), which
+        # only the user can fix, still surfaces.
         name="temperature-unsupported",
-        markers=("`temperature` is deprecated", "temperature is deprecated"),
+        markers=(
+            "`temperature` is deprecated",
+            "temperature is deprecated",
+            "'temperature' is not supported",
+            "'temperature' does not support",
+        ),
         overrides={"temperature": None},
+    ),
+    Remediation(
+        name="top-k-unsupported",
+        markers=("`top_k` is deprecated",),
+        overrides={"top_k": None},
+    ),
+    Remediation(
+        name="top-p-unsupported",
+        markers=("`top_p` is deprecated",),
+        overrides={"top_p": None},
     ),
 )
 
@@ -128,6 +149,8 @@ def apply_overrides_to_model(model: Any, overrides: dict[str, Any]) -> bool:
     fix re-raises the provider error instead of retrying an unchanged request.
     Unknown attributes are never created: silently attaching one would turn a
     clear provider error into a request that fails again for a hidden reason.
+    Cleared fields are also removed from ``additional_model_request_fields``
+    when that dictionary carries them, even if a matching attribute exists.
 
     Mutating in place (rather than rebuilding) is what lets the fix reach a model
     already wrapped in a prompt chain or ``with_config`` binding — those hold a
@@ -136,10 +159,18 @@ def apply_overrides_to_model(model: Any, overrides: dict[str, Any]) -> bool:
     if not overrides:
         return False
     for key, value in overrides.items():
-        if not hasattr(model, key):
+        fields = getattr(model, "additional_model_request_fields", None)
+        in_fields = value is None and isinstance(fields, dict) and key in fields
+        has_attribute = hasattr(model, key)
+        if not in_fields and not has_attribute:
             return False
         try:
-            setattr(model, key, value)
+            if in_fields:
+                # Bedrock Converse carries top_k only in this dictionary. Replace
+                # it so clearing a field leaves shared input dictionaries intact.
+                model.additional_model_request_fields = {k: v for k, v in fields.items() if k != key}
+            if has_attribute:
+                setattr(model, key, value)
         except (AttributeError, TypeError, ValueError):
             return False
     return True

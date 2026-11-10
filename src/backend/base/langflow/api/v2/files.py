@@ -1,5 +1,6 @@
 import io
 import re
+import unicodedata
 import uuid
 import zipfile
 from collections.abc import AsyncGenerator, AsyncIterable
@@ -12,6 +13,7 @@ from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from lfx.log.logger import logger
+from lfx.utils.file_path_security import user_storage_scope, user_storage_scope_for_path
 from sqlmodel import col, select
 
 from langflow.api.schemas import UploadFileResponse
@@ -29,6 +31,61 @@ router = APIRouter(tags=["Files"], prefix="/files")
 # Set the static name of the MCP servers file
 MCP_SERVERS_FILE = "_mcp_servers"
 SAMPLE_DATA_DIR = Path(__file__).parent / "sample_data"
+MAX_FILENAME_BYTES = 255
+_UNSAFE_ARCHIVE_NAME_CHARS = re.compile(r'[\\/\x00-\x1f\x7f-\x9f<>:"|?*]')
+_WINDOWS_DEVICE_NAME = re.compile(
+    r"^(?:CON|PRN|AUX|NUL|CONIN\$|CONOUT\$|COM[0-9¹²³]|LPT[0-9¹²³])(?=[ .]|$)",
+    re.IGNORECASE,
+)
+_UNSAFE_UNICODE_CATEGORIES = frozenset({"Cf", "Zl", "Zp"})
+
+
+def _truncate_utf8(value: str, max_bytes: int) -> str:
+    return value.encode("utf-8")[:max_bytes].decode("utf-8", errors="ignore")
+
+
+def _replace_unsafe_archive_chars(value: str) -> str:
+    value = _UNSAFE_ARCHIVE_NAME_CHARS.sub("_", value)
+    return "".join("_" if unicodedata.category(char) in _UNSAFE_UNICODE_CATEGORIES else char for char in value)
+
+
+def _safe_archive_member_name(name: str, *, extension: str = "", collision_suffix: str = "") -> str:
+    """Return a portable ZIP member name of at most 255 UTF-8 bytes."""
+    safe_name = _replace_unsafe_archive_chars(name).replace("..", "_").strip(" .") or "file"
+    safe_extension = _replace_unsafe_archive_chars(extension).replace("..", "_").rstrip(" .")
+    # Long legacy extensions must leave room for a nonempty stem and the
+    # collision suffix, which can be added to an otherwise 255-byte name.
+    tail = collision_suffix + _truncate_utf8(
+        safe_extension, MAX_FILENAME_BYTES - len(collision_suffix.encode("utf-8")) - len("file")
+    )
+    stem_budget = MAX_FILENAME_BYTES - len(tail.encode("utf-8"))
+    safe_name = _truncate_utf8(safe_name, stem_budget).rstrip(" .") or "file"
+    if _WINDOWS_DEVICE_NAME.match(safe_name):
+        safe_name = _truncate_utf8(f"_{safe_name}", stem_budget).rstrip(" .")
+    return f"{safe_name}{tail}"
+
+
+def _validate_file_name(name: str | None) -> str:
+    """Apply the same path and length rules to uploads and renames."""
+    if (
+        not name
+        or any(char in name for char in ("..", "/", "\\", "\x00", "\n", "\r"))
+        or any(unicodedata.category(char) in _UNSAFE_UNICODE_CATEGORIES for char in name)
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid file name: paths, '..', NUL, CR/LF, and unsafe Unicode formatting are forbidden.",
+        )
+    if len(name.encode("utf-8")) > MAX_FILENAME_BYTES:
+        raise HTTPException(status_code=400, detail="File name is too long. Maximum 255 bytes allowed.")
+
+    basename = Path(name).name
+    if not basename or basename in (".", ".."):
+        raise HTTPException(status_code=400, detail="Invalid file name after sanitization")
+
+    if _WINDOWS_DEVICE_NAME.match(basename):
+        raise HTTPException(status_code=400, detail=f"Invalid file name. '{basename}' is a reserved system name.")
+    return basename
 
 
 def is_permanent_storage_failure(error: Exception) -> bool:
@@ -142,6 +199,11 @@ async def fetch_file_object(file_id: uuid.UUID, current_user: CurrentActiveUser,
     return file
 
 
+def _user_file_namespace(path: str, owner_id: uuid.UUID) -> str:
+    """Use the recorded path's typed namespace, or its legacy raw user namespace."""
+    return user_storage_scope_for_path(path, owner_id)
+
+
 async def save_file_routine(
     file,
     storage_service,
@@ -150,6 +212,7 @@ async def save_file_routine(
     file_name=None,
     *,
     append: bool = False,
+    namespace: str | None = None,
 ):
     """Routine to save the file content to the storage service."""
     file_id = uuid.uuid4()
@@ -159,8 +222,12 @@ async def save_file_routine(
     if not file_name:
         file_name = file.filename
 
-    # Save the file using the storage service.
-    await storage_service.save_file(flow_id=str(current_user.id), file_name=file_name, data=file_content, append=append)
+    await storage_service.save_file(
+        flow_id=namespace or user_storage_scope(current_user.id),
+        file_name=file_name,
+        data=file_content,
+        append=append,
+    )
 
     return file_id, file_name
 
@@ -202,73 +269,7 @@ async def upload_user_file(
 
     # Create a new database record for the uploaded file.
     try:
-        # SECURITY FIX: Validate and sanitize multipart upload filename to prevent path traversal attacks
-        # First, validate the original filename to reject obvious malicious attempts
-        if not file.filename:
-            raise HTTPException(status_code=400, detail="No filename provided")
-
-        # Reject filenames containing directory traversal sequences or path separators
-        # This prevents attackers from using directory traversal in the Content-Disposition header
-        # Check for: path separators (/, \), traversal (..), null bytes, and other dangerous chars
-        dangerous_chars = ["..", "/", "\\", "\x00", "\n", "\r"]
-        if any(char in file.filename for char in dangerous_chars):
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    "Invalid file name. Filename must not contain directory paths, "
-                    "'..' sequences, or control characters."
-                ),
-            )
-
-        # Additional check: reject filenames that are too long (prevent DoS)
-        # Most filesystems have a 255 byte limit for filenames
-        MAX_FILENAME_BYTES = 255  # noqa: N806
-        if len(file.filename.encode("utf-8")) > MAX_FILENAME_BYTES:
-            raise HTTPException(
-                status_code=400,
-                detail="File name is too long. Maximum 255 bytes allowed.",
-            )
-
-        # Extract only the basename as an additional safety measure
-        # This provides defense-in-depth in case the above checks are bypassed
-        new_filename = Path(file.filename).name
-
-        # Final validation: ensure the sanitized filename is valid and not empty
-        if not new_filename or new_filename in (".", ".."):
-            raise HTTPException(status_code=400, detail="Invalid file name after sanitization")
-
-        # Reject reserved filenames on Windows (CON, PRN, AUX, NUL, COM1-9, LPT1-9)
-        # This prevents issues when code runs on Windows systems
-        reserved_names = {
-            "CON",
-            "PRN",
-            "AUX",
-            "NUL",
-            "COM1",
-            "COM2",
-            "COM3",
-            "COM4",
-            "COM5",
-            "COM6",
-            "COM7",
-            "COM8",
-            "COM9",
-            "LPT1",
-            "LPT2",
-            "LPT3",
-            "LPT4",
-            "LPT5",
-            "LPT6",
-            "LPT7",
-            "LPT8",
-            "LPT9",
-        }
-        name_without_ext = new_filename.rsplit(".", 1)[0].upper()
-        if name_without_ext in reserved_names:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid file name. '{name_without_ext}' is a reserved system name.",
-            )
+        new_filename = _validate_file_name(file.filename)
 
         # Enforce unique constraint on name, except for the special _mcp_servers file
         try:
@@ -344,13 +345,26 @@ async def upload_user_file(
             # Create the unique filename with extension for storage
             unique_filename = f"{root_filename}.{file_extension}" if file_extension else root_filename
 
+        # The duplicate suffix can push an otherwise valid upload past the
+        # filesystem's single-segment byte limit.
+        _validate_file_name(unique_filename)
+
         # Read file content, save with unique filename, and compute file size in one routine
         try:
             file_id, stored_file_name = await save_file_routine(
-                file, storage_service, current_user, file_name=unique_filename, append=append
+                file,
+                storage_service,
+                current_user,
+                file_name=unique_filename,
+                append=append,
+                namespace=_user_file_namespace(existing_file.path, current_user.id) if existing_file else None,
             )
             file_size = await storage_service.get_file_size(
-                flow_id=str(current_user.id),
+                flow_id=(
+                    user_storage_scope(current_user.id)
+                    if not existing_file
+                    else _user_file_namespace(existing_file.path, current_user.id)
+                ),
                 file_name=stored_file_name,
             )
         except FileNotFoundError as e:
@@ -363,10 +377,15 @@ async def upload_user_file(
             # General error saving file or getting file size
             raise HTTPException(status_code=500, detail=f"Error accessing file: {e}") from e
 
+        storage_namespace = (
+            _user_file_namespace(existing_file.path, current_user.id)
+            if existing_file
+            else user_storage_scope(current_user.id)
+        )
         if ephemeral:
             # Ephemeral uploads: file is saved to storage (servable for chat history)
             # but no UserFile record is created (won't appear in "My Files")
-            file_path = f"{current_user.id}/{stored_file_name}"
+            file_path = f"{storage_namespace}/{stored_file_name}"
             return UploadFileResponse(id=file_id, name=root_filename, path=file_path, size=file_size)
 
         if append and existing_file:
@@ -381,7 +400,7 @@ async def upload_user_file(
                 id=file_id,
                 user_id=current_user.id,
                 name=root_filename,
-                path=f"{current_user.id}/{stored_file_name}",
+                path=f"{storage_namespace}/{stored_file_name}",
                 size=file_size,
             )
 
@@ -392,7 +411,7 @@ async def upload_user_file(
         except Exception as db_err:
             # Database insert failed - clean up the uploaded file to avoid orphaned files
             try:
-                await storage_service.delete_file(flow_id=str(current_user.id), file_name=stored_file_name)
+                await storage_service.delete_file(flow_id=storage_namespace, file_name=stored_file_name)
             except OSError as e:
                 #  If delete fails, just log the error
                 await logger.aerror(f"Failed to clean up uploaded file {stored_file_name}: {e}")
@@ -451,7 +470,7 @@ async def load_sample_files(current_user: CurrentActiveUser, session: DbSession,
             file_name=sample_file_name,
         )
         file_size = await storage_service.get_file_size(
-            flow_id=str(current_user.id),
+            flow_id=user_storage_scope(current_user.id),
             file_name=sample_file_name,
         )
         # Create a UserFile object for the sample file
@@ -459,7 +478,7 @@ async def load_sample_files(current_user: CurrentActiveUser, session: DbSession,
             id=file_id,
             user_id=current_user.id,
             name=root_filename,
-            path=sample_file_name,
+            path=f"{user_storage_scope(current_user.id)}/{sample_file_name}",
             size=file_size,
         )
 
@@ -562,7 +581,7 @@ async def delete_files_batch(
             # Extract just the filename from the path (strip user_id prefix).
             # The file lives under its owner's namespace.
             file_name = Path(file.path).name
-            owner_id = str(file.user_id)
+            owner_id = _user_file_namespace(file.path, file.user_id)
             storage_deleted = False
 
             try:
@@ -671,14 +690,24 @@ async def download_files_batch(
 
         # Create a ZIP file. Each file is read from its owner's storage
         # namespace, not the actor's.
+        used_names: set[str] = set()
         with zipfile.ZipFile(zip_stream, "w") as zip_file:
             for file in files:
-                file_content = await storage_service.get_file(flow_id=str(file.user_id), file_name=Path(file.path).name)
+                file_content = await storage_service.get_file(
+                    flow_id=_user_file_namespace(file.path, file.user_id), file_name=Path(file.path).name
+                )
 
                 # Get the file extension from the original filename
                 file_extension = Path(file.path).suffix
                 # Create the filename with extension
-                filename_with_extension = f"{file.name}{file_extension}"
+                filename_with_extension = _safe_archive_member_name(file.name, extension=file_extension)
+                duplicate = 0
+                while unicodedata.normalize("NFC", filename_with_extension).casefold() in used_names:
+                    duplicate += 1
+                    filename_with_extension = _safe_archive_member_name(
+                        file.name, extension=file_extension, collision_suffix=f"_{file.id}_{duplicate}"
+                    )
+                used_names.add(unicodedata.normalize("NFC", filename_with_extension).casefold())
 
                 # Write the file to the ZIP with the proper extension
                 zip_file.writestr(filename_with_extension, file_content)
@@ -776,11 +805,10 @@ async def download_file(
         except HTTPException as exc:
             raise deny_to_404(exc, detail="File not found") from exc
 
-        # Get the basename of the file path. The file lives under the owner's
-        # storage namespace, not the actor's — for a shared-file read by a
-        # non-owner the bytes are at ``flow_id=str(file.user_id)``.
+        # Resolve the owner's typed or legacy namespace from the recorded path,
+        # never the actor's namespace when a file is shared.
         file_name = Path(file.path).name
-        owner_id = str(file.user_id)
+        owner_id = _user_file_namespace(file.path, file.user_id)
 
         # If return_content is True, read the file content and return it
         if return_content:
@@ -842,6 +870,10 @@ async def edit_file_name(
         except HTTPException as exc:
             raise deny_to_404(exc, detail="File not found") from exc
 
+        # Use the upload rules for display names; batch export makes legacy and
+        # platform-specific names portable without changing the stored name.
+        _validate_file_name(name)
+
         # Update the file name
         file.name = name
         session.add(file)
@@ -877,11 +909,10 @@ async def delete_file(
         except HTTPException as exc:
             raise deny_to_404(exc, detail="File not found") from exc
 
-        # Extract just the filename from the path (strip user_id prefix).
-        # The file lives under the owner's namespace; for shared-file deletes
-        # by a non-owner, we must point at ``file_to_delete.user_id``.
+        # Extract the filename and resolve the owner's typed or legacy namespace
+        # from the recorded path when a shared file is deleted by a non-owner.
         file_name = Path(file_to_delete.path).name
-        owner_id = str(file_to_delete.user_id)
+        owner_id = _user_file_namespace(file_to_delete.path, file_to_delete.user_id)
 
         # Delete the file from the storage service first
         storage_deleted = False
@@ -964,7 +995,9 @@ async def delete_all_files(
             storage_deleted = False
 
             try:
-                await storage_service.delete_file(flow_id=str(current_user.id), file_name=file_name)
+                await storage_service.delete_file(
+                    flow_id=_user_file_namespace(file.path, current_user.id), file_name=file_name
+                )
                 storage_deleted = True
             except OSError as err:
                 # Check if this is a "permanent" failure where file/storage is gone

@@ -4,7 +4,7 @@ from ibm_watsonx_ai.metanames import EmbedTextParamsMetaNames
 from langchain_ibm import WatsonxEmbeddings
 from lfx.base.embeddings.model import LCEmbeddingsModel
 from lfx.base.models.model_utils import get_watsonx_embedding_models
-from lfx.base.models.provider_ssrf import validate_provider_base_url
+from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed, validate_provider_base_url
 from lfx.field_typing import Embeddings
 from lfx.io import BoolInput, DropdownInput, IntInput, Output, SecretStrInput, StrInput
 from lfx.log.logger import logger
@@ -139,6 +139,20 @@ class WatsonxEmbeddingsComponent(LCEmbeddingsModel):
         # host it names. The dropdown's canonical watsonx region endpoints are server-chosen;
         # block internal/cloud-metadata destinations for anything else before connecting.
         if self.url not in WatsonxEmbeddingsComponent._urls:
+            ensure_credential_endpoint_allowed(
+                api_key_value, self.url, sdk_env_fallback=("WATSONX_API_KEY", "WATSONX_APIKEY")
+            )
+            # The SDK also loads tokens/passwords independently of the supplied API key.
+            ensure_credential_endpoint_allowed(
+                None,
+                self.url,
+                sdk_env_fallback=(
+                    "WATSONX_TOKEN",
+                    "WATSONX_PASSWORD",
+                    "USER_ACCESS_TOKEN",
+                    "RUNTIME_ENV_ACCESS_TOKEN_FILE",
+                ),
+            )
             validate_provider_base_url(self.url)
 
         return WatsonxEmbeddings(

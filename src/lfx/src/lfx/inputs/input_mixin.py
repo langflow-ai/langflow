@@ -13,6 +13,8 @@ from pydantic import (
 from lfx.field_typing.conditional_options import ConditionalOptions
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.validators import CoalesceBool
+from lfx.integrations.capabilities import ConditionalScopeRequirement
+from lfx.integrations.models import PROVIDER_ID_PATTERN
 from lfx.schema.cross_module import CrossModuleModel
 
 
@@ -28,6 +30,7 @@ class FieldTypes(str, Enum):
     ACTION_PICKER = "actionPicker"
     DURATION = "duration"
     CONNECTION = "connect"
+    CONNECTION_REF = "connection_ref"
     AUTH = "auth"
     FILE = "file"
     PROMPT = "prompt"
@@ -56,6 +59,7 @@ SENSITIVE_FIELD_TYPES = {
     FieldTypes.AUTH,
     FieldTypes.FILE,
     FieldTypes.CONNECTION,
+    FieldTypes.CONNECTION_REF,
     FieldTypes.MCP,
 }
 
@@ -357,6 +361,18 @@ class ConnectionMixin(BaseModel):
     """Specifies the category of the field. Defaults to an empty list."""
     options: list[dict[str, Any]] = Field(default_factory=list)
     """List of dictionaries with metadata for each option."""
+
+
+class ConnectionRefMixin(BaseModel):
+    """Provider and capability metadata for a portable connection reference."""
+
+    provider: str = Field(pattern=PROVIDER_ID_PATTERN, max_length=120)
+    auth_profile_id: str = ""
+    required_scopes: list[str] = Field(default_factory=list)
+    conditional_scopes: list[ConditionalScopeRequirement] = Field(default_factory=list)
+    identity_kind: Literal["user", "instance", "any"] = "any"
+    ownership_mode: Literal["user", "instance", "any"] = "any"
+    capabilities: list[str] = Field(default_factory=list)
 
 
 class TabMixin(BaseModel):

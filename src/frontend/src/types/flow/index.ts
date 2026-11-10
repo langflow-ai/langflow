@@ -33,6 +33,8 @@ export type FlowType = {
   locked?: boolean | null;
   public?: boolean;
   access_type?: "PUBLIC" | "PRIVATE" | "PROTECTED";
+  /** Identifies the graph version this object came from; sent back as a save precondition. */
+  version_token?: string | null;
   /**
    * Anonymous capabilities for this flow, returned only by the direct-link
    * endpoint (`GET /api/v1/flows/public_flow/{id}`). Authoritative over

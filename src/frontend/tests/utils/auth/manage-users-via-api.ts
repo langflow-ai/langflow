@@ -64,4 +64,18 @@ export async function deleteUserViaApi(
 ): Promise<void> {
   const response = await page.request.delete(`/api/v1/users/${userId}`);
   await assertOk(response, "Delete user");
+  if (response.status() === 202) {
+    await expect
+      .poll(
+        async () => {
+          const user = await page.request.get(`/api/v1/users/${userId}`);
+          return user.status();
+        },
+        {
+          timeout: 30000,
+          message: "User erasure completes before username reuse",
+        },
+      )
+      .toBe(404);
+  }
 }

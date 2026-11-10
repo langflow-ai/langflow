@@ -186,7 +186,7 @@ if [ "$DRY_RUN" = true ]; then
     print_dry_run "Would create git tag: $TAG_NAME"
 else
     print_info "Creating git tag: $TAG_NAME"
-    git tag -a "$TAG_NAME" -m "LFX Release $NEW_VERSION"
+    uv run --no-sync python scripts/ci/release_auth_defaults.py tag "$TAG_NAME"
 fi
 
 if [ "$DRY_RUN" = true ]; then

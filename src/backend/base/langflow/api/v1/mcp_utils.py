@@ -18,6 +18,7 @@ from fastapi import HTTPException
 from lfx.base.mcp.util import build_mcp_tool_name_map, get_flow_snake_case
 from lfx.log.logger import logger
 from lfx.observability import execution_protocol
+from lfx.utils.file_path_security import user_storage_scope
 from lfx.utils.flow_validation import (
     CustomComponentValidationError,
     prepare_public_flow_build,
@@ -28,8 +29,16 @@ from mcp import types
 from sqlmodel import select
 
 from langflow.api.utils.core import strip_secret_field_values
+from langflow.api.utils.execution_principal import FAMILY_LEGACY_MCP, FAMILY_MCP_PROJECTS
 from langflow.api.utils.flow_utils import compute_virtual_flow_id, scope_session_to_namespace
+from langflow.api.utils.migration_pause import REFUSAL, writing
 from langflow.api.v1.endpoints import simple_run_flow
+from langflow.api.v1.files import (
+    _get_file_with_legacy_fallback,
+    _get_flow_file,
+    _legacy_flow_storage_allowed,
+    _list_flow_files,
+)
 from langflow.api.v1.run_validation import HITL_UNSUPPORTED_DETAIL, flow_requires_hitl
 from langflow.api.v1.schemas import SimplifiedAPIRequest
 from langflow.helpers.flow import get_flow_input_tweaks, json_schema_from_flow
@@ -40,6 +49,7 @@ from langflow.services.database.models import Flow
 from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, get_storage_service, session_scope
+from langflow.utils.flow_secrets import restore_request_variable_references
 
 T = TypeVar("T")
 P = ParamSpec("P")
@@ -77,48 +87,6 @@ def _public_mcp_session_namespace(server: Any, project_id: UUID, flow_id: UUID) 
     return str(compute_virtual_flow_id(identifier, flow_id, principal_type="client"))
 
 
-def _restore_public_mcp_request_variable_references(
-    source: Any,
-    sanitized: Any,
-    request_variables: dict[str, str],
-) -> None:
-    """Restore sanitized variable names only when the current request supplies them.
-
-    Public MCP execution scrubs all secret-looking values before building the flow. A
-    ``load_from_db`` field or table cell contains a variable *name*, not the stored
-    secret, and the build needs that name to resolve a request-scoped override. Restore
-    only references that have a matching request value so anonymous execution cannot
-    fall back to an owner's database variables or ambient environment credentials.
-    """
-    if isinstance(source, dict) and isinstance(sanitized, dict):
-        source_value = source.get("value")
-        if source.get("load_from_db") is True and isinstance(source_value, str) and source_value in request_variables:
-            sanitized["value"] = source_value
-
-        row_load_from_db_fields = source.get("__load_from_db_fields")
-        if isinstance(row_load_from_db_fields, dict):
-            variable_fields = [name for name, enabled in row_load_from_db_fields.items() if enabled is True]
-        elif isinstance(row_load_from_db_fields, list):
-            variable_fields = row_load_from_db_fields
-        else:
-            variable_fields = []
-        for field_name in variable_fields:
-            variable_name = source.get(field_name)
-            if isinstance(field_name, str) and isinstance(variable_name, str) and variable_name in request_variables:
-                sanitized[field_name] = variable_name
-
-        for key, source_child in source.items():
-            if key in sanitized:
-                _restore_public_mcp_request_variable_references(
-                    source_child,
-                    sanitized[key],
-                    request_variables,
-                )
-    elif isinstance(source, list) and isinstance(sanitized, list):
-        for source_item, sanitized_item in zip(source, sanitized, strict=False):
-            _restore_public_mcp_request_variable_references(source_item, sanitized_item, request_variables)
-
-
 async def _prepare_public_mcp_execution_flow(
     flow: Flow,
     request_variables: dict[str, str] | None = None,
@@ -129,7 +97,7 @@ async def _prepare_public_mcp_execution_flow(
     source_data = prepared_data if prepared_data is not None else flow.data
     sanitized_data = strip_secret_field_values(source_data)
     if request_variables:
-        _restore_public_mcp_request_variable_references(source_data, sanitized_data, request_variables)
+        restore_request_variable_references(source_data, sanitized_data, request_variables)
     return flow.model_copy(update={"data": sanitized_data}, deep=True)
 
 
@@ -220,7 +188,12 @@ async def handle_list_resources(project_id=None):
         async with session_scope() as session:
             # SECURITY: Always scope to the calling user to prevent cross-user enumeration.
             if project_id:
-                flows_query = select(Flow).where(Flow.folder_id == project_id, Flow.user_id == current_user.id)
+                # Legacy NULL flags stay excluded, matching project tool visibility.
+                flows_query = select(Flow).where(
+                    Flow.folder_id == project_id,
+                    Flow.user_id == current_user.id,
+                    Flow.mcp_enabled == True,  # noqa: E712
+                )
             else:
                 flows_query = select(Flow).where(Flow.user_id == current_user.id)
 
@@ -229,7 +202,8 @@ async def handle_list_resources(project_id=None):
             for flow in flows:
                 if flow.id:
                     try:
-                        files = await storage_service.list_files(flow_id=str(flow.id))
+                        allow_legacy = await _legacy_flow_storage_allowed(session, flow.id)
+                        files = await _list_flow_files(storage_service, flow.id, allow_legacy=allow_legacy)
                         for file_name in files:
                             # URL encode the filename
                             safe_filename = quote(file_name)
@@ -335,6 +309,7 @@ async def handle_read_resource(uri: str, project_id: UUID | str | None = None) -
                 msg = "Resource not found or access denied"
                 raise ValueError(msg) from exc
 
+        allow_legacy = False
         async with session_scope() as session:
             try:
                 flow_id = UUID(namespace_id)
@@ -343,8 +318,14 @@ async def handle_read_resource(uri: str, project_id: UUID | str | None = None) -
             else:
                 flow_query = select(Flow).where(Flow.id == flow_id, Flow.user_id == current_user.id)
                 if parsed_project_id is not None:
-                    flow_query = flow_query.where(Flow.folder_id == parsed_project_id)
+                    # Legacy NULL flags stay excluded, matching project tool visibility.
+                    flow_query = flow_query.where(
+                        Flow.folder_id == parsed_project_id,
+                        Flow.mcp_enabled == True,  # noqa: E712
+                    )
                 flow = (await session.exec(flow_query)).first()
+                if flow is not None:
+                    allow_legacy = await _legacy_flow_storage_allowed(session, flow.id)
 
             if flow is None:
                 # The namespace segment may refer to the user's own bucket (user-level
@@ -359,8 +340,17 @@ async def handle_read_resource(uri: str, project_id: UUID | str | None = None) -
 
         storage_service = get_storage_service()
 
-        # Read the file content
-        content = await storage_service.get_file(flow_id=namespace_id, file_name=filename)
+        # Read the file content from its typed namespace, falling back to the
+        # authorized legacy location when the object predates typed storage.
+        if flow is not None:
+            content = await _get_flow_file(storage_service, flow.id, filename, allow_legacy=allow_legacy)
+        else:
+            content = await _get_file_with_legacy_fallback(
+                storage_service,
+                namespace=user_storage_scope(current_user.id),
+                legacy_namespace=str(current_user.id),
+                file_name=filename,
+            )
         if not content:
             msg = f"File {filename} not found in flow {namespace_id}"
             raise ValueError(msg)
@@ -505,6 +495,15 @@ async def handle_call_tool(
                             context=exec_context,
                             expose_error_details=caller_owns_resource(flow.user_id),
                             http_request=http_request_shim,
+                            # Both MCP families are owner-only: their admission never
+                            # admits a delegated caller, so an explicit connection
+                            # share must not resolve either.
+                            execution_family=(FAMILY_MCP_PROJECTS if project_id is not None else FAMILY_LEGACY_MCP),
+                            # A project transport authenticated with auth_type=none has
+                            # nobody at the keyboard: it already executes under the
+                            # anonymous principal (which resolves no user connection at
+                            # all), and marking it non-interactive keeps that explicit.
+                            interactive=not is_public_project_call,
                         )
                     # Process all outputs and messages, ensuring no duplicates
                     processed_texts = set()
@@ -550,12 +549,18 @@ async def handle_call_tool(
                 )
             raise
 
-    try:
-        return await with_db_session(execute_tool)
-    except Exception as e:
-        msg = f"Error executing tool {name}: {e!s}"
-        await logger.aexception(msg)
-        raise
+    # Over the SSE transport the POST that carries a call answers before the call runs, in the task
+    # of the stream. So the call holds a place of its own among the changes a migration pause waits
+    # for, and is refused when the pause came first.
+    with writing("task", name="mcp_tool_call") as let_in:
+        if not let_in:
+            raise RuntimeError(REFUSAL)
+        try:
+            return await with_db_session(execute_tool)
+        except Exception as e:
+            msg = f"Error executing tool {name}: {e!s}"
+            await logger.aexception(msg)
+            raise
 
 
 async def _collect_tools(

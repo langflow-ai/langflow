@@ -3,8 +3,16 @@ from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vec
 from lfx.helpers.data import docs_to_data
 from lfx.io import HandleInput, IntInput, SecretStrInput, StrInput
 from lfx.schema.data import Data
+from lfx.utils.ssrf_protection import validate_connector_hostname_for_ssrf
 
 logger = structlog.get_logger(__name__)
+
+
+def _valkey_connection_host(url: str) -> str:
+    """Select the host exactly as langchain-aws's Valkey URL parser does."""
+    address = url.split("://", 1)[1] if "://" in url else url
+    address = address.rsplit("@", 1)[-1]
+    return address.rsplit(":", 1)[0] if ":" in address else address.split("/", 1)[0]
 
 
 def _patch_check_index_exists():
@@ -85,6 +93,8 @@ class ValkeyVectorStoreComponent(LCVectorStoreComponent):
                 "'pip install langchain-aws[valkey]'."
             )
             raise ImportError(msg) from e
+
+        validate_connector_hostname_for_ssrf(_valkey_connection_host(self.valkey_server_url))
 
         _patch_check_index_exists()
 

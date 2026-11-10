@@ -78,6 +78,76 @@ async def test_end_user_survives_later_metadata_merge():
 
 
 @pytest.mark.usefixtures("client")
+async def test_update_job_status_returns_the_written_row():
+    """The status UPDATE returns the row through RETURNING, including the finished timestamp."""
+    service = JobService()
+    job_id = uuid4()
+    await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
+
+    updated = await service.update_job_status(job_id, JobStatus.COMPLETED, finished_timestamp=True)
+
+    assert updated is not None
+    assert updated.job_id == job_id
+    assert updated.status == JobStatus.COMPLETED
+    assert updated.finished_timestamp is not None
+    assert (await service.get_job_by_job_id(job_id)).status == JobStatus.COMPLETED
+
+
+@pytest.mark.usefixtures("client")
+async def test_update_job_status_returns_none_for_missing_job():
+    assert await JobService().update_job_status(uuid4(), JobStatus.FAILED) is None
+
+
+@pytest.mark.usefixtures("client")
+async def test_crud_update_job_status_refreshes_a_job_the_session_holds():
+    """A caller that already loaded the Job sees the new status on that same instance."""
+    from langflow.services.database.models.jobs.crud import update_job_status
+    from langflow.services.database.models.jobs.model import Job
+    from langflow.services.deps import session_scope
+
+    service = JobService()
+    job_id = uuid4()
+    await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
+
+    async with session_scope() as session:
+        held = await session.get(Job, job_id)
+        assert held.status == JobStatus.QUEUED
+        updated = await update_job_status(session, job_id, JobStatus.CANCELLED)
+        assert updated is held
+        assert held.status == JobStatus.CANCELLED
+
+
+@pytest.mark.usefixtures("client")
+async def test_job_created_in_progress_runs_without_the_queued_flip():
+    """A job created IN_PROGRESS runs with no extra status write, and still ends COMPLETED."""
+    from unittest.mock import patch
+
+    from lfx.schema.workflow import JobStatus as WorkflowJobStatus
+
+    service = JobService()
+    job_id = uuid4()
+    # The v2 sync path passes lfx's JobStatus; the row stores the same value.
+    await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4(), status=WorkflowJobStatus.IN_PROGRESS)
+    assert (await service.get_job_by_job_id(job_id)).status == JobStatus.IN_PROGRESS
+
+    seen: dict = {}
+
+    async def run(**kwargs):
+        seen["kwargs"] = kwargs
+        seen["status"] = (await service.get_job_by_job_id(job_id)).status
+        return "done"
+
+    with patch.object(service, "update_job_status", wraps=service.update_job_status) as update:
+        result = await service.execute_with_status(job_id, run, mark_in_progress=False, value=1)
+        update_calls = [call.args[1] for call in update.await_args_list]
+
+    assert result == "done"
+    assert seen == {"kwargs": {"value": 1}, "status": JobStatus.IN_PROGRESS}
+    assert update_calls == [JobStatus.COMPLETED]
+    assert (await service.get_job_by_job_id(job_id)).status == JobStatus.COMPLETED
+
+
+@pytest.mark.usefixtures("client")
 async def test_set_result_persists_blob():
     service = JobService()
     job_id = uuid4()

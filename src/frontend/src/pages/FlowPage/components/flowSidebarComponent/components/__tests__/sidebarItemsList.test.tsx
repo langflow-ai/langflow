@@ -78,6 +78,7 @@ jest.mock("../sidebarDraggableComponent", () => ({
     itemName,
     error,
     display_name,
+    paletteLabel,
     official,
     beta,
     legacy,
@@ -92,6 +93,7 @@ jest.mock("../sidebarDraggableComponent", () => ({
     itemName?: string;
     error?: boolean;
     display_name?: string;
+    paletteLabel?: string;
     official?: boolean;
     beta?: boolean;
     legacy?: boolean;
@@ -106,6 +108,7 @@ jest.mock("../sidebarDraggableComponent", () => ({
       data-item-name={itemName}
       data-error={error}
       data-display-name={display_name}
+      data-palette-label={paletteLabel}
       data-official={official}
       data-beta={beta}
       data-legacy={legacy}
@@ -115,7 +118,7 @@ jest.mock("../sidebarDraggableComponent", () => ({
         onDragStart?.({ type: "dragstart" }, { type: itemName, node: apiClass })
       }
     >
-      {display_name}
+      {paletteLabel ?? display_name}
     </div>
   ),
 }));
@@ -663,6 +666,30 @@ describe("SidebarItemsList", () => {
   });
 
   describe("Props Handling", () => {
+    it("shortens only the visible label for an item in a bundle", () => {
+      render(
+        <SidebarItemsList
+          {...defaultProps}
+          item={{ name: "slack", icon: "Slack" }}
+          bundleDisplayName="Slack"
+          dataFilter={{
+            slack: {
+              SlackOnMessage: {
+                display_name: "Slack: On Message",
+                icon: "Slack",
+              },
+            },
+          }}
+          nodeColors={{ slack: "#FF0000" }}
+        />,
+      );
+
+      const row = screen.getByTestId("draggable-SlackOnMessage");
+      expect(row).toHaveTextContent("On Message");
+      expect(row).toHaveAttribute("data-display-name", "Slack: On Message");
+      expect(row).toHaveAttribute("data-palette-label", "On Message");
+    });
+
     it("should handle different item names", () => {
       const propsWithDifferentItem = {
         ...defaultProps,

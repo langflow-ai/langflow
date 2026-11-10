@@ -1,4 +1,6 @@
 import platform
+from contextlib import contextmanager
+from contextvars import ContextVar
 from pathlib import Path
 
 from cryptography.hazmat.primitives import serialization
@@ -10,6 +12,24 @@ from lfx.log.logger import logger
 
 class RSAKeyError(Exception):
     """Exception raised when RSA key operations fail."""
+
+
+_keys_persisted: ContextVar[bool] = ContextVar("keys_persisted", default=True)
+
+
+@contextmanager
+def keys_not_persisted():
+    """Build settings that read the key files in CONFIG_DIR and never write them.
+
+    Settings save a provided key over its file and generate one when there is none.
+    A read-only tool pointed at an existing instance must do neither: the file may
+    be the only copy of that instance's key.
+    """
+    token = _keys_persisted.set(False)
+    try:
+        yield
+    finally:
+        _keys_persisted.reset(token)
 
 
 def derive_public_key_from_private(private_key_pem: str) -> str:
@@ -111,6 +131,8 @@ def set_secure_permissions(file_path: Path) -> None:
 
 
 def write_secret_to_file(path: Path, value: str) -> None:
+    if not _keys_persisted.get():
+        return
     path.write_text(value, encoding="utf-8")
     try:
         set_secure_permissions(path)
@@ -141,6 +163,8 @@ def write_public_key_to_file(path: Path, value: str) -> None:
         path: The file path to write to.
         value: The public key content.
     """
+    if not _keys_persisted.get():
+        return
     path.write_text(value, encoding="utf-8")
     try:
         if platform.system() in {"Linux", "Darwin"}:

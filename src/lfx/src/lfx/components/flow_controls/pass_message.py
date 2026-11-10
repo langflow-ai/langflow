@@ -10,7 +10,7 @@ class PassMessageComponent(Component):
     name = "Pass"
     icon = "arrow-right"
     legacy: bool = True
-    replacement = ["logic.ConditionalRouter"]
+    replacement = ["flow_controls.ConditionalRouter"]
 
     inputs = [
         MessageInput(

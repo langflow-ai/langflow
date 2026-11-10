@@ -5,8 +5,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
-from langchain_core.embeddings import DeterministicFakeEmbedding
-from lfx.schema.data import Data
+from lfx.base.knowledge_bases.backends.chroma import ChromaMigrationRequiredError
 from lfx_bundles.apify.apify_actor import ApifyActorsComponent
 from lfx_bundles.chroma.chroma import ChromaVectorStoreComponent
 from lfx_bundles.cloudflare.cloudflare import CloudflareWorkersAIEmbeddingsComponent
@@ -83,14 +82,15 @@ def test_cloudflare_batching_and_existing_routing(monkeypatch):
     )
     observed = []
 
-    def post(url, *, headers, json):
+    def post(url, *, headers, json, timeout):
+        assert timeout is None
         observed.append((url, headers, json))
         response = Response()
         response.status_code = 200
         response._content = __import__("json").dumps({"result": {"data": [[1.0, 2.0] for _ in json["text"]]}}).encode()
         return response
 
-    with patch("langchain_cloudflare.embeddings.requests.post", side_effect=post):
+    with patch("lfx_bundles.cloudflare.cloudflare_common.provider_safe_httpx_post", side_effect=post):
         assert embeddings.embed_documents(["a\nb", "c", "d"]) == [[1.0, 2.0]] * 3
     assert [call[2]["text"] for call in observed] == [["a b", "c"], ["d"]]
     assert observed[0][0] == "https://api.cloudflare.com/client/v4/accounts/account/ai/run/@cf/baai/bge-base-en-v1.5"
@@ -104,7 +104,10 @@ def test_cloudflare_rejects_http_errors():
     response = Response()
     response.status_code = 401
     response._content = b'{"error": "unauthorized"}'
-    with patch("langchain_cloudflare.embeddings.requests.post", return_value=response), pytest.raises(HTTPError):
+    with (
+        patch("lfx_bundles.cloudflare.cloudflare_common.provider_safe_httpx_post", return_value=response),
+        pytest.raises(HTTPError),
+    ):
         embeddings.embed_query("test")
 
 
@@ -121,41 +124,24 @@ def test_cloudflare_embeddings_remain_picklable():
     assert restored._inference_url == embeddings._inference_url
 
 
-def test_chroma_persists_filtered_metadata_without_community(tmp_path, monkeypatch):
-    # Exercises metadata filtering against tmp_path, not containment; opt out of local-file restriction.
-    monkeypatch.setattr(
-        "lfx.utils.file_path_security.get_settings_service",
-        lambda: SimpleNamespace(settings=SimpleNamespace(restrict_local_file_access=False)),
-    )
+def test_chroma_retirement_preserves_source_and_bundle_discovery(tmp_path):
+    from lfx.extension.loader._detection import collect_component_classes
+    from lfx_bundles.chroma import chroma as module
+
+    original = tmp_path / "chroma.sqlite3"
+    original.write_bytes(b"existing-source")
+    assert collect_component_classes(module) == [ChromaVectorStoreComponent]
     component = ChromaVectorStoreComponent().set(
         collection_name="migration-test",
         persist_directory=str(tmp_path),
-        embedding=DeterministicFakeEmbedding(size=8),
-        allow_duplicates=True,
-        ingest_data=[
-            Data(
-                data={
-                    "text": "document",
-                    "str": "value",
-                    "bool": False,
-                    "int": 0,
-                    "float": 1.5,
-                    "none": None,
-                    "list": [],
-                    "dict": {},
-                }
-            )
-        ],
     )
-    with patch.dict("sys.modules", {"langchain_community.vectorstores.utils": None}):
-        store = component.build_vector_store()
-    result = store.get()
-    assert result["documents"] == ["document"]
-    assert result["metadatas"] == [{"str": "value", "bool": False, "int": 0, "float": 1.5}]
+    with pytest.raises(ChromaMigrationRequiredError, match="requires migration"):
+        component.build_vector_store()
+    assert original.read_bytes() == b"existing-source"
 
 
 @pytest.mark.asyncio
-async def test_cloudflare_async_preserves_slow_successful_responses():
+async def test_cloudflare_async_preserves_slow_successful_responses(monkeypatch):
     import asyncio
     import json
     import threading
@@ -177,6 +163,7 @@ async def test_cloudflare_async_preserves_slow_successful_responses():
             pass
 
     server = ThreadingHTTPServer(("127.0.0.1", 0), EmbeddingHandler)
+    monkeypatch.setenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "127.0.0.1")
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:

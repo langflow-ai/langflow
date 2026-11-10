@@ -104,6 +104,7 @@ def load_installed_extensions(
                         )
                     )
                     result.components = []
+                    result.integrations = []
                 else:
                     seen_bundles[result.bundle] = result
             results.append(result)

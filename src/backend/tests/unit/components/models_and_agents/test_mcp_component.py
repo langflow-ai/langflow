@@ -45,6 +45,13 @@ class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
         """Return the file names mapping for different versions."""
         return []
 
+    @pytest.fixture
+    def skipped_outputs(self):
+        return {
+            "component_as_tool": "needs a database user and starts the MCP server in default_kwargs",
+            "response": "calls a tool on the MCP server in default_kwargs",
+        }
+
     @pytest.mark.asyncio
     @pytest.mark.skipif(not shutil.which("npx"), reason="Node.js not available")
     async def test_component_initialization(self, component_class, default_kwargs):
@@ -123,12 +130,16 @@ class TestMCPToolsComponentSchemaHandling:
 
     def test_build_tool_kwargs_omits_blank_optional_values(self, component):
         args_schema = create_input_schema_from_json_schema(self._browser_use_schema())
-        component.task = "Open docs homepage"
-        component.model = ""
-        component.profile_id = ""
-        component.keep_alive = False
-        component.output_schema = {}
-        component.proxy_country = ""
+        component.set_attributes(
+            {
+                "task": "Open docs homepage",
+                "model": "",
+                "profile_id": "",
+                "keep_alive": False,
+                "output_schema": {},
+                "proxy_country": "",
+            }
+        )
 
         kwargs = component._build_tool_kwargs(args_schema)
 
@@ -628,7 +639,7 @@ class TestMCPComponentConfigPriority:
             patch("lfx.components.models_and_agents.mcp_component.session_scope"),
             patch.object(component.stdio_client, "connect_to_server") as mock_connect,
         ):
-            mock_get_user.return_value = MagicMock(id="test_user_123")
+            mock_get_user.return_value = SimpleNamespace(id="test_user_123", is_superuser=True)
             mock_get_server.return_value = db_config
             mock_connect.return_value = []
 
@@ -664,7 +675,7 @@ class TestMCPComponentConfigPriority:
             patch("lfx.components.models_and_agents.mcp_component.session_scope"),
             patch.object(component.stdio_client, "connect_to_server") as mock_connect,
         ):
-            mock_get_user.return_value = MagicMock(id="test_user_123")
+            mock_get_user.return_value = SimpleNamespace(id="test_user_123", is_superuser=True)
             mock_get_server.return_value = db_config
             mock_connect.return_value = []
 
@@ -694,7 +705,7 @@ class TestMCPComponentConfigPriority:
             patch("lfx.components.models_and_agents.mcp_component.session_scope"),
             patch.object(component.stdio_client, "connect_to_server") as mock_connect,
         ):
-            mock_get_user.return_value = MagicMock(id="test_user_123")
+            mock_get_user.return_value = SimpleNamespace(id="test_user_123", is_superuser=True)
             # Database returns None (server not found)
             mock_get_server.return_value = None
             mock_connect.return_value = []
@@ -720,7 +731,7 @@ class TestMCPComponentConfigPriority:
             patch("lfx.components.models_and_agents.mcp_component.session_scope"),
             patch("lfx.components.models_and_agents.mcp_component.update_tools") as mock_update_tools,
         ):
-            mock_get_user.return_value = MagicMock(id="test_user_123")
+            mock_get_user.return_value = SimpleNamespace(id="test_user_123", is_superuser=True)
             mock_get_server.return_value = None
 
             with pytest.raises(
@@ -818,7 +829,7 @@ class TestMCPComponentConfigPriority:
             patch("lfx.components.models_and_agents.mcp_component.session_scope"),
             patch.object(component.stdio_client, "connect_to_server") as mock_connect,
         ):
-            mock_get_user.return_value = MagicMock(id="test_user_123")
+            mock_get_user.return_value = SimpleNamespace(id="test_user_123", is_superuser=True)
             mock_get_server.return_value = None
 
             with pytest.raises(ValueError, match="Command 'curl' is not allowed"):
@@ -844,7 +855,7 @@ class TestMCPComponentConfigPriority:
             patch("lfx.components.models_and_agents.mcp_component.session_scope"),
             patch.object(component.stdio_client, "connect_to_server") as mock_connect,
         ):
-            mock_get_user.return_value = MagicMock(id="api_user_456")
+            mock_get_user.return_value = SimpleNamespace(id="api_user_456", is_superuser=True)
             # Database returns None (server not in database yet)
             mock_get_server.return_value = None
             mock_connect.return_value = []
@@ -1208,7 +1219,7 @@ async def test_config_priority_with_fixtures(mock_db_session_with_servers):
         ),
         patch.object(component.stdio_client, "connect_to_server", return_value=[]),
     ):
-        mock_get_user.return_value = MagicMock(id="test_user")
+        mock_get_user.return_value = SimpleNamespace(id="test_user", is_superuser=True)
         mock_get_server.return_value = {"command": "uvx", "args": ["test"]}
 
         _tools, server_info = await component.update_tool_list()

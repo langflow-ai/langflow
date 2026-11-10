@@ -423,13 +423,19 @@ class DatabaseService(Service):
                 "check_same_thread": False,
                 "timeout": settings.db_connect_timeout,
             }
-        # For PostgreSQL, set the timezone to UTC
+        # For PostgreSQL, set the timezone to UTC and disable server-side prepared
+        # statements, mirroring alembic/env.py's migration-engine connect_args. A
+        # stable backend connection is required for the lifetime of a prepared
+        # statement, which PgBouncer transaction-pooling mode does not guarantee.
         if settings.database_url and settings.database_url.startswith(("postgresql", "postgres")):
-            return {"options": "-c timezone=utc"}
+            return {"options": "-c timezone=utc", "prepare_threshold": None}
         return {}
 
     def on_connection(self, dbapi_connection, _connection_record) -> None:
         if isinstance(dbapi_connection, sqlite3.Connection | dialect_sqlite.aiosqlite.AsyncAdapt_aiosqlite_connection):
+            from langflow.services.audit.search_sql import register_sqlite_search_functions
+
+            register_sqlite_search_functions(dbapi_connection)
             pragmas: dict = self.settings_service.settings.sqlite_pragmas or {}
             pragmas_list = []
             for key, val in pragmas.items():
@@ -464,6 +470,27 @@ class DatabaseService(Service):
             # Provides efficient session creation and proper connection pooling
             async with self.async_session_maker() as session:
                 yield session
+
+    @asynccontextmanager
+    async def session_scope_for_sync_validation(self):
+        """Keep temporary validation loops from borrowing the application's pool."""
+        url = self.engine.url
+        database = url.database or ""
+        in_memory = url.get_backend_name() == "sqlite" and (
+            database in {"", ":memory:"} or database.startswith("file::memory:") or url.query.get("mode") == "memory"
+        )
+        if self.settings_service.settings.use_noop_database or in_memory:
+            # A new SQLite memory connection would lose the existing database.
+            async with self._with_session() as session:
+                yield session
+            return
+
+        engine = self._create_engine()
+        try:
+            async with SQLModelAsyncSession(engine, expire_on_commit=False) as session:
+                yield session
+        finally:
+            await engine.dispose()
 
     async def ensure_postgresql_version(self) -> None:
         """If the database is PostgreSQL, ensure it is version 15 or higher.

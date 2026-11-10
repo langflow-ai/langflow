@@ -1,8 +1,11 @@
 """Unit tests for langflow.core.celeryconfig module."""
 
 import importlib
+from pathlib import Path
+from urllib.parse import urlsplit
 
 import pytest
+from dotenv import dotenv_values
 
 # Import the module to test
 from langflow.core import celeryconfig
@@ -21,14 +24,19 @@ class TestCeleryConfigAcceptContent:
     def test_accept_content_configuration(self):
         """Test that accept_content is set to the expected values."""
         # This should be consistent regardless of environment
-        expected_content = ["json", "pickle"]
+        expected_content = ["json"]
         assert celeryconfig.accept_content == expected_content
 
     def test_accept_content_types(self):
         """Test that accept_content contains the expected content types."""
         assert "json" in celeryconfig.accept_content
-        assert "pickle" in celeryconfig.accept_content
-        assert len(celeryconfig.accept_content) == 2
+        assert "pickle" not in celeryconfig.accept_content
+        assert len(celeryconfig.accept_content) == 1
+
+    def test_task_and_result_serialization_is_json_only(self):
+        assert celeryconfig.task_serializer == "json"
+        assert celeryconfig.result_serializer == "json"
+        assert celeryconfig.result_accept_content == ["json"]
 
     def test_accept_content_is_list(self):
         """Test that accept_content is a list type."""
@@ -38,6 +46,22 @@ class TestCeleryConfigAcceptContent:
         """Test that accept_content contains only string values."""
         for content_type in celeryconfig.accept_content:
             assert isinstance(content_type, str)
+
+    def test_celery_rejects_pickle_before_decoding(self):
+        """Both the task consumer and result reader reject untrusted pickle content."""
+        from kombu.exceptions import ContentDisallowed
+        from kombu.serialization import loads, prepare_accept_content
+        from langflow.core.celery_app import make_celery
+
+        app = make_celery("test", "langflow.core.celeryconfig")
+        for accepted in (app.conf.accept_content, app.conf.result_accept_content):
+            with pytest.raises(ContentDisallowed):
+                loads(
+                    b"not-a-pickle",
+                    content_type="application/x-python-serialize",
+                    content_encoding="binary",
+                    accept=prepare_accept_content(accepted),
+                )
 
 
 class TestCeleryConfigVariables:
@@ -74,6 +98,30 @@ class TestCeleryConfigVariables:
     def test_result_backend_not_empty(self):
         """Test that result_backend is not an empty string."""
         assert len(celeryconfig.result_backend) > 0
+
+    def test_deploy_sample_uses_credentialed_rabbitmq_broker(self, monkeypatch):
+        sample = dotenv_values(Path(__file__).resolve().parents[5] / "deploy/.env.example")
+        for name in (
+            "LANGFLOW_VALKEY_HOST",
+            "LANGFLOW_VALKEY_PORT",
+            "LANGFLOW_REDIS_HOST",
+            "LANGFLOW_REDIS_PORT",
+            "BROKER_URL",
+            "RESULT_BACKEND",
+        ):
+            monkeypatch.delenv(name, raising=False)
+            if sample.get(name):
+                monkeypatch.setenv(name, sample[name])
+
+        importlib.reload(celeryconfig)
+
+        assert celeryconfig.broker_url == sample["BROKER_URL"]
+        broker = urlsplit(celeryconfig.broker_url)
+        assert broker.scheme == "amqp"
+        assert broker.hostname == "broker"
+        assert broker.username == sample["RABBITMQ_DEFAULT_USER"]
+        assert broker.password == sample["RABBITMQ_DEFAULT_PASS"]
+        assert celeryconfig.result_backend == sample["RESULT_BACKEND"]
 
 
 class TestCeleryConfigStructure:

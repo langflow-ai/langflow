@@ -67,6 +67,19 @@ describe("isBackendRefusedField", () => {
       true,
     );
     expect(isBackendRefusedField("SQLComponent", "query", "str")).toBe(true);
+    expect(
+      isBackendRefusedField(
+        "ext:bing:BingSearchAPIComponent@official",
+        "bing_search_url",
+        "str",
+      ),
+    ).toBe(true);
+    expect(
+      isBackendRefusedField("BingSearchAPI", "bing_search_url", "str"),
+    ).toBe(true);
+    expect(isBackendRefusedField("NewsSearch", "bing_search_url", "str")).toBe(
+      false,
+    );
     // `query` is a common field name; only SQLComponent's is a protected sink.
     expect(isBackendRefusedField("NewsSearch", "query", "str")).toBe(false);
   });

@@ -72,6 +72,14 @@ def stdio_client() -> MCPStdioClient:
     return _stdio_client_with_mocked_session()[0]
 
 
+@pytest.fixture
+def trust_mock_mcp_server(monkeypatch):
+    from lfx.services.deps import get_settings_service
+
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "ssrf_allowed_hosts", [*settings.ssrf_allowed_hosts, "test-mcp.example"])
+
+
 class TestMCPStdioShellFreeLaunch:
     """Tests for the shell=False stdio launcher.
 
@@ -323,6 +331,7 @@ class TestMCPSessionManager:
 
         assert session_tasks.isdisjoint(session_manager._background_tasks)
 
+    @pytest.mark.usefixtures("trust_mock_mcp_server")
     async def test_http_session_creation_cancellation_stops_background_task(self, session_manager):
         """Cancelling HTTP session creation must also stop the task that owns the transport."""
         initialize_started = asyncio.Event()
@@ -413,8 +422,7 @@ class TestMCPSessionManager:
             "last_cleanup": 0,
         }
 
-        # Set up mapping for backwards compatibility
-        session_manager._context_to_session[context_id] = (server_key, session_id)
+        session_manager._context_to_session[context_id] = {server_key: session_id}
 
         await session_manager._cleanup_session(context_id)
 
@@ -739,7 +747,7 @@ class TestMCPSessionManager:
                 await cleanup_task
 
         # The fresh B mapping survives.
-        assert session_manager._context_to_session.get("ctx_move") == (server_key_b, f"{server_key_b}_0")
+        assert session_manager._context_to_session.get("ctx_move") == {server_key_b: f"{server_key_b}_0"}
         # A's session is gone; B's session is live with refcount 1.
         assert f"{server_key_a}_0" not in session_manager.sessions_by_server.get(server_key_a, {}).get("sessions", {})
         assert f"{server_key_b}_0" in session_manager.sessions_by_server[server_key_b]["sessions"]
@@ -2663,13 +2671,11 @@ class TestMCPSseClientUnit:
         sse_client._connection_params = {"url": "http://test.url", "headers": {}}
         sse_client._session_context = "test_context"
 
-        call_count = 0
+        sessions = []
 
         async def mock_get_session_side_effect():
-            nonlocal call_count
-            call_count += 1
             session = AsyncMock()
-            if call_count == 1:
+            if not sessions:
                 # First call fails with connection error
                 from anyio import ClosedResourceError
 
@@ -2678,6 +2684,7 @@ class TestMCPSseClientUnit:
                 # Second call succeeds
                 mock_result = MagicMock()
                 session.call_tool = AsyncMock(return_value=mock_result)
+            sessions.append(session)
             return session
 
         with (
@@ -2685,16 +2692,17 @@ class TestMCPSseClientUnit:
             patch.object(sse_client, "_get_session_manager") as mock_get_manager,
         ):
             mock_manager = MagicMock()
-            mock_manager.invalidate_server_key = AsyncMock()
+            mock_manager.discard_session = AsyncMock()
             mock_manager._get_server_key = MagicMock(return_value="streamable_http_testkey")
             mock_get_manager.return_value = mock_manager
 
             result = await sse_client.run_tool("test_tool", {"param": "value"})
 
             # Should have retried and succeeded on second attempt
-            assert call_count == 2
+            assert len(sessions) == 2
             assert result is not None
-            mock_manager.invalidate_server_key.assert_called_once_with("streamable_http_testkey")
+            # Only the session that failed is discarded, not whatever is pooled by then.
+            mock_manager.discard_session.assert_called_once_with("streamable_http_testkey", sessions[0])
 
 
 class TestMCPStructuredTool:
@@ -4071,6 +4079,7 @@ class TestMCPStructuredToolToolCallId:
         assert result.name == "get_image"
 
 
+@pytest.mark.usefixtures("trust_mock_mcp_server")
 class TestStreamableHttpTransportPolicy:
     """Mocked streamable HTTP vs SSE: reconnect policy and fallback classification."""
 

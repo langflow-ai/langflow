@@ -1,11 +1,15 @@
-from langchain_sambanova import ChatSambaNovaCloud
+import os
+
+from langchain_sambanova import ChatSambaNova
 from lfx.base.models.model import LCModelComponent
-from lfx.base.models.provider_ssrf import validate_provider_base_url
+from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed, openai_compatible_client_kwargs
 from lfx.base.models.sambanova_constants import SAMBANOVA_MODEL_NAMES
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
 from pydantic.v1 import SecretStr
+
+DEFAULT_SAMBANOVA_API_BASE = "https://api.sambanova.ai/v1"
 
 
 class SambaNovaComponent(LCModelComponent):
@@ -22,7 +26,7 @@ class SambaNovaComponent(LCModelComponent):
             display_name="SambaNova Cloud Base Url",
             advanced=True,
             info="The base URL of the Sambanova Cloud API. "
-            "Defaults to https://api.sambanova.ai/v1/chat/completions. "
+            "Defaults to https://api.sambanova.ai/v1. "
             "You can change this to use other urls like Sambastudio",
         ),
         DropdownInput(
@@ -65,7 +69,18 @@ class SambaNovaComponent(LCModelComponent):
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
-        sambanova_url = self.base_url
+        sambanova_url = (
+            self.base_url
+            or os.getenv("SAMBANOVA_API_BASE")
+            or os.getenv("SAMBA_NOVA_BASE_URL")
+            or DEFAULT_SAMBANOVA_API_BASE
+        )
+
+        # Saved flows may carry the full completion URL documented by the old SDK.
+        completion_suffix = "/chat/completions"
+        normalized_url = sambanova_url.rstrip("/")
+        if normalized_url.endswith(completion_suffix):
+            sambanova_url = normalized_url[: -len(completion_suffix)]
 
         sambanova_api_key = self.api_key
         model_name = self.model_name
@@ -75,19 +90,24 @@ class SambaNovaComponent(LCModelComponent):
 
         api_key = SecretStr(sambanova_api_key).get_secret_value() if sambanova_api_key else None
 
-        # base_url is tenant-editable and the SDK sends the operator's API key to whatever
-        # host it names. Block internal/cloud-metadata destinations before connecting.
-        # This is the only host check on this path: validate_provider_base_url is the strict
-        # one (no literal-loopback exemption, and it requires https for a credential-bearing
-        # endpoint), so running validate_connector_url_for_ssrf ahead of it only rejected the
-        # same URLs sooner, with a weaker message and a second lookup.
-        validate_provider_base_url(sambanova_url)
+        ensure_credential_endpoint_allowed(
+            api_key, sambanova_url, default_url=DEFAULT_SAMBANOVA_API_BASE, sdk_env_fallback="SAMBANOVA_API_KEY"
+        )
+        # SambaNova loads a separate x-api-key and arbitrary operator-defined headers
+        # from the environment, even when the tenant supplies the bearer key explicitly.
+        ensure_credential_endpoint_allowed(
+            None,
+            sambanova_url,
+            default_url=DEFAULT_SAMBANOVA_API_BASE,
+            sdk_env_fallback=("SAMBANOVA_API_KEY", "SAMBA_NOVA_CUSTOM_HEADERS"),
+        )
 
-        return ChatSambaNovaCloud(
+        return ChatSambaNova(
             model=model_name,
             max_tokens=max_tokens or 1024,
             temperature=temperature or 0.07,
             top_p=top_p,
-            sambanova_url=sambanova_url,
+            base_url=sambanova_url,
             sambanova_api_key=api_key,
+            **openai_compatible_client_kwargs(sambanova_url, default_url=DEFAULT_SAMBANOVA_API_BASE),
         )

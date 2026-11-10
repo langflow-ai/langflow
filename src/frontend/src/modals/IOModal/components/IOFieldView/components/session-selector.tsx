@@ -11,6 +11,7 @@ import {
   SelectTrigger,
 } from "@/components/ui/select";
 import { useUpdateSessionName } from "@/controllers/API/queries/messages/use-rename-session";
+import { getSessionLabel } from "@/modals/IOModal/helpers/session-label";
 import { useGetFlowId } from "@/modals/IOModal/hooks/useGetFlowId";
 import useFlowStore from "@/stores/flowStore";
 import { useVoiceStore } from "@/stores/voiceStore";
@@ -45,8 +46,10 @@ export default function SessionSelector({
 }) {
   const { t } = useTranslation();
   const currentFlowId = useGetFlowId();
+  const sessionLabel = getSessionLabel(session, currentFlowId);
   const [isEditing, setIsEditing] = useState(false);
-  const [editedSession, setEditedSession] = useState(session);
+  // Rename edits the label; a namespaced session keeps its prefix (see session-label.ts).
+  const [editedSession, setEditedSession] = useState(sessionLabel);
   const { mutate: updateSessionName } = useUpdateSessionName();
   const inputRef = useRef<HTMLInputElement>(null);
   const _setNewChatOnPlayground = useFlowStore(
@@ -54,8 +57,8 @@ export default function SessionSelector({
   );
 
   useEffect(() => {
-    setEditedSession(session);
-  }, [session]);
+    setEditedSession(sessionLabel);
+  }, [sessionLabel]);
 
   const handleEditClick = (e?: React.MouseEvent<HTMLDivElement>) => {
     e?.stopPropagation();
@@ -68,19 +71,22 @@ export default function SessionSelector({
 
   const handleConfirm = () => {
     setIsEditing(false);
-    if (editedSession.trim() !== session) {
+    const name = editedSession.trim();
+    const newSessionId =
+      sessionLabel === session ? name : `${currentFlowId}:${name}`;
+    if (newSessionId !== session) {
       updateSessionName(
-        { old_session_id: session, new_session_id: editedSession.trim() },
+        { old_session_id: session, new_session_id: newSessionId },
         {
           onSuccess: () => {
             if (isVisible) {
-              updateVisibleSession(editedSession.trim());
+              updateVisibleSession(newSessionId);
             }
             if (
               selectedView?.type === "Session" &&
               selectedView?.id === session
             ) {
-              setSelectedView({ type: "Session", id: editedSession.trim() });
+              setSelectedView({ type: "Session", id: newSessionId });
             }
           },
         },
@@ -90,7 +96,7 @@ export default function SessionSelector({
 
   const handleCancel = () => {
     setIsEditing(false);
-    setEditedSession(session);
+    setEditedSession(sessionLabel);
   };
 
   const handleSelectChange = (value: string) => {
@@ -185,10 +191,12 @@ export default function SessionSelector({
               </button>
             </div>
           ) : (
-            <ShadTooltip styleClasses="z-50" content={session}>
+            <ShadTooltip styleClasses="z-50" content={sessionLabel}>
               <div className="relative w-full overflow-hidden">
                 <span className="w-full truncate">
-                  {session === currentFlowId ? "Default Session" : session}
+                  {session === currentFlowId
+                    ? t("modal.io.defaultSession")
+                    : sessionLabel}
                 </span>
                 <div
                   className={cn(

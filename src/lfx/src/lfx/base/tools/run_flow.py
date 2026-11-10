@@ -588,6 +588,17 @@ class RunFlowBaseComponent(Component):
                 flow_id_selected=self.flow_id_selected,
                 updated_at=self._cached_flow_updated_at,
             )  # may or may not want to create a deepcopy of the graph here
+            if graph is None:
+                msg = "Flow not found"
+                raise ValueError(msg)
+
+            # A cached child graph is rebuilt without the current serving run's
+            # identity. Bind that context only when executing it, so its messages
+            # have the same owner and persistence policy as the parent run.
+            parent_graph = getattr(getattr(self, "_vertex", None), "graph", None)
+            if parent_graph is not None:
+                graph.end_user_id = getattr(parent_graph, "end_user_id", None)
+                graph.persist_messages = getattr(parent_graph, "persist_messages", True)
 
             if tweaks := self._build_flow_tweak_data():
                 from lfx.processing.process import process_tweaks_on_graph
@@ -607,6 +618,11 @@ class RunFlowBaseComponent(Component):
                 session_id=self.session_id,
                 output_type=output_type,
                 graph=graph,
+                # The target is a sub-flow of THIS execution, so it resolves
+                # connections under the calling graph's principal. A freshly
+                # loaded child graph carries the fail-closed ``unknown()``, which
+                # would deny every connection inside a Run Flow node.
+                execution_principal=getattr(self.graph, "execution_principal", None),
             )
 
         except Exception as exc:

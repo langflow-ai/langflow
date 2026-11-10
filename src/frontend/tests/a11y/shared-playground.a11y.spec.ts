@@ -115,7 +115,13 @@ async function publishChatFlowAndGetId(page: LangflowPage): Promise<string> {
           edges: flow.data?.edges?.length ?? 0,
         };
       },
-      { message: `Flow ${flowId} graph was not persisted before publish` },
+      {
+        // With autosave on there is no save button to click, so this poll is
+        // what waits for the write. It has to outlast AUTOSAVE_DEBOUNCE_TIME,
+        // and the default poll window is exactly as long as that debounce.
+        message: `Flow ${flowId} graph was not persisted before publish`,
+        timeout: TIMEOUTS.standard,
+      },
     )
     .toEqual({ status: 200, nodes: 2, edges: 1 });
 

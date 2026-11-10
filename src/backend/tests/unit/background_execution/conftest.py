@@ -87,19 +87,31 @@ async def real_services_job_service(real_services_db_url: str) -> AsyncGenerator
     manager = get_service_manager()
     settings_service = get_settings_service()
     original_url = settings_service.settings.database_url
+    original_env_url = os.environ.get("LANGFLOW_DATABASE_URL")
     original_db_service = manager.services.pop(ServiceType.DATABASE_SERVICE, None)
-
-    settings_service.settings.database_url = real_services_db_url
-    db_service = DatabaseServiceFactory().create(settings_service)
-    manager.services[ServiceType.DATABASE_SERVICE] = db_service
+    db_service = None
 
     try:
+        # ``database_url`` is validated on assignment, and its validator replaces any
+        # assigned value with LANGFLOW_DATABASE_URL (or the default SQLite path). An
+        # assignment alone therefore binds the default database and the postgres param
+        # silently runs on SQLite; route the URL through the env var the validator reads.
+        os.environ["LANGFLOW_DATABASE_URL"] = real_services_db_url
+        settings_service.settings.database_url = real_services_db_url
+        assert settings_service.settings.database_url == real_services_db_url
+        db_service = DatabaseServiceFactory().create(settings_service)
+        manager.services[ServiceType.DATABASE_SERVICE] = db_service
         await db_service.run_migrations()
         yield JobService()
     finally:
         manager.services.pop(ServiceType.DATABASE_SERVICE, None)
-        with contextlib.suppress(Exception):
-            await db_service.teardown()
+        if db_service is not None:
+            with contextlib.suppress(Exception):
+                await db_service.teardown()
+        if original_env_url is None:
+            os.environ.pop("LANGFLOW_DATABASE_URL", None)
+        else:
+            os.environ["LANGFLOW_DATABASE_URL"] = original_env_url
         settings_service.settings.database_url = original_url
         if original_db_service is not None:
             manager.services[ServiceType.DATABASE_SERVICE] = original_db_service

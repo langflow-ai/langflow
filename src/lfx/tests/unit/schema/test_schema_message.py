@@ -9,10 +9,18 @@ from uuid import uuid4
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 from lfx.log.logger import logger
+from lfx.schema.data import Data
 from lfx.schema.message import Message
+from lfx.services.deps import get_settings_service
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 from lfx.utils.image import create_image_content_dict
 from platformdirs import user_cache_dir
+
+
+@pytest.fixture(autouse=True)
+def unrestricted_standalone_attachments(monkeypatch):
+    """These standalone conversion tests intentionally attach temporary local paths."""
+    monkeypatch.setattr(get_settings_service().settings, "restrict_local_file_access", False)
 
 
 @pytest.fixture
@@ -450,12 +458,13 @@ class _S3LikeStorage:
 
 @pytest.fixture
 def s3_storage(monkeypatch):
+    """Provide uncached object-storage reads without relying on local files or a live bucket."""
     # ``create_image_content_dict`` is lru_cached on the path, so a stale entry from another
     # test would be served instead of going through the stub.
     create_image_content_dict.cache_clear()
     storage = _S3LikeStorage({})
     settings_service = SimpleNamespace(settings=SimpleNamespace(storage_type="s3"))
-    for module in ("lfx.schema.image", "lfx.utils.image", "lfx.base.data.storage_utils"):
+    for module in ("lfx.schema.image", "lfx.utils.image", "lfx.base.data.storage_utils", "lfx.services.deps"):
         monkeypatch.setattr(importlib.import_module(module), "get_storage_service", lambda: storage)
     for module in ("lfx.base.data.storage_utils", "lfx.base.data.utils", "lfx.services.deps"):
         monkeypatch.setattr(importlib.import_module(module), "get_settings_service", lambda: settings_service)
@@ -530,3 +539,42 @@ def test_local_file_with_image_extension_but_non_image_content_is_not_sent_as_im
     content = Message(text="what is it?", files=["fake.png" if relative else str(fake_png)]).get_file_content_dicts()
 
     assert content == []
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [(42, "42"), (0, "0"), (3.5, "3.5"), (False, "False"), ({"a": 1}, "{'a': 1}"), (["a"], "['a']")],
+    ids=["int", "zero", "float", "bool", "dict", "list"],
+)
+def test_non_string_text_is_kept_as_text(value, expected):
+    message = Data(data={"text": value}).to_message()
+    message.sender = MESSAGE_SENDER_USER
+
+    assert message.text == expected
+    assert message.text_stream is None
+    assert message.data["text"] == expected
+    assert message.to_lc_message().content == expected
+    assert Message(**message.model_dump()).text == expected
+
+
+def test_iterator_text_stays_a_stream():
+    stream = iter(["a", "b"])
+
+    message = Message(text=stream)
+
+    assert message.text is stream
+    assert message.text_stream is stream
+    assert message.data["text"] == ""
+
+
+def test_async_iterator_text_stays_a_stream():
+    async def chunks():
+        yield "a"
+
+    stream = chunks()
+
+    message = Message(text=stream)
+
+    assert message.text is stream
+    assert message.text_stream is stream
+    assert message.data["text"] == ""

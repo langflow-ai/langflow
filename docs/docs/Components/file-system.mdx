@@ -17,7 +17,9 @@ To use a different directory, set the location in `LANGFLOW_FS_TOOL_BASE_DIR` in
 
 If [`LANGFLOW_AUTO_LOGIN`](/api-keys-and-authentication#langflow-auto-login) is set to `true`, all agents share a single workspace at `LANGFLOW_FS_TOOL_BASE_DIR/shared/`.
 If `LANGFLOW_AUTO_LOGIN` is set to `false`, each authenticated user gets a private workspace at `LANGFLOW_FS_TOOL_BASE_DIR/users/HASH/`, where `HASH` is an opaque HMAC-derived identifier. Anonymous requests are refused.
-`LANGFLOW_AUTO_LOGIN` defaults to `true`, so shared mode is the default.
+Official release packages, tagged source archives, and Docker images default `LANGFLOW_AUTO_LOGIN` to `false`, so each authenticated user gets a private workspace. Development branches default to `true` and use the shared workspace.
+
+The current File System component uses the stable `shared/` workspace for standalone `lfx run` and identity-free `lfx serve` executions when LFX generates their user identity. This preserves files between runs even with `LANGFLOW_AUTO_LOGIN=false`; it does not enable automatic login. Existing flow exports must first [update their saved component code](#upgrade-an-existing-flow-export). An explicitly supplied or verified user identity uses private per-user storage when automatic login is disabled. Do not use identity-free serving to separate multiple users' files; configure verified identities for that purpose.
 
 Tool errors are not raised as an unhandled exception.
 Tool errors are returned to the agent as structured JSON:
@@ -51,6 +53,29 @@ Tool errors are returned to the agent as structured JSON:
 | `root_path` | String | Input parameter. Sub-folder inside the sandboxed workspace. Leave empty to use the workspace root. |
 | `read_only` | Boolean | Input parameter. If `true`, `write_file` and `edit_file` are disabled and not registered with the agent. Default: `false`. |
 | `metadata` | Data | Output parameter. A fixed-structure `JSON` object that describes the sandbox configuration at build time and is independent of any file operation. The fields are `root_path`, `read_only`, `tools_registered`, `auto_login`, `mode` (`shared`, `isolated`, or `refused`), `effective_root`, and `resolution_error`. |
+
+## Upgrade an existing flow export
+
+Flow JSON includes the component code saved when the flow was exported. Installing a newer LFX package does not replace that embedded code in the default configuration. An older File System component can therefore continue choosing a different private workspace on each standalone run.
+
+1. Back up the flow export and its filesystem data.
+2. Open the flow in an updated Langflow installation and apply the File System component update. Preserve its connections, workspace sub-path, and read-only setting. If you customized the component code, review and incorporate the storage change into that code instead of replacing your customizations automatically.
+3. Save and export the updated flow, then use that export with `lfx run` or `lfx serve`.
+4. Run its Metadata output and confirm the expected mode: `shared` for an LFX-generated identity, or `isolated` for an explicitly supplied or verified user when automatic login is disabled. Verify a file can be read on a subsequent run.
+
+Updating the component does not relocate files written into earlier per-run private directories. Restore any such files from your backup into the intended workspace after reviewing their ownership.
+
+## Move shared files when enabling authentication
+
+Switching an existing Langflow installation from `LANGFLOW_AUTO_LOGIN=true` to `false` changes this component's directory from `shared/` to `users/HASH/`. Existing files are not deleted or moved automatically. A flow can report `File not found` even though its earlier files remain in `shared/`.
+
+1. Stop active flows and back up the entire `LANGFLOW_FS_TOOL_BASE_DIR` directory, including its `.fs_pepper` file. Preserve this directory along with the database and configuration during the [authentication upgrade](/api-keys-and-authentication#upgrade-from-auto-login).
+2. Decide which account owns each file previously stored in the shared workspace. Shared data has no reliable per-user ownership record; do not copy every file into every user's private directory.
+3. Enable authentication and sign in as the destination user. Run the updated File System component's Metadata output with the original workspace sub-path. Confirm `mode` is `isolated` and record `effective_root`, which identifies that user's destination directory. Do not guess the opaque user hash.
+4. Stop the instance while an administrator copies only the files assigned to that user from `shared/<sub-path>/` into the recorded `effective_root`. Preserve paths relative to the sub-path and the service account's filesystem permissions. Do not overwrite existing private files or copy administrative metadata such as `.fs_pepper`, `.lfsig`, or `.components` into the destination.
+5. Restart the instance and verify the destination user can read the restored files. Keep the backup until the migration is verified.
+
+Keep authentication enabled during normal operation. Re-enabling automatic login to make the old directory visible would restore shared access.
 
 ## Docker deployment
 

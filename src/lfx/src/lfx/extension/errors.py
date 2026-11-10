@@ -43,6 +43,8 @@ ERROR_CODES: frozenset[str] = frozenset(
         "manifest-not-found",
         "manifest-invalid",
         "manifest-unreadable",
+        "integration-identity-conflict",
+        "lfx-version-too-old",
         "field-deferred-in-this-milestone",
         # Deprecated alias of multi-bundle-unsupported; kept for one
         # milestone for log scrapers.
@@ -226,6 +228,8 @@ class ExtensionErrorCollection:
 # ---------------------------------------------------------------------------
 
 _BRANCH_TEMPLATES: dict[str, str] = {
+    "integration-identity-conflict": "Ambiguous integration metadata: {message}",
+    "lfx-version-too-old": "Unsupported integration manifest: {message}",
     "manifest-not-found": ("No extension.json or [tool.langflow.extension] entry found in {location}."),
     "manifest-invalid": ("Invalid manifest at {location}: {message}"),
     "manifest-unreadable": ("Could not read manifest at {location}: {message}"),

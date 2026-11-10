@@ -62,6 +62,13 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         # Provide an empty list or the actual mapping if versioned files exist
         return []
 
+    @pytest.fixture
+    def skipped_outputs(self):
+        return dict.fromkeys(
+            ["text_output", "data_output", "dataframe_output"],
+            "sends the prompt to a running Ollama server",
+        )
+
     @patch.object(_OLLAMA_MODULE, "ChatOllama")
     async def test_build_model(self, mock_chat_ollama, component_class, default_kwargs):
         mock_instance = MagicMock()

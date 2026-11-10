@@ -16,7 +16,8 @@ dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 export default defineConfig({
   testDir: "./tests",
-  testIgnore: "**/live/**",
+  // Node's test runner owns the utility tests, which are run by test:e2e-utilities.
+  testIgnore: ["**/live/**", "**/*.test.mjs"],
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
@@ -149,6 +150,8 @@ export default defineConfig({
         // Serve the A2A discovery + JSON-RPC endpoints so the Agent tab tests
         // can publish and exercise a live agent.
         LANGFLOW_A2A_ENABLED: "true",
+        // Shows Settings > Migration, which is off by default.
+        LANGFLOW_FEATURE_INSTANCE_MIGRATION: "true",
       },
       stdout:
         process.env.CI && process.platform === "win32" ? "pipe" : "ignore",

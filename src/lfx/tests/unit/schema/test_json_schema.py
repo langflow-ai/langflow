@@ -3,6 +3,8 @@
 from unittest.mock import patch
 
 import pytest
+from langchain_core.tools import StructuredTool
+from langchain_core.utils.function_calling import convert_to_openai_tool
 from lfx.io.schema import flatten_schema
 from lfx.schema.json_schema import create_input_schema_from_json_schema
 from pydantic import BaseModel, ValidationError
@@ -290,6 +292,167 @@ class TestCreateInputSchemaFromJsonSchema:
         instance = model.model_validate({"first": {"a": "x"}, "second": {"b": 1}})
         assert instance.first.a == "x"
         assert instance.second.b == 1
+
+    @pytest.mark.parametrize(
+        "tags_schema",
+        [
+            {"anyOf": [{"type": "array", "items": {"type": "string"}}, {"type": "null"}], "default": None},
+            {"type": ["array", "null"], "items": {"type": "string"}},
+        ],
+        ids=["anyOf-null", "type-list-null"],
+    )
+    def test_nullable_array_keeps_item_type(self, tags_schema):
+        """A nullable array (list[str] | None) must keep its item type in the generated schema.
+
+        Regression: the nullable shortcut mapped "array" to a bare ``list``, so the
+        generated JSON schema had ``"items": {}``. Gemini rejects that for the whole
+        request with ``items: missing field``.
+        """
+        schema = {"type": "object", "properties": {"tags": tags_schema}}
+        model = create_input_schema_from_json_schema(schema)
+
+        prop = model.model_json_schema()["properties"]["tags"]
+        variants = prop.get("anyOf", [prop])
+        arr = next(v for v in variants if v.get("type") == "array")
+        assert arr["items"] == {"type": "string"}
+
+        assert model.model_validate({"tags": ["a", "b"]}).tags == ["a", "b"]
+        assert model.model_validate({}).tags is None
+
+    @pytest.mark.parametrize(
+        "tags_schema",
+        [
+            {"anyOf": [{"type": "array", "items": {"type": "string"}}, {"type": "null"}]},
+            {"type": ["array", "null"], "items": {"type": "string"}},
+        ],
+        ids=["anyOf-null", "type-list-null"],
+    )
+    def test_required_nullable_array_accepts_null_but_not_omission(self, tags_schema):
+        """A required nullable array keeps its item type, accepts an explicit null and rejects omission."""
+        schema = {"type": "object", "properties": {"tags": tags_schema}, "required": ["tags"]}
+        model = create_input_schema_from_json_schema(schema)
+
+        assert model.model_validate({"tags": None}).tags is None
+        assert model.model_validate({"tags": ["a"]}).tags == ["a"]
+        with pytest.raises(ValidationError):
+            model.model_validate({})
+        with pytest.raises(ValidationError):
+            model.model_validate({"tags": [1]})
+
+    @pytest.mark.parametrize(
+        "items_schema",
+        [
+            {"type": "object", "properties": {"a": {"type": "integer"}}, "required": ["a"]},
+            {"$ref": "#/$defs/Row"},
+        ],
+        ids=["inline-object", "ref"],
+    )
+    def test_nullable_array_of_objects_keeps_item_model(self, items_schema):
+        """Item models of a nullable array are built, not collapsed to a bare ``list`` of untyped values."""
+        schema = {
+            "type": "object",
+            "properties": {"rows": {"anyOf": [{"type": "array", "items": items_schema}, {"type": "null"}]}},
+            "$defs": {"Row": {"type": "object", "properties": {"a": {"type": "integer"}}, "required": ["a"]}},
+        }
+        model = create_input_schema_from_json_schema(schema)
+
+        assert model.model_validate({"rows": [{"a": 1}]}).rows[0].a == 1
+        with pytest.raises(ValidationError):
+            model.model_validate({"rows": [{"a": "not-an-int"}]})
+
+    def test_nullable_array_item_type_survives_tool_schema_conversion(self):
+        """The tool schema handed to the model provider must carry ``items`` for a nullable array param."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "tags": {"anyOf": [{"type": "array", "items": {"type": "string"}}, {"type": "null"}], "default": None},
+            },
+            "required": ["query"],
+        }
+        tool = StructuredTool.from_function(
+            func=lambda **_: "",
+            name="search",
+            description="Search.",
+            args_schema=create_input_schema_from_json_schema(schema),
+        )
+
+        tags = convert_to_openai_tool(tool)["function"]["parameters"]["properties"]["tags"]
+        arr = next(v for v in tags.get("anyOf", [tags]) if v.get("type") == "array")
+        assert arr["items"] == {"type": "string"}
+
+
+class TestUnderscorePropertyNames:
+    """JSON Schema allows names such as Glean's ``_user_goal``; Pydantic reserves leading underscores."""
+
+    @pytest.mark.parametrize("nested", [False, True])
+    @pytest.mark.parametrize(("snake_name", "camel_key"), [("_foo_bar", "_fooBar"), ("foo_bar", "fooBar")])
+    def test_camel_alias_cannot_supply_a_different_wire_property(self, nested, snake_name, camel_key):
+        schema = {
+            "type": "object",
+            "properties": {snake_name: {"type": "string"}, "_fooBar": {"type": "string"}},
+            "required": [snake_name, "_fooBar"],
+        }
+        values = {camel_key: "only the camel-named property"}
+        if nested:
+            schema = {"type": "object", "properties": {"opts": schema}}
+            values = {"opts": values}
+
+        model = create_input_schema_from_json_schema(schema)
+
+        with pytest.raises(ValidationError) as exc_info:
+            model.model_validate(values)
+
+        assert exc_info.value.errors()[0]["type"] == "missing"
+        assert exc_info.value.errors()[0]["loc"] == (("opts", "foo_bar") if nested else ("foo_bar",))
+
+        payload = values["opts"] if nested else values
+        payload[snake_name] = "the snake-named property"
+        expected = {snake_name: "the snake-named property", "_fooBar": "only the camel-named property"}
+        assert model.model_validate(values).model_dump(by_alias=True) == ({"opts": expected} if nested else expected)
+
+    def test_underscore_property_builds_and_accepts_field_or_wire_name(self):
+        schema = {
+            "type": "object",
+            "properties": {"query": {"type": "string"}, "_user_goal": {"type": "string"}},
+            "required": ["query", "_user_goal"],
+        }
+
+        model = create_input_schema_from_json_schema(schema)
+
+        assert list(model.model_fields) == ["query", "user_goal"]
+        assert model.model_validate({"query": "q", "user_goal": "g"}).user_goal == "g"
+        assert model.model_validate({"query": "q", "_user_goal": "g"}).user_goal == "g"
+
+    def test_underscore_property_dumps_under_its_wire_name(self):
+        schema = {
+            "type": "object",
+            "properties": {
+                "_user_goal": {"type": "string"},
+                "opts": {"type": "object", "properties": {"_trace_id": {"type": "string"}}},
+            },
+        }
+        model = create_input_schema_from_json_schema(schema)
+
+        dumped = model.model_validate({"user_goal": "g", "opts": {"trace_id": "t"}}).model_dump(by_alias=True)
+
+        assert dumped == {"_user_goal": "g", "opts": {"_trace_id": "t"}}
+
+    def test_sanitized_name_next_to_its_unprefixed_sibling_keeps_both_values(self):
+        schema = {
+            "type": "object",
+            "properties": {"_foo": {"type": "string"}, "foo": {"type": "string"}},
+            "required": ["_foo", "foo"],
+        }
+        model = create_input_schema_from_json_schema(schema)
+
+        by_field = model.model_validate({"foo_1": "private", "foo": "public"})
+        by_wire = model.model_validate({"_foo": "private", "foo": "public"})
+
+        assert list(model.model_fields) == ["foo_1", "foo"]
+        assert list(model.model_json_schema()["properties"]) == ["foo_1", "foo"]
+        assert by_field.model_dump(by_alias=True) == {"_foo": "private", "foo": "public"}
+        assert by_wire.model_dump(by_alias=True) == {"_foo": "private", "foo": "public"}
 
 
 class TestFlattenSchema:

@@ -7,7 +7,6 @@ import pytest
 
 pytest.importorskip("lfx_bundles")
 
-from langflow.custom import Component
 from lfx.components.tools.calculator import CalculatorToolComponent
 from lfx_bundles.cuga.cuga_agent import (
     _CUGA_CODE_AGENT_GUARD_ATTR,
@@ -147,20 +146,11 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         """
         return []
 
-    async def component_setup(self, component_class: type[Any], default_kwargs: dict[str, Any]) -> Component:
-        """Set up component instance for testing with mocked methods.
-
-        Args:
-            component_class: The component class to instantiate
-            default_kwargs: Default keyword arguments for the component
-
-        Returns:
-            Component: Configured component instance with mocked methods
-        """
-        component_instance = await super().component_setup(component_class, default_kwargs)
-        # Mock _should_process_output method
-        component_instance._should_process_output = lambda output: False  # noqa: ARG005
-        return component_instance
+    @pytest.fixture
+    def skipped_outputs(self):
+        return {
+            "response": "runs the agent loop, which needs a chat model that supports tool calling",
+        }
 
     @pytest.fixture
     def default_kwargs(self):
@@ -388,6 +378,12 @@ class TestCugaComponentWithClient(ComponentTestBaseWithClient):
             list: Empty list since no file mappings are needed
         """
         return []
+
+    @pytest.fixture
+    def skipped_outputs(self):
+        return {
+            "response": "runs the agent loop, which needs a chat model that supports tool calling",
+        }
 
     @pytest.mark.api_key_required
     @pytest.mark.no_blockbuster

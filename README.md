@@ -9,7 +9,7 @@
 [![PyPI - License](https://img.shields.io/badge/license-MIT-orange)](https://opensource.org/licenses/MIT)
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/langflow?style=flat-square)](https://pypistats.org/packages/langflow)
 [![Twitter](https://img.shields.io/twitter/url/https/twitter.com/langflow-ai.svg?style=social&label=Follow%20%40Langflow)](https://twitter.com/langflow_ai)
-[![YouTube Channel](https://img.shields.io/youtube/channel/subscribers/UCn2bInQrjdDYKEEmbpwblLQ?label=Subscribe)](https://www.youtube.com/@Langflow)
+[![YouTube Channel](https://img.shields.io/badge/Subscribe-red?logo=youtube&logoColor=white)](https://www.youtube.com/@Langflow)
 [![Discord Server](https://img.shields.io/discord/1116803230643527710?logo=discord&style=social&label=Join)](https://discord.gg/EqksyE2EX9)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/langflow-ai/langflow)
 
@@ -51,6 +51,8 @@ For more information, see [Install and run the Langflow OSS Python package](http
 
 #### Run
 
+Official release packages and tagged source archives disable automatic login by default. Set `LANGFLOW_SUPERUSER_PASSWORD` before starting Langflow, then sign in with the username `langflow` (or your configured `LANGFLOW_SUPERUSER`). Development branches retain automatic login by default. See [authentication configuration](https://docs.langflow.org/api-keys-and-authentication#start-a-langflow-server-with-authentication-enabled).
+
 To start Langflow, run:
 ```shell
 uv run langflow run
@@ -70,11 +72,14 @@ make run_cli
 For more information, see [DEVELOPMENT.md](./DEVELOPMENT.md).
 
 ### Docker
-Start a Langflow container with default settings:
+Set and export a strong password before starting the container (Bash):
 ```shell
-docker run -p 7860:7860 langflowai/langflow:latest
+read -rsp "Langflow administrator password: " LANGFLOW_SUPERUSER_PASSWORD; echo
+export LANGFLOW_SUPERUSER_PASSWORD
+docker run -p 7860:7860 -e LANGFLOW_SUPERUSER_PASSWORD langflowai/langflow:latest
 ```
-Langflow is available at http://localhost:7860/.
+Langflow is available at http://localhost:7860/. Sign in as `langflow` with the password you entered. Official Docker images require authentication by default.
+If you already have an auto-login installation, follow the [upgrade instructions](https://docs.langflow.org/api-keys-and-authentication#upgrade-from-auto-login) before switching defaults.
 For configuration options, see the [Docker deployment guide](https://docs.langflow.org/deployment-docker).
 
 ## 🛡️ Security

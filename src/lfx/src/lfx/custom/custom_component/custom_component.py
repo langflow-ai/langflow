@@ -29,6 +29,7 @@ from lfx.template.utils import update_frontend_node_with_template_values
 from lfx.type_extraction import post_process_type
 from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.file_path_security import validate_storage_key
+from lfx.utils.flow_validation import is_protected_tweak_field
 
 if TYPE_CHECKING:
     from langchain_core.callbacks.base import BaseCallbackHandler
@@ -493,8 +494,11 @@ class CustomComponent(BaseComponent):
             if context and "request_variables" in context:
                 request_variables = context["request_variables"]
                 if name in request_variables:
-                    logger.debug(f"Found context override for variable '{name}'")
-                    return request_variables[name]
+                    if is_protected_tweak_field(type(self).__name__, field):
+                        logger.warning("Ignoring request variable override for protected field {!r}.", field)
+                    else:
+                        logger.debug(f"Found context override for variable '{name}'")
+                        return request_variables[name]
 
         # Only check user_id when we need to access the database
         if hasattr(self, "_user_id") and not self.user_id:
@@ -574,6 +578,10 @@ class CustomComponent(BaseComponent):
             tweaks=tweaks,
             user_id=str(self.user_id),
             run_id=self.graph.run_id,
+            # A sub-flow is part of the parent's execution, not a new entry point:
+            # it must resolve connections under exactly the parent's principal, and
+            # never fall back to the fail-closed unknown() a fresh graph carries.
+            execution_principal=getattr(self.graph, "execution_principal", None),
         )
 
     def list_flows(self) -> list[Data]:

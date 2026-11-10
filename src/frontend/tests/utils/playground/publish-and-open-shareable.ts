@@ -1,4 +1,4 @@
-import type { BrowserContext, Page } from "@playwright/test";
+import type { BrowserContext, Page, Request } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { configureLoopbackOpenAI } from "../configure-loopback-openai";
 import { TID } from "../constants/testIds";
@@ -13,6 +13,16 @@ export type PublishedFlow = {
   /** The URL of the shareable playground (useful for reload-in-place tests). */
   url: string;
 };
+
+/** `access_type` carried by a flow PATCH body, if any. */
+function patchAccessType(request: Request): string | undefined {
+  try {
+    const body = request.postDataJSON() as { access_type?: string } | null;
+    return body?.access_type;
+  } catch {
+    return undefined;
+  }
+}
 
 /**
  * End-to-end: open Basic Prompting, configure the loopback model, build, publish, toggle
@@ -43,12 +53,18 @@ export async function publishBasicPromptingAndOpenShareablePlayground(
   if (!flowId) {
     throw new Error(`Expected a /flow/:id editor URL, got ${page.url()}`);
   }
+  // The switch flushes any pending canvas autosave before it changes access,
+  // and that flush is a PATCH to this same URL. Only the access-type PATCH
+  // publishes the flow, so match on its body rather than on the first response
+  // (nightly 33576072242: the autosave PATCH resolved first, the item was
+  // clicked while the flow was still private, and no tab ever opened).
   const publishResponsePromise = page.waitForResponse((response) => {
-    const url = new URL(response.url());
-    return (
-      response.request().method() === "PATCH" &&
-      url.pathname === `/api/v1/flows/${flowId}`
-    );
+    const request = response.request();
+    if (request.method() !== "PATCH") return false;
+    if (new URL(response.url()).pathname !== `/api/v1/flows/${flowId}`) {
+      return false;
+    }
+    return patchAccessType(request) === "PUBLIC";
   });
   await page.getByTestId(TID.publishSwitch).click();
   const publishResponse = await publishResponsePromise;
@@ -57,8 +73,15 @@ export async function publishBasicPromptingAndOpenShareablePlayground(
     `Publishing flow ${flowId} returned ${publishResponse.status()}`,
   ).toBeTruthy();
 
+  // The menu item only renders the playground link once the store reflects
+  // PUBLIC access, which lands after the response, so wait for the link itself
+  // rather than clicking the item as soon as the request has returned.
+  const shareableLink = page
+    .getByTestId(TID.shareablePlayground)
+    .getByRole("link");
+  await expect(shareableLink).toBeVisible({ timeout: TIMEOUTS.medium });
   const pagePromise = context.waitForEvent("page");
-  await page.getByTestId(TID.shareablePlayground).click();
+  await shareableLink.click();
   const playgroundPage = await pagePromise;
   await playgroundPage.waitForURL(new RegExp(`/playground/${flowId}/?$`), {
     timeout: TIMEOUTS.long,

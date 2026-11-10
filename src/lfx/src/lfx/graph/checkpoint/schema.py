@@ -38,6 +38,8 @@ class GraphCheckpoint(BaseModel):
     # The identity the run started under; restored so a resumed run continues as the same
     # user (e.g. self.user_id-reading components keep working after a HITL pause).
     user_id: str | None = None
+    # Runner-owned provenance, separate from the user-supplied flow payload.
+    headless_filesystem_user_id: str | None = None
     job_id: str | None = None
     flow_payload: dict[str, Any] = Field(default_factory=dict)
     run_map: dict[str, list[str]] = Field(default_factory=dict)

@@ -178,6 +178,11 @@ def restore_graph_from_checkpoint(checkpoint: GraphCheckpoint, *, store: Checkpo
         user_id=checkpoint.user_id,
     )
     graph.source_flow_id = checkpoint.source_flow_id
+    # Retain only provenance for the restored identity; the runner still checks
+    # explicit identities and host principals before enabling shared storage.
+    graph._headless_filesystem_user_id = (  # noqa: SLF001
+        checkpoint.headless_filesystem_user_id if checkpoint.headless_filesystem_user_id == checkpoint.user_id else None
+    )
     if not graph._prepared:  # noqa: SLF001
         graph.prepare()
     graph.set_run_id(checkpoint.run_id)

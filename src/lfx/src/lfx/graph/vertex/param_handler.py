@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 from collections.abc import Mapping
+from functools import lru_cache
 from pathlib import PurePosixPath, PureWindowsPath
 from typing import TYPE_CHECKING, Any
 
@@ -18,7 +19,9 @@ from lfx.utils.file_path_security import (
     StorageNamespaceError,
     enforce_local_file_access,
     enforce_storage_key_scope,
+    flow_storage_scope,
     is_local_file_access_restricted,
+    user_storage_scope,
 )
 from lfx.utils.util import unescape_string
 
@@ -73,12 +76,17 @@ class ParameterHandler:
         return self._storage_service
 
     @staticmethod
-    def _file_input_names_from_code(code: str) -> set[str]:
-        """Extract literal FileInput names from trusted component source."""
+    @lru_cache(maxsize=512)
+    def _file_input_names_from_code(code: str) -> frozenset[str]:
+        """Extract literal FileInput names from trusted component source.
+
+        The result depends only on the exact source text, so it is cached per
+        source; every request otherwise re-parses each component's code.
+        """
         try:
             tree = ast.parse(code)
         except SyntaxError:
-            return set()
+            return frozenset()
 
         aliases = {"FileInput"}
         for node in ast.walk(tree):
@@ -99,7 +107,7 @@ class ParameterHandler:
                     if isinstance(keyword.value.value, str) and keyword.value.value:
                         names.add(keyword.value.value)
                     break
-        return names
+        return frozenset(names)
 
     def _canonical_file_fields(self) -> dict[str, dict[str, Any]]:
         """Return FileInput metadata derived from server-trusted component source."""
@@ -427,18 +435,27 @@ class ParameterHandler:
         return self._enforce_file_paths(full_path)
 
     def _file_access_scopes(self) -> list[str]:
-        """Return server-established storage namespaces for the executing graph."""
+        """Return typed namespaces and server-authorized legacy flow scopes."""
         graph = getattr(self.vertex, "graph", None)
+        user_id = getattr(graph, "user_id", None)
+        candidates = (
+            (user_storage_scope, user_id),
+            (flow_storage_scope, getattr(graph, "flow_id", None)),
+            (flow_storage_scope, getattr(graph, "source_flow_id", None)),
+        )
         scopes: list[str] = []
-        for candidate in (
-            getattr(graph, "user_id", None),
-            getattr(graph, "flow_id", None),
-            getattr(graph, "source_flow_id", None),
-        ):
-            if candidate is not None:
-                scope = str(candidate).strip()
-                if scope and scope not in scopes:
+        for scope_factory, candidate in candidates:
+            if candidate is not None and str(candidate).strip():
+                scope = scope_factory(candidate)
+                if scope not in scopes:
                     scopes.append(scope)
+        authorized_legacy = getattr(graph, "authorized_legacy_flow_ids", frozenset())
+        if not isinstance(authorized_legacy, frozenset):
+            authorized_legacy = frozenset()
+        for candidate in sorted(authorized_legacy):
+            scope = str(candidate).strip()
+            if scope and scope not in scopes:
+                scopes.append(scope)
         return scopes
 
     def _enforce_file_paths(self, file_paths: str | list[str]) -> str | list[str]:
@@ -471,7 +488,7 @@ class ParameterHandler:
             or logical_path.is_absolute()
             or any(segment in {"", ".", ".."} for segment in segments)
             or not logical_path.parts
-            or logical_path.parts[0] not in scopes
+            or (logical_path.parts[0] not in scopes and user_storage_scope(logical_path.parts[0]) not in scopes)
         ):
             msg = "S3 file references must stay within the authenticated user's or executing flow's namespace."
             raise LocalFileAccessError(msg)

@@ -247,6 +247,72 @@ class AuthzTeamMember(SQLModel, table=True):  # type: ignore[call-arg]
     created_at: datetime = Field(default_factory=_tz_aware_now, sa_column=_tz_column())
 
 
+class AuthzTeamMemberGrant(SQLModel, table=True):  # type: ignore[call-arg]
+    """Independent provenance keeping one effective Team membership alive."""
+
+    __tablename__ = "authz_team_member_grant"
+    __table_args__ = (
+        CheckConstraint(
+            "(source_kind = 'manual' AND provider_id IS NULL AND external_group_id IS NULL "
+            "AND legacy_source IS NULL) OR "
+            "(source_kind = 'directory' AND provider_id IS NOT NULL AND external_group_id IS NOT NULL "
+            "AND legacy_source IS NULL) OR "
+            "(source_kind = 'legacy' AND provider_id IS NULL AND external_group_id IS NULL "
+            "AND legacy_source IS NOT NULL)",
+            name=conv("ck_authz_team_member_grant_source"),
+        ),
+        Index(
+            "uq_authz_team_member_grant_manual",
+            "membership_id",
+            unique=True,
+            postgresql_where=text("source_kind = 'manual'"),
+            sqlite_where=text("source_kind = 'manual'"),
+        ),
+        Index(
+            "uq_authz_team_member_grant_directory",
+            "membership_id",
+            "provider_id",
+            "external_group_id",
+            unique=True,
+            postgresql_where=text("source_kind = 'directory'"),
+            sqlite_where=text("source_kind = 'directory'"),
+        ),
+        Index(
+            "uq_authz_team_member_grant_legacy",
+            "membership_id",
+            "legacy_source",
+            unique=True,
+            postgresql_where=text("source_kind = 'legacy'"),
+            sqlite_where=text("source_kind = 'legacy'"),
+        ),
+        Index(
+            "ix_authz_team_member_grant_provider_group",
+            "provider_id",
+            "external_group_id",
+        ),
+    )
+
+    id: UUIDstr = Field(default_factory=uuid4, primary_key=True)
+    membership_id: UUIDstr = Field(
+        sa_column=Column(
+            sa.Uuid(),
+            ForeignKey("authz_team_member.id", ondelete="CASCADE"),
+            nullable=False,
+            index=True,
+        ),
+    )
+    source_kind: str = Field(max_length=16, description="manual, directory, or unresolved legacy")
+    provider_id: str | None = Field(default=None, max_length=256)
+    external_group_id: str | None = Field(default=None, max_length=512)
+    legacy_source: str | None = Field(default=None, max_length=512)
+    administrative_actor: UUIDstr | None = Field(
+        default=None,
+        sa_column=Column(sa.Uuid(), ForeignKey("user.id", ondelete="SET NULL"), nullable=True),
+    )
+    created_at: datetime = Field(default_factory=_tz_aware_now, sa_column=_tz_column())
+    updated_at: datetime = Field(default_factory=_tz_aware_now, sa_column=_tz_column())
+
+
 class AuthzShare(SQLModel, table=True):  # type: ignore[call-arg]
     """Resource share record granting access at a specific scope/permission level.
 
@@ -312,6 +378,44 @@ class AuthzShare(SQLModel, table=True):  # type: ignore[call-arg]
     scope: str = Field(index=True)
     target_id: UUIDstr | None = Field(default=None, index=True)
     permission_level: str = Field(default=SharePermissionLevel.READ.value)
+    created_by: UUIDstr | None = Field(
+        default=None,
+        sa_column=Column(sa.Uuid(), ForeignKey("user.id", ondelete="SET NULL"), nullable=True),
+    )
+    created_at: datetime = Field(default_factory=_tz_aware_now, sa_column=_tz_column())
+
+
+class AuthzAccessException(SQLModel, table=True):  # type: ignore[call-arg]
+    """A per-(user, resource) revocation of role/scope-derived access.
+
+    Deliberately narrow: one row means "this user's access to this resource
+    via a role or scope grant is revoked" — it says nothing about, and never
+    cancels, an independent :class:`AuthzShare` on the same resource. Those
+    are two separate grants with two separate removal paths on purpose, so a
+    revoke here can never silently take away more than it says it does.
+
+    ``user_id`` cascades on delete (an exception naming a deleted user is
+    meaningless); ``created_by`` uses ``SET NULL`` like ``AuthzShare.created_by``
+    so deleting the person who revoked something doesn't undo the revoke.
+    """
+
+    __tablename__ = "authz_access_exception"
+    __table_args__ = (
+        Index("ix_authz_access_exception_resource", "resource_type", "resource_id"),
+        UniqueConstraint(
+            "user_id",
+            "resource_type",
+            "resource_id",
+            name="uq_authz_access_exception_target",
+        ),
+    )
+
+    id: UUIDstr = Field(default_factory=uuid4, primary_key=True)
+    user_id: UUIDstr = Field(
+        sa_column=Column(sa.Uuid(), ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True)
+    )
+    resource_type: str = Field(index=True)
+    resource_id: UUIDstr = Field(index=True)
     created_by: UUIDstr | None = Field(
         default=None,
         sa_column=Column(sa.Uuid(), ForeignKey("user.id", ondelete="SET NULL"), nullable=True),

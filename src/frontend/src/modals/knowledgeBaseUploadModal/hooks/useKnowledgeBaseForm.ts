@@ -3,14 +3,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ModelOption } from "@/components/core/parameterRenderComponent/components/modelInputComponent";
 import {
-  ACTIVE_DB_PROVIDER_VARIABLE,
-  type AvailableDBProviderId,
   type DBProviderConfigValue,
   getDBProviderOption,
   getDefaultDBProviderConfig,
-  getGlobalVariableValue,
   isDBProviderConfigured,
   resolveUIBackendType,
+  type StoredDBProviderId,
   toAPIBackendType,
 } from "@/constants/dbProviderConstants";
 import { api } from "@/controllers/API/api";
@@ -58,12 +56,11 @@ import { formatFileSize } from "../utils";
  * server schema validator.
  */
 function validateBackendConfig(
-  backendType: AvailableDBProviderId,
+  backendType: StoredDBProviderId,
   _config: Record<string, DBProviderConfigValue>,
 ): string | null {
-  if (backendType === "chroma_cloud") {
-    // API key is validated by isDBProviderConfigured; no literal fields here.
-    return null;
+  if (backendType === "chroma" || backendType === "chroma_cloud") {
+    return "This Chroma store requires migration before it can be used.";
   }
   // OpenSearch no longer requires an ``index_name``: the backend derives a
   // unique index per Knowledge Base from its owner and name when one isn't
@@ -123,6 +120,15 @@ export function useKnowledgeBaseForm({
   );
   const localVectorStoreAvailable = useUtilityStore(
     (state) => state.localVectorStoreAvailable,
+  );
+  const defaultVectorStoreBackend = useUtilityStore(
+    (state) => state.defaultVectorStoreBackend,
+  );
+  const configuredVectorStoreBackends = useUtilityStore(
+    (state) => state.configuredVectorStoreBackends,
+  );
+  const vectorStoreConfigLoaded = useUtilityStore(
+    (state) => state.vectorStoreConfigLoaded,
   );
   const hasAppliedBackendDefaults = useRef(false);
 
@@ -193,27 +199,34 @@ export function useKnowledgeBaseForm({
       )
     );
   }, [embeddingModelOptions, modelCatalogReady, selectedEmbeddingModel]);
-  // Defaults keep existing KBs on the local Chroma store. Backend is immutable
+  // Defaults keep existing KBs on the local SQLite store. Backend is immutable
   // after create, so add-sources mode displays the existing backend read-only.
-  const [backendType, setBackendType] =
-    useState<AvailableDBProviderId>("chroma");
+  const [backendType, setBackendType] = useState<StoredDBProviderId>("sqlite");
   const [backendConfig, setBackendConfig] = useState<
     Record<string, DBProviderConfigValue>
   >({});
   // Persists per-provider configs across provider switches within the modal
   // so that switching away and back restores the config seen on first entry.
   const perProviderConfigsRef = useRef<
-    Partial<
-      Record<AvailableDBProviderId, Record<string, DBProviderConfigValue>>
-    >
+    Partial<Record<StoredDBProviderId, Record<string, DBProviderConfigValue>>>
   >({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(!hideAdvanced);
 
   const defaultBackendSelection = useMemo(
     () =>
-      getDefaultDBProviderConfig(globalVariables, localVectorStoreAvailable),
-    [globalVariables, localVectorStoreAvailable],
+      getDefaultDBProviderConfig(
+        globalVariables,
+        localVectorStoreAvailable,
+        defaultVectorStoreBackend,
+        configuredVectorStoreBackends,
+      ),
+    [
+      globalVariables,
+      localVectorStoreAvailable,
+      defaultVectorStoreBackend,
+      configuredVectorStoreBackends,
+    ],
   );
   const [isFilePanelOpen, setIsFilePanelOpen] = useState(false);
 
@@ -223,7 +236,7 @@ export function useKnowledgeBaseForm({
   // dropdown when no prior selection exists.
   const handleBackendProviderChange = useCallback(
     (
-      newType: AvailableDBProviderId,
+      newType: StoredDBProviderId,
       freshConfig: Record<string, DBProviderConfigValue>,
     ) => {
       perProviderConfigsRef.current[backendType] = backendConfig;
@@ -346,7 +359,8 @@ export function useKnowledgeBaseForm({
     if (
       existingKnowledgeBase ||
       hasAppliedBackendDefaults.current ||
-      !globalVariablesReady
+      !globalVariablesReady ||
+      !vectorStoreConfigLoaded
     ) {
       return;
     }
@@ -359,6 +373,7 @@ export function useKnowledgeBaseForm({
     existingKnowledgeBase,
     globalVariablesReady,
     open,
+    vectorStoreConfigLoaded,
   ]);
 
   const resetForm = useCallback(() => {
@@ -371,7 +386,7 @@ export function useKnowledgeBaseForm({
       { column_name: "text", vectorize: true, identifier: true },
     ]);
     setSelectedEmbeddingModel([]);
-    setBackendType("chroma");
+    setBackendType("sqlite");
     setBackendConfig({});
     perProviderConfigsRef.current = {};
     setMetadataPairs([]);
@@ -456,27 +471,31 @@ export function useKnowledgeBaseForm({
 
   const getValidationErrors = useCallback((): Record<string, string> => {
     const errors: Record<string, string> = {};
-    const trimmedName = sourceName.trim().replace(/\s+/g, "_");
-    if (!trimmedName) {
-      errors.sourceName = t("knowledge.validationNameRequired");
-    } else if (trimmedName.length < 3 || trimmedName.length > 512) {
-      errors.sourceName = t("knowledge.validationNameLength");
-    } else if (!KB_NAME_REGEX.test(trimmedName)) {
-      errors.sourceName = t("knowledge.validationNameFormat");
-    } else if (
-      !isAddSourcesMode &&
-      existingKnowledgeBaseNames?.some(
-        (name) => name.toLowerCase() === trimmedName.toLowerCase(),
-      )
-    ) {
-      errors.sourceName = t("knowledge.validationNameDuplicate");
+    if (!isAddSourcesMode) {
+      const trimmedName = sourceName.trim().replace(/\s+/g, "_");
+      if (!trimmedName) {
+        errors.sourceName = t("knowledge.validationNameRequired");
+      } else if (trimmedName.length < 3 || trimmedName.length > 512) {
+        errors.sourceName = t("knowledge.validationNameLength");
+      } else if (!KB_NAME_REGEX.test(trimmedName)) {
+        errors.sourceName = t("knowledge.validationNameFormat");
+      } else if (
+        existingKnowledgeBaseNames?.some(
+          (name) => name.toLowerCase() === trimmedName.toLowerCase(),
+        )
+      ) {
+        errors.sourceName = t("knowledge.validationNameDuplicate");
+      }
     }
     if (!modelCatalogReady) {
       errors.embeddingModel = t("errors.failedToLoadModels");
     } else if (!selectedEmbeddingModelAuthorized) {
       errors.embeddingModel = t("knowledge.validationEmbeddingRequired");
     }
-    if (!globalVariablesReady) {
+    if (
+      !globalVariablesReady ||
+      (!isAddSourcesMode && !vectorStoreConfigLoaded)
+    ) {
       errors.backend = t("modelProviders.errorUnexpected");
     } else if (!isAddSourcesMode) {
       const selectedProvider = getDBProviderOption(backendType);
@@ -485,6 +504,8 @@ export function useKnowledgeBaseForm({
           backendType,
           globalVariables,
           localVectorStoreAvailable,
+          defaultVectorStoreBackend,
+          configuredVectorStoreBackends,
         )
       ) {
         errors.backend = `${selectedProvider.label} must be configured in DB Providers settings before it can be used.`;
@@ -524,6 +545,9 @@ export function useKnowledgeBaseForm({
     globalVariables,
     globalVariablesReady,
     localVectorStoreAvailable,
+    defaultVectorStoreBackend,
+    configuredVectorStoreBackends,
+    vectorStoreConfigLoaded,
     files,
     existingKnowledgeBaseNames,
     metadataPairs,
@@ -542,32 +566,22 @@ export function useKnowledgeBaseForm({
     }
 
     const selectedModel = selectedEmbeddingModel[0];
-    const kbName = sourceName.trim().replace(/\s+/g, "_");
+    const kbName =
+      existingKnowledgeBase?.name ?? sourceName.trim().replace(/\s+/g, "_");
     setIsSubmitting(true);
 
     try {
       // Create the knowledge base (skip if adding to existing)
       if (!isAddSourcesMode) {
-        // When the user hasn't explicitly chosen a provider (no active-provider
-        // variable set, still on the Chroma default), send ``undefined`` so the
-        // server resolves the deployment default — this is what lets an
-        // env-configured pgVector auto-become the backend instead of Chroma.
-        // An explicit selection (active variable set, or any non-Chroma pick)
-        // is always sent through and honored.
-        const hasExplicitActiveProvider = Boolean(
-          getGlobalVariableValue(globalVariables, ACTIVE_DB_PROVIDER_VARIABLE),
-        );
-        const resolvedBackendType =
-          !hasExplicitActiveProvider && backendType === "chroma"
-            ? undefined
-            : toAPIBackendType(backendType);
+        // Defaults are already resolved when the form opens. Send the provider
+        // shown in the review, including SQLite on remote-default deployments.
         await createKnowledgeBase.mutateAsync({
           name: kbName,
           embedding_provider: selectedModel.provider || "Unknown",
           embedding_model: selectedModel.id || selectedModel.name,
           model_selection: selectedModel,
           column_config: columnConfig,
-          backend_type: resolvedBackendType,
+          backend_type: toAPIBackendType(backendType),
           backend_config: backendConfig,
         });
       }
@@ -576,6 +590,7 @@ export function useKnowledgeBaseForm({
       if (!showAdvanced && !isAddSourcesMode) {
         const callbackData: KnowledgeBaseFormData = {
           sourceName,
+          dirName: kbName,
           files: [],
           embeddingModel: selectedEmbeddingModel,
           columnConfig,
@@ -632,9 +647,11 @@ export function useKnowledgeBaseForm({
 
         // Don't await — fire and forget. Polling will track status.
         api
-          .post(`${getURL("KNOWLEDGE_BASES")}/${kbName}/ingest`, formData, {
-            headers: { "Content-Type": "multipart/form-data" },
-          })
+          .post(
+            `${getURL("KNOWLEDGE_BASES")}/${encodeURIComponent(kbName)}/ingest`,
+            formData,
+            { headers: { "Content-Type": "multipart/form-data" } },
+          )
           .catch((ingestError: unknown) => {
             const err = ingestError as AxiosError<{ detail?: string }>;
             setErrorData({
@@ -648,6 +665,7 @@ export function useKnowledgeBaseForm({
 
       const callbackData: KnowledgeBaseFormData = {
         sourceName,
+        dirName: kbName,
         files,
         embeddingModel: selectedEmbeddingModel,
         chunkSize,

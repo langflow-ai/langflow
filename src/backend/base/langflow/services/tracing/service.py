@@ -305,16 +305,24 @@ class TracingService(Service):
             )
             trace_context_var.set(trace_context)
             await self._start(trace_context)
-            self._initialize_langsmith_tracer(trace_context)
-            self._initialize_langwatch_tracer(trace_context)
-            self._initialize_langfuse_tracer(trace_context)
-            self._initialize_arize_phoenix_tracer(trace_context)
-            self._initialize_opik_tracer(trace_context)
-            self._initialize_traceloop_tracer(trace_context)
-            self._initialize_native_tracer(trace_context)
-            self._initialize_openlayer_tracer(trace_context)
         except Exception as e:  # noqa: BLE001
             await logger.adebug(f"Error initializing tracers: {e}")
+            return
+
+        for initialize_tracer in (
+            self._initialize_langsmith_tracer,
+            self._initialize_langwatch_tracer,
+            self._initialize_langfuse_tracer,
+            self._initialize_arize_phoenix_tracer,
+            self._initialize_opik_tracer,
+            self._initialize_traceloop_tracer,
+            self._initialize_native_tracer,
+            self._initialize_openlayer_tracer,
+        ):
+            try:
+                initialize_tracer(trace_context)
+            except Exception as e:  # noqa: BLE001
+                await logger.adebug(f"Error initializing tracers: {e}")
 
     async def _stop(self, trace_context: TraceContext) -> None:
         try:

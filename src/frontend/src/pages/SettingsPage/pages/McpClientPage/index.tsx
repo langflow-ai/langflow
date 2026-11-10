@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
+import SettingsPageHeader from "@/pages/SettingsPage/components/SettingsPageHeader";
 import { cn } from "@/utils/utils";
 
 type AgentTab = "bob" | "claude-code";
@@ -116,20 +117,10 @@ export default function McpClientPage() {
 
   return (
     <div className="flex h-full w-full flex-col gap-6">
-      <div className="flex w-full items-start justify-between gap-6">
-        <div className="flex flex-col">
-          <h2 className="flex items-center text-lg font-semibold tracking-tight">
-            {t("settings.mcpClient.title")}
-            <ForwardedIconComponent
-              name="Mcp"
-              className="ml-2 h-5 w-5 text-primary"
-            />
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {t("settings.mcpClient.description")}
-          </p>
-        </div>
-      </div>
+      <SettingsPageHeader
+        title={t("settings.mcpClient.title")}
+        description={t("settings.mcpClient.description")}
+      />
 
       <div className="flex flex-col gap-4">
         <div

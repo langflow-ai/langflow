@@ -82,6 +82,7 @@ DIRECT_TYPES = [
     "duration",
     "auth",
     "connect",
+    "connection_ref",
     "query",
     "tools",
     "mcp",

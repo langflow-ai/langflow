@@ -40,6 +40,9 @@ class BaseTelemetryService(Service, ABC):
             payload: Run payload containing run information
         """
 
+    async def log_integration_action(self, payload: BaseModel) -> None:
+        """Enqueue an integration event; older host implementations safely omit it."""
+
     @abstractmethod
     async def log_package_shutdown(self) -> None:
         """Log a package shutdown event."""

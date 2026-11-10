@@ -194,8 +194,8 @@ async def build_agent_card(flow: Flow, *, rpc_url: str, session: AsyncSession) -
     # can be flagged for A2A with empty/unbuildable data, so degrade to an empty
     # input contract rather than 500ing the public discovery endpoint.
     try:
-        # json_schema_from_flow does a full, synchronous graph build; offload it
-        # so this public endpoint never blocks the event loop.
+        # json_schema_from_flow parses the graph synchronously (without instantiating
+        # components); offload it so this public endpoint never blocks the event loop.
         input_schema = await asyncio.to_thread(json_schema_from_flow, flow, require_api_editable=False)
     except Exception:  # noqa: BLE001 - any graph build failure degrades, not crashes
         logger.warning("Could not build A2A input schema for flow %s; serving empty input contract", flow.id)

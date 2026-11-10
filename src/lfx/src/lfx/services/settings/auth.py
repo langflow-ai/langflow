@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Literal
 from urllib.parse import urlparse
 
-from passlib.context import CryptContext
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -15,6 +14,7 @@ from lfx.services.settings.constants import (
     MINIMUM_SECRET_KEY_LENGTH,
     SHORT_SECRET_KEY_WARNING,
 )
+from lfx.services.settings.password_hashing import PasswordContext
 from lfx.services.settings.utils import (
     derive_public_key_from_private,
     generate_rsa_key_pair,
@@ -94,11 +94,14 @@ class AuthSettings(BaseSettings):
     )
 
     AUTO_LOGIN: bool = Field(
-        default=True,  # TODO: Set to False in v2.0
+        default=False,  # TODO: Set the development default to False in v2.0.
         description=(
             "Enable automatic login with a configured or generated bootstrap account. "
             "SECURITY WARNING: This bypasses authentication and should only be used in development environments. "
-            "Set to False in production. This will default to False in v2.0."
+            "Enabled by default on development branches; official release packages and tags default to False. "
+            "Set LANGFLOW_AUTO_LOGIN=false to require authentication. "
+            "Planned to default to False for all installations in v2.0, requiring an explicit "
+            "LANGFLOW_AUTO_LOGIN=true to enable automatic login."
         ),
     )
     """If True, the application will attempt to log in automatically as a super user."""
@@ -107,10 +110,8 @@ class AuthSettings(BaseSettings):
     This will be removed in v2.0"""
 
     WEBHOOK_AUTH_ENABLE: bool = True
-    """If True, webhook endpoints will require API key authentication.
-    If False, webhooks run as flow owner without authentication.
-    Defaults to True for secure-by-default behavior; set to False only in
-    trusted environments where unauthenticated webhook execution is acceptable."""
+    """Deprecated compatibility setting. Webhook endpoints always require API key authentication.
+    False remains accepted in existing configuration but no longer disables authentication."""
 
     ENABLE_SUPERUSER_CLI: bool = Field(
         default=True,
@@ -339,7 +340,7 @@ class AuthSettings(BaseSettings):
         ),
     )
 
-    pwd_context: CryptContext = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    pwd_context: PasswordContext = Field(default_factory=PasswordContext)
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
 

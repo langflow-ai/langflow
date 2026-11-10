@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ColDef } from "ag-grid-community";
+import type { ColDef, NewValueParams } from "ag-grid-community";
 import React from "react";
 import type { FileType } from "@/types/file_management";
 
@@ -11,6 +11,9 @@ interface MockTableProps {
   columnDefs?: ColDef<FileType>[];
   rowData?: FileType[];
   quickFilterText?: string;
+  editable?: Array<{
+    onUpdate: (params: NewValueParams<FileType, string>) => void;
+  }>;
   onSelectionChanged?: (event: {
     api: { getSelectedRows: () => FileType[] };
   }) => void;
@@ -224,6 +227,28 @@ describe("FilesTab", () => {
       expect(rows[1]).toHaveTextContent("older");
     });
 
+    it("shows the API error when a rename is rejected", () => {
+      render(<FilesTab {...defaultProps} />, { wrapper: createWrapper() });
+      const renameCell = mockLatestTableProps.editable?.[0].onUpdate;
+      expect(renameCell).toEqual(expect.any(Function));
+      act(() => {
+        renameCell?.({ data: older, newValue: "bad name" } as NewValueParams<
+          FileType,
+          string
+        >);
+      });
+      const options = mockRename.mock.calls[0][1];
+      act(() => {
+        options.onError({
+          response: { data: { detail: "Invalid file name" } },
+        });
+      });
+      expect(mockSetErrorData).toHaveBeenCalledWith({
+        title: "Error renaming file",
+        list: ["Invalid file name"],
+      });
+    });
+
     it.each([
       ["files/recording.21.mov", "MOV"],
       ["archives.v1/report.pdf", "PDF"],
@@ -239,6 +264,25 @@ describe("FilesTab", () => {
         value: string;
       }) => string | undefined;
       expect(formatType({ value: path })).toBe(expected);
+    });
+
+    // The files API sends its times in UTC with a Z. Older answers came without one.
+    it.each([
+      ["2026-10-15T22:53:48.793401Z", "2026-10-15T22:53:48.793Z"],
+      ["2024-01-02T00:00:00", "2024-01-02T00:00:00Z"],
+    ])("shows the modified time %s as the instant %s", (sent, instant) => {
+      render(<FilesTab {...defaultProps} />, { wrapper: createWrapper() });
+      const modifiedColumn = mockLatestTableProps.columnDefs?.find(
+        (column) => column.field === "updated_at",
+      );
+      const formatModified = modifiedColumn?.valueFormatter as (params: {
+        value: string;
+        data: FileType;
+      }) => string;
+
+      expect(formatModified({ value: sent, data: older })).toBe(
+        new Date(instant).toLocaleString(),
+      );
     });
 
     it("calls setQuickFilterText when typing in the search input", () => {

@@ -379,6 +379,74 @@ describe("mutateTemplate", () => {
     );
   });
 
+  it("applies a dependent-field reset after the user edited that field before the refresh", async () => {
+    const original = {
+      code: { value: "Slack trigger" },
+      mentions_only: { value: false },
+      conversation_types: {
+        value: ["channel", "group", "im", "mpim"],
+        show: true,
+      },
+    };
+    const selected = {
+      code: { value: "Slack trigger" },
+      mentions_only: { value: true },
+      conversation_types: { value: ["im"], show: true },
+    };
+    const reset = {
+      code: { value: "Slack trigger" },
+      mentions_only: { value: true },
+      conversation_types: {
+        value: ["channel", "group", "im", "mpim"],
+        show: false,
+      },
+    };
+    const node = { template: original, outputs: [] } as unknown as APIClassType;
+    setStoreNodeTemplate("slack-trigger", original);
+    await mutateTemplate(
+      false,
+      "slack-trigger",
+      node,
+      jest.fn(),
+      {
+        mutateAsync: jest
+          .fn()
+          .mockResolvedValue({ template: original, outputs: [] }),
+      } as never,
+      jest.fn(),
+      "mentions_only",
+    );
+    await new Promise((resolve) => setTimeout(resolve, 600));
+
+    setStoreNodeTemplate("slack-trigger", selected);
+    const setNodeClass = jest.fn();
+    await mutateTemplate(
+      true,
+      "slack-trigger",
+      { template: selected, outputs: [] } as unknown as APIClassType,
+      setNodeClass,
+      {
+        mutateAsync: jest
+          .fn()
+          .mockResolvedValue({ template: reset, outputs: [] }),
+      } as never,
+      jest.fn(),
+      "mentions_only",
+    );
+    await new Promise((resolve) => setTimeout(resolve, 600));
+
+    expect(setNodeClass).toHaveBeenCalledWith(
+      expect.objectContaining({
+        template: expect.objectContaining({
+          conversation_types: expect.objectContaining({
+            value: ["channel", "group", "im", "mpim"],
+            show: false,
+          }),
+        }),
+      }),
+    );
+  });
+
   it("applies a backend-driven visibility change the user did not touch", async () => {
     const node = {
       template: {

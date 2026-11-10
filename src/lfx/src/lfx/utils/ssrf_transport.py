@@ -118,7 +118,7 @@ class DNSPinningNetworkBackend(httpcore.AsyncNetworkBackend):
                         local_address=local_address,
                         socket_options=socket_options,
                     )
-                except (OSError, TimeoutError) as e:
+                except (OSError, TimeoutError, httpcore.ConnectError, httpcore.ConnectTimeout) as e:
                     last_error = e
                     logger.debug(f"DNS pinning: Failed to connect to {pinned_ip}: {e}")
                     continue
@@ -211,7 +211,7 @@ class DNSPinningSyncNetworkBackend(httpcore.NetworkBackend):
                         local_address=local_address,
                         socket_options=socket_options,
                     )
-                except (OSError, TimeoutError) as e:
+                except (OSError, TimeoutError, httpcore.ConnectError, httpcore.ConnectTimeout) as e:
                     last_error = e
                     logger.debug(f"DNS pinning: Failed to connect to {pinned_ip}: {e}")
                     continue

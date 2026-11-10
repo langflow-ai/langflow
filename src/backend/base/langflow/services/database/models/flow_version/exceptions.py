@@ -24,3 +24,11 @@ class FlowVersionNotFoundError(FlowVersionError):
 
 class FlowVersionDeployedError(FlowVersionError):
     """Raised when an operation targets a flow version attached to a deployment."""
+
+
+class FlowVersionRetainedError(FlowVersionError):
+    """Raised when deleting a flow version that an extension has marked retained."""
+
+
+class FlowVersionPinnedError(FlowVersionError):
+    """Raised when deleting a flow version still pinned by a trigger."""

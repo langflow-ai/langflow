@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { CustomAPIGenerator } from "@/customization/components/custom-api-generator";
 import { CustomLink } from "@/customization/components/custom-link";
+import { handleBlockedSave } from "@/hooks/flows/handle-blocked-save";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
@@ -88,7 +89,7 @@ export default function ApiModal({
       endpointName && endpointName.length > 0 ? endpointName : null;
 
     if (autoSaving) {
-      saveFlow(newFlow);
+      saveFlow(newFlow).catch(handleBlockedSave);
     } else {
       setCurrentFlow(newFlow);
     }

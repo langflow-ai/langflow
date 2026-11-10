@@ -1,6 +1,7 @@
 // src/constants/constants.ts
 
 import {
+  BASENAME,
   BASE_URL_API as CUSTOM_BASE_URL_API,
   BASE_URL_API_V2 as CUSTOM_BASE_URL_API_V2,
 } from "../customization/config-constants";
@@ -817,6 +818,14 @@ export const BROKEN_EDGES_WARNING =
 
 export const SAVE_DEBOUNCE_TIME = 300;
 
+// How long an edit waits before the flow is written back. Every save is a
+// full-graph overwrite, so this interval is the window in which two people can
+// diverge, and n8n reached for the same lever after attributing their
+// false-conflict problem to a more eager autosave. Deliberately not the
+// template-refresh delay above: holding a field's refresh back only leaves the
+// user waiting.
+export const AUTOSAVE_DEBOUNCE_TIME = 5000;
+
 export const IS_MAC =
   typeof navigator !== "undefined" &&
   navigator.userAgent.toUpperCase().includes("MAC");
@@ -860,10 +869,12 @@ export const TABS_ORDER = [
   "chat widget html",
 ];
 
-export const LANGFLOW_ACCESS_TOKEN = "access_token_lf";
-export const LANGFLOW_API_TOKEN = "apikey_tkn_lflw";
-export const LANGFLOW_AUTO_LOGIN_OPTION = "auto_login_lf";
-export const LANGFLOW_REFRESH_TOKEN = "refresh_token_lf";
+// Cookie paths alone cannot prevent a parent path's cookie from being sent.
+const authCookieSuffix = BASENAME ? `_${encodeURIComponent(BASENAME)}` : "";
+export const LANGFLOW_ACCESS_TOKEN = `access_token_lf${authCookieSuffix}`;
+export const LANGFLOW_API_TOKEN = `apikey_tkn_lflw${authCookieSuffix}`;
+export const LANGFLOW_AUTO_LOGIN_OPTION = `auto_login_lf${authCookieSuffix}`;
+export const LANGFLOW_REFRESH_TOKEN = `refresh_token_lf${authCookieSuffix}`;
 
 export const LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS = 60 * 60 - 60 * 60 * 0.1;
 const viteAccessTokenExpireSeconds =

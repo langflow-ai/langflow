@@ -20,6 +20,8 @@ from collections.abc import Awaitable, Callable
 
 from lfx.log.logger import logger
 
+from langflow.api.utils.migration_pause import is_paused, writing_on
+
 CoroFactory = Callable[[], Awaitable[None]]
 
 
@@ -100,7 +102,20 @@ class InProcessExecutor:
                 key, coro_factory = await self._queue.get()
             except asyncio.CancelledError:
                 return
+            try:
+                # A paused instance starts nothing: the job waits here, still queued, until the pause ends.
+                # The pause is a file that another process writes, so there is no event to wait on.
+                while is_paused():  # noqa: ASYNC110
+                    await asyncio.sleep(1)
+            except asyncio.CancelledError:
+                # stop() arrived during the pause. The job goes back, so the next start() still runs it.
+                self._queue.put_nowait((key, coro_factory))
+                self._queue.task_done()
+                return
             task = asyncio.create_task(coro_factory())
+            # A migration pause waits for the task and not only for the job's status: a run that is
+            # told to stop is marked as cancelled at once, and still writes until its task ends.
+            writing_on(task, name="background_run")
             self._in_flight[key] = task
             try:
                 await self._await_task(task)

@@ -105,12 +105,17 @@ class TestMCPCommandInjectionSecurity:
         valid_configs = [
             MCPServerConfig(command="cmd", args=["/C", "uvx", "mcp-server"]),
             MCPServerConfig(command="sh", args=["-c", "npx @modelcontextprotocol/server"]),
-            MCPServerConfig(command="bash", args=["-lc", "python -m mcp_server"]),
+            MCPServerConfig(command="bash", args=["-uc", "python -m mcp_server"]),
             MCPServerConfig(command="cmd", args=["/c", "node", "server.js"]),
         ]
 
         for config in valid_configs:
             assert config.command in ("cmd", "sh", "bash")
+
+    @pytest.mark.parametrize("flag", ["-ic", "-lc", "-vc", "-xc"])
+    def test_shell_startup_and_tracing_modes_rejected(self, flag):
+        with pytest.raises(ValidationError, match="Unsupported shell options"):
+            MCPServerConfig(command="bash", args=[flag, "python -m mcp_server"])
 
     def test_shell_wrappers_reject_dangerous_commands(self):
         """Test that shell wrappers reject dangerous wrapped commands."""
@@ -263,6 +268,14 @@ class TestMCPCommandInjectionSecurity:
 
         error_msg = str(exc_info.value)
         assert "not allowed" in error_msg.lower()
+
+    def test_node_import_data_url_rejected(self):
+        """The REST model applies the same runtime-option policy as the spawn sink."""
+        with pytest.raises(ValidationError, match=r"Node[.]js runtime options"):
+            MCPServerConfig(
+                command="node",
+                args=["--import=data:text/javascript,console.log%281%29", "--interactive"],
+            )
 
     def test_pip_install_rejected(self):
         """Test that pip install is rejected."""

@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from lfx.graph.graph.base import Graph
     from lfx.graph.schema import RunOutputs
     from lfx.graph.vertex.base import Vertex
+    from lfx.services.authorization.base import ExecutionPrincipal
 
     from langflow.services.database.models.user.model import User
 
@@ -271,7 +272,14 @@ async def _build_graph_from_authorized_flow(
         # against the deployment policy would make ``off`` stop an agent from
         # calling a flow as a tool. The protected-field floor still applies.
         graph_data = process_tweaks(graph_data=graph_data, tweaks=tweaks, caller_supplied=False)
-    return Graph.from_payload(graph_data, flow_id=flow_id, user_id=user_id)
+    from langflow.api.utils.flow_utils import get_authorized_legacy_flow_ids
+
+    return Graph.from_payload(
+        graph_data,
+        flow_id=flow_id,
+        user_id=user_id,
+        authorized_legacy_flow_ids=await get_authorized_legacy_flow_ids(flow_id),
+    )
 
 
 async def _resolve_authorized_target_flow(
@@ -402,7 +410,14 @@ async def run_flow(
     run_id: str | None = None,
     session_id: str | None = None,
     graph: Graph | None = None,
+    execution_principal: ExecutionPrincipal | None = None,
 ) -> list[RunOutputs]:
+    """Run a target flow as a sub-flow or flow-as-tool.
+
+    ``execution_principal`` is the calling graph's identity. A sub-flow runs inside
+    its parent's execution, so it inherits that principal verbatim rather than
+    minting one: the child is not a new entry point and has no family of its own.
+    """
     if user_id is None:
         msg = "Session is invalid"
         raise ValueError(msg)
@@ -431,6 +446,8 @@ async def run_flow(
         if session_id:
             graph.session_id = session_id
         graph.user_id = str(user_id)
+        if execution_principal is not None:
+            graph.execution_principal = execution_principal
 
         if inputs is None:
             inputs = []
@@ -708,7 +725,12 @@ async def generate_unique_flow_name(flow_name, user_id, session):
 def _get_flow_input_nodes(flow: Flow) -> list[Vertex]:
     from lfx.graph.graph.base import Graph
 
-    graph = Graph.from_payload(flow.data or {})
+    # Schema derivation reads stored data only: ``is_input`` comes from the node's type and the
+    # advertised fields from its saved template. Instantiating a component evaluates the node's
+    # stored ``code``, and this runs for callers who may never build the flow -- anonymous MCP
+    # ``tools/list`` on an ``auth_type="none"`` project and the public A2A agent card -- so it
+    # would run code the public call paths refuse to execute.
+    graph = Graph.from_payload(flow.data or {}, instantiate_components=False)
     return [vertex for vertex in graph.vertices if vertex.is_input]
 
 

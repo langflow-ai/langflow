@@ -43,7 +43,7 @@ const useApplyFlowToCanvas = () => {
       if (fitView && clonedFlow.data?.nodes?.length) {
         useFlowStore.getState().requestFitView();
       }
-      refreshAllModelInputs({ silent: true }).catch((err) => {
+      refreshAllModelInputs({ silent: true, origin: "load" }).catch((err) => {
         console.error(
           "useApplyFlowToCanvas: failed to refresh model inputs",
           err,

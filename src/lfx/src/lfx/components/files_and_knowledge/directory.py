@@ -1,5 +1,6 @@
 from pathlib import Path, PurePath, PureWindowsPath
 
+import lfx
 from lfx.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data, retrieve_file_paths
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, IntInput, MessageTextInput, MultiselectInput
@@ -17,7 +18,7 @@ class DirectoryComponent(Component):
     icon = "folder"
     name = "Directory"
     legacy = True
-    replacement = ["data.File"]
+    replacement = ["files_and_knowledge.File"]
 
     inputs = [
         MessageTextInput(
@@ -82,8 +83,14 @@ class DirectoryComponent(Component):
         path_parts = (*PurePath(path).parts, *PureWindowsPath(path).parts)
         return any(part == ".." for part in path_parts)
 
+    @staticmethod
+    def _bundled_components_root() -> Path:
+        # The component sources shipped with lfx are public, read-only package files that the
+        # Langflow Assistant reads wherever lfx is installed, whatever the working directory.
+        return (Path(lfx.__file__).parent / "components").resolve()
+
     def _allowed_roots(self) -> list[Path]:
-        roots = {Path.cwd().resolve()}
+        roots = {Path.cwd().resolve(), self._bundled_components_root()}
         configured_roots = getattr(get_settings_service().settings, "directory_component_allowed_roots", []) or []
         for root in configured_roots:
             if root:
@@ -120,7 +127,8 @@ class DirectoryComponent(Component):
 
         # Security: confine directory reads to the storage dir in restricted (multi-tenant)
         # mode so a tenant cannot recursively read arbitrary server directories.
-        resolved_path = str(enforce_local_file_access(resolved_path, scope_ids=component_file_access_scopes(self)))
+        if not Path(resolved_path).is_relative_to(self._bundled_components_root()):
+            resolved_path = str(enforce_local_file_access(resolved_path, scope_ids=component_file_access_scopes(self)))
 
         # If no types are specified, use all supported types
         if not types:

@@ -1,7 +1,7 @@
 from langchain_openai import ChatOpenAI
 from lfx.base.models.aiml_constants import AimlModels
 from lfx.base.models.model import LCModelComponent
-from lfx.base.models.provider_ssrf import openai_compatible_client_kwargs
+from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed, openai_compatible_client_kwargs
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import (
@@ -81,7 +81,10 @@ class AIMLModelComponent(LCModelComponent):
         model_kwargs = self.model_kwargs or {}
         aiml_api_base = self.aiml_api_base or self._default_api_base
 
-        openai_api_key = secret_value_to_str(aiml_api_key)
+        openai_api_key = secret_value_to_str(aiml_api_key) or None
+        ensure_credential_endpoint_allowed(
+            openai_api_key, aiml_api_base, default_url=self._default_api_base, sdk_env_fallback="OPENAI_API_KEY"
+        )
 
         # TODO: Once OpenAI fixes their o1 models, this part will need to be removed
         # to work correctly with o1 temperature settings.

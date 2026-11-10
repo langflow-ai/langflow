@@ -8,7 +8,11 @@ from lfx.base.models.anthropic_constants import (
     TOOL_CALLING_UNSUPPORTED_ANTHROPIC_MODELS,
 )
 from lfx.base.models.model import LCModelComponent
-from lfx.base.models.provider_ssrf import provider_httpx_clients, validate_provider_base_url
+from lfx.base.models.provider_ssrf import (
+    ensure_credential_endpoint_allowed,
+    provider_httpx_clients,
+    validate_provider_base_url,
+)
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput
@@ -88,6 +92,16 @@ class AnthropicModelComponent(LCModelComponent):
         # base_url is tenant-editable and the SDK sends the operator's stored API key to whatever
         # host it names. Build protected clients before the try block below, which would otherwise
         # flatten an SSRF error into a generic "could not connect" message.
+        ensure_credential_endpoint_allowed(
+            self.api_key, self.base_url, default_url=DEFAULT_ANTHROPIC_API_URL, sdk_env_fallback="ANTHROPIC_API_KEY"
+        )
+        # The SDK loads auth tokens and arbitrary operator-defined headers independently of the API key.
+        ensure_credential_endpoint_allowed(
+            None,
+            self.base_url,
+            default_url=DEFAULT_ANTHROPIC_API_URL,
+            sdk_env_fallback=("ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_CUSTOM_HEADERS"),
+        )
         ssrf_clients = provider_httpx_clients(self.base_url, default_url=DEFAULT_ANTHROPIC_API_URL)
         try:
             max_tokens_value = getattr(self, "max_tokens", "")
@@ -112,13 +126,23 @@ class AnthropicModelComponent(LCModelComponent):
         return output
 
     def get_models(self, *, tool_model_enabled: bool | None = None) -> list[str]:
+        ensure_credential_endpoint_allowed(
+            self.api_key, self.base_url, default_url=DEFAULT_ANTHROPIC_API_URL, sdk_env_fallback="ANTHROPIC_API_KEY"
+        )
+        # The SDK loads auth tokens and arbitrary operator-defined headers independently of the API key.
+        ensure_credential_endpoint_allowed(
+            None,
+            self.base_url,
+            default_url=DEFAULT_ANTHROPIC_API_URL,
+            sdk_env_fallback=("ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_CUSTOM_HEADERS"),
+        )
         # Reject unsafe custom configuration before the capability probe constructs model objects.
         # The live model-list request below uses Anthropic's canonical endpoint, not base_url.
         validate_provider_base_url(self.base_url, default_url=DEFAULT_ANTHROPIC_API_URL)
         try:
             import anthropic
 
-            client = anthropic.Anthropic(api_key=self.api_key)
+            client = anthropic.Anthropic(api_key=self.api_key, base_url=DEFAULT_ANTHROPIC_API_URL)
             models = client.models.list(limit=20).data
             model_ids = ANTHROPIC_MODELS + [model.id for model in models]
         except (ImportError, ValueError, requests.exceptions.RequestException) as e:
@@ -132,6 +156,9 @@ class AnthropicModelComponent(LCModelComponent):
                 msg = "langchain_anthropic is not installed. Please install it with `pip install langchain_anthropic`."
                 raise ImportError(msg) from e
 
+            from lfx_anthropic.anthropic_chat_model import install_anthropic_ssrf_clients
+
+            ssrf_clients = provider_httpx_clients(self.base_url, default_url=DEFAULT_ANTHROPIC_API_URL)
             # Create a new list instead of modifying while iterating
             filtered_models = []
             for model in model_ids:
@@ -144,6 +171,9 @@ class AnthropicModelComponent(LCModelComponent):
                     anthropic_api_key=self.api_key,
                     anthropic_api_url=cast("str", self.base_url) or DEFAULT_ANTHROPIC_API_URL,
                 )
+
+                if ssrf_clients:
+                    install_anthropic_ssrf_clients(model_with_tool, **ssrf_clients)
 
                 if (
                     not self.supports_tool_calling(model_with_tool)

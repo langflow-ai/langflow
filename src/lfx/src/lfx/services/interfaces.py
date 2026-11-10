@@ -7,10 +7,17 @@ from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     import asyncio
+    from collections.abc import Awaitable, Callable
     from uuid import UUID
 
     from sqlalchemy.ext.asyncio import AsyncSession
 
+    from lfx.integrations.models import (
+        ConnectionRef,
+        ConnectionResolutionRequest,
+        ConnectionStatus,
+        ResolvedCredential,
+    )
     from lfx.services.adapters.deployment.schema import (
         ConfigListParams,
         ConfigListResult,
@@ -37,6 +44,7 @@ if TYPE_CHECKING:
         VerifyCredentials,
         VerifyCredentialsResult,
     )
+    from lfx.services.authorization.base import ExecutionPrincipal
     from lfx.services.settings.base import Settings
 
 
@@ -55,6 +63,29 @@ class AuthUserProtocol(Protocol):
 
 class AuthServiceProtocol(Protocol):
     """Protocol for auth service (minimal surface for dependency injection)."""
+
+    def run_sync_validation(self, validate: Callable[[], Awaitable[None]]) -> None:
+        """Run host authorization checks from synchronous execution paths."""
+        ...
+
+    async def validate_tool_call(
+        self,
+        *,
+        flow_id: str,
+        component_id: str,
+        tool_tag: str,
+        tool_name: str,
+        approval_actions: tuple[str, ...],
+        metadata_configured: bool,
+    ) -> None:
+        """Recheck current host tool settings before execution."""
+        ...
+
+    async def validate_execution_user(
+        self, user_id: str | UUID | None, *, principal: Any = None, db: Any = None
+    ) -> None:
+        """Recheck the host's persisted execution identity before side effects."""
+        ...
 
     @abstractmethod
     async def get_current_user(
@@ -153,6 +184,25 @@ class VariableServiceProtocol(Protocol):
         ...
 
 
+@runtime_checkable
+class ConnectionResolverProtocol(Protocol):
+    """Portable surface implemented by host connection resolvers."""
+
+    @abstractmethod
+    async def resolve(self, request: ConnectionResolutionRequest) -> ResolvedCredential:
+        """Resolve a non-secret reference for the current execution principal."""
+        ...
+
+    @abstractmethod
+    async def describe(
+        self,
+        ref: ConnectionRef,
+        principal: ExecutionPrincipal,
+    ) -> ConnectionStatus | None:
+        """Return credential-free connection status when supported."""
+        ...
+
+
 class CacheServiceProtocol(Protocol):
     """Protocol for cache service."""
 
@@ -208,6 +258,9 @@ class TransactionServiceProtocol(Protocol):
         status: str,
         target_id: str | None = None,
         error: str | None = None,
+        *,
+        user_id: UUID | None = None,
+        session_id: str | None = None,
     ) -> None:
         """Log a transaction record for a vertex execution.
 
@@ -219,6 +272,8 @@ class TransactionServiceProtocol(Protocol):
             status: Execution status (success/error)
             target_id: Optional target vertex ID
             error: Optional error message
+            user_id: Message owner of the run (the end user when one is known)
+            session_id: Session of the run
         """
         ...
 

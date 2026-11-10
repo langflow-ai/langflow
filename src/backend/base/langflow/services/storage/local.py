@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import aiofiles
+from lfx.services.storage.namespace import remove_namespace_tree
 
 from langflow.logging.logger import logger
 from langflow.services.storage.service import StorageService
@@ -303,6 +305,11 @@ class LocalStorageService(StorageService):
             raise
         else:
             return file_size_stat.st_size
+
+    async def delete_namespace(self, namespace: str) -> int:
+        """Remove the whole ``data_dir/<namespace>`` tree, nested files included."""
+        root = Path(str(await self.data_dir.resolve()))
+        return await asyncio.to_thread(remove_namespace_tree, root, namespace)
 
     async def teardown(self) -> None:
         """Perform any cleanup operations when the service is being torn down."""

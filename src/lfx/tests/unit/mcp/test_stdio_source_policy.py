@@ -3,6 +3,7 @@ from lfx.base.mcp.security import validate_mcp_stdio_config
 from lfx.base.mcp.source_policy import (
     is_package_manager_config_env_var,
     parse_mcp_shell_wrapper,
+    split_mcp_stdio_command,
     validate_mcp_stdio_source_policy,
 )
 
@@ -317,12 +318,78 @@ def test_cmd_wrapper_parser_skips_switches_that_do_not_execute(switch):
     assert parse_mcp_shell_wrapper("cmd", [switch, "/c", "uvx", "mcp-proxy"]) == ("uvx", ["mcp-proxy"])
 
 
+@pytest.mark.parametrize("command", ["sh", "bash"])
+@pytest.mark.parametrize("flag", ["-c", "-uc", "-ec", "-euc"])
+def test_posix_wrapper_parser_preserves_supported_option_clusters(command, flag):
+    assert parse_mcp_shell_wrapper(command, [flag, "uvx mcp-proxy"]) == ("uvx", ["mcp-proxy"])
+
+
+@pytest.mark.parametrize("command", ["sh", "bash"])
+@pytest.mark.parametrize(
+    "flag", ["-C", "-norc", "--norc", "-rcfile", "-oc", "-Ocompat43c", "/c", "-kc", "-kec", "-ic", "-lc", "-vc", "-xc"]
+)
+def test_posix_wrapper_parser_rejects_unsupported_option_forms(command, flag):
+    assert parse_mcp_shell_wrapper(command, [flag, "uvx mcp-proxy"]) is None
+
+
+@pytest.mark.parametrize("command", ["sh", "bash"])
+@pytest.mark.parametrize("flag", ["-ic", "-lc", "-vc", "-xc", "-cuvx mcp-proxy", "-oc"])
+def test_source_policy_explains_unsupported_shell_options(command, flag):
+    with pytest.raises(ValueError, match="Pass the command as a separate argument after -c"):
+        validate_mcp_stdio_source_policy(command, [flag, "uvx mcp-proxy"])
+
+
+@pytest.mark.parametrize("command", ["sh", "bash"])
+def test_posix_wrapper_parser_does_not_scan_past_a_script_operand(command):
+    assert parse_mcp_shell_wrapper(command, ["server.sh", "-c", "uvx mcp-proxy"]) is None
+
+
+@pytest.mark.parametrize("hardened", [False, True])
+@pytest.mark.parametrize("command", ["sh", "bash", "cmd"])
+@pytest.mark.parametrize("args", [[], ["server.txt"]])
+def test_source_policy_requires_an_inline_shell_command(command, args, hardened):
+    with pytest.raises(ValueError, match="not allowed"):
+        validate_mcp_stdio_source_policy(command, args, interpreter_hardening=hardened)
+
+
+def test_relative_command_paths_preserve_the_complete_filename():
+    assert split_mcp_stdio_command("tools/python3 helper", ["--version"]) == (
+        "tools/python3 helper",
+        ["--version"],
+    )
+
+
+def test_legacy_packed_command_preserves_url_arguments():
+    assert split_mcp_stdio_command("uvx mcp-proxy https://mcp.example.com", []) == (
+        "uvx",
+        ["mcp-proxy", "https://mcp.example.com"],
+    )
+
+
 def test_interpreter_hardening_preserves_authenticated_agentic_module():
     validate_mcp_stdio_source_policy(
         "python",
         ["-m", "langflow.agentic.mcp"],
         interpreter_hardening=True,
     )
+
+
+def test_node_source_policy_rejects_runtime_options_without_optional_hardening():
+    with pytest.raises(ValueError, match=r"Node[.]js runtime options"):
+        validate_mcp_stdio_source_policy(
+            "node",
+            ["--import=data:text/javascript,console.log%281%29"],
+            interpreter_hardening=False,
+        )
+
+
+def test_node_source_policy_rejects_inspect_subcommand_without_optional_hardening():
+    with pytest.raises(ValueError, match=r"Node[.]js runtime options or 'inspect'"):
+        validate_mcp_stdio_source_policy(
+            "node",
+            ["inspect", "--import=data:text/javascript,console.log%281%29", "server.js"],
+            interpreter_hardening=False,
+        )
 
 
 def test_windows_forward_slash_executable_path_preserves_source_policy():

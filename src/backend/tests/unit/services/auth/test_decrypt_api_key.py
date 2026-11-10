@@ -1,14 +1,18 @@
 """Test decrypt_api_key function with encrypted, plain text, and wrong key scenarios."""
 
+import logging
 from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
+from cryptography.fernet import Fernet
 from langflow.services.auth.mcp_encryption import is_encrypted
 from langflow.services.auth.service import AuthService
 from langflow.services.auth.utils import decrypt_api_key, encrypt_api_key
 from lfx.services.settings.auth import AuthSettings
 from pydantic import SecretStr
+from structlog import make_filtering_bound_logger, wrap_logger
+from structlog.testing import LogCapture
 
 
 @pytest.fixture
@@ -56,21 +60,34 @@ class TestDecryptApiKey:
         result = decrypt_api_key(plain_text_value)
         assert result == plain_text_value
 
-    def test_decrypt_with_wrong_key_returns_empty(self):
-        """Test that encrypted values with wrong key return empty string."""
+    @pytest.mark.parametrize("failure_kind", ["wrong-key", "malformed-token"])
+    def test_decrypt_failure_returns_empty_and_logs_error(self, langflow_auth_service, monkeypatch, failure_kind):
+        """Decryption failures remain visible at ERROR without exposing credentials."""
         original_value = "my-secret-api-key-12345"
-
-        # Encrypt with one key
+        encryption_key = Fernet.generate_key().decode()
+        decryption_key = Fernet.generate_key().decode()
+        langflow_auth_service.settings.auth_settings.SECRET_KEY = SecretStr(encryption_key)
         encrypted_value = encrypt_api_key(original_value)
+        langflow_auth_service.settings.auth_settings.SECRET_KEY = SecretStr(decryption_key)
+        token = encrypted_value if failure_kind == "wrong-key" else "gAAAAA-invalid-token"
 
-        # Verify it's encrypted
-        assert encrypted_value.startswith("gAAAAA")
+        captured_logs = LogCapture()
+        error_logger = wrap_logger(
+            logging.getLogger(__name__),
+            processors=[captured_logs],
+            wrapper_class=make_filtering_bound_logger(logging.ERROR),
+        )
+        monkeypatch.setattr("langflow.services.auth.service.logger", error_logger)
 
-        # Note: Since encrypt/decrypt now use the auth service internally,
-        # this test will decrypt successfully with the same service instance
-        # The test behavior has changed - it will now decrypt correctly
-        result = decrypt_api_key(encrypted_value)
-        assert result == original_value  # Changed expectation
+        assert decrypt_api_key(token) == ""
+        assert len(captured_logs.entries) == 1
+        entry = captured_logs.entries[0]
+        assert entry["log_level"] == "error"
+        assert "API key decryption failed" in entry["event"]
+        assert "SECRET_KEY mismatch" in entry["event"]
+        log_output = repr(captured_logs.entries)
+        for secret in (original_value, encrypted_value, token, encryption_key, decryption_key):
+            assert secret not in log_output
 
     def test_decrypt_empty_string(self):
         """Test decryption of empty string."""

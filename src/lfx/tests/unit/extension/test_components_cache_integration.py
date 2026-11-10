@@ -434,6 +434,40 @@ async def test_inline_bundle_components_decorated_with_extension_metadata(tmp_pa
     assert template["legacy_module"] == "thing"
 
 
+@pytest.mark.parametrize(
+    ("oauth_context", "expected_count"),
+    [("hosted", 1), ("desktop", 1), ("self_managed", 2)],
+)
+@pytest.mark.asyncio
+async def test_gmail_trigger_palette_visibility_follows_oauth_context(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, oauth_context: str, expected_count: int
+) -> None:
+    parent = tmp_path / "components_root"
+    bundle_dir = parent / "google"
+    bundle_dir.mkdir(parents=True)
+    (bundle_dir / "sources.py").write_text(
+        "class Component:\n    pass\n"
+        "class GoogleOnGmailTriggerComponent(Component):\n"
+        "    def build(self):\n        return None\n"
+        "class GoogleOnCalendarTriggerComponent(Component):\n"
+        "    def build(self):\n        return None\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("LANGFLOW_CONNECTION_OAUTH_CONTEXT", oauth_context)
+
+    with (
+        patch("lfx.interface.components.load_installed_extensions", return_value=[]),
+        patch("lfx.interface.components.load_seed_extensions", return_value=[]),
+        patch("lfx.interface.components.load_lfx_bundles_extensions", return_value=[]),
+        patch("lfx.interface.components.load_dev_extensions", return_value=[]),
+        patch("lfx.interface.components.create_component_template", side_effect=_stub_template),
+    ):
+        result = await import_extension_components(_FakeSettingsService(components_path=[str(parent)]))
+
+    assert "ext:google:GoogleOnCalendarTriggerComponent@extra" in result["google"]
+    assert len(result["google"]) == expected_count
+
+
 @pytest.mark.asyncio
 async def test_template_failure_skips_component_without_aborting_bundle(tmp_path: Path) -> None:
     """A class that fails to instantiate / template doesn't abort the bundle.

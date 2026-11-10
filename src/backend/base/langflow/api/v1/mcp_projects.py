@@ -50,7 +50,7 @@ from langflow.api.utils.mcp import (
     get_url_by_os,
     project_mcp_server_name_candidates,
 )
-from langflow.api.v1.auth_helpers import handle_auth_settings_update
+from langflow.api.v1.auth_helpers import get_default_project_auth_settings, handle_auth_settings_update
 from langflow.api.v1.mcp import ResponseNoOp
 from langflow.api.v1.mcp_utils import (
     authenticated_caller_ctx,
@@ -72,6 +72,13 @@ from langflow.api.v1.schemas import (
     MCPProjectUpdateRequest,
     MCPSettings,
 )
+from langflow.services.audit import vocabulary as audit_vocab
+from langflow.services.audit.operations import (
+    audited_permission,
+    audited_route,
+    stage_flow_succeeded,
+    stage_project_succeeded,
+)
 from langflow.services.auth.constants import AUTO_LOGIN_ERROR, AUTO_LOGIN_WARNING
 from langflow.services.auth.context import (
     AUTH_METHOD_AUTO_LOGIN,
@@ -80,11 +87,13 @@ from langflow.services.auth.context import (
     set_current_auth_context,
 )
 from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
+from langflow.services.auth.utils import set_authenticated_telemetry_user
 from langflow.services.authorization import ProjectAction, ensure_project_permission
 from langflow.services.authorization.access_ceiling import clear_current_external_access_context
 from langflow.services.database.models import Flow, Folder
 from langflow.services.database.models.api_key.crud import authenticate_api_key, create_api_key
 from langflow.services.database.models.api_key.model import ApiKeyCreate
+from langflow.services.database.models.api_key.policy import ApiKeyIssuanceDeniedError
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_service
@@ -191,6 +200,7 @@ async def verify_project_auth(
         if project_user_id != user.id:
             raise HTTPException(status_code=404, detail="Project not found")
 
+        set_authenticated_telemetry_user(user)
         authenticated_caller_ctx.set(user.id)
         return user
 
@@ -273,7 +283,11 @@ async def verify_project_auth_conditional(
 
     async with session_scope() as session:
         user = await get_current_user_mcp(
-            token=token or "", query_param=api_key_query_value, header_param=api_key_header_value, db=session
+            request=request,
+            token=token or "",
+            query_param=api_key_query_value,
+            header_param=api_key_header_value,
+            db=session,
         )
 
     if project_user_id != user.id:
@@ -582,6 +596,15 @@ async def handle_project_streamable_http(
 
 
 @router.patch("/{project_id}", status_code=200)
+@audited_route(
+    resource_type=audit_vocab.AuditResourceType.PROJECT,
+    action=audit_vocab.PROJECT_WRITE,
+    operation=audit_vocab.AuditOperation.PATCH,
+    resource_id_param="project_id",
+    session_param=None,
+    user_param="current_user",
+    authorized=False,
+)
 async def update_project_mcp_settings(
     project_id: UUID,
     request: MCPProjectUpdateRequest,
@@ -610,12 +633,15 @@ async def update_project_mcp_settings(
             # WRITE: enforce so the external access ceiling (e.g. a "viewer")
             # cannot change MCP settings. The owner with no ceiling fast-paths via
             # owner-override; behavior is unchanged when the feature is off.
-            await ensure_project_permission(
-                current_user,
-                ProjectAction.WRITE,
-                project_id=project_id,
-                project_user_id=project.user_id,
-                workspace_id=project.workspace_id,
+            await audited_permission(
+                ensure_project_permission(
+                    current_user,
+                    ProjectAction.WRITE,
+                    project_id=project_id,
+                    project_user_id=project.user_id,
+                    workspace_id=project.workspace_id,
+                ),
+                resource_name=project.name,
             )
 
             # Track if MCP Composer needs to be started or stopped
@@ -660,6 +686,26 @@ async def update_project_mcp_settings(
                     updated_flows.append(flow)
 
             await session.flush()
+
+            for flow in updated_flows:
+                await stage_flow_succeeded(
+                    session,
+                    action=audit_vocab.FLOW_WRITE,
+                    operation=audit_vocab.AuditOperation.PATCH,
+                    flow_id=flow.id,
+                    flow_name=flow.name,
+                    written_fields=["mcp_enabled", "action_name", "action_description"],
+                )
+            if auth_settings_updated:
+                # The Project details contract has no field for auth settings, so the
+                # event records the write itself: who changed this project, and when.
+                await stage_project_succeeded(
+                    session,
+                    action=audit_vocab.PROJECT_WRITE,
+                    operation=audit_vocab.AuditOperation.PATCH,
+                    project_id=project.id,
+                    project_name=project.name,
+                )
 
             response: dict[str, Any] = {
                 "message": f"Updated MCP settings for {len(updated_flows)} flows and project auth settings"
@@ -758,6 +804,11 @@ async def update_project_mcp_settings(
                     )
                 except HTTPException:
                     raise
+                except ApiKeyIssuanceDeniedError as denial:
+                    # The caller asked for apikey auth explicitly. Reporting
+                    # success here would leave the project on its old auth with
+                    # nothing to say so.
+                    raise HTTPException(status_code=403, detail=str(denial)) from denial
                 except Exception as e:  # noqa: BLE001
                     await logger.awarning(
                         "Failed to reconcile MCP server config for project %s after auth update: %s",
@@ -1627,6 +1678,7 @@ def _get_startup_project_auth_settings(
     *,
     auto_login: bool,
     mcp_composer_enabled: bool,
+    default_auth: dict[str, str],
 ) -> tuple[dict[str, Any] | None, str | None]:
     """Return the auth state startup should enforce for this project.
 
@@ -1640,9 +1692,11 @@ def _get_startup_project_auth_settings(
     if not auto_login and auth_type in {None, "none"}:
         return {"auth_type": "apikey"}, "auto_enable_apikey"
 
+    if not project.auth_settings:
+        return default_auth, "auto_enable_apikey" if default_auth["auth_type"] == "apikey" else None
+
     if not mcp_composer_enabled and auth_type == "oauth":
-        fallback_auth_type = "apikey" if not auto_login else "none"
-        return {"auth_type": fallback_auth_type}, "oauth_fallback"
+        return default_auth, "oauth_fallback"
 
     if auth_type in {"apikey", "none"}:
         return {"auth_type": auth_type}, None
@@ -1660,10 +1714,12 @@ async def init_mcp_servers():
 
             for project in projects:
                 try:
+                    project_user = await session.get(User, project.user_id) if project.user_id is not None else None
                     target_auth_settings, persist_reason = _get_startup_project_auth_settings(
                         project,
                         auto_login=settings_service.auth_settings.AUTO_LOGIN,
                         mcp_composer_enabled=settings_service.settings.mcp_composer_enabled,
+                        default_auth=get_default_project_auth_settings(settings_service.auth_settings, project_user),
                     )
                     reconciled_mcp_server = False
 
@@ -1682,7 +1738,6 @@ async def init_mcp_servers():
                         if should_reconcile_project_server:
                             from langflow.api.v1.projects_mcp_helpers import register_mcp_servers_for_project
 
-                            project_user = await session.get(User, project.user_id)
                             if project_user is not None:
                                 reconciled_mcp_server = await register_mcp_servers_for_project(
                                     project,
@@ -1698,7 +1753,7 @@ async def init_mcp_servers():
                     if persist_reason == "auto_enable_apikey":
                         await logger.ainfo(
                             f"Auto-enabled API key authentication for existing project {project.name} "
-                            f"({project.id}) due to AUTO_LOGIN=false"
+                            f"({project.id}) to match MCP authentication requirements"
                         )
                     elif persist_reason == "oauth_fallback" and target_auth_settings is not None:
                         fallback_auth_type = target_auth_settings["auth_type"]

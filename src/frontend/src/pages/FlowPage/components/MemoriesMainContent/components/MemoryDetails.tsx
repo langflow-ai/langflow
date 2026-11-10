@@ -188,6 +188,8 @@ export function MemoryDetails({
         </div>
 
         <MemoryKnowledgeBaseSection
+          storageState={memory.storage_state}
+          storageKbId={memory.storage_kb_id}
           docsData={docsData}
           docsLoading={docsLoading}
           fetchNextMessagesPage={fetchNextMessagesPage}

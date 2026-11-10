@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { handleBlockedSave } from "@/hooks/flows/handle-blocked-save";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
@@ -105,10 +106,12 @@ export function useApplyTemplateToCurrentFlow() {
               rejectedNames.push(candidate.name);
               return persist(attempt + 1);
             }
-            setErrorData({
-              title: t("errors.failedToSaveFlow"),
-              list: [getErrorDetail(error)],
-            });
+            if (!handleBlockedSave(error)) {
+              setErrorData({
+                title: t("errors.failedToSaveFlow"),
+                list: [getErrorDetail(error)],
+              });
+            }
             // Only roll back if the user hasn't switched to a different flow.
             const latest = useFlowsManagerStore.getState().currentFlow;
             if (latest?.id === candidate.id) {

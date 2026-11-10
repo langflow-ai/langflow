@@ -1,5 +1,6 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useUtilityStore } from "@/stores/utilityStore";
 import type { GlobalVariable } from "@/types/global_variables";
 import DBProvidersPage from "../index";
 
@@ -22,8 +23,11 @@ const mockPatchMutateAsync = jest.fn((params: Record<string, unknown>) => {
   patchCalls.push(params);
   return Promise.resolve(undefined);
 });
-const mockTestMutateAsync = jest.fn(() =>
-  Promise.resolve({ ok: true, message: "cluster green" }),
+const mockTestMutateAsync = jest.fn(
+  (_params: {
+    backend_type: string;
+    backend_config: Record<string, unknown>;
+  }) => Promise.resolve({ ok: true, message: "cluster green" }),
 );
 
 const mockSetSuccessData = jest.fn();
@@ -62,8 +66,8 @@ jest.mock("@/stores/alertStore", () => ({
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
-  default: ({ name }: { name: string }) => (
-    <span data-testid={`icon-${name}`} />
+  default: ({ name, className }: { name: string; className?: string }) => (
+    <span data-testid={`icon-${name}`} className={className} />
   ),
 }));
 
@@ -75,10 +79,10 @@ const STRINGS: Record<string, string> = {
   "settings.dbProviders.comingSoon": "Coming soon",
   "settings.dbProviders.comingSoonDescription":
     "This provider is stubbed in the Knowledge Base backend registry and will become configurable after the provider implementation is wired through end-to-end.",
-  "settings.dbProviders.chromaDescription":
-    "Chroma stores vectors on disk next to Langflow and is enabled by default. Selecting it here makes it the default provider for new Knowledge Bases.",
-  "settings.dbProviders.chromaSelected": "Chroma selected",
-  "settings.dbProviders.useChroma": "Use Chroma",
+  "settings.dbProviders.sqliteDescription":
+    "SQLite stores vectors on disk next to Langflow and is enabled by default. Selecting it here makes it the default provider for new Knowledge Bases.",
+  "settings.dbProviders.sqliteSelected": "SQLite selected",
+  "settings.dbProviders.useSQLite": "Use SQLite",
   "settings.dbProviders.save": "Save",
   "settings.dbProviders.useProvider": "Use {{provider}}",
   "settings.dbProviders.saveAndUseProvider": "Save and use {{provider}}",
@@ -94,6 +98,10 @@ const STRINGS: Record<string, string> = {
     "Not configured. Set PGVECTOR_CONNECTION_STRING in your server environment.",
   "settings.dbProviders.usePostgres": "Use Postgres pgVector",
   "settings.dbProviders.postgresSelected": "Postgres pgVector selected",
+  // Non-English copy proves these strings come from translation keys.
+  "settings.dbProviders.fields.OPENSEARCH_USE_SSL.label": "Usar TLS (HTTPS)",
+  "settings.dbProviders.fields.OPENSEARCH_PASSWORD.placeholder":
+    "Digite a senha do OpenSearch",
 };
 
 jest.mock("react-i18next", () => ({
@@ -143,6 +151,11 @@ const openSearchRequiredSaved = (): GlobalVariable[] => [
 const getSaveButton = (name: RegExp) => screen.getByRole("button", { name });
 
 beforeEach(() => {
+  useUtilityStore.setState({
+    localVectorStoreAvailable: true,
+    defaultVectorStoreBackend: undefined,
+    configuredVectorStoreBackends: [],
+  });
   mockGlobalVariables = [];
   postCalls.length = 0;
   patchCalls.length = 0;
@@ -150,13 +163,111 @@ beforeEach(() => {
 });
 
 describe("DBProvidersPage characterization", () => {
+  describe("environment-configured OpenSearch", () => {
+    it.each(["postgres", "opensearch"])(
+      "tests server configuration without saving credentials when %s is the default",
+      async (defaultBackend) => {
+        useUtilityStore.setState({
+          defaultVectorStoreBackend: defaultBackend,
+          configuredVectorStoreBackends: ["postgres", "opensearch"],
+        });
+        const user = userEvent.setup();
+        render(<DBProvidersPage />);
+        await user.click(screen.getByTestId("db-provider-item-opensearch"));
+        expect(
+          screen.getByText("settings.dbProviders.serverConfiguration"),
+        ).toBeInTheDocument();
+        const testButton = screen.getByTestId("db-provider-test-connection");
+        expect(testButton).toBeEnabled();
+        mockTestMutateAsync.mockClear();
+        await user.click(testButton);
+        await waitFor(() =>
+          expect(mockTestMutateAsync).toHaveBeenCalledWith({
+            backend_type: "opensearch",
+            backend_config: expect.objectContaining({
+              url_variable: "OPENSEARCH_URL",
+            }),
+          }),
+        );
+        const config = mockTestMutateAsync.mock.calls[0][0].backend_config;
+        expect(config).not.toHaveProperty("use_ssl");
+        expect(config).not.toHaveProperty("verify_certs");
+        expect(postCalls).toEqual([]);
+        expect(patchCalls).toEqual([]);
+      },
+    );
+
+    it("activates environment-configured OpenSearch without creating credential variables", async () => {
+      useUtilityStore.setState({
+        defaultVectorStoreBackend: "postgres",
+        configuredVectorStoreBackends: ["postgres", "opensearch"],
+      });
+      const user = userEvent.setup();
+      render(<DBProvidersPage />);
+      await user.click(screen.getByTestId("db-provider-item-opensearch"));
+      await user.click(getSaveButton(/^use opensearch$/i));
+      await waitFor(() => expect(postCalls).toHaveLength(1));
+      expect(postCalls[0]).toMatchObject({
+        name: "LANGFLOW_KNOWLEDGE_BACKEND",
+        value: "opensearch",
+      });
+      expect(patchCalls).toEqual([]);
+    });
+
+    it("requires a complete configuration when overriding the server fields", async () => {
+      useUtilityStore.setState({
+        configuredVectorStoreBackends: ["opensearch"],
+      });
+      const user = userEvent.setup();
+      render(<DBProvidersPage />);
+      await user.click(screen.getByTestId("db-provider-item-opensearch"));
+      await user.type(
+        screen.getByPlaceholderText("https://search.example.com:9200"),
+        "https://other.example.com",
+      );
+      expect(screen.getByTestId("db-provider-test-connection")).toBeDisabled();
+    });
+  });
   describe("provider list", () => {
-    it("renders the six providers in canonical order", () => {
+    it.each(["environment", "saved variables"])(
+      "shows a muted check for inactive OpenSearch configured through %s",
+      (configurationSource) => {
+        if (configurationSource === "environment") {
+          useUtilityStore.setState({
+            configuredVectorStoreBackends: ["opensearch"],
+          });
+        } else {
+          mockGlobalVariables = openSearchRequiredSaved();
+        }
+        render(<DBProvidersPage />);
+        expect(screen.getByTestId("db-provider-item-sqlite")).toHaveTextContent(
+          "Active",
+        );
+        const openSearchItem = screen.getByTestId(
+          "db-provider-item-opensearch",
+        );
+        expect(openSearchItem).not.toHaveTextContent("Active");
+        const check = within(openSearchItem).getByTestId("icon-Check");
+        expect(check).toHaveClass("text-muted-foreground");
+        expect(check).not.toHaveClass("text-status-green");
+        expect(within(openSearchItem).queryByTestId("icon-Plus")).toBeNull();
+      },
+    );
+
+    it("shows a muted plus for unconfigured OpenSearch", () => {
+      render(<DBProvidersPage />);
+      const openSearchItem = screen.getByTestId("db-provider-item-opensearch");
+      expect(within(openSearchItem).getByTestId("icon-Plus")).toHaveClass(
+        "text-muted-foreground",
+      );
+      expect(within(openSearchItem).queryByTestId("icon-Check")).toBeNull();
+    });
+
+    it("renders supported and future providers in canonical order", () => {
       render(<DBProvidersPage />);
       const items = screen.getAllByTestId(/^db-provider-item-/);
       expect(items.map((item) => item.getAttribute("data-testid"))).toEqual([
-        "db-provider-item-chroma",
-        "db-provider-item-chroma_cloud",
+        "db-provider-item-sqlite",
         "db-provider-item-opensearch",
         "db-provider-item-astra",
         "db-provider-item-mongodb",
@@ -164,12 +275,12 @@ describe("DBProvidersPage characterization", () => {
       ]);
     });
 
-    it("marks chroma as the active provider when no backend variable exists", () => {
+    it("marks sqlite as the active provider when no backend variable exists", () => {
       render(<DBProvidersPage />);
-      const chromaItem = screen.getByTestId("db-provider-item-chroma");
-      expect(chromaItem).toHaveTextContent("Active");
+      const sqliteItem = screen.getByTestId("db-provider-item-sqlite");
+      expect(sqliteItem).toHaveTextContent("Active");
       expect(
-        chromaItem.querySelector('[data-testid="icon-Check"]'),
+        sqliteItem.querySelector('[data-testid="icon-Check"]'),
       ).toBeInTheDocument();
     });
 
@@ -183,7 +294,7 @@ describe("DBProvidersPage characterization", () => {
         screen.getByTestId("db-provider-item-opensearch"),
       ).toHaveTextContent("Active");
       expect(
-        screen.getByTestId("db-provider-item-chroma"),
+        screen.getByTestId("db-provider-item-sqlite"),
       ).not.toHaveTextContent("Active");
     });
 
@@ -197,34 +308,22 @@ describe("DBProvidersPage characterization", () => {
     });
   });
 
-  describe("chroma panel (default selection)", () => {
-    it("shows a disabled 'Chroma selected' action while chroma is active", () => {
+  describe("sqlite panel (default selection)", () => {
+    it("shows a disabled 'SQLite selected' action while sqlite is active", () => {
       render(<DBProvidersPage />);
-      const button = getSaveButton(/chroma selected/i);
+      const button = getSaveButton(/sqlite selected/i);
       expect(button).toBeDisabled();
       expect(screen.queryByTestId("db-provider-test-connection")).toBeNull();
     });
   });
 
-  describe("chroma cloud panel", () => {
-    it("does not treat an empty masked credential as configured", async () => {
-      mockGlobalVariables = [
-        variable(
-          "CHROMA_API_KEY",
-          undefined,
-          "id-CHROMA_API_KEY",
-          "Credential",
-          false,
-        ),
-      ];
-      const user = userEvent.setup();
-      render(<DBProvidersPage />);
-
-      await user.click(screen.getByTestId("db-provider-item-chroma_cloud"));
-
-      expect(document.querySelector('input[type="password"]')).toHaveValue("");
-      expect(getSaveButton(/save and use chroma cloud/i)).toBeDisabled();
-    });
+  it("does not offer retired Chroma providers even with saved credentials", () => {
+    mockGlobalVariables = [
+      variable("CHROMA_API_KEY", undefined, "key", "Credential", true),
+    ];
+    render(<DBProvidersPage />);
+    expect(screen.queryByTestId("db-provider-item-chroma")).toBeNull();
+    expect(screen.queryByTestId("db-provider-item-chroma_cloud")).toBeNull();
   });
 
   describe("postgres pgvector panel", () => {
@@ -279,6 +378,21 @@ describe("DBProvidersPage characterization", () => {
       expect(
         screen.getByTestId("db-provider-toggle-OPENSEARCH_VERIFY_CERTS"),
       ).toHaveAttribute("aria-checked", "true");
+    });
+
+    it("names the TLS switches and the password placeholder in the interface language", async () => {
+      await openOpenSearch();
+      // The switch's accessible name used to be the English field label.
+      expect(
+        screen.getByRole("switch", { name: "Usar TLS (HTTPS)" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText("Digite a senha do OpenSearch"),
+      ).toBeInTheDocument();
+      // Example-value placeholders have no key and stay as written.
+      expect(
+        screen.getByPlaceholderText("https://search.example.com:9200"),
+      ).toBeInTheDocument();
     });
 
     it("keeps Save and Test connection disabled until every required field has a value", async () => {

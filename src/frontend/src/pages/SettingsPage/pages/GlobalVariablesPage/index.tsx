@@ -25,12 +25,11 @@ import {
 } from "@/controllers/API/queries/variables";
 import CustomVariableShareAction from "@/customization/components/custom-variable-share-action";
 import type { GlobalVariable } from "@/types/global_variables";
-import IconComponent, {
-  ForwardedIconComponent,
-} from "../../../../components/common/genericIconComponent";
+import IconComponent from "../../../../components/common/genericIconComponent";
 import { Badge } from "../../../../components/ui/badge";
 import { Button } from "../../../../components/ui/button";
 import useAlertStore from "../../../../stores/alertStore";
+import SettingsPageHeader from "../../components/SettingsPageHeader";
 import {
   authorizedVariableIds,
   canMutateVariable,
@@ -130,6 +129,7 @@ function GlobalVariablesPageContent({
       suppressKeyboardEvent: suppressRowActionKeys,
     },
     {
+      headerName: t("globalVars.columnValue"),
       field: "value",
       valueFormatter: (params: ValueFormatterParams<GlobalVariable>) => {
         return formatVariableValue(
@@ -353,6 +353,13 @@ function GlobalVariablesPageContent({
   );
 
   function updateVariables(event: RowClickedEvent<GlobalVariable>) {
+    // AG Grid dispatches row clicks before a button's React stopPropagation.
+    if (
+      event.event?.target instanceof Element &&
+      event.event.target.closest('[col-id="actions"]')
+    ) {
+      return;
+    }
     if (!canMutateVariable(event.data, "write", permissionState, can)) return;
     rememberFocusedCell(event.rowIndex, "name");
     initialData.current = event.data;
@@ -362,6 +369,9 @@ function GlobalVariablesPageContent({
   function handleCellKeyDown(event: CellKeyDownEvent<GlobalVariable>) {
     const keyboardEvent = event.event as KeyboardEvent | undefined;
     if (!keyboardEvent) return;
+
+    // Actions own their activation keys and must not edit or select the row.
+    if (event.column?.getColId() === "actions") return;
 
     // Let AG Grid / the checkbox handle Space when focus is already on it.
     if (
@@ -404,31 +414,17 @@ function GlobalVariablesPageContent({
 
   return (
     <div className="flex h-full w-full flex-col justify-between gap-6">
-      <div className="flex w-full items-start justify-between gap-6">
-        <div className="flex min-w-0 flex-1 flex-col">
-          <h2
-            className="flex items-center text-lg font-semibold tracking-tight"
-            data-testid="settings_menu_header"
-          >
-            {t("globalVars.pageTitle")}
-            <ForwardedIconComponent
-              name="Globe"
-              className="ml-2 h-5 w-5 text-primary"
-            />
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {t("globalVars.pageDescription")}
-          </p>
-        </div>
-        <div className="flex flex-shrink-0 items-center gap-2 pr-1">
-          <GlobalVariableModal asChild>
-            <Button data-testid="api-key-button-store" variant="primary">
-              <IconComponent name="Plus" className="w-4" />
-              {t("globalVars.addNew")}
-            </Button>
-          </GlobalVariableModal>
-        </div>
-      </div>
+      <SettingsPageHeader
+        title={t("globalVars.pageTitle")}
+        description={t("globalVars.pageDescription")}
+      >
+        <GlobalVariableModal asChild>
+          <Button data-testid="api-key-button-store" size="sm">
+            <IconComponent name="Plus" className="w-4" />
+            {t("globalVars.addNew")}
+          </Button>
+        </GlobalVariableModal>
+      </SettingsPageHeader>
 
       <div className="flex h-full w-full flex-col justify-between">
         {permissionsLoading ? (

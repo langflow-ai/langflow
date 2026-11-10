@@ -27,6 +27,20 @@ async def test_get_or_create_default_folder_creation() -> None:
         folder = await get_or_create_default_folder(session, test_user_id)
         assert folder.name == DEFAULT_FOLDER_NAME, "The project name should match the default."
         assert hasattr(folder, "id"), "The project should have an 'id' attribute after creation."
+        stored_folder = await session.get(Folder, folder.id)
+        assert stored_folder is not None
+        assert stored_folder.is_personal is True
+
+
+@pytest.mark.usefixtures("client")
+async def test_get_or_create_default_folder_marks_existing_default_personal() -> None:
+    test_user_id = uuid4()
+    async with session_scope() as session:
+        existing = Folder(user_id=test_user_id, name=DEFAULT_FOLDER_NAME)
+        session.add(existing)
+        await session.flush()
+        await get_or_create_default_folder(session, test_user_id)
+        assert existing.is_personal is True
 
 
 async def test_get_or_create_starter_folder_ignores_user_owned_name_collision(async_session) -> None:
@@ -98,6 +112,7 @@ async def test_get_or_create_default_folder_respects_rename() -> None:
         stmt = select(Folder).where(Folder.id == original_id)
         folder_row = (await session.exec(stmt)).first()
         assert folder_row is not None
+        assert folder_row.is_personal is True
         folder_row.name = renamed_folder_name
         session.add(folder_row)
         await session.flush()
@@ -112,6 +127,9 @@ async def test_get_or_create_default_folder_respects_rename() -> None:
         assert folder_second.name == renamed_folder_name, (
             "The folder's user-assigned name must be preserved across calls."
         )
+        stored_folder = await session.get(Folder, original_id)
+        assert stored_folder is not None
+        assert stored_folder.is_personal is True
 
         # There should still be exactly one folder for this user — no phantom duplicate.
         all_folders_stmt = select(Folder).where(Folder.user_id == test_user_id)
@@ -147,6 +165,7 @@ async def test_get_or_create_default_folder_respects_other_existing_folder() -> 
         all_folders = (await session.exec(all_folders_stmt)).all()
         folder_names = sorted(f.name for f in all_folders)
         assert folder_names == [other_folder_name], f"No new default folder should be created; found: {folder_names}"
+        assert all_folders[0].is_personal is False
 
 
 def _make_all_types_dict():

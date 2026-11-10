@@ -31,7 +31,8 @@ For information about using Langflow as an MCP client and managing MCP server co
 
 When you create a [Langflow project](/concepts-flows#projects), Langflow automatically adds the project to your MCP server's configuration and makes the project's flows available as MCP tools.
 
-If your Langflow server has authentication enabled (`AUTO_LOGIN=false`), the project's MCP server is automatically configured with API key authentication, and a new API key is generated specifically for accessing the new project's flows.
+New projects use API key authentication by default, including when `LANGFLOW_AUTO_LOGIN=true`.
+Generated client configurations include an API key belonging to the project owner.
 For more information, see [MCP server authentication](#authentication).
 
 
@@ -150,7 +151,7 @@ You can modify this process for any [MCP-compatible client](https://modelcontext
 
     For example, in Cursor, go to **Cursor Settings**, select **MCP**, and then click **Add New Global MCP Server** to open Cursor's global `mcp.json` configuration file.
 
-3. Recommended: Configure [authentication](#authentication) for your MCP server.
+3. Check your project's [authentication settings](#authentication).
 
 4. In Langflow, on the **Projects** page, click the **MCP Server** tab.
 
@@ -166,6 +167,9 @@ For example:
             "mcp-proxy",
             "--transport",
             "streamablehttp",
+            "--headers",
+            "x-api-key",
+            "YOUR_API_KEY",
             "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/streamable"
           ]
         }
@@ -178,7 +182,9 @@ For example:
     The default Langflow server address is `http://localhost:7860`.
     If you are using a [public Langflow server](/deployment-public-server), the server address is automatically included.
 
-    If your Langflow server requires authentication, you must include your Langflow API key or OAuth settings in the configuration.
+    Keep the authentication arguments from the generated snippet.
+    For API key authentication, use an API key belonging to the project owner.
+    For OAuth, use the generated OAuth configuration.
     For more information, see [MCP server authentication](#authentication).
 
 6. To include other environment variables with your MCP server command, add an `env` object with key-value pairs of environment variables. For example:
@@ -192,6 +198,9 @@ For example:
             "mcp-proxy",
             "--transport",
             "streamablehttp",
+            "--headers",
+            "x-api-key",
+            "YOUR_API_KEY",
             "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/streamable"
           ],
           "env": {
@@ -222,7 +231,7 @@ If your client isn't supported, is installed remotely, or you need to pass addit
 
 1. Install [Cursor](https://docs.cursor.com/get-started/installation), [Claude](https://claude.ai/download), or [Windsurf](https://windsurf.com/download/editor) on the same computer where your Langflow server is running.
 
-2. Recommended: Configure [authentication](#authentication) for your MCP server.
+2. Check your project's [authentication settings](#authentication).
 
 3. In Langflow, on the **Projects** page, click the **MCP Server** tab.
 
@@ -245,17 +254,34 @@ For more information, see the MCP documentation for your client, such as [Cursor
 
 Each [Langflow project](/concepts-flows#projects) has its own MCP server with its own MCP server authentication settings.
 
-When you create a new project, Langflow automatically configures authentication for the project's MCP server based on your Langflow server's authentication settings. If authentication is enabled (`AUTO_LOGIN=false`), the project is automatically configured with API key authentication, and a new API key is generated for accessing the project's flows.
+In Langflow 1.13.2, new projects use API key authentication by default, including when `LANGFLOW_AUTO_LOGIN=true`.
+Automatic sign-in to the Langflow UI does not authenticate an external MCP client.
+Use the complete generated client configuration with an API key belonging to the project owner.
+
+On startup, existing projects with unset or empty authentication settings receive the same default.
+When `LANGFLOW_AUTO_LOGIN=false`, startup also changes an explicit **None** setting to API key authentication.
+OAuth remains available when MCP Composer is enabled.
+
+After upgrading, update MCP clients that previously connected without credentials.
+Open the project's **MCP Server** tab and copy its updated **JSON** snippet into each external client.
+Alternatively, repeat **Auto install** for a supported local client, then restart the client.
+Langflow's saved server configurations are reconciled on startup when automatic project registration is enabled.
+Configurations already copied into external clients are not rewritten by that startup process.
+
+The configured superuser retains a no-authentication default only when both `LANGFLOW_AUTO_LOGIN` and `LANGFLOW_SKIP_AUTH_AUTO_LOGIN` are `true`.
+The project owner must match `LANGFLOW_SUPERUSER`.
+Other users' projects still default to API key authentication.
+An explicit **None** setting is preserved across startup when `LANGFLOW_AUTO_LOGIN=true`.
 
 To configure authentication for a Langflow MCP server, go to the **Projects** page in Langflow, click the **MCP Server** tab, click <Icon name="Fingerprint" aria-hidden="true"/> **Edit Auth**, and then select your preferred authentication method:
 
 <Tabs groupId="auth-type">
-<TabItem value="API key" label="API key">
+<TabItem value="API key" label="API key" default>
 
 When authenticating your MCP server with a Langflow API key, your project's MCP server **JSON** code snippets and **Auto install** configuration automatically include the `--headers` and `x-api-key` arguments in the **args** array (for streamable transport).
 
 Click <Icon name="key" aria-hidden="true"/> **Generate API key** to automatically insert a new Langflow API key into the code template.
-Alternatively, you can replace `YOUR_API_KEY` with an existing Langflow API key.
+Alternatively, you can replace `YOUR_API_KEY` with an existing Langflow API key belonging to the project owner.
 
 To add your API key to the configuration, use three separate entries in `args`: `"--headers"`, `"x-api-key"`, and your key value. For example:
 
@@ -332,7 +358,8 @@ If your client doesn't open the OAuth window, try restarting the client to retri
 </TabItem>
 <TabItem value="None" label="None">
 
-When no authentication is configured, your MCP server becomes a public endpoint that anyone can access without providing credentials.
+Selecting **None** explicitly makes the project's MCP server a public endpoint that anyone can access without credentials.
+With `LANGFLOW_AUTO_LOGIN=false`, startup changes this setting to API key authentication.
 Only use this option when Langflow is running in a trusted environment.
 
 </TabItem>

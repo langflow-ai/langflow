@@ -211,6 +211,7 @@ Langflow maps JWT claims to local user attributes when creating or updating the 
 | `LANGFLOW_EXTERNAL_AUTH_USERNAME_CLAIM` | JWT claim preferred for the local Langflow username. Falls back to email, name, or a deterministic hash. | `preferred_username` |
 | `LANGFLOW_EXTERNAL_AUTH_EMAIL_CLAIM` | JWT claim containing the user's email address. | `email` |
 | `LANGFLOW_EXTERNAL_AUTH_NAME_CLAIM` | JWT claim containing the user's display name. | `name` |
+| `LANGFLOW_EXTERNAL_AUTH_GROUP_RECONCILE_INTERVAL_SECONDS` | Minimum seconds between group reconciliations for an unchanged directory state. A changed group set always reconciles immediately. Set to `0` to reconcile on every request. | `60` |
 
 ## Configure an access ceiling from JWT claims
 
@@ -302,9 +303,17 @@ LANGFLOW_EXTERNAL_AUTH_TRUSTED_JWT_DECODE=true
 LANGFLOW_EXTERNAL_AUTH_TOKEN_HEADER=X-Forwarded-User-Token
 ```
 
+The proxy must remove any client-supplied value for `X-Forwarded-User-Token` and replace it only after validating the user's token.
+If you configure `LANGFLOW_EXTERNAL_AUTH_TOKEN_COOKIE`, the proxy must also replace or remove that cookie.
+Restrict direct access to the Langflow backend so callers cannot bypass the proxy.
+
+Langflow sends only the configured external header or cookie to the external identity resolver.
+Native credentials in the `Authorization` header, `access_token_lf` cookie, or WebSocket `token` query parameter still require Langflow's JWT signature verification unless that header or cookie is explicitly configured as an external credential source.
+Strip those native credentials at the proxy when all requests must use the proxy's identity, so a valid Langflow session cannot take precedence over it.
+
 ## SSO provider integrations
 
-Full provider-specific SSO (OIDC, SAML, LDAP) is available as a plugin (`SSO_ENABLED`, `SSO_PROVIDER`, `SSO_CONFIG_FILE`).
+Full provider-specific SSO (OIDC, SAML, LDAP) is available as a plugin (`LANGFLOW_SSO_ENABLED`, `LANGFLOW_SSO_PROVIDER`, `LANGFLOW_SSO_CONFIG_FILE`, `LANGFLOW_SSO_REDIRECT_URL`).
 The external authentication settings above work independently of the SSO plugin and are the recommended starting point for deployments behind an OIDC proxy.
 Contact your Langflow account team for information about the SSO plugin.
 

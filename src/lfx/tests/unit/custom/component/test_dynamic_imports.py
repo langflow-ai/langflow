@@ -9,42 +9,10 @@ This module tests the new langchain-style dynamic import system to ensure:
 6. Backward compatibility with existing imports
 """
 
-import importlib.util
-import sys
 from unittest.mock import patch
 
 import pytest
 from lfx.components._importing import import_mod
-
-
-def _knowledge_deps_available() -> bool:
-    """Whether the knowledge module's ``langchain_chroma`` import can resolve.
-
-    ``files_and_knowledge.knowledge`` (KnowledgeComponent) imports
-    ``langchain_chroma`` at module-import time; every ``langflow`` import in it
-    is lazy. So whether that module — and the component class — imports cleanly
-    depends solely on this one optional dependency being importable. The
-    engine-only lfx test env normally lacks it, but some CI environments carry
-    it transitively, so these tests branch on its presence rather than
-    hard-assuming it is absent (mirrors ``test_type_checking_imports``).
-
-    Must tolerate the KB-backends conftest, which registers a bare
-    ``types.ModuleType("langchain_chroma")`` shim into ``sys.modules`` when the
-    real package is missing. That shim still satisfies ``from langchain_chroma
-    import Chroma`` — so the knowledge module imports — but its ``__spec__`` is
-    ``None``, which makes ``find_spec`` raise ``ValueError``. Check
-    ``sys.modules`` first, and guard ``find_spec`` the same way the conftest's
-    own ``_is_missing`` helper does.
-    """
-    if "langchain_chroma" in sys.modules:
-        return True
-    try:
-        return importlib.util.find_spec("langchain_chroma") is not None
-    except (ImportError, ValueError):
-        return False
-
-
-_KNOWLEDGE_DEPS_AVAILABLE = _knowledge_deps_available()
 
 
 class TestImportUtils:
@@ -53,17 +21,11 @@ class TestImportUtils:
     def test_import_mod_with_module_name(self):
         """Test importing a specific attribute from the knowledge module.
 
-        When ``langchain_chroma`` is absent the module import fails and the
-        original error bubbles up; when it is present the attribute resolves to
-        the component class. Either way exercises ``import_mod``'s module path.
+        Knowledge imports even when no retired Chroma SDK is installed.
         """
-        if _KNOWLEDGE_DEPS_AVAILABLE:
-            result = import_mod("KnowledgeComponent", "knowledge", "lfx.components.files_and_knowledge")
-            assert result is not None
-            assert result.__name__ == "KnowledgeComponent"
-        else:
-            with pytest.raises(ModuleNotFoundError, match="No module named"):
-                import_mod("KnowledgeComponent", "knowledge", "lfx.components.files_and_knowledge")
+        result = import_mod("KnowledgeComponent", "knowledge", "lfx.components.files_and_knowledge")
+        assert result is not None
+        assert result.__name__ == "KnowledgeComponent"
 
     def test_import_mod_without_module_name(self):
         """Test importing entire module when module_name is None."""
@@ -80,16 +42,10 @@ class TestImportUtils:
     def test_import_mod_attribute_not_found(self):
         """Test error handling for a missing attribute on the knowledge module.
 
-        With ``langchain_chroma`` absent the module never imports, so the
-        dependency error surfaces first (ModuleNotFoundError). With it present
-        the module imports and the missing attribute surfaces as AttributeError.
+        Missing attributes surface as AttributeError after the core module loads.
         """
-        if _KNOWLEDGE_DEPS_AVAILABLE:
-            with pytest.raises(AttributeError, match="NonExistentComponent"):
-                import_mod("NonExistentComponent", "knowledge", "lfx.components.files_and_knowledge")
-        else:
-            with pytest.raises(ModuleNotFoundError, match="No module named"):
-                import_mod("NonExistentComponent", "knowledge", "lfx.components.files_and_knowledge")
+        with pytest.raises(AttributeError, match="NonExistentComponent"):
+            import_mod("NonExistentComponent", "knowledge", "lfx.components.files_and_knowledge")
 
 
 class TestComponentDynamicImports:
@@ -137,26 +93,16 @@ class TestComponentDynamicImports:
 
     def test_category_module_dynamic_import(self):
         """Test dynamic import behavior in a lazy category module."""
-        # files_and_knowledge is an in-tree core category. KnowledgeComponent's
-        # module imports langchain_chroma at import time; whether accessing it
-        # succeeds or raises the wrapped AttributeError depends on that dep.
+        # files_and_knowledge is a core category with no Chroma dependency.
         import lfx.components.files_and_knowledge as fk_components
 
         # Test that components are in __all__
         assert "KnowledgeComponent" in fk_components.__all__
         assert "KnowledgeBaseComponent" in fk_components.__all__
 
-        if _KNOWLEDGE_DEPS_AVAILABLE:
-            component = fk_components.KnowledgeComponent
-            assert component is not None
-            assert component.__name__ == "KnowledgeComponent"
-        else:
-            # Access component - this should raise AttributeError due to missing deps
-            with pytest.raises(AttributeError, match="Could not import 'KnowledgeComponent'"):
-                _ = fk_components.KnowledgeComponent
-            # Test that the error is properly cached - second access should also fail
-            with pytest.raises(AttributeError, match="Could not import 'KnowledgeComponent'"):
-                _ = fk_components.KnowledgeComponent
+        component = fk_components.KnowledgeComponent
+        assert component is not None
+        assert component.__name__ == "KnowledgeComponent"
 
     def test_category_module_dir(self):
         """Test __dir__ functionality for category modules."""
@@ -277,16 +223,10 @@ class TestPerformanceCharacteristics:
 
     def test_lazy_loading_performance(self):
         """Test that components can be accessed and cached properly."""
-        # files_and_knowledge: in-tree core category; KnowledgeComponent's
-        # module-import-time dep (langchain_chroma) may or may not be present.
+        # Core Knowledge remains importable without optional provider SDKs.
         from lfx.components import files_and_knowledge as fk_modules
 
-        if _KNOWLEDGE_DEPS_AVAILABLE:
-            assert fk_modules.KnowledgeComponent is not None
-        else:
-            # Test that we can access a component
-            with pytest.raises(AttributeError, match=r"Could not import.*KnowledgeComponent"):
-                fk_modules.KnowledgeComponent  # noqa: B018
+        assert fk_modules.KnowledgeComponent is not None
 
     def test_memory_usage_multiple_accesses(self):
         """Test memory behavior with multiple component accesses."""
@@ -340,13 +280,8 @@ class TestSpecialCases:
         from lfx import components
 
         # Test that we can access nested components through the hierarchy.
-        # KnowledgeComponent requires langchain_chroma at import time; the access
-        # succeeds when it is installed and raises the wrapped error otherwise.
-        if _KNOWLEDGE_DEPS_AVAILABLE:
-            assert components.files_and_knowledge.KnowledgeComponent is not None
-        else:
-            with pytest.raises(AttributeError, match=r"Could not import.*KnowledgeComponent"):
-                _ = components.files_and_knowledge.KnowledgeComponent
+        # Core Knowledge no longer needs the retired Chroma SDK.
+        assert components.files_and_knowledge.KnowledgeComponent is not None
 
         # APIRequestComponent should work now that validators is installed
         api_component = components.data.APIRequestComponent

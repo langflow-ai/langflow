@@ -16,19 +16,16 @@ import { CustomLoadingPage } from "@/customization/components/custom-loading-pag
 import { ENABLE_LANGFLOW_STORE } from "@/customization/feature-flags";
 import { useCustomPrimaryLoading } from "@/customization/hooks/use-custom-primary-loading";
 import useAuthStore from "@/stores/authStore";
-import { useDarkStore } from "@/stores/darkStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import type { Users } from "@/types/api";
 import { LoadingPage } from "../LoadingPage";
 
 export function AppInitPage() {
-  const refreshStars = useDarkStore((state) => state.refreshStars);
-  const refreshDiscordCount = useDarkStore(
-    (state) => state.refreshDiscordCount,
-  );
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
   const { setUserData, storeApiKey } = useContext(AuthContext);
   const setIsAuthenticated = useAuthStore((state) => state.setIsAuthenticated);
   const setIsAdmin = useAuthStore((state) => state.setIsAdmin);
+  const setStoreUserData = useAuthStore((state) => state.setUserData);
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
@@ -64,7 +61,12 @@ export function AppInitPage() {
   // Update auth state when session data is available
   useEffect(() => {
     if (sessionData?.authenticated && sessionData.user) {
-      setUserData(sessionData.user);
+      // Keep AuthContext and the auth store in sync, as the playground gate
+      // does: on a reload this probe is the only thing that restores the user,
+      // and pages reading `useAuthStore.userData` would otherwise see null.
+      const user = sessionData.user as Users;
+      setUserData(user);
+      setStoreUserData(user);
       setIsAuthenticated(true);
       setIsAdmin(sessionData.user.is_superuser || false);
       if (sessionData.store_api_key) {
@@ -81,15 +83,10 @@ export function AppInitPage() {
   }, [sessionData]);
 
   useEffect(() => {
-    if (isFetched) {
-      refreshStars();
-      refreshDiscordCount();
-    }
-
     if (isConfigFetched) {
       refetchExamples();
     }
-  }, [isFetched, isConfigFetched]);
+  }, [isConfigFetched]);
 
   const isSessionReady = useMemo(
     () => isAuthenticated || autoLogin || isSessionFetched,

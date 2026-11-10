@@ -259,7 +259,10 @@ def _upgrade_instance_fields(conn: sa.Connection) -> None:
         (fk for fk in _foreign_keys(conn, _CONFIG_TABLE) if fk["constrained_columns"] == ["updated_by"]),
         None,
     )
-    with op.batch_alter_table(_CONFIG_TABLE, schema=None) as batch_op:
+    with (
+        migration.preserve_sqlite_triggers(conn, _CONFIG_TABLE, _SETTINGS_TABLE),
+        op.batch_alter_table(_CONFIG_TABLE, schema=None) as batch_op,
+    ):
         batch_op.alter_column(
             "sort_order",
             existing_type=sa.Integer(),
@@ -350,7 +353,10 @@ def _upgrade_sso_config(conn: sa.Connection) -> None:
     _sanitize_legacy_client_secrets(conn)
     columns = _column_names(conn, _CONFIG_TABLE)
     indexes = _indexes(conn, _CONFIG_TABLE)
-    with op.batch_alter_table(_CONFIG_TABLE, schema=None) as batch_op:
+    with (
+        migration.preserve_sqlite_triggers(conn, _CONFIG_TABLE, _SETTINGS_TABLE),
+        op.batch_alter_table(_CONFIG_TABLE, schema=None) as batch_op,
+    ):
         # Both generations of columns remain nullable during EXPAND so N-1
         # services can insert rows without knowing the new fields and N can
         # insert rows without knowing the legacy fields. A head migration adds

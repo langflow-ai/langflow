@@ -115,6 +115,7 @@ export const BundleItem = memo(
           <DisclosureContent>
             <SidebarItemsList
               item={item}
+              bundleDisplayName={item.display_name}
               dataFilter={dataFilter}
               nodeColors={nodeColors}
               onDragStart={onDragStart}

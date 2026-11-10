@@ -1,0 +1,11 @@
+{
+  "kind": "calendar#event",
+  "id": "event-langflow-sync",
+  "status": "confirmed",
+  "summary": "Langflow sync",
+  "location": "Remote",
+  "start": {"dateTime": "2026-09-10T14:00:00Z"},
+  "end": {"dateTime": "2026-09-10T15:00:00Z"},
+  "attendees": [{"email": "teammate@example.com", "responseStatus": "needsAction"}],
+  "htmlLink": "https://www.google.com/calendar/event?eid=event-langflow-sync"
+}

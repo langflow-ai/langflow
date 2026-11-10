@@ -47,6 +47,12 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
         return []
 
     @pytest.fixture
+    def skipped_outputs(self):
+        return {
+            "text_output": "sends the prompt to a live LLM",
+        }
+
+    @pytest.fixture
     def openai_api_key(self):
         """Fixture to get OpenAI API key from environment variable."""
         api_key = os.environ.get("OPENAI_API_KEY")

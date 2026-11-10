@@ -23,8 +23,13 @@ from lfx.workflow.converters import ParsedWorkflowRun
 from langflow.api.utils.execution_errors import caller_owns_flow, error_for_client
 from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.authorization.flow_data_override import flow_data_override_allowed
-from langflow.services.database.models.flow.model import FlowRead
+from langflow.services.database.models.flow.model import AccessTypeEnum, FlowRead
 from langflow.services.database.models.user.model import UserRead
+from langflow.utils.flow_secrets import (
+    HiddenFieldMetadataError,
+    restore_redacted_flow_values,
+    strip_secret_field_values,
+)
 
 
 def _flow_not_found_privacy_exception(exc: HTTPException, flow_id: str) -> HTTPException:
@@ -118,7 +123,36 @@ def _validate_flow_data_for_execution(
     expose_error_details: bool,
 ) -> ParsedWorkflowRun:
     """Apply component policies and return sanitized caller-supplied graph data."""
+    shared_caller = not caller_owns_flow(flow, current_user)
+    private_shared_flow = shared_caller and getattr(flow, "access_type", None) != AccessTypeEnum.PUBLIC
     try:
+        if shared_caller and parsed.globals and strip_secret_field_values(flow.data) != flow.data:
+            # Request variables can replace a load_from_db destination (such as
+            # a URL) while the stored graph still carries the owner's API key.
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot override variables in a shared flow using its owner's hidden credentials.",
+            )
+        if shared_caller and parsed.data is not None and strip_secret_field_values(parsed.data) != parsed.data:
+            # Background requests are durable and cannot carry a new plaintext
+            # credential. Without this check, scrubbing that value would turn it
+            # into null and later restore the owner's credential instead.
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Shared runs cannot override hidden credential values.",
+            )
+        if shared_caller and parsed.tweaks and strip_secret_field_values(flow.data) != flow.data:
+            # Tweaks are applied after graph construction in stream/background
+            # and after loading stored data in sync. A destination tweak could
+            # otherwise redirect an owner's restored key without changing data.
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot tweak a shared flow while using its owner's hidden credentials.",
+            )
+        if private_shared_flow and parsed.data is not None:
+            # Validate the redacted canvas against its stored source before the
+            # job request is persisted. The restored copy is discarded here.
+            restore_redacted_flow_values(parsed.data, flow.data)
         original_data = parsed.data if parsed.data is not None else flow.data
         if parsed.data is not None:
             sanitized_data = prepare_flow_build_for_user_from_cache(
@@ -146,6 +180,11 @@ def _validate_flow_data_for_execution(
         # Validation loads the registry and sanitizes a detached copy. Inspect the original
         # source so admin-only sanitization cannot erase the evidence of a substitution.
         warning = describe_component_code_substitution(original_data, include_component_names=expose_error_details)
+    except HiddenFieldMetadataError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot change hidden fields or executable graph data in a shared flow.",
+        ) from exc
     except CustomComponentValidationError as exc:
         client_error = error_for_client(exc, expose_details=expose_error_details)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(client_error)) from exc
@@ -155,6 +194,16 @@ def _validate_flow_data_for_execution(
     except RuntimeError as exc:
         client_error = error_for_client(exc, expose_details=expose_error_details)
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(client_error)) from exc
+    if shared_caller and parsed.mode != "sync":
+        # A background request is stored in job_metadata. Keep it, and the
+        # live stream adapter, free of the owner's hidden graph values. The
+        # runtime restores a detached copy only at graph construction.
+        parsed = replace(
+            parsed,
+            data=strip_secret_field_values(parsed.data) if isinstance(parsed.data, dict) else None,
+            expose_graph_state=False,
+            emit_v1_side_channel=False,
+        )
     return replace(parsed, component_substitution_warning=warning)
 
 

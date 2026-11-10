@@ -64,6 +64,14 @@ These base classes enforce mandatory methods that the component test classes mus
         ]
     ```
 
+The inherited `test_latest_version` test runs every output of the component with `default_kwargs` and fails if an output returns `None`. It runs offline, so an output that opens a network connection fails the test. If an output can't run offline, mock the external call. If mocking isn't practical, override the optional `skipped_outputs` fixture to name the output and the reason:
+
+```python
+@pytest.fixture
+def skipped_outputs(self):
+    return {"text_output": "sends the prompt to a live LLM"}
+```
+
 ## Testing component functionalities
 
 Once the basic structure of the test file is defined, implement test methods for the component's functionalities. The following guidelines must be followed:

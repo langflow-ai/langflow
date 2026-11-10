@@ -1,13 +1,25 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { isBlockedByCatalogPolicy } from "@/CustomNodes/helpers/check-code-validity";
 import { usePermissions } from "@/contexts/permissionsContext";
 import useAlertStore from "@/stores/alertStore";
+import useAuthStore from "@/stores/authStore";
+import useFlowConflictStore from "@/stores/flowConflictStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { FlowType } from "@/types/flow";
 import { useDebounce } from "../use-debounce";
+import { persistConflictDraft } from "./conflict-actions";
 import useSaveFlow from "./use-save-flow";
+
+/**
+ * How much longer than the debounce a continuous burst may defer its save.
+ *
+ * Bounds both the work at risk in a crash and how late a conflict can surface,
+ * neither of which a trailing debounce limits on its own.
+ */
+const AUTOSAVE_MAX_WAIT_FACTOR = 3;
 
 type PendingAutoSave = {
   flow?: FlowType;
@@ -44,7 +56,25 @@ const blockedComponentNames = (): string[] => {
     .map((component) => component.display_name ?? component.id);
 };
 
+/** Flows already told that their stranded work has no safety net. */
+const warnedUnprotected = new Set<string>();
+
+/**
+ * The last queued save per flow, shared by every editor instance.
+ *
+ * Memories and Traces unmount the canvas while its save can still be in flight
+ * (or waiting on a transient-error retry). A queue owned by the canvas started
+ * empty on return, so the next save went out on the same version token, won,
+ * and the orphan's retry was then refused as a conflict with the user's own
+ * edit. Keyed by flow so one flow's slow save never holds up another's.
+ */
+const saveQueueTails = new Map<string, Promise<void>>();
+
+const queueTail = (flowId: string): Promise<void> =>
+  saveQueueTails.get(flowId) ?? Promise.resolve();
+
 const useAutoSaveFlow = () => {
+  const { t } = useTranslation();
   const { can, isLoading } = usePermissions();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const reportedBlockedRef = useRef(false);
@@ -70,7 +100,6 @@ const useAutoSaveFlow = () => {
   }, [setErrorData]);
   const saveFlow = useSaveFlow();
   const pendingAutoSaveRef = useRef<PendingAutoSave | null>(null);
-  const saveQueueTailRef = useRef<Promise<void>>(Promise.resolve());
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
   const autoSavingInterval = useFlowsManagerStore(
     (state) => state.autoSavingInterval,
@@ -79,49 +108,93 @@ const useAutoSaveFlow = () => {
 
   const enqueueSave = useCallback(
     (flow?: FlowType): Promise<void> => {
-      const queuedSave = saveQueueTailRef.current.then(() => saveFlow(flow));
+      const flowId = flow?.id ?? currentFlowId;
+      const queuedSave = queueTail(flowId).then(() => saveFlow(flow));
       // Keep the tail fulfilled after a failed save so later edits still get a
       // chance to persist. The queuedSave returned to the immediate caller
       // retains the original rejection while the shared barrier tracks settle.
-      saveQueueTailRef.current = queuedSave.catch(() => undefined);
+      const tail = queuedSave.catch(() => undefined);
+      saveQueueTails.set(flowId, tail);
+      void tail.then(() => {
+        if (saveQueueTails.get(flowId) === tail) saveQueueTails.delete(flowId);
+      });
       return queuedSave;
     },
-    [saveFlow],
+    [currentFlowId, saveFlow],
   );
 
-  const debouncedAutoSave = useDebounce((flow?: FlowType) => {
-    const flowId = flow?.id ?? currentFlowId;
-    if (!autoSaving) {
-      pendingAutoSaveRef.current = null;
-      return;
-    }
-    if (isLoading) {
-      pendingAutoSaveRef.current = { flow, flowId };
-      return;
-    }
-    if (pauseForBlockedComponents()) {
-      // Hold the edit rather than discard it, so it still lands once the
-      // blocking component is removed.
-      pendingAutoSaveRef.current = { flow, flowId };
-      return;
-    }
-    if (can(flowId, "write")) {
-      pendingAutoSaveRef.current = null;
-      return enqueueSave(flow);
-    }
-  }, autoSavingInterval);
+  const debouncedAutoSave = useDebounce(
+    (flow?: FlowType) => {
+      const flowId = flow?.id ?? currentFlowId;
+      if (!autoSaving) {
+        pendingAutoSaveRef.current = null;
+        return;
+      }
+      if (isLoading) {
+        pendingAutoSaveRef.current = { flow, flowId };
+        return;
+      }
+      if (pauseForBlockedComponents()) {
+        // Hold the edit rather than discard it, so it still lands once the
+        // blocking component is removed.
+        pendingAutoSaveRef.current = { flow, flowId };
+        return;
+      }
+      const conflict = useFlowConflictStore.getState().conflict;
+      if (flowId && conflict?.flowId === flowId) {
+        // No write can succeed here, but the work still has to survive a reload,
+        // and this is the only thing still running while a conflict stands.
+        pendingAutoSaveRef.current = null;
+        const kept = persistConflictDraft(
+          flowId,
+          conflict.expectedToken,
+          useAuthStore.getState().userData?.id ?? null,
+        );
+        // Said once per conflict, not once per keystroke: the autosave that
+        // calls this runs every few seconds for as long as the conflict lasts.
+        if (!kept && !warnedUnprotected.has(flowId)) {
+          warnedUnprotected.add(flowId);
+          setErrorData({ title: t("multiEdit.error.draftNotKept") });
+        }
+        return;
+      }
+      if (can(flowId, "write")) {
+        pendingAutoSaveRef.current = null;
+        // Swallowed: a save the queue could not make is reported by whoever asked
+        // for it, and an unhandled rejection from a background debounce is not a
+        // way to tell anybody anything.
+        return enqueueSave(flow).catch(() => undefined);
+      }
+    },
+    autoSavingInterval,
+    // Cap how long a burst may defer the write. A plain trailing debounce has no
+    // ceiling: measured against a real server, a ten-second interval held 23
+    // seconds of continuous editing entirely in memory, and the conflict that
+    // work had collided with surfaced only once the person stopped.
+    { maxWait: autoSavingInterval * AUTOSAVE_MAX_WAIT_FACTOR },
+  );
 
   const autoSaveFlow = useMemo(() => {
-    const queuedAutoSave = (flow?: FlowType) => debouncedAutoSave(flow);
+    const queuedAutoSave = (flow?: FlowType) => {
+      // Asking for a save is the definition of a user-originated change, and the
+      // only signal that covers every one of them: drags and keyboard moves call
+      // this directly, never through the store setters.
+      useFlowStore.setState({ userEditedSinceLoad: true });
+      return debouncedAutoSave(flow);
+    };
     queuedAutoSave.cancel = () => debouncedAutoSave.cancel?.();
     queuedAutoSave.flush = async (): Promise<void> => {
       // flush() invokes a pending debounce callback synchronously, which adds
-      // its save to saveQueueTailRef before we capture and await the tail.
+      // its save to the flow's queue before we capture and await the tail.
       debouncedAutoSave.flush?.();
-      await saveQueueTailRef.current;
+      await queueTail(currentFlowId);
+    };
+    queuedAutoSave.enqueue = (flow: FlowType): Promise<void> => {
+      debouncedAutoSave.flush?.();
+      return enqueueSave(flow);
     };
     return queuedAutoSave;
-  }, [debouncedAutoSave]);
+  }, [currentFlowId, debouncedAutoSave, enqueueSave]);
 
   useEffect(() => {
     const pendingAutoSave = pendingAutoSaveRef.current;

@@ -63,9 +63,11 @@ It contains [Langflow environment variables](/environment-variables) that are us
 For example:
 
 ```text
-LANGFLOW_AUTO_LOGIN=True
+LANGFLOW_AUTO_LOGIN=false
+LANGFLOW_SUPERUSER_PASSWORD=REPLACE_WITH_A_STRONG_PASSWORD
+LANGFLOW_API_KEY_SOURCE=env
+LANGFLOW_API_KEY=REPLACE_WITH_A_SECURE_API_KEY
 LANGFLOW_SAVE_DB_IN_CONFIG_DIR=True
-LANGFLOW_BASE_URL=http://0.0.0.0:7860
 OPENAI_API_KEY=sk-...
 ```
 
@@ -211,6 +213,7 @@ For information about publishing your image on Docker Hub and running a Langflow
         curl --request POST \
           --url 'http://localhost:7860/api/v1/run/e4167236-938f-4aca-845b-21de3f399858?stream=true' \
           --header 'Content-Type: application/json' \
+          --header 'x-api-key: REPLACE_WITH_A_SECURE_API_KEY' \
           --data '{
             "input_value": "Tell me about Charizard.",
             "output_type": "chat",

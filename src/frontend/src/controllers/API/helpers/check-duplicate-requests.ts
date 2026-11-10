@@ -1,6 +1,10 @@
+import axios from "axios";
 import { AUTHORIZED_DUPLICATE_REQUESTS } from "../../../constants/constants";
 
 export function checkDuplicateRequestAndStoreRequest(config) {
+  // Compare with the query string: pages of one list and lookups of
+  // different ids share a path but are different requests.
+  const url = axios.getUri(config);
   const lastUrl = localStorage.getItem("lastUrlCalled");
   const lastMethodCalled = localStorage.getItem("lastMethodCalled");
   const lastRequestTime = localStorage.getItem("lastRequestTime");
@@ -13,7 +17,7 @@ export function checkDuplicateRequestAndStoreRequest(config) {
   );
 
   if (
-    config?.url === lastUrl &&
+    url === lastUrl &&
     !isContained &&
     lastMethodCalled === config.method &&
     lastMethodCalled === "get" && // Assuming you want to check only for GET requests
@@ -24,7 +28,7 @@ export function checkDuplicateRequestAndStoreRequest(config) {
     throw new Error("Duplicate request: " + lastUrl);
   }
 
-  localStorage.setItem("lastUrlCalled", config.url ?? "");
+  localStorage.setItem("lastUrlCalled", url);
   localStorage.setItem("lastMethodCalled", config.method ?? "");
   localStorage.setItem("lastRequestTime", currentTime.toString());
   localStorage.setItem("lastCurrentUrl", currentUrl);

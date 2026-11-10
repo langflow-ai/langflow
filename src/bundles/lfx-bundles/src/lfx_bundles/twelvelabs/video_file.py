@@ -1,9 +1,10 @@
-from pathlib import Path
-
 from lfx.base.data import BaseFileComponent
 from lfx.io import FileInput
 from lfx.schema import Data, DataFrame
+from lfx.utils.file_path_security import component_file_access_scopes
 from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
+
+from lfx_bundles.twelvelabs.file_access import resolve_video_file
 
 disable_component_in_astra_cloud_msg = (
     "Video processing is not supported in Astra cloud environment. "
@@ -118,11 +119,7 @@ class VideoFileComponent(BaseFileComponent):
                 file_path = str(file.path)
                 self.log(f"DEBUG: Processing video file: {file_path}")
 
-                # Verify file exists
-                file_path_obj = Path(file_path)
-                if not file_path_obj.exists():
-                    error_msg = f"Video file not found: {file_path}"
-                    raise FileNotFoundError(error_msg)
+                file_path = str(resolve_video_file(file_path, scope_ids=component_file_access_scopes(self)))
 
                 # Verify extension
                 if not file_path.lower().endswith(tuple(self.VALID_EXTENSIONS)):
@@ -157,11 +154,7 @@ class VideoFileComponent(BaseFileComponent):
 
             self.log(f"DEBUG: Loading video from path: {self.file_path}")
 
-            # Verify file exists
-            file_path_obj = Path(self.file_path)
-            if not file_path_obj.exists():
-                self.log(f"DEBUG: Video file not found at path: {self.file_path}")
-                return DataFrame()
+            file_path_obj = resolve_video_file(str(self.file_path), scope_ids=component_file_access_scopes(self))
 
             # Verify file size
             file_size = file_path_obj.stat().st_size
@@ -169,8 +162,8 @@ class VideoFileComponent(BaseFileComponent):
 
             # Create a proper Data object with the video path
             video_data = {
-                "text": self.file_path,
-                "metadata": {"source": self.file_path, "type": "video", "size": file_size},
+                "text": str(file_path_obj),
+                "metadata": {"source": str(file_path_obj), "type": "video", "size": file_size},
             }
 
             self.log(f"DEBUG: Created video data: {video_data}")

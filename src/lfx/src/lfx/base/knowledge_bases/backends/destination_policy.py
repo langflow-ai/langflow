@@ -7,18 +7,14 @@ The connector SSRF guard is *validate-then-connect*: it resolves the hostname,
 checks the answers against the blocklist, and then hands the original URL to a
 third-party SDK that resolves DNS again at connect time. For the SDKs the API
 Request component uses we close that window by pinning the validated IPs
-(``lfx.utils.ssrf_transport.SSRFProtectedTransport``), but neither KB network SDK
-offers a seam for it:
+(``lfx.utils.ssrf_transport.SSRFProtectedTransport``), but the OpenSearch adapter
+does not offer a compatible seam:
 
-* ``chromadb.CloudClient`` builds its own ``httpx.Client`` inside
-  ``chromadb.api.fastapi.FastAPI.__init__`` with no transport parameter, and
-  ``Client.__init__`` makes an identity request *during construction*, so there is
-  no moment between "client exists" and "first request" in which to install one.
 * ``langchain_community``'s ``OpenSearchVectorSearch`` forwards one ``**kwargs``
   dict to both ``OpenSearch`` (urllib3) and ``AsyncOpenSearch`` (aiohttp), so a
   single ``connection_class`` cannot pin both transports.
 
-So for these two backends a tenant-chosen *hostname* whose DNS answer flips
+For this backend a tenant-chosen *hostname* whose DNS answer flips
 between validation and the SDK's own resolution can still land on an internal
 address. Literal IP targets — cloud metadata at ``169.254.169.254``, RFC1918
 literals — have no DNS to rebind and are blocked by the SSRF guard either way;

@@ -82,6 +82,110 @@ result = math.sqrt(16)
         assert result.is_safe is True
 
 
+class TestMatchClassAttributes:
+    @pytest.mark.parametrize(
+        "attribute", ["__class__", "gi_frame", "f_globals", "format", "attrgetter", "subprocess_exec", "eval", "query"]
+    )
+    def test_rejects_blocked_keyword_attributes(self, attribute):
+        result = scan_code_security(f"match value:\n    case Record({attribute}=_):\n        pass")
+        assert result.is_safe is False
+        assert f"Access to '{attribute}' is forbidden in components (sandbox escape)" in result.violations
+
+    @pytest.mark.parametrize(
+        "pattern",
+        [
+            "Record(name=name)",
+            "Record()",
+            "1",
+            "name",
+            "_",
+            "Record(item=Record(name=name))",
+            "[Record(name=name)]",
+            "Record(__name__=name, __qualname__=qualname, __module__=module, __doc__=doc)",
+        ],
+    )
+    def test_preserves_benign_class_patterns(self, pattern):
+        result = scan_code_security(f"match value:\n    case {pattern}:\n        pass")
+        assert result.is_safe is True
+        assert result.violations == ()
+
+    @pytest.mark.parametrize("pattern", ["Record(item=Record(__class__=_))", "Record.__class__()"])
+    def test_checks_nested_pattern_nodes(self, pattern):
+        result = scan_code_security(f"match value:\n    case {pattern}:\n        pass")
+        assert result.is_safe is False
+        assert "Access to '__class__' is forbidden in components (sandbox escape)" in result.violations
+
+    @pytest.mark.parametrize("pattern", ["Record(name, count)", "Record(_)", "Record(item=Record(_))", "int(1)"])
+    def test_rejects_positional_class_patterns(self, pattern):
+        result = scan_code_security(f"match value:\n    case {pattern}:\n        pass")
+        assert result.is_safe is False
+        assert (
+            "Positional class patterns are not allowed in saved Python Interpreter, Python REPL, "
+            "or Lambda Filter code. Use keyword patterns with named attributes instead." in result.violations
+        )
+
+
+class TestScanCodeSecurityModuleReexports:
+    """Modules must not expose blocked capabilities through safe package imports."""
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import pydoc",
+            "import pydoc\npydoc.pipepager(text, command)",
+            "import pydoc as documentation\ndocumentation.importfile(source_path)",
+            "from pydoc import importfile as load_module\nload_module(source_path)",
+            "from pydoc import tempfile\nvalue = tempfile.NamedTemporaryFile()",
+            "from pydoc import *\nimportfile(source_path)",
+        ],
+    )
+    def test_rejects_pydoc_imports(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("pydoc" in violation for violation in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import numpy.ctypeslib",
+            "import numpy.ctypeslib as npct\nnpct.ctypes.CDLL(library_path)",
+            "from numpy import ctypeslib as ffi\nffi.ctypes.CDLL(library_path)",
+            "from numpy.ctypeslib import ctypes as ffi\nffi.CDLL(library_path)",
+            "from numpy.ctypeslib import load_library\nload_library(library_name, library_path)",
+            "from numpy.ctypeslib import *\nload_library(library_name, library_path)",
+            "import numpy\nnumpy.ctypeslib.ctypes.CDLL(library_path)",
+            "import numpy as np\nnp.ctypeslib.ctypes.CDLL(library_path)",
+            "import numpy as np\nffi = np.ctypeslib\nffi.ctypes.CDLL(library_path)",
+            "import numpy as np\ngetattr(np, 'ctypeslib').ctypes.CDLL(library_path)",
+            "import numpy as np\ngetattr(np, 'ctypes' + 'lib').ctypes.CDLL(library_path)",
+            "import numpy as np\nvars(np)['ctypeslib'].ctypes.CDLL(library_path)",
+            "import numpy as np\nvars(np).get('ctypeslib').ctypes.CDLL(library_path)",
+            "from numpy import *\nctypeslib.ctypes.CDLL(library_path)",
+        ],
+    )
+    def test_rejects_numpy_ctypeslib_access(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("numpy.ctypeslib" in violation for violation in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import numpy as np\nvalue = np.array([1, 2, 3]).mean()",
+            "from numpy import array\nvalue = array([1, 2, 3]).sum()",
+            "import numpy.linalg as linalg\nvalue = linalg.norm([1, 2, 3])",
+            "import numpy as np\nvalue = getattr(np, 'array')([1, 2, 3])",
+            "import numpy as np\nvalue = vars(np)['array']([1, 2, 3])",
+            "from numpy import *\nvalue = array([1, 2, 3])",
+            "import numpy as np\nvalue = np.load(payload, allow_pickle=False)",
+        ],
+    )
+    def test_preserves_safe_numpy_operations(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is True
+        assert result.violations == ()
+
+
 class TestScanCodeSecurityDangerousCalls:
     """Tests that dangerous function calls are detected."""
 
@@ -356,6 +460,30 @@ class TestScanCodeSecurityDangerousAttrCalls:
 
 class TestScanCodeSecurityDangerousImports:
     """Tests that dangerous imports are detected."""
+
+    @pytest.mark.parametrize(
+        ("code", "module"),
+        [
+            ('import timeit\ntimeit.timeit("print(1)", number=1)', "timeit"),
+            ('from timeit import Timer\nTimer("print(1)").timeit(1)', "timeit"),
+            ('import profile\nprofile.run("print(1)")', "profile"),
+            ('from profile import runctx\nrunctx("print(1)", {}, {})', "profile"),
+            ('import cProfile as profiler\nprofiler.run("print(1)")', "cProfile"),
+            ('from cProfile import runctx\nrunctx("print(1)", {}, {})', "cProfile"),
+            ('import trace\ntrace.Trace().run("print(1)")', "trace"),
+            ('from trace import Trace\nTrace().runctx("print(1)", {}, {})', "trace"),
+            ('import bdb\nbdb.Bdb().run("print(1)")', "bdb"),
+            ('from bdb import Bdb\nBdb().run("print(1)")', "bdb"),
+            ('import pdb\npdb.Pdb().run("print(1)")', "pdb"),
+            ('from pdb import Pdb\nPdb().run("print(1)")', "pdb"),
+            ("import doctest\ndoctest.DocTestRunner().run(test)", "doctest"),
+            ("from doctest import DocTestRunner\nDocTestRunner().run(test)", "doctest"),
+        ],
+    )
+    def test_should_detect_string_execution_profiling_imports(self, code, module):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any(module in violation for violation in result.violations)
 
     def test_should_detect_subprocess_import(self):
         """Import subprocess should be detected."""
@@ -868,6 +996,7 @@ class TestScanCodeSecurityAliasAndWildcardBypass:
             "import os.path\ngetattr(os.path, 'os').system('id')",
             "import os.path\nos.path.os.system('id')",
             "import os.path\nos.path.os.getenv('SECRET')",
+            "from os import *\npath.os.system('id')",
         ],
     )
     def test_should_detect_os_module_escape_through_os_path(self, code):
@@ -2162,14 +2291,16 @@ class TestScanCodeSecurityStdlibReexportBypass:
             pytest.param(
                 "from platform import sys as runtime\nruntime.modules['os'].fork()", id="from-platform-import-sys"
             ),
-            pytest.param("import zipfile\nzipfile.os.system('id')", id="zipfile-os-call"),
+            pytest.param("import configparser\nconfigparser.os.system('id')", id="configparser-os-call"),
             pytest.param("import tarfile\ntarfile.sys.modules['os'].posix_spawn()", id="tarfile-sys-modules"),
-            pytest.param("import zipfile\nzipfile.__dict__['os'].spawnv()", id="zipfile-dict-os"),
+            pytest.param("import configparser\nconfigparser.__dict__['os'].spawnv()", id="configparser-dict-os"),
             pytest.param("import tarfile\nvars(tarfile).get('os').fork()", id="tarfile-vars-get-os"),
         ],
     )
     def test_should_detect_stdlib_module_reexports(self, code):
-        assert scan_code_security(code).is_safe is False
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert not any(violation.startswith("Import ") for violation in result.violations)
 
     @pytest.mark.parametrize(
         "code",
@@ -2185,7 +2316,10 @@ class TestScanCodeSecurityStdlibReexportBypass:
                 "import platform\ngetattr(platform, '__dict__')['__builtins__']['eval']('1')",
                 id="getattr-dict-builtins",
             ),
-            pytest.param("import zipfile\nzipfile.__dict__['__builtins__']['eval']('1')", id="zipfile-dict-builtins"),
+            pytest.param(
+                "import configparser\nconfigparser.__dict__['__builtins__']['eval']('1')",
+                id="configparser-dict-builtins",
+            ),
             pytest.param(
                 "import requests\nrequests.__dict__['__builtins__']['eval']('1')", id="third-party-dict-builtins"
             ),
@@ -2209,25 +2343,27 @@ class TestScanCodeSecurityStdlibReexportBypass:
                 "import platform\nplatform.__dict__.get('__builtins__')['eval']('1')", id="platform-dict-get-builtins"
             ),
             pytest.param(
-                "import zipfile\nzipfile.__dict__.__getitem__('__builtins__')['eval']('1')",
-                id="zipfile-dict-getitem-builtins",
+                "import configparser\nconfigparser.__dict__.__getitem__('__builtins__')['eval']('1')",
+                id="configparser-dict-getitem-builtins",
             ),
             pytest.param(
-                "import zipfile\ndict.get(zipfile.__dict__, '__builtins__')['eval']('1')",
-                id="zipfile-dict-get-unbound-builtins",
+                "import configparser\ndict.get(configparser.__dict__, '__builtins__')['eval']('1')",
+                id="configparser-dict-get-unbound-builtins",
             ),
             pytest.param(
                 "import requests\nrequests.__dict__.get('__builtins__', {})['eval']('1')",
                 id="third-party-dict-get-default-builtins",
             ),
             pytest.param(
-                "import zipfile\nzipfile.__dict__['__loader__'].load_module('os').system('id')",
-                id="zipfile-dict-loader",
+                "import configparser\nconfigparser.__dict__['__loader__'].load_module('os').system('id')",
+                id="configparser-dict-loader",
             ),
         ],
     )
     def test_should_detect_builtins_reflection_through_module_dict(self, code):
-        assert scan_code_security(code).is_safe is False
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert not any(violation.startswith("Import ") for violation in result.violations)
 
     @pytest.mark.parametrize(
         "code",
@@ -2327,6 +2463,18 @@ class TestScanCodeSecurityDottedSubmoduleAccess:
         result = scan_code_security(code)
         assert result.is_safe is False
         assert any("urllib.request" in v for v in result.violations)
+
+    @pytest.mark.parametrize(
+        ("submodule", "access"),
+        [
+            ("request", "request.urlopen('file:///etc/passwd')"),
+            ("error", "error.HTTPError('url', 400, 'bad request', {}, None)"),
+        ],
+    )
+    def test_should_detect_urllib_star_submodule(self, submodule, access):
+        result = scan_code_security(f"from urllib import *\n{access}")
+        assert result.is_safe is False
+        assert any(f"urllib.{submodule}" in violation for violation in result.violations)
 
     def test_should_detect_bare_http_then_client(self):
         code = "import http\nc = http.client.HTTPConnection('attacker', 80)"
@@ -2865,7 +3013,7 @@ class TestStdlibReexportHostBoundary:
     ``_reexported_restricted_module`` canonicalizes ``<stdlib>.os`` to the
     real ``os`` for every stdlib host, which is what closes
     ``platform.os.system(...)``. That only runs while the host is a named value,
-    so the boundary rule has to cover the same set: passing ``zipfile`` into a
+    so the boundary rule has to cover the same set: passing ``configparser`` into a
     helper and reading ``m.os`` inside it otherwise reaches ``os`` with the
     scanner unable to relate ``m`` back to a module.
     """
@@ -2873,13 +3021,14 @@ class TestStdlibReexportHostBoundary:
     @pytest.mark.parametrize(
         "code",
         [
-            "import zipfile\n\n\ndef helper(m):\n    return m.os.getenv('HOME')\n\n\nvalue = helper(zipfile)",
-            "import zipfile\n\n\ndef helper(m):\n    return m.os.system('id')\n\n\nhelper(zipfile)",
-            "import zipfile\n\n\ndef give():\n    return zipfile\n\n\nvalue = give().os.getenv('HOME')",
-            "import zipfile\n\nmodules = [zipfile]\nvalue = modules[0].os.getenv('HOME')",
-            "import zipfile\n\n\nclass C:\n    m = zipfile\n\n\nvalue = C.m.os.getenv('HOME')",
-            "import zipfile\n\n\ndef helper(m=zipfile):\n    return m.os.getenv('HOME')\n\n\nvalue = helper()",
-            "import zipfile\n\nmapping = {'z': zipfile}\nvalue = mapping['z'].os.getenv('HOME')",
+            "import configparser\n\n\ndef helper(m):\n    return m.os.getenv('HOME')\n\n\nvalue = helper(configparser)",
+            "import configparser\n\n\ndef helper(m):\n    return m.os.system('id')\n\n\nhelper(configparser)",
+            "import configparser\n\n\ndef give():\n    return configparser\n\n\nvalue = give().os.getenv('HOME')",
+            "import configparser\n\nmodules = [configparser]\nvalue = modules[0].os.getenv('HOME')",
+            "import configparser\n\n\nclass C:\n    m = configparser\n\n\nvalue = C.m.os.getenv('HOME')",
+            "import configparser\n\n\ndef helper(m=configparser):\n    return m.os.getenv('HOME')"
+            "\n\n\nvalue = helper()",
+            "import configparser\n\nmapping = {'z': configparser}\nvalue = mapping['z'].os.getenv('HOME')",
             "import tempfile\n\n\ndef helper(m):\n    return m.os.getenv('HOME')\n\n\nvalue = helper(tempfile)",
         ],
         ids=[
@@ -2894,7 +3043,13 @@ class TestStdlibReexportHostBoundary:
         ],
     )
     def test_stdlib_module_cannot_cross_an_opaque_boundary(self, code):
-        assert scan_code_security(code).is_safe is False
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any(violation.startswith("Indirect reference to restricted module '") for violation in result.violations)
+        assert not any(violation.startswith("Import ") for violation in result.violations)
+
+    def test_boundary_fixture_import_stays_allowed(self):
+        assert scan_code_security("import configparser").is_safe is True
 
     @pytest.mark.parametrize(
         "code",
@@ -2902,7 +3057,6 @@ class TestStdlibReexportHostBoundary:
             # Ordinary stdlib use is unaffected: only a bare *module value*
             # crossing a boundary is a carrier.
             "import json\nvalue = json.dumps({'a': 1})",
-            "import zipfile\narchive = zipfile.ZipFile('x.zip')\nnames = archive.namelist()",
             "import re\nmatch = re.match('a', 'abc')",
             "import math\nvalue = math.sqrt(4)",
             "import datetime\nvalue = datetime.datetime.now()",
@@ -2914,7 +3068,6 @@ class TestStdlibReexportHostBoundary:
         ],
         ids=[
             "json-dumps",
-            "zipfile-normal-use",
             "re-match",
             "math-sqrt",
             "datetime-now",
@@ -3122,25 +3275,39 @@ class TestReflectiveNamespaceProvenance:
             "base = {'a': 1}\nvalues = list(base.values())",
             "base = {'a': 1}\nfor k, v in base.items():\n    pass",
             # A namespace read with a statically known, non-dunder key still works.
-            "import argparse\nparsed = argparse.Namespace()\nconfig = dict(vars(parsed))\nname = config['name']",
-            "class C:\n    x = 1\n\n\nfields = sorted(vars(C).keys())",
-            "class C:\n    x = 1\n\n\ncount = len(vars(C))",
-            # The marker rides onto non-mappings, so sequence reads must stay clean.
-            "import json\n\n\nclass C:\n    x = 1\n\n\ntext = json.dumps(vars(C()))\nhead = text[:100]",
+            "import argparse\nparsed = argparse.Namespace()\nconfig = vars(parsed)\nname = config['name']",
         ],
         ids=[
             "plain-dict-copy",
             "plain-dict-merge",
             "plain-dict-values",
             "plain-dict-items",
+            "namespace-static-key",
+        ],
+    )
+    def test_ordinary_dictionary_copies_still_allowed(self, code):
+        assert scan_code_security(code).is_safe is True
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import argparse\nparsed = argparse.Namespace()\nconfig = dict(vars(parsed))\nname = config['name']",
+            "class C:\n    x = 1\n\n\nfields = sorted(vars(C).keys())",
+            "class C:\n    x = 1\n\n\ncount = len(vars(C))",
+            "import json\n\n\nclass C:\n    x = 1\n\n\ntext = json.dumps(vars(C()))\nhead = text[:100]",
+        ],
+        ids=[
             "namespace-copy-static-key",
             "namespace-keys",
             "namespace-length",
             "serialized-namespace-slice",
         ],
     )
-    def test_ordinary_dictionary_copies_still_allowed(self, code):
-        assert scan_code_security(code).is_safe is True
+    def test_namespace_arguments_are_rejected_even_for_benign_consumers(self, code):
+        """Call targets can be replaced, so namespace arguments cannot escape tracking."""
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("namespace mapping" in violation for violation in result.violations)
 
 
 class TestScanCodeSecurityDynamicGetattrSandboxBypass:
@@ -3311,4 +3478,662 @@ class TestScanCodeSecurityUnpackedGetattrArguments:
         ],
     )
     def test_should_allow_unpacking_outside_getattr(self, code):
+        assert scan_code_security(code).is_safe is True
+
+
+class TestScanCodeSecurityExpressionEvaluation:
+    """Expression evaluators must not execute code hidden inside strings."""
+
+    @pytest.mark.parametrize("method", ["eval", "query"])
+    @pytest.mark.parametrize(
+        "source",
+        [
+            "import pandas as pd\npd.DataFrame({'x': [1]}).METHOD('x + 1')",
+            "import pandas as pd\nframe = pd.DataFrame({'x': [1]})\nframe.METHOD('x + 1')",
+            "from pandas import DataFrame as Frame\nFrame.METHOD(frame, 'x + 1')",
+            "def calculate(frame):\n    return frame.METHOD(expression)",
+            "calculate = frame.METHOD\ncalculate(expression)",
+            "callbacks = [frame.METHOD]\ncallbacks[0](expression)",
+            "getattr(frame, 'METHOD')(expression)",
+            "getattr(frame, 'METHOD' + '')(expression)",
+            "vars(type(frame))['METHOD'](frame, expression)",
+            "vars(type(frame)).get('METHOD')(frame, expression)",
+            "dict.get(vars(type(frame)), 'METHOD')(frame, expression)",
+            "namespace = dict(vars(type(frame)))\nnamespace['METHOD'](frame, expression)",
+            "copy_namespace = vars(type(frame)).copy\nnamespace = copy_namespace()\n"
+            "namespace['METHOD'](frame, expression)",
+        ],
+    )
+    def test_rejects_expression_methods(self, source, method):
+        result = scan_code_security(source.replace("METHOD", method))
+        assert result.is_safe is False
+        assert any(method in violation for violation in result.violations)
+
+    @pytest.mark.parametrize("method", ["eval", "query"])
+    @pytest.mark.parametrize(
+        "source",
+        [
+            "def members(value):\n    return vars(type(value))\nmembers(frame)['METHOD'](frame, 'x == 1')",
+            "def members():\n    return vars(pd.DataFrame)\nmembers()['METHOD'](frame, 'x == 1')",
+            "def lookup(namespace):\n    return namespace['METHOD']\nlookup(vars(type(frame)))(frame, 'x == 1')",
+            "def lookup(namespace):\n    return namespace.get('METHOD')\nlookup(vars(type(frame)))(frame, 'x == 1')",
+            "def lookup():\n    return vars(pd.DataFrame).get\nlookup()('METHOD')(frame, 'x == 1')",
+            "class Methods:\n    namespace = vars(pd.DataFrame)\nMethods.namespace['METHOD'](frame, 'x == 1')",
+            "holder.namespace = vars(type(frame))\nholder.namespace['METHOD'](frame, 'x == 1')",
+            "holder.lookup = vars(type(frame)).get\nholder.lookup('METHOD')(frame, 'x == 1')",
+            "def publish():\n    global namespace\n    namespace = vars(type(frame))\n"
+            "publish()\nnamespace['METHOD'](frame, 'x == 1')",
+            "def outer():\n    namespace = {}\n    def publish():\n        nonlocal namespace\n"
+            "        namespace = vars(type(frame))\n    publish()\n    return namespace['METHOD'](frame, 'x == 1')",
+            "def members():\n    yield vars(type(frame))\nnext(members())['METHOD'](frame, 'x == 1')",
+            "def members():\n    return [vars(type(frame))]\nmembers()[0]['METHOD'](frame, 'x == 1')",
+            "def lookup(namespace):\n    return namespace['METHOD']\nlookup(dict(vars(type(frame))))(frame, 'x == 1')",
+            "def copy_namespace():\n    return vars(type(frame)).copy\ncopy_namespace()()['METHOD'](frame, 'x == 1')",
+            "namespaces = {'fields': vars(type(frame))}\nnamespaces['fields']['METHOD'](frame, 'x == 1')",
+            "{'fields': vars(type(frame))}['fields']['METHOD'](frame, 'x == 1')",
+            "namespaces = {'outer': {'fields': vars(type(frame))}}\n"
+            "namespaces['outer']['fields']['METHOD'](frame, 'x == 1')",
+        ],
+    )
+    def test_rejects_namespace_escapes(self, source, method):
+        code = "import pandas as pd\nframe = pd.DataFrame({'x': [1]})\n" + source.replace("METHOD", method)
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize("capability", ["vars", "getattr", "builtins.vars", "builtins.getattr"])
+    @pytest.mark.parametrize(
+        "source",
+        [
+            "lookup = [CAPABILITY][0]",
+            "lookup = (lambda value: value)(CAPABILITY)",
+            "def factory():\n    return CAPABILITY\nlookup = factory()",
+            "holder.lookup = CAPABILITY",
+            "class Helpers:\n    lookup = CAPABILITY",
+            "def factory(lookup=CAPABILITY):\n    return lookup",
+        ],
+    )
+    def test_rejects_reflection_callable_escapes(self, source, capability):
+        code = "import builtins\n" + source.replace("CAPABILITY", capability)
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import pandas as pd\npd.eval('1 + 1')",
+            "from pandas import eval as calculate\ncalculate('1 + 1')",
+            "from pandas import *\neval('1 + 1')",
+            "import pandas.core.computation.eval as expressions\nexpressions.eval('1 + 1')",
+            "from pandas.core.computation.eval import eval as calculate\ncalculate('1 + 1')",
+            "from pandas.core.computation.api import eval as calculate\ncalculate('1 + 1')",
+            "from pandas.core.computation.expr import Expr\nExpr(expression)",
+            "from pandas.core.computation.engines import PythonEngine\nPythonEngine(expression).evaluate()",
+            "import pandas as pd\npd.core.computation.expr.Expr(expression)",
+        ],
+    )
+    def test_rejects_pandas_evaluator_imports(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import pandas as pd\nframe = pd.DataFrame({'x': [1, 2]})\nresult = frame[frame['x'] > 1]",
+            "import pandas as pd\nframe = pd.DataFrame({'x': [1]})\nresult = frame['x'] + 1",
+            "data = {'query': 'text', 'eval': 1}\nresult = data['query'], data['eval']",
+            "data = {}\nresult = data.get('query'), data.get('eval')",
+            "data = {}\nresult = dict.get(data, 'query'), dict.get(data, 'eval')",
+            "def lookup(data):\n    return data['eval']\nresult = lookup({'eval': 1})",
+            "class C:\n    x = 1\nnamespace = vars\nresult = namespace(C)['x']",
+            "class C:\n    x = 1\nlookup = getattr\nresult = lookup(C, 'x')",
+            "import pandas as pd\nframe = pd.DataFrame({'query': [1], 'eval': [2]})\nresult = frame['query']",
+        ],
+    )
+    def test_preserves_data_operations(self, code):
+        assert scan_code_security(code).is_safe is True
+
+    @pytest.mark.parametrize(
+        "selection",
+        [
+            pytest.param("namespace['name']", id="subscript"),
+            pytest.param("namespace.get('name')", id="bound-get"),
+            pytest.param("namespace.get('name', 'unknown')", id="get-with-default"),
+            pytest.param("dict.get(namespace, 'name')", id="unbound-get"),
+            pytest.param("lookup('name')", id="aliased-get"),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "use",
+        [
+            pytest.param("return SELECTED", id="returned-value"),
+            pytest.param("return {'name': SELECTED}", id="dictionary-value"),
+            pytest.param("return str(SELECTED)", id="argument-value"),
+        ],
+    )
+    def test_preserves_selected_namespace_data(self, selection, use):
+        code = """
+import argparse
+
+def read_name():
+    parsed = argparse.Namespace(name="Alice")
+    namespace = vars(parsed)
+    lookup = namespace.get
+    USE
+""".replace("USE", use.replace("SELECTED", selection))
+        result = scan_code_security(code)
+        assert result.is_safe is True, result.violations
+
+    @pytest.mark.parametrize(
+        "selection",
+        ["namespace.get('name', fallback)", "dict.get(namespace, 'name', fallback)"],
+    )
+    def test_rejects_namespace_valued_lookup_defaults(self, selection):
+        code = f"""
+import argparse
+
+def read_name():
+    parsed = argparse.Namespace(name="Alice")
+    namespace = vars(parsed)
+    fallback = vars(argparse.Namespace(name="unknown"))
+    return {selection}
+"""
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("namespace mapping" in violation for violation in result.violations)
+
+    @pytest.mark.parametrize("method", ["eval", "query"])
+    def test_pandas_expression_can_invoke_a_callback(self, method):
+        """Prove the expression reaches Python with an in-memory marker only."""
+        import pandas as pd
+
+        calls = []
+
+        def record():
+            calls.append("called")
+            return 1
+
+        frame = pd.DataFrame({"x": [1]})
+        getattr(frame, method)("x == @record()", engine="python", local_dict={"record": record})
+        assert calls == ["called"]
+
+
+class TestScanCodeSecurityUnsafeDeserialization:
+    """Generated code must not reach pickle through permitted data libraries."""
+
+    @pytest.mark.parametrize(
+        ("code", "module"),
+        [
+            ("import pandas as pd\npd.read_pickle(payload)", "pandas"),
+            ("import pandas as pd\nloader = pd.read_pickle\nloader(payload)", "pandas"),
+            ("import pandas as pd\ngetattr(pd, 'read_pickle')(payload)", "pandas"),
+            ("from pandas import read_pickle as load\nload(payload)", "pandas"),
+            ("from pandas import read_pickle", "pandas"),
+            ("import pandas.io.pickle as io_pickle\nio_pickle.read_pickle(payload)", "pandas"),
+            ("import pandas.io.pickle as io_pickle\nio_pickle.pickle.loads(payload)", "pandas"),
+            ("import pandas.io.pickle as io_pickle\nio_pickle.pc.Unpickler(stream).load()", "pandas"),
+            ("from pandas.io import pickle as io_pickle\nio_pickle.read_pickle(payload)", "pandas"),
+            ("from pandas.io.pickle import pc", "pandas"),
+            ("from pandas.io.pickle import *\npc.Unpickler(stream).load()", "pandas"),
+            ("from pandas.io.pickle import read_pickle\nread_pickle(payload)", "pandas"),
+            ("import pandas.io.api as pio\npio.read_pickle(payload)", "pandas"),
+            ("from pandas.io.api import *\nread_pickle(payload)", "pandas"),
+            ("import pandas.core.generic as generic\ngeneric.pickle.loads(payload)", "pandas"),
+            ("from pandas.core.generic import pickle as p\np.loads(payload)", "pandas"),
+            ("from pandas.core import generic\ngeneric.pickle.loads(payload)", "pandas"),
+            ("import pandas.compat.pickle_compat as pc\npc.load(payload)", "pandas"),
+            ("import pandas.compat.pickle_compat as pc\npc.loads(payload)", "pandas"),
+            ("from pandas.compat.pickle_compat import *\nloads(payload)", "pandas"),
+            ("import pandas.compat.pickle_compat as pc\npc.Unpickler(stream).load()", "pandas"),
+            ("import pandas.compat.pickle_compat as pc\npc.pkl.loads(payload)", "pandas"),
+            ("from pandas.compat.pickle_compat import Unpickler", "pandas"),
+            ("from pandas.compat import pickle_compat as pc\npc.Unpickler(stream).load()", "pandas"),
+            ("import pandas as pd\npd.compat.pickle_compat.pkl.loads(payload)", "pandas"),
+            ("import pandas as pd\npd.io.pickle.pc.Unpickler(stream).load()", "pandas"),
+            ("import pandas as pd\ngetattr(pd.io, 'pickle').pc.Unpickler(stream).load()", "pandas"),
+            ("import pandas as pd\nvars(pd.io)['pickle'].pickle.loads(payload)", "pandas"),
+            ("import pandas as pd\ngetattr(pd.compat, 'pickle_compat').pkl.loads(payload)", "pandas"),
+            ("import pandas as pd\nvars(pd.compat)['pickle_compat'].pkl.loads(payload)", "pandas"),
+            ("import pandas as pd\nvars(pd.compat).get('pickle_compat').pkl.loads(payload)", "pandas"),
+            ("from pandas import *\nread_pickle(payload)", "pandas"),
+            ("from pandas import *\ndata = io.pickle.read_pickle(payload)", "pandas"),
+            ("from pandas.io import *\napi.read_pickle(payload)", "pandas"),
+            ("from pandas.core import *\ndata = generic.pickle.loads(payload)", "pandas"),
+            ("import joblib\njoblib.load(payload)", "joblib"),
+            ("from dill import loads\nloads(payload)", "dill"),
+            ("import cloudpickle\ncloudpickle.loads(payload)", "cloudpickle"),
+            ("import _pickle\n_pickle.loads(payload)", "_pickle"),
+            ("from _pickle import loads\nloads(payload)", "_pickle"),
+            ("import pickletools\npickletools.pickle.loads(payload)", "pickletools"),
+            ("from pickletools import pickle as p\np.loads(payload)", "pickletools"),
+            ("import pickletools\ngetattr(pickletools, 'pickle').loads(payload)", "pickletools"),
+            ("import trace\ntrace.pickle.loads(payload)", "trace"),
+            ("import tracemalloc\ntracemalloc.pickle.loads(payload)", "tracemalloc"),
+            ("from tracemalloc import pickle as p\np.loads(payload)", "tracemalloc"),
+            ("from tracemalloc import *\npickle.loads(payload)", "tracemalloc"),
+            (
+                "import concurrent.futures.process as process\nprocess.mp.reduction.ForkingPickler.loads(payload)",
+                "concurrent.futures.process",
+            ),
+            (
+                "from concurrent.futures import process\nprocess.mp.reduction.ForkingPickler.loads(payload)",
+                "concurrent.futures.process",
+            ),
+            (
+                "from concurrent import *\nfutures.process.mp.reduction.ForkingPickler.loads(payload)",
+                "concurrent.futures.process",
+            ),
+            ("import numpy.lib.format as fmt\nfmt.pickle.loads(payload)", "numpy"),
+            ("import numpy._core._methods as methods\nmethods.pickle.loads(payload)", "numpy"),
+            ("from numpy._core._methods import pickle as p\np.loads(payload)", "numpy"),
+            ("import numpy.lib._format_impl as fmt\nfmt.pickle.loads(payload)", "numpy"),
+            ("import numpy.lib._npyio_impl as npio\nnpio.pickle.loads(payload)", "numpy"),
+            ("import numpy as np\nnp.lib._format_impl.pickle.loads(payload)", "numpy"),
+            ("from numpy import *\ndata = lib._format_impl.pickle.loads(payload)", "numpy"),
+            ("from numpy.lib import *\nformat.read_array(payload, allow_pickle=True)", "numpy"),
+            ("from numpy.lib import *\nnpyio.NpzFile(payload, allow_pickle=True)", "numpy"),
+            ("from numpy.lib._format_impl import pickle as p\np.loads(payload)", "numpy"),
+            ("from numpy.lib._npyio_impl import pickle", "numpy"),
+            ("from numpy.lib._format_impl import *\npickle.loads(payload)", "numpy"),
+            ("from numpy.lib import _npyio_impl as npio\nnpio.pickle.loads(payload)", "numpy"),
+            ("import numpy.lib._format_impl as fmt\ngetattr(fmt, 'pickle').loads(payload)", "numpy"),
+            ("import numpy.lib._npyio_impl as npio\nvars(npio).get('pickle').loads(payload)", "numpy"),
+        ],
+    )
+    def test_rejects_pickle_deserialization_paths(self, code, module):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any(module in violation for violation in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import pandas as pd\npd.read_csv(path)",
+            "from pandas import DataFrame\nframe = DataFrame(data)",
+            "import pandas.compat as compat\nvalue = compat.is_numpy_dev",
+            "from pandas.io import *\nframe = api.read_csv(path)",
+        ],
+    )
+    def test_preserves_non_pickle_pandas_operations(self, code):
+        assert scan_code_security(code).is_safe is True
+
+    @pytest.mark.parametrize(
+        ("private_name", "reader_method"),
+        [("_npyio_impl", "load"), ("_format_impl", "read_array")],
+    )
+    def test_numpy_lib_star_does_not_replace_private_local(self, private_name, reader_method):
+        code = (
+            f"class SafeReader:\n    def {reader_method}(self, payload, allow_pickle):\n"
+            f"        return payload\n{private_name} = SafeReader()\n"
+            f"from numpy.lib import *\n{private_name}.{reader_method}(payload, allow_pickle=True)"
+        )
+        assert scan_code_security(code).is_safe is True
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "class SafeCompat:\n    pickle_compat = 'plain text'\n"
+            "compat = SafeCompat()\nfrom pandas import *\nvalue = compat.pickle_compat",
+            "class SafeGeneric:\n    pickle = 'plain text'\n"
+            "class SafeCore:\n    generic = SafeGeneric()\n"
+            "core = SafeCore()\nfrom pandas import *\nvalue = core.generic.pickle",
+            "class SafeOS:\n    def system(self, command):\n        return command\n"
+            "class SafeClient:\n    os = SafeOS()\n"
+            "client = SafeClient()\nfrom http import *\nvalue = client.os.system('safe')",
+            "class SafeProcess:\n    def create_subprocess_exec(self, command):\n        return command\n"
+            "subprocess = SafeProcess()\nfrom asyncio import *\nvalue = subprocess.create_subprocess_exec('safe')",
+        ],
+    )
+    def test_star_import_does_not_replace_unexported_public_local(self, code):
+        assert scan_code_security(code).is_safe is True
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import numpy as np\nnp.load(payload, allow_pickle=True)",
+            "import numpy as np\nreader = np.load\nreader(payload, allow_pickle=True)",
+            "import numpy as np\nreader = [np.load][0]\nreader(payload, allow_pickle=True)",
+            "import numpy as np\nclass Loader:\n    reader = np.load\n"
+            "    def run(self):\n        return self.reader(payload, allow_pickle=True)",
+            "import numpy as np\ngetattr(np, 'load')(payload, allow_pickle=True)",
+            "from numpy import load as reader\nreader(payload, allow_pickle=True)",
+            "from numpy import *\nload(payload, allow_pickle=True)",
+            "from numpy.lib.npyio import *\nload(payload, allow_pickle=True)",
+            "from numpy.lib._npyio_impl import NpzFile\nNpzFile(payload, allow_pickle=True)['arr_0']",
+            "import numpy.lib._npyio_impl as npio\nnpio.NpzFile(payload, allow_pickle=True)['arr_0']",
+            "import numpy.lib.npyio as npio\nnpio.NpzFile(payload, allow_pickle=True)['arr_0']",
+            "from numpy.lib._npyio_impl import NpzFile as Reader\nReader(payload, allow_pickle=flag)['arr_0']",
+            "import numpy as np\nnp.load(payload, None, True)",
+            "import numpy as np\nnp.load(payload, allow_pickle=flag)",
+            "import numpy as np\nnp.load(payload, **options)",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    z.allow_pickle = True\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    setattr(z, 'allow_pickle', True)\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    list(map(setattr, [z], ['allow_pickle'], [True]))\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "import functools\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    functools.partial(setattr, z, 'allow_pickle')(True)\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "from builtins import setattr as write\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    list(map(write, [z], ['allow_pickle'], [True]))\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    vars(z)['allow_pickle'] = True\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "z = (lambda value: value)(np.load(payload, allow_pickle=False))\n"
+            "vars(z)['allow_pickle'] = True\n"
+            "data = z['arr_0']",
+            "import numpy as np\n"
+            "def identity(value):\n"
+            "    return value\n"
+            "z = identity(np.load(payload, allow_pickle=False))\n"
+            "vars(z)['allow_pickle'] = True\n"
+            "data = z['arr_0']",
+            "import numpy as np\n"
+            "z = next(iter([np.load(payload, allow_pickle=False)]))\n"
+            "vars(z)['allow_pickle'] = True\n"
+            "data = z['arr_0']",
+            "import numpy as np\n"
+            "z = {'reader': np.load(payload, allow_pickle=False)}.get('reader')\n"
+            "vars(z)['allow_pickle'] = True\n"
+            "data = z['arr_0']",
+            "import numpy as np\n"
+            "from types import SimpleNamespace\n"
+            "z = SimpleNamespace(reader=np.load(payload, allow_pickle=False)).reader\n"
+            "vars(z)['allow_pickle'] = True\n"
+            "data = z['arr_0']",
+            "import numpy as np\n"
+            "from builtins import vars as reflect\n"
+            "def expose(reader):\n"
+            "    reflect(reader)['allow_pickle'] = True\n"
+            "z = np.load(payload, allow_pickle=False)\n"
+            "expose(z)",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    alias = z\n"
+            "    vars(alias)['allow_pickle'] = True\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    vars([z][0])['allow_pickle'] = True\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    vars({'reader': z}['reader'])['allow_pickle'] = True\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    generated = (vars(z) for _ in (0,))\n"
+            "    next(generated)['allow_pickle'] = True\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    getter = lambda: vars(z)\n"
+            "    getter()['allow_pickle'] = True\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    namespace = vars(z)\n"
+            "    namespace['allow_pickle'] = True\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    key = 'ALLOW_PICKLE'.lower()\n"
+            "    vars(z)[key] = True\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    z.__dict__['allow_pickle'] = True\n"
+            "    data = z['arr_0']",
+            "import numpy as np\nnp.load(payload, allow_pickle=False).__dict__['allow_pickle'] = True",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    setattr(z, 'ALLOW_PICKLE'.lower(), True)\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "import operator\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    operator.setitem(vars(z), 'allow_pickle', True)\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "from operator import *\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    setitem(vars(z), 'allow_pickle', True)\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "import operator\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    operator.ior(vars(z), {'allow_pickle': True})\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "from operator import *\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    ior(vars(z), {'allow_pickle': True})\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    dict.update(*[vars(z), {'allow_pickle': True}])\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "import operator\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    operator.setitem(*[vars(z), 'allow_pickle', True])\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    args = [vars(z), {'allow_pickle': True}]\n"
+            "    dict.update(*args)\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    write = vars(z).update\n"
+            "    write({'allow_pickle': True})\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    writes = [vars(z).update]\n"
+            "    writes[0]({'allow_pickle': True})\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    writes = {'mutate': vars(z).update}\n"
+            "    writes['mutate']({'allow_pickle': True})\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "import functools\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    functools.partial(dict.update, vars(z), {'allow_pickle': True})()\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "import functools\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    functools.partial(vars(z).update, {'allow_pickle': True})()\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "def mutate(namespace):\n"
+            "    namespace['allow_pickle'] = True\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    mutate(vars(z))\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    dict.update(vars(z), {'allow_pickle': True})\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    dict.setdefault(vars(z), 'allow_pickle', True)\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "with np.load(payload, allow_pickle=False) as z:\n"
+            "    namespace = vars(z)\n"
+            "    namespace |= {'allow_pickle': True}\n"
+            "    data = z['arr_0']",
+            "import numpy as np\n"
+            "class Z(np.lib.npyio.NpzFile):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "Base = type(np.load(payload, allow_pickle=False))\n"
+            "class Z(Base):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "class Z(type(np.load(payload, allow_pickle=False))):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "z = np.load(payload, allow_pickle=False)\n"
+            "Base = type(z)\n"
+            "class Z(Base):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "z = np.load(payload, allow_pickle=False)\n"
+            "Z = type('Z', (type(z),), {})\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "z = np.load(payload, allow_pickle=False)\n"
+            "class Z([type(z)][0]):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "z = np.load(payload, allow_pickle=False)\n"
+            "class Z((type(z),)[0]):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "z = np.load(payload, allow_pickle=False)\n"
+            "class Z({'base': type(z)}['base']):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "z = np.load(payload, allow_pickle=False)\n"
+            "class Z(True and type(z)):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "z = np.load(payload, allow_pickle=False)\n"
+            "class Z((Base := type(z))):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "from builtins import type as typ\n"
+            "z = np.load(payload, allow_pickle=False)\n"
+            "class Z(typ(z)):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "def identity(value):\n"
+            "    return value\n"
+            "z = identity(np.load(payload, allow_pickle=False))\n"
+            "class Z(type(z)):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "def identity(value):\n"
+            "    return value\n"
+            "class Z(type(identity(np.load(payload, allow_pickle=False)))):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "class Z(type((lambda value: value)(np.load(payload, allow_pickle=False)))):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "class Z(type(next(iter([np.load(payload, allow_pickle=False)])))):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "z = np.load(payload, allow_pickle=False)\n"
+            "class Z(type(z, *[])):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "z = np.load(payload, allow_pickle=False)\n"
+            "class Z(type(*[z], *[])):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+            "import numpy as np\n"
+            "from builtins import type as typ\n"
+            "z = np.load(payload, allow_pickle=False)\n"
+            "class Z(typ(z, *())):\n"
+            "    pass\n"
+            "data = Z(payload, allow_pickle=True)['arr_0']",
+        ],
+    )
+    def test_rejects_numpy_load_when_pickle_may_be_enabled(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("numpy" in violation for violation in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import numpy as np\nvalue_type = type(1)\nnp.load(payload, allow_pickle=False)",
+            "import numpy as np\nnp.load(payload, allow_pickle=False)\nvalue_type = type(1)",
+        ],
+    )
+    def test_rejects_type_with_numpy_archive_reader_regardless_of_source_order(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("type() is forbidden in code using numpy archive readers" in item for item in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import numpy as np\nnp.load(payload)",
+            "import numpy as np\nnp.load(payload, allow_pickle=False)",
+            "import numpy as np\narr = np.load(payload, allow_pickle=False)",
+            "import numpy as np\ndef read():\n    return np.load(payload)",
+            "import numpy as np\nvalue = np.load(payload).sum()",
+            "import numpy.lib.format as fmt\nvalue = fmt.read_array(payload)",
+            "import numpy.lib.format as fmt\nvalue = fmt.read_array(payload, allow_pickle=False)",
+            "from numpy import load\nload(payload, None, False)",
+            "from numpy import *\nload(payload, allow_pickle=False)",
+            "from numpy.lib import *\nformat.read_array(payload, allow_pickle=False)",
+            "from numpy.lib import *\nnpyio.NpzFile(payload, allow_pickle=False)",
+            "setattr(record, 'label', label)",
+            "from builtins import setattr as write\nwrite(record, 'label', label)",
+            "from numpy.lib.npyio import *\nload(payload)",
+            "from numpy.lib._npyio_impl import NpzFile\nNpzFile(payload)['arr_0']",
+            "import numpy.lib._npyio_impl as npio\nnpio.NpzFile(payload, allow_pickle=False)['arr_0']",
+        ],
+    )
+    def test_preserves_numpy_load_with_pickle_disabled(self, code):
+        assert scan_code_security(code).is_safe is True
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import numpy.lib.format as fmt\nfmt.read_array(payload, allow_pickle=True)",
+            "from numpy.lib.format import read_array as reader\nreader(payload, allow_pickle=True)",
+            "from numpy.lib.format import *\nread_array(payload, allow_pickle=True)",
+            "import numpy.lib.format as fmt\nfmt.read_array(payload, flag)",
+            "import numpy.lib._format_impl as fmt\nfmt.read_array(payload, allow_pickle=True)",
+            "from numpy.lib._format_impl import *\nread_array(payload, allow_pickle=True)",
+        ],
+    )
+    def test_rejects_numpy_read_array_when_pickle_may_be_enabled(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("numpy.lib." in violation and "read_array" in violation for violation in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import numpy.lib.format as fmt\nfmt.read_array(payload)",
+            "from numpy.lib.format import *\nread_array(payload, allow_pickle=False)",
+            "import numpy.lib._format_impl as fmt\nfmt.read_array(payload)",
+        ],
+    )
+    def test_preserves_numpy_read_array_with_pickle_disabled(self, code):
         assert scan_code_security(code).is_safe is True

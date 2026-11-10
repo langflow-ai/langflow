@@ -53,6 +53,12 @@ class LLMProviderMetricsCallbackHandler(BaseCallbackHandler):
     # ponytail: fixed cap, fine because entries are tiny and only in-flight+recently-orphaned runs sit here.
     _MAX_RUNS = 10_000
 
+    # The callbacks only touch the dict under a brief lock and record on in-memory instruments
+    # (export happens on the SDK's own thread), so run them on the event loop. Otherwise
+    # LangChain's async manager hands every event to the thread pool, including one per streamed
+    # token for the no-op on_llm_new_token.
+    run_inline = True
+
     def __init__(self) -> None:
         super().__init__()
         meter = metrics.get_meter(APPLICATION_METER_NAME)

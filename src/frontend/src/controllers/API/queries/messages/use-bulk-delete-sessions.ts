@@ -8,6 +8,9 @@ interface BulkDeleteSessionsParams {
   sessionIds: string[];
 }
 
+// The bulk delete endpoint rejects larger requests.
+const MAX_SESSIONS_PER_REQUEST = 500;
+
 export const useBulkDeleteSessions: useMutationFunctionType<
   undefined,
   BulkDeleteSessionsParams
@@ -16,15 +19,20 @@ export const useBulkDeleteSessions: useMutationFunctionType<
 
   const bulkDeleteSessions = async ({
     sessionIds,
-  }: BulkDeleteSessionsParams): Promise<any> => {
-    // Use the bulk delete endpoint to delete all sessions in a single request
-    const response = await api.delete(`${getURL("MESSAGES")}/sessions`, {
-      data: sessionIds,
-    });
-    return response.data;
+  }: BulkDeleteSessionsParams): Promise<void> => {
+    // "Select all" covers every loaded page, which can exceed one request.
+    for (
+      let start = 0;
+      start < sessionIds.length;
+      start += MAX_SESSIONS_PER_REQUEST
+    ) {
+      await api.delete(`${getURL("MESSAGES")}/sessions`, {
+        data: sessionIds.slice(start, start + MAX_SESSIONS_PER_REQUEST),
+      });
+    }
   };
 
-  const mutation: UseMutationResult<any, any, BulkDeleteSessionsParams> =
+  const mutation: UseMutationResult<void, Error, BulkDeleteSessionsParams> =
     mutate(["useBulkDeleteSessions"], bulkDeleteSessions, {
       ...options,
       onSettled: (...args) => {

@@ -21,5 +21,9 @@ else:
     mq_password = os.environ.get("RABBITMQ_DEFAULT_PASS", "langflow")
     broker_url = os.environ.get("BROKER_URL", f"amqp://{mq_user}:{mq_password}@localhost:5672//")
     result_backend = os.environ.get("RESULT_BACKEND", "redis://localhost:6379/0")
-# tasks should be json or pickle
-accept_content = ["json", "pickle"]
+# Broker and result data must never be deserialized as Python objects. A broker
+# writer can otherwise execute code in the worker before task routing runs.
+task_serializer = "json"
+result_serializer = "json"
+accept_content = ["json"]
+result_accept_content = ["json"]

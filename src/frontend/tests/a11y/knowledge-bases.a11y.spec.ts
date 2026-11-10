@@ -558,7 +558,7 @@ test.describe("knowledge bases route accessibility", () => {
       await expect(openaiProvider).toBeHidden({ timeout: TIMEOUTS.standard });
 
       await page.getByRole("combobox", { name: /db provider/i }).click();
-      await expect(page.getByTestId("chroma-provider-option")).toBeVisible({
+      await expect(page.getByTestId("sqlite-provider-option")).toBeVisible({
         timeout: TIMEOUTS.standard,
       });
       await page.runA11yScan("kb-upload-db-provider-dropdown");

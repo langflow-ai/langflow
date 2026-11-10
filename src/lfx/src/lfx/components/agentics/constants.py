@@ -48,8 +48,20 @@ TRANSDUCTION_GENERATE = "generate"
 
 TRANSDUCTION_TYPES = [TRANSDUCTION_AMAP, TRANSDUCTION_AREDUCE, TRANSDUCTION_GENERATE]
 
+AGENTICS_DOCS_URL = "https://docs.langflow.org/bundles-agentics"
+
 # Error messages for user feedback
-ERROR_AGENTICS_NOT_INSTALLED = "Agentics-py is not installed. Please install it with `uv pip install agentics-py`."
+# No agentics-py release is co-installable with lfx: current releases pin langchain-core<1.0
+# (via langchain-huggingface) and crewai>=0.140 pins json-repair/tomli below lfx's floors. The
+# message must not tell users to install it: `pip install agentics-py` downgrades langchain-core
+# in place and breaks Langflow.
+ERROR_AGENTICS_NOT_INSTALLED = (
+    "The Agentics components are deprecated and can't run in this version of Langflow. "
+    "They need the agentics-py SDK, and no agentics-py release is compatible with Langflow's dependencies. "
+    "Don't install it into this environment with `pip install agentics-py` or `uv pip install agentics-py`: "
+    "it downgrades langchain-core and breaks Langflow. "
+    f"For details, see {AGENTICS_DOCS_URL}."
+)
 ERROR_API_KEY_REQUIRED = "{provider} API key is required. Please configure it in your settings or provide it directly."
 ERROR_UNSUPPORTED_PROVIDER = (
     f"Unsupported provider: {{provider}}. Supported providers: {', '.join(SUPPORTED_PROVIDERS)}"

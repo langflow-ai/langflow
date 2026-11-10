@@ -1,4 +1,6 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
+import type { ComponentProps } from "react";
 import { ChatSidebar } from "../chat-sidebar";
 
 jest.mock(
@@ -42,6 +44,11 @@ jest.mock("../session-selector", () => ({
 
 const baseProps = {
   sessions: ["flow-1", "New Session 0", "New Session 1"],
+  sessionsPagination: {
+    hasNextPage: false,
+    isFetchingNextPage: false,
+    fetchNextPage: jest.fn(),
+  },
   onSessionSelect: jest.fn(),
   currentSessionId: "flow-1",
   onDeleteSession: jest.fn(),
@@ -49,17 +56,26 @@ const baseProps = {
   onBulkDeleteSessions: jest.fn(),
 };
 
+const renderSidebar = (
+  props: Partial<ComponentProps<typeof ChatSidebar>> = {},
+) =>
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <ChatSidebar {...baseProps} {...props} />
+    </QueryClientProvider>,
+  );
+
 const checkAll = () =>
   fireEvent.click(screen.getByTestId("select-all-checkbox"));
 
 describe("ChatSidebar — Select All row alignment", () => {
   it("does not render the bulk-delete button while nothing is selected", () => {
-    render(<ChatSidebar {...baseProps} />);
+    renderSidebar();
     expect(screen.queryByTestId("bulk-delete-button")).not.toBeInTheDocument();
   });
 
   it("renders the bulk-delete button with the same h-8 w-8 p-2 shape as a SessionMoreMenu trigger", () => {
-    render(<ChatSidebar {...baseProps} />);
+    renderSidebar();
     checkAll();
     const trash = screen.getByTestId("bulk-delete-button");
     expect(trash).toBeInTheDocument();
@@ -71,7 +87,7 @@ describe("ChatSidebar — Select All row alignment", () => {
   });
 
   it("hosts the bulk-delete button in an h-8 row with no extra vertical padding", () => {
-    render(<ChatSidebar {...baseProps} />);
+    renderSidebar();
     checkAll();
     const trash = screen.getByTestId("bulk-delete-button");
     // Walk up to the Select All row wrapper. Its className must include
@@ -86,12 +102,7 @@ describe("ChatSidebar — Select All row alignment", () => {
 
   it("calls onBulkDeleteSessions with the checked sessions when clicked", () => {
     const onBulkDeleteSessions = jest.fn();
-    render(
-      <ChatSidebar
-        {...baseProps}
-        onBulkDeleteSessions={onBulkDeleteSessions}
-      />,
-    );
+    renderSidebar({ onBulkDeleteSessions });
     checkAll();
     fireEvent.click(screen.getByTestId("bulk-delete-button"));
     expect(onBulkDeleteSessions).toHaveBeenCalledTimes(1);
@@ -102,5 +113,44 @@ describe("ChatSidebar — Select All row alignment", () => {
     // Default session (currentFlowId) is non-selectable and must not be
     // included in the bulk delete payload.
     expect(ids).not.toContain("flow-1");
+  });
+});
+
+describe("ChatSidebar — older sessions", () => {
+  it("does not offer more sessions once every page is loaded", () => {
+    renderSidebar();
+
+    expect(
+      screen.queryByRole("button", { name: "Show more sessions" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("loads the next page from the show more button", () => {
+    const fetchNextPage = jest.fn().mockResolvedValue({ hasNextPage: true });
+    renderSidebar({
+      sessionsPagination: {
+        hasNextPage: true,
+        isFetchingNextPage: false,
+        fetchNextPage,
+      },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Show more sessions" }));
+
+    expect(fetchNextPage).toHaveBeenCalledTimes(1);
+  });
+
+  it("says Select All covers only loaded sessions while older ones remain", () => {
+    renderSidebar({
+      sessionsPagination: {
+        hasNextPage: true,
+        isFetchingNextPage: false,
+        fetchNextPage: jest.fn(),
+      },
+    });
+
+    expect(screen.getByTestId("select-all-checkbox")).toHaveTextContent(
+      "Select All Loaded",
+    );
   });
 });

@@ -20,6 +20,8 @@ import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import FilesContextMenuComponent from "@/modals/fileManagerModal/components/filesContextMenuComponent";
 import useAlertStore from "@/stores/alertStore";
 import type { FileType } from "@/types/file_management";
+import { extractApiErrorMessages } from "@/utils/apiError";
+import { parseApiTimestamp } from "@/utils/dateTime";
 import { formatFileSize } from "@/utils/stringManipulation";
 import { FILE_ICONS } from "@/utils/styleUtils";
 import { cn } from "@/utils/utils";
@@ -63,10 +65,23 @@ const FilesTab = ({
   const { mutate: rename } = usePostRenameFileV2();
   const { mutate: deleteFiles, isPending: isDeleting } = useDeleteFilesV2();
   const handleRename = (params: NewValueParams<FileType, string>) => {
-    rename({
-      id: params.data.id,
-      name: params.newValue,
-    });
+    if (typeof params.newValue !== "string") {
+      return;
+    }
+    rename(
+      {
+        id: params.data.id,
+        name: params.newValue,
+      },
+      {
+        onError: (error) => {
+          setErrorData({
+            title: t("files.errorRenaming"),
+            list: extractApiErrorMessages(error),
+          });
+        },
+      },
+    );
   };
 
   const handleOpenRename = (id: string, name: string) => {
@@ -260,7 +275,7 @@ const FilesTab = ({
       valueFormatter: (params) => {
         return params.data.progress
           ? ""
-          : new Date(params.value + "Z").toLocaleString();
+          : (parseApiTimestamp(params.value)?.toLocaleString() ?? "");
       },
       editable: false,
       flex: 1,

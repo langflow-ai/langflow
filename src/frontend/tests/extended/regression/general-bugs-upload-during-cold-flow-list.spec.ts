@@ -5,11 +5,10 @@ import { TIMEOUTS } from "../../utils/constants/timeouts";
 import { openFlowsList } from "../../utils/flow/open-flows-list";
 
 const PROJECT_PAGE_PATTERN = /\/api\/v1\/projects\/[^/?]+\?/;
-const FIRST_PAGE_DELAY_MS = 6000;
 
 test(
   "uploaded flow must appear when the project list is still loading its first page",
-  { tag: ["@release"] },
+  { tag: ["@release", "@workspace", "@api"] },
   async ({ page }) => {
     /* Reproduces the Windows-CI failure of outdated-actions.spec.ts.
      *
@@ -31,6 +30,11 @@ test(
     // Delaying the request instead would let the server answer with a snapshot
     // that already contains the new flow, and the race would never show.
     let firstPageHeld = false;
+    let firstPageResponseReady = false;
+    let releaseFirstPage: () => void = () => undefined;
+    const firstPageRelease = new Promise<void>((resolve) => {
+      releaseFirstPage = resolve;
+    });
     await page.route(
       (url) => PROJECT_PAGE_PATTERN.test(url.toString()),
       async (route) => {
@@ -41,50 +45,57 @@ test(
         firstPageHeld = true;
         const response = await route.fetch();
         const body = await response.body();
-        await new Promise((resolve) =>
-          setTimeout(resolve, FIRST_PAGE_DELAY_MS),
-        );
+        firstPageResponseReady = true;
+        await firstPageRelease;
         await route.fulfill({ response, body });
       },
     );
 
-    const firstPageRequest = page.waitForRequest(
-      (request) => PROJECT_PAGE_PATTERN.test(request.url()),
-      { timeout: TIMEOUTS.standard },
-    );
+    try {
+      const dropTarget = await openFlowsList(page);
 
-    const dropTarget = await openFlowsList(page);
+      // Start the timeout after navigation, and wait until the server snapshot
+      // has been captured. Keep it held through the upload on slow runners too.
+      await expect
+        .poll(() => firstPageResponseReady, { timeout: TIMEOUTS.standard })
+        .toBe(true);
 
-    // The drop only reproduces the bug while that first page is unanswered.
-    await firstPageRequest;
+      const flowName = `Cold List Upload ${Date.now()}`;
+      const jsonContent = JSON.stringify({
+        ...JSON.parse(readFileSync("tests/assets/outdated_flow.json", "utf-8")),
+        name: flowName,
+      });
 
-    const flowName = `Cold List Upload ${Date.now()}`;
-    const jsonContent = JSON.stringify({
-      ...JSON.parse(readFileSync("tests/assets/outdated_flow.json", "utf-8")),
-      name: flowName,
-    });
+      const dataTransfer = await page.evaluateHandle((data) => {
+        const dt = new DataTransfer();
+        dt.items.add(
+          new File([data], "outdated_flow.json", { type: "application/json" }),
+        );
+        return dt;
+      }, jsonContent);
 
-    const dataTransfer = await page.evaluateHandle((data) => {
-      const dt = new DataTransfer();
-      dt.items.add(
-        new File([data], "outdated_flow.json", { type: "application/json" }),
-      );
-      return dt;
-    }, jsonContent);
+      await Promise.all([
+        page.waitForResponse(
+          (response) =>
+            response.request().method() === "POST" &&
+            response.url().endsWith("/api/v1/flows/") &&
+            response.status() === 201,
+          { timeout: TIMEOUTS.standard },
+        ),
+        dropTarget.dispatchEvent("drop", { dataTransfer }),
+      ]);
+      // Let the mutation's callbacks run while the first query is still cold.
+      await expect(
+        page.getByText("All files uploaded successfully", { exact: true }),
+      ).toBeVisible({ timeout: TIMEOUTS.standard });
+      releaseFirstPage();
 
-    const flowCreated = page.waitForResponse(
-      (response) =>
-        response.request().method() === "POST" &&
-        response.url().endsWith("/api/v1/flows/") &&
-        response.status() === 201,
-      { timeout: TIMEOUTS.standard },
-    );
-
-    await dropTarget.dispatchEvent("drop", { dataTransfer });
-    await flowCreated;
-
-    await expect(
-      page.getByTestId("list-card").filter({ hasText: flowName }),
-    ).toBeVisible({ timeout: TIMEOUTS.standard });
+      await expect(
+        page.getByTestId("list-card").filter({ hasText: flowName }),
+      ).toBeVisible({ timeout: TIMEOUTS.standard });
+    } finally {
+      releaseFirstPage();
+      await page.unrouteAll({ behavior: "wait" });
+    }
   },
 );

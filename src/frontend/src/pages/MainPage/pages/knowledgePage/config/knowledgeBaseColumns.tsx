@@ -22,10 +22,7 @@ import { formatFileSize } from "@/utils/stringManipulation";
 import { FILE_ICONS } from "@/utils/styleUtils";
 import { cn } from "@/utils/utils";
 import { getKnowledgeBaseBackendLabel } from "../utils/backendMetadata";
-import {
-  formatAverageChunkSize,
-  formatNumber,
-} from "../utils/knowledgeBaseUtils";
+import { formatNumber } from "../utils/knowledgeBaseUtils";
 import { isBusyStatus, STATUS_CONFIG } from "./statusConfig";
 
 export interface KnowledgeBaseColumnsCallbacks {
@@ -61,6 +58,9 @@ function KnowledgeBaseRowActions({
 }: KnowledgeBaseRowActionsProps) {
   const status = knowledgeBase?.status;
   const isBusy = isBusyStatus(status);
+  const isStorageBlocked =
+    knowledgeBase.storage_state !== undefined &&
+    knowledgeBase.storage_state !== "ready";
   const isCancelling = status === "cancelling";
   const rootRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -82,7 +82,7 @@ function KnowledgeBaseRowActions({
             <Button
               variant="ghost"
               size="icon"
-              disabled={isBusy}
+              disabled={isBusy || isStorageBlocked}
               data-testid="kb-row-update-button"
               aria-label={t("knowledge.action.ingestFiles")}
               onClick={(e) => {
@@ -126,7 +126,7 @@ function KnowledgeBaseRowActions({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" container={menuContainer ?? undefined}>
           <DropdownMenuItem
-            disabled={isBusy}
+            disabled={isBusy || isStorageBlocked}
             onClick={(e) => {
               e.stopPropagation();
               callbacks?.onAddSources?.(knowledgeBase);
@@ -136,6 +136,7 @@ function KnowledgeBaseRowActions({
             {t("knowledge.action.ingestFiles")}
           </DropdownMenuItem>
           <DropdownMenuItem
+            disabled={isStorageBlocked}
             onClick={(e) => {
               e.stopPropagation();
               callbacks?.onViewChunks?.(knowledgeBase);
@@ -164,6 +165,7 @@ function KnowledgeBaseRowActions({
             </DropdownMenuItem>
           ) : (
             <DropdownMenuItem
+              disabled={knowledgeBase.storage_state === "migrating"}
               onClick={(e) => {
                 e.stopPropagation();
                 callbacks?.onDelete?.(knowledgeBase);
@@ -205,6 +207,7 @@ export const createKnowledgeBaseColumns = (
       headerName: t("knowledge.column.name"),
       field: "name",
       flex: 2,
+      minWidth: 200,
       sortable: true,
       headerCheckboxSelection: true,
       checkboxSelection: true,
@@ -231,14 +234,16 @@ export const createKnowledgeBaseColumns = (
         }
 
         return (
-          <div className="flex items-center gap-3 pl-1">
-            <div className="file-icon pointer-events-none relative">
+          <div className="flex min-w-0 items-center gap-3 pl-1">
+            <div className="file-icon pointer-events-none relative shrink-0">
               <ForwardedIconComponent
                 name={iconName}
                 className={cn("h-6 w-6 shrink-0", iconColor)}
               />
             </div>
-            <span>{params.value}</span>
+            <span className="truncate" title={params.value}>
+              {params.value}
+            </span>
           </div>
         );
       },
@@ -311,18 +316,9 @@ export const createKnowledgeBaseColumns = (
       valueFormatter: (params) => formatNumber(params.value),
     },
     {
-      headerName: t("knowledge.column.avgChunkSize"),
-      field: "avg_chunk_size",
-      flex: 1,
-      sortable: false,
-      editable: false,
-      cellClass: baseCellClass,
-      valueFormatter: (params) => formatAverageChunkSize(params.value),
-    },
-    {
       headerName: t("knowledge.column.status"),
       field: "status",
-      flex: 1,
+      width: 120,
       sortable: false,
       editable: false,
       resizable: false,

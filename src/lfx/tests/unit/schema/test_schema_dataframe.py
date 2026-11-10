@@ -71,3 +71,23 @@ class TestDataFrameSchema:
 
         non_empty_df = DataFrame({"name": ["John"], "text": ["name is John"]})
         assert bool(non_empty_df)
+
+    @pytest.mark.parametrize("metadata_column", [0, ("source", "id"), None, "source"])
+    def test_smart_column_order_preserves_column_labels(self, metadata_column):
+        """Keep non-string metadata labels while ordering content and system columns."""
+        data_frame = DataFrame(
+            {
+                metadata_column: ["value"],
+                "session_id": ["s1"],
+                "TEXT": ["hello"],
+                "_trace": ["t1"],
+                "category": ["news"],
+            }
+        )
+        original_columns = list(data_frame.columns)
+
+        ordered = data_frame.smart_column_order()
+
+        assert list(ordered.columns) == ["TEXT", metadata_column, "category", "session_id", "_trace"]
+        assert ordered.iloc[0].tolist() == ["hello", "value", "news", "s1", "t1"]
+        assert list(data_frame.columns) == original_columns

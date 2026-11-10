@@ -14,26 +14,26 @@ from langflow.schema.message import Message
 from langflow.services.database.models.message.model import MessageTable
 
 
-async def _store(session_id: str, user_id, text: str) -> None:
+async def _store(session_id: str, flow_id, user_id, text: str) -> None:
     msg = Message(text=text, sender="User", sender_name="User", session_id=session_id)
-    await aadd_messages([msg], user_id=user_id)
+    await aadd_messages([msg], flow_id=flow_id, user_id=user_id)
 
 
 async def test_aget_messages_scopes_by_user_id(client):  # noqa: ARG001
     """Two users sharing a session_id see only their own messages when scoped by user_id."""
     user_a, user_b = uuid4(), uuid4()
+    flow_id = uuid4()
     session_id = "shared-session-le1675"
-    await _store(session_id, user_a, "secret from A")
-    await _store(session_id, user_b, "secret from B")
+    await _store(session_id, flow_id, user_a, "secret from A")
+    await _store(session_id, flow_id, user_b, "secret from B")
 
-    a_msgs = await aget_messages(session_id=session_id, user_id=user_a)
-    b_msgs = await aget_messages(session_id=session_id, user_id=user_b)
+    a_msgs = await aget_messages(session_id=session_id, flow_id=flow_id, user_id=user_a)
+    b_msgs = await aget_messages(session_id=session_id, flow_id=flow_id, user_id=user_b)
     unscoped = await aget_messages(session_id=session_id)
 
     assert [m.text for m in a_msgs] == ["secret from A"]
     assert [m.text for m in b_msgs] == ["secret from B"]
-    # No user_id => legacy unscoped behavior (both users' messages), preserving backward compat.
-    assert len(unscoped) == 2
+    assert unscoped == []
 
 
 async def test_aget_messages_scopes_by_string_user_id(client):  # noqa: ARG001
@@ -45,13 +45,14 @@ async def test_aget_messages_scopes_by_string_user_id(client):  # noqa: ARG001
     string. The query path must coerce the scope to ``UUID`` before building the predicate.
     """
     user_a, user_b = uuid4(), uuid4()
+    flow_id = uuid4()
     session_id = "shared-session-le1675-str"
-    await _store(session_id, user_a, "secret from A")
-    await _store(session_id, user_b, "secret from B")
+    await _store(session_id, flow_id, user_a, "secret from A")
+    await _store(session_id, flow_id, user_b, "secret from B")
 
     # Pass the scope as a string, mirroring _safe_graph_user_id(graph.user_id).
-    a_msgs = await aget_messages(session_id=session_id, user_id=str(user_a))
-    b_msgs = await aget_messages(session_id=session_id, user_id=str(user_b))
+    a_msgs = await aget_messages(session_id=session_id, flow_id=flow_id, user_id=str(user_a))
+    b_msgs = await aget_messages(session_id=session_id, flow_id=flow_id, user_id=str(user_b))
 
     assert [m.text for m in a_msgs] == ["secret from A"]
     assert [m.text for m in b_msgs] == ["secret from B"]

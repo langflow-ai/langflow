@@ -1,10 +1,10 @@
 import os
+from datetime import datetime, timezone
 from typing import Any
 from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
-from langflow.custom import Component
 from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS
 from lfx.base.models.openai_constants import (
     OPENAI_CHAT_MODEL_NAMES,
@@ -28,11 +28,11 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
     def file_names_mapping(self):
         return []
 
-    async def component_setup(self, component_class: type[Any], default_kwargs: dict[str, Any]) -> Component:
-        component_instance = await super().component_setup(component_class, default_kwargs)
-        # Mock _should_process_output method
-        component_instance._should_process_output = lambda output: False  # noqa: ARG005
-        return component_instance
+    @pytest.fixture
+    def skipped_outputs(self):
+        return {
+            "response": "runs the agent loop, which needs a chat model that supports tool calling",
+        }
 
     @pytest.fixture
     def default_kwargs(self):
@@ -649,6 +649,17 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert "{model_name}" not in result
         assert "gpt-4o" in result
 
+    def test_should_resolve_current_date_to_utc_day_when_placeholder_present(self, component_class):
+        """A time-of-day value changes the system prompt every turn and defeats provider prompt caching."""
+        component = component_class()
+        component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+
+        before = datetime.now(tz=timezone.utc).date().isoformat()
+        result = component._inject_dynamic_prompt_values("Today's date: {current_date}")
+        after = datetime.now(tz=timezone.utc).date().isoformat()
+
+        assert result in {f"Today's date: {before}", f"Today's date: {after}"}
+
     def test_should_leave_literal_braces_untouched_when_prompt_has_no_known_placeholders(self, component_class):
         """Adversarial: prompts with literal JSON like {"key": 1} must not raise and must stay intact."""
         component = component_class()
@@ -1049,6 +1060,12 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
     @pytest.fixture
     def file_names_mapping(self):
         return []
+
+    @pytest.fixture
+    def skipped_outputs(self):
+        return {
+            "response": "runs the agent loop, which needs a chat model that supports tool calling",
+        }
 
     @pytest.mark.api_key_required
     @pytest.mark.no_blockbuster

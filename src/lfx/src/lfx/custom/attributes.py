@@ -53,6 +53,10 @@ def getattr_return_int(value):
 def getattr_return_list_of_str(value):
     if isinstance(value, list):
         return [str(val) for val in value]
+    # A bare string (``replacement = "category.Name"``) is a one-item list;
+    # dropping it would silently hide the value.
+    if isinstance(value, str) and value:
+        return [value]
     return []
 
 

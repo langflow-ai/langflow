@@ -93,6 +93,13 @@ def patch_build_flow(monkeypatch):
     monkeypatch.setattr(flows_helpers, "_read_flow", fake_read_flow)
     monkeypatch.setattr(chat_module, "ensure_flow_permission", fake_ensure)
     monkeypatch.setattr(chat_module, "start_flow_build", fake_start_build)
+    from langflow.services.authorization import flow_data_override
+
+    authz = SimpleNamespace(
+        is_enabled=AsyncMock(return_value=True),
+        supports_cross_user_fetch=AsyncMock(return_value=True),
+    )
+    monkeypatch.setattr(flow_data_override, "get_authorization_service", lambda: authz, raising=False)
 
     # validate_flow_for_current_settings is called when flow.data exists; we
     # leave flow.data=None so it's not invoked. queue_service.register_job_owner
@@ -108,6 +115,38 @@ def _make_queue_service():
         return None
 
     return SimpleNamespace(register_job_owner=register)
+
+
+@pytest.mark.parametrize(("enabled", "cross_user"), [(False, False), (True, False), (False, True)])
+async def test_public_fallback_drops_graph_override_without_active_plugin(
+    patch_build_flow, monkeypatch, enabled, cross_user
+):
+    from langflow.api.v1 import chat as chat_module
+    from langflow.api.v1.schemas import FlowDataRequest
+    from langflow.services.authorization import flow_data_override
+
+    service = SimpleNamespace(
+        is_enabled=AsyncMock(return_value=enabled),
+        supports_cross_user_fetch=AsyncMock(return_value=cross_user),
+    )
+    monkeypatch.setattr(flow_data_override, "get_authorization_service", lambda: service, raising=False)
+    write_check = AsyncMock()
+    monkeypatch.setattr(flow_data_override, "ensure_flow_permission", write_check)
+    monkeypatch.setattr(chat_module, "prepare_flow_build_for_user", AsyncMock(return_value=None))
+    flow = _make_flow(owner_id=uuid4(), public=True, data={"nodes": [], "edges": []})
+    patch_build_flow["session_exec"] = [[flow]]
+
+    result = await chat_module.build_flow(
+        flow_id=flow.id,
+        background_tasks=None,
+        current_user=_make_user(),
+        queue_service=_make_queue_service(),
+        data=FlowDataRequest(nodes=[{"id": "alternate"}], edges=[]),
+    )
+
+    assert result == {"job_id": "fake-job-id"}
+    assert patch_build_flow["start_kwargs"]["data"] is None
+    write_check.assert_not_awaited()
 
 
 # --------------------------------------------------------------------- #
@@ -226,6 +265,76 @@ async def test_build_flow_write_holder_may_override_someone_elses_flow(patch_bui
     assert result == {"job_id": "fake-job-id"}
     # The caller's graph is honored, not the stored one.
     assert patch_build_flow["start_kwargs"]["data"] is override
+
+
+@pytest.mark.asyncio
+async def test_build_flow_restores_private_shared_canvas_without_echoing_params(patch_build_flow, monkeypatch):
+    """A shared writer's V1 graph runs with stored keys and hides raw vertex params."""
+    from langflow.api.v1 import chat as chat_module
+    from langflow.api.v1.schemas import FlowDataRequest
+    from langflow.services.authorization import flow_data_override
+    from langflow.utils.flow_secrets import strip_secret_field_values
+
+    async def _allow_write(*_args, **_kwargs):
+        return None
+
+    async def _allow_inline(_data, *, is_superuser):
+        assert is_superuser is False
+
+    monkeypatch.setattr(flow_data_override, "ensure_flow_permission", _allow_write)
+    monkeypatch.setattr(chat_module, "prepare_flow_build_for_user", _allow_inline)
+    stored = {
+        "nodes": [
+            {
+                "id": "model-node",
+                "data": {
+                    "node": {
+                        "template": {
+                            "api_key": {"name": "api_key", "password": True, "value": "owner-secret"},
+                            "model_name": {"name": "model_name", "value": "original"},
+                            "bing_search_url": {
+                                "name": "bing_search_url",
+                                "value": "https://provider.example/search",
+                            },
+                        }
+                    }
+                },
+            }
+        ],
+        "edges": [],
+    }
+    user = _make_user()
+    flow = _make_flow(owner_id=uuid4(), data=stored)
+    patch_build_flow["read_flow"] = flow
+    submitted = strip_secret_field_values(stored)
+    submitted["nodes"][0]["position"] = {"x": 20, "y": 30}
+
+    result = await chat_module.build_flow(
+        flow_id=flow.id,
+        background_tasks=None,
+        current_user=user,
+        queue_service=_make_queue_service(),
+        data=FlowDataRequest.model_validate(submitted),
+    )
+
+    assert result == {"job_id": "fake-job-id"}
+    dispatched = patch_build_flow["start_kwargs"]
+    template = dispatched["data"].nodes[0]["data"]["node"]["template"]
+    assert template["api_key"]["value"] == "owner-secret"
+    assert dispatched["data"].nodes[0]["position"] == {"x": 20, "y": 30}
+    assert submitted["nodes"][0]["data"]["node"]["template"]["api_key"]["value"] is None
+    assert dispatched["redact_build_params"] is True
+
+    submitted["nodes"][0]["data"]["node"]["template"]["bing_search_url"]["value"] = "https://attacker.example/collect"
+    with pytest.raises(HTTPException) as error:
+        await chat_module.build_flow(
+            flow_id=flow.id,
+            background_tasks=None,
+            current_user=user,
+            queue_service=_make_queue_service(),
+            data=FlowDataRequest.model_validate(submitted),
+        )
+    assert error.value.status_code == 400
 
 
 @pytest.mark.asyncio
@@ -494,7 +603,8 @@ async def test_build_flow_admin_only_keeps_superuser_stored_custom_code(patch_bu
 
 
 @pytest.mark.asyncio
-async def test_legacy_vertices_route_passes_only_sanitized_inline_data(monkeypatch):
+@pytest.mark.parametrize("use_stored_data", [False, True])
+async def test_legacy_vertices_route_passes_sanitized_data_and_caller(monkeypatch, use_stored_data):
     """The still-routed legacy graph cache cannot bypass the inline-data policy."""
     from langflow.api.v1 import chat as chat_module
     from langflow.api.v1.schemas import FlowDataRequest
@@ -520,8 +630,9 @@ async def test_legacy_vertices_route_passes_only_sanitized_inline_data(monkeypat
     graph.run_id = None
     graph.set_run_id.side_effect = lambda value: setattr(graph, "run_id", value)
 
-    async def build_from_data(*, graph_data, **_kwargs):
+    async def build_from_data(*, graph_data, user_id, **_kwargs):
         seen["graph_data"] = graph_data
+        seen["user_id"] = user_id
         return graph
 
     chat_service = SimpleNamespace(set_cache=AsyncMock())
@@ -535,12 +646,13 @@ async def test_legacy_vertices_route_passes_only_sanitized_inline_data(monkeypat
     await chat_module.retrieve_vertices_order(
         flow_id=flow.id,
         background_tasks=SimpleNamespace(add_task=lambda *_args, **_kwargs: None),
-        data=original,
+        data=None if use_stored_data else original,
         session=_FakeSession([[flow]]),
         current_user=owner,
     )
 
     assert seen["graph_data"] == sanitized
+    assert seen["user_id"] == str(owner.id)
     assert original.nodes[0]["data"]["source"] == "request"
 
 

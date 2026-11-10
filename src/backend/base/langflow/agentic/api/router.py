@@ -26,7 +26,7 @@ from lfx.services.deps import get_settings_service, session_scope
 from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from langflow.agentic.api.deps import require_agentic_experience
+from langflow.agentic.api.deps import require_agentic_component_admin, require_agentic_experience
 from langflow.agentic.api.schemas import AssistantRequest, HeadlessAssistantRequest
 from langflow.agentic.helpers.sse import format_complete_event, format_error_event
 from langflow.agentic.services.assistant_service import (
@@ -49,6 +49,9 @@ from langflow.api.utils.core import CurrentActiveUser, DbSession, release_db_tra
 from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 
 router = APIRouter(prefix="/agentic", tags=["Agentic"], include_in_schema=False)
+
+
+_ASSISTANT_EXECUTION_DEPENDENCIES = [Depends(require_agentic_experience), Depends(require_agentic_component_admin)]
 
 
 @dataclass(frozen=True)
@@ -178,7 +181,7 @@ async def _validate_flow_access(flow_id: str | None, user_id: UUID, session: Asy
     return flow
 
 
-@router.post("/execute/{flow_name}", dependencies=[Depends(require_agentic_experience)])
+@router.post("/execute/{flow_name}", dependencies=_ASSISTANT_EXECUTION_DEPENDENCIES)
 async def execute_named_flow(
     flow_name: str,
     request: AssistantRequest,
@@ -331,7 +334,7 @@ async def check_assistant_config(
     }
 
 
-@router.post("/assist", dependencies=[Depends(require_agentic_experience)])
+@router.post("/assist", dependencies=_ASSISTANT_EXECUTION_DEPENDENCIES)
 async def assist(
     request: AssistantRequest,
     current_user: CurrentActiveUser,
@@ -367,7 +370,7 @@ async def assist(
         )
 
 
-@router.post("/assist/stream", dependencies=[Depends(require_agentic_experience)])
+@router.post("/assist/stream", dependencies=_ASSISTANT_EXECUTION_DEPENDENCIES)
 async def assist_stream(
     request: AssistantRequest,
     http_request: Request,
@@ -421,7 +424,7 @@ async def assist_stream(
     )
 
 
-@router.post("/assist/run", dependencies=[Depends(require_agentic_experience)], include_in_schema=False)
+@router.post("/assist/run", dependencies=_ASSISTANT_EXECUTION_DEPENDENCIES, include_in_schema=False)
 async def assist_headless(
     request: HeadlessAssistantRequest,
     current_user: CurrentActiveUser,

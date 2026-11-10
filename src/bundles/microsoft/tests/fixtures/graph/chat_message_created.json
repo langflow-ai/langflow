@@ -1,0 +1,8 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#chats('19%3Achat')/messages/$entity",
+  "id": "1756640000000",
+  "messageType": "message",
+  "createdDateTime": "2026-08-31T12:00:00.000Z",
+  "chatId": "19:chat-id@thread.v2",
+  "body": {"contentType": "text", "content": "Deployment finished."}
+}

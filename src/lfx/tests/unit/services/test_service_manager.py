@@ -187,6 +187,41 @@ policy_bundle_service = "nonexistent.module:MissingPolicyBundleService"
         with pytest.raises(RuntimeError, match="Configured policy bundle service could not be loaded"):
             service_manager.discover_plugins(temp_config_dir)
 
+    @pytest.mark.parametrize(
+        ("service_path", "error"),
+        [
+            ("nonexistent.module:MissingAuthorizationService", "could not be loaded"),
+            ("lfx.services.authorization.base:MissingAuthorizationService", "could not be loaded"),
+            ("lfx.services.storage.local:LocalStorageService", "must subclass BaseAuthorizationService"),
+        ],
+    )
+    def test_invalid_explicit_authorization_fails_closed(self, service_manager, temp_config_dir, service_path, error):
+        (temp_config_dir / "lfx.toml").write_text(f'[services]\nauthorization_service = "{service_path}"\n')
+
+        with pytest.raises(RuntimeError, match=error):
+            service_manager.discover_plugins(temp_config_dir)
+
+    def test_absent_authorization_configuration_preserves_default(self, service_manager, temp_config_dir):
+        from lfx.services.authorization.service import AuthorizationService
+
+        service_manager.register_service_class(ServiceType.AUTHORIZATION_SERVICE, AuthorizationService)
+        (temp_config_dir / "lfx.toml").write_text("[services]\n")
+
+        service_manager.discover_plugins(temp_config_dir)
+
+        assert service_manager.service_classes[ServiceType.AUTHORIZATION_SERVICE] is AuthorizationService
+
+    def test_valid_explicit_authorization_is_registered(self, service_manager, temp_config_dir):
+        from lfx.services.authorization.service import AuthorizationService
+
+        (temp_config_dir / "lfx.toml").write_text(
+            '[services]\nauthorization_service = "lfx.services.authorization.service:AuthorizationService"\n'
+        )
+
+        service_manager.discover_plugins(temp_config_dir)
+
+        assert service_manager.service_classes[ServiceType.AUTHORIZATION_SERVICE] is AuthorizationService
+
     def test_discover_multiple_services_from_config(self, service_manager, temp_config_dir):
         """Test discovering multiple real services from config."""
         config_file = temp_config_dir / "lfx.toml"
@@ -299,6 +334,18 @@ storage_service = "nonexistent.module:NonexistentClass"
 
 class TestServiceCreation:
     """Tests for creating real services with dependency injection."""
+
+    def test_factory_creates_protocol_cache_without_readiness_lifecycle(self, service_manager):
+        """Factory-created caches must work before an application has initialized services."""
+        from lfx.services.shared_component_cache.factory import SharedComponentCacheServiceFactory
+
+        service_manager.register_factory(SharedComponentCacheServiceFactory())
+
+        cache = service_manager.get(ServiceType.SHARED_COMPONENT_CACHE_SERVICE)
+        cache.set("tools", ["tool"])
+
+        assert cache.get("tools") == ["tool"]
+        assert service_manager.get(ServiceType.SHARED_COMPONENT_CACHE_SERVICE) is cache
 
     def test_create_storage_service(self, service_manager):
         """Test creating LocalStorageService."""

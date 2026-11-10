@@ -3,7 +3,8 @@ title: Telemetry
 slug: /contributing-telemetry
 ---
 
-Langflow uses anonymous telemetry to collect statistics about feature usage and performance.
+Langflow uses installation-scoped telemetry and pseudonymous authenticated product-usage telemetry to collect
+statistics about feature usage and performance.
 The Langflow team uses this data to identify popular features and areas that need improvement based on actual usage patterns.
 This helps prioritize development efforts on the most impactful changes and popular features.
 
@@ -11,8 +12,16 @@ This helps prioritize development efforts on the most impactful changes and popu
 
 The Langflow team respects your privacy, and the team is committed to protecting your data.
 
-Langflow telemetry doesn't collect any personal information or sensitive data.
-All telemetry data is anonymized and used solely for improving Langflow.
+Langflow telemetry doesn't send raw operating-system or authenticated Langflow user names, or raw authenticated user IDs.
+Authenticated product-usage IDs are derived from the installation identifier and the user's random database UUID.
+Usernames and SSO email addresses are not used to derive these IDs, and the same user UUID produces different IDs on different installations.
+
+Free-form error messages are omitted because they can contain user inputs, SQL parameters, or credentials.
+Error types, stack hashes, success flags, and timings are retained.
+The data collected by each event, including fields that can contain user-provided values, is documented below.
+
+Product-usage events are delivered through Segment.
+Desktop email registration events use a one-time identifier, so the registered address is not linked to the installation's other telemetry.
 
 ## Opt out of telemetry
 
@@ -29,7 +38,6 @@ This telemetry event is sent every time a flow is executed.
 - **IsWebhook**: Indicates whether the operation was triggered with a webhook.
 - **Seconds**: Duration in seconds for how long the operation lasted, providing insights into performance.
 - **Success**: Boolean value indicating whether the operation was successful, helping identify potential errors or issues.
-- **ErrorMessage**: Provides error message details if the operation was unsuccessful, aiding in troubleshooting and enhancements.
 
 ### Shutdown
 
@@ -48,6 +56,7 @@ This telemetry event is sent once when the telemetry service starts.
 - **AutoLogin**: Indicates whether the auto-login feature is enabled, reflecting user preference settings.
 - **CacheType**: Type of caching mechanism used, which impacts performance and efficiency.
 - **BackendOnly**: Boolean indicating whether Langflow is running in backend-only mode, useful for understanding deployment configurations.
+- **DatabaseDialect**: The database engine Langflow is configured to use, such as `sqlite` or `postgresql`. Only the engine name is sent, never the database URL, host, or credentials.
 - **Desktop**: Indicates whether Langflow is running in desktop mode (Langflow Desktop), helping to understand usage patterns across different deployment types.
 
 ### Email
@@ -81,7 +90,6 @@ This telemetry event is sent for each component execution.
 - **Name**: Identifies the component, providing data on which components are most utilized or prone to issues.
 - **Seconds**: Time taken by the component to execute, offering performance metrics.
 - **Success**: Whether the component operated successfully, which helps in quality control.
-- **ErrorMessage**: Details of any errors encountered, crucial for debugging and improvement.
 
 ### Component inputs
 
@@ -117,7 +125,6 @@ It does not include user or flow data.
 This telemetry event is sent when an unhandled exception is captured by Langflow's lifecycle or global exception handler.
 
 - **Type**: The exception class name, such as `ValueError`.
-- **Message**: The exception message that was raised.
 - **Context**: Additional contextual information related to where the exception occurred, such as route, component, or operation details, when available.
 - **StackTraceHash**: A hash of the stack trace used to group similar exceptions for easier analysis.
 
@@ -129,7 +136,6 @@ This telemetry event is sent for various lifecycle operations on deployment prov
 - **DeploymentProvider**: The deployment provider used, such as `watsonx-orchestrate`.
 - **DeploymentSeconds**: Duration in seconds for the operation, providing performance insights.
 - **DeploymentSuccess**: Boolean value indicating whether the operation was successful.
-- **DeploymentErrorMessage**: Error message details if the operation was unsuccessful.
 - **WxoTenantId**: A unique identifier for the tenant, populated only for `watsonx-orchestrate` deployments, used to understand multi-tenant usage patterns without collecting personal information.
 
 ### Deployment
@@ -140,5 +146,4 @@ This telemetry event is sent for various lifecycle operations on deployment reso
 - **DeploymentProvider**: The deployment provider used, such as `watsonx-orchestrate`.
 - **DeploymentSeconds**: Duration in seconds for the operation, providing performance insights.
 - **DeploymentSuccess**: Boolean value indicating whether the operation was successful.
-- **DeploymentErrorMessage**: Error message details if the operation was unsuccessful.
 - **WxoTenantId**: A unique identifier for the tenant, populated only for `watsonx-orchestrate` deployments, used to understand multi-tenant usage patterns without collecting personal information.

@@ -1,0 +1,196 @@
+"""``langflow listeners``: the process that holds Track B connections.
+
+It is the same image and the same configuration as the API - the same database
+URL, the same secret key, the same ``lfx.toml`` service discovery, so an
+Enterprise override registered for the API is registered here too - with one
+difference that the whole design rests on: there is no HTTP application. The
+boot path marks the process and asserts it, and
+:func:`langflow.main.create_app` refuses to build one afterwards.
+
+What it deliberately does *not* do:
+
+* **It does not migrate.** Schema is the API's job. A listener that ran Alembic
+  would race every API replica during a rolling upgrade, so this process
+  verifies that the trigger tables exist and exits with an actionable message
+  when they do not.
+* **It does not create a superuser, load bundles, or warm a component cache.**
+  None of that is needed to hold a socket, and every one of them is a way for
+  the listener to fail on something the API is responsible for.
+* **It does not run the dispatcher or the schedule tick.** Those are API-process
+  singletons (``decisions/process-model.md``). The two processes meet only at
+  the ledger table.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import contextlib
+import signal
+
+from lfx.log.logger import logger
+
+from langflow.services.triggers.listeners.adapters import register_builtin_adapters
+from langflow.services.triggers.listeners.guard import assert_no_http_app, mark_listener_process
+from langflow.services.triggers.listeners.health import ListenerHealthServer
+from langflow.services.triggers.listeners.supervisor import ListenerSupervisor
+
+
+async def verify_schema() -> None:
+    """Fail fast, and legibly, when the database has not been migrated yet.
+
+    A listener started before its API (a Compose ``depends_on`` that only waits
+    for the container, a Kubernetes Deployment that rolls first) would otherwise
+    die on an opaque "no such table" once per restart.
+
+    Every table the runtime touches is probed, not just ``trigger``: a database
+    carrying the trigger table but not the lease or the ledger would pass a
+    narrower check and then fail once per reconcile forever, which is the
+    opaque failure this function exists to replace with one actionable message.
+    """
+    from sqlmodel import select
+
+    from langflow.services.database.models.trigger.model import Trigger, TriggerEvent, TriggerListenerLease
+    from langflow.services.deps import session_scope
+
+    for model in (Trigger, TriggerListenerLease, TriggerEvent):
+        try:
+            async with session_scope() as session:
+                await session.exec(select(model).limit(1))
+        except Exception as exc:
+            msg = (
+                f"The trigger tables are missing or unreadable ({model.__tablename__}). "
+                "The listener process never migrates: start (or upgrade) the Langflow API "
+                "against this database first, then start the listeners."
+            )
+            raise RuntimeError(msg) from exc
+
+
+async def warn_on_unrefreshable_connections() -> list[str]:
+    """Say at startup when this listener cannot refresh the tokens it will hold.
+
+    A refresh does not go out over HTTP to the API: the listener performs it
+    itself, so it needs the API's ``LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS`` as
+    well as its database URL and secret key. Without them the failure is
+    invisible until the first access token expires - hours after the deploy,
+    with nothing in the logs from the moment the mistake was made.
+
+    A warning, not an exit. Only some connections are OAuth-backed, a
+    registration can be added to the environment while the process is running,
+    and refusing to start would take down the connections that *are* working
+    for the sake of the ones that are not.
+
+    Returns the registration ids it could not find, so the check is worth
+    something to a caller that is not reading the log.
+    """
+    from sqlmodel import col, select
+
+    from langflow.services.connection.oauth.config import OAuthError, get_oauth_settings
+    from langflow.services.database.models.connection.oauth import ConnectionOAuth
+    from langflow.services.deps import session_scope
+    from langflow.services.triggers.listeners.supervisor import load_desired_state
+
+    try:
+        configured = set(get_oauth_settings().registration_ids())
+    except OAuthError:
+        configured = set()
+
+    async with session_scope() as session:
+        desired = await load_desired_state(session)
+        if not desired:
+            return []
+        statement = select(ConnectionOAuth).where(col(ConnectionOAuth.connection_id).in_(list(desired)))
+        bindings = (await session.exec(statement)).all()
+
+    missing = sorted({row.registration_id for row in bindings} - configured)
+    if not missing:
+        return []
+    await logger.awarning(
+        "This listener holds %s OAuth-backed connection(s) whose registrations it cannot see (%s). Their access "
+        "tokens cannot be refreshed here. Set LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS to the same value the "
+        "Langflow API runs with; until then the affected triggers stay armed and retry.",
+        sum(1 for row in bindings if row.registration_id in set(missing)),
+        ", ".join(missing),
+    )
+    return missing
+
+
+async def boot_services() -> None:
+    """Bring up exactly the services a listener needs, and nothing else."""
+    from langflow.services.utils import initialize_settings_service, register_all_service_factories
+
+    initialize_settings_service()
+    register_all_service_factories()
+    register_builtin_adapters()
+    await verify_schema()
+
+
+async def run_listeners(*, stop_event: asyncio.Event | None = None) -> None:
+    """Boot, supervise, and shut down cleanly. Returns when stopped."""
+    mark_listener_process()
+    assert_no_http_app()
+    await boot_services()
+    with contextlib.suppress(Exception):
+        # Advisory only: a listener whose warning query fails still starts.
+        await warn_on_unrefreshable_connections()
+
+    stopping = stop_event or asyncio.Event()
+    supervisor = ListenerSupervisor()
+    health = ListenerHealthServer(supervisor)
+
+    try:
+        # Both starts sit inside the try: a health port already in use would
+        # otherwise propagate out with the reconcile task still holding claimed
+        # leases, and every one of them would be left to expire - costing the
+        # next holder up to two TTLs, which is what the clean-shutdown path
+        # below exists to avoid.
+        supervisor.start()
+        await health.start()
+        await logger.ainfo("Langflow listeners started (holder %s)", supervisor.holder)
+        await stopping.wait()
+    finally:
+        await logger.ainfo("Langflow listeners stopping")
+        with contextlib.suppress(Exception):
+            await health.stop()
+        with contextlib.suppress(Exception):
+            await supervisor.stop()
+        with contextlib.suppress(Exception):
+            from langflow.services.utils import teardown_services
+
+            await teardown_services()
+
+
+def _install_signal_handlers(loop: asyncio.AbstractEventLoop, stopping: asyncio.Event) -> None:
+    """SIGTERM and SIGINT stop the supervisor instead of killing the process.
+
+    A hard kill leaves every lease to expire, which costs the next replica up to
+    two TTLs. Handling the signal is what makes "stops cleanly on SIGTERM" - a
+    container's normal shutdown - a promise rather than a hope. Windows has no
+    ``add_signal_handler``; there ``KeyboardInterrupt`` is the path.
+    """
+    for signal_name in ("SIGTERM", "SIGINT"):
+        sig = getattr(signal, signal_name, None)
+        if sig is None:  # pragma: no cover - platform dependent
+            continue
+        with contextlib.suppress(NotImplementedError, RuntimeError):
+            loop.add_signal_handler(sig, stopping.set)
+
+
+async def _main() -> None:
+    stopping = asyncio.Event()
+    _install_signal_handlers(asyncio.get_running_loop(), stopping)
+    try:
+        await run_listeners(stop_event=stopping)
+    except KeyboardInterrupt:  # pragma: no cover - Windows / no signal handler
+        stopping.set()
+
+
+def main() -> None:
+    """Console entry point for ``langflow listeners``."""
+    # A second Ctrl-C during shutdown should end the process quietly, not print
+    # a traceback over the clean-shutdown log lines.
+    with contextlib.suppress(KeyboardInterrupt):
+        asyncio.run(_main())
+
+
+if __name__ == "__main__":  # pragma: no cover - ``python -m`` convenience
+    main()

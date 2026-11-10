@@ -82,6 +82,12 @@ class TestFileDescriptionGeneratorComponent(ComponentTestBaseWithoutClient):
         """Return empty list - new component without version history."""
         return []
 
+    @pytest.fixture
+    def skipped_outputs(self):
+        return {
+            "descriptions": "asks a live LLM to describe each file",
+        }
+
     # ========== Core Functionality Tests ==========
 
     def test_generate_descriptions_basic_success(self, component_class, default_kwargs):

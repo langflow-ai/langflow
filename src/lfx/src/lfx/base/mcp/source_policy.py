@@ -149,6 +149,8 @@ DOCKER_HARDENED_NAMESPACE_FLAGS = frozenset({"--pid", "--ipc", "--uts", "--cgrou
 DOCKER_HARDENED_NETWORK_FLAGS = frozenset({"--net", "--network"})
 DOCKER_SAFE_NETWORK_VALUES = frozenset({"none", "bridge", "default"})
 SHELL_CONTROL_CHARS = frozenset({";", "|", "&", "$", "`", "<", ">", "\n", "\r"})
+POSIX_SHELL_EXPANSION_CHARS = frozenset({"{", "}", "*", "?", "[", "]"})
+CMD_TOKEN_TRANSFORM_CHARS = frozenset({"%", "!", "^", '"'})
 
 # cmd.exe switches that do NOT run the rest of the command line. ``/c`` is not the only
 # executing switch: ``/k`` runs the command and keeps the session alive, and ``/r`` is an
@@ -159,6 +161,11 @@ SHELL_CONTROL_CHARS = frozenset({";", "|", "&", "$", "`", "<", ">", "\n", "\r"})
 # this module does not know about fails safe (the wrapped payload still gets bound to the
 # command allowlist) instead of silently skipping the wrapper check.
 CMD_NON_EXEC_SWITCH_LETTERS = frozenset({"a", "d", "e", "f", "q", "s", "t", "u", "v"})
+
+# Only no-argument short options may precede the inline-command flag.
+# Startup-file modes run code outside the validated payload, and tracing can expose credentials.
+# Keyword assignment mode changes the command environment.
+POSIX_SHELL_BOOLEAN_FLAGS = frozenset("aefhmnptuBCEHPT")
 
 HARDENED_ALLOWED_PYTHON_MODULES = frozenset({"langflow.agentic.mcp", "langflow.agentic.mcp.server"})
 PYTHON_MODULE_MIN_ARGS = 2
@@ -256,8 +263,9 @@ def _base_command(command: str) -> str:
 
 
 def _looks_like_file_path(command: str) -> bool:
+    """Distinguish an executable path from a legacy packed command."""
     return (
-        command.startswith(("/", "./", "../"))
+        "/" in command.split(" ", 1)[0]
         or "\\" in command
         or (len(command) >= WINDOWS_DRIVE_PREFIX_LENGTH and command[1:3] in {":\\", ":/"})
     )
@@ -286,6 +294,14 @@ def _split_command(command: str, args: list[str] | None) -> tuple[str, list[str]
 
 def _raise_disallowed(command: str, value: str) -> None:
     msg = f"Argument '{value}' is not allowed for MCP stdio command '{command}'"
+    raise ValueError(msg)
+
+
+def _raise_unsafe_shell_character(command: str, char: str) -> None:
+    msg = (
+        f"Shell wrapper '{command}' contains unsupported character {char!r} and is not allowed for MCP stdio; "
+        "set the executable directly as 'command' (for example, 'uvx') and pass its arguments separately in 'args'"
+    )
     raise ValueError(msg)
 
 
@@ -565,19 +581,37 @@ def _validate_allowed_package(base_command: str, args: list[str], allowed_packag
 
 
 def _validate_interpreter_invocation(base_command: str, args: list[str], *, hardened: bool) -> None:
-    if not hardened:
-        return
+    """Enforce inline shell wrappers and the configured interpreter restrictions."""
+    # Node interprets options before the script operand. A tenant can use --import,
+    # --require, --run, or future runtime options to execute code without supplying
+    # a script path. `node inspect` is also a launcher: it respawns Node with
+    # subsequent options, so it must not be mistaken for a server script.
+    # Keep ordinary `node server.js [server args]` configurations even when the
+    # optional interpreter-hardening policy is disabled.
+    if base_command == "node" and args and (args[0].startswith("-") or args[0] == "inspect"):
+        msg = (
+            "Node.js runtime options or 'inspect' are not allowed before an MCP server script; "
+            "use 'node server.js [server args]' or an operator-approved launcher"
+        )
+        raise ValueError(msg)
     if base_command in {"sh", "bash", "cmd"}:
-        first_arg = args[0].lower() if args else ""
         has_leading_exec_flag = (
             has_leading_cmd_exec_flag(args)
             if base_command == "cmd"
-            else first_arg.startswith("-") and not first_arg.startswith("--") and "c" in first_arg[1:]
+            else bool(args) and is_posix_shell_exec_flag(args[0])
         )
         if has_leading_exec_flag and parse_mcp_shell_wrapper(base_command, args) is not None:
             return
+        if base_command in {"sh", "bash"} and args and args[0].startswith("-"):
+            msg = (
+                f"Unsupported shell options or attached commands are not allowed for MCP command '{base_command}'. "
+                "Pass the command as a separate argument after -c."
+            )
+            raise ValueError(msg)
         msg = f"Direct shell scripts are not allowed for MCP command '{base_command}'"
         raise ValueError(msg)
+    if not hardened:
+        return
     if base_command not in {"node", "python", "python3"}:
         return
     if (
@@ -685,6 +719,17 @@ def _parse_shell_payload(command: str, payload: str) -> tuple[str, list[str]]:
         raise ValueError(msg) from exc
     if not parts:
         _raise_disallowed(command, payload)
+    # sh/bash also accept assignment variants such as NAME+=value and
+    # NAME[index]=value. The approved launcher names contain no '='; reject
+    # any ambiguous first token before recursing into the wrapped command.
+    if "=" in parts[0]:
+        msg = f"Shell wrapper '{command}' cannot start with an assignment-like token"
+        raise ValueError(msg)
+    # Brace expansion and filename globs can turn a validated script operand
+    # into a Node option such as -p after this parser has checked it.
+    unsafe_char = next((char for char in payload if char in POSIX_SHELL_EXPANSION_CHARS), None)
+    if unsafe_char is not None:
+        _raise_unsafe_shell_character(command, unsafe_char)
     return parts[0], parts[1:]
 
 
@@ -716,6 +761,11 @@ def has_leading_cmd_exec_flag(args: list[str]) -> bool:
     return False
 
 
+def is_posix_shell_exec_flag(arg: str) -> bool:
+    """Recognize supported short-option clusters ending with the inline-command flag."""
+    return arg.startswith("-") and arg.endswith("c") and all(flag in POSIX_SHELL_BOOLEAN_FLAGS for flag in arg[1:-1])
+
+
 def parse_mcp_shell_wrapper(command: str, args: list[str]) -> tuple[str, list[str]] | None:
     """Return a shell wrapper's canonical executable and argv payload."""
     command = _base_command(command)
@@ -725,20 +775,21 @@ def parse_mcp_shell_wrapper(command: str, args: list[str]) -> tuple[str, list[st
             if not is_cmd_exec_flag(arg_lower) or index + 1 >= len(args):
                 continue
             payload = args[index + 1 :]
-            if any(char in " ".join(payload) for char in SHELL_CONTROL_CHARS):
-                _raise_disallowed(command, " ".join(payload))
+            # cmd expands %VAR%/!VAR! and strips carets/quotes before launching
+            # the wrapped command. Those forms can supply a Node option or
+            # `inspect` after validation, so reject them before parsing.
+            payload_text = " ".join(payload)
+            unsafe_char = next((char for char in payload_text if char in CMD_TOKEN_TRANSFORM_CHARS), None)
+            if unsafe_char is not None:
+                _raise_unsafe_shell_character(command, unsafe_char)
+            if any(char in payload_text for char in SHELL_CONTROL_CHARS):
+                _raise_disallowed(command, payload_text)
             return split_mcp_stdio_command(payload[0], payload[1:])
 
-        is_exec_flag = arg_lower.startswith("-") and not arg_lower.startswith("--") and "c" in arg_lower[1:]
-        if not is_exec_flag:
-            continue
+        if command not in {"sh", "bash"} or index != 0 or not is_posix_shell_exec_flag(arg):
+            return None
 
-        # bash/sh accept the command attached to -c or as the next token. Any
-        # later tokens become $0/$1 rather than additional command arguments.
-        option_cluster = arg[1:]
-        attached_command = option_cluster[option_cluster.lower().index("c") + 1 :]
-        if attached_command:
-            return _parse_shell_payload(command, attached_command)
+        # The next token contains the command. Later tokens become positional arguments.
         if index + 1 < len(args):
             return _parse_shell_payload(command, args[index + 1])
     return None

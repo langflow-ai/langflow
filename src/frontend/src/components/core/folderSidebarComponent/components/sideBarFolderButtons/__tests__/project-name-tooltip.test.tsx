@@ -106,6 +106,21 @@ jest.mock("@/customization/feature-flags", () => ({
   ENABLE_MCP_NOTICE: false,
 }));
 
+jest.mock("@/customization/components/custom-project-sidebar", () => {
+  const actual = jest.requireActual(
+    "@/customization/components/custom-project-sidebar",
+  );
+
+  return {
+    ...actual,
+    useCustomProjectSidebar: (projects: typeof mockFolders) => ({
+      projects,
+      tools: null,
+      footer: <div>Custom footer</div>,
+    }),
+  };
+});
+
 jest.mock("@/customization/hooks/use-custom-navigate", () => ({
   useCustomNavigate: () => jest.fn(),
 }));
@@ -264,6 +279,14 @@ describe("project name tooltip", () => {
       // would claim a different project than the row it belongs to.
       expect(cell).toHaveAttribute("title", cell?.textContent ?? "");
     }
+  });
+
+  it("renders a custom footer without disabled file-management items", () => {
+    render(<SideBarFoldersButtonsComponent handleChangeFolder={jest.fn()} />);
+
+    expect(screen.getByText("Custom footer")).toBeInTheDocument();
+    expect(screen.queryByText("sidebar.knowledge")).not.toBeInTheDocument();
+    expect(screen.queryByText("sidebar.myFiles")).not.toBeInTheDocument();
   });
 
   it("does not render a title on the rename input that replaces the name", () => {

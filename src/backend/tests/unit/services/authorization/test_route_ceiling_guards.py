@@ -222,7 +222,13 @@ async def test_files_delete_viewer_denied(owner):
     set_current_external_access_context(_viewer_ceiling())
     try:
         with pytest.raises(HTTPException) as exc_info:
-            await files.delete_file(file_name="x.txt", flow=flow, current_user=owner, storage_service=storage)
+            await files.delete_file(
+                file_name="x.txt",
+                flow=flow,
+                current_user=owner,
+                session=SimpleNamespace(get=AsyncMock(return_value=None)),
+                storage_service=storage,
+            )
     finally:
         set_current_external_access_context(None)
 
@@ -235,9 +241,15 @@ async def test_files_delete_owner_proceeds(owner):
     from langflow.api.v1 import files
 
     flow = _make_flow(owner.id)
-    storage = MagicMock(delete_file=AsyncMock())
+    storage = MagicMock(delete_file=AsyncMock(), get_file_size=AsyncMock())
 
-    result = await files.delete_file(file_name="x.txt", flow=flow, current_user=owner, storage_service=storage)
+    result = await files.delete_file(
+        file_name="x.txt",
+        flow=flow,
+        current_user=owner,
+        session=SimpleNamespace(get=AsyncMock(return_value=None)),
+        storage_service=storage,
+    )
 
     storage.delete_file.assert_awaited_once()
     assert "deleted successfully" in result["message"]
@@ -413,6 +425,7 @@ async def test_custom_component_update_viewer_denied_before_build(monkeypatch, o
 async def test_custom_component_editor_passes_ceiling(monkeypatch, owner):
     """An editor ceiling allows component instantiation (create is in the editor set)."""
     from langflow.api.v1 import endpoints
+    from langflow.api.v1.schemas import CustomComponentRequest
 
     # Stub the build pipeline so the route returns without real execution; the
     # point is that the ceiling check does NOT short-circuit for an editor.
@@ -429,7 +442,7 @@ async def test_custom_component_editor_passes_ceiling(monkeypatch, owner):
     monkeypatch.setattr(endpoints, "get_settings_service", lambda: SimpleNamespace(settings=settings))
     # ``isinstance(instance, Component)`` must be False so the optional
     # run_and_validate_update_outputs branch is skipped for this MagicMock.
-    raw_code = SimpleNamespace(code="print('x')", frontend_node=None)
+    raw_code = CustomComponentRequest(code="print('x')")
     request = SimpleNamespace(state=SimpleNamespace(locale="en"))
 
     set_current_external_access_context(ExternalAccessContext(provider="openrag", subject="s-1", level="editor"))

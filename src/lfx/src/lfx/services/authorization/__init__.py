@@ -2,6 +2,7 @@
 
 from lfx.services.authorization.base import (
     PUBLIC_ANONYMOUS_ACTOR_ID,
+    AdministrationResource,
     AuthorizationAuditEvent,
     AuthorizationMutation,
     AuthorizationMutationKind,
@@ -11,6 +12,7 @@ from lfx.services.authorization.base import (
     DirectoryMembershipClaimState,
     DirectoryMembershipIngestResult,
     DirectoryMembershipSnapshot,
+    ExecutionPrincipal,
     PublicAuthorizationRequest,
     PublicResourceAction,
     ResourceVisibilityScope,
@@ -21,6 +23,7 @@ from lfx.services.authorization.service import AuthorizationService
 
 __all__ = [
     "PUBLIC_ANONYMOUS_ACTOR_ID",
+    "AdministrationResource",
     "AuthorizationAuditEvent",
     "AuthorizationMutation",
     "AuthorizationMutationKind",
@@ -31,6 +34,7 @@ __all__ = [
     "DirectoryMembershipClaimState",
     "DirectoryMembershipIngestResult",
     "DirectoryMembershipSnapshot",
+    "ExecutionPrincipal",
     "PublicAuthorizationRequest",
     "PublicResourceAction",
     "ResourceVisibilityScope",

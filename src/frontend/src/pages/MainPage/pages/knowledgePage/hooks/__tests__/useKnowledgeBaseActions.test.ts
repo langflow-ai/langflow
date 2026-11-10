@@ -9,8 +9,14 @@ const mockCancelMutate = jest.fn();
 jest.mock(
   "@/controllers/API/queries/knowledge-bases/use-cancel-ingestion",
   () => ({
-    useCancelIngestion: ({ onSuccess, onError }: any) => ({
-      mutate: (args: any) => {
+    useCancelIngestion: ({
+      onSuccess,
+      onError,
+    }: {
+      onSuccess: () => void;
+      onError: unknown;
+    }) => ({
+      mutate: (args: unknown) => {
         mockCancelMutate(args);
       },
       isPending: false,
@@ -21,17 +27,29 @@ jest.mock(
 );
 
 const mockDeleteMutate = jest.fn();
+const mockDeletionCallbacks: Array<{
+  onSuccess: (response: { deleted_count: number; failed?: string }) => void;
+}> = [];
 jest.mock(
   "@/controllers/API/queries/knowledge-bases/use-delete-knowledge-base",
   () => ({
-    useDeleteKnowledgeBase: ({ onSuccess, onError }: any) => ({
-      mutate: (args: any) => {
-        mockDeleteMutate(args);
-      },
-      isPending: false,
-      _onSuccess: onSuccess,
-      _onError: onError,
-    }),
+    useDeleteKnowledgeBase: ({
+      onSuccess,
+      onError,
+    }: {
+      onSuccess: (response: { deleted_count: number; failed?: string }) => void;
+      onError: unknown;
+    }) => {
+      mockDeletionCallbacks.push({ onSuccess });
+      return {
+        mutate: (args: unknown) => {
+          mockDeleteMutate(args);
+        },
+        isPending: false,
+        _onSuccess: onSuccess,
+        _onError: onError,
+      };
+    },
   }),
 );
 
@@ -83,7 +101,10 @@ const defaultOptions = {
   clearSelection: jest.fn(),
 };
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockDeletionCallbacks.length = 0;
+});
 
 // ── Tests ────────────────────────────────────────────────────────────────────
 
@@ -163,6 +184,39 @@ describe("useKnowledgeBaseActions", () => {
   });
 
   describe("confirmBulkDelete", () => {
+    it("does not delete a migrating base whose ingestion status is ready", () => {
+      const qc = makeQueryClient();
+      const { result } = renderHook(
+        () =>
+          useKnowledgeBaseActions({
+            ...defaultOptions,
+            selectedFiles: [
+              makeKb({ storage_state: "migrating", status: "ready" }),
+            ],
+          }),
+        { wrapper: createWrapper(qc) },
+      );
+      act(() => result.current.confirmBulkDelete());
+      expect(mockDeleteMutate).not.toHaveBeenCalled();
+    });
+
+    it("reports a refused deletion without claiming success", () => {
+      const qc = makeQueryClient();
+      renderHook(() => useKnowledgeBaseActions(defaultOptions), {
+        wrapper: createWrapper(qc),
+      });
+      act(() =>
+        mockDeletionCallbacks
+          .at(-1)!
+          .onSuccess({ deleted_count: 0, failed: "locked base" }),
+      );
+      expect(mockSetErrorData).toHaveBeenCalledWith(
+        expect.objectContaining({ list: ["locked base"] }),
+      );
+      expect(mockSetSuccessData).not.toHaveBeenCalled();
+      expect(defaultOptions.refetch).toHaveBeenCalled();
+    });
+
     it("calls mutate with all non-busy selected KB dir_names", () => {
       const qc = makeQueryClient();
       const readyKb = makeKb({ dir_name: "ready_kb", status: "ready" });

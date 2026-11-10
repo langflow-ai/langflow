@@ -35,6 +35,12 @@ class TestCometAPIComponent(ComponentTestBaseWithoutClient):
     def file_names_mapping(self):
         return []
 
+    @pytest.fixture
+    def skipped_outputs(self):
+        return {
+            "text_output": "sends the prompt to a live LLM",
+        }
+
     def test_basic_setup(self, component_class, default_kwargs):
         """Test basic component initialization."""
         component = component_class()

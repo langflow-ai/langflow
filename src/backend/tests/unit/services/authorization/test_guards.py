@@ -18,6 +18,7 @@ from langflow.services.authorization.access_ceiling import (
     set_current_external_access_context,
 )
 from langflow.services.authorization.actions import (
+    ConnectionAction,
     DeploymentAction,
     FileAction,
     FlowAction,
@@ -35,6 +36,52 @@ from ._common import (
     install_authz,
     install_settings,
 )
+
+# ----------------------------------------------------------------------------- #
+# ensure_connection_permission
+# ----------------------------------------------------------------------------- #
+
+
+@pytest.mark.anyio
+async def test_connection_owner_and_scoped_api_key_personas(monkeypatch, fake_user):
+    """Connection use honors owner override but not a narrower API-key policy."""
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=False, supports_api_key_scopes=True)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+    connection_id = uuid4()
+
+    await authz_guards.ensure_connection_permission(
+        fake_user,
+        ConnectionAction.EXECUTE,
+        connection_id=connection_id,
+        connection_owner_id=fake_user.id,
+    )
+    assert service.calls == []
+
+    set_current_auth_context(
+        AuthCredentialContext(
+            method=AUTH_METHOD_API_KEY,
+            api_key_id=uuid4(),
+            api_key_source="db",  # pragma: allowlist secret
+        )
+    )
+    try:
+        with pytest.raises(HTTPException) as exc_info:
+            await authz_guards.ensure_connection_permission(
+                fake_user,
+                ConnectionAction.EXECUTE,
+                connection_id=connection_id,
+                connection_owner_id=fake_user.id,
+            )
+    finally:
+        clear_current_auth_context()
+
+    assert exc_info.value.status_code == 403
+    assert service.calls[-1]["obj"] == f"connection:{connection_id}"
+    assert service.calls[-1]["act"] == "execute"
+    assert service.calls[-1]["context"]["connection_owner_id"] == fake_user.id
+
 
 # ----------------------------------------------------------------------------- #
 # ensure_permission
@@ -576,6 +623,52 @@ async def test_ensure_flows_permission_owner_override_skips_batch(monkeypatch, f
 
     assert service.batch_calls == []
     assert service.calls == []
+
+
+@pytest.mark.anyio
+async def test_ensure_flows_permission_forwards_same_context_as_single_flow_check(monkeypatch, fake_user):
+    """The batched check must forward the same extra context as the single-flow check.
+
+    ``ensure_flow_permission`` -> ``_ensure_typed`` builds ``extra_context`` from
+    ``workspace_id`` / ``folder_id`` / ``flow_user_id`` / ``folder_user_id`` for the
+    "flow" resource spec. The batched path used to forward only the caller's auth
+    context, silently dropping the fields a plugin needs to scope its policy the
+    same way it would for a single-flow check.
+    """
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    flow_user_id = uuid4()
+    workspace_id = uuid4()
+    folder_id = uuid4()
+
+    await authz_guards.ensure_flow_permission(
+        fake_user,
+        FlowAction.WRITE,
+        flow_id=uuid4(),
+        flow_user_id=flow_user_id,
+        workspace_id=workspace_id,
+        folder_id=folder_id,
+    )
+    single_flow_context = service.calls[0]["context"]
+
+    await authz_guards.ensure_flows_permission(
+        fake_user,
+        FlowAction.WRITE,
+        flow_ids=[uuid4(), uuid4()],
+        flow_user_id=flow_user_id,
+        workspace_id=workspace_id,
+        folder_id=folder_id,
+    )
+    batch_context = service.batch_calls[0]["context"]
+
+    assert batch_context == single_flow_context
+    assert batch_context["flow_user_id"] == flow_user_id
+    assert batch_context["workspace_id"] == workspace_id
+    assert batch_context["folder_id"] == folder_id
+    assert batch_context["folder_user_id"] is None
 
 
 # ----------------------------------------------------------------------------- #

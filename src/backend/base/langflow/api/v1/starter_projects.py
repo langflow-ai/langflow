@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from langflow.api.utils import CurrentActiveUser
 from langflow.services.deps import get_catalog_policy_service
+from langflow.services.integration_policy_discovery import ablocked_template_positions
 
 router = APIRouter(prefix="/starter-projects", tags=["Flows"])
 
@@ -66,6 +67,7 @@ async def get_starter_projects(
 
         # Convert TypedDict GraphDump to Pydantic GraphDumpResponse
         results = []
+        result_nodes: list[list] = []
         for item in raw_data:
             name_key = item.get("name_key")
             if not isinstance(name_key, str):
@@ -93,7 +95,16 @@ async def get_starter_projects(
                 endpoint_name=item.get("endpoint_name"),
             )
             results.append(graph_dump)
+            result_nodes.append(nodes if isinstance(nodes, list) else [])
 
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    if not include_blocked:
+        # Integration governance (INT-7): a template whose integration node
+        # could never run is hidden for the same reason a catalog-blocked
+        # template is. The superuser authoring view keeps showing everything.
+        blocked_positions = await ablocked_template_positions(result_nodes, user_id=current_user.id)
+        if blocked_positions:
+            results = [result for position, result in enumerate(results) if position not in blocked_positions]
     return results

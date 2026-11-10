@@ -109,8 +109,8 @@ class TestGoogleSearchAPICore(ComponentTestBaseWithoutClient):
         build_result = component.build()
         assert build_result == component.search_google
 
-    @pytest.mark.asyncio
-    async def test_latest_version(self, component_class, default_kwargs):
-        """Override test_latest_version to skip API call."""
-        component = component_class(**default_kwargs)
-        assert component is not None
+    async def test_latest_version(self, component_class, default_kwargs, skipped_outputs):
+        # Answer the search offline; the component's handling of the results runs for real.
+        results = [{"title": "Langflow", "link": "https://langflow.org", "snippet": "Build AI agents"}]
+        with patch("langchain_google_community.GoogleSearchAPIWrapper.results", return_value=results):
+            await super().test_latest_version(component_class, default_kwargs, skipped_outputs)

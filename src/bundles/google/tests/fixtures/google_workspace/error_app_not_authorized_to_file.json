@@ -1,0 +1,13 @@
+{
+  "error": {
+    "errors": [
+      {
+        "domain": "global",
+        "reason": "appNotAuthorizedToFile",
+        "message": "The user has not granted the app 123456 read access to the file file-outside-grant."
+      }
+    ],
+    "code": 403,
+    "message": "The user has not granted the app 123456 read access to the file file-outside-grant."
+  }
+}

@@ -12,7 +12,7 @@ Langflow and LFX are versioned together on the same `major.minor` line, so you c
 The major and minor numbers must match.
 The patches `.N` for LFX and `.M` for Langflow are released independently. An LFX patch fix does not require a Langflow patch release, and vice versa.
 
-When LFX and a flow share the same `major` version but differ on `minor`, such as a flow exported from Langflow 1.9.x run with LFX 1.10.x,  individual components may have been updated since the flow was saved.
+When LFX and a flow share the same `major` version but differ on `minor`, such as a flow exported from Langflow 1.12.x run with LFX 1.13.x, individual components may have been updated since the flow was saved.
 Use `lfx upgrade` to check compatibility and apply safe automatic fixes before running or serving such a flow.
 For more information, see [Check and upgrade flows with lfx upgrade](#check-and-upgrade-flows-with-lfx-upgrade).
 
@@ -20,8 +20,10 @@ For more information, see [Check and upgrade flows with lfx upgrade](#check-and-
 
 | Langflow version | Compatible LFX version | Notes |
 |---|---|---|
-| 1.10.x | 1.10.x | Fully compatible. Same `major.minor` line. |
+| 1.13.x | 1.13.x | Fully compatible. Same `major.minor` line. |
+| 1.12.x | 1.12.x | Fully compatible. Same `major.minor` line. |
 | 1.11.x | 1.11.x | Fully compatible. Same `major.minor` line. |
+| 1.10.x | 1.10.x | Fully compatible. Same `major.minor` line. |
 | 1.9.x or earlier | 1.10.x | Use `lfx upgrade --upgrade-flow=safe` to apply safe component schema upgrades before running. |
 | Any 1.x.x | 0.5.x | LFX 0.5.x was a standalone release before version alignment. It is no longer compatible with Langflow 1.10+ flows. |
 
@@ -83,11 +85,11 @@ lfx serve my-flow.json --upgrade-flow=safe
 
 ## Pin versions
 
-Pin `lfx~=1.10.0` in `requirements.txt` to track all patch releases for a given Langflow minor without crossing into the next minor automatically.
+Pin `lfx~=1.13.0` in `requirements.txt` to track all patch releases for a given Langflow minor without crossing into the next minor automatically.
 
 ```text
-# requirements.txt — allows 1.10.1, 1.10.2, … but not 1.11.0
-lfx~=1.10.0
+# requirements.txt — allows 1.13.1, 1.13.2, … but not 1.14.0
+lfx~=1.13.0
 ```
 
 ## Migrating from LFX 0.5.x to 1.10.0
@@ -100,9 +102,9 @@ This jump can affect existing dependency pins in unexpected ways:
 |---|---|
 | `lfx==0.5.x` or `lfx<1.0` | Does not upgrade. The deployment stays on 0.5.x. |
 | `lfx>=0.5,<1` | Does not upgrade. The upper bound excludes 1.10.0. |
-| `lfx>=0.5` (no upper bound) | Upgrades automatically to 1.10.0 on the next install. |
+| `lfx>=0.5` (no upper bound) | Upgrades automatically to the latest 1.x release on the next install. |
 
-Going forward, pin with `lfx~=1.10.0` so you receive compatible patches without silently crossing minor lines.
+Pin with `lfx~=1.13.0` so you receive compatible patches without silently crossing minor lines.
 
 ## Engine-only LFX and `lfx[bundles]`
 

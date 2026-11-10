@@ -12,6 +12,7 @@ from __future__ import annotations
 import contextlib
 import contextvars
 import copy
+import os
 import re
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Any
@@ -69,12 +70,14 @@ from lfx.mcp.registry import (
     load_registry,
     search_registry,
 )
+from lfx.services.deps import get_settings_service
 from lfx.services.telemetry import MCPToolPayload, TelemetryService
 
 # Session state. Module-level singletons for stdio (single agent), with
 # contextvars overlay for SSE (multiple concurrent agents).
 _client_var: contextvars.ContextVar[LangflowClient | None] = contextvars.ContextVar("_client", default=None)
 _registry_var: contextvars.ContextVar[dict[str, dict] | None] = contextvars.ContextVar("_registry", default=None)
+_request_scope_var: contextvars.ContextVar[bool] = contextvars.ContextVar("_request_scope", default=False)
 _shared_client: LangflowClient | None = None
 _shared_registry: dict[str, dict] | None = None
 _telemetry: TelemetryService | None = None
@@ -84,7 +87,12 @@ _telemetry: TelemetryService | None = None
 async def _telemetry_lifespan(_server: FastMCP) -> AsyncIterator[dict]:
     """Start/stop the telemetry service with the MCP server lifecycle."""
     global _telemetry  # noqa: PLW0603
-    svc = TelemetryService()
+    settings = get_settings_service().settings
+    svc = TelemetryService(
+        base_url=os.environ.get("LANGFLOW_SEGMENT_API_URL") or settings.segment_api_url,
+        write_key=os.environ.get("LANGFLOW_SEGMENT_WRITE_KEY") or settings.segment_write_key,
+        do_not_track=settings.do_not_track or os.environ.get("DO_NOT_TRACK", "false").lower() in {"1", "true"},
+    )
     svc.start()
     _telemetry = svc
     try:
@@ -139,24 +147,37 @@ def _set_client(client: LangflowClient) -> None:
     _shared_client = client
 
 
-@contextlib.contextmanager
-def client_scope(client: LangflowClient):
+@contextlib.asynccontextmanager
+async def client_scope(client: LangflowClient):
     """Bind ``client`` for the current async context only (host mounts).
 
     Unlike ``_set_client`` this never touches the shared stdio client, so an
     HTTP mount can serve concurrent callers with per-request credentials
     without cross-contaminating sessions.
     """
-    token = _client_var.set(client)
+    client_token = _client_var.set(client)
+    registry_token = _registry_var.set(None)
+    scope_token = _request_scope_var.set(True)
     try:
         yield client
     finally:
-        _client_var.reset(token)
+        replacement = _client_var.get()
+        try:
+            if replacement is not None and replacement is not client:
+                await replacement.aclose()
+        finally:
+            _request_scope_var.reset(scope_token)
+            _registry_var.reset(registry_token)
+            _client_var.reset(client_token)
 
 
 async def _get_registry() -> dict[str, dict]:
     registry = _registry_var.get()
     if registry is not None:
+        return registry
+    if _request_scope_var.get():
+        registry = await load_registry(_get_client())
+        _registry_var.set(registry)
         return registry
     global _shared_registry  # noqa: PLW0603
     if _shared_registry is not None:
@@ -251,16 +272,20 @@ async def login(username: str, password: str, server_url: str | None = None) -> 
         password: Langflow password.
         server_url: Server URL (defaults to LANGFLOW_SERVER_URL env var or http://localhost:7860).
     """
-    # Only close the client owned by this session (contextvar). The shared
-    # fallback is still overwritten by _set_client below, but we avoid
-    # closing it here since another session may be using it.
+    # Only close the client owned by this session (contextvar), never the
+    # shared fallback that another session may be using.
     old_client = _client_var.get()
     if old_client is not None:
         await old_client.close()
-    client = LangflowClient(server_url=server_url)
-    _set_client(client)
-    # Clear only this session's cached registry; leave _shared_registry
-    # intact so other sessions are not disrupted.
+    client = LangflowClient(
+        server_url=server_url,
+        use_env_api_key=server_url is None,
+        use_env_global_vars=server_url is None,
+    )
+    if _request_scope_var.get():
+        _client_var.set(client)
+    else:
+        _set_client(client)
     _registry_var.set(None)
     await client.login(username, password)
     return {"status": "authenticated", "server_url": client.server_url}

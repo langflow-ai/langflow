@@ -10,12 +10,15 @@ stored in an otherwise ordinary field is not a secret.
 from __future__ import annotations
 
 import re
+from collections import Counter
 from copy import deepcopy
 from typing import TYPE_CHECKING
 from urllib.parse import parse_qsl, urlsplit
 
+from langflow.utils import mcp_config_secrets as _mcp_config_secrets
+
 if TYPE_CHECKING:
-    from collections.abc import Collection
+    from collections.abc import Callable, Collection, Mapping
 
 API_WORDS = ["api", "key", "token"]
 
@@ -27,6 +30,23 @@ _VARIABLE_REFERENCE_MAX_LENGTH = 256
 # table cell editor and read by ``lfx.interface.initialize.loading``. Duplicated
 # rather than imported to keep this module free of runtime dependencies.
 _TABLE_LOAD_FROM_DB_FIELDS = "__load_from_db_fields"
+_HIDDEN_VALUE_METADATA_KEYS = frozenset(
+    {"id", "key", "name", "header", "password", "load_from_db", "type", "_input_type", _TABLE_LOAD_FROM_DB_FIELDS}
+)
+_CANVAS_LAYOUT_KEYS = frozenset(
+    {
+        "position",
+        "positionAbsolute",
+        "width",
+        "height",
+        "selected",
+        "dragging",
+        "measured",
+        "sourcePosition",
+        "targetPosition",
+        "style",
+    }
+)
 
 # Defense-in-depth for several widely used credential formats, not an exhaustive
 # provider catalog. ``load_from_db`` is the required reference marker, while
@@ -63,6 +83,10 @@ _SECRET_COMPOUND_NAMES = frozenset(
         "set_cookie",
     }
 )
+
+
+class HiddenFieldMetadataError(ValueError):
+    """A shared graph changed metadata used to hide an owner's value."""
 
 
 def has_api_terms(word: str) -> bool:
@@ -110,6 +134,280 @@ def strip_secret_field_values(flow_data: dict | None) -> dict | None:
     if flow_data is None:
         return flow_data
     return strip_secret_field_values_in_place(deepcopy(flow_data))
+
+
+def restore_redacted_flow_values(incoming_data: dict, stored_data: dict | None) -> dict:
+    """Restore hidden values in a shared editor's detached graph for save or run.
+
+    A non-owner receives a scrubbed flow and may send that graph back for an
+    edit. Restore only null values that the read scrubber hid
+    in the same stored node and template field. The metadata that classified
+    a hidden value must still match the stored field. A non-null edit remains
+    the editor's own value. If an owner's value is restored, the executable
+    graph must remain unchanged: other inputs can redirect or return the key.
+    """
+    restored = deepcopy(incoming_data)
+    if not isinstance(stored_data, dict):
+        return restored
+    redacted_data = strip_secret_field_values(stored_data)
+    if not isinstance(redacted_data, dict):
+        return restored
+
+    restored_hidden_value_anywhere = False
+    node_frames = [(restored.get("nodes"), stored_data.get("nodes"), redacted_data.get("nodes"))]
+    while node_frames:
+        incoming_nodes, stored_nodes, redacted_nodes = node_frames.pop()
+        if not all(isinstance(nodes, list) for nodes in (incoming_nodes, stored_nodes, redacted_nodes)):
+            continue
+        incoming_ids = Counter(
+            node.get("id") for node in incoming_nodes if isinstance(node, dict) and isinstance(node.get("id"), str)
+        )
+        stored_ids = Counter(
+            node.get("id") for node in stored_nodes if isinstance(node, dict) and isinstance(node.get("id"), str)
+        )
+        redacted_stored_ids = {
+            stored_node.get("id")
+            for stored_node, redacted_node in zip(stored_nodes, redacted_nodes, strict=False)
+            if isinstance(stored_node, dict)
+            and isinstance(redacted_node, dict)
+            and stored_node != redacted_node
+            and isinstance(stored_node.get("id"), str)
+        }
+        stored_by_id = {
+            node["id"]: node
+            for node in stored_nodes
+            if isinstance(node, dict) and isinstance(node.get("id"), str) and stored_ids[node["id"]] == 1
+        }
+        redacted_by_id = {
+            node["id"]: node for node in redacted_nodes if isinstance(node, dict) and isinstance(node.get("id"), str)
+        }
+        for incoming_node in incoming_nodes:
+            if not isinstance(incoming_node, dict):
+                continue
+            node_id = incoming_node.get("id")
+            if not isinstance(node_id, str):
+                continue
+            if incoming_ids[node_id] != 1 or stored_ids[node_id] > 1:
+                if node_id in redacted_stored_ids:
+                    raise HiddenFieldMetadataError
+                continue
+            stored_node = stored_by_id.get(node_id)
+            redacted_node = redacted_by_id.get(node_id)
+            if stored_node is None or redacted_node is None:
+                continue
+            if stored_node != redacted_node and incoming_node.get("type") != stored_node.get("type"):
+                raise HiddenFieldMetadataError
+            incoming_inner = _node_inner(incoming_node)
+            stored_inner = _node_inner(stored_node)
+            redacted_inner = _node_inner(redacted_node)
+            if not all(isinstance(inner, dict) for inner in (incoming_inner, stored_inner, redacted_inner)):
+                if stored_node != redacted_node:
+                    raise HiddenFieldMetadataError
+                continue
+            if stored_inner != redacted_inner and incoming_inner.get("type") != stored_inner.get("type"):
+                raise HiddenFieldMetadataError
+            incoming_template = incoming_inner.get("template")
+            stored_template = stored_inner.get("template")
+            redacted_template = redacted_inner.get("template")
+            if stored_template != redacted_template and not isinstance(incoming_template, dict):
+                raise HiddenFieldMetadataError
+            if all(isinstance(template, dict) for template in (incoming_template, stored_template, redacted_template)):
+                restored_hidden_value = False
+                for field_name in stored_template.keys() - incoming_template.keys():
+                    if stored_template[field_name] != redacted_template.get(field_name):
+                        raise HiddenFieldMetadataError
+                for field_name, incoming_field in incoming_template.items():
+                    stored_field = stored_template.get(field_name)
+                    redacted_field = redacted_template.get(field_name)
+                    if not all(isinstance(field, dict) for field in (incoming_field, stored_field, redacted_field)):
+                        continue
+                    if "value" in incoming_field and "value" in stored_field and "value" in redacted_field:
+                        if _frontend_cleared_hidden_binding(incoming_field, stored_field, redacted_field):
+                            # A shared canvas receives a null variable name, then its
+                            # missing-variable hook may clear the binding to "".
+                            # Preserve the owner's binding for a layout-only save.
+                            incoming_template[field_name] = deepcopy(stored_field)
+                            restored_hidden_value = True
+                            continue
+                        before_restore = deepcopy(incoming_field["value"])
+                        restored_value = _restore_redacted_value(
+                            incoming_field["value"], stored_field["value"], redacted_field["value"]
+                        )
+                        if restored_value != before_restore and {
+                            key: value for key, value in incoming_field.items() if key != "value"
+                        } != {key: value for key, value in stored_field.items() if key != "value"}:
+                            raise HiddenFieldMetadataError
+                        restored_hidden_value |= restored_value != before_restore
+                        incoming_field["value"] = restored_value
+                restored_hidden_value_anywhere |= restored_hidden_value
+
+            incoming_flow = incoming_inner.get("flow")
+            stored_flow = stored_inner.get("flow")
+            redacted_flow = redacted_inner.get("flow")
+            if stored_flow != redacted_flow and not isinstance(incoming_flow, dict):
+                raise HiddenFieldMetadataError
+            if all(isinstance(flow, dict) for flow in (incoming_flow, stored_flow, redacted_flow)):
+                incoming_nested = incoming_flow.get("data")
+                stored_nested = stored_flow.get("data")
+                redacted_nested = redacted_flow.get("data")
+                if stored_nested != redacted_nested and not isinstance(incoming_nested, dict):
+                    raise HiddenFieldMetadataError
+                if all(isinstance(data, dict) for data in (incoming_nested, stored_nested, redacted_nested)):
+                    node_frames.append(
+                        (incoming_nested.get("nodes"), stored_nested.get("nodes"), redacted_nested.get("nodes"))
+                    )
+    if restored_hidden_value_anywhere:
+        _ensure_shared_graph_execution_unchanged(restored, stored_data)
+    return restored
+
+
+def restore_request_variable_references(
+    source: object,
+    sanitized: object,
+    request_variables: Mapping[str, object],
+) -> None:
+    """Restore scrubbed variable names in place only when the current request supplies them.
+
+    The read scrubber nulls secret-looking values, including the variable *name* in a
+    ``load_from_db`` field or table cell. That name is not the stored secret, and a
+    shared or public run needs it to resolve a request-scoped override. Restore only
+    references that have a matching request value so the run cannot fall back to an
+    owner's database variables or ambient environment credentials.
+    """
+    if isinstance(source, dict) and isinstance(sanitized, dict):
+        source_value = source.get("value")
+        if source.get("load_from_db") is True and isinstance(source_value, str) and source_value in request_variables:
+            sanitized["value"] = source_value
+
+        row_load_from_db_fields = source.get(_TABLE_LOAD_FROM_DB_FIELDS)
+        if isinstance(row_load_from_db_fields, dict):
+            variable_fields = [name for name, enabled in row_load_from_db_fields.items() if enabled is True]
+        elif isinstance(row_load_from_db_fields, list):
+            variable_fields = row_load_from_db_fields
+        else:
+            variable_fields = []
+        for field_name in variable_fields:
+            variable_name = source.get(field_name)
+            if isinstance(field_name, str) and isinstance(variable_name, str) and variable_name in request_variables:
+                sanitized[field_name] = variable_name
+
+        for key, source_child in source.items():
+            if key in sanitized:
+                restore_request_variable_references(source_child, sanitized[key], request_variables)
+    elif isinstance(source, list) and isinstance(sanitized, list):
+        for source_item, sanitized_item in zip(source, sanitized, strict=False):
+            restore_request_variable_references(source_item, sanitized_item, request_variables)
+
+
+def _node_inner(node: dict) -> dict | None:
+    node_data = node.get("data")
+    inner = node_data.get("node") if isinstance(node_data, dict) else None
+    return inner if isinstance(inner, dict) else None
+
+
+def _frontend_cleared_hidden_binding(incoming: dict, stored: dict, redacted: dict) -> bool:
+    """Recognize the UI's empty-value cleanup of a hidden variable reference."""
+    return (
+        stored.get("load_from_db") is True
+        and incoming.get("load_from_db") is False
+        and stored.get("value") != redacted.get("value")
+        and redacted.get("value") is None
+        and incoming.get("value") == ""
+        and {key: value for key, value in incoming.items() if key not in {"value", "load_from_db"}}
+        == {key: value for key, value in stored.items() if key not in {"value", "load_from_db"}}
+    )
+
+
+def _restore_redacted_value(incoming: object, stored: object, redacted: object) -> object:
+    """Copy just the leaves removed by the read scrubber into an incoming value."""
+    if incoming is None:
+        return deepcopy(stored) if redacted is None else None
+    if isinstance(incoming, dict) and isinstance(stored, dict) and isinstance(redacted, dict):
+        if stored != redacted:
+            for key in (stored.keys() & redacted.keys()) - incoming.keys():
+                if stored[key] != redacted[key]:
+                    raise HiddenFieldMetadataError
+        before_restore = deepcopy(incoming)
+        for key in incoming.keys() & stored.keys() & redacted.keys():
+            incoming[key] = _restore_redacted_value(incoming[key], stored[key], redacted[key])
+        if stored != redacted and incoming != before_restore:
+            metadata_keys = _HIDDEN_VALUE_METADATA_KEYS & (stored.keys() | incoming.keys())
+            for key in metadata_keys:
+                if key not in incoming or key not in stored or incoming[key] != stored[key]:
+                    raise HiddenFieldMetadataError
+    elif isinstance(incoming, list) and isinstance(stored, list) and isinstance(redacted, list):
+        stored_keys = Counter(_structured_row_identity(item) for item in stored)
+        incoming_keys = Counter(_structured_row_identity(item) for item in incoming)
+        stored_by_key = {
+            key: index
+            for index, item in enumerate(stored)
+            if (key := _structured_row_identity(item)) is not None and stored_keys[key] == 1
+        }
+        for index, incoming_item in enumerate(incoming):
+            key = _structured_row_identity(incoming_item)
+            if key is not None:
+                # Reordered rows can keep their own values; duplicate row
+                # identifiers must never inherit a different row's credential.
+                if incoming_keys[key] != 1 or key not in stored_by_key:
+                    if any(
+                        _structured_row_identity(stored_item) == key and stored_item != redacted_item
+                        for stored_item, redacted_item in zip(stored, redacted, strict=False)
+                    ):
+                        raise HiddenFieldMetadataError
+                    continue
+                stored_index = stored_by_key[key]
+            else:
+                if index >= len(stored):
+                    continue
+                if incoming_item != redacted[index]:
+                    if stored[index] != redacted[index] and (len(stored) != 1 or len(incoming) != 1):
+                        # Without an identifier, a changed row can only be
+                        # matched safely when it is the sole row in the list.
+                        raise HiddenFieldMetadataError
+                    if stored[index] == redacted[index]:
+                        continue
+                stored_index = index
+            incoming[index] = _restore_redacted_value(incoming_item, stored[stored_index], redacted[stored_index])
+    return incoming
+
+
+def _structured_row_identity(value: object) -> tuple[str, str] | None:
+    if isinstance(value, dict):
+        for key in ("id", "key", "name", "header"):
+            candidate = value.get(key)
+            if isinstance(candidate, str):
+                return key, candidate
+    return None
+
+
+def _ensure_shared_graph_execution_unchanged(incoming_data: dict, stored_data: dict) -> None:
+    """Allow canvas layout edits while keeping a restored-key graph executable as stored."""
+    if {key: value for key, value in incoming_data.items() if key not in {"nodes", "viewport"}} != {
+        key: value for key, value in stored_data.items() if key not in {"nodes", "viewport"}
+    }:
+        raise HiddenFieldMetadataError
+    incoming_nodes = incoming_data.get("nodes")
+    stored_nodes = stored_data.get("nodes")
+    if not isinstance(incoming_nodes, list) or not isinstance(stored_nodes, list):
+        raise HiddenFieldMetadataError
+    if any(
+        not isinstance(node, dict) or not isinstance(node.get("id"), str) for node in (*incoming_nodes, *stored_nodes)
+    ):
+        raise HiddenFieldMetadataError
+    incoming_by_id = {node["id"]: node for node in incoming_nodes}
+    stored_by_id = {node["id"]: node for node in stored_nodes}
+    if (
+        len(incoming_by_id) != len(incoming_nodes)
+        or len(stored_by_id) != len(stored_nodes)
+        or incoming_by_id.keys() != stored_by_id.keys()
+    ):
+        raise HiddenFieldMetadataError
+    for node_id, incoming_node in incoming_by_id.items():
+        stored_node = stored_by_id[node_id]
+        if {key: value for key, value in incoming_node.items() if key not in _CANVAS_LAYOUT_KEYS} != {
+            key: value for key, value in stored_node.items() if key not in _CANVAS_LAYOUT_KEYS
+        }:
+            raise HiddenFieldMetadataError
 
 
 def strip_flow_secrets(flow: dict, *, known_variable_names: Collection[str] = frozenset()) -> dict:
@@ -196,9 +494,20 @@ def _is_preserved_reference(value: object, known_variable_names: Collection[str]
 
 
 def _contains_url_credentials(value: str) -> bool:
-    """Return whether a URL contains userinfo or secret-named parameters."""
+    """Return whether a URL contains userinfo or secret-named parameters.
+
+    ``urlsplit`` parses any string, not just URLs: component ``code``, a
+    Markdown template, or a regex ``pattern`` all parse without error, and
+    text after a bare ``#`` is read as the fragment. A comment merely
+    mentioning "password" was therefore misread as a credential-bearing query
+    parameter. A URL has no inner whitespace, while code and prose do, so only
+    whitespace-free text (after trimming its ends) is treated as a URL.
+    """
+    candidate = value.strip()
+    if not candidate or any(character.isspace() for character in candidate):
+        return False
     try:
-        parsed = urlsplit(value)
+        parsed = urlsplit(candidate)
     except ValueError:
         return False
     if parsed.username is not None or parsed.password is not None:
@@ -321,12 +630,127 @@ def _strip_table_rows_in_place(
             row[_TABLE_LOAD_FROM_DB_FIELDS] = row_metadata
 
 
+# A flag argument whose name itself names a credential kind - ``--token x`` or
+# ``--api-key=x`` - carries the secret positionally, where ``strip_config_secrets``
+# cannot see it (it only rewrites the ``env``/``headers`` maps and drops ``--headers``
+# triples). Case-insensitive because CLIs are not consistent about casing.
+_MCP_SECRET_FLAG_PATTERN = re.compile(
+    r"^--?[A-Za-z0-9_-]*(key|token|secret|password|passwd|auth|credential)[A-Za-z0-9_-]*(=.*)?$",
+    re.IGNORECASE,
+)
+
+
+def _mcp_reference_names_known_variable(value: str, known_variable_names: Collection[str]) -> bool:
+    """Return whether an ``env``/``headers`` reference names one of the owner's variables.
+
+    Only called once ``_mcp_config_secrets._is_variable_reference`` has confirmed
+    ``value`` is a bare ``MCP_*`` reference or a ``{{NAME}}`` placeholder - the two
+    shapes the deploy target can resolve. A bare reference names itself; a
+    placeholder names its inner ``NAME``.
+    """
+    placeholder_match = _mcp_config_secrets.PLACEHOLDER_PATTERN.match(value)
+    name = value[2:-2].strip() if placeholder_match else value
+    return name in known_variable_names
+
+
+def _mcp_config_is_clean(config: dict, name: str, known_variable_names: Collection[str] | None = None) -> bool:
+    """Return whether an MCP ``config`` is provably free of secrets, verbatim.
+
+    Deliberately conservative: this only ever widens what gets kept behind an
+    explicit opt-in (see ``keep_mcp_config`` on ``_strip_template_field_value``),
+    so any shape it cannot positively clear the config on is treated as unclean.
+    The caller then nulls the config rather than keep something unverified.
+
+    ``known_variable_names``, when given, additionally requires every ``env``/
+    ``headers`` reference to name one of the caller's real global variables
+    (see ``_mcp_reference_names_known_variable``), so a literal secret shaped
+    like an ``MCP_*`` name or a ``{{NAME}}`` placeholder cannot escape a strict
+    snapshot just because it is shaped like a reference. ``None`` keeps the
+    shape-only check, matching ``_is_preserved_reference``'s default for other
+    secret fields.
+    """
+    # strip_config_secrets rewrites env/headers entries and drops secret-bearing
+    # args and top-level fields; "found" means it had to change something.
+    _, _, found = _mcp_config_secrets.strip_config_secrets(config, name)
+    if found:
+        return False
+
+    # Anything the general structured scrubber (secret-named keys, nested or
+    # top-level) would null - e.g. a top-level "token" or a nested
+    # "auth.client_secret" - means the config is not provably clean. env/headers
+    # are checked separately below because a reference value there is expected
+    # and must not be nulled by the generic key-name heuristic.
+    sanitized = {key: value for key, value in config.items() if key not in ("env", "headers")}
+    before = deepcopy(sanitized)
+    _strip_structured_secret_values_in_place(sanitized)
+    if sanitized != before:
+        return False
+
+    for map_name in ("env", "headers"):
+        values = config.get(map_name)
+        if values is None:
+            continue
+        if not isinstance(values, dict):
+            return False
+        for header_key, value in values.items():
+            is_non_secret_header = (
+                map_name == "headers"
+                and isinstance(header_key, str)
+                and header_key.lower() in _mcp_config_secrets.NON_SECRET_HEADERS
+            )
+            if is_non_secret_header or not value:
+                continue
+            if not isinstance(value, str) or not _mcp_config_secrets._is_variable_reference(value):  # noqa: SLF001
+                return False
+            if known_variable_names is not None and not _mcp_reference_names_known_variable(
+                value, known_variable_names
+            ):
+                return False
+
+    args = config.get("args")
+    if args is not None:
+        if not isinstance(args, list):
+            return False
+        for item in args:
+            if not isinstance(item, str):
+                continue
+            stripped_item = item.strip()
+            if _contains_url_credentials(item) or _MCP_SECRET_FLAG_PATTERN.match(stripped_item):
+                return False
+
+    for key, value in config.items():
+        if key in ("env", "headers"):
+            continue
+        if isinstance(value, str) and _contains_url_credentials(value):
+            return False
+
+    return True
+
+
 def _strip_template_field_value(
     field: dict,
     variable_references: set[str] | None = None,
     known_variable_names: Collection[str] | None = None,
+    *,
+    keep_mcp_config: bool = False,
 ) -> None:
     """Strip a template field according to metadata and value shape."""
+    field_type = str(field.get("type") or "").lower()
+    if field_type == "connection_ref":
+        # Connection handles are non-secret deployment references. Validate the
+        # shape before preserving one so a malformed legacy value does not get
+        # mistaken for a deployable connection requirement.
+        value = field.get("value")
+        if value in (None, ""):
+            return
+        try:
+            from lfx.integrations.models import ConnectionRef
+
+            field["value"] = ConnectionRef.parse(value).to_handle()
+        except (TypeError, ValueError):
+            field["value"] = None
+        return
+
     if (
         variable_references is not None
         and field.get("load_from_db")
@@ -344,30 +768,169 @@ def _strip_template_field_value(
         return
 
     if field.get("password") or _is_secret_name(field.get("name")):
-        field["value"] = None
+        # An already-empty or absent value carries no secret. Nulling it
+        # anyway would turn a missing ``value`` key into an explicit ``None``
+        # one, or ``""`` into ``None`` - a shape change a strict snapshot
+        # reads as scrubbing having removed something and refuses to capture.
+        if field.get("value") not in (None, ""):
+            field["value"] = None
         return
 
-    field_type = str(field.get("type") or "").lower()
     input_type = str(field.get("_input_type") or "").lower()
     if field_type == "mcp" or input_type == "mcpinput":
         value = field.get("value")
-        name = value.get("name") if isinstance(value, dict) else None
-        field["value"] = {"name": name} if name else None
+        if not isinstance(value, dict):
+            field["value"] = None
+            return
+        name = value.get("name")
+        preserved: dict[str, object] = {}
+        if name:
+            preserved["name"] = name
+        # Every caller gets name-only by default, matching every other secret
+        # field: the config is kept only for the one caller that opts in and
+        # only when it is provably clean, never re-stripped and handed back.
+        # An unclean config is nulled explicitly (not omitted) so a strict
+        # snapshot sees the change against the original and refuses to capture.
+        config = value.get("config")
+        if keep_mcp_config and isinstance(config, dict):
+            preserved["config"] = (
+                config if _mcp_config_is_clean(config, str(name or ""), known_variable_names) else None
+            )
+        field["value"] = preserved or None
         return
 
-    if variable_references is not None:
-        reference_columns = _table_reference_columns(field)
-        if reference_columns:
-            _strip_table_rows_in_place(field, reference_columns, variable_references, known_variable_names)
-            return
+    reference_columns = _table_reference_columns(field)
+    if reference_columns:
+        # A shared read has no variable manifest. Even an ordinary-looking
+        # column name can hold the owner's variable name, so hide every bound
+        # cell rather than relying on the column's spelling to classify it.
+        _strip_table_rows_in_place(
+            field,
+            reference_columns,
+            variable_references if variable_references is not None else set(),
+            known_variable_names if variable_references is not None else frozenset(),
+        )
+        return
 
     field["value"] = _strip_structured_secret_values_in_place(field.get("value"))
+
+
+def is_secret_header_name(header_name: object) -> bool:
+    """Whether a header name reads as a credential rather than as routing data.
+
+    Both halves of the Headers-box handling are held to this, so a header rewritten at
+    save time is the same one kept and declared at packaging.
+    """
+    return _is_secret_name(header_name)
+
+
+def mcp_header_scope(server_name: str) -> str:
+    """The scope a Headers box's variables are named under, apart from the server's own.
+
+    Both the box and the server config can set the same header, and the box exists
+    precisely to override it. Naming them alike gave them one variable, and whichever
+    was written last won -- the config, in practice, so the override was silently
+    discarded and the component authenticated with the value it was meant to replace.
+
+    Both sides derive the name from here so they cannot drift.
+    """
+    return f"{server_name} header override"
+
+
+def iter_mcp_header_cells(headers: object):
+    """Yield ``(set_value, header_name, value)`` for either shape of a Headers box.
+
+    The input is a ``DictInput(is_list=True)``, so the canvas stores it either as a
+    mapping or as a list of ``{"key", "value"}`` rows, and the component reads both at
+    run time. Anything that handles one shape and not the other silently misses half the
+    flows people actually have.
+    """
+    if isinstance(headers, dict):
+        for name, value in list(headers.items()):
+            yield (lambda new, _name=name: headers.__setitem__(_name, new)), name, value
+    elif isinstance(headers, list):
+        for row in headers:
+            if isinstance(row, dict) and "key" in row and "value" in row:
+                yield (lambda new, _row=row: _row.__setitem__("value", new)), row["key"], row["value"]
+
+
+def _is_mcp_header_reference(value: object, server_name: str, header_name: str) -> bool:
+    """Accept this server/header's generated aliases, including older unsuffixed names."""
+    expected = _mcp_config_secrets.variable_name_for(mcp_header_scope(server_name), header_name)
+    if value == expected:
+        return True
+    return (
+        isinstance(value, str)
+        and value.startswith(f"{expected}_")
+        and re.fullmatch(r"[0-9a-f]{32}", value[len(expected) + 1 :]) is not None
+    )
+
+
+def _strip_mcp_header_field(
+    template: dict,
+    variable_references: set[str] | None,
+    known_variable_names: Collection[str] | None = None,
+) -> dict | None:
+    """Scrub an MCP component's own Headers box, keeping the names save time wrote.
+
+    That box overrides the server's headers, so it is a real place to put auth. Saving
+    the flow moves a literal out of it and leaves a generated variable name.
+    The generic walk below would null that name
+    again with nothing declared to put it back, and the deployed flow would send no
+    header at all -- silently, which is how this was found.
+
+    Only generated names for this server and header are kept, with an owner-variable
+    check when available. Returns the field it handled so the caller skips it, or ``None``
+    when this node has no MCP server and the generic rules apply as before.
+    """
+    server_field = template.get("mcp_server")
+    field = template.get("headers")
+    if not isinstance(server_field, dict) or not isinstance(field, dict):
+        return None
+    server_value = server_field.get("value")
+    headers = field.get("value")
+    if not isinstance(server_value, dict) or not isinstance(headers, (dict, list)):
+        return None
+    name = server_value.get("name")
+    server_name = name if isinstance(name, str) and name else "server"
+    preserved: list[tuple[Callable[[object], None], object]] = []
+    for set_value, header_name, value in iter_mcp_header_cells(headers):
+        # Credential-named headers only, which is the rule the save side is held to as
+        # well so the two agree. Treating every header outside `NON_SECRET_HEADERS` as a
+        # credential swept up ordinary routing headers: `X-Tenant: acme` became a
+        # variable an operator then had to provision for a value that is not a secret.
+        if not _is_secret_name(header_name):
+            continue
+        if (
+            variable_references is not None
+            and _is_mcp_header_reference(value, server_name, str(header_name))
+            and (known_variable_names is None or value in known_variable_names)
+        ):
+            variable_references.add(value)
+            preserved.append((set_value, value))
+        elif _mcp_config_secrets.variable_reference_name(value) is not None:
+            # A reference that is not this server and header's own: a stale name left by
+            # a rename, say. Clear it explicitly so a strict snapshot cannot silently omit
+            # its requirement, and a shared read cannot expose the binding.
+            set_value(None)
+    # Lift the references out, scrub everything else the ordinary way, put them back.
+    # Skipping the generic pass outright would lose what it catches beyond a secret-named
+    # key: a credential inside a URL under an innocent key, and secrets nested deeper in
+    # a value. Same shape as `_strip_table_rows_in_place`.
+    for set_value, _ in preserved:
+        set_value(None)
+    _strip_structured_secret_values_in_place(headers)
+    for set_value, value in preserved:
+        set_value(value)
+    return field
 
 
 def _strip_secrets_from_nodes(
     nodes: list,
     variable_references: set[str] | None = None,
     known_variable_names: Collection[str] | None = None,
+    *,
+    keep_mcp_config: bool = False,
 ) -> None:
     """Iteratively strip secret values from regular and grouped flow nodes."""
     node_frames = [iter(nodes)]
@@ -387,9 +950,12 @@ def _strip_secrets_from_nodes(
             continue
         template = node_inner.get("template")
         if isinstance(template, dict):
+            handled = _strip_mcp_header_field(template, variable_references, known_variable_names)
             for value in template.values():
-                if isinstance(value, dict):
-                    _strip_template_field_value(value, variable_references, known_variable_names)
+                if isinstance(value, dict) and value is not handled:
+                    _strip_template_field_value(
+                        value, variable_references, known_variable_names, keep_mcp_config=keep_mcp_config
+                    )
 
         flow = node_inner.get("flow")
         if isinstance(flow, dict):
@@ -405,6 +971,7 @@ def strip_secret_field_values_in_place(
     *,
     variable_references: set[str] | None = None,
     known_variable_names: Collection[str] | None = None,
+    keep_mcp_config: bool = False,
 ) -> dict | None:
     """Scrub a detached flow-data mapping in place with bounded traversal memory.
 
@@ -424,19 +991,30 @@ def strip_secret_field_values_in_place(
     an ordinary name. Callers that can list the owner's global variables pass
     ``known_variable_names`` to close it: only values naming one of those
     variables are then preserved.
+
+    An MCP server field is always reduced to its ``name`` (or nulled if it has
+    none) regardless of ``variable_references`` - a deploy target does not need
+    the config to reference the server by name, and handing it out by default
+    would leak whatever a flow saved before save-time MCP stripping still
+    embeds. ``keep_mcp_config=True`` is the single, explicit opt-in for a
+    caller that both needs the config and can fail closed on it: the config
+    is kept only when it is provably free of secrets, and nulled outright
+    otherwise so a strict snapshot sees the change and refuses to capture it.
     """
     if not flow_data:
         return flow_data
     nodes = flow_data.get("nodes")
     if isinstance(nodes, list):
-        _strip_secrets_from_nodes(nodes, variable_references, known_variable_names)
+        _strip_secrets_from_nodes(nodes, variable_references, known_variable_names, keep_mcp_config=keep_mcp_config)
     return flow_data
 
 
 __all__ = [
     "API_WORDS",
+    "HiddenFieldMetadataError",
     "has_api_terms",
     "remove_api_keys",
+    "restore_request_variable_references",
     "strip_flow_secrets",
     "strip_secret_field_values",
     "strip_secret_field_values_in_place",

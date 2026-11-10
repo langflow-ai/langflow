@@ -39,6 +39,10 @@ class PolicyBundleService(BasePolicyBundleService):
     def source_available(self) -> bool:
         return self._source_available
 
+    def read_state(self) -> tuple[PolicyBundleSnapshot, bool]:
+        with self._lock:
+            return self._snapshot, self._source_available
+
     def publish(self, snapshot: PolicyBundleSnapshot) -> bool:
         with self._lock:
             current = self._snapshot
@@ -52,6 +56,8 @@ class PolicyBundleService(BasePolicyBundleService):
                     current.blocked_component_keys,
                     current.blocked_template_keys,
                     current.blocked_model_keys,
+                    current.approved_integration_provider_ids,
+                    current.blocked_integration_action_keys,
                     current.content_hash,
                     current.reason,
                     current.rollback_of_revision,
@@ -63,6 +69,8 @@ class PolicyBundleService(BasePolicyBundleService):
                     snapshot.blocked_component_keys,
                     snapshot.blocked_template_keys,
                     snapshot.blocked_model_keys,
+                    snapshot.approved_integration_provider_ids,
+                    snapshot.blocked_integration_action_keys,
                     snapshot.content_hash,
                     snapshot.reason,
                     snapshot.rollback_of_revision,

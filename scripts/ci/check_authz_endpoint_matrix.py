@@ -13,7 +13,19 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_MATRIX = REPO_ROOT / "scripts" / "ci" / "authz_endpoint_matrix.json"
 API_ROOT = REPO_ROOT / "src" / "backend" / "base" / "langflow"
 HTTP_METHODS = {"get", "post", "put", "patch", "delete", "websocket"}
-ACCESS_MODES = {"authenticated", "conditional", "deprecated", "public"}
+ACCESS_MODES = {"authenticated", "conditional", "deprecated", "provider_signed", "public"}
+#: ``provider_signed`` is the unauthenticated ingress class (TRG-4): the caller
+#: is a provider proving itself with its own signing scheme, never a Langflow
+#: user. Two pairings are enforced so the word cannot be used to wave an
+#: ordinary route past review:
+#:
+#: * the action must be ``ingest`` - such a route appends to a ledger and runs
+#:   nothing, so ``execute``, ``write`` or ``read`` on it would be a lie;
+#: * the contract must use the ``public_or_conditional`` persona preset, because
+#:   no role grants access to it and a canonical persona row would claim one.
+PROVIDER_SIGNED_ACCESS = "provider_signed"
+PROVIDER_SIGNED_ACTION = "ingest"
+PROVIDER_SIGNED_PRESET = "public_or_conditional"
 VALID_ACTIONS = {"create", "delete", "deploy", "execute", "ingest", "read", "update", "write"}
 REQUIRED_PERSONAS = {
     "viewer",
@@ -173,10 +185,21 @@ def validate_matrix(matrix_path: Path = DEFAULT_MATRIX) -> list[str]:
             continue
         for raw in contract["routes"]:
             try:
-                route, _action, _access = _parse_matrix_route(source, raw)
+                route, action, access = _parse_matrix_route(source, raw)
             except ValueError as exc:
                 errors.append(str(exc))
                 continue
+            if access == PROVIDER_SIGNED_ACCESS:
+                if action != PROVIDER_SIGNED_ACTION:
+                    errors.append(
+                        f"{source}:{route.handler}: {PROVIDER_SIGNED_ACCESS!r} routes must use the "
+                        f"{PROVIDER_SIGNED_ACTION!r} action, got {action!r}"
+                    )
+                if preset_name != PROVIDER_SIGNED_PRESET:
+                    errors.append(
+                        f"{source}:{route.handler}: {PROVIDER_SIGNED_ACCESS!r} routes belong to a "
+                        f"{PROVIDER_SIGNED_PRESET!r} contract, got {preset_name!r}"
+                    )
             if route in expected:
                 errors.append(f"matrix classifies route more than once: {route.display}")
             expected.add(route)

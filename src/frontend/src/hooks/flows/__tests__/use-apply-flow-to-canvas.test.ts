@@ -52,7 +52,10 @@ describe("useApplyFlowToCanvas", () => {
     });
 
     expect(setCurrentFlowMock).toHaveBeenCalledTimes(1);
-    expect(refreshAllModelInputsMock).toHaveBeenCalledWith({ silent: true });
+    expect(refreshAllModelInputsMock).toHaveBeenCalledWith({
+      silent: true,
+      origin: "load",
+    });
   });
 
   // Fitting here would measure an incomplete graph: the nodes have not been

@@ -54,11 +54,21 @@ DEFAULT_COMPONENT_ROOTS = (
 
 # A class is "ambiguous" if it lives in this many or more bundle folders.
 _AMBIGUITY_THRESHOLD = 2
+_METAPACKAGE_SOURCE_PREFIX = ("lfx-bundles", "src", "lfx_bundles")
 
 # Bare-name entries are append-only once published, even if a later release
 # removes the component class. Keep those retired names here so the guard still
 # catches accidental misspellings and untracked removals.
 RETIRED_BARE_CLASS_NAMES = {
+    # MrScraper 0.6 exposes Account, Scraper API, and Web Search. The legacy
+    # AI, crawl, batch, rerun, and result operations no longer ship.
+    "MrscraperAiScraper",
+    "MrscraperBatchScrape",
+    "MrscraperCrawlWebsite",
+    "MrscraperGetResult",
+    "MrscraperGetResults",
+    "MrscraperRunAiScraper",
+    "MrscraperRunManualScraper",
     # vLLM graduated to a provider-only bundle; the old component classes no
     # longer ship from lfx-bundles.
     "VllmComponent",
@@ -84,7 +94,9 @@ def _iter_component_files(roots: Iterable[Path]) -> Iterable[Path]:
 def _bundle_folder_for(file_path: Path, roots: Iterable[Path]) -> str | None:
     """Return the bundle-folder name owning ``file_path`` (e.g. ``openai``).
 
-    The "bundle folder" is the directory immediately under one of the roots.
+    The "bundle folder" is the directory immediately under one of the roots,
+    except the lfx-bundles metapackage: its immediate provider directories own
+    the runtime ``ext:<provider>:<Class>`` namespace, not the distribution name.
     Returns None if the file is not under any of the given roots.
     """
     for root in roots:
@@ -94,6 +106,12 @@ def _bundle_folder_for(file_path: Path, roots: Iterable[Path]) -> str | None:
             continue
         if not rel.parts:
             return None
+        prefix_length = len(_METAPACKAGE_SOURCE_PREFIX)
+        if len(rel.parts) > prefix_length + 1 and rel.parts[:prefix_length] == _METAPACKAGE_SOURCE_PREFIX:
+            # Match load_lfx_bundles_extensions' provider-folder identity.
+            # A compatibility wrapper and legacy class in the same provider
+            # share one saved-flow target. Different providers remain distinct.
+            return rel.parts[prefix_length]
         return rel.parts[0]
     return None
 
@@ -268,7 +286,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
-    roots = args.components_root if args.components_root else list(DEFAULT_COMPONENT_ROOTS)
+    roots = args.components_root or list(DEFAULT_COMPONENT_ROOTS)
     try:
         class_to_bundles = build_class_to_bundles(roots)
     except RuntimeError as exc:

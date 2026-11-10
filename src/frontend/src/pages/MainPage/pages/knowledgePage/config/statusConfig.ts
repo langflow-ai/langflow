@@ -4,6 +4,18 @@ export interface StatusConfigEntry {
 }
 
 export const STATUS_CONFIG: Record<string, StatusConfigEntry> = {
+  unavailable: {
+    label: "storageUpgrade.unavailable",
+    textClass: "text-muted-foreground",
+  },
+  upgrading: {
+    label: "storageUpgrade.title",
+    textClass: "text-accent-amber-foreground",
+  },
+  needs_migration: {
+    label: "storageUpgrade.needsAttention",
+    textClass: "text-destructive",
+  },
   ready: {
     label: "knowledge.status.ready",
     textClass: "text-accent-emerald-foreground",

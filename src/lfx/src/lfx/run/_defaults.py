@@ -24,6 +24,7 @@ import uuid
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
+from lfx.services.authorization.base import ExecutionPrincipal
 from lfx.services.deps import get_settings_service
 
 if TYPE_CHECKING:
@@ -78,6 +79,20 @@ def apply_run_defaults(
     validate_provided_id("session_id", session_id)
     validate_provided_id("user_id", user_id)
 
+    supplied_user_id = user_id
+    previous_shared_user = getattr(graph, "_headless_filesystem_user_id", None)
+    principal = getattr(graph, "execution_principal", None)
+    owns_identity = (
+        principal is None
+        or principal.kind == "unknown"
+        or (
+            principal.kind == "headless_operator"
+            and principal.family == "lfx_headless"
+            and previous_shared_user is not None
+            and previous_shared_user == graph.user_id
+        )
+    )
+    generated_user = user_id is None and (overwrite_user_id or not getattr(graph, "user_id", None))
     if not user_id:
         user_id = uuid.uuid4().hex
         logger.debug(
@@ -89,6 +104,29 @@ def apply_run_defaults(
     else:
         # Caller-supplied None plus an existing graph.user_id: preserve the existing.
         user_id = graph.user_id
+    # A host that already stamped a route-family principal owns this graph's
+    # identity: overwriting it here would silently promote an interactive_chat,
+    # webhook or public run to the headless operator, which is the only kind the
+    # portable floor lets resolve environment-backed connections. Only an
+    # unstamped graph (bare ``lfx run``/``serve``, or a checkpoint-restored one)
+    # gets the headless stamp.
+    if getattr(graph, "execution_principal", None) is None or graph.execution_principal.kind == "unknown":
+        graph.execution_principal = ExecutionPrincipal(
+            kind="headless_operator",
+            user_id=str(user_id),
+            actor_id=str(user_id),
+            family="lfx_headless",
+            interactive=False,
+            actor_label=str(user_id),
+        )
+
+    # Only the standalone runner may opt a synthetic identity into shared files.
+    # Explicit/verified identities and host-stamped principals retain isolation.
+    graph._headless_filesystem_user_id = (  # noqa: SLF001 — runner-owned provenance, not a flow input
+        user_id
+        if owns_identity and supplied_user_id is None and (generated_user or previous_shared_user == user_id)
+        else None
+    )
 
     if not session_id:
         session_id = uuid.uuid4().hex

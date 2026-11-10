@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 import anyio
 
 from lfx.services.base import Service
+from lfx.services.storage.namespace import validate_namespace
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -165,6 +166,10 @@ class StorageService(Service):
         for i in range(0, len(content), chunk_size):
             yield content[i : i + chunk_size]
 
+    async def get_file_md5(self, flow_id: str, file_name: str) -> str | None:  # noqa: ARG002
+        """The file's MD5 when the backend already has it, or None when it would have to read the file."""
+        return None
+
     @abstractmethod
     async def list_files(self, flow_id: str) -> list[str]:
         """List all files in a flow's storage namespace.
@@ -208,6 +213,19 @@ class StorageService(Service):
             Should not raise an error if the file doesn't exist
         """
         raise NotImplementedError
+
+    async def delete_namespace(self, namespace: str) -> int:
+        """Delete every object under a flow or user namespace and return how many were removed.
+
+        ``namespace`` must be a UUID string. The default deletes the flat file list;
+        backends that can store nested keys override it.
+        """
+        validated = validate_namespace(namespace)
+        removed = 0
+        for file_name in await self.list_files(validated):
+            await self.delete_file(validated, file_name)
+            removed += 1
+        return removed
 
     async def check_readiness(self) -> StorageReadiness:
         """Probe whether this storage backend is usable, for production preflight.

@@ -28,6 +28,11 @@ class McpSettings(BaseModel):
 
     It also acts as a floor for ``mcp_tool_execution_timeout``: tool calls wait for the larger
     of the two, so lowering the tool timeout below this value has no effect.
+
+    For ``GET /api/v2/mcp/servers?action_count=true``, this is the budget for the entire
+    enumeration, followed by transport cleanup. Discovery runs at most four checks per
+    application worker across all requests. Requests arriving at capacity receive 429;
+    unfinished entries retain their names and report a timeout instead of spawning more servers.
     Env var: LANGFLOW_MCP_SERVER_TIMEOUT."""
 
     mcp_tool_execution_timeout: float = 180.0

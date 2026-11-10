@@ -334,6 +334,19 @@ class LCAgentComponent(Component):
     def create_agent_runnable(self) -> Runnable:
         """Create the agent."""
 
+    def resolve_duplicate_tool_names(self) -> None:
+        """Make the connected tools individually addressable by the LLM.
+
+        Two nodes of the same component type each derive the same tool name, so
+        without this the model cannot tell them apart and every call lands on
+        one of them. This agent is the first place the whole tool set is
+        visible, and names that do not collide are left untouched.
+        """
+        from lfx.base.tools.component_tool import disambiguate_tool_names
+
+        if getattr(self, "tools", None):
+            self.tools = disambiguate_tool_names(self.tools)
+
     def validate_tool_names(self) -> None:
         """Validate tool names to ensure they match the required pattern."""
         pattern = re.compile(r"^[a-zA-Z0-9_-]+$")
@@ -361,6 +374,7 @@ class LCToolsAgentComponent(LCAgentComponent):
     ]
 
     def build_agent(self) -> AgentExecutor:
+        self.resolve_duplicate_tool_names()
         self.validate_tool_names()
         agent = self.create_agent_runnable()
         return AgentExecutor.from_agent_and_tools(

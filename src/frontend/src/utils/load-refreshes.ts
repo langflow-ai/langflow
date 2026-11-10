@@ -1,0 +1,58 @@
+import type { APITemplateType } from "@/types/api";
+import { type FlowChange, renderValue } from "@/utils/flow-diff";
+
+/**
+ * Field values that opening a flow rewrote, so a conflict diff stops crediting them to a person.
+ *
+ * Opening a flow refreshes its model inputs, and that can replace a saved value (an
+ * empty model becomes the first available one) without anybody touching it. Diffed
+ * against the saved version, that rewrite read as "Your changes" in every conflict.
+ * A change is dropped only while it still matches the rewrite exactly, so an edit
+ * made on top of it, or a baseline that moved since, is always shown.
+ */
+
+type Rewrite = { before: string; after: string };
+
+const rewritesByFlow = new Map<string, Map<string, Rewrite>>();
+
+const keyOf = (nodeId: string, fieldName: string) => `${nodeId}::${fieldName}`;
+
+export const recordLoadRefresh = (
+  flowId: string | undefined,
+  nodeId: string,
+  before: APITemplateType,
+  after: APITemplateType,
+): void => {
+  if (!flowId) return;
+  const rewrites = rewritesByFlow.get(flowId) ?? new Map<string, Rewrite>();
+  const names = new Set([...Object.keys(before), ...Object.keys(after)]);
+  for (const name of names) {
+    const from = renderValue(before[name]?.value);
+    const to = renderValue(after[name]?.value);
+    if (from !== to)
+      rewrites.set(keyOf(nodeId, name), { before: from, after: to });
+  }
+  rewritesByFlow.set(flowId, rewrites);
+};
+
+export const clearLoadRefreshes = (flowId?: string): void => {
+  if (flowId === undefined) rewritesByFlow.clear();
+  else rewritesByFlow.delete(flowId);
+};
+
+export const withoutLoadRefreshes = (
+  flowId: string | null | undefined,
+  changes: FlowChange[],
+): FlowChange[] => {
+  const rewrites = flowId ? rewritesByFlow.get(flowId) : undefined;
+  if (!rewrites?.size) return changes;
+  return changes.filter((change) => {
+    if (!change.fieldName || !change.detail) return true;
+    const rewrite = rewrites.get(keyOf(change.targetId, change.fieldName));
+    return !(
+      rewrite &&
+      rewrite.before === change.detail.before &&
+      rewrite.after === change.detail.after
+    );
+  });
+};

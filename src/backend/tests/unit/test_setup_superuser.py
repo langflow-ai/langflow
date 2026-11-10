@@ -256,3 +256,25 @@ async def test_create_super_user_concurrent_workers(auth_service: AuthService):
 
     # Worker 2 should have rolled back and fetched existing user
     assert mock_session2.rollback.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_get_or_create_super_user_matches_existing_username_case_insensitively(async_session):
+    """A configured "Admin" must resolve to an existing "admin", not attempt a create.
+
+    ix_user_username_lower rejects the insert, so an exact-match lookup would
+    surface a raw IntegrityError instead of the credential checks below it.
+    """
+    from langflow.services.utils import get_or_create_super_user
+
+    async_session.add(User(username="admin", password="hashed", is_active=True))  # noqa: S106 # pragma: allowlist secret
+    await async_session.commit()
+    auth = MagicMock()
+    auth.verify_password.return_value = False
+
+    with (
+        patch("langflow.services.utils.get_auth_service", return_value=auth),
+        pytest.raises(ValueError, match="Incorrect superuser credentials"),
+    ):
+        await get_or_create_super_user(async_session, "Admin", "password", is_default=False)
+    auth.create_super_user.assert_not_called()

@@ -100,6 +100,23 @@ class TestLoadFilesMessage:
         assert isinstance(result, Message)
         assert result.text == "Hello world"
 
+    @pytest.mark.parametrize("unsupported_name", ["private", "private.bin"])
+    def test_silent_errors_never_processes_unsupported_files(self, unsupported_name):
+        """Suppressing errors must not bypass the extension allow-list."""
+        supported = self.temp_path / "allowed.txt"
+        supported.write_text("allowed content", encoding="utf-8")
+        unsupported = self.temp_path / unsupported_name
+        unsupported.write_text("private content", encoding="utf-8")
+
+        self.component.path = [str(supported), str(unsupported)]
+        self.component.silent_errors = True
+        self.component.ignore_unsupported_extensions = False
+        self.component.delete_server_file_after_processing = False
+
+        result = self.component.load_files_base()
+
+        assert [item.data["text"] for item in result] == ["allowed content"]
+
     def test_load_files_message_with_json_dict_content(self):
         """Test load_files_message with JSON file containing dict (simulates get_text() returning dict)."""
         # Create JSON file with dict content
@@ -133,6 +150,10 @@ class TestLoadFilesMessage:
         assert "First text" in result.text
         assert "Second text" in result.text
         assert "\n\n" in result.text  # Default separator
+        assert result.data["source_files"] == [
+            {"file_path": str(file1), "text": "First text"},
+            {"file_path": str(file2), "text": "Second text"},
+        ]
 
     def test_load_files_message_with_custom_separator(self):
         """Test load_files_message with custom separator."""
@@ -149,6 +170,20 @@ class TestLoadFilesMessage:
         result = self.component.load_files_message()
 
         assert result.text == "First | Second"
+
+    def test_multiple_data_rows_from_one_file_stay_together(self):
+        self.component.load_files_core = lambda: [
+            Data(data={"file_path": "first.txt", "text": "first part"}),
+            Data(data={"file_path": "second.txt", "text": "second file"}),
+            Data(data={"file_path": "first.txt", "text": "second part"}),
+        ]
+
+        result = self.component.load_files_message()
+
+        assert result.data["source_files"] == [
+            {"file_path": "first.txt", "text": "first part\n\nsecond part"},
+            {"file_path": "second.txt", "text": "second file"},
+        ]
 
     def test_load_files_message_with_json_complex_structure(self):
         """Test load_files_message with complex JSON structure."""
@@ -452,6 +487,19 @@ class TestS3DeleteAfterProcessingSecurity:
         assert result[0].data["text"] == "SAFE_CANARY"
         assert canary.read_text(encoding="utf-8") == "SAFE_CANARY"
 
+    def test_silent_errors_skips_unsupported_local_file_with_s3_storage(self, tmp_path):
+        """S3 ignores the local-storage skip flag, so silent errors must still filter."""
+        canary = tmp_path / "private"
+        canary.write_text("SAFE_CANARY", encoding="utf-8")
+
+        component = TestFileComponent()
+        component.file_path = Data(data={"file_path": str(canary)})
+        component.silent_errors = True
+        component.delete_server_file_after_processing = False
+
+        assert component.load_files_base() == []
+        assert canary.read_text(encoding="utf-8") == "SAFE_CANARY"
+
     def test_s3_component_temp_file_uses_explicit_local_cleanup(self, monkeypatch, tmp_path):
         temp_file = tmp_path / "component-download.txt"
         temp_file.write_text("SAFE_CANARY", encoding="utf-8")
@@ -524,7 +572,7 @@ class TestS3DeleteAfterProcessingSecurity:
         storage_service.delete_file.assert_not_awaited()
 
     def test_s3_key_cleanup_rejects_flow_id_collision_with_other_user(self, monkeypatch):
-        storage_service = SimpleNamespace(delete_file=AsyncMock())
+        storage_service = SimpleNamespace(delete_file=AsyncMock(), get_file=AsyncMock())
         monkeypatch.setattr("lfx.base.data.base_file.get_storage_service", lambda: storage_service, raising=False)
 
         component = TestFileComponent()
@@ -535,9 +583,39 @@ class TestS3DeleteAfterProcessingSecurity:
         component.file_path = Data(data={"file_path": "victim-id/file.txt"})
         component.delete_server_file_after_processing = True
 
-        component.load_files_base()
+        with pytest.raises(StorageNamespaceError, match="outside the authenticated user's"):
+            component.load_files_base()
 
+        storage_service.get_file.assert_not_awaited()
         storage_service.delete_file.assert_not_awaited()
+
+
+class TestLocalDeleteAfterProcessingSecurity:
+    @pytest.mark.parametrize("target", ["own", "foreign", "flow", "outside", "symlink"])
+    def test_authenticated_cleanup_uses_only_user_storage(self, monkeypatch, tmp_path, target):
+        storage_root = tmp_path / "storage"
+        user_root = storage_root / "user-id"
+        user_root.mkdir(parents=True)
+        namespace = "user-id" if target in ("own", "symlink") else target
+        path = (tmp_path if target == "outside" else storage_root / namespace) / "file.txt"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("synthetic input", encoding="utf-8")
+        if target == "symlink":
+            foreign = storage_root / "foreign" / "file.txt"
+            foreign.parent.mkdir()
+            foreign.write_text("synthetic input", encoding="utf-8")
+            path.unlink()
+            path.symlink_to(foreign)
+        settings = SimpleNamespace(storage_type="local", config_dir=str(storage_root))
+        monkeypatch.setattr("lfx.base.data.base_file.get_settings_service", lambda: SimpleNamespace(settings=settings))
+        component = TestFileComponent()
+        component._user_id = "user-id"
+        component._vertex = SimpleNamespace(graph=SimpleNamespace(user_id="user-id", flow_id=namespace))
+        file = BaseFileComponent.BaseFile(Data(), path, delete_after_processing=True)
+
+        component._delete_after_processing(file)
+
+        assert path.exists() is (target != "own")
 
 
 class TestStorageKeyNamespaceOwnership:
@@ -635,9 +713,9 @@ class TestStorageKeyNamespaceOwnership:
 
     @pytest.mark.usefixtures("storage")
     def test_executing_flow_namespace_still_resolves(self, tmp_path):
-        """Legacy per-flow uploads are addressed by flow id, which is also an owned scope."""
+        """Typed per-flow uploads cannot be confused with a user's raw UUID namespace."""
         flow_id = "33333333-3333-3333-3333-333333333333"
-        flow_dir = tmp_path / "config" / flow_id
+        flow_dir = tmp_path / "config" / f"flow-{flow_id}"
         flow_dir.mkdir(parents=True)
         (flow_dir / "flow.txt").write_text("FLOW_UPLOAD", encoding="utf-8")
 
@@ -645,11 +723,45 @@ class TestStorageKeyNamespaceOwnership:
         component._vertex = SimpleNamespace(
             graph=SimpleNamespace(user_id=self.ATTACKER_ID, flow_id=flow_id, source_flow_id=None)
         )
-        component.path = [f"{flow_id}/flow.txt"]
+        component.path = [f"flow-{flow_id}/flow.txt"]
 
         result = component.load_files_base()
 
         assert [data.data["text"] for data in result] == ["FLOW_UPLOAD"]
+
+    @pytest.mark.usefixtures("storage")
+    def test_authorized_legacy_flow_namespace_still_resolves(self, tmp_path):
+        """A server-authorized non-colliding legacy flow key remains backward compatible."""
+        flow_id = "33333333-3333-3333-3333-333333333333"
+        flow_dir = tmp_path / "config" / flow_id
+        flow_dir.mkdir(parents=True)
+        (flow_dir / "legacy.txt").write_text("LEGACY_FLOW_UPLOAD", encoding="utf-8")
+        component = self._attacker_component()
+        component._vertex = SimpleNamespace(
+            graph=SimpleNamespace(
+                user_id=self.ATTACKER_ID,
+                flow_id=flow_id,
+                source_flow_id=None,
+                authorized_legacy_flow_ids=frozenset({flow_id}),
+            )
+        )
+        component.path = [f"{flow_id}/legacy.txt"]
+
+        result = component.load_files_base()
+
+        assert [data.data["text"] for data in result] == ["LEGACY_FLOW_UPLOAD"]
+
+    @pytest.mark.usefixtures("storage")
+    def test_flow_id_cannot_address_legacy_user_namespace(self):
+        """A caller-chosen flow ID must not grant access to the matching user's uploads."""
+        component = self._attacker_component()
+        component._vertex = SimpleNamespace(
+            graph=SimpleNamespace(user_id=self.ATTACKER_ID, flow_id=self.VICTIM_ID, source_flow_id=None)
+        )
+        component.path = [f"{self.VICTIM_ID}/secret.txt"]
+
+        with pytest.raises(StorageNamespaceError, match="outside the authenticated user's"):
+            component.load_files_base()
 
     def test_s3_object_key_outside_namespace_is_denied(self, monkeypatch, tmp_path):
         """S3 keys never touch the filesystem, so they need the same namespace check."""

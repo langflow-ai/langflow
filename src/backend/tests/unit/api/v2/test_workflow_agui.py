@@ -15,6 +15,7 @@ import asyncio
 import contextlib
 import json
 import time
+from collections.abc import Iterator
 from types import SimpleNamespace
 from unittest.mock import ANY, AsyncMock, MagicMock
 from uuid import uuid4
@@ -102,6 +103,88 @@ async def chatbot_flow(created_api_key, json_memory_chatbot_no_llm):
         flow = await session.get(Flow, flow_id)
         if flow:
             await session.delete(flow)
+
+
+@pytest.fixture
+def paused_background_producer(monkeypatch: pytest.MonkeyPatch) -> Iterator[asyncio.Event]:
+    """Hold the real workflow producer until stop tests have exercised an in-flight job."""
+    from langflow.api.v2 import workflow_execution
+
+    started = asyncio.Event()
+    release = asyncio.Event()
+    generate_flow_events = workflow_execution.generate_flow_events
+
+    async def paused_generate_flow_events(*args, **kwargs):
+        """Signal that execution started and wait for cancellation or fixture cleanup."""
+        started.set()
+        await release.wait()
+        await generate_flow_events(*args, **kwargs)
+
+    monkeypatch.setattr(workflow_execution, "generate_flow_events", paused_generate_flow_events)
+    yield started
+    release.set()
+
+
+@pytest.mark.anyio
+async def test_workflow_host_resolve_caller_accepts_external_only_credential(tmp_path):
+    from unittest.mock import patch
+
+    from langflow.api.v2.workflow_host import LangflowWorkflowHost
+    from langflow.services.auth.context import clear_current_auth_context
+    from langflow.services.auth.external import identity_from_claims, set_current_external_access_context
+    from langflow.services.auth.service import AuthService
+    from langflow.services.database.models.user.model import User
+    from lfx.services.settings.auth import AuthSettings
+    from pydantic import SecretStr
+
+    settings = AuthSettings(CONFIG_DIR=str(tmp_path))
+    settings.SECRET_KEY = SecretStr("MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=")  # pragma: allowlist secret
+    settings.AUTO_LOGIN = False
+    settings.EXTERNAL_AUTH_ENABLED = True
+    settings.EXTERNAL_AUTH_TRUSTED_JWT_DECODE = True
+    settings.EXTERNAL_AUTH_PROVIDER = "external"
+    settings.EXTERNAL_AUTH_TOKEN_HEADER = "X-External-Auth"  # noqa: S105
+    settings_service = SimpleNamespace(
+        auth_settings=settings,
+        settings=SimpleNamespace(config_dir=str(tmp_path)),
+    )
+    service = AuthService(settings_service)
+    owner = User(id=uuid4(), username="owner", password="hashed", is_active=True, is_superuser=False)  # noqa: S106
+    credential = "external-workflow-credential"  # pragma: allowlist secret
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/",
+            "headers": [(b"x-external-auth", credential.encode())],
+            "query_string": b"",
+        }
+    )
+    identity = identity_from_claims({"sub": "external-workflow-subject"}, settings)
+    resolver = AsyncMock(return_value=identity)
+    db = AsyncMock()
+
+    @contextlib.asynccontextmanager
+    async def db_scope():
+        yield db
+
+    try:
+        with (
+            patch("langflow.services.auth.utils._auth_service", return_value=service),
+            patch("langflow.services.auth.utils.get_settings_service", return_value=settings_service),
+            patch("langflow.services.auth.utils.set_authenticated_telemetry_user"),
+            patch("langflow.services.auth.utils.session_scope", new=db_scope),
+            patch("langflow.services.auth.service.resolve_external_identity", new=resolver),
+            patch.object(service, "_materialize_external_user", new=AsyncMock(return_value=owner)),
+            patch.object(service, "_reconcile_verified_external_groups", new=AsyncMock()),
+        ):
+            result = await LangflowWorkflowHost().resolve_caller(request)
+    finally:
+        clear_current_auth_context()
+        set_current_external_access_context(None)
+
+    assert result.id == owner.id
+    resolver.assert_awaited_once_with(credential, settings)
 
 
 class TestAGUIRequestContract:
@@ -298,7 +381,7 @@ class TestAGUIModeDispatch:
 class TestV2WorkflowAdmission:
     """Route-level admission checks before workflow execution dispatch."""
 
-    def test_non_owner_data_override_is_dropped_not_denied(self):
+    def test_non_owner_data_override_is_dropped_not_denied(self, monkeypatch):
         """Execute-only callers run the stored graph; their injected data never reaches it.
 
         This asserted a 404 until LE-1905. The Playground always posts the
@@ -309,9 +392,11 @@ class TestV2WorkflowAdmission:
         does not run.
         """
         from langflow.api.v2 import workflow as workflow_module
+        from langflow.services.deps import get_settings_service
         from lfx.schema.workflow import WorkflowRunRequest
         from lfx.workflow.converters import parse_workflow_run_request
 
+        monkeypatch.setattr(get_settings_service().settings, "custom_component_admin_only", False)
         flow_id = uuid4()
         flow = SimpleNamespace(
             id=flow_id,
@@ -828,6 +913,7 @@ class TestAGUIStreaming:
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream"),
                 current_user=SimpleNamespace(id=uuid4()),
                 protocol="v2",
+                execution_family="workflow_v2",
                 expose_error_details=True,
             )
         ]
@@ -868,6 +954,7 @@ class TestAGUIStreaming:
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="hi", mode="stream"),
                 current_user=SimpleNamespace(id=uuid4()),
                 protocol="v2",
+                execution_family="workflow_v2",
                 expose_error_details=expose_error_details,
             )
         ]
@@ -911,6 +998,7 @@ class TestAGUIStreaming:
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream"),
                 current_user=SimpleNamespace(id=uuid4()),
                 protocol="v2",
+                execution_family="workflow_v2",
                 expose_error_details=True,
             )
         ]
@@ -950,6 +1038,7 @@ class TestAGUIStreaming:
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream"),
                 current_user=SimpleNamespace(id=uuid4()),
                 protocol="v2",
+                execution_family="workflow_v2",
                 expose_error_details=True,
             )
         ]
@@ -992,6 +1081,7 @@ class TestAGUIStreaming:
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream"),
                 current_user=SimpleNamespace(id=uuid4()),
                 protocol="v2",
+                execution_family="workflow_v2",
                 expose_error_details=expose_error_details,
             )
         ]
@@ -1038,6 +1128,7 @@ class TestAGUIStreaming:
                 parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream"),
                 current_user=SimpleNamespace(id=uuid4()),
                 protocol="v2",
+                execution_family="workflow_v2",
             )
         ]
 
@@ -1106,6 +1197,7 @@ class TestAGUIStreaming:
                 ),
                 current_user=SimpleNamespace(id=uuid4()),
                 protocol="v2",
+                execution_family="workflow_v2",
             )
         ]
 
@@ -1459,6 +1551,7 @@ class TestAGUICancellation:
         client: AsyncClient,
         created_api_key,
         chatbot_flow,
+        paused_background_producer,
     ):
         """POST /workflows/stop cancels a background run by its job id."""
         headers = {"x-api-key": created_api_key.api_key}
@@ -1469,6 +1562,7 @@ class TestAGUICancellation:
         )
         assert start.status_code == 200
         job_id = start.json()["job_id"]
+        await asyncio.wait_for(paused_background_producer.wait(), timeout=10)
 
         stop = await client.post("api/v2/workflows/stop", json={"job_id": job_id}, headers=headers)
 
@@ -1743,6 +1837,9 @@ class TestAGUIBackgroundJobStatus:
         monkeypatch.setattr(wf_bg, "get_job_service", lambda: FakeJobService())
         monkeypatch.setattr(wf_bg, "_finalize_job_status", AsyncMock())
         monkeypatch.setattr(wf_exec, "generate_flow_events", fake_generate_flow_events)
+        # Synthetic jobs have no trace row. Keep real database latency out of
+        # the cancellation handshake, just like status updates above.
+        monkeypatch.setattr(wf_exec, "_queued_trace_link_for", AsyncMock(return_value=None))
 
         owner_id = uuid4()
         bg_run = wf_bg._BackgroundRun(user_id=str(uuid4()), stream_protocol="agui")
@@ -1812,6 +1909,7 @@ class TestAGUIBackgroundJobStatus:
         monkeypatch.setattr(wf_bg, "get_job_service", lambda: FakeJobService())
         monkeypatch.setattr(wf_bg, "_finalize_job_status", AsyncMock())
         monkeypatch.setattr(wf_exec, "generate_flow_events", fake_generate_flow_events)
+        monkeypatch.setattr(wf_exec, "_queued_trace_link_for", AsyncMock(return_value=None))
 
         owner_id = uuid4()
         bg_run = wf_bg._BackgroundRun(user_id=str(uuid4()), stream_protocol="langflow")
@@ -1875,6 +1973,7 @@ class TestAGUIBackgroundJobStatus:
         monkeypatch.setattr(wf_bg, "get_job_service", lambda: FakeJobService())
         monkeypatch.setattr(wf_bg, "_finalize_job_status", AsyncMock())
         monkeypatch.setattr(wf_exec, "generate_flow_events", fake_generate_flow_events)
+        monkeypatch.setattr(wf_exec, "_queued_trace_link_for", AsyncMock(return_value=None))
         monkeypatch.setattr(wf_bg, "_BACKGROUND_RUNS", {})
 
         owner_id = uuid4()
@@ -2573,6 +2672,7 @@ class TestBackgroundFinalizationGuards:
         client: AsyncClient,
         created_api_key,
         chatbot_flow,
+        paused_background_producer,
     ):
         """A stopped run settles on CANCELLED and is not overwritten by completion.
 
@@ -2598,6 +2698,7 @@ class TestBackgroundFinalizationGuards:
         assert start.status_code == 200
         job_id = start.json()["job_id"]
         job_uuid = _UUID(job_id)
+        await asyncio.wait_for(paused_background_producer.wait(), timeout=10)
 
         stop = await client.post(
             "api/v2/workflows/stop",
