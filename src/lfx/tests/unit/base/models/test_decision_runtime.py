@@ -164,6 +164,23 @@ def test_a_switched_off_model_never_reaches_its_provider(execution, monkeypatch,
     transport.assert_not_called()
 
 
+def test_a_switched_off_discovered_model_never_reaches_its_provider(execution, monkeypatch, model_switches):
+    """A live-discovered model skips the catalog check, but not the user's switch-off."""
+    request, model, transport = execution
+    policy = ModelProviderPolicySnapshot(
+        context=ModelProviderPolicyContext(),
+        purpose=ModelProviderPolicyPurpose.USE,
+        candidate_provider_ids=frozenset({"openrouter"}),
+        allowed_provider_ids=frozenset({"openrouter"}),
+    )
+    monkeypatch.setattr("lfx.services.model_provider_policy.resolve_model_provider_policy", lambda **_: policy)
+    model.update(provider="OpenRouter", name="typesafe/jev-1.14")
+    model_switches.add("typesafe/jev-1.14")
+    with pytest.raises(DecisionConfigurationError, match=r"typesafe/jev-1\.14 is switched off in Model Providers\."):
+        evaluate_decision(request, model=model, user_id=USER_ID)
+    transport.assert_not_called()
+
+
 def test_another_switched_off_model_doesnt_stop_this_one(execution, model_switches):
     request, model, transport = execution
     model_switches.add("jev-latest")
