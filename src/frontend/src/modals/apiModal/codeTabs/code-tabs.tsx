@@ -28,7 +28,7 @@ import {
 
 const apiVersionTabs = [
   { name: "v1", title: "v1" },
-  { name: "v2", title: "v2", beta: true },
+  { name: "v2", title: "v2" },
 ];
 
 const operatingSystemTabs = [
@@ -109,7 +109,7 @@ export default function APITabsComponent() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const shouldDisplayApiKey = isAuthenticated;
 
-  const [apiVersion, setApiVersion] = useState<"v1" | "v2">("v1");
+  const [apiVersion, setApiVersion] = useState<"v1" | "v2">("v2");
 
   const v1TabsList = [
     {
@@ -142,7 +142,7 @@ export default function APITabsComponent() {
     },
   ];
 
-  // v2 (beta) targets POST /api/v2/workflows. It uses the flow UUID and the
+  // v2 targets POST /api/v2/workflows. It uses the flow UUID and the
   // raw input_value/tweaks the modal already collects, not the v1 /run shape.
   const v2CodeOptions = {
     flowId: flowId || "",
@@ -211,7 +211,7 @@ export default function APITabsComponent() {
   return (
     <div className="api-modal-tabs inset-0 m-0 h-full overflow-hidden">
       <div className="flex h-full flex-col gap-4 overflow-hidden">
-        {/* API version selector (v1 / v2 beta) */}
+        {/* API version selector (v1 / v2) */}
         <div className="flex flex-row justify-start">
           <Tabs
             value={apiVersion}
@@ -226,11 +226,6 @@ export default function APITabsComponent() {
                   data-testid={`api_version_${tab.name}`}
                 >
                   <span>{tab.title}</span>
-                  {tab.beta && (
-                    <span className="rounded border border-border px-1 py-px text-[9px] font-medium uppercase leading-none text-muted-foreground">
-                      beta
-                    </span>
-                  )}
                 </TabsTrigger>
               ))}
             </TabsList>

@@ -3654,5 +3654,15 @@
   "decision.minimumProbability": "最小確率",
   "decision.errorAction": "評価エラー時",
   "decision.requestId": "プロバイダーのリクエスト ID",
-  "decision.tone.answered": "回答済み"
+  "decision.tone.answered": "回答済み",
+  "triggers.events.whatsapp.message": "メッセージを受信",
+  "triggers.events.whatsapp.sent": "送信済み",
+  "triggers.events.whatsapp.delivered": "配信済み",
+  "triggers.events.whatsapp.read": "既読",
+  "triggers.events.whatsapp.failed": "配信に失敗",
+  "triggers.events.whatsapp.status": "メッセージの状態",
+  "triggers.events.state.skipped": "スキップ",
+  "triggers.events.filters.skipped": "スキップ",
+  "triggers.eventError.sender_not_allowed": "送信者が許可された送信者番号に含まれていません。",
+  "triggers.events.skippedCannotReplay": "スキップされたイベントは再実行できません。送信者フィルターを更新し、新しいメッセージを送信してください。"
 }

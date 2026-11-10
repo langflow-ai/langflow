@@ -79,4 +79,5 @@ TABLE_POLICY: dict[str, str] = {
     "upgrade_report_repair": "deleted with its report, or independently by repair author",
     "variable": BUILDER_ROWS,
     "vertex_build": END_USER_ROWS,
+    "worker_registry": NOT_PERSONAL,
 }

@@ -59,6 +59,7 @@ from .trigger import (
 from .upgrade_report import UpgradeReport, UpgradeReportRepair
 from .user import User
 from .variable import Variable
+from .worker_registry import WorkerRegistry, WorkerState
 
 __all__ = [
     "A2ACheckpoint",
@@ -133,6 +134,8 @@ __all__ = [
     "UpgradeReportRepair",
     "User",
     "Variable",
+    "WorkerRegistry",
+    "WorkerState",
     "decrypt_sso_client_secret",
     "encrypt_sso_client_secret",
     "is_sso_client_secret_envelope",

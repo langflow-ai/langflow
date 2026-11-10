@@ -3654,5 +3654,15 @@
   "decision.minimumProbability": "Probabilidade mínima",
   "decision.errorAction": "Em caso de erro de avaliação",
   "decision.requestId": "ID da solicitação no provedor",
-  "decision.tone.answered": "Respondida"
+  "decision.tone.answered": "Respondida",
+  "triggers.events.whatsapp.message": "Mensagem recebida",
+  "triggers.events.whatsapp.sent": "Status enviado",
+  "triggers.events.whatsapp.delivered": "Status entregue",
+  "triggers.events.whatsapp.read": "Status lido",
+  "triggers.events.whatsapp.failed": "Falha na entrega",
+  "triggers.events.whatsapp.status": "Status da mensagem",
+  "triggers.events.state.skipped": "Ignorado",
+  "triggers.events.filters.skipped": "Ignorados",
+  "triggers.eventError.sender_not_allowed": "O remetente não está na lista de números permitidos.",
+  "triggers.events.skippedCannotReplay": "Eventos ignorados não podem ser repetidos. Atualize o filtro de remetentes e envie uma nova mensagem."
 }

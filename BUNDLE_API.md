@@ -224,6 +224,12 @@ the deserialize half is covered by
 
 ## Changelog
 
+- **Connection configuration identity (2026-11-09).**
+  `Component.resolve_connection()` uses the authenticated configuring user's
+  identity when a configuration hook resolves a connection without a graph
+  vertex. `connection_configuration_context()` scopes that identity to the hook.
+  Graph execution keeps its existing principal, and `BUNDLE_API_VERSION` remains `1`.
+
 - **Integration policy upgrade compatibility (2026-11-06).** `IntegrationProvider`
   reserves `langflow-reserved.integration-policy.deny-all` for policy storage and
   rejects manifests that claim it as a provider identity. The nonempty marker

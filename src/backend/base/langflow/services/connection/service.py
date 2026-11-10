@@ -570,6 +570,10 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         row.updated_at = row.health_checked_at
         session.add(row)
         await session.flush()
+        if row.provider_key == "whatsapp":
+            from langflow.services.triggers.subscriptions import revoke_for_connection
+
+            await revoke_for_connection(session, connection_id=row.id)
         await session.refresh(row)
         return ConnectionRevokeRead(
             **self.to_read(row, has_credentials=False).model_dump(), provider_revocation=provider_revocation
@@ -977,6 +981,9 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
             from langflow.services.triggers.providers.registry import get_provider
 
             provider = get_provider(row.provider_key)
+            if row.provider_key == "telegram" and (provider is None or provider.check_credential is None):
+                raise ProviderUnavailableError(provider=row.provider_key)
+            manual_credential_validated = False
             if (
                 provider is not None
                 and provider.validate_manual_credential is not None
@@ -1028,6 +1035,9 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
                     identity=validated.executing_identity.identity,
                     expires_at=validated.credentials.expires_at,
                 )
+                manual_credential_validated = True
+            if provider is not None and provider.check_credential is not None and not manual_credential_validated:
+                await provider.check_credential(credential)
         missing = ScopeSet.missing(
             provider=row.provider_key, required=required_scopes, granted=credential.granted_scopes
         )
