@@ -3163,6 +3163,7 @@
   "triggers.empty.noMatch": "Aucun déclencheur ne correspond à ces filtres.",
   "triggers.errors.load": "Impossible de charger les déclencheurs.",
   "triggers.errors.unknown": "Une erreur s’est produite. Réessayez.",
+  "triggers.serverError.policy_blocked": "Bloqué par la politique des déclencheurs. Demandez à un administrateur d’approuver ce type de déclencheur.",
   "triggers.serverError.multiple_triggers": "Un flux ne peut avoir qu’un seul déclencheur. Supprimez les déclencheurs supplémentaires et réessayez.",
   "triggers.serverError.node_removed": "Le nœud du déclencheur a été retiré du flux. Rajoutez-le pour reprendre le déclencheur.",
   "triggers.serverError.source_settings_changed": "Les paramètres de la source ont changé. Reprenez le déclencheur pour vous réabonner.",

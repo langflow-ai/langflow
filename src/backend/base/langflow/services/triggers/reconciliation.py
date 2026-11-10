@@ -46,6 +46,7 @@ from langflow.services.triggers.constants import (
     KIND_SLACK_MESSAGE,
     KIND_SLACK_REACTION,
     MICROSOFT_SOURCE_KINDS,
+    POLICY_BLOCKED_ERROR,
     PROVIDER_SLACK,
     SLACK_TRIGGER_KINDS,
 )
@@ -233,7 +234,10 @@ def apply_config_verdict(row: Trigger, error: str | None) -> bool:
         if row.state == TriggerState.ERROR.value:
             row.state = TriggerState.ACTIVE.value
             row.next_fire_at = None
-        if row.state in _VERDICT_STATES and row.last_error != NODE_REMOVED_ERROR:
+        if row.state in _VERDICT_STATES and row.last_error not in {
+            NODE_REMOVED_ERROR,
+            POLICY_BLOCKED_ERROR,
+        }:
             row.last_error = None
     return (row.state, row.last_error, row.next_fire_at) != before
 

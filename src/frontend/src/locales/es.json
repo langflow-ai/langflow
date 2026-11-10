@@ -3163,6 +3163,7 @@
   "triggers.empty.noMatch": "Ningún disparador coincide con estos filtros.",
   "triggers.errors.load": "No se han podido cargar los disparadores.",
   "triggers.errors.unknown": "Algo ha salido mal. Inténtalo de nuevo.",
+  "triggers.serverError.policy_blocked": "Bloqueado por la política de disparadores. Pide a un administrador que apruebe este tipo de disparador.",
   "triggers.serverError.multiple_triggers": "Un flujo solo puede tener un disparador. Elimina los disparadores adicionales e inténtalo de nuevo.",
   "triggers.serverError.node_removed": "El nodo del disparador se quitó del flujo. Vuelve a añadirlo para reanudar el disparador.",
   "triggers.serverError.source_settings_changed": "La configuración del origen cambió. Reanuda el disparador para volver a suscribirte.",

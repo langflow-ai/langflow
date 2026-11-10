@@ -3162,6 +3162,7 @@
   "triggers.empty.noMatch": "No triggers match these filters.",
   "triggers.errors.load": "Couldn't load triggers.",
   "triggers.errors.unknown": "Something went wrong. Try again.",
+  "triggers.serverError.policy_blocked": "Blocked by trigger policy. Ask an administrator to approve this trigger kind.",
   "triggers.serverError.multiple_triggers": "A flow can have only one trigger. Remove the extra triggers and try again.",
   "triggers.serverError.node_removed": "The trigger node was removed from the flow. Add it back to resume the trigger.",
   "triggers.serverError.source_settings_changed": "The source settings changed. Resume the trigger to subscribe again.",

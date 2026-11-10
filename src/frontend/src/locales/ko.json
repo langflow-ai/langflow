@@ -3162,6 +3162,7 @@
   "triggers.empty.noMatch": "조건과 일치하는 Trigger가 없습니다.",
   "triggers.errors.load": "Trigger를 불러오지 못했습니다.",
   "triggers.errors.unknown": "문제가 생겼습니다. 다시 시도하세요.",
+  "triggers.serverError.policy_blocked": "Trigger 정책으로 차단되었습니다. 관리자에게 이 Trigger 유형의 승인을 요청하세요.",
   "triggers.serverError.multiple_triggers": "플로우에는 트리거를 하나만 사용할 수 있습니다. 추가 트리거를 제거하고 다시 시도하세요.",
   "triggers.serverError.node_removed": "Trigger 노드가 Flow에서 제거되었습니다. Trigger를 다시 시작하려면 노드를 다시 추가하세요.",
   "triggers.serverError.source_settings_changed": "소스 설정이 변경되었습니다. 다시 구독하려면 Trigger를 다시 시작하세요.",
