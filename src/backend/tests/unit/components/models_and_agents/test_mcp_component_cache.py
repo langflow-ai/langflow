@@ -102,6 +102,7 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
         assert getattr(component, "use_cache", False) is False  # Updated to match actual default
 
     @pytest.mark.asyncio
+    @pytest.mark.usefixtures("administrator_user")
     async def test_cache_stores_tools_when_enabled(
         self, component_class, default_kwargs, mock_tools_list, mock_server_config, active_user
     ):
@@ -146,6 +147,7 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
         assert cached_data["tool_names"] == ["test_tool", "second_tool"]
 
     @pytest.mark.asyncio
+    @pytest.mark.usefixtures("administrator_user")
     async def test_cache_reuses_cached_tools(
         self, component_class, default_kwargs, mock_tools_list, mock_server_config, active_user
     ):
@@ -420,6 +422,7 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
         assert server_name not in servers_cache
 
     @pytest.mark.asyncio
+    @pytest.mark.usefixtures("administrator_user")
     async def test_cache_persistence_across_instances(
         self, component_class, default_kwargs, mock_tools_list, mock_server_config, active_user
     ):
