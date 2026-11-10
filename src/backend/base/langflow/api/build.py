@@ -1195,6 +1195,27 @@ async def _generate_flow_events(
     await event_manager.queue.put((None, None, time.time()))
 
 
+async def _drain_build_background_tasks(background_tasks: BackgroundTasks) -> None:
+    """Run job-owned callbacks once, isolating a failed callback from the remaining work."""
+    while background_tasks.tasks:
+        tasks, background_tasks.tasks = background_tasks.tasks, []
+        for task in tasks:
+            try:
+                await task()
+            except Exception as exc:  # noqa: BLE001 - one optional callback must not discard the remaining callbacks
+                await logger.aerror(f"Flow build background callback failed: {exc}")
+
+
+async def _complete_build_background_tasks(background_tasks: BackgroundTasks) -> None:
+    """Join cleanup even when the build is cancelled; preserve cancellation for its caller."""
+    cleanup = asyncio.create_task(_drain_build_background_tasks(background_tasks))
+    try:
+        await asyncio.shield(cleanup)
+    except asyncio.CancelledError:
+        await cleanup
+        raise
+
+
 @wraps(_generate_flow_events)
 async def generate_flow_events(*args, provider_policy_flow: Flow | None = None, **kwargs) -> None:
     """Run the build driver under a trusted, required provider-policy scope.
@@ -1202,14 +1223,22 @@ async def generate_flow_events(*args, provider_policy_flow: Flow | None = None, 
     Production callers pass the exact server-loaded flow they authorized. A
     missing flow remains a required unresolved scope so provider-bearing test
     or internal callers fail closed in the Enterprise policy implementation.
+    Each invocation owns a fresh callback queue of the caller's type (including
+    vertex-log limits). It drains on success, failure and cancellation independently
+    of the HTTP response that may have completed before this job starts.
     """
+    background_tasks = type(kwargs["background_tasks"])()
+    kwargs["background_tasks"] = background_tasks
     current_user = kwargs.get("current_user")
     with scoped_model_provider_policy_for_flow(
         provider_policy_flow,
         user_id=getattr(current_user, "id", None),
         is_superuser=bool(getattr(current_user, "is_superuser", False)),
     ):
-        await _generate_flow_events(*args, **kwargs)
+        try:
+            await _generate_flow_events(*args, **kwargs)
+        finally:
+            await _complete_build_background_tasks(background_tasks)
 
 
 async def cancel_flow_build(
