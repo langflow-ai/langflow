@@ -224,6 +224,11 @@ the deserialize half is covered by
 
 ## Changelog
 
+- **Decision questions input (2026-11-10).** `lfx.io.DecisionQuestionsInput`
+  provides an array-valued input for choice, boolean, and score questions,
+  including per-question connection fields. This is additive, so
+  `BUNDLE_API_VERSION` remains `1`.
+
 - **Integration policy upgrade compatibility (2026-11-06).** `IntegrationProvider`
   reserves `langflow-reserved.integration-policy.deny-all` for policy storage and
   rejects manifests that claim it as a provider identity. The nonempty marker

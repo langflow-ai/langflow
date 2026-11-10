@@ -402,7 +402,7 @@
                 "dependencies": [
                   {
                     "name": "pydantic",
-                    "version": "2.13.5"
+                    "version": "2.13.4"
                   },
                   {
                     "name": "lfx",
@@ -634,9 +634,27 @@
                 "type": "decision_questions",
                 "value": [
                   {
-                    "name": "",
+                    "id": "1",
                     "kind": "Choice",
-                    "question": "What kind of message is this?",
+                    "levels": [
+                      {
+                        "description": "",
+                        "id": "low",
+                        "label": "Low"
+                      },
+                      {
+                        "description": "",
+                        "id": "medium",
+                        "label": "Medium"
+                      },
+                      {
+                        "description": "",
+                        "id": "high",
+                        "label": "High"
+                      }
+                    ],
+                    "name": "",
+                    "no_description": "",
                     "options": [
                       {
                         "description": "Asks how something works or how to do something",
@@ -659,26 +677,8 @@
                         "label": "Billing"
                       }
                     ],
-                    "levels": [
-                      {
-                        "id": "low",
-                        "label": "Low",
-                        "description": ""
-                      },
-                      {
-                        "id": "medium",
-                        "label": "Medium",
-                        "description": ""
-                      },
-                      {
-                        "id": "high",
-                        "label": "High",
-                        "description": ""
-                      }
-                    ],
-                    "yes_description": "",
-                    "no_description": "",
-                    "id": "1"
+                    "question": "What kind of message is this?",
+                    "yes_description": ""
                   }
                 ]
               },
