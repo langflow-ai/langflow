@@ -6,15 +6,36 @@ import json
 import math
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, JsonValue, ValidationError, field_validator, model_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    Field,
+    JsonValue,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 
-DecisionKind = Literal["choice", "boolean", "score"]
+# Component code saved before the rename still asks for "boolean"; it means noul.
+DecisionKind = Literal["choice", "noul", "score", "boolean"]
+NOUL_KINDS = frozenset({"noul", "boolean"})
 Probability = Annotated[float, Field(strict=True, ge=0, le=1, allow_inf_nan=False)]
 FiniteNumber = Annotated[float, Field(strict=True, allow_inf_nan=False)]
 NonEmpty = Annotated[str, Field(strict=True, min_length=1, pattern=r"\S")]
 # Provider-reported model names are stored in evidence; anything longer is not a model name.
 ModelName = Annotated[str, Field(strict=True, min_length=1, max_length=128, pattern=r"\S")]
 MIN_CANDIDATES = 2
+# A single question keeps this wire name.
+QUESTION_ID = "decision"
+
+
+def _json_safe(value: str | dict[str, JsonValue]) -> str | dict[str, JsonValue]:
+    json.dumps(value, allow_nan=False)
+    return value
+
+
+Context = Annotated[str | dict[str, JsonValue], AfterValidator(_json_safe)]
 # Providers report rounded numbers: TypeSafe's probabilities only "roughly" sum to 1, and its answers
 # come back to two decimals, so each reported probability and score can be off by up to 0.005.
 REPORTED_ROUNDING = 0.005
@@ -104,15 +125,14 @@ class DecisionOption(BaseModel):
     description: str = ""
 
 
-class DecisionRequest(BaseModel):
+class DecisionQuestion(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     kind: DecisionKind
     question: NonEmpty
-    context: str | dict[str, JsonValue]
     options: tuple[DecisionOption, ...] = ()
     levels: tuple[DecisionOption, ...] = ()
-    # Boolean only: what a Yes and a No answer mean.
+    # Noul only: what a Yes and a No answer mean.
     yes_description: str = ""
     no_description: str = ""
 
@@ -122,14 +142,8 @@ class DecisionRequest(BaseModel):
         # A blank description is no description.
         return value.strip()
 
-    @field_validator("context")
-    @classmethod
-    def validate_context(cls, value: str | dict[str, JsonValue]) -> str | dict[str, JsonValue]:
-        json.dumps(value, allow_nan=False)
-        return value
-
     @model_validator(mode="after")
-    def validate_candidates(self) -> DecisionRequest:
+    def validate_candidates(self) -> DecisionQuestion:
         candidates = self.options if self.kind == "choice" else self.levels
         noun = "Option" if self.kind == "choice" else "Level"
         if self.kind in {"choice", "score"} and len(candidates) < MIN_CANDIDATES:
@@ -138,8 +152,8 @@ class DecisionRequest(BaseModel):
         if (self.kind != "choice" and self.options) or (self.kind != "score" and self.levels):
             msg = "Options belong to Choice and ordered levels belong to Score"
             raise ValueError(msg)
-        if self.kind != "boolean" and (self.yes_description or self.no_description):
-            msg = "Yes and No descriptions belong to Boolean"
+        if self.kind not in NOUL_KINDS and (self.yes_description or self.no_description):
+            msg = "Yes and No descriptions belong to Noul"
             raise ValueError(msg)
         ids = [c.id for c in candidates]
         labels = [c.label.strip().casefold() for c in candidates]
@@ -151,6 +165,22 @@ class DecisionRequest(BaseModel):
         return self
 
 
+class DecisionRequest(DecisionQuestion):
+    context: Context
+
+    @property
+    def questions(self) -> dict[str, DecisionQuestion]:
+        """The same view a batch has, so callers handle one shape."""
+        return {QUESTION_ID: self}
+
+
+class DecisionBatchRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    context: Context
+    questions: dict[NonEmpty, DecisionQuestion] = Field(min_length=1)
+
+
 def decision_request(**fields: Any) -> DecisionRequest:
     """Build a request from flow configuration, reporting invalid configuration as a clear error."""
     try:
@@ -160,7 +190,7 @@ def decision_request(**fields: Any) -> DecisionRequest:
 
 
 class DecisionResult(BaseModel):
-    """Evidence fields retain their meanings; no implicit Boolean/route policy."""
+    """Evidence fields retain their meanings; no implicit Noul/route policy."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -199,11 +229,11 @@ class DecisionResult(BaseModel):
         if self.refusal is not None:
             msg = "Successful judgments cannot contain a refusal"
             raise ValueError(msg)
-        if self.kind == "boolean":
+        if self.kind in NOUL_KINDS:
             if self.probability_true is None or any(
                 value is not None for value in (self.probabilities, self.score, self.selected_option)
             ):
-                msg = "Boolean results require P(true), without a distribution, score or derived Boolean"
+                msg = "Noul results require P(true), without a distribution, score or a derived yes or no"
                 raise ValueError(msg)
         else:
             if not self.probabilities or self.probability_true is not None:
@@ -222,7 +252,7 @@ class DecisionResult(BaseModel):
                 raise ValueError(msg)
         return self
 
-    def validate_for(self, request: DecisionRequest) -> DecisionResult:
+    def validate_for(self, request: DecisionQuestion) -> DecisionResult:
         """Reject mismatched or incomplete evidence against the original question."""
         if self.kind != request.kind:
             msg = "Provider answered a different decision question"
@@ -253,3 +283,13 @@ class DecisionResult(BaseModel):
                 msg = "Score disagrees with its ordered-level probability distribution"
                 raise DecisionEvaluationError(msg)
         return self
+
+
+class DecisionBatchResult(BaseModel):
+    """Named evidence from one provider call; shared usage is counted exactly once."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    answers: dict[NonEmpty, DecisionResult]
+    usage: dict[str, JsonValue] | None = None
+    request_id: NonEmpty | None = None

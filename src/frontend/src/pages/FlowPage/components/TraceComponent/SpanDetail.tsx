@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import IconComponent from "@/components/common/genericIconComponent";
 import SimplifiedCodeTabComponent from "@/components/core/codeTabsComponent";
 import DecisionInspection from "@/components/core/decisionInspection";
-import { findDecisionEvidence } from "@/components/core/decisionInspection/decision-evidence";
+import { findAllDecisionEvidence } from "@/components/core/decisionInspection/decision-evidence";
 import { Badge } from "@/components/ui/badge";
 import {
   formatCost,
@@ -23,7 +23,7 @@ import type { SpanDetailProps } from "./types";
 export function SpanDetail({ span, isRunSummary = false }: SpanDetailProps) {
   const { t } = useTranslation();
   const decisionEvidence = useMemo(
-    () => (isRunSummary ? null : findDecisionEvidence(span?.outputs)),
+    () => (isRunSummary ? [] : findAllDecisionEvidence(span?.outputs)),
     [isRunSummary, span?.outputs],
   );
   if (!span) {
@@ -152,9 +152,13 @@ export function SpanDetail({ span, isRunSummary = false }: SpanDetailProps) {
         )}
 
         {/* The decision outranks the raw payloads it was read from. */}
-        {decisionEvidence && (
-          <DecisionInspection evidence={decisionEvidence} className="mb-4" />
-        )}
+        {decisionEvidence.map((evidence, index) => (
+          <DecisionInspection
+            key={evidence.name ?? index}
+            evidence={evidence}
+            className="mb-4"
+          />
+        ))}
 
         {/* Inputs section */}
         {hasInputs && (

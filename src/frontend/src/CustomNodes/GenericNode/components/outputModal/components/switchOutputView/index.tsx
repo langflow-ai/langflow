@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import DecisionInspection from "@/components/core/decisionInspection";
-import { findDecisionEvidence } from "@/components/core/decisionInspection/decision-evidence";
+import { findAllDecisionEvidence } from "@/components/core/decisionInspection/decision-evidence";
 import JsonOutputViewComponent from "@/components/core/jsonOutputComponent/json-output-view";
 import { MAX_TEXT_LENGTH } from "@/constants/constants";
 import type { LogsLogType, OutputLogType } from "@/types/api";
@@ -65,14 +65,13 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
   // A stopped Smart Router has no output, but its log keeps the evidence. The
   // log is keyed to whichever output was building when the run stopped, so
   // every output's logs are searched.
-  const decisionEvidence = useMemo(
-    () =>
-      type === "outputs"
-        ? (findDecisionEvidence(resultMessage) ??
-          findDecisionEvidence(Object.values(flowPoolNode?.data?.logs ?? {})))
-        : null,
-    [type, resultMessage, flowPoolNode],
-  );
+  const decisionEvidence = useMemo(() => {
+    if (type !== "outputs") return [];
+    const fromResult = findAllDecisionEvidence(resultMessage);
+    return fromResult.length > 0
+      ? fromResult
+      : findAllDecisionEvidence(Object.values(flowPoolNode?.data?.logs ?? {}));
+  }, [type, resultMessage, flowPoolNode]);
 
   const resultMessageMemoized = useMemo(() => {
     if (!resultMessage) return "";
@@ -149,9 +148,14 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
 
   return type === "outputs" ? (
     <>
-      {decisionEvidence && !isToolOutput && (
-        <DecisionInspection evidence={decisionEvidence} className="mb-4" />
-      )}
+      {!isToolOutput &&
+        decisionEvidence.map((evidence, index) => (
+          <DecisionInspection
+            key={evidence.name ?? index}
+            evidence={evidence}
+            className="mb-4"
+          />
+        ))}
       <Case condition={isToolOutput && resultMessageMemoized}>
         <ToolOutputDisplay
           tools={

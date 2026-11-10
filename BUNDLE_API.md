@@ -224,6 +224,10 @@ the deserialize half is covered by
 
 ## Changelog
 
+- **Decision questions input (2026-11-10).** `lfx.io.DecisionQuestionsInput`
+  provides an array-valued input for choice, boolean, and score questions,
+  including per-question connection fields. This is additive, so
+  `BUNDLE_API_VERSION` remains `1`.
 - **Connection configuration identity (2026-11-09).**
   `Component.resolve_connection()` uses the authenticated configuring user's
   identity when a configuration hook resolves a connection without a graph

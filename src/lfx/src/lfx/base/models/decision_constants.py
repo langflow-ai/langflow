@@ -12,7 +12,7 @@ def is_decision_row(row: dict) -> bool:
 DECISION_ONLY_PROVIDERS = frozenset({"TypeSafe", "Perplexity"})
 # Decision catalogs read from the provider's model-list endpoint; the provider validates IDs at run time.
 LIVE_DECISION_PROVIDERS = frozenset({"OpenRouter", "TypeSafe"})
-DECISION_CAPABILITIES = ("choice", "boolean", "score")
+DECISION_CAPABILITIES = ("choice", "noul", "score")
 
 
 def decision_model_metadata(provider: str, name: str, icon: str, *, default: bool = False) -> dict:

@@ -36,7 +36,9 @@ export function DecisionInspection({
       data-testid="decision-inspection"
     >
       <h4 id={titleId} className="text-sm font-semibold">
-        {t("decision.title")}
+        {evidence.name
+          ? t("decision.titleNamed", { name: evidence.name })
+          : t("decision.title")}
       </h4>
       <DecisionSummary outcome={outcome} />
       <DecisionFailureDetails evidence={evidence} />

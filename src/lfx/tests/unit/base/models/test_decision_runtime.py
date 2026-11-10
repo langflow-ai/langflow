@@ -26,7 +26,7 @@ from pydantic import SecretStr
 
 @pytest.fixture
 def execution(monkeypatch):
-    request = DecisionRequest(kind="boolean", question="Is this a complaint?", context="My payment failed.")
+    request = DecisionRequest(kind="noul", question="Is this a complaint?", context="My payment failed.")
     model = {"provider": "OpenAI", "name": "gpt-6-luna"}
     policy = ModelProviderPolicySnapshot(
         context=ModelProviderPolicyContext(),
@@ -37,7 +37,7 @@ def execution(monkeypatch):
     monkeypatch.setattr("lfx.services.model_provider_policy.resolve_model_provider_policy", lambda **_: policy)
     transport = Mock(
         return_value=DecisionResult(
-            kind="boolean",
+            kind="noul",
             provider="OpenAI",
             model="gpt-6-luna",
             probability_true=0.8,
@@ -231,9 +231,22 @@ def test_unoffered_model_and_capability_are_authoritative(execution, monkeypatch
     with pytest.raises(DecisionConfigurationError, match="no longer offered"):
         evaluate_decision(request, model=model)
     options.return_value = [{**model, "metadata": {"capabilities": ["choice"]}}]
-    with pytest.raises(DecisionConfigurationError, match="Decision Type"):
+    with pytest.raises(DecisionConfigurationError, match=f"support the {request.kind.title()} Decision Type"):
         evaluate_decision(request, model=model)
     transport.assert_not_called()
+
+
+def test_saved_boolean_requests_count_as_noul_for_capabilities(execution, monkeypatch):
+    """A catalog that offers noul also serves component code saved while the type was called boolean."""
+    _request, model, transport = execution
+    request = DecisionRequest(kind="boolean", question="Is this a complaint?", context="My payment failed.")
+    options = Mock(return_value=[{**model, "metadata": {"capabilities": ["noul"]}}])
+    monkeypatch.setattr(unified_models, "get_decision_model_options", options)
+    monkeypatch.setattr(
+        unified_models, "get_all_variables_for_provider", Mock(return_value={"OPENAI_API_KEY": SecretStr("sk-key")})
+    )
+    evaluate_decision(request, model=model)
+    transport.assert_called_once()
 
 
 def test_configuration_read_failure_does_not_invoke_provider(execution, monkeypatch):
@@ -465,7 +478,7 @@ def test_per_request_keys_for_other_providers_are_ignored(execution):
 
 
 def _with_usage(usage):
-    return DecisionResult(kind="boolean", provider="TypeSafe", model="jev-1.13.0", probability_true=0.9, usage=usage)
+    return DecisionResult(kind="noul", provider="TypeSafe", model="jev-1.13.0", probability_true=0.9, usage=usage)
 
 
 @pytest.mark.parametrize(
@@ -502,3 +515,42 @@ def test_decision_token_usage_reads_the_providers_counts(usage, expected):
 )
 def test_decision_token_usage_is_none_without_counts(usage):
     assert decision_token_usage(_with_usage(usage)) is None
+
+
+def test_batch_uses_same_policy_boundary_and_counts_usage_once(execution):
+    from lfx.base.models.decisions.schema import DecisionBatchRequest, DecisionBatchResult, DecisionQuestion
+
+    request, model, transport = execution
+    batch = DecisionBatchRequest(
+        context=request.context,
+        questions={
+            "urgent": DecisionQuestion(kind="noul", question="Is this urgent?"),
+            "complaint": DecisionQuestion(kind="noul", question="Is this a complaint?"),
+        },
+    )
+    evidence = transport.return_value
+    transport.return_value = DecisionBatchResult(
+        answers={"urgent": evidence, "complaint": evidence}, usage={"input_tokens": 23, "output_tokens": 4}
+    )
+    result = evaluate_decision(batch, model=model)
+    transport.assert_called_once_with("OpenAI", "gpt-6-luna", batch, api_key="sk-explicit-test", timeout=60)
+    assert decision_token_usage(result).total_tokens == 27
+
+
+def test_batch_policy_denial_precedes_transport(execution, monkeypatch):
+    from lfx.base.models.decisions.schema import DecisionBatchRequest, DecisionQuestion
+
+    request, model, transport = execution
+    batch = DecisionBatchRequest(
+        context=request.context, questions={"urgent": DecisionQuestion(kind="noul", question="Urgent?")}
+    )
+    snapshot = ModelProviderPolicySnapshot(
+        context=ModelProviderPolicyContext(),
+        purpose=ModelProviderPolicyPurpose.USE,
+        candidate_provider_ids=frozenset({"openai"}),
+        allowed_provider_ids=frozenset(),
+    )
+    monkeypatch.setattr("lfx.services.model_provider_policy.resolve_model_provider_policy", lambda **_: snapshot)
+    with pytest.raises(ModelProviderPolicyError):
+        evaluate_decision(batch, model=model)
+    transport.assert_not_called()

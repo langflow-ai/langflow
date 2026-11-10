@@ -878,7 +878,7 @@ async def test_list_decision_models_returns_only_typed_decision_rows(client, log
     rows = _decision_rows(response)
     assert set(rows) == DECISION_CATALOG
     assert all(meta["model_type"] == "decision" for meta in rows.values())
-    assert all(meta["capabilities"] == ["choice", "boolean", "score"] for meta in rows.values())
+    assert all(meta["capabilities"] == ["choice", "noul", "score"] for meta in rows.values())
 
 
 @pytest.mark.usefixtures("active_user")
@@ -1173,7 +1173,7 @@ async def test_openrouter_discovery_and_custom_decision_enablement(client, logge
     assert response.status_code == 200
     rows = _decision_rows(response)
     assert ("OpenRouter", "author/new:exacto") in rows
-    assert rows[("OpenRouter", "author/new:exacto")]["capabilities"] == ["choice", "boolean", "score"]
+    assert rows[("OpenRouter", "author/new:exacto")]["capabilities"] == ["choice", "noul", "score"]
     response = await client.get(
         "api/v1/models",
         params={"model_type": "decision", "model_name": "author/discovered"},
@@ -1205,7 +1205,7 @@ async def test_typesafe_models_are_discovered_as_decisions_only(client, logged_i
                 "name": "jev-preview",
                 "model_type": "decision",
                 "default": True,
-                "capabilities": ["choice", "boolean", "score"],
+                "capabilities": ["choice", "noul", "score"],
                 "icon": "Bot",
             }
         ]

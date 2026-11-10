@@ -61,7 +61,7 @@ def _decided_router(
 
 
 def _boolean(probability_true):
-    return DecisionResult(kind="boolean", provider="TypeSafe", model="jev-1.13.0", probability_true=probability_true)
+    return DecisionResult(kind="noul", provider="TypeSafe", model="jev-1.13.0", probability_true=probability_true)
 
 
 def _choice_result(*probabilities):
@@ -558,9 +558,9 @@ class TestSmartRouterComponent(ComponentTestBaseWithoutClient):
         ("question", "kind", "expected"),
         [
             ("Which route best matches the input?", "Score", "Which level best describes the input?"),
-            ("Which route best matches the input?", "Boolean", ""),
+            ("Which route best matches the input?", "Noul", ""),
             ("", "Choice", "Which route best matches the input?"),
-            ("Which team should take this?", "Boolean", "Which team should take this?"),
+            ("Which team should take this?", "Noul", "Which team should take this?"),
         ],
     )
     def test_switching_type_swaps_only_a_stock_question(self, question, kind, expected):
@@ -578,10 +578,10 @@ class TestSmartRouterComponent(ComponentTestBaseWithoutClient):
 
     @pytest.mark.parametrize(("probability_true", "label"), [(0.9, "Yes"), (0.1, "No")])
     def test_boolean_answers_through_its_yes_and_no_outputs(self, monkeypatch, probability_true, label):
-        # The routes table plays no part in Boolean.
-        routed, evidence, request = _decide(monkeypatch, "Boolean", [], _boolean(probability_true))
+        # The routes table plays no part in Noul.
+        routed, evidence, request = _decide(monkeypatch, "Noul", [], _boolean(probability_true))
         assert routed == label
-        assert request.kind == "boolean"
+        assert request.kind == "noul"
         assert not request.options
         assert not request.levels
         assert evidence["route_probabilities"] == pytest.approx(
@@ -590,14 +590,14 @@ class TestSmartRouterComponent(ComponentTestBaseWithoutClient):
 
     def test_a_no_exactly_at_its_threshold_takes_the_no_output(self, monkeypatch):
         """1 - 0.33 is 0.6699999999999999 in floating point, just under a 0.67 threshold."""
-        routed, evidence, _ = _decide(monkeypatch, "Boolean", [], _boolean(0.33), minimum_probability=0.67)
+        routed, evidence, _ = _decide(monkeypatch, "Noul", [], _boolean(0.33), minimum_probability=0.67)
         assert routed == "No"
         assert evidence["route_probabilities"]["no_result"] == 0.67
 
     def test_boolean_tells_the_model_what_yes_and_no_mean(self, monkeypatch):
         _, _, request = _decide(
             monkeypatch,
-            "Boolean",
+            "Noul",
             [],
             _boolean(0.9),
             yes_description="Asks for money back",
@@ -614,7 +614,7 @@ class TestSmartRouterComponent(ComponentTestBaseWithoutClient):
         ],
     )
     def test_yes_and_no_can_each_set_their_own_threshold(self, monkeypatch, probability_true, fields, label):
-        routed, evidence, _ = _decide(monkeypatch, "Boolean", [], _boolean(probability_true), **fields)
+        routed, evidence, _ = _decide(monkeypatch, "Noul", [], _boolean(probability_true), **fields)
         assert routed == label
         expected = {"yes_result": 0.7, "no_result": 0.7}
         expected.update({f"{key.split('_')[0]}_result": value for key, value in fields.items() if value != ""})
@@ -626,15 +626,15 @@ class TestSmartRouterComponent(ComponentTestBaseWithoutClient):
         build_config = router.update_build_config(_fresh_build_config(router), "Decision Model", "routing_mode")
         node = {"outputs": [], "template": build_config}
 
-        build_config = router.update_build_config(build_config, "Boolean", "decision_kind")
-        names = [output.name for output in router.update_outputs(node, "decision_kind", "Boolean")["outputs"]]
+        build_config = router.update_build_config(build_config, "Noul", "decision_kind")
+        names = [output.name for output in router.update_outputs(node, "decision_kind", "Noul")["outputs"]]
         # Else keeps its edge: it still takes unsure answers.
         assert names == ["yes_result", "no_result", "default_result"]
         assert build_config["routes"]["show"] is False
         assert build_config["routes"]["required"] is False
         assert all(build_config[name]["show"] for name in ("yes_description", "no_description", "yes_message"))
 
-        build_config["decision_kind"]["value"] = "Boolean"
+        build_config["decision_kind"]["value"] = "Noul"
         build_config = router.update_build_config(build_config, "Choice", "decision_kind")
         names = [output.name for output in router.update_outputs(node, "decision_kind", "Choice")["outputs"]]
         assert names == ["category_1_result", "category_2_result", "default_result"]
@@ -644,7 +644,7 @@ class TestSmartRouterComponent(ComponentTestBaseWithoutClient):
     def test_language_model_mode_keeps_the_route_outputs_whatever_the_type(self):
         router = SmartRouterComponent()
         build_config = _fresh_build_config(router)
-        build_config["decision_kind"]["value"] = "Boolean"
+        build_config["decision_kind"]["value"] = "Noul"
         build_config = router.update_build_config(build_config, "Language Model", "routing_mode")
         node = router.update_outputs({"outputs": [], "template": build_config}, "routing_mode", "Language Model")
         assert [output.name for output in node["outputs"]] == ["category_1_result", "category_2_result"]
@@ -655,7 +655,7 @@ class TestSmartRouterComponent(ComponentTestBaseWithoutClient):
         ("probability_true", "reason"), [(0.5, "tied_top_probability"), (0.6, "below_minimum_probability")]
     )
     def test_an_unsure_boolean_goes_to_else(self, monkeypatch, probability_true, reason):
-        routed, evidence, _ = _decide(monkeypatch, "Boolean", [], _boolean(probability_true))
+        routed, evidence, _ = _decide(monkeypatch, "Noul", [], _boolean(probability_true))
         assert routed == ""
         assert evidence["reason"] == reason
         assert evidence["activated_branch"] == "default_result"
@@ -663,29 +663,29 @@ class TestSmartRouterComponent(ComponentTestBaseWithoutClient):
     def test_a_decision_reports_the_tokens_it_used(self, monkeypatch):
         """Chat Output adds these to the Playground message, as it does a language model's."""
         result = _boolean(0.9).model_copy(update={"usage": {"input_tokens": 296, "output_tokens": 1}})
-        router, routed, _ = _decided_router(monkeypatch, "Boolean", [], result)
+        router, routed, _ = _decided_router(monkeypatch, "Noul", [], result)
         assert routed == "Yes"
         assert router._token_usage == Usage(input_tokens=296, output_tokens=1, total_tokens=297)
 
     def test_a_refusal_still_reports_its_tokens(self, monkeypatch):
         refusal = DecisionResult(
-            kind="boolean",
+            kind="noul",
             provider="OpenAI",
             model="gpt-6-luna",
             status="refusal",
             usage={"input_tokens": 120, "output_tokens": 0, "total_tokens": 120},
         )
-        router, routed, _ = _decided_router(monkeypatch, "Boolean", [], refusal)
+        router, routed, _ = _decided_router(monkeypatch, "Noul", [], refusal)
         assert routed == ""
         assert router._token_usage == Usage(input_tokens=120, output_tokens=0, total_tokens=120)
 
     def test_a_decision_without_usage_reports_none(self, monkeypatch):
-        router, _, _ = _decided_router(monkeypatch, "Boolean", [], _boolean(0.9))
+        router, _, _ = _decided_router(monkeypatch, "Noul", [], _boolean(0.9))
         assert router._token_usage is None
 
     def test_each_run_starts_without_the_last_runs_tokens(self):
         router = self._router_with_outputs("yes_result", "no_result", "default_result")
-        router.set(routing_mode="Decision Model", decision_kind="Boolean", enable_else_output=True)
+        router.set(routing_mode="Decision Model", decision_kind="Noul", enable_else_output=True)
         router._vertex = SimpleNamespace(
             outgoing_edges=[SimpleNamespace(source_handle=SimpleNamespace(name="default_result"))]
         )
@@ -695,14 +695,14 @@ class TestSmartRouterComponent(ComponentTestBaseWithoutClient):
 
     def test_a_blank_question_stops_before_any_model_call(self, monkeypatch):
         with pytest.raises(DecisionConfigurationError, match="Enter a Decision Question"):
-            _decide(monkeypatch, "Boolean", [], _boolean(0.9), question="  ")
+            _decide(monkeypatch, "Noul", [], _boolean(0.9), question="  ")
 
     def test_a_boolean_router_runs_without_matching_routes_to_outputs(self):
         """Its Yes and No outputs don't come from the routes, so the route check doesn't apply."""
         router = self._router_with_outputs("yes_result", "no_result", "default_result")
         router.set(
             routing_mode="Decision Model",
-            decision_kind="Boolean",
+            decision_kind="Noul",
             routes=[{"route_category": "Leftover"}],
             enable_else_output=True,
         )
@@ -770,7 +770,7 @@ class TestSmartRouterUpdate:
         node = await self._update(
             {
                 "routing_mode": {"type": "str", "value": "Decision Model"},
-                "decision_kind": {"type": "str", "value": "Boolean"},
+                "decision_kind": {"type": "str", "value": "Noul"},
                 "routes": {"type": "table", "value": [{"route_category": "Billing"}]},
             }
         )
@@ -778,6 +778,18 @@ class TestSmartRouterUpdate:
         for name in ("decision_model", "decision_question", "minimum_probability", "yes_message"):
             assert template[name]["show"] is True, name
         assert template["model"]["show"] is False
+        assert template["routes"]["show"] is False
+
+    async def test_a_saved_boolean_router_becomes_noul(self):
+        node = await self._update(
+            {
+                "routing_mode": {"type": "str", "value": "Decision Model"},
+                "decision_kind": {"type": "str", "value": "Boolean"},
+            }
+        )
+        template = node["template"]
+        assert template["decision_kind"]["value"] == "Noul"
+        assert template["yes_message"]["show"] is True
         assert template["routes"]["show"] is False
 
     async def test_routes_saved_without_ids_get_them(self):

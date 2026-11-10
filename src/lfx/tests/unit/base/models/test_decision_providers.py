@@ -2,6 +2,7 @@
 
 import copy
 import json
+from unittest.mock import Mock
 
 import httpx
 import pytest
@@ -12,6 +13,7 @@ from lfx.base.models.decisions.schema import (
     DecisionEvaluationError,
     DecisionOption,
     DecisionRequest,
+    decision_request,
 )
 from lfx.base.models.unified_models import get_provider_secret_variable_key
 
@@ -33,7 +35,7 @@ def request_for(kind):
 
 
 def response_for(provider, kind):
-    if kind == "boolean":
+    if kind == "noul":
         answer = {"type": "predicate", "probability": 0.7} if provider == "OpenAI" else {"type": "noul", "noul": 0.7}
     else:
         answer = {"type": kind, "confidence": 0.25}
@@ -57,7 +59,7 @@ def response_for(provider, kind):
 
 
 @pytest.mark.parametrize("provider", PROVIDERS)
-@pytest.mark.parametrize("kind", ["choice", "boolean", "score"])
+@pytest.mark.parametrize("kind", ["choice", "noul", "score"])
 def test_wire_contract(provider, kind):
     request = request_for(kind)
     payload = providers.build_payload(provider, DEFAULT_MODELS[provider], request)
@@ -77,7 +79,7 @@ def test_wire_contract(provider, kind):
         elif kind == "score":
             assert question["criteria"] == ["Low", "High"]
     result = providers.parse_response(provider, request, response_for(provider, kind))
-    if kind == "boolean":
+    if kind == "noul":
         assert result.probability_true == 0.7
         assert result.confidence is None
     else:
@@ -130,7 +132,7 @@ def test_hosted_score_level_limit(provider):
 def test_refusal_is_not_false():
     result = providers.parse_response(
         "OpenAI",
-        request_for("boolean"),
+        request_for("noul"),
         {
             "model": "gpt-6-luna",
             "answers": [{"type": "refusal", "name": "decision"}],
@@ -173,7 +175,7 @@ def test_transport_exceptions_redacted(monkeypatch, failure):
 
     monkeypatch.setattr(providers, "provider_safe_httpx_post", post)
     with pytest.raises(DecisionEvaluationError) as caught:
-        providers.evaluate_provider("OpenAI", "gpt-6-luna", request_for("boolean"), api_key="key")
+        providers.evaluate_provider("OpenAI", "gpt-6-luna", request_for("noul"), api_key="key")
     assert "secret" not in str(caught.value)
 
 
@@ -188,14 +190,14 @@ def test_validator_never_uses_environment_or_custom_host(monkeypatch):
 
 
 def test_usage_only_emits_documented_token_counts():
-    body = response_for("OpenAI", "boolean")
+    body = response_for("OpenAI", "noul")
     body["usage"] = {
         "input_tokens": 10,
         "output_tokens": 0,
         "secret": "private-token",
         "input_tokens_details": {"cached_tokens": 3, "secret": "private-token"},
     }
-    result = providers.parse_response("OpenAI", request_for("boolean"), body)
+    result = providers.parse_response("OpenAI", request_for("noul"), body)
     assert result.usage == {"input_tokens": 10, "output_tokens": 0, "input_tokens_details": {"cached_tokens": 3}}
 
 
@@ -273,7 +275,7 @@ def test_choice_option_limit(provider):
 @pytest.mark.parametrize("timeout", [0, -1, 301, float("nan"), float("inf")])
 def test_invalid_timeout_fails_before_transport(timeout):
     with pytest.raises(DecisionConfigurationError, match="Timeout"):
-        providers.evaluate_provider("OpenAI", "gpt-6-luna", request_for("boolean"), api_key="key", timeout=timeout)
+        providers.evaluate_provider("OpenAI", "gpt-6-luna", request_for("noul"), api_key="key", timeout=timeout)
 
 
 @pytest.mark.parametrize("provider", PROVIDERS)
@@ -287,7 +289,7 @@ def test_credential_validation_uses_explicit_key_and_boolean_request(provider, m
     args, kwargs = calls.pop()
     assert args[0] == provider
     assert args[1] == DEFAULT_MODELS[provider]
-    assert args[2].kind == "boolean"
+    assert args[2].kind == "noul"
     assert kwargs == {"api_key": "tenant-key", "timeout": 15}
 
 
@@ -441,9 +443,9 @@ def test_choice_without_optional_evidence_is_still_valid(provider):
 
 
 def test_boolean_keeps_supplied_confidence_separate_from_probability():
-    payload = response_for("OpenAI", "boolean")
+    payload = response_for("OpenAI", "noul")
     payload["answers"][0]["confidence"] = 0.4
-    result = providers.parse_response("OpenAI", request_for("boolean"), payload)
+    result = providers.parse_response("OpenAI", request_for("noul"), payload)
     assert (result.probability_true, result.confidence) == (0.7, 0.4)
 
 
@@ -549,19 +551,19 @@ def test_overlong_model_name_is_an_invalid_response():
     ],
 )
 def test_boolean_sends_what_yes_and_no_mean(provider, yes, no, criteria):
-    request = DecisionRequest(kind="boolean", question="Refund?", context="x", yes_description=yes, no_description=no)
+    request = DecisionRequest(kind="noul", question="Refund?", context="x", yes_description=yes, no_description=no)
     question = providers.build_payload(provider, DEFAULT_MODELS[provider], request)["questions"]["decision"]
     assert question.get("criteria") == criteria
 
 
 def test_openai_refuses_yes_and_no_descriptions_instead_of_dropping_them():
-    request = DecisionRequest(kind="boolean", question="Refund?", context="x", yes_description="Money back")
+    request = DecisionRequest(kind="noul", question="Refund?", context="x", yes_description="Money back")
     with pytest.raises(DecisionConfigurationError, match="take no descriptions of what Yes and No mean"):
         providers.build_payload("OpenAI", "gpt-6-luna", request)
 
 
 def test_a_blank_yes_or_no_description_is_none():
-    request = DecisionRequest(kind="boolean", question="Refund?", context="x", yes_description="  ", no_description="")
+    request = DecisionRequest(kind="noul", question="Refund?", context="x", yes_description="  ", no_description="")
     assert "criteria" not in providers.build_payload("TypeSafe", "jev-latest", request)["questions"]["decision"]
     assert providers.build_payload("OpenAI", "gpt-6-luna", request)["questions"][0]["type"] == "predicate"
 
@@ -569,9 +571,9 @@ def test_a_blank_yes_or_no_description_is_none():
 @pytest.mark.parametrize(("header", "expected"), [("req_5f0c9a", "req_5f0c9a"), ("has spaces <b>", None), (None, None)])
 def test_result_keeps_only_a_safe_request_id(monkeypatch, header, expected):
     headers = {"x-request-id": header} if header else {}
-    response = httpx.Response(200, json=response_for("Perplexity", "boolean"), headers=headers)
+    response = httpx.Response(200, json=response_for("Perplexity", "noul"), headers=headers)
     monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: response)
-    result = providers.evaluate_provider("Perplexity", "pplx-decider-latest", request_for("boolean"), api_key="key")
+    result = providers.evaluate_provider("Perplexity", "pplx-decider-latest", request_for("noul"), api_key="key")
     assert result.request_id == expected
 
 
@@ -638,7 +640,7 @@ def test_a_key_httpx_cant_send_is_refused_without_naming_its_characters(monkeypa
     sent = []
     monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *a, **_k: sent.append(a))
     with pytest.raises(DecisionConfigurationError, match="contains a character a key can't have") as caught:
-        providers.evaluate_provider("TypeSafe", "jev-latest", request_for("boolean"), api_key="sk-key\u200b")
+        providers.evaluate_provider("TypeSafe", "jev-latest", request_for("noul"), api_key="sk-key\u200b")
     assert "position" not in str(caught.value)
     assert sent == []
 
@@ -656,14 +658,14 @@ def test_an_oversized_input_is_judged_by_its_error_code(monkeypatch, code, error
     body = json.dumps({"error": {"code": code, "message": "instructions mention max_tokens_exceeded"}})
     monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: httpx.Response(400, text=body))
     with pytest.raises(error) as caught:
-        providers.evaluate_provider("TypeSafe", "jev-latest", request_for("boolean"), api_key="key")
+        providers.evaluate_provider("TypeSafe", "jev-latest", request_for("noul"), api_key="key")
     assert (getattr(caught.value, "category", None) == "input_too_large") is (error is DecisionEvaluationError)
 
 
 @pytest.mark.parametrize("usage", [{"input_tokens": 290.0}, {"input_tokens": -1}, "not usage"])
 def test_a_usage_block_langflow_cant_read_keeps_the_decision(usage):
-    payload = {**response_for("TypeSafe", "boolean"), "usage": usage}
-    result = providers.parse_response("TypeSafe", request_for("boolean"), payload)
+    payload = {**response_for("TypeSafe", "noul"), "usage": usage}
+    result = providers.parse_response("TypeSafe", request_for("noul"), payload)
     assert result.probability_true == 0.7
     assert result.usage is None
 
@@ -673,15 +675,13 @@ def test_a_timeout_sent_as_text_is_read_or_refused_plainly(monkeypatch, timeout,
     monkeypatch.setattr(
         providers,
         "provider_safe_httpx_post",
-        lambda *_a, **_k: httpx.Response(200, json=response_for("TypeSafe", "boolean")),
+        lambda *_a, **_k: httpx.Response(200, json=response_for("TypeSafe", "noul")),
     )
     if ok:
-        assert providers.evaluate_provider(
-            "TypeSafe", "jev-latest", request_for("boolean"), api_key="k", timeout=timeout
-        )
+        assert providers.evaluate_provider("TypeSafe", "jev-latest", request_for("noul"), api_key="k", timeout=timeout)
     else:
         with pytest.raises(DecisionConfigurationError, match="Timeout"):
-            providers.evaluate_provider("TypeSafe", "jev-latest", request_for("boolean"), api_key="k", timeout=timeout)
+            providers.evaluate_provider("TypeSafe", "jev-latest", request_for("noul"), api_key="k", timeout=timeout)
 
 
 @pytest.mark.parametrize(("key", "refused"), [("sk-server-env-key", True), ("sk-users-own-key", False)])
@@ -718,13 +718,13 @@ def test_a_key_with_a_line_break_is_refused_not_sent(monkeypatch):
     sent = []
     monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *a, **_k: sent.append(a))
     with pytest.raises(DecisionConfigurationError, match="contains a character a key can't have"):
-        providers.evaluate_provider("TypeSafe", "jev-latest", request_for("boolean"), api_key="ts-abc\nts-abc")
+        providers.evaluate_provider("TypeSafe", "jev-latest", request_for("noul"), api_key="ts-abc\nts-abc")
     assert sent == []
 
 
 def test_a_boolean_timeout_is_refused():
     with pytest.raises(DecisionConfigurationError, match="Timeout"):
-        providers.evaluate_provider("TypeSafe", "jev-latest", request_for("boolean"), api_key="k", timeout=True)
+        providers.evaluate_provider("TypeSafe", "jev-latest", request_for("noul"), api_key="k", timeout=True)
 
 
 # The bodies each provider actually sent for a ~300k-token input (LE-3117 QA, F1).
@@ -810,16 +810,14 @@ def test_the_error_reference_names_a_code_only_when_it_adds_to_the_status(monkey
 
 @pytest.mark.parametrize(("yes", "no"), [("Matches", ""), ("", "Does not match")])
 def test_openrouter_rejects_partial_boolean_criteria(yes, no):
-    request = DecisionRequest(
-        kind="boolean", context="example", question="Match?", yes_description=yes, no_description=no
-    )
+    request = DecisionRequest(kind="noul", context="example", question="Match?", yes_description=yes, no_description=no)
     with pytest.raises(DecisionConfigurationError, match="requires both"):
         providers.build_payload("OpenRouter", "typesafe/jev-1.14", request)
 
 
 def test_openrouter_preserves_boolean_criteria():
     request = DecisionRequest(
-        kind="boolean", context="example", question="Match?", yes_description="Matches", no_description="No match"
+        kind="noul", context="example", question="Match?", yes_description="Matches", no_description="No match"
     )
     payload = providers.build_payload("OpenRouter", "typesafe/jev-1.14", request)
     assert payload["questions"]["decision"]["criteria"] == {"true": "Matches", "false": "No match"}
@@ -829,7 +827,141 @@ def test_openrouter_preserves_boolean_criteria():
     ("request_id", "expected"), [("gen-dec-123", "gen-dec-123"), ("secret\nheader", None), (123, None)]
 )
 def test_openrouter_response_id_is_safe(request_id, expected):
-    payload = {**response_for("OpenRouter", "boolean"), "id": request_id}
-    result = providers.parse_response("OpenRouter", request_for("boolean"), payload)
+    payload = {**response_for("OpenRouter", "noul"), "id": request_id}
+    result = providers.parse_response("OpenRouter", request_for("noul"), payload)
     assert result.request_id == expected
     assert result.provider == "OpenRouter"
+
+
+def batch_request():
+    from lfx.base.models.decisions.schema import DecisionBatchRequest, DecisionQuestion
+
+    return DecisionBatchRequest(
+        context={"text": "Example"},
+        questions={
+            kind: DecisionQuestion(**request_for(kind).model_dump(exclude={"context"}))
+            for kind in ("choice", "noul", "score")
+        },
+    )
+
+
+def batch_response(provider):
+    answers = [] if provider == "OpenAI" else {}
+    for kind in ("choice", "noul", "score"):
+        body = response_for(provider, kind)
+        if provider == "OpenAI":
+            answers.append({**body["answers"][0], "name": kind})
+        else:
+            answers[kind] = body["answers"]["decision"]
+    return {"model": DEFAULT_MODELS[provider], "answers": answers, "usage": {"input_tokens": 17}}
+
+
+@pytest.mark.parametrize("provider", PROVIDERS)
+def test_mixed_questions_share_one_http_request_and_usage(provider, monkeypatch):
+    calls = []
+
+    def post(url, **kwargs):
+        calls.append((url, kwargs))
+        return httpx.Response(200, json=batch_response(provider), headers={"x-request-id": "req_batch"})
+
+    monkeypatch.setattr(providers, "provider_safe_httpx_post", post)
+    result = providers.evaluate_provider(provider, DEFAULT_MODELS[provider], batch_request(), api_key="test")
+    assert len(calls) == 1
+    questions = calls[0][1]["json"]["questions"]
+    if provider == "OpenAI":
+        assert [question["name"] for question in questions] == ["choice", "noul", "score"]
+        assert [question["type"] for question in questions] == ["choice", "predicate", "score"]
+    else:
+        assert list(questions) == ["choice", "noul", "score"]
+        assert [question["type"] for question in questions.values()] == ["choice", "noul", "score"]
+    assert result.answers["choice"].selected_option == "b"
+    assert result.answers["noul"].probability_true == 0.7
+    assert result.answers["score"].score == 0.7
+    assert result.usage == {"input_tokens": 17}
+    assert result.request_id == "req_batch"
+    assert all(answer.usage is None for answer in result.answers.values())
+
+
+@pytest.mark.parametrize("provider", PROVIDERS)
+@pytest.mark.parametrize("mutation", ["missing", "extra", "wrong_type", "invalid_probability"])
+def test_batch_rejects_incomplete_or_malformed_answers(provider, mutation):
+    body = batch_response(provider)
+    answers = body["answers"]
+    if mutation == "missing":
+        answers.pop() if provider == "OpenAI" else answers.pop("noul")
+    elif mutation == "extra":
+        if provider == "OpenAI":
+            answers.append({**answers[0], "name": "extra"})
+        else:
+            answers["extra"] = answers["choice"]
+    else:
+        answer = answers[1] if provider == "OpenAI" else answers["noul"]
+        if mutation == "wrong_type":
+            answer["type"] = "choice"
+        else:
+            answer["probability" if provider == "OpenAI" else "noul"] = 4
+    with pytest.raises(DecisionEvaluationError, match="couldn't use") as raised:
+        providers.parse_response(provider, batch_request(), body)
+    message = str(raised.value)
+    assert message.count("couldn't use") == 1
+    assert message.count("Try again") == 1
+    if mutation in {"wrong_type", "invalid_probability"}:
+        assert "question 'noul'" in message
+
+
+def test_batch_question_cap_fails_before_any_call(monkeypatch):
+    from lfx.base.models.decisions.schema import DecisionBatchRequest, DecisionQuestion
+
+    post = Mock()
+    monkeypatch.setattr(providers, "provider_safe_httpx_post", post)
+    question = DecisionQuestion(kind="noul", question="Relevant?")
+    request = DecisionBatchRequest(
+        context="Example", questions={f"q{i}": question for i in range(providers.MAX_QUESTIONS + 1)}
+    )
+    with pytest.raises(DecisionConfigurationError, match=f"at most {providers.MAX_QUESTIONS} questions"):
+        providers.evaluate_provider("OpenAI", DEFAULT_MODELS["OpenAI"], request, api_key="test")
+    post.assert_not_called()
+
+
+def test_openai_batch_matches_names_not_order_and_preserves_partial_refusal():
+    body = batch_response("OpenAI")
+    body["answers"][1] = {"name": "noul", "type": "refusal", "refusal": "Cannot answer"}
+    body["answers"].reverse()
+    result = providers.parse_response("OpenAI", batch_request(), body)
+    assert result.answers["noul"].status == "refusal"
+    assert result.answers["choice"].status == "success"
+    assert result.answers["score"].score == 0.7
+
+
+def test_openrouter_batch_keeps_answers_beside_a_refusal():
+    body = batch_response("OpenRouter")
+    body["answers"]["noul"] = {"type": "refusal"}
+    result = providers.parse_response("OpenRouter", batch_request(), body)
+    assert (result.answers["noul"].status, result.answers["noul"].refusal) == ("refusal", None)
+    assert result.answers["choice"].status == "success"
+    assert result.answers["score"].score == 0.7
+
+
+def test_openai_batch_rejects_duplicate_names():
+    body = batch_response("OpenAI")
+    body["answers"].append(body["answers"][0])
+    with pytest.raises(DecisionEvaluationError, match="repeat a question"):
+        providers.parse_response("OpenAI", batch_request(), body)
+
+
+@pytest.mark.parametrize("provider", PROVIDERS)
+def test_saved_component_code_that_still_asks_for_boolean_gets_a_noul_answer(provider, monkeypatch):
+    """Decision Model and Smart Router code saved before the rename keeps running without an update.
+
+    That code calls decision_request(kind="boolean"), branches on request.kind == "boolean" and reads
+    result.probability_true, so the alias is kept on the request and the result rather than renamed.
+    """
+    request = decision_request(kind="boolean", question="Refund?", context="x", yes_description="", no_description="")
+    assert request.kind == "boolean"
+    payload = providers.build_payload(provider, DEFAULT_MODELS[provider], request)
+    question = payload["questions"][0] if provider == "OpenAI" else payload["questions"]["decision"]
+    assert question["type"] == ("predicate" if provider == "OpenAI" else "noul")
+    response = httpx.Response(200, json=response_for(provider, "noul"))
+    monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: response)
+    result = providers.evaluate_provider(provider, DEFAULT_MODELS[provider], request, api_key="key")
+    assert (result.kind, result.probability_true, result.probabilities) == ("boolean", 0.7, None)

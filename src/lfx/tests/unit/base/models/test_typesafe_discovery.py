@@ -54,7 +54,7 @@ def catalog(monkeypatch):
 def test_list_uses_fixed_authenticated_endpoint_and_isolates_cached_credentials(catalog):
     first = typesafe.get_models("first-key")
     first[0]["capabilities"].clear()
-    assert typesafe.get_models("first-key")[0]["capabilities"] == ["choice", "boolean", "score"]
+    assert typesafe.get_models("first-key")[0]["capabilities"] == ["choice", "noul", "score"]
     assert typesafe.get_models("second-key")[0]["name"] == "future-model"
     assert catalog.call_count == 2
     assert str(catalog.call_args.args[0].url) == "https://api.typesafe.ai/v1/models"
@@ -99,6 +99,15 @@ def test_standalone_picker_discovers_env_configured_models(monkeypatch):
     assert [o["name"] for o in options] == ["jev-preview"]
 
 
+def test_a_whitespace_only_key_does_not_turn_on_discovery(monkeypatch, catalog):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "  \n")
+    errors = {}
+    options = get_decision_model_options(provider_policy=policy(), discovery_errors=errors)
+    catalog.assert_not_called()
+    assert errors == {}
+    assert "jev-preview" not in [o["name"] for o in options]
+
+
 def test_default_validation_discovers_using_unsaved_key(monkeypatch, catalog):
     monkeypatch.setattr("lfx.services.model_provider_policy.resolve_model_provider_policy", lambda **_: policy())
     validate = Mock()
@@ -111,10 +120,10 @@ def test_default_validation_discovers_using_unsaved_key(monkeypatch, catalog):
 def test_pinned_execution_uses_request_key_without_discovery(monkeypatch, catalog):
     monkeypatch.setattr("lfx.services.model_provider_policy.resolve_model_provider_policy", lambda **_: policy())
     transport = Mock(
-        return_value=DecisionResult(kind="boolean", provider="TypeSafe", model="jev-1.14.0", probability_true=0.5)
+        return_value=DecisionResult(kind="noul", provider="TypeSafe", model="jev-1.14.0", probability_true=0.5)
     )
     monkeypatch.setattr(providers, "evaluate_provider", transport)
-    request = DecisionRequest(kind="boolean", question="Relevant?", context="text")
+    request = DecisionRequest(kind="noul", question="Relevant?", context="text")
     evaluate_decision(
         request,
         model={"provider": "TypeSafe", "name": "jev-1.14.0"},

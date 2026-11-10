@@ -1,40 +1,69 @@
+import json
+from copy import deepcopy
+
+from pydantic import ValidationError
+
+from lfx.base.models.decisions.providers import unique_json_object
 from lfx.base.models.decisions.runtime import decision_token_usage, evaluate_decision, request_variables_of
-from lfx.base.models.decisions.schema import DecisionConfigurationError, decision_request
+from lfx.base.models.decisions.schema import (
+    DecisionBatchRequest,
+    DecisionConfigurationError,
+    DecisionQuestion,
+    configuration_summary,
+    decision_request,
+    validation_summary,
+)
 from lfx.base.models.unified_models import handle_model_input_update
 from lfx.custom.custom_component.component import Component
-from lfx.io import DropdownInput, FloatInput, HandleInput, MessageTextInput, ModelInput, Output, TableInput
+from lfx.io import (
+    DecisionQuestionsInput,
+    FloatInput,
+    HandleInput,
+    MessageTextInput,
+    ModelInput,
+    MultilineInput,
+    Output,
+    TabInput,
+)
 from lfx.schema.data import Data
-from lfx.schema.table import EditMode
+from lfx.schema.message import Message
 
-_KINDS = ("Choice", "Boolean", "Score")
-# The table's name and help follow the Decision Type.
-_TABLE = {
-    "Choice": (
-        "Options",
-        "The options to choose between, 2 to 255. ID is a short unique key the result uses, such as refund; "
-        "Label is the name the model reads.",
-    ),
-    "Score": (
-        "Levels",
-        "Levels ordered from lowest to highest, 2 to 10. The model scores the input from 0 (the first level) up "
-        "to one less than the number of levels. ID is a short unique key the result uses; Label is the name the "
-        "model reads.",
-    ),
+_KINDS = ("Choice", "Noul", "Score")
+_FORM, _JSON = "Form", "JSON"
+# Text fields a node held before the question list, which could be bound to a global variable.
+_LEGACY_LABELS = {"question": "Question", "yes_description": "What Yes Means", "no_description": "What No Means"}
+# Question X's text can be connected through the hidden field <prefix>X.
+_CONNECTION_PREFIX = "question_input_"
+# What Add question appends; a node starts with none.
+_NEW_QUESTION = {
+    "name": "",
+    "kind": "Choice",
+    "question": "",
+    "options": [
+        {"id": "a", "label": "Option A", "description": ""},
+        {"id": "b", "label": "Option B", "description": ""},
+    ],
+    "levels": [
+        {"id": "low", "label": "Low", "description": ""},
+        {"id": "medium", "label": "Medium", "description": ""},
+        {"id": "high", "label": "High", "description": ""},
+    ],
+    "yes_description": "",
+    "no_description": "",
 }
+
 # What an agent learns about this component when it is a tool.
 _RESULT_INFO = (
-    "Answers this component's fixed question about the text you pass as context, and returns JSON. Choice gives "
+    "Answers the configured questions about the context and returns JSON. Several questions return an answers "
+    "object keyed by question name, with shared usage counted once. Choice gives "
     "probabilities by option ID and, when the provider names one, selected_option (otherwise take the most "
-    "probable option); Boolean gives probability_true, the "
+    "probable option); Noul gives probability_true, the "
     "probability the answer is yes, from 0 to 1; Score gives score, from 0 (the first level) up to one less than "
     "the number of levels, and probabilities by level ID. confidence is the provider's own measure, not an "
     "option's probability."
 )
 
 # Follow-ups, deferred until there is demand:
-# - Several named questions in one request, answered as one typed object. All three providers take
-#   them, but Perplexity's full model answers grouped questions jointly (an answer can change with
-#   its group) and its flash model bills the context once per question, so keep it opt-in.
 # - Images: TypeSafe `assets` behind its TypeSafe-Danger-Zone-Images header, Perplexity image parts
 #   in `state`, OpenAI image inputs. Needs size limits and SSRF checks for each format.
 # - Pinned model versions, such as pplx-decider-v1.2: policy allows models by name, so each version
@@ -42,10 +71,10 @@ _RESULT_INFO = (
 
 
 class DecisionModelComponent(Component):
-    """Evaluates one judgment through the same runtime as the Smart Router."""
+    """Evaluates named judgments through the same runtime as the Smart Router."""
 
     display_name = "Decision Model"
-    description = "Evaluate a choice, probability, or ordered score"
+    description = "Evaluate one or more choices, probabilities, or ordered scores"
     name = "DecisionModel"
     icon = "Split"
 
@@ -53,87 +82,55 @@ class DecisionModelComponent(Component):
         ModelInput(
             model_type="decision", name="model", display_name="Decision Model", required=True, real_time_refresh=True
         ),
-        DropdownInput(
-            name="kind",
-            display_name="Decision Type",
-            options=list(_KINDS),
-            value="Choice",
-            info="Choice picks one option. Boolean answers yes or no. Score places the input on ordered levels.",
+        TabInput(
+            name="question_mode",
+            display_name="Questions Mode",
+            options=[_FORM, _JSON],
+            value=_FORM,
             real_time_refresh=True,
+            info="Fill in the questions here, or paste Questions JSON. All questions share the same Context.",
+        ),
+        MultilineInput(
+            name="questions_json",
+            display_name="Questions JSON",
+            advanced=True,
+            show=False,
+            value="",
+            info="In JSON mode, paste an object keyed by question name. Each value uses kind (choice, noul, "
+            "score), question, and options or levels as arrays of {id, label, description}. Noul descriptions "
+            'are optional. Example: {"urgent":{"kind":"noul","question":"Is this urgent?"}}. '
+            "This replaces the form for this run; its values are preserved.",
         ),
         MessageTextInput(
             name="context",
             display_name="Context",
             # Also the argument description an Agent reads when this is a tool, so the purpose comes first.
             info=(
-                "The text the question is about, such as a message or a document. "
+                "The text the questions are about, such as a message or a document. "
                 "Required unless a Structured Context is connected."
             ),
             # Not marked required: a connected Structured Context replaces it, and the editor can't see that.
             placeholder="Required, or Structured Context",
             tool_mode=True,
         ),
-        MessageTextInput(
-            name="question",
-            display_name="Question",
-            info='What to decide about the Context, such as "Which team should handle this message?"',
-            required=True,
+        DecisionQuestionsInput(
+            name="questions",
+            display_name="Questions",
+            value=[],
+            new_question=_NEW_QUESTION,
+            connection_prefix=_CONNECTION_PREFIX,
+            info="Each question has its own Decision Type: Choice picks one option, Noul answers yes or no, and "
+            "Score places the input on ordered levels. With more than one question, they are sent in one call and "
+            "the result holds each answer under its Name, which defaults to q1, q2 and so on.",
         ),
-        TableInput(
-            name="candidates",
-            display_name=_TABLE["Choice"][0],
-            # Options are typed in, not connected: connected rows arrive with NaN cells and number IDs.
-            input_types=[],
-            value=[
-                {"id": "low", "label": "Low", "description": ""},
-                {"id": "medium", "label": "Medium", "description": ""},
-                {"id": "high", "label": "High", "description": ""},
-            ],
-            info=_TABLE["Choice"][1],
-            table_schema=[
-                {
-                    "name": "id",
-                    "display_name": "ID",
-                    "type": "str",
-                    "description": "A short unique key, such as refund. The result uses it.",
-                    "edit_mode": EditMode.INLINE,
-                },
-                {
-                    "name": "label",
-                    "display_name": "Label",
-                    "type": "str",
-                    "description": "The name the model reads. Labels must differ, ignoring case.",
-                    "edit_mode": EditMode.INLINE,
-                },
-                {
-                    "name": "description",
-                    "display_name": "Description",
-                    "type": "str",
-                    "description": "Optional: more about when this one applies.",
-                    "edit_mode": EditMode.POPOVER,
-                    "default": "",
-                },
-            ],
-        ),
+        # The connection of a question migrated from the single-question fields (id "1"), and the field
+        # the editor copies for each question it adds; the handle is drawn on that question's row.
         MessageTextInput(
-            name="yes_description",
-            display_name="What Yes Means (Optional)",
-            info=(
-                "Optional: what a Yes answer means. Some decision models don't accept this; if yours "
-                "doesn't, the run stops and asks you to clear it."
-            ),
+            name=f"{_CONNECTION_PREFIX}1",
+            display_name="Question 1",
+            info="Connect a component to supply this question's text.",
+            input_types=["Message"],
             show=False,
-            advanced=True,
-        ),
-        MessageTextInput(
-            name="no_description",
-            display_name="What No Means (Optional)",
-            info=(
-                "Optional: what a No answer means. Some decision models don't accept this; if yours "
-                "doesn't, the run stops and asks you to clear it."
-            ),
-            show=False,
-            advanced=True,
         ),
         HandleInput(
             name="structured_context",
@@ -180,23 +177,86 @@ class DecisionModelComponent(Component):
             raise DecisionConfigurationError(msg)
         return structured
 
-    def evaluate(self) -> Data:
-        # A tweak can send anything here; the dropdown only offers these three.
-        if self.kind not in _KINDS:
-            msg = "Pick a Decision Type: Choice, Boolean or Score."
+    def _json_request(self, context: str | dict) -> DecisionBatchRequest:
+        try:
+            questions = json.loads(self.questions_json or "", object_pairs_hook=unique_json_object)
+        except (ValueError, TypeError) as exc:
+            msg = f"Questions JSON must be a valid JSON object keyed by question name: {exc}"
+            raise DecisionConfigurationError(msg) from None
+        try:
+            return DecisionBatchRequest(context=context, questions=questions)
+        except ValidationError as exc:
+            msg = f"Check Questions: {validation_summary(exc)}"
+            raise DecisionConfigurationError(msg) from None
+
+    def _connected_text(self, field: str) -> str | None:
+        """The text a component connected to this hidden field sends, if any."""
+        value = self._attributes.get(field)
+        if value in (None, ""):
+            return None
+        return value.text if isinstance(value, Message) else str(value)
+
+    def _question_fields(self, item, number: int) -> dict:
+        """One question's fields, only those its Decision Type uses."""
+        # A tweak can send anything here; the editor only offers these three types.
+        kind = item.get("kind") if isinstance(item, dict) else None
+        if kind not in _KINDS:
+            msg = f"Pick a Decision Type for Question {number}: Choice, Noul or Score."
             raise DecisionConfigurationError(msg)
-        kind = self.kind.lower()
-        boolean = kind == "boolean"
-        request = decision_request(
-            kind=kind,
-            question=self.question,
-            context=self._context(),
-            options=self.candidates if kind == "choice" else (),
-            levels=self.candidates if kind == "score" else (),
-            # Hidden for other types, so a value left from Boolean never applies to them.
-            yes_description=(self.yes_description or "") if boolean else "",
-            no_description=(self.no_description or "") if boolean else "",
-        )
+        kind = kind.lower()
+        noul = kind == "noul"
+        connected = {text: self._connected_text(field) for text, field in _connection_fields(item).items()}
+        item = {**item, **{text: value for text, value in connected.items() if value is not None}}
+        # A migrated field still holding the name of the global variable it was bound to; see _legacy_question.
+        for field, variable in (item.get("global_variables") or {}).items():
+            if (field == "question" or noul) and item.get(field) == variable:
+                msg = (
+                    f"Question {number}'s {_LEGACY_LABELS.get(field, field)} was read from the global variable "
+                    f"{variable!r}, which question cards can't use. Type the text into the card, or clear it."
+                )
+                raise DecisionConfigurationError(msg)
+        return {
+            "kind": kind,
+            "question": item.get("question"),
+            "options": (item.get("options") or ()) if kind == "choice" else (),
+            "levels": (item.get("levels") or ()) if kind == "score" else (),
+            # Ignored for other types, so a value left from Noul never applies to them.
+            "yes_description": (item.get("yes_description") or "") if noul else "",
+            "no_description": (item.get("no_description") or "") if noul else "",
+        }
+
+    def _request(self):
+        context = self._context()
+        if self.question_mode == _JSON:
+            return self._json_request(context)
+        if self.question_mode != _FORM:
+            msg = "Pick a Questions Mode: Form or JSON."
+            raise DecisionConfigurationError(msg)
+        items = self.questions
+        if not isinstance(items, list) or not items:
+            msg = "Add a question."
+            raise DecisionConfigurationError(msg)
+        if len(items) == 1:
+            return decision_request(context=context, **self._question_fields(items[0], 1))
+        questions = {}
+        for number, item in enumerate(items, start=1):
+            fields = self._question_fields(item, number)
+            name = str(item.get("name") or "").strip() or f"q{number}"
+            if name in questions:
+                msg = f"Two questions are named {name!r}. Give each question a different Name."
+                raise DecisionConfigurationError(msg)
+            try:
+                questions[name] = DecisionQuestion(**fields)
+            except ValidationError as exc:
+                msg = f"Question {number}: {configuration_summary(exc)}"
+                raise DecisionConfigurationError(msg) from None
+        try:
+            return DecisionBatchRequest(context=context, questions=questions)
+        except ValidationError as exc:
+            raise DecisionConfigurationError(configuration_summary(exc)) from None
+
+    def evaluate(self) -> Data:
+        request = self._request()
         result = evaluate_decision(
             request,
             model=self.model,
@@ -216,30 +276,108 @@ class DecisionModelComponent(Component):
         return data
 
     async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):
-        """Re-apply the saved Decision Type's fields after a code update.
+        """Carry a node saved before the question list over to it, then show the saved mode's fields.
 
-        Update rebuilds the node from the class, which shows Choice's fields, and copies only values back.
-        Without this a Boolean node came back with What Yes Means and What No Means hidden, so the run
-        dropped them.
+        Update rebuilds the node from the class and copies back only values whose field names match.
         """
         await super().update_frontend_node(new_frontend_node, current_frontend_node)
         template = new_frontend_node.get("template", {})
-        self._show_fields(template, (template.get("kind") or {}).get("value", "Choice"))
+        saved = current_frontend_node.get("template", {})
+        if (saved.get("questions") or {}).get("type") != "decision_questions":
+            template["questions"]["value"] = [_legacy_question(saved)] if "question" in saved else []
+            if "question" in saved:
+                # The old fields keep their names as the migrated question's connections, so an edge
+                # wired into one stays connected.
+                for text, name in _connection_fields(template["questions"]["value"][0]).items():
+                    template[name] = {
+                        **deepcopy(template[f"{_CONNECTION_PREFIX}1"]),
+                        "name": name,
+                        "display_name": "Question 1" if text == "question" else _LEGACY_LABELS[text],
+                    }
+        for item in template["questions"]["value"]:
+            if isinstance(item, dict) and item.get("kind") == "Boolean":
+                # The yes-or-no type was renamed Noul, the providers' own name for it.
+                item["kind"] = "Noul"
+        # Each question's connection fields live on the node; the class has only the one to copy.
+        for item in template["questions"]["value"]:
+            for name in _connection_fields(item).values() if isinstance(item, dict) else ():
+                if name not in template and name in saved:
+                    template[name] = deepcopy(saved[name])
+        if template["question_mode"]["value"] not in {_FORM, _JSON}:
+            template["question_mode"]["value"] = _FORM
+        self._show_fields(template)
         return new_frontend_node
 
     def update_build_config(self, build_config: dict, field_value, field_name: str | None = None) -> dict:
         config = handle_model_input_update(self, build_config, field_value, field_name)
-        self._show_fields(
-            config, field_value if field_name == "kind" else config.get("kind", {}).get("value", "Choice")
-        )
+        if field_name == "question_mode":
+            config["question_mode"]["value"] = field_value
+        self._show_fields(config)
         return config
 
     @staticmethod
-    def _show_fields(config: dict, kind: str) -> None:
-        """Show the table and the Yes/No meanings for this Decision Type, and name the table for it."""
-        config["candidates"]["show"] = kind != "Boolean"
-        if kind in _TABLE:
-            config["candidates"]["display_name"], config["candidates"]["info"] = _TABLE[kind]
-        for name in ("yes_description", "no_description"):
-            if name in config:
-                config[name]["show"] = kind == "Boolean"
+    def _show_fields(config: dict) -> None:
+        """Show the question list in Form mode and Questions JSON in JSON mode, keeping both values."""
+        form = config.get("question_mode", {}).get("value", _FORM) != _JSON
+        if "questions" in config:
+            config["questions"]["show"] = form
+        if "questions_json" in config:
+            config["questions_json"]["show"] = not form
+            config["questions_json"]["advanced"] = form
+
+
+def _connection_fields(item: dict) -> dict[str, str]:
+    """The hidden node fields a question's texts can be connected through, keyed by the text each supplies.
+
+    Its question text's is the field it names or <prefix><id>; a Noul migrated from the old fields
+    also names its What Yes Means and What No Means fields.
+    """
+    fields = {
+        "question": item.get("input_field") or (f"{_CONNECTION_PREFIX}{item['id']}" if item.get("id") else None),
+        "yes_description": item.get("yes_input_field"),
+        "no_description": item.get("no_input_field"),
+    }
+    return {text: field for text, field in fields.items() if field}
+
+
+def _legacy_question(saved: dict) -> dict:
+    """The one question a node held in separate fields before the question list.
+
+    A question card has no global variables, so a field bound to one keeps the variable's name and
+    records the binding; the run refuses it until the card holds real text.
+    """
+
+    def value(name: str, default):
+        return deepcopy((saved.get(name) or {}).get("value", default))
+
+    bound = {
+        name: value(name, "")
+        for name in _LEGACY_LABELS
+        if (saved.get(name) or {}).get("load_from_db") and value(name, "")
+    }
+
+    kind = value("kind", "Choice")
+    kind = "Noul" if kind == "Boolean" else kind
+    connections = {"input_field": "question"}
+    if kind == "Noul":
+        # What Yes Means and What No Means showed, and could be connected, only on a yes-or-no node.
+        for answer in ("yes", "no"):
+            if f"{answer}_description" in saved:
+                connections[f"{answer}_input_field"] = f"{answer}_description"
+    options = value("candidates", _NEW_QUESTION["options"])
+    levels = value("levels", _NEW_QUESTION["levels"])
+    if "levels" not in saved and kind == "Score":
+        # Older Score nodes stored their rubric in the shared candidates field.
+        options, levels = deepcopy(_NEW_QUESTION["options"]), options
+    return {
+        **deepcopy(_NEW_QUESTION),
+        "id": "1",
+        **connections,
+        "kind": kind,
+        "question": value("question", ""),
+        "options": options,
+        "levels": levels,
+        "yes_description": value("yes_description", ""),
+        "no_description": value("no_description", ""),
+        **({"global_variables": bound} if bound else {}),
+    }

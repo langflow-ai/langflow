@@ -48,7 +48,7 @@ def test_catalog_accepts_new_authors_aliases_and_free_variants_without_credentia
     assert public_catalog.call_args.args == ("https://openrouter.ai/api/v1/models?output_modalities=decisions",)
     assert "headers" not in public_catalog.call_args.kwargs
     rows[0]["capabilities"].clear()
-    assert openrouter.get_models()[0]["capabilities"] == ["choice", "boolean", "score"]
+    assert openrouter.get_models()[0]["capabilities"] == ["choice", "noul", "score"]
     public_catalog.assert_called_once()
 
 
@@ -125,10 +125,10 @@ def test_explicit_model_runs_without_catalog_and_uses_only_openrouter_key(monkey
     monkeypatch.setattr("lfx.services.model_provider_policy.resolve_model_provider_policy", lambda **_: policy())
     monkeypatch.setenv("OPENROUTER_API_KEY", "own-key")
     transport = Mock(
-        return_value=DecisionResult(kind="boolean", provider="OpenRouter", model="new-id", probability_true=0.7)
+        return_value=DecisionResult(kind="noul", provider="OpenRouter", model="new-id", probability_true=0.7)
     )
     monkeypatch.setattr(providers, "evaluate_provider", transport)
-    request = DecisionRequest(kind="boolean", context="text", question="Relevant?")
+    request = DecisionRequest(kind="noul", context="text", question="Relevant?")
     evaluate_decision(request, model={"provider": "OpenRouter", "name": "author/new-id:exacto"})
     transport.assert_called_once_with("OpenRouter", "author/new-id:exacto", request, api_key="own-key", timeout=60)
     public_catalog.assert_not_called()
@@ -143,7 +143,7 @@ def test_explicit_model_cannot_bypass_policy(monkeypatch, public_catalog):
     )
     with pytest.raises(ModelProviderPolicyError):
         evaluate_decision(
-            DecisionRequest(kind="boolean", context="text", question="Relevant?"),
+            DecisionRequest(kind="noul", context="text", question="Relevant?"),
             model={"provider": "OpenRouter", "name": "new-id"},
         )
     public_catalog.assert_not_called()

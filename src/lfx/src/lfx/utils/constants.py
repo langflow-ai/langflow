@@ -88,6 +88,7 @@ DIRECT_TYPES = [
     "mcp",
     "model",
     "data_display",
+    "decision_questions",
 ]
 
 

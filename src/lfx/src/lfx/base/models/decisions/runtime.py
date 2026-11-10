@@ -6,7 +6,12 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.models.decision_constants import LIVE_DECISION_PROVIDERS
-from lfx.base.models.decisions.schema import DecisionConfigurationError, DecisionRequest
+from lfx.base.models.decisions.schema import (
+    NOUL_KINDS,
+    DecisionBatchRequest,
+    DecisionConfigurationError,
+    DecisionRequest,
+)
 from lfx.schema.properties import Usage
 from lfx.services.variable.request_scope import variable_name_forms
 from lfx.utils.secrets import secret_value_to_str
@@ -14,7 +19,7 @@ from lfx.utils.secrets import secret_value_to_str
 if TYPE_CHECKING:
     from uuid import UUID
 
-    from lfx.base.models.decisions.schema import DecisionResult
+    from lfx.base.models.decisions.schema import DecisionBatchResult, DecisionResult
 
 
 def request_variables_of(component: Any) -> Mapping[str, Any] | None:
@@ -23,7 +28,7 @@ def request_variables_of(component: Any) -> Mapping[str, Any] | None:
     return context.get("request_variables") if isinstance(context, Mapping) else None
 
 
-def decision_token_usage(result: DecisionResult) -> Usage | None:
+def decision_token_usage(result: DecisionResult | DecisionBatchResult) -> Usage | None:
     """The tokens a decision used, for the node badge and the Playground; None when the provider sent none."""
     raw = result.usage or {}
     counts = {name: raw.get(name) for name in ("input_tokens", "output_tokens", "total_tokens")}
@@ -37,13 +42,13 @@ def decision_token_usage(result: DecisionResult) -> Usage | None:
 
 
 def evaluate_decision(
-    request: DecisionRequest,
+    request: DecisionRequest | DecisionBatchRequest,
     *,
     model: list[dict[str, Any]] | dict[str, Any],
     user_id: UUID | str | None = None,
     request_variables: Mapping[str, Any] | None = None,
     timeout: float = 60,
-) -> DecisionResult:
+) -> DecisionResult | DecisionBatchResult:
     """Authorize the canonical catalog identity before resolving credentials or invoking HTTP."""
     if isinstance(model, list):
         if len(model) > 1:
@@ -89,10 +94,13 @@ def evaluate_decision(
         if selected is None:
             msg = "The selected Decision Model is no longer offered. Pick another Decision Model."
             raise DecisionConfigurationError(msg)
-        if request.kind not in selected.get("metadata", {}).get("capabilities", []):
+        capabilities = selected.get("metadata", {}).get("capabilities", [])
+        asked = {"noul" if q.kind in NOUL_KINDS else q.kind for q in request.questions.values()}
+        unsupported = sorted(asked - set(capabilities))
+        if unsupported:
+            names = " or ".join(kind.title() for kind in unsupported)
             msg = (
-                f"{model_name} doesn't support the {request.kind.title()} Decision Type. "
-                "Pick another Decision Type or Decision Model."
+                f"{model_name} doesn't support the {names} Decision Type. Pick another Decision Type or Decision Model."
             )
             raise DecisionConfigurationError(msg)
 
