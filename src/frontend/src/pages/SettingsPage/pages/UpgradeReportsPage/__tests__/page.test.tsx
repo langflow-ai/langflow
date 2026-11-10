@@ -120,6 +120,59 @@ it("redirects non-admins without reading reports", async () => {
   expect(api.get).not.toHaveBeenCalled();
 });
 
+it("explains the first action and keeps incomplete checks distinct from success", async () => {
+  open();
+  expect(
+    screen.getByRole("heading", { name: "Start an upgrade review" }),
+  ).toBeVisible();
+  expect(
+    screen.getByText(/Importing a report does not change any flows/),
+  ).toBeVisible();
+  expect(
+    await screen.findByRole("heading", { name: "Assessment incomplete" }),
+  ).toBeVisible();
+  expect(
+    screen.getByText(/correct the cause, and generate a new report/),
+  ).toBeVisible();
+  await userEvent.click(screen.getByText("What the results mean"));
+  expect(
+    screen.getByText(/This is an unknown result and requires review/),
+  ).toBeVisible();
+  expect(
+    screen.queryByRole("heading", { name: "No compatibility problems found" }),
+  ).not.toBeInTheDocument();
+});
+
+it.each([
+  ["ok", "No compatibility problems found"],
+  ["warn", "Review required before upgrading"],
+  ["fail", "Compatibility problems found"],
+])(
+  "explains the next action for a complete %s assessment",
+  async (status, title) => {
+    const current = {
+      ...report,
+      document: {
+        ...report.document,
+        summary: { flows: { ok: 0, warn: 0, fail: 0, [status]: 1 }, nodes: {} },
+      },
+    };
+    jest.spyOn(api, "get").mockImplementation(async (url) => ({
+      data: url.endsWith(report.id)
+        ? current
+        : url.endsWith("/repairs")
+          ? { items: [], total: 0 }
+          : history,
+    }));
+    open();
+    expect(await screen.findByRole("heading", { name: title })).toBeVisible();
+    if (status === "ok")
+      expect(
+        screen.getByText(/This result does not certify an upgrade/),
+      ).toBeVisible();
+  },
+);
+
 it("shows unknown metadata, incomplete older reports, and retained-history limits", async () => {
   open();
   expect(
@@ -168,6 +221,12 @@ it("requires preview, maintenance, and explicit confirmation before applying ser
   const apply = await screen.findByRole("button", {
     name: "Apply 1 reviewed update",
   });
+  expect(
+    screen.getByText(/Preview complete. No flows have changed/),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("list", { name: "Update results" }),
+  ).toHaveTextContent("Customer support");
   expect(apply).toBeDisabled();
   await userEvent.click(
     screen.getByRole("checkbox", { name: /I reviewed this 1 update/ }),
@@ -198,6 +257,9 @@ it("requires preview, maintenance, and explicit confirmation before applying ser
   );
   expect(
     await screen.findByText("Protected recovery version recovery-1"),
+  ).toBeVisible();
+  expect(
+    screen.getByText(/Update request complete. Review each result/),
   ).toBeVisible();
 });
 

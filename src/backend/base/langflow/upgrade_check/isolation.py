@@ -28,6 +28,7 @@ _RUNTIME_ENVIRONMENT = frozenset(
         "LANG",
         "LC_ALL",
         "LC_CTYPE",
+        "__CF_USER_TEXT_ENCODING",
         "TZ",
         "PYTHONUTF8",
         "PYTHONIOENCODING",

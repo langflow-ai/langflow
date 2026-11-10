@@ -52,6 +52,8 @@ The test reads the releases from git tags. If a tag is missing, the test skips l
 git fetch origin --force tag v1.12.6 tag v1.13.0
 ```
 
+The test also enforces `scripts/ci/historical_compatibility_limitations.json`, the same reviewed ledger used by release CI. Two MCP Tools fixtures retain their original `no_action` expectations while static discovery conservatively reports `outdated_breaking`. Each exception requires the exact saved fixture digest, target contract digest, and expected and observed statuses. A new difference or an exception that no longer applies fails the test. The test records these reviewed limitations as a JUnit property and runs with the rest of the suite.
+
 ## `hard_flows/<release>/`
 
 Flows built and exported on that release, for cases the starter flows do not cover. Add a flow, then regenerate `expected_statuses.json`.

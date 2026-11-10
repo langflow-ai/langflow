@@ -98,6 +98,19 @@ async def test_all_endpoints_require_admin_authorization(client, logged_in_heade
         assert (await client.post(URL, content=FIXTURE.read_bytes(), headers=headers)).status_code in {401, 403}
 
 
+async def test_export_keeps_admin_authorization_during_maintenance(client, logged_in_headers, admin_headers):
+    imported = await client.post(URL, content=FIXTURE.read_bytes(), headers=admin_headers)
+    report_id = imported.json()["id"]
+    enabled = await client.post("/api/v1/maintenance/on", json={}, headers=admin_headers)
+    assert enabled.status_code == 200
+    for path in (URL, f"{URL}/{report_id}", f"{URL}/{report_id}/export", f"{URL}/{report_id}/repairs"):
+        response = await client.get(path, headers=logged_in_headers)
+        assert response.status_code == 403, response.text
+    exported = await client.get(f"{URL}/{report_id}/export", headers=admin_headers)
+    assert exported.status_code == 200
+    assert exported.content == FIXTURE.read_bytes()
+
+
 @pytest.mark.parametrize(
     "corruption", ["version", "identity", "dialect", "count", "timezone", "duplicate", "non_object"]
 )

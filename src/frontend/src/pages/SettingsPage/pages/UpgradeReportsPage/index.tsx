@@ -58,6 +58,27 @@ function UpgradeReports() {
         </p>
       </div>
       <section
+        aria-labelledby="upgrade-workflow-title"
+        className="space-y-3 rounded border p-4"
+      >
+        <h3 id="upgrade-workflow-title" className="font-medium">
+          {t("settings.upgrade.workflowTitle")}
+        </h3>
+        <ol className="list-decimal space-y-2 pl-5 text-sm">
+          <li>{t("settings.upgrade.workflowAssess")}</li>
+          <li>{t("settings.upgrade.workflowReview")}</li>
+          <li>{t("settings.upgrade.workflowRepair")}</li>
+        </ol>
+        <p className="text-sm">{t("settings.upgrade.commandHelp")}</p>
+        <pre className="whitespace-pre-wrap break-all rounded bg-muted p-3 text-sm">
+          <code>
+            {
+              "langflow upgrade-check --database-url <source-database-url> --output upgrade-report.json"
+            }
+          </code>
+        </pre>
+      </section>
+      <section
         aria-labelledby="upgrade-import-title"
         className="space-y-3 rounded border p-4"
       >
@@ -68,9 +89,12 @@ function UpgradeReports() {
           {t("settings.upgrade.file")}
           <input
             type="file"
+            aria-describedby="upgrade-import-help upgrade-import-feedback"
+            aria-invalid={fileError || imported.isError}
             accept="application/json,.json"
             className="min-w-0 max-w-full"
             onChange={(event) => {
+              imported.reset();
               const chosen = event.target.files?.[0] ?? null;
               setFileError(Boolean(chosen && chosen.size > 20 * 1024 * 1024));
               setFile(
@@ -79,7 +103,7 @@ function UpgradeReports() {
             }}
           />
         </label>
-        <p className="text-sm text-muted-foreground">
+        <p id="upgrade-import-help" className="text-sm text-muted-foreground">
           {t("settings.upgrade.importHelp")}
         </p>
         <Button
@@ -89,19 +113,24 @@ function UpgradeReports() {
         >
           {t("settings.upgrade.import")}
         </Button>
-        {(fileError || imported.isError) && (
-          <p role="alert">
-            {t(
-              imported.error?.response?.data?.detail?.code ===
-                "unsupported_upgrade_report_format"
-                ? "settings.upgrade.unsupportedFormat"
-                : "settings.upgrade.importError",
-            )}
-          </p>
-        )}
-        {imported.isPending && (
-          <p role="status">{t("settings.upgrade.importing")}</p>
-        )}
+        <div id="upgrade-import-feedback">
+          {(fileError || imported.isError) && (
+            <p role="alert">
+              {t(
+                imported.error?.response?.data?.detail?.code ===
+                  "unsupported_upgrade_report_format"
+                  ? "settings.upgrade.unsupportedFormat"
+                  : "settings.upgrade.importError",
+              )}
+            </p>
+          )}
+          {imported.isPending && (
+            <p role="status">{t("settings.upgrade.importing")}</p>
+          )}
+          {imported.isSuccess && !imported.isPending && !fileError && (
+            <p role="status">{t("settings.upgrade.importSuccess")}</p>
+          )}
+        </div>
       </section>
       <section aria-labelledby="upgrade-history-title" className="space-y-3">
         <h3 id="upgrade-history-title" className="font-medium">

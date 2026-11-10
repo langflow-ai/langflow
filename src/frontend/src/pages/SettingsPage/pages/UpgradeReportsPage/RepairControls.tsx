@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import {
   type RepairPreview,
   type RepairResult,
+  type ReportFlow,
   useApplyUpgradeRepair,
   useGetUpgradeRepairOutcomes,
   usePreviewUpgradeRepair,
@@ -15,9 +16,11 @@ import { repairReasonKey } from "./reasons";
 export default function RepairControls({
   reportId,
   selected,
+  flows,
 }: {
   reportId: string;
   selected: Set<string>;
+  flows: ReportFlow[];
 }) {
   const { t, i18n } = useTranslation();
   const maintenance = useUpgradeMaintenance();
@@ -30,12 +33,14 @@ export default function RepairControls({
   });
   const [result, setResult] = useState<RepairPreview | null>(null);
   const [confirmed, setConfirmed] = useState(false);
+  const [applied, setApplied] = useState(false);
   const selectionKey = [...selected].sort().join(",");
   const latestSelection = useRef(selectionKey);
   latestSelection.current = selectionKey;
   useEffect(() => {
     setResult(null);
     setConfirmed(false);
+    setApplied(false);
   }, [selectionKey, reportId]);
   const ready =
     result?.results.filter(
@@ -63,6 +68,7 @@ export default function RepairControls({
         disabled={!selected.size || busy}
         onClick={() => {
           setConfirmed(false);
+          setApplied(false);
           setResult(null);
           preview.mutate(
             { flow_ids: [...selected], report_id: reportId },
@@ -88,6 +94,13 @@ export default function RepairControls({
       {busy && <p role="status">{t("settings.upgrade.repairBusy")}</p>}
       {result && (
         <>
+          <p role="status">
+            {t(
+              applied
+                ? "settings.upgrade.applyComplete"
+                : "settings.upgrade.previewComplete",
+            )}
+          </p>
           <dl className="text-sm">
             <dt>{t("settings.upgrade.target")}</dt>
             <dd>{result.target_version ?? t("settings.upgrade.unknown")}</dd>
@@ -101,8 +114,9 @@ export default function RepairControls({
             {result.results.map((item) => (
               <li key={item.flow_id} className="break-all">
                 <p>
-                  {item.flow_id} ·{" "}
-                  {t(`settings.upgrade.repairStatus.${item.status}`)}
+                  {flows.find((flow) => flow.id === item.flow_id)?.name ??
+                    item.flow_id}{" "}
+                  · {t(`settings.upgrade.repairStatus.${item.status}`)}
                 </p>
                 {item.reason_codes.length > 0 && (
                   <ul>
@@ -149,6 +163,7 @@ export default function RepairControls({
                       onSuccess: (response) => {
                         setResult(response);
                         setConfirmed(false);
+                        setApplied(true);
                       },
                     },
                   );

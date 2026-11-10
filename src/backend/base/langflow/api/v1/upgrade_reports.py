@@ -104,8 +104,13 @@ async def detail(report_id: UUID, _admin: Superuser, session: DbSessionReadOnly,
     return ReportDetail(**entry(row).model_dump(), document=json.loads(row.document_json))
 
 
-@router.get("/{report_id}/export", dependencies=[Depends(changes_the_instance)])
-async def export(report_id: UUID, admin: Superuser, session: DbSessionReadOnly) -> Response:
+@router.get("/{report_id}/export")
+async def export(
+    report_id: UUID,
+    admin: Superuser,
+    session: DbSessionReadOnly,
+    _changes: Annotated[None, Depends(changes_the_instance)],
+) -> Response:
     row = await read_row(session, report_id)
     await audit_decision(
         user_id=admin.id, action="upgrade-report:export", obj=f"upgrade-report:{row.id}", result="allow"

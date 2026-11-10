@@ -40,8 +40,8 @@ members = [
     "lfx-azure",
     "lfx-bundles",
     "lfx-cohere",
-    "lfx-confluent",
     "lfx-confluence",
+    "lfx-confluent",
     "lfx-datastax",
     "lfx-docling",
     "lfx-duckduckgo",
@@ -9055,7 +9055,7 @@ pinecone = [
     { name = "langchain-pinecone", marker = "python_full_version < '3.14'" },
 ]
 postgresql = [
-    { name = "sqlalchemy", extra = ["postgresql-psycopg", "postgresql-psycopg2binary"] },
+    { name = "sqlalchemy", extra = ["postgresql-psycopg2binary", "postgresql-psycopgbinary"] },
 ]
 pyarrow = [
     { name = "pyarrow" },
@@ -9398,8 +9398,8 @@ requires-dist = [
     { name = "spider-client", specifier = ">=0.0.27,<1.0.0" },
     { name = "spider-client", marker = "extra == 'spider'", specifier = ">=0.0.27,<1.0.0" },
     { name = "sqlalchemy", extras = ["aiosqlite"], specifier = ">=2.0.38,<3.0.0" },
-    { name = "sqlalchemy", extras = ["postgresql-psycopg"], marker = "extra == 'postgresql'", specifier = ">=2.0.38,<3.0.0" },
     { name = "sqlalchemy", extras = ["postgresql-psycopg2binary"], marker = "extra == 'postgresql'", specifier = ">=2.0.38,<3.0.0" },
+    { name = "sqlalchemy", extras = ["postgresql-psycopgbinary"], marker = "extra == 'postgresql'", specifier = ">=2.0.38,<3.0.0" },
     { name = "sqlmodel", specifier = "~=0.0.46" },
     { name = "sseclient-py", marker = "extra == 'sseclient'", specifier = "==1.8.0" },
     { name = "starlette", specifier = ">=1.5.0" },
@@ -10677,6 +10677,21 @@ requires-dist = [
 ]
 
 [[package]]
+name = "lfx-confluence"
+version = "0.1.0"
+source = { editable = "src/bundles/confluence" }
+dependencies = [
+    { name = "httpx" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.27,<1" },
+    { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
 name = "lfx-confluent"
 version = "0.3.1"
 source = { editable = "src/bundles/confluent" }
@@ -10696,21 +10711,6 @@ requires-dist = [
     { name = "pyarrow", marker = "python_full_version < '3.11'", specifier = ">=23.0.1,<24.0.0" },
     { name = "pyarrow", marker = "python_full_version >= '3.11'", specifier = ">=26.0.1,<27.0.0" },
     { name = "pyiceberg", specifier = ">=0.10,<1" },
-]
-
-[[package]]
-name = "lfx-confluence"
-version = "0.1.0"
-source = { editable = "src/bundles/confluence" }
-dependencies = [
-    { name = "httpx" },
-    { name = "lfx" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "httpx", specifier = ">=0.27,<1" },
-    { name = "lfx", editable = "src/lfx" },
 ]
 
 [[package]]
@@ -20405,13 +20405,13 @@ aiosqlite = [
     { name = "greenlet" },
     { name = "typing-extensions" },
 ]
-postgresql-psycopg = [
-    { name = "psycopg", version = "3.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.15'" },
-    { name = "psycopg", version = "3.3.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.15'" },
-]
 postgresql-psycopg2binary = [
     { name = "psycopg2-binary", version = "2.9.12", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.15'" },
     { name = "psycopg2-binary", version = "2.9.13", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.15'" },
+]
+postgresql-psycopgbinary = [
+    { name = "psycopg", version = "3.3.4", source = { registry = "https://pypi.org/simple" }, extra = ["binary"], marker = "python_full_version < '3.15'" },
+    { name = "psycopg", version = "3.3.6", source = { registry = "https://pypi.org/simple" }, extra = ["binary"], marker = "python_full_version >= '3.15'" },
 ]
 
 [[package]]

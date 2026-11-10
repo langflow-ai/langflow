@@ -78,6 +78,28 @@ async def test_editor_update_keeps_prompt_variables_and_values(
     }
 
 
+async def test_editor_update_keeps_connected_variables_when_saved_prompt_text_is_empty(
+    client: AsyncClient, logged_in_headers: dict
+):
+    path = Path(__file__).parents[5] / "lfx/tests/data/component_compat/hard_flows/v1.13.0/prompt_variables.json"
+    flow = json.loads(path.read_text(encoding="utf-8"))
+    saved = next(node for node in flow["data"]["nodes"] if node["id"] == "Prompt Template-ZPhy9")["data"]["node"]
+    assert saved["template"]["template"]["value"] == ""
+    assert saved["custom_fields"]["template"] == ["question", "context"]
+    code = Path(inspect.getsourcefile(PromptComponent)).read_text(encoding="utf-8")
+
+    response = await client.post(
+        "api/v1/custom_component", json={"code": code, "frontend_node": saved}, headers=logged_in_headers
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    body = response.json()
+    assert body["warnings"] == []
+    assert body["data"]["custom_fields"]["template"] == ["question", "context"]
+    for name in ("question", "context"):
+        assert body["data"]["template"][name] == saved["template"][name]
+
+
 @pytest.mark.parametrize(
     "flow_path",
     [

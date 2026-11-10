@@ -761,6 +761,39 @@ def _saved_generated_fields(component: Component, frontend_node: dict, saved_nod
     ]
 
 
+def _restore_empty_prompt_variables(component: Component, frontend_node: dict, saved_node: dict) -> None:
+    if type(component).__name__ != "PromptComponent":
+        return
+    template = frontend_node.get("template", {})
+    if template.get("template", {}).get("value") != "":
+        return
+    saved_custom_fields = saved_node.get("custom_fields")
+    if not isinstance(saved_custom_fields, dict):
+        return
+    names = saved_custom_fields.get("template", [])
+    if not isinstance(names, list):
+        return
+    from lfx.base.prompts.api_utils import add_new_variables_to_template, validate_prompt
+
+    preserved = []
+    for name in names:
+        if (
+            not isinstance(name, str)
+            or name in template
+            or not isinstance(saved_node.get("template", {}).get(name), dict)
+        ):
+            continue
+        try:
+            if validate_prompt("{" + name + "}") != [name]:
+                continue
+        except ValueError:
+            continue
+        preserved.append(name)
+    custom_fields = frontend_node.setdefault("custom_fields", {})
+    custom_fields.setdefault("template", [])
+    add_new_variables_to_template(preserved, custom_fields, template, "template")
+
+
 def _raise_rebuild_policy_error(error: Exception) -> None:
     # Component hooks may wrap policy denials. Keep the original refusal visible to the caller.
     seen: set[int] = set()
@@ -901,6 +934,7 @@ async def update_rebuilt_node(
     if saved_node is not None:
         frontend_node = await component_instance.update_frontend_node(frontend_node, saved_node)
         if isinstance(component_instance, Component):
+            _restore_empty_prompt_variables(component_instance, frontend_node, saved_node)
             refresh_fields, refresh_failed = await _replay_saved_refreshes(
                 component_instance, frontend_node, saved_node
             )

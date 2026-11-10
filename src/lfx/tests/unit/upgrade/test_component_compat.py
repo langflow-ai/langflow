@@ -154,7 +154,7 @@ def _retired_bundle_templates() -> dict:
     }
 
 
-def test_source_release_statuses():
+def test_source_release_statuses(monkeypatch, record_property):
     """Every node saved on a supported source release keeps the result recorded for it.
 
     The result is ``no_action`` for ok and outdated_safe, otherwise the status itself.
@@ -170,21 +170,18 @@ def test_source_release_statuses():
         return
 
     expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
-    changed = [
-        f"{tag} {source} {key}: {expected.get(tag, {}).get(source, {}).get(key)} -> {status}"
-        for tag, sources in actual.items()
-        for source, statuses in sources.items()
-        for key, status in statuses.items()
-        if expected.get(tag, {}).get(source, {}).get(key) != status
-    ]
-    changed += [
-        f"{tag} {source} {key}: {status} -> missing"
-        for tag, sources in expected.items()
-        for source, statuses in sources.items()
-        for key, status in statuses.items()
-        if key not in actual.get(tag, {}).get(source, {})
-    ]
-    assert not changed, "Results changed. If intended, rerun with UPDATE_COMPAT_EXPECTED=1:\n" + "\n".join(changed)
+    ci_dir = DATA_DIR.parents[4] / "scripts" / "ci"
+    monkeypatch.syspath_prepend(str(ci_dir))
+    from historical_compatibility_gate import check_pins
+
+    messages = check_pins(
+        expected,
+        actual,
+        json.loads((ci_dir / "historical_compatibility_limitations.json").read_text(encoding="utf-8")),
+        DATA_DIR / "hard_flows",
+        lookup,
+    )
+    record_property("reviewed_limitations", messages)
 
 
 @cache

@@ -82,6 +82,12 @@ def test_clean_source_streams_every_flow_then_the_report(tmp_path):
     report = events[-1]["report"]
     assert json.loads(output.read_text()) == report
     assert report["format_version"] == 1
+    assert report["inputs"] == {"output": str(output.resolve()), "json": True}
+    assert report["network_policy"] == {
+        "component_callbacks": "blocked_by_python_audit_events",
+        "local_system_metadata_probes": "allowlisted",
+        "source_connections": "explicit_read_only_databases",
+    }
     assert report["source"]["identity"]["kind"] == "sqlite"
     assert report["source"]["identity"]["locator"] == {"path": str(database.resolve())}
     assert {key: value for key, value in report["source"].items() if key != "identity"} == {
@@ -97,7 +103,9 @@ def test_clean_source_streams_every_flow_then_the_report(tmp_path):
         "catalog_rules": {"from": "policy_bundle_active", "blocked_component_keys": [], "blocked_template_keys": []},
     }
     assert report["summary"]["flows"] == {"ok": 3, "warn": 0, "fail": 0}
-    assert (report["flows"], report["errors"]) == ([], [])
+    assert len(report["flows"]) == 3
+    assert report["errors"] == []
+    assert all(flow["usage"]["serving"]["history"] == "unavailable" for flow in report["flows"])
 
 
 def test_check_reads_nothing_of_the_server_and_writes_nowhere(tmp_path):

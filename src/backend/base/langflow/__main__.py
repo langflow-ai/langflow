@@ -1766,9 +1766,11 @@ def check_integrity(
 
 async def _check_integrity(*, as_json: bool = False) -> bool:
     from langflow.cli.integrity import check_instance, open_instance
+    from langflow.services.database.service import readonly_database_connections
 
     open_instance()
-    report = await check_instance(on_check=partial(_echo_check, width=16, as_json=as_json))
+    with readonly_database_connections():
+        report = await check_instance(on_check=partial(_echo_check, width=16, as_json=as_json))
     if as_json:
         _echo_json_report(report)
     return report.ok
@@ -1842,14 +1844,16 @@ async def _migration_preflight(
 ) -> bool:
     from langflow.cli.integrity import open_instance
     from langflow.cli.migration_preflight import run_preflight
+    from langflow.services.database.service import readonly_database_connections
 
     open_instance()
-    report = await run_preflight(
-        target_revision=target_revision,
-        target_version=target_version,
-        target_secret_key=target_secret_key,
-        on_check=partial(_echo_check, width=24, as_json=as_json),
-    )
+    with readonly_database_connections():
+        report = await run_preflight(
+            target_revision=target_revision,
+            target_version=target_version,
+            target_secret_key=target_secret_key,
+            on_check=partial(_echo_check, width=24, as_json=as_json),
+        )
     if as_json:
         _echo_json_report(report)
     return report.ok
@@ -1864,6 +1868,11 @@ def upgrade_check(
         ...,
         help="URL of the database the server to upgrade uses, such as sqlite:////app/langflow/langflow.db or "
         "postgresql://user:password@host:5432/langflow. It is only read.",  # pragma: allowlist secret
+    ),
+    serving_database_url: str | None = typer.Option(
+        None,
+        help="Optional read-only Serving database URL. Its job.flow_id must preserve the Editor flow ID. "
+        "No new Serving API is required. Unavailable history stays unknown.",
     ),
     components_path: list[str] = typer.Option(
         [],
@@ -1910,6 +1919,7 @@ def upgrade_check(
 
     options = {
         "database_url": database_url,
+        "serving_database_url": serving_database_url,
         "settings": {
             "allow_custom_components": allow_custom_components,
             "substitute_outdated_component_code": substitute_outdated_component_code,

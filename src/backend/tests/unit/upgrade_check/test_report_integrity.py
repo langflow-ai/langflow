@@ -313,6 +313,7 @@ def test_interrupted_cli_reaps_a_child_that_ignores_termination(monkeypatch):
         with pytest.raises(KeyboardInterrupt):
             upgrade_check(
                 database_url="sqlite:////unused.db",
+                serving_database_url=None,
                 components_path=[],
                 allow_custom_components=True,
                 substitute_outdated_component_code=True,

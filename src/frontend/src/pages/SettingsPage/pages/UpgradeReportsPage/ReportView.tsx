@@ -19,6 +19,15 @@ export default function ReportView({ report }: { report: ReportDetail }) {
     document.summary.flows.ok +
     document.summary.flows.warn +
     document.summary.flows.fail;
+  const incomplete = document.flows.length < total;
+  const assessment =
+    document.errors.length > 0 || incomplete
+      ? "incomplete"
+      : document.summary.flows.fail > 0
+        ? "blocked"
+        : document.summary.flows.warn > 0
+          ? "review"
+          : "clear";
   const ageHours = Math.floor(
     (Date.now() - Date.parse(document.generated_at)) / 3600000,
   );
@@ -55,6 +64,14 @@ export default function ReportView({ report }: { report: ReportDetail }) {
       {exportReport.isError && (
         <p role="alert">{t("settings.upgrade.exportError")}</p>
       )}
+      <div className="space-y-2 rounded border p-4" role="note">
+        <h4 className="font-medium">
+          {t(`settings.upgrade.assessment.${assessment}`)}
+        </h4>
+        <p className="text-sm">
+          {t(`settings.upgrade.nextStep.${assessment}`)}
+        </p>
+      </div>
       <dl className="grid min-w-0 grid-cols-1 gap-3 rounded border p-4 text-sm [overflow-wrap:anywhere] sm:grid-cols-2">
         <div>
           <dt className="text-muted-foreground">
@@ -98,7 +115,7 @@ export default function ReportView({ report }: { report: ReportDetail }) {
         </div>
       </dl>
       <p role="note">{t("settings.upgrade.reportWarning")}</p>
-      {document.flows.length < total && (
+      {incomplete && (
         <p role="note">
           {t("settings.upgrade.partialReport", {
             shown: document.flows.length,
@@ -106,6 +123,21 @@ export default function ReportView({ report }: { report: ReportDetail }) {
           })}
         </p>
       )}
+      <details>
+        <summary className="cursor-pointer">
+          {t("settings.upgrade.resultHelp")}
+        </summary>
+        <dl className="mt-2 space-y-2 text-sm">
+          {["ok", "warn", "fail", "could_not_verify"].map((status) => (
+            <div key={status}>
+              <dt className="font-medium">
+                {t(`settings.upgrade.status.${status}`)}
+              </dt>
+              <dd>{t(`settings.upgrade.resultMeaning.${status}`)}</dd>
+            </div>
+          ))}
+        </dl>
+      </details>
       {document.errors.length > 0 && (
         <section aria-labelledby="upgrade-errors-title">
           <h4 id="upgrade-errors-title" className="font-medium">
@@ -152,7 +184,11 @@ export default function ReportView({ report }: { report: ReportDetail }) {
           })
         }
       />
-      <RepairControls reportId={report.id} selected={selected} />
+      <RepairControls
+        reportId={report.id}
+        selected={selected}
+        flows={document.flows}
+      />
     </section>
   );
 }
