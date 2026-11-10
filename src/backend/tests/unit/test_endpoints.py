@@ -1353,6 +1353,43 @@ async def test_user_can_run_own_flow_advanced_endpoint(client: AsyncClient, simp
     assert "outputs" in json_response
 
 
+async def test_advanced_endpoint_accepts_a_new_caller_session_id_like_run(
+    client: AsyncClient, simple_api_test, created_api_key
+):
+    """A session_id the caller picks works on the advanced endpoint as on /run."""
+    from langflow.services.database.models.message.model import MessageTable
+    from lfx.services.deps import session_scope
+    from sqlmodel import select
+
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = simple_api_test["id"]
+
+    simple = await client.post(
+        f"/api/v1/run/{flow_id}",
+        headers=headers,
+        json={"input_value": "hello", "session_id": "my-session-1"},
+    )
+    advanced = await client.post(
+        f"/api/v1/run/advanced/{flow_id}",
+        headers=headers,
+        json={"inputs": [{"input_value": "from advanced"}], "session_id": "my-session-1"},
+    )
+
+    assert simple.status_code == status.HTTP_200_OK, simple.text
+    assert advanced.status_code == status.HTTP_200_OK, advanced.text
+    assert advanced.json()["session_id"] == "my-session-1"
+    assert advanced.json()["outputs"]
+    async with session_scope() as db:
+        stored = (
+            await db.exec(
+                select(MessageTable.text).where(
+                    MessageTable.flow_id == UUID(flow_id), MessageTable.session_id == "my-session-1"
+                )
+            )
+        ).all()
+    assert "from advanced" in stored
+
+
 @pytest.mark.benchmark
 async def test_user_cannot_run_other_users_flow_advanced_endpoint(
     client: AsyncClient, simple_api_test, user_two_api_key
