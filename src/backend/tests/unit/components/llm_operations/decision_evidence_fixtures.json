@@ -97,7 +97,7 @@
     "activated_branch": "yes_result",
     "applied_threshold": 0.7,
     "error_action": "Route to Else",
-    "kind": "boolean",
+    "kind": "noul",
     "minimum_probability": 0.7,
     "options": [
       {
@@ -113,7 +113,7 @@
     ],
     "reason": "accepted",
     "result": {
-      "kind": "boolean",
+      "kind": "noul",
       "model": "jev-1.13.0",
       "model_source": "response",
       "probability_true": 0.88,
@@ -137,7 +137,7 @@
     "activated_branch": "default_result",
     "applied_threshold": 0.7,
     "error_action": "Route to Else",
-    "kind": "boolean",
+    "kind": "noul",
     "minimum_probability": 0.7,
     "options": [
       {
@@ -153,7 +153,7 @@
     ],
     "reason": "below_minimum_probability",
     "result": {
-      "kind": "boolean",
+      "kind": "noul",
       "model": "jev-1.13.0",
       "model_source": "response",
       "probability_true": 0.55,

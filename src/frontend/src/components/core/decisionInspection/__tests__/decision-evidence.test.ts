@@ -1,11 +1,15 @@
-import { findDecisionEvidence } from "../decision-evidence";
+import {
+  findAllDecisionEvidence,
+  findDecisionEvidence,
+} from "../decision-evidence";
 import { describeDecisionOutcome } from "../decision-outcome";
 import {
   acceptedChoice,
   belowThreshold,
-  booleanAccepted,
+  decisionModelBatch,
   decisionModelScore,
   malformedToElse,
+  noulAccepted,
   refusedToElse,
   scoreAccepted,
   tied,
@@ -74,8 +78,8 @@ describe("findDecisionEvidence", () => {
     expect(findDecisionEvidence(spanOutputs)?.policy?.reason).toBe("accepted");
   });
 
-  it("uses the router's Boolean route probabilities and keeps P(true)", () => {
-    const evidence = findDecisionEvidence(booleanAccepted);
+  it("uses the router's Noul route probabilities and keeps P(true)", () => {
+    const evidence = findDecisionEvidence(noulAccepted);
 
     expect(evidence?.probabilityTrue).toBe(0.98);
     expect(evidence?.probabilities).toEqual({
@@ -83,6 +87,17 @@ describe("findDecisionEvidence", () => {
       no_result: 0.02,
     });
     expect(evidence?.confidence).toBeNull();
+  });
+
+  it("reads evidence from component code saved before the Noul rename", () => {
+    const evidence = findDecisionEvidence({
+      ...noulAccepted,
+      kind: "boolean",
+      result: { ...noulAccepted.result, kind: "boolean" },
+    });
+
+    expect(evidence?.kind).toBe("noul");
+    expect(evidence?.probabilityTrue).toBe(0.98);
   });
 
   it("reads a standalone Decision Model result with its question and levels", () => {
@@ -99,6 +114,22 @@ describe("findDecisionEvidence", () => {
       "medium",
       "high",
     ]);
+  });
+
+  it("pairs each answer of a batch with its own question", () => {
+    const evidence = findAllDecisionEvidence({ message: decisionModelBatch });
+
+    expect(evidence.map((e) => [e.name, e.kind, e.question, e.status])).toEqual(
+      [
+        ["team", "choice", "Which team should take this?", "success"],
+        ["urgent", "noul", "Is this urgent?", "refusal"],
+      ],
+    );
+    expect(evidence[0].candidates.map((c) => c.id)).toEqual([
+      "billing",
+      "support",
+    ]);
+    expect(evidence[0].probabilities).toEqual({ billing: 0.9, support: 0.1 });
   });
 
   it("marks a model the provider didn't report", () => {

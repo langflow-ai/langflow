@@ -23,6 +23,7 @@ import {
 } from "@xyflow/react";
 import { cloneDeep } from "lodash";
 import ShortUniqueId from "short-unique-id";
+import { isCanvasVisible } from "@/CustomNodes/helpers/parameter-filtering";
 import {
   getLeftHandleId,
   getRightHandleId,
@@ -31,6 +32,7 @@ import { customDownloadNodeJson } from "@/customization/utils/custom-download-js
 import { customDownloadFlow } from "@/customization/utils/custom-reactFlowUtils";
 import useFlowStore from "@/stores/flowStore";
 import getFieldTitle from "../CustomNodes/utils/get-field-title";
+import type { DecisionQuestion } from "../components/core/parameterRenderComponent/components/decision-questions/decision-questions-modal";
 import {
   INPUT_TYPES,
   IS_MAC,
@@ -382,6 +384,84 @@ const isAdvancedField = (data: APIClassType, fieldName: string): boolean => {
   return field && "advanced" in field && field.advanced === true;
 };
 
+export type QuestionText = "question" | "yes_description" | "no_description";
+
+// The hidden node fields a question's texts are connected through: its question text's (the field
+// it names, or <prefix><id>) and, on a Noul migrated from the old fields, What Yes / No Means'.
+export const questionConnections = (
+  question: DecisionQuestion | undefined,
+  prefix?: string,
+): { text: QuestionText; fieldName: string }[] =>
+  (
+    [
+      [
+        "question",
+        question?.input_field ??
+          (prefix && question?.id ? `${prefix}${question.id}` : undefined),
+      ],
+      ...(question?.kind === "Noul"
+        ? [
+            ["yes_description", question.yes_input_field],
+            ["no_description", question.no_input_field],
+          ]
+        : []),
+    ] as [QuestionText, string | undefined][]
+  ).flatMap(([text, fieldName]) => (fieldName ? [{ text, fieldName }] : []));
+
+// The fields whose edges drive a node field: the field itself and, for a question list, its
+// questions' hidden connection fields.
+export const fieldConnectionNames = (
+  name: string,
+  field: InputFieldType | undefined,
+): string[] => [
+  name,
+  ...(field?.type === "decision_questions" && Array.isArray(field.value)
+    ? field.value.flatMap((question) =>
+        questionConnections(question, field.connection_prefix).map(
+          ({ fieldName }) => fieldName,
+        ),
+      )
+    : []),
+];
+
+// A shown question list draws its questions' connection handles on its own rows, so those
+// fields stay hidden as rows but keep their edges.
+const isDrawnByQuestionList = (
+  template: APITemplateType,
+  fieldName: string,
+): boolean =>
+  Object.values(template).some(
+    (field) =>
+      field?.type === "decision_questions" &&
+      field.show &&
+      ((!!field.connection_prefix &&
+        fieldName.startsWith(field.connection_prefix)) ||
+        (Array.isArray(field.value) &&
+          field.value.some((question) =>
+            questionConnections(question, field.connection_prefix).some(
+              (connection) => connection.fieldName === fieldName,
+            ),
+          ))),
+  );
+
+// The connection fields a question list on the canvas draws handles for, with each question's
+// number. A list taken off the canvas draws none, minimized or not.
+export const questionConnectionFields = (
+  template: APITemplateType,
+  isToolMode = false,
+): { text: QuestionText; fieldName: string; number: number }[] =>
+  Object.values(template).flatMap((field) =>
+    field?.type === "decision_questions" &&
+    isCanvasVisible(field, isToolMode) &&
+    Array.isArray(field.value)
+      ? field.value.flatMap((question, index) =>
+          questionConnections(question, field.connection_prefix)
+            .filter(({ fieldName }) => template[fieldName])
+            .map((connection) => ({ ...connection, number: index + 1 })),
+        )
+      : [],
+  );
+
 export function filterHiddenFieldsEdges(
   edge: EdgeType,
   newEdges: EdgeType[],
@@ -396,7 +476,10 @@ export function filterHiddenFieldsEdges(
     const nodeTemplates = targetNode.data.node!.template;
 
     // Only check the specific field the edge is connected to
-    if (nodeTemplates[fieldName]?.show === false) {
+    if (
+      nodeTemplates[fieldName]?.show === false &&
+      !isDrawnByQuestionList(nodeTemplates, fieldName)
+    ) {
       const removed = newEdges.some((e) => e.id === edge.id);
       newEdges = newEdges.filter((e) => e.id !== edge.id);
       // Dropping a connection because its target field went hidden used

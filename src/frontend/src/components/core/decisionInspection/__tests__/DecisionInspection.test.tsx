@@ -5,10 +5,10 @@ import DecisionInspection from "../index";
 import {
   acceptedChoice,
   belowThreshold,
-  booleanAccepted,
-  decisionModelBooleanRefusal,
+  decisionModelNoulRefusal,
   decisionModelScore,
   malformedToElse,
+  noulAccepted,
   refusedToElse,
   scoreAccepted,
   transportStopped,
@@ -61,8 +61,8 @@ describe("DecisionInspection", () => {
     );
   });
 
-  it("shows Boolean P(true) apart from the provider's confidence", () => {
-    renderEvidence(booleanAccepted);
+  it("shows Noul P(true) apart from the provider's confidence", () => {
+    renderEvidence(noulAccepted);
 
     expect(screen.getByTestId("decision-probability-true")).toHaveTextContent(
       "98%",
@@ -159,7 +159,7 @@ describe("DecisionInspection", () => {
   });
 
   it("renders supplied refusal text as text, never as markup", () => {
-    const { container } = renderEvidence(decisionModelBooleanRefusal);
+    const { container } = renderEvidence(decisionModelNoulRefusal);
 
     expect(container.querySelector("img")).toBeNull();
     expect(screen.getByTestId("decision-refusal")).toHaveTextContent(

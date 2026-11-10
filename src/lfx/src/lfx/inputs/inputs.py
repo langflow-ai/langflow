@@ -140,6 +140,26 @@ class DataDisplayInput(BaseInputMixin):
     button_icon: str = "Eye"
 
 
+class DecisionQuestionsInput(BaseInputMixin, MetadataTraceMixin):
+    """Decision questions the editor shows as cards, with Add question and Remove buttons.
+
+    Each item is ``{"id", "name", "kind", "question", "options", "levels", "yes_description",
+    "no_description"}``; ``kind`` is Choice, Boolean or Score, and ``options`` and ``levels`` are
+    rows of ``{"id", "label", "description"}``. Add question appends a copy of ``new_question``.
+
+    With ``connection_prefix``, each question's text can also be connected: the question whose ``id``
+    is X takes its connection through the hidden template field ``<connection_prefix>X``, or through
+    the field its ``input_field`` names, and the editor creates one for a new question by copying
+    ``<connection_prefix>1``. A Noul question's ``yes_input_field`` and ``no_input_field`` name the
+    fields its What Yes Means and What No Means are connected through.
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.DECISION_QUESTIONS
+    value: list[dict] = Field(default_factory=list)
+    new_question: dict = Field(default_factory=dict)
+    connection_prefix: str = ""
+
+
 class HandleInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
     """Represents an Input that has a Handle to a specific type (e.g. BaseLanguageModel, BaseRetriever, etc.).
 
@@ -1163,6 +1183,7 @@ InputTypes: TypeAlias = (
     | ActionPickerInput
     | DurationInput
     | DataDisplayInput
+    | DecisionQuestionsInput
 )
 
 InputTypesMap: dict[str, type[InputTypes]] = {t.__name__: t for t in get_args(InputTypes)}

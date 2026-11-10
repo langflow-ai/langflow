@@ -53,6 +53,7 @@ jest.mock("@/utils/utils", () => ({
 }));
 
 jest.mock("@/utils/reactflowUtils", () => ({
+  ...jest.requireActual("@/utils/reactflowUtils"),
   scapeJSONParse: (value: string) => JSON.parse(value),
 }));
 
@@ -316,6 +317,29 @@ describe("InspectionPanelParameterRow", () => {
         },
       ];
       renderWithProviders(<InspectionPanelParameterRow {...defaultProps} />);
+
+      const removeButton = screen.getByTestId("inspector-remove-test_field");
+      expect(removeButton).toBeDisabled();
+      await user.click(removeButton);
+      expect(mockHandleOnNewValue).not.toHaveBeenCalled();
+    });
+
+    it("disables Remove for a question list whose question is connected through its own field", async () => {
+      const user = userEvent.setup();
+      mockEdges = [
+        {
+          target: "test-node-123",
+          targetHandle: JSON.stringify({ fieldName: "question_input_1" }),
+        },
+      ];
+      const data = createMockData({
+        type: "decision_questions",
+        connection_prefix: "question_input_",
+        value: [{ id: "1", kind: "Choice", question: "" }],
+      });
+      renderWithProviders(
+        <InspectionPanelParameterRow {...defaultProps} data={data} />,
+      );
 
       const removeButton = screen.getByTestId("inspector-remove-test_field");
       expect(removeButton).toBeDisabled();

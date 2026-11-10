@@ -3,6 +3,7 @@ import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-va
 import CodeAreaComponent from "@/components/core/parameterRenderComponent/components/codeAreaComponent";
 import DataDisplayComponent from "@/components/core/parameterRenderComponent/components/dataDisplayComponent";
 import DBProviderInputComponent from "@/components/core/parameterRenderComponent/components/dbProviderInputComponent";
+import DecisionQuestionsComponent from "@/components/core/parameterRenderComponent/components/decision-questions/decision-questions";
 import ModelInputComponent from "@/components/core/parameterRenderComponent/components/modelInputComponent";
 import SliderComponent from "@/components/core/parameterRenderComponent/components/sliderComponent";
 import TableNodeComponent from "@/components/core/parameterRenderComponent/components/TableNodeComponent";
@@ -403,6 +404,16 @@ export function ParameterRenderComponent({
             buttonText={templateData?.button_text}
             buttonIcon={templateData?.button_icon}
             id={`data_display_${id}`}
+          />
+        );
+      case "decision_questions":
+        return (
+          <DecisionQuestionsComponent
+            {...baseInputProps}
+            id={`decision_questions_${id}`}
+            newQuestion={templateData?.new_question}
+            connectionPrefix={templateData?.connection_prefix}
+            fieldName={name}
           />
         );
       default:

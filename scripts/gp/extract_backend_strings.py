@@ -78,7 +78,8 @@ def iter_dynamic_input_strings(cls: type) -> Iterator[tuple[str, str]]:
         return
     constants = vars(sys.modules[cls.__module__])
     if component_key == "DecisionModel":
-        for display_name, info in constants["_TABLE"].values():
+        # Only a Decision Model that keeps its Options or Levels table on the node renames it by type.
+        for display_name, info in constants.get("_TABLE", {}).values():
             yield "inputs.candidates.display_name", display_name
             yield "inputs.candidates.info", info
     else:

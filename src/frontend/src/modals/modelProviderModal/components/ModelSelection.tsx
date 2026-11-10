@@ -24,17 +24,19 @@ const CUSTOM_DEPLOYMENT_PROVIDERS = new Set(["Azure AI Foundry"]);
 
 /**
  * Providers that render their own useful UI when no catalog models exist.
- * They serve only language and embedding models, so a decision-only view
- * gets the generic empty state instead.
+ * Custom deployments and Ollama serve only language and embedding models, so
+ * a decision-only view gets the generic empty state instead; OpenRouter's
+ * decision view offers its own add-a-model-ID control.
  */
 export const hasProviderOwnedEmptyState = (
   providerName: string | undefined,
   modelType: ModelTypeFilter,
 ): boolean =>
-  !!providerName &&
-  deploymentKindsOfFilter(modelType).length > 0 &&
-  (CUSTOM_DEPLOYMENT_PROVIDERS.has(providerName) ||
-    providerName.toLowerCase() === "ollama");
+  (providerName === "OpenRouter" && modelType === "decision") ||
+  (!!providerName &&
+    deploymentKindsOfFilter(modelType).length > 0 &&
+    (CUSTOM_DEPLOYMENT_PROVIDERS.has(providerName) ||
+      providerName.toLowerCase() === "ollama"));
 
 export interface ModelProviderSelectionProps extends ProviderScopeParams {
   availableModels: Model[];
@@ -280,13 +282,21 @@ const ModelSelection = ({
   };
 
   const visibleKinds = kindsOfFilter(modelType);
+  // OpenRouter model IDs are added only from the decision view, so a chat ID
+  // typed elsewhere is never saved as a decision model.
+  const addsOpenRouterDecisions =
+    providerName === "OpenRouter" && modelType === "decision";
   const visibleDeploymentTypes = useMemo(
-    () => deploymentKindsOfFilter(modelType),
-    [modelType],
+    () =>
+      addsOpenRouterDecisions
+        ? kindsOfFilter(modelType)
+        : deploymentKindsOfFilter(modelType),
+    [addsOpenRouterDecisions, modelType],
   );
   const supportsCustomDeployments =
     !!providerName &&
-    CUSTOM_DEPLOYMENT_PROVIDERS.has(providerName) &&
+    (CUSTOM_DEPLOYMENT_PROVIDERS.has(providerName) ||
+      addsOpenRouterDecisions) &&
     visibleDeploymentTypes.length > 0;
 
   // Merge enabled free-text deployments; typed API wins, legacy customs default to llm.
@@ -325,7 +335,7 @@ const ModelSelection = ({
             model_name: name,
             metadata: {
               model_type: deploymentType,
-              icon: "Azure",
+              icon: addsOpenRouterDecisions ? "OpenRouter" : "Azure",
             },
           });
         }
@@ -492,7 +502,10 @@ const ModelSelection = ({
   // decision view the generic one: discovery finds only chat and embedding
   // models.
   const awaitsCredentialDiscovery =
-    !!liveDiscovery && !isConfigured && !isOllama && modelType !== "decision";
+    !!liveDiscovery &&
+    !isConfigured &&
+    !isOllama &&
+    (modelType !== "decision" || addsOpenRouterDecisions);
   // Use the unfiltered list for the empty-state check so an
   // ollama-no-models warning still fires when the search field happens to be
   // populated.
@@ -505,13 +518,17 @@ const ModelSelection = ({
 
   const showSearchInput = supportsCustomDeployments || !noModelsAvailable;
 
-  const searchInputLabel = supportsCustomDeployments
-    ? t("modelProviders.searchOrAddDeployment", {
-        defaultValue: "Search or add a deployment name…",
+  const searchInputLabel = addsOpenRouterDecisions
+    ? t("modelProviders.searchOrAddModel", {
+        defaultValue: "Search or add a model ID…",
       })
-    : t("modelProviders.searchModels", {
-        defaultValue: "Search models…",
-      });
+    : supportsCustomDeployments
+      ? t("modelProviders.searchOrAddDeployment", {
+          defaultValue: "Search or add a deployment name…",
+        })
+      : t("modelProviders.searchModels", {
+          defaultValue: "Search models…",
+        });
 
   // A refusal won't change on retry: this user can't read the policy.
   const isAccessError = isAccessRefusal(enabledModelsError);
@@ -553,10 +570,15 @@ const ModelSelection = ({
           className="text-xs text-muted-foreground leading-relaxed"
           data-testid="custom-deployment-hint"
         >
-          {t("modelProviders.customDeploymentHint", {
-            defaultValue:
-              "Use your Azure AI Foundry deployment names from the portal (not catalog model IDs). Search or type a name to add one.",
-          })}
+          {addsOpenRouterDecisions
+            ? t("modelProviders.openRouterModelHint", {
+                defaultValue:
+                  "Choose a listed model or enter an OpenRouter decision model ID. OpenRouter determines which requests the model supports.",
+              })
+            : t("modelProviders.customDeploymentHint", {
+                defaultValue:
+                  "Use your Azure AI Foundry deployment names from the portal (not catalog model IDs). Search or type a name to add one.",
+              })}
         </p>
       ) : null}
       {showSearchInput && (
@@ -589,22 +611,27 @@ const ModelSelection = ({
               }}
             >
               <ForwardedIconComponent name="Plus" className="mr-2 h-4 w-4" />
-              {modelType === "all"
-                ? deploymentType === "llm"
-                  ? t("modelProviders.addLanguageDeployment", {
-                      name: trimmedModelQuery,
-                      defaultValue:
-                        'Add deployment "{{name}}" as language model',
-                    })
-                  : t("modelProviders.addEmbeddingDeployment", {
-                      name: trimmedModelQuery,
-                      defaultValue:
-                        'Add deployment "{{name}}" as embedding model',
-                    })
-                : t("modelProviders.addDeployment", {
+              {addsOpenRouterDecisions
+                ? t("modelProviders.addDecisionModel", {
                     name: trimmedModelQuery,
-                    defaultValue: 'Add deployment "{{name}}"',
-                  })}
+                    defaultValue: 'Add decision model "{{name}}"',
+                  })
+                : modelType === "all"
+                  ? deploymentType === "llm"
+                    ? t("modelProviders.addLanguageDeployment", {
+                        name: trimmedModelQuery,
+                        defaultValue:
+                          'Add deployment "{{name}}" as language model',
+                      })
+                    : t("modelProviders.addEmbeddingDeployment", {
+                        name: trimmedModelQuery,
+                        defaultValue:
+                          'Add deployment "{{name}}" as embedding model',
+                      })
+                  : t("modelProviders.addDeployment", {
+                      name: trimmedModelQuery,
+                      defaultValue: 'Add deployment "{{name}}"',
+                    })}
             </Button>
           ))}
         </div>

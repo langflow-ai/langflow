@@ -53,7 +53,7 @@ def test_the_starter_shows_the_components_help():
     fresh = DecisionModelComponent().to_frontend_node()["data"]["node"]
     node = _node(_data(), "DecisionModel")["data"]["node"]
     assert node["description"] == fresh["description"]
-    for field in ("kind", "context", "question", "candidates", "timeout"):
+    for field in ("context", "question_mode", "questions", "timeout"):
         assert node["template"][field]["info"] == fresh["template"][field]["info"], field
 
 

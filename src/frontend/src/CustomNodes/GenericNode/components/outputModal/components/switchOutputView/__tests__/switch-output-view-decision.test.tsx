@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import {
   acceptedChoice,
+  decisionModelBatch,
   transportStopped,
 } from "@/components/core/decisionInspection/__tests__/decision-fixtures";
 import SwitchOutputView from "../index";
@@ -60,6 +61,28 @@ describe("SwitchOutputView decision evidence", () => {
       panel.compareDocumentPosition(screen.getByTestId("json-output-view")) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+
+  it("shows one titled panel per question of a batch", () => {
+    mockFlowPool = {
+      "SmartRouter-1": [
+        {
+          data: {
+            outputs: {
+              result: { type: "object", message: decisionModelBatch },
+            },
+            logs: {},
+          },
+        },
+      ],
+    };
+
+    renderOutput("result");
+
+    const panels = screen.getAllByTestId("decision-inspection");
+    expect(
+      panels.map((panel) => panel.querySelector("h4")?.textContent),
+    ).toEqual(["Decision: team", "Decision: urgent"]);
   });
 
   it("falls back to the evidence log when the run stopped with an error", () => {
