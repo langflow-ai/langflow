@@ -77,6 +77,7 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.knowledge_bases.backends.base import (
+    METADATA_KEY_JOB_ID,
     BackendConfigurationError,
     BackendType,
     BaseVectorStoreBackend,
@@ -113,6 +114,51 @@ async def _drained_worker(function, *args, **kwargs):
         task.exception()
         raise asyncio.CancelledError
     return task.result()
+
+
+def _document_from_hit(
+    hit: Any,
+    *,
+    text_fields: list[str],
+    embedding_fields: list[str],
+    include_embeddings: bool,
+) -> IngestedDocument:
+    """Turn one search hit into a chunk, for both the LangChain and the flat ``_source`` layouts."""
+    source = hit.get("_source") if isinstance(hit, dict) else {}
+    if not isinstance(source, dict):
+        source = {}
+    content = next((source[field] for field in text_fields if source.get(field)), "")
+    metadata = source.get("metadata")
+    if not isinstance(metadata, dict):
+        # Keys that are never chunk metadata when it has to be rebuilt from a flat ``_source``.
+        non_metadata_keys = {*text_fields, "metadata", *embedding_fields}
+        metadata = {k: v for k, v in source.items() if k not in non_metadata_keys}
+    embedding: list[float] | None = None
+    if include_embeddings:
+        raw_vec = next((source[field] for field in embedding_fields if source.get(field) is not None), None)
+        if raw_vec is not None:
+            embedding = list(raw_vec)
+    return IngestedDocument(
+        content=str(content),
+        metadata=dict(metadata),
+        embedding=embedding,
+        id=hit.get("_id") if isinstance(hit, dict) else None,
+    )
+
+
+def _job_query(job_id: str) -> dict[str, Any]:
+    """Match exactly one job, whichever layout the index stores metadata in."""
+    # Not ``match``: an analyzed UUID splits at its hyphens and ``match`` accepts
+    # any one piece, so a job could pick up another job's chunks.
+    return {
+        "bool": {
+            "should": [
+                {"match_phrase": {METADATA_KEY_JOB_ID: job_id}},
+                {"match_phrase": {f"metadata.{METADATA_KEY_JOB_ID}": job_id}},
+            ],
+            "minimum_should_match": 1,
+        }
+    }
 
 
 def _is_missing_index(exc: Exception) -> bool:
@@ -777,32 +823,13 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             raise RuntimeError(msg) from exc
 
         index = self._os_index
-        vector_field = self._os_vector_field
-        text_field = self._os_text_field
-        # LangChain stores embeddings under its own default field for this
-        # backend (see ``LANGCHAIN_DEFAULT_VECTOR_FIELD``), so the on-disk field
-        # is ``vector_field`` regardless of what the KB's persisted config names
-        # (historically ``chunk_embedding``). Read the configured field first
-        # (honouring an explicit override on an externally-populated index) and
-        # fall back to LangChain's field so ``include_embeddings`` retrieval
-        # actually returns the stored vectors.
-        embedding_fields = [vector_field]
-        if LANGCHAIN_DEFAULT_VECTOR_FIELD not in embedding_fields:
-            embedding_fields.append(LANGCHAIN_DEFAULT_VECTOR_FIELD)
-        # Chunk text has the same split: LangChain writes and searches it under
-        # ``text`` whatever the config names, so fall back to that field too.
-        text_fields = [text_field]
-        if DEFAULT_TEXT_FIELD not in text_fields:
-            text_fields.append(DEFAULT_TEXT_FIELD)
+        text_fields, embedding_fields = self._stored_fields()
         # Skip the embedding column(s) in ``_source`` when the caller doesn't
         # need them — large embedding vectors dominate scroll payloads. When the
         # caller does, ask for ``_source`` explicitly: OpenSearch 3.8+ can strip
         # knn_vector fields from every response (the knn_default_excludes
         # processor) unless the request sets ``_source`` itself.
         source_params = {"_source": True} if include_embeddings else {"_source_excludes": list(embedding_fields)}
-        # Keys that are never chunk metadata when we have to reconstruct it from
-        # a flat ``_source`` (the non-LangChain layout fallback below).
-        non_metadata_keys = {*text_fields, "metadata", *embedding_fields}
 
         sentinel = object()
         batch_queue: sync_queue.Queue[Any] = sync_queue.Queue(maxsize=2)
@@ -833,27 +860,12 @@ class OpenSearchBackend(BaseVectorStoreBackend):
                     if cancel_event.is_set():
                         break
                     saw_hit = True
-                    source = hit.get("_source") if isinstance(hit, dict) else {}
-                    if not isinstance(source, dict):
-                        source = {}
-                    content = next((source[field] for field in text_fields if source.get(field)), "")
-                    metadata = source.get("metadata")
-                    if not isinstance(metadata, dict):
-                        metadata = {k: v for k, v in source.items() if k not in non_metadata_keys}
-                    embedding: list[float] | None = None
-                    if include_embeddings:
-                        raw_vec = next(
-                            (source[field] for field in embedding_fields if source.get(field) is not None),
-                            None,
-                        )
-                        if raw_vec is not None:
-                            embedding = list(raw_vec)
                     buf.append(
-                        IngestedDocument(
-                            content=str(content),
-                            metadata=dict(metadata),
-                            embedding=embedding,
-                            id=hit.get("_id") if isinstance(hit, dict) else None,
+                        _document_from_hit(
+                            hit,
+                            text_fields=text_fields,
+                            embedding_fields=embedding_fields,
+                            include_embeddings=include_embeddings,
                         )
                     )
                     if len(buf) >= batch_size:
@@ -895,6 +907,97 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             if not sentinel_seen:
                 await asyncio.to_thread(drain_queue_until_sentinel, batch_queue, sentinel)
             await worker
+
+    def _stored_fields(self) -> tuple[list[str], list[str]]:
+        """Return the fields chunk text and vectors may be stored under, most specific first."""
+        # LangChain stores embeddings under its own default field for this
+        # backend (see ``LANGCHAIN_DEFAULT_VECTOR_FIELD``), so the on-disk field
+        # is ``vector_field`` regardless of what the KB's persisted config names
+        # (historically ``chunk_embedding``). Read the configured field first
+        # (honouring an explicit override on an externally-populated index) and
+        # fall back to LangChain's field so ``include_embeddings`` retrieval
+        # actually returns the stored vectors.
+        embedding_fields = [self._os_vector_field]
+        if LANGCHAIN_DEFAULT_VECTOR_FIELD not in embedding_fields:
+            embedding_fields.append(LANGCHAIN_DEFAULT_VECTOR_FIELD)
+        # Chunk text has the same split: LangChain writes and searches it under
+        # ``text`` whatever the config names, so fall back to that field too.
+        text_fields = [self._os_text_field]
+        if DEFAULT_TEXT_FIELD not in text_fields:
+            text_fields.append(DEFAULT_TEXT_FIELD)
+        return text_fields, embedding_fields
+
+    async def iter_job_documents(
+        self,
+        job_id: str | None,
+        *,
+        batch_size: int = 5000,
+        after_id: str | None = None,
+    ) -> AsyncIterator[list[IngestedDocument]]:
+        """Stream one job's chunks with vectors in id order, or every chunk when ``job_id`` is None.
+
+        Uses ``search_after`` rather than the scroll ``iter_documents`` uses: a
+        scroll cannot start part way, and a copy has to resume where it stopped.
+        """
+        await self.ensure_ready()
+        client = getattr(self, "_os_client", None)
+        if client is None:
+            _ = self.vector_store
+            client = self._os_client
+        text_fields, embedding_fields = self._stored_fields()
+        query = {"match_all": {}} if job_id is None else _job_query(str(job_id))
+        # ``_source`` is explicit for the reason iter_documents gives: OpenSearch
+        # 3.8+ can otherwise strip knn_vector fields from the response.
+        body: dict[str, Any] = {"query": query, "sort": [{"_id": "asc"}], "size": batch_size, "_source": True}
+        if after_id is not None:
+            body["search_after"] = [after_id]
+        saw_hit = False
+        while True:
+            try:
+                result = await _drained_worker(client.search, index=self._os_index, body=body)
+            except Exception as exc:
+                # A never-created index is empty. If it disappears during a read,
+                # the partial read must fail rather than look complete.
+                if not saw_hit and _is_missing_index(exc):
+                    return
+                raise
+            if result.get("timed_out") or result.get("_shards", {}).get("failed"):
+                msg = "OpenSearch did not read every shard for this ingestion job."
+                raise RuntimeError(msg)
+            hits = result["hits"]["hits"]
+            if not hits:
+                return
+            saw_hit = True
+            yield [
+                _document_from_hit(
+                    hit,
+                    text_fields=text_fields,
+                    embedding_fields=embedding_fields,
+                    include_embeddings=True,
+                )
+                for hit in hits
+            ]
+            body["search_after"] = hits[-1]["sort"]
+
+    async def count_job(self, job_id: str) -> int:
+        """Count one job's chunks, treating a never-created index as empty."""
+        await self.ensure_ready()
+        client = getattr(self, "_os_client", None)
+        if client is None:
+            _ = self.vector_store
+            client = self._os_client
+        try:
+            result = await asyncio.to_thread(
+                client.count, index=self._os_index, body={"query": _job_query(str(job_id))}
+            )
+        except Exception as exc:
+            if _is_missing_index(exc):
+                return 0
+            raise
+        if result.get("_shards", {}).get("failed"):
+            msg = "OpenSearch count did not complete on all shards."
+            raise RuntimeError(msg)
+        return int(result["count"])
 
     @staticmethod
     def _translate_where(where: dict[str, Any]) -> dict[str, Any]:

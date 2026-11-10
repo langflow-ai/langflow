@@ -154,3 +154,96 @@ async def test_rejected_write_is_reported_without_the_documents(tmp_path: Path, 
     finally:
         await backend.delete_collection()
         await backend.teardown()
+
+
+# Share every hyphen-separated piece but the first, as UUIDs from one job batch can.
+_JOB_A = "aaaaaaaa-1111-4111-8111-111111111111"
+_JOB_B = "bbbbbbbb-1111-4111-8111-111111111111"
+
+
+async def _seed_two_jobs(tmp_path: Path):
+    backend = create_backend(
+        "opensearch",
+        kb_name=f"kb_job_{uuid.uuid4().hex[:8]}",
+        kb_path=tmp_path,
+        backend_config={"url_variable": "OPENSEARCH_URL"},
+        user_id=uuid.uuid4(),
+    )
+    await backend.ensure_ready()
+    docs = [
+        IngestedDocument(id=f"a-{i}", content=f"a {i}", metadata={"job_id": _JOB_A}, embedding=[i / 10] * 8)
+        for i in range(5)
+    ] + [
+        IngestedDocument(id=f"b-{i}", content=f"b {i}", metadata={"job_id": _JOB_B}, embedding=[i / 10] * 8)
+        for i in range(3)
+    ]
+    await backend.add_embedded_documents([*docs, IngestedDocument(id="c", content="old", embedding=[0.5] * 8)])
+    backend._os_client.indices.refresh(index=backend._os_index)
+    return backend
+
+
+async def _read_job(backend, job_id, **kwargs):
+    return [doc async for batch in backend.iter_job_documents(job_id, **kwargs) for doc in batch]
+
+
+async def test_jobs_sharing_uuid_pieces_read_back_apart(tmp_path: Path) -> None:
+    _require_live_opensearch()
+    backend = await _seed_two_jobs(tmp_path)
+    try:
+        assert await backend.count_job(_JOB_A) == 5
+        assert await backend.count_job(_JOB_B) == 3
+        job_a = await _read_job(backend, _JOB_A, batch_size=2)
+        assert [doc.id for doc in job_a] == [f"a-{i}" for i in range(5)]
+        assert job_a[3].content == "a 3"
+        assert job_a[3].embedding == pytest.approx([0.3] * 8)
+    finally:
+        await backend.delete_collection()
+        await backend.teardown()
+
+
+async def test_resuming_a_job_returns_only_what_is_left(tmp_path: Path) -> None:
+    _require_live_opensearch()
+    backend = await _seed_two_jobs(tmp_path)
+    try:
+        assert [doc.id for doc in await _read_job(backend, _JOB_A, after_id="a-2")] == ["a-3", "a-4"]
+        assert [doc.id for doc in await _read_job(backend, None, after_id="b-2")] == ["c"]
+        assert len(await _read_job(backend, None)) == 9
+    finally:
+        await backend.delete_collection()
+        await backend.teardown()
+
+
+async def test_a_job_is_found_in_a_flat_source_layout(tmp_path: Path) -> None:
+    _require_live_opensearch()
+    backend = await _seed_two_jobs(tmp_path)
+    job = "cccccccc-1111-4111-8111-111111111111"
+    try:
+        backend._os_client.index(
+            index=backend._os_index,
+            id="flat",
+            body={"text": "flat", "job_id": job, "vector_field": [0.1] * 8},
+            refresh=True,
+        )
+        assert await backend.count_job(job) == 1
+        assert [(doc.id, doc.content, doc.metadata) for doc in await _read_job(backend, job)] == [
+            ("flat", "flat", {"job_id": job})
+        ]
+    finally:
+        await backend.delete_collection()
+        await backend.teardown()
+
+
+async def test_a_never_created_index_has_no_job_chunks(tmp_path: Path) -> None:
+    _require_live_opensearch()
+    backend = create_backend(
+        "opensearch",
+        kb_name=f"kb_job_{uuid.uuid4().hex[:8]}",
+        kb_path=tmp_path,
+        backend_config={"url_variable": "OPENSEARCH_URL"},
+        user_id=uuid.uuid4(),
+    )
+    try:
+        assert await _read_job(backend, _JOB_A) == []
+        assert await backend.count_job(_JOB_A) == 0
+    finally:
+        await backend.teardown()

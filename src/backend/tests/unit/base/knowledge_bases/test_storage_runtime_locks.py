@@ -275,3 +275,26 @@ async def test_remote_lock_contention_has_bounded_wait(remote_engine, monkeypatc
             await asyncio.create_task(contender())
         assert remote_engine.active == 1
     assert remote_engine.active == 0
+
+
+async def test_reading_one_job_takes_the_shared_lock(monkeypatch):
+    seen = []
+
+    @asynccontextmanager
+    async def operation(_record, *, shared=False):
+        seen.append(shared)
+        yield
+
+    monkeypatch.setattr(runtime, "operation", operation)
+
+    class Backend:
+        async def iter_job_documents(self, job_id):
+            yield [job_id]
+
+        async def count_job(self, job_id):
+            return len(job_id)
+
+    backend = runtime._GuardedMethods(Backend(), object())
+    assert [batch async for batch in backend.iter_job_documents("job")] == [["job"]]
+    assert await backend.count_job("job") == 3
+    assert seen == [True, True]

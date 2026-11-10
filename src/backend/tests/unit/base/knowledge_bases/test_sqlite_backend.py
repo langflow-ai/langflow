@@ -452,3 +452,12 @@ async def test_mixed_native_and_stable_distances_share_prefiltered_top_k(context
     )
     assert [doc.id for doc, _ in results] == ["c", "b"]
     assert [score for _, score in results] == pytest.approx([0.0, 1.0])
+
+
+async def test_reading_one_job_raises_rather_than_returning_nothing(context):
+    store = backend(context)
+    # A silent empty read would let a deploy report success without the chunks.
+    with pytest.raises(NotImplementedError, match="by ingestion job"):
+        await anext(store.iter_job_documents("job-a"))
+    with pytest.raises(NotImplementedError, match="by ingestion job"):
+        await store.count_job("job-a")

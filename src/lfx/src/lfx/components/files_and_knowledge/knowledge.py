@@ -29,7 +29,12 @@ import anyio
 import pandas as pd
 
 from lfx.base.knowledge_bases.backends import BackendType, BaseVectorStoreBackend
-from lfx.base.knowledge_bases.backends.base import BackendConfigurationError, IngestedDocument
+from lfx.base.knowledge_bases.backends.base import (
+    METADATA_KEY_INGESTED_AT,
+    METADATA_KEY_JOB_ID,
+    BackendConfigurationError,
+    IngestedDocument,
+)
 from lfx.base.knowledge_bases.backends.naming import ensure_storage_routing_allowed
 from lfx.base.knowledge_bases.ingestion_sources.base import (
     IngestionItemResult,
@@ -1005,6 +1010,7 @@ class KnowledgeComponent(Component):
         data_objects = await self._convert_df_to_data_objects(df_source, config_list)
 
         user_metadata_tag = self._resolve_user_metadata_tag()
+        ingested_at = datetime.now(timezone.utc).isoformat()
 
         documents = []
         row_indices = []
@@ -1016,6 +1022,11 @@ class KnowledgeComponent(Component):
                 doc.id = doc.metadata["_id"]
             if user_metadata_tag:
                 doc.metadata["source_metadata"] = user_metadata_tag
+            if job_id is not None:
+                # A deploy moves a KB one ingestion job at a time, so a chunk
+                # without this label would never be found and copied.
+                doc.metadata[METADATA_KEY_JOB_ID] = str(job_id)
+                doc.metadata[METADATA_KEY_INGESTED_AT] = ingested_at
             documents.append(doc)
             row_indices.append(row_index)
         if not documents:
