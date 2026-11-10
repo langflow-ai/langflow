@@ -9,12 +9,14 @@ from uuid import uuid4
 import httpx
 import pytest
 from langflow.services.connection.oauth.broker import store_tokens
+from langflow.services.connection.service import DatabaseConnectionResolverService
 from langflow.services.database.models.connection.model import Connection
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.trigger.model import Trigger, TriggerCleanup, TriggerEvent, TriggerSubscription
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import session_scope
 from langflow.services.triggers import dispatcher, source_runtime
+from langflow.services.triggers.ownership import TriggerConnectionNotOwnedError
 from langflow.services.triggers.providers import registry
 from langflow.services.triggers.reconciliation import reconcile_flow_triggers
 from langflow.services.triggers.service import TriggerService
@@ -71,7 +73,7 @@ def salesforce(monkeypatch, client):  # noqa: ARG001
         if kwargs.get("group") == registry.ENTRY_POINT_GROUP
         else original(**kwargs),
     )
-    state = SimpleNamespace(version="2026-10-22T12:00:00.000Z", fail=False, requests=[])
+    state = SimpleNamespace(version="2026-10-22T12:00:00.000Z", covered=None, fail=False, requests=[])
 
     def handle(request):
         state.requests.append(request)
@@ -84,7 +86,9 @@ def salesforce(monkeypatch, client):  # noqa: ARG001
                 },
             )
         if request.url.path.endswith("updated/"):
-            return httpx.Response(200, json={"ids": [RECORD], "latestDateCovered": request.url.params["end"]})
+            return httpx.Response(
+                200, json={"ids": [RECORD], "latestDateCovered": state.covered or request.url.params["end"]}
+            )
         if state.fail:
             return httpx.Response(503, json={"message": "synthetic-access"})
         return httpx.Response(200, json=[{"Id": RECORD, "Name": "Example", "SystemModstamp": state.version}])
@@ -198,6 +202,26 @@ async def test_save_enable_baseline_change_replay_dispatch_and_local_cleanup(
     assert len(salesforce.requests) == calls
 
 
+async def test_lagging_baseline_recovers_and_delivers_a_change_once(salesforce, trigger_owner, owned_flow):
+    await connection(trigger_owner)
+    trigger = await reconcile(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable(session, row=row)
+    salesforce.covered = iso(datetime.now(timezone.utc).replace(second=0, microsecond=0) - timedelta(minutes=3))
+    assert await source_runtime.sync_source(trigger.id) == 0
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        assert row.provider_state == {"latest_date_covered": salesforce.covered, "baseline_complete": True}
+    salesforce.covered = None
+    salesforce.version = "2026-10-22T12:01:00.000Z"
+    assert await source_runtime.sync_source(trigger.id) == 1
+    assert await source_runtime.sync_source(trigger.id) == 0
+    async with session_scope() as session:
+        events = (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == trigger.id))).all()
+        assert len(events) == 1
+
+
 async def test_failed_fetch_and_stale_replica_cannot_advance_cursor(salesforce, trigger_owner, owned_flow):
     await connection(trigger_owner)
     trigger = await reconcile(owned_flow, trigger_owner)
@@ -269,6 +293,27 @@ async def test_activation_blocks_foreign_owner_missing_consent_identity_scopes_a
     finally:
         bundle.publish(replace(original, revision=bundle.snapshot.revision + 1))
         get_integration_policy_service().invalidate()
+
+
+@pytest.mark.usefixtures("salesforce")
+async def test_resume_after_connection_deletion_explains_how_to_recover(trigger_owner, owned_flow):
+    connection_id = await connection(trigger_owner)
+    trigger = await reconcile(owned_flow, trigger_owner)
+    async with session_scope() as session:
+        row = await session.get(Trigger, trigger.id)
+        await TriggerService().enable(session, row=row)
+        await TriggerService().disable(session, row=row)
+    async with session_scope() as session:
+        row = await session.get(Connection, connection_id)
+        await DatabaseConnectionResolverService().delete(session, row)
+    async with session_scope() as session:
+        assert await session.get(Connection, connection_id) is None
+        row = await session.get(Trigger, trigger.id)
+        assert row.state == "paused"
+        with pytest.raises(TriggerConnectionNotOwnedError, match="may have been deleted") as caught:
+            await TriggerService().enable(session, row=row)
+        assert "Choose or create one of your own connections" in str(caught.value)
+        assert row.state == "paused"
 
 
 @pytest.mark.usefixtures("salesforce")

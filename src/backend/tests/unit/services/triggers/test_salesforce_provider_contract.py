@@ -2,6 +2,7 @@
 
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
+from urllib.parse import parse_qs, urlsplit
 
 import httpx
 import pytest
@@ -100,6 +101,22 @@ def token(**changes):
         "id": "https://login.salesforce.com/id/00D000000000001AAA/005000000000001AAA",
         **changes,
     }
+
+
+def test_authorization_requests_explicit_consent_with_existing_grants(monkeypatch):
+    from dataclasses import replace
+
+    from langflow.services.connection.oauth import adapter, providers
+
+    monkeypatch.setattr(adapter, "provider_adapter", lambda _provider: replace(oauth.OAUTH, allowed_origins=(ORG,)))
+    reg = registration(client_id="operator-app", redirect_uri="https://langflow.example/callback")
+    url = providers.authorization_url(reg, state="synthetic-state", verifier="synthetic-verifier", scopes=reg.scopes)
+    assert url.startswith(ORG + "/services/oauth2/authorize?")
+    params = parse_qs(urlsplit(url).query)
+    assert params["prompt"] == ["consent"]
+    assert params["scope"] == ["api id refresh_token"]
+    assert params["state"] == ["synthetic-state"]
+    assert params["code_challenge_method"] == ["S256"]
 
 
 @pytest.mark.parametrize("missing", ["api", "id", "refresh_token"])
@@ -412,7 +429,32 @@ async def test_next_round_overlap_and_complete_cursor(monkeypatch, source_trigge
     assert result.items[0]["session_key"] == f"salesforce:Account:{RECORD}"
 
 
-@pytest.mark.parametrize("failure", ["wrong-id", "truncated-batch", "failed-fetch", "invalid-cursor", "too-many"])
+@pytest.mark.parametrize("baseline", [True, False])
+async def test_replication_watermark_before_start_is_retained_for_the_next_poll(monkeypatch, source_trigger, baseline):
+    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    covered = iso(now - timedelta(minutes=3))
+    if not baseline:
+        source_trigger.provider_state = {
+            "latest_date_covered": iso(now - timedelta(minutes=1)),
+            "baseline_complete": True,
+        }
+    requests = attach_transport(monkeypatch, change_handler(ids=[], covered=covered))
+    lease, _ = lease_for()
+    result = await collector.collect(source_trigger, lease)
+    assert result.baseline is baseline
+    assert result.cursor == {"latest_date_covered": covered, "baseline_complete": True}
+    assert result.previous_cursor == source_trigger.provider_state
+    assert result.items == []
+
+    source_trigger.provider_state = result.cursor
+    next_round = await collector.collect(source_trigger, lease)
+    assert requests[-1].url.params["start"] == covered
+    assert not next_round.baseline
+
+
+@pytest.mark.parametrize(
+    "failure", ["wrong-id", "truncated-batch", "failed-fetch", "invalid-cursor", "expired-watermark", "too-many"]
+)
 async def test_invalid_round_never_mutates_persisted_cursor(monkeypatch, source_trigger, failure):
     before = dict(source_trigger.provider_state)
     handler = change_handler(
@@ -421,7 +463,11 @@ async def test_invalid_round_never_mutates_persisted_cursor(monkeypatch, source_
         else []
         if failure == "truncated-batch"
         else None,
-        covered="2099-01-01T00:00:00Z" if failure == "invalid-cursor" else None,
+        covered="2099-01-01T00:00:00Z"
+        if failure == "invalid-cursor"
+        else iso(datetime.now(timezone.utc) - timedelta(days=30))
+        if failure == "expired-watermark"
+        else None,
         ids=[RECORD] * 5001 if failure == "too-many" else None,
     )
 

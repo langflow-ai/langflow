@@ -141,6 +141,8 @@ Provider rate limits, backlog, and listener retries can delay delivery.
 
 The initial poll establishes a baseline without emitting the records it finds.
 Later polls request up to five minutes of replication history and fetch the latest visible state of each changed record.
+Salesforce can return a replication watermark before the requested start while a long transaction is open.
+The next poll starts from that watermark so changes remain available after the transaction completes.
 The source accepts at most 5000 changed IDs per round and fetches records in batches of 200.
 It advances only to Salesforce's `latestDateCovered` after the whole round succeeds.
 See [Salesforce Get Updated](https://developer.salesforce.com/docs/platform/api-rest/guide/resources-getupdated.html).

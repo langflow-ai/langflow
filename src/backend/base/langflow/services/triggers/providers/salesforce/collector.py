@@ -89,7 +89,8 @@ async def collect(trigger: Trigger, lease: CredentialLease) -> SourceRound:
             raise SourceConfigurationError(msg)
         ids = list(dict.fromkeys(record_id(value) for value in ids))
         covered = timestamp(response.get("latestDateCovered"))
-        if covered < previous or covered > end:
+        # An open provider transaction can hold the watermark before this request's start.
+        if covered < now - timedelta(days=29) or covered > end:
             msg = "Salesforce returned an invalid replication cursor."
             raise invalid(msg)
         items = []
