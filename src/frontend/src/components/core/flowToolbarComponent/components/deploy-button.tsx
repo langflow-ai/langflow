@@ -1,6 +1,8 @@
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { BlockableButton } from "@/components/core/triggers/BlockableButton";
 import { usePermissions } from "@/contexts/permissionsContext";
+import { useCustomDeployButton } from "@/customization/hooks/use-custom-deploy-button";
 import DeploymentStepperModal from "@/pages/MainPage/pages/deploymentsPage/components/deployment-stepper-modal";
 import { useNavigateToTest } from "@/pages/MainPage/pages/deploymentsPage/hooks/use-navigate-to-test";
 import { useUtilityStore } from "@/stores/utilityStore";
@@ -28,6 +30,7 @@ function DeployButtonInner() {
   } = usePrepareDeploy();
 
   const navigateToTest = useNavigateToTest();
+  const deployButton = useCustomDeployButton();
 
   const { can } = usePermissions();
   // Deploying provisions and runs the flow on an environment → gate on execute.
@@ -35,8 +38,10 @@ function DeployButtonInner() {
 
   return (
     <>
-      <button
+      <BlockableButton
         type="button"
+        unstyled
+        blockedReason={deployButton.blockedReason || undefined}
         onClick={handleDeploy}
         disabled={
           isPreparingDeploy ||
@@ -53,7 +58,7 @@ function DeployButtonInner() {
           className={`h-4 w-4 ${isPreparingDeploy ? "animate-pulse" : ""}`}
         />
         <span className="font-normal text-mmd">{t("misc.deploy")}</span>
-      </button>
+      </BlockableButton>
       <DeployChoiceDialog
         open={choiceDialogOpen}
         setOpen={setChoiceDialogOpen}
