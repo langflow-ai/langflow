@@ -41,6 +41,8 @@ def test_deployment_copy_and_release_have_single_head():
         "b7e1d4a92c60",  # pragma: allowlist secret
         "4d6e8f0a2b3c",  # pragma: allowlist secret
         "f4b8c1d2e3a6",  # pragma: allowlist secret
+        "a8c2e6f4b9d1",  # pragma: allowlist secret
+        "d7e9a1c3f5b8",  # pragma: allowlist secret
     ],
 )
 def test_upgrading_from_either_side_keeps_jobs_and_accepts_a_copy_job(db_url, prior_revision):  # noqa: F811
@@ -71,9 +73,12 @@ def test_upgrading_from_either_side_keeps_jobs_and_accepts_a_copy_job(db_url, pr
         engine.dispose()
 
 
-@pytest.mark.parametrize("release_applied", [False, True])
-def test_upgrading_maintenance_preserves_existing_state(db_url, release_applied):  # noqa: F811
-    """Merging either maintenance alone or both old heads preserves an active freeze."""
+@pytest.mark.parametrize(
+    "intermediate_revision",
+    [None, "f4b8c1d2e3a6", "a8c2e6f4b9d1"],  # pragma: allowlist secret
+)
+def test_upgrading_maintenance_preserves_existing_state(db_url, intermediate_revision):  # noqa: F811
+    """Upgrading from maintenance alone or with earlier release migrations preserves an active freeze."""
     config = _make_alembic_cfg(db_url)
     command.upgrade(config, "4d6e8f0a2b3c")  # pragma: allowlist secret
     engine = create_engine(_engine_url(db_url))
@@ -84,8 +89,8 @@ def test_upgrading_maintenance_preserves_existing_state(db_url, release_applied)
                 {"enabled": True, "reason": "Upgrade rehearsal"},
             )
             state = connection.execute(text("SELECT * FROM maintenance_state")).one()
-        if release_applied:
-            command.upgrade(config, "f4b8c1d2e3a6")  # pragma: allowlist secret
+        if intermediate_revision is not None:
+            command.upgrade(config, intermediate_revision)
         command.upgrade(config, "head")
         command.upgrade(config, "head")
         with engine.connect() as connection:
