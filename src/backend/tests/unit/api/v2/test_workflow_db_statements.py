@@ -15,7 +15,6 @@ import re
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
-from itertools import pairwise
 from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import uuid4
@@ -180,15 +179,17 @@ async def _measure(client: AsyncClient, api_key: str, flow_id, mode: str) -> _Re
 
 
 # Statements and pool checkouts for one run, per flow and mode. Update these
-# on purpose: a new round trip on this path costs every workflow run.
+# on purpose: a new round trip on this path costs every workflow run. The user
+# lookup prevents a legacy flow storage namespace from colliding with a user ID.
 _ROUND_TRIPS = {
-    "memory_chatbot": {"sync": (9, 8), "stream": (12, 11)},
-    "simple_chat": {"sync": (10, 8), "stream": (13, 11)},
+    "memory_chatbot": {"sync": (10, 9), "stream": (13, 12)},
+    "simple_chat": {"sync": (11, 9), "stream": (14, 12)},
 }
-
-
-def _follows(statements: list[str], first: str, then: str) -> bool:
-    return any(a == first and b == then for a, b in pairwise(statements))
+# Admission reads the originating key inside the existing job transaction.
+# Execution reloads key, owner, and flow together in one additional checkout.
+# Streaming also reloads the job's persisted credential provenance after the
+# conditional start; sync reuses the row it created IN_PROGRESS.
+_JOB_KEY_AUTHORIZATION_ROUND_TRIPS = {"sync": (4, 1), "stream": (5, 2)}
 
 
 @pytest.mark.parametrize("mode", ["sync", "stream"])
@@ -197,14 +198,21 @@ async def test_run_db_round_trips(client: AsyncClient, created_api_key, chat_flo
     recorder = await _measure(client, created_api_key.api_key, chat_flow, mode)
     statements = recorder.statements
 
-    # A job status change returns the row it wrote instead of reading it back.
-    assert not _follows(statements, "UPDATE job", "SELECT job"), statements
-
     if mode == "sync":
         # The sync job row is created IN_PROGRESS and written once more when it ends.
-        assert [s for s in statements if s.endswith(" job")] == ["INSERT job", "UPDATE job"], statements
+        expected_job_statements = ["INSERT job", "UPDATE job"]
+    else:
+        # The first read checks for an existing job. The second reloads credential
+        # provenance after the conditional start, rather than reading back status.
+        expected_job_statements = ["SELECT job", "INSERT job", "UPDATE job", "SELECT job", "UPDATE job"]
+    assert [s for s in statements if s.endswith(" job")] == expected_job_statements, statements
     flow_name = request.node.callspec.params["chat_flow"]
-    assert (len(statements), recorder.checkouts) == _ROUND_TRIPS[flow_name][mode], statements
+    base_statements, base_checkouts = _ROUND_TRIPS[flow_name][mode]
+    key_statements, key_checkouts = _JOB_KEY_AUTHORIZATION_ROUND_TRIPS[mode]
+    assert (len(statements), recorder.checkouts) == (
+        base_statements + key_statements,
+        base_checkouts + key_checkouts,
+    ), statements
 
 
 @pytest.mark.usefixtures("client")

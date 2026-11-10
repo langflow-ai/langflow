@@ -49,6 +49,7 @@ class TestExceptionTelemetry:
         telemetry_service.do_not_track = False
         telemetry_service._stopping = False
         telemetry_service.client_type = "oss"
+        telemetry_service.edition = "opensource"
 
         # Mock the _queue_event method to capture calls
         captured_events = []
@@ -90,10 +91,10 @@ class TestExceptionTelemetry:
         telemetry_service.anonymous_id = "test-installation"
         telemetry_service.do_not_track = False
         telemetry_service.client_type = "oss"
+        telemetry_service.edition = "opensource"
         telemetry_service.common_telemetry_fields = {
-            "langflow_version": "1.0.0",
-            "platform": "python_package",
-            "os": "linux",
+            "productVersion": "1.0.0",
+            "osName": "linux",
         }
 
         # Mock HTTP client
@@ -131,10 +132,9 @@ class TestExceptionTelemetry:
         assert "exceptionMessage" not in body["properties"]
         assert body["properties"]["exceptionContext"] == "handler"
         assert body["properties"]["stackTraceHash"] == "abc123"
-        assert body["properties"]["clientType"] == "oss"
-        assert body["properties"]["langflow_version"] == "1.0.0"
-        assert body["properties"]["platform"] == "python_package"
-        assert body["properties"]["os"] == "linux"
+        assert body["properties"]["subProductTitle"] == "oss"
+        assert body["properties"]["productVersion"] == "1.0.0"
+        assert body["properties"]["osName"] == "linux"
         assert body["properties"]["UT30"] == "30AS5"
         assert body["properties"]["productCode"] == "WW3151"
         assert body["properties"]["productCodeType"] == "WWPC"
@@ -155,6 +155,7 @@ class TestExceptionTelemetry:
         telemetry_service.anonymous_id = "installation-a"
         telemetry_service.do_not_track = False
         telemetry_service.client_type = "oss"
+        telemetry_service.edition = "opensource"
         telemetry_service.common_telemetry_fields = {}
         telemetry_service.client = AsyncMock()
         telemetry_service.client.post.return_value.status_code = 200
@@ -181,7 +182,7 @@ class TestExceptionTelemetry:
                 RunPayload(run_seconds=1, run_success=False, run_error_message="user input"),
                 "run",
                 "runErrorMessage",
-                "runSuccess",
+                "successFlag",
             ),
             (
                 DeploymentPayload(
@@ -237,6 +238,7 @@ class TestExceptionTelemetry:
         telemetry_service.anonymous_id = "test-installation"
         telemetry_service.do_not_track = False
         telemetry_service.client_type = "oss"
+        telemetry_service.edition = "opensource"
         telemetry_service.common_telemetry_fields = {}
         telemetry_service.client = AsyncMock()
         telemetry_service.client.post.return_value.status_code = 200
@@ -255,10 +257,10 @@ class TestExceptionTelemetry:
         telemetry_service.base_url = "https://mock-telemetry.example.com"
         telemetry_service.do_not_track = True
         telemetry_service.client_type = "oss"
+        telemetry_service.edition = "opensource"
         telemetry_service.common_telemetry_fields = {
-            "langflow_version": "1.0.0",
-            "platform": "python_package",
-            "os": "linux",
+            "productVersion": "1.0.0",
+            "osName": "linux",
         }
 
         # Mock HTTP client
@@ -329,10 +331,10 @@ class TestExceptionTelemetry:
         telemetry_service.anonymous_id = "test-installation"
         telemetry_service.do_not_track = False
         telemetry_service.client_type = "oss"
+        telemetry_service.edition = "opensource"
         telemetry_service.common_telemetry_fields = {
-            "langflow_version": "1.0.0",
-            "platform": "python_package",
-            "os": "linux",
+            "productVersion": "1.0.0",
+            "osName": "linux",
         }
 
         # Create payload with potentially sensitive data

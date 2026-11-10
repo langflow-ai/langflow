@@ -43,6 +43,7 @@ from .message import MessageTable
 from .model_provider_policy import ModelProviderPolicy
 from .policy_bundle import PolicyBundleActive, PolicyBundleRevision
 from .project_replacement_operation import ProjectReplacementOperation
+from .secret_rotation import SecretRotation
 from .traces.model import SpanTable, TraceTable
 from .transactions import TransactionTable
 from .trigger import (
@@ -56,6 +57,7 @@ from .trigger import (
 )
 from .user import User
 from .variable import Variable
+from .worker_registry import WorkerRegistry, WorkerState
 
 __all__ = [
     "A2ACheckpoint",
@@ -113,6 +115,7 @@ __all__ = [
     "SSOSecretError",
     "SSOSettings",
     "SSOUserProfile",
+    "SecretRotation",
     "SignalType",
     "SpanTable",
     "TraceTable",
@@ -126,6 +129,8 @@ __all__ = [
     "TriggerSubscription",
     "User",
     "Variable",
+    "WorkerRegistry",
+    "WorkerState",
     "decrypt_sso_client_secret",
     "encrypt_sso_client_secret",
     "is_sso_client_secret_envelope",

@@ -54,6 +54,7 @@ from langflow.api.v1.schemas.deployment_snapshot import (
     DeploymentSnapshotRequiredConnection,
     DeploymentSnapshotRequiredMcpProject,
     DeploymentSnapshotRequiredModel,
+    DeploymentSnapshotRequiredVariable,
 )
 from langflow.api.v1.schemas.replacement_operations import (
     ProjectReplacementRequest,
@@ -70,6 +71,7 @@ from langflow.services.audit.operations import (
     stage_flow_succeeded,
     stage_project_succeeded,
 )
+from langflow.services.auth.context import current_auth_is_restricted_api_key
 from langflow.services.auth.mcp_encryption import encrypt_auth_settings
 from langflow.services.authorization import (
     FlowAction,
@@ -634,6 +636,11 @@ async def read_project_deployment_snapshot(
         ],
         dependencies=snapshot.dependencies,
         required_variables=list(snapshot.required_variables),
+        required_variable_declarations=[
+            DeploymentSnapshotRequiredVariable(name=item.name, kind=item.kind)
+            for item in snapshot.required_variable_declarations
+        ],
+        schema_version=snapshot.schema_version,
         required_connections=[
             DeploymentSnapshotRequiredConnection(
                 provider=connection.provider,
@@ -715,7 +722,7 @@ async def read_project(
         # caller (i.e. reached via a share grant), show all flows in the
         # project — the share grant on the project implies access to its
         # contents. Otherwise keep the existing owner-scoped flow filter.
-        treat_as_shared = share_aware and project.user_id != current_user.id
+        treat_as_shared = share_aware and (project.user_id != current_user.id or current_auth_is_restricted_api_key())
 
         # DB-layer authz prefilter for the project's flows. Only meaningful for
         # shared-project reads (owner reads are already owner-scoped and run no
@@ -807,13 +814,13 @@ async def read_project(
                 visible_flows = [
                     flow
                     for flow in project.flows
-                    if flow.user_id == current_user.id
-                    or resource_visible_in_scope(
+                    if resource_visible_in_scope(
                         resource_id=flow.id,
                         workspace_id=project.workspace_id,
                         project_id=flow.folder_id,
                         project_is_personal=project.is_personal,
                         visibility=visibility_scope,
+                        is_owner=flow.user_id == current_user.id,
                     )
                 ]
             else:
@@ -847,6 +854,8 @@ def _replacement_request_digest(request_body: ProjectReplacementRequest) -> str:
     # compatible while binding any non-empty opaque manifest to the operation.
     if not request_body.dependencies:
         normalized.pop("dependencies", None)
+    if request_body.variables is None:
+        normalized.pop("variables", None)
     try:
         return canonical_json_digest(normalized)
     except UnicodeEncodeError as exc:
@@ -1083,6 +1092,7 @@ async def _replace_project_operation_once(
 ):
     """Apply one replacement attempt, committing its content and receipt together."""
     request_digest = _replacement_request_digest(request_body)
+    activation_request = request_body.model_copy(deep=True)
     memory_base_cleanups = []
     newly_created_project: Folder | None = None
     try:
@@ -1542,6 +1552,15 @@ async def _replace_project_operation_once(
                 reraise_database_errors=True,
             )
             result_flows.append(flow_read)
+
+        from langflow.services.deployment_artifacts.activation import guard_project_activation
+
+        await guard_project_activation(
+            session=session,
+            project=project,
+            current_user=current_user,
+            request=activation_request,
+        )
 
         result = ProjectReplacementResult(
             project=FolderRead.model_validate(project, from_attributes=True, update={"auth_settings": None}),

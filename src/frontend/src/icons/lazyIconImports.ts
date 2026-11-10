@@ -1,5 +1,13 @@
 // Export the lazy loading mapping for icons
 export const lazyIconsMapping = {
+  WhatsApp: () =>
+    import("@/icons/WhatsApp").then((mod) => ({ default: mod.WhatsAppIcon })),
+  ServiceNow: () =>
+    import("@/icons/ServiceNow").then((mod) => ({
+      default: mod.ServiceNowIcon,
+    })),
+  Telegram: () =>
+    import("@/icons/Telegram").then((mod) => ({ default: mod.TelegramIcon })),
   AIML: () => import("@/icons/AIML").then((mod) => ({ default: mod.AIMLIcon })),
   Agentics: () =>
     import("@/icons/Agentics").then((mod) => ({
@@ -329,6 +337,8 @@ export const lazyIconsMapping = {
   Jira: () => import("@/icons/Jira").then((mod) => ({ default: mod.JiraIcon })),
   Jotform: () =>
     import("@/icons/Jotform").then((mod) => ({ default: mod.JotformIcon })),
+  Keenable: () =>
+    import("@/icons/Keenable").then((mod) => ({ default: mod.KeenableIcon })),
   Linear: () =>
     import("@/icons/linear").then((mod) => ({ default: mod.LinearIcon })),
   LangChain: () =>

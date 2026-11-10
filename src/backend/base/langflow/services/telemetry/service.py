@@ -11,7 +11,12 @@ from typing import TYPE_CHECKING
 
 import httpx
 from lfx.log.logger import logger
-from lfx.services.telemetry.constants import IBM_PRODUCT_PROPERTIES, get_ibm_common_event
+from lfx.services.telemetry.constants import (
+    IBM_PRODUCT_PROPERTIES,
+    SUB_PRODUCT_DESKTOP,
+    SUB_PRODUCT_OSS,
+    get_ibm_common_event,
+)
 from lfx.services.telemetry.identity import get_hashed_user_id, get_or_create_anonymous_id, is_installation_user_id
 from lfx.services.telemetry.privacy import get_safe_payload_properties
 
@@ -86,13 +91,13 @@ class TelemetryService(Service):
         self.log_package_version_task: asyncio.Task | None = None
         self.log_package_email_task: asyncio.Task | None = None
         self.client_type = self._get_client_type()
+        self.edition = settings_service.settings.edition
 
         # Initialize static telemetry fields
         version_info = get_version_info()
         self.common_telemetry_fields = {
-            "langflow_version": version_info["version"],
-            "platform": "desktop" if self._get_langflow_desktop() else "python_package",
-            "os": platform.system().lower(),
+            "productVersion": version_info["version"],
+            "osName": platform.system().lower(),
         }
 
     async def telemetry_worker(self) -> None:
@@ -119,10 +124,10 @@ class TelemetryService(Service):
             payload_dict = get_safe_payload_properties(payload)
             event_anonymous_id = str(uuid.uuid4()) if isinstance(payload, EmailPayload) else self.anonymous_id
 
-            # Add common fields to all payloads except VersionPayload
-            if not isinstance(payload, VersionPayload):
-                payload_dict.update(self.common_telemetry_fields)
+            for key, value in self.common_telemetry_fields.items():
+                payload_dict.setdefault(key, value)
             payload_dict.update(IBM_PRODUCT_PROPERTIES)
+            payload_dict["productPlanName"] = self.edition
             payload_dict["instanceId"] = event_anonymous_id
             payload_dict["subscriptionId"] = event_anonymous_id
             event, process_type, legacy_event = get_ibm_common_event(path)
@@ -191,7 +196,7 @@ class TelemetryService(Service):
         return str(os.getenv("LANGFLOW_DESKTOP", "False")).lower() in {"1", "true"}
 
     def _get_client_type(self) -> str:
-        return "desktop" if self._get_langflow_desktop() else "oss"
+        return SUB_PRODUCT_DESKTOP if self._get_langflow_desktop() else SUB_PRODUCT_OSS
 
     async def _send_email_telemetry(self) -> None:
         """Send the telemetry event for the registered email address."""

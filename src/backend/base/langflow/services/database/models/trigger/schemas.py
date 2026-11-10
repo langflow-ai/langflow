@@ -88,9 +88,11 @@ class TriggerReason(str, Enum):
     ERROR = "error"
     NEEDS_RECONNECT = "needs_reconnect"
     CONSENT_REQUIRED = "consent_required"
+    READY_TO_RESUME = "ready_to_resume"
     EXPIRED = "expired"
     DEAD = "dead"
     # Caller and applicability reasons; only ever values in ``blocked_actions``.
+    MULTIPLE_TRIGGERS = "multiple_triggers"
     INSUFFICIENT_PERMISSION = "insufficient_permission"
     NOT_CONNECTION_OWNER = "not_connection_owner"
     RECONNECT_NOT_NEEDED = "reconnect_not_needed"
@@ -108,13 +110,28 @@ class TriggerEventState(str, Enum):
     CLAIMED = "claimed"
     DISPATCHED = "dispatched"
     COMPLETED = "completed"
+    SKIPPED = "skipped"
     FAILED = "failed"
     DEAD = "dead"
 
 
+class TriggerEventFilter(str, Enum):
+    """The events drawer's filters, applied by the server so they search every event, not one page."""
+
+    FAILED = "failed"  # failed or dead
+    SKIPPED = "skipped"
+    REPLAYS = "replays"  # a replay of another event
+    TESTS = "tests"  # a test event, not a replay of one
+
+
 #: Rows that no dispatcher will ever pick up again.
 TERMINAL_EVENT_STATES = frozenset(
-    {TriggerEventState.COMPLETED.value, TriggerEventState.FAILED.value, TriggerEventState.DEAD.value}
+    {
+        TriggerEventState.COMPLETED.value,
+        TriggerEventState.SKIPPED.value,
+        TriggerEventState.FAILED.value,
+        TriggerEventState.DEAD.value,
+    }
 )
 #: Rows that count against a trigger's concurrency cap.
 IN_FLIGHT_EVENT_STATES = frozenset({TriggerEventState.CLAIMED.value, TriggerEventState.DISPATCHED.value})
@@ -255,6 +272,9 @@ class TriggerRead(BaseModel):
     next_fire_at: datetime | None
     last_fired_at: datetime | None
     last_error: str | None
+    #: Stable code for ``last_error`` so the UI can show it in the reader's
+    #: language; ``None`` when the text has no code and is shown as written.
+    last_error_code: str | None = None
     admin_paused_at: datetime | None = None
     created_at: datetime | None
     updated_at: datetime | None
@@ -319,6 +339,18 @@ class TriggerBulkResult(BaseModel):
     owners: int = Field(description="Distinct owners of the changed triggers.")
 
 
+class TriggerSessionRead(BaseModel):
+    """What started a trigger-run chat session, so the Playground can label it."""
+
+    session_id: str
+    trigger_id: UUID
+    trigger_name: str
+    kind: str
+    provider: str | None
+    #: When the session's first event arrived. A shared session spans many runs.
+    started_at: datetime
+
+
 class TriggerEventRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -333,6 +365,7 @@ class TriggerEventRead(BaseModel):
     job_id: UUID | None
     replay_of_event_id: UUID | None
     error: str | None
+    error_detail: str | None = None
     created_at: datetime | None
     updated_at: datetime | None
 

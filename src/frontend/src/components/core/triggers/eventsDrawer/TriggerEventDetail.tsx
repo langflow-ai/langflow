@@ -1,11 +1,9 @@
-import { useId } from "react";
 import { useTranslation } from "react-i18next";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
-import { Button } from "@/components/ui/button";
 import type {
   TriggerEventRead,
   TriggerRead,
 } from "@/controllers/API/queries/triggers";
+import { BlockableButton } from "../BlockableButton";
 import { formatDateTime } from "../helpers/format-relative-time";
 import {
   availabilityOf,
@@ -13,7 +11,11 @@ import {
   eventErrorKeyOf,
   parseServerTime,
 } from "../helpers/trigger-presentation";
-import { lineageOf } from "./event-helpers";
+import {
+  deliveryErrorOf,
+  lineageOf,
+  openRunBlockedKeyOf,
+} from "./event-helpers";
 import TriggerEventStateBadge from "./TriggerEventStateBadge";
 
 export interface TriggerEventDetailProps {
@@ -36,10 +38,18 @@ export function TriggerEventDetail({
   replaying,
 }: TriggerEventDetailProps) {
   const { t, i18n } = useTranslation();
-  const replayReasonId = useId();
   const time = parseServerTime(event.created_at);
   const errorKey = eventErrorKeyOf(event.error);
+  const errorDetail = event.error_detail?.trim();
+  const deliveryError = deliveryErrorOf(event);
   const replay = availabilityOf(trigger, "replay");
+  const replayBlockedReason =
+    event.state === "skipped"
+      ? t("triggers.events.skippedCannotReplay")
+      : replay?.blockedReason
+        ? t(blockedReasonKey(replay.blockedReason))
+        : undefined;
+  const openRunBlockedKey = openRunBlockedKeyOf(event);
   const { parent, replays } = lineageOf(event, events);
   const when = (row: TriggerEventRead) => {
     const at = parseServerTime(row.created_at);
@@ -62,58 +72,45 @@ export function TriggerEventDetail({
               </span>
             )}
           </div>
-          {errorKey && (
+          {(errorDetail || errorKey) && (
             <p className="text-sm text-muted-foreground">
-              {t(errorKey)}{" "}
-              <code className="rounded bg-muted px-1 text-xs">
-                {event.error}
-              </code>
+              {errorDetail || (errorKey ? t(errorKey) : null)}{" "}
+              {event.error && (
+                <code className="rounded bg-muted px-1 text-xs">
+                  {event.error}
+                </code>
+              )}
+            </p>
+          )}
+          {deliveryError && (
+            <p
+              className="text-sm text-destructive"
+              data-testid="trigger-event-delivery-error"
+            >
+              {t("triggers.events.whatsapp.failed")}. {deliveryError}
             </p>
           )}
         </div>
         <div className="flex gap-2">
-          <Button
+          <BlockableButton
             variant="outline"
             size="sm"
-            disabled={!event.job_id}
+            blockedReason={openRunBlockedKey ? t(openRunBlockedKey) : undefined}
             onClick={() => onOpenRun(event)}
             data-testid="trigger-event-open-run"
           >
             {t("triggers.events.openRun")}
-          </Button>
+          </BlockableButton>
           {replay && (
-            <ShadTooltip
-              content={
-                replay.blockedReason
-                  ? t(blockedReasonKey(replay.blockedReason))
-                  : undefined
-              }
+            <BlockableButton
+              size="sm"
+              blockedReason={replayBlockedReason}
+              loading={replaying}
+              onClick={() => onReplay(event)}
+              data-testid="trigger-event-replay"
             >
-              <Button
-                size="sm"
-                aria-disabled={replay.blockedReason ? true : undefined}
-                aria-describedby={
-                  replay.blockedReason ? replayReasonId : undefined
-                }
-                className={
-                  replay.blockedReason
-                    ? "cursor-not-allowed opacity-50 aria-disabled:pointer-events-auto"
-                    : ""
-                }
-                loading={replaying}
-                onClick={() => {
-                  if (!replay.blockedReason) onReplay(event);
-                }}
-                data-testid="trigger-event-replay"
-              >
-                {t("triggers.actions.replay")}
-                {replay.blockedReason && (
-                  <span id={replayReasonId} className="sr-only">
-                    {t(blockedReasonKey(replay.blockedReason))}
-                  </span>
-                )}
-              </Button>
-            </ShadTooltip>
+              {t("triggers.actions.replay")}
+            </BlockableButton>
           )}
         </div>
       </div>

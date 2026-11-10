@@ -1,28 +1,40 @@
+import asyncio
+import hashlib
 import io
 import re
 import unicodedata
 import uuid
 import zipfile
-from collections.abc import AsyncGenerator, AsyncIterable
+from collections.abc import AsyncGenerator, AsyncIterable, AsyncIterator
 from datetime import datetime
 from http import HTTPStatus
 from pathlib import Path
 from typing import Annotated
 from zoneinfo import ZoneInfo
 
+import anyio
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from lfx.log.logger import logger
+from lfx.utils.file_path_security import user_storage_scope, user_storage_scope_for_path
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, select
 
 from langflow.api.schemas import UploadFileResponse
 from langflow.api.utils import CurrentActiveUser, DbSession, build_content_disposition
+from langflow.services.auth.context import current_auth_is_restricted_api_key
 from langflow.services.authorization import FileAction, ensure_file_permission
+from langflow.services.authorization.credentials import ensure_mcp_credential_file_access, is_mcp_credential_file
 from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
-from langflow.services.authorization.listing import restrict_to_owned_or_visible_scope, visible_scope_prefilter
+from langflow.services.authorization.listing import (
+    filter_visible_resources,
+    restrict_to_owned_or_visible_scope,
+    visible_scope_prefilter,
+)
 from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.settings.service import SettingsService
+from langflow.services.storage.s3 import S3StorageService
 from langflow.services.storage.service import StorageService
 
 router = APIRouter(tags=["Files"], prefix="/files")
@@ -31,6 +43,7 @@ router = APIRouter(tags=["Files"], prefix="/files")
 MCP_SERVERS_FILE = "_mcp_servers"
 SAMPLE_DATA_DIR = Path(__file__).parent / "sample_data"
 MAX_FILENAME_BYTES = 255
+UPLOAD_READ_CHUNK = 1024 * 1024
 _UNSAFE_ARCHIVE_NAME_CHARS = re.compile(r'[\\/\x00-\x1f\x7f-\x9f<>:"|?*]')
 _WINDOWS_DEVICE_NAME = re.compile(
     r"^(?:CON|PRN|AUX|NUL|CONIN\$|CONOUT\$|COM[0-9¹²³]|LPT[0-9¹²³])(?=[ .]|$)",
@@ -178,6 +191,14 @@ async def byte_stream_generator(file_input, chunk_size: int = 8192) -> AsyncGene
             yield chunk
 
 
+async def _release_restricted_file_reads(session: DbSession, *files: UserFile) -> None:
+    """Keep loaded rows usable while enforcement opens its own read session."""
+    if current_auth_is_restricted_api_key():
+        for file in files:
+            session.expunge(file)
+        await session.rollback()
+
+
 async def fetch_file_object(file_id: uuid.UUID, current_user: CurrentActiveUser, session: DbSession):
     # Share-aware fetch. Under the OSS pass-through this keeps the existing
     # owner-scoped query (cannot widen visibility). Authorization plugins set
@@ -195,7 +216,36 @@ async def fetch_file_object(file_id: uuid.UUID, current_user: CurrentActiveUser,
     if not file:
         raise HTTPException(status_code=404, detail="File not found")
 
+    await _release_restricted_file_reads(session, file)
+    await ensure_mcp_credential_file_access(
+        user_id=current_user.id,
+        names=(file.name, file.path),
+        session=session,
+    )
     return file
+
+
+def _user_file_namespace(path: str, owner_id: uuid.UUID) -> str:
+    """Use the recorded path's typed namespace, or its legacy raw user namespace."""
+    return user_storage_scope_for_path(path, owner_id)
+
+
+async def _upload_chunks(file) -> AsyncIterator[bytes]:
+    while chunk := await file.read(UPLOAD_READ_CHUNK):
+        yield chunk
+    # Write File can upload the destination itself. Windows requires its read
+    # handle to be closed before local storage replaces it with the staged file.
+    await file.close()
+
+
+def _spooled_md5(handle) -> str:
+    """The MD5 of an upload's spooled body, read from its start and rewound for the save."""
+    digest = hashlib.md5(usedforsecurity=False)
+    handle.seek(0)
+    while chunk := handle.read(UPLOAD_READ_CHUNK):
+        digest.update(chunk)
+    handle.seek(0)
+    return digest.hexdigest()
 
 
 async def save_file_routine(
@@ -206,17 +256,41 @@ async def save_file_routine(
     file_name=None,
     *,
     append: bool = False,
+    namespace: str | None = None,
 ):
-    """Routine to save the file content to the storage service."""
+    """Save file content to storage, consuming and closing streamed uploads."""
     file_id = uuid.uuid4()
 
-    if not file_content:
-        file_content = await file.read()
     if not file_name:
         file_name = file.filename
+    flow_id = namespace or user_storage_scope(current_user.id)
 
-    # Save the file using the storage service.
-    await storage_service.save_file(flow_id=str(current_user.id), file_name=file_name, data=file_content, append=append)
+    # Read in pieces: FastAPI has the body on disk by now, and reading it whole is what takes
+    # an Editor down once an upload is bigger than its memory.
+    # shortcut: an append still reads the whole body. Local disk could stream it too, if a
+    # large append ever needs to.
+    if not file_content and not append:
+        try:
+            if isinstance(storage_service, S3StorageService):
+                # S3 labels each object with its MD5. Known before the upload starts, the label goes
+                # on with it; known only at the end, it costs a copy of the whole object, which took
+                # a 900 MB upload past an OpenShift route's 30 s. Reading the spooled body is local.
+                md5 = await asyncio.to_thread(_spooled_md5, file.file)
+                await storage_service.save_upload_stream(flow_id, file_name, _upload_chunks(file), md5=md5)
+            else:
+                await storage_service.save_upload_stream(flow_id, file_name, _upload_chunks(file))
+        finally:
+            # Storage and checksum failures can happen before the first chunk is requested.
+            with anyio.CancelScope(shield=True):
+                await file.close()
+        return file_id, file_name
+
+    await storage_service.save_file(
+        flow_id=flow_id,
+        file_name=file_name,
+        data=file_content or await file.read(),
+        append=append,
+    )
 
     return file_id, file_name
 
@@ -259,6 +333,7 @@ async def upload_user_file(
     # Create a new database record for the uploaded file.
     try:
         new_filename = _validate_file_name(file.filename)
+        await ensure_mcp_credential_file_access(user_id=current_user.id, names=(new_filename,), session=session)
 
         # Enforce unique constraint on name, except for the special _mcp_servers file
         try:
@@ -305,6 +380,10 @@ async def upload_user_file(
             # In append mode, check if file exists and reuse the same filename
             existing_file = await get_file_by_name(root_filename, current_user, session)
             if existing_file:
+                if current_auth_is_restricted_api_key():
+                    await ensure_mcp_credential_file_access(
+                        user_id=current_user.id, names=(existing_file.name, existing_file.path), session=session
+                    )
                 # File exists, append to it by reusing the same filename
                 # Extract the filename from the path
                 unique_filename = Path(existing_file.path).name
@@ -338,13 +417,44 @@ async def upload_user_file(
         # filesystem's single-segment byte limit.
         _validate_file_name(unique_filename)
 
+        storage_namespace = (
+            _user_file_namespace(existing_file.path, current_user.id)
+            if existing_file
+            else user_storage_scope(current_user.id)
+        )
+        if current_auth_is_restricted_api_key():
+            if existing_file is not None:
+                session.expunge(existing_file)
+                await session.rollback()
+                await ensure_file_permission(
+                    current_user,
+                    FileAction.WRITE,
+                    file_id=existing_file.id,
+                    file_user_id=existing_file.user_id,
+                )
+            else:
+                # Ephemeral files have no permission-bearing row. A create
+                # grant may create a new path, but cannot replace or append to
+                # an existing path that has no resolvable resource identity.
+                try:
+                    await storage_service.get_file_size(flow_id=storage_namespace, file_name=unique_filename)
+                except FileNotFoundError:
+                    pass
+                else:
+                    raise HTTPException(status_code=403, detail="Existing file requires write permission")
+
         # Read file content, save with unique filename, and compute file size in one routine
         try:
             file_id, stored_file_name = await save_file_routine(
-                file, storage_service, current_user, file_name=unique_filename, append=append
+                file,
+                storage_service,
+                current_user,
+                file_name=unique_filename,
+                append=append,
+                namespace=storage_namespace,
             )
             file_size = await storage_service.get_file_size(
-                flow_id=str(current_user.id),
+                flow_id=storage_namespace,
                 file_name=stored_file_name,
             )
         except FileNotFoundError as e:
@@ -354,13 +464,14 @@ async def upload_user_file(
             # Access denied or invalid credentials - return 500 as this is a server config issue
             raise HTTPException(status_code=500, detail="Error accessing storage") from e
         except Exception as e:
-            # General error saving file or getting file size
-            raise HTTPException(status_code=500, detail=f"Error accessing file: {e}") from e
+            # The raw error can name the storage's address, which is no use to whoever uploaded.
+            await logger.aexception("Error saving an upload to storage")
+            raise HTTPException(status_code=500, detail="Error accessing storage") from e
 
         if ephemeral:
             # Ephemeral uploads: file is saved to storage (servable for chat history)
             # but no UserFile record is created (won't appear in "My Files")
-            file_path = f"{current_user.id}/{stored_file_name}"
+            file_path = f"{storage_namespace}/{stored_file_name}"
             return UploadFileResponse(id=file_id, name=root_filename, path=file_path, size=file_size)
 
         if append and existing_file:
@@ -375,7 +486,7 @@ async def upload_user_file(
                 id=file_id,
                 user_id=current_user.id,
                 name=root_filename,
-                path=f"{current_user.id}/{stored_file_name}",
+                path=f"{storage_namespace}/{stored_file_name}",
                 size=file_size,
             )
 
@@ -383,17 +494,24 @@ async def upload_user_file(
         try:
             await session.flush()
             await session.refresh(new_file)
+        except IntegrityError as db_err:
+            # Another upload of the same name finished first: both picked the name before either
+            # row existed, and the stored file is now that upload's, so it must stay.
+            raise HTTPException(
+                status_code=409,
+                detail=f"Another upload named {unique_filename} finished first. Upload again to save a new copy.",
+            ) from db_err
         except Exception as db_err:
             # Database insert failed - clean up the uploaded file to avoid orphaned files
             try:
-                await storage_service.delete_file(flow_id=str(current_user.id), file_name=stored_file_name)
+                await storage_service.delete_file(flow_id=storage_namespace, file_name=stored_file_name)
             except OSError as e:
                 #  If delete fails, just log the error
                 await logger.aerror(f"Failed to clean up uploaded file {stored_file_name}: {e}")
 
-            raise HTTPException(
-                status_code=500, detail=f"Error inserting file metadata into database: {db_err}"
-            ) from db_err
+            # The raw error carries the SQL and its parameters, the user's id and the file's path.
+            await logger.aexception("Error recording an upload")
+            raise HTTPException(status_code=500, detail="Error inserting file metadata into database") from db_err
     except HTTPException:
         # Re-raise HTTP exceptions (like 409 conflicts) without modification
         raise
@@ -445,7 +563,7 @@ async def load_sample_files(current_user: CurrentActiveUser, session: DbSession,
             file_name=sample_file_name,
         )
         file_size = await storage_service.get_file_size(
-            flow_id=str(current_user.id),
+            flow_id=user_storage_scope(current_user.id),
             file_name=sample_file_name,
         )
         # Create a UserFile object for the sample file
@@ -453,7 +571,7 @@ async def load_sample_files(current_user: CurrentActiveUser, session: DbSession,
             id=file_id,
             user_id=current_user.id,
             name=root_filename,
-            path=sample_file_name,
+            path=f"{user_storage_scope(current_user.id)}/{sample_file_name}",
             size=file_size,
         )
 
@@ -471,11 +589,12 @@ async def list_files(
     # storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ) -> list[UserFile]:
     """List the files available to the current user."""
-    await ensure_file_permission(
-        current_user,
-        FileAction.READ,
-        file_user_id=current_user.id,
-    )
+    if not current_auth_is_restricted_api_key():
+        await ensure_file_permission(
+            current_user,
+            FileAction.READ,
+            file_user_id=current_user.id,
+        )
     try:
         # Load sample files if they don't exist
         # TODO: Pending further testing
@@ -501,11 +620,26 @@ async def list_files(
         results = await session.exec(stmt)
 
         full_list = list(results)
+        if visibility is None and current_auth_is_restricted_api_key():
+            full_list = await filter_visible_resources(
+                current_user,
+                resource_type="file",
+                candidates=full_list,
+                act=FileAction.READ,
+            )
 
         # Reserved MCP configuration files are internal implementation details.
         # Derive the reserved name from each row's true owner because a widened
         # visibility scope can return files owned by multiple users.
-        return [file for file in full_list if file.name != f"{MCP_SERVERS_FILE}_{file.user_id!s}"]
+        return [
+            file
+            for file in full_list
+            if file.name != f"{MCP_SERVERS_FILE}_{file.user_id!s}"
+            and (
+                not current_auth_is_restricted_api_key()
+                or not any(is_mcp_credential_file(name) for name in (file.name, file.path))
+            )
+        ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error listing files: {e}") from e
 
@@ -536,6 +670,12 @@ async def delete_files_batch(
         if not files:
             raise HTTPException(status_code=404, detail="No files found")
 
+        await _release_restricted_file_reads(session, *files)
+        await ensure_mcp_credential_file_access(
+            user_id=current_user.id,
+            names=(name for file in files for name in (file.name, file.path)),
+            session=session,
+        )
         # Per-file authorization. Use the true owner so a delete share on
         # someone else's file is enforced against the right object key.
         for file in files:
@@ -556,7 +696,7 @@ async def delete_files_batch(
             # Extract just the filename from the path (strip user_id prefix).
             # The file lives under its owner's namespace.
             file_name = Path(file.path).name
-            owner_id = str(file.user_id)
+            owner_id = _user_file_namespace(file.path, file.user_id)
             storage_deleted = False
 
             try:
@@ -622,6 +762,8 @@ async def delete_files_batch(
         else:
             message = "No files were deleted from database"
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting files: {e}") from e
 
@@ -652,6 +794,12 @@ async def download_files_batch(
         if not files:
             raise HTTPException(status_code=404, detail="No files found")
 
+        await _release_restricted_file_reads(session, *files)
+        await ensure_mcp_credential_file_access(
+            user_id=current_user.id,
+            names=(name for file in files for name in (file.name, file.path)),
+            session=session,
+        )
         for file in files:
             await ensure_file_permission(
                 current_user,
@@ -668,7 +816,9 @@ async def download_files_batch(
         used_names: set[str] = set()
         with zipfile.ZipFile(zip_stream, "w") as zip_file:
             for file in files:
-                file_content = await storage_service.get_file(flow_id=str(file.user_id), file_name=Path(file.path).name)
+                file_content = await storage_service.get_file(
+                    flow_id=_user_file_namespace(file.path, file.user_id), file_name=Path(file.path).name
+                )
 
                 # Get the file extension from the original filename
                 file_extension = Path(file.path).suffix
@@ -699,6 +849,8 @@ async def download_files_batch(
             headers={"Content-Disposition": cd},
         )
 
+    except HTTPException:
+        raise
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=f"File not found: {e}") from e
     except Exception as e:
@@ -778,11 +930,10 @@ async def download_file(
         except HTTPException as exc:
             raise deny_to_404(exc, detail="File not found") from exc
 
-        # Get the basename of the file path. The file lives under the owner's
-        # storage namespace, not the actor's — for a shared-file read by a
-        # non-owner the bytes are at ``flow_id=str(file.user_id)``.
+        # Resolve the owner's typed or legacy namespace from the recorded path,
+        # never the actor's namespace when a file is shared.
         file_name = Path(file.path).name
-        owner_id = str(file.user_id)
+        owner_id = _user_file_namespace(file.path, file.user_id)
 
         # If return_content is True, read the file content and return it
         if return_content:
@@ -883,11 +1034,10 @@ async def delete_file(
         except HTTPException as exc:
             raise deny_to_404(exc, detail="File not found") from exc
 
-        # Extract just the filename from the path (strip user_id prefix).
-        # The file lives under the owner's namespace; for shared-file deletes
-        # by a non-owner, we must point at ``file_to_delete.user_id``.
+        # Extract the filename and resolve the owner's typed or legacy namespace
+        # from the recorded path when a shared file is deleted by a non-owner.
         file_name = Path(file_to_delete.path).name
-        owner_id = str(file_to_delete.user_id)
+        owner_id = _user_file_namespace(file_to_delete.path, file_to_delete.user_id)
 
         # Delete the file from the storage service first
         storage_deleted = False
@@ -960,6 +1110,12 @@ async def delete_all_files(
         results = await session.exec(stmt)
         files = results.all()
 
+        await _release_restricted_file_reads(session, *files)
+        await ensure_mcp_credential_file_access(
+            user_id=current_user.id,
+            names=(name for file in files for name in (file.name, file.path)),
+            session=session,
+        )
         storage_failures = []
         db_failures = []
 
@@ -970,7 +1126,9 @@ async def delete_all_files(
             storage_deleted = False
 
             try:
-                await storage_service.delete_file(flow_id=str(current_user.id), file_name=file_name)
+                await storage_service.delete_file(
+                    flow_id=_user_file_namespace(file.path, current_user.id), file_name=file_name
+                )
                 storage_deleted = True
             except OSError as err:
                 # Check if this is a "permanent" failure where file/storage is gone
@@ -1030,6 +1188,8 @@ async def delete_all_files(
         else:
             message = "Failed to delete files. See logs for details."
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting all files: {e}") from e
 

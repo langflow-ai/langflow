@@ -7,7 +7,7 @@ import {
   eventOriginOf,
   parseServerTime,
 } from "../helpers/trigger-presentation";
-import { eventSummaryOf } from "./event-helpers";
+import { eventLabelKeyOf, eventSummaryOf } from "./event-helpers";
 import TriggerEventStateBadge from "./TriggerEventStateBadge";
 
 export interface TriggerEventListProps {
@@ -34,8 +34,10 @@ export function TriggerEventList({
         {events.map((event) => {
           const origin = eventOriginOf(event);
           const time = parseServerTime(event.created_at);
+          const labelKey = eventLabelKeyOf(event);
           const summary =
-            eventSummaryOf(event) ?? t(`triggers.events.origin.${origin}`);
+            (labelKey ? t(labelKey) : eventSummaryOf(event)) ??
+            t(`triggers.events.origin.${origin}`);
           const selected = event.id === selectedId;
           return (
             <li key={event.id}>
