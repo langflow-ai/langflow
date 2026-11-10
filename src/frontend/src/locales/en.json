@@ -1838,7 +1838,7 @@
   "playgroundComponent.enterFullscreen": "Enter fullscreen",
   "playgroundComponent.closeAndGoBack": "Close and go back to flow",
   "playgroundComponent.chatSessions": "Chat sessions",
-  "playgroundComponent.deleteFile": "Delete file",
+  "playgroundComponent.deleteFile": "Delete {{name}}",
   "playgroundComponent.moreOptions": "More options",
   "playgroundComponent.rename": "Rename",
   "playgroundComponent.messageLogs": "Message logs",

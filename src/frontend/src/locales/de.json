@@ -1849,7 +1849,7 @@
   "playgroundComponent.clearChat": "Chat löschen",
   "playgroundComponent.clearSession": "Sitzung löschen",
   "playgroundComponent.closeAndGoBack": "Schließen und zum Arbeitsablauf zurückkehren",
-  "playgroundComponent.deleteFile": "Datei löschen",
+  "playgroundComponent.deleteFile": "{{name}} löschen",
   "playgroundComponent.deleteSession": "Sitzung löschen",
   "playgroundComponent.enterFullscreen": "Vollbildmodus aktivieren",
   "playgroundComponent.focusChatInput": "Fokus auf Chat-Eingabe",

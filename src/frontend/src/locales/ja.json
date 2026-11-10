@@ -1849,7 +1849,7 @@
   "playgroundComponent.clearChat": "チャットをクリアする",
   "playgroundComponent.clearSession": "クリア・セッション",
   "playgroundComponent.closeAndGoBack": "閉じてフローに戻る",
-  "playgroundComponent.deleteFile": "ファイルの削除",
+  "playgroundComponent.deleteFile": "{{name}} を削除",
   "playgroundComponent.deleteSession": "セッションを削除",
   "playgroundComponent.enterFullscreen": "全画面表示にする",
   "playgroundComponent.focusChatInput": "チャット入力を選択",
