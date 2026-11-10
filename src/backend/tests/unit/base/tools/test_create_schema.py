@@ -89,6 +89,15 @@ def test_create_schema_resolves_serialized_field_types(serialized_type, expected
     assert schema.model_fields["value"].annotation is expected_type
 
 
+def test_create_schema_resolves_a_live_question_list_input():
+    from lfx.inputs.inputs import DecisionQuestionsInput
+    from lfx.io.schema import create_input_schema
+
+    schema = create_input_schema([DecisionQuestionsInput(name="questions")])
+
+    assert schema.model_fields["questions"].annotation is list
+
+
 def test_create_schema_rejects_forward_ref_expressions(monkeypatch):
     system_mock = Mock(side_effect=AssertionError("untrusted expression was evaluated"))
     monkeypatch.setattr(os, "system", system_mock)

@@ -37,6 +37,7 @@ _convert_field_type_to_type: dict[FieldTypes, type] = {
     FieldTypes.OTHER: str,
     FieldTypes.TAB: str,
     FieldTypes.QUERY: str,
+    FieldTypes.DECISION_QUESTIONS: list,
 }
 
 # Serialized component templates carry frontend field-type identifiers as strings.
