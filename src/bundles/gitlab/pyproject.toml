@@ -1,0 +1,28 @@
+[project]
+name = "lfx-gitlab"
+version = "0.1.0"
+description = "GitLab actions and signed project webhook triggers."
+readme = "README.md"
+requires-python = ">=3.10,<3.16"
+license = { text = "MIT" }
+dependencies = ["lfx>=1.14.0.dev0,<2.0.0", "httpx>=0.27,<1.0"]
+
+[project.entry-points."langflow.extensions"]
+lfx-gitlab = "lfx_gitlab"
+
+[project.entry-points."langflow.trigger_providers"]
+gitlab = "langflow.services.triggers.providers.gitlab.runtime:PROVIDER"
+
+[build-system]
+requires = ["hatchling==1.31.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lfx_gitlab"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/lfx_gitlab", "extension.json", "README.md", "pyproject.toml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

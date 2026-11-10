@@ -116,6 +116,22 @@ describe("SIDEBAR_BUNDLES", () => {
   });
 });
 
+it("uses the WhatsApp logo for its integration palette group", () => {
+  expect(SIDEBAR_BUNDLES).toContainEqual({
+    display_name: "WhatsApp",
+    name: "whatsapp",
+    icon: "WhatsApp",
+  });
+});
+
+it("uses the GitLab logo for its integration palette group", () => {
+  expect(SIDEBAR_BUNDLES).toContainEqual({
+    display_name: "GitLab",
+    name: "gitlab",
+    icon: "Gitlab",
+  });
+});
+
 it("uses the Confluence logo for its integration palette group", () => {
   expect(SIDEBAR_BUNDLES).toContainEqual({
     display_name: "Confluence",
@@ -129,5 +145,13 @@ it("uses the ServiceNow logo for its integration palette group", () => {
     display_name: "ServiceNow",
     name: "servicenow",
     icon: "ServiceNow",
+  });
+});
+
+it("uses the Telegram logo for its integration palette group", () => {
+  expect(SIDEBAR_BUNDLES).toContainEqual({
+    display_name: "Telegram",
+    name: "telegram",
+    icon: "Telegram",
   });
 });

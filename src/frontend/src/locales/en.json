@@ -3517,5 +3517,15 @@
   "decision.minimumProbability": "Minimum probability",
   "decision.errorAction": "On evaluation error",
   "decision.requestId": "Provider request ID",
-  "decision.tone.answered": "Answered"
+  "decision.tone.answered": "Answered",
+  "triggers.events.whatsapp.message": "Message received",
+  "triggers.events.whatsapp.sent": "Status sent",
+  "triggers.events.whatsapp.delivered": "Status delivered",
+  "triggers.events.whatsapp.read": "Status read",
+  "triggers.events.whatsapp.failed": "Delivery failed",
+  "triggers.events.whatsapp.status": "Message status",
+  "triggers.events.state.skipped": "Skipped",
+  "triggers.events.filters.skipped": "Skipped",
+  "triggers.eventError.sender_not_allowed": "The sender is not in Allowed Sender Numbers.",
+  "triggers.events.skippedCannotReplay": "Skipped events cannot be replayed. Update the sender filter and send a new message."
 }

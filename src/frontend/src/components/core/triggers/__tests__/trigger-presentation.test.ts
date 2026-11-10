@@ -162,9 +162,9 @@ describe("transportOf", () => {
 describe("sourceKeyOf", () => {
   it.each([
     ["gitlab", "Gitlab"],
-    ["whatsapp", "MessageCircle"],
+    ["whatsapp", "WhatsApp"],
     ["discord", "MessageCircle"],
-    ["telegram", "Send"],
+    ["telegram", "Telegram"],
     ["salesforce", "Cloud"],
     ["servicenow", "ServiceNow"],
     ["jira", "Jira"],
@@ -263,6 +263,11 @@ describe("eventErrorKeyOf", () => {
   it.each([
     [null, null],
     ["owner_inactive", "triggers.eventError.owner_inactive"],
+    [
+      "connection_not_authorized",
+      "triggers.eventError.connection_not_authorized",
+    ],
+    ["connection_unusable", "triggers.serverError.connection_unusable"],
     ["job_failed", "triggers.eventError.job"],
     ["job_cancelled", "triggers.eventError.job"],
     ["submit_failed:TimeoutError", "triggers.eventError.submit"],
