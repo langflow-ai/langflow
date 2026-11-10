@@ -68,6 +68,18 @@ Highlights of this release include the following changes. For all changes, see t
 
     For more information, see [API keys and authentication](/api-keys-and-authentication#langflow-auto-login).
 
+- Project MCP and A2A endpoints require authentication by default
+
+    In 1.13.2, new projects default to API-key authentication, including auto-login installations.
+    Existing projects with unset authentication settings adopt that default at startup.
+    When `LANGFLOW_AUTO_LOGIN=false`, startup also changes projects set to **None** to API-key authentication.
+
+    Update existing MCP clients with the configuration from the project's **MCP Server** tab.
+    For protected A2A requests, send the flow owner's Langflow API key in the `x-api-key` header.
+    Public A2A agent-card discovery remains available without credentials.
+
+    See [MCP authentication](/mcp-server#authentication) and [A2A authentication](/a2a-server#authentication) for client setup and the supported public-project and superuser exceptions.
+
 - Chroma and Local DB components are removed
 
     Langflow 1.13 stores local Knowledge and Memory in SQLite, instead of a local Chroma database.
