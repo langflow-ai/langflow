@@ -216,7 +216,7 @@ bundles = [
     "lfx-paddle>=0.2.1,<1.0.0",
     "lfx-serpingapi>=0.1.1,<1.0.0",
     "lfx-serply>=0.1.1,<1.0.0",
-    "lfx-valkey>=0.2.1,<1.0.0",
+    "lfx-valkey>=0.3.0,<1.0.0",
 ]
 
 docling = [

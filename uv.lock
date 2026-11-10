@@ -11210,11 +11210,11 @@ requires-dist = [
 
 [[package]]
 name = "lfx-valkey"
-version = "0.2.1"
+version = "0.3.0"
 source = { editable = "src/bundles/valkey" }
 dependencies = [
     { name = "langchain-aws" },
-    { name = "langchain-aws", extra = ["valkey"], marker = "sys_platform != 'win32'" },
+    { name = "langchain-aws", extra = ["valkey"], marker = "python_full_version < '3.15' and sys_platform != 'win32'" },
     { name = "langchain-community" },
     { name = "lfx" },
     { name = "redis" },
@@ -11223,8 +11223,8 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "langchain-aws", marker = "sys_platform == 'win32'", specifier = ">=1.4.1,<2.0.0" },
-    { name = "langchain-aws", extras = ["valkey"], marker = "sys_platform != 'win32'", specifier = ">=1.4.1,<2.0.0" },
+    { name = "langchain-aws", marker = "python_full_version >= '3.15' or sys_platform == 'win32'", specifier = ">=1.4.1,<2.0.0" },
+    { name = "langchain-aws", extras = ["valkey"], marker = "python_full_version < '3.15' and sys_platform != 'win32'", specifier = ">=1.4.1,<2.0.0" },
     { name = "langchain-community", specifier = ">=0.4.1,<1.0.0" },
     { name = "lfx", editable = "src/lfx" },
     { name = "redis", specifier = ">=7.4.0,<8.0.0" },
