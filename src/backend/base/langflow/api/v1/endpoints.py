@@ -1130,6 +1130,8 @@ async def _run_flow_internal(
                 run_id=run_id,
             ),
         )
+        if (typed := integration_http_error(exc, expose_details=expose_error_details)) is not None:
+            raise typed from exc
         if "badly formed hexadecimal UUID string" in str(exc):
             # This means the Flow ID is not a valid UUID which means it can't find the flow
             http_error = HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
@@ -1140,11 +1142,6 @@ async def _run_flow_internal(
         if "not found" in str(exc):
             http_error = HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
             raise error_for_client(http_error, expose_details=expose_error_details) from exc
-        # A connection the caller may not use is not a server fault: keep the
-        # typed body and the provider's status (403/401/429) instead of flattening
-        # it into a 500 whose message a client cannot act on.
-        if (typed := integration_http_error(exc, expose_details=expose_error_details)) is not None:
-            raise typed from exc
         client_error = error_for_client(exc, expose_details=expose_error_details)
         raise APIException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -183,6 +183,16 @@
       "resolved_version": "0.4.1"
     },
     {
+      "distribution": "lfx-salesforce",
+      "extras": [],
+      "providers": [
+        "lfx-salesforce"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-salesforce==0.1.0",
+      "resolved_version": "0.1.0"
+    },
+    {
       "distribution": "lfx-servicenow",
       "extras": [],
       "providers": [
@@ -250,7 +260,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:b00b51d9a02b8674",
+  "profile_digest": "sha256:36e9620120863a04",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",
@@ -269,6 +279,7 @@
     "lfx-openai",
     "lfx-openai-compatible",
     "lfx-oracle",
+    "lfx-salesforce",
     "lfx-servicenow",
     "lfx-slack",
     "lfx-telegram",
