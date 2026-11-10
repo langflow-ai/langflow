@@ -88,7 +88,7 @@ overrides = [
     { name = "authlib", specifier = ">=1.9.1,<2.0.0" },
     { name = "cryptography", specifier = ">=50.0.0" },
     { name = "gitpython", specifier = ">=3.2.1" },
-    { name = "gunicorn", specifier = ">=25.3.0" },
+    { name = "gunicorn", specifier = ">=25.3.0,<27.0.0" },
     { name = "h2", specifier = ">=4.4.1" },
     { name = "langchain-litellm", specifier = "==0.5.1" },
     { name = "lxml", specifier = ">=6.1.0,<7.0.0" },
