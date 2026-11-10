@@ -93,6 +93,7 @@ def test_contract_required_files_exist_in_sources() -> None:
         "lfx-slack": REPO_ROOT / "src" / "bundles" / "slack" / "src",
         "lfx-telegram": REPO_ROOT / "src" / "bundles" / "telegram" / "src",
         "lfx-toolguard": REPO_ROOT / "src" / "bundles" / "toolguard" / "src",
+        "lfx-whatsapp": REPO_ROOT / "src" / "bundles" / "whatsapp" / "src",
         "lfx-bundles": REPO_ROOT / "src" / "bundles" / "lfx-bundles" / "src",
     }
 

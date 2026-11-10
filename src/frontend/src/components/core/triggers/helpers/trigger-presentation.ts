@@ -19,7 +19,8 @@ export const badgeStateOf = (
   state: TriggerState,
   reason?: TriggerRead["reason"],
 ): TriggerBadgeState =>
-  state === "needs_reconnect" && reason === "ready_to_resume"
+  (state === "needs_reconnect" || state === "pending") &&
+  reason === "ready_to_resume"
     ? "ready_to_resume"
     : state === "pending" && reason === "config_invalid"
       ? "blocked"
@@ -201,6 +202,7 @@ export const sourceIconOf = (
     case "gitlab":
       return "Gitlab";
     case "whatsapp":
+      return "WhatsApp";
     case "discord":
       return "MessageCircle";
     case "telegram":
@@ -256,6 +258,7 @@ export type TriggerEventDisplayState =
   | "queued"
   | "running"
   | "completed"
+  | "skipped"
   | "failed"
   | "dead";
 
@@ -282,6 +285,7 @@ const KNOWN_EVENT_ERRORS = new Set([
   "owner_inactive",
   "connection_not_authorized",
   "lease_expired",
+  "sender_not_allowed",
 ]);
 
 export const eventErrorKeyOf = (error: string | null): string | null => {
