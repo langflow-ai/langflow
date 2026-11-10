@@ -7,6 +7,7 @@ from fastapi.encoders import jsonable_encoder
 from langchain_core.documents import Document
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
+from lfx.serialization.constants import NUMPY_ENCODERS
 
 from langflow.schema.message import Message
 
@@ -156,7 +157,7 @@ def clean_string(s):
 def _serialize_data(data: Data) -> str:
     """Serialize Data object to JSON string."""
     # Convert data.data to JSON-serializable format
-    serializable_data = jsonable_encoder(data.data)
+    serializable_data = jsonable_encoder(data.data, custom_encoder=NUMPY_ENCODERS)
     # Serialize with orjson, enabling pretty printing with indentation
     json_bytes = orjson.dumps(serializable_data, option=orjson.OPT_INDENT_2)
     # Convert bytes to string and wrap in Markdown code blocks
