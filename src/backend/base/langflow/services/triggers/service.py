@@ -46,7 +46,11 @@ from langflow.services.triggers.reconciliation import (
     trigger_node_on_canvas,
     validate_single_trigger_per_flow,
 )
-from langflow.services.triggers.schedule_config import schedule_timing_changed, validate_schedule_config
+from langflow.services.triggers.schedule_config import (
+    InvalidScheduleError,
+    schedule_timing_changed,
+    validate_schedule_config,
+)
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -291,7 +295,14 @@ class TriggerService(Service):
             msg = "This trigger provider is unavailable. Install its integration bundle before enabling it."
             raise ValueError(msg)
         if row.kind == "schedule":
-            validate_schedule_config(row.config or {})
+            try:
+                validate_schedule_config(row.config or {})
+            except InvalidScheduleError as exc:
+                # An unusable pick blanks the cron, and the user cannot see the
+                # cron field: refuse with the picker's reason the reconciler kept.
+                if row.last_error and not (row.config or {}).get("cron"):
+                    raise InvalidScheduleError(row.last_error) from exc
+                raise
         if row.kind in SLACK_TRIGGER_KINDS:
             await _arm_slack(session, row, connection_ids=connection_ids)
         if row.kind in source_kinds():

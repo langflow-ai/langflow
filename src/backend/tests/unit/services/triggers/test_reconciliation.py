@@ -9,7 +9,8 @@ from typing import Any
 import pytest
 from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.database.models.trigger.schemas import TriggerSessionPolicy, TriggerState
-from langflow.services.deps import session_scope
+from langflow.services.deps import get_trigger_service, session_scope
+from langflow.services.triggers.error_codes import refusal_detail
 from langflow.services.triggers.reconciliation import NODE_REMOVED_ERROR, find_trigger_nodes, reconcile_flow_triggers
 from sqlmodel import select
 
@@ -91,6 +92,19 @@ async def test_an_unusable_pick_reports_what_to_fix_not_the_hidden_cron(trigger_
     rows = await _triggers(owned_flow)
     assert rows[0].last_error == "Pick at least one day of the week."
     assert "schedule_error" not in rows[0].config
+
+
+async def test_enabling_an_unusable_pick_says_what_to_fix(trigger_owner, owned_flow) -> None:
+    empty_week = _picked_schedule_node("0 8 * * 1-5", schedule_type="Weekly", time_of_day="08:00", days_of_week=[])
+    async with session_scope() as session:
+        await reconcile_flow_triggers(
+            session, flow_id=owned_flow, owner_id=trigger_owner, flow_data=_flow_data(empty_week)
+        )
+    [row] = await _triggers(owned_flow)
+    async with session_scope() as session:
+        with pytest.raises(ValueError, match=r"^Pick at least one day of the week\.$") as refusal:
+            await get_trigger_service().enable(session, row=await session.get(Trigger, row.id))
+    assert refusal_detail(refusal.value)["code"] is None
 
 
 def test_loading_langflow_before_lfx_components_keeps_component_importable() -> None:
