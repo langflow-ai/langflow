@@ -102,6 +102,33 @@ async def test_json_exchange_uses_shared_token_validation_and_refresh(monkeypatc
     assert "code_verifier" not in calls[1][1]
 
 
+@pytest.mark.parametrize("limit_scopes", [False, True])
+@pytest.mark.parametrize("refresh", [False, True])
+async def test_provider_can_limit_refreshed_scopes_to_previously_verified_grants(
+    oauth, monkeypatch, limit_scopes, refresh
+):
+    async def request(*_args, **_kwargs):
+        return {
+            "credential": {
+                "access_token": "synthetic-access",
+                "refresh_token": "synthetic-new-refresh",
+                "scope": "items:read items:write",
+            }
+        }
+
+    if limit_scopes:
+        monkeypatch.setattr(
+            adapter, "provider_adapter", lambda _provider: replace(oauth, limit_refresh_scopes_to_previous=True)
+        )
+    monkeypatch.setattr(providers, "_request", request)
+    kwargs = {"refresh_token": "synthetic-old-refresh"} if refresh else {"code": "code"}
+    payload, scopes, _ = await providers.exchange(
+        _registration(), previous_scopes=["items:read", "items:admin"], **kwargs
+    )
+    assert scopes == (["items:read"] if limit_scopes and refresh else ["items:read", "items:write"])
+    assert payload["refresh_token"] == "synthetic-new-refresh"  # noqa: S105 - test fixture
+
+
 @pytest.mark.usefixtures("oauth")
 async def test_custom_token_parser_cannot_bypass_expiry_or_tenant_validation(monkeypatch):
     async def request(*_args, **_kwargs):
