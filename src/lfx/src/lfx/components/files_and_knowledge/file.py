@@ -337,6 +337,17 @@ class FileComponent(BaseFileComponent):
             show=False,
             advanced=True,
         ),
+        BoolInput(
+            name="force_ocr",
+            display_name="Force Full Page OCR",
+            info=(
+                "Run OCR on every page, including pages with extractable text. "
+                "Requires the standard pipeline and an OCR engine."
+            ),
+            value=False,
+            show=False,
+            advanced=True,
+        ),
         StrInput(
             name="md_image_placeholder",
             display_name="Image placeholder",
@@ -518,13 +529,22 @@ class FileComponent(BaseFileComponent):
             build_config["advanced_mode"]["show"] = False
             build_config["advanced_mode"]["value"] = False
         # Hide all Docling-related fields
-        docling_fields = ("pipeline", "ocr_engine", "doc_key", "md_image_placeholder", "md_page_break_placeholder")
+        docling_fields = (
+            "pipeline",
+            "ocr_engine",
+            "force_ocr",
+            "doc_key",
+            "md_image_placeholder",
+            "md_page_break_placeholder",
+        )
         for field in docling_fields:
             if field in build_config:
                 build_config[field]["show"] = False
         # Also disable OCR engine specifically
         if "ocr_engine" in build_config:
             build_config["ocr_engine"]["value"] = "None"
+        if "force_ocr" in build_config:
+            build_config["force_ocr"]["value"] = False
 
     def update_build_config(
         self,
@@ -615,6 +635,7 @@ class FileComponent(BaseFileComponent):
                     docling_fields = (
                         "pipeline",
                         "ocr_engine",
+                        "force_ocr",
                         "doc_key",
                         "md_image_placeholder",
                         "md_page_break_placeholder",
@@ -632,13 +653,16 @@ class FileComponent(BaseFileComponent):
                 docling_fields = (
                     "pipeline",
                     "ocr_engine",
+                    "force_ocr",
                     "doc_key",
                     "md_image_placeholder",
                     "md_page_break_placeholder",
                 )
                 for field in docling_fields:
                     if field in build_config:
-                        build_config[field]["show"] = bool(field_value)
+                        build_config[field]["show"] = bool(field_value) and (
+                            field != "force_ocr" or build_config.get("pipeline", {}).get("value") == "standard"
+                        )
                         if field == "pipeline":
                             build_config[field]["advanced"] = not bool(field_value)
 
@@ -649,9 +673,14 @@ class FileComponent(BaseFileComponent):
             elif field_value == "standard":
                 build_config["ocr_engine"]["show"] = True
                 build_config["ocr_engine"]["value"] = "easyocr"
+                if "force_ocr" in build_config:
+                    build_config["force_ocr"]["show"] = True
             else:
                 build_config["ocr_engine"]["show"] = False
                 build_config["ocr_engine"]["value"] = "None"
+                if "force_ocr" in build_config:
+                    build_config["force_ocr"]["show"] = False
+                    build_config["force_ocr"]["value"] = False
 
         return build_config
 
@@ -1111,6 +1140,7 @@ class FileComponent(BaseFileComponent):
             "ocr_engine": (
                 self.ocr_engine if self.ocr_engine and self.ocr_engine != "None" and self.pipeline != "vlm" else None
             ),
+            "force_ocr": bool(self.force_ocr),
         }
 
         # Child script for isolating the docling processing
@@ -1127,7 +1157,9 @@ class FileComponent(BaseFileComponent):
                 except Exception as e:
                     raise e
 
-            def create_converter(strategy, input_format, DocumentConverter, pipeline, ocr_engine):
+            def create_converter(strategy, input_format, DocumentConverter, pipeline, ocr_engine, force_ocr):
+                if force_ocr and (pipeline != "standard" or not ocr_engine):
+                    raise ValueError("Force Full Page OCR requires the standard pipeline and an OCR engine")
                 # --- Standard PDF/IMAGE pipeline (your existing behavior), with optional OCR ---
                 if pipeline == "standard":
                     try:
@@ -1143,7 +1175,10 @@ class FileComponent(BaseFileComponent):
                                 pipe.do_ocr = True
                                 fac = get_ocr_factory(allow_external_plugins=False)
                                 pipe.ocr_options = fac.create_options(kind=ocr_engine)
+                                pipe.ocr_options.force_full_page_ocr = force_ocr
                             except Exception:
+                                if force_ocr:
+                                    raise
                                 # If OCR setup fails, disable it
                                 pipe.do_ocr = False
 
@@ -1155,6 +1190,8 @@ class FileComponent(BaseFileComponent):
 
                         return DocumentConverter(format_options=fmt)
                     except Exception:
+                        if force_ocr:
+                            raise
                         return DocumentConverter()
 
                 # --- Vision-Language Model (VLM) pipeline ---
@@ -1234,11 +1271,14 @@ class FileComponent(BaseFileComponent):
                 pg_ph = cfg["md_page_break_placeholder"]
                 pipeline = cfg["pipeline"]
                 ocr_engine = cfg.get("ocr_engine")
+                force_ocr = cfg.get("force_ocr", False)
                 meta = {"file_path": file_path}
 
                 try:
                     ConversionStatus, InputFormat, DocumentConverter, ImageRefMode, strategy = try_imports()
-                    converter = create_converter(strategy, InputFormat, DocumentConverter, pipeline, ocr_engine)
+                    converter = create_converter(
+                        strategy, InputFormat, DocumentConverter, pipeline, ocr_engine, force_ocr
+                    )
                     try:
                         res = converter.convert(file_path)
                     except Exception as e:
