@@ -45,6 +45,9 @@ def test_deployment_copy_and_release_have_single_head():
         "e6f8a0b2c4d6",  # pragma: allowlist secret
         "d8e2f4a6c9b1",  # pragma: allowlist secret
         "a8c2e6f4b9d1",  # pragma: allowlist secret
+        "3d7f9a1c5e80",  # pragma: allowlist secret
+        "e9c5a1b7d3f6",  # pragma: allowlist secret
+        "6b4d1e9c7a25",  # pragma: allowlist secret
     ],
 )
 def test_upgrading_from_either_side_keeps_jobs_and_accepts_a_copy_job(db_url, prior_revision):  # noqa: F811
@@ -148,6 +151,11 @@ def test_report_merge_downgrade_and_upgrade_keep_existing_rows(db_url):  # noqa:
             "3d7f9a1c5e80",  # pragma: allowlist secret
             "9b1d3f5a7c8e",  # pragma: allowlist secret
             {"9b1d3f5a7c8e", "f6a2c8e4b901"},  # pragma: allowlist secret
+        ),
+        (
+            "7e2c5a9d1b64",  # pragma: allowlist secret
+            "3d7f9a1c5e80",  # pragma: allowlist secret
+            {"3d7f9a1c5e80", "6b4d1e9c7a25"},  # pragma: allowlist secret
         ),
     ],
 )
