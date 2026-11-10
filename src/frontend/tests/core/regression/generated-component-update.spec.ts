@@ -122,6 +122,8 @@ test.afterAll(async () => stopServer(mcpServer));
 test.afterEach(async ({ page }, testInfo) => {
   const resources = createdResources.get(testInfo.testId);
   if (!resources) return;
+  // Leaving the canvas closes its flow-event stream before fixture teardown.
+  await page.goto("/all");
   for (const name of resources.servers) {
     const response = await page.request.delete(`/api/v2/mcp/servers/${name}`);
     expect(response.ok()).toBeTruthy();
@@ -237,15 +239,9 @@ for (const componentType of ["RunFlow", "MCPTools"] as const) {
         expect(created.status()).toBe(201);
         const flowId = (await created.json()).id as string;
         resources.flows.push(flowId);
-        await Promise.all([
-          page.waitForResponse(
-            (response) =>
-              response.request().method() === "GET" &&
-              new URL(response.url()).pathname === `/api/v1/flows/${flowId}` &&
-              response.ok(),
-          ),
-          page.goto(`/flow/${flowId}`),
-        ]);
+        // The route loader can use the complete flow already cached by the
+        // create/list requests, so opening a flow does not require another GET.
+        await page.goto(`/flow/${flowId}`);
         await waitForFlowEditorReady(page);
         await expect(page.getByTestId("div-generic-node")).toHaveCount(
           flow.data!.nodes.length,
@@ -367,20 +363,7 @@ for (const componentType of ["RunFlow", "MCPTools"] as const) {
             code: definitions[componentType].template.code.value,
             state: before,
           });
-        await Promise.all([
-          page.waitForResponse(
-            (response) =>
-              new URL(response.url()).pathname === "/api/v1/all" &&
-              response.ok(),
-          ),
-          page.waitForResponse(
-            (response) =>
-              response.request().method() === "GET" &&
-              new URL(response.url()).pathname === `/api/v1/flows/${flowId}` &&
-              response.ok(),
-          ),
-          page.reload(),
-        ]);
+        await page.reload();
         await waitForFlowEditorReady(page);
         await expect(page.getByTestId("div-generic-node")).toHaveCount(
           flow.data!.nodes.length,

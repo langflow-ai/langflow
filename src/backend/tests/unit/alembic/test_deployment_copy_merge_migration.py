@@ -136,10 +136,30 @@ def test_report_merge_downgrade_and_upgrade_keep_existing_rows(db_url):  # noqa:
         engine.dispose()
 
 
-def test_qa_merge_downgrade_and_upgrade_keep_existing_state(db_url):  # noqa: F811
-    """The final no-op join preserves rows and the active freeze in either direction."""
+@pytest.mark.parametrize(
+    ("merge_revision", "prior_revision", "expected_heads"),
+    [
+        (
+            "9b1d3f5a7c8e",  # pragma: allowlist secret
+            "d8e2f4a6c9b1",  # pragma: allowlist secret
+            {"d8e2f4a6c9b1", "a8c2e6f4b9d1"},  # pragma: allowlist secret
+        ),
+        (
+            "3d7f9a1c5e80",  # pragma: allowlist secret
+            "9b1d3f5a7c8e",  # pragma: allowlist secret
+            {"9b1d3f5a7c8e", "f6a2c8e4b901"},  # pragma: allowlist secret
+        ),
+    ],
+)
+def test_qa_merge_downgrade_and_upgrade_keep_existing_state(
+    db_url,  # noqa: F811
+    merge_revision,
+    prior_revision,
+    expected_heads,
+):
+    """Each no-op join preserves rows and the active freeze in either direction."""
     config = _make_alembic_cfg(db_url)
-    command.upgrade(config, "head")
+    command.upgrade(config, merge_revision)
     engine = create_engine(_engine_url(db_url))
     try:
         with engine.begin() as connection:
@@ -149,19 +169,14 @@ def test_qa_merge_downgrade_and_upgrade_keep_existing_state(db_url):  # noqa: F8
                 {"enabled": True, "reason": "QA rehearsal"},
             )
             state = connection.execute(text("SELECT * FROM maintenance_state")).one()
-        command.downgrade(config, "d8e2f4a6c9b1")  # pragma: allowlist secret
+        command.downgrade(config, prior_revision)
         with engine.connect() as connection:
-            assert set(MigrationContext.configure(connection).get_current_heads()) == {
-                "d8e2f4a6c9b1",  # pragma: allowlist secret
-                "a8c2e6f4b9d1",  # pragma: allowlist secret
-            }
+            assert set(MigrationContext.configure(connection).get_current_heads()) == expected_heads
             assert connection.execute(text("SELECT * FROM maintenance_state")).one() == state
             assert connection.execute(text("SELECT COUNT(*) FROM job")).scalar() == 1
-        command.upgrade(config, "head")
+        command.upgrade(config, merge_revision)
         with engine.connect() as connection:
-            assert MigrationContext.configure(connection).get_current_heads() == tuple(
-                ScriptDirectory.from_config(config).get_heads()
-            )
+            assert MigrationContext.configure(connection).get_current_heads() == (merge_revision,)
             assert connection.execute(text("SELECT * FROM maintenance_state")).one() == state
             assert connection.execute(text("SELECT COUNT(*) FROM job")).scalar() == 1
     finally:

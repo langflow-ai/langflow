@@ -598,8 +598,14 @@ def test_every_get_route_says_whether_it_changes_the_instance():
         # plugin mounts is the plugin's to answer for.
         ours = getattr(route.endpoint, "__module__", "").startswith(("langflow.", "lfx."))
         if ours and (route.methods or set()) & {"GET", "HEAD"}:
-            depends_on = getattr(route, "dependencies", None) or []
-            says_so = any(depends.dependency is changes_the_instance for depends in depends_on)
+            # A parameter dependency can follow authentication intentionally, so
+            # non-admin callers still receive 403 before the maintenance guard.
+            pending = list(route.dependant.dependencies)
+            says_so = False
+            while pending:
+                dependency = pending.pop()
+                says_so |= dependency.call is changes_the_instance
+                pending.extend(dependency.dependencies)
             served[route.path] = served.get(route.path, False) or says_so
     changes = {path for path, says_so in served.items() if says_so}
     # The migration's own routes are let through on purpose: they are the steps the pause is for.
@@ -608,7 +614,7 @@ def test_every_get_route_says_whether_it_changes_the_instance():
     assert unread == [], (
         "A migration pause lets every GET through as a read, and these routes are new. Read each one to its "
         "end, with what it depends on. A route that leaves the instance as it is goes in READS, in this file. "
-        "A route that changes it takes dependencies=[Depends(changes_the_instance)], which makes a pause "
+        "A route that changes it depends on changes_the_instance, which makes a pause "
         "refuse it, and goes in CHANGES."
     )
     assert changes == CHANGES

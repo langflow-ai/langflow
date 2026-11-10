@@ -37,17 +37,17 @@ async def test_queued_startup_work_resumes_when_maintenance_starts_between_rows(
     for job_id in (first, second):
         await jobs.create_job(job_id=job_id, flow_id=uuid4(), user_id=active_user.id)
     service = BackgroundExecutionService(get_settings_service(), frame_source_factory=lambda **_kw: _frames)
-    enqueue = service._enqueue
+    dispatch = service._backend.dispatch
     dispatched = []
 
-    async def enqueue_then_pause(**kwargs):
-        await enqueue(**kwargs)
-        dispatched.append(kwargs["job_id"])
+    async def dispatch_then_pause(job_id, **kwargs):
+        await dispatch(job_id, **kwargs)
+        dispatched.append(job_id)
         if len(dispatched) == 1:
-            await _finished(kwargs["job_id"])
+            await _finished(job_id)
             await _set_paused(enabled=True)
 
-    monkeypatch.setattr(service, "_enqueue", enqueue_then_pause)
+    monkeypatch.setattr(service._backend, "dispatch", dispatch_then_pause)
     try:
         await service.sweep_orphans_on_startup()
         remaining = next(job_id for job_id in (first, second) if job_id not in dispatched)
