@@ -43,6 +43,9 @@ def test_deployment_copy_and_release_have_single_head():
         "f4b8c1d2e3a6",  # pragma: allowlist secret
         "e6f8a0b2c4d6",  # pragma: allowlist secret
         "f6a2c8e4b901",  # pragma: allowlist secret
+        "2a4c6e8f0b1d",  # pragma: allowlist secret
+        "53e9b7a2c614",  # pragma: allowlist secret
+        "e9c5a1b7d3f6",  # pragma: allowlist secret
     ],
 )
 def test_upgrading_from_either_side_keeps_jobs_and_accepts_a_copy_job(db_url, prior_revision):  # noqa: F811
