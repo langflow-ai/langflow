@@ -5,8 +5,8 @@ import { cn } from "@/utils/utils";
 
 export interface BlockableButtonProps extends Omit<ButtonProps, "children"> {
   children?: ReactNode;
-  /** Why the action is unavailable, already translated; unset when it is available. */
-  blockedReason?: string;
+  /** Why the action is unavailable, already translated; unset, null or empty when it is available. */
+  blockedReason?: string | null;
   /** Hover text while the action is available. */
   tooltip?: string;
 }
@@ -29,7 +29,7 @@ export function BlockableButton({
   return (
     <>
       <ShadTooltip
-        content={blockedReason ?? tooltip}
+        content={blockedReason || tooltip}
         avoidCollisions
         styleClasses="max-w-[min(24rem,var(--radix-tooltip-content-available-width))] whitespace-normal break-words"
       >
@@ -38,8 +38,7 @@ export function BlockableButton({
           aria-disabled={blocked || undefined}
           aria-describedby={blocked ? reasonId : undefined}
           className={cn(
-            blocked &&
-              "cursor-not-allowed opacity-50 aria-disabled:pointer-events-auto",
+            blocked && "cursor-not-allowed aria-disabled:pointer-events-auto",
             className,
           )}
           onClick={(event) => {

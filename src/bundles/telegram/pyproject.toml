@@ -1,6 +1,6 @@
 [project]
 name = "lfx-telegram"
-version = "0.1.0"
+version = "0.1.1"
 description = "Connection-backed Telegram bot actions and triggers for Langflow."
 readme = "README.md"
 requires-python = ">=3.10,<3.16"

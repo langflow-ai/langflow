@@ -4,6 +4,18 @@ import json
 
 import pytest
 from httpx import AsyncClient
+from lfx.utils.flow_validation import prepare_public_flow_build
+
+
+@pytest.fixture
+async def current_api_flow(client, logged_in_headers, simple_api_test):
+    """Use current trusted built-ins while testing streaming protocol behavior."""
+    data = await prepare_public_flow_build(simple_api_test["data"])
+    response = await client.patch(
+        f"api/v1/flows/{simple_api_test['id']}", json={"data": data}, headers=logged_in_headers
+    )
+    assert response.status_code == 200, response.text
+    return response.json()
 
 
 @pytest.mark.integration
@@ -43,7 +55,7 @@ async def test_openai_pre_streaming_error_format(client: AsyncClient, created_ap
 
 
 @pytest.mark.integration
-async def test_openai_streaming_runtime_error_format(client: AsyncClient, created_api_key, simple_api_test):
+async def test_openai_streaming_runtime_error_format(client: AsyncClient, created_api_key, current_api_flow):
     """Test that runtime errors during streaming are properly formatted.
 
     This test verifies the fix for the bug where error events during flow execution
@@ -55,7 +67,7 @@ async def test_openai_streaming_runtime_error_format(client: AsyncClient, create
     """
     headers = {"x-api-key": created_api_key.api_key}
     payload = {
-        "model": str(simple_api_test["id"]),
+        "model": str(current_api_flow["id"]),
         "input": "test input",
         "stream": True,
     }
@@ -100,11 +112,11 @@ async def test_openai_streaming_runtime_error_format(client: AsyncClient, create
 
 
 @pytest.mark.integration
-async def test_openai_streaming_success_finish_reason(client: AsyncClient, created_api_key, simple_api_test):
+async def test_openai_streaming_success_finish_reason(client: AsyncClient, created_api_key, current_api_flow):
     """Test that successful streaming responses include finish_reason='stop'."""
     headers = {"x-api-key": created_api_key.api_key}
     payload = {
-        "model": str(simple_api_test["id"]),
+        "model": str(current_api_flow["id"]),
         "input": "Hello",
         "stream": True,
     }
