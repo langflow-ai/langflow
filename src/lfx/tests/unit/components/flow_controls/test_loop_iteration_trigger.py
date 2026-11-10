@@ -21,6 +21,7 @@ from lfx.components.processing.parser import ParserComponent
 from lfx.custom.custom_component.component import Component
 from lfx.events.event_manager import create_default_event_manager
 from lfx.graph import Graph
+from lfx.processing.process import process_tweaks_on_graph
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 
@@ -113,6 +114,41 @@ async def test_item_only_topology_dispatches_each_row_to_chatoutput():
     item = loop_result.result_dict.outputs["item"]
     assert item["message"]["count"] == 3
     assert [row["text"] for row in item["message"]["items"]] == ["Row 0", "Row 1", "Row 2"]
+
+
+@pytest.mark.asyncio
+async def test_tweak_on_the_built_graph_reaches_every_pass_of_the_body():
+    """Stream and background runs tweak the built graph, and the body is rebuilt on each pass.
+
+    The body comes from the node data, so an override kept only in the built
+    vertex's params never reached it: every pass ran with the saved value.
+    """
+    loop = LoopComponent(_id="loop")
+    loop.set(data=DataFrame([Data(text=f"Row {i}") for i in range(3)]))
+
+    parser = ParserComponent(_id="parser")
+    parser.set(input_data=loop.item_output, pattern="saved {text}", mode="Parser")
+
+    chat_output = ChatOutput(_id="ChatOutput-sink")
+    chat_output.set(input_value=parser.parse_combined_text, should_store_message=False)
+    _attach_feedback(loop, chat_output)
+
+    graph = Graph(loop, chat_output)
+    graph.prepare()
+    process_tweaks_on_graph(graph, {"parser": {"pattern": "tweaked {text}"}})
+
+    queue: asyncio.Queue = asyncio.Queue()
+    em = create_default_event_manager(queue=queue)
+    async for _ in graph.async_start(event_manager=em):
+        pass
+
+    events = await _drain(queue)
+    parsed = [
+        d["build_data"]["data"]["outputs"]["parsed_text"]["message"]
+        for d in events["end_vertex"]
+        if d["build_data"]["id"] == "parser"
+    ]
+    assert parsed == ["tweaked Row 0", "tweaked Row 1", "tweaked Row 2"]
 
 
 @pytest.mark.asyncio

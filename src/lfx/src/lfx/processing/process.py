@@ -462,7 +462,9 @@ def apply_tweaks_on_vertex(
     The override is written through ``update_raw_params`` as well as
     ``vertex.params``. Setting ``params`` alone does not reach the built
     component at runtime, which is the bug the two former private copies of this
-    function existed to work around.
+    function existed to work around. It also goes into the node data, because a
+    Loop rebuilds its body from that data on every pass and would otherwise run
+    with the saved values.
     """
     template_data = vertex.data.get("node", {}).get("template", {})
     if not isinstance(template_data, dict):
@@ -513,6 +515,7 @@ def apply_tweaks_on_vertex(
 
     if accepted:
         vertex.update_raw_params(accepted, overwrite=True)
+        apply_tweaks({"data": vertex.data}, accepted, policy=policy, flow_declares_allowlist=flow_declares_allowlist)
 
     return list(refused)
 
