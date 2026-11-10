@@ -845,6 +845,15 @@ def test_openai_batch_matches_names_not_order_and_preserves_partial_refusal():
     assert result.answers["score"].score == 0.7
 
 
+def test_openrouter_batch_keeps_answers_beside_a_refusal():
+    body = batch_response("OpenRouter")
+    body["answers"]["noul"] = {"type": "refusal"}
+    result = providers.parse_response("OpenRouter", batch_request(), body)
+    assert (result.answers["noul"].status, result.answers["noul"].refusal) == ("refusal", None)
+    assert result.answers["choice"].status == "success"
+    assert result.answers["score"].score == 0.7
+
+
 def test_openai_batch_rejects_duplicate_names():
     body = batch_response("OpenAI")
     body["answers"].append(body["answers"][0])
