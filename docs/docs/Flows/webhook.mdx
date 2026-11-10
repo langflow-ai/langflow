@@ -142,6 +142,11 @@ The **Parser** component can fail to build if it doesn't receive data from the *
 If this occurs, try changing the **Parser** component's **Mode** to **Stringify** so that the component outputs the parsed payload as a single string.
 Then, you can examine the string output and troubleshoot your parsing template, or work with the parsed data in string form.
 
+### Webhook request returns 404
+
+The webhook endpoint runs only flows that contain a **Webhook** component.
+For any other flow, including a flow that has only an [**Inbound Webhook** trigger](/deployment-trigger-webhooks), it returns the same `404` as for a flow that doesn't exist.
+
 ## See also
 
 - [Get started with the Langflow API](/api-reference-api-examples)
