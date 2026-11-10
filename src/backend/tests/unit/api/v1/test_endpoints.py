@@ -236,6 +236,7 @@ async def test_catalog_blocks_known_template_before_custom_component_build(
 
 
 @pytest.mark.parametrize("path", ["api/v1/custom_component", "api/v1/custom_component/update"])
+@pytest.mark.usefixtures("administrator_user")
 async def test_catalog_blocks_resolved_custom_component_type(
     client: AsyncClient,
     logged_in_headers: dict,
@@ -282,6 +283,7 @@ class CatalogLookalikeComponent(Component):
     assert "Agent" in response.json()["detail"]
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_update_component_outputs(client: AsyncClient, logged_in_headers: dict):
     path = Path(__file__).parent.parent.parent.parent / "data" / "dynamic_output_component.py"
 
@@ -749,6 +751,7 @@ async def test_custom_component_update_keeps_realtime_value_out_of_component_att
     assert set_attributes.call_args.args[0]["model"] == template_value
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_custom_component_endpoint_returns_metadata(client: AsyncClient, logged_in_headers: dict):
     """Test that the /custom_component endpoint returns metadata with module and code_hash."""
     component_code = """
@@ -798,6 +801,7 @@ class TestMetadataComponent(Component):
     # assert all(c in "0123456789abcdef" for c in metadata["code_hash"]), "Code hash should be hexadecimal"
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_custom_component_endpoint_metadata_consistency(client: AsyncClient, logged_in_headers: dict):
     """Test that the same component code produces consistent metadata."""
     component_code = """

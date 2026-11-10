@@ -25,6 +25,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import select
 
+from langflow.services.database.models.jobs.model import Job, JobStatus
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
 from langflow.services.database.models.knowledge_base_storage_migration import KnowledgeBaseStorageMigration
 from langflow.services.deps import get_db_service, get_settings_service, session_scope
@@ -40,6 +41,7 @@ _READ_METHODS = frozenset(
         "asimilarity_search_with_score",
         "count",
         "iter_documents",
+        "get_documents_by_ids",
         "storage_size_bytes",
         "read_migration_manifest",
         "integrity_check",
@@ -446,11 +448,54 @@ def unfenced_backend(record) -> BaseVectorStoreBackend:
 
 
 class _GuardedMethods:
-    def __init__(self, target, record, *, before_write=None):
+    def __init__(self, target, record, *, before_write=None, preserve_existing_documents=False):
         """Capture the backend and routing snapshot used to guard future operations."""
         self._target = target
         self._record = record
         self._before_write = before_write
+        self._preserve_existing_documents = preserve_existing_documents
+        self._written_document_ids: set[str] = set()
+
+    async def _new_documents(self, documents):
+        """Keep earlier successful writes out of this job's rollback scope."""
+        if not self._preserve_existing_documents:
+            return documents
+        candidates = {doc.id: doc for doc in documents if doc.id is not None}
+        existing = await self._target.get_documents_by_ids(list(candidates))
+        matched = [(doc, candidate) for doc in existing if (candidate := candidates.get(doc.id)) is not None]
+        other_jobs = {
+            UUID(doc.metadata["job_id"])
+            for doc, candidate in matched
+            if doc.metadata.get("job_id") and doc.metadata["job_id"] != candidate.metadata.get("job_id")
+        }
+        if other_jobs:
+            async with session_scope() as session:
+                jobs = (await session.exec(select(Job).where(Job.job_id.in_(other_jobs)))).all()
+            if any(job.status in (JobStatus.QUEUED, JobStatus.IN_PROGRESS, JobStatus.SUSPENDED) for job in jobs):
+                msg = (
+                    "These documents belong to an unfinished ingestion. Retry after that job finishes or is cleaned up."
+                )
+                raise StorageUnavailableError(msg)
+            failed_jobs = {str(job.job_id) for job in jobs if job.status != JobStatus.COMPLETED}
+        else:
+            failed_jobs = set()
+        for doc, candidate in matched:
+            if doc.metadata.get("job_id") not in failed_jobs and doc.metadata.get("job_id") != candidate.metadata.get(
+                "job_id"
+            ):
+                candidates.pop(doc.id, None)
+        return [*candidates.values(), *(doc for doc in documents if doc.id is None)]
+
+    def _record_written_documents(self, documents):
+        """Count newly acknowledged IDs once across successful batches in this ingestion."""
+        previous_count = len(self._written_document_ids)
+        without_id = 0
+        for doc in documents:
+            if doc.id is None:
+                without_id += 1
+            else:
+                self._written_document_ids.add(doc.id)
+        return len(self._written_document_ids) - previous_count + without_id
 
     def __getattr__(self, name):
         """Wrap asynchronous methods and iterators with the appropriate storage lease."""
@@ -503,13 +548,22 @@ class _GuardedMethods:
                     async with operation(self._record):
                         if self._before_write is not None:
                             await self._before_write()
-                        return await self._target.add_embedded_documents(embedded)
+                        embedded = await self._new_documents(embedded)
+                        await self._target.add_embedded_documents(embedded)
+                        if self._preserve_existing_documents:
+                            return self._record_written_documents(embedded)
+                        return len(embedded)
                 read_only = name in _READ_METHODS or (
                     name == "ensure_ready" and not getattr(self._target, "_create", False)
                 )
                 async with operation(self._record, shared=read_only):
                     if self._before_write is not None and name in ("add_documents", "add_embedded_documents"):
                         await self._before_write()
+                    if name == "add_documents" and self._preserve_existing_documents:
+                        documents = args[0] if args else kwargs["docs"]
+                        documents = await self._new_documents(documents)
+                        await value(documents)
+                        return self._record_written_documents(documents)
                     return await value(*args, **kwargs)
 
             return call
@@ -525,14 +579,22 @@ class _GuardedMethods:
 
 
 async def backend_for_record(
-    record, *, embedding_function=None, create=False, credential_user_id=None, before_write=None
+    record,
+    *,
+    embedding_function=None,
+    create=False,
+    credential_user_id=None,
+    before_write=None,
+    preserve_existing_documents=False,
 ):
     """Validate routing and initialize a guarded backend for its immutable generation."""
     async with operation(record, shared=not create) as current:
         backend = _raw_backend(
             current, embedding_function=embedding_function, create=create, credential_user_id=credential_user_id
         )
-    return _GuardedMethods(backend, current, before_write=before_write)
+    return _GuardedMethods(
+        backend, current, before_write=before_write, preserve_existing_documents=preserve_existing_documents
+    )
 
 
 async def backend_for_name(user_id, name, **kwargs):

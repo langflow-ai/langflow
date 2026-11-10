@@ -105,12 +105,17 @@ class TestMCPCommandInjectionSecurity:
         valid_configs = [
             MCPServerConfig(command="cmd", args=["/C", "uvx", "mcp-server"]),
             MCPServerConfig(command="sh", args=["-c", "npx @modelcontextprotocol/server"]),
-            MCPServerConfig(command="bash", args=["-lc", "python -m mcp_server"]),
+            MCPServerConfig(command="bash", args=["-uc", "python -m mcp_server"]),
             MCPServerConfig(command="cmd", args=["/c", "node", "server.js"]),
         ]
 
         for config in valid_configs:
             assert config.command in ("cmd", "sh", "bash")
+
+    @pytest.mark.parametrize("flag", ["-ic", "-lc", "-vc", "-xc"])
+    def test_shell_startup_and_tracing_modes_rejected(self, flag):
+        with pytest.raises(ValidationError, match="Unsupported shell options"):
+            MCPServerConfig(command="bash", args=[flag, "python -m mcp_server"])
 
     def test_shell_wrappers_reject_dangerous_commands(self):
         """Test that shell wrappers reject dangerous wrapped commands."""

@@ -12,6 +12,7 @@ on:
       - ".github/workflows/store_pytest_durations.yml"
       - ".github/workflows/test-coverage-advisor.yml"
       - ".github/workflows/release.yml"
+      - ".github/workflows/docker-build-v2.yml"
       - "pyproject.toml"
       - "src/bundles/*/pyproject.toml"
       - "src/bundles/*/src/*/**/capabilities.v1.json"
