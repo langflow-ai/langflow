@@ -120,13 +120,13 @@ async def test_typed_artifact_has_deterministic_declarations_and_keeps_legacy_na
     kinds = {
         "SECRET_KEY": "secret",  # pragma: allowlist secret
         "PLAIN_URL": "plain",
-        "LEGACY_NAME": None,
+        "LEGACY_NAME": "plain",
         "UNUSED": "secret",
     }
     artifact = await _typed_export(project, [first, second], kinds)
     manifest = _manifest(artifact)
     expected = [
-        {"name": "LEGACY_NAME", "kind": None},
+        {"name": "LEGACY_NAME", "kind": "plain"},
         {"name": "PLAIN_URL", "kind": "plain"},
         {"name": "SECRET_KEY", "kind": "secret"},
     ]
@@ -144,7 +144,7 @@ async def test_typed_snapshot_and_artifact_declarations_match_through_route():
     owner_id = uuid4()
     project = Folder(id=uuid4(), name="Snapshot requirements", user_id=owner_id)
     flow = _bound_flow(owner_id, project.id, ["OWNER_KEY", "OWNER_URL", "UNKNOWN_KIND"])
-    kinds = {"OWNER_KEY": "secret", "OWNER_URL": "plain", "UNKNOWN_KIND": None}
+    kinds = {"OWNER_KEY": "secret", "OWNER_URL": "plain", "UNKNOWN_KIND": "plain"}
     manifest = _manifest(await _typed_export(project, [flow], kinds))
     snapshot = await _typed_export(project, [flow], kinds, snapshot=True)
     with (
@@ -206,6 +206,29 @@ async def test_typed_metadata_without_owner_does_not_query():
 
 
 @pytest.mark.asyncio
+async def test_typed_artifact_rejects_unknown_bound_variable_instead_of_downgrading():
+    owner_id = uuid4()
+    project = Folder(id=uuid4(), name="Unknown variable kind", user_id=owner_id)
+    flow = _bound_flow(owner_id, project.id, ["UNKNOWN_NAME_OR_LITERAL_SECRET"])
+
+    with pytest.raises(builder.ProjectArtifactError, match="variable kind") as caught:
+        await _typed_export(project, [flow], {})
+
+    assert str(flow.id) in str(caught.value)
+    assert "UNKNOWN_NAME_OR_LITERAL_SECRET" not in str(caught.value)
+
+
+@pytest.mark.asyncio
+async def test_typed_artifact_rejects_known_variable_with_unresolved_kind():
+    owner_id = uuid4()
+    project = Folder(id=uuid4(), name="Unknown stored variable kind", user_id=owner_id)
+    flow = _bound_flow(owner_id, project.id, ["KNOWN_NAME"])
+
+    with pytest.raises(builder.ProjectArtifactError, match=r"KNOWN_NAME.*variable kind"):
+        await _typed_export(project, [flow], {"KNOWN_NAME": None})
+
+
+@pytest.mark.asyncio
 async def test_typed_metadata_rejects_conflicting_kinds_without_exposing_names():
     result = MagicMock()
     result.all.return_value = [("PRIVATE_NAME", CREDENTIAL_TYPE), ("PRIVATE_NAME", GENERIC_TYPE)]
@@ -248,7 +271,7 @@ async def test_typed_export_declares_literal_mcp_credentials_without_values(snap
         }
     }
     exported = await _typed_export(
-        project, [flow], {"KNOWN": "plain"}, snapshot=snapshot, registered_mcp_servers=registered
+        project, [flow], {"KNOWN": "plain", "MISSING": "plain"}, snapshot=snapshot, registered_mcp_servers=registered
     )
     if snapshot:
         declarations = [asdict(item) for item in exported.required_variable_declarations]
@@ -260,7 +283,7 @@ async def test_typed_export_declares_literal_mcp_credentials_without_values(snap
     assert declarations == sorted(
         [
             {"name": "KNOWN", "kind": "plain"},
-            {"name": "MISSING", "kind": None},
+            {"name": "MISSING", "kind": "plain"},
             {"name": variable_name_for("demo", "Authorization"), "kind": "secret"},
         ],
         key=lambda item: item["name"],

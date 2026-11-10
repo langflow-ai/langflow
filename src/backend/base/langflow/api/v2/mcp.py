@@ -292,12 +292,14 @@ async def get_servers(
 
     # Load variables once: AsyncSession cannot be used concurrently by discovery workers.
     request_variables = {}
+    strict_variables = False
     try:
         from langflow.services.variable.runtime_policy import resolve_runtime_variables
 
         request_variables = await resolve_runtime_variables(
             user_id=current_user.id, session=session, settings=settings_service
         )
+        strict_variables = request_variables is not None
         if request_variables is None:
             from langflow.services.auth import utils as auth_utils
             from langflow.services.database.models.variable.model import Variable
@@ -339,6 +341,7 @@ async def get_servers(
                     # DB-backed set the URL is allowed to resolve from.
                     url_variables=request_variables,
                     current_user_id=current_user.id,
+                    strict_variables=strict_variables,
                 )
                 server_info["mode"] = mode.lower()
                 server_info["toolsCount"] = len(tool_list)

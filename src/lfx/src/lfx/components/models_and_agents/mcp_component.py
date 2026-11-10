@@ -666,6 +666,7 @@ class MCPToolsComponent(ComponentWithCache):
                     mcp_streamable_http_client=self.streamable_http_client,
                     request_variables=request_variables,
                     url_variables=db_variables,
+                    strict_variables=bound_variables is not None,
                     tool_execution_timeout=timeout,
                     current_user_id=self.user_id,
                     end_user_id=end_user_id,
