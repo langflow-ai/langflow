@@ -77,8 +77,11 @@ class SplitTextComponent(Component):
     ]
 
     def _docs_to_data(self, docs, *, clean: bool = False) -> list[Data]:
+        """Convert split documents to Data rows, keeping each document's metadata unless clean is set."""
+        # The chunk goes last so it replaces a leftover "text" field from the source record.
         return [
-            Data(text=doc.page_content) if clean else Data(text=doc.page_content, data=doc.metadata) for doc in docs
+            Data(text=doc.page_content) if clean else Data(data={**doc.metadata, "text": doc.page_content})
+            for doc in docs
         ]
 
     def _fix_separator(self, separator: str) -> str:
@@ -105,7 +108,7 @@ class SplitTextComponent(Component):
                 msg = f"Error converting DataFrame to documents: {e}"
                 raise TypeError(msg) from e
         elif isinstance(self.data_inputs, Message):
-            self.data_inputs = [self.data_inputs.to_data()]
+            self.data_inputs = [self.data_inputs]
             return self.split_text_base()
         else:
             if not self.data_inputs:
@@ -118,7 +121,17 @@ class SplitTextComponent(Component):
                 documents = [self.data_inputs.to_lc_document()]
             else:
                 try:
-                    documents = [input_.to_lc_document() for input_ in self.data_inputs if isinstance(input_, Data)]
+                    # Only a custom Text Key overrides a record's own text_key; Messages always keep theirs.
+                    is_custom_key = bool(self.text_key) and self.text_key != "text"
+                    documents = [
+                        (
+                            input_.model_copy(update={"text_key": self.text_key})
+                            if is_custom_key and not isinstance(input_, Message)
+                            else input_
+                        ).to_lc_document()
+                        for input_ in self.data_inputs
+                        if isinstance(input_, Data)
+                    ]
                     if not documents:
                         msg = f"No valid Data inputs found in {type(self.data_inputs)}"
                         raise TypeError(msg)
