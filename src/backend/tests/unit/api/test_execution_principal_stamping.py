@@ -203,10 +203,12 @@ async def test_the_playground_cache_seam_stamps_too() -> None:
         flow_id,
         chat_service,
         _MINIMAL_FLOW,
+        user_id=principal.user_id,
         execution_principal=principal,
     )
 
     assert graph.execution_principal == principal
+    assert graph.user_id == principal.user_id
     assert chat_service.cached[str(flow_id)] is graph
 
 

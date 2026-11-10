@@ -22,6 +22,7 @@ from .auth import (
     encrypt_sso_client_secret,
     is_sso_client_secret_envelope,
 )
+from .auth.refresh_token import RefreshTokenSession
 from .catalog_policy import CatalogPolicyMode, CatalogPolicyRule, CatalogPolicyScope, CatalogResourceKind
 from .connection import Connection, ConnectionSecret
 from .connection.oauth import ConnectionOAuth
@@ -52,6 +53,7 @@ from .trigger import (
     TriggerEvent,
     TriggerLease,
     TriggerListenerLease,
+    TriggerRenewalObservation,
     TriggerSourceVersion,
     TriggerSubscription,
 )
@@ -108,6 +110,7 @@ __all__ = [
     "PolicyBundleActive",
     "PolicyBundleRevision",
     "ProjectReplacementOperation",
+    "RefreshTokenSession",
     "SSOConfig",
     "SSOConfigCreate",
     "SSOConfigRead",
@@ -125,6 +128,7 @@ __all__ = [
     "TriggerEvent",
     "TriggerLease",
     "TriggerListenerLease",
+    "TriggerRenewalObservation",
     "TriggerSourceVersion",
     "TriggerSubscription",
     "User",
