@@ -325,6 +325,8 @@ class DropDownMixin(BaseModel):
     """Variable that defines the value of the toggle button. Defaults to None."""
     toggle_disable: bool | None = None
     """Variable that defines if the toggle button is disabled. Defaults to None."""
+    translate_options: bool | None = None
+    """Show the options in the reader's language; the value saved is still the English option."""
 
     @field_validator("toggle_value")
     @classmethod

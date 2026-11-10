@@ -1,4 +1,4 @@
-"""Fire a flow on a cron schedule, in a named timezone."""
+"""Fire a flow on a schedule, in a named timezone."""
 
 from __future__ import annotations
 
@@ -8,20 +8,19 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from lfx.base.triggers.base import BaseTriggerComponent
 from lfx.base.triggers.schedule import (
     FIELDS_BY_TYPE,
-    INTERVALS,
     MONTH_DAYS,
     PICKER_FIELDS,
     SCHEDULE_CUSTOM,
     SCHEDULE_TYPES,
     SCHEDULE_WEEKLY,
-    TIMES_OF_DAY,
     WEEKDAYS,
     ScheduleTriggerError,
-    picker_cron,
-    schedule_cron,
+    picker_timing,
+    schedule_timing,
     timezone_options,
 )
-from lfx.io import BoolInput, DropdownInput, MessageTextInput, MultiselectInput
+from lfx.inputs.inputs import DateTimeInput, TimeInput
+from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, MultiselectInput
 
 #: Catch-up policies, mirroring ``TriggerCatchupPolicy`` on the server.
 CATCHUP_COALESCE = "coalesce"
@@ -86,12 +85,20 @@ class ScheduleTriggerComponent(BaseTriggerComponent):
             value=SCHEDULE_WEEKLY,
             info="How often the flow runs. Pick Custom (cron) to write a cron expression.",
             real_time_refresh=True,
+            translate_options=True,
         ),
-        DropdownInput(
-            name="interval",
-            display_name="Every",
-            options=list(INTERVALS),
-            value="15 minutes",
+        IntInput(
+            name="interval_minutes",
+            display_name="Interval, in minutes",
+            value=15,
+            real_time_refresh=True,
+            show=False,
+        ),
+        DateTimeInput(
+            name="run_at",
+            display_name="Date and time",
+            value="",
+            info="The flow runs once, at this moment in the timezone below.",
             real_time_refresh=True,
             show=False,
         ),
@@ -101,6 +108,7 @@ class ScheduleTriggerComponent(BaseTriggerComponent):
             options=list(WEEKDAYS),
             value=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
             real_time_refresh=True,
+            translate_options=True,
         ),
         MultiselectInput(
             name="days_of_month",
@@ -111,13 +119,13 @@ class ScheduleTriggerComponent(BaseTriggerComponent):
             real_time_refresh=True,
             show=False,
         ),
-        DropdownInput(
-            name="time_of_day",
+        TimeInput(
+            name="times_of_day",
             display_name="Time of day",
-            options=TIMES_OF_DAY,
-            value="08:00",
-            info="24-hour time in the timezone below. Type another time, such as 08:15, to use it.",
-            combobox=True,
+            value=["08:00"],
+            info="In the timezone below. Add more times to run the flow several times a day.",
+            is_list=True,
+            list_add_label="Add time",
             real_time_refresh=True,
         ),
         MessageTextInput(
@@ -166,7 +174,7 @@ class ScheduleTriggerComponent(BaseTriggerComponent):
     ]
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
-        """Show the fields the schedule type needs; the server compiles the cron from them."""
+        """Show the fields the schedule type needs; the server compiles the timing from them."""
         if field_name in build_config:
             build_config[field_name]["value"] = field_value
         return _show_picker_fields(build_config)
@@ -184,8 +192,11 @@ class ScheduleTriggerComponent(BaseTriggerComponent):
     def trigger_config(self) -> dict[str, Any]:
         """The JSON the flow-save reconciler copies onto the trigger row."""
         values = {name: getattr(self, name, None) for name in PICKER_FIELDS}
+        timing = schedule_timing(values, self.cron_expression or "")
+        if "cron" in timing:
+            timing["cron"] = validate_cron_expression(timing["cron"])
         return {
-            "cron": validate_cron_expression(schedule_cron(values, self.cron_expression or "")),
+            **timing,
             "timezone": validate_timezone(self.timezone or ""),
             "catchup_policy": self.catchup_policy or CATCHUP_COALESCE,
             "share_session": bool(self.share_session),
@@ -205,8 +216,8 @@ def _show_picker_fields(build_config: dict) -> dict:
 def _picker_disagrees(template: dict) -> bool:
     values = {name: (template.get(name) or {}).get("value") for name in PICKER_FIELDS}
     try:
-        cron = picker_cron(values)
+        timing = picker_timing(values)
     except ScheduleTriggerError:
         return True
     stored = (template.get("cron_expression") or {}).get("value") or ""
-    return cron is not None and " ".join(stored.split()) != cron
+    return timing is not None and timing != {"cron": " ".join(stored.split())}

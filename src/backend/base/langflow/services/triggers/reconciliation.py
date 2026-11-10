@@ -60,6 +60,7 @@ from langflow.services.triggers.locking import lock_trigger
 from langflow.services.triggers.providers.registry import component_kind, get_kind, source_kinds
 from langflow.services.triggers.schedule_config import (
     InvalidScheduleError,
+    schedule_summary,
     schedule_timing_changed,
     validate_schedule_config,
 )
@@ -284,11 +285,12 @@ def _apply_schedule_pick(node_data: dict[str, Any], config: dict[str, Any]) -> N
     """
     # Imported here: ``lfx.base.triggers`` loads Component, and this module is
     # reached while ``lfx.inputs`` is still importing (lfx.helpers -> langflow).
-    from lfx.base.triggers.schedule import PICKER_FIELDS, ScheduleTriggerError, schedule_cron
+    from lfx.base.triggers.schedule import PICKER_FIELDS, ScheduleTriggerError, schedule_timing
 
     values = {name: _template_value(node_data, name, None) for name in PICKER_FIELDS}
+    stored_cron = config.pop("cron")
     try:
-        config["cron"] = schedule_cron(values, config["cron"])
+        config.update(schedule_timing(values, stored_cron))
     except ScheduleTriggerError as exc:
         config["cron"] = ""
         config[SCHEDULE_PICK_ERROR] = str(exc)
@@ -327,8 +329,9 @@ def validate_single_trigger_per_flow(flow_data: dict[str, Any] | None) -> None:
 
 
 def _display_name(config: dict[str, Any], kind: str) -> str:
-    if kind == "schedule" and config.get("cron"):
-        return f"Schedule {config['cron']}"
+    summary = schedule_summary(config) if kind == "schedule" else None
+    if summary:
+        return f"Schedule {summary}"
     extension = get_kind(kind)
     return extension.display_name if extension else _KIND_DISPLAY_NAMES.get(kind) or kind.replace("_", " ").title()
 

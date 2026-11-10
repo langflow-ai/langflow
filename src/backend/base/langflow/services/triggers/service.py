@@ -48,6 +48,8 @@ from langflow.services.triggers.reconciliation import (
 )
 from langflow.services.triggers.schedule_config import (
     InvalidScheduleError,
+    has_timing,
+    run_at_instant,
     schedule_timing_changed,
     validate_schedule_config,
 )
@@ -98,6 +100,21 @@ def _reject_mechanism(config: dict | None) -> None:
     if config and "mechanism_id" in config:
         msg = "mechanism_id is derived from the trigger's connection and cannot be set."
         raise ValueError(msg)
+
+
+def _check_schedule_can_arm(row: Trigger) -> None:
+    """Refuse a schedule that would never fire, saying what to fix."""
+    try:
+        config = validate_schedule_config(row.config or {})
+    except InvalidScheduleError as exc:
+        # An unusable pick blanks the timing, and the user cannot see the cron
+        # field: refuse with the picker's reason the reconciler kept.
+        if row.last_error and not has_timing(row.config or {}):
+            raise InvalidScheduleError(row.last_error) from exc
+        raise
+    if "run_at" in config and run_at_instant(config) <= datetime.now(timezone.utc):
+        msg = "The date and time to run at has already passed. Pick a later one."
+        raise InvalidScheduleError(msg)
 
 
 async def _arm_slack(session: AsyncSession, row: Trigger, *, connection_ids: frozenset[UUID]) -> None:
@@ -295,14 +312,7 @@ class TriggerService(Service):
             msg = "This trigger provider is unavailable. Install its integration bundle before enabling it."
             raise ValueError(msg)
         if row.kind == "schedule":
-            try:
-                validate_schedule_config(row.config or {})
-            except InvalidScheduleError as exc:
-                # An unusable pick blanks the cron, and the user cannot see the
-                # cron field: refuse with the picker's reason the reconciler kept.
-                if row.last_error and not (row.config or {}).get("cron"):
-                    raise InvalidScheduleError(row.last_error) from exc
-                raise
+            _check_schedule_can_arm(row)
         if row.kind in SLACK_TRIGGER_KINDS:
             await _arm_slack(session, row, connection_ids=connection_ids)
         if row.kind in source_kinds():

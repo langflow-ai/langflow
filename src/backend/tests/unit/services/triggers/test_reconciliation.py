@@ -55,36 +55,44 @@ def _picked_schedule_node(cron: str, **picked: Any) -> dict:
 
 
 @pytest.mark.parametrize(
-    ("picked", "cron"),
+    ("picked", "timing"),
     [
-        ({"schedule_type": "Daily", "time_of_day": "09:00"}, "0 9 * * *"),
-        ({"schedule_type": "Weekly", "time_of_day": "17:30", "days_of_week": ["Saturday"]}, "30 17 * * 6"),
-        ({"schedule_type": "At regular intervals", "interval": "15 minutes"}, "*/15 * * * *"),
-        ({"schedule_type": "Custom (cron)", "time_of_day": "09:00"}, "0 8 * * 1-5"),
-        ({}, "0 8 * * 1-5"),
+        ({"schedule_type": "Daily", "times_of_day": ["09:00"]}, {"cron": "0 9 * * *"}),
+        ({"schedule_type": "Daily", "times_of_day": ["09:00", "18:30"]}, {"crons": ["0 9 * * *", "30 18 * * *"]}),
+        (
+            {"schedule_type": "Weekly", "times_of_day": ["17:30"], "days_of_week": ["Saturday"]},
+            {"cron": "30 17 * * 6"},
+        ),
+        ({"schedule_type": "At regular intervals", "interval_minutes": 7}, {"interval_minutes": 7}),
+        ({"schedule_type": "Once", "run_at": "2026-12-24T18:30"}, {"run_at": "2026-12-24T18:30"}),
+        ({"schedule_type": "Custom (cron)", "times_of_day": ["09:00"]}, {"cron": "0 8 * * 1-5"}),
+        ({}, {"cron": "0 8 * * 1-5"}),
     ],
 )
-def test_the_picked_schedule_is_compiled_whatever_cron_the_node_carries(picked, cron) -> None:
+def test_the_picked_schedule_is_compiled_whatever_cron_the_node_carries(picked, timing) -> None:
     """A save that skipped the canvas refresh (API, import, Assistant) still runs what the node shows."""
     _node_id, _kind, config = find_trigger_nodes(_flow_data(_picked_schedule_node("0 8 * * 1-5", **picked)))[0]
-    assert config["cron"] == cron
+    assert {key: config[key] for key in ("cron", "crons", "interval_minutes", "run_at") if key in config} == timing
 
 
 @pytest.mark.parametrize(
     "picked",
     [
-        {"schedule_type": "Weekly", "time_of_day": "08:00", "days_of_week": []},
-        {"schedule_type": "Daily", "time_of_day": "8:5x"},
-        {"schedule_type": "Daily", "time_of_day": 1730},
+        {"schedule_type": "Weekly", "times_of_day": ["08:00"], "days_of_week": []},
+        {"schedule_type": "Daily", "times_of_day": ["8:5x"]},
+        {"schedule_type": "Daily", "times_of_day": [1730]},
+        {"schedule_type": "At regular intervals", "interval_minutes": 0},
+        {"schedule_type": "Once", "run_at": ""},
     ],
 )
 def test_an_unusable_pick_stops_the_old_schedule_instead_of_keeping_it(picked) -> None:
     _node_id, _kind, config = find_trigger_nodes(_flow_data(_picked_schedule_node("0 8 * * 1-5", **picked)))[0]
     assert config["cron"] == ""
+    assert not {"crons", "interval_minutes", "run_at"} & config.keys()
 
 
 async def test_an_unusable_pick_reports_what_to_fix_not_the_hidden_cron(trigger_owner, owned_flow) -> None:
-    empty_week = _picked_schedule_node("0 8 * * 1-5", schedule_type="Weekly", time_of_day="08:00", days_of_week=[])
+    empty_week = _picked_schedule_node("0 8 * * 1-5", schedule_type="Weekly", times_of_day=["08:00"], days_of_week=[])
     async with session_scope() as session:
         await reconcile_flow_triggers(
             session, flow_id=owned_flow, owner_id=trigger_owner, flow_data=_flow_data(empty_week)
@@ -95,7 +103,7 @@ async def test_an_unusable_pick_reports_what_to_fix_not_the_hidden_cron(trigger_
 
 
 async def test_enabling_an_unusable_pick_says_what_to_fix(trigger_owner, owned_flow) -> None:
-    empty_week = _picked_schedule_node("0 8 * * 1-5", schedule_type="Weekly", time_of_day="08:00", days_of_week=[])
+    empty_week = _picked_schedule_node("0 8 * * 1-5", schedule_type="Weekly", times_of_day=["08:00"], days_of_week=[])
     async with session_scope() as session:
         await reconcile_flow_triggers(
             session, flow_id=owned_flow, owner_id=trigger_owner, flow_data=_flow_data(empty_week)
