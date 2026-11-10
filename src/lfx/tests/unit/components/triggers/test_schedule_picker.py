@@ -170,6 +170,12 @@ def test_a_malformed_time_of_day_is_refused(time_of_day) -> None:
 def test_a_daily_schedule_needs_a_time() -> None:
     with pytest.raises(ScheduleTriggerError, match="Add at least one time"):
         picker_timing({"schedule_type": "Daily", "times_of_day": []})
+    with pytest.raises(ScheduleTriggerError, match="Add at least one time"):
+        picker_timing({"schedule_type": "Daily", "times_of_day": ["", "  "]})
+
+
+def test_a_time_row_added_but_not_filled_in_is_ignored() -> None:
+    assert picker_timing({"schedule_type": "Daily", "times_of_day": ["09:00", ""]}) == {"cron": "0 9 * * *"}
 
 
 def test_a_weekly_or_monthly_schedule_needs_a_day() -> None:

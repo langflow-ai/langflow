@@ -1472,6 +1472,17 @@ export function syncNodeTranslations(): void {
           };
         }
       }
+      // Option labels are never edited by the user, so they always follow the
+      // language; English sends none, which drops the old language's labels.
+      if (
+        freshField?.option_labels !== undefined ||
+        updatedTemplate[fieldName]?.option_labels !== undefined
+      ) {
+        updatedTemplate[fieldName] = {
+          ...updatedTemplate[fieldName],
+          option_labels: freshField?.option_labels,
+        };
+      }
     }
 
     // Update output display_names and info

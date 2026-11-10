@@ -118,6 +118,10 @@ export type InputFieldType = {
   text?: string;
   temp_file?: boolean;
   separator?: string;
+  /** Translated label per option value, sent for fields that ask for it. */
+  option_labels?: Record<string, string>;
+  /** How a text field is entered: a time of day, or a local date and time. */
+  input_format?: "time" | "datetime";
 };
 
 export type OutputFieldProxyType = {

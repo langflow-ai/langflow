@@ -3544,5 +3544,10 @@
   "triggers.events.state.skipped": "Ignorado",
   "triggers.events.filters.skipped": "Ignorados",
   "triggers.eventError.sender_not_allowed": "O remetente não está na lista de números permitidos.",
-  "triggers.events.skippedCannotReplay": "Eventos ignorados não podem ser repetidos. Atualize o filtro de remetentes e envie uma nova mensagem."
+  "triggers.events.skippedCannotReplay": "Eventos ignorados não podem ser repetidos. Atualize o filtro de remetentes e envie uma nova mensagem.",
+  "timeOfDay.add": "Adicionar horário",
+  "timeOfDay.invalid": "Digite um horário como {{example}}.",
+  "timeOfDay.nth": "Horário {{n}}",
+  "timeOfDay.date": "Data",
+  "timeOfDay.time": "Horário"
 }

@@ -16,10 +16,12 @@ import {
   filterMetadataKeys,
   formatTooltipContent,
 } from "../helpers/dropdown-search";
+import { type OptionLabels, optionLabel } from "../helpers/option-label";
 
 export function DropdownOptionsList({
   filteredOptions,
   filteredMetadata,
+  optionLabels,
   firstWord,
   value,
   onSelect,
@@ -40,6 +42,7 @@ export function DropdownOptionsList({
   filteredOptions: string[];
   // biome-ignore lint/suspicious/noExplicitAny: legacy
   filteredMetadata: Record<string, any>[] | undefined;
+  optionLabels?: OptionLabels;
   firstWord: string;
   value: string;
   onSelect: (
@@ -76,7 +79,7 @@ export function DropdownOptionsList({
               delayDuration={700}
               styleClasses="whitespace-pre-wrap"
               content={formatTooltipContent(
-                option,
+                optionLabel(optionLabels, option),
                 index,
                 filteredMetadata,
                 firstWord,
@@ -114,7 +117,7 @@ export function DropdownOptionsList({
                       })}
                     >
                       <div className="text-[13px] mr-2 whitespace-nowrap flex-shrink-0">
-                        {option}
+                        {optionLabel(optionLabels, option)}
                       </div>
                       {filteredMetadata?.[index]?.status && (
                         <span

@@ -596,3 +596,41 @@ describe("legacy provider dropdown policy", () => {
     expect(screen.getByTestId("provider-dropdown")).toBeDisabled();
   });
 });
+
+describe("Dropdown option labels", () => {
+  it("should_show_translated_labels_and_select_the_option_value", () => {
+    const mockOnSelect = jest.fn();
+
+    render(
+      <Dropdown
+        value="Weekly"
+        options={["Daily", "Weekly"]}
+        optionLabels={{ Daily: "每天", Weekly: "每周" }}
+        onSelect={mockOnSelect}
+        name="schedule_type"
+        nodeId="test-node"
+        nodeClass={mockNodeClass}
+        handleNodeClass={jest.fn()}
+        id="test-dropdown"
+        editNode={false}
+        handleOnNewValue={jest.fn()}
+        disabled={false}
+      />,
+    );
+
+    expect(
+      screen.getByTestId("value-dropdown-test-dropdown"),
+    ).toHaveTextContent("每周");
+    const daily = screen.getByTestId("Daily-0-option");
+    expect(daily).toHaveTextContent("每天");
+
+    fireEvent.click(daily);
+
+    expect(mockOnSelect).toHaveBeenCalledWith(
+      "Daily",
+      undefined,
+      undefined,
+      undefined,
+    );
+  });
+});

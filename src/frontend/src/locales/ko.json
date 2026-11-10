@@ -3543,5 +3543,10 @@
   "triggers.events.state.skipped": "건너뜀",
   "triggers.events.filters.skipped": "건너뜀",
   "triggers.eventError.sender_not_allowed": "발신자가 허용된 발신자 번호 목록에 없습니다.",
-  "triggers.events.skippedCannotReplay": "건너뛴 이벤트는 다시 실행할 수 없습니다. 발신자 필터를 수정하고 새 메시지를 보내세요."
+  "triggers.events.skippedCannotReplay": "건너뛴 이벤트는 다시 실행할 수 없습니다. 발신자 필터를 수정하고 새 메시지를 보내세요.",
+  "timeOfDay.add": "시각 추가",
+  "timeOfDay.invalid": "{{example}}처럼 시각을 입력하세요.",
+  "timeOfDay.nth": "시각 {{n}}",
+  "timeOfDay.date": "날짜",
+  "timeOfDay.time": "시각"
 }

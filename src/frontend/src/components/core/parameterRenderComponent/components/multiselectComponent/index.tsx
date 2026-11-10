@@ -18,6 +18,10 @@ import {
   PopoverContentWithoutPortal,
   PopoverTrigger,
 } from "../../../../ui/popover";
+import {
+  optionLabel,
+  searchableOptions,
+} from "../../../dropdownComponent/helpers/option-label";
 import type { InputProps, MultiselectComponentType } from "../../types";
 
 export default function MultiselectComponent({
@@ -32,6 +36,7 @@ export default function MultiselectComponent({
   hideOnSelection,
   inspectionPanel,
   ariaLabelledBy,
+  optionLabels,
 }: InputProps<string[], MultiselectComponentType>): JSX.Element | null {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -49,13 +54,20 @@ export default function MultiselectComponent({
 
   const [options, setOptions] = useState<string[]>(defaultOptions);
 
-  const fuseOptions = new Fuse(options, { keys: ["name", "value"] });
-  const fuseValues = new Fuse(treatedValue, { keys: ["name", "value"] });
+  const searchKeys = { keys: ["label", "value"] };
+  const fuseOptions = new Fuse(
+    searchableOptions(options, optionLabels),
+    searchKeys,
+  );
+  const fuseValues = new Fuse(
+    searchableOptions(treatedValue, optionLabels),
+    searchKeys,
+  );
 
   const searchRoleByTerm = async (v: string) => {
     const fuse = onlySelected ? fuseValues : fuseOptions;
     const searchValues = fuse.search(v);
-    let filtered: string[] = searchValues.map((search) => search.item);
+    let filtered: string[] = searchValues.map((search) => search.item.value);
     if (!filtered.includes(v) && combobox && v) filtered = [v, ...filtered];
     setFilteredOptions(
       v
@@ -128,7 +140,9 @@ export default function MultiselectComponent({
         <span className="truncate" data-testid={`value-dropdown-${id}`}>
           {treatedValue.length > 0 &&
           options.find((option) => treatedValue.includes(option))
-            ? treatedValue.join(", ")
+            ? treatedValue
+                .map((option) => optionLabel(optionLabels, option))
+                .join(", ")
             : t("multiselect.chooseOption")}
         </span>
         <ForwardedIconComponent
@@ -170,7 +184,11 @@ export default function MultiselectComponent({
       <CommandEmpty>{t("multiselect.noValuesFound")}</CommandEmpty>
       <CommandGroup>
         {filteredOptions.map((option, index) => (
-          <ShadTooltip key={index} delayDuration={700} content={option}>
+          <ShadTooltip
+            key={index}
+            delayDuration={700}
+            content={optionLabel(optionLabels, option)}
+          >
             <div>
               <CommandItem
                 value={option}
@@ -183,7 +201,9 @@ export default function MultiselectComponent({
                     {t("multiselect.textPrefix")}&nbsp;
                   </span>
                 )}
-                <span className="truncate">{option}</span>
+                <span className="truncate">
+                  {optionLabel(optionLabels, option)}
+                </span>
                 <ForwardedIconComponent
                   name="Check"
                   className={cn(

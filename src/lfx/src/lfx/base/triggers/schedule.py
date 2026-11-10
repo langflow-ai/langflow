@@ -142,6 +142,8 @@ def _run_at(value: object) -> str:
 def _time_crons(times: object, days: str) -> dict[str, Any]:
     """One cron per distinct minute: 08:00 and 12:00 share ``0 8,12``, 18:30 needs its own."""
     items = [times] if isinstance(times, str) else times if isinstance(times, list) else []
+    # A row added on the canvas and not filled in yet is not a time to run at.
+    items = [item for item in items if not (isinstance(item, str) and not item.strip())]
     if not items:
         msg = "Add at least one time of day."
         raise ScheduleTriggerError(msg)

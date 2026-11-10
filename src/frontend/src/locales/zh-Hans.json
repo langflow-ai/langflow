@@ -3543,5 +3543,10 @@
   "triggers.events.state.skipped": "已跳过",
   "triggers.events.filters.skipped": "已跳过",
   "triggers.eventError.sender_not_allowed": "发送者不在允许的发送者号码列表中。",
-  "triggers.events.skippedCannotReplay": "无法重放已跳过的事件。请更新发送者筛选条件并发送新消息。"
+  "triggers.events.skippedCannotReplay": "无法重放已跳过的事件。请更新发送者筛选条件并发送新消息。",
+  "timeOfDay.add": "添加时间",
+  "timeOfDay.invalid": "请输入时间，例如 {{example}}。",
+  "timeOfDay.nth": "时间 {{n}}",
+  "timeOfDay.date": "日期",
+  "timeOfDay.time": "时间"
 }

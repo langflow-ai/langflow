@@ -3543,5 +3543,10 @@
   "triggers.events.state.skipped": "Skipped",
   "triggers.events.filters.skipped": "Skipped",
   "triggers.eventError.sender_not_allowed": "The sender is not in Allowed Sender Numbers.",
-  "triggers.events.skippedCannotReplay": "Skipped events cannot be replayed. Update the sender filter and send a new message."
+  "triggers.events.skippedCannotReplay": "Skipped events cannot be replayed. Update the sender filter and send a new message.",
+  "timeOfDay.add": "Add time",
+  "timeOfDay.invalid": "Enter a time such as {{example}}.",
+  "timeOfDay.nth": "Time {{n}}",
+  "timeOfDay.date": "Date",
+  "timeOfDay.time": "Time"
 }

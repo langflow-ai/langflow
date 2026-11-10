@@ -3544,5 +3544,10 @@
   "triggers.events.state.skipped": "Ignoré",
   "triggers.events.filters.skipped": "Ignorés",
   "triggers.eventError.sender_not_allowed": "L’expéditeur ne figure pas dans la liste des numéros autorisés.",
-  "triggers.events.skippedCannotReplay": "Les événements ignorés ne peuvent pas être rejoués. Modifiez le filtre des expéditeurs et envoyez un nouveau message."
+  "triggers.events.skippedCannotReplay": "Les événements ignorés ne peuvent pas être rejoués. Modifiez le filtre des expéditeurs et envoyez un nouveau message.",
+  "timeOfDay.add": "Ajouter une heure",
+  "timeOfDay.invalid": "Saisissez une heure comme {{example}}.",
+  "timeOfDay.nth": "Heure {{n}}",
+  "timeOfDay.date": "Date",
+  "timeOfDay.time": "Heure"
 }
