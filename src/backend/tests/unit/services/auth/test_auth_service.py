@@ -423,7 +423,7 @@ async def test_auto_login_longterm_token_is_short_lived_with_refresh(
         patch("langflow.services.auth.service.get_user_by_username", new=AsyncMock(return_value=superuser)),
         patch("langflow.services.auth.service.update_user_last_login_at", new=AsyncMock()),
     ):
-        user_id, tokens = await auth_service.create_user_longterm_token(AsyncMock())
+        user_id, tokens = await auth_service.create_user_longterm_token(_login_session_db())
 
     assert user_id == superuser.id
     # A refresh token is now issued (previously None).
@@ -805,11 +805,18 @@ def test_create_user_api_key(auth_service: AuthService):
     assert claims["type"] == "api_key"
 
 
+def _login_session_db():
+    """Async execution returns a synchronous SQLAlchemy result."""
+    db = AsyncMock()
+    db.execute.return_value = SimpleNamespace(scalar_one_or_none=lambda: "registered-session")
+    return db
+
+
 @pytest.mark.anyio
 async def test_create_user_tokens(auth_service: AuthService):
     """Test creating access and refresh tokens."""
     user_id = uuid4()
-    db = AsyncMock()
+    db = _login_session_db()
 
     result = await auth_service.create_user_tokens(user_id, db, update_last_login=False)
 
@@ -832,7 +839,7 @@ async def test_create_user_tokens(auth_service: AuthService):
 async def test_create_user_tokens_updates_last_login(auth_service: AuthService):
     """Test that create_user_tokens updates last login when requested."""
     user_id = uuid4()
-    db = AsyncMock()
+    db = _login_session_db()
     db.exec.return_value = MagicMock()
     db.exec.return_value.first.return_value = False
 
@@ -845,11 +852,14 @@ async def test_create_user_tokens_updates_last_login(auth_service: AuthService):
 async def test_create_refresh_token_valid(auth_service: AuthService):
     """Test creating new tokens from a valid refresh token."""
     user_id = uuid4()
-    db = AsyncMock()
-    refresh_token = auth_service.create_token({"sub": str(user_id), "type": "refresh"}, timedelta(minutes=5))
+    db = _login_session_db()
+    refresh_token = (await auth_service.create_user_tokens(user_id, db))["refresh_token"]
     fake_user = _dummy_user(user_id)
 
-    with patch("langflow.services.auth.service.get_user_by_id", new=AsyncMock(return_value=fake_user)):
+    with (
+        patch("langflow.services.auth.service.get_user_by_id", new=AsyncMock(return_value=fake_user)),
+        patch("langflow.services.auth.service.register_refresh_session", new=AsyncMock(return_value=True)),
+    ):
         result = await auth_service.create_refresh_token(refresh_token, db)
 
     assert "access_token" in result
@@ -860,8 +870,8 @@ async def test_create_refresh_token_valid(auth_service: AuthService):
 async def test_create_refresh_token_user_not_found(auth_service: AuthService):
     """Test refresh token fails when user doesn't exist."""
     user_id = uuid4()
-    db = AsyncMock()
-    refresh_token = auth_service.create_token({"sub": str(user_id), "type": "refresh"}, timedelta(minutes=5))
+    db = _login_session_db()
+    refresh_token = (await auth_service.create_user_tokens(user_id, db))["refresh_token"]
 
     with (
         patch("langflow.services.auth.service.get_user_by_id", new=AsyncMock(return_value=None)),
@@ -876,8 +886,8 @@ async def test_create_refresh_token_user_not_found(auth_service: AuthService):
 async def test_create_refresh_token_inactive_user(auth_service: AuthService):
     """Test refresh token fails for inactive user."""
     user_id = uuid4()
-    db = AsyncMock()
-    refresh_token = auth_service.create_token({"sub": str(user_id), "type": "refresh"}, timedelta(minutes=5))
+    db = _login_session_db()
+    refresh_token = (await auth_service.create_user_tokens(user_id, db))["refresh_token"]
     inactive_user = _dummy_user(user_id, active=False)
 
     with (
@@ -2961,32 +2971,37 @@ async def test_get_current_user_mcp_auto_login_skip_missing_superuser_rejects(
 
 
 @pytest.mark.anyio
-async def test_webhook_without_auth_refuses_a_deactivated_flow_owner(auth_service: AuthService):
+async def test_webhook_without_credentials_never_loads_the_flow_owner(auth_service: AuthService):
     owner = _dummy_user(uuid4(), active=False)
 
     with (
         patch(
             "langflow.services.auth.service.get_user_by_flow_id_or_endpoint_name",
             new=AsyncMock(return_value=owner),
-        ),
+        ) as lookup,
         pytest.raises(HTTPException) as exc_info,
     ):
         await auth_service.get_webhook_user(str(uuid4()), SimpleNamespace(headers={}, query_params={}))
 
-    assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
+    assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
+    lookup.assert_not_awaited()
 
 
 @pytest.mark.anyio
-async def test_webhook_without_auth_runs_as_an_active_flow_owner(auth_service: AuthService):
+async def test_webhook_auth_disabled_rejects_missing_credentials(auth_service: AuthService):
     owner = _dummy_user(uuid4())
 
-    with patch(
-        "langflow.services.auth.service.get_user_by_flow_id_or_endpoint_name",
-        new=AsyncMock(return_value=owner),
+    with (
+        patch(
+            "langflow.services.auth.service.get_user_by_flow_id_or_endpoint_name",
+            new=AsyncMock(return_value=owner),
+        ) as lookup,
+        pytest.raises(HTTPException) as exc_info,
     ):
-        result = await auth_service.get_webhook_user(str(uuid4()), SimpleNamespace(headers={}, query_params={}))
+        await auth_service.get_webhook_user(str(uuid4()), SimpleNamespace(headers={}, query_params={}))
 
-    assert result is owner
+    assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
+    lookup.assert_not_awaited()
 
 
 def _http_request(headers: dict[str, str]) -> Request:
@@ -3154,3 +3169,90 @@ async def test_external_only_request_still_authenticates_across_entrypoints(
 
     assert result.id == user.id
     resolver.assert_awaited_once_with(external_token, auth_settings)
+
+
+@pytest.mark.parametrize("external_source", ["dedicated-header", "configured-cookie", "authorization", "missing"])
+@pytest.mark.parametrize(
+    "entrypoint", ["http", "optional", "cookie-first-optional", "sse", "websocket-cookie", "websocket-query"]
+)
+@pytest.mark.anyio
+async def test_trusted_proxy_credential_isolated_from_native_channels(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+    external_source: str,
+    entrypoint: str,
+):
+    """Native cookies and query tokens cannot supply a trusted proxy identity."""
+    from langflow.services.auth import utils as auth_utils
+
+    _enable_trusted_proxy(auth_settings)
+    forged_token = _foreign_external_jwt({"sub": "forged-victim"})
+    proxy_token = _foreign_external_jwt({"sub": "verified-proxy-user"})
+    headers = {"Cookie": f"access_token_lf={forged_token}"}
+    if external_source == "dedicated-header":
+        headers["X-External-Auth"] = f"Bearer {proxy_token}"
+    elif external_source == "configured-cookie":
+        headers["Cookie"] += f"; external-session={proxy_token}"
+    elif external_source == "authorization":
+        auth_settings.EXTERNAL_AUTH_TOKEN_HEADER = "Authorization"  # noqa: S105
+        headers["Authorization"] = f"Bearer {proxy_token}"
+
+    user = _dummy_user(uuid4())
+    materialize = AsyncMock(return_value=user)
+    db = AsyncMock()
+    with (
+        patch("langflow.services.auth.utils._auth_service", return_value=auth_service),
+        patch("langflow.services.auth.utils.get_settings_service", return_value=auth_service.settings),
+        patch("langflow.services.auth.utils.set_authenticated_telemetry_user"),
+        patch.object(
+            auth_service, "_authenticate_with_token", wraps=auth_service._authenticate_with_token
+        ) as native_auth,
+        patch.object(auth_service, "_materialize_external_user", new=materialize),
+        patch.object(auth_service, "_reconcile_verified_external_groups", new=AsyncMock()),
+    ):
+        if entrypoint.startswith("websocket"):
+            query = f"token={forged_token}" if entrypoint == "websocket-query" else ""
+            if query:
+                headers["Cookie"] = headers["Cookie"].replace(f"access_token_lf={forged_token}", "")
+            websocket = WebSocket(
+                {
+                    "type": "websocket",
+                    "path": "/",
+                    "headers": [(name.lower().encode(), value.encode()) for name, value in headers.items()],
+                    "query_string": query.encode(),
+                },
+                receive=AsyncMock(),
+                send=AsyncMock(),
+            )
+            attempt = auth_utils.get_current_user_for_websocket(websocket, db=db)
+        else:
+            request = _http_request(headers)
+            if entrypoint == "sse":
+                attempt = auth_utils.get_current_user_for_sse(request, db=db)
+            elif entrypoint == "cookie-first-optional":
+                attempt = auth_utils.get_current_user_optional(request, db=db)
+            else:
+                token = await auth_utils.oauth2_login(request)
+                dependency = auth_utils.get_optional_user if entrypoint == "optional" else auth_utils.get_current_user
+                attempt = dependency(request, token, None, None, db=db)
+
+        if external_source != "missing":
+            assert await attempt is user
+            materialize.assert_awaited_once()
+            assert materialize.await_args.args[0].subject == "verified-proxy-user"
+        elif "optional" in entrypoint:
+            assert await attempt is None
+        else:
+            error_type = WebSocketException if entrypoint.startswith("websocket") else HTTPException
+            with pytest.raises(error_type) as exc_info:
+                await attempt
+            if entrypoint.startswith("websocket"):
+                assert exc_info.value.code == status.WS_1008_POLICY_VIOLATION
+            else:
+                expected_status = status.HTTP_403_FORBIDDEN if entrypoint == "sse" else status.HTTP_401_UNAUTHORIZED
+                assert exc_info.value.status_code == expected_status
+
+    if entrypoint == "websocket-query":
+        native_auth.assert_awaited_once_with(forged_token, db)
+    if external_source == "missing":
+        materialize.assert_not_awaited()

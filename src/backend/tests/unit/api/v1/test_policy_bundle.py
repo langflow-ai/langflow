@@ -52,7 +52,7 @@ def _client(monkeypatch, *, superuser: bool = True, include_v2: bool = True):
 
     app.dependency_overrides[injectable_session_scope] = _unused_session
     app.dependency_overrides[injectable_session_scope_readonly] = _unused_session
-    read_state = AsyncMock()
+    read_state = AsyncMock(return_value=PolicyBundleSnapshot(revision=7))
     replace_state = AsyncMock()
     list_history = AsyncMock()
     rollback_state = AsyncMock()
@@ -158,6 +158,7 @@ def test_get_returns_the_complete_active_bundle_with_stable_sorted_lists(monkeyp
         "blocked_model_keys": ["anthropic::claude-blocked", "openai::gpt-blocked"],
         "approved_integration_provider_ids": ["google", "slack"],
         "blocked_integration_action_keys": ["integrations.google.drive.delete"],
+        "approved_trigger_kinds": None,
         "content_hash": f"{4:064x}",
         "created_by": str(admin.id),
         "created_at": "2026-08-05T12:30:00Z",
@@ -185,6 +186,7 @@ def test_put_forwards_one_complete_cas_replacement_and_publishes_committed_snaps
         "blocked_model_keys": ["OpenAI::gpt-blocked", "openai::gpt-blocked", "claude-blocked"],
         "approved_integration_provider_ids": ["Slack", "google"],
         "blocked_integration_action_keys": [f"  Integrations.{provider}.Drive.Delete  "],
+        "approved_trigger_kinds": None,
         "reason": "quarterly policy refresh",
     }
 
@@ -202,6 +204,7 @@ def test_put_forwards_one_complete_cas_replacement_and_publishes_committed_snaps
         blocked_model_keys=["claude-blocked", "openai::gpt-blocked"],
         approved_integration_provider_ids=["google", "slack"],
         blocked_integration_action_keys=[f"integrations.{provider.casefold()}.drive.delete"],
+        approved_trigger_kinds=None,
         actor_user_id=admin.id,
         reason="quarterly policy refresh",
     )
@@ -445,9 +448,46 @@ def _integration_put(client, blocked_integration_action_keys: list[str], **overr
             "blocked_component_keys": [],
             "blocked_template_keys": [],
             "blocked_integration_action_keys": blocked_integration_action_keys,
+            "approved_trigger_kinds": None,
             **overrides,
         },
     )
+
+
+@pytest.mark.parametrize("version", ["v1", "v2"])
+@pytest.mark.parametrize("change", ["omitted", None, [], ["Slack.Message", "google.gmail"]])
+def test_trigger_ceiling_api_distinguishes_omission_clear_and_deny_all(monkeypatch, version, change):
+    client, _admin, read_state, replace_state, *_ = _client(monkeypatch)
+    original = replace(_snapshot(revision=7), approved_trigger_kinds=frozenset({"google.calendar"}))
+    read_state.return_value = original
+    expected = (
+        original.approved_trigger_kinds
+        if change == "omitted"
+        else (None if change is None else frozenset(value.casefold() for value in change))
+    )
+    replace_state.return_value = replace(original, revision=8, approved_trigger_kinds=expected)
+    payload = {
+        "expected_revision": 7,
+        "approved_provider_ids": [],
+        "blocked_component_keys": [],
+        "blocked_template_keys": [],
+    }
+    if change != "omitted":
+        payload["approved_trigger_kinds"] = change
+    response = client.put(f"/api/{version}/policy-bundle", json=payload)
+    assert response.status_code == 200
+    assert replace_state.await_args.kwargs["approved_trigger_kinds"] == (
+        expected if change == "omitted" else (None if expected is None else sorted(expected))
+    )
+    assert response.json()["approved_trigger_kinds"] == (None if expected is None else sorted(expected))
+
+
+@pytest.mark.parametrize("kind", ["", "google..gmail", "google/*", "a" * 65])
+def test_trigger_ceiling_api_rejects_malformed_kinds(monkeypatch, kind):
+    client, _admin, _read_state, replace_state, *_ = _client(monkeypatch)
+    response = _integration_put(client, [], approved_trigger_kinds=[kind])
+    assert response.status_code == 422
+    replace_state.assert_not_awaited()
 
 
 def test_put_rejects_a_newly_blocked_key_its_loaded_provider_does_not_declare(monkeypatch):
@@ -555,6 +595,7 @@ def test_put_without_model_keys_blocks_no_models_for_legacy_writers(monkeypatch)
         blocked_model_keys=[],
         approved_integration_provider_ids=None,
         blocked_integration_action_keys=[],
+        approved_trigger_kinds=None,
         actor_user_id=admin.id,
         reason=None,
     )

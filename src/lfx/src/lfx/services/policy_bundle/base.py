@@ -5,6 +5,7 @@ from __future__ import annotations
 import abc
 import hashlib
 import json
+import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -16,6 +17,21 @@ if TYPE_CHECKING:
     from collections.abc import Collection
     from datetime import datetime
     from uuid import UUID
+
+_MAX_TRIGGER_KIND_LENGTH = 64
+
+
+def normalize_trigger_kind(kind: str) -> str:
+    """Validate a stable trigger kind, including the core schedule/webhook kinds."""
+    value = kind.strip().casefold()
+    if (
+        not value
+        or len(value) > _MAX_TRIGGER_KIND_LENGTH
+        or re.fullmatch(r"[a-z0-9][a-z0-9_-]*(?:\.[a-z0-9][a-z0-9_-]*)*", value) is None
+    ):
+        msg = "Trigger kinds must use stable lowercase identifier syntax and at most 64 characters"
+        raise ValueError(msg)
+    return value
 
 
 def encode_integration_provider_ids(provider_ids: Collection[str] | None) -> list[str]:
@@ -53,6 +69,7 @@ def policy_bundle_content_hash(
     blocked_model_keys: Collection[str] = (),
     approved_integration_provider_ids: Collection[str] | None = None,
     blocked_integration_action_keys: Collection[str] = (),
+    approved_trigger_kinds: Collection[str] | None = None,
 ) -> str:
     """Return the SHA-256 of the canonical complete decision payload.
 
@@ -72,6 +89,8 @@ def policy_bundle_content_hash(
         payload["approved_integration_provider_ids"] = integration_providers
     if blocked_integration_action_keys:
         payload["blocked_integration_action_keys"] = sorted(set(blocked_integration_action_keys))
+    if approved_trigger_kinds is not None:
+        payload["approved_trigger_kinds"] = sorted({normalize_trigger_kind(kind) for kind in approved_trigger_kinds})
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
     return hashlib.sha256(encoded).hexdigest()
 
@@ -91,6 +110,9 @@ class PolicyBundleSnapshot:
     # This keeps the operator intent distinct without a second policy-mode flag.
     approved_integration_provider_ids: frozenset[str] | None = None
     blocked_integration_action_keys: frozenset[str] = frozenset()
+    # Kinds are provider-qualified (for example google.gmail). None preserves
+    # unrestricted OSS behavior; an explicit empty set denies every trigger.
+    approved_trigger_kinds: frozenset[str] | None = None
     content_hash: str = ""
     created_at: datetime | None = None
     created_by: UUID | None = None
@@ -116,6 +138,22 @@ class PolicyBundleSnapshot:
             "blocked_integration_action_keys",
             frozenset(self.blocked_integration_action_keys),
         )
+        if self.approved_trigger_kinds is not None:
+            object.__setattr__(
+                self,
+                "approved_trigger_kinds",
+                frozenset(normalize_trigger_kind(kind) for kind in self.approved_trigger_kinds),
+            )
+
+    def allows_trigger_kind(self, kind: str) -> bool:
+        """Return the provider/kind ceiling decision without widening unknown kinds."""
+        if self.approved_trigger_kinds is None:
+            return True
+        try:
+            normalized = normalize_trigger_kind(kind)
+        except ValueError:
+            return False
+        return normalized in self.approved_trigger_kinds
 
 
 class BasePolicyBundleService(Service, abc.ABC):

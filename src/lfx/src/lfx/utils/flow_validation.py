@@ -243,6 +243,9 @@ MCP_SERVER_FIELD_NAMES: frozenset[str] = frozenset({"mcp_server"})
 # ``McpInput``'s serialized template ``type``.
 MCP_SERVER_FIELD_TYPE = "mcp"
 
+API_REQUEST_COMPONENT_TYPES: frozenset[str] = frozenset({"APIRequest", "APIRequestComponent", "API Request"})
+API_REQUEST_DESTINATION_FIELDS: frozenset[str] = frozenset({"url_input", "curl_input"})
+
 
 def _compute_code_hash(code: str) -> str:
     """Compute the 12-char SHA256 prefix used by the component index."""
@@ -2045,6 +2048,61 @@ def _collect_mcp_stdio_components(nodes: list[dict]) -> list[str]:
     return found
 
 
+def _collect_dynamic_api_request_destinations(flow_data: dict, *, request_hashes: frozenset[str]) -> list[str]:
+    """Find API Request destinations supplied by another node or a tool call."""
+    from lfx.base.tools.constants import TOOL_OUTPUT_NAME
+    from lfx.graph.edge.schema import TargetHandle
+    from lfx.graph.graph.utils import process_flow
+
+    if not _collect_blocked_components(
+        flow_data["nodes"], blocked_types=API_REQUEST_COMPONENT_TYPES, blocked_hashes=request_hashes
+    ):
+        return []
+
+    try:
+        # Group proxies can redirect a harmless-looking group input into the URL.
+        # Inspect the executor's expanded graph without changing the saved flow.
+        executable = process_flow(flow_data)
+        requests = {}
+        for node in executable["nodes"]:
+            labels = _collect_blocked_components(
+                [node], blocked_types=API_REQUEST_COMPONENT_TYPES, blocked_hashes=request_hashes
+            )
+            if labels:
+                requests[node["id"]] = (labels[0], node["data"]["node"])
+
+        # Saved input flags do not override the runtime class's destination tool inputs.
+        dynamic = {node_id for node_id, (_, node_info) in requests.items() if node_info.get("tool_mode")}
+        for edge in executable.get("edges", []):
+            data = edge.get("data") or {}
+            source_handle = data.get("sourceHandle", {})
+            source = edge.get("source")
+            if source in requests and source_handle.get("name") == TOOL_OUTPUT_NAME:
+                dynamic.add(source)
+
+            target = edge.get("target")
+            if target not in requests:
+                continue
+            if data:
+                handle_data = data["targetHandle"]
+                handle = (
+                    TargetHandle.from_loop_target_handle(handle_data)
+                    if "name" in handle_data
+                    else TargetHandle(**handle_data)
+                )
+                field_name = handle.field_name
+            else:
+                # Retain the legacy edge syntax accepted by Edge.__init__.
+                field_name = edge.get("targetHandle", "").split("|")[1]
+            if field_name in API_REQUEST_DESTINATION_FIELDS:
+                dynamic.add(target)
+    except (AttributeError, IndexError, KeyError, TypeError, ValueError) as exc:
+        msg = "Public flow contains malformed API Request connections."
+        raise PublicFlowValidationError(msg) from exc
+
+    return [requests[node_id][0] for node_id in sorted(dynamic)]
+
+
 def validate_public_flow_no_code_execution(
     target: Mapping[str, Any] | Any | None,
     *,
@@ -2073,6 +2131,9 @@ def validate_public_flow_no_code_execution(
       trusted-code substitution touches them: the server would run the flow author's
       chosen command for an anonymous visitor. Remote MCP transports (HTTP/SSE) spawn
       nothing and remain allowed, so only the stdio selection is refused.
+    * Dynamic API Request destinations supplied through connected URL/cURL inputs
+      or tool arguments. Anonymous visitors may supply request payloads, but the
+      flow author must fix the network destination before publishing the flow.
 
     The first two classes are matched both by the node's declared ``type`` and by its
     ``code``-hash, so relabelling a node's ``type`` to an alias cannot smuggle a
@@ -2086,7 +2147,8 @@ def validate_public_flow_no_code_execution(
 
     Raises:
         PublicFlowValidationError: if the flow contains a code-execution component,
-            a flow-invoking component, or an MCP stdio server configuration.
+            a flow-invoking component, an MCP stdio server configuration, or a
+            dynamic API Request destination.
     """
     normalized_flow_data = _extract_flow_data(target)
     if not normalized_flow_data:
@@ -2145,6 +2207,18 @@ def validate_public_flow_no_code_execution(
         message = (
             "Public flows cannot be built without authentication when they launch a local "
             f"MCP server process (stdio transport): {blocked_names}"
+        )
+        raise PublicFlowValidationError(message)
+
+    dynamic_requests = _collect_dynamic_api_request_destinations(
+        normalized_flow_data,
+        request_hashes=_blocked_code_hashes(API_REQUEST_COMPONENT_TYPES, type_to_current_hash=type_to_current_hash),
+    )
+    if dynamic_requests:
+        message = (
+            "Public flows cannot be built without authentication when they expose dynamic "
+            f"API Request destinations: {', '.join(dynamic_requests)}. "
+            "Use API Request with a fixed URL and ordinary data outputs, without URL/cURL connections."
         )
         raise PublicFlowValidationError(message)
 
