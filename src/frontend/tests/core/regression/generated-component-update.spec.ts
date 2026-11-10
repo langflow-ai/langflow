@@ -7,6 +7,7 @@ import type { APIClassType, APIObjectType } from "../../../src/types/api";
 import type { FlowType, GenericNodeType } from "../../../src/types/flow";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TIMEOUTS } from "../../utils/constants/timeouts";
 import { waitForFlowEditorReady } from "../../utils/flow/wait-for-flow-editor-ready";
 
 const hardFlows = path.resolve(
@@ -243,6 +244,7 @@ for (const componentType of ["RunFlow", "MCPTools"] as const) {
               response.request().method() === "GET" &&
               new URL(response.url()).pathname === `/api/v1/flows/${flowId}` &&
               response.ok(),
+            { timeout: TIMEOUTS.standard },
           ),
           page.goto(`/flow/${flowId}`),
         ]);
