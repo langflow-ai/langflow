@@ -1227,7 +1227,8 @@ async def generate_flow_events(*args, provider_policy_flow: Flow | None = None, 
     vertex-log limits). It drains on success, failure and cancellation independently
     of the HTTP response that may have completed before this job starts.
     """
-    background_tasks = type(kwargs["background_tasks"])()
+    request_background_tasks = kwargs.get("background_tasks")
+    background_tasks = type(request_background_tasks)() if request_background_tasks is not None else BackgroundTasks()
     kwargs["background_tasks"] = background_tasks
     current_user = kwargs.get("current_user")
     with scoped_model_provider_policy_for_flow(
