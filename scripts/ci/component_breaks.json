@@ -15,21 +15,6 @@
       "id": "c65e648b54313bcc9833b5813ca97ae0ab808b0108b88676a0623c9d26842580",
       "reason": "Accept the documented Local DB retirement with manual saved-flow migration guidance.",
       "release_note": "docs/release_notes/compatibility/langflow-c65e648b5431.md"
-    },
-    {
-      "id": "a4043bd241ac0383b7b1a04d700e5b51d25ea0bebfa427d2a56e826bca16041a",
-      "reason": "Accept the documented ALTK Agent retirement with manual saved-flow migration guidance.",
-      "release_note": "docs/release_notes/compatibility/lfx-bundles-a4043bd241ac.md"
-    },
-    {
-      "id": "f19ae42f277a370693941eaa2f9d0061b220bd32d15c7b7010d1c78541e62df3",
-      "reason": "Accept the documented Chroma Vector Store retirement with manual saved-flow migration guidance.",
-      "release_note": "docs/release_notes/compatibility/lfx-bundles-f19ae42f277a.md"
-    },
-    {
-      "id": "835680c60211244c04913b37455e1a685f539479bb4cf0de9325a20d0ecedc7f",
-      "reason": "Accept the documented Local DB retirement with manual saved-flow migration guidance.",
-      "release_note": "docs/release_notes/compatibility/lfx-bundles-835680c60211.md"
     }
   ]
 }
