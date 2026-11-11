@@ -239,7 +239,7 @@ Changing only credentials does not change the identity when the endpoint and sel
 The identity's shape and fingerprint are validated together.
 This identifies the selected locator. It does not authenticate an installation or prove that its data stayed unchanged.
 
-The output file must be separate from either SQLite source database and its WAL, shared-memory, and journal files.
+The output file must be separate from the SQLite source databases and their WAL, shared-memory, and journal files.
 The command refuses paths, symlinks, and hard links that alias those files before checking any flows.
 It replaces a report file atomically rather than truncating an inode through a hard link.
 
