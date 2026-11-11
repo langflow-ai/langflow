@@ -1075,3 +1075,59 @@ class TestOpenSearchDestinationPolicy:
         assert result.ok is False
         assert result.details["type"] == "SSRFProtectionError"
         assert "not allowed" in result.message
+
+
+class TestJobReadSortField:
+    """Which field the per-job read sorts on, without a live cluster."""
+
+    @staticmethod
+    def _backend(tmp_path, *, mapped: bool, missing: int = 0, mapping_error: Exception | None = None):
+        from lfx.base.knowledge_bases.backends.opensearch import CHUNK_ID_SORT_FIELD
+
+        backend = _make_backend(tmp_path)
+        backend._os_index = "test_index"
+        client = MagicMock()
+        if mapping_error is not None:
+            client.indices.get_field_mapping.side_effect = mapping_error
+        else:
+            client.indices.get_field_mapping.return_value = {
+                "test_index": {"mappings": {CHUNK_ID_SORT_FIELD: {"mapping": {}}} if mapped else {}}
+            }
+        client.count.return_value = {"count": missing}
+        return backend, client
+
+    async def test_every_chunk_carrying_the_field_sorts_on_it(self, tmp_path):
+        from lfx.base.knowledge_bases.backends.opensearch import CHUNK_ID_SORT_FIELD
+
+        backend, client = self._backend(tmp_path, mapped=True)
+        assert await backend._job_sort_field(client, {"match_all": {}}) == CHUNK_ID_SORT_FIELD
+
+    async def test_a_chunk_without_the_field_keeps_the_id_sort(self, tmp_path):
+        backend, client = self._backend(tmp_path, mapped=True, missing=3)
+        assert await backend._job_sort_field(client, {"match_all": {}}) == "_id"
+
+    async def test_an_index_that_never_mapped_the_field_keeps_the_id_sort(self, tmp_path):
+        backend, client = self._backend(tmp_path, mapped=False)
+        assert await backend._job_sort_field(client, {"match_all": {}}) == "_id"
+        client.count.assert_not_called()
+
+    async def test_a_mapping_lookup_that_fails_keeps_the_id_sort(self, tmp_path):
+        backend, client = self._backend(tmp_path, mapped=True, mapping_error=OSError("no index"))
+        assert await backend._job_sort_field(client, {"match_all": {}}) == "_id"
+
+
+async def test_reads_by_id_do_not_hand_back_the_chunk_id_field(tmp_path):
+    from lfx.base.knowledge_bases.backends.opensearch import CHUNK_ID_KEY
+
+    backend = _make_backend(tmp_path)
+    backend._vector_store = MagicMock()
+    backend._os_index = "test_index"
+    backend._os_text_field = "text"
+    backend._os_client = MagicMock()
+    backend._os_client.mget.return_value = {
+        "docs": [{"_id": "a", "found": True, "_source": {"text": "t", "metadata": {"job_id": "j", CHUNK_ID_KEY: "a"}}}]
+    }
+
+    [doc] = await backend.get_documents_by_ids(["a"])
+
+    assert doc.metadata == {"job_id": "j"}
