@@ -65,6 +65,12 @@ async function openAgentTab(page: Page, flowId: string) {
 // If the flow's folder is apikey-gated, the live JSON-RPC endpoint needs an
 // x-api-key. Mint one and paste it; on a public folder the field never shows.
 async function fillTestKeyIfNeeded(page: Page) {
+  // API-key requirements arrive with the resolved card. The publish switch
+  // renders before that fetch finishes, so wait for the actual input contract
+  // before deciding whether the key field is present.
+  await expect(page.getByText("session_id", { exact: true })).toBeVisible({
+    timeout: 30000,
+  });
   const keyField = page.getByTestId("agent-test-apikey");
   if (await keyField.isVisible().catch(() => false)) {
     const key = await page.evaluate(async () => {
