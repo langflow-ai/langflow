@@ -123,18 +123,24 @@ test.afterAll(async () => stopServer(mcpServer));
 test.afterEach(async ({ page }, testInfo) => {
   const resources = createdResources.get(testInfo.testId);
   if (!resources) return;
-  // Leave the finished editor for a real document that starts no API polling.
-  const cleanupPage = await page.goto("/health");
-  expect(cleanupPage?.ok()).toBeTruthy();
-  for (const name of resources.servers) {
-    const response = await page.request.delete(`/api/v2/mcp/servers/${name}`);
-    expect(response.ok()).toBeTruthy();
+  try {
+    // Unmount the editor in-app so polling stops without canceling in-flight XHRs.
+    const canvas = page.locator("#react-flow-id");
+    if (await canvas.isVisible()) {
+      await page.getByTestId("icon-ChevronLeft").first().click();
+      await expect(canvas).toHaveCount(0);
+    }
+  } finally {
+    for (const name of resources.servers) {
+      const response = await page.request.delete(`/api/v2/mcp/servers/${name}`);
+      expect(response.ok()).toBeTruthy();
+    }
+    for (const id of resources.flows.reverse()) {
+      const response = await page.request.delete(`/api/v1/flows/${id}`);
+      expect(response.ok()).toBeTruthy();
+    }
+    createdResources.delete(testInfo.testId);
   }
-  for (const id of resources.flows.reverse()) {
-    const response = await page.request.delete(`/api/v1/flows/${id}`);
-    expect(response.ok()).toBeTruthy();
-  }
-  createdResources.delete(testInfo.testId);
 });
 
 for (const componentType of ["RunFlow", "MCPTools"] as const) {
