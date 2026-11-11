@@ -64,7 +64,13 @@ class DecisionModelComponent(Component):
         MessageTextInput(
             name="context",
             display_name="Context",
-            info="The text the question is about, such as a message or a document.",
+            # Also the argument description an Agent reads when this is a tool, so the purpose comes first.
+            info=(
+                "The text the question is about, such as a message or a document. "
+                "Required unless a Structured Context is connected."
+            ),
+            # Not marked required: a connected Structured Context replaces it, and the editor can't see that.
+            placeholder="Required, or Structured Context",
             tool_mode=True,
         ),
         MessageTextInput(

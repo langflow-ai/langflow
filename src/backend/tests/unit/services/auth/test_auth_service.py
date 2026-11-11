@@ -5,7 +5,7 @@ import hashlib
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import jwt
@@ -808,6 +808,8 @@ def test_create_user_api_key(auth_service: AuthService):
 def _login_session_db():
     """Async execution returns a synchronous SQLAlchemy result."""
     db = AsyncMock()
+    db.exec.return_value = MagicMock()
+    db.exec.return_value.first.return_value = False
     db.execute.return_value = SimpleNamespace(scalar_one_or_none=lambda: "registered-session")
     return db
 
@@ -840,6 +842,8 @@ async def test_create_user_tokens_updates_last_login(auth_service: AuthService):
     """Test that create_user_tokens updates last login when requested."""
     user_id = uuid4()
     db = _login_session_db()
+    db.exec.return_value = MagicMock()
+    db.exec.return_value.first.return_value = False
 
     with patch("langflow.services.auth.service.update_user_last_login_at", new=AsyncMock()) as mock_update:
         await auth_service.create_user_tokens(user_id, db, update_last_login=True)

@@ -17,6 +17,7 @@ async def initialize_database(*, fix_migration: bool = False) -> None:
     from langflow.services.deps import get_db_service
 
     database_service: DatabaseService = get_db_service()
+    database_service.database_initialized = False
     await database_service.ensure_postgresql_version()
     # Fail fast with a clear, actionable message when a SQLite path cannot be
     # opened (e.g. a relative LANGFLOW_DATABASE_URL whose parent directory does
@@ -55,6 +56,7 @@ async def initialize_database(*, fix_migration: bool = False) -> None:
             raise
         await logger.adebug("Migration attempted to create existing table, skipping.")
     await logger.adebug("Database initialized")
+    database_service.database_initialized = True
 
 
 @asynccontextmanager

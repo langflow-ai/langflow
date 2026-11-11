@@ -138,6 +138,19 @@ export function useSettingsSidebarItems(): SettingsSidebarItem[] {
     },
   );
 
+  if (isSuperuser) {
+    items.push({
+      title: t("settings.nav.upgradeReports"),
+      href: "/settings/upgrade-reports",
+      icon: (
+        <ForwardedIconComponent
+          name="ClipboardCheck"
+          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+        />
+      ),
+    });
+  }
+
   if (isSuperuser && migrationEnabled) {
     items.push({
       title: t("settings.nav.migration"),

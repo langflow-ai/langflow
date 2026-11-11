@@ -49,6 +49,7 @@ dependencies = [
     "lfx-slack>=0.3.0,<1.0.0",
     "lfx-salesforce>=0.1.0,<1.0.0",
     "lfx-confluence>=0.1.1,<1.0.0",
+    "lfx-discord>=0.1.0,<1.0.0",
     "lfx-servicenow>=0.1.1,<1.0.0",
     "lfx-telegram>=0.1.1,<1.0.0",
     "lfx-github>=0.1.1,<1.0.0",
@@ -144,6 +145,7 @@ lfx-jira = { workspace = true }
 lfx-slack = { workspace = true }
 lfx-salesforce = { workspace = true }
 lfx-confluence = { workspace = true }
+lfx-discord = { workspace = true }
 lfx-servicenow = { workspace = true }
 lfx-telegram = { workspace = true }
 lfx-github = { workspace = true }
@@ -192,6 +194,7 @@ members = [
     "src/bundles/slack",
     "src/bundles/salesforce",
     "src/bundles/confluence",
+    "src/bundles/discord",
     "src/bundles/servicenow",
     "src/bundles/telegram",
     "src/bundles/github",
@@ -208,7 +211,7 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 bundles = [
-    "lfx-bundles[all-no-torch]>=1.3.5,<2.0",
+    "lfx-bundles[all-no-torch]>=1.3.6,<2.0",
     "lfx-arxiv>=0.2.1,<1.0.0",
     "lfx-confluent>=0.3.1,<1.0.0",
     "lfx-duckduckgo>=0.3.0,<1.0.0",
@@ -396,6 +399,7 @@ log_cli = true
 log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 markers = [
+    "component_runtime: Compatibility contracts requiring the installed LFX runtime",
     "full_database_init: Run the API client fixture with a fresh schema and real migrations",
     "async_test",
     "api_key_required",

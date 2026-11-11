@@ -13,6 +13,11 @@ if TYPE_CHECKING:
 
 
 @dataclass
+class EraseStepPending:
+    """A bounded inspection made progress without deleting rows; repeat after a heartbeat."""
+
+
+@dataclass
 class EraseContext:
     request_id: UUID
     subject_user_id: UUID
