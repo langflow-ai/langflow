@@ -253,6 +253,8 @@ def test_hard_flow_status_after_a_component_change(release, flow_name, component
     report = check_flow_compatibility(flow, {}, registry={**lookup, component_type: entry})
 
     assert {node.status for node in report.nodes if node.component_type == component_type} == {expected}
+
+
 @pytest.mark.parametrize("handle", [None, "not-a-handle", "null", '{"fieldName": 9}'])
 @pytest.mark.parametrize("unknown_first", [False, True])
 def test_unreadable_target_handle_requires_review_only_for_its_target(handle, unknown_first):

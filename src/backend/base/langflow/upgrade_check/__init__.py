@@ -28,6 +28,7 @@ __all__ = [
     "read_only_connection",
 ]
 
+
 def __getattr__(name: str) -> Any:
     if name in __all__:
         from importlib import import_module
