@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
-from lfx.utils.flow_validation import prepare_flow_build_for_user
+from lfx.utils.flow_validation import CustomComponentValidationError, prepare_flow_build_for_user
 from sqlalchemy import Text, cast, or_, update
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, select
@@ -123,7 +123,13 @@ async def _load_context(run_id: UUID) -> RunContext | None:
         except EvalsValidationError as exc:
             await _fail_run(session, run_id, str(exc))
             return None
-    sanitized = await prepare_flow_build_for_user(version_data, is_superuser=bool(user.is_superuser))
+    try:
+        sanitized = await prepare_flow_build_for_user(version_data, is_superuser=bool(user.is_superuser))
+    except CustomComponentValidationError as exc:
+        # Checked at start too; this covers a code policy that changed while the run was queued.
+        async with session_scope() as session:
+            await _fail_run(session, run_id, str(exc))
+        return None
     graph_data = sanitized if sanitized is not None else version_data
     graph_data = await apply_global_variable_defaults(graph_data, user.id)
     return RunContext(

@@ -1,4 +1,5 @@
 import asyncio
+import json
 from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
@@ -14,6 +15,7 @@ from langflow.services.evaluations.row_runner import RowExecution
 from sqlmodel import select
 
 from .conftest import (
+    DATA_DIR,
     create_dataset,
     create_evaluation,
     create_flow,
@@ -251,6 +253,45 @@ class TestGuards:
         response = await client.post(f"api/v1/evaluations/{evaluation['id']}/runs", headers=logged_in_headers)
         assert response.status_code == 422
         assert "human_in_the_loop" in {issue["code"] for issue in response.json()["detail"]["issues"]}
+
+    async def test_should_block_a_flow_the_code_policy_refuses_before_any_run(self, client, logged_in_headers):
+        # The bundled snapshot as saved, without the server's current code: under the default
+        # admin-only code policy a regular user cannot run its drifted built-in components.
+        stale = json.loads((DATA_DIR / "chat_echo_no_llm.json").read_text(encoding="utf-8"))["data"]
+        created = await client.post("api/v1/flows/", json={"name": "Stale", "data": stale}, headers=logged_in_headers)
+        flow = created.json()
+        dataset = await create_dataset(client, logged_in_headers, "stale", [("x", "x")])
+        evaluation = await create_evaluation(client, logged_in_headers, flow["id"], dataset["id"])
+
+        check = await client.get("api/v1/evaluations/check", params={"flow_id": flow["id"]}, headers=logged_in_headers)
+        started = await client.post(f"api/v1/evaluations/{evaluation['id']}/runs", headers=logged_in_headers)
+
+        blocking = check.json()["blocking"]
+        assert [issue["code"] for issue in blocking] == ["build_blocked"]
+        assert "outdated components" in blocking[0]["message"]
+        assert started.status_code == 422
+        assert [issue["code"] for issue in started.json()["detail"]["issues"]] == ["build_blocked"]
+
+    async def test_should_fail_the_run_with_the_policy_reason_when_it_refuses_after_the_start(
+        self, client, logged_in_headers, monkeypatch
+    ):
+        from lfx.utils.flow_validation import CustomComponentValidationError
+
+        async def refuse(*_args, **_kwargs):
+            msg = "Flow build blocked: custom components are not allowed: Chat Input"
+            raise CustomComponentValidationError(msg)
+
+        monkeypatch.setattr(runner, "prepare_flow_build_for_user", refuse)
+        flow = await create_flow(client, logged_in_headers)
+        dataset = await create_dataset(client, logged_in_headers, "policy-later", [("x", "x")])
+        evaluation = await create_evaluation(client, logged_in_headers, flow["id"], dataset["id"])
+
+        run = await wait_for_run(
+            client, logged_in_headers, (await start_run(client, logged_in_headers, evaluation["id"]))["id"]
+        )
+
+        assert run["status"] == "failed"
+        assert run["error"] == "Flow build blocked: custom components are not allowed: Chat Input"
 
     async def test_should_refuse_an_empty_dataset(self, client, logged_in_headers):
         flow = await create_flow(client, logged_in_headers)

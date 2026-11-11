@@ -4056,5 +4056,6 @@
   "evals.safety.checkHint.prompt_injection": "Sinaliza respostas que revelam as instruções ocultas do app ou seguem instruções plantadas em um documento ou resultado de ferramenta.",
   "evals.safety.checkHint.jailbreak": "Sinaliza respostas que dão uma ajuda que o app deve recusar, depois que o usuário argumentou ou fez role-play para contornar as regras.",
   "evals.infoLabel": "Sobre {{name}}",
-  "evals.evaluations.loadingOne": "Carregando avaliação..."
+  "evals.evaluations.loadingOne": "Carregando avaliação...",
+  "evals.checks.build_blocked": "Alguns componentes precisam ser atualizados antes de este flow rodar. Abra o flow e atualize-os."
 }

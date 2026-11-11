@@ -4055,5 +4055,6 @@
   "evals.safety.checkHint.prompt_injection": "앱의 숨겨진 지침을 드러내거나 문서 또는 도구 결과에 심어진 지침을 따르는 답변을 표시합니다.",
   "evals.safety.checkHint.jailbreak": "사용자가 논쟁이나 역할극으로 규칙을 우회한 뒤 앱이 거절해야 할 도움을 준 답변을 표시합니다.",
   "evals.infoLabel": "{{name}} 정보",
-  "evals.evaluations.loadingOne": "평가 불러오는 중..."
+  "evals.evaluations.loadingOne": "평가 불러오는 중...",
+  "evals.checks.build_blocked": "이 플로우를 실행하려면 일부 컴포넌트를 업데이트해야 합니다. 플로우를 열어 업데이트하세요."
 }

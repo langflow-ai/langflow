@@ -21,7 +21,7 @@ from langflow.services.evaluations.dataset_service import count_items
 from langflow.services.evaluations.errors import EvalsConflictError, EvalsNotFoundError, EvalsValidationError
 from langflow.services.evaluations.estimate import estimate_run
 from langflow.services.evaluations.evaluation_service import has_active_run
-from langflow.services.evaluations.flow_checks import check_flow, resolve_output_vertex
+from langflow.services.evaluations.flow_checks import build_policy_issue, check_flow, resolve_output_vertex
 from langflow.services.evaluations.model_overrides import apply_model_overrides, require_models
 from langflow.services.evaluations.run_reconcile import ACTIVE_STATUSES, reconcile_runs
 from langflow.services.evaluations.runner import cancel_local_run, run_evaluation
@@ -107,6 +107,8 @@ async def start_evaluation_run(
         raise FlowCheckFailedError([issue.model_dump() for issue in report.blocking])
     run_data = apply_model_overrides(version.data or {}, model_overrides)
     require_models(run_data)
+    if issue := await build_policy_issue(run_data, is_superuser=bool(user.is_superuser)):
+        raise FlowCheckFailedError([issue.model_dump()])
     if comparison is not None and comparison["index"] == 0:
         # Refuse a variant the version cannot run now, before the first variant spends anything.
         for variant in comparison["variants"]:

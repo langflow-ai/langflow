@@ -15,7 +15,7 @@ from langflow.services.evaluations import evaluation_service, run_service
 from langflow.services.evaluations.access import load_eval_dataset, load_eval_flow, load_evaluation
 from langflow.services.evaluations.dataset_service import item_text
 from langflow.services.evaluations.estimate import estimate_variants
-from langflow.services.evaluations.flow_checks import check_flow
+from langflow.services.evaluations.flow_checks import build_policy_issue, check_flow
 from langflow.services.evaluations.model_overrides import apply_model_overrides
 from langflow.services.evaluations.results_export import export_results
 from langflow.services.evaluations.schemas import (
@@ -107,7 +107,10 @@ async def check_flow_for_evaluation(
     async with evals_http_errors():
         flow = await load_eval_flow(session, current_user, flow_id, FlowAction.READ)
         data = await _flow_data(session, flow, flow_version_id)
-    return check_flow(data, output_vertex_id)
+    report = check_flow(data, output_vertex_id)
+    if not report.blocking and (issue := await build_policy_issue(data or {}, is_superuser=current_user.is_superuser)):
+        report.blocking.append(issue)
+    return report
 
 
 @router.post("/evaluations/estimate", response_model=EstimateRead)

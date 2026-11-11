@@ -4056,5 +4056,6 @@
   "evals.safety.checkHint.prompt_injection": "アプリの隠れた指示を明かしたり、ドキュメントやツール結果に仕込まれた指示に従ったりする回答を検出します。",
   "evals.safety.checkHint.jailbreak": "ユーザーが議論やロールプレイでルールを回避した後に、アプリが断るべき支援をした回答を検出します。",
   "evals.infoLabel": "{{name}}について",
-  "evals.evaluations.loadingOne": "評価を読み込んでいます..."
+  "evals.evaluations.loadingOne": "評価を読み込んでいます...",
+  "evals.checks.build_blocked": "このフローを実行するには、一部のコンポーネントを更新する必要があります。フローを開いて更新してください。"
 }

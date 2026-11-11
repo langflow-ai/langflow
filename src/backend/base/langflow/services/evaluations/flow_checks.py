@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from lfx.utils.flow_validation import CustomComponentValidationError, prepare_flow_build_for_user
+
 from langflow.api.v1.run_validation import flow_requires_hitl
 from langflow.services.evaluations.model_overrides import model_fields
 from langflow.services.evaluations.schemas import FlowCheckIssue, FlowCheckReport
@@ -192,3 +194,12 @@ def resolve_output_vertex(flow_data: dict[str, Any], output_vertex_id: str | Non
     if output_vertex_id is not None:
         return output_vertex_id
     return output_vertices(flow_data)[0]["id"]
+
+
+async def build_policy_issue(flow_data: dict[str, Any], *, is_superuser: bool) -> FlowCheckIssue | None:
+    """Whether the server's code policy refuses this flow for this user, e.g. outdated built-in components."""
+    try:
+        await prepare_flow_build_for_user(flow_data, is_superuser=is_superuser)
+    except CustomComponentValidationError as exc:
+        return FlowCheckIssue(code="build_blocked", message=str(exc))
+    return None

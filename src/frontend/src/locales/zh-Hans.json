@@ -4055,5 +4055,6 @@
   "evals.safety.checkHint.prompt_injection": "标记泄露应用隐藏指令，或听从文档或工具结果中植入指令的回答。",
   "evals.safety.checkHint.jailbreak": "标记在用户通过争辩或角色扮演绕过规则后，给出应用本应拒绝的帮助的回答。",
   "evals.infoLabel": "关于{{name}}",
-  "evals.evaluations.loadingOne": "正在加载评估..."
+  "evals.evaluations.loadingOne": "正在加载评估...",
+  "evals.checks.build_blocked": "运行此流程前需要更新部分组件。请打开流程并更新它们。"
 }

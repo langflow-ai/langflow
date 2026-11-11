@@ -1,4 +1,5 @@
 import asyncio
+import copy
 import json
 from collections.abc import Sequence
 from pathlib import Path
@@ -24,7 +25,28 @@ def evals_enabled(monkeypatch: pytest.MonkeyPatch):
     del routes[mounted:]
 
 
+_EVAL_FLOW_FILES = ("chat_echo_no_llm.json", "human_input_flow.json", "MemoryChatbotNoLLM.json")
+_CURRENT_FLOWS: dict[str, dict] = {}
+
+
+@pytest.fixture(autouse=True)
+async def current_builtin_flows(client):  # noqa: ARG001 - the server's component registry must be loaded
+    """Refresh the bundled flows with this server's component code, as the shared fixtures do.
+
+    Regular users cannot run drifted built-in code under the default admin-only code policy, and
+    these snapshots drift whenever a component changes.
+    """
+    from lfx.utils.flow_validation import prepare_public_flow_build
+
+    for filename in _EVAL_FLOW_FILES:
+        if filename not in _CURRENT_FLOWS:
+            raw = json.loads((DATA_DIR / filename).read_text(encoding="utf-8"))["data"]
+            _CURRENT_FLOWS[filename] = await prepare_public_flow_build(raw)
+
+
 def load_flow_data(filename: str) -> dict:
+    if filename in _CURRENT_FLOWS:
+        return copy.deepcopy(_CURRENT_FLOWS[filename])
     return json.loads((DATA_DIR / filename).read_text(encoding="utf-8"))["data"]
 
 

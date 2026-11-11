@@ -4055,5 +4055,6 @@
   "evals.safety.checkHint.prompt_injection": "Flags answers that reveal the app's hidden instructions or follow instructions planted in a document or tool result.",
   "evals.safety.checkHint.jailbreak": "Flags answers that give help the app must refuse after the user argued or role-played around its rules.",
   "evals.infoLabel": "About {{name}}",
-  "evals.evaluations.loadingOne": "Loading evaluation..."
+  "evals.evaluations.loadingOne": "Loading evaluation...",
+  "evals.checks.build_blocked": "Some components must be updated before this flow can run. Open the flow and update them."
 }
