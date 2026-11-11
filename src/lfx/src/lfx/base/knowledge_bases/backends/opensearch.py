@@ -75,6 +75,7 @@ import threading
 from contextlib import contextmanager
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
+from uuid import uuid4
 
 from lfx.base.knowledge_bases.backends.base import (
     METADATA_KEY_JOB_ID,
@@ -140,10 +141,18 @@ def _document_from_hit(
             embedding = list(raw_vec)
     return IngestedDocument(
         content=str(content),
-        metadata=dict(metadata),
+        metadata=_without_chunk_id(metadata),
         embedding=embedding,
         id=hit.get("_id") if isinstance(hit, dict) else None,
     )
+
+
+def _with_chunk_id(metadata: dict[str, Any] | None, chunk_id: str) -> dict[str, Any]:
+    return {**(metadata or {}), CHUNK_ID_KEY: chunk_id}
+
+
+def _without_chunk_id(metadata: dict[str, Any] | None) -> dict[str, Any]:
+    return {key: value for key, value in (metadata or {}).items() if key != CHUNK_ID_KEY}
 
 
 def _job_query(job_id: str) -> dict[str, Any]:
@@ -248,6 +257,12 @@ DEFAULT_VECTOR_FIELD = "vector_field"
 # DB-providers UI still writes.
 LANGCHAIN_DEFAULT_VECTOR_FIELD = "vector_field"
 DEFAULT_TEXT_FIELD = "text"
+#: Each chunk's own id, kept in its metadata as well, so a per-job read can sort on an ordinary
+#: field. Sorting on ``_id`` needs ``indices.id_field_data.enabled``, which a hardened cluster can
+#: turn off, and loads every id into heap. Never shown: the read paths take it out again.
+CHUNK_ID_KEY = "kb_chunk_id"
+#: Dynamic mapping gives the string a keyword copy; this is what the per-job read sorts on.
+CHUNK_ID_SORT_FIELD = f"metadata.{CHUNK_ID_KEY}.keyword"
 # ``faiss`` is part of the core OpenSearch k-NN plugin on every
 # released version (1.x → 3.x) and works without extra cluster setup.
 # ``jvector`` was tempting (it's faster on OpenSearch 3.2+) but it
@@ -542,8 +557,14 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             return
         await self.ensure_ready()
         store = self.vector_store
+        # Ids chosen here rather than by LangChain, so each chunk's metadata can carry its own.
+        ids = [doc.id or str(uuid4()) for doc in docs]
+        docs = [
+            doc.model_copy(update={"id": chunk_id, "metadata": _with_chunk_id(doc.metadata, chunk_id)})
+            for doc, chunk_id in zip(docs, ids, strict=True)
+        ]
         with _refused_documents_left_out():
-            await store.aadd_documents(docs, space_type=self._os_space_type)
+            await store.aadd_documents(docs, ids=ids, space_type=self._os_space_type)
 
     async def _write_embedded(self, ids: list[str], docs: list[IngestedDocument]) -> None:
         # Like ingestion, no per-call field override: LangChain writes vectors to
@@ -561,7 +582,10 @@ class OpenSearchBackend(BaseVectorStoreBackend):
                 await _drained_worker(
                     self.vector_store.add_embeddings,  # type: ignore[attr-defined]
                     [(doc.content, doc.embedding) for doc in chunk],
-                    metadatas=[doc.metadata for doc in chunk],
+                    metadatas=[
+                        _with_chunk_id(doc.metadata, chunk_id)
+                        for doc, chunk_id in zip(chunk, ids[start : start + bulk_size], strict=True)
+                    ],
                     ids=ids[start : start + bulk_size],
                     space_type=self._os_space_type,
                 )
@@ -600,9 +624,10 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         if filter:
             kwargs["filter"] = self._translate_where(filter)
         if with_scores:
-            return await self.vector_store.asimilarity_search_with_score(**kwargs)
+            scored = await self.vector_store.asimilarity_search_with_score(**kwargs)
+            return [(doc.model_copy(update={"metadata": _without_chunk_id(doc.metadata)}), s) for doc, s in scored]
         docs = await self.vector_store.asimilarity_search(**kwargs)
-        return [(doc, 0.0) for doc in docs]
+        return [(doc.model_copy(update={"metadata": _without_chunk_id(doc.metadata)}), 0.0) for doc in docs]
 
     async def get_documents_by_ids(self, ids: list[str]) -> list[Document]:
         """Read exact IDs without depending on search-index refreshes."""
@@ -633,7 +658,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
                     Document(
                         id=item["_id"],
                         page_content=source.get(self._os_text_field) or source.get("text", ""),
-                        metadata=source.get("metadata", {}),
+                        metadata=_without_chunk_id(source.get("metadata", {})),
                     )
                 )
         return documents
@@ -927,6 +952,28 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             text_fields.append(DEFAULT_TEXT_FIELD)
         return text_fields, embedding_fields
 
+    async def _job_sort_field(self, client: Any, query: dict[str, Any]) -> str:
+        """The chunk id field when the index maps it and every chunk the query matches has it, else ``_id``.
+
+        Both hold the same string for each chunk, so a resume cursor taken under one sort
+        carries on under the other. Chunks written before ``CHUNK_ID_KEY`` (or with an id
+        longer than the keyword copy keeps) fall back to ``_id``, as reads did before.
+        """
+        try:
+            mapping = await _drained_worker(
+                client.indices.get_field_mapping, index=self._os_index, fields=CHUNK_ID_SORT_FIELD
+            )
+        except Exception:  # noqa: BLE001 — a missing index or field is the old layout; the read decides
+            return "_id"
+        if not any(CHUNK_ID_SORT_FIELD in (body.get("mappings") or {}) for body in (mapping or {}).values()):
+            return "_id"
+        missing = await _drained_worker(
+            client.count,
+            index=self._os_index,
+            body={"query": {"bool": {"must": [query], "must_not": [{"exists": {"field": CHUNK_ID_SORT_FIELD}}]}}},
+        )
+        return CHUNK_ID_SORT_FIELD if missing.get("count") == 0 else "_id"
+
     async def iter_job_documents(
         self,
         job_id: str | None,
@@ -948,7 +995,8 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         query = {"match_all": {}} if job_id is None else _job_query(str(job_id))
         # ``_source`` is explicit for the reason iter_documents gives: OpenSearch
         # 3.8+ can otherwise strip knn_vector fields from the response.
-        body: dict[str, Any] = {"query": query, "sort": [{"_id": "asc"}], "size": batch_size, "_source": True}
+        sort_field = await self._job_sort_field(client, query)
+        body: dict[str, Any] = {"query": query, "sort": [{sort_field: "asc"}], "size": batch_size, "_source": True}
         if after_id is not None:
             body["search_after"] = [after_id]
         saw_hit = False

@@ -247,3 +247,81 @@ async def test_a_never_created_index_has_no_job_chunks(tmp_path: Path) -> None:
         assert await backend.count_job(_JOB_A) == 0
     finally:
         await backend.teardown()
+
+
+def _sorts_used(backend) -> list:
+    """Record the sort of every search the backend sends."""
+    client, seen = backend._os_client, []
+    search = client.search
+
+    def spy(*args, **kwargs):
+        seen.append((kwargs.get("body") or {}).get("sort"))
+        return search(*args, **kwargs)
+
+    client.search = spy
+    return seen
+
+
+async def test_new_chunks_are_read_by_their_chunk_id_field_not_id(tmp_path: Path) -> None:
+    """Sorting on ``_id`` needs indices.id_field_data.enabled; chunks written now carry an ordinary field to sort on."""
+    _require_live_opensearch()
+    from lfx.base.knowledge_bases.backends.opensearch import CHUNK_ID_KEY, CHUNK_ID_SORT_FIELD
+
+    backend = await _seed_two_jobs(tmp_path)
+    try:
+        sorts = _sorts_used(backend)
+        job_a = await _read_job(backend, _JOB_A, batch_size=2)
+        resumed = await _read_job(backend, _JOB_A, after_id="a-2")
+        stored = await backend.get_documents_by_ids(["a-0"])
+
+        assert [doc.id for doc in job_a] == [f"a-{i}" for i in range(5)]
+        assert [doc.id for doc in resumed] == ["a-3", "a-4"]
+        assert sorts
+        assert all(sort == [{CHUNK_ID_SORT_FIELD: "asc"}] for sort in sorts), sorts
+        # The field is for sorting only: no read hands it back as chunk metadata.
+        assert all(CHUNK_ID_KEY not in doc.metadata for doc in [*job_a, *resumed, *stored])
+        raw = backend._os_client.get(index=backend._os_index, id="a-0")["_source"]["metadata"]
+        assert raw[CHUNK_ID_KEY] == "a-0"
+    finally:
+        await backend.delete_collection()
+        await backend.teardown()
+
+
+async def test_chunks_written_before_the_chunk_id_field_are_read_by_id_as_before(tmp_path: Path) -> None:
+    """A job with any chunk lacking the field keeps the ``_id`` sort, so an older index still reads whole."""
+    _require_live_opensearch()
+    backend = await _seed_two_jobs(tmp_path)
+    job = "dddddddd-1111-4111-8111-111111111111"
+    try:
+        for i in range(3):  # written as LangChain did before, without the chunk id in metadata
+            backend._os_client.index(
+                index=backend._os_index,
+                id=f"old-{i}",
+                body={"text": f"old {i}", "metadata": {"job_id": job}, "vector_field": [0.1] * 8},
+                refresh=True,
+            )
+        sorts = _sorts_used(backend)
+
+        assert [doc.id for doc in await _read_job(backend, job, batch_size=2)] == ["old-0", "old-1", "old-2"]
+        assert sorts
+        assert all(sort == [{"_id": "asc"}] for sort in sorts), sorts
+    finally:
+        await backend.delete_collection()
+        await backend.teardown()
+
+
+async def test_a_cluster_that_refuses_id_sorting_still_reads_new_chunks(tmp_path: Path) -> None:
+    """With indices.id_field_data.enabled off an _id sort fails; new chunks still read. Flips a cluster setting."""
+    _require_live_opensearch()
+    if os.getenv("LANGFLOW_RUN_OPENSEARCH_CLUSTER_SETTING_TESTS") != "1":
+        pytest.skip("Set LANGFLOW_RUN_OPENSEARCH_CLUSTER_SETTING_TESTS=1: this test flips a cluster-wide setting")
+    backend = await _seed_two_jobs(tmp_path)
+    client = backend._os_client
+    try:
+        client.cluster.put_settings(body={"transient": {"indices.id_field_data.enabled": False}})
+
+        assert [doc.id for doc in await _read_job(backend, _JOB_A, batch_size=2)] == [f"a-{i}" for i in range(5)]
+    finally:
+        client.cluster.put_settings(body={"transient": {"indices.id_field_data.enabled": None}})
+        await backend.delete_collection()
+        await backend.teardown()

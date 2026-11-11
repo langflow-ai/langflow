@@ -431,14 +431,19 @@ async def test_writes_pass_configured_metric_even_after_store_was_built(tmp_path
     store.aadd_documents = AsyncMock()
     backend._vector_store = store
     if write == "ingest":
-        docs = [Document(page_content="doc")]
+        docs = [Document(id="chunk", page_content="doc")]
         await backend.add_documents(docs)
-        store.aadd_documents.assert_awaited_once_with(docs, space_type="cosinesimil")
+        # Each chunk also carries its own id in metadata, for the per-job read's sort.
+        store.aadd_documents.assert_awaited_once_with(
+            [Document(id="chunk", page_content="doc", metadata={"kb_chunk_id": "chunk"})],
+            ids=["chunk"],
+            space_type="cosinesimil",
+        )
     else:
         docs = [IngestedDocument(id="chunk", content="doc", embedding=[1.0, 0.0])]
         await backend.add_embedded_documents(docs)
         store.add_embeddings.assert_called_once_with(
-            [("doc", [1.0, 0.0])], metadatas=[{}], ids=["chunk"], space_type="cosinesimil"
+            [("doc", [1.0, 0.0])], metadatas=[{"kb_chunk_id": "chunk"}], ids=["chunk"], space_type="cosinesimil"
         )
 
 
