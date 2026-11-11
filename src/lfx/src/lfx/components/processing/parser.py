@@ -128,15 +128,15 @@ class ParserComponent(Component):
 
         lines = []
         if df is not None:
-            legacy_rows = iter(df.iterrows()) if df.isna().to_numpy().any() else None
+            legacy_rows = None
             # Preserve column types and keep zero-column rows by iterating with the index.
-            for row in df.itertuples(name=None):
-                legacy_row = next(legacy_rows)[1] if legacy_rows is not None else None
+            for position, row in enumerate(df.itertuples(name=None)):
                 values = dict(zip(df.columns, row[1:], strict=True))
-                if legacy_row is not None and any(value is pd.NA for value in values.values()):
-                    # iterrows coerces pd.NA to nan in numeric rows and None otherwise.
-                    # Retain that row-dtype-dependent rendering only for patch compatibility.
-                    legacy_values = legacy_row.to_dict()
+                if any(value is pd.NA for value in values.values()):
+                    # Match iterrows' coercion for pd.NA without inferring a Series dtype on other rows.
+                    if legacy_rows is None:
+                        legacy_rows = df.to_numpy()
+                    legacy_values = pd.Series(legacy_rows[position], index=df.columns).to_dict()
                     values = {key: legacy_values[key] if value is pd.NA else value for key, value in values.items()}
                 formatted_text = self.pattern.format(**values)
                 lines.append(formatted_text)

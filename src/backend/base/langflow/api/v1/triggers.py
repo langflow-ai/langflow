@@ -532,7 +532,7 @@ async def list_trigger_events(
     rows = await ledger.list_events(
         session, trigger_id=trigger_id, limit=limit, offset=offset, event_filter=event_filter
     )
-    return await present_events(session, trigger, rows)
+    return await present_events(session, trigger, rows, current_user)
 
 
 @router.post("/{trigger_id}/replay", response_model=TriggerEventRead, status_code=status.HTTP_202_ACCEPTED)

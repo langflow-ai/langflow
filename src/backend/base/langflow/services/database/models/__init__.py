@@ -38,6 +38,7 @@ from .ingestion_run import IngestionRun, IngestionRunStatus
 from .jobs import ExecutionSignal, Job, JobCheckpoint, JobEvent, JobMetricTotals, SignalType
 from .knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
 from .knowledge_base_storage_migration import KnowledgeBaseStorageMigration
+from .maintenance import MaintenanceState
 from .mcp_server import MCPServer
 from .memory_base import MemoryBase, MemoryBaseSession, MemoryBaseWorkflowRun, MessageIngestionRecord
 from .message import MessageTable
@@ -101,6 +102,7 @@ __all__ = [
     "KnowledgeBaseStatus",
     "KnowledgeBaseStorageMigration",
     "MCPServer",
+    "MaintenanceState",
     "MemoryBase",
     "MemoryBaseSession",
     "MemoryBaseWorkflowRun",

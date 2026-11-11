@@ -113,7 +113,7 @@ async def test_bound_account_denial_precedes_mcp_discovery(discovery_db, server_
     from langflow.services.variable import runtime_policy
     from lfx.services.variable.exceptions import RuntimeVariableError
 
-    user = await _register(discovery_db, server_scripts[0], 1)
+    user = await _register(discovery_db, server_scripts[0], 1, is_superuser=True)
 
     async def refused(**_):
         msg = "Target disabled"
@@ -142,7 +142,7 @@ async def test_discovery_endpoint_respects_authoritative_variables(
     from langflow.services.database.models.variable.model import Variable
     from langflow.services.variable import runtime_policy
 
-    user = SimpleNamespace(id=uuid4(), is_superuser=False)
+    user = SimpleNamespace(id=uuid4(), is_superuser=True)
     script = tmp_path / "variable_server.py"
     script.write_text(f"import os\nassert os.environ['MCP_TOKEN'] == {expected_token!r}\n" + SERVER)
     discovery_db.add(
