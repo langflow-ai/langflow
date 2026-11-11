@@ -229,7 +229,6 @@ class FlowResult:
     used_by: dict[str, list[str]] | None = None
     # Set when the saved data could not be read; the flow then has no nodes.
     error: str | None = None
-
     usage: FlowUsage | None = None
 
     def to_dict(self) -> dict[str, Any]:

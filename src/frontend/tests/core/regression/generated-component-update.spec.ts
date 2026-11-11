@@ -241,16 +241,9 @@ for (const componentType of ["RunFlow", "MCPTools"] as const) {
         expect(created.status()).toBe(201);
         const flowId = (await created.json()).id as string;
         resources.flows.push(flowId);
-        await Promise.all([
-          page.waitForResponse(
-            (response) =>
-              response.request().method() === "GET" &&
-              new URL(response.url()).pathname === `/api/v1/flows/${flowId}` &&
-              response.ok(),
-            { timeout: TIMEOUTS.standard },
-          ),
-          page.goto(`/flow/${flowId}`),
-        ]);
+        // The route loader can use the complete flow already cached by the
+        // create/list requests, so opening a flow does not require another GET.
+        await page.goto(`/flow/${flowId}`);
         await waitForFlowEditorReady(page);
         await expect(page.getByTestId("div-generic-node")).toHaveCount(
           flow.data!.nodes.length,
@@ -372,26 +365,12 @@ for (const componentType of ["RunFlow", "MCPTools"] as const) {
             code: definitions[componentType].template.code.value,
             state: before,
           });
-        await Promise.all([
-          page.waitForResponse(
-            (response) =>
-              new URL(response.url()).pathname === "/api/v1/all" &&
-              response.ok(),
-            { timeout: TIMEOUTS.long },
-          ),
-          page.waitForResponse(
-            (response) =>
-              response.request().method() === "GET" &&
-              new URL(response.url()).pathname === `/api/v1/flows/${flowId}` &&
-              response.ok(),
-            { timeout: TIMEOUTS.long },
-          ),
-          page.reload(),
-        ]);
-        await waitForFlowEditorReady(page);
+        await page.reload();
         await expect(page.getByTestId("div-generic-node")).toHaveCount(
           flow.data!.nodes.length,
+          { timeout: TIMEOUTS.long },
         );
+        await waitForFlowEditorReady(page);
         await expect(page.locator(".react-flow__edge")).toHaveCount(
           before.edges.length,
         );

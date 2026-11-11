@@ -41,10 +41,10 @@ def test_deployment_copy_and_release_have_single_head():
         "b7e1d4a92c60",  # pragma: allowlist secret
         "4d6e8f0a2b3c",  # pragma: allowlist secret
         "f4b8c1d2e3a6",  # pragma: allowlist secret
+        "8f1a2b3c4d5e",  # pragma: allowlist secret
         "e6f8a0b2c4d6",  # pragma: allowlist secret
         "f6a2c8e4b901",  # pragma: allowlist secret
         "2a4c6e8f0b1d",  # pragma: allowlist secret
-        "8f1a2b3c4d5e",  # pragma: allowlist secret
         "d8e2f4a6c9b1",  # pragma: allowlist secret
         "a8c2e6f4b9d1",  # pragma: allowlist secret
         "3d7f9a1c5e80",  # pragma: allowlist secret
@@ -53,6 +53,7 @@ def test_deployment_copy_and_release_have_single_head():
         "d7e9a1c3f5b8",  # pragma: allowlist secret
         "53e9b7a2c614",  # pragma: allowlist secret
         "56827e37fd6f",  # pragma: allowlist secret
+        "d4c8a6f2b901",  # pragma: allowlist secret
         "9c4b7e2a6d10",  # pragma: allowlist secret
     ],
 )
@@ -166,6 +167,11 @@ def test_report_merge_downgrade_and_upgrade_keep_existing_rows(db_url):  # noqa:
             "7e2c5a9d1b64",  # pragma: allowlist secret
             "3d7f9a1c5e80",  # pragma: allowlist secret
             {"3d7f9a1c5e80", "6b4d1e9c7a25"},  # pragma: allowlist secret
+        ),
+        (
+            "9c4b7e2a6d10",  # pragma: allowlist secret
+            "d4c8a6f2b901",  # pragma: allowlist secret
+            {"d4c8a6f2b901", "56827e37fd6f"},  # pragma: allowlist secret
         ),
     ],
 )

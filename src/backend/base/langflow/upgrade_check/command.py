@@ -80,6 +80,8 @@ def main() -> int:
             _report_destination(serving_url, options["output"])
         report, listed = run(options, on_flow, source_connection=source_connection)
         if output is not None:
+            if serving_url:
+                _report_destination(serving_url, str(output))
             _write_report(options["database_url"], output, report)
     except CheckError as exc:
         _fail(out, exc.code, str(exc), as_json=as_json)

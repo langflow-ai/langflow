@@ -442,7 +442,7 @@ def _target_handle(edge: Mapping[str, Any]) -> Mapping[str, Any] | None:
 
 
 def _connected_fields_by_node(edges: list[dict] | None) -> dict[str, set[str] | None] | None:
-    """Map each node id to its connected fields, or ``None`` when its handles are unknown."""
+    """Map each node id to the fields a connection goes into. ``None`` when the edges are unknown."""
     if edges is None:
         return None
     connected: dict[str, set[str] | None] = {}

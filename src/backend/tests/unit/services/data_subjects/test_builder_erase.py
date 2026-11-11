@@ -380,7 +380,7 @@ async def test_should_keep_a_replacement_maintenance_actor():
     event.listen(engine, "before_cursor_execute", replace_actor_before_scrub)
     try:
         async with session_scope() as session:
-            step = dict(BUILDER_ACCOUNT_STEPS)["maintenance_actor"]
+            step = dict(BUILDER_ACCOUNT_STEPS)["maintenance_setter"]
             cleared = await step(session, EraseContext(request_id=uuid4(), subject_user_id=subject_id))
     finally:
         event.remove(engine, "before_cursor_execute", replace_actor_before_scrub)

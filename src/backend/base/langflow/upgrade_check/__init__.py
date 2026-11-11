@@ -15,6 +15,7 @@ if TYPE_CHECKING:
         read_connection,
         read_only_connection,
     )
+
 __all__ = [
     "SourceCatalogPolicy",
     "SourceDatabase",

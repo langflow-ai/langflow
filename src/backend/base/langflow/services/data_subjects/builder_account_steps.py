@@ -216,7 +216,6 @@ BUILDER_ACCOUNT_STEPS: tuple[tuple[str, Step], ...] = (
     ("project_receipts", erase_project_receipts),
     ("folders", erase_folders),
     # Append steps to preserve the positions saved in in-flight request cursors.
-    ("maintenance_actor", clear_maintenance_actor),
     ("maintenance_setter", clear_maintenance_actor),
     ("upgrade_repair_author", _delete_by_user(UpgradeReportRepair, UpgradeReportRepair.created_by)),
     ("upgrade_reports", erase_upgrade_reports),
