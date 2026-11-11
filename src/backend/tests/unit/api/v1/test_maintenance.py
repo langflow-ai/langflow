@@ -247,3 +247,39 @@ async def test_stale_author_save_is_refused_before_route_logic(client, logged_in
     assert response.status_code == 503
     current = await client.get(f"/api/v1/flows/{saved.json()['id']}", headers=logged_in_headers)
     assert current.json()["name"] == "before"
+
+
+async def test_status_keeps_actor_and_instance_job_counts_private(
+    client, logged_in_headers, logged_in_headers_super_user
+):
+    async with session_scope() as session:
+        session.add(Job(job_id=uuid4(), flow_id=uuid4(), status=JobStatus.QUEUED))
+        session.add(Job(job_id=uuid4(), flow_id=uuid4(), status=JobStatus.IN_PROGRESS))
+    enabled = await client.post(ON, json={"reason": "review rehearsal"}, headers=logged_in_headers_super_user)
+    assert enabled.status_code == 200
+    admin = await client.get(STATUS, headers=logged_in_headers_super_user)
+    ordinary = await client.get(STATUS, headers=logged_in_headers)
+    assert ordinary.status_code == 200
+    assert admin.json()["set_by"] is not None
+    assert (admin.json()["queued_jobs"], admin.json()["running_jobs"]) == (1, 1)
+    public = ordinary.json()
+    assert public["set_by"] is None
+    assert (public["queued_jobs"], public["running_jobs"]) == (0, 0)
+    assert (public["maintenance"], public["paused"], public["reason"]) == (True, True, "review rehearsal")
+
+
+async def test_notice_status_does_not_query_other_users_jobs():
+    from unittest.mock import AsyncMock
+
+    from langflow.services.database.models.maintenance import MaintenanceState
+    from langflow.services.maintenance.state import maintenance_status
+
+    session = AsyncMock()
+    session.get.return_value = MaintenanceState(
+        id=1, enabled=True, reason="review rehearsal", set_by=uuid4(), set_at=datetime.now(timezone.utc)
+    )
+    status = await maintenance_status(session, include_details=False)
+    session.exec.assert_not_awaited()
+    assert status.maintenance is True
+    assert status.set_by is None
+    assert status.queued_jobs == status.running_jobs == 0

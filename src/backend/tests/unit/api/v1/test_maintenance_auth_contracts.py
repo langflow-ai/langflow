@@ -49,8 +49,9 @@ async def test_local_login_preserves_rows_and_still_checks_credentials(
 
 
 @pytest.mark.parametrize("existing", [False, True])
+@pytest.mark.parametrize("endpoint", [maintenance_fixtures.STATUS, "/api/v1/session"])
 async def test_external_bearer_returns_retryable_503_without_jit_or_directory_writes(
-    client, active_user, logged_in_headers_super_user, monkeypatch, *, existing
+    client, active_user, logged_in_headers_super_user, monkeypatch, endpoint, *, existing
 ):
     settings = get_settings_service().auth_settings
     monkeypatch.setattr(settings, "EXTERNAL_AUTH_ENABLED", True)
@@ -77,7 +78,7 @@ async def test_external_bearer_returns_retryable_503_without_jit_or_directory_wr
         await client.post(maintenance_fixtures.ON, json={}, headers=logged_in_headers_super_user)
     ).status_code == 200
     before = await _snapshot((User, SSOUserProfile, Folder, Variable))
-    response = await client.get(maintenance_fixtures.STATUS, headers={"Authorization": f"Bearer {token}"})
+    response = await client.get(endpoint, headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 503
     assert response.headers["Retry-After"] == "1"
     assert response.json()["detail"]["code"] == "external_auth_maintenance"
