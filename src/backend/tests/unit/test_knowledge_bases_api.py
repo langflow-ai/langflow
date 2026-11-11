@@ -1496,14 +1496,25 @@ class TestKnowledgeBaseAPI:
                         },
                     )
                 )
+                rollback_queued = asyncio.create_task(queued.wait())
                 try:
-                    await asyncio.wait_for(queued.wait(), timeout=5)
+                    # Auth, database access, and async logging precede rollback. Wait for the
+                    # queue event rather than imposing a request-speed deadline on this test.
+                    done, _ = await asyncio.wait({rollback_queued, request}, return_when=asyncio.FIRST_COMPLETED)
+                    if request in done:
+                        response = await request
+                        pytest.fail(
+                            f"Request completed before rollback was queued: {response.status_code} {response.text}"
+                        )
                     assert kb_path.exists()
                     request.cancel()
                     with pytest.raises(asyncio.CancelledError):
                         await request
                 finally:
                     release_worker.set()
+                    rollback_queued.cancel()
+                    request.cancel()
+                    await asyncio.gather(rollback_queued, request, return_exceptions=True)
                 await asyncio.wait_for(asyncio.wrap_future(cleanup_futures[0]), timeout=5)
 
         assert not kb_path.exists()
