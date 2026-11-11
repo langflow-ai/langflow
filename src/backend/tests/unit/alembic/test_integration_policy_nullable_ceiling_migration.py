@@ -8,7 +8,7 @@ from lfx.services.policy_bundle.base import decode_integration_provider_ids, enc
 
 from .test_migration_execution import _engine_url, _make_alembic_cfg, db_url  # noqa: F401
 
-_PRIOR_REVISION = "c6a81d3e9502"  # pragma: allowlist secret
+_PRIOR_REVISION = "e5a7c9b1d3f2"  # pragma: allowlist secret
 _REVISION = "f4b8c1d2e3a6"  # pragma: allowlist secret
 
 
