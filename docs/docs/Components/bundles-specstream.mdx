@@ -21,7 +21,7 @@ Create an API key under **Agents & API** in your SpecStream workspace. For detai
 The component reads the request, gets a quote, and starts the run only if the quoted maximum is within **Maximum Price (USD)**. It waits for the run to finish, then returns the rows.
 If the quote is above the maximum, or SpecStream needs a clearer request, the component raises an error and nothing runs.
 
-A row costs 5 cents, 15 cents, or $1 depending on how much it needs, plus 5 cents for a person's email and 15 cents for a phone. For current prices, see [specstream.ai/pricing](https://specstream.ai/pricing).
+A row costs 5 cents, 15 cents, or $1 depending on how much it needs, plus 5 cents for a person's email and 15 cents for a person's phone. A company's phone is part of the row price. When a row has a related list, its first 10 records are included and each further 10 cost 10 cents. For current prices, see [specstream.ai/pricing](https://specstream.ai/pricing).
 
 Every row includes the columns that the request asks for, plus the following fields:
 
