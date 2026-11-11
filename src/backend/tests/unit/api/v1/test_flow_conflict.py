@@ -362,6 +362,22 @@ async def test_owner_can_delete_a_version_another_user_wrote(client: AsyncClient
     assert remaining.json()["entries"] == []
 
 
+async def test_owner_can_pick_a_version_another_user_wrote_for_deployment(
+    client: AsyncClient, logged_in_headers, user_two
+):
+    """Choosing what to deploy reads versions by id, and must see the same ones history shows."""
+    flow = await _overwrite_a_version_written_by(client, logged_in_headers, user_two.id)
+    versions = await client.get(f"api/v1/flows/{flow['id']}/versions/", headers=logged_in_headers)
+    entry_id = versions.json()["entries"][0]["id"]
+
+    detected = await client.post(
+        "api/v1/variables/detections", json={"flow_version_ids": [entry_id]}, headers=logged_in_headers
+    )
+
+    assert detected.status_code == status.HTTP_200_OK, detected.text
+    assert detected.json() == {"variables": []}
+
+
 async def test_overwrite_is_still_refused_when_the_flow_moved_again(client: AsyncClient, logged_in_headers):
     """Overwrite means "replace what I reviewed", not "write unconditionally".
 

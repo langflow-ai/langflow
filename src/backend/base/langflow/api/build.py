@@ -4,7 +4,7 @@ import time
 import traceback
 import uuid
 from collections.abc import AsyncIterator
-from functools import wraps
+from functools import partial, wraps
 
 from fastapi import BackgroundTasks, HTTPException, Response
 from lfx.exceptions.tweaks import TweakRefusedError
@@ -40,11 +40,13 @@ from langflow.api.v1.schemas import (
     VertexBuildResponse,
 )
 from langflow.events.event_manager import EventManager
+from langflow.exceptions.api import WorkflowServiceUnavailableError
 from langflow.exceptions.component import ComponentBuildError
 from langflow.schema.message import ErrorMessage
 from langflow.schema.schema import OutputValue
+from langflow.services.auth.context import AUTH_METHOD_API_KEY, get_current_auth_context
 from langflow.services.database.models.flow.model import Flow
-from langflow.services.database.models.jobs.model import JobType
+from langflow.services.database.models.jobs.model import JobStatus, JobType
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import (
     get_chat_service,
@@ -195,6 +197,36 @@ def _log_component_input_telemetry(
             )
 
 
+def _requires_api_key_admission() -> bool:
+    """Keep every database-key build bound to its credential while it is queued."""
+    context = get_current_auth_context()
+    return (
+        context is not None
+        and context.method == AUTH_METHOD_API_KEY
+        and (context.api_key_source != "env" or context.api_key_restricted)  # pragma: allowlist secret
+    )
+
+
+async def _execute_admitted_build(job_service, job_id: uuid.UUID, **kwargs) -> None:
+    async def run() -> None:
+        from langflow.services.auth.api_key_context import refresh_database_api_key_user
+
+        kwargs["current_user"] = await refresh_database_api_key_user(kwargs["current_user"])
+        await generate_flow_events(job_id=job_id, propagate_pause=True, **kwargs)
+
+    try:
+        await job_service.execute_with_status(
+            job_id,
+            run,
+            keep_alive=True,
+        )
+    except GraphPausedException:
+        # The driver already emitted the approval card and stream sentinel.
+        # No durable runner owns this legacy queue callback's pause transition.
+        await job_service.update_job_status(job_id, JobStatus.SUSPENDED)
+        return
+
+
 async def start_flow_build(
     *,
     flow_id: uuid.UUID,
@@ -250,9 +282,31 @@ async def start_flow_build(
     validate_targeted_inputs([inputs] if inputs is not None else None)
 
     job_id = str(uuid.uuid4())
+    admitted_job_service = None
+    admitted = False
+    task_coro = None
     try:
+        build_task = generate_flow_events
+        if _requires_api_key_admission():
+            admitted_job_service = get_job_service()
+            durable_job_id = uuid.UUID(job_id)
+            await admitted_job_service.create_job(
+                job_id=durable_job_id,
+                flow_id=provider_policy_flow.id,
+                user_id=current_user.id,
+                job_type=JobType.WORKFLOW,
+                heartbeat=True,
+            )
+            admitted = True
+            # Revalidate before graph construction. The driver reuses this row
+            # and leaves status ownership with the outer job-service wrapper.
+            build_task = partial(
+                _execute_admitted_build,
+                admitted_job_service,
+                durable_job_id,
+            )
         _, event_manager = queue_service.create_queue(job_id)
-        task_coro = generate_flow_events(
+        task_coro = build_task(
             flow_id=flow_id,
             background_tasks=background_tasks,
             event_manager=event_manager,
@@ -273,6 +327,13 @@ async def start_flow_build(
         )
         queue_service.start_job(job_id, task_coro)
     except Exception as e:
+        if admitted_job_service is not None:
+            if task_coro is not None:
+                task_coro.close()
+            if admitted:
+                await admitted_job_service.update_job_status(
+                    uuid.UUID(job_id), JobStatus.FAILED, finished_timestamp=True
+                )
         await logger.aexception("Failed to create queue and start task")
         client_error = error_for_client(e, expose_details=expose_error_details)
         if isinstance(client_error, HTTPException):
@@ -488,6 +549,7 @@ async def _generate_flow_events(
     resume: dict | None = None,
     run_id: str | None = None,
     track_job_status: bool = True,
+    propagate_pause: bool = False,
     tweaks: dict | None = None,
     expose_error_details: bool = False,
     redact_build_params: bool = False,
@@ -505,6 +567,8 @@ async def _generate_flow_events(
     When ``run_id`` is provided the graph adopts it instead of minting a fresh
     one, so callers (e.g. background jobs) can later look up the run's vertex
     builds by that id. Defaults to a fresh uuid for the live build path.
+    ``propagate_pause`` lets an outer status wrapper observe a pause after the
+    driver emits the approval card, preserving the legacy nonterminal status.
     """
     chat_service = get_chat_service()
     telemetry_service = get_telemetry_service()
@@ -550,6 +614,9 @@ async def _generate_flow_events(
             # or expired checkpoint is unrecoverable, so surface a clean 404 instead.
             raise HTTPException(status_code=404, detail="Checkpoint expired or not found; cannot resume this run.")
         graph = LfxGraph.resume_from_checkpoint(checkpoint, checkpoint_store=store)
+        # A background checkpoint holds the untweaked flow, so re-apply the run's tweaks as the fresh path does.
+        if tweaks:
+            process_tweaks_on_graph(graph, tweaks)
         # A checkpoint stores flow payload + user_id and deliberately never persists an
         # execution principal, so a restored graph carries ``unknown()`` and would deny
         # every connection. Re-stamp from the principal admitted for THIS resume request.
@@ -846,6 +913,7 @@ async def _generate_flow_events(
             vertex.add_build_time(timedelta)
             # Capture both inactivated and conditionally excluded vertices
             inactivated_vertices = list(graph.inactivated_vertices.union(graph.conditionally_excluded_vertices))
+            branch_skips = graph.branch_skips()
             graph.reset_inactivated_vertices(vertex.id)
             graph.reset_activated_vertices()
 
@@ -864,6 +932,7 @@ async def _generate_flow_events(
 
             build_response = VertexBuildResponse(
                 inactivated_vertices=list(set(inactivated_vertices)),
+                branch_skips=branch_skips or None,
                 next_vertices_ids=list(set(next_runnable_vertices)),
                 top_level_vertices=list(set(top_level_vertices)),
                 valid=valid,
@@ -987,7 +1056,8 @@ async def _generate_flow_events(
         raise client_error from e
 
     # Create a WORKFLOW job record so memory-base on_flow_output can track this run.
-    # Best-effort: failures here must never break the build path.
+    # Best-effort for non-database credentials. Database-key builds must never
+    # continue into components without their durable authorization record.
     _build_job_svc = None
     _build_run_id: uuid.UUID | None = None
     try:
@@ -1006,7 +1076,9 @@ async def _generate_flow_events(
                     # for a runner-owned job, never for this one.
                     heartbeat=True,
                 )
-    except Exception:  # noqa: BLE001
+    except Exception:
+        if _requires_api_key_admission():
+            raise
         await logger.awarning(
             "Failed to create workflow job for /build — memory base tracking disabled for flow %s",
             flow_id,
@@ -1091,6 +1163,8 @@ async def _generate_flow_events(
             await logger.awarning("Failed to flush partial trace on pause for flow %s", flow_id, exc_info=True)
         event_manager.send_event(event_type="human_input_required", data=exc.data or {})
         await event_manager.queue.put((None, None, time.time()))
+        if propagate_pause:
+            raise
         return
 
     build_duration = sum(vertex_timedeltas)
@@ -1115,7 +1189,7 @@ async def _generate_flow_events(
                 session_id=graph.session_id or str(flow_id),
                 job_id=_run_id_uuid,
             )
-        except (RuntimeError, ValueError, OSError):
+        except (RuntimeError, ValueError, OSError, WorkflowServiceUnavailableError):
             await logger.awarning("Memory base hook scheduling failed for flow %s", flow_id, exc_info=True)
 
     await event_manager.queue.put((None, None, time.time()))

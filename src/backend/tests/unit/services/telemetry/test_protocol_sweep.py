@@ -313,6 +313,7 @@ async def test_v1_advanced_run_reports_v1_advanced(client, simple_api_test, crea
     assert protocols == ["v1.advanced"], protocols
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_webhook_run_reports_webhook(client, added_webhook_test, created_api_key, span_exporter):
     """Cell 8: POST /api/v1/webhook/{flow} -> protocol=webhook.
 

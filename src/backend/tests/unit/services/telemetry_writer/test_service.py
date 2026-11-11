@@ -965,3 +965,28 @@ async def test_teardown_cancelled_still_spills_buffer(writer_with_engine, tmp_pa
     reader = _build_writer()
     reader._restore_from_disk(own_dir, kind="transactions", buffer=reader._tx_buffer)
     assert [row["cancelled_spill"] for row in reader._tx_buffer] == [0, 1, 2]
+
+
+async def test_empty_writer_does_not_query_maintenance_admission(monkeypatch):
+    """An idle telemetry writer must not read the application database on every flush tick."""
+    from contextlib import asynccontextmanager
+
+    from langflow.services.telemetry_writer import service as writer_module
+
+    writer = _build_writer()
+    writer._shutdown_event = asyncio.Event()
+    admissions = 0
+
+    @asynccontextmanager
+    async def admission(**_kwargs):
+        nonlocal admissions
+        admissions += 1
+        yield True
+
+    async def stop_after_idle_tick(_timeout, **_kwargs):
+        writer._shutdown_event.set()
+
+    monkeypatch.setattr(writer_module, "async_writing", admission)
+    monkeypatch.setattr(writer, "_wait_or_shutdown", stop_after_idle_tick)
+    await writer._run_writer()
+    assert admissions == 0

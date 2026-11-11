@@ -124,7 +124,7 @@ def test_lxml_rebuild_ignores_cached_wheels_and_existing_installations() -> None
     """Require an uncached source reinstall rather than trusting cached lxml wheels."""
     helper = REPO_ROOT / "docker" / "build_lxml.sh"
     tokens = shlex.split(" ".join(_logical_instructions(helper)))
-    assert {"--no-cache", "--no-deps", "--force-reinstall", "--no-binary"}.issubset(tokens)
+    assert {"--no-cache", "--no-config", "--no-deps", "--force-reinstall", "--no-binary"}.issubset(tokens)
     assert tokens[tokens.index("--no-binary") + 1] == "lxml"
 
 
@@ -360,12 +360,25 @@ def test_published_images_pin_hardened_package_managers() -> None:
         ("BRACE_EXPANSION_VERSION", "5.0.12", "brace-expansion", '"brace-expansion": "5.0.12"'),
         ("TAR_VERSION", "7.5.22", "tar", 'tar: "7.5.22"'),
         ("UNDICI_VERSION", "6.29.1", "undici", 'undici: "6.29.1"'),
+        ("POSTCSS_SELECTOR_PARSER_VERSION", "7.1.6", "postcss-selector-parser", '"postcss-selector-parser": "7.1.6"'),
+        ("GLOB_VERSION", "14.0.2", "glob", 'glob: "14.0.2"'),
+        ("MINIMATCH_VERSION", "11.0.1", "minimatch", 'minimatch: "11.0.1"'),
+        ("PATH_SCURRY_VERSION", "3.0.0", "path-scurry", '"path-scurry": "3.0.0"'),
+        (
+            "NONRECURSIVE_GLOB_MATCH_VERSION",
+            "1.0.1",
+            "@isaacs/nonrecursive-glob-match",
+            '"@isaacs/nonrecursive-glob-match": "1.0.1"',
+        ),
     ):
         assert f'{variable}="{version}"' in install_script
         assert f'"{package}@${{{variable}}}"' in install_script
         assert validation_entry in install_script
 
-    assert "for package in ip-address brace-expansion tar undici; do" in install_script
+    assert (
+        "for package in ip-address brace-expansion tar undici postcss-selector-parser "
+        "glob minimatch path-scurry @isaacs/nonrecursive-glob-match; do"
+    ) in install_script
     for validation_entry in (
         'sigstore: "5.0.0"',
         '"@sigstore/core": "4.0.1"',
@@ -426,3 +439,58 @@ def test_the_listener_deployment_names_a_uid_and_not_only_non_root() -> None:
 
     for dockerfile in ("build_and_push.Dockerfile", "build_and_push_backend.Dockerfile"):
         assert _image_uid(dockerfile) == runtime_uid, f"{dockerfile} runs as a different uid than the manifest asks for"
+
+
+@pytest.mark.parametrize(
+    "dockerfile",
+    ["build_and_push.Dockerfile", "build_and_push_backend.Dockerfile", "build_and_push_ep.Dockerfile"],
+)
+def test_published_node_versions_include_brotli_security_fix(dockerfile: str) -> None:
+    """Reject Node runtimes that still bundle the vulnerable Brotli decoder."""
+    versions = [
+        instruction.split("=", 1)[1]
+        for instruction in _logical_instructions(REPO_ROOT / "docker" / dockerfile)
+        if instruction.startswith("ARG NODE_VERSION=")
+    ]
+    assert len(versions) == 1
+    version = tuple(int(part) for part in versions[0].split("."))
+    fixed = {22: (22, 23, 4), 24: (24, 22, 1), 26: (26, 12, 1)}
+    assert version[0] in fixed, "Verify the Brotli fix before changing Node release lines"
+    assert version >= fixed[version[0]], f"{dockerfile} still ships CVE-2026-111497"
+
+
+def test_frontend_runtime_uses_patched_base_and_non_root_runtime() -> None:
+    """Keep OS updates privileged and the frontend runtime on its patched image."""
+    dockerfile = REPO_ROOT / "docker/frontend/build_and_push_frontend.Dockerfile"
+    _, bases, final_stage = _dockerfile_stages(dockerfile)
+    image = re.fullmatch(
+        r"nginxinc/nginx-unprivileged:(\d+)\.(\d+)\.(\d+)-trixie@sha256:[0-9a-f]{64}",
+        bases[final_stage],
+    )
+    assert image is not None, "Pin the patched non-Perl Trixie runtime by digest"
+    assert tuple(int(part) for part in image.groups()) >= (1, 30, 5)
+
+    instructions = _stage_instructions(dockerfile)[final_stage]
+    upgrades = [
+        index
+        for index, instruction in enumerate(instructions)
+        if instruction.startswith("RUN ") and "apt-get upgrade" in instruction
+    ]
+    assert len(upgrades) == 1
+    upgrade_index = upgrades[0]
+    commands = [shlex.split(command) for command in instructions[upgrade_index][4:].split("&&")]
+    update = commands.index(["apt-get", "update"])
+    upgrade = commands.index(["apt-get", "upgrade", "-y"])
+    cleanup = commands.index(["rm", "-rf", "/var/lib/apt/lists/*"])
+    assert update < upgrade < cleanup
+    users_before_upgrade = [
+        instruction for instruction in instructions[:upgrade_index] if instruction.startswith("USER ")
+    ]
+    assert users_before_upgrade[-1] == "USER root"
+
+    copies = [index for index, instruction in enumerate(instructions) if instruction.startswith("COPY ")]
+    assert copies
+    for index in copies:
+        users = [instruction for instruction in instructions[:index] if instruction.startswith("USER ")]
+        assert users[-1] == "USER nginx"
+    assert [instruction for instruction in instructions if instruction.startswith("USER ")][-1] == "USER nginx"

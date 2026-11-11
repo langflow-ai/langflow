@@ -7,7 +7,9 @@ import json
 import pytest
 import typer
 from lfx.cli.upgrade import load_registry_from_index, upgrade_command
+from lfx.upgrade.checker import build_registry_lookup
 from lfx.upgrade.cli_gate import UpgradeFlowError, apply_upgrade_gate
+from lfx.upgrade.registry import load_upgrade_registry
 
 COMPONENT_ID = "ext:smoke:SmokeComponent@official"
 CURRENT_CODE = "class SmokeComponent:\n    pass  # current"
@@ -125,3 +127,35 @@ def test_discovery_failure_uses_cli_error_channel(monkeypatch, capsys):
     assert "fixture discovery failure" not in error
     with pytest.raises(UpgradeFlowError, match="could not load the extension component registry"):
         apply_upgrade_gate(_flow(), mode="check")
+
+
+GREETER = """from lfx.custom.custom_component.component import Component
+from lfx.io import MessageTextInput, Output
+from lfx.schema.message import Message
+
+
+class GreeterComponent(Component):
+    display_name = "Greeter"
+    name = "Greeter"
+    inputs = [MessageTextInput(name="who", display_name="Who")]
+    outputs = [Output(display_name="Greeting", name="greeting", method="greet")]
+
+    def greet(self) -> Message:
+        return Message(text=f"Hello, {self.who}")
+"""
+
+
+def test_registry_from_a_components_path_the_caller_names(tmp_path):
+    """The upgrade check names the server's components path instead of reading Langflow's settings.
+
+    A component in a subfolder is both a legacy custom component and an inline bundle, and the merge
+    keeps the bundle's entry, as the server does at startup.
+    """
+    folder = tmp_path / "greetings"
+    folder.mkdir()
+    (folder / "greeter.py").write_text(GREETER, encoding="utf-8")
+
+    all_types = load_upgrade_registry(components_path=[str(tmp_path)])
+
+    assert list(all_types["greetings"]) == ["ext:greetings:GreeterComponent@extra"]
+    assert build_registry_lookup(all_types)["Greeter"]["template"]["code"]["value"] == GREETER

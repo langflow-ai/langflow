@@ -216,6 +216,7 @@ class Graph:
         # Conditional routing system (separate from ACTIVE/INACTIVE cycle management)
         self.conditionally_excluded_vertices: set = set()  # Vertices excluded by conditional routing
         self.conditional_exclusion_sources: dict[str, set[str]] = {}  # Maps source vertex -> excluded vertices
+        self.conditional_exclusion_outputs: dict[str, set[str]] = {}  # Maps source vertex -> excluded outputs
         self.edges: list[CycleEdge] = []
         self.vertices: list[Vertex] = []
         self.run_manager = RunnableVerticesManager()
@@ -530,11 +531,15 @@ class Graph:
         config: StartConfigDict | None = None,
         event_manager: EventManager | None = None,
         *,
+        user_id: str | None = None,
         reset_output_values: bool = True,
         fallback_to_env_vars: bool = False,
         open_flow_span: bool = True,
     ):
         """Run the graph, yielding each step.
+
+        Pass the authenticated caller as ``user_id``. It is forwarded to each
+        vertex build and is never inferred from cached graph state.
 
         open_flow_span=False says the caller already opened the flow span and this run belongs
         to it. Prefer that: a span opened here cannot be made current, because this is an async
@@ -564,7 +569,10 @@ class Graph:
 
             while should_continue(yielded_counts, max_iterations):
                 result = await self.astep(
-                    event_manager=event_manager, inputs=inputs, fallback_to_env_vars=fallback_to_env_vars
+                    event_manager=event_manager,
+                    inputs=inputs,
+                    user_id=user_id,
+                    fallback_to_env_vars=fallback_to_env_vars,
                 )
                 yield result
                 if isinstance(result, Finish):
@@ -1551,7 +1559,9 @@ class Graph:
             for held_vertex_id in branch_vertices & self._held_branch_inactivations():
                 self.mark_vertex(held_vertex_id, VertexStates.INACTIVE)
 
-    def _replace_conditional_exclusions(self, vertex_id: str, excluded: set[str]) -> None:
+    def _replace_conditional_exclusions(
+        self, vertex_id: str, excluded: set[str], output_names: set[str] | None = None
+    ) -> None:
         """Replace ``vertex_id``'s conditional exclusions with ``excluded``.
 
         Any vertices this source previously excluded are cleared first so the routing
@@ -1563,6 +1573,33 @@ class Graph:
         self.conditionally_excluded_vertices.update(excluded)
         if excluded:
             self.conditional_exclusion_sources[vertex_id] = excluded
+        if output_names is None:
+            self.conditional_exclusion_outputs.pop(vertex_id, None)
+        else:
+            self.conditional_exclusion_outputs[vertex_id] = output_names
+
+    def branch_skips(self) -> dict[str, dict[str, Any]]:
+        """Map each conditionally excluded vertex to its router and the outputs that router took.
+
+        A whole-branch exclusion records no outputs, so it reports no taken outputs.
+        """
+        skips: dict[str, dict[str, Any]] = {}
+        excluded_outputs = getattr(self, "conditional_exclusion_outputs", {})
+        for source_id, excluded in getattr(self, "conditional_exclusion_sources", {}).items():
+            stopped = excluded_outputs.get(source_id)
+            source = self.get_vertex(source_id)
+            taken = (
+                [
+                    output["name"]
+                    for output in source.outputs
+                    if isinstance(output, dict) and output.get("name") and output["name"] not in stopped
+                ]
+                if stopped is not None
+                else []
+            )
+            for vertex_id in excluded:
+                skips[vertex_id] = {"skipped_by": source_id, "taken_outputs": taken}
+        return skips
 
     def exclude_branch_conditionally(self, vertex_id: str, output_name: str | None = None) -> None:
         """Marks a branch as conditionally excluded (for conditional routing).
@@ -1614,7 +1651,7 @@ class Graph:
         for output_name in output_names:
             excluded.update(self._collect_branch_vertices(vertex_id, {output_name}))
         excluded -= self._get_vertices_reachable_from_other_outputs(vertex_id, output_names_set)
-        self._replace_conditional_exclusions(vertex_id, excluded)
+        self._replace_conditional_exclusions(vertex_id, excluded, output_names_set)
 
     def get_edge(self, source_id: str, target_id: str) -> CycleEdge | None:
         """Returns the edge between two vertices."""
@@ -2323,35 +2360,28 @@ class Graph:
         """
         return run_until_complete(self.astep(inputs, files, user_id))
 
-    def _vertex_result_cache_key(self, vertex_id: str) -> str:
+    def _vertex_result_cache_key(self, vertex_id: str, *, user_id: str | None) -> str:
         """Namespace the vertex result cache key to the executing principal.
 
-        Frozen-vertex results were historically cached under the bare vertex UUID,
-        which let any tenant read or overwrite another tenant's cached component
-        output by reusing the vertex id in their own flow (H1-3985565). Served
-        executions always carry the authenticated user (editor/API plane) or the
-        executing flow (anonymous public runs), so the key is prefixed with that
-        principal scope; entries written under other scopes become unreachable,
-        which fails closed against stale keys written by older versions. Graphs
-        with no principal context (standalone ``lfx run``, scripted graphs) have
-        no tenant boundary and keep the bare key, matching the empty-scope
-        contract of ``enforce_storage_key_scope``.
+        Use the same user that authorizes and builds the vertex. Cached graphs
+        can have missing or stale user state. Public and unscoped runs use
+        separate namespaces and cannot restore legacy flow-scoped results.
         """
-        user_scope = str(self.user_id).strip() if self.user_id is not None else ""
-        if user_scope:
-            from lfx.services.authorization import PUBLIC_ANONYMOUS_ACTOR_ID
+        from lfx.services.authorization import PUBLIC_ANONYMOUS_ACTOR_ID
 
-            if user_scope != str(PUBLIC_ANONYMOUS_ACTOR_ID):
-                # Serving-plane runs execute as a service account on behalf of many
-                # end users, so include the end-user identity when one is present.
-                end_user_scope = str(self.end_user_id).strip() if self.end_user_id is not None else ""
-                if end_user_scope:
-                    return f"user:{user_scope}:end-user:{end_user_scope}:{vertex_id}"
-                return f"user:{user_scope}:{vertex_id}"
+        user_scope = str(user_id).strip() if user_id is not None else ""
+        if user_scope and user_scope != str(PUBLIC_ANONYMOUS_ACTOR_ID):
+            # Serving-plane runs execute as a service account on behalf of many
+            # end users, so include the end-user identity when one is present.
+            end_user_scope = str(self.end_user_id).strip() if self.end_user_id is not None else ""
+            if end_user_scope:
+                return f"user:{user_scope}:end-user:{end_user_scope}:{vertex_id}"
+            return f"user:{user_scope}:{vertex_id}"
+        scope = "public" if user_scope == str(PUBLIC_ANONYMOUS_ACTOR_ID) else "unscoped"
         flow_scope = str(self.flow_id).strip() if self.flow_id is not None else ""
         if flow_scope:
-            return f"flow:{flow_scope}:{vertex_id}"
-        return vertex_id
+            return f"{scope}:flow:{flow_scope}:{vertex_id}"
+        return f"{scope}:{vertex_id}"
 
     async def build_vertex(
         self,
@@ -2385,6 +2415,12 @@ class Graph:
             ValueError: If no result is found for the vertex.
         """
         vertex = self.get_vertex(vertex_id)
+        user_scope = str(user_id).strip() if user_id is not None else ""
+        if not user_scope and (user_id is not None or self.user_id is not None):
+            # Components can fall back to the graph's user when no caller is supplied.
+            # Missing or blank caller IDs cannot safely share that result cache.
+            get_cache = None
+            set_cache = None
         self.run_manager.add_to_vertices_being_run(vertex_id)
         try:
             params = ""
@@ -2401,7 +2437,7 @@ class Graph:
                 await vertex.arequire_model_provider_policy(user_id, event_manager=event_manager)
                 # Check the cache for the vertex under the principal-scoped key
                 if get_cache is not None:
-                    cached_result = await get_cache(key=self._vertex_result_cache_key(vertex.id))
+                    cached_result = await get_cache(key=self._vertex_result_cache_key(vertex.id, user_id=user_id))
                 else:
                     cached_result = CacheMiss()
                 if isinstance(cached_result, CacheMiss):
@@ -2447,7 +2483,7 @@ class Graph:
                         "full_data": vertex.full_data,
                     }
 
-                    await set_cache(key=self._vertex_result_cache_key(vertex.id), data=vertex_dict)
+                    await set_cache(key=self._vertex_result_cache_key(vertex.id, user_id=user_id), data=vertex_dict)
 
         except Exception as exc:
             if not isinstance(exc, ComponentBuildError):
@@ -2903,14 +2939,15 @@ class Graph:
         return self._cycle_vertices
 
     def _build_edges(self) -> list[CycleEdge]:
-        """Builds the edges of the graph."""
+        """Builds the edges of the graph, in the flow's edge order, without duplicates."""
         # Edge takes two vertices as arguments, so we need to build the vertices first
         # and then build the edges
         # if we can't find a vertex, we raise an error
-        edges: set[CycleEdge | Edge] = set()
+        # A dict, not a set: a set's order follows the hash seed, and list inputs read this order.
+        edges: dict[CycleEdge | Edge, None] = {}
         for edge in self._edges:
             new_edge = self.build_edge(edge)
-            edges.add(new_edge)
+            edges.setdefault(new_edge, None)
         if self.vertices and not edges:
             logger.warning("Graph has vertices but no edges")
         return list(cast("Iterable[CycleEdge]", edges))
