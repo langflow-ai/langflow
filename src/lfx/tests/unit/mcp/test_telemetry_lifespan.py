@@ -2,6 +2,7 @@
 
 import json
 from contextlib import nullcontext
+from types import SimpleNamespace
 
 import httpx
 import pytest
@@ -17,9 +18,10 @@ def segment_requests(monkeypatch):
         requests.append(json.loads(request.content))
         return httpx.Response(200)
 
+    # Keep the shared AsyncClient class intact for MCP's import-time annotations.
     monkeypatch.setattr(
-        "lfx.services.telemetry.service.httpx.AsyncClient",
-        lambda **kwargs: real_client(transport=httpx.MockTransport(capture), **kwargs),
+        "lfx.services.telemetry.service.httpx",
+        SimpleNamespace(AsyncClient=lambda **kwargs: real_client(transport=httpx.MockTransport(capture), **kwargs)),
     )
     return requests
 
