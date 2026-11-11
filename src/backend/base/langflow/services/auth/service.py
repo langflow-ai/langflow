@@ -1588,11 +1588,10 @@ class AuthService(BaseAuthService):
         )
         if not await create_refresh_session(session_id, str(user_id), expires_at, db):
             raise HTTPException(status_code=401, detail="User account is inactive or no longer exists")
-        if update_last_login:
-            from langflow.services.maintenance.state import maintenance_enabled
+        from langflow.services.maintenance.state import maintenance_enabled
 
-            if not await maintenance_enabled(db):
-                await update_user_last_login_at(user_id, db)
+        if update_last_login and not await maintenance_enabled(db):
+            await update_user_last_login_at(user_id, db)
         return tokens
 
     def _create_session_tokens(self, user_id: UUID, session_id: str) -> dict:

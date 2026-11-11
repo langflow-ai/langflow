@@ -45,6 +45,7 @@ import ModelProvidersPage from "./pages/SettingsPage/pages/ModelProvidersPage";
 import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
 import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
 import TriggersPage from "./pages/SettingsPage/pages/TriggersPage";
+import UpgradeReportsPage from "./pages/SettingsPage/pages/UpgradeReportsPage";
 
 const LoginAdminPage = lazy(() => import("./pages/AdminPage/LoginPage"));
 
@@ -177,6 +178,10 @@ const router = createBrowserRouter(
                   <Route path="shortcuts" element={<ShortcutsPage />} />
                   <Route path="messages" element={<MessagesPage />} />
                   <Route path="migration" element={<MigrationPage />} />
+                  <Route
+                    path="upgrade-reports"
+                    element={<UpgradeReportsPage />}
+                  />
                   {CustomRoutesStore()}
                 </Route>
                 {CustomRoutesStorePages()}
