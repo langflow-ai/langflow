@@ -196,39 +196,28 @@ class ConditionalRouterComponent(Component):
             return Message(text=case_message)
         return Message(text=self.input_text)
 
-    def true_response(self) -> Message:
+    def _routes_to_true(self) -> bool:
         result = self.evaluate_condition(
             self.input_text, self.match_text, self.operator, case_sensitive=self.case_sensitive
         )
-
         self.iterate_and_stop_once("false_result" if result else "true_result")
+        # At the limit the helper keeps only the default route active, so the message must follow it.
+        if self.ctx.get(f"{self._id}_iteration", 0) >= self.max_iterations:
+            return self.default_route == "true_result"
+        return result
 
-        # Resolve the message after the iteration helper selects the active branch.
-        current_iteration = self.ctx.get(f"{self._id}_iteration", 0)
-        if current_iteration >= self.max_iterations:
-            result = self.default_route == "true_result"
-
-        if result:
+    def true_response(self) -> Message:
+        if self._routes_to_true():
             true_message = self._resolve_case_message(self.true_case_message)
             self.status = true_message
             return true_message
         return Message(text="")
 
     def false_response(self) -> Message:
-        result = self.evaluate_condition(
-            self.input_text, self.match_text, self.operator, case_sensitive=self.case_sensitive
-        )
-        self.iterate_and_stop_once("false_result" if result else "true_result")
-
-        current_iteration = self.ctx.get(f"{self._id}_iteration", 0)
-        if current_iteration >= self.max_iterations:
-            result = self.default_route == "true_result"
-
-        if not result:
+        if not self._routes_to_true():
             false_message = self._resolve_case_message(self.false_case_message)
             self.status = false_message
             return false_message
-
         return Message(text="")
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
