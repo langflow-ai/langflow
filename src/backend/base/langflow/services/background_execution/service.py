@@ -891,14 +891,7 @@ class BackgroundExecutionService(Service):
 
         await self.start()
         if await writes_paused():
-            if self._maintenance_recovery_task is None or self._maintenance_recovery_task.done():
-
-                async def recover_after_maintenance():
-                    while await writes_paused():  # noqa: ASYNC110
-                        await asyncio.sleep(0.1)
-                    await self.sweep_orphans_on_startup()
-
-                self._maintenance_recovery_task = asyncio.create_task(recover_after_maintenance())
+            self._schedule_maintenance_recovery()
             return
         if self._scaled:
             return
