@@ -13,6 +13,7 @@ import asyncio
 import shutil
 import tempfile
 import warnings
+from contextlib import asynccontextmanager
 from pathlib import Path
 from uuid import uuid4
 
@@ -28,6 +29,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel
+from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
 
 class _FakeSettings:
@@ -94,7 +96,7 @@ def _make_vertex_build_row(flow_id, vertex_id="v1") -> dict:
 
 
 @pytest.fixture
-async def writer_with_engine():
+async def writer_with_engine(monkeypatch):
     """Yield (writer, engine) wired together with a fresh in-memory SQLite."""
     engine = create_async_engine(
         "sqlite+aiosqlite://",
@@ -103,6 +105,15 @@ async def writer_with_engine():
     )
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
+
+    @asynccontextmanager
+    async def maintenance_session():
+        # Admission must read this test's database, not a previous API fixture's
+        # application database or its maintenance state.
+        async with SQLModelAsyncSession(engine) as session:
+            yield session
+
+    monkeypatch.setattr("langflow.api.utils.migration_pause.session_scope_readonly", maintenance_session)
     writer = _build_writer()
     writer._engine = engine
     writer._session_maker = async_sessionmaker(engine, expire_on_commit=False)
@@ -748,6 +759,7 @@ async def test_in_flight_batch_returned_on_cancel(writer_with_engine) -> None:
     # Replace the session_maker with one that hangs forever inside execute,
     # so the writer is guaranteed to be blocked mid-flush when we cancel.
     hang = asyncio.Event()  # never set
+    flushing = asyncio.Event()
 
     class _HangingSessionMaker:
         def __call__(self):
@@ -760,6 +772,7 @@ async def test_in_flight_batch_returned_on_cancel(writer_with_engine) -> None:
             return False
 
         async def execute(self, *_, **__):
+            flushing.set()
             await hang.wait()
 
         async def commit(self):
@@ -767,19 +780,21 @@ async def test_in_flight_batch_returned_on_cancel(writer_with_engine) -> None:
 
     writer._session_maker = _HangingSessionMaker()
     task = asyncio.create_task(writer._run_writer())
-    # Give the writer a tick to drain into a batch and start the flush.
-    for _ in range(20):
-        await asyncio.sleep(0.02)
-        if len(writer._tx_buffer) == 0:
-            break
-    assert len(writer._tx_buffer) == 0  # the batch is in-flight
+    try:
+        # Maintenance admission may need to open a database connection first.
+        # Cancel only once execute is blocked, rather than after a fixed tick budget.
+        await asyncio.wait_for(flushing.wait(), timeout=30)
+        assert len(writer._tx_buffer) == 0  # the batch is in-flight
 
-    task.cancel()
-    with pytest.raises(asyncio.CancelledError):
-        await task
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
 
-    # Cancelled mid-flush — the 20 rows should be back in the buffer.
-    assert len(writer._tx_buffer) == 20
+        # Cancelled mid-flush — the 20 rows should be back in the buffer.
+        assert len(writer._tx_buffer) == 20
+    finally:
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
 
 
 async def test_lifecycle_idempotent_when_disabled() -> None:
