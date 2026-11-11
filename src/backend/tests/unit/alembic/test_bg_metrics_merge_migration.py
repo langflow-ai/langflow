@@ -37,6 +37,7 @@ def test_job_metrics_and_release_have_single_head():
         "8d4c7a2e9b61",  # pragma: allowlist secret
         "9e6b2c4a7d80",  # pragma: allowlist secret
         "a8e4c2f6b901",  # pragma: allowlist secret
+        "7fd2c80e5a39",  # pragma: allowlist secret
         "f6a2c8e4b901",  # pragma: allowlist secret
         "f6b9d2e4a731",  # pragma: allowlist secret
         "c6e8a2f4b901",  # pragma: allowlist secret
@@ -71,6 +72,12 @@ def test_job_metrics_and_release_upgrade_to_single_head(db_url, prior_revision):
             assert "version_token" in {column["name"] for column in inspector.get_columns("flow")}
             assert "retired_at" in {column["name"] for column in inspector.get_columns("user")}
             assert inspector.has_table("project_replacement_operation")
+            assert "project_name" in {
+                column["name"] for column in inspector.get_columns("project_replacement_operation")
+            }
+            assert {"represented_issuer", "represented_subject"} <= {
+                column["name"] for column in inspector.get_columns("audit_events")
+            }
             assert inspector.has_table("worker_registry")
             assert inspector.has_table("refresh_token_session")
             assert inspector.has_table("trigger_renewal_observation")

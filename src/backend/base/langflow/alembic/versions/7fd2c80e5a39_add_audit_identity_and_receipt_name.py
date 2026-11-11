@@ -1,7 +1,7 @@
 """Add represented audit identity and retain names on pruned replacement receipts.
 
 Revision ID: 7fd2c80e5a39
-Revises: f6a2c8e4b901
+Revises: 310c015b3c92
 Phase: EXPAND
 
 Keep existing acting identity and audit history. Bound both identity indexes.
@@ -13,7 +13,7 @@ from alembic import op
 from langflow.utils import migration
 
 revision = "7fd2c80e5a39"  # pragma: allowlist secret
-down_revision = "f6a2c8e4b901"  # pragma: allowlist secret
+down_revision = "310c015b3c92"  # pragma: allowlist secret
 branch_labels = None
 depends_on = None
 

@@ -139,9 +139,14 @@ async def test_authentication_carries_current_scoped_policy(monkeypatch):
     assert result is not None
     assert result.api_key_restricted is True
     assert result.api_key_permissions == key.permissions
-    context = AuthCredentialContext.from_api_key_result(result).to_authz_context()
+    assert result.api_key_fingerprint == crud.hash_api_key("candidate")
+    credential = AuthCredentialContext.from_api_key_result(result)
+    assert credential.api_key_fingerprint == result.api_key_fingerprint
+    assert result.api_key_fingerprint not in repr(credential)
+    context = credential.to_authz_context()
     assert context["api_key_restricted"] is True
     assert context["api_key_permissions"] == key.permissions
+    assert "api_key_fingerprint" not in context
 
 
 @pytest.mark.anyio
