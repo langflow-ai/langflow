@@ -148,8 +148,16 @@ def test_check_reads_nothing_of_the_server_and_writes_nowhere(tmp_path):
         assert {(node["status"], node["dry_run"]["result"]) for node in listed[name]["nodes"]} == {
             ("outdated_safe", "keeps")
         }
-    mcp_nodes = [(node["type"], node["status"]) for node in listed["MCP flow"]["nodes"]]
-    assert mcp_nodes == [("MCPTools", "could_not_verify")]
+    mcp_nodes = [node for node in listed["MCP flow"]["nodes"] if node["type"] == "MCPTools"]
+    assert [(node["status"], node["dry_run"]["result"]) for node in mcp_nodes] == [
+        ("could_not_verify", "could_not_verify")
+    ]
+    # Other saved nodes may need safe updates as the installed registry changes.
+    assert {
+        (node["status"], node["dry_run"]["result"])
+        for node in listed["MCP flow"]["nodes"]
+        if node["type"] != "MCPTools"
+    } <= {("outdated_safe", "keeps")}
     assert report["summary"]["nodes"]["could_not_verify"] == 1
     assert report["summary"]["flows"] == {"ok": 2, "warn": 1, "fail": 0}
     # Defaults, not the server's variables: custom code allowed, no components path.

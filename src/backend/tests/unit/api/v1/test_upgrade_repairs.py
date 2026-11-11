@@ -23,12 +23,14 @@ APPLY = "/api/v1/upgrade-repairs/apply"
 
 
 @pytest.fixture(autouse=True)
-def installed_target(monkeypatch):
+def installed_target(client, monkeypatch):  # noqa: ARG001
     async def load():
         return registry()
 
     monkeypatch.setattr(service, "target_registry", load)
     monkeypatch.setattr(FEATURE_FLAGS, "instance_migration", False)
+    # Client startup replaces the settings service. Patch the live instance so
+    # synthetic repair fixtures do not depend on the deployment's default policy.
     settings = get_settings_service().settings
     monkeypatch.setattr(settings, "allow_custom_components", True)
     monkeypatch.setattr(settings, "custom_component_admin_only", False)
