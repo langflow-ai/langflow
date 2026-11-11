@@ -21,9 +21,13 @@ jest.mock("@/controllers/API/queries/flow-version", () => ({
 const restoreMock = jest.fn(async () => {
   callOrder.push("restore");
 });
+const restoreHookMock = jest.fn();
 jest.mock("@/hooks/flows/use-restore-version", () => ({
   __esModule: true,
-  default: () => ({ restore: restoreMock, isRestoring: false }),
+  default: (...args: unknown[]) => {
+    restoreHookMock(...args);
+    return { restore: restoreMock, isRestoring: false };
+  },
 }));
 
 const setErrorDataMock = jest.fn();
@@ -34,10 +38,14 @@ jest.mock("@/stores/alertStore", () => ({
 }));
 
 let currentFlowIdMock: string | undefined = "flow-1";
+let currentFlowMock = { id: "flow-1", version_token: "persisted-token" };
 jest.mock("@/stores/flowsManagerStore", () => ({
   __esModule: true,
   default: (selector: (state: Record<string, unknown>) => unknown) =>
-    selector({ currentFlowId: currentFlowIdMock }),
+    selector({
+      currentFlowId: currentFlowIdMock,
+      currentFlow: currentFlowMock,
+    }),
 }));
 
 jest.mock("react-i18next", () => ({
@@ -51,6 +59,7 @@ describe("useAssistantRevert", () => {
     jest.clearAllMocks();
     callOrder.length = 0;
     currentFlowIdMock = "flow-1";
+    currentFlowMock = { id: "flow-1", version_token: "persisted-token" };
   });
 
   it("should_create_the_safety_snapshot_before_restoring", async () => {
@@ -71,6 +80,22 @@ describe("useAssistantRevert", () => {
       saveDraft: false,
       onSuccess: undefined,
     });
+  });
+
+  it("should pass the persisted flow token for assistant revert", async () => {
+    const { result } = renderHook(() => useAssistantRevert());
+    await act(async () => {
+      await result.current.revert("ver-1");
+    });
+
+    expect(restoreHookMock).toHaveBeenCalledWith("flow-1", "persisted-token");
+  });
+
+  it("should not use a token belonging to another flow", async () => {
+    currentFlowMock = { id: "different-flow", version_token: "other-token" };
+    renderHook(() => useAssistantRevert());
+
+    expect(restoreHookMock).toHaveBeenCalledWith("flow-1", undefined);
   });
 
   it("should_propagate_onSuccess_to_the_restore_call", async () => {

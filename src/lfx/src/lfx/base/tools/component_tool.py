@@ -13,6 +13,7 @@ from langchain_core.callbacks import AsyncCallbackManagerForToolRun, CallbackMan
 from langchain_core.runnables import RunnableConfig  # noqa: TC002
 from langchain_core.tools import BaseTool, ToolException
 from langchain_core.tools.structured import StructuredTool
+from pydantic import PrivateAttr
 from typing_extensions import override
 
 from lfx.base.tools.constants import TOOL_OUTPUT_NAME
@@ -20,6 +21,7 @@ from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.message import Message
 from lfx.serialization.serialization import serialize
+from lfx.services.auth.utils import run_sync_auth_validation
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -39,6 +41,60 @@ class ComponentStructuredTool(StructuredTool):
     """StructuredTool that keeps JSON-safe component results as LangChain artifacts."""
 
     response_format: Literal["content_and_artifact"] = "content_and_artifact"
+    _component: Component | None = PrivateAttr(default=None)
+    _policy_tag: str = PrivateAttr(default="")
+    _policy_name: str = PrivateAttr(default="")
+    _approval_actions: tuple[str, ...] = PrivateAttr(default=())
+    _metadata_configured: bool = PrivateAttr(default=False)
+
+    def __init__(self, *, source_component: Component | None = None, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self._component = source_component
+
+    def capture_policy(self) -> None:
+        """Keep the build-time policy stable across runtime tool renaming."""
+        metadata = self.metadata or {}
+        self._policy_tag = self.tags[0] if self.tags else self.name
+        self._policy_name = self.name
+        self._approval_actions = tuple(metadata.get("approval_actions") or ())
+        self._metadata_configured = "approval_actions" in metadata
+
+    def bind_component(self, component: Component) -> None:
+        self._component = component
+        self.capture_policy()
+
+    async def validate_runtime_authorization(self) -> None:
+        from lfx.graph.graph.base import Graph
+        from lfx.services.deps import get_auth_service
+
+        component = self._component
+        if component is None:
+            return
+        graph = getattr(component, "graph", None)
+        if not isinstance(graph, Graph):
+            return
+        auth = get_auth_service()
+        if auth is None:
+            return
+        try:
+            await auth.validate_execution_user(graph.user_id, principal=getattr(graph, "execution_principal", None))
+        except Exception as exc:
+            msg = "Execution user is inactive or unavailable"
+            raise ToolException(msg) from exc
+        if not graph.flow_id:
+            return
+        try:
+            await auth.validate_tool_call(
+                flow_id=str(graph.source_flow_id or graph.flow_id),
+                component_id=component.get_id(),
+                tool_tag=self._policy_tag,
+                tool_name=self._policy_name,
+                approval_actions=self._approval_actions,
+                metadata_configured=self._metadata_configured,
+            )
+        except Exception as exc:
+            msg = "Tool settings changed or are unavailable. Start a new run before calling this tool."
+            raise ToolException(msg) from exc
 
     @staticmethod
     def _content_and_artifact(content: Any) -> tuple[Any, Any | None]:
@@ -53,6 +109,7 @@ class ComponentStructuredTool(StructuredTool):
         run_manager: CallbackManagerForToolRun | None = None,
         **kwargs: Any,
     ) -> tuple[Any, Any | None]:
+        run_sync_auth_validation(self.validate_runtime_authorization)
         content = super()._run(*args, config=config, run_manager=run_manager, **kwargs)
         return self._content_and_artifact(content)
 
@@ -68,6 +125,7 @@ class ComponentStructuredTool(StructuredTool):
             # StructuredTool falls back to self._run, which already returns the
             # content-and-artifact tuple. Wrapping it again would nest the tuple.
             return await super()._arun(*args, config=config, run_manager=run_manager, **kwargs)
+        await self.validate_runtime_authorization()
         content = await super()._arun(*args, config=config, run_manager=run_manager, **kwargs)
         return self._content_and_artifact(content)
 
@@ -137,6 +195,11 @@ def _build_output_function(
     _tool_input_names = [inp.name for inp in component.inputs if getattr(inp, "tool_mode", False)]
 
     def output_function(*args, **kwargs):
+        try:
+            run_sync_auth_validation(lambda: _validate_execution_user(component))
+        except Exception as exc:
+            msg = "Execution user is inactive or unavailable"
+            raise ToolException(msg) from exc
         # Map positional args to keyword args using tool_mode input names
         if args:
             for i, val in enumerate(args):
@@ -199,6 +262,11 @@ def _build_output_async_function(
     _tool_input_names = [inp.name for inp in component.inputs if getattr(inp, "tool_mode", False)]
 
     async def output_function(*args, **kwargs):
+        try:
+            await _validate_execution_user(component)
+        except Exception as exc:
+            msg = "Execution user is inactive or unavailable"
+            raise ToolException(msg) from exc
         # Map positional args to keyword args using tool_mode input names
         if args:
             for i, val in enumerate(args):
@@ -244,6 +312,18 @@ def _build_output_async_function(
         return serialize(result)
 
     return output_function
+
+
+async def _validate_execution_user(component: Component) -> None:
+    from lfx.graph.graph.base import Graph
+    from lfx.services.deps import get_auth_service
+
+    graph = getattr(component, "graph", None)
+    if not isinstance(graph, Graph):
+        return
+    auth = get_auth_service()
+    if auth is not None:
+        await auth.validate_execution_user(graph.user_id, principal=getattr(graph, "execution_principal", None))
 
 
 def _format_tool_name(name: str):
@@ -489,6 +569,7 @@ class ComponentToolkit:
                         coroutine=_build_output_async_function(
                             self.component, output_method, event_manager, TOOL_OUTPUT_NAME
                         ),
+                        source_component=self.component,
                         args_schema=args_schema,
                         handle_tool_error=True,
                         callbacks=callbacks,
@@ -502,6 +583,7 @@ class ComponentToolkit:
                         name=formatted_name,
                         description=build_description(self.component, output),
                         func=_build_output_function(self.component, output_method, event_manager, TOOL_OUTPUT_NAME),
+                        source_component=self.component,
                         args_schema=args_schema,
                         handle_tool_error=True,
                         callbacks=callbacks,
@@ -523,6 +605,8 @@ class ComponentToolkit:
                 if tool_description:
                     tool.description = f"{tool_description} Output details: {tool.description}"
                 tool.tags = [tool.name]
+        for tool in tools:
+            tool.capture_policy()
         return tools
 
     def get_tools_metadata_dictionary(self) -> dict:
@@ -546,8 +630,10 @@ class ComponentToolkit:
         if isinstance(self.metadata, pd.DataFrame):
             metadata_dict = self.get_tools_metadata_dictionary()
             filtered_tools = []
-            for tool in tools:
-                if isinstance(tool, StructuredTool | BaseTool) and tool.tags:
+            for candidate in tools:
+                if isinstance(candidate, StructuredTool | BaseTool) and candidate.tags:
+                    tool = candidate.model_copy()
+                    tool.metadata = dict(tool.metadata or {})
                     try:
                         tag = tool.tags[0]
                     except IndexError:
@@ -564,13 +650,39 @@ class ComponentToolkit:
                             if tool.metadata is None:
                                 tool.metadata = {}
                             tool.metadata["approval_actions"] = tool_metadata.get("approval_actions") or []
+                            if isinstance(tool, ComponentStructuredTool):
+                                tool.capture_policy()
                             if tool_metadata.get("commands"):
                                 tool.description = _add_commands_to_tool_description(
                                     tool.description, tool_metadata.get("commands")
                                 )
                             filtered_tools.append(tool)
                 else:
-                    msg = f"Expected a StructuredTool or BaseTool, got {type(tool)}"
+                    msg = f"Expected a StructuredTool or BaseTool, got {type(candidate)}"
                     raise TypeError(msg)
-            return filtered_tools
-        return tools
+            return self.protect_tools(filtered_tools)
+        return self.protect_tools(tools)
+
+    def protect_tools(self, tools: list[BaseTool]) -> list[BaseTool]:
+        from lfx.base.tools.policy_tool import PolicyCheckedTool
+
+        protected = []
+        for tool in tools:
+            if isinstance(tool, ComponentStructuredTool):
+                tool.bind_component(self.component)
+                protected.append(tool)
+                continue
+            checker = ComponentStructuredTool(
+                name=tool.name,
+                description=tool.description,
+                args_schema=tool.args_schema or tool.get_input_schema(),
+                source_component=self.component,
+                tags=list(tool.tags or []),
+                metadata=dict(tool.metadata or {}),
+            )
+            checker.capture_policy()
+            if isinstance(tool, PolicyCheckedTool):
+                protected.append(tool.with_policy(checker.validate_runtime_authorization))
+            else:
+                protected.append(PolicyCheckedTool(tool, checker.validate_runtime_authorization))
+        return protected

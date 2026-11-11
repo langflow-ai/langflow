@@ -4,6 +4,7 @@ from langflow.services.database.models.trigger.model import (
     TriggerEvent,
     TriggerLease,
     TriggerListenerLease,
+    TriggerRenewalObservation,
     TriggerSourceVersion,
     TriggerSubscription,
 )
@@ -36,6 +37,7 @@ __all__ = [
     "TriggerListenerLease",
     "TriggerPinRequest",
     "TriggerRead",
+    "TriggerRenewalObservation",
     "TriggerReplayRequest",
     "TriggerSessionPolicy",
     "TriggerSourceVersion",

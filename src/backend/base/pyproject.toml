@@ -99,6 +99,7 @@ dependencies = [
     "prometheus-client>=0.20.0,<1.0.0",
     "aiofiles>=24.1.0,<25.0.0",
     "aiohttp>=3.14.4,<4.0.0",
+    "certifi>=2026.10.19",
     "pip>=26.2.1,<27.0.0",
     "setuptools>=84.1.0,<85.0.0",
     "nanoid>=2.0.0,<3.0.0",
@@ -231,7 +232,7 @@ audio = [
 
 postgresql = [
     "sqlalchemy[postgresql_psycopg2binary]>=2.0.38,<3.0.0",
-    "sqlalchemy[postgresql_psycopg]>=2.0.38,<3.0.0",
+    "sqlalchemy[postgresql_psycopgbinary]>=2.0.38,<3.0.0",
 ]
 
 local = [
@@ -384,7 +385,7 @@ needle = ["needle-python>=0.4.0"]
 sseclient = ["sseclient-py==1.8.0"]
 openinference = ["openinference-instrumentation-langchain>=0.1.29"]
 mcp = ["mcp>=1.30.0,<2.0.0"]
-ag2 = ["ag2>=0.1.0"]
+ag2 = ["ag2>=1.1.1"]
 scrapegraph = ["scrapegraph-py>=1.12.0"]
 apify = ["apify-client>=1.8.1"]
 spider = ["spider-client>=0.0.27,<1.0.0"]

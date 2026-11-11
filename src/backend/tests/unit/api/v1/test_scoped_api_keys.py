@@ -35,7 +35,9 @@ async def test_permission_options_reports_unsupported_without_plugin(client, log
 
 @pytest.mark.anyio
 async def test_owner_can_replace_and_remove_permissions_without_rotating_secret(client, logged_in_headers, monkeypatch):
-    created = (await client.post("api/v1/api_key/", json={"name": "Runner"}, headers=logged_in_headers)).json()
+    response = await client.post("api/v1/api_key/", json={"name": "Runner"}, headers=logged_in_headers)
+    assert response.status_code == 200, response.text
+    created = response.json()
     original_secret = created["api_key"]
     validate = AsyncMock()
     plugin = SimpleNamespace(
@@ -220,7 +222,7 @@ async def test_restricted_key_cannot_administer_credentials(client, logged_in_he
         json={"name": "Restricted", "permissions": {"restrictions": [{"resource_type": "flow", "actions": ["read"]}]}},
         headers=logged_in_headers,
     )
-    assert created.status_code == 200
+    assert created.status_code == 200, created.text
     key = created.json()
     requests = {
         "list": ("GET", "api/v1/api_key/", None),

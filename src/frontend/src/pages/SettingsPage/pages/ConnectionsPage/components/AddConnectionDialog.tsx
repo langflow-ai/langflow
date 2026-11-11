@@ -127,9 +127,10 @@ export function AddConnectionDialog({
   const requestedScopes = useRef<string[]>([]);
 
   const provider = providers.find((item) => item.provider_id === providerId);
-  // Every ServiceNow component requires a flow-owner connection. Instance
+  // Salesforce and ServiceNow require a flow-owner connection. Instance
   // sharing would create a connection none of those components can select.
-  const requiresUserOwnership = providerId === "servicenow";
+  const requiresUserOwnership =
+    providerId === "servicenow" || providerId === "salesforce";
   const manualTokenProfiles = provider?.manual_token_profiles ?? [];
   const tokenProfile =
     manualTokenProfiles.find((profile) => profile.identity === identity) ??
@@ -879,7 +880,11 @@ export function AddConnectionDialog({
               )}
               {!usesToken && requiresUserOwnership && (
                 <p className="text-xs text-muted-foreground">
-                  {t("connections.add.servicenowUserOwned")}
+                  {t(
+                    providerId === "salesforce"
+                      ? "connections.add.salesforceUserOwned"
+                      : "connections.add.servicenowUserOwned",
+                  )}
                 </p>
               )}
 

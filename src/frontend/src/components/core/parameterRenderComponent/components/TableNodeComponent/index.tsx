@@ -14,6 +14,11 @@ import { ForwardedIconComponent } from "../../../../common/genericIconComponent"
 import { Button } from "../../../../ui/button";
 import type { InputProps, TableComponentType } from "../../types";
 
+// The trigger text every TableInput sends unless a component sets its own
+// (``trigger_text`` in lfx/inputs/input_mixin.py). It is English, so it stands
+// for "no text set" and the button shows the translated label instead.
+const BACKEND_DEFAULT_TRIGGER_TEXT = "Open table";
+
 export default function TableNodeComponent({
   tableTitle,
   description,
@@ -32,7 +37,10 @@ export default function TableNodeComponent({
   // biome-ignore lint/suspicious/noExplicitAny: legacy
 }: InputProps<any[], TableComponentType>): JSX.Element | null {
   const { t } = useTranslation();
-  const effectiveTriggerText = trigger_text ?? t("component.openTable");
+  const effectiveTriggerText =
+    trigger_text && trigger_text !== BACKEND_DEFAULT_TRIGGER_TEXT
+      ? trigger_text
+      : t("component.openTable");
   const dataTypeDefinitions: {
     // biome-ignore lint/suspicious/noExplicitAny: legacy
     [cellDataType: string]: DataTypeDefinition<any>;

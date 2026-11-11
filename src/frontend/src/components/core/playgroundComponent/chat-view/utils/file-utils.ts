@@ -168,6 +168,16 @@ export function getFilePreviewUrl(
   return null;
 }
 
+// The upload endpoint stores a chat attachment as "<timestamp>_<original name>".
+const UPLOAD_TIMESTAMP_PREFIX = /^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_(?=.)/;
+
+/**
+ * The name the user uploaded, without the timestamp the server prefixes.
+ */
+function getUploadedFileName(storedName: string): string {
+  return storedName.replace(UPLOAD_TIMESTAMP_PREFIX, "");
+}
+
 /**
  * Extract file information from various file formats
  * @param file - Can be File, path string, or file object
@@ -184,14 +194,14 @@ export function extractFileInfo(
     };
   } else if (typeof file === "string") {
     const normalizedPath = file.replace(/\\/g, "/");
-    const name = normalizedPath.split("/").pop() || file;
+    const name = getUploadedFileName(normalizedPath.split("/").pop() || file);
     const type = normalizedPath.split(".").pop() || "";
     return { name, type, path: file };
   } else {
     const normalizedPath = (file.path || "").replace(/\\/g, "/");
     const nameFromPath = normalizedPath.split("/").pop() || file.path || "";
     return {
-      name: file.name || nameFromPath,
+      name: file.name || getUploadedFileName(nameFromPath),
       type: file.type || normalizedPath.split(".").pop() || "",
       path: file.path || "",
     };

@@ -1,6 +1,10 @@
-"""Regression tests: the Top K input must reach models that support it, and only those."""
+"""Regression tests for Bedrock Converse model configuration and request fields."""
+
+from types import SimpleNamespace
 
 import pytest
+from botocore.stub import Stubber
+from lfx.graph.vertex.param_handler import ParameterHandler
 from lfx_amazon.components.amazon.amazon_bedrock_converse import AmazonBedrockConverseComponent
 
 _FAKE_AWS_ACCESS_KEY_ID = "AKIAFAKEFAKEFAKEFAKE"  # pragma: allowlist secret
@@ -129,3 +133,68 @@ def test_top_p_still_sent_with_temperature_to_other_providers():
 
     assert model.temperature == 0.7
     assert model.top_p == 0.9
+
+
+@pytest.mark.parametrize(
+    "additional_model_fields",
+    [
+        {"qa_marker": "keep-me", "top_k": 99},
+        [{"qa_marker": "keep-me"}, {"top_k": 99}],
+    ],
+)
+def test_additional_model_fields_reach_converse_request(additional_model_fields):
+    model = _component(additional_model_fields=additional_model_fields).build_model()
+    response = {
+        "output": {"message": {"role": "assistant", "content": [{"text": "pong"}]}},
+        "stopReason": "end_turn",
+        "usage": {"inputTokens": 1, "outputTokens": 1, "totalTokens": 2},
+        "metrics": {"latencyMs": 1},
+    }
+    expected_params = {
+        "modelId": model.model_id,
+        "messages": [{"role": "user", "content": [{"text": "ping"}]}],
+        "system": [],
+        "inferenceConfig": {"maxTokens": 4096, "temperature": 0.7},
+        "additionalModelRequestFields": {"qa_marker": "keep-me", "top_k": 99},
+    }
+
+    with Stubber(model.client) as stubber:
+        stubber.add_response("converse", response, expected_params)
+        assert model.invoke("ping").text == "pong"
+        stubber.assert_no_pending_responses()
+
+
+def test_additional_model_fields_survive_parameter_normalization():
+    vertex = SimpleNamespace(
+        data={
+            "node": {
+                "template": {
+                    "additional_model_fields": {
+                        "type": "dict",
+                        "value": [{"qa_marker": "keep-me"}],
+                        "show": True,
+                    }
+                }
+            }
+        },
+        display_name="Amazon Bedrock Converse",
+    )
+    params, _ = ParameterHandler(vertex, storage_service=None).process_field_parameters()
+    model = _component(**params).build_model()
+
+    assert model.additional_model_request_fields == {"top_k": 250, "qa_marker": "keep-me"}
+
+
+def test_model_id_template_accepts_custom_inference_profiles():
+    model_id = "us.anthropic.claude-opus-5-5"
+    component = AmazonBedrockConverseComponent().set(
+        model_id=model_id,
+        aws_access_key_id=_FAKE_AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=_FAKE_AWS_SECRET_ACCESS_KEY,
+    )
+    template = component.to_frontend_node()["data"]["node"]["template"]["model_id"]
+
+    assert model_id not in template["options"]
+    assert template["combobox"] is True
+    assert template["value"] == model_id
+    assert component.build_model().model_id == model_id
