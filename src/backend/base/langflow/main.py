@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import platform
 import re
 import sys
 import tempfile
@@ -119,6 +120,10 @@ async def _run_enterprise_lifespan_hooks(phase: str) -> None:
         except Exception as e:  # noqa: BLE001
             hook_name = getattr(hook, "__name__", getattr(hook, "__qualname__", type(hook).__name__))
             await logger.awarning(f"Enterprise lifespan {phase} hook {hook_name} failed: {e}")
+
+# Set Windows-specific event loop policy when running the app directly
+if platform.system() == "Windows":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())  # type: ignore[attr-defined]
 
 
 async def log_exception_to_telemetry(exc: Exception, context: str) -> None:
