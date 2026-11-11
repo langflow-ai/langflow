@@ -6,7 +6,10 @@ export async function installDocumentRequestCleanup(
   page: Page,
   trackers: PendingRequestTracker<Request>[],
 ): Promise<() => void> {
-  const navigationCandidates = new Map<Frame, Set<Request>>();
+  const navigationCandidates = new Map<
+    Frame,
+    { requests: Set<Request>; committed: boolean }
+  >();
   const frameForRequest = (request: Request): Frame | undefined => {
     try {
       return request.frame();
@@ -16,12 +19,25 @@ export async function installDocumentRequestCleanup(
     }
   };
   const onRequest = (request: Request) => {
-    if (!request.isNavigationRequest()) return;
     const frame = frameForRequest(request);
     if (!frame) return;
-    navigationCandidates.set(
-      frame,
-      new Set(
+    const isDocumentRequest =
+      request.resourceType() === "xhr" || request.resourceType() === "fetch";
+    if (!request.isNavigationRequest()) {
+      const candidate = navigationCandidates.get(frame);
+      // The old document can keep polling while the navigation response is
+      // pending. Chromium can omit cancellation events for these late XHRs
+      // too, so capture them until the replacement commits. Requests started
+      // by the new document must remain tracked even if its init binding has
+      // not reached Node yet.
+      if (isDocumentRequest && candidate && !candidate.committed) {
+        candidate.requests.add(request);
+      }
+      return;
+    }
+    navigationCandidates.set(frame, {
+      committed: false,
+      requests: new Set(
         trackers.flatMap((tracker) =>
           tracker
             .snapshot()
@@ -33,7 +49,12 @@ export async function installDocumentRequestCleanup(
             ),
         ),
       ),
-    );
+    });
+  };
+
+  const onFrameNavigated = (frame: Frame) => {
+    const candidate = navigationCandidates.get(frame);
+    if (candidate) candidate.committed = true;
   };
 
   const onFrameDetached = (frame: Frame) => {
@@ -55,15 +76,15 @@ export async function installDocumentRequestCleanup(
     ({ frame }) => {
       const abandoned = navigationCandidates.get(frame);
       navigationCandidates.delete(frame);
-      for (const request of abandoned ?? []) {
+      for (const request of abandoned?.requests ?? []) {
         for (const tracker of trackers) tracker.finish(request);
       }
     },
   );
   await page.addInitScript(() => {
-    // Init scripts run for a replacement document, not history/hash changes or
-    // aborted navigations. The captured set excludes requests from this new
-    // document even if its scripts run before the binding reaches Node.
+    // Init scripts confirm a replacement document, not history/hash changes
+    // or aborted navigations. The candidate set freezes at navigation commit,
+    // before the new document can start its own API requests.
     void (
       globalThis as typeof globalThis & {
         __langflowPlaywrightDocumentStarted: () => Promise<void>;
@@ -71,10 +92,12 @@ export async function installDocumentRequestCleanup(
     ).__langflowPlaywrightDocumentStarted();
   });
   page.on("request", onRequest);
+  page.on("framenavigated", onFrameNavigated);
   page.on("framedetached", onFrameDetached);
 
   return () => {
     page.off("request", onRequest);
+    page.off("framenavigated", onFrameNavigated);
     page.off("framedetached", onFrameDetached);
     navigationCandidates.clear();
   };

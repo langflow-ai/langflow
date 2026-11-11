@@ -30,10 +30,18 @@ const lifecycleTest = test.extend<{ lifecycle: LifecycleFixture }>({
         return;
       }
       const xhr = url.searchParams.get("xhr");
+      const script = xhr
+        ? `<script>const xhr = new XMLHttpRequest(); xhr.open("GET", ${JSON.stringify(xhr)}); xhr.send();</script>`
+        : "";
+      if (url.pathname === "/delayed-document") {
+        setTimeout(() => {
+          response.writeHead(200, { "content-type": "text/html" });
+          response.end(`<title>Replacement document</title>${script}`);
+        }, 500);
+        return;
+      }
       response.writeHead(200, { "content-type": "text/html" });
-      response.end(
-        `<title>Request lifecycle</title>${xhr ? `<script>const xhr = new XMLHttpRequest(); xhr.open("GET", ${JSON.stringify(xhr)}); xhr.send();</script>` : ""}`,
-      );
+      response.end(`<title>Request lifecycle</title>${script}`);
     });
     await new Promise<void>((resolve) =>
       server.listen(0, "127.0.0.1", resolve),
@@ -99,6 +107,49 @@ const lifecycleTest = test.extend<{ lifecycle: LifecycleFixture }>({
 });
 
 lifecycleTest.describe("document request cleanup", () => {
+  lifecycleTest(
+    "retires an old-document XHR started while navigation is waiting",
+    { tag: ["@release", "@workspace"] },
+    async ({ lifecycle: { page, url, trackers } }) => {
+      const observedRequests: Request[] = [];
+      page.on("request", (request) => observedRequests.push(request));
+      await page.evaluate(() => {
+        setTimeout(() => {
+          const xhr = new XMLHttpRequest();
+          xhr.open("GET", "/api/hang/during-navigation");
+          xhr.send();
+        }, 100);
+      });
+      const lateRequestPromise = page.waitForEvent(
+        "request",
+        (request) =>
+          new URL(request.url()).pathname === "/api/hang/during-navigation",
+      );
+      const navigationRequestPromise = page.waitForEvent("request", (request) =>
+        request.isNavigationRequest(),
+      );
+      const newRequestPromise = page.waitForEvent(
+        "request",
+        (request) => new URL(request.url()).pathname === "/api/hang/new",
+      );
+      const [lateRequest, navigationRequest, newRequest] = await Promise.all([
+        lateRequestPromise,
+        navigationRequestPromise,
+        newRequestPromise,
+        page.goto(`${url}/delayed-document?xhr=/api/hang/new`),
+      ]);
+      expect(observedRequests.indexOf(lateRequest)).toBeGreaterThan(
+        observedRequests.indexOf(navigationRequest),
+      );
+      await expect(page).toHaveTitle("Replacement document");
+      for (const tracker of trackers) {
+        await expect
+          .poll(() => tracker.snapshot().includes(lateRequest))
+          .toBe(false);
+        expect(await tracker.drain(30)).toEqual([newRequest]);
+      }
+    },
+  );
   lifecycleTest(
     "retires an old-document XHR after reload",
     { tag: ["@release", "@workspace"] },
