@@ -34,12 +34,14 @@ class SlackReadThreadComponent(SlackBaseComponent):
             display_name="Channel ID",
             required=True,
             info="Conversation ID, for example C0SLACKDEMO.",
+            tool_mode=True,
         ),
         StrInput(
             name="ts",
             display_name="Thread timestamp",
             required=True,
             info="Timestamp of the thread's parent message, for example 1700000000.000100.",
+            tool_mode=True,
         ),
         IntInput(
             name="limit",
@@ -49,24 +51,28 @@ class SlackReadThreadComponent(SlackBaseComponent):
             info=(
                 "Slack caps this at 15 for commercially distributed apps that are not listed in the Slack Marketplace."
             ),
+            tool_mode=True,
         ),
         StrInput(
             name="cursor",
             display_name="Cursor",
             info="Cursor from a previous run's Pagination output. Leave empty for the first page.",
             advanced=True,
+            tool_mode=True,
         ),
         StrInput(
             name="oldest",
             display_name="Oldest",
             info="Only replies at or after this timestamp.",
             advanced=True,
+            tool_mode=True,
         ),
         StrInput(
             name="latest",
             display_name="Latest",
             info="Only replies at or before this timestamp.",
             advanced=True,
+            tool_mode=True,
         ),
     ]
 

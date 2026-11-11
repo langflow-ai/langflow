@@ -42,6 +42,7 @@ class GoogleDriveListComponent(Component):
             name="query",
             display_name="Query",
             info="Drive query (q) syntax, for example \"name contains 'report'\".",
+            tool_mode=True,
         ),
         IntInput(
             name="page_size",
@@ -49,18 +50,21 @@ class GoogleDriveListComponent(Component):
             info=f"Files per page, maximum {MAX_PAGE_SIZE}.",
             value=DEFAULT_PAGE_SIZE,
             advanced=True,
+            tool_mode=True,
         ),
         MessageTextInput(
             name="page_token",
             display_name="Page Token",
             info="Continue a previous listing.",
             advanced=True,
+            tool_mode=True,
         ),
         MessageTextInput(
             name="order_by",
             display_name="Order By",
             info="Drive orderBy expression, for example 'modifiedTime desc'.",
             advanced=True,
+            tool_mode=True,
         ),
         BoolInput(
             name="include_shared_drives",
@@ -68,12 +72,14 @@ class GoogleDriveListComponent(Component):
             info="Sets includeItemsFromAllDrives and supportsAllDrives.",
             value=False,
             advanced=True,
+            tool_mode=True,
         ),
         MessageTextInput(
             name="fields",
             display_name="Fields",
             info="Partial-response selector. Leave empty for the default field set.",
             advanced=True,
+            tool_mode=True,
         ),
     ]
 

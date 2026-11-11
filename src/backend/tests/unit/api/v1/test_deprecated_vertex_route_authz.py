@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING, Literal
 from unittest.mock import MagicMock
 
@@ -15,6 +16,20 @@ if TYPE_CHECKING:
 
 RouteName = Literal["order", "build", "stream"]
 CacheState = Literal["empty", "owner_seeded"]
+
+
+@pytest.fixture
+async def added_builtin_flow(client: AsyncClient, json_memory_chatbot_no_llm, logged_in_headers):
+    """Use current built-ins so regular users exercise route authorization."""
+    response = await client.post(
+        "api/v1/flows/",
+        json={"name": "Legacy vertex routes", "data": json.loads(json_memory_chatbot_no_llm)["data"]},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 201, response.text
+    flow = response.json()
+    yield flow
+    await client.delete(f"api/v1/flows/{flow['id']}", headers=logged_in_headers)
 
 
 async def _login_second_user(client: AsyncClient, user_two) -> dict[str, str]:
@@ -46,7 +61,7 @@ async def _request_route(
 @pytest.mark.parametrize("route_name", ["order", "build", "stream"])
 async def test_non_owner_public_flow_is_hidden_from_deprecated_vertex_routes(
     client: AsyncClient,
-    added_flow_webhook_test,
+    added_builtin_flow,
     logged_in_headers,
     user_two,
     monkeypatch: pytest.MonkeyPatch,
@@ -56,8 +71,8 @@ async def test_non_owner_public_flow_is_hidden_from_deprecated_vertex_routes(
     """A PUBLIC transition must not widen the owner-only legacy vertex surface."""
     from langflow.api.v1 import chat as chat_module
 
-    flow_id = added_flow_webhook_test["id"]
-    vertex_id = added_flow_webhook_test["data"]["nodes"][0]["id"]
+    flow_id = added_builtin_flow["id"]
+    vertex_id = added_builtin_flow["data"]["nodes"][0]["id"]
     other_headers = await _login_second_user(client, user_two)
 
     # Capture the exact same-flow privacy response while it is still PRIVATE.
@@ -105,11 +120,11 @@ async def test_non_owner_public_flow_is_hidden_from_deprecated_vertex_routes(
 @pytest.mark.security
 async def test_owner_keeps_all_deprecated_vertex_routes_after_public_transition(
     client: AsyncClient,
-    added_flow_webhook_test,
+    added_builtin_flow,
     logged_in_headers,
 ):
     """Making a flow PUBLIC must not break its owner's legacy editor path."""
-    flow_id = added_flow_webhook_test["id"]
+    flow_id = added_builtin_flow["id"]
     patch_response = await client.patch(
         f"api/v1/flows/{flow_id}",
         json={"access_type": "PUBLIC"},
@@ -140,7 +155,7 @@ async def test_owner_keeps_all_deprecated_vertex_routes_after_public_transition(
 @pytest.mark.security
 async def test_owner_deprecated_vertex_routes_bind_stored_flow_provider_scope(
     client: AsyncClient,
-    added_flow_webhook_test,
+    added_builtin_flow,
     logged_in_headers,
     monkeypatch: pytest.MonkeyPatch,
 ):
@@ -149,11 +164,16 @@ async def test_owner_deprecated_vertex_routes_bind_stored_flow_provider_scope(
 
     captured = {}
     original_build_graph = chat_module.build_graph_from_db
+    original_build_from_data = chat_module.build_and_cache_graph_from_data
     original_build_vertex = Graph.build_vertex
 
     async def capture_graph_scope(*args, **kwargs):
         captured["order"] = current_model_provider_policy_context()
         return await original_build_graph(*args, **kwargs)
+
+    async def capture_trusted_graph_scope(*args, **kwargs):
+        captured["order"] = current_model_provider_policy_context()
+        return await original_build_from_data(*args, **kwargs)
 
     async def capture_vertex_scope(self, *args, **kwargs):
         captured["build"] = current_model_provider_policy_context()
@@ -164,10 +184,11 @@ async def test_owner_deprecated_vertex_routes_bind_stored_flow_provider_scope(
         yield 'event: close\ndata: {"message": "Stream closed"}\n\n'
 
     monkeypatch.setattr(chat_module, "build_graph_from_db", capture_graph_scope)
+    monkeypatch.setattr(chat_module, "build_and_cache_graph_from_data", capture_trusted_graph_scope)
     monkeypatch.setattr(Graph, "build_vertex", capture_vertex_scope)
     monkeypatch.setattr(chat_module, "_stream_vertex", capture_stream_scope)
 
-    flow_id = added_flow_webhook_test["id"]
+    flow_id = added_builtin_flow["id"]
     order_response = await client.post(f"api/v1/build/{flow_id}/vertices", headers=logged_in_headers)
     assert order_response.status_code == 200, order_response.text
     vertex_id = order_response.json()["ids"][0]
@@ -189,4 +210,4 @@ async def test_owner_deprecated_vertex_routes_bind_stored_flow_provider_scope(
     for route in ("order", "build", "stream"):
         attributes = captured[route].attributes
         assert attributes["provider_scope_required"] is True
-        assert str(attributes["project_id"]) == added_flow_webhook_test["folder_id"]
+        assert str(attributes["project_id"]) == added_builtin_flow["folder_id"]

@@ -54,28 +54,36 @@ class GmailSendComponent(Component):
     inputs = [
         google_connection_input(required_scopes=[GMAIL_SEND_SCOPE], capabilities=[CAPABILITY]),
         MessageTextInput(
-            name="to",
-            display_name="To",
-            info="Recipient addresses.",
+            name="to", display_name="To", info="Recipient addresses.", is_list=True, required=True, tool_mode=True
+        ),
+        MessageTextInput(
+            name="cc",
+            display_name="Cc",
+            info="Carbon-copy addresses.",
             is_list=True,
-            required=True,
+            value=[],
+            advanced=True,
+            tool_mode=True,
         ),
-        MessageTextInput(name="cc", display_name="Cc", info="Carbon-copy addresses.", is_list=True, advanced=True),
         MessageTextInput(
-            name="bcc", display_name="Bcc", info="Blind carbon-copy addresses.", is_list=True, advanced=True
+            name="bcc",
+            display_name="Bcc",
+            info="Blind carbon-copy addresses.",
+            is_list=True,
+            value=[],
+            advanced=True,
+            tool_mode=True,
         ),
-        MessageTextInput(name="subject", display_name="Subject", required=True),
+        MessageTextInput(name="subject", display_name="Subject", required=True, tool_mode=True),
         MessageTextInput(
-            name="body",
-            display_name="Body",
-            info="Plain text or HTML body.",
-            required=True,
+            name="body", display_name="Body", info="Plain text or HTML body.", required=True, tool_mode=True
         ),
         BoolInput(
             name="body_is_html",
             display_name="Body Is HTML",
             info="Send the body as text/html instead of text/plain.",
             value=False,
+            tool_mode=True,
         ),
         FileInput(
             name="attachments",
@@ -90,18 +98,21 @@ class GmailSendComponent(Component):
             display_name="Thread ID",
             info="Reply into an existing Gmail thread. Also set In Reply To and match the original subject.",
             advanced=True,
+            tool_mode=True,
         ),
         MessageTextInput(
             name="in_reply_to",
             display_name="In Reply To",
             info="The original email's Message-ID header, including angle brackets. Required with Thread ID.",
             advanced=True,
+            tool_mode=True,
         ),
         MessageTextInput(
             name="references",
             display_name="References",
             info="Space-separated Message-ID headers from the conversation. Defaults to In Reply To.",
             advanced=True,
+            tool_mode=True,
         ),
     ]
 

@@ -1,6 +1,7 @@
 import type { ModelProviderWithStatus } from "@/controllers/API/queries/models/use-get-model-providers";
 import type { ModelType } from "@/types/models";
 import type { ModelOption } from "../types";
+import { matchesModelIdentity } from "./model-option-identity";
 import { canonicalProviderName, providerNamesMatch } from "./provider-identity";
 import { recoverModelOption } from "./recover-model-option";
 
@@ -95,4 +96,44 @@ export function isSavedModelUnavailable({
         saved.name,
       ));
   return !knownToUserSettings;
+}
+
+export interface SavedModelSwitchedOffParams {
+  savedValue: ModelOption | undefined;
+  /** The models the field offers; a switched-on model is one of them. */
+  flatOptions: ModelOption[];
+  providers: ModelProviderWithStatus[] | undefined;
+  /** Whether the provider list and the enabled-models map are settled; nothing is judged before. */
+  modelStatusIsReliable: boolean;
+}
+
+/**
+ * Whether a saved decision model is switched off in Model Providers: its
+ * provider is set up and its catalog lists the model, but the field does not
+ * offer it. A model whose provider has no key yet waits for the key; one the
+ * catalog no longer lists is unavailable (policy or retirement), not switched
+ * off. Neither counts.
+ */
+export function isSavedDecisionModelSwitchedOff({
+  savedValue,
+  flatOptions,
+  providers,
+  modelStatusIsReliable,
+}: SavedModelSwitchedOffParams): boolean {
+  const saved = recoverModelOption(savedValue);
+  if (!modelStatusIsReliable || !saved?.name || !saved.provider) return false;
+  if (flatOptions.some((option) => matchesModelIdentity(option, saved))) {
+    return false;
+  }
+  const provider = providers?.find((candidate) =>
+    providerNamesMatch(candidate.provider, saved.provider),
+  );
+  return (
+    provider?.is_configured === true &&
+    (provider.models ?? []).some(
+      (model) =>
+        model.model_name === saved.name &&
+        model.metadata?.model_type === "decision",
+    )
+  );
 }

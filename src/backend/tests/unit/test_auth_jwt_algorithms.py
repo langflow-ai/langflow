@@ -676,41 +676,30 @@ class TestRefreshTokenVerification:
         return mock_service
 
     @pytest.mark.asyncio
-    async def test_refresh_token_rs256_success(self):
+    async def test_refresh_token_rs256_success(self, active_user):
         """Valid RS256 refresh token should create new tokens."""
         from langflow.services.auth.service import AuthService
-        from langflow.services.auth.utils import create_refresh_token, create_token
+        from langflow.services.auth.utils import create_refresh_token
+        from langflow.services.deps import session_scope
 
         with tempfile.TemporaryDirectory() as tmpdir:
             mock_settings_service = self._create_mock_settings_service("RS256", tmpdir)
             mock_auth_service = AuthService(mock_settings_service)
 
-            mock_user = MagicMock()
-            mock_user.id = "9cd4172c-0190-4124-a749-671d23e3c6dd"
-            mock_user.is_active = True
+            async with session_scope() as db:
+                original = await mock_auth_service.create_user_tokens(active_user.id, db)
+            with patch("langflow.services.auth.utils.get_auth_service", return_value=mock_auth_service):
+                async with session_scope() as db:
+                    new_tokens = await create_refresh_token(original["refresh_token"], db)
 
-            mock_db = AsyncMock()
-
-            # Create async function that returns mock_user
-            async def mock_get_user_by_id(*args, **kwargs):  # noqa: ARG001
-                return mock_user
-
-            with (
-                patch("langflow.services.auth.utils.get_auth_service", return_value=mock_auth_service),
-                patch("langflow.services.auth.service.get_user_by_id", side_effect=mock_get_user_by_id),
-            ):
-                # Create refresh token
-                refresh_token = create_token(
-                    data={"sub": "9cd4172c-0190-4124-a749-671d23e3c6dd", "type": "refresh"},
-                    expires_delta=timedelta(days=7),
-                )
-
-                # Use refresh token to get new tokens
-                new_tokens = await create_refresh_token(refresh_token, mock_db)
-
-                assert "access_token" in new_tokens
-                assert "refresh_token" in new_tokens
-                assert new_tokens.get("token_type") == "bearer"
+            assert "access_token" in new_tokens
+            assert "refresh_token" in new_tokens
+            assert new_tokens.get("token_type") == "bearer"
+            assert jwt.get_unverified_header(new_tokens["refresh_token"])["alg"] == "RS256"
+            original_claims = jwt.decode(original["refresh_token"], options={"verify_signature": False})
+            new_claims = jwt.decode(new_tokens["refresh_token"], options={"verify_signature": False})
+            assert new_claims["sub"] == str(active_user.id)
+            assert new_claims["sid"] == original_claims["sid"]
 
     @pytest.mark.asyncio
     async def test_refresh_token_wrong_type_raises_401(self):

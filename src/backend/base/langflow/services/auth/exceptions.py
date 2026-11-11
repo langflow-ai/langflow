@@ -65,3 +65,11 @@ class AuthBackendUnavailableError(AuthenticationError):
 
     def __init__(self, message: str = "Authentication is temporarily unavailable"):
         super().__init__(message, error_code="auth_backend_unavailable")
+
+
+class ExternalAuthMaintenanceError(AuthBackendUnavailableError):
+    """External bearer authentication needs writes that maintenance refuses."""
+
+    def __init__(self) -> None:
+        super().__init__("External SSO/OIDC authentication is paused during maintenance. Use an API key or local JWT.")
+        self.error_code = "external_auth_maintenance"

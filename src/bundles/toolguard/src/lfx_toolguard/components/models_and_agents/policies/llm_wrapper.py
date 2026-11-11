@@ -2,6 +2,7 @@
 
 from typing import Any
 
+from langchain_core.callbacks.base import Callbacks
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import messages_from_dict
 from toolguard.buildtime.llm import LanguageModelBase
@@ -19,13 +20,15 @@ class LangchainModelWrapper(LanguageModelBase):
     MAX_CONTINUATIONS = 5  # Prevent infinite recursion
     DEFAULT_MAX_OUT_TOKENS = 16000
 
-    def __init__(self, langchain_model: BaseChatModel):
+    def __init__(self, langchain_model: BaseChatModel, callbacks: Callbacks = None):
         """Initialize the wrapper with a Langchain chat model.
 
         Args:
             langchain_model: A Langchain BaseChatModel instance
+            callbacks: Workflow callbacks to receive model tracing events
         """
         self.langchain_model = langchain_model
+        self.callbacks = callbacks
         if hasattr(self.langchain_model, "max_tokens") and getattr(self.langchain_model, "max_tokens", None) is None:
             self.langchain_model.max_tokens = self.DEFAULT_MAX_OUT_TOKENS
 
@@ -133,6 +136,7 @@ class LangchainModelWrapper(LanguageModelBase):
         try:
             response = await self.langchain_model.agenerate(
                 messages=[lc_messages],
+                callbacks=self.callbacks,
             )
         except Exception as exc:
             msg = f"Language model API call failed: {exc}"

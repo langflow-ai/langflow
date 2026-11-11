@@ -27,9 +27,9 @@ class JiraSearchIssuesComponent(JiraActionComponent):
     capability_id = "jira.issue.search"
     inputs = [
         connection_input(capability_id),
-        MessageTextInput(name="project", display_name="Project Key", required=True),
-        MessageTextInput(name="status_id", display_name="Status ID"),
-        MessageTextInput(name="page", display_name="Next Page Token", advanced=True),
+        MessageTextInput(name="project", display_name="Project Key", required=True, tool_mode=True),
+        MessageTextInput(name="status_id", display_name="Status ID", tool_mode=True),
+        MessageTextInput(name="page", display_name="Next Page Token", advanced=True, tool_mode=True),
     ]
     outputs = [Output(display_name="Issues", name="issues", method="search_issues")]
 
@@ -59,7 +59,10 @@ class JiraReadIssueComponent(JiraActionComponent):
     description = "Read the summary, status, project and timestamps of one issue."
     name = "JiraReadIssue"
     capability_id = "jira.issue.read"
-    inputs = [connection_input(capability_id), MessageTextInput(name="issue", display_name="Issue Key", required=True)]
+    inputs = [
+        connection_input(capability_id),
+        MessageTextInput(name="issue", display_name="Issue Key", required=True, tool_mode=True),
+    ]
     outputs = [Output(display_name="Issue", name="result", method="read_issue")]
 
     async def read_issue(self) -> Data:
@@ -75,10 +78,10 @@ class JiraCreateIssueComponent(JiraActionComponent):
     capability_id = "jira.issue.create"
     inputs = [
         connection_input(capability_id),
-        MessageTextInput(name="project", display_name="Project Key", required=True),
-        MessageTextInput(name="issue_type_id", display_name="Issue Type ID", required=True),
-        MessageTextInput(name="summary", display_name="Summary", required=True),
-        MessageTextInput(name="description_text", display_name="Description"),
+        MessageTextInput(name="project", display_name="Project Key", required=True, tool_mode=True),
+        MessageTextInput(name="issue_type_id", display_name="Issue Type ID", required=True, tool_mode=True),
+        MessageTextInput(name="summary", display_name="Summary", required=True, tool_mode=True),
+        MessageTextInput(name="description_text", display_name="Description", tool_mode=True),
     ]
     outputs = [Output(display_name="Issue", name="result", method="create_issue")]
 
@@ -105,9 +108,9 @@ class JiraUpdateIssueComponent(JiraActionComponent):
     capability_id = "jira.issue.update"
     inputs = [
         connection_input(capability_id),
-        MessageTextInput(name="issue", display_name="Issue Key", required=True),
-        MessageTextInput(name="summary", display_name="Summary", required=True),
-        MessageTextInput(name="description_text", display_name="Description"),
+        MessageTextInput(name="issue", display_name="Issue Key", required=True, tool_mode=True),
+        MessageTextInput(name="summary", display_name="Summary", required=True, tool_mode=True),
+        MessageTextInput(name="description_text", display_name="Description", tool_mode=True),
     ]
     outputs = [Output(display_name="Result", name="result", method="update_issue")]
 
@@ -127,8 +130,8 @@ class JiraTransitionIssueComponent(JiraActionComponent):
     capability_id = "jira.issue.transition"
     inputs = [
         connection_input(capability_id),
-        MessageTextInput(name="issue", display_name="Issue Key", required=True),
-        MessageTextInput(name="transition_id", display_name="Transition ID", required=True),
+        MessageTextInput(name="issue", display_name="Issue Key", required=True, tool_mode=True),
+        MessageTextInput(name="transition_id", display_name="Transition ID", required=True, tool_mode=True),
     ]
     outputs = [Output(display_name="Result", name="result", method="transition_issue")]
 
