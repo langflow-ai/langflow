@@ -13,6 +13,11 @@ IBM_PRODUCT_PROPERTIES: Final = {
     "productTitle": "Langflow",
 }
 
+# `subProductTitle` values: the IBM tracking plan drops `clientType` and `platform`.
+SUB_PRODUCT_OSS: Final = "Langflow OSS"
+SUB_PRODUCT_DESKTOP: Final = "Langflow Desktop"
+SUB_PRODUCT_MCP: Final = "Langflow MCP"
+
 IBM_COMMON_EVENT_MAP: Final[dict[str, tuple[str, str | None]]] = {
     "version": ("Started Process", "Langflow"),
     "run": ("Ran Process", "Langflow Flow"),

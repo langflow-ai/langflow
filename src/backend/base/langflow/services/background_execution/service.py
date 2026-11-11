@@ -8,10 +8,10 @@ executor, the in-memory live bus, and the per-job runner. Methods:
 * ``status(job_id, user)`` / ``result(job_id, user)``
 * ``stop_job(job_id, user)``
 
-This single-node slice always runs jobs on the in-process executor + in-memory
-bus implemented here. ``LANGFLOW_JOB_QUEUE_TYPE=redis`` still selects the v1
-``RedisJobQueueService`` elsewhere; this facade has no scaled backend on this
-branch and runs in-process regardless.
+Backend selection follows ``settings.background_backend``: ``default`` uses the
+in-process executor + in-memory bus implemented here; ``scaled`` wires the
+DB-backed backend (the durable job table as the work queue, drained by separate
+``langflow worker`` processes) behind these same methods.
 """
 
 from __future__ import annotations
@@ -33,8 +33,7 @@ from filelock import FileLock, Timeout
 from lfx.log.logger import logger
 
 from langflow.services.background_execution.executor import InProcessExecutor
-from langflow.services.background_execution.live_bus import InMemoryLiveBus, LiveFrame
-from langflow.services.background_execution.runner import JobRunner
+from langflow.services.background_execution.live_bus import InMemoryLiveBus
 from langflow.services.base import Service
 from langflow.services.database.models.jobs.model import JobStatus, JobType, SignalType
 from langflow.services.deps import get_job_service
@@ -115,30 +114,64 @@ class BackgroundExecutionService(Service):
     ) -> None:
         self.settings_service = settings_service
         self._settings = settings_service.settings
-        self._is_redis = self._settings.background_backend_is_scaled
-        # Scaled backend: the redis claim queue + Streams live bus + DB replay.
-        # Injected in tests; otherwise built lazily from settings. In the default
-        # (asyncio) path it stays None and the in-process executor runs jobs here.
-        if backend is None and self._is_redis:
+        self._is_scaled_configured = self._settings.background_backend_is_scaled
+        # Process-unique owner token stamped on the heartbeat of jobs this API
+        # process runs in the default backend. Lets a liveness-aware sweep tell a
+        # job this live process is running from a genuinely orphaned one.
+        # Assigned before the backend build below, which passes it along.
+        self._owner = f"api:{os.getpid()}:{uuid4().hex[:8]}"
+        # Scaled backend: the durable job table as the work queue + DB replay.
+        # When configured, the API process only persists the QUEUED row — a
+        # separate ``langflow worker`` process claims it and runs the JobRunner.
+        # Injected in tests; otherwise built lazily here from settings when the
+        # scaled backend is configured. In the default path it stays None and
+        # the in-process executor below runs jobs inside the API.
+        if backend is None and self._is_scaled_configured:
             backend = self._build_scaled_backend()
-        self._backend = backend
+            # Operator signal: submitted jobs will sit QUEUED until a
+            # ``langflow worker`` process drains them off this database. The
+            # API never runs them itself in scaled mode, so a fleet with zero
+            # workers queues silently — say so once at wiring time.
+            logger.info(
+                "background_backend=scaled: background jobs are drained by separate "
+                "'langflow worker' processes sharing this database; ensure at least one is running."
+            )
+            if (self._settings.database_url or "").startswith("sqlite"):
+                # Loud, not just a docstring note: SQLite serializes writers, so
+                # every durable milestone across the whole fleet contends on one
+                # writer lock — and the file must be shared, so single host only.
+                logger.warning(
+                    "background_backend=scaled is running on SQLite: single-host only, and all "
+                    "workers contend on one writer lock. Use Postgres for real fleets."
+                )
         self._executor = InProcessExecutor(max_concurrency=self._settings.background_max_concurrency)
         self._bus = InMemoryLiveBus()
-        # Process-unique owner token stamped on the heartbeat of jobs this API
-        # process runs. Lets a liveness-aware sweep tell a job this live process
-        # is running from a genuinely orphaned one.
-        self._owner = f"api:{os.getpid()}:{uuid4().hex[:8]}"
         self._frame_source_factory = frame_source_factory
+        if backend is None:
+            # Default path as a first-class backend: same executor + bus, so the
+            # facade makes identical polymorphic calls in both modes.
+            from langflow.services.background_execution.in_process_backend import InProcessBackend
+
+            backend = InProcessBackend(
+                executor=self._executor,
+                bus=self._bus,
+                settings=self._settings,
+                owner=self._owner,
+                # The v2 routes late-bind the frame source factory onto the
+                # facade after construction; read it through this closure.
+                get_frame_source_factory=lambda: self._frame_source_factory,
+            )
+        self._backend = backend
         self._deadline_task: asyncio.Task | None = None
-        self._orphan_task: asyncio.Task | None = None
         self._retention_task: asyncio.Task | None = None
         self._lease_expiry_task: asyncio.Task | None = None
+        self._maintenance_recovery_task: asyncio.Task | None = None
         self.set_ready()
 
     @property
     def _scaled(self) -> bool:
-        """True when a redis-backed scaled backend is wired behind this facade."""
-        return self._backend is not None
+        """True when jobs run in external worker processes, not in this API process."""
+        return bool(getattr(self._backend, "external_workers", True))
 
     @property
     def is_scaled(self) -> bool:
@@ -150,50 +183,44 @@ class BackgroundExecutionService(Service):
         return self._scaled
 
     def _build_scaled_backend(self) -> Any:
-        """Build the redis-backed scaled backend from settings.
+        """Build the DB-backed scaled backend from settings.
 
-        Reuses the worker's redis-client resolution (URL -> host/port/db with the
-        cache-redis fallbacks) so the API enqueues to the exact redis a worker
-        drains, and ``select_background_backend`` so selection follows
-        ``background_backend_is_scaled``. Returns None in the default path.
+        The backend shares the API's database — the durable job table is the
+        queue, so no broker client is constructed. ``select_background_backend``
+        keeps selection on ``background_backend_is_scaled``; returns None in the
+        default path.
         """
-        try:
-            from langflow.services.background_execution.factory import select_background_backend
-            from langflow.services.background_execution.worker import _build_redis_client
-        except ImportError:
-            # The scaled modules (worker/redis_backend) are not shipped on this branch;
-            # degrade to the in-process executor instead of crashing the facade.
-            logger.warning(
-                "job_queue_type=redis requested but the scaled background backend is not "
-                "available; falling back to the in-process executor."
-            )
-            return None
+        from langflow.services.background_execution.factory import select_background_backend
         from langflow.services.deps import get_job_service
 
-        client = _build_redis_client(self._settings)
-        return select_background_backend(self._settings, client=client, job_service=get_job_service())
+        return select_background_backend(self._settings, job_service=get_job_service(), owner=self._owner)
 
     async def start(self) -> None:
-        # Scaled mode: the external worker owns execution and its watchdogs.
-        if self._scaled:
-            return
-        await self._executor.start()
+        # The backend owns execution lifecycle (in-process executor, or nothing
+        # when separate workers run the jobs). The input-deadline watchdog and
+        # retention sweep run here in both modes: pure-DB sweeps the worker
+        # fleet does not run.
+        await self._backend.start()
         self._start_deadline_watchdog()
-        self._start_orphan_watchdog()
         self._start_retention_sweep()
 
     async def stop(self) -> None:
-        tasks = (self._deadline_task, self._orphan_task, self._retention_task, self._lease_expiry_task)
+        tasks = (
+            self._deadline_task,
+            self._retention_task,
+            self._lease_expiry_task,
+            self._maintenance_recovery_task,
+        )
         watchdogs = [task for task in tasks if task is not None]
         for task in watchdogs:
             task.cancel()
         self._deadline_task = None
-        self._orphan_task = None
         self._retention_task = None
         self._lease_expiry_task = None
+        self._maintenance_recovery_task = None
         if watchdogs:
             await asyncio.gather(*watchdogs, return_exceptions=True)
-        await self._executor.stop()
+        await self._backend.teardown()
 
     def _start_deadline_watchdog(self) -> None:
         """Run the input-deadline sweep on the watchdog interval (only when the budget is set).
@@ -207,39 +234,16 @@ class BackgroundExecutionService(Service):
         interval = self._settings.background_watchdog_interval_s
 
         async def _loop() -> None:
+            from langflow.api.utils.migration_pause import async_writing
+
             while True:
                 await asyncio.sleep(interval)
                 with contextlib.suppress(Exception):
-                    await self.sweep_input_deadlines()
+                    async with async_writing(name="background_deadlines") as let_in:
+                        if let_in:
+                            await self.sweep_input_deadlines()
 
         self._deadline_task = asyncio.create_task(_loop())
-
-    def _start_orphan_watchdog(self) -> None:
-        """Periodically reconcile dead owners when Redis mode fell back in-process.
-
-        The release branch intentionally omits the scaled worker modules. Redis
-        queue configuration therefore falls back to the in-process executor, but
-        still sets ``_is_redis``. The startup path historically returned early in
-        that state, leaving a dead replica's IN_PROGRESS rows stranded forever.
-        Keep the fallback fleet self-healing without competing with a real scaled
-        backend, whose worker owns its own retry-aware watchdog.
-        """
-        if not self._is_redis or self._scaled or self._orphan_task is not None:
-            return
-        interval = self._settings.background_watchdog_interval_s
-        lease_ttl = self._settings.background_lease_ttl_s
-
-        async def _loop() -> None:
-            while True:
-                await asyncio.sleep(interval)
-                try:
-                    await get_job_service().sweep_orphans(lease_ttl_s=lease_ttl)
-                except asyncio.CancelledError:
-                    raise
-                except Exception:  # noqa: BLE001 -- a later watchdog tick must still run
-                    await logger.aexception("Periodic background orphan sweep failed")
-
-        self._orphan_task = asyncio.create_task(_loop())
 
     def _start_lease_expiry_sweep(self, lease_ttl_s: float) -> None:
         """Sweep once more after the lease TTL, for runs whose worker died just before this boot.
@@ -257,9 +261,15 @@ class BackgroundExecutionService(Service):
             return
 
         async def _sweep_after_lease() -> None:
+            from langflow.api.utils.migration_pause import async_writing, writes_paused
+
             await asyncio.sleep(lease_ttl_s)
+            while await writes_paused():  # noqa: ASYNC110
+                await asyncio.sleep(0.1)
             try:
-                await get_job_service().sweep_orphans(lease_ttl_s=lease_ttl_s, require_heartbeat=True)
+                async with async_writing(name="background_lease_expiry") as let_in:
+                    if let_in:
+                        await get_job_service().sweep_orphans(lease_ttl_s=lease_ttl_s, require_heartbeat=True)
             except Exception:  # noqa: BLE001 -- a failed pass must not surface as an unretrieved task error
                 await logger.aexception("Orphan sweep after the startup lease expired failed")
 
@@ -286,6 +296,8 @@ class BackgroundExecutionService(Service):
             return
 
         async def _loop() -> None:
+            from langflow.api.utils.migration_pause import async_writing
+
             job_service = get_job_service()
             delay = _RETENTION_INITIAL_DELAY_S
             while True:
@@ -297,9 +309,12 @@ class BackgroundExecutionService(Service):
                 batches = 0
                 for _ in range(_RETENTION_MAX_BATCHES_PER_TICK):
                     try:
-                        deleted = await job_service.purge_terminal_jobs(
-                            older_than_days=retention_days, limit=_RETENTION_BATCH_SIZE
-                        )
+                        async with async_writing(name="background_retention") as let_in:
+                            if not let_in:
+                                break
+                            deleted = await job_service.purge_terminal_jobs(
+                                older_than_days=retention_days, limit=_RETENTION_BATCH_SIZE
+                            )
                     except Exception:  # noqa: BLE001
                         # Log and stop this tick: a purge that cannot run must be
                         # visible, not silently skipped until the table is huge.
@@ -321,8 +336,9 @@ class BackgroundExecutionService(Service):
 
     async def teardown(self) -> None:
         await self.stop()
-        # Scaled mode: close the redis client this facade built so the API replica
-        # does not leak its connection pool on shutdown. No-op in default mode.
+        # Scaled mode: give the backend its teardown hook (the DB backend holds
+        # no connection of its own, so today this is a formality kept for any
+        # backend that does). Default mode has no backend, so this is a no-op.
         backend = self._backend
         if backend is not None and hasattr(backend, "teardown"):
             await backend.teardown()
@@ -335,7 +351,7 @@ class BackgroundExecutionService(Service):
 
         ``submit`` persists the submit request under ``job_metadata['request']`` and the
         runner threads ``request['session_id'] or str(flow_id)`` into the stream adapter
-        (``_build_adapter``), so the same fallback keys the supersede scope. Legacy rows
+        (the backend adapter builders), so the same fallback keys the supersede scope. Legacy rows
         written before the request was persisted keep a flat ``job_metadata['session_id']``
         — read it the way ``_reconstruct_request`` does rather than mis-scoping them.
         """
@@ -378,14 +394,14 @@ class BackgroundExecutionService(Service):
             # scope: reading a JSON column off a row already detached from its session
             # would depend on the engine's expire_on_commit setting.
             stale_job_ids = [job.job_id for job in result.all() if self._effective_session(job) == effective_session]
-        cancelled: list[UUID] = []
-        for stale_job_id in stale_job_ids:
-            if self._scaled:
-                await self._backend.stop(str(stale_job_id))
-                cancelled.append(stale_job_id)
-            elif await self._cancel_suspended(stale_job_id, job_service):
-                cancelled.append(stale_job_id)
-        return cancelled
+        # A SUSPENDED job has no running worker in ANY mode, so cancel each row
+        # directly. A durable STOP signal would never be consumed (only a live
+        # runner polls it), leaving the row SUSPENDED forever and the stale
+        # STOP primed to self-cancel a later resume. Only CAS winners are
+        # reported, so callers never hear about a run a resume just revived.
+        return [
+            stale_job_id for stale_job_id in stale_job_ids if await self._cancel_suspended(stale_job_id, job_service)
+        ]
 
     async def submit(
         self, *, flow_id: UUID, request: dict[str, Any], user: UserRead, job_id: UUID | None = None
@@ -430,12 +446,10 @@ class BackgroundExecutionService(Service):
         # After create_job so an idempotent retry returns the existing job instead of
         # cancelling it; the new job is QUEUED, so the suspended-only query skips it.
         await self.supersede_suspended_runs(flow_id=flow_id, user_id=user.id, session_id=request.get("session_id"))
-        if self._scaled:
-            # Scaled mode: hand the QUEUED job id to a worker via the redis claim
-            # queue; the worker hydrates the request from the job row.
-            await self._backend.enqueue(str(job_id))
-        else:
-            await self._enqueue(job_id=job_id, flow_id=flow_id, request=request, user=user)
+        # In-process: build and submit the runner. Scaled: the QUEUED row
+        # persisted above IS the queue entry, so dispatch is a no-op and a
+        # worker lease-claims it off the shared DB.
+        await self._backend.dispatch(job_id, flow_id=flow_id, request=request, user=user)
         return job_id
 
     @staticmethod
@@ -704,29 +718,6 @@ class BackgroundExecutionService(Service):
             row = result.first()
             return row.job_id if row is not None else None
 
-    async def _enqueue(self, *, job_id: UUID, flow_id: UUID, request: dict[str, Any], user: UserRead | None) -> None:
-        """Build a runner for the job and submit it to the in-process executor."""
-        job_service = get_job_service()
-        adapter = self._build_adapter(request, job_id, flow_id)
-        source = self._frame_source_factory(request=request, flow_id=flow_id, user=user, adapter=adapter)
-        runner = JobRunner(
-            job_service=job_service,
-            live_bus=self._bus,
-            adapter=adapter,
-            frame_source=source,
-            job_timeout=self._settings.background_job_timeout,
-            owner=self._owner,
-            heartbeat_interval_s=self._settings.background_heartbeat_interval_s,
-            input_deadline_s=self._settings.background_input_deadline_s,
-        )
-
-        async def _coro() -> None:
-            # job_id reaches the frame source via source_kwargs so the default
-            # build-loop source can tag its memory-base hook with the run's job.
-            await runner.run(job_id=job_id, source_kwargs={"job_id": job_id})
-
-        await self._executor.submit(str(job_id), _coro)
-
     # ------------------------------------------------------------------ events
 
     async def events(
@@ -736,53 +727,21 @@ class BackgroundExecutionService(Service):
         user: UserRead,
     ) -> AsyncIterator[bytes]:
         job = await self._validate(job_id, user)
-        job_service = get_job_service()
         last_seq = self._parse_last_event_id(last_event_id)
         # The durable replay must serialize with the SAME separators the live
         # adapter used (agui = compact, langflow = spaced) so replayed bytes are
         # byte-identical. The protocol is on the persisted submit request.
         protocol = self._job_protocol(job)
 
-        async def read_durable(after_seq: int) -> list[LiveFrame]:
-            rows = await job_service.read_events(job_id, after_seq=after_seq)
-            return [LiveFrame(seq=r.seq, data=self._row_to_frame(r, protocol=protocol)) for r in rows]
-
-        # Terminal jobs must be answered from the DURABLE log alone. The live bus
-        # is process-local: after a restart it is fresh and its ``_closed`` marker
-        # is empty, so ``reattach`` would replay durable rows then block forever on
-        # ``while True: queue.get()`` waiting for a live tail that will never come.
-        # Decide "finished" off the persisted status (the cross-restart source of
-        # truth), replay, and return.
-        # SUSPENDED is parked awaiting human input: no live tail to wait on, so answer
-        # from the durable log alone (like a terminal status) instead of blocking.
-        if job.status in _TERMINAL_STATUSES or job.status == JobStatus.SUSPENDED:
-            for frame in await read_durable(last_seq):
-                yield frame.data
-            return
-
-        # Scaled mode: any API replica serves reattach by replaying durable
-        # job_events (from the DB) then tailing the shared redis Stream.
-        if self._scaled:
-            async for item in self._backend.events(str(job_id), last_event_id=last_seq):
-                seq = getattr(item, "seq", None)
-                if seq is not None:
-                    yield self._row_to_frame(item, protocol=protocol)
-                else:
-                    yield item.payload
-            return
-
-        async def _is_terminal() -> bool:
-            # SUSPENDED ends the tail too: a run that connected while IN_PROGRESS and
-            # then suspended has no live tail to wait on (the pause isn't published live).
-            current = await job_service.get_job_by_job_id(job_id)
-            return current is not None and (
-                current.status in _TERMINAL_STATUSES or current.status == JobStatus.SUSPENDED
-            )
-
-        async for frame in self._bus.reattach(
-            str(job_id), last_seq=last_seq, read_durable=read_durable, is_done=_is_terminal
+        # Live tail is the backend's transport: the in-memory bus for the
+        # in-process path, durable-row replay + poll off the shared DB for
+        # scaled (any API replica serves the reattach). Framing rides the same
+        # SSE formatter in both, so replayed bytes match live frames
+        # (Last-Event-ID resume).
+        async for data in self._backend.tail(
+            str(job_id), last_seq=last_seq, frame_row=lambda r: self._row_to_frame(r, protocol=protocol)
         ):
-            yield frame.data
+            yield data
 
     # ------------------------------------------------------------------ status
 
@@ -810,18 +769,16 @@ class BackgroundExecutionService(Service):
 
     async def stop_job(self, job_id: UUID, user: UserRead) -> None:
         job = await self._validate(job_id, user)
-        if self._scaled:
-            # Scaled mode: the owning worker runs in another process; backend.stop
-            # writes the durable STOP signal its JobRunner polls at vertex boundaries.
-            await self._backend.stop(str(job_id))
-            return
         job_service = get_job_service()
-        # A lost claim means a resume flipped it IN_PROGRESS mid-call — fall
-        # through to the running-job stop path instead of doing nothing.
+        # A SUSPENDED job has no running worker in ANY mode — cancel it directly
+        # (a durable STOP would sit unconsumed forever). A lost claim means a
+        # resume flipped it IN_PROGRESS mid-call — fall through to the
+        # running-job stop path instead of doing nothing.
         if job.status == JobStatus.SUSPENDED and await self._cancel_suspended(job_id, job_service):
             return
-        await job_service.write_signal(job_id, SignalType.STOP)
-        await self._executor.cancel(str(job_id))
+        # The backend writes the durable STOP signal the runner polls at durable
+        # frame boundaries; the in-process backend also cancels the local task.
+        await self._backend.stop(str(job_id))
 
     async def resume_job(self, job_id: UUID, user: UserRead, *, request_id: str, decision: Any) -> bool:  # noqa: ARG002
         """Carry a human decision back into a SUSPENDED run and re-enqueue it.
@@ -848,12 +805,21 @@ class BackgroundExecutionService(Service):
             return False
         await job_service.write_signal(job_id, SignalType.RESUME, {"decision": decision, "request_id": request_id})
         try:
-            await self._enqueue(
-                job_id=job_id,
+            # In-process: re-run the job right here. Scaled: hand the row back
+            # to the queue (QUEUED, lease cleared) so a worker claims it — the
+            # RESUME signal is already durable, so a worker that claims
+            # immediately still sees the decision, and the IN_PROGRESS hop above
+            # keeps the single-flight (workers cannot claim the row between the
+            # SUSPENDED flip and the signal write).
+            if not await self._backend.hand_back(
+                job_id,
                 flow_id=job.flow_id,
                 request=request,
                 user=self._user_stub(job.user_id),
-            )
+                owner=self._owner,
+            ):
+                msg = f"resume hand-back lost its claim for job {job_id}"
+                raise RuntimeError(msg)
         except Exception:
             # Why: claim already flipped SUSPENDED→IN_PROGRESS; a failed enqueue would strand the job
             # and lose the decision — roll back to SUSPENDED (clearing RESUME) so it can be retried.
@@ -902,17 +868,25 @@ class BackgroundExecutionService(Service):
         worker_lost + terminal event). QUEUED workflow rows never started, so
         under at-least-once we re-enqueue them onto this worker's executor with a
         reconstructed request. Best-effort per job so one bad row can't block the
-        rest. A real scaled Redis backend reconciles via its own watchdog; when
-        those modules are unavailable, the in-process fallback starts its local
-        periodic watchdog and performs this initial sweep.
+        rest. The scaled backend reconciles via its worker-side watchdog.
         """
+        from langflow.api.utils.migration_pause import writes_paused
+
         await self.start()
+        if await writes_paused():
+            if self._maintenance_recovery_task is None or self._maintenance_recovery_task.done():
+
+                async def recover_after_maintenance():
+                    while await writes_paused():  # noqa: ASYNC110
+                        await asyncio.sleep(0.1)
+                    await self.sweep_orphans_on_startup()
+
+                self._maintenance_recovery_task = asyncio.create_task(recover_after_maintenance())
+            return
+        if self._scaled:
+            return
         job_service = get_job_service()
         lease_ttl = self._settings.background_lease_ttl_s
-        if self._is_redis:
-            if not self._scaled:
-                await job_service.sweep_orphans(lease_ttl_s=lease_ttl)
-            return
         # Single-flight the IN_PROGRESS reconcile: only the worker that wins the
         # lock fails orphans; the others skip (a non-blocking try-acquire). The
         # QUEUED re-enqueue below stays per-worker because each row is lease-claimed
@@ -936,6 +910,8 @@ class BackgroundExecutionService(Service):
         # sweep would fail worker_lost. The runner's execute_with_status performs
         # the real QUEUED->IN_PROGRESS flip once it actually starts emitting.
         for job in await self._queued_workflow_jobs():
+            if await writes_paused():
+                return
             lease_heartbeat = datetime.now(timezone.utc).isoformat()
             if not await job_service.claim_queued_lease(
                 job.job_id,
@@ -971,8 +947,8 @@ class BackgroundExecutionService(Service):
                 continue
             user = self._user_stub(job.user_id)
             try:
-                await self._enqueue(
-                    job_id=job.job_id,
+                await self._backend.dispatch(
+                    job.job_id,
                     flow_id=job.flow_id,
                     request=request_dict,
                     user=user,
@@ -1102,22 +1078,6 @@ class BackgroundExecutionService(Service):
         if isinstance(request, dict):
             return request.get("stream_protocol") or "langflow"
         return meta.get("stream_protocol") or "langflow"
-
-    def _build_adapter(self, request: dict[str, Any], job_id: UUID, flow_id: UUID):
-        from lfx.workflow.adapters import StreamAdapterContext, get_stream_adapter
-
-        protocol = request.get("stream_protocol", "langflow")
-        return get_stream_adapter(
-            protocol,
-            StreamAdapterContext(
-                run_id=str(job_id),
-                thread_id=request.get("session_id") or str(flow_id),
-                # ``submit`` persists the whole request body, so the replayed
-                # stream is narrowed exactly like the live one. Legacy rows
-                # written before the field existed default to today's behavior.
-                expose_graph_state=request.get("expose_graph_state", True),
-            ),
-        )
 
     @staticmethod
     def _parse_last_event_id(last_event_id: str | None) -> int:

@@ -15,7 +15,6 @@ import re
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
-from itertools import pairwise
 from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import uuid4
@@ -110,6 +109,8 @@ def serving_settings(client, monkeypatch):  # noqa: ARG001
     monkeypatch.setattr(settings, "transactions_storage_enabled", False)
     monkeypatch.setattr(settings, "vertex_builds_storage_enabled", False)
     monkeypatch.setattr(settings, "disable_track_apikey_usage", True)
+    # Preserve the trusted deployment's original code policy and measured execution path.
+    monkeypatch.setattr(settings, "custom_component_admin_only", False)
 
 
 _SIMPLE_CHAT = Path(__file__).parents[5] / "lfx" / "tests" / "data" / "simple_chat_no_llm.json"
@@ -182,17 +183,24 @@ async def _measure(client: AsyncClient, api_key: str, flow_id, mode: str) -> _Re
 # Statements and pool checkouts for one run, per flow and mode. Update these
 # on purpose: a new round trip on this path costs every workflow run. The user
 # lookup prevents a legacy flow storage namespace from colliding with a user ID.
+# Each message write also rechecks the execution user's active status in its existing session.
 _ROUND_TRIPS = {
-    "memory_chatbot": {"sync": (10, 9), "stream": (13, 12)},
-    "simple_chat": {"sync": (11, 9), "stream": (14, 12)},
+    "memory_chatbot": {"sync": (12, 9), "stream": (15, 12)},
+    "simple_chat": {"sync": (13, 9), "stream": (16, 12)},
 }
 # Admission reads the originating key inside the existing job transaction.
 # Execution reloads key, owner, and flow together in one additional checkout.
-_JOB_KEY_AUTHORIZATION_ROUND_TRIPS = (4, 1)
+_JOB_KEY_AUTHORIZATION_ROUND_TRIPS = {"sync": (4, 1), "stream": (5, 2)}
 
 
-def _follows(statements: list[str], first: str, then: str) -> bool:
-    return any(a == first and b == then for a, b in pairwise(statements))
+def _assert_round_trips(recorder: _Recorder, expected: tuple[int, int], *, maintenance_reads: int) -> None:
+    # Every admission reads the shared flag through its own read-only session.
+    # Keep this exact cost visible without relaxing the existing execution budget.
+    assert recorder.statements.count("SELECT maintenance_state") == maintenance_reads, recorder.statements
+    assert (len(recorder.statements), recorder.checkouts) == (
+        expected[0] + maintenance_reads,
+        expected[1] + maintenance_reads,
+    ), recorder.statements
 
 
 @pytest.mark.parametrize("mode", ["sync", "stream"])
@@ -200,20 +208,28 @@ def _follows(statements: list[str], first: str, then: str) -> bool:
 async def test_run_db_round_trips(client: AsyncClient, created_api_key, chat_flow, mode, request):
     recorder = await _measure(client, created_api_key.api_key, chat_flow, mode)
     statements = recorder.statements
-
-    # A job status change returns the row it wrote instead of reading it back.
-    assert not _follows(statements, "UPDATE job", "SELECT job"), statements
+    # One read each for request authentication, legacy storage isolation, and job credential
+    # revalidation, plus one lifecycle check for each of the two message writes.
+    assert statements.count("SELECT user") == 5, statements
 
     if mode == "sync":
         # The sync job row is created IN_PROGRESS and written once more when it ends.
-        assert [s for s in statements if s.endswith(" job")] == ["INSERT job", "UPDATE job"], statements
+        expected_job_statements = ["INSERT job", "UPDATE job"]
+    else:
+        # The first read checks for an existing job. The second reloads credential
+        # provenance after the conditional start, rather than reading back status.
+        expected_job_statements = ["SELECT job", "INSERT job", "UPDATE job", "SELECT job", "UPDATE job"]
+    assert [s for s in statements if s.endswith(" job")] == expected_job_statements, statements
     flow_name = request.node.callspec.params["chat_flow"]
     base_statements, base_checkouts = _ROUND_TRIPS[flow_name][mode]
-    key_statements, key_checkouts = _JOB_KEY_AUTHORIZATION_ROUND_TRIPS
-    assert (len(statements), recorder.checkouts) == (
-        base_statements + key_statements,
-        base_checkouts + key_checkouts,
-    ), statements
+    key_statements, key_checkouts = _JOB_KEY_AUTHORIZATION_ROUND_TRIPS[mode]
+    # One HTTP admission, then submission and start of the memory-base output
+    # hook. The queued start must recheck a freeze set after submission.
+    _assert_round_trips(
+        recorder,
+        (base_statements + key_statements, base_checkouts + key_checkouts),
+        maintenance_reads=3,
+    )
 
 
 @pytest.mark.usefixtures("client")
@@ -283,5 +299,10 @@ async def test_run_task_wait_includes_delayed_child_sql():
             measurement.cancel()
         await asyncio.gather(measurement, return_exceptions=True)
 
-    assert recorder.statements == ["SELECT", "SELECT"]
-    assert recorder.checkouts == 2
+    assert [statement for statement in recorder.statements if statement != "SELECT maintenance_state"] == [
+        "SELECT",
+        "SELECT",
+    ]
+    # Both the parent hook and its child check admission when submitted and
+    # again when the queue starts them. Their own two statements remain counted.
+    _assert_round_trips(recorder, (2, 2), maintenance_reads=4)

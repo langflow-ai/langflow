@@ -142,6 +142,7 @@ READS = frozenset(
         "/api/v1/config",
         "/api/v1/connections",
         "/api/v1/connections/oauth/registrations",
+        "/api/v1/connections/oauth/registrations/saved",
         "/api/v1/data-subjects/requests",
         "/api/v1/data-subjects/requests/{request_id}",
         "/api/v1/data-subjects/requests/{request_id}/dry-run",
@@ -204,6 +205,7 @@ READS = frozenset(
         "/api/v1/memories/{memory_base_id}/messages",
         "/api/v1/memories/{memory_base_id}/mismatch",
         "/api/v1/memories/{memory_base_id}/sessions",
+        "/api/v1/maintenance/status",
         "/api/v1/model-provider-policy",
         "/api/v1/model-provider-policy/",
         "/api/v1/model_options/embedding",
@@ -248,6 +250,12 @@ READS = frozenset(
         "/api/v1/triggers/{trigger_id}",
         "/api/v1/triggers/{trigger_id}/events",
         "/api/v1/triggers/{trigger_id}/ingress",
+        # These return stored reports/results; export only emits the allowed
+        # authorization audit record and never executes the imported report.
+        "/api/v1/upgrade-reports",
+        "/api/v1/upgrade-reports/{report_id}",
+        "/api/v1/upgrade-reports/{report_id}/export",
+        "/api/v1/upgrade-reports/{report_id}/repairs",
         "/api/v1/users/",
         "/api/v1/users/me/deletion-request",
         "/api/v1/users/whoami",
@@ -893,7 +901,7 @@ async def test_a_record_that_says_paused_changes_nothing_while_the_feature_is_of
     _write_record(config_dir, PAUSED)
 
     assert not is_paused()
-    assert MigrationPauseMiddleware not in [middleware.cls for middleware in create_app().user_middleware]
+    assert MigrationPauseMiddleware in [middleware.cls for middleware in create_app().user_middleware]
     assert (await client.post("api/v1/flows/", json=NEW_FLOW, headers=logged_in_headers)).status_code == 201
     listener = ListenerSupervisor()
     sync = asyncio.create_task(sync_flows_from_fs())

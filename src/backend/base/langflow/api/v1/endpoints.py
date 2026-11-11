@@ -24,6 +24,7 @@ from lfx.custom.utils import (
 from lfx.exceptions.tweaks import TweakRefusedError
 from lfx.graph.graph.base import Graph
 from lfx.graph.schema import RunOutputs
+from lfx.integrations.configuration import connection_configuration_context
 from lfx.log.logger import logger
 from lfx.observability import execution_protocol
 from lfx.schema.legacy_render import project_payload_to_v1
@@ -743,9 +744,7 @@ async def simple_run_flow_task(
                 run_id=run_id,
                 expose_error_details=api_key_user is not None and _caller_owns_flow(flow, api_key_user),
                 http_request=http_request,
-                # Both webhook auth modes (owner row when WEBHOOK_AUTH_ENABLE is off,
-                # API-key user with ownership enforced when it is on) execute the
-                # published flow unattended on its owner's behalf.
+                # The API key belongs to the owner whose published flow runs unattended.
                 execution_family=execution_family,
             )
 
@@ -1131,6 +1130,8 @@ async def _run_flow_internal(
                 run_id=run_id,
             ),
         )
+        if (typed := integration_http_error(exc, expose_details=expose_error_details)) is not None:
+            raise typed from exc
         if "badly formed hexadecimal UUID string" in str(exc):
             # This means the Flow ID is not a valid UUID which means it can't find the flow
             http_error = HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
@@ -1141,11 +1142,6 @@ async def _run_flow_internal(
         if "not found" in str(exc):
             http_error = HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
             raise error_for_client(http_error, expose_details=expose_error_details) from exc
-        # A connection the caller may not use is not a server fault: keep the
-        # typed body and the provider's status (403/401/429) instead of flattening
-        # it into a 500 whose message a client cannot act on.
-        if (typed := integration_http_error(exc, expose_details=expose_error_details)) is not None:
-            raise typed from exc
         client_error = error_for_client(exc, expose_details=expose_error_details)
         raise APIException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -1567,8 +1563,6 @@ async def experimental_run_flow(
 ) -> RunResponse:
     """Executes a specified flow by ID with optional input values, output selection, tweaks, and streaming capability.
 
-    This endpoint supports running flows with caching to enhance performance and efficiency.
-
     ### Parameters:
     - `flow` (Flow): The flow object to be executed, resolved via dependency injection.
     - `inputs` (List[InputValueRequest], optional): A list of inputs specifying the input values and components
@@ -1579,8 +1573,8 @@ async def experimental_run_flow(
       The tweaks can be used to modify the flow's parameters and components.
       Tweaks can be overridden by the input values.
     - `stream` (bool, optional): Specifies whether the results should be streamed. Defaults to False.
-    - `session_id` (Union[None, str], optional): An optional session ID to utilize existing session data for the flow
-      execution.
+    - `session_id` (Union[None, str], optional): The chat-memory session for the run, as on `/run`. A new ID
+      starts a new session.
     - `api_key_user` (User): The user associated with the current API key. Automatically resolved from the API key.
 
     ### Returns:
@@ -1639,29 +1633,27 @@ async def experimental_run_flow(
             client_error = error_for_client(exc, expose_details=expose_error_details)
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(client_error)) from exc
         graph, _artifacts = session_data or (None, None)
-        if graph is None:
-            msg = f"Session {session_id} not found"
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=msg)
-        if not _graph_executes_as_actor(graph, api_key_user, flow_id=flow.id):
-            # Cache keys are legacy and not actor-scoped. Reusing an instantiated
-            # graph across principals would retain the first actor's component
-            # credentials, variables, files, and tweaks. Rebuild the immutable
-            # stored flow under the current actor instead.
-            await logger.awarning(
-                "Ignoring advanced-run graph cached under another execution principal for flow %s",
-                flow.id,
-            )
-            graph = None
-        elif admin_only_build_required(is_superuser=bool(getattr(api_key_user, "is_superuser", False))):
-            # The cached graph was compiled under whatever component policy was in force when
-            # it was cached. Session cache keys carry no policy generation, so a graph cached
-            # while admin-only mode was off still embeds the caller's own component source and
-            # would execute it unchecked. Rebuild from stored data through the policy instead.
-            await logger.awarning(
-                "Ignoring advanced-run cached graph that predates the admin-only component policy for flow %s",
-                flow.id,
-            )
-            graph = None
+        if graph is not None:
+            if not _graph_executes_as_actor(graph, api_key_user, flow_id=flow.id):
+                # Cache keys are legacy and not actor-scoped. Reusing an instantiated
+                # graph across principals would retain the first actor's component
+                # credentials, variables, files, and tweaks. Rebuild the immutable
+                # stored flow under the current actor instead.
+                await logger.awarning(
+                    "Ignoring advanced-run graph cached under another execution principal for flow %s",
+                    flow.id,
+                )
+                graph = None
+            elif admin_only_build_required(is_superuser=bool(getattr(api_key_user, "is_superuser", False))):
+                # The cached graph was compiled under whatever component policy was in force when
+                # it was cached. Session cache keys carry no policy generation, so a graph cached
+                # while admin-only mode was off still embeds the caller's own component source and
+                # would execute it unchecked. Rebuild from stored data through the policy instead.
+                await logger.awarning(
+                    "Ignoring advanced-run cached graph that predates the admin-only component policy for flow %s",
+                    flow.id,
+                )
+                graph = None
 
     if graph is None:
         if flow.data is None:
@@ -1983,10 +1975,11 @@ async def custom_component(
                 parameters=_raw_component_parameters(current_template),
             )
         if raw_code.frontend_node is not None:
-            built_frontend_node = await component_instance.update_frontend_node(
-                built_frontend_node,
-                raw_code.frontend_node,
-            )
+            with connection_configuration_context(user_id=user.id):
+                built_frontend_node = await component_instance.update_frontend_node(
+                    built_frontend_node,
+                    raw_code.frontend_node,
+                )
 
         tool_mode: bool = built_frontend_node.get("tool_mode", False)
         if isinstance(component_instance, Component):
@@ -2120,12 +2113,13 @@ async def custom_component_update(
                 )
                 cc_instance.set_attributes(params)
         updated_build_config = code_request.get_template()
-        await update_component_build_config(
-            cc_instance,
-            build_config=updated_build_config,
-            field_value=code_request.field_value,
-            field_name=code_request.field,
-        )
+        with connection_configuration_context(user_id=user.id):
+            await update_component_build_config(
+                cc_instance,
+                build_config=updated_build_config,
+                field_value=code_request.field_value,
+                field_name=code_request.field,
+            )
         if "code" not in updated_build_config or not updated_build_config.get("code", {}).get("value"):
             updated_build_config = add_code_field_to_build_config(updated_build_config, effective_code)
         else:

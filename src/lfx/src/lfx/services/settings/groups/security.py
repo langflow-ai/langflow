@@ -131,7 +131,7 @@ class SecuritySettings(BaseModel):
 
     Note: this is a beta feature. For security in a multi-tenant environment,
     use hardware-level isolation to restrict access."""
-    custom_component_admin_only: bool = False
+    custom_component_admin_only: bool = True
     """If set to True, only admin users can edit custom component code. Regular editors
     are blocked from modifying custom component templates."""
 

@@ -1,4 +1,5 @@
 import json
+import re
 import unicodedata
 
 from lfx.custom.custom_component.component import Component
@@ -45,23 +46,23 @@ class JSONCleaner(Component):
     ]
 
     def clean_json(self) -> Message:
+        """Clean the input JSON string based on provided options and return the cleaned JSON string."""
         try:
             from json_repair import repair_json
         except ImportError as e:
             msg = "Could not import the json_repair package. Please install it with `pip install json_repair`."
             raise ImportError(msg) from e
 
-        """Clean the input JSON string based on provided options and return the cleaned JSON string."""
         json_str = self.json_str
         remove_control_chars = self.remove_control_chars
         normalize_unicode = self.normalize_unicode
         validate_json = self.validate_json
 
-        start = json_str.find("{")
-        end = json_str.rfind("}")
-        if start == -1 or end == -1:
-            msg = "Invalid JSON string: Missing '{' or '}'"
+        span = self._find_json_span(json_str)
+        if span is None:
+            msg = "Invalid JSON string: no JSON object or array found"
             raise ValueError(msg)
+        start, end = span
         try:
             json_str = json_str[start : end + 1]
 
@@ -80,6 +81,50 @@ class JSONCleaner(Component):
         except Exception as e:
             msg = f"Error cleaning JSON string: {e}"
             raise ValueError(msg) from e
+
+    @staticmethod
+    def _find_json_span(s: str) -> tuple[int, int] | None:
+        """Return an enclosing array or the existing object span.
+
+        For array-only input, prefer payloads over bracketed prose labels ending
+        with a colon. Preserve a leading array or the first candidate as fallback.
+        """
+        object_span = (s.find("{"), s.rfind("}"))
+        has_object = -1 not in object_span
+        first_array_span = None
+        content_start = len(s) - len(s.lstrip())
+        array_start = -1
+        depth = 0
+        quoted_string = re.compile(r"""(?<![\w\\])(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')""", re.DOTALL)
+        index = 0
+        while index < len(s):
+            if depth and (quoted := quoted_string.match(s, index)):
+                # Leave unmatched quotes and unquoted apostrophes for json_repair.
+                index = quoted.end()
+                continue
+            char = s[index]
+            if char == "[":
+                if depth == 0:
+                    array_start = index
+                depth += 1
+            elif char == "]" and depth:
+                depth -= 1
+                if depth == 0:
+                    if has_object:
+                        if array_start < object_span[0] and index > object_span[1]:
+                            return array_start, index
+                    else:
+                        if first_array_span is None:
+                            first_array_span = (array_start, index)
+                        following = index + 1
+                        while following < len(s) and s[following].isspace():
+                            following += 1
+                        if array_start == content_start or following == len(s) or s[following] != ":":
+                            return array_start, index
+            index += 1
+        if has_object:
+            return object_span
+        return first_array_span
 
     def _remove_control_characters(self, s: str) -> str:
         """Remove control characters from the string."""

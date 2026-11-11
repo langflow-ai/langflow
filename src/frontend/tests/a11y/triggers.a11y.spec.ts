@@ -29,7 +29,7 @@ const failedEvent: MockTriggerEvent = {
   session_id: "a11y-session",
   job_id: "a11y-job",
   replay_of_event_id: null,
-  error: "flow_build_failed",
+  error: "job_failed",
   created_at: "2026-10-15T09:00:00Z",
   updated_at: "2026-10-15T09:00:05Z",
 };
@@ -188,7 +188,7 @@ test.describe("Triggers route accessibility", () => {
   test(
     "events drawer is a labelled dialog with pressed-state filters and a keyboard replay",
     { tag: ["@release", "@workspace"] },
-    async ({ page }) => {
+    async ({ page }, testInfo) => {
       const server = await openTriggersRoute(page);
 
       await page.getByTestId(`trigger-menu-${SCHEDULE_ID}`).focus();
@@ -201,9 +201,22 @@ test.describe("Triggers route accessibility", () => {
       await expect(
         drawer.getByTestId(`trigger-event-${failedEvent.id}`),
       ).toBeVisible();
+      for (const surface of [
+        drawer.getByTestId(`trigger-event-${failedEvent.id}`),
+        drawer.getByTestId("trigger-event-detail"),
+        drawer.getByTestId("trigger-event-lineage"),
+      ]) {
+        await expect(
+          surface.getByTestId("trigger-event-receipt").first(),
+        ).toHaveText("Received");
+        await expect(
+          surface.getByTestId("trigger-event-state").first(),
+        ).toHaveText("Flow: Failed");
+      }
 
       const all = drawer.getByTestId("trigger-events-filter-all");
       const failed = drawer.getByTestId("trigger-events-filter-failed");
+      await expect(failed).toHaveText("Needs attention");
       await expect(all).toHaveAttribute("aria-pressed", "true");
       await failed.focus();
       await page.keyboard.press("Space");
@@ -217,6 +230,12 @@ test.describe("Triggers route accessibility", () => {
       ).not.toHaveAttribute("tabindex");
 
       await page.runA11yScan("settings-triggers-events-drawer");
+      const receiptScreenshot = testInfo.outputPath("event-receipt.png");
+      await page.screenshot({ path: receiptScreenshot, fullPage: true });
+      await testInfo.attach("Event receipt and flow result", {
+        path: receiptScreenshot,
+        contentType: "image/png",
+      });
 
       await page.route("**/api/v1/monitor/traces/a11y-job", async (route) =>
         route.fulfill({
@@ -326,7 +345,10 @@ test.describe("Triggers route accessibility", () => {
     { tag: ["@release", "@workspace"] },
     async ({ page }) => {
       await openTriggersRoute(page);
-      await page.getByRole("tab", { name: "All triggers" }).click();
+      await page.getByRole("combobox", { name: "Scope", exact: true }).click();
+      await page
+        .getByRole("option", { name: "All triggers", exact: true })
+        .click();
       await page.getByTestId("triggers-provider-filter").click();
       await page.getByRole("option", { name: "Slack" }).click();
       await page.getByTestId("triggers-bulk-pause").click();

@@ -332,6 +332,8 @@ class ResultDataResponse(BaseModel):
 class VertexBuildResponse(BaseModel):
     id: str | None = None
     inactivated_vertices: list[str] | None = None
+    branch_skips: dict[str, dict[str, Any]] | None = None
+    """Router that excluded each inactivated vertex and the outputs it took instead."""
     next_vertices_ids: list[str] | None = None
     top_level_vertices: list[str] | None = None
     valid: bool
@@ -559,7 +561,7 @@ class ConfigResponse(BaseConfigResponse):
             voice_mode_available=settings.voice_mode_available,
             mcp_base_url=settings.mcp_base_url,
             enable_extension_reload=settings.enable_extension_reload,
-            webhook_auth_enable=auth_settings.WEBHOOK_AUTH_ENABLE,
+            webhook_auth_enable=True,
             default_folder_name=DEFAULT_FOLDER_NAME,
             hide_getting_started_progress=settings.hide_getting_started_progress,
             allow_custom_components=settings.allow_custom_components,

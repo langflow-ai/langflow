@@ -22,6 +22,7 @@ from .auth import (
     encrypt_sso_client_secret,
     is_sso_client_secret_envelope,
 )
+from .auth.refresh_token import RefreshTokenSession
 from .catalog_policy import CatalogPolicyMode, CatalogPolicyRule, CatalogPolicyScope, CatalogResourceKind
 from .connection import Connection, ConnectionSecret
 from .connection.oauth import ConnectionOAuth
@@ -37,6 +38,7 @@ from .ingestion_run import IngestionRun, IngestionRunStatus
 from .jobs import ExecutionSignal, Job, JobCheckpoint, JobEvent, JobMetricTotals, SignalType
 from .knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
 from .knowledge_base_storage_migration import KnowledgeBaseStorageMigration
+from .maintenance import MaintenanceState
 from .mcp_server import MCPServer
 from .memory_base import MemoryBase, MemoryBaseSession, MemoryBaseWorkflowRun, MessageIngestionRecord
 from .message import MessageTable
@@ -52,11 +54,13 @@ from .trigger import (
     TriggerEvent,
     TriggerLease,
     TriggerListenerLease,
+    TriggerRenewalObservation,
     TriggerSourceVersion,
     TriggerSubscription,
 )
 from .user import User
 from .variable import Variable
+from .worker_registry import WorkerRegistry, WorkerState
 
 __all__ = [
     "A2ACheckpoint",
@@ -98,6 +102,7 @@ __all__ = [
     "KnowledgeBaseStatus",
     "KnowledgeBaseStorageMigration",
     "MCPServer",
+    "MaintenanceState",
     "MemoryBase",
     "MemoryBaseSession",
     "MemoryBaseWorkflowRun",
@@ -107,6 +112,7 @@ __all__ = [
     "PolicyBundleActive",
     "PolicyBundleRevision",
     "ProjectReplacementOperation",
+    "RefreshTokenSession",
     "SSOConfig",
     "SSOConfigCreate",
     "SSOConfigRead",
@@ -124,10 +130,13 @@ __all__ = [
     "TriggerEvent",
     "TriggerLease",
     "TriggerListenerLease",
+    "TriggerRenewalObservation",
     "TriggerSourceVersion",
     "TriggerSubscription",
     "User",
     "Variable",
+    "WorkerRegistry",
+    "WorkerState",
     "decrypt_sso_client_secret",
     "encrypt_sso_client_secret",
     "is_sso_client_secret_envelope",

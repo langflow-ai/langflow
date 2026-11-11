@@ -168,6 +168,52 @@ def test_background_echo_completes_with_execution_response(client):
     assert body["outputs"]
 
 
+@pytest.mark.parametrize("operation", ["pending", "resume", "events", "status", "stop"])
+def test_durable_job_rejects_another_identity(durable_db, operation):
+    from lfx.cli.serve_identity import IdentityConfig, build_identity_verifier
+
+    del durable_db
+    app = create_multi_serve_app(registry=_build_registry())
+    app.state.identity_verifier = build_identity_verifier(
+        IdentityConfig(mode="header", trusted_header="X-Consumer-Username")
+    )
+    owner_headers = {**_HEADERS, "X-Consumer-Username": "owner"}
+    peer_headers = {**_HEADERS, "X-Consumer-Username": "peer"}
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v2/workflows",
+            json={"flow_id": _HITL_FLOW_ID, "input_value": "hello", "mode": "background"},
+            headers=owner_headers,
+        )
+        assert response.status_code == 200, response.text
+        job_id = response.json()["job_id"]
+        deadline = time.monotonic() + _WAIT_S
+        while time.monotonic() < deadline:
+            pending = client.get(f"/api/v2/workflows/{job_id}/pending", headers=owner_headers)
+            if pending.status_code == 200:
+                break
+            time.sleep(0.05)
+        assert pending.status_code == 200, pending.text
+        request_id = pending.json()["request_id"]
+        if operation == "status":
+            denied = client.get("/api/v2/workflows", params={"job_id": job_id}, headers=peer_headers)
+        elif operation in {"pending", "events"}:
+            denied = client.get(f"/api/v2/workflows/{job_id}/{operation}", headers=peer_headers)
+        elif operation == "resume":
+            denied = client.post(
+                f"/api/v2/workflows/{job_id}/resume",
+                json={"request_id": request_id, "decision": {"action_id": "approve"}},
+                headers=peer_headers,
+            )
+        else:
+            denied = client.post("/api/v2/workflows/stop", json={"job_id": job_id}, headers=peer_headers)
+        assert denied.status_code == 404, denied.text
+        assert denied.json()["detail"]["code"] == "JOB_NOT_FOUND"
+        still_pending = client.get(f"/api/v2/workflows/{job_id}/pending", headers=owner_headers)
+        assert still_pending.status_code == 200, still_pending.text
+        assert still_pending.json()["request_id"] == request_id
+
+
 def test_background_hitl_suspends_and_exposes_pending_request(client):
     job_id = _submit(client, _HITL_FLOW_ID)
     body = _wait_for_status(client, job_id, "suspended")
@@ -233,6 +279,25 @@ def test_supersede_does_not_clobber_a_run_claimed_for_resume(tmp_path):
         assert await host.jobs.unconsumed_signals(job_id) == []
 
     asyncio.run(scenario())
+
+
+@pytest.mark.asyncio
+async def test_resubmission_only_supersedes_the_callers_suspended_jobs(tmp_path):
+    from lfx.cli.serve_durable import DurableServeWorkflowHost
+    from lfx.services.durable.models import JobStatus as DurableJobStatus
+
+    host = DurableServeWorkflowHost(_build_registry(), lambda: None, db_path=tmp_path / "owners.db")
+    for owner in ("owner", "peer"):
+        await host.jobs.create_job(job_id=owner, flow_id=_HITL_FLOW_ID, user_id=owner)
+        await host.jobs.update_status(owner, DurableJobStatus.SUSPENDED)
+        await host.jobs.update_metadata(owner, {"pending": {"request_id": f"req-{owner}"}})
+
+    await host._supersede_suspended(_HITL_FLOW_ID, "peer")
+
+    assert (await host.jobs.get_job("peer")).status == DurableJobStatus.CANCELLED
+    assert (await host.jobs.get_job("owner")).status == DurableJobStatus.SUSPENDED
+    assert await host.jobs.unconsumed_signals("owner") == []
+    assert await host.pending_request("owner", "owner") == {"request_id": "req-owner"}
 
 
 def test_resubmit_of_a_different_flow_leaves_the_pause_alone(client):

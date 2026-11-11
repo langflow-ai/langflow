@@ -9,13 +9,19 @@ from lfx.log.logger import logger
 from lfx.services.authorization.base import ExecutionPrincipal, ResourceVisibilityScope
 from lfx.services.settings.constants import AGENTIC_VARIABLES
 from lfx.services.variable import VariableNotFoundError
-from sqlmodel import col, false, select, update
+from lfx.services.variable.exceptions import RuntimeVariableError
+from sqlmodel import col, false, func, select, update
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
 from langflow.services.database.models.variable.model import Variable, VariableCreate, VariableRead, VariableUpdate
 from langflow.services.variable.base import VariableService
-from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
+from langflow.services.variable.constants import (
+    CREDENTIAL_TYPE,
+    GENERIC_TYPE,
+    OAUTH_REGISTRATION_VARIABLE_PREFIX,
+    is_oauth_registration_variable,
+)
 from langflow.services.variable.runtime_policy import (
     RuntimeVariable,
     guard_variable_mutation,
@@ -43,6 +49,13 @@ def has_variable_value(variable: Variable) -> bool:
     except Exception:  # noqa: BLE001
         return False
     return bool(decrypted_value and decrypted_value.strip())
+
+
+def _ensure_user_variable(name: str | None) -> None:
+    """Reject instance OAuth storage names before ordinary variable mutations."""
+    if is_oauth_registration_variable(name):
+        msg = "OAuth registrations must be managed from Connections settings."
+        raise ValueError(msg)
 
 
 class DatabaseVariableService(VariableService, Service):
@@ -110,12 +123,17 @@ class DatabaseVariableService(VariableService, Service):
         """Read only names and default fields; never materialize variable values."""
         stmt = (
             select(Variable.name, Variable.default_fields)
-            .where(Variable.user_id == user_id)
+            .where(
+                Variable.user_id == user_id,
+                func.substr(Variable.name, 1, len(OAUTH_REGISTRATION_VARIABLE_PREFIX))
+                != OAUTH_REGISTRATION_VARIABLE_PREFIX,
+            )
             .order_by(col(Variable.name), col(Variable.id))
         )
         return [(name, default_fields) for name, default_fields in (await session.exec(stmt)).all() if name]
 
     async def initialize_user_variables(self, user_id: UUID | str, session: AsyncSession) -> None:
+        """Import allowed environment defaults without replacing user edits or exposing OAuth storage."""
         if not self.settings_service.settings.store_environment_variables:
             await logger.adebug("Skipping environment variable storage.")
             return
@@ -152,6 +170,8 @@ class DatabaseVariableService(VariableService, Service):
             return
 
         for var_name in self.settings_service.settings.variables_to_get_from_environment:
+            if is_oauth_registration_variable(var_name):
+                continue
             # Check if session is still usable before processing each variable
             if not session.is_active:
                 await logger.awarning(
@@ -285,6 +305,10 @@ class DatabaseVariableService(VariableService, Service):
         name: str,
         session: AsyncSession,
     ) -> Variable:
+        """Load a nonempty owned variable without exposing reserved registration storage."""
+        if is_oauth_registration_variable(name):
+            msg = f"{name} variable not found."
+            raise VariableNotFoundError(msg)
         # we get the credential from the database
         stmt = select(Variable).where(Variable.user_id == user_id, Variable.name == name)
         variable = (await session.exec(stmt)).first()
@@ -303,6 +327,9 @@ class DatabaseVariableService(VariableService, Service):
         session: AsyncSession,
     ) -> RuntimeVariable | None:
         """Resolve deployment accounts before any shared or request override."""
+        if is_oauth_registration_variable(name):
+            msg = "OAuth registrations are unavailable to flow variables."
+            raise RuntimeVariableError(msg, reason="reserved_variable")
         return await resolve_runtime_variable(
             user_id=UUID(str(user_id)), name=name, field=field, session=session, settings=self.settings_service
         )
@@ -406,7 +433,15 @@ class DatabaseVariableService(VariableService, Service):
         visibility: ResourceVisibilityScope | None = None,
         include_empty_names: set[str] | None = None,
     ) -> list[VariableRead]:
-        stmt = select(Variable).order_by(col(Variable.name), col(Variable.id))
+        """Return visible user-variable metadata without credentials or reserved registration rows."""
+        stmt = (
+            select(Variable)
+            .where(
+                func.substr(Variable.name, 1, len(OAUTH_REGISTRATION_VARIABLE_PREFIX))
+                != OAUTH_REGISTRATION_VARIABLE_PREFIX
+            )
+            .order_by(col(Variable.name), col(Variable.id))
+        )
         if visibility is None:
             stmt = stmt.where(Variable.user_id == user_id)
         else:
@@ -487,7 +522,10 @@ class DatabaseVariableService(VariableService, Service):
         session: AsyncSession,
     ) -> dict[str, str] | None:
         """Return an authoritative account map, or None for an unmanaged account."""
-        return await resolve_runtime_variables(user_id=user_id, session=session, settings=self.settings_service)
+        variables = await resolve_runtime_variables(user_id=user_id, session=session, settings=self.settings_service)
+        if variables is None:
+            return None
+        return {name: value for name, value in variables.items() if not is_oauth_registration_variable(name)}
 
     async def get_all_decrypted_variables(
         self,
@@ -508,7 +546,11 @@ class DatabaseVariableService(VariableService, Service):
             return bound
         # Convert string to UUID if needed for SQLAlchemy query
         user_id_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
-        stmt = select(Variable).where(Variable.user_id == user_id_uuid)
+        stmt = select(Variable).where(
+            Variable.user_id == user_id_uuid,
+            func.substr(Variable.name, 1, len(OAUTH_REGISTRATION_VARIABLE_PREFIX))
+            != OAUTH_REGISTRATION_VARIABLE_PREFIX,
+        )
         variables = (await session.exec(stmt)).all()
 
         result = {}
@@ -534,15 +576,17 @@ class DatabaseVariableService(VariableService, Service):
         variable_id: UUID | str,
         session: AsyncSession,
     ) -> Variable:
+        """Resolve only owned user variables and hide reserved registration identifiers."""
         query = select(Variable).where(Variable.id == variable_id, Variable.user_id == user_id)
         variable = (await session.exec(query)).first()
-        if not variable:
+        if not variable or is_oauth_registration_variable(variable.name):
             msg = f"{variable_id} variable not found."
             raise ValueError(msg)
         return variable
 
     async def list_variables(self, user_id: UUID | str, session: AsyncSession) -> list[str | None]:
-        variables = await self.get_all(user_id=user_id, session=session)
+        """List variable names, including empty assistant defaults for startup checks."""
+        variables = await self.get_all(user_id=user_id, session=session, include_empty_names=set(AGENTIC_VARIABLES))
         return [variable.name for variable in variables if variable]
 
     async def get_available_variable_names(
@@ -567,6 +611,8 @@ class DatabaseVariableService(VariableService, Service):
         stmt = select(Variable).where(
             Variable.user_id == user_id,
             col(Variable.name).in_(names),
+            func.substr(Variable.name, 1, len(OAUTH_REGISTRATION_VARIABLE_PREFIX))
+            != OAUTH_REGISTRATION_VARIABLE_PREFIX,
         )
         variables = (await session.exec(stmt)).all()
         return {variable.name for variable in variables if has_variable_value(variable)}
@@ -578,6 +624,8 @@ class DatabaseVariableService(VariableService, Service):
         value: str,
         session: AsyncSession,
     ):
+        """Replace an owned user value and encrypt it when its type is Credential."""
+        _ensure_user_variable(name)
         await guard_variable_mutation(session=session, user_id=user_id)
         stmt = (
             select(Variable)
@@ -616,6 +664,8 @@ class DatabaseVariableService(VariableService, Service):
         variable: VariableUpdate,
         session: AsyncSession,
     ):
+        """Apply user-variable edits without reserved renames or unsafe credential type changes."""
+        _ensure_user_variable(variable.name)
         await guard_variable_mutation(session=session, user_id=user_id, new_name=variable.name, variable_id=variable_id)
         query = (
             select(Variable)
@@ -623,6 +673,7 @@ class DatabaseVariableService(VariableService, Service):
             .execution_options(populate_existing=True)
         )
         db_variable = (await session.exec(query)).one()
+        _ensure_user_variable(db_variable.name)
 
         # Security: prevent a CREDENTIAL -> GENERIC type-confusion that would expose the
         # decrypted secret. Credential values are stored as Fernet ciphertext ("gAAAAA...").
@@ -681,6 +732,8 @@ class DatabaseVariableService(VariableService, Service):
         name: str,
         session: AsyncSession,
     ) -> None:
+        """Remove a named owned user variable while leaving instance OAuth storage protected."""
+        _ensure_user_variable(name)
         await guard_variable_mutation(session=session, user_id=user_id)
         stmt = (
             select(Variable)
@@ -694,6 +747,7 @@ class DatabaseVariableService(VariableService, Service):
         await session.delete(variable)
 
     async def delete_variable_by_id(self, user_id: UUID | str, variable_id: UUID, session: AsyncSession) -> None:
+        """Delete an owned user-variable row only after checking its reserved storage name."""
         await guard_variable_mutation(session=session, user_id=user_id)
         stmt = (
             select(Variable)
@@ -704,6 +758,7 @@ class DatabaseVariableService(VariableService, Service):
         if not variable:
             msg = f"{variable_id} variable not found."
             raise ValueError(msg)
+        _ensure_user_variable(variable.name)
         await session.delete(variable)
 
     async def create_variable(
@@ -716,6 +771,8 @@ class DatabaseVariableService(VariableService, Service):
         type_: str = CREDENTIAL_TYPE,
         session: AsyncSession,
     ):
+        """Store a user-owned value with type-appropriate encryption and reject OAuth storage names."""
+        _ensure_user_variable(name)
         await guard_variable_mutation(session=session, user_id=user_id, new_name=name)
         # Validate that GENERIC variables don't start with Fernet signature
         if type_ == GENERIC_TYPE and value.startswith("gAAAAA"):
