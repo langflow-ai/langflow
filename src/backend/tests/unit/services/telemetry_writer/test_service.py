@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import shutil
+import sqlite3
 import tempfile
 import warnings
 from pathlib import Path
@@ -1063,8 +1064,8 @@ async def test_retention_survives_an_unreadable_maintenance_flag(writer_with_eng
     await writer._flush([], vb_batch)
 
     async def _unreadable(*_args, **_kwargs):
-        msg = "database is locked"
-        raise OperationalError("SELECT 1", {}, Exception(msg))
+        statement = "SELECT 1"
+        raise OperationalError(statement, {}, sqlite3.OperationalError("database is locked"))
 
     monkeypatch.setattr(migration_pause, "maintenance_enabled", _unreadable)
     await writer._run_retention_pass()
