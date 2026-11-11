@@ -59,7 +59,21 @@ class ContractChange:
 
     @property
     def id(self) -> str:
-        return digest(asdict(self))
+        """Identify the reviewed contract break, not the baseline it was measured from.
+
+        ``source_version`` is excluded on purpose. It is the newest published
+        release at or below the declared ceiling, so publishing any patch
+        release moves it and would silently invalidate every acknowledgment
+        even though the compared contracts did not change. Acknowledgment
+        staleness must track contract content only: the two contract digests
+        and the reasons already pin the break exactly.
+        """
+        return digest(self.identity_payload())
+
+    def identity_payload(self) -> dict[str, Any]:
+        payload = asdict(self)
+        del payload["source_version"]
+        return payload
 
     def to_dict(self) -> dict[str, Any]:
         return {"id": self.id, **asdict(self)}
