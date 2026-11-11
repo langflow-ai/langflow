@@ -1,10 +1,13 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { AgGridReact } from "ag-grid-react";
 import type { ReactNode } from "react";
+import type { TableComponentProps } from "@/components/core/parameterRenderComponent/components/tableComponent";
 import type { GlobalVariable } from "@/types/global_variables";
 import GlobalVariablesPage from "../index";
 
 const mockOpenShareDialog = jest.fn();
+const mockFirstDataRendered = jest.fn();
 let mockCanShare = true;
 const mockVariables: GlobalVariable[] = [
   {
@@ -16,6 +19,47 @@ const mockVariables: GlobalVariable[] = [
     is_owner: true,
   },
 ];
+
+// AG Grid initializes its real cell renderers asynchronously. Keep a bounded
+// startup watchdog separate from the interaction this suite verifies.
+jest.setTimeout(10_000);
+
+function renderVariablesPage() {
+  render(<GlobalVariablesPage />);
+  return waitFor(
+    () => {
+      expect(mockFirstDataRendered).toHaveBeenCalled();
+      return screen.getByRole("button", { name: "Share variable" });
+    },
+    { timeout: 5000 },
+  );
+}
+
+jest.mock(
+  "@/components/core/parameterRenderComponent/components/tableComponent",
+  () => {
+    const React = jest.requireActual<typeof import("react")>("react");
+    const actual = jest.requireActual<
+      typeof import("@/components/core/parameterRenderComponent/components/tableComponent")
+    >("@/components/core/parameterRenderComponent/components/tableComponent");
+    return {
+      __esModule: true,
+      ...actual,
+      default: React.forwardRef<AgGridReact, TableComponentProps>(
+        (props, ref) => (
+          <actual.default
+            {...props}
+            ref={ref}
+            onFirstDataRendered={(event) => {
+              props.onFirstDataRendered?.(event);
+              mockFirstDataRendered();
+            }}
+          />
+        ),
+      ),
+    };
+  },
+);
 
 jest.mock("@/contexts/permissionsContext", () => ({
   PermissionsProvider: ({ children }: { children: ReactNode }) => children,
@@ -93,10 +137,7 @@ describe("GlobalVariablesPage sharing in AG Grid", () => {
     "opens sharing on a %s click without opening the variable editor",
     async (target) => {
       const user = userEvent.setup();
-      render(<GlobalVariablesPage />);
-      const action = await screen.findByRole("button", {
-        name: "Share variable",
-      });
+      const action = await renderVariablesPage();
 
       await user.click(
         target === "button" ? action : screen.getByText("Share icon"),
@@ -114,10 +155,7 @@ describe("GlobalVariablesPage sharing in AG Grid", () => {
     "lets the share button handle %s without editing or selecting its row",
     async (key) => {
       const user = userEvent.setup();
-      render(<GlobalVariablesPage />);
-      const action = await screen.findByRole("button", {
-        name: "Share variable",
-      });
+      const action = await renderVariablesPage();
       action.focus();
 
       await user.keyboard(key);
@@ -136,8 +174,7 @@ describe("GlobalVariablesPage sharing in AG Grid", () => {
 
   it("does not edit when clicking an empty area of the actions cell", async () => {
     const user = userEvent.setup();
-    render(<GlobalVariablesPage />);
-    await screen.findByRole("button", { name: "Share variable" });
+    await renderVariablesPage();
 
     await user.click(screen.getByRole("gridcell", { name: /Share variable/ }));
 
@@ -148,11 +185,10 @@ describe("GlobalVariablesPage sharing in AG Grid", () => {
   it("does not share or edit when the share action is disabled", async () => {
     mockCanShare = false;
     const user = userEvent.setup();
-    render(<GlobalVariablesPage />);
+    const action = await renderVariablesPage();
+    expect(action).toBeDisabled();
 
-    await user.click(
-      await screen.findByRole("button", { name: "Share variable" }),
-    );
+    await user.click(action);
 
     expect(mockOpenShareDialog).not.toHaveBeenCalled();
     expect(screen.queryByRole("dialog", { name: "Edit variable" })).toBeNull();
@@ -162,7 +198,7 @@ describe("GlobalVariablesPage sharing in AG Grid", () => {
     "still edits a data cell on %s",
     async (activation) => {
       const user = userEvent.setup();
-      render(<GlobalVariablesPage />);
+      await renderVariablesPage();
       const cell = await screen.findByRole("gridcell", {
         name: /TEST_VARIABLE/,
       });
@@ -183,7 +219,7 @@ describe("GlobalVariablesPage sharing in AG Grid", () => {
 
   it("still selects a data row with Space", async () => {
     const user = userEvent.setup();
-    render(<GlobalVariablesPage />);
+    await renderVariablesPage();
     const cell = await screen.findByRole("gridcell", { name: /TEST_VARIABLE/ });
     cell.focus();
 
