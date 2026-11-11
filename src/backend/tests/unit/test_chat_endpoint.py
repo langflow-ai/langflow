@@ -1340,32 +1340,15 @@ async def test_cancel_build_public_tmp_job_accessible_by_any_auth_user(
 async def test_job_owner_cleaned_up_after_cleanup_job():
     """JobQueueService.cleanup_job removes the _job_owners entry for the job."""
     service = JobQueueService()
-    service.start()
+    job_id = str(uuid.uuid4())
+    user_id = uuid.uuid4()
+    service.create_queue(job_id)
+    await service.register_job_owner(job_id, user_id)
+    assert await service.get_job_owner(job_id) == user_id
 
-    try:
-        job_id = str(uuid.uuid4())
-        user_id = uuid.uuid4()
+    await service.cleanup_job(job_id)
 
-        service.create_queue(job_id)
-
-        async def _noop():
-            await asyncio.sleep(0)
-
-        service.start_job(job_id, _noop())
-        await asyncio.sleep(0.05)
-        await service.register_job_owner(job_id, user_id)
-
-        assert await service.get_job_owner(job_id) == user_id
-
-        await service.cleanup_job(job_id)
-
-        assert await service.get_job_owner(job_id) is None
-    finally:
-        service._closed = True
-        if service._cleanup_task:
-            service._cleanup_task.cancel()
-            with contextlib.suppress(asyncio.CancelledError, Exception):
-                await service._cleanup_task
+    assert await service.get_job_owner(job_id) is None
 
 
 # ---------------------------------------------------------------------------
