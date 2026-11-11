@@ -3551,5 +3551,9 @@
   "triggers.events.state.skipped": "已跳过",
   "triggers.events.filters.skipped": "已跳过",
   "triggers.eventError.sender_not_allowed": "发送者不在允许的发送者号码列表中。",
-  "triggers.events.skippedCannotReplay": "无法重放已跳过的事件。请更新发送者筛选条件并发送新消息。"
+  "triggers.events.skippedCannotReplay": "无法重放已跳过的事件。请更新发送者筛选条件并发送新消息。",
+  "modelProviders.openRouterModelHint": "选择列表中的模型，或输入 OpenRouter 决策模型 ID。模型支持哪些请求由 OpenRouter 决定。",
+  "modelProviders.searchOrAddModel": "搜索或添加模型 ID…",
+  "modelProviders.addDecisionModel": "添加决策模型“{{name}}”",
+  "modelProviders.decisionDiscoveryError": "无法加载决策模型。请检查此提供商的凭据并重试。其他提供商仍然可用。"
 }
