@@ -22,6 +22,7 @@ from uuid import UUID, uuid4
 import pytest
 from httpx import AsyncClient
 from langflow.services.database.models.flow.model import Flow
+from langflow.services.deps import get_background_execution_service
 from lfx.services.deps import session_scope
 
 
@@ -69,6 +70,9 @@ async def chatbot_flow(created_api_key, json_memory_chatbot_no_llm):
         session.add(flow)
         await session.flush()
     yield flow_id
+    # Terminal status can precede the runner's final writes. Stop it before
+    # deleting rows that unfinished background jobs may still reference.
+    await get_background_execution_service().stop()
     async with session_scope() as session:
         flow = await session.get(Flow, flow_id)
         if flow:
@@ -228,6 +232,7 @@ class TestStatusDurableResultError:
         self,
         client: AsyncClient,
         created_api_key,
+        monkeypatch,
     ):
         """A failed run surfaces the durable error JSON additively in the detail.
 
@@ -236,6 +241,9 @@ class TestStatusDurableResultError:
         additive-only.
         """
         headers = {"x-api-key": created_api_key.api_key}
+        from langflow.services.deps import get_settings_service
+
+        monkeypatch.setattr(get_settings_service().settings, "custom_component_admin_only", False)
         # A flow whose data is corrupt fails during the background run; the runner
         # persists the durable error which status echoes additively.
         bad_flow = uuid4()
@@ -273,6 +281,7 @@ class TestStatusDurableResultError:
             assert detail["error"] == "Job failed"
             assert detail["error_detail"] is not None
         finally:
+            await get_background_execution_service().stop()
             async with session_scope() as session:
                 flow = await session.get(Flow, bad_flow)
                 if flow:

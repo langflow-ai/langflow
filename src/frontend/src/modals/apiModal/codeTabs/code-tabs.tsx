@@ -28,7 +28,7 @@ import {
 
 const apiVersionTabs = [
   { name: "v1", title: "v1" },
-  { name: "v2", title: "v2", beta: true },
+  { name: "v2", title: "v2" },
 ];
 
 const operatingSystemTabs = [
@@ -109,7 +109,7 @@ export default function APITabsComponent() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const shouldDisplayApiKey = isAuthenticated;
 
-  const [apiVersion, setApiVersion] = useState<"v1" | "v2">("v1");
+  const [apiVersion, setApiVersion] = useState<"v1" | "v2">("v2");
 
   const v1TabsList = [
     {
@@ -142,7 +142,7 @@ export default function APITabsComponent() {
     },
   ];
 
-  // v2 (beta) targets POST /api/v2/workflows. It uses the flow UUID and the
+  // v2 targets POST /api/v2/workflows. It uses the flow UUID and the
   // raw input_value/tweaks the modal already collects, not the v1 /run shape.
   const v2CodeOptions = {
     flowId: flowId || "",
@@ -211,7 +211,7 @@ export default function APITabsComponent() {
   return (
     <div className="api-modal-tabs inset-0 m-0 h-full overflow-hidden">
       <div className="flex h-full flex-col gap-4 overflow-hidden">
-        {/* API version selector (v1 / v2 beta) */}
+        {/* API version selector (v1 / v2) */}
         <div className="flex flex-row justify-start">
           <Tabs
             value={apiVersion}
@@ -226,11 +226,6 @@ export default function APITabsComponent() {
                   data-testid={`api_version_${tab.name}`}
                 >
                   <span>{tab.title}</span>
-                  {tab.beta && (
-                    <span className="rounded border border-border px-1 py-px text-[9px] font-medium uppercase leading-none text-muted-foreground">
-                      beta
-                    </span>
-                  )}
                 </TabsTrigger>
               ))}
             </TabsList>
@@ -300,13 +295,13 @@ export default function APITabsComponent() {
               return (
                 <div className="api-modal-tabs-content flex h-full flex-col gap-4 overflow-auto">
                   {steps.map((step, index) => (
+                    // Every block keeps its own height and the list scrolls. A
+                    // last block set to fill the leftover space shrank to 0 px
+                    // whenever the blocks above it filled the modal.
                     <div
                       key={index}
-                      className={
-                        index === steps.length - 1
-                          ? "flex flex-1 flex-col overflow-hidden"
-                          : ""
-                      }
+                      className="flex shrink-0 flex-col"
+                      data-testid={`api-step-${index + 1}`}
                     >
                       <h4 className="mb-2 text-sm font-medium">
                         {STEP_TITLE_KEYS[step.title]
@@ -318,11 +313,7 @@ export default function APITabsComponent() {
                           {step.description}
                         </p>
                       )}
-                      <div
-                        className={`relative flex ${
-                          index === steps.length - 1 ? "h-full" : ""
-                        } w-full`}
-                      >
+                      <div className="relative flex w-full">
                         <Button
                           variant="ghost"
                           size="icon"
@@ -349,9 +340,7 @@ export default function APITabsComponent() {
                           wrapLongLines={true}
                           language={currentTab.language}
                           style={dark ? oneDark : oneLight}
-                          className={`!mt-0 ${
-                            index === steps.length - 1 ? "h-full" : ""
-                          } ${customCodeTabsClass.step}`}
+                          className={`!mt-0 ${customCodeTabsClass.step}`}
                         >
                           {step.code}
                         </SyntaxHighlighter>

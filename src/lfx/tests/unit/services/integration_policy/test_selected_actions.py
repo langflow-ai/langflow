@@ -80,7 +80,7 @@ async def _invoke(tool, **kwargs):
 
 @pytest.fixture
 def install_policy(monkeypatch):
-    def install(component_class, *, providers=frozenset(), actions=frozenset({DELETE_KEY})):
+    def install(component_class, *, providers=None, actions=frozenset({DELETE_KEY})):
         bundle = PolicyBundleService()
         bundle.publish(
             PolicyBundleSnapshot(
@@ -119,7 +119,7 @@ def install_policy(monkeypatch):
 @pytest.mark.parametrize("component_class", [FixedAction, AsyncFixedAction])
 @pytest.mark.parametrize("block_provider", [False, True])
 async def test_api_key_tool_gate_precedes_adapter(install_policy, component_class, *, block_provider):
-    install_policy(component_class, providers=frozenset({"other"}) if block_provider else frozenset())
+    install_policy(component_class, providers=frozenset({"other"}) if block_provider else None)
     tool = ComponentToolkit(component=component_class()).get_tools()[0]
 
     with pytest.raises(ToolException) as caught:
@@ -199,7 +199,7 @@ async def test_tool_rechecks_policy_after_creation(install_policy):
 async def test_graph_can_construct_a_tool_before_its_action_is_selected(install_policy, action, *, block_provider):
     from lfx.exceptions.component import ComponentBuildError
 
-    install_policy(AsyncActionPicker, providers=frozenset({"other"}) if block_provider else frozenset())
+    install_policy(AsyncActionPicker, providers=frozenset({"other"}) if block_provider else None)
     picker = AsyncActionPicker(_id="picker", action="delete")
     picker._append_tool_to_outputs_map()
     caller = ToolCaller(_id="caller", action=action).set(tools=picker.to_toolkit)

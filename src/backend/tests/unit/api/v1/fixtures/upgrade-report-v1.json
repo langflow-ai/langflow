@@ -1,0 +1,119 @@
+{
+  "format_version": 1,
+  "generated_at": "2026-11-04T21:06:33Z",
+  "source": {
+    "dialect": "sqlite",
+    "identity": {
+      "kind": "sqlite",
+      "locator": {
+        "path": "/private/var/folders/_z/vl3q3jzn49j88cz4dhny8c_m0000gn/T/le-3096-report-source-2iqeuyyk/langflow-1.13.0.db"
+      },
+      "sha256": "bffe133f0024cf1971845e1f0dc0ebf8df3b5a163434d01a783e8a8dff00e667"
+    },
+    "alembic_revision": "e5a7c9b1d3f2",
+    "counts": {
+      "flows": 2,
+      "components": 1,
+      "flow_versions": 1
+    }
+  },
+  "target": {
+    "langflow": "1.14.0",
+    "lfx": "1.14.0",
+    "component_index_sha256": "c8a0f6854be946bace2f4e47074c9bd124e6f1314b7338f3c9a3e2bbab34e9c4",
+    "bundles": [
+      "lfx-amazon==0.3.0",
+      "lfx-anthropic==0.2.1",
+      "lfx-azure==0.2.1",
+      "lfx-cohere==0.2.1",
+      "lfx-datastax==0.2.1",
+      "lfx-docling==0.2.2",
+      "lfx-google==0.4.0",
+      "lfx-ibm==0.3.1",
+      "lfx-microsoft==0.1.5",
+      "lfx-ollama==0.2.1",
+      "lfx-openai==0.2.1",
+      "lfx-oracle==0.2.1",
+      "lfx-slack==0.2.3",
+      "lfx-toolguard==0.3.0"
+    ],
+    "custom_components": {
+      "path": [],
+      "count": 0
+    }
+  },
+  "settings": {
+    "allow_custom_components": true,
+    "substitute_outdated_component_code": true,
+    "block_code_interpreter_components": false,
+    "custom_component_admin_only": false,
+    "allow_components_paths_override": true,
+    "components_path": [],
+    "catalog_rules": {
+      "from": "policy_bundle_active",
+      "blocked_component_keys": [],
+      "blocked_template_keys": []
+    }
+  },
+  "summary": {
+    "flows": {
+      "ok": 3,
+      "warn": 1,
+      "fail": 0
+    },
+    "nodes": {
+      "ok": 10,
+      "outdated_safe": 0,
+      "outdated_breaking": 0,
+      "blocked": 0,
+      "retired": 0,
+      "customized": 0,
+      "could_not_verify": 1
+    }
+  },
+  "flows": [
+    {
+      "id": "17f11737-2436-4de3-a908-826c7cf93118",
+      "kind": "flow",
+      "name": "MCP flow",
+      "owner": {
+        "id": "807bc5eb-65aa-4752-8d01-4d42975104e9",
+        "username": "langflow"
+      },
+      "project": {
+        "id": "610039a6-2609-4869-84f0-6f8617d255ba",
+        "name": "Fixture project"
+      },
+      "last_edited_at": "2026-10-27T18:14:59.006401+00:00",
+      "status": "warn",
+      "nodes": [
+        {
+          "id": "MCPTools-4BbE9",
+          "group_path": [],
+          "type": "MCPTools",
+          "display_name": "MCP Tools",
+          "status": "could_not_verify",
+          "runs": "saved_code",
+          "reasons": [
+            {
+              "code": "could_not_verify",
+              "field": null,
+              "message": "the update could not verify the generated fields"
+            }
+          ],
+          "dry_run": {
+            "result": "could_not_verify"
+          },
+          "replacement": null,
+          "bundle": null
+        }
+      ],
+      "ok_nodes": 3,
+      "flow_id": null,
+      "version_number": null,
+      "used_by": null,
+      "error": null
+    }
+  ],
+  "errors": []
+}

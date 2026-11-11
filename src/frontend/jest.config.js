@@ -44,6 +44,8 @@ module.exports = {
   injectGlobals: true,
   moduleNameMapper: {
     "\\.(css|less|scss|sass)$": "<rootDir>/src/__mocks__/styleMock.js",
+    "(^|/)audio-worklet-processor\\.js\\?url&no-inline$":
+      "<rootDir>/src/__mocks__/audio-worklet-url.js",
     "^@/(.*)$": "<rootDir>/src/$1",
     "^@jsonquerylang/jsonquery$":
       "<rootDir>/src/__mocks__/@jsonquerylang/jsonquery.js",

@@ -682,7 +682,7 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
                         session_id=parsed.session_id or str(flow.id),
                         job_id=job_id,
                     )
-                except (RuntimeError, ValueError, OSError):
+                except (RuntimeError, ValueError, OSError, WorkflowServiceUnavailableError):
                     await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
 
     return _source
