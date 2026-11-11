@@ -10,6 +10,18 @@ from lfx.components.models_and_agents.structured_output.json_extraction import (
 
 @pytest.mark.unit
 class TestExtractJsonFromText:
+    @pytest.mark.parametrize(
+        ("text", "expected"),
+        [
+            ('前言 🙂 {invalid} then {"answer": "正确"} trailing', {"answer": "正确"}),
+            ('[not JSON] before [1, {"two": 2}] trailing', [1, {"two": 2}]),
+            ('First {"answer": 1} then ' + "[unfinished " * 1000, {"answer": 1}),
+            ("Only {invalid and [invalid candidates", None),
+        ],
+    )
+    def test_should_preserve_candidate_order_with_invalid_candidates_and_unicode(self, text, expected):
+        assert extract_json_from_text(text) == expected
+
     def test_should_return_dict_when_text_is_pure_json_object(self):
         text = '{"foo": "bar"}'
 
