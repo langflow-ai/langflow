@@ -1,6 +1,6 @@
-# Chroma Vector Store retirement in lfx-bundles
+# Local DB retirement in lfx-bundles
 
-Saved component `ext:chroma:ChromaVectorStoreComponent@official` is retired in the target contract. The compatibility identity remains available for inspection, while execution requires manual replacement.
+Saved component `ext:chroma:LocalDBComponent@official` is retired in the target contract. The compatibility identity remains available for inspection, while execution requires manual replacement.
 
 Replace this saved node manually with a supported [Knowledge Base or remote vector store](https://docs.langflow.org/knowledge-storage-upgrade#replace-retired-components), migrate its data as needed, reconnect its edges, and test the flow. Keep the original flow and source data until validation succeeds.
 
@@ -8,6 +8,6 @@ Supported local Knowledge Base and Memory Base storage upgrades are separate fro
 
 Release comparison `lfx-bundles` 1.3.4 to 1.3.5.
 
-- Break identity `84ea820281262def1569911f322cca35b7f77f97e258bfd96bd376c9d2f81e6a`
-- Previous contract `71d4f962ecb49bd505c192cded435c737169a21692da37d8301acf9af3a333b7`
-- Target contract `70bb4f4a726b4527d9ffa9b176cacf81d557f9f6412c49b594bc9cad3e911fb1`
+- Break identity `122c2a2e5f3fdfeaf06133a19349cbec96d5ed918bd1dbe4c4711299da0e75c8`
+- Previous contract `02f2cf302bcd204b65e3e2aaac44c8f5d7c6dd63c7e800411f69cb3cf0e9ab55`
+- Target contract `c5dec403563d038a2118640a7dc1c61ef9eda86e8a4cee8fe101bb4903fc0406`
