@@ -9,5 +9,8 @@ Supported local Knowledge Base and Memory Base storage upgrades are separate fro
 Release comparison `lfx-bundles` 1.3.5 to 1.3.7.
 
 - Break identity `a43192020cd7f53e5fd7ea5a0c1dafedef700abf862941902b456574070672ba`
+Release comparison `lfx-bundles` 1.3.5 to 1.3.6.
+
+- Break identity `a43192020cd7f53e5fd7ea5a0c1dafedef700abf862941902b456574070672ba`
 - Previous contract `02f2cf302bcd204b65e3e2aaac44c8f5d7c6dd63c7e800411f69cb3cf0e9ab55`
 - Target contract `c5dec403563d038a2118640a7dc1c61ef9eda86e8a4cee8fe101bb4903fc0406`
