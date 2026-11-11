@@ -147,6 +147,11 @@ test(
       // A long flow name truncates instead of pushing the sidebar toggle off the panel.
       const toggle = page.getByRole("button", { name: "Hide sidebar" });
       await expect(toggle).toBeInViewport({ ratio: 1 });
+      // The truncated name shows in full on hover.
+      await page.getByTestId("playground-sidebar-title").hover();
+      await expect(page.getByRole("tooltip")).toContainText(
+        "Quarterly planning assistant with attachments",
+      );
 
       const uploaded = page.waitForResponse(
         (response) =>
@@ -176,6 +181,57 @@ test(
         page.getByText("meeting-notes-final-v2.txt").first(),
       ).toBeVisible();
       await page.runA11yScan("shareable-playground-attachment-sent");
+    } finally {
+      await page.request.delete(`/api/v1/flows/${flowId}`);
+    }
+  },
+);
+
+// A 1x1 transparent PNG.
+const PIXEL_PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+  "base64",
+);
+
+test(
+  "shareable playground: an image attachment is shown in the chat",
+  { tag: ["@release", "@api"] },
+  async ({ page }) => {
+    await awaitBootstrapTest(page, { skipModal: true });
+    const flowId = await createPublicEchoFlow(page, "shared-image");
+
+    try {
+      await page.goto(`/playground/${flowId}`);
+      const input = page.getByPlaceholder(TEXTS.placeholderSendMessage);
+      await input.waitFor({ state: "visible", timeout: TIMEOUTS.long });
+
+      const uploaded = page.waitForResponse(
+        (response) =>
+          response.request().method() === "POST" &&
+          response.url().includes("/files/upload/") &&
+          response.ok(),
+      );
+      await page.locator('input[type="file"]').setInputFiles({
+        name: "quarterly-chart.png",
+        mimeType: "image/png",
+        buffer: PIXEL_PNG,
+      });
+      await uploaded;
+
+      await input.fill("see the chart");
+      await page.getByTestId(TID.buttonSend).last().click();
+      await expect(page.getByTestId(TID.chatMessage)).toHaveText(
+        ["see the chart"],
+        { timeout: TIMEOUTS.standard },
+      );
+
+      const image = page.locator('img[src*="quarterly-chart.png"]');
+      await expect(image.first()).toBeVisible({ timeout: TIMEOUTS.standard });
+      await expect
+        .poll(() =>
+          image.first().evaluate((node: HTMLImageElement) => node.naturalWidth),
+        )
+        .toBeGreaterThan(0);
     } finally {
       await page.request.delete(`/api/v1/flows/${flowId}`);
     }

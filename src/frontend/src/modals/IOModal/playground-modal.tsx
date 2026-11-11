@@ -394,9 +394,19 @@ export default function IOModal({
                       />
                     </div>
                     {sidebarOpen && (
-                      <div className="truncate font-semibold">
-                        {PlaygroundTitle}
-                      </div>
+                      <ShadTooltip
+                        styleClasses="z-50"
+                        side="bottom"
+                        align="start"
+                        content={PlaygroundTitle}
+                      >
+                        <div
+                          className="truncate font-semibold"
+                          data-testid="playground-sidebar-title"
+                        >
+                          {PlaygroundTitle}
+                        </div>
+                      </ShadTooltip>
                     )}
                   </div>
                   <ShadTooltip
