@@ -152,6 +152,12 @@ async def test_upload_file(files_client, files_created_api_key):
 
     response_json = response.json()
     assert "id" in response_json
+    assert response_json["path"].startswith(f"user-{files_created_api_key.user_id}/")
+
+    from langflow.services.deps import get_storage_service
+
+    stored = await get_storage_service().get_file(flow_id=f"user-{files_created_api_key.user_id}", file_name="test.txt")
+    assert stored == b"test content"
 
 
 async def test_should_not_persist_in_my_files_when_upload_is_ephemeral(files_client, files_created_api_key):
@@ -188,7 +194,8 @@ async def test_should_not_persist_in_my_files_when_upload_is_ephemeral(files_cli
     assert file_path, "Ephemeral upload should return a non-empty path"
     # Path format: {user_id}/{stored_file_name}
     parts = file_path.split("/")
-    assert len(parts) == 2, f"Expected path format 'user_id/filename', got: {file_path}"
+    assert len(parts) == 2, f"Expected path format 'user-<user_id>/filename', got: {file_path}"
+    assert parts[0] == f"user-{files_created_api_key.user_id}"
 
 
 async def test_should_return_path_with_forward_slashes_when_uploading_file(files_client, files_created_api_key):
@@ -223,6 +230,32 @@ async def test_should_return_path_with_forward_slashes_when_uploading_file(files
         f"Upload path '{upload_path}' not found in listed paths {listed_paths}. "
         "POST and GET must return identical path strings."
     )
+
+
+async def test_legacy_user_file_still_downloads(files_client, files_created_api_key):
+    """Existing raw user namespaces remain readable without a storage migration."""
+    from langflow.services.database.models.file.model import File as UserFile
+    from langflow.services.deps import get_storage_service
+
+    user_id = files_created_api_key.user_id
+    storage_service = get_storage_service()
+    await storage_service.save_file(flow_id=str(user_id), file_name="legacy.txt", data=b"legacy content")
+    async with session_scope() as session:
+        legacy_file = UserFile(
+            user_id=user_id,
+            name="legacy",
+            path=f"{user_id}/legacy.txt",
+            size=len(b"legacy content"),
+        )
+        session.add(legacy_file)
+        await session.commit()
+        await session.refresh(legacy_file)
+        file_id = legacy_file.id
+
+    response = await files_client.get(f"api/v2/files/{file_id}", headers={"x-api-key": files_created_api_key.api_key})
+
+    assert response.status_code == 200, response.text
+    assert response.content == b"legacy content"
 
 
 async def test_download_file(files_client, files_created_api_key):
@@ -355,6 +388,33 @@ async def test_edit_file_uses_upload_name_rules(files_client, files_created_api_
     for name in ("inv\u202etxt.exe", "COM0.txt", "LPT0.txt"):
         response = await files_client.post("api/v2/files", files={"file": (name, b"content")}, headers=headers)
         assert response.status_code == 400, name
+
+
+@pytest.mark.parametrize(
+    "invalid_name", ["../escape", "..\\escape", "nested/path", "nested\\path", "/absolute", "a\x00b"]
+)
+async def test_rejected_rename_preserves_name_and_safe_batch_download(
+    files_client, files_created_api_key, invalid_name: str
+):
+    headers = {"x-api-key": files_created_api_key.api_key}
+    content = b"original uploaded content"
+    upload = await files_client.post("api/v2/files", files={"file": ("safe.txt", content)}, headers=headers)
+    assert upload.status_code == 201, upload.text
+    original = upload.json()
+
+    rename = await files_client.put(f"api/v2/files/{original['id']}", params={"name": invalid_name}, headers=headers)
+    assert rename.status_code == 400, rename.text
+
+    listed = await files_client.get("api/v2/files", headers=headers)
+    assert listed.status_code == 200, listed.text
+    persisted = next(file for file in listed.json() if file["id"] == original["id"])
+    assert persisted["name"] == original["name"]
+
+    download = await files_client.post("api/v2/files/batch/", json=[original["id"]], headers=headers)
+    assert download.status_code == 200, download.text
+    with zipfile.ZipFile(io.BytesIO(download.content)) as archive:
+        assert archive.namelist() == [f"{original['name']}.txt"]
+        assert archive.read(archive.namelist()[0]) == content
 
 
 async def test_batch_download_limits_legacy_names_with_collision_suffix(files_client, files_created_api_key):
@@ -666,6 +726,11 @@ async def test_upload_files_with_different_extensions_same_name(files_client, fi
 
 async def test_mcp_servers_file_replacement(files_client, files_created_api_key, files_active_user):
     """Test that _mcp_servers file gets replaced instead of creating unique names."""
+    async with session_scope() as session:
+        user = await session.get(User, files_active_user.id)
+        user.is_superuser = True
+        session.add(user)
+    files_active_user.is_superuser = True
     headers = {"x-api-key": files_created_api_key.api_key}
 
     mcp_file_ext = await get_mcp_file(files_active_user, extension=True)

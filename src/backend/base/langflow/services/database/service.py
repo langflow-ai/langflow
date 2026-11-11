@@ -471,6 +471,27 @@ class DatabaseService(Service):
             async with self.async_session_maker() as session:
                 yield session
 
+    @asynccontextmanager
+    async def session_scope_for_sync_validation(self):
+        """Keep temporary validation loops from borrowing the application's pool."""
+        url = self.engine.url
+        database = url.database or ""
+        in_memory = url.get_backend_name() == "sqlite" and (
+            database in {"", ":memory:"} or database.startswith("file::memory:") or url.query.get("mode") == "memory"
+        )
+        if self.settings_service.settings.use_noop_database or in_memory:
+            # A new SQLite memory connection would lose the existing database.
+            async with self._with_session() as session:
+                yield session
+            return
+
+        engine = self._create_engine()
+        try:
+            async with SQLModelAsyncSession(engine, expire_on_commit=False) as session:
+                yield session
+        finally:
+            await engine.dispose()
+
     async def ensure_postgresql_version(self) -> None:
         """If the database is PostgreSQL, ensure it is version 15 or higher.
 

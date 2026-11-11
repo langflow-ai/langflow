@@ -14,11 +14,13 @@ import uuid
 from contextlib import contextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pytest
 from langflow.api.utils import ingestion_run_service
 from langflow.api.utils.kb_helpers import KBIngestionHelper
 from langflow.services.database.models.jobs.model import JobStatus, JobType
 from langflow.services.deps import get_job_service, get_settings_service
+from lfx.base.knowledge_bases.ingestion_sources.google_drive import GoogleDriveSource
 
 
 @contextmanager
@@ -49,7 +51,7 @@ def _storage_paused_mid_write():
         yield write_started, release
 
 
-async def _start_ingestion(job_service, job_id, user):
+async def _start_ingestion(job_service, job_id, user, *, source=None):
     # Created the way the ingest routes create it.
     await job_service.create_job(
         job_id=job_id,
@@ -74,6 +76,7 @@ async def _start_ingestion(job_service, job_id, user):
             model_selection={"name": "text-embedding-3-small", "provider": "OpenAI"},
             task_job_id=job_id,
             job_service=job_service,
+            source=source,
         )
     )
 
@@ -157,3 +160,29 @@ async def test_ingest_route_inserts_its_job_heartbeated(client, logged_in_header
     assert job.status == JobStatus.QUEUED
     assert job.job_metadata["heartbeat_at"]
     assert job.job_metadata["owner"]
+
+
+@pytest.mark.usefixtures("client")
+@pytest.mark.parametrize("config", [{"folder_id": "outside-folder"}, {"query": "name = 'outside-doc'"}])
+async def test_empty_targeted_drive_ingestion_persists_the_scope_explanation(active_user, monkeypatch, config):
+    source = GoogleDriveSource(user_id=active_user.id, source_config={"connection": "google/work", **config})
+    monkeypatch.setattr(source, "_token", AsyncMock(return_value="test-token"))
+    monkeypatch.setattr(source, "_request", AsyncMock(return_value=httpx.Response(200, json={"files": []})))
+    job_service = get_job_service()
+    job_id = uuid.uuid4()
+    with (
+        _storage_paused_mid_write(),
+        patch.object(KBIngestionHelper, "cleanup_chroma_chunks_by_job", new=AsyncMock()),
+    ):
+        task = await _start_ingestion(job_service, job_id, active_user, source=source)
+        with pytest.raises(ValueError, match=r"drive\.file"):
+            await task
+
+    run = await ingestion_run_service.get_run(job_id, user_id=active_user.id)
+    assert run.status == "failed"
+    assert run.source_type == "google_drive"
+    assert run.total_items == 0
+    assert run.chunks_created == 0
+    assert "No matching Drive files" in run.error_message
+    assert "drive.file" in run.error_message
+    assert (await job_service.get_job_by_job_id(job_id)).status == JobStatus.FAILED

@@ -1,0 +1,93 @@
+---
+title: Upgrade Knowledge and Memory storage
+slug: /knowledge-storage-upgrade
+---
+
+Langflow 1.13 stores local knowledge bases and memory bases in SQLite.
+If those stores were local Chroma databases, Langflow copies them the first time you start Langflow 1.13.
+The copy uses the vectors already on disk, and does not call your embedding provider.
+
+If you use local Chroma knowledge bases or memory bases, complete the prerequisites and then follow the steps in [Upgrade one Langflow instance](#upgrade-one-langflow-instance).
+
+If you use OpenSearch or Postgres pgvector, you don't need to upgrade, as those vector stores will continue using the same providers.
+
+Chroma Cloud is retired in Langflow 1.13 and doesn't reconnect automatically.
+If you use Chroma Cloud, follow the steps in [This remote Chroma store must be migrated](/troubleshoot#remote-source-requires-migration).
+
+If a flow uses a **Chroma** or **Local DB** component, you must replace the components.
+Follow the steps in [Replace retired components](#replace-retired-components).
+
+A new Langflow installation doesn't require an upgrade.
+
+### Replace retired components {#replace-retired-components}
+
+Flows that contain **Chroma** or **Local DB** components will not run until you replace the Chroma and Local DB components.
+To replace the components, do the following:
+
+1. Open the flow.
+2. Replace **Chroma** and **Local DB** with a [knowledge base](/knowledge#knowledge-bases) or with a supported remote vector store.
+3. Run the flow.
+
+## Configure storage migration
+
+`LANGFLOW_KNOWLEDGE_BASE_AUTO_MIGRATE` defaults to `true` and starts supported local Chroma migrations when Langflow starts.
+Set it to `false` when multiple hosts share Knowledge Bases or when you want to migrate to pgvector or OpenSearch instead.
+
+`LANGFLOW_KB_DISK_RECONCILE_ENABLED` defaults to `false`.
+Enable it only to adopt legacy Knowledge Base directories that don't have matching database rows; it isn't required for a normal 1.13 upgrade.
+
+For defaults and related storage settings, see [Knowledge Base storage and local file access](/environment-variables#knowledge-base-storage-and-local-file-access).
+
+## Prerequisites {#prerequisites}
+
+Complete this list before you change Langflow versions. The copy starts on the first start of 1.13, so these have to be true before that start.
+
+1. Back up the Langflow application database, and keep that backup until you have checked the upgraded bases. See [Database migrations](./database-migrations.mdx). This backup is what you use to return to 1.12.
+2. Back up the knowledge base directory, and keep that backup with the database backup. The default directory is `~/.langflow/knowledge_bases`. If you set `LANGFLOW_KNOWLEDGE_BASES_DIR`, back up that path instead.
+3. Free about four times the disk space of each local Chroma store. The copy needs that room while it runs.
+4. Plan to run one Langflow process during the copy. Stop every other Langflow process, including old 1.12 workers, before you start 1.13.
+5. Confirm the knowledge base directory is on a local disk. A shared or network filesystem does not qualify. A Docker Desktop bind mount that reports `fuse.grpcfuse` does not qualify either. Move that data to a local named volume first. VirtioFS mounts, including `fakeowner`, do qualify.
+6. Confirm your platform publishes a sqlite-vec wheel. Python 3.14 on Windows ARM64 does not.
+
+:::warning
+Langflow writes its own database file while the copy runs. That file is created after the 1.13 schema upgrade, so it cannot be used to return to 1.12. Keep the backup from step 1.
+:::
+
+If more than one host must serve the same knowledge bases, skip the automatic copy. Move those stores to [pgvector or OpenSearch](/knowledge#configure-vector-database-providers), and set `LANGFLOW_KNOWLEDGE_BASE_AUTO_MIGRATE=false` before you start 1.13. Local SQLite stays on one host after the copy.
+
+You are ready to upgrade when every item above is done.
+
+## Upgrade one Langflow instance {#upgrade-one-langflow-instance}
+
+Use these steps when one Langflow process owns the data and the [prerequisites](#prerequisites) are done.
+
+1. Stop the running Langflow process.
+2. Upgrade the Langflow package or container image to 1.13.
+3. Start Langflow.
+4. Open Langflow. A notice in the corner says **Upgrading your data**.
+5. Select **View upgrade progress**. Each base is listed there. You can keep using the rest of Langflow while the list is running.
+6. Wait for each base to finish. The notice moves through **Waiting to upgrade**, **Backing up your data**, **Reading existing vectors**, **Copying your data**, and **Verifying the upgrade**.
+7. Confirm each base shows **Ready** on the knowledge bases page. The corner notice is gone.
+8. Run a flow that uses an upgraded base.
+9. Leave the original Chroma folders in place until that check succeeds. After you have checked the data, you can archive or remove those folders.
+
+A base that is still in the progress list does not show **Ready**. A flow that uses it stops with:
+
+> This knowledge or memory base is upgrading automatically. Wait for the upgrade to finish, then try again. Progress is shown in Langflow.
+
+Wait for step 7, then run the flow again.
+
+If you stop Langflow during the copy, start it again. The copy continues from where it stopped. Repeat from step 4.
+
+After the copy, search is exact. When two results used to tie, their order can change.
+
+## If a knowledge base fails
+
+If a **Storage upgrade needs attention** error message appears, it means Langflow could not finish copying that knowledge base or memory base. The original files stay in the knowledge base directory.
+
+To troubleshoot, click **View upgrade progress** and match the error message to the error messages in [Knowledge base storage upgrade](/troubleshoot#knowledge-base-storage-upgrade).
+
+Complete the troubleshooting steps, and then click **Retry upgrade**.
+
+Only a superuser can view upgrade status.
+A successful upgrade returns a **Ready** state in the knowledge or memory base.

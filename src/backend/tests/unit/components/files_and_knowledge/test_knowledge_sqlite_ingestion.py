@@ -1,7 +1,6 @@
 """Flow ingestion must publish the totals stored in the SQLite knowledge base."""
 
 import asyncio
-import contextlib
 from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
@@ -15,6 +14,7 @@ from lfx.components.files_and_knowledge.knowledge import KnowledgeComponent
 from lfx.graph import Graph
 from lfx.graph.graph.constants import Finish
 from lfx.schema.dataframe import DataFrame
+from lfx.utils.async_helpers import RUN_CANCEL_GRACE_SECONDS, cancel_and_wait
 
 
 class LocalEmbeddings(Embeddings):
@@ -59,10 +59,16 @@ async def test_flow_ingestion_updates_sqlite_totals(
     )
 
     repeated_texts = texts * (2 if allow_duplicates else 1)
-    for input_texts, expected_texts in (
-        (texts, texts),
-        (texts, repeated_texts),
-        (["appended document"], [*repeated_texts, "appended document"]),
+    mixed_texts = [*texts[:2], "appended document", "appended document"]
+    final_texts = [*repeated_texts, *(mixed_texts if allow_duplicates else ["appended document"])]
+    for run_count, (input_texts, expected_texts, stored_rows) in enumerate(
+        (
+            (texts, texts, set(range(5))),
+            (texts, repeated_texts, set(range(5)) if allow_duplicates else set()),
+            (mixed_texts, final_texts, set(range(4)) if allow_duplicates else {2}),
+            ([], final_texts, set()),
+        ),
+        start=1,
     ):
         component.set(input_df=DataFrame({"text": input_texts, "source": ["documents.txt"] * len(input_texts)}))
         graph = Graph(start=component, end=component)
@@ -73,6 +79,8 @@ async def test_flow_ingestion_updates_sqlite_totals(
         assert response.status_code == 200, response.text
         assert response.json()["total"] == len(expected_texts)
         assert sorted(chunk["content"] for chunk in response.json()["chunks"]) == sorted(expected_texts)
+        if not allow_duplicates:
+            assert all(chunk["id"] == chunk["metadata"]["_id"] for chunk in response.json()["chunks"])
 
         response = await client.get(endpoint, headers=logged_in_headers)
         assert response.status_code == 200, response.text
@@ -84,11 +92,84 @@ async def test_flow_ingestion_updates_sqlite_totals(
         assert info["source_types"] == ["txt"]
         assert info["status"] == "ready"
 
+        response = await client.get(f"{endpoint}/runs", headers=logged_in_headers)
+        assert response.status_code == 200, response.text
+        runs = response.json()["runs"]
+        assert len(runs) == run_count
+        run = runs[0]
+        assert run["status"] == "succeeded"
+        assert run["chunks_created"] == len(stored_rows)
+        assert run["succeeded"] == len(stored_rows)
+        assert run["skipped"] == len(input_texts) - len(stored_rows)
+        assert run["total_items"] == len(input_texts)
+        assert run["failed"] == 0
+        response = await client.get(f"{endpoint}/runs/{run['id']}", headers=logged_in_headers)
+        assert response.status_code == 200, response.text
+        items = response.json()["items"]
+        assert len({item["item_id"] for item in items}) == len(input_texts)
+        assert [item["status"] for item in items] == [
+            "succeeded" if index in stored_rows else "skipped" for index in range(len(input_texts))
+        ]
+        assert [item["chunks_created"] for item in items] == [
+            int(index in stored_rows) for index in range(len(input_texts))
+        ]
+        assert f"{len(stored_rows)} chunks" in component.status
+
+
+@pytest.mark.parametrize("concurrent_texts", [["shared document"], ["shared document", "other document"]])
+async def test_flow_ingestion_counts_duplicates_inserted_during_embedding(
+    client, logged_in_headers, active_user, monkeypatch, tmp_path, concurrent_texts
+):
+    component, embeddings = await _create_ready_kb(
+        client, logged_in_headers, active_user, monkeypatch, tmp_path, "concurrent_ingestion", has_documents=False
+    )
+    component.set(input_df=DataFrame({"text": ["shared document", "other document"]}), allow_duplicates=False)
+    started, release = asyncio.Event(), asyncio.Event()
+
+    async def blocked_embeddings(texts):
+        started.set()
+        await release.wait()
+        return embeddings.embed_documents(texts)
+
+    monkeypatch.setattr(embeddings, "aembed_documents", blocked_embeddings)
+    task = asyncio.create_task(component.build_kb_info())
+    try:
+        await asyncio.wait_for(started.wait(), timeout=10)
+        monkeypatch.setattr(
+            "lfx.components.files_and_knowledge.knowledge.get_embeddings", lambda **_kwargs: LocalEmbeddings()
+        )
+        concurrent = KnowledgeComponent(
+            knowledge_base="concurrent_ingestion",
+            input_df=DataFrame({"text": concurrent_texts}),
+            allow_duplicates=False,
+            _user_id=active_user.id,
+        )
+        await concurrent.build_kb_info()
+    finally:
+        release.set()
+        result = await asyncio.wait_for(task, timeout=10)
+
+    expected_created = 2 - len(concurrent_texts)
+    assert result.data["rows"] == 2
+    assert result.data["chunks_created"] == expected_created
+    assert result.data["skipped"] == len(concurrent_texts)
+    endpoint = "/api/v1/knowledge_bases/concurrent_ingestion"
+    response = await client.get(endpoint, headers=logged_in_headers)
+    assert response.json()["chunks"] == 2
     response = await client.get(f"{endpoint}/runs", headers=logged_in_headers)
     assert response.status_code == 200, response.text
     runs = response.json()["runs"]
-    assert len(runs) == 3
-    assert all(run["status"] == "succeeded" for run in runs)
+    assert len(runs) == 2
+    run = runs[-1]
+    assert run["chunks_created"] == expected_created
+    assert run["succeeded"] == expected_created
+    assert run["skipped"] == len(concurrent_texts)
+    response = await client.get(f"{endpoint}/runs/{run['id']}", headers=logged_in_headers)
+    assert response.status_code == 200, response.text
+    assert [item["status"] for item in response.json()["items"]] == [
+        "skipped",
+        "succeeded" if expected_created else "skipped",
+    ]
 
 
 @pytest.mark.parametrize("cancel_kind", ["task", "scope"])
@@ -262,9 +343,8 @@ async def test_disconnected_playground_stream_finalizes_the_run(
 ):
     """Leaving the flow drops the stream; the run must still end cancelled.
 
-    Mirrors ``_stream_event_frames``: Starlette cancels the response's AnyIO
-    scope on disconnect, and the generator's ``finally`` awaits the run task
-    inside that scope, so AnyIO re-cancels the run task on every loop tick.
+    Use the same shielded teardown as ``_stream_event_frames`` after Starlette
+    cancels the response's AnyIO scope on disconnect.
     """
     name = "disconnected_stream_ingestion"
     component, embeddings = await _create_ready_kb(
@@ -283,10 +363,8 @@ async def test_disconnected_playground_stream_finalizes_the_run(
         try:
             await asyncio.Event().wait()
         finally:
-            if not run_task.done():
-                run_task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await run_task
+            await cancel_and_wait(run_task, grace_seconds=RUN_CANCEL_GRACE_SECONDS)
+            assert run_task.cancelled()
 
     with anyio.fail_after(10):
         async with anyio.create_task_group() as task_group:

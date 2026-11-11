@@ -36,9 +36,9 @@ def span_exporter():
 
     Two consequences are handled rather than ignored. ``set_tracer_provider`` is
     first-write-wins, so the assert is what stops this file from passing vacuously if anything
-    else in the worker installs one first. And the provider cannot be uninstalled, so the
-    teardown shuts it down instead — otherwise every later test in this worker that runs a
-    flow would keep appending spans to an exporter nobody reads.
+    else in the worker installs one first. The provider cannot be uninstalled, so teardown
+    stops and clears only this exporter. Shutting down a processor still attached to the
+    global provider makes the SDK warn on every later span, corrupting CLI output tests.
     """
     from opentelemetry import trace
     from opentelemetry.sdk.trace import TracerProvider
@@ -53,7 +53,7 @@ def span_exporter():
         "another test installed a tracer provider first; these assertions would be vacuous"
     )
     yield exporter
-    provider.shutdown()
+    exporter.shutdown()
     exporter.clear()
 
 
@@ -148,6 +148,7 @@ def _flow_with_a_failing_component(flow_data: str) -> str:
     return json.dumps(payload)
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_a_failed_build_is_not_reported_as_a_successful_run(
     client, json_memory_chatbot_no_llm, logged_in_headers, span_exporter
 ):

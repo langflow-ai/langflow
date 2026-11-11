@@ -13,6 +13,11 @@ Due to strict SemVer requirements, Langflow Desktop can have different patch ver
 
 ## Prepare to upgrade
 
+For an existing 1.11.x Python installation, follow [Upgrade from Langflow 1.11.x](/get-started-installation#upgrade-from-langflow-111).
+An in-place package upgrade can retain incompatible optional providers from the old full installation.
+The procedure uses a new environment with the `bundles` extra and preserves the instance's database, encryption key, files, and knowledge storage.
+Keep backups taken before the first new-version startup so you can restore them if needed.
+
 :::warning
 Whenever possible, the Langflow team recommends installing new Langflow versions in a new virtual environment or VM before upgrading your primary installation.
 This allows you to [import flows](/concepts-flows-import#import-a-flow) from your existing installation and test them in the new version without disrupting your existing installation.
@@ -55,46 +60,100 @@ Highlights of this release include the following changes. For all changes, see t
 - Official packages require authentication by default
 
     Official Python packages, tagged source archives, and Docker images now set `LANGFLOW_AUTO_LOGIN=false`.
-    For a new installation, set `LANGFLOW_SUPERUSER_PASSWORD` before starting Langflow, then sign in with the username `langflow` (or your configured `LANGFLOW_SUPERUSER`).
-    Setting `LANGFLOW_SUPERUSER_PASSWORD` does not replace an existing account's non-legacy password. If you are upgrading an auto-login installation, [prepare that account for password sign-in](/api-keys-and-authentication#upgrade-from-auto-login) before you upgrade.
-    Development branches and local builds from those branches still default to automatic login.
-    For trusted local development with a release package or Docker image, set `LANGFLOW_AUTO_LOGIN=true`.
+    Set `LANGFLOW_SUPERUSER_PASSWORD`, then sign in as `langflow` or the username in `LANGFLOW_SUPERUSER`.
+
+    Before upgrading an auto-login installation, [prepare that account for password sign-in](/api-keys-and-authentication#upgrade-from-auto-login).
+
+    If you already upgraded and can't sign in, see [recover access](/troubleshoot#recover-access-after-upgrading).
 
     For more information, see [API keys and authentication](/api-keys-and-authentication#langflow-auto-login).
 
-- Chroma components are removed
+- Project MCP and A2A endpoints require authentication by default
+
+    In 1.13.2, new projects default to API-key authentication, including auto-login installations.
+    Existing projects with unset authentication settings adopt that default at startup.
+    When `LANGFLOW_AUTO_LOGIN=false`, startup also changes projects set to **None** to API-key authentication.
+
+    Update existing MCP clients with the configuration from the project's **MCP Server** tab.
+    For protected A2A requests, send the flow owner's Langflow API key in the `x-api-key` header.
+    Public A2A agent-card discovery remains available without credentials.
+
+    See [MCP authentication](/mcp-server#authentication) and [A2A authentication](/a2a-server#authentication) for client setup and the supported public-project and superuser exceptions.
+
+- MCP shell wrappers require a separate inline command
+
+    Stored MCP shell configurations must place the inline command in the argument following `-c`.
+    Replace `["-cuvx mcp-proxy"]` with `["-c", "uvx mcp-proxy"]`.
+    Direct script operands and shells without an inline command are rejected even when interpreter hardening is disabled.
+    Login, interactive, verbose, and xtrace modes are also rejected.
+
+- Chroma and Local DB components are removed
 
     Langflow 1.13 stores local Knowledge and Memory in SQLite, instead of a local Chroma database.
-    The [**Chroma**](/bundles-chroma) and [**Local DB**](/components-bundle-components#vector-stores-bundle) bundle components are removed.
+    The [**Chroma DB**](/components-bundle-components#legacy-bundles) and [**Local DB**](/components-bundle-components#legacy-bundles) components are legacy.
 
     Replace **Chroma** and **Local DB** with a [knowledge base](/knowledge#knowledge-bases), or with a supported remote vector store.
-    At startup, Langflow copies supported local Chroma stores into SQLite.
 
-    Back up the application database and the knowledge-base directory before you upgrade.
+    For more information, see [Upgrade Knowledge and Memory storage](/knowledge-storage-upgrade).
 
-    For more information, see [Upgrade Knowledge and Memory storage](./knowledge-storage-upgrade).
+- Python components require keyword class patterns
 
-- The ALTK component is removed
+    Positional class patterns such as `case Point(x, y)` are no longer accepted in Python Interpreter, Python REPL, or Lambda Filter code, including saved flows.
+    Use keyword patterns such as `case Point(x=x, y=y)`.
+    This restriction also applies to builtin positional patterns such as `case int(n)`.
 
-    The [**ALTK**](/bundles-altk) component is removed.
+- Repeated ingestion uses stable chunk IDs
 
-    Replace **ALTK** with the [**Agent**](/components-agents) component.
+    In 1.13.2, repeated ingestion uses stable chunk IDs.
+    The first re-ingestion of data created before this fix can add one stable-ID copy per chunk.
+    Updating a document's content leaves its previous chunks in place.
 
 ### New features
 
+- Audit logging
+
+    Set `LANGFLOW_AUDIT_ENABLED=true` to record an append-only history of flow and project operations, including who attempted a change, on which resource, when, how it completed, and a description of what was written.
+    Query events with `GET /api/v1/flows/audits` and `GET /api/v1/projects/audits`.
+
+    For more information, see [Audit logging](./audit-logging).
+
 - Connections
 
-    Langflow stores Google Workspace, Microsoft 365, and Slack accounts as connections.
-
+    Langflow stores Google Workspace, Microsoft 365, and Slack accounts as persistent connections.
     For more information, see [Connections](./connections).
 
 - Concurrent editing
 
-    Langflow now protects a flow that is open in more than one place.
-    When another save has already updated the flow, your changes remain in place until you review.
-    You can select **Update Current Flow**, **Duplicate Flow**, or **Load Latest**.
-
+    Langflow now protects a flow that is open by more than one user.
     For more information, see [Concurrent editing](./concurrent-editing).
+
+- Instance migration
+
+    Langflow provides a guided workflow to migrate users, projects, flows, settings, local files, and local knowledge bases to a new instance.
+    The workflow checks the source instance, pauses writes, creates a backup, copies applicable data to the target instance's storage, verifies the copy, and provides recovery steps.
+
+    For more information, see [Migrate a Langflow instance](/instance-migration).
+
+- Administration API and CLI
+
+    Superusers can manage users, teams, and roles with the API or the `langflow admin` command.
+    For more information, see [Administer users and teams with the API and CLI](./admin-api-cli).
+
+## Component changes
+
+- The ALTK component is removed
+
+    The [**ALTK**](/components-bundle-components) component is removed.
+
+    Replace **ALTK** with the [**Agent**](/components-agents) component.
+
+- MrScraper components are removed
+
+    The [**MrScraper**](/bundles-mrscraper) bundle now provides three components.
+
+    Instead, use the **Scraper API** or **Web Search** components.
+
+    For more information, see [Update existing flows](/bundles-mrscraper#updating-existing-flows).
 
 ## 1.12.x
 
@@ -111,10 +170,6 @@ For 1.10.x release notes, see the [1.10.x documentation](https://docs.langflow.o
 ## 1.9.x
 
 For 1.9.x release notes, see the [1.9.x documentation](https://docs.langflow.org/1.9.0/release-notes).
-
-## 1.8.x
-
-For 1.8.x release notes, see the [1.8.x documentation](https://docs.langflow.org/1.8.0/release-notes).
 
 ## Earlier releases
 

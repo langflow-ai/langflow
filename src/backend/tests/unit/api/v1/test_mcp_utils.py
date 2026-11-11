@@ -11,6 +11,7 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User
 from lfx.interface.components import component_cache
 from lfx.services.authorization import PUBLIC_ANONYMOUS_ACTOR_ID
+from sqlalchemy import text
 
 
 class FakeResult:
@@ -37,6 +38,9 @@ class FakeSession:
         if entity_name == "File":
             return FakeResult(self._user_files)
         return FakeResult([])
+
+    async def get(self, _model, _identifier):
+        return None
 
 
 class FakeSessionContext:
@@ -81,7 +85,7 @@ async def test_handle_list_resources_includes_flow_and_user_files(monkeypatch):
     ]
 
     fake_session = FakeSession(flows=flows, user_files=user_files)
-    storage_service = FakeStorageService({flow_id: ["flow-doc.docx"]})
+    storage_service = FakeStorageService({f"flow-{flow_id}": ["flow-doc.docx"]})
 
     monkeypatch.setattr(mcp_utils, "session_scope", lambda: FakeSessionContext(fake_session))
     monkeypatch.setattr(mcp_utils, "get_storage_service", lambda: storage_service)
@@ -333,11 +337,11 @@ async def test_handle_read_resource_denies_user_bucket_under_project_scope(monke
 @pytest.mark.asyncio
 async def test_handle_read_resource_project_scope_binds_flow_id_as_uuid(monkeypatch, async_session):
     """A flow UUID parsed from an advertised resource URI must remain UUID-typed in the database query."""
-    user = User(username="mcp-resource-reader", password="test-password")  # noqa: S106
+    user = User(username="mcp-resource-reader", password=str(uuid4()))
     project = Folder(name="MCP Resource Project", user_id=user.id)
-    flow = Flow(name="MCP Resource Flow", user_id=user.id, folder_id=project.id)
+    flow = Flow(name="MCP Resource Flow", user_id=user.id, folder_id=project.id, mcp_enabled=True)
     other_project = Folder(name="Other MCP Resource Project", user_id=user.id)
-    other_flow = Flow(name="Other MCP Resource Flow", user_id=user.id, folder_id=other_project.id)
+    other_flow = Flow(name="Other MCP Resource Flow", user_id=user.id, folder_id=other_project.id, mcp_enabled=True)
     async_session.add_all([user, project, flow, other_project, other_flow])
     await async_session.flush()
 
@@ -345,7 +349,7 @@ async def test_handle_read_resource_project_scope_binds_flow_id_as_uuid(monkeypa
     storage_service = FakeStorageService(
         {},
         {
-            f"{flow.id}/{file_name}": b"project file contents",
+            f"flow-{flow.id}/{file_name}": b"project file contents",
             f"{other_flow.id}/{file_name}": b"other project file contents",
         },
     )
@@ -370,6 +374,142 @@ async def test_handle_read_resource_project_scope_binds_flow_id_as_uuid(monkeypa
     import base64
 
     assert base64.b64decode(result) == b"project file contents"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("project_scoped", [True, False])
+async def test_handle_list_resources_respects_project_flow_visibility(monkeypatch, async_session, project_scoped):
+    """Project listings require MCP exposure while global listings retain all owner-scoped flows."""
+    user = User(username="mcp-resource-owner", password=str(uuid4()))
+    other_user = User(username="mcp-resource-other-owner", password=str(uuid4()))
+    project = Folder(name="Resource visibility project", user_id=user.id)
+    other_project = Folder(name="Other resource visibility project", user_id=user.id)
+    enabled_flow = Flow(name="Enabled resource flow", user_id=user.id, folder_id=project.id, mcp_enabled=True)
+    disabled_flow = Flow(name="Disabled resource flow", user_id=user.id, folder_id=project.id)
+    legacy_flow = Flow(name="Legacy resource flow", user_id=user.id, folder_id=project.id, mcp_enabled=True)
+    other_project_flow = Flow(
+        name="Other project resource flow", user_id=user.id, folder_id=other_project.id, mcp_enabled=True
+    )
+    other_user_flow = Flow(
+        name="Other owner resource flow", user_id=other_user.id, folder_id=project.id, mcp_enabled=True
+    )
+    async_session.add_all(
+        [
+            user,
+            other_user,
+            project,
+            other_project,
+            enabled_flow,
+            disabled_flow,
+            legacy_flow,
+            other_project_flow,
+            other_user_flow,
+        ]
+    )
+    await async_session.flush()
+    # Constructors apply the False default, so reproduce the legacy migration row directly.
+    await async_session.execute(
+        text("UPDATE flow SET mcp_enabled = NULL WHERE id = :flow_id"), {"flow_id": legacy_flow.id.hex}
+    )
+    await async_session.refresh(legacy_flow)
+    assert legacy_flow.mcp_enabled is None
+
+    flows = [enabled_flow, disabled_flow, legacy_flow, other_project_flow, other_user_flow]
+    storage_service = FakeStorageService({f"flow-{flow.id}": ["resource.txt"] for flow in flows})
+    monkeypatch.setattr(mcp_utils, "session_scope", lambda: FakeSessionContext(async_session))
+    monkeypatch.setattr(mcp_utils, "get_storage_service", lambda: storage_service)
+    monkeypatch.setattr(
+        mcp_utils,
+        "get_settings_service",
+        lambda: SimpleNamespace(settings=SimpleNamespace(host="localhost", port=4000)),
+    )
+
+    token = mcp_utils.current_user_ctx.set(user)
+    try:
+        resources = await mcp_utils.handle_list_resources(project_id=project.id if project_scoped else None)
+    finally:
+        mcp_utils.current_user_ctx.reset(token)
+
+    expected_flows = (
+        [enabled_flow] if project_scoped else [enabled_flow, disabled_flow, legacy_flow, other_project_flow]
+    )
+    assert {str(resource.uri) for resource in resources} == {
+        f"http://localhost:4000/api/v1/files/download/{flow.id}/resource.txt" for flow in expected_flows
+    }
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("project_scoped", [True, False])
+@pytest.mark.parametrize("mcp_enabled", [True, False, None])
+async def test_handle_read_resource_respects_project_flow_visibility(
+    monkeypatch, async_session, project_scoped, mcp_enabled
+):
+    """Project reads require MCP exposure while global reads retain access to the owner's flows."""
+    import base64
+
+    user = User(username="mcp-resource-reader", password=str(uuid4()))
+    project = Folder(name="Resource visibility project", user_id=user.id)
+    flow = Flow(name="Resource flow", user_id=user.id, folder_id=project.id, mcp_enabled=mcp_enabled)
+    async_session.add_all([user, project, flow])
+    await async_session.flush()
+    if mcp_enabled is None:
+        # Constructors apply the False default, so reproduce the legacy migration row directly.
+        await async_session.execute(
+            text("UPDATE flow SET mcp_enabled = NULL WHERE id = :flow_id"), {"flow_id": flow.id.hex}
+        )
+        await async_session.refresh(flow)
+        assert flow.mcp_enabled is None
+
+    storage_service = FakeStorageService({}, {f"flow-{flow.id}/resource.txt": b"resource contents"})
+    monkeypatch.setattr(mcp_utils, "session_scope", lambda: FakeSessionContext(async_session))
+    monkeypatch.setattr(mcp_utils, "get_storage_service", lambda: storage_service)
+
+    token = mcp_utils.current_user_ctx.set(user)
+    try:
+        uri = f"http://host/api/v1/files/download/{flow.id}/resource.txt"
+        if project_scoped and not mcp_enabled:
+            with pytest.raises(ValueError, match="Resource not found or access denied"):
+                await mcp_utils.handle_read_resource(uri, project_id=project.id)
+        else:
+            result = await mcp_utils.handle_read_resource(uri, project_id=project.id if project_scoped else None)
+            assert base64.b64decode(result) == b"resource contents"
+    finally:
+        mcp_utils.current_user_ctx.reset(token)
+
+
+@pytest.mark.asyncio
+async def test_handle_read_resource_authorizes_legacy_flow_inside_open_session(monkeypatch):
+    """The legacy-flow ownership check must run before the session closes."""
+    import base64
+
+    class ClosingSession(FakeSession):
+        closed = False
+
+        async def get(self, _model, _identifier):
+            if self.closed:
+                msg = "session is closed"
+                raise RuntimeError(msg)
+
+    class ClosingContext(FakeSessionContext):
+        async def __aexit__(self, exc_type, exc, tb):
+            self._session.closed = True
+            return False
+
+    user_id = uuid4()
+    flow_id = uuid4()
+    file_name = "legacy.txt"
+    flow = SimpleNamespace(id=flow_id, user_id=user_id, folder_id=None, name="Legacy flow")
+    fake_session = ClosingSession(flows=[flow], user_files=[])
+    storage_service = FakeStorageService({}, {f"flow-{flow_id}/{file_name}": b"legacy contents"})
+    monkeypatch.setattr(mcp_utils, "session_scope", lambda: ClosingContext(fake_session))
+    monkeypatch.setattr(mcp_utils, "get_storage_service", lambda: storage_service)
+    token = mcp_utils.current_user_ctx.set(SimpleNamespace(id=user_id))
+    try:
+        result = await mcp_utils.handle_read_resource(f"http://host/api/v1/files/download/{flow_id}/{file_name}")
+    finally:
+        mcp_utils.current_user_ctx.reset(token)
+
+    assert base64.b64decode(result) == b"legacy contents"
 
 
 @pytest.mark.asyncio

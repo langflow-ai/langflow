@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from typing import Annotated, Any, cast
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Response, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Response, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi_pagination import Params
 from fastapi_pagination.ext.sqlmodel import apaginate
@@ -22,11 +22,13 @@ from langflow.api.utils import (
     CurrentActiveUser,
     DbSession,
     DbSessionReadOnly,
+    PageQuery,
+    SizeQuery,
     cascade_delete_flow,
     custom_params,
 )
 from langflow.api.utils.mcp.flow_secrets import extract_and_strip_mcp_secrets, mcp_server_names, stage_mcp_secrets
-from langflow.api.v1.auth_helpers import handle_auth_settings_update
+from langflow.api.v1.auth_helpers import get_default_project_auth_settings, handle_auth_settings_update
 from langflow.api.v1.flows import (
     _flow_read_for_caller,
     _handle_unique_constraint_error,
@@ -57,6 +59,7 @@ from langflow.api.v1.schemas.replacement_operations import (
     ProjectReplacementRequest,
     ProjectReplacementResult,
 )
+from langflow.api.v2.mcp import mcp_stdio_restricted_for_user
 from langflow.initial_setup.constants import ASSISTANT_FOLDER_NAME, STARTER_FOLDER_NAME
 from langflow.services.audit import vocabulary as audit_vocab
 from langflow.services.audit.operations import (
@@ -104,7 +107,7 @@ from langflow.services.database.models.deployment.exceptions import (
 )
 from langflow.services.database.models.deployment.guards import check_project_has_deployments
 from langflow.services.database.models.deployment.orm_guards import ensure_flow_moves_allowed
-from langflow.services.database.models.flow.model import Flow, FlowRead
+from langflow.services.database.models.flow.model import Flow, FlowRead, is_virtual_flow_id
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import (
     Folder,
@@ -294,7 +297,7 @@ async def _new_project(
             new_project.name = f"{new_project.name} (1)"
 
     settings_service = get_settings_service()
-    mcp_auth: dict = {"auth_type": "none"}
+    mcp_auth = get_default_project_auth_settings(settings_service.auth_settings, current_user)
     # Whether the API key below is something the caller asked for or something
     # this endpoint chose for them. It decides what happens if the deployment
     # refuses to issue one: a request is answered, a convenience is dropped.
@@ -303,13 +306,11 @@ async def _new_project(
     if project.auth_settings:
         mcp_auth = project.auth_settings.copy()
         new_project.auth_settings = encrypt_auth_settings(mcp_auth)
-    # If AUTO_LOGIN is false, automatically enable API key authentication
-    elif not settings_service.auth_settings.AUTO_LOGIN:
-        mcp_auth = {"auth_type": "apikey"}
+    elif mcp_auth["auth_type"] == "apikey":
         auth_was_chosen_for_caller = True
         new_project.auth_settings = encrypt_auth_settings(mcp_auth)
         await logger.adebug(
-            "Auto-enabled API key authentication for project %s (%s) due to AUTO_LOGIN=false",
+            "Auto-enabled API key authentication for project %s (%s) to match MCP authentication requirements",
             new_project.name,
             new_project.id,
         )
@@ -319,7 +320,9 @@ async def _new_project(
     await session.refresh(new_project)
 
     # Auto-register MCP server for this project with configured default auth
-    if get_settings_service().settings.add_projects_to_mcp_servers:
+    if settings_service.settings.add_projects_to_mcp_servers and not mcp_stdio_restricted_for_user(
+        current_user, settings_service.settings
+    ):
         try:
             await register_mcp_servers_for_project(
                 new_project, mcp_auth, current_user, session, owns_transaction=owns_transaction
@@ -665,8 +668,8 @@ async def read_project(
     project_id: UUID,
     current_user: CurrentActiveUser,
     params: Annotated[Params | None, Depends(custom_params)],
-    page: Annotated[int | None, Query()] = None,
-    size: Annotated[int | None, Query()] = None,
+    page: PageQuery = None,
+    size: SizeQuery = None,
     is_component: bool = False,
     is_flow: bool = False,
     search: str = "",
@@ -1200,12 +1203,9 @@ async def _replace_project_operation_once(
                     headers={ERROR_CODE_HEADER: "replacement_project_name_conflict"},
                 )
 
-            mcp_auth: dict = {"auth_type": "none"}
-            project_auth_settings = None
             settings_service = get_settings_service()
-            if not settings_service.auth_settings.AUTO_LOGIN:
-                mcp_auth = {"auth_type": "apikey"}
-                project_auth_settings = encrypt_auth_settings(mcp_auth)
+            mcp_auth = get_default_project_auth_settings(settings_service.auth_settings, current_user)
+            project_auth_settings = encrypt_auth_settings(mcp_auth) if mcp_auth["auth_type"] == "apikey" else None
             project = Folder(
                 id=project_id,
                 name=request_body.project_name,
@@ -1217,7 +1217,9 @@ async def _replace_project_operation_once(
             session.add(project)
             await session.flush()
             newly_created_project = project
-            if settings_service.settings.add_projects_to_mcp_servers:
+            if settings_service.settings.add_projects_to_mcp_servers and not mcp_stdio_restricted_for_user(
+                current_user, settings_service.settings
+            ):
                 try:
                     await register_mcp_servers_for_project(
                         project,
@@ -1228,11 +1230,7 @@ async def _replace_project_operation_once(
                         owns_transaction=False,
                     )
                 except ApiKeyIssuanceDeniedError as denial:
-                    # This branch always auto-chooses apikey auth — there is no
-                    # caller-supplied auth_settings on a replacement request —
-                    # so a denial mirrors _new_project's AUTO_LOGIN=false
-                    # default: create the project without the MCP server
-                    # rather than failing on a credential nothing asked for.
+                    # A refused default key skips MCP registration without failing project creation.
                     project.auth_settings = None
                     await logger.awarning(
                         "Skipped MCP auto-registration for project %s (%s): %s",
@@ -1447,7 +1445,7 @@ async def _replace_project_operation_once(
         catalog_policy_snapshot = get_catalog_policy_service().snapshot
         carried_secrets_by_id: dict[UUID, tuple[list[tuple[str, dict]], dict[str, str]]] = {}
         for flow in request_body.flows:
-            carried, variables = extract_and_strip_mcp_secrets(flow.data)
+            carried, variables = extract_and_strip_mcp_secrets(flow.data, flow_id=flow.id)
             if variables and current_user.id != project.user_id:
                 # MCP credentials are staged as the project owner's global
                 # variables, which rotation would overwrite for every flow the
@@ -2277,9 +2275,13 @@ async def delete_project(
             memory_base_cleanups.clear()
             await _lock_project_for_delete(session, project_id)
             target_name = target.name
-            flows = (
-                await session.exec(select(Flow).where(Flow.folder_id == project_id, Flow.user_id == project_owner_id))
-            ).all()
+            flows = (await session.exec(select(Flow).where(Flow.folder_id == project_id))).all()
+            # Folder deletion also cascades through flows owned by other contributors.
+            if any(is_virtual_flow_id(flow.id) for flow in flows):
+                raise HTTPException(
+                    status_code=400, detail="UUID5 flow IDs are reserved for public execution histories."
+                )
+            flows = [flow for flow in flows if flow.user_id == project_owner_id]
             removed_flows = {flow.id: flow.name for flow in flows}
             if len(flows) > 0:
                 for flow in flows:
@@ -2345,6 +2347,10 @@ async def delete_project(
         mark_committed()
         await finalize_flow_memory_base_cleanup(memory_base_cleanups)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
+    except HTTPException:
+        # Preserve intentional client errors (e.g. the reserved UUID5 flow
+        # guard in cascade_delete_flow) instead of masking them as 500s.
+        raise
     except Exception as e:
         await araise_if_deployment_guard_error_or_skip(
             e,

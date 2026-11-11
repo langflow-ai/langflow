@@ -54,21 +54,23 @@
     "node": "22.22.0"
   },
   "overrides": {
+    "http-cache-semantics": "^4.3.0",
     "axios": "^1.20.0",
     "basic-ftp": "^6.2.1",
     "source-map-js": "^1.2.2",
     "shell-quote": "^1.9.0",
+    "modern-tar": "^0.8.6",
     "websocket-driver": "^0.7.5",
     "brace-expansion@^1": "^1.1.21",
     "brace-expansion@^2": "^2.1.7",
-    "ip-address": "^10.7.2",
-    "undici": "^7.29.1",
+    "ip-address": "^10.7.6",
+    "undici": "^7.30.1",
     "serialize-javascript": "^7.0.5",
     "nanoid": "^3.3.17",
-    "dompurify": "^3.4.16",
+    "dompurify": "^3.4.17",
     "picomatch": "^4.0.4",
     "lodash": "4.18.1",
-    "fast-uri": "^3.1.8",
+    "fast-uri": "^3.1.9",
     "fast-xml-parser@^4": "^4.5.5",
     "fast-xml-parser@^5": "^5.11.2",
     "js-yaml@^3": "^3.15.2",
@@ -89,13 +91,13 @@
     "ajv@^8": "^8.18.0",
     "bn.js@^4": "^4.12.3",
     "bn.js@^5": "^5.2.3",
-    "body-parser": "^1.20.6",
+    "body-parser": "^1.20.9",
     "fflate": "^0.4.9",
     "http-proxy-middleware": "^2.0.10",
     "launch-editor": "^2.14.1",
-    "minimatch@^8": "^8.0.6",
-    "minimatch@^9": "^9.0.7",
-    "qs": "^6.16.0",
+    "minimatch@^8": "^11.0.4",
+    "minimatch@^9": "^11.0.4",
+    "qs": "^6.17.1",
     "webpack": "^5.104.1",
     "webpack-dev-server": "^5.2.6",
     "ws@^7": "^7.5.11",
@@ -113,6 +115,9 @@
     "styled-components": "^6.5.3",
     "serve-handler": {
       ".": "^6.1.7"
-    }
+    },
+    "follow-redirects": "^1.16.2",
+    "open@^10": "^11.0.4",
+    "glob": "^14.0.3"
   }
 }

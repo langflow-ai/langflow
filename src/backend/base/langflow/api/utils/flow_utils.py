@@ -24,13 +24,13 @@ from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
 )
 from langflow.services.database.models.deployment.guards import check_flow_has_deployed_versions
-from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow.model import Flow, is_virtual_flow_id
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.traces.model import SpanTable, TraceTable
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.trigger.model import Trigger
-from langflow.services.database.models.user.model import UserRead
+from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.triggers.cleanup import delete_triggers
 
@@ -50,6 +50,18 @@ async def _get_flow_name(flow_id: uuid.UUID) -> str:
     return flow.name
 
 
+async def get_authorized_legacy_flow_ids(flow_id: uuid.UUID | str) -> frozenset[str]:
+    """Allow a raw flow namespace only when no user owns the same ID."""
+    try:
+        flow_uuid = flow_id if isinstance(flow_id, uuid.UUID) else uuid.UUID(str(flow_id))
+    except (ValueError, AttributeError, TypeError):
+        return frozenset()
+    async with session_scope() as session:
+        if await session.get(User, flow_uuid) is not None:
+            return frozenset()
+    return frozenset({str(flow_uuid)})
+
+
 async def build_graph_from_data(flow_id: uuid.UUID | str, payload: dict, **kwargs):
     """Build and cache the graph.
 
@@ -65,7 +77,13 @@ async def build_graph_from_data(flow_id: uuid.UUID | str, payload: dict, **kwarg
     str_flow_id = str(flow_id)
     session_id = kwargs.get("session_id") or str_flow_id
 
-    graph = Graph.from_payload(payload, str_flow_id, flow_name, kwargs.get("user_id"))
+    graph = Graph.from_payload(
+        payload,
+        str_flow_id,
+        flow_name,
+        kwargs.get("user_id"),
+        authorized_legacy_flow_ids=await get_authorized_legacy_flow_ids(flow_id),
+    )
     if (execution_principal := kwargs.get("execution_principal")) is not None:
         stamp_execution_principal(graph, execution_principal)
     for vertex_id in graph.has_session_id_vertices:
@@ -105,16 +123,23 @@ async def build_and_cache_graph_from_data(
     chat_service: ChatService,
     graph_data: dict,
     *,
+    user_id: str | None = None,
     execution_principal: ExecutionPrincipal | None = None,
 ):  # -> Graph | Any:
     """Build and cache the graph.
 
     This is the Playground's primary build seam, so it carries the same
     ``execution_principal`` contract as ``build_graph_from_data``.
+    ``user_id`` records the caller on the graph for component initialization.
     """
     # Convert flow_id to str if it's UUID
     str_flow_id = str(flow_id) if isinstance(flow_id, uuid.UUID) else flow_id
-    graph = Graph.from_payload(graph_data, str_flow_id)
+    graph = Graph.from_payload(
+        graph_data,
+        str_flow_id,
+        user_id=user_id,
+        authorized_legacy_flow_ids=await get_authorized_legacy_flow_ids(flow_id),
+    )
     if execution_principal is not None:
         stamp_execution_principal(graph, execution_principal)
     await chat_service.set_cache(str_flow_id, graph)
@@ -134,6 +159,9 @@ async def cascade_delete_flow(
     :func:`~langflow.services.memory_base.flow_cleanup.finalize_flow_memory_base_cleanup`
     only after the transaction commits, and discard them if it rolls back.
     """
+    if is_virtual_flow_id(flow_id):
+        # Deleting a colliding Flow would also cascade through database foreign keys.
+        raise HTTPException(status_code=400, detail="UUID5 flow IDs are reserved for public execution histories.")
     # Imported lazily so this module (loaded early, via ``api.utils``) stays free
     # of the memory-base service import chain.
     from langflow.services.knowledge_base_storage.runtime import StorageUnavailableError
@@ -161,9 +189,7 @@ async def cascade_delete_flow(
         # by default (requires PRAGMA foreign_keys = ON), and this function follows
         # the existing pattern of explicitly deleting all child records.
         await session.exec(delete(FlowVersion).where(FlowVersion.flow_id == flow_id))
-        # span.trace_id FK lacks ON DELETE CASCADE in the DDL, so spans must
-        # be removed before traces to avoid an FK violation under
-        # PRAGMA foreign_keys=ON.
+        # span.trace_id lacks ON DELETE CASCADE, so remove spans first.
         trace_ids = (await session.exec(select(TraceTable.id).where(TraceTable.flow_id == flow_id))).all()
         if trace_ids:
             await session.exec(delete(SpanTable).where(col(SpanTable.trace_id).in_(trace_ids)))

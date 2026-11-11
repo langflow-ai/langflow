@@ -8,7 +8,6 @@ import TabItem from '@theme/TabItem';
 import Cards from "@site/src/components/Cards";
 import Card from "@site/src/components/Card";
 import Icon from "@site/src/components/icon";
-import PartialAutoLoginDefaults from '@site/docs/_partial-auto-login-defaults.mdx';
 
 Langflow can be installed in multiple ways. Choose an option below to jump to the steps.
 
@@ -81,12 +80,15 @@ For more information, see [Deploy Langflow on Docker](/deployment-docker).
     ```
 
     Replace `SUPERUSER_PASSWORD` with a strong password for the Langflow superuser.
-
-    <PartialAutoLoginDefaults />
+    The Docker image disables automatic login.
 
 3. To access Langflow, navigate to `http://localhost:7860/`.
 
-4. Create your first flow with the [Quickstart](/get-started-quickstart).
+4. Sign in with the username `langflow` or your configured `LANGFLOW_SUPERUSER`.
+
+    For more information, see [`LANGFLOW_AUTO_LOGIN`](/api-keys-and-authentication#langflow-auto-login).
+
+5. Create your first flow with the [Quickstart](/get-started-quickstart).
 
 ## Install and run the Langflow OSS Python package {#install-and-run-the-langflow-oss-python-package}
 
@@ -192,31 +194,44 @@ For more information, see [Deploy Langflow on Docker](/deployment-docker).
     Both packages use the `langflow` command. In Langflow 1.12,
     `langflow-base` does not provide a `langflow-base` executable.
 
-4. Set `LANGFLOW_SUPERUSER_PASSWORD` to a strong password, then start Langflow.
+4. Set a superuser password. As of Langflow 1.13, official release packages disable automatic login.
 
-    If the password is exported in your environment:
+    Create a `.env` file with the following values:
 
-    ```bash
-    uv run langflow run
+    ```text
+    LANGFLOW_AUTO_LOGIN=false
+    LANGFLOW_SUPERUSER_PASSWORD=YOUR_SUPERUSER_PASSWORD
     ```
 
-    If the password is in a `.env` file, pass that file with `--env-file`. This loads the file and overrides variables already set in the environment:
+    Replace `YOUR_SUPERUSER_PASSWORD` with a strong password for the Langflow superuser.
+
+5. Start Langflow with the `.env` file. `--env-file` loads the file and overrides variables already set in the environment:
 
     ```bash
     uv run langflow run --env-file .env
     ```
 
+    If `LANGFLOW_SUPERUSER_PASSWORD` is already exported in your environment, you can start Langflow with only `uv run langflow run`.
+
     It can take a few minutes for Langflow to start.
 
-    <PartialAutoLoginDefaults />
+6. To confirm that a local Langflow instance is running, navigate to the default Langflow URL `http://127.0.0.1:7860`.
 
-5. To confirm that a local Langflow instance is running, navigate to the default Langflow URL `http://127.0.0.1:7860`.
+7. Sign in with the username `langflow` or your configured `LANGFLOW_SUPERUSER`.
 
-6. Create your first flow with the [Quickstart](/get-started-quickstart).
+    For more information, see [`LANGFLOW_AUTO_LOGIN`](/api-keys-and-authentication#langflow-auto-login).
+
+8. Create your first flow with the [Quickstart](/get-started-quickstart).
 
 ### Manage the Langflow OSS version
 
-To upgrade Langflow to the latest version, run `uv pip install langflow -U`.
+:::warning Upgrading from Langflow 1.11.x
+Use the [1.11.x upgrade procedure](#upgrade-from-langflow-111) when moving an older full installation to 1.13.
+An in-place upgrade can leave incompatible provider packages installed.
+Neither `--upgrade` nor `--force-reinstall` removes packages that are no longer dependencies.
+:::
+
+For other Python installations, upgrade Langflow to the latest version with `uv pip install langflow -U`.
 However, the Langflow team recommends taking steps to backup your existing installation before you upgrade Langflow.
 For more information, see [Prepare to upgrade](/release-notes#prepare-to-upgrade).
 
@@ -224,12 +239,53 @@ To install a specific version of the Langflow package, add the required version 
 
 To reinstall Langflow and all of its dependencies, run `uv pip install langflow --force-reinstall`.
 
-:::note Langflow 1.12 package migration
-The new runnable `langflow-base` package starts at version `1.12.0` and stays
-version-aligned with `langflow`. Requirements such as
-`langflow-base~=0.12` remain on the previous package line and don't select the
-1.12 application.
+:::warning Upgrading from an auto-login installation
+Langflow 1.13 disables auto-login by default.
+Before you upgrade an installation that signs in automatically, [prepare the existing account for password sign-in](/api-keys-and-authentication#upgrade-from-auto-login).
+`LANGFLOW_SUPERUSER_PASSWORD` does not replace a password that was already generated for that account.
+If you already upgraded and can't sign in, see [Recover access after upgrading](/api-keys-and-authentication#recover-access-after-upgrading).
+Don't delete or reinstall Langflow to regain access, because that can permanently remove your flows.
 :::
+
+### Upgrade from Langflow 1.11.x {#upgrade-from-langflow-111}
+
+1. While the old version is still running, [prepare the existing account for password sign-in](/api-keys-and-authentication#upgrade-from-auto-login).
+   Then stop all Langflow workers and back up the database, configuration, uploaded files, and knowledge storage.
+   Keep the original Python environment and these backups until you have checked the new version.
+
+2. From your existing working directory, create a new environment in an unused directory and install the replacement version.
+
+   ```bash
+   uv venv --python 3.12 .venv-langflow-1.13
+   uv pip install --python .venv-langflow-1.13 'langflow[bundles]==1.13.2'
+   uv pip check --python .venv-langflow-1.13
+   ```
+
+   The `bundles` extra includes the optional provider packages omitted from the default installation.
+   To test a release candidate, use its full version instead, such as `1.13.2rc1`.
+   Resolve any dependency conflicts before starting Langflow.
+
+3. Put your original instance settings in an environment file for the new process.
+   If you already use a `.env` file, copy it and preserve its existing values.
+   Keep the original `LANGFLOW_CONFIG_DIR`, `LANGFLOW_KNOWLEDGE_BASES_DIR`, and file-storage settings.
+   Set `LANGFLOW_DATABASE_URL` explicitly to your existing external database URL or an absolute URL for your SQLite file.
+   The [default SQLite file](/memory#storage-options-and-paths) can be inside the old Python environment.
+   If so, copy it to a persistent directory outside both environments and point `LANGFLOW_DATABASE_URL` at that copy.
+   Retain the original `LANGFLOW_SECRET_KEY` if set, or the generated `secret_key` file in the config directory.
+   Use absolute storage paths and the same username and prepared password.
+   Set `LANGFLOW_AUTO_LOGIN=false` in the new environment file.
+
+4. Start the replacement environment using that file.
+
+   ```bash
+   uv run --no-project --python .venv-langflow-1.13 python -m langflow run --env-file /absolute/path/to/langflow-upgrade.env
+   ```
+
+   Replace the environment file path with your actual path.
+   Sign in as the existing user and check saved flows, credentials, files, and knowledge bases.
+   Keep the old environment if any active database or storage path still points inside it.
+   The first startup can migrate your database and local knowledge storage.
+   Returning to 1.11.x afterward requires restoring the database and storage backups before starting the old environment.
 
 ## Next steps
 

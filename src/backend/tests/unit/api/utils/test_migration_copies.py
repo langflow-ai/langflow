@@ -11,6 +11,7 @@ import sys
 
 import pytest
 from langflow.api.utils.migration_copies import (
+    COPY_COMMANDS,
     DECISIONS,
     blocking_code,
     copy_command,
@@ -129,6 +130,25 @@ def test_the_knowledge_base_copy_works_on_the_destination_database_and_puts_the_
         "LANGFLOW_DATABASE_URL": DESTINATION,
         "PGVECTOR_CONNECTION_STRING": DESTINATION,
     }
+
+
+# The settings that say which stores this server may dial.
+DIAL = {
+    "LANGFLOW_SSRF_PROTECTION_ENABLED": "true",
+    "LANGFLOW_SSRF_ALLOWED_HOSTS": "10.0.0.0/8",
+    "LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED": "true",
+    "LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK": "false",
+    "LANGFLOW_KB_ALLOWED_HOSTS": "opensearch.internal",
+}
+
+
+@pytest.mark.parametrize("step", list(COPY_COMMANDS))
+def test_a_copy_may_dial_the_stores_this_server_may_dial(step):
+    # The check of this instance read its stores with these settings. A store that only they let through, such
+    # as an OpenSearch server on the company network, would be out of reach for the copy without them.
+    env = copy_environment(step, {**SERVER, **DIAL}, {"database_url": DESTINATION, "files": S3_KEYS})
+
+    assert {name: env.get(name) for name in DIAL} == DIAL
 
 
 def test_the_file_copy_signs_in_with_the_keys_it_was_given_and_reads_none_of_the_servers_own():
@@ -309,6 +329,11 @@ NAMED = {"copy_knowledge_bases": "0b6c5a0e-kb", "copy_files": "0b6c5a0e-user/cat
         # Its row names the destination and its chunks are not there. This copy does not read the store they
         # are in.
         ("copy_knowledge_bases", "kb_target_short", "leave_behind", True),
+        # This instance cannot open or count its store: the store is gone, or its server cannot be reached
+        # from here. Copying again does not bring it back.
+        ("copy_knowledge_bases", "kb_source_unreadable", "leave_behind", True),
+        # This instance no longer serves it, and the check of this instance left it out.
+        ("copy_knowledge_bases", "kb_detached", "leave_behind", True),
         # An option of the command is for the whole step, so it names no item.
         ("copy_knowledge_bases", "kb_metric_change", "accept_ranking_change", False),
         ("copy_files", "file_conflict", "keep_bucket_file", True),

@@ -7,8 +7,9 @@ import time
 import warnings
 from collections import OrderedDict
 from collections.abc import Awaitable, Callable, Coroutine, Iterable, Mapping
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NoReturn
 from uuid import UUID
 
 import jwt
@@ -16,6 +17,7 @@ from fastapi import HTTPException, Request, WebSocketException, status
 from jwt import InvalidTokenError
 from lfx.log.logger import logger
 from lfx.services.auth.base import BaseAuthService
+from lfx.services.auth.utils import is_sync_auth_validation
 from lfx.services.model_provider_policy import set_current_model_provider_policy_context
 from lfx.services.settings.constants import DEFAULT_SUPERUSER, LEGACY_DEFAULT_SUPERUSER_PASSWORD
 from sqlalchemy.exc import IntegrityError
@@ -50,6 +52,7 @@ from langflow.services.auth.external import (
     resolve_external_identity,
     set_current_external_access_context,
 )
+from langflow.services.auth.refresh_tokens import create_refresh_session, refresh_session_id, register_refresh_session
 from langflow.services.database.models.api_key.crud import authenticate_api_key
 from langflow.services.database.models.user.crud import (
     get_user_by_id,
@@ -58,7 +61,7 @@ from langflow.services.database.models.user.crud import (
     update_user_last_login_at,
 )
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import session_scope
+from langflow.services.deps import get_db_service, session_scope
 from langflow.services.schema import ServiceType
 
 _MAX_EXTERNAL_AUTHORIZATION_GROUPS = 500
@@ -294,8 +297,19 @@ async def _safe_audit_directory_reconciliation(
 
 if TYPE_CHECKING:
     from cryptography.fernet import Fernet, MultiFernet
+    from lfx.services.authorization.base import ExecutionPrincipal
     from lfx.services.settings.service import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
+
+
+@asynccontextmanager
+async def _runtime_validation_scope():
+    if is_sync_auth_validation():
+        async with get_db_service().session_scope_for_sync_validation() as session:
+            yield session
+    else:
+        async with session_scope() as session:
+            yield session
 
 
 class AuthService(BaseAuthService):
@@ -389,15 +403,12 @@ class AuthService(BaseAuthService):
                 # 401 would blame a token that was never rejected.
                 raise
             except (AuthInvalidTokenError, TokenExpiredError, InactiveUserError) as e:
-                # Native auth failed. If a *distinct* external credential was
-                # extracted, try it before surfacing the native error so a present
-                # but invalid/expired native token can't shadow a valid external
-                # one. When external_token is None or identical to the token we
-                # already tried, behavior is unchanged.
-                if external_token and external_token != token:
+                # Native auth failed. Try only the separately-extracted external
+                # credential before surfacing the native error.
+                if external_token:
                     # A recognized auth failure can still follow external JIT
                     # materialization (for example, a later authorization-policy
-                    # rejection). Start the distinct credential at a clean
+                    # rejection). Start the external credential at a clean
                     # transaction and context boundary so its commit cannot
                     # persist state from the rejected attempt.
                     await db.rollback()
@@ -408,13 +419,13 @@ class AuthService(BaseAuthService):
                         return external_user
                 raise e  # noqa: TRY201
             except Exception as e:
-                # Token auth failed for an unexpected reason; try the distinct
+                # Token auth failed for an unexpected reason; try the configured
                 # external credential first, then fall back to API key if provided.
-                if external_token and external_token != token:
+                if external_token:
                     # Token authentication can delegate to external JIT
                     # provisioning, which may flush user/profile state before a
-                    # later step fails. Give the distinct external credential a
-                    # clean transaction and authentication context.
+                    # later step fails. Give the external credential a clean
+                    # transaction and authentication context.
                     await db.rollback()
                     clear_current_auth_context()
                     clear_current_external_access_context()
@@ -546,16 +557,10 @@ class AuthService(BaseAuthService):
             msg = "Token has expired"
             raise TokenExpiredError(msg) from e
         except InvalidTokenError as e:
-            external_user = await self._authenticate_with_external_token(token, db)
-            if external_user is not None:
-                return external_user
             logger.debug("JWT validation failed: Invalid token format or signature")
             msg = "Invalid token"
             raise AuthInvalidTokenError(msg) from e
         except Exception as e:
-            external_user = await self._authenticate_with_external_token(token, db)
-            if external_user is not None:
-                return external_user
             logger.error(f"Unexpected error decoding token: {e}")
             msg = "Token validation failed"
             raise AuthInvalidTokenError(msg) from e
@@ -1225,8 +1230,7 @@ class AuthService(BaseAuthService):
 
         ``external_token`` is an optional, separately-extracted external credential
         tried as a fallback when native token authentication fails so a
-        present-but-invalid native token cannot shadow a valid external one. When
-        ``None`` (or identical to ``token``) behavior is unchanged.
+        present-but-invalid native token cannot shadow a valid external one.
         """
         clear_current_auth_context()
         clear_current_external_access_context()
@@ -1270,17 +1274,15 @@ class AuthService(BaseAuthService):
             raise MissingCredentialsError(msg)
 
         # Use internal authentication method. Try the native token first; on
-        # failure fall back to a *distinct* external credential before surfacing
-        # the native error so a stale/invalid native token can't shadow a valid
-        # external one. When external_token is None or identical, behavior is
-        # unchanged.
+        # failure fall back only to the separately-extracted external credential
+        # before surfacing the native error.
         try:
             return await self._authenticate_with_token(resolved_token, db)
         except (AuthInvalidTokenError, TokenExpiredError, InactiveUserError, InvalidCredentialsError) as e:
-            if external_token and external_token != resolved_token:
+            if external_token:
                 # Match the framework-agnostic credential path: the failed
                 # attempt may have staged JIT/profile state before a policy
-                # rejection, so the distinct credential needs a clean boundary.
+                # rejection, so the external credential needs a clean boundary.
                 await db.rollback()
                 clear_current_auth_context()
                 clear_current_external_access_context()
@@ -1324,22 +1326,105 @@ class AuthService(BaseAuthService):
         set_current_model_provider_policy_context(user_id=current_user.id, attributes={"is_superuser": True})
         return current_user
 
+    async def validate_tool_call(
+        self,
+        *,
+        flow_id: str,
+        component_id: str,
+        tool_tag: str,
+        tool_name: str,
+        approval_actions: tuple[str, ...],
+        metadata_configured: bool,
+    ) -> None:
+        """Refuse stale tool permissions before the captured callable executes."""
+        from lfx.graph.graph.utils import process_flow
+
+        from langflow.services.database.models.flow.model import Flow
+
+        def deny() -> NoReturn:
+            msg = "Stored tool settings no longer authorize this call"
+            raise PermissionError(msg)
+
+        async with _runtime_validation_scope() as session:
+            flow = await session.get(Flow, UUID(flow_id))
+            if flow is None or not isinstance(flow.data, dict):
+                deny()
+            nodes = process_flow(flow.data).get("nodes") or []
+            matches = [node for node in nodes if isinstance(node, dict) and node.get("id") == component_id]
+            if len(matches) != 1:
+                deny()
+            node = matches[0]
+            node_info = (node.get("data") or {}).get("node") or {}
+            if node_info.get("tool_mode") is not True:
+                deny()
+            template = node_info.get("template") or {}
+            field = template.get("tools_metadata")
+            if field is None and not metadata_configured:
+                return
+            rows = field.get("value") if isinstance(field, dict) else None
+            if not isinstance(rows, list):
+                deny()
+            matches = [
+                row
+                for row in rows
+                if isinstance(row, dict)
+                and isinstance(row.get("tags"), list)
+                and row["tags"]
+                and row["tags"][0] == tool_tag
+            ]
+            if len(matches) != 1:
+                deny()
+            row = matches[0]
+            if row.get("status", True) is not True:
+                deny()
+            if row.get("name") and row["name"] != tool_name:
+                deny()
+            actions = row.get("approval_actions") or []
+            if actions and set(actions) != set(approval_actions):
+                deny()
+
+    async def validate_execution_user(
+        self,
+        user_id: str | UUID | None,
+        *,
+        principal: ExecutionPrincipal | None = None,
+        db: AsyncSession | None = None,
+    ) -> None:
+        from lfx.services.authorization.base import PUBLIC_ANONYMOUS_ACTOR_ID
+        from sqlmodel import select
+
+        if (
+            principal is not None
+            and principal.kind == "anonymous_public"
+            and principal.user_id is None
+            and principal.actor_id == str(PUBLIC_ANONYMOUS_ACTOR_ID)
+            and str(user_id) == str(PUBLIC_ANONYMOUS_ACTOR_ID)
+        ):
+            return
+        identities = {user_id}
+        if principal is not None and principal.kind != "anonymous_public":
+            identities.update((principal.user_id, principal.actor_id))
+        try:
+            ids = {UUID(str(identity)) for identity in identities if identity is not None}
+        except ValueError as exc:
+            raise HTTPException(status_code=401, detail="Invalid execution user") from exc
+        if not ids:
+            raise HTTPException(status_code=401, detail="Execution user is required")
+
+        async def validate(session: AsyncSession) -> None:
+            result = await session.exec(select(User.id).where(User.id.in_(ids), User.is_active == True))  # noqa: E712
+            if set(result.all()) != ids:
+                raise HTTPException(status_code=401, detail="Execution user is inactive or no longer exists")
+
+        if db is not None:
+            await validate(db)
+        else:
+            async with _runtime_validation_scope() as session:
+                await validate(session)
+
     async def get_webhook_user(self, flow_id: str, request: Request) -> UserRead:
-        settings_service = self.settings
         clear_current_auth_context()
         clear_current_external_access_context()
-
-        if not settings_service.auth_settings.WEBHOOK_AUTH_ENABLE:
-            try:
-                flow_owner = await get_user_by_flow_id_or_endpoint_name(flow_id)
-                # A deactivated owner (including one whose erase is in progress) must not keep running flows.
-                if flow_owner is None or not flow_owner.is_active:
-                    raise HTTPException(status_code=404, detail="Flow not found")
-                return flow_owner  # noqa: TRY300
-            except HTTPException:
-                raise
-            except Exception as exc:
-                raise HTTPException(status_code=404, detail="Flow not found") from exc
 
         api_key_header_val = request.headers.get("x-api-key")
         api_key_query_val = request.query_params.get("x-api-key")
@@ -1488,6 +1573,19 @@ class AuthService(BaseAuthService):
             return UUID(int=0)
 
     async def create_user_tokens(self, user_id: UUID, db: AsyncSession, *, update_last_login: bool = False) -> dict:
+        session_id = secrets.token_urlsafe(32)
+        tokens = self._create_session_tokens(user_id, session_id)
+        expires_at = datetime.now(timezone.utc) + timedelta(
+            seconds=self.settings.auth_settings.REFRESH_TOKEN_EXPIRE_SECONDS
+        )
+        if not await create_refresh_session(session_id, str(user_id), expires_at, db):
+            raise HTTPException(status_code=401, detail="User account is inactive or no longer exists")
+        if update_last_login:
+            await update_user_last_login_at(user_id, db)
+        return tokens
+
+    def _create_session_tokens(self, user_id: UUID, session_id: str) -> dict:
+        """Issue a token pair belonging to one native login session."""
         settings_service = self.settings
 
         access_token_expires = timedelta(seconds=settings_service.auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS)
@@ -1498,12 +1596,9 @@ class AuthService(BaseAuthService):
 
         refresh_token_expires = timedelta(seconds=settings_service.auth_settings.REFRESH_TOKEN_EXPIRE_SECONDS)
         refresh_token = self.create_token(
-            data={"sub": str(user_id), "type": "refresh"},
+            data={"sub": str(user_id), "type": "refresh", "jti": secrets.token_urlsafe(32), "sid": session_id},
             expires_delta=refresh_token_expires,
         )
-
-        if update_last_login:
-            await update_user_last_login_at(user_id, db)
 
         return {
             "access_token": access_token,
@@ -1526,12 +1621,20 @@ class AuthService(BaseAuthService):
                     refresh_token,
                     verification_key,
                     algorithms=[algorithm],
+                    options={"require": ["exp", "sub"]},
                 )
             user_id: UUID = payload.get("sub")  # type: ignore[assignment]
             token_type: str = payload.get("type")  # type: ignore[assignment]
 
             if user_id is None or token_type != "refresh":  # noqa: S105
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+
+            try:
+                user_id = UUID(user_id)
+                session_id = refresh_session_id(payload)
+                original_expires_at = datetime.fromtimestamp(float(payload["exp"]), timezone.utc)
+            except (TypeError, ValueError, OverflowError) as exc:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token") from exc
 
             user_exists = await get_user_by_id(db, user_id)
 
@@ -1541,7 +1644,16 @@ class AuthService(BaseAuthService):
             if not user_exists.is_active:
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User account is inactive")
 
-            return await self.create_user_tokens(user_id, db)
+            tokens = self._create_session_tokens(user_id, session_id)
+            # Compute this upper bound after minting to cover the replacement's
+            # full lifetime, including when the configured TTL changes.
+            expires_at = max(
+                original_expires_at,
+                datetime.now(timezone.utc)
+                + timedelta(seconds=settings_service.auth_settings.REFRESH_TOKEN_EXPIRE_SECONDS),
+            )
+            if not await register_refresh_session(session_id, str(user_id), expires_at, db):
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
 
         except InvalidTokenError as e:
             logger.exception("JWT decoding error")
@@ -1549,6 +1661,8 @@ class AuthService(BaseAuthService):
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid refresh token",
             ) from e
+        else:
+            return tokens
 
     async def authenticate_user(
         self, username: str, password: str, db: AsyncSession, request: Request | None = None
@@ -1680,11 +1794,16 @@ class AuthService(BaseAuthService):
         query_param: str | None,
         header_param: str | None,
         db: AsyncSession,
+        external_token: str | None = None,
     ) -> User | UserRead:
         clear_current_auth_context()
         clear_current_external_access_context()
-        if token:
-            return await self.get_current_user_from_access_token(token, db)
+        if token or external_token:
+            try:
+                return await self.get_current_user_from_access_token(token, db, external_token=external_token)
+            except MissingCredentialsError:
+                if not (query_param or header_param):
+                    raise
 
         settings_service = self.settings
         result: User | None

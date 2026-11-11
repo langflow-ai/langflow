@@ -64,7 +64,62 @@ class _OpenSearchReadError(Exception):
         self.error = error
 
 
-@pytest.mark.parametrize("operation", ["count", "iter_documents"])
+async def test_id_lookup_reads_current_documents_without_a_scan(tmp_path):
+    backend = _make_backend(tmp_path)
+    backend._vector_store = MagicMock()
+    backend._os_client = MagicMock()
+    backend._os_index = "test_index"
+    backend._os_text_field = "legacy_text"
+    backend._os_client.mget.return_value = {
+        "docs": [
+            {"_id": "one", "found": True, "_source": {"text": "stored", "metadata": {"job_id": "prior"}}},
+            {"_id": "missing", "found": False},
+        ]
+    }
+    documents = await backend.get_documents_by_ids(["one", "missing", "one"])
+    assert [(doc.id, doc.page_content, doc.metadata) for doc in documents] == [("one", "stored", {"job_id": "prior"})]
+    backend._os_client.mget.assert_called_once_with(index="test_index", body={"ids": ["one", "missing"]})
+    backend._os_client.search.assert_not_called()
+
+
+async def test_id_lookup_treats_per_document_missing_index_as_empty(tmp_path):
+    backend = _make_backend(tmp_path)
+    backend._vector_store = MagicMock()
+    backend._os_client = MagicMock()
+    backend._os_index = "test_index"
+    backend._os_client.mget.return_value = {
+        "docs": [
+            {
+                "_index": "test_index",
+                "_id": doc_id,
+                "error": {
+                    "type": "index_not_found_exception",
+                    "reason": "no such index [test_index]",
+                    "index": "test_index",
+                },
+            }
+            for doc_id in ["one", "two"]
+        ]
+    }
+    assert await backend.get_documents_by_ids(["one", "two"]) == []
+
+
+@pytest.mark.parametrize("error_type", ["unavailable", "security_exception", "search_context_missing_exception"])
+@pytest.mark.parametrize("missing_index_first", [False, True])
+async def test_id_lookup_does_not_treat_a_partial_failure_as_missing(tmp_path, error_type, missing_index_first):
+    backend = _make_backend(tmp_path)
+    backend._vector_store = MagicMock()
+    backend._os_client = MagicMock()
+    backend._os_index = "test_index"
+    results = [{"_id": "one", "error": {"type": error_type}}]
+    if missing_index_first:
+        results.insert(0, {"_id": "missing", "error": {"type": "index_not_found_exception"}})
+    backend._os_client.mget.return_value = {"docs": results}
+    with pytest.raises(RuntimeError, match="could not check"):
+        await backend.get_documents_by_ids(["one"])
+
+
+@pytest.mark.parametrize("operation", ["count", "iter_documents", "get_documents_by_ids"])
 @pytest.mark.parametrize(
     "error",
     [
@@ -77,28 +132,36 @@ class _OpenSearchReadError(Exception):
 )
 async def test_remote_read_propagates_failure(tmp_path, operation, error):
     backend = _make_backend(tmp_path)
+    backend._vector_store = MagicMock()
     backend._os_client = MagicMock()
     backend._os_client.count.side_effect = error
+    backend._os_client.mget.side_effect = error
     backend._os_index = "test_index"
     backend._os_vector_field = DEFAULT_VECTOR_FIELD
     backend._os_text_field = DEFAULT_TEXT_FIELD
     if operation == "count":
         with pytest.raises(type(error), match=str(error)):
             await backend.count()
-    else:
+    elif operation == "iter_documents":
         with patch("opensearchpy.helpers.scan", side_effect=error), pytest.raises(type(error), match=str(error)):
             _ = [batch async for batch in backend.iter_documents()]
+    else:
+        with pytest.raises(type(error), match=str(error)):
+            await backend.get_documents_by_ids(["one"])
 
 
 async def test_missing_index_is_an_empty_store(tmp_path):
     backend = _make_backend(tmp_path)
     error = _OpenSearchReadError(404, "index_not_found_exception")
+    backend._vector_store = MagicMock()
     backend._os_client = MagicMock()
     backend._os_client.count.side_effect = error
+    backend._os_client.mget.side_effect = error
     backend._os_index = "test_index"
     backend._os_vector_field = DEFAULT_VECTOR_FIELD
     backend._os_text_field = DEFAULT_TEXT_FIELD
     assert await backend.count() == 0
+    assert await backend.get_documents_by_ids(["one"]) == []
     with patch("opensearchpy.helpers.scan", side_effect=error):
         assert [batch async for batch in backend.iter_documents()] == []
 
@@ -881,7 +944,7 @@ class TestOpenSearchSSRFProtection:
         from lfx.utils.ssrf_protection import SSRFProtectionError
 
         backend = self._backend(tmp_path, "http://169.254.169.254/latest/meta-data/")
-        with pytest.raises(SSRFProtectionError, match="blocked"):
+        with pytest.raises(SSRFProtectionError, match="not allowed"):
             await backend._resolve_secrets()
 
     @pytest.mark.usefixtures("ssrf_env")
@@ -889,7 +952,7 @@ class TestOpenSearchSSRFProtection:
         from lfx.utils.ssrf_protection import SSRFProtectionError
 
         backend = self._backend(tmp_path, "http://10.0.0.5:9200")
-        with pytest.raises(SSRFProtectionError, match="blocked"):
+        with pytest.raises(SSRFProtectionError, match="not allowed"):
             await backend._resolve_secrets()
 
     @pytest.mark.usefixtures("ssrf_env")
@@ -899,7 +962,7 @@ class TestOpenSearchSSRFProtection:
         backend = self._backend(tmp_path, "http://opensearch.internal:9200")
         with (
             patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["10.1.2.3"]),
-            pytest.raises(SSRFProtectionError, match="blocked"),
+            pytest.raises(SSRFProtectionError, match="not allowed"),
         ):
             await backend._resolve_secrets()
 
@@ -928,7 +991,7 @@ class TestOpenSearchSSRFProtection:
         result = await backend.test_connection()
         assert result.ok is False
         assert result.details["type"] == "SSRFProtectionError"
-        assert "blocked" in result.message
+        assert "not allowed" in result.message
 
     @pytest.mark.usefixtures("ssrf_env")
     async def test_blocked_url_is_never_stashed_for_later_paths(self, tmp_path: Path) -> None:
@@ -979,7 +1042,7 @@ class TestOpenSearchDestinationPolicy:
         backend = self._backend(tmp_path, "https://rebind.attacker.example:9200", "variable")
         with (
             patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["93.184.216.34"]),
-            pytest.raises(SSRFProtectionError, match="not an approved destination"),
+            pytest.raises(SSRFProtectionError, match="not allowed"),
         ):
             await backend._resolve_secrets()
         assert getattr(backend, "_resolved_url", None) is None
@@ -1006,4 +1069,4 @@ class TestOpenSearchDestinationPolicy:
             result = await backend.test_connection()
         assert result.ok is False
         assert result.details["type"] == "SSRFProtectionError"
-        assert "not an approved destination" in result.message
+        assert "not allowed" in result.message

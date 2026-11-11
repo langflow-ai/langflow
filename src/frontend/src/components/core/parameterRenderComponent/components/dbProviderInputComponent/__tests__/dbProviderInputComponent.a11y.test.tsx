@@ -1,8 +1,16 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { axe } from "@/utils/a11y-test";
 import DBProviderInputComponent, { DBProviderInput } from "..";
+
+Element.prototype.scrollIntoView = jest.fn();
 
 type MockGlobalVariablesQuery = {
   data: never[];
@@ -69,6 +77,43 @@ const fieldProps = {
 };
 
 describe("DBProviderInput", () => {
+  it("selects both environment backends when only Postgres is the default", async () => {
+    const previousState = useUtilityStore.getState();
+    useUtilityStore.setState({
+      localVectorStoreAvailable: false,
+      defaultVectorStoreBackend: "postgres",
+      configuredVectorStoreBackends: ["postgres", "opensearch"],
+    });
+    const onValueChange = jest.fn();
+    try {
+      render(
+        <MemoryRouter>
+          <DBProviderInput
+            {...baseProps}
+            value="postgres"
+            onValueChange={onValueChange}
+          />
+        </MemoryRouter>,
+      );
+      expect(screen.queryByText("Needs setup")).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole("combobox"));
+      const postgres = await screen.findByTestId("postgres-provider-option");
+      const opensearch = screen.getByTestId("opensearch-provider-option");
+      expect(postgres).not.toHaveAttribute("aria-disabled", "true");
+      expect(opensearch).not.toHaveAttribute("aria-disabled", "true");
+      expect(
+        screen.queryByTestId("sqlite-provider-option"),
+      ).not.toBeInTheDocument();
+      fireEvent.click(opensearch);
+      expect(onValueChange).toHaveBeenCalledWith(
+        "opensearch",
+        expect.any(Object),
+      );
+    } finally {
+      useUtilityStore.setState(previousState);
+    }
+  });
+
   it("should_have_no_axe_violations", async () => {
     const { container } = render(
       <MemoryRouter>
@@ -139,6 +184,7 @@ describe("DBProviderInputComponent", () => {
       vectorStoreConfigLoaded: true,
       localVectorStoreAvailable: true,
       defaultVectorStoreBackend: undefined,
+      configuredVectorStoreBackends: [],
     });
     mockCurrentFlowId = "flow-project-a";
     mockGlobalVariablesQuery = {

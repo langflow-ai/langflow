@@ -46,4 +46,11 @@ export const skipIfMissing = {
       "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
     );
   },
+
+  basePathTestUrl: (): void => {
+    test.skip(
+      !process?.env?.LANGFLOW_BASE_PATH_TEST_URL,
+      "LANGFLOW_BASE_PATH_TEST_URL required to run this test",
+    );
+  },
 };

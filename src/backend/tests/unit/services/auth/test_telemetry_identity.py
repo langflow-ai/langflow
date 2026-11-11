@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
+from fastapi import HTTPException
 from langflow.api.v1 import endpoints
 from langflow.services.auth import utils as auth_utils
 from langflow.services.auth.service import AuthService
@@ -30,7 +31,8 @@ async def test_optional_user_sets_telemetry_identity(monkeypatch) -> None:
     auth_service = SimpleNamespace(get_current_user=AsyncMock(return_value=user))
     monkeypatch.setattr(auth_utils, "_auth_service", lambda: auth_service)
 
-    result = await auth_utils.get_optional_user(None, None, None, db=AsyncMock())
+    request = SimpleNamespace(headers={}, cookies={})
+    result = await auth_utils.get_optional_user(request, None, None, None, db=AsyncMock())
 
     assert result is user
     assert get_current_telemetry_user_id() == get_installation_user_id(user.id, "test-installation")
@@ -69,10 +71,10 @@ async def test_streaming_user_sets_telemetry_identity(monkeypatch, auth_method, 
     monkeypatch.setattr(auth_utils, "_auth_service", lambda: auth_service)
 
     if auth_method is auth_utils.get_current_user_for_websocket:
-        request = SimpleNamespace(cookies={}, query_params={}, headers={})
+        request = SimpleNamespace(cookies={}, query_params={}, headers={}, scope={})
         result = await auth_method(request, AsyncMock())
     else:
-        request = SimpleNamespace(cookies={}, query_params={}, headers={})
+        request = SimpleNamespace(cookies={}, query_params={}, headers={}, scope={})
         result = await auth_method(request, db=AsyncMock())
 
     assert result is user
@@ -84,7 +86,7 @@ async def test_current_user_optional_sets_telemetry_identity(monkeypatch) -> Non
     user = SimpleNamespace(id=uuid4(), username="alice")
     auth_service = SimpleNamespace(get_current_user_for_sse=AsyncMock(return_value=user))
     monkeypatch.setattr(auth_utils, "_auth_service", lambda: auth_service)
-    request = SimpleNamespace(cookies={"access_token_lf": "token"}, query_params={}, headers={})
+    request = SimpleNamespace(cookies={"access_token_lf": "token"}, query_params={}, headers={}, scope={})
 
     result = await auth_utils.get_current_user_optional(request, db=AsyncMock())
 
@@ -117,7 +119,7 @@ def test_default_or_missing_user_uses_installation_fallback(username) -> None:
 
 
 @pytest.mark.asyncio
-async def test_public_webhook_does_not_attribute_the_owner(monkeypatch) -> None:
+async def test_rejected_webhook_does_not_attribute_the_owner(monkeypatch) -> None:
     owner = SimpleNamespace(id="owner-id", username="alice", is_active=True)
     settings = SimpleNamespace(auth_settings=SimpleNamespace(WEBHOOK_AUTH_ENABLE=False))
     auth_service = AuthService(settings)
@@ -127,9 +129,8 @@ async def test_public_webhook_does_not_attribute_the_owner(monkeypatch) -> None:
         "langflow.services.auth.service.get_user_by_flow_id_or_endpoint_name",
         AsyncMock(return_value=owner),
     )
-    set_current_telemetry_user(uuid4(), "test-installation")
+    with pytest.raises(HTTPException) as exc_info:
+        await auth_utils.get_webhook_user("public-flow", SimpleNamespace(headers={}, query_params={}))
 
-    result = await auth_utils.get_webhook_user("public-flow", SimpleNamespace(headers={}, query_params={}))
-
-    assert result is owner
+    assert exc_info.value.status_code == 403
     assert get_current_telemetry_user_id() is None

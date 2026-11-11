@@ -9,13 +9,20 @@ from pydantic import BaseModel
 from langflow.api.utils import DbSession
 from langflow.api.v1.schemas import Token
 from langflow.initial_setup.setup import get_or_create_default_folder
+from langflow.services.auth.cookies import auth_cookie_name
 from langflow.services.auth.exceptions import AuthenticationError
+from langflow.services.auth.refresh_tokens import revoke_refresh_token
 from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_auth_service, get_settings_service, get_variable_service
 from langflow.services.rate_limit import check_rate_limit
 
 router = APIRouter(tags=["Login"])
+
+
+def _cookie_path(request: Request) -> str:
+    """Match the frontend base configured at startup, independent of forwarded headers."""
+    return f"{request.app.root_path.strip().rstrip('/')}/"
 
 
 def get_limiter_from_app(request: Request):
@@ -61,8 +68,9 @@ async def login_to_get_access_token(
     if user:
         tokens = await auth.create_user_tokens(user_id=user.id, db=db, update_last_login=True)
         response.set_cookie(
-            "refresh_token_lf",
+            auth_cookie_name("refresh_token_lf", request),
             tokens["refresh_token"],
+            path=_cookie_path(request),
             httponly=auth_settings.REFRESH_HTTPONLY,
             samesite=auth_settings.REFRESH_SAME_SITE,
             secure=auth_settings.REFRESH_SECURE,
@@ -70,8 +78,9 @@ async def login_to_get_access_token(
             domain=auth_settings.COOKIE_DOMAIN,
         )
         response.set_cookie(
-            "access_token_lf",
+            auth_cookie_name("access_token_lf", request),
             tokens["access_token"],
+            path=_cookie_path(request),
             httponly=auth_settings.ACCESS_HTTPONLY,
             samesite=auth_settings.ACCESS_SAME_SITE,
             secure=auth_settings.ACCESS_SECURE,
@@ -79,8 +88,9 @@ async def login_to_get_access_token(
             domain=auth_settings.COOKIE_DOMAIN,
         )
         response.set_cookie(
-            "apikey_tkn_lflw",
+            auth_cookie_name("apikey_tkn_lflw", request),
             str(user.store_api_key),
+            path=_cookie_path(request),
             httponly=auth_settings.ACCESS_HTTPONLY,
             samesite=auth_settings.ACCESS_SAME_SITE,
             secure=auth_settings.ACCESS_SECURE,
@@ -106,7 +116,7 @@ async def login_to_get_access_token(
 
 
 @router.get("/auto_login", include_in_schema=False)
-async def auto_login(response: Response, db: DbSession):
+async def auto_login(request: Request, response: Response, db: DbSession):
     auth_settings = get_settings_service().auth_settings
 
     if auth_settings.AUTO_LOGIN:
@@ -117,8 +127,9 @@ async def auto_login(response: Response, db: DbSession):
         # of relying on a year-long token.
         if tokens.get("refresh_token"):
             response.set_cookie(
-                "refresh_token_lf",
+                auth_cookie_name("refresh_token_lf", request),
                 tokens["refresh_token"],
+                path=_cookie_path(request),
                 httponly=auth_settings.REFRESH_HTTPONLY,
                 samesite=auth_settings.REFRESH_SAME_SITE,
                 secure=auth_settings.REFRESH_SECURE,
@@ -126,8 +137,9 @@ async def auto_login(response: Response, db: DbSession):
                 domain=auth_settings.COOKIE_DOMAIN,
             )
         response.set_cookie(
-            "access_token_lf",
+            auth_cookie_name("access_token_lf", request),
             tokens["access_token"],
+            path=_cookie_path(request),
             httponly=auth_settings.ACCESS_HTTPONLY,
             samesite=auth_settings.ACCESS_SAME_SITE,
             secure=auth_settings.ACCESS_SECURE,
@@ -142,8 +154,9 @@ async def auto_login(response: Response, db: DbSession):
                 user.store_api_key = ""
 
             response.set_cookie(
-                "apikey_tkn_lflw",
+                auth_cookie_name("apikey_tkn_lflw", request),
                 str(user.store_api_key),  # Ensure it's a string
+                path=_cookie_path(request),
                 httponly=auth_settings.ACCESS_HTTPONLY,
                 samesite=auth_settings.ACCESS_SAME_SITE,
                 secure=auth_settings.ACCESS_SECURE,
@@ -175,14 +188,15 @@ async def refresh_token(
 ):
     auth_settings = get_settings_service().auth_settings
 
-    token = request.cookies.get("refresh_token_lf")
+    token = request.cookies.get(auth_cookie_name("refresh_token_lf", request))
 
     if token:
         auth = get_auth_service()
         tokens = await auth.create_refresh_token(token, db)
         response.set_cookie(
-            "refresh_token_lf",
+            auth_cookie_name("refresh_token_lf", request),
             tokens["refresh_token"],
+            path=_cookie_path(request),
             httponly=auth_settings.REFRESH_HTTPONLY,
             samesite=auth_settings.REFRESH_SAME_SITE,
             secure=auth_settings.REFRESH_SECURE,
@@ -190,8 +204,9 @@ async def refresh_token(
             domain=auth_settings.COOKIE_DOMAIN,
         )
         response.set_cookie(
-            "access_token_lf",
+            auth_cookie_name("access_token_lf", request),
             tokens["access_token"],
+            path=_cookie_path(request),
             httponly=auth_settings.ACCESS_HTTPONLY,
             samesite=auth_settings.ACCESS_SAME_SITE,
             secure=auth_settings.ACCESS_SECURE,
@@ -246,25 +261,32 @@ async def get_session(
 
 
 @router.post("/logout", include_in_schema=False)
-async def logout(response: Response):
-    auth_settings = get_settings_service().auth_settings
+async def logout(request: Request, response: Response, db: DbSession):
+    settings = get_settings_service()
+    auth_settings = settings.auth_settings
+    token = request.cookies.get(auth_cookie_name("refresh_token_lf", request))
+    if token:
+        await revoke_refresh_token(token, db, settings)
 
     response.delete_cookie(
-        "refresh_token_lf",
+        auth_cookie_name("refresh_token_lf", request),
+        path=_cookie_path(request),
         httponly=auth_settings.REFRESH_HTTPONLY,
         samesite=auth_settings.REFRESH_SAME_SITE,
         secure=auth_settings.REFRESH_SECURE,
         domain=auth_settings.COOKIE_DOMAIN,
     )
     response.delete_cookie(
-        "access_token_lf",
+        auth_cookie_name("access_token_lf", request),
+        path=_cookie_path(request),
         httponly=auth_settings.ACCESS_HTTPONLY,
         samesite=auth_settings.ACCESS_SAME_SITE,
         secure=auth_settings.ACCESS_SECURE,
         domain=auth_settings.COOKIE_DOMAIN,
     )
     response.delete_cookie(
-        "apikey_tkn_lflw",
+        auth_cookie_name("apikey_tkn_lflw", request),
+        path=_cookie_path(request),
         httponly=auth_settings.ACCESS_HTTPONLY,
         samesite=auth_settings.ACCESS_SAME_SITE,
         secure=auth_settings.ACCESS_SECURE,

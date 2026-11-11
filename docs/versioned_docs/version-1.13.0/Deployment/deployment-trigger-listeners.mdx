@@ -1,0 +1,147 @@
+---
+title: Deploy Langflow trigger listeners
+slug: /deployment-trigger-listeners
+---
+
+Some triggers need Langflow to call out and hold a connection, or to poll a provider. Slack Socket Mode works this way, and so do polling triggers for Microsoft and Google. That work runs in a separate `langflow listeners` process, not in the API.
+
+Use listeners when Langflow is not reachable from the public internet, including Langflow Desktop. If a provider can post to a public HTTPS URL instead, see [Receive provider events with trigger webhooks](./deployment-trigger-webhooks.mdx).
+
+## Prerequisites
+
+Complete these before you start the listener. It uses the same database and credentials as the API, and it does not run database migrations.
+
+1. Start or upgrade the Langflow API against this database first. If the trigger tables are missing, the listener exits and tells you to start the API.
+2. Use the API's `LANGFLOW_DATABASE_URL`. Use PostgreSQL when more than one API or listener process will run. A single container can use SQLite.
+3. Use the API's `LANGFLOW_SECRET_KEY`. A different key cannot read connection credentials.
+4. If any connection was authorized with OAuth, set `LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS` to the same value as the API. The listener refreshes tokens itself. Without the registrations, every refresh fails.
+
+## Choose how to run listeners
+
+- **Kubernetes:** a second Deployment, with `args: ["langflow", "listeners"]`.
+- **Docker Compose:** a second service, with `command: ["langflow", "listeners"]`.
+- **One container, or Langflow Desktop:** a child of the API, with `LANGFLOW_LISTENERS_MODE=subprocess`.
+
+`lfx run` and `lfx serve` do not run listeners.
+
+In subprocess mode, listeners stop when Langflow stops. On Desktop, triggers fire only while Langflow is open.
+
+## Run listeners on Kubernetes
+
+1. Add a Deployment next to the API Deployment. Use the same image. Set `args` to `["langflow", "listeners"]`.
+2. Pass `LANGFLOW_DATABASE_URL`, `LANGFLOW_SECRET_KEY`, and, when you use OAuth, `LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS`.
+3. Set `LANGFLOW_LISTENERS_HEALTH_HOST` to `0.0.0.0`. The default bind is loopback, so probes cannot reach it.
+4. Point the liveness probe at `GET /health` on port `7861`, and the readiness probe at `GET /healthz` on the same port.
+5. Set `terminationGracePeriodSeconds` to at least `30`, and use a `Recreate` strategy so two listener processes do not overlap by accident.
+6. Do not add a Service or Ingress. The listener accepts no provider traffic.
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: langflow-listeners
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    spec:
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: listeners
+          image: langflowai/langflow:latest
+          args: ["langflow", "listeners"]
+          env:
+            - name: LANGFLOW_DATABASE_URL
+              valueFrom:
+                secretKeyRef: {name: langflow-secrets, key: database-url}
+            - name: LANGFLOW_SECRET_KEY
+              valueFrom:
+                secretKeyRef: {name: langflow-secrets, key: secret-key}
+            - name: LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS
+              valueFrom:
+                secretKeyRef: {name: langflow-secrets, key: connection-oauth-registrations, optional: true}
+            - name: LANGFLOW_LISTENERS_HEALTH_HOST
+              value: "0.0.0.0"
+          ports:
+            - name: health
+              containerPort: 7861
+          livenessProbe:
+            httpGet: {path: /health, port: health}
+          readinessProbe:
+            httpGet: {path: /healthz, port: health}
+```
+
+Example manifests are in [`deploy/listeners/`](https://github.com/langflow-ai/langflow/tree/main/deploy/listeners).
+
+## Run listeners with Docker Compose
+
+1. Add a service that uses the same image as the API.
+2. Set `command` to `["langflow", "listeners"]`.
+3. Set the same database URL, secret key, and OAuth registrations as the API.
+4. Set `LANGFLOW_LISTENERS_HEALTH_HOST` to `0.0.0.0`.
+5. Start the API before this service. Give the container at least 30 seconds to stop.
+
+```yaml
+services:
+  langflow-listeners:
+    image: langflowai/langflow:latest
+    command: ["langflow", "listeners"]
+    depends_on:
+      - langflow
+      - postgres
+    environment:
+      - LANGFLOW_DATABASE_URL=${LANGFLOW_DATABASE_URL:?set LANGFLOW_DATABASE_URL to the API's database}
+      - LANGFLOW_SECRET_KEY=${LANGFLOW_SECRET_KEY:?set LANGFLOW_SECRET_KEY to the API's key}
+      - LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS=${LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS:-}
+      - LANGFLOW_LISTENERS_HEALTH_HOST=0.0.0.0
+    stop_grace_period: 30s
+    restart: unless-stopped
+```
+
+## Run listeners in one container or on Desktop
+
+1. Set this variable on the Langflow container or app:
+
+    ```bash
+    LANGFLOW_LISTENERS_MODE=subprocess
+    ```
+
+2. Start Langflow. It starts `langflow listeners` as a child and stops that child on shutdown.
+3. Leave Langflow running. On Desktop, triggers fire only while the app is open.
+
+Only one API worker starts the child, even when `LANGFLOW_WORKERS` is greater than 1.
+
+## Confirm the listener is working
+
+1. Open `http://<listener>:7861/healthz`. A ready listener returns success. A `503` means it is not ready to hold connections.
+2. Enable the trigger on the flow. For Slack Socket Mode, use an app-level token connection. Setup is on [Slack triggers](../Components/bundles-slack.mdx#slack-triggers).
+3. Cause an event the trigger listens for, and confirm the flow runs.
+
+Listeners do not run the flow. The API does. The listener only records the event.
+
+## Troubleshoot
+
+**The listener exits and says the trigger tables are missing.**
+Start or upgrade the API against this database, then start the listener again.
+
+**A trigger says the listener cannot read the connection.**
+The listener's `LANGFLOW_SECRET_KEY` or `LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS` does not match the API. Set both to the API's values and restart the listener. Armed triggers resume on their own.
+
+**A trigger shows "needs reconnect."**
+The provider revoked or expired the credential. Reconnect the connection, then enable the trigger again.
+
+**A new replica holds no connections.**
+Check that it uses the same database as the other replicas. If it does, wait a few seconds. The loaded replica releases extra connections, and the new one takes them.
+
+**The same event runs the flow twice.**
+Check whether two triggers are armed on the same source. One trigger records a matching provider event once.
+
+## Reference
+
+| Variable | Default | Description |
+|---|---|---|
+| `LANGFLOW_LISTENERS_MODE` | `off` | Set to `subprocess` to run the listener as a child of the API. |
+| `LANGFLOW_LISTENERS_HEALTH_HOST` | `127.0.0.1` | Set to `0.0.0.0` so container probes can reach the health server. |
+| `LANGFLOW_LISTENERS_HEALTH_PORT` | `7861` | Port for `/health` and `/healthz`. |
+| `LANGFLOW_TRIGGER_SLACK_SOCKET_MAX_CONNECTIONS` | `10` | Socket Mode connections one Slack app may hold. Slack's own limit is 10. |

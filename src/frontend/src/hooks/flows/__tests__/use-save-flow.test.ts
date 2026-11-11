@@ -1,5 +1,5 @@
 // biome-ignore-all lint/suspicious/noExplicitAny: store mocks intentionally accept multiple selector shapes
-import { renderHook } from "@testing-library/react";
+import { renderHook, waitFor } from "@testing-library/react";
 import useSaveFlow from "../use-save-flow";
 
 const mockSetFlows = jest.fn();
@@ -16,8 +16,15 @@ jest.mock("@/controllers/API/queries/flows/use-get-flow", () => ({
   useGetFlow: () => ({ mutate: mockGetFlow }),
 }));
 
+// Each case scripts the request through `mockMutate`'s callbacks; the hook
+// itself awaits `mutateAsync`, which settles the same way.
 jest.mock("@/controllers/API/queries/flows/use-patch-update-flow", () => ({
-  usePatchUpdateFlow: () => ({ mutate: mockMutate }),
+  usePatchUpdateFlow: () => ({
+    mutateAsync: (payload: unknown) =>
+      new Promise((resolve, reject) =>
+        mockMutate(payload, { onSuccess: resolve, onError: reject }),
+      ),
+  }),
 }));
 
 jest.mock("@/stores/alertStore", () => ({
@@ -505,6 +512,8 @@ describe("useSaveFlow", () => {
 
       const { result } = renderHook(() => useSaveFlow());
       const inFlight = result.current({ ...lockedFlow, locked: false });
+      // The graph save starts once the unlock request has settled.
+      await waitFor(() => expect(resolveSave).toBeDefined());
       landNodeUpdate();
 
       resolveSave!();

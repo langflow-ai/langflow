@@ -289,9 +289,11 @@ class Message(Data):
         if is_secret_value(text_val):
             text_val = str(text_val)
             self.data[self.text_key] = text_val
-        if text_val is not None and not isinstance(text_val, str):
+        if isinstance(text_val, AsyncIterator | Iterator):
             self.data.pop("text", None)
             self.__dict__["_text_stream"] = text_val
+        elif text_val is not None and not isinstance(text_val, str):
+            self.data[self.text_key] = str(text_val)
         new_files: list[Any] = []
         for file in self.files or []:
             # Skip if already an Image instance
@@ -1045,6 +1047,7 @@ class ErrorMessage(Message):
                             field=str(exception.field) if hasattr(exception, "field") else None,
                             reason=markdown_reason,
                             solution=str(solution) if solution is not None else None,
+                            code=exception.code if isinstance(exception, IntegrationError) else None,
                             traceback=traceback.format_exc() if include_traceback else "",
                         )
                     ],

@@ -11,6 +11,7 @@ scrubbed flow keeps running unchanged. Flows saved before this are left alone.
 """
 
 import uuid
+from copy import deepcopy
 
 import pytest
 from fastapi import status
@@ -76,6 +77,48 @@ async def test_should_not_persist_header_secret_on_create(client: AsyncClient, l
 
     assert SECRET not in raw
     assert _stored_config(flow)["headers"] == {"x-api-key": variable_name_for(server_name, "x-api-key")}
+
+
+async def test_should_persist_independent_component_header_overrides(
+    client: AsyncClient, logged_in_headers, active_user
+):
+    server_name = f"billing-{uuid.uuid4().hex[:6]}"
+    payload = _flow_payload(server_name, {"url": "https://serving.internal/mcp"})
+    payload["id"] = str(uuid.uuid4())
+    first = payload["data"]["nodes"][0]
+    second = deepcopy(first)
+    second["id"] = second["data"]["id"] = "MCPTools-second"
+    payload["data"]["nodes"].append(second)
+    credentials = ("Bearer first-account", "Bearer second-account")
+    for node, credential in zip(payload["data"]["nodes"], credentials, strict=True):
+        node["data"]["node"]["template"]["headers"] = {
+            "name": "headers",
+            "value": {"Authorization": credential},
+        }
+
+    response = await client.post("api/v1/flows/", json=payload, headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_201_CREATED, response.text
+    assert all(credential not in response.text for credential in credentials)
+    references = [
+        node["data"]["node"]["template"]["headers"]["value"]["Authorization"]
+        for node in response.json()["data"]["nodes"]
+    ]
+    assert len(set(references)) == 2
+    repeated = await client.patch(
+        f"api/v1/flows/{payload['id']}", json={"data": payload["data"]}, headers=logged_in_headers
+    )
+    assert repeated.status_code == status.HTTP_200_OK, repeated.text
+    assert [
+        node["data"]["node"]["template"]["headers"]["value"]["Authorization"]
+        for node in repeated.json()["data"]["nodes"]
+    ] == references
+    async with session_scope() as session:
+        for reference, credential in zip(references, credentials, strict=True):
+            value = await get_variable_service().get_variable(
+                user_id=active_user.id, name=reference, field="", session=session
+            )
+            assert value.get_secret_value() == credential
 
 
 async def test_should_keep_non_secret_config_intact(client: AsyncClient, logged_in_headers):

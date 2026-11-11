@@ -240,6 +240,42 @@ describe("useAutoSaveFlow", () => {
     );
   });
 
+  it("makes a remounted canvas wait for the save the unmounted one left in flight", async () => {
+    (useFlowsManagerStore as unknown as jest.Mock).mockImplementation(
+      (selector) =>
+        selector({
+          autoSaving: true,
+          autoSavingInterval: 3000,
+          currentFlowId: "flow-1",
+        }),
+    );
+    let settleOrphan = () => {};
+    mockSaveFlow
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            settleOrphan = resolve;
+          }),
+      )
+      .mockResolvedValue(undefined);
+
+    // Memories or Traces replaces the canvas while its save is in flight.
+    const first = renderHook(() => useAutoSaveFlow());
+    first.result.current({ ...makeMockFlow(), name: "Orphan" });
+    await waitFor(() => expect(mockSaveFlow).toHaveBeenCalledTimes(1));
+    first.unmount();
+
+    const second = renderHook(() => useAutoSaveFlow());
+    second.result.current({ ...makeMockFlow(), name: "Back on canvas" });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(mockSaveFlow).toHaveBeenCalledTimes(1);
+
+    act(() => settleOrphan());
+    await waitFor(() => expect(mockSaveFlow).toHaveBeenCalledTimes(2));
+    await expect(second.result.current.flush()).resolves.toBeUndefined();
+  });
+
   it("rejects a failed enqueued save without blocking later saves", async () => {
     (useFlowsManagerStore as unknown as jest.Mock).mockImplementation(
       (selector) =>

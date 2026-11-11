@@ -11,15 +11,11 @@ from urllib.parse import urlsplit
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, ValidationError, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-#: The one reason worth telling apart. ``registration-unavailable`` means this
-#: process cannot see a usable registration for a connection - unparsable or
-#: absent ``LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS``, a registration that does
-#: not validate, one that belongs to another deployment context. The
-#: authorization is intact; the process is configured wrong, so a caller that
-#: would otherwise disarm the work (a listener holding a trigger) should retry
-#: instead. Every other OAuthError describes the authorization itself and does
-#: need a human to reconnect.
-OAuthErrorReason = Literal["registration-unavailable"]
+#: These failures do not establish that the authorization is expired.
+#: ``registration-unavailable`` means this process lacks usable OAuth settings.
+#: ``provider-unavailable`` means the exchange failed without a confirmed
+#: credential rejection. Neither should disarm a listener or require reconnect.
+OAuthErrorReason = Literal["registration-unavailable", "provider-unavailable"]
 
 
 class OAuthError(ValueError):

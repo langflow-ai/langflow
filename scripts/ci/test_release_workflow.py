@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import ast
 from pathlib import Path
+
+import yaml
 
 WORKFLOWS_DIR = Path(__file__).resolve().parents[2] / ".github" / "workflows"
 WORKFLOW_PATH = WORKFLOWS_DIR / "release.yml"
@@ -20,6 +23,42 @@ def _job_block(path: Path, start_job: str, end_job: str) -> str:
     start = workflow.index(f"\n  {start_job}:")
     end = workflow.index(f"\n  {end_job}:", start)
     return workflow[start:end]
+
+
+def test_release_and_nightly_use_current_python_matrix() -> None:
+    for name, job_name in [("release.yml", "ci"), ("nightly_build.yml", "backend-unit-tests")]:
+        jobs = yaml.safe_load((WORKFLOWS_DIR / name).read_text())["jobs"]
+        versions = ast.literal_eval(jobs[job_name]["with"]["python-versions"])
+        assert set(versions) == {"3.11", "3.12", "3.13", "3.14", "3.15"}, name
+
+
+def test_installation_gate_requires_stable_python_and_isolates_preview() -> None:
+    jobs = yaml.safe_load(CROSS_PLATFORM_WORKFLOW_PATH.read_text())["jobs"]
+    stable = jobs["test-installation-stable"]
+    preview = jobs["test-installation-experimental"]
+    assert not stable.get("continue-on-error", False)
+    assert preview["continue-on-error"] is True
+    assert preview["strategy"]["fail-fast"] is False
+    for os_name in ("linux", "macos", "windows"):
+        versions = {leg["python-version"] for leg in stable["strategy"]["matrix"]["include"] if leg["os"] == os_name}
+        assert versions == {"3.11", "3.12", "3.13", "3.14"}, os_name
+    assert {leg["python-version"] for leg in preview["strategy"]["matrix"]["include"]} == {"3.15"}
+
+
+def test_release_python_preview_failures_cannot_cancel_required_jobs() -> None:
+    matrix_jobs = {
+        "backend-unit-tests.yml": ["test", "report"],
+        "python_test.yml": ["bundle-guarded-tests", "integration-tests", "lfx-tests", "test-cli"],
+        "release-inventory-gate.yml": ["python-base-inventory", "python-inventory"],
+        "release-lfx.yml": ["run-tests"],
+        "release_bundles.yml": ["test-install"],
+    }
+    for name, job_names in matrix_jobs.items():
+        jobs = yaml.safe_load((WORKFLOWS_DIR / name).read_text())["jobs"]
+        for job_name in job_names:
+            job = jobs[job_name]
+            assert job["continue-on-error"] == "${{ matrix.python-version == '3.15' }}", (name, job_name)
+            assert job["strategy"]["fail-fast"] is False, (name, job_name)
 
 
 def test_finalized_bundles_do_not_influence_shared_rc_number() -> None:
@@ -57,12 +96,36 @@ def test_full_release_requires_and_consumes_the_aligned_base_artifact() -> None:
     assert "langflow ($main_version) and langflow-base ($base_version) must be version-aligned" in validation
     assert "Please enable 'release_package_base' when releasing Langflow" in validation
     assert "Download base artifact" in main_build
-    assert "Update langflow-base dependency for pre-release" in main_build
+    assert "Pin langflow-base release dependency" in main_build
     assert "update_bundle_prerelease_dependencies.py" in main_build
     assert "path: dist/langflow-*.whl" in main_build
     assert "uv pip install dist/langflow-*.whl" in main_build
     assert "dist-core" not in validation + main_build
     assert "pypi/langflow-core" not in validation + main_build
+
+
+def test_core_pins_and_wheel_checks_run_for_stable_and_prerelease() -> None:
+    workflow = yaml.safe_load(WORKFLOW_PATH.read_text())
+    for job, step_name in [
+        ("build-base", "Pin LFX release dependency"),
+        ("build-main", "Pin langflow-base release dependency"),
+    ]:
+        steps = workflow["jobs"][job]["steps"]
+        pin = next(step for step in steps if step["name"] == step_name)
+        assert "if" not in pin
+        assert any("check_core_dependency_pins.py" in step.get("run", "") for step in steps)
+
+    nightly = yaml.safe_load(NIGHTLY_WORKFLOW_PATH.read_text())
+    for job in ["build-nightly-base", "build-nightly-main"]:
+        assert any("check_core_dependency_pins.py" in step.get("run", "") for step in nightly["jobs"][job]["steps"])
+
+    base_build = next(
+        step["run"]
+        for step in nightly["jobs"]["build-nightly-base"]["steps"]
+        if "check_core_dependency_pins.py" in step.get("run", "")
+    )
+    assert "src/lfx/pyproject.toml" in base_build
+    assert "inputs.nightly_tag_lfx" not in base_build
 
 
 def test_main_build_prefers_release_wheels_over_workspace_sources() -> None:
@@ -183,6 +246,21 @@ def test_release_docker_builds_consume_built_wheels() -> None:
     assert "release_artifacts: ${{ needs.build-base.result == 'success' }}" in base_docker_job
     assert "pattern: dist-*" in docker_workflow
     assert "path: .release-artifacts" in docker_workflow
+
+
+def test_release_docker_jobs_are_not_skipped_by_skipped_ancestors() -> None:
+    # Without a status function GitHub adds an implicit success(). It is false when any transitive
+    # ancestor was skipped, and build-sdk is skipped whenever the SDK version is unchanged.
+    jobs = yaml.safe_load(WORKFLOW_PATH.read_text(encoding="utf-8"))["jobs"]
+    docker_jobs = {name: job for name, job in jobs.items() if name.startswith("call_docker_build_")}
+
+    assert {"call_docker_build_main_backend", "call_docker_build_main_frontend"} <= docker_jobs.keys()
+    for name, job in docker_jobs.items():
+        condition = " ".join(str(job.get("if", "")).strip().removeprefix("${{").removesuffix("}}").split())
+        assert condition.startswith("always() && !cancelled() &&"), name
+        assert "needs.reserve-final-release.result == 'success'" in condition, name
+        if "call_docker_build_main" in job["needs"]:
+            assert "needs.call_docker_build_main.result == 'success'" in condition, name
 
 
 def test_base_wheel_gate_checks_the_public_langflow_entry_point() -> None:

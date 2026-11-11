@@ -67,7 +67,7 @@ const FlowSettingsComponent = ({
   );
   const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
   // A flow card (`flowData`) must not use the registered autosave: it may
-  // belong to an unmounted editor, whose save never settles.
+  // belong to an editor that is gone or holds a different flow.
   const pendingAutoSave = useFlowStore((state) =>
     flowData ? undefined : state.autoSaveFlow,
   );

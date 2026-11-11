@@ -26,7 +26,7 @@ def _make_flow(node_type: str, code: str, display_name: str) -> dict:
                         "node": {
                             "display_name": display_name,
                             "template": {
-                                "code": {"value": code},
+                                "code": {"type": "code", "value": code},
                             },
                         },
                     },
@@ -73,9 +73,12 @@ async def test_aload_flow_from_json_fail_closed_when_hashes_are_unavailable():
 
 
 @pytest.mark.asyncio
-async def test_aload_flow_from_json_allows_legacy_url_aliases():
+@pytest.mark.parametrize("code_as_lines", [False, True])
+async def test_aload_flow_from_json_allows_legacy_url_aliases(code_as_lines):
     current_code = "current_url_code"
     flow = _make_flow("URL", current_code, "Legacy URL")
+    if code_as_lines:
+        flow["data"]["nodes"][0]["data"]["node"]["template"]["code"]["value"] = current_code.split("\n")
     type_to_current_hash, _ = collect_component_hash_lookups(
         {
             "tools": {
@@ -107,4 +110,9 @@ async def test_aload_flow_from_json_allows_legacy_url_aliases():
         graph = await aload_flow_from_json(flow, disable_logs=True)
 
     assert graph is not None
-    mock_add_nodes_and_edges.assert_called_once_with(flow["data"]["nodes"], flow["data"]["edges"])
+    mock_add_nodes_and_edges.assert_called_once()
+    nodes, edges = mock_add_nodes_and_edges.call_args.args
+    assert nodes[0]["data"]["node"]["template"]["code"]["value"] == current_code
+    assert edges == flow["data"]["edges"]
+    if code_as_lines:
+        assert flow["data"]["nodes"][0]["data"]["node"]["template"]["code"]["value"] == current_code.split("\n")

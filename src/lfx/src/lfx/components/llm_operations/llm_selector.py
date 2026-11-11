@@ -305,6 +305,11 @@ If no model seems suitable, pick the first model in the list (index 0) as a fall
             raise ValueError(error_msg)
 
         successful_result: Message | None = None
+        config_dict = {
+            "display_name": self.display_name,
+            "get_project_name": self.get_project_name,
+            "get_langchain_callbacks": self.get_langchain_callbacks,
+        }
         try:
             self.log(f"Starting model routing with {len(self.models)} available Langflow models.")
             self.log(f"Optimization preference: {self.optimization}")
@@ -358,7 +363,9 @@ Return ONLY the index number:"""
             self.log("Requesting model selection from judge LLM...")
             self.status = "Judge LLM analyzing options..."
 
-            response = await self.judge_llm.ainvoke([system_message, user_message])
+            response = await self.judge_llm.ainvoke(
+                [system_message, user_message], config={"callbacks": self.get_langchain_callbacks()}
+            )
             self._token_usage = accumulate_usage(self._token_usage, extract_usage_from_message(response))
             selected_index, chosen_model_instance = self._parse_judge_response(response.content.strip())
             self._selected_model_name = get_model_name(chosen_model_instance)
@@ -395,6 +402,7 @@ Return ONLY the index number:"""
             raw_result = get_chat_result(
                 runnable=chosen_model_instance,
                 input_value=input_message_obj,
+                config=config_dict,
                 token_usage_callback=lambda msg: setattr(
                     self, "_token_usage", accumulate_usage(self._token_usage, extract_usage_from_message(msg))
                 ),
@@ -431,6 +439,7 @@ Return ONLY the index number:"""
                 raw_fallback_result = get_chat_result(
                     runnable=chosen_model_instance,
                     input_value=input_message_obj,
+                    config=config_dict,
                     token_usage_callback=lambda msg: setattr(
                         self, "_token_usage", accumulate_usage(self._token_usage, extract_usage_from_message(msg))
                     ),

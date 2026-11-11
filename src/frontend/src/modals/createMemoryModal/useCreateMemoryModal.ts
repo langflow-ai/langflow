@@ -96,6 +96,9 @@ export function useCreateMemoryModal({
   const defaultVectorStoreBackend = useUtilityStore(
     (state) => state.defaultVectorStoreBackend,
   );
+  const configuredVectorStoreBackends = useUtilityStore(
+    (state) => state.configuredVectorStoreBackends,
+  );
   const vectorStoreConfigLoaded = useUtilityStore(
     (state) => state.vectorStoreConfigLoaded,
   );
@@ -110,8 +113,14 @@ export function useCreateMemoryModal({
         globalVariables,
         localVectorStoreAvailable,
         defaultVectorStoreBackend,
+        configuredVectorStoreBackends,
       ),
-    [globalVariables, localVectorStoreAvailable, defaultVectorStoreBackend],
+    [
+      globalVariables,
+      localVectorStoreAvailable,
+      defaultVectorStoreBackend,
+      configuredVectorStoreBackends,
+    ],
   );
 
   // Both requests must settle before committing the one-shot default.
@@ -149,6 +158,7 @@ export function useCreateMemoryModal({
       globalVariables,
       localVectorStoreAvailable,
       defaultVectorStoreBackend,
+      configuredVectorStoreBackends,
     );
   const { setErrorData, setSuccessData } = useAlertStore((state) => ({
     setErrorData: state.setErrorData,

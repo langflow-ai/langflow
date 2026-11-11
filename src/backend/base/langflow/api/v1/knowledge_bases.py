@@ -824,9 +824,10 @@ async def create_knowledge_base(
             # duplicate is a 409, not a 500.
             await logger.awarning("Concurrent KB create collided for %s: %s", kb_name, exc)
             if kb_path is not None:
-                KBStorageHelper.delete_storage(kb_path, kb_name)
+                await asyncio.shield(asyncio.to_thread(KBStorageHelper.delete_storage, kb_path, kb_name))
             raise HTTPException(status_code=409, detail=f"Knowledge base '{kb_name}' already exists") from exc
         except StorageUnavailableError:
+            # Chroma skips the storage guards that raise this error, so no local path needs cleanup.
             raise
         except Exception as exc:
             await logger.aerror(
@@ -836,7 +837,7 @@ async def create_knowledge_base(
                 exc,
             )
             if kb_path is not None:
-                KBStorageHelper.delete_storage(kb_path, kb_name)
+                await asyncio.shield(asyncio.to_thread(KBStorageHelper.delete_storage, kb_path, kb_name))
             raise HTTPException(
                 status_code=500,
                 detail=(
@@ -868,7 +869,7 @@ async def create_knowledge_base(
     except Exception as e:
         # Clean up if something went wrong
         if kb_path is not None and kb_path.exists():
-            KBStorageHelper.delete_storage(kb_path, kb_name)
+            await asyncio.shield(asyncio.to_thread(KBStorageHelper.delete_storage, kb_path, kb_name))
         await logger.aerror("Error creating knowledge base: %s", e)
         raise HTTPException(status_code=500, detail="Internal error creating knowledge base") from e
 
@@ -1351,13 +1352,11 @@ async def list_knowledge_bases(
 
             # Map job statuses back to knowledge bases
             # Normalize to frontend-expected values: ready, ingesting, failed, empty
-            # A cancelled job is absent: cancelling rolls the KB back, so the
-            # row's own status (ready / empty / an earlier failure) still holds.
+            # Ended runs do not determine whether the base remains usable.
+            # Preserve its stored failure or its existing chunk availability.
             job_status_map = {
                 "queued": "ingesting",
                 "in_progress": "ingesting",
-                "failed": "failed",
-                "timed_out": "failed",
             }
             for kb_info in knowledge_bases:
                 try:
@@ -1368,7 +1367,6 @@ async def list_knowledge_bases(
                         mapped = job_status_map.get(raw_status)
                         if mapped:
                             kb_info.status = mapped
-                        # For "completed", keep the file-marker / chunk-count status already set
                         kb_info.last_job_id = str(job.job_id)
                 except (ValueError, AttributeError):
                     # If KB ID is not a valid UUID, skip job status update

@@ -1,3 +1,7 @@
+// Set the native time zone before Jest creates its sandboxed process.env.
+// UTC-3 keeps timezone-less API timestamp regressions visible on UTC runners.
+process.env.TZ = "America/Sao_Paulo";
+
 const markdownEsmPackages = [
   "@ungap[/\\\\]structured-clone",
   "bail",
@@ -40,6 +44,8 @@ module.exports = {
   injectGlobals: true,
   moduleNameMapper: {
     "\\.(css|less|scss|sass)$": "<rootDir>/src/__mocks__/styleMock.js",
+    "(^|/)audio-worklet-processor\\.js\\?url&no-inline$":
+      "<rootDir>/src/__mocks__/audio-worklet-url.js",
     "^@/(.*)$": "<rootDir>/src/$1",
     "^@jsonquerylang/jsonquery$":
       "<rootDir>/src/__mocks__/@jsonquerylang/jsonquery.js",

@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
 from lfx.utils.component_aliases import ComponentIdentityIndex, get_component_type_aliases
+from lfx.utils.flow_code import has_code_lines, normalize_code_for_import
 
 if TYPE_CHECKING:
     from lfx.services.catalog_policy import CatalogPolicySnapshot
@@ -241,6 +242,9 @@ MCP_SERVER_FIELD_NAMES: frozenset[str] = frozenset({"mcp_server"})
 # ``McpInput``'s serialized template ``type``.
 MCP_SERVER_FIELD_TYPE = "mcp"
 
+API_REQUEST_COMPONENT_TYPES: frozenset[str] = frozenset({"APIRequest", "APIRequestComponent", "API Request"})
+API_REQUEST_DESTINATION_FIELDS: frozenset[str] = frozenset({"url_input", "curl_input"})
+
 
 def _compute_code_hash(code: str) -> str:
     """Compute the 12-char SHA256 prefix used by the component index."""
@@ -276,11 +280,24 @@ def _extract_graph_payload(graph: Any) -> Mapping[str, Any] | None:
 
 
 def _extract_flow_data(target: Mapping[str, Any] | Any | None) -> dict[str, Any] | None:
-    """Normalize a flow payload or graph-like object to raw graph data."""
-    if isinstance(target, Mapping) or target is None:
-        return _normalize_flow_data(target)
+    """Normalize a flow payload or graph-like object to raw graph data.
 
-    return _normalize_flow_data(_extract_graph_payload(target))
+    Downloaded flows store component code as lists of lines, and ``Graph.from_payload`` joins
+    them before it builds. Join them here as well, on a copy, so policy checks hash and sanitize
+    the source that will run. Lines that cannot be joined stay as they are, and the code checks
+    still block them.
+    """
+    if isinstance(target, Mapping) or target is None:
+        flow_data = _normalize_flow_data(target)
+    else:
+        flow_data = _normalize_flow_data(_extract_graph_payload(target))
+
+    if flow_data is None or not has_code_lines(flow_data):
+        return flow_data
+    try:
+        return normalize_code_for_import(flow_data)
+    except ValueError:
+        return flow_data
 
 
 def _collect_catalog_component_keys(nodes: Any) -> set[str]:
@@ -1317,10 +1334,10 @@ def substitute_outdated_component_code_in_place(
     claim is likewise left untouched, so drift is never resolved into the *wrong* component —
     see :class:`SubstitutableComponentTypes`.
 
-    Mutates ``flow_data`` in place, matching ``Graph.from_payload``'s existing contract with
-    ``migrate_flow_payload``; callers that must preserve the stored flow (so the editor keeps
-    flagging the node as outdated) pass a copy. Returns ``display_name (id)`` labels for the
-    nodes that were swapped.
+    Mutates ``flow_data`` in place. ``Graph.from_payload`` passes the normalized copy it builds
+    from, so a stored flow is never changed there. Other callers that must preserve the stored
+    flow, so the editor keeps flagging the node as outdated, pass a copy. Returns
+    ``display_name (id)`` labels for the nodes that were swapped.
 
     When ``validate_public_execution`` is true, the exact post-substitution bytes are checked
     against the public code-execution policy using the same registry snapshot that supplied
@@ -1603,7 +1620,8 @@ async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> d
     graph dict for the caller to build from.
 
     Opt-in (``allow_public_custom_components`` is True): preserves stored custom code only when
-    the global custom-component policy is also permissive. When the global policy is restricted,
+    both global and admin-only custom-component policies permit anonymous execution.
+    When the global policy is restricted,
     this helper mirrors its trusted-code substitution. Both paths validate the expanded graph
     and return its grouped form, preserving group IDs in build status and graph snapshots.
 
@@ -1653,6 +1671,12 @@ async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> d
     except (AttributeError, IndexError, KeyError, TypeError, ValueError) as exc:
         msg = "Flow validation failed: malformed grouped graph."
         raise CustomComponentValidationError(msg) from exc
+
+    if settings.allow_public_custom_components and _admin_only_build_required(settings, is_superuser=False):
+        # Public execution never carries an administrator entitlement.
+        prepared = await prepare_flow_build_for_user(sanitized, is_superuser=False)
+        if prepared is not None:
+            sanitized = prepared
 
     if settings.allow_public_custom_components and settings.allow_custom_components:
         validate_flow_for_current_settings(sanitized)
@@ -1731,6 +1755,10 @@ def revalidate_public_executable_flow(flow_data: dict[str, Any]) -> None:
             )
             raise CustomComponentValidationError(message)
     else:
+        prepared = prepare_flow_build_for_user_from_cache(flow_data, is_superuser=False)
+        if prepared is not None:
+            flow_data.clear()
+            flow_data.update(prepared)
         substitute_outdated_component_code_in_place(flow_data, validate_public_execution=True)
         validate_flow_for_current_settings(flow_data)
 
@@ -1913,6 +1941,61 @@ def _collect_mcp_stdio_components(nodes: list[dict]) -> list[str]:
     return found
 
 
+def _collect_dynamic_api_request_destinations(flow_data: dict, *, request_hashes: frozenset[str]) -> list[str]:
+    """Find API Request destinations supplied by another node or a tool call."""
+    from lfx.base.tools.constants import TOOL_OUTPUT_NAME
+    from lfx.graph.edge.schema import TargetHandle
+    from lfx.graph.graph.utils import process_flow
+
+    if not _collect_blocked_components(
+        flow_data["nodes"], blocked_types=API_REQUEST_COMPONENT_TYPES, blocked_hashes=request_hashes
+    ):
+        return []
+
+    try:
+        # Group proxies can redirect a harmless-looking group input into the URL.
+        # Inspect the executor's expanded graph without changing the saved flow.
+        executable = process_flow(flow_data)
+        requests = {}
+        for node in executable["nodes"]:
+            labels = _collect_blocked_components(
+                [node], blocked_types=API_REQUEST_COMPONENT_TYPES, blocked_hashes=request_hashes
+            )
+            if labels:
+                requests[node["id"]] = (labels[0], node["data"]["node"])
+
+        # Saved input flags do not override the runtime class's destination tool inputs.
+        dynamic = {node_id for node_id, (_, node_info) in requests.items() if node_info.get("tool_mode")}
+        for edge in executable.get("edges", []):
+            data = edge.get("data") or {}
+            source_handle = data.get("sourceHandle", {})
+            source = edge.get("source")
+            if source in requests and source_handle.get("name") == TOOL_OUTPUT_NAME:
+                dynamic.add(source)
+
+            target = edge.get("target")
+            if target not in requests:
+                continue
+            if data:
+                handle_data = data["targetHandle"]
+                handle = (
+                    TargetHandle.from_loop_target_handle(handle_data)
+                    if "name" in handle_data
+                    else TargetHandle(**handle_data)
+                )
+                field_name = handle.field_name
+            else:
+                # Retain the legacy edge syntax accepted by Edge.__init__.
+                field_name = edge.get("targetHandle", "").split("|")[1]
+            if field_name in API_REQUEST_DESTINATION_FIELDS:
+                dynamic.add(target)
+    except (AttributeError, IndexError, KeyError, TypeError, ValueError) as exc:
+        msg = "Public flow contains malformed API Request connections."
+        raise PublicFlowValidationError(msg) from exc
+
+    return [requests[node_id][0] for node_id in sorted(dynamic)]
+
+
 def validate_public_flow_no_code_execution(
     target: Mapping[str, Any] | Any | None,
     *,
@@ -1941,6 +2024,9 @@ def validate_public_flow_no_code_execution(
       trusted-code substitution touches them: the server would run the flow author's
       chosen command for an anonymous visitor. Remote MCP transports (HTTP/SSE) spawn
       nothing and remain allowed, so only the stdio selection is refused.
+    * Dynamic API Request destinations supplied through connected URL/cURL inputs
+      or tool arguments. Anonymous visitors may supply request payloads, but the
+      flow author must fix the network destination before publishing the flow.
 
     The first two classes are matched both by the node's declared ``type`` and by its
     ``code``-hash, so relabelling a node's ``type`` to an alias cannot smuggle a
@@ -1954,7 +2040,8 @@ def validate_public_flow_no_code_execution(
 
     Raises:
         PublicFlowValidationError: if the flow contains a code-execution component,
-            a flow-invoking component, or an MCP stdio server configuration.
+            a flow-invoking component, an MCP stdio server configuration, or a
+            dynamic API Request destination.
     """
     normalized_flow_data = _extract_flow_data(target)
     if not normalized_flow_data:
@@ -2013,6 +2100,18 @@ def validate_public_flow_no_code_execution(
         message = (
             "Public flows cannot be built without authentication when they launch a local "
             f"MCP server process (stdio transport): {blocked_names}"
+        )
+        raise PublicFlowValidationError(message)
+
+    dynamic_requests = _collect_dynamic_api_request_destinations(
+        normalized_flow_data,
+        request_hashes=_blocked_code_hashes(API_REQUEST_COMPONENT_TYPES, type_to_current_hash=type_to_current_hash),
+    )
+    if dynamic_requests:
+        message = (
+            "Public flows cannot be built without authentication when they expose dynamic "
+            f"API Request destinations: {', '.join(dynamic_requests)}. "
+            "Use API Request with a fixed URL and ordinary data outputs, without URL/cURL connections."
         )
         raise PublicFlowValidationError(message)
 

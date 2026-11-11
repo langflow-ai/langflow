@@ -105,10 +105,11 @@ jobs:
     needs: validate-version
     if: needs.validate-version.outputs.should_release == 'true'
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.python-version == '3.15' }}
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        python-version: ["3.11", "3.12", "3.13", "3.14", "3.15"]
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -116,11 +117,15 @@ jobs:
       - name: Setup Environment
         uses: astral-sh/setup-uv@v10.0.0
         with:
-          version: latest-known
+          version: ${{ matrix.python-version == '3.15' && '0.13.0' || 'latest-known' }}
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
           prune-cache: false
+
+      - name: Set up Python preview builds
+        if: matrix.python-version == '3.15'
+        uses: ./.github/actions/setup-python-preview
 
       - name: Run LFX tests
         run: |

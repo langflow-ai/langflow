@@ -206,11 +206,16 @@ const fillRequiredFields = async (
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe("KnowledgeBaseUploadModal", () => {
+  beforeAll(() => {
+    HTMLElement.prototype.scrollIntoView = jest.fn();
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
     useUtilityStore.getState().setVectorStoreConfig({
       localVectorStoreAvailable: true,
       defaultVectorStoreBackend: undefined,
+      configuredVectorStoreBackends: [],
     });
     mockModelProvidersResult = {
       data: MODEL_PROVIDERS,
@@ -660,13 +665,44 @@ describe("KnowledgeBaseUploadModal", () => {
           column_config: [
             { column_name: "text", vectorize: true, identifier: true },
           ],
-          // Omit the implicit SQLite choice so the server can apply its
-          // configured default backend.
-          backend_type: undefined,
+          backend_type: "sqlite",
           backend_config: {},
         }),
       );
     });
+
+    it.each([
+      ["postgres", "Postgres pgVector"],
+      ["opensearch", "OpenSearch"],
+    ])(
+      "submits SQLite when selected instead of the server's %s default",
+      async (defaultBackend, defaultLabel) => {
+        useUtilityStore.getState().setVectorStoreConfig({
+          localVectorStoreAvailable: true,
+          defaultVectorStoreBackend: defaultBackend,
+        });
+        const user = userEvent.setup();
+        render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
+          wrapper: createWrapper(),
+        });
+        expect(screen.getByTestId("kb-db-provider")).toHaveTextContent(
+          defaultLabel,
+        );
+        await user.click(screen.getByTestId("kb-db-provider"));
+        await user.click(screen.getByRole("option", { name: /SQLite Local/ }));
+        await advanceToReview(user);
+        expect(screen.getByText("SQLite Local")).toBeInTheDocument();
+        await user.click(screen.getByTestId("kb-create-button"));
+        await waitFor(() =>
+          expect(mockMutateAsync).toHaveBeenCalledWith(
+            expect.objectContaining({
+              backend_type: "sqlite",
+              backend_config: {},
+            }),
+          ),
+        );
+      },
+    );
 
     it("calls setSuccessData with the knowledge base name after creation", async () => {
       const user = userEvent.setup();
@@ -1061,6 +1097,44 @@ describe("KnowledgeBaseUploadModal", () => {
       embeddingModel: "text-embedding-3-small",
       embeddingProvider: "OpenAI",
     };
+
+    it.each(["ui4 test", "Customer #1?"])(
+      "preserves the stored name %s when adding files",
+      async (name) => {
+        const user = userEvent.setup();
+        const onSubmit = jest.fn();
+        render(
+          <KnowledgeBaseUploadModal
+            open={true}
+            setOpen={jest.fn()}
+            onSubmit={onSubmit}
+            existingKnowledgeBase={{ ...existingKB, name }}
+          />,
+          { wrapper: createWrapper() },
+        );
+        const file = new File(["content"], "notes.txt", {
+          type: "text/plain",
+        });
+        await user.upload(
+          document.getElementById("file-input") as HTMLInputElement,
+          file,
+        );
+        await user.click(screen.getByRole("button", { name: /Next Step/i }));
+        await user.click(await screen.findByTestId("kb-create-button"));
+
+        await waitFor(() =>
+          expect(mockApiPost).toHaveBeenCalledWith(
+            `/api/v1/knowledge_bases/${encodeURIComponent(name)}/ingest`,
+            expect.any(FormData),
+            expect.any(Object),
+          ),
+        );
+        expect(mockMutateAsync).not.toHaveBeenCalled();
+        expect(onSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({ sourceName: name, dirName: name }),
+        );
+      },
+    );
 
     it("disables the name input", async () => {
       render(

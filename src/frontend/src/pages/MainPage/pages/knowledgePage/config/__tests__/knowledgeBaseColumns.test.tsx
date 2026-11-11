@@ -59,9 +59,9 @@ type StatusCellRendererProps = {
 };
 
 describe("createKnowledgeBaseColumns", () => {
-  it("returns 8 column definitions", () => {
+  it("returns 7 column definitions", () => {
     const cols = createKnowledgeBaseColumns();
-    expect(cols).toHaveLength(8);
+    expect(cols).toHaveLength(7);
   });
 
   it("includes the expected header names", () => {
@@ -73,7 +73,6 @@ describe("createKnowledgeBaseColumns", () => {
         "Embedding Model",
         "Vector Store",
         "Chunks",
-        "Avg Chunk Size",
         "Status",
         "Actions",
       ]),
@@ -88,6 +87,19 @@ describe("createKnowledgeBaseColumns", () => {
         nameCol.cellRenderer as React.ComponentType<NameCellRendererProps>;
       render(<CellRenderer data={makeKb()} value="My KB" />);
       expect(screen.getByText("My KB")).toBeInTheDocument();
+    });
+
+    it("exposes the full name when hovering a truncated name", () => {
+      const name = "Quarterly customer research and support documentation";
+      const nameCol = createKnowledgeBaseColumns().find(
+        (column) => column.field === "name",
+      )!;
+      const CellRenderer =
+        nameCol.cellRenderer as React.ComponentType<NameCellRendererProps>;
+      render(<CellRenderer data={makeKb({ name })} value={name} />);
+
+      expect(screen.getByTitle(name)).toHaveTextContent(name);
+      expect(screen.getByTitle(name)).toHaveClass("truncate");
     });
 
     it("shows a file icon when source_types is empty", () => {

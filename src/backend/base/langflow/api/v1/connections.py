@@ -23,6 +23,7 @@ from langflow.services.authorization.guards import audit_guard_in_transaction
 from langflow.services.connection import ConnectionConflictError, DatabaseConnectionResolverService
 from langflow.services.connection.oauth import broker as oauth_broker
 from langflow.services.connection.oauth.config import OAuthError, OAuthRegistration, get_oauth_settings
+from langflow.services.connection.policy import providers_with_usable_actions
 from langflow.services.connection.service import enforce_integration_policy_for_provider
 from langflow.services.connection.slack_credentials import ManualCredentialError
 from langflow.services.database.models.connection import (
@@ -101,6 +102,19 @@ _OAUTH_RESPONSE_HEADERS = {
     "Referrer-Policy": "no-referrer",
     "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
 }
+
+
+def oauth_rate_limit_response(retry_after_seconds: int) -> HTMLResponse:
+    """Give browser consent requests the same recovery guidance as other OAuth errors."""
+    return HTMLResponse(
+        '<!doctype html><html lang="en"><head>'
+        '<meta charset="utf-8"><title>Too many OAuth attempts</title>'
+        "</head><body><h1>Too many OAuth attempts</h1>"
+        f"<p>Wait about {retry_after_seconds} seconds, then return to "
+        "Settings &rarr; Connections and start again.</p></body></html>",
+        status_code=429,
+        headers={**_OAUTH_RESPONSE_HEADERS, "Retry-After": str(retry_after_seconds)},
+    )
 
 
 class OAuthStartRequest(BaseModel):
@@ -317,7 +331,7 @@ async def test_connection(
     current_user: CurrentActiveUser,
     service: ConnectionService,
 ) -> ConnectionRead:
-    """Validate the local credential envelope and requested scope coverage."""
+    """Check stored credentials, including Slack validation, and requested scope coverage."""
     check_rate_limit(request, scope=_SCOPE_CONNECTION_TEST, key=get_user_limiter_key(current_user.id))
     row = await _authorized_row(
         service=service,
@@ -482,10 +496,12 @@ async def start_connection_oauth(
         action=ConnectionAction.WRITE,
         for_update=True,
     )
-    # A blocked provider must not reach the authorization screen: refuse before
-    # the broker mints state or sets a browser-binding cookie.
+    # Refuse consent when no action remains available, before the broker mints
+    # state or sets a browser-binding cookie.
     try:
-        await enforce_integration_policy_for_provider(row.provider_key, user_id=current_user.id)
+        await enforce_integration_policy_for_provider(
+            row.provider_key, user_id=current_user.id, require_usable_action=True
+        )
     except IntegrationPolicyBlockedError as exc:
         raise _policy_blocked(exc) from exc
     try:
@@ -590,13 +606,15 @@ async def list_oauth_registrations(
     if not available:
         return OAuthRegistrationListRead(registrations=[])
 
-    # A provider outside the operator's integration ceiling is refused at
-    # oauth/start, so it must not appear here either.
+    # Offer only providers that could pass the policy check at oauth/start.
     policy = await aresolve_integration_policy(
         user_id=current_user.id,
         provider_ids=frozenset(registration.provider for _, registration in available),
         purpose=IntegrationPolicyPurpose.DISCOVER,
         attributes=provider_policy_attributes,
+    )
+    available_providers = await providers_with_usable_actions(
+        frozenset(registration.provider for _, registration in available), policy
     )
     return OAuthRegistrationListRead(
         registrations=[
@@ -610,7 +628,7 @@ async def list_oauth_registrations(
                 allowed_tenants=list(registration.allowed_tenants),
             )
             for registration_id, registration in available
-            if policy.allows_provider(registration.provider)
+            if registration.provider in available_providers
         ]
     )
 

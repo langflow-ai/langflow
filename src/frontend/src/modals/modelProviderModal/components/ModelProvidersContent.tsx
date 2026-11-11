@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import type { ProviderScopeParams } from "@/controllers/API/helpers/provider-scope";
@@ -29,6 +29,13 @@ const ModelProvidersContent = ({
     null,
   );
   const [providerQuery, setProviderQuery] = useState<string>("");
+  const providerContentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (providerContentRef.current) {
+      providerContentRef.current.scrollTop = 0;
+    }
+  }, [selectedProvider?.provider]);
 
   // Use the custom hook for provider configuration logic
   const {
@@ -105,7 +112,7 @@ const ModelProvidersContent = ({
     <div className="flex flex-row w-full h-full overflow-hidden">
       <div
         className={cn(
-          "flex p-2 flex-col flex-shrink-0 transition-all duration-300 ease-in-out",
+          "flex min-h-0 p-2 flex-col flex-shrink-0 transition-all duration-300 ease-in-out",
           syncedSelectedProvider ? "w-1/3 border-r" : "w-full",
         )}
       >
@@ -122,19 +129,26 @@ const ModelProvidersContent = ({
           data-testid="provider-search-input"
           className="mb-2"
         />
-        <ProviderList
-          modelType={modelType}
-          onProviderSelect={handleProviderSelect}
-          selectedProviderName={syncedSelectedProvider?.provider ?? null}
-          query={providerQuery}
-          flowId={flowId}
-          projectId={projectId}
-        />
+        <div
+          className="min-h-0 flex-1 overflow-y-auto"
+          data-testid="provider-list-scroll"
+        >
+          <ProviderList
+            modelType={modelType}
+            onProviderSelect={handleProviderSelect}
+            selectedProviderName={syncedSelectedProvider?.provider ?? null}
+            query={providerQuery}
+            flowId={flowId}
+            projectId={projectId}
+          />
+        </div>
       </div>
 
       <div
+        ref={providerContentRef}
+        data-testid="provider-content-scroll"
         className={cn(
-          "flex min-h-0 flex-col gap-1 transition-all duration-300 ease-in-out",
+          "min-h-0 overflow-y-auto transition-all duration-300 ease-in-out",
           syncedSelectedProvider
             ? "w-2/3 opacity-100 translate-x-0"
             : "w-0 opacity-0 translate-x-full",
@@ -163,40 +177,33 @@ const ModelProvidersContent = ({
           requiresConfiguration={requiresConfiguration}
         />
 
-        {/* hidden while collapsed: the padded scroller inside has intrinsic
+        {/* Hidden without a selection because the padded content has intrinsic
             width, so it would stick out of the w-0 column and register as
             clipped content at a 320px viewport (WCAG 1.4.10). */}
         <div
-          className={cn(
-            "relative flex min-h-0 flex-1 flex-col",
-            !syncedSelectedProvider && "hidden",
-          )}
+          className={cn("px-4 pt-4 pb-6", !syncedSelectedProvider && "hidden")}
         >
-          <div className="flex h-full flex-col gap-3 overflow-y-auto px-4 pt-4 pb-6 transition-all duration-300 ease-in-out">
-            <CustomModelProvidersEmptyState
-              kind="models"
-              show={showNoAvailableModels}
-            >
-              <ModelSelection
-                modelType={modelType}
-                availableModels={syncedSelectedProvider?.models || []}
-                onModelToggle={handleModelToggle}
-                providerName={syncedSelectedProvider?.provider}
-                isEnabledModel={
-                  !!(
-                    syncedSelectedProvider?.is_enabled ||
-                    syncedSelectedProvider?.is_configured
-                  )
-                }
-                liveDiscovery={!!syncedSelectedProvider?.live_discovery}
-                isConfigured={!!syncedSelectedProvider?.is_configured}
-                flowId={flowId}
-                projectId={projectId}
-              />
-            </CustomModelProvidersEmptyState>
-          </div>
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-6 bg-gradient-to-b from-background via-background/70 to-transparent" />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-background via-background/70 to-transparent" />
+          <CustomModelProvidersEmptyState
+            kind="models"
+            show={showNoAvailableModels}
+          >
+            <ModelSelection
+              modelType={modelType}
+              availableModels={syncedSelectedProvider?.models || []}
+              onModelToggle={handleModelToggle}
+              providerName={syncedSelectedProvider?.provider}
+              isEnabledModel={
+                !!(
+                  syncedSelectedProvider?.is_enabled ||
+                  syncedSelectedProvider?.is_configured
+                )
+              }
+              liveDiscovery={!!syncedSelectedProvider?.live_discovery}
+              isConfigured={!!syncedSelectedProvider?.is_configured}
+              flowId={flowId}
+              projectId={projectId}
+            />
+          </CustomModelProvidersEmptyState>
         </div>
       </div>
     </div>

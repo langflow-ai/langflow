@@ -1,5 +1,6 @@
 import type { Edge } from "@xyflow/react";
 import { LANGFLOW_SUPPORTED_TYPES } from "@/constants/constants";
+import { isConnectionRefField } from "@/utils/connection-ref-gate";
 import { scapedJSONStringfy } from "@/utils/reactflowUtils";
 
 export type DisplayHandleTemplate = {
@@ -32,6 +33,12 @@ export const computeDisplayHandle = (
     optionalHandle &&
     Array.isArray(optionalHandle) &&
     optionalHandle.length > 0;
+
+  // A connection reference is set only through the connection picker; its
+  // value must never come from an edge, so it never gets a handle.
+  if (isConnectionRefField(template)) {
+    return false;
+  }
 
   // Always show handle for model inputs
   if (isModelInput) {

@@ -699,7 +699,8 @@ async def test_a_record_that_fails_to_save_does_not_leave_the_child_running(
         text=True,
         check=False,
     )
-    assert status.stdout.strip() in {"", "Z"}
+    # ps may append flags to the state, such as "Zl" for a multithreaded zombie on Linux.
+    assert status.stdout.strip()[:1] in {"", "Z"}
 
 
 async def test_an_unreadable_record_says_where_it_is(client, logged_in_headers_super_user, config_dir):
@@ -889,6 +890,27 @@ async def test_a_pause_refuses_changes_until_the_admin_resumes(client, logged_in
     assert (await client.post("api/v1/flows/", json=NEW_FLOW, headers=headers)).status_code == 201
     # Nothing to resume is not an error.
     assert (await client.delete(PAUSE, headers=headers)).status_code == 200
+
+
+async def test_any_signed_in_user_can_see_whether_changes_are_paused(
+    client, user_two_api_key, logged_in_headers_super_user, config_dir
+):
+    _checked(config_dir, [PASSING], **PREPARED)
+    # The client keeps the admin's sign-in cookie, which would answer for the user below.
+    client.cookies.clear()
+    user = {"x-api-key": user_two_api_key}
+    # Every page shows it, so every user can ask. Who paused and the rest of the record stay the admin's.
+    assert (await client.get(PAUSE, headers=user)).json() == {"paused": False}
+
+    paused = await client.post(PAUSE, headers=logged_in_headers_super_user)
+    assert paused.status_code == 200, paused.text
+
+    seen = await client.get(PAUSE, headers=user)
+    assert seen.status_code == 200, seen.text
+    assert seen.json() == {"paused": True}
+    await client.delete(PAUSE, headers=logged_in_headers_super_user)
+    assert (await client.get(PAUSE, headers=user)).json() == {"paused": False}
+    assert (await client.get(PAUSE)).status_code in (401, 403)
 
 
 async def test_each_pause_and_resume_is_logged(
@@ -1272,12 +1294,15 @@ async def test_a_run_that_a_webhook_left_running_stops_the_pause(
     _checked(config_dir, [PASSING], **PREPARED)
     monkeypatch.setattr(migration_module, "_DRAIN_SECONDS", 0.2)
     await _add(Flow(id=flow_id, name="on a webhook", data={"nodes": [], "edges": []}, user_id=active_super_user.id))
-    # A webhook that asks for no key runs as the owner of its flow.
     monkeypatch.setattr(get_settings_service().auth_settings, "WEBHOOK_AUTH_ENABLE", False)
+    key = await client.post("api/v1/api_key/", json={"name": "migration-webhook"}, headers=headers)
+    assert key.status_code == 200, key.text
     arrived, release = await _held_before_it_is_a_job(monkeypatch, endpoints, "apply_global_variable_defaults")
 
     # The webhook answers at once and leaves its run going in a task of its own.
-    answered = await client.post(f"api/v1/webhook/{flow_id}", json={"any": "payload"})
+    answered = await client.post(
+        f"api/v1/webhook/{flow_id}", headers={"x-api-key": key.json()["api_key"]}, json={"any": "payload"}
+    )
     assert answered.status_code == 202, answered.text
 
     detail = await _refused_over_work_left_running(client, headers, arrived, release)

@@ -173,11 +173,16 @@ async def validate_opensearch_url(url: str, url_variable: str, url_source: str) 
     additionally required to be one the operator approved. It runs first, and without a DNS
     lookup, so a refused destination is never resolved on the tenant's behalf.
     """
-    enforce_kb_destination(url, source=url_source, description=f"Langflow variable {url_variable!r}")
     try:
+        enforce_kb_destination(url, source=url_source, description=f"Langflow variable {url_variable!r}")
         await asyncio.to_thread(validate_connector_url_for_ssrf, url)
-    except SSRFProtectionError as exc:
-        msg = f"OpenSearch URL from variable {url_variable!r} is not allowed: {exc}"
+    except ValueError as exc:
+        # Both URL parsing and policy errors can contain the resolved value.
+        # A variable may be usable by a tenant without being readable by them.
+        msg = (
+            f"OpenSearch URL from variable {url_variable!r} is not allowed. "
+            "Use an http(s) URL with an approved host and check the server's destination policy."
+        )
         raise SSRFProtectionError(msg) from exc
 
 
@@ -553,6 +558,40 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         docs = await self.vector_store.asimilarity_search(**kwargs)
         return [(doc, 0.0) for doc in docs]
 
+    async def get_documents_by_ids(self, ids: list[str]) -> list[Document]:
+        """Read exact IDs without depending on search-index refreshes."""
+        from langchain_core.documents import Document
+
+        if not ids:
+            return []
+        await self.ensure_ready()
+        _ = self.vector_store
+        try:
+            result = await _drained_worker(
+                self._os_client.mget, index=self._os_index, body={"ids": list(dict.fromkeys(ids))}
+            )
+        except Exception as exc:
+            if _is_missing_index(exc):
+                return []
+            raise
+        documents = []
+        for item in result["docs"]:
+            if "error" in item:
+                if item["error"].get("type") == "index_not_found_exception":
+                    continue
+                msg = "OpenSearch could not check an existing document."
+                raise RuntimeError(msg)
+            if item.get("found"):
+                source = item["_source"]
+                documents.append(
+                    Document(
+                        id=item["_id"],
+                        page_content=source.get(self._os_text_field) or source.get("text", ""),
+                        metadata=source.get("metadata", {}),
+                    )
+                )
+        return documents
+
     async def count(self) -> int:
         await self.ensure_ready()
         client = getattr(self, "_os_client", None)
@@ -607,7 +646,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         except Exception as exc:  # noqa: BLE001
             return TestConnectionResult(
                 ok=False,
-                message=str(exc) or type(exc).__name__,
+                message="OpenSearch credential resolution failed.",
                 details={"type": type(exc).__name__},
             )
 
@@ -616,7 +655,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         except Exception as exc:  # noqa: BLE001
             return TestConnectionResult(
                 ok=False,
-                message=str(exc) or type(exc).__name__,
+                message="OpenSearch client setup failed. Check the backend configuration.",
                 details={"type": type(exc).__name__},
             )
 
@@ -654,13 +693,13 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         # to surface.
         try:
             info = await asyncio.to_thread(client.info)
-        except AuthenticationException as exc:
+        except AuthenticationException:
             return TestConnectionResult(
                 ok=False,
                 message="Authentication failed. Check the username and password variables.",
-                details={"type": "AuthenticationException", "error": str(exc)},
+                details={"type": "AuthenticationException"},
             )
-        except AuthorizationException as exc:
+        except AuthorizationException:
             # A 403 proves liveness: DNS, TLS, the connection, and credential
             # authentication all succeeded (a bad password raises 401
             # AuthenticationException instead) — the cluster only declined the
@@ -671,30 +710,30 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             return TestConnectionResult(
                 ok=True,
                 message="Connected to OpenSearch (cluster-monitor not permitted; liveness confirmed).",
-                details={"type": "AuthorizationException", "reachable": True, "error": str(exc)},
+                details={"type": "AuthorizationException", "reachable": True},
             )
-        except OpenSearchSSLError as exc:
+        except OpenSearchSSLError:
             return TestConnectionResult(
                 ok=False,
                 message=(
                     "TLS handshake failed. Verify the URL scheme matches the cluster, and "
                     "toggle 'Verify TLS cert' off if you are using a self-signed certificate."
                 ),
-                details={"type": "SSLError", "error": str(exc)},
+                details={"type": "SSLError"},
             )
-        except OpenSearchConnectionError as exc:
+        except OpenSearchConnectionError:
             return TestConnectionResult(
                 ok=False,
                 message=(
                     "Could not reach the cluster. Verify the URL, network access, and that "
                     "the 'Use TLS' toggle matches the cluster's scheme."
                 ),
-                details={"type": "ConnectionError", "error": str(exc)},
+                details={"type": "ConnectionError"},
             )
         except Exception as exc:  # noqa: BLE001
             return TestConnectionResult(
                 ok=False,
-                message=str(exc) or type(exc).__name__,
+                message="OpenSearch connection failed.",
                 details={"type": type(exc).__name__},
             )
 

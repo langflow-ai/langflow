@@ -50,7 +50,7 @@ from langflow.api.utils.mcp import (
     get_url_by_os,
     project_mcp_server_name_candidates,
 )
-from langflow.api.v1.auth_helpers import handle_auth_settings_update
+from langflow.api.v1.auth_helpers import get_default_project_auth_settings, handle_auth_settings_update
 from langflow.api.v1.mcp import ResponseNoOp
 from langflow.api.v1.mcp_utils import (
     authenticated_caller_ctx,
@@ -283,7 +283,11 @@ async def verify_project_auth_conditional(
 
     async with session_scope() as session:
         user = await get_current_user_mcp(
-            token=token or "", query_param=api_key_query_value, header_param=api_key_header_value, db=session
+            request=request,
+            token=token or "",
+            query_param=api_key_query_value,
+            header_param=api_key_header_value,
+            db=session,
         )
 
     if project_user_id != user.id:
@@ -1674,6 +1678,7 @@ def _get_startup_project_auth_settings(
     *,
     auto_login: bool,
     mcp_composer_enabled: bool,
+    default_auth: dict[str, str],
 ) -> tuple[dict[str, Any] | None, str | None]:
     """Return the auth state startup should enforce for this project.
 
@@ -1687,9 +1692,11 @@ def _get_startup_project_auth_settings(
     if not auto_login and auth_type in {None, "none"}:
         return {"auth_type": "apikey"}, "auto_enable_apikey"
 
+    if not project.auth_settings:
+        return default_auth, "auto_enable_apikey" if default_auth["auth_type"] == "apikey" else None
+
     if not mcp_composer_enabled and auth_type == "oauth":
-        fallback_auth_type = "apikey" if not auto_login else "none"
-        return {"auth_type": fallback_auth_type}, "oauth_fallback"
+        return default_auth, "oauth_fallback"
 
     if auth_type in {"apikey", "none"}:
         return {"auth_type": auth_type}, None
@@ -1707,10 +1714,12 @@ async def init_mcp_servers():
 
             for project in projects:
                 try:
+                    project_user = await session.get(User, project.user_id) if project.user_id is not None else None
                     target_auth_settings, persist_reason = _get_startup_project_auth_settings(
                         project,
                         auto_login=settings_service.auth_settings.AUTO_LOGIN,
                         mcp_composer_enabled=settings_service.settings.mcp_composer_enabled,
+                        default_auth=get_default_project_auth_settings(settings_service.auth_settings, project_user),
                     )
                     reconciled_mcp_server = False
 
@@ -1729,7 +1738,6 @@ async def init_mcp_servers():
                         if should_reconcile_project_server:
                             from langflow.api.v1.projects_mcp_helpers import register_mcp_servers_for_project
 
-                            project_user = await session.get(User, project.user_id)
                             if project_user is not None:
                                 reconciled_mcp_server = await register_mcp_servers_for_project(
                                     project,
@@ -1745,7 +1753,7 @@ async def init_mcp_servers():
                     if persist_reason == "auto_enable_apikey":
                         await logger.ainfo(
                             f"Auto-enabled API key authentication for existing project {project.name} "
-                            f"({project.id}) due to AUTO_LOGIN=false"
+                            f"({project.id}) to match MCP authentication requirements"
                         )
                     elif persist_reason == "oauth_fallback" and target_auth_settings is not None:
                         fallback_auth_type = target_auth_settings["auth_type"]

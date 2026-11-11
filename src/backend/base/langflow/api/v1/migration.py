@@ -34,6 +34,7 @@ from fastapi.responses import StreamingResponse
 from lfx.base.knowledge_bases.backends import is_local_backend
 from lfx.base.knowledge_bases.backends.postgres import postgres_env_configured
 from lfx.log.logger import logger
+from lfx.utils.file_path_security import flow_storage_scope, user_storage_scope
 from pydantic import BaseModel, SecretStr, StringConstraints, ValidationError
 from sqlalchemy.engine import make_url
 from sqlmodel import select
@@ -49,7 +50,7 @@ from langflow.api.utils.migration_copies import (
     shown,
 )
 from langflow.api.utils.migration_jobs import active_jobs, live_listeners
-from langflow.api.utils.migration_pause import drained, under_way
+from langflow.api.utils.migration_pause import drained, is_paused, under_way
 from langflow.api.utils.migration_probes import database_identity, location, probe_database, probe_files, probe_vectors
 from langflow.api.utils.migration_runs import (
     RunActiveError,
@@ -68,7 +69,7 @@ from langflow.api.utils.migration_target import (
     start_settings,
 )
 from langflow.cli.migration_preflight import check_target_version
-from langflow.services.auth.utils import get_current_active_superuser
+from langflow.services.auth.utils import get_current_active_superuser, get_current_active_user
 from langflow.services.database.models.file.model import File
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
@@ -89,6 +90,7 @@ if TYPE_CHECKING:
 router = APIRouter(prefix="/migration", tags=["Migration"], include_in_schema=False)
 
 Superuser = Annotated[User, Depends(get_current_active_superuser)]
+SignedIn = Annotated[User, Depends(get_current_active_user)]
 
 # Failing checks an admin may accept: the move stays safe, and what is left behind is known.
 ACCEPTABLE_FINDINGS = frozenset(
@@ -354,6 +356,15 @@ async def pause_changes(request: Request, admin: Superuser) -> dict[str, Any]:
         # the same pause was refused or cut off. Nothing is paused, and the answer must not read as if it were.
         raise HTTPException(status_code=409, detail={"code": "pause_ended"})
     return await _state(record)
+
+
+@router.get("/pause")
+async def pause_state(_user: SignedIn) -> dict[str, bool]:
+    """Whether this instance refuses changes now, for the notice that every signed-in user sees on every page.
+
+    Says nothing else of the move: who paused it and the rest of the record are the admin's.
+    """
+    return {"paused": is_paused()}
 
 
 @router.delete("/pause")
@@ -1176,7 +1187,12 @@ async def _instance() -> dict[str, Any]:
         ).all()
         has_files = (await session.exec(select(File.id).limit(1))).first() is not None
         # relocate-files copies from the folder of each user and each flow, and from no other.
-        namespaces = {str(identifier) for model in (User, Flow) for identifier in await session.exec(select(model.id))}
+        namespaces = {
+            namespace
+            for model, typed_scope in ((User, user_storage_scope), (Flow, flow_storage_scope))
+            for identifier in await session.exec(select(model.id))
+            for namespace in (str(identifier), typed_scope(identifier))
+        }
     if settings.storage_type.lower() == "s3":
         files = {
             "storage": "s3",

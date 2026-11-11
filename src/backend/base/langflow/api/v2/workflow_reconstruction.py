@@ -109,7 +109,16 @@ async def reconstruct_workflow_response_from_job_id(
         user_id=user_id,
         is_superuser=is_superuser,
     ):
-        graph = Graph.from_payload(flow.data, flow_id=flow_id_str, user_id=user_id, flow_name=flow.name)
+        # Status reads need topology and output metadata, never live components.
+        # The stored flow may have changed since this job ran, so instantiating
+        # it here would execute new source while returning the old saved result.
+        graph = Graph.from_payload(
+            flow.data,
+            flow_id=flow_id_str,
+            user_id=user_id,
+            flow_name=flow.name,
+            instantiate_components=False,
+        )
     terminal_node_ids = graph.get_terminal_nodes()
 
     terminal_vertex_builds = [vb for vb in vertex_builds if vb.id in terminal_node_ids and vb.data]

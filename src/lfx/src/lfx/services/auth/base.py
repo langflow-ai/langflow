@@ -15,15 +15,53 @@ from lfx.services.base import Service
 from lfx.services.schema import ServiceType
 
 if TYPE_CHECKING:
-    from collections.abc import Coroutine
+    from collections.abc import Awaitable, Callable, Coroutine
     from datetime import timedelta
     from uuid import UUID
+
+    from lfx.services.authorization.base import ExecutionPrincipal
 
 
 class BaseAuthService(Service, abc.ABC):
     """Abstract base class for authentication services."""
 
     name = ServiceType.AUTH_SERVICE.value
+
+    def run_sync_validation(self, validate: Callable[[], Awaitable[None]]) -> None:
+        """Let hosts keep synchronous checks separate from their async database pool."""
+        from lfx.services.auth.utils import sync_auth_validation
+        from lfx.utils.async_helpers import run_until_complete
+
+        async def check() -> None:
+            with sync_auth_validation():
+                await validate()
+
+        run_until_complete(check())
+
+    async def validate_tool_call(
+        self,
+        *,
+        flow_id: str,
+        component_id: str,
+        tool_tag: str,
+        tool_name: str,
+        approval_actions: tuple[str, ...],
+        metadata_configured: bool,
+    ) -> None:
+        """Recheck current tool settings when the host maintains saved flows."""
+
+    async def validate_execution_user(
+        self,
+        user_id: str | UUID | None,
+        *,
+        principal: ExecutionPrincipal | None = None,
+        db: Any | None = None,
+    ) -> None:
+        """Recheck a running identity when the host maintains a user store.
+
+        Standalone LFX has no user lifecycle to enforce. Hosts with native users
+        override this check before tool calls and persistent side effects.
+        """
 
     @abc.abstractmethod
     async def authenticate_with_credentials(
@@ -198,6 +236,7 @@ class BaseAuthService(Service, abc.ABC):
         query_param: str | None,
         header_param: str | None,
         db: Any,
+        external_token: str | None = None,
     ) -> Any:
         """Get current user for MCP endpoints."""
 

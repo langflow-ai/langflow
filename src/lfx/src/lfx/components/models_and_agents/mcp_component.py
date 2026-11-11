@@ -245,6 +245,7 @@ class MCPToolsComponent(ComponentWithCache):
         "code",
         "_type",
         "tool_mode",
+        "tools_metadata",
         "tool_placeholder",
         "mcp_server",
         "tool",
@@ -385,16 +386,30 @@ class MCPToolsComponent(ComponentWithCache):
 
         ensure_mcp_stdio_access(server_config, current_user, get_settings_service().settings)
 
+    @staticmethod
+    def _normalize_mcp_server_value(mcp_server: Any) -> tuple[str | None, dict | None]:
+        if isinstance(mcp_server, dict):
+            server_name = mcp_server.get("name")
+            server_config = mcp_server.get("config")
+        elif mcp_server is None or isinstance(mcp_server, str):
+            server_name = mcp_server
+            server_config = None
+        else:
+            msg = "MCP server must be a name or an object with a name and optional config."
+            raise ValueError(msg)
+
+        if server_name is not None and not isinstance(server_name, str):
+            msg = "MCP server name must be a string."
+            raise ValueError(msg)
+        if server_config is not None and not isinstance(server_config, dict):
+            msg = "MCP server config must be an object."
+            raise ValueError(msg)
+        return server_name, server_config
+
     async def update_tool_list(self, mcp_server_value=None):
         # Accepts mcp_server_value as dict {name, config} or uses self.mcp_server
         mcp_server = mcp_server_value if mcp_server_value is not None else getattr(self, "mcp_server", None)
-        server_name = None
-        server_config_from_value = None
-        if isinstance(mcp_server, dict):
-            server_name = mcp_server.get("name")
-            server_config_from_value = mcp_server.get("config")
-        else:
-            server_name = mcp_server
+        server_name, server_config_from_value = self._normalize_mcp_server_value(mcp_server)
         if not server_name:
             self.tools = []
             await logger.adebug("MCP update_tool_list: empty server_name, clearing tools")
@@ -682,6 +697,9 @@ class MCPToolsComponent(ComponentWithCache):
 
     async def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         """Toggle the visibility of connection-specific fields based on the selected mode."""
+        normalized_server_name = None
+        if field_name == "mcp_server":
+            normalized_server_name, _ = self._normalize_mcp_server_value(field_value)
         try:
             is_refresh = bool(build_config.get("is_refresh", False))
             if field_name == "tool":
@@ -747,7 +765,7 @@ class MCPToolsComponent(ComponentWithCache):
 
                 build_config["tool_placeholder"]["tool_mode"] = True
 
-                current_server_name = field_value.get("name") if isinstance(field_value, dict) else field_value
+                current_server_name = normalized_server_name
                 build_config_server_value = build_config.get("mcp_server", {}).get("value")
                 build_config_server_name = (
                     build_config_server_value.get("name")
@@ -972,10 +990,17 @@ class MCPToolsComponent(ComponentWithCache):
             value == {} and model_field.default is None and cls._is_object_like_annotation(model_field.annotation)
         )
 
+    @classmethod
+    def _validate_tool_argument_name(cls, arg_name: str) -> None:
+        if arg_name in cls.default_keys:
+            msg = f"Remote tool argument '{arg_name}' conflicts with a reserved component field."
+            raise ValueError(msg)
+
     def _build_tool_kwargs(self, args_schema: type[BaseModel]) -> dict[str, Any]:
         """Collect tool kwargs from component inputs, omitting blank optional values."""
         kwargs: dict[str, Any] = {}
         for arg_name, model_field in args_schema.model_fields.items():
+            self._validate_tool_argument_name(arg_name)
             # MCP argument names come from the server and can match component methods or metadata.
             value = self._attributes.get(arg_name)
             if arg_name not in self._attributes and arg_name in self._inputs:
@@ -1011,14 +1036,20 @@ class MCPToolsComponent(ComponentWithCache):
 
     async def _update_tool_config(self, build_config: dict, tool_name: str) -> None:
         """Update tool configuration with proper error handling."""
-        if not self.tools:
-            self.tools, build_config["mcp_server"]["value"] = await self.update_tool_list()
+        tools_refreshed = not self.tools
+        server_info = None
+        if tools_refreshed:
+            self.tools, server_info = await self.update_tool_list()
 
         if not tool_name:
+            if tools_refreshed:
+                build_config["mcp_server"]["value"] = server_info
             return
 
         tool_obj = next((tool for tool in self.tools if tool.name == tool_name), None)
         if not tool_obj:
+            if tools_refreshed:
+                build_config["mcp_server"]["value"] = server_info
             msg = f"Tool {tool_name} not found in available tools: {self.tools}"
             self.remove_non_default_keys(build_config)
             build_config["tool"]["value"] = ""
@@ -1026,6 +1057,14 @@ class MCPToolsComponent(ComponentWithCache):
             return
 
         try:
+            schema_inputs = await self._validate_schema_inputs(tool_obj)
+            for schema_input in schema_inputs:
+                if schema_input and hasattr(schema_input, "name"):
+                    self._validate_tool_argument_name(schema_input.name)
+
+            if tools_refreshed:
+                build_config["mcp_server"]["value"] = server_info
+
             # Store current values before removing inputs (only for the current tool)
             current_values = {}
             for key, value in build_config.items():
@@ -1035,8 +1074,7 @@ class MCPToolsComponent(ComponentWithCache):
             # Remove ALL non-default keys (all previous tool inputs)
             self.remove_non_default_keys(build_config)
 
-            # Get and validate new inputs for the selected tool
-            self.schema_inputs = await self._validate_schema_inputs(tool_obj)
+            self.schema_inputs = schema_inputs
             if not self.schema_inputs:
                 msg = f"No input parameters to configure for tool '{tool_name}'"
                 await logger.ainfo(msg)
@@ -1051,6 +1089,7 @@ class MCPToolsComponent(ComponentWithCache):
 
                 try:
                     name = schema_input.name
+                    self._validate_tool_argument_name(name)
                     input_dict = schema_input.to_dict()
                     input_dict.setdefault("value", None)
                     input_dict.setdefault("required", True)
@@ -1153,7 +1192,7 @@ class MCPToolsComponent(ComponentWithCache):
         the "Use Cached Server" (``use_cache``) toggle which controls the shared cross-request cache.
         """
         mcp_server = getattr(self, "mcp_server", None)
-        srv = mcp_server.get("name") if isinstance(mcp_server, dict) else mcp_server
+        srv, _ = self._normalize_mcp_server_value(mcp_server)
 
         ttl = self.TOOL_TTL_SECS
         ttl_key = self._mcp_servers_cache_key(srv or "") if ttl > 0 and srv else ""

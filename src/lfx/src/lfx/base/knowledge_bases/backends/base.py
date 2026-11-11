@@ -204,8 +204,8 @@ class BaseVectorStoreBackend(ABC):
         (``connector_base.ConnectorIngestionSource.resolve_secret``):
 
         1. Langflow's ``variable_service`` scoped to ``self.user_id``.
-        2. Process env var of the same name as a fallback for desktop /
-           single-user deployments that skip the UI step.
+        2. Process env var of the same name, only when ``fallback_to_env_var``
+           is enabled, for deployments that skip the UI step.
 
         The provenance matters for values that become a *network destination*.
         A Langflow variable is written by the tenant through the UI/API, so a URL
@@ -244,6 +244,15 @@ class BaseVectorStoreBackend(ABC):
                             return str(value), "variable"
             except Exception as exc:  # noqa: BLE001 — fall through to env
                 logger.debug("variable_service lookup for %s failed: %s", variable_name, exc)
+
+        from lfx.services.deps import get_settings_service
+
+        try:
+            fallback_enabled = get_settings_service().settings.fallback_to_env_var
+        except (AttributeError, TypeError):
+            fallback_enabled = False
+        if not fallback_enabled:
+            return None, "missing"
 
         # safe_getenv denies reserved names (LANGFLOW_SECRET_KEY, DATABASE_URL, ...) so a
         # tenant-supplied KB secret name cannot exfiltrate the server's own secrets.
@@ -318,12 +327,22 @@ class BaseVectorStoreBackend(ABC):
             self._vector_store = self._build_vector_store()
         return self._vector_store
 
-    async def add_documents(self, docs: list[Document]) -> None:
-        """Write nonempty document batches through the initialized vector store."""
+    async def add_documents(self, docs: list[Document]) -> int | None:
+        """Write a batch, optionally returning the number of newly written chunks.
+
+        Backends without duplicate filtering may return None to count every input.
+        """
         if not docs:
             return
         await self.ensure_ready()
         await self.vector_store.aadd_documents(docs)
+
+    async def get_documents_by_ids(self, ids: list[str]) -> list[Document]:
+        """Fetch a bounded set of document IDs with their stored metadata."""
+        if not ids:
+            return []
+        await self.ensure_ready()
+        return await self.vector_store.aget_by_ids(ids)
 
     async def add_embedded_documents(self, docs: list[IngestedDocument]) -> None:
         """Write chunks whose vectors are already computed, without re-embedding.

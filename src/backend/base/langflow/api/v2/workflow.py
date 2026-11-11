@@ -70,6 +70,7 @@ from langflow.api.v2.workflow_execution import (
     _execute_streaming_workflow,
     _resolve_execution_timeout,
     _stream_event_frames,
+    _with_transport_keepalive,
     execute_sync_workflow_with_timeout,
 )
 from langflow.api.v2.workflow_reconstruction import reconstruct_workflow_response_from_job_id
@@ -1322,6 +1323,6 @@ async def reattach_workflow_events(
         raise _not_found()
 
     return EventSourceResponse(
-        service.events(UUID(job_id), last_event_id=last_event_id, user=current_user),
+        _with_transport_keepalive(service.events(UUID(job_id), last_event_id=last_event_id, user=current_user)),
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )

@@ -226,10 +226,9 @@ def span_exporter():
         try:
             yield exporter
         finally:
-            # Shut the processor down rather than detach it: a provider has no removal API,
-            # so clearing the exporter empties the list and leaves the processor registered,
-            # still appending every later span in this worker to it for the rest of the run.
-            processor.shutdown()
+            # The provider has no processor-removal API. Stop only the exporter so it
+            # retains no later spans and the attached processor stays quiet and usable.
+            exporter.shutdown()
             exporter.clear()
         return
 
@@ -239,7 +238,7 @@ def span_exporter():
     try:
         yield exporter
     finally:
-        provider.shutdown()
+        exporter.shutdown()
         exporter.clear()
 
 
@@ -314,6 +313,7 @@ async def test_v1_advanced_run_reports_v1_advanced(client, simple_api_test, crea
     assert protocols == ["v1.advanced"], protocols
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_webhook_run_reports_webhook(client, added_webhook_test, created_api_key, span_exporter):
     """Cell 8: POST /api/v1/webhook/{flow} -> protocol=webhook.
 
