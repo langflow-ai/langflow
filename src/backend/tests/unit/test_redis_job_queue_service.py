@@ -560,12 +560,6 @@ async def test_redis_service_owner_cleaned_up_after_cleanup_job():
         user_id = uuid.uuid4()
 
         service.create_queue(job_id)
-
-        async def _noop():
-            await asyncio.sleep(0)
-
-        service.start_job(job_id, _noop())
-        await asyncio.sleep(0.05)
         await service.register_job_owner(job_id, user_id)
 
         assert await service.get_job_owner(job_id) == user_id

@@ -3705,5 +3705,9 @@
   "settings.upgrade.resultMeaning.fail": "兼容性问题或检查错误需要处理。尝试更新前请阅读检查结果。",
   "settings.upgrade.resultMeaning.could_not_verify": "检查器未能确定兼容性。这是未知结果，需要审查。",
   "settings.upgrade.previewComplete": "预览已完成。流程未发生更改。“可以更新”表示在您审查并确认后可以应用更新。",
-  "settings.upgrade.applyComplete": "更新请求已完成。请检查下方的每项结果和恢复版本。结束维护前请验证已更新的流程。"
+  "settings.upgrade.applyComplete": "更新请求已完成。请检查下方的每项结果和恢复版本。结束维护前请验证已更新的流程。",
+  "modelProviders.openRouterModelHint": "选择列表中的模型，或输入 OpenRouter 决策模型 ID。模型支持哪些请求由 OpenRouter 决定。",
+  "modelProviders.searchOrAddModel": "搜索或添加模型 ID…",
+  "modelProviders.addDecisionModel": "添加决策模型“{{name}}”",
+  "modelProviders.decisionDiscoveryError": "无法加载决策模型。请检查此提供商的凭据并重试。其他提供商仍然可用。"
 }

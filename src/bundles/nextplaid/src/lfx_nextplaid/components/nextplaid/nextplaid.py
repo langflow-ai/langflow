@@ -18,8 +18,7 @@ from lfx.io import (
 )
 from lfx.schema.data import Data
 from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
-
-from ._http import secure_nextplaid_http
+from lfx_nextplaid.components.nextplaid._http import secure_nextplaid_http
 
 
 class NextPlaidVectorStoreComponent(LCVectorStoreComponent):

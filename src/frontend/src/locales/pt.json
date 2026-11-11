@@ -3706,5 +3706,9 @@
   "settings.upgrade.resultMeaning.fail": "Um problema de compatibilidade ou erro de verificação precisa de atenção. Leia os resultados antes de tentar uma atualização.",
   "settings.upgrade.resultMeaning.could_not_verify": "O verificador não conseguiu determinar a compatibilidade. Este resultado é desconhecido e precisa de revisão.",
   "settings.upgrade.previewComplete": "Prévia concluída. Nenhum fluxo foi alterado. Pronto para atualizar significa que uma atualização pode ser aplicada após sua revisão e confirmação.",
-  "settings.upgrade.applyComplete": "Solicitação de atualização concluída. Revise cada resultado e versão de recuperação abaixo. Verifique os fluxos atualizados antes de encerrar a manutenção."
+  "settings.upgrade.applyComplete": "Solicitação de atualização concluída. Revise cada resultado e versão de recuperação abaixo. Verifique os fluxos atualizados antes de encerrar a manutenção.",
+  "modelProviders.openRouterModelHint": "Escolha um modelo listado ou insira um ID de modelo de decisão do OpenRouter. O OpenRouter determina quais solicitações o modelo suporta.",
+  "modelProviders.searchOrAddModel": "Pesquisar ou adicionar um ID de modelo…",
+  "modelProviders.addDecisionModel": "Adicionar modelo de decisão \"{{name}}\"",
+  "modelProviders.decisionDiscoveryError": "Não foi possível carregar os modelos de decisão. Verifique as credenciais deste provedor e tente novamente. Os outros provedores continuam disponíveis."
 }

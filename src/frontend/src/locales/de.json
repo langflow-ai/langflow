@@ -3706,5 +3706,9 @@
   "settings.upgrade.resultMeaning.fail": "Ein Kompatibilitätsproblem oder ein Prüffehler erfordert Aufmerksamkeit. Lesen Sie die Ergebnisse, bevor Sie eine Aktualisierung versuchen.",
   "settings.upgrade.resultMeaning.could_not_verify": "Die Prüfung konnte die Kompatibilität nicht feststellen. Dieses Ergebnis ist unbekannt und muss überprüft werden.",
   "settings.upgrade.previewComplete": "Vorschau abgeschlossen. Es wurden keine Flows geändert. „Bereit zur Aktualisierung“ bedeutet, dass eine Aktualisierung nach Ihrer Prüfung und Bestätigung angewendet werden kann.",
-  "settings.upgrade.applyComplete": "Aktualisierungsanfrage abgeschlossen. Prüfen Sie unten jedes Ergebnis und jede Wiederherstellungsversion. Überprüfen Sie aktualisierte Flows, bevor Sie den Wartungsmodus beenden."
+  "settings.upgrade.applyComplete": "Aktualisierungsanfrage abgeschlossen. Prüfen Sie unten jedes Ergebnis und jede Wiederherstellungsversion. Überprüfen Sie aktualisierte Flows, bevor Sie den Wartungsmodus beenden.",
+  "modelProviders.openRouterModelHint": "Wähle ein aufgeführtes Modell oder gib eine OpenRouter-Entscheidungsmodell-ID ein. OpenRouter bestimmt, welche Anfragen das Modell unterstützt.",
+  "modelProviders.searchOrAddModel": "Modell-ID suchen oder hinzufügen…",
+  "modelProviders.addDecisionModel": "Entscheidungsmodell „{{name}}“ hinzufügen",
+  "modelProviders.decisionDiscoveryError": "Entscheidungsmodelle konnten nicht geladen werden. Prüfen Sie die Zugangsdaten dieses Anbieters und versuchen Sie es erneut. Andere Anbieter sind weiterhin verfügbar."
 }

@@ -3706,5 +3706,9 @@
   "settings.upgrade.resultMeaning.fail": "互換性の問題またはチェックエラーへの対処が必要です。更新を試す前に検出結果を確認してください。",
   "settings.upgrade.resultMeaning.could_not_verify": "チェッカーは互換性を確認できませんでした。この結果は不明であり、確認が必要です。",
   "settings.upgrade.previewComplete": "プレビューが完了しました。フローは変更されていません。「更新可能」は、内容を確認して承認した後に更新を適用できることを示します。",
-  "settings.upgrade.applyComplete": "更新リクエストが完了しました。以下の各結果と復元用バージョンを確認してください。メンテナンスを終了する前に、更新したフローを検証してください。"
+  "settings.upgrade.applyComplete": "更新リクエストが完了しました。以下の各結果と復元用バージョンを確認してください。メンテナンスを終了する前に、更新したフローを検証してください。",
+  "modelProviders.openRouterModelHint": "一覧からモデルを選択するか、OpenRouterの判断モデルIDを入力してください。モデルが対応するリクエストはOpenRouterが決定します。",
+  "modelProviders.searchOrAddModel": "モデルIDを検索または追加…",
+  "modelProviders.addDecisionModel": "判断モデル「{{name}}」を追加",
+  "modelProviders.decisionDiscoveryError": "意思決定モデルを読み込めませんでした。このプロバイダーの認証情報を確認して、もう一度お試しください。他のプロバイダーは引き続き利用できます。"
 }
