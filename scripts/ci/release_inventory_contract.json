@@ -69,6 +69,7 @@
         "lfx-cohere",
         "lfx-confluence",
         "lfx-datastax",
+        "lfx-discord",
         "lfx-docling",
         "lfx-github",
         "lfx-gitlab",
@@ -80,6 +81,7 @@
         "lfx-openai",
         "lfx-openai-compatible",
         "lfx-oracle",
+        "lfx-salesforce",
         "lfx-servicenow",
         "lfx-slack",
         "lfx-telegram",
@@ -113,6 +115,7 @@
           "lfx-cohere",
           "lfx-confluence",
           "lfx-datastax",
+          "lfx-discord",
           "lfx-docling",
           "lfx-github",
           "lfx-gitlab",
@@ -124,6 +127,7 @@
           "lfx-openai",
           "lfx-openai-compatible",
           "lfx-oracle",
+          "lfx-salesforce",
           "lfx-servicenow",
           "lfx-slack",
           "lfx-telegram",
@@ -188,6 +192,11 @@
           "lfx_whatsapp/extension.json",
           "lfx_whatsapp/components/whatsapp/capabilities.v1.json",
           "lfx_whatsapp/components/whatsapp/whatsapp_on_event_trigger_component.py"
+        ],
+        "lfx-discord": [
+          "lfx_discord/extension.json",
+          "lfx_discord/components/discord/capabilities.v1.json",
+          "lfx_discord/components/discord/discord_send_message.py"
         ]
       },
       "module_checks": [
@@ -270,6 +279,7 @@
           "lfx-confluence",
           "lfx-confluent",
           "lfx-datastax",
+          "lfx-discord",
           "lfx-docling",
           "lfx-duckduckgo",
           "lfx-empiriolabs",
@@ -287,6 +297,7 @@
           "lfx-openai-compatible",
           "lfx-oracle",
           "lfx-paddle",
+          "lfx-salesforce",
           "lfx-serpingapi",
           "lfx-serply",
           "lfx-servicenow",
@@ -423,6 +434,11 @@
           "lfx_whatsapp/extension.json",
           "lfx_whatsapp/components/whatsapp/capabilities.v1.json",
           "lfx_whatsapp/components/whatsapp/whatsapp_on_event_trigger_component.py"
+        ],
+        "lfx-discord": [
+          "lfx_discord/extension.json",
+          "lfx_discord/components/discord/capabilities.v1.json",
+          "lfx_discord/components/discord/discord_send_message.py"
         ]
       },
       "module_checks": [

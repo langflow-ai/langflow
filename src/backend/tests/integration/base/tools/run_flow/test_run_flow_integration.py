@@ -27,7 +27,7 @@ class TestRunFlowEndToEnd:
             json={"name": "Test Folder", "description": "Folder for integration tests"},
             headers=logged_in_headers,
         )
-        assert folder_response.status_code == 201
+        assert folder_response.status_code == 201, folder_response.text
         folder_id = folder_response.json()["id"]
 
         # Create the target flow that will be run (Integration Test Flow)
@@ -155,7 +155,7 @@ class TestRunFlowComponentWithTools:
             json={"name": "Tool Test Folder", "description": "Folder for tool generation tests"},
             headers=logged_in_headers,
         )
-        assert folder_response.status_code == 201
+        assert folder_response.status_code == 201, folder_response.text
         folder_id = folder_response.json()["id"]
 
         # Create a REAL flow that can be used as a tool

@@ -68,6 +68,11 @@ The **Valkey** vector store component reads and writes to Valkey vector stores u
 
 This component uses the `valkey-glide` client library to communicate with the Valkey server and supports the `FT.CREATE` and `FT.SEARCH` commands for vector indexing and similarity search.
 
+The vector store requires Python 3.10 through 3.14 on Linux or macOS.
+It is unavailable on Python 3.15 because the GLIDE driver has no wheel for that version, and its source build omits a required generated protobuf module.
+The component reports this limitation before calling the driver.
+Valkey Chat Memory remains available on Python 3.15.
+
 <details>
 <summary>About vector store instances</summary>
 

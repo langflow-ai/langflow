@@ -15,7 +15,7 @@ class GitLabCreateIssueComponent(GitLabActionComponent):
     inputs = [
         connection_input(capability_id),
         project_input(),
-        MessageTextInput(name="title", display_name="Title", required=True),
-        MultilineInput(name="body_content", display_name="Description", value=""),
+        MessageTextInput(name="title", display_name="Title", required=True, tool_mode=True),
+        MultilineInput(name="body_content", display_name="Description", value="", tool_mode=True),
     ]
     outputs = [Output(display_name="Result", name="result", method="build_result")]

@@ -530,6 +530,24 @@ class TestGraphExecution:
         assert mock_graph.user_id == "preset-user-uuid"
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize("user_id", [None, "verified-caller"])
+    async def test_execute_graph_forwards_only_the_explicit_caller(self, user_id):
+        seen = []
+
+        async def mock_async_start(inputs, **kwargs):  # noqa: ARG001
+            seen.append(kwargs["user_id"])
+            yield MagicMock(results={"text": "ok"})
+
+        graph = MagicMock()
+        graph.context = {}
+        graph.user_id = "stale-user"
+        graph.async_start = mock_async_start
+
+        await execute_graph_with_capture(graph, "test input", user_id=user_id)
+
+        assert seen == [user_id]
+
+    @pytest.mark.asyncio
     async def test_execute_graph_passes_fallback_from_settings_default(self):
         """Default settings (fallback_to_env_var=True) reach async_start.
 
