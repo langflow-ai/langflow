@@ -58,6 +58,7 @@ from .trigger import (
     TriggerSourceVersion,
     TriggerSubscription,
 )
+from .upgrade_report import UpgradeReport, UpgradeReportRepair
 from .user import User
 from .variable import Variable
 from .worker_registry import WorkerRegistry, WorkerState
@@ -133,6 +134,8 @@ __all__ = [
     "TriggerRenewalObservation",
     "TriggerSourceVersion",
     "TriggerSubscription",
+    "UpgradeReport",
+    "UpgradeReportRepair",
     "User",
     "Variable",
     "WorkerRegistry",

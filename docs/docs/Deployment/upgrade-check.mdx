@@ -1,0 +1,280 @@
+---
+title: Check flows before an upgrade
+slug: /upgrade-check
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+The `langflow upgrade-check` command reads the database of the Langflow server you are about to upgrade, and checks every saved flow against the release you upgrade to.
+It names each flow that needs action before the upgrade, and why.
+
+Run the command from the release you upgrade to, before you upgrade the server.
+The command only reads the database. It never changes it.
+
+## What the command checks
+
+The command checks every flow, saved component, and saved flow version that still runs, which means a trigger pins it or a deployment has it attached.
+Nodes inside groups are checked too, including groups inside groups.
+Starter projects are skipped, because Langflow recreates them at startup.
+
+For each node, the command reports the following:
+
+- The node's status uses the same rule as [`lfx upgrade`](/lfx-compatibility#check-and-upgrade-flows-with-lfx-upgrade), with `ok`, `outdated_safe`, `outdated_breaking`, `retired`, `customized`, or `blocked`. The checker also reports `could_not_verify` when an outdated node's generated fields or saved file references cannot be verified and no independent breaking change is confirmed.
+- For an outdated node, the result of a dry run of the visual editor's **Update**. The node is rebuilt from the new release's code with its saved values, and nothing is saved. A completed dry run is breaking when it drops a connection, a value, a field, or an output. An incomplete update records uncertainty, and any independent breaking finding still takes precedence.
+- What the upgraded server runs for the node under the settings you pass: its saved code (`saved_code`), the server's own code (`server_code`), or nothing (`refused`). The catalog rules saved in the database apply too.
+
+Update replays saved, nonempty refresh selectors that the current component still declares, including selectors on components other than Run Flow or MCP. Those existing hooks can use their configured services and add latency in the editor. The isolated checker refuses external discovery and records incomplete refresh warnings rather than treating partial discovery as verified.
+
+The command doesn't do the following:
+
+- It doesn't run flows. The Python audit guard described below applies during target component discovery and dry runs. During discovery, a refused operation or a wait over 30 seconds stops the check with exit 2, preventing a report against an incomplete registry. During a node's dry run, a refused or incomplete update records `could_not_verify` as its dry-run result and reason, and the check continues. This does not automatically replace the node's compatibility status, which can remain `outdated_safe` or `outdated_breaking`. Inspect dry-run results and reasons as well as node statuses when finding these warnings.
+- It doesn't migrate the database schema or update any flow.
+- It doesn't check files, knowledge bases, credentials, or variables. To check those, see [Migrate to a new Langflow instance](/instance-migration).
+
+## Before you run the check
+
+Pass the upgraded server's settings as options.
+The command reads no server setting from its environment or `.env` file, so a server option you don't pass takes its default.
+Its child retains only interpreter and operating system essentials. Provider credential variables are removed, and its home, configuration, cache, and working directory are temporary. Explicit source, output, and custom component paths are resolved before this isolation. Supported SDK offline settings also prevent automatic model metadata downloads.
+
+Selected PostgreSQL sources still use libpq's normal connection precedence, including explicit URL values, `PG*` variables, service definitions, default password/TLS files, and Kerberos inputs. These private source inputs travel over stdin and are applied only while opening and reading the source connections, using the caller's original home and working directory. They are removed before component discovery or dry runs. The existing connection remains open for later read-only pages. Provider credentials are never added to the child's environment, and source inputs are not copied into reports or child process arguments.
+
+For `sslrootcert=system`, the source-only context also preserves `SSL_CERT_FILE` and `SSL_CERT_DIR`, including relative paths resolved from the caller's working directory.
+
+The guard refuses these Python network audit events: `socket.connect`, `socket.getaddrinfo`, `socket.gethostbyname`, `socket.gethostbyaddr`, `socket.getnameinfo`, `socket.sendto`, and `socket.sendmsg`. Some Python networking remains allowed, including `socket.bind`.
+
+The guard permits only two local metadata probes used by installed dependencies. These are the canonical system Git executable with exactly `version`, and the canonical system `file` executable with exactly `-b` and the current interpreter path. Executable identity, arguments, target, sanitized environment, and system PATH are checked before launch. Alternate executables, arguments, and environments are refused. Refusals remain recorded even if component code catches the exception.
+
+The Python audit guard is not an operating system sandbox. It cannot contain native extension transports or arbitrary native code. Run the check with trusted installed components and custom folders. Source database connections open before component discovery and remain read-only. A discovery worker that exceeds its time limit stays guarded until it ends.
+Unrelated component import or template errors retain the shared loader's existing skip behavior. This check does not turn those skips into complete discovery evidence.
+
+| Option | Server setting | Default |
+|---|---|---|
+| `--allow-custom-components` / `--no-allow-custom-components` | `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` | Allowed |
+| `--substitute-outdated-component-code` / `--no-substitute-outdated-component-code` | `LANGFLOW_SUBSTITUTE_OUTDATED_COMPONENT_CODE` | On |
+| `--block-code-interpreter-components` / `--no-block-code-interpreter-components` | `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS` | Off |
+| `--custom-component-admin-only` / `--no-custom-component-admin-only` | `LANGFLOW_CUSTOM_COMPONENT_ADMIN_ONLY` | Off |
+| `--allow-components-paths-override` / `--no-allow-components-paths-override` | `LANGFLOW_ALLOW_COMPONENTS_PATHS_OVERRIDE` | On |
+| `--components-path`, once per folder | `LANGFLOW_COMPONENTS_PATH` | None |
+
+If the upgraded server loads custom components, pass every folder the server actually loads with `--components-path`.
+The command loads them the way the server does at startup, which imports their code, so the command needs the same Python packages as the server.
+If you pass `--no-allow-custom-components` and `--no-allow-components-paths-override`, the command loads none of the folders you pass.
+
+If the database is SQLite, the database's folder must be writable.
+Langflow keeps SQLite in WAL mode, and SQLite creates a `-shm` file next to the database even to read it.
+The database file itself doesn't change.
+If the folder is read-only, such as a Docker volume mounted with `:ro`, the command stops and says so.
+Mount the folder writable for the check, or stop the server and create a consistent SQLite backup in a writable folder.
+If you copy database files directly, preserve the database and its WAL sidecars together after stopping every writer.
+A WAL file can contain committed flows that have not reached the main database file.
+Check the consistent backup or complete file copy.
+
+If the database is PostgreSQL, use a database user that can only read.
+For example:
+
+```sql
+CREATE ROLE langflow_check LOGIN PASSWORD 'CHANGE_ME';
+GRANT CONNECT ON DATABASE langflow TO langflow_check;
+GRANT USAGE ON SCHEMA public TO langflow_check;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO langflow_check;
+```
+
+The command also reads PostgreSQL in read-only transactions.
+To read PostgreSQL, the command needs the PostgreSQL driver, which the `postgresql` extra and the Docker image include.
+
+## Run the check
+
+The examples check against Langflow 1.14.0. Replace it with the release you upgrade to.
+
+<Tabs>
+<TabItem value="pip" label="pip or uvx" default>
+
+Run the command with the new release, without installing it over the running server:
+
+```bash
+uvx --from "langflow[postgresql]==1.14.0" langflow upgrade-check \
+  --database-url "postgresql://langflow_check:CHANGE_ME@db.example.com:5432/langflow" \
+  --output upgrade-check.json
+```
+
+For a SQLite database, pass the absolute path of the file:
+
+```bash
+uvx --from "langflow==1.14.0" langflow upgrade-check \
+  --database-url "sqlite:////var/lib/langflow/langflow.db" \
+  --output upgrade-check.json
+```
+
+Other users of the machine can see the database URL in the process list while the check runs.
+
+</TabItem>
+<TabItem value="docker" label="Docker">
+
+Mount the volume that holds the server's SQLite database, writable, and pass the path the server's `LANGFLOW_DATABASE_URL` names:
+
+```bash
+docker run --rm \
+  -v langflow-data:/app/langflow \
+  langflowai/langflow:1.14.0 \
+  langflow upgrade-check \
+    --database-url sqlite:////app/langflow/langflow.db \
+    --json > upgrade-check.jsonl
+```
+
+For PostgreSQL, pass the database URL and no volume.
+With `--json`, a completed check ends with a report event.
+Save that event with the extraction command below.
+
+</TabItem>
+<TabItem value="kubernetes" label="Kubernetes">
+
+1. Store the database URL in a secret:
+
+    ```bash
+    kubectl create secret generic langflow-upgrade-check \
+      --namespace langflow \
+      --from-literal=database-url="postgresql://langflow_check:CHANGE_ME@postgres:5432/langflow"
+    ```
+
+2. Create a Job that runs the new release's image:
+
+    ```yaml
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      name: langflow-upgrade-check
+      namespace: langflow
+    spec:
+      backoffLimit: 0
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: upgrade-check
+              image: langflowai/langflow:1.14.0
+              command: ["langflow", "upgrade-check"]
+              args: ["--database-url", "$(DATABASE_URL)", "--json"]
+              env:
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: langflow-upgrade-check
+                      key: database-url
+    ```
+
+    `backoffLimit: 0` keeps Kubernetes from running the check again when it exits with `1`.
+    If the server loads custom components, mount the same folders and add `--components-path` for each one.
+
+3. After the Job reaches either terminal state, `Complete` or `Failed`, save its logs:
+
+    ```bash
+    kubectl logs job/langflow-upgrade-check --namespace langflow > upgrade-check.jsonl
+    ```
+
+    Exit `1` marks the Job as failed even though the check finished and produced a report that needs review. Exit `2` means the check could not finish. Keep the logs from either terminal state and inspect the final event.
+
+</TabItem>
+</Tabs>
+
+For Docker or Kubernetes, extract exactly one report event from the saved logs.
+A check that could not finish has no report event, so extraction fails and leaves any existing report unchanged. A completed warning or failure report still has a report event.
+Non-JSON log lines are ignored.
+
+```bash
+report_tmp=$(mktemp ./upgrade-check.XXXXXX)
+if jq -R -s -e '
+  split("\n") | map(fromjson? | objects | select(.event == "report"))
+  | if length == 1 and (.[0].report | type == "object") then .[0].report
+    else error("expected exactly one report event") end
+' upgrade-check.jsonl > "$report_tmp"; then
+  mv -- "$report_tmp" upgrade-check.json
+else
+  rm -f -- "$report_tmp"
+  false
+fi
+```
+
+## Read the result
+
+| Exit code | Meaning |
+|---|---|
+| `0` | Nothing needs review. Every checked flow is OK and no source blocker was found. |
+| `1` | At least one flow needs review or repair, or the database has a problem that stops the upgraded server from starting. Warning-only reports also exit 1. |
+| `2` | The check could not finish, such as for a wrong URL, an unreadable database, or components that could not load. The last line says what to change. |
+| `130` or `143` | The check was stopped by `SIGINT` or `SIGTERM`. It is safe to run again. |
+
+A flow's status is the worst of its nodes:
+
+- `fail`: a node is `outdated_breaking`, `retired`, or `blocked`, the upgraded server refuses to run a node, or a customized node's edits will not run because the server runs its own code instead.
+- `warn`: a node is `customized` and its edits still run, a dry run has a `could_not_verify` reason, or the new release's code for a node doesn't build. A flow whose saved data can't be read also warns. An independently confirmed failing finding still takes precedence.
+- `ok`: nothing needs action.
+
+Without `--json`, the command prints the number of flows with each status, then each failing or warning flow with the nodes and reasons behind its status.
+
+With `--json`, the command prints one JSON object per line.
+Each flow is a `{"event": "flow", "flow": {...}}` line as soon as it is checked, and the last line is `{"event": "report", "report": {...}}`.
+If the check can't finish, the last line is `{"event": "error", "code": "...", "message": "..."}` instead.
+
+`--output` writes the report as one JSON file. The report has the following keys:
+
+- `format_version`: `1`.
+- `generated_at`: when the check ran, in UTC.
+- `source`: the database's dialect, its credential-free identity, its Alembic revision, and how many flows, saved components, and running flow versions the check read.
+- `target`: the Langflow and LFX versions, the hash of the component index, the installed bundles, and the custom components folders and how many components they hold.
+- `settings`: every setting the check used, and the catalog rules it applied.
+- `inputs`: the resolved output path, or `null` when no output was requested, and whether JSON events were selected.
+- `network_policy`: component callbacks cannot use Python network audit events. Only allowlisted local system metadata probes may launch a process. Explicit source database connections are read-only. This guard is not an operating system sandbox.
+- `summary`: the number of flows by status, and the number of nodes by status.
+- `flows`: every checked flow, saved component, and running flow version, including healthy rows. Each row has its owner, project, last edit, separate Editor and Serving usage, and nodes that need review. Each node lists its `status`, what it `runs`, its `reasons`, and its `dry_run` result: `keeps`, `loses`, `could_not_verify`, or `build_failed`.
+- `errors`: saved rows that couldn't be read, and catalog rules that couldn't be read, which stop the upgraded server from starting.
+
+The source identity contains a `kind`, a structured `locator`, and a `sha256` fingerprint of that locator.
+SQLite uses the canonical database file path, so symlinks to the same path have the same identity.
+PostgreSQL uses the connected host, port, database, and a fingerprint of the ordered schema search path.
+Schema names and arbitrary connection options are not copied into the report.
+Usernames, passwords, and URL query parameters are excluded.
+Changing only credentials does not change the identity when the endpoint and selected schemas remain the same.
+The identity's shape and fingerprint are validated together.
+This identifies the selected locator. It does not authenticate an installation or prove that its data stayed unchanged.
+
+The output file must be separate from either SQLite source database and its WAL, shared-memory, and journal files.
+The command refuses paths, symlinks, and hard links that alias those files before checking any flows.
+It replaces a report file atomically rather than truncating an inode through a hard link.
+
+## Flow usage and retained history
+
+The JSON report includes every checked flow, including healthy flows. Each flow carries separate Editor and Serving usage. The text summary still lists flows that need review.
+
+Usage comes from the existing job table. Only workflow jobs with execution evidence count as runs. The supported execution states are `in_progress`, `completed`, `failed`, `timed_out`, and `suspended`. A suspended graph already executed before it paused for human input. Errors count failed and timed-out jobs. Queued jobs do not count. Canceled jobs cannot establish whether execution started, so they are excluded and flagged. Ingestion, evaluation, and unclassified job types are excluded.
+
+The last run uses the newest creation time among jobs with execution evidence. This timestamp marks job creation because older schemas do not retain a separate execution-start timestamp. Stored timestamp components are validated before UTC normalization. SQLite and PostgreSQL timestamps retain microsecond precision. Retained coverage shows the oldest and newest workflow job creation times observed, including queued and canceled records.
+
+Zero retained executions does not establish that a flow never ran. Job retention can remove records, and executions without job records are outside this evidence. The report keeps `coverage.complete` false and leaves the retention policy unknown because it does not load the source server's settings. Missing tables, missing required columns, and unavailable databases produce explicit unknown values and limitation codes. They do not become zero counts or compatibility failures.
+
+To read Serving usage, pass its existing database through a read-only account. This adapter requires the preserved Editor flow ID in `job.flow_id`. It needs no new route on the older Serving release.
+
+```bash
+langflow upgrade-check \
+  --database-url "postgresql://langflow_check:CHANGE_ME@editor-db.example.com:5432/langflow" \
+  --serving-database-url "postgresql://langflow_check:CHANGE_ME@serving-db.example.com:5432/langflow" \
+  --output upgrade-check.json
+```
+
+Editor and Serving counts stay separate. A missing Serving configuration or missing preserved Editor ID is visible in the report. Saved flow versions reuse their owning flow's usage with a limitation that the counts are not version-specific. Saved components have no execution history.
+
+Both databases are read before any component dry run begins. Read transactions end before component checks. The report binds each available usage source to its credential-free database identity and never contains its connection URL. A scan across multiple short reads is not one database snapshot.
+
+## Limits
+
+- The command reads flows in pages, each page in its own short transaction, so a long check never blocks the database. The report isn't one snapshot: a flow saved while the check runs is read as it is when its page comes.
+- Each flow is judged as its owner runs it. A shared flow that another user runs can get a different result, such as with `--custom-component-admin-only`, which treats admins and other users differently.
+- The editor's **Update** regenerates **Run Flow** inputs and outputs from the selected flow, and **MCP Tools** arguments from the selected tool, carrying over saved values and compatible connections. The checker does not start the server's database services or permit network discovery. When it cannot verify those generated fields, it reports `could_not_verify` and the flow warns. A confirmed removed field, changed static input or output, or runtime refusal still makes the flow fail. Review the generated fields in the editor with the selected flow or tool available before upgrading.
+- A custom component whose update code calls the network reports as `could_not_verify`.
+
+## See also
+
+- [LFX and Langflow version compatibility](/lfx-compatibility)
+- [Migrate to a new Langflow instance](/instance-migration)
+- [Database migrations](/database-migrations)

@@ -693,6 +693,14 @@ jobs:
       runs-on: ubuntu-latest
     secrets: inherit
 
+  component-compatibility:
+    name: Component compatibility
+    needs: [validate-tag, validate-dependencies]
+    uses: ./.github/workflows/component-compatibility.yml
+    with:
+      ref: ${{ inputs.release_commit }}
+      base-sha: ${{ inputs.release_commit }}
+
   build-sdk:
     name: Build langflow-sdk
     needs: [determine-sdk-version]
@@ -1421,13 +1429,14 @@ jobs:
 
   reserve-final-release:
     name: Reserve final publication
-    needs: [validate-tag, validate-tag-format, ci, test-cross-platform, release-inventory]
+    needs: [validate-tag, validate-tag-format, ci, test-cross-platform, release-inventory, component-compatibility]
     if: |
       always() &&
       !cancelled() &&
       needs.validate-tag.result == 'success' &&
       needs.validate-tag-format.result == 'success' &&
       needs.ci.result == 'success' &&
+      needs.component-compatibility.result == 'success' &&
       (needs.test-cross-platform.result == 'success' || needs.test-cross-platform.result == 'skipped') &&
       (needs.release-inventory.result == 'success' || needs.release-inventory.result == 'skipped')
     runs-on: ubuntu-latest
@@ -1787,6 +1796,7 @@ jobs:
         publish-base,
         publish-main,
         validate-tag-format,
+        component-compatibility,
       ]
     if: |
       always() &&
@@ -1801,8 +1811,15 @@ jobs:
        needs.publish-base.result == 'success' ||
        needs.determine-base-version.outputs.skipped == 'true') &&
       (needs.publish-main.result == 'success' || needs.publish-base.result == 'success') &&
-      needs.validate-tag-format.result == 'success'
+      needs.validate-tag-format.result == 'success' &&
+      needs.component-compatibility.result == 'success'
     steps:
+      - name: Download component compatibility release notes
+        uses: actions/download-artifact@v8
+        with:
+          name: component-compatibility
+          path: compatibility-evidence
+
       - name: Download main artifact
         if: ${{ inputs.release_package_main && needs.publish-main.result == 'success' }}
         uses: actions/download-artifact@v8
@@ -1851,6 +1868,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: false
           generateReleaseNotes: true
+          bodyFile: compatibility-evidence/release-notes.md
           prerelease: ${{ inputs.pre_release }}
           tag: ${{ inputs.pre_release && (needs.determine-main-version.outputs.version || needs.determine-base-version.outputs.version) || inputs.release_tag }}
           name: ${{ needs.determine-main-version.outputs.version || needs.determine-base-version.outputs.version }}
