@@ -3,8 +3,7 @@ from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import DropdownInput, MessageTextInput, SecretStrInput
 from lfx.schema.message import Message
 from lfx.template.field.base import Output
-
-from .serpkite_search import _http_error_message
+from lfx_serpkite.components.serpkite.serpkite_search import _http_error_message
 
 API_BASE = "https://api.serpkite.com/v1"
 # Display name -> endpoint. Answers take seconds (Brave) to under a minute.
