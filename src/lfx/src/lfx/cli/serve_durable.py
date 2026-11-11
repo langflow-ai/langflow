@@ -65,7 +65,7 @@ if TYPE_CHECKING:
 
     from fastapi import APIRouter
 
-    from lfx.services.durable.models import DurableEvent
+    from lfx.services.durable.models import DurableEvent, DurableJob
     from lfx.workflow.converters import ParsedWorkflowRun
     from lfx.workflow.host import ResolvedFlow
 
@@ -132,24 +132,33 @@ class DurableServeWorkflowHost(ServeWorkflowHost):
         *,
         stream_protocol: str,  # noqa: ARG002
     ) -> WorkflowJobResponse:
-        await self._supersede_suspended(flow.flow_id)
+        await self._supersede_suspended(flow.flow_id, caller)
         job_id = str(uuid4())
         await self.jobs.create_job(job_id=job_id, flow_id=flow.flow_id, user_id=self._run_user_id(caller) or "")
         self._spawn(job_id, self._run_job(job_id, flow.graph, parsed, caller))
         return create_job_response(job_id, flow.flow_id)
 
-    async def _supersede_suspended(self, flow_id: str) -> None:
+    async def _get_owned_job(self, job_id: str, caller: Any) -> DurableJob:
+        job = await self.jobs.get_job(job_id)
+        if job is None or job.user_id != (self._run_user_id(caller) or ""):
+            raise _job_not_found(job_id)
+        return job
+
+    async def _supersede_suspended(self, flow_id: str, caller: Any = None) -> None:
         """Cancel this flow's stale suspended runs so a rerun replaces the pause.
 
         A suspended run holds a pause nobody will answer once the flow is rerun;
-        left alive it piles up in every pending surface. serve has a single API-key
-        identity, so the scope is the flow (the langflow backend scopes by user too).
+        left alive it piles up in every pending surface. Only the submitting
+        identity can replace its own suspended runs.
 
         The conditional claim keeps supersede-vs-resume safe: a resume that flipped
         the row IN_PROGRESS between the select and this loop keeps its run, and no
         STOP signal is written that its continuation could later consume.
         """
         for stale_job_id in await self.jobs.suspended_job_ids_for_flow(flow_id):
+            job = await self.jobs.get_job(stale_job_id)
+            if job is None or job.user_id != (self._run_user_id(caller) or ""):
+                continue
             if not await self.jobs.claim_suspended_for_cancel(stale_job_id):
                 continue
             await self.jobs.write_signal(stale_job_id, SignalType.STOP)
@@ -161,12 +170,10 @@ class DurableServeWorkflowHost(ServeWorkflowHost):
     async def get_job_status(
         self,
         job_id: str,
-        caller: Any,  # noqa: ARG002
+        caller: Any,
         session: Any,  # noqa: ARG002
     ) -> WorkflowExecutionResponse | WorkflowJobResponse:
-        job = await self.jobs.get_job(job_id)
-        if job is None:
-            raise _job_not_found(job_id)
+        job = await self._get_owned_job(job_id, caller)
         if job.status == DurableJobStatus.COMPLETED and job.result:
             return workflow_response_from_output_events(
                 job.result.get("output_events", []), flow_id=job.flow_id, job_id=job_id
@@ -179,10 +186,8 @@ class DurableServeWorkflowHost(ServeWorkflowHost):
             errors=errors,
         )
 
-    async def stop_job(self, job_id: str, caller: Any) -> WorkflowStopResponse:  # noqa: ARG002
-        job = await self.jobs.get_job(job_id)
-        if job is None:
-            raise _job_not_found(job_id)
+    async def stop_job(self, job_id: str, caller: Any) -> WorkflowStopResponse:
+        job = await self._get_owned_job(job_id, caller)
         await self.jobs.write_signal(job_id, SignalType.STOP)
         task = self._tasks.get(job_id)
         if task is not None and not task.done():
@@ -191,10 +196,8 @@ class DurableServeWorkflowHost(ServeWorkflowHost):
             await self.jobs.update_status(job_id, DurableJobStatus.CANCELLED)
         return WorkflowStopResponse(job_id=job_id, message="Stop signal recorded; job cancelled.")
 
-    async def pending_request(self, job_id: str) -> dict[str, Any]:
-        job = await self.jobs.get_job(job_id)
-        if job is None:
-            raise _job_not_found(job_id)
+    async def pending_request(self, job_id: str, caller: Any) -> dict[str, Any]:
+        job = await self._get_owned_job(job_id, caller)
         pending = (job.job_metadata or {}).get("pending")
         if job.status != DurableJobStatus.SUSPENDED or not pending:
             raise HTTPException(
@@ -203,15 +206,14 @@ class DurableServeWorkflowHost(ServeWorkflowHost):
             )
         return pending
 
-    async def stream_events(self, job_id: str, *, last_event_id: str | None) -> StreamingResponse:
+    async def stream_events(self, job_id: str, caller: Any, *, last_event_id: str | None) -> StreamingResponse:
         """Replay the durable event log as SSE, tailing until the run ends or suspends.
 
         Backs the advertised ``links.events`` URL: events are read from the job's
         ``job_events`` log after ``Last-Event-ID`` and streamed with the seq as the
         SSE id, so a reconnect resumes exactly where it left off.
         """
-        if await self.jobs.get_job(job_id) is None:
-            raise _job_not_found(job_id)
+        await self._get_owned_job(job_id, caller)
         return StreamingResponse(
             self._event_frames(job_id, after_seq=_parse_last_event_id(last_event_id)),
             media_type="text/event-stream",
@@ -235,10 +237,8 @@ class DurableServeWorkflowHost(ServeWorkflowHost):
                 return
             await asyncio.sleep(_EVENT_POLL_INTERVAL_S)
 
-    async def resume_job(self, job_id: str, request: WorkflowResumeRequest) -> WorkflowResumeResponse:
-        job = await self.jobs.get_job(job_id)
-        if job is None:
-            raise _job_not_found(job_id)
+    async def resume_job(self, job_id: str, request: WorkflowResumeRequest, caller: Any) -> WorkflowResumeResponse:
+        job = await self._get_owned_job(job_id, caller)
         pending = (job.job_metadata or {}).get("pending") or {}
         if pending.get("request_id") != request.request_id:
             raise _not_resumable(job_id)
@@ -365,18 +365,18 @@ class DurableServeWorkflowHost(ServeWorkflowHost):
 def _register_resume_routes(router: APIRouter, host: DurableServeWorkflowHost) -> None:
     @router.post("/{job_id}/resume", summary="Resume Workflow (v2 human-in-the-loop)")
     async def resume_workflow(job_id: str, request: WorkflowResumeRequest, http_request: Request):
-        await host.resolve_caller(http_request)
-        return await host.resume_job(job_id, request)
+        caller = await host.resolve_caller(http_request)
+        return await host.resume_job(job_id, request, caller)
 
     @router.get("/{job_id}/pending", summary="Pending human-input request (v2 background)")
     async def pending_request(job_id: str, http_request: Request):
-        await host.resolve_caller(http_request)
-        return await host.pending_request(job_id)
+        caller = await host.resolve_caller(http_request)
+        return await host.pending_request(job_id, caller)
 
     @router.get("/{job_id}/events", response_model=None, summary="Re-attach to a background run (v2 SSE)")
     async def stream_events(job_id: str, http_request: Request):
-        await host.resolve_caller(http_request)
-        return await host.stream_events(job_id, last_event_id=http_request.headers.get("Last-Event-ID"))
+        caller = await host.resolve_caller(http_request)
+        return await host.stream_events(job_id, caller, last_event_id=http_request.headers.get("Last-Event-ID"))
 
 
 def create_durable_workflow_router(registry, verify_api_key, *, db_path: Path) -> APIRouter:

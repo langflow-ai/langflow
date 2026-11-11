@@ -6,6 +6,24 @@ import i18n, { loadLanguage } from "@/i18n";
 import ConnectionRefComponent from "../index";
 
 jest.unmock("react-i18next");
+jest.mock("@tanstack/react-query", () => ({
+  ...jest.requireActual("@tanstack/react-query"),
+  useQueryClient: () => ({ setQueryData: jest.fn() }),
+}));
+jest.mock("@/controllers/API/queries/connections/use-connections", () => ({
+  useIntegrationsQuery: () => ({
+    data: { providers: [] },
+    isSuccess: true,
+    refetch: jest.fn(),
+  }),
+}));
+jest.mock(
+  "@/pages/SettingsPage/pages/ConnectionsPage/components/AddConnectionDialog",
+  () => ({
+    __esModule: true,
+    default: () => null,
+  }),
+);
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
   default: () => null,

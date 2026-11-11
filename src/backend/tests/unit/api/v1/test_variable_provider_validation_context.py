@@ -75,7 +75,8 @@ async def test_should_validate_with_owner_provider_vars_not_caller_in_share_awar
     svc = SimpleNamespace(update_variable_fields=AsyncMock(return_value=existing))
     captured = {}
 
-    def fake_get_all_vars(user_id, _provider):
+    def fake_get_all_vars(user_id, _provider, *, exclude=()):
+        assert exclude == ("OPENAI_API_KEY",)
         captured["user_id"] = user_id
         return {"OPENAI_BASE_URL": CUSTOM_BASE_URL}
 

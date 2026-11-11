@@ -37,6 +37,7 @@ ENDPOINTS = {
     "TypeSafe": "https://api.typesafe.ai/v1/systemone",
     "Perplexity": "https://api.perplexity.ai/v1/decisions",
     "OpenAI": "https://api.openai.com/v1/decisions",
+    "OpenRouter": "https://openrouter.ai/api/v1/systemone",
 }
 MAX_HOSTED_SCORE_LEVELS = 10
 MAX_CHOICES = 255
@@ -84,14 +85,50 @@ def _description(candidate: DecisionOption) -> str:
     return f"{candidate.label}: {candidate.description}" if candidate.description else candidate.label
 
 
-def _provider_error_code(response: httpx.Response) -> str:
-    """A provider's machine-readable error code, only when it is a short safe token; never its message."""
+_SAFE_ERROR_CODE = re.compile(r"[A-Za-z0-9_.-]{1,64}")
+_INPUT_TOO_LARGE_CODES = frozenset({"max_tokens_exceeded", "context_length_exceeded"})
+# Providers that name no code for an oversized input say so in a fixed sentence of their own. Only a
+# whole-message match counts, so a message that quotes the input can't pass for one.
+_INPUT_TOO_LARGE_MESSAGES = (
+    re.compile(r"Decision input exceeds the token limit\."),  # OpenAI, with code null
+    re.compile(r"Decision question requires \d+ tokens with context, exceeding maximum context length \(\d+\)"),
+)
+
+
+def _error_body(response: httpx.Response) -> dict[str, Any]:
     try:
-        error = response.json().get("error")
-    except (ValueError, AttributeError):
-        return ""
-    code = error.get("code") or error.get("type") if isinstance(error, dict) else None
-    return f", {code}" if isinstance(code, str) and re.fullmatch(r"[A-Za-z0-9_.-]{1,64}", code) else ""
+        body = response.json()
+    except ValueError:
+        return {}
+    return body if isinstance(body, dict) else {}
+
+
+def _error_codes(body: dict[str, Any]) -> list[str]:
+    """Every machine-readable code in an error body, most specific first; only short safe tokens."""
+    error, detail = body.get("error"), body.get("detail")
+    candidates = []
+    if isinstance(error, dict):
+        candidates += [error.get("code"), error.get("type")]
+    if isinstance(detail, dict):
+        candidates.append(detail.get("error_type"))  # TypeSafe
+    return [code for code in candidates if isinstance(code, str) and _SAFE_ERROR_CODE.fullmatch(code)]
+
+
+def _provider_error_code(body: dict[str, Any], status: int) -> str:
+    """The provider's error code for the message, never its message, and never one that only repeats the status."""
+    return next((code for code in _error_codes(body) if code != str(status)), "")
+
+
+def _input_too_large(status: int, body: dict[str, Any]) -> bool:
+    if status == httpx.codes.REQUEST_ENTITY_TOO_LARGE:
+        return True
+    if status != httpx.codes.BAD_REQUEST:
+        return False
+    if _INPUT_TOO_LARGE_CODES.intersection(_error_codes(body)):
+        return True
+    error = body.get("error")
+    message = error.get("message") if isinstance(error, dict) else None
+    return isinstance(message, str) and any(pattern.fullmatch(message) for pattern in _INPUT_TOO_LARGE_MESSAGES)
 
 
 def _request_id(response: httpx.Response) -> str | None:
@@ -102,7 +139,7 @@ def _request_id(response: httpx.Response) -> str | None:
 
 def _reference(status: int | None = None, code: str = "", request_id: str | None = None) -> str:
     """A trailing reference such as " (HTTP 401, invalid_api_key, request ID req_1)", or nothing."""
-    parts = [f"HTTP {status}{code}"] if status else []
+    parts = [f"HTTP {status}, {code}" if code else f"HTTP {status}"] if status else []
     if request_id:
         parts.append(f"request ID {request_id}")
     return f" ({', '.join(parts)})" if parts else ""
@@ -147,6 +184,9 @@ def build_payload(provider: str, model: str, request: DecisionRequest) -> dict[s
             raise DecisionConfigurationError(msg)
         outcomes = (("true", request.yes_description), ("false", request.no_description))
         question["criteria"] = {outcome: text for outcome, text in outcomes if text}
+        if provider == "OpenRouter" and not (request.yes_description and request.no_description):
+            msg = "OpenRouter requires both What Yes Means and What No Means when either is provided."
+            raise DecisionConfigurationError(msg)
     if provider == "OpenAI":
         question["name"] = QUESTION_ID
         if request.kind == "choice":
@@ -211,6 +251,10 @@ def parse_response(
         if not isinstance(model, str) or not model.strip():
             msg = "model must be a non-empty string"
             raise ValueError(msg)
+        if provider == "OpenRouter" and request_id is None:
+            candidate = payload.get("id")
+            if isinstance(candidate, str) and re.fullmatch(r"[A-Za-z0-9._:-]{1,128}", candidate):
+                request_id = candidate
         answers = payload["answers"]
         if provider == "OpenAI":
             if not isinstance(answers, list) or len(answers) != 1:
@@ -234,9 +278,9 @@ def parse_response(
             "usage": _token_usage(payload.get("usage")),
             "request_id": request_id,
         }
-        # Only OpenAI documents a refusal answer. TypeSafe and Perplexity always answer with the
-        # requested type, so any other type there is an invalid response, never a refusal.
-        if provider == "OpenAI" and answer["type"] == "refusal":
+        # OpenAI and OpenRouter document a refusal answer (OpenRouter's carries no reason). TypeSafe and
+        # Perplexity always answer with the requested type, so any other type there is invalid, never a refusal.
+        if provider in {"OpenAI", "OpenRouter"} and answer["type"] == "refusal":
             reason = answer.get("refusal")
             refusal = reason if isinstance(reason, str) and reason.strip() else None
             return DecisionResult(**common, status="refusal", refusal=refusal)
@@ -351,12 +395,13 @@ def evaluate_provider(
     status = response.status_code
     request_id = _request_id(response)
     # Failures end with the HTTP status, the provider's code and its request ID, to raise with the provider.
-    code = "" if response.is_success else _provider_error_code(response)
+    body = {} if response.is_success else _error_body(response)
+    code = _provider_error_code(body, status)
     ref = "" if response.is_success else _reference(status, code, request_id)
     # 402 is an unpaid or exhausted account, which OpenAI reports as 429 insufficient_quota: like a
     # rejected key, it must stop rather than route to Else.
     out_of_credit = status == httpx.codes.PAYMENT_REQUIRED or (
-        status == httpx.codes.TOO_MANY_REQUESTS and code == ", insufficient_quota"
+        status == httpx.codes.TOO_MANY_REQUESTS and code == "insufficient_quota"
     )
     if status == httpx.codes.UNAUTHORIZED:
         msg = f"{provider} didn't accept the API key{ref}. Check the {provider} API key in Model Providers."
@@ -368,11 +413,9 @@ def evaluate_provider(
         msg = f"This {provider} API key can't use decision models{ref}. Use a key with access to them."
         raise PermissionError(msg)
     # An oversized input is a property of this message, not of the router, so the error action applies.
-    # TypeSafe reports it as 400 max_tokens_exceeded; OpenAI's other APIs as 400 context_length_exceeded,
-    # assumed for its Decisions API too.
-    if status == httpx.codes.REQUEST_ENTITY_TOO_LARGE or (
-        status == httpx.codes.BAD_REQUEST and code in {", max_tokens_exceeded", ", context_length_exceeded"}
-    ):
+    # TypeSafe answers 400 {"detail": {"error_type": "max_tokens_exceeded"}}; OpenAI and Perplexity name no
+    # code and are recognised by their own fixed sentence.
+    if _input_too_large(status, body):
         msg = f"{provider} rejected the input as too large{ref}. Shorten the input."
         raise DecisionEvaluationError(msg, category="input_too_large")
     if status == httpx.codes.NOT_FOUND:

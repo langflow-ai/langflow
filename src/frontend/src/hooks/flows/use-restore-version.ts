@@ -10,7 +10,10 @@ import useVersionPreviewStore from "@/stores/versionPreviewStore";
 /** One beat, then try again: long enough for the competing write to commit. */
 const RETRY_BUSY_MS = 700;
 
-export default function useRestoreVersion(flowId: string) {
+export default function useRestoreVersion(
+  flowId: string,
+  versionToken?: string | null,
+) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -33,7 +36,12 @@ export default function useRestoreVersion(flowId: string) {
           api.post(
             `${getURL("FLOWS")}/${flowId}/versions/${versionId}/activate`,
             null,
-            { params: { save_draft: saveDraft } },
+            {
+              params: { save_draft: saveDraft },
+              ...(versionToken
+                ? { headers: { "If-Match": versionToken } }
+                : {}),
+            },
           );
         // A restore that lands at the same moment as an autosave finds the row
         // locked. Nothing is wrong with either write, so the second attempt is
@@ -58,7 +66,14 @@ export default function useRestoreVersion(flowId: string) {
         // biome-ignore lint/suspicious/noExplicitAny: legacy
       } catch (err: any) {
         const apiDetail = err?.response?.data?.detail;
-        const message = apiDetail ?? err?.message ?? "Unknown error";
+        const detailMessage =
+          typeof apiDetail === "string" ? apiDetail : apiDetail?.message;
+        const message =
+          typeof detailMessage === "string"
+            ? detailMessage
+            : typeof err?.message === "string"
+              ? err.message
+              : t("errors.generic");
         setErrorData({
           title: t("errors.failedToRestoreVersion"),
           list: [message],
@@ -83,11 +98,13 @@ export default function useRestoreVersion(flowId: string) {
     },
     [
       flowId,
+      versionToken,
       queryClient,
       applyFlowToCanvas,
       clearPreview,
       setSuccessData,
       setErrorData,
+      t,
     ],
   );
 
