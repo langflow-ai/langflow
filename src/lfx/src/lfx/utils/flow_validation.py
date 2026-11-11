@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import hashlib
-from collections.abc import Container, Mapping
+from collections.abc import Collection, Container, Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -12,6 +12,7 @@ from lfx.utils.component_aliases import ComponentIdentityIndex, get_component_ty
 from lfx.utils.flow_code import has_code_lines, normalize_code_for_import
 
 if TYPE_CHECKING:
+    from lfx.interface.components import ComponentCache
     from lfx.services.catalog_policy import CatalogPolicySnapshot
 
 INITIALIZING_COMPONENT_TEMPLATES_MESSAGE = (
@@ -347,11 +348,19 @@ def collect_catalog_component_keys(target: Mapping[str, Any] | Any | None) -> fr
     return frozenset(_collect_catalog_component_keys(normalized_flow_data.get("nodes")))
 
 
-def get_component_identity_index_for_validation() -> ComponentIdentityIndex | None:
-    """Return the cached canonical identity index when the registry is ready."""
+def get_component_identity_index_for_validation(cache: ComponentCache | None = None) -> ComponentIdentityIndex | None:
+    """Return the cached canonical identity index when the registry is ready.
+
+    ``cache`` replaces the process registry here and in the checks below, for a caller that
+    judges flows against another release's components (the upgrade check).
+    """
     from lfx.interface.components import get_component_identity_index
 
-    return get_component_identity_index()
+    if cache is None:
+        return get_component_identity_index()
+    # Building the hash lookups builds every derived lookup, the identity index too.
+    get_component_hash_lookups_for_validation(cache)
+    return cache.component_identity_index
 
 
 def _resolve_catalog_policy_matches(
@@ -373,6 +382,7 @@ def validate_catalog_policy_for_flow(
     target: Mapping[str, Any] | Any | None,
     *,
     snapshot: CatalogPolicySnapshot | None = None,
+    cache: ComponentCache | None = None,
 ) -> None:
     """Reject a flow containing component keys blocked by the current catalog snapshot.
 
@@ -408,7 +418,7 @@ def validate_catalog_policy_for_flow(
     # exact policy denial fail closed without waiting for alias data.
     blocked = snapshot.blocked_components(component_keys)
     if not blocked:
-        identity_index = get_component_identity_index_for_validation()
+        identity_index = get_component_identity_index_for_validation(cache)
         if identity_index is None:
             raise CatalogPolicyIdentityUnavailableError(CATALOG_POLICY_IDENTITIES_UNAVAILABLE_MESSAGE)
         blocked = _resolve_catalog_policy_matches(
@@ -519,6 +529,7 @@ def _get_invalid_components(
     nodes: list[dict],
     type_to_current_hash: Mapping[str, set[str]],
     substitutable_types: Container[str] | None = None,
+    outdated_types: dict[str, str] | None = None,
 ) -> tuple[list[str], list[str]]:
     """Walk nodes and classify invalid components.
 
@@ -527,6 +538,7 @@ def _get_invalid_components(
     :func:`substitute_outdated_component_code_in_place`). A hash mismatch on one of those
     types is not reported as outdated, because the stored code is never what runs. It only
     ever suppresses the *outdated* classification — an unrecognized type is still blocked.
+    ``outdated_types``, when given, receives the label and component type of every outdated node.
     """
     blocked: list[str] = []
     outdated: list[str] = []
@@ -584,6 +596,8 @@ def _get_invalid_components(
                 is_substitutable = substitutable_types is not None and component_type in substitutable_types
                 if node_hash not in expected_hashes and not is_substitutable:
                     outdated.append(label)
+                    if outdated_types is not None:
+                        outdated_types[label] = component_type
 
         flow_data = node_info.get("flow", {})
         if isinstance(flow_data, dict):
@@ -600,6 +614,7 @@ def _get_invalid_components(
                     nested_nodes,
                     type_to_current_hash,
                     substitutable_types,
+                    outdated_types,
                 )
                 blocked.extend(nested_blocked)
                 outdated.extend(nested_outdated)
@@ -728,7 +743,7 @@ def code_hash_matches_any_template(code: str, all_known_hashes: set[str]) -> boo
     return _compute_code_hash(code) in all_known_hashes
 
 
-def get_trusted_code_for_validation(code: str) -> str | None:
+def get_trusted_code_for_validation(code: str, cache: ComponentCache | None = None) -> str | None:
     """Return the server-trusted source whose hash matches ``code``, if any.
 
     When a request clears the hash gate in a restricted deployment
@@ -743,19 +758,16 @@ def get_trusted_code_for_validation(code: str) -> str | None:
     """
     from lfx.interface.components import component_cache
 
+    cache = component_cache if cache is None else cache
     code_hash = _compute_code_hash(code)
-    with component_cache.state_lock:
+    with cache.state_lock:
         # Self-heal lazily when eager warm-up did not run. Building and
         # publishing under the same lock as reload prevents an old registry
         # snapshot from being published after reload invalidates it.
-        if (
-            component_cache.code_by_hash is None
-            and component_cache.all_types_ready
-            and component_cache.all_types_dict is not None
-        ):
-            component_cache.code_by_hash = collect_code_by_hash(component_cache.all_types_dict)
+        if cache.code_by_hash is None and cache.all_types_ready and cache.all_types_dict is not None:
+            cache.code_by_hash = collect_code_by_hash(cache.all_types_dict)
 
-        code_by_hash = component_cache.code_by_hash
+        code_by_hash = cache.code_by_hash
         if not code_by_hash:
             return None
 
@@ -777,7 +789,7 @@ def get_trusted_code_and_hashes_for_validation(code: str) -> tuple[str | None, d
         return (code_by_hash.get(code_hash) if code_by_hash else None, component_cache.type_to_current_hash)
 
 
-def _substitute_trusted_code_by_hash(nodes: list[dict]) -> list[str]:
+def _substitute_trusted_code_by_hash(nodes: list[dict], cache: ComponentCache | None = None) -> list[str]:
     """Replace code-bearing nodes with the matching server-trusted source.
 
     The caller must first validate each node's declared type and code hash with
@@ -804,7 +816,7 @@ def _substitute_trusted_code_by_hash(nodes: list[dict]) -> list[str]:
         code_field = template.get("code") if isinstance(template, dict) else None
         code = code_field.get("value") if isinstance(code_field, dict) else None
         if isinstance(code, str) and code:
-            trusted = get_trusted_code_for_validation(code)
+            trusted = get_trusted_code_for_validation(code, cache)
             if trusted is None:
                 display_name = node_info.get("display_name") or node_data.get("type") or "unknown"
                 node_id = node_data.get("id") or node.get("id", "unknown")
@@ -817,7 +829,7 @@ def _substitute_trusted_code_by_hash(nodes: list[dict]) -> list[str]:
             nested_data = nested_flow.get("data")
             nested_nodes = nested_data.get("nodes") if isinstance(nested_data, dict) else None
             if isinstance(nested_nodes, list) and nested_nodes:
-                blocked.extend(_substitute_trusted_code_by_hash(nested_nodes))
+                blocked.extend(_substitute_trusted_code_by_hash(nested_nodes, cache))
 
     return blocked
 
@@ -910,7 +922,8 @@ def check_flow_and_raise(
         )
         raise CustomComponentValidationError(INITIALIZING_COMPONENT_TEMPLATES_MESSAGE)
 
-    blocked, outdated = _get_invalid_components(nodes, type_to_current_hash, substitutable_types)
+    outdated_types: dict[str, str] = {}
+    blocked, outdated = _get_invalid_components(nodes, type_to_current_hash, substitutable_types, outdated_types)
 
     if blocked:
         blocked_names = ", ".join(blocked)
@@ -921,23 +934,30 @@ def check_flow_and_raise(
     if outdated:
         outdated_names = ", ".join(outdated)
         logger.warning(f"Flow build blocked: outdated components must be updated: {outdated_names}")
-        message = f"Flow build blocked: outdated components must be updated before running: {outdated_names}"
+        # A retired component fails whatever code runs, so updating it cannot help: name its
+        # replacement instead, as the build note and the v2 warning do.
+        retired = _retired_components(outdated_types)
+        sentences = [
+            _retired_sentence(label, entry["retired_in"], entry.get("replacement")) for label, entry in retired.items()
+        ]
+        stale_names = ", ".join(label for label in outdated if label not in retired)
+        if stale_names:
+            stale = f"outdated components must be updated before running: {stale_names}"
+            sentences.insert(0, f"{stale}." if sentences else stale)
+        message = f"Flow build blocked: {' '.join(sentences)}"
         raise CustomComponentValidationError(message)
 
 
-def get_component_hash_lookups_for_validation() -> dict[str, set[str]] | None:
+def get_component_hash_lookups_for_validation(cache: ComponentCache | None = None) -> dict[str, set[str]] | None:
     """Return the cached component hashes, building them synchronously if possible."""
     from lfx.interface.components import _build_code_hash_lookups, component_cache
 
-    with component_cache.state_lock:
-        if (
-            component_cache.type_to_current_hash is None
-            and component_cache.all_types_ready
-            and component_cache.all_types_dict is not None
-        ):
-            _build_code_hash_lookups(component_cache)
+    cache = component_cache if cache is None else cache
+    with cache.state_lock:
+        if cache.type_to_current_hash is None and cache.all_types_ready and cache.all_types_dict is not None:
+            _build_code_hash_lookups(cache)
 
-        return component_cache.type_to_current_hash
+        return cache.type_to_current_hash
 
 
 def validate_catalog_policy_for_component_code(
@@ -1029,17 +1049,24 @@ def validate_flow_for_current_settings(
     target: Mapping[str, Any] | Any | None,
     *,
     catalog_policy_snapshot: CatalogPolicySnapshot | None = None,
+    settings: Any | None = None,
+    cache: ComponentCache | None = None,
 ) -> None:
-    """Enforce catalog and custom-component policy for a payload or graph-like object."""
+    """Enforce catalog and custom-component policy for a payload or graph-like object.
+
+    ``settings`` (anything with the settings' attributes) replaces the settings service, and
+    ``cache`` the process registry, for a caller that judges flows for another server.
+    """
     from lfx.services.deps import get_catalog_policy_service, get_settings_service
 
-    settings_service = get_settings_service()
-    if settings_service is None:
-        raise RuntimeError(SETTINGS_SERVICE_REQUIRED_MESSAGE)
+    if settings is None:
+        settings_service = get_settings_service()
+        if settings_service is None:
+            raise RuntimeError(SETTINGS_SERVICE_REQUIRED_MESSAGE)
+        settings = settings_service.settings
 
     if catalog_policy_snapshot is None:
         catalog_policy_snapshot = get_catalog_policy_service().snapshot
-    settings = settings_service.settings
     allow_custom_components = getattr(settings, "allow_custom_components", True)
     block_code_interpreter_components = getattr(settings, "block_code_interpreter_components", False)
     normalized_flow_data = _extract_flow_data(target)
@@ -1058,10 +1085,12 @@ def validate_flow_for_current_settings(
         )
         raise CustomComponentValidationError(msg)
 
-    validate_catalog_policy_for_flow(normalized_flow_data, snapshot=catalog_policy_snapshot)
+    validate_catalog_policy_for_flow(normalized_flow_data, snapshot=catalog_policy_snapshot, cache=cache)
 
     if block_code_interpreter_components:
-        check_code_execution_components_and_raise(normalized_flow_data)
+        check_code_execution_components_and_raise(
+            normalized_flow_data, type_to_current_hash=get_component_hash_lookups_for_validation(cache)
+        )
 
     # Pre-check call sites (API endpoints, warm-graph reuse) validate a payload they do not own,
     # so the substitution itself happens later, in Graph.from_payload, on the payload that is
@@ -1072,11 +1101,11 @@ def validate_flow_for_current_settings(
     substitution_lookups = None
     type_to_current_hash = None
     if not allow_custom_components:
-        substitution_lookups = get_outdated_code_substitution_lookups()
+        substitution_lookups = get_outdated_code_substitution_lookups(settings, cache)
         type_to_current_hash = (
             substitution_lookups[1].type_to_current_hash
             if substitution_lookups
-            else get_component_hash_lookups_for_validation()
+            else get_component_hash_lookups_for_validation(cache)
         )
 
     check_flow_and_raise(
@@ -1169,7 +1198,7 @@ def _substitute_trusted_node_code(nodes: list, type_to_code: dict[str, str]) -> 
     return blocked
 
 
-def get_component_code_lookups_for_validation() -> dict[str, str] | None:
+def get_component_code_lookups_for_validation(cache: ComponentCache | None = None) -> dict[str, str] | None:
     """Return the cached component type→trusted-code map, building it synchronously if possible.
 
     ``None`` means the registry is not ready yet, which callers must treat as "no substitution
@@ -1177,18 +1206,15 @@ def get_component_code_lookups_for_validation() -> dict[str, str] | None:
     """
     from lfx.interface.components import component_cache
 
-    with component_cache.state_lock:
+    cache = component_cache if cache is None else cache
+    with cache.state_lock:
         # Self-heal lazily when eager warm-up did not run, mirroring
         # get_trusted_code_for_validation. Only this lookup is (re)built, so a
         # caller holding another derived index keeps its own consistent view.
-        if (
-            component_cache.type_to_code is None
-            and component_cache.all_types_ready
-            and component_cache.all_types_dict is not None
-        ):
-            component_cache.type_to_code = collect_component_code_lookups(component_cache.all_types_dict)
+        if cache.type_to_code is None and cache.all_types_ready and cache.all_types_dict is not None:
+            cache.type_to_code = collect_component_code_lookups(cache.all_types_dict)
 
-        return component_cache.type_to_code
+        return cache.type_to_code
 
 
 @dataclass(frozen=True, slots=True)
@@ -1226,7 +1252,9 @@ class SubstitutableComponentTypes(Container[str]):
         return next(iter(self.type_to_current_hash[component_type]))
 
 
-def get_outdated_code_substitution_lookups() -> tuple[dict[str, str], SubstitutableComponentTypes] | None:
+def get_outdated_code_substitution_lookups(
+    settings: Any | None = None, cache: ComponentCache | None = None
+) -> tuple[dict[str, str], SubstitutableComponentTypes] | None:
     """Return ``(type_to_code, substitutable_types)`` when drifted built-ins are substitutable.
 
     ``None`` — meaning "keep the strict hash check" — is returned when custom components are
@@ -1237,11 +1265,11 @@ def get_outdated_code_substitution_lookups() -> tuple[dict[str, str], Substituta
     from lfx.interface.components import component_cache
     from lfx.services.deps import get_settings_service
 
-    settings_service = get_settings_service()
-    if settings_service is None:
-        return None
-
-    settings = settings_service.settings
+    if settings is None:
+        settings_service = get_settings_service()
+        if settings_service is None:
+            return None
+        settings = settings_service.settings
     if getattr(settings, "allow_custom_components", True):
         return None
     if not getattr(settings, "substitute_outdated_component_code", True):
@@ -1250,9 +1278,10 @@ def get_outdated_code_substitution_lookups() -> tuple[dict[str, str], Substituta
     # The cache publishes and invalidates all derived indexes under this lock. Keep it across
     # both reads so a hot reload cannot pair hashes from one registry snapshot with source from
     # another. The individual helpers also take this RLock while lazily self-healing an index.
-    with component_cache.state_lock:
-        type_to_current_hash = get_component_hash_lookups_for_validation()
-        type_to_code = get_component_code_lookups_for_validation()
+    cache = component_cache if cache is None else cache
+    with cache.state_lock:
+        type_to_current_hash = get_component_hash_lookups_for_validation(cache)
+        type_to_code = get_component_code_lookups_for_validation(cache)
     if not type_to_current_hash or not type_to_code:
         return None
 
@@ -1263,6 +1292,7 @@ def _substitute_outdated_node_code(
     nodes: list,
     type_to_code: Mapping[str, str],
     substitutable_types: SubstitutableComponentTypes,
+    node_types: dict[str, str] | None = None,
 ) -> list[str]:
     """Replace drifted built-in code with this server's copy for the node's component type.
 
@@ -1271,7 +1301,8 @@ def _substitute_outdated_node_code(
     are touched; every other node — one whose type is unknown, and one whose type is ambiguous
     across the registry — is left exactly as it was for :func:`check_flow_and_raise` to
     classify. Recurses into inlined sub-flow definitions. Returns ``display_name (id)`` labels
-    for swapped nodes.
+    for swapped nodes; ``node_types``, when given, receives the label and component type of every
+    node with code and a string type, swapped or not.
     """
     swapped: list[str] = []
 
@@ -1289,6 +1320,11 @@ def _substitute_outdated_node_code(
         code_field = template.get("code") if isinstance(template, dict) else None
         code = code_field.get("value") if isinstance(code_field, dict) else None
         component_type = node_data.get("type")
+        display_name = node_info.get("display_name") or component_type
+        node_id = node_data.get("id") or node.get("id", "unknown")
+        label = f"{display_name} ({node_id})"
+        if node_types is not None and isinstance(code, str) and code and isinstance(component_type, str):
+            node_types[label] = component_type
 
         if (
             isinstance(code, str)
@@ -1299,16 +1335,16 @@ def _substitute_outdated_node_code(
             trusted = type_to_code[component_type]
             if trusted != code:
                 code_field["value"] = trusted
-                display_name = node_info.get("display_name") or component_type
-                node_id = node_data.get("id") or node.get("id", "unknown")
-                swapped.append(f"{display_name} ({node_id})")
+                swapped.append(label)
 
         nested_flow = node_info.get("flow")
         if isinstance(nested_flow, dict):
             nested_data = nested_flow.get("data")
             nested_nodes = nested_data.get("nodes") if isinstance(nested_data, dict) else None
             if isinstance(nested_nodes, list) and nested_nodes:
-                swapped.extend(_substitute_outdated_node_code(nested_nodes, type_to_code, substitutable_types))
+                swapped.extend(
+                    _substitute_outdated_node_code(nested_nodes, type_to_code, substitutable_types, node_types)
+                )
 
     return swapped
 
@@ -1388,27 +1424,68 @@ def describe_component_code_substitution(flow_data: dict | None, *, include_comp
     """Describe the restricted-mode substitutions before sanitization discards the saved code.
 
     Use the same substitution rule as the build, including nested flows and ambiguous types.
-    Work on a detached copy so collecting a warning never changes the saved flow or logs a build.
+    Name every retired component too, substituted or not, in every mode.
+    Substitute on a detached copy so collecting a warning never changes the saved flow or logs a
+    build; without substitution the walk only reads the nodes.
     """
     from copy import deepcopy
 
+    if not flow_data or not isinstance(flow_data.get("nodes"), list):
+        return None
     lookups = get_outdated_code_substitution_lookups()
-    if lookups is None or not flow_data or not isinstance(flow_data.get("nodes"), list):
+    node_types: dict[str, str] = {}
+    if lookups:
+        # Substitution rewrites node code, so it walks a detached copy.
+        swapped = _substitute_outdated_node_code(deepcopy(flow_data["nodes"]), *lookups, node_types)
+    else:
+        # Without substitution the walk changes nothing and only collects the component types.
+        swapped = _substitute_outdated_node_code(
+            flow_data["nodes"], {}, SubstitutableComponentTypes({}, {}), node_types
+        )
+    # A retired component fails whatever code runs, so updating it cannot help: name its
+    # replacement instead, whether or not its code was substituted.
+    retired = _retired_components(node_types) if node_types else {}
+    substituted = [label for label in swapped if label not in retired]
+    if not substituted and not retired:
         return None
-    swapped = _substitute_outdated_node_code(deepcopy(flow_data["nodes"]), *lookups)
-    if not swapped:
-        return None
-    affected = f" for {', '.join(swapped)}" if include_component_names else ""
-    next_step = (
-        "Review and update the affected components in the flow editor to use the server version."
-        if include_component_names
-        else "Ask the flow owner to review and update the affected components to use the server version."
-    )
-    return (
-        "Custom components are disabled on this server (LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false). "
-        f"This run uses the server's component code instead of the code saved in the flow{affected}. "
-        f"The saved flow is unchanged. {next_step}"
-    )
+    parts = []
+    if substituted:
+        affected = f" for {', '.join(substituted)}" if include_component_names else ""
+        next_step = (
+            "Review and update the affected components in the flow editor to use the server version."
+            if include_component_names
+            else "Ask the flow owner to review and update the affected components to use the server version."
+        )
+        parts.append(
+            "Custom components are disabled on this server (LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false). "
+            f"This run uses the server's component code instead of the code saved in the flow{affected}. "
+            f"The saved flow is unchanged. {next_step}"
+        )
+    if retired and include_component_names:
+        parts.extend(
+            _retired_sentence(label, entry["retired_in"], entry.get("replacement")) for label, entry in retired.items()
+        )
+    elif retired:
+        parts.append(
+            "Some components in this flow were retired and fail when the flow runs. Ask the flow owner to replace them."
+        )
+    return " ".join(parts)
+
+
+def _retired_components(node_types: Mapping[str, str]) -> dict[str, dict]:
+    """Return this server's registry entry for each ``label: component type`` that is retired."""
+    registry = _registry_lookup()
+    return {
+        label: registry[component_type]
+        for label, component_type in node_types.items()
+        if registry.get(component_type, {}).get("retired_in")
+    }
+
+
+def _retired_sentence(subject: str, retired_in: str, replacement: list[str] | None) -> str:
+    """Say that ``subject`` was retired and name its replacement, as ``lfx upgrade`` does."""
+    sentence = f"{subject} was retired in {retired_in} and fails when the flow runs."
+    return f"{sentence} Replace it with {', '.join(replacement)}." if replacement else sentence
 
 
 RESTRICTED_MODE_MISMATCH_HINT = (
@@ -1420,22 +1497,31 @@ RESTRICTED_MODE_MISMATCH_HINT = (
 )
 
 
-def _registry_entry_for_component_type(component_type: str) -> Mapping[str, Any] | None:
-    """Return this server's registry entry for ``component_type``, aliases included."""
+def _registry_lookup() -> dict[str, dict]:
+    """Return this server's registry entries by component type, aliases included; empty until it loads."""
     from lfx.interface.components import component_cache
     from lfx.upgrade.checker import build_registry_lookup
 
     with component_cache.state_lock:
         all_types_dict = component_cache.all_types_dict if component_cache.all_types_ready else None
-    if not all_types_dict:
-        return None
-    return build_registry_lookup(all_types_dict).get(component_type)
+        if not all_types_dict:
+            return {}
+        cached = component_cache.upgrade_registry
+        if cached is None or cached[0] is not all_types_dict:
+            cached = (all_types_dict, build_registry_lookup(all_types_dict))
+            component_cache.upgrade_registry = cached
+        return cached[1]
+
+
+def _registry_entry_for_component_type(component_type: str) -> Mapping[str, Any] | None:
+    """Return this server's registry entry for ``component_type``, aliases included."""
+    return _registry_lookup().get(component_type)
 
 
 def _unfillable_required_fields(registry_template: Mapping[str, Any], flow_template: Mapping[str, Any]) -> list[str]:
     """Name the server inputs a saved node cannot supply, using the checker's own rule.
 
-    These are exactly the fields ``_template_keys_compatible`` refuses to introduce silently: a
+    These are exactly the fields ``_template_key_reasons`` refuses to introduce silently: a
     required input the saved node has no key for and whose declared state cannot fill it.
     """
     from lfx.upgrade.checker import new_template_field_keys
@@ -1448,7 +1534,9 @@ def _unfillable_required_fields(registry_template: Mapping[str, Any], flow_templ
     return sorted(missing)
 
 
-def describe_restricted_component_mismatch(component_type: Any, node_info: Any) -> str | None:
+def describe_restricted_component_mismatch(
+    component_type: Any, node_info: Any, connected_fields: Collection[str] | None = None
+) -> str | None:
     """Explain a build failure caused by restricted mode running server code for a saved component.
 
     In restricted mode a node's stored code never runs: the build executes this server's
@@ -1461,16 +1549,19 @@ def describe_restricted_component_mismatch(component_type: Any, node_info: Any) 
 
     Returns a sentence to append to the build error when the saved component is structurally
     incompatible with this server's component of the same type -- the same condition the upgrade
-    checker reports as a breaking change, and the frontend as "flow needs review". Returns ``None``
-    in permissive mode, for an unknown type (already refused by :func:`check_flow_and_raise`), when
-    the registry is unavailable, and for a node this server's component can still drive: a legacy
-    Agent carrying ``agent_llm``/``model_name`` runs fine after the swap and must not be blamed.
+    checker reports as a breaking change, and the frontend as "flow needs review". For a retired
+    component the sentence names the retirement and the replacement instead, breaking or not, in
+    every mode. Returns ``None`` for any other component in permissive mode, for an unknown type
+    (already refused by :func:`check_flow_and_raise`), when the registry is unavailable, and for a
+    node that is neither retired nor called breaking by the checker.
+
+    ``connected_fields`` names the node's fields an edge goes into, as the checker receives them.
+    ``None`` means the connections are unknown, so every field counts as connected.
     """
     from lfx.services.deps import get_settings_service
 
     settings_service = get_settings_service()
-    if settings_service is None or getattr(settings_service.settings, "allow_custom_components", True):
-        return None
+    permissive = settings_service is None or getattr(settings_service.settings, "allow_custom_components", True)
     if not isinstance(component_type, str) or not component_type or not isinstance(node_info, Mapping):
         return None
 
@@ -1478,9 +1569,18 @@ def describe_restricted_component_mismatch(component_type: Any, node_info: Any) 
     if registry_entry is None:
         return None
 
+    # A retired component fails whatever code runs, so neither updating it nor running the saved
+    # code helps: name the retirement and the replacement in every mode, whether or not the saved
+    # node drifted.
+    if registry_entry.get("retired_in"):
+        subject = f'Note: the "{component_type}" component'
+        return _retired_sentence(subject, registry_entry["retired_in"], registry_entry.get("replacement"))
+    if permissive:
+        return None
+
     from lfx.upgrade.checker import has_breaking_change
 
-    if not has_breaking_change(registry_entry, node_info):
+    if not has_breaking_change(registry_entry, node_info, connected_fields):
         return None
 
     registry_template = registry_entry.get("template")
@@ -1494,14 +1594,25 @@ def describe_restricted_component_mismatch(component_type: Any, node_info: Any) 
     return RESTRICTED_MODE_MISMATCH_HINT.format(component_type=component_type, missing_clause=missing_clause)
 
 
-def explain_restricted_component_mismatch(component_type: Any, node_info: Any) -> str | None:
+def explain_restricted_component_mismatch(
+    component_type: Any,
+    node_info: Any,
+    connected_fields: Collection[str] | None = None,
+    *,
+    vertex: Any = None,
+) -> str | None:
     """Never-raising wrapper for :func:`describe_restricted_component_mismatch`.
 
     Callers are build-error handlers, where a diagnostic that raises would replace the
     component's real error with an unrelated one.
     """
     try:
-        return describe_restricted_component_mismatch(component_type, node_info)
+        if vertex is not None:
+            try:
+                connected_fields = {edge.target_param for edge in vertex.incoming_edges}
+            except Exception:  # noqa: BLE001 -- unreadable edges mean connections are unknown
+                connected_fields = None
+        return describe_restricted_component_mismatch(component_type, node_info, connected_fields)
     except Exception:  # noqa: BLE001 -- diagnosis is best effort; never mask the original failure
         logger.debug("Could not diagnose restricted-mode component mismatch", exc_info=True)
         return None
@@ -2176,6 +2287,9 @@ def _sanitize_admin_only_flow_build(
     target: Mapping[str, Any] | Any | None,
     *,
     type_to_current_hash: Mapping[str, set[str]] | None,
+    settings: Any | None = None,
+    cache: ComponentCache | None = None,
+    catalog_policy_snapshot: CatalogPolicySnapshot | None = None,
 ) -> dict[str, Any] | None:
     """Return trusted build data after component hashes have been loaded.
 
@@ -2210,7 +2324,7 @@ def _sanitize_admin_only_flow_build(
     # own sanitizer; otherwise this second, strict hash check restores the very rejection the
     # substitution policy was designed to avoid. The helper no-ops in permissive mode, so
     # admin-only remains strict when it is the only active custom-component restriction.
-    substitution_lookups = get_outdated_code_substitution_lookups()
+    substitution_lookups = get_outdated_code_substitution_lookups(settings, cache)
     validation_hashes = type_to_current_hash
     if substitution_lookups:
         nodes = sanitized_grouped.get("nodes", [])
@@ -2229,7 +2343,9 @@ def _sanitize_admin_only_flow_build(
         raise CustomComponentValidationError(msg) from exc
     # The code-interpreter policy also applies to proxy-injected executable code. Its type
     # alone may still say ChatInput, so validate after expansion and after drift substitution.
-    validate_flow_for_current_settings(sanitized)
+    validate_flow_for_current_settings(
+        sanitized, catalog_policy_snapshot=catalog_policy_snapshot, settings=settings, cache=cache
+    )
     # Trusted interpreter source still executes caller-controlled input fields.
     # A template hash match must not grant regular users code-execution privileges.
     # Inspect the expanded graph so grouped and relabelled interpreters are covered.
@@ -2241,7 +2357,7 @@ def _sanitize_admin_only_flow_build(
     )
 
     nodes = sanitized.get("nodes", [])
-    blocked = _substitute_trusted_code_by_hash(nodes) if isinstance(nodes, list) else []
+    blocked = _substitute_trusted_code_by_hash(nodes, cache) if isinstance(nodes, list) else []
     if blocked:
         blocked_names = ", ".join(blocked)
         logger.warning(f"Flow build blocked: trusted component source unavailable: {blocked_names}")
@@ -2356,24 +2472,35 @@ def prepare_flow_build_for_user_from_cache(
     target: Mapping[str, Any] | Any | None,
     *,
     is_superuser: bool,
+    settings: Any | None = None,
+    cache: ComponentCache | None = None,
+    catalog_policy_snapshot: CatalogPolicySnapshot | None = None,
 ) -> dict[str, Any] | None:
     """Synchronous policy gate for execution seams that construct responses.
 
     The V2 streaming host must validate before returning ``StreamingResponse``
     and cannot await registry loading at that seam. Startup normally warms the
-    registry; if it is unavailable, the hash gate fails closed.
+    registry; if it is unavailable, the hash gate fails closed. ``settings``, ``cache`` and
+    ``catalog_policy_snapshot`` replace the server's own, as in :func:`validate_flow_for_current_settings`.
     """
     from lfx.services.deps import get_settings_service
 
-    settings_service = get_settings_service()
-    if settings_service is None:
-        raise RuntimeError(SETTINGS_SERVICE_REQUIRED_MESSAGE)
+    if settings is None:
+        settings_service = get_settings_service()
+        if settings_service is None:
+            raise RuntimeError(SETTINGS_SERVICE_REQUIRED_MESSAGE)
+        settings = settings_service.settings
 
-    validate_flow_for_current_settings(target)
-    if not _admin_only_build_required(settings_service.settings, is_superuser=is_superuser):
+    validate_flow_for_current_settings(
+        target, catalog_policy_snapshot=catalog_policy_snapshot, settings=settings, cache=cache
+    )
+    if not _admin_only_build_required(settings, is_superuser=is_superuser):
         return None
 
     return _sanitize_admin_only_flow_build(
         target,
-        type_to_current_hash=get_component_hash_lookups_for_validation(),
+        type_to_current_hash=get_component_hash_lookups_for_validation(cache),
+        settings=settings,
+        cache=cache,
+        catalog_policy_snapshot=catalog_policy_snapshot,
     )
