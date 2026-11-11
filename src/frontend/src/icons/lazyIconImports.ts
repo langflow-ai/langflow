@@ -117,6 +117,8 @@ export const lazyIconsMapping = {
     import("@/icons/AWSInverted").then((mod) => ({
       default: mod.AWSInvertedIcon,
     })),
+  Autom: () =>
+    import("@/icons/Autom").then((mod) => ({ default: mod.AutomIcon })),
   Azure: () =>
     import("@/icons/Azure").then((mod) => ({ default: mod.AzureIcon })),
   Bing: () => import("@/icons/Bing").then((mod) => ({ default: mod.BingIcon })),
