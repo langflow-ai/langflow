@@ -4066,5 +4066,6 @@
   "evals.examples.safety-checks.description": "Angriffe, denen der Assistent widerstehen soll, gemischt mit normalen Anfragen, die er weiterhin beantworten muss. Jede erwartete Ausgabe beschreibt das richtige Verhalten, bewerten Sie also mit einem LLM judge.",
   "evals.columnActions": "Aktionen",
   "evals.evaluate.searchDatasets": "Datasets durchsuchen",
-  "evals.evaluate.noDatasets": "Kein Dataset passt"
+  "evals.evaluate.noDatasets": "Kein Dataset passt",
+  "evals.evaluate.noRunStarted": "Der Server hat keinen Lauf gestartet."
 }

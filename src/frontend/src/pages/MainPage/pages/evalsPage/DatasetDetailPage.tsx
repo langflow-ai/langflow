@@ -61,7 +61,11 @@ export default function DatasetDetailPage() {
   const onError = (title: string) => (error: unknown) =>
     setErrorData({ title, list: extractApiErrorMessages(error) });
   const { data: dataset, isError } = useGetDataset({ datasetId });
-  const { data: items, isLoading } = useGetDatasetItems({
+  const {
+    data: items,
+    isLoading,
+    isError: itemsFailed,
+  } = useGetDatasetItems({
     datasetId,
     size: ITEMS_SIZE,
   });
@@ -171,7 +175,8 @@ export default function DatasetDetailPage() {
         )
       }
     >
-      {isError ? (
+      {/* A failed items read must not pass for an empty dataset: that screen invites adding rows. */}
+      {isError || itemsFailed ? (
         <p role="alert" className="text-sm text-destructive">
           {t("evals.loadError")}
         </p>

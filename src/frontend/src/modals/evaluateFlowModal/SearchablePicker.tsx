@@ -50,6 +50,7 @@ export default function SearchablePicker({
 }: SearchablePickerProps) {
   const [open, setOpen] = useState(false);
   const selected = options.find((option) => option.id === value);
+  const listId = `${id}-list`;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -60,6 +61,7 @@ export default function SearchablePicker({
           variant="primary"
           role="combobox"
           aria-expanded={open}
+          aria-controls={listId}
           disabled={disabled}
           data-testid={testId}
           className="h-9 w-full justify-between px-4 font-normal focus-visible:ring-1 focus-visible:ring-offset-0"
@@ -92,7 +94,7 @@ export default function SearchablePicker({
             aria-label={searchPlaceholder}
             data-testid={`${testId}-search`}
           />
-          <CommandList className="max-h-64">
+          <CommandList id={listId} className="max-h-64">
             <CommandEmpty>{emptyText}</CommandEmpty>
             {options.map((option) => (
               <CommandItem

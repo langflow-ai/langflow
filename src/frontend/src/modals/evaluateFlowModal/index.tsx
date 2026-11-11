@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import { extractApiErrorMessages } from "@/utils/apiError";
 import { modelKindOfField } from "@/utils/model-kind";
 import BaseModal from "../baseModal";
 import EvaluateStepper, { type EvaluateStep } from "./EvaluateStepper";
+import EvaluationPreflight from "./EvaluationPreflight";
 import ModelOverrides from "./ModelOverrides";
 import ReviewStep from "./ReviewStep";
 import ScorerFields from "./ScorerFields";
@@ -25,6 +26,9 @@ import { LATEST_VERSION, useEvaluateFlowForm } from "./useEvaluateFlowForm";
 
 type StepKey = "setup" | "scoring" | "models" | "review";
 const PREVIEW_ROWS = 3;
+// Next and the run button are one button: a second click or a held Enter that lands right after Review
+// opens must not start a run the user has not seen.
+const REVIEW_SETTLE_MS = 600;
 
 function flowTime(flow: { updated_at?: string; date_created?: string }) {
   return Date.parse(flow.updated_at ?? flow.date_created ?? "") || 0;
@@ -107,6 +111,14 @@ export default function EvaluateFlowModal({
     review: form.canSubmit && decision !== "wait",
   };
   const isLast = current === keys.length - 1;
+  // The run button arrives disabled for a moment, so the click that opened Review cannot also start the run.
+  const [reviewSettled, setReviewSettled] = useState(false);
+  useEffect(() => {
+    setReviewSettled(false);
+    if (!isLast) return;
+    const timer = setTimeout(() => setReviewSettled(true), REVIEW_SETTLE_MS);
+    return () => clearTimeout(timer);
+  }, [isLast]);
 
   const run = async () => {
     setSubmitting(true);
@@ -133,6 +145,7 @@ export default function EvaluateFlowModal({
       setStepIndex(current + 1);
       return;
     }
+    if (!reviewSettled) return;
     void run();
   };
 
@@ -234,6 +247,21 @@ export default function EvaluateFlowModal({
               />
             )}
             {stepKey === "review" && (
+              // A version picked here is checked again: its problems must show where the run button waits.
+              <EvaluationPreflight
+                report={report}
+                failed={form.check.isError}
+              />
+            )}
+            {stepKey === "review" && form.modelsMissing && (
+              <p
+                className="text-sm text-destructive"
+                data-testid="evaluate-review-models-missing"
+              >
+                {t("evals.evaluate.modelsMissing")}
+              </p>
+            )}
+            {stepKey === "review" && (
               <ReviewStep
                 flowName={flowName}
                 datasetName={datasetName}
@@ -271,7 +299,8 @@ export default function EvaluateFlowModal({
                 })
               : t("evals.evaluate.createAndRun"),
           loading: submitting,
-          disabled: !stepReady[stepKey] || submitting,
+          disabled:
+            !stepReady[stepKey] || submitting || (isLast && !reviewSettled),
           dataTestId: isLast ? "evaluate-submit" : "evaluate-next",
         }}
       >

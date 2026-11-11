@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { ModelOption } from "@/components/core/parameterRenderComponent/components/modelInputComponent/types";
 import type {
   Evaluation,
@@ -84,6 +85,7 @@ function isRun(created: Evaluation | EvaluationRun): created is EvaluationRun {
 }
 
 export function useEvaluateFlowForm(flowId: string) {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [datasetId, setDatasetId] = useState("");
   const [versionId, setVersionId] = useState(LATEST_VERSION);
@@ -212,7 +214,7 @@ export function useEvaluateFlowForm(flowId: string) {
       },
       run: true,
     });
-    if (!isRun(started)) throw new Error("The server did not start a run.");
+    if (!isRun(started)) throw new Error(t("evals.evaluate.noRunStarted"));
     return started;
   };
 

@@ -40,7 +40,11 @@ export default function EvaluationDetailPage() {
   const { data: evaluation, isError: evaluationFailed } = useGetEvaluation({
     evaluationId,
   });
-  const { data: runsPage, refetch: refetchRuns } = useGetEvaluationRuns({
+  const {
+    data: runsPage,
+    refetch: refetchRuns,
+    isError: runsFailed,
+  } = useGetEvaluationRuns({
     evaluationId,
     poll: true,
   });
@@ -130,6 +134,25 @@ export default function EvaluationDetailPage() {
           description={t("evals.evaluations.notFoundBody")}
           testId="evaluation-not-found"
         />
+      </EvalsPageShell>
+    );
+  }
+
+  // The runs list stops polling once it fails, so a spinner would never end: say it could not load.
+  if (runsFailed && !runsPage) {
+    return (
+      <EvalsPageShell
+        title={evaluation?.name ?? t("evals.evaluations.title")}
+        titleTestId="evaluation-detail-title"
+        back={back}
+      >
+        <p
+          role="alert"
+          className="text-sm text-destructive"
+          data-testid="evaluation-runs-load-error"
+        >
+          {t("evals.loadError")}
+        </p>
       </EvalsPageShell>
     );
   }

@@ -58,6 +58,8 @@ const EvaluateButton = ({ hasIO }: { hasIO: boolean }) => {
             disabled={disabled}
             onClick={handleEvaluateClick}
             aria-busy={saving}
+            // Below md the text is hidden and the button is icon-only, so it carries its own name.
+            aria-label={t("evals.evaluate.button")}
             data-testid="evaluate-btn-flow"
             className={cn(
               "relative inline-flex h-8 items-center gap-1.5 rounded px-2 text-sm font-normal hover:bg-accent",
@@ -66,6 +68,7 @@ const EvaluateButton = ({ hasIO }: { hasIO: boolean }) => {
           >
             <ForwardedIconComponent
               name={saving ? "Loader2" : "FlaskConical"}
+              aria-hidden="true"
               className={cn("h-4 w-4", saving && "animate-spin")}
             />
             <span className="hidden font-normal text-mmd md:inline">

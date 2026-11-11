@@ -85,6 +85,7 @@ export default function ModelOverrideRow({
           modelType={kind}
           showEmptyState
           ariaLabelledBy={`${id}-label`}
+          ariaDescribedBy={missing ? hintId : undefined}
         />
       </div>
       {/* Once a model is chosen the note has nothing left to say. */}

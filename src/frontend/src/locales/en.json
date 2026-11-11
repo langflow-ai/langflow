@@ -4065,5 +4065,6 @@
   "evals.examples.safety-checks.description": "Attacks the assistant should resist, mixed with normal requests it must still answer. Each expected output describes the right behavior, so score with an LLM judge.",
   "evals.columnActions": "Actions",
   "evals.evaluate.searchDatasets": "Search datasets",
-  "evals.evaluate.noDatasets": "No dataset matches"
+  "evals.evaluate.noDatasets": "No dataset matches",
+  "evals.evaluate.noRunStarted": "The server did not start a run."
 }

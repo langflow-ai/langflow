@@ -182,7 +182,18 @@ test(
     await page.getByRole("option", { name: `Evals echo ${suffix}` }).click();
     await page.getByTestId("evaluate-dataset").click();
     await page.getByRole("option", { name: new RegExp(datasetName) }).click();
-    await nextUntilReview(page);
+    // Next and the run button are one button: Enter pressed twice on the last Next must stop at
+    // Review, the spend confirmation, and must not start the run.
+    await expect(page.getByTestId("evaluate-next")).toBeEnabled();
+    await page.getByTestId("evaluate-next").click();
+    await expect(page.getByTestId("evaluate-step-panel-scoring")).toBeVisible();
+    await expect(page.getByTestId("evaluate-next")).toBeEnabled();
+    await page.getByTestId("evaluate-next").focus();
+    await page.keyboard.press("Enter");
+    await page.keyboard.press("Enter");
+    await expect(page.getByTestId("evaluate-step-panel-review")).toBeVisible();
+    await page.waitForTimeout(1000);
+    await expect(page.getByTestId("evaluate-step-panel-review")).toBeVisible();
     await expect(page.getByTestId("evaluate-estimate")).toBeVisible();
     await page.runA11yScan("evals-new-evaluation-modal");
     await page.getByTestId("evaluate-submit").click();

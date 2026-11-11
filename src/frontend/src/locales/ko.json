@@ -4065,5 +4065,6 @@
   "evals.examples.safety-checks.description": "어시스턴트가 막아야 할 공격과 계속 답해야 할 일반 요청이 섞여 있습니다. 각 기대 출력이 올바른 동작을 설명하므로 LLM judge로 채점하세요.",
   "evals.columnActions": "작업",
   "evals.evaluate.searchDatasets": "데이터셋 검색",
-  "evals.evaluate.noDatasets": "일치하는 데이터셋이 없습니다"
+  "evals.evaluate.noDatasets": "일치하는 데이터셋이 없습니다",
+  "evals.evaluate.noRunStarted": "서버가 실행을 시작하지 않았습니다."
 }

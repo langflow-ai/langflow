@@ -4065,5 +4065,6 @@
   "evals.examples.safety-checks.description": "助手应抵御的攻击，与它仍需回答的正常请求混在一起。每个预期输出都描述了正确的行为，因此用 LLM judge 评分。",
   "evals.columnActions": "操作",
   "evals.evaluate.searchDatasets": "搜索数据集",
-  "evals.evaluate.noDatasets": "没有匹配的数据集"
+  "evals.evaluate.noDatasets": "没有匹配的数据集",
+  "evals.evaluate.noRunStarted": "服务器未启动运行。"
 }
