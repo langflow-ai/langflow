@@ -189,19 +189,22 @@ async def list_evaluation_runs(
     size: SizeParam = 50,
     comparison_id: Annotated[str | None, Query(max_length=64)] = None,
 ) -> EvaluationRunPage:
+    # Reading may also mark runs whose worker is gone as failed: a write, so a busy database answers 503.
     async with evals_http_errors():
         evaluation = await load_evaluation(session, current_user, evaluation_id)
-    if comparison_id is not None:
-        # A comparison has at most a few runs; all of them, however many other runs came after.
-        matched = await run_service.comparison_runs(session, evaluation.id, comparison_id)
-        total = len(matched)
-        runs = matched[(page - 1) * size : page * size]
-    else:
-        runs, total = await run_service.list_runs(session, evaluation.id, page=page, size=size)
-    items = [
-        evaluation_service.to_run_read(run).model_copy(update={"summary": await run_service.live_summary(session, run)})
-        for run in runs
-    ]
+        if comparison_id is not None:
+            # A comparison has at most a few runs; all of them, however many other runs came after.
+            matched = await run_service.comparison_runs(session, evaluation.id, comparison_id)
+            total = len(matched)
+            runs = matched[(page - 1) * size : page * size]
+        else:
+            runs, total = await run_service.list_runs(session, evaluation.id, page=page, size=size)
+        items = [
+            evaluation_service.to_run_read(run).model_copy(
+                update={"summary": await run_service.live_summary(session, run)}
+            )
+            for run in runs
+        ]
     return EvaluationRunPage(items=items, total=total, page=page, size=size)
 
 
@@ -209,8 +212,8 @@ async def list_evaluation_runs(
 async def get_evaluation_run(run_id: UUID, current_user: CurrentActiveUser, session: DbSession) -> EvaluationRunRead:
     async with evals_http_errors():
         run = await run_service.get_run(session, current_user, run_id)
-    read = evaluation_service.to_run_read(run)
-    return read.model_copy(update={"summary": await run_service.live_summary(session, run)})
+        summary = await run_service.live_summary(session, run)
+    return evaluation_service.to_run_read(run).model_copy(update={"summary": summary})
 
 
 @router.post("/evaluation-runs/{run_id}/cancel", response_model=EvaluationRunRead)

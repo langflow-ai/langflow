@@ -26,6 +26,10 @@ class CsvFormatError(ValueError):
     """The upload is not a readable CSV with a header row."""
 
 
+# A file of empty rows would otherwise answer with one entry per row, millions for a 20 MB upload.
+MAX_REPORTED_SKIPS = 100
+
+
 @dataclass(frozen=True)
 class ParsedRow:
     input: str
@@ -36,6 +40,17 @@ class ParsedRow:
 class ImportPlan:
     rows: list[ParsedRow] = field(default_factory=list)
     skipped: list[tuple[int, str]] = field(default_factory=list)
+    unreported: int = 0
+    """Skipped rows past ``MAX_REPORTED_SKIPS``, summed into one closing entry from the first of them."""
+    first_unreported: int = 0
+
+    def skip(self, line_number: int, reason: str) -> None:
+        if len(self.skipped) < MAX_REPORTED_SKIPS:
+            self.skipped.append((line_number, reason))
+            return
+        if not self.unreported:
+            self.first_unreported = line_number
+        self.unreported += 1
 
 
 def decode_upload(content: bytes) -> str:
@@ -127,18 +142,20 @@ def plan_import(text: str, *, input_column: str, expected_column: str | None, ma
             continue
         if len(plan.rows) >= max_rows:
             extra = 1 + sum(1 for rest in rows if any(cell.strip() for cell in rest))
-            plan.skipped.append((line_number, f"Row limit of {max_rows} reached: {extra} more rows were not imported"))
+            plan.skip(line_number, f"Row limit of {max_rows} reached: {extra} more rows were not imported")
             break
         input_text = (_cell(row, input_index) or "").strip()
         if not input_text:
-            plan.skipped.append((line_number, "Input is empty"))
+            plan.skip(line_number, "Input is empty")
             continue
         expected = _cell(row, expected_index)
         expected = expected.strip() if expected is not None and expected.strip() else None
         if len(input_text) > TEXT_MAX_CHARS or (expected is not None and len(expected) > TEXT_MAX_CHARS):
-            plan.skipped.append((line_number, f"A cell is longer than {TEXT_MAX_CHARS} characters"))
+            plan.skip(line_number, f"A cell is longer than {TEXT_MAX_CHARS} characters")
             continue
         plan.rows.append(ParsedRow(input=input_text, expected_output=expected))
+    if plan.unreported:
+        plan.skipped.append((plan.first_unreported, f"This row and {plan.unreported - 1} more were also skipped"))
     return plan
 
 

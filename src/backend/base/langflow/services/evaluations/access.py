@@ -73,7 +73,9 @@ async def load_evaluation(session: AsyncSession, user: User, evaluation_id: UUID
         owner_column=Evaluation.user_id,
         owner_id=user.id,
     )
-    if evaluation is None or (evaluation.user_id != user.id and not user.is_superuser):
+    # Owner only, also for a superuser: with a cross-user plugin the row loads by id alone, and no
+    # evaluation guard exists for the plugin to deny with.
+    if evaluation is None or evaluation.user_id != user.id:
         msg = "Evaluation not found"
         raise EvalsNotFoundError(msg)
     return evaluation

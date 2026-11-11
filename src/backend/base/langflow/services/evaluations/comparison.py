@@ -111,7 +111,9 @@ async def continue_comparison(run_id: UUID) -> UUID | None:
                 session, user, evaluation, run.flow_version_id, overrides, comparison=comparison
             )
         except EvalsError as exc:
-            # The remaining variants show as not run; the reason goes to the log, not to a run row.
+            # The refused start already claimed the active slot with a queued run; dropping it keeps the
+            # evaluation free. The remaining variants show as not run; the reason goes to the log.
+            await session.rollback()
             await logger.awarning(
                 f"evals_comparison_stopped run_id={run_id} next_index={comparison['index']} "
                 f"error={type(exc).__name__}: {exc}"

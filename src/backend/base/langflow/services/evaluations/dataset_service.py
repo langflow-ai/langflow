@@ -10,8 +10,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, select
 
 from langflow.services.database.models.evaluation import Dataset, DatasetItem
-from langflow.services.evaluations.errors import EvalsConflictError, EvalsNotFoundError
-from langflow.services.evaluations.schemas import DatasetItemRead, DatasetRead, ExampleLabels
+from langflow.services.evaluations.errors import EvalsConflictError, EvalsNotFoundError, EvalsValidationError
+from langflow.services.evaluations.schemas import MAX_DATASET_ITEMS, DatasetItemRead, DatasetRead, ExampleLabels
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -247,6 +247,13 @@ def _payload(text: str | None) -> dict | None:
 async def add_items(
     session: AsyncSession, dataset: Dataset, items: Sequence[DatasetItemWrite | ParsedRow | ExampleRow], *, source: str
 ) -> list[DatasetItem]:
+    existing = await count_items(session, dataset.id)
+    if existing + len(items) > MAX_DATASET_ITEMS:
+        msg = (
+            f"A dataset holds at most {MAX_DATASET_ITEMS} rows; this one has {existing} and the request adds "
+            f"{len(items)}."
+        )
+        raise EvalsValidationError(msg)
     position = await _next_position(session, dataset.id)
     now = _now()
     created = [

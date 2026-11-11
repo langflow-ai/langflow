@@ -713,7 +713,10 @@ message). The delimiter is taken from the header row only, among `,`, `;`, tab a
 a header without any of them is a single column, so commas in the text are kept.
 The first non-blank row is the header. Rows with an empty input are skipped and reported
 with their row number, as are cells longer than 100,000 characters; rows past
-`evals_csv_max_rows` are reported as one entry with their count. Uploads are
+`evals_csv_max_rows` are reported as one entry with their count. At most 100
+skipped rows are listed one by one; the rest close the list as one entry from
+the first of them. A dataset holds at most 5000 rows (one page of the item list,
+which the dataset page loads whole); an add or import past that is 422. Uploads are
 capped at `evals_csv_max_bytes` and parsed off the event loop. Export
 prefixes a cell starting with `=`, `+`, `-` or `@` with `'`
 (`langflow.utils.csv_safety.csv_safe_cell`, shared with the audit export).
@@ -735,8 +738,9 @@ prefixes a cell starting with `=`, `+`, `-` or `@` with `'`
   copy lands in the superuser's account); the dataset list stays the caller's
   own. With `LANGFLOW_AUTHZ_ENABLED=true` and only the OSS stub,
   visibility does not widen.
-- Evaluations are owner-scoped; a run is readable by whoever can read its
-  evaluation. Creating or duplicating a dataset checks `DatasetAction.CREATE`,
+- Evaluations are owner-scoped, also for a superuser and also with a
+  cross-user plugin (no evaluation guard exists for a plugin to deny with); a
+  run is readable by whoever can read its evaluation. Creating or duplicating a dataset checks `DatasetAction.CREATE`,
   and a duplicate lands in the caller's account. Starting a run (each variant
   of a comparison included) re-checks `FlowAction.EXECUTE` on the flow and
   read on the dataset, so a user who lost access cannot start runs.
@@ -809,7 +813,11 @@ prefixes a cell starting with `=`, `+`, `-` or `@` with `'`
   4. **Review**: what will run (flow, dataset, scoring, the models each version
      really runs), the name and flow version, and the estimate. This step is the
      confirmation: Create and run (or "Create & compare N") starts it without a
-     second dialog; Re-run still asks in one.
+     second dialog; Re-run still asks in one. Next and the run button are one
+     button, so the run button arrives disabled for 600 ms: Enter pressed twice
+     on the last Next stops at Review instead of starting the run. A version
+     picked on Review is checked again, and its blocking issues or missing
+     models show above the summary.
 - Evaluation page: three views in tabs, one at a time, the chosen one and the
   run in the URL (`?run=&view=runs|results|comparison`). Without a `view` the
   page opens on Runs, including right after Create and run or a re-run; a row

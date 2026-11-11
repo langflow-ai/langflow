@@ -278,6 +278,35 @@ class TestModelComparison:
         runs = await _wait_for_comparison(client, logged_in_headers, evaluation["id"], 2)
         assert [run["config"]["output_vertex_id"] for run in runs] == [first["id"]]
 
+    async def test_should_leave_no_queued_run_when_a_later_variant_is_refused(
+        self, client, logged_in_headers, monkeypatch
+    ):
+        from langflow.services.evaluations import run_service
+        from langflow.services.evaluations.schemas import FlowCheckIssue
+
+        flow, node_id = await _create_flow(client, logged_in_headers)
+        monkeypatch.setattr(runner, "execute_row", _recording_execute_row([], node_id))
+        starts = {"count": 0}
+
+        async def refuse_the_second_start(*_args, **_kwargs):
+            starts["count"] += 1
+            return None if starts["count"] == 1 else FlowCheckIssue(code="build_blocked", message="policy changed")
+
+        monkeypatch.setattr(run_service, "build_policy_issue", refuse_the_second_start)
+        dataset = await create_dataset(client, logged_in_headers, "refused-variant", [("a", "a")])
+
+        started = await _start_comparison(
+            client, logged_in_headers, flow["id"], dataset["id"], _variants(node_id, None, MINI)
+        )
+
+        assert started.status_code == 201, started.text
+        runs = await _wait_for_comparison(client, logged_in_headers, started.json()["evaluation_id"], 2)
+        assert [run["status"] for run in runs] == ["completed"]
+        again = await client.post(
+            f"api/v1/evaluations/{started.json()['evaluation_id']}/runs", headers=logged_in_headers
+        )
+        assert again.status_code != 409, again.text
+
     async def test_should_refuse_a_later_variant_the_flow_cannot_run_before_spending(
         self, client, logged_in_headers, monkeypatch
     ):

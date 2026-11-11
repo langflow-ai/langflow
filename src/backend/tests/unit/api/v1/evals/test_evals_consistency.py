@@ -384,6 +384,30 @@ class TestOwnership:
         other = await login_headers(client, user_two)
         assert (await client.get(f"api/v1/evaluation-runs/{run_id}", headers=other)).status_code == 404
 
+    async def test_should_keep_evaluations_owner_only_for_a_superuser_under_a_cross_user_plugin(
+        self, client, logged_in_headers_super_user, user_two, monkeypatch
+    ):
+        from langflow.services.authorization import fetch
+        from langflow.services.database.models.evaluation import Dataset, Evaluation
+
+        async def cross_user_enabled() -> bool:
+            return True
+
+        monkeypatch.setattr(fetch, "cross_user_fetch_enabled", cross_user_enabled)
+        async with session_scope() as session:
+            dataset = Dataset(user_id=user_two.id, name="theirs")
+            session.add(dataset)
+            await session.flush()
+            evaluation = Evaluation(user_id=user_two.id, dataset_id=dataset.id, name="theirs", scorers=[])
+            session.add(evaluation)
+            await session.flush()
+            evaluation_id = str(evaluation.id)
+
+        read = await client.get(f"api/v1/evaluations/{evaluation_id}", headers=logged_in_headers_super_user)
+        removed = await client.delete(f"api/v1/evaluations/{evaluation_id}", headers=logged_in_headers_super_user)
+
+        assert (read.status_code, removed.status_code) == (404, 404)
+
     async def test_should_hand_runs_to_the_evaluation_owner_when_the_starter_is_erased(
         self, client, logged_in_headers, user_two
     ):

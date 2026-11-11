@@ -135,6 +135,21 @@ class TestDatasetItems:
         assert removed.status_code == 200, removed.text
         assert removed.json() == {"deleted": 999}
 
+    async def test_should_refuse_rows_past_the_dataset_limit(self, client, logged_in_headers, monkeypatch):
+        from langflow.services.evaluations import dataset_service
+
+        monkeypatch.setattr(dataset_service, "MAX_DATASET_ITEMS", 3)
+        dataset = await create_dataset(client, logged_in_headers, "capped", [("a", None), ("b", None)])
+
+        response = await client.post(
+            f"api/v1/datasets/{dataset['id']}/items",
+            json={"items": [{"input": "c"}, {"input": "d"}]},
+            headers=logged_in_headers,
+        )
+
+        assert response.status_code == 422
+        assert "at most 3 rows" in response.json()["detail"]
+
     async def test_should_reject_a_delete_larger_than_one_item_page(self, client, logged_in_headers):
         dataset = await create_dataset(client, logged_in_headers, "huge-delete", [])
 
@@ -381,3 +396,25 @@ class TestDatabaseBusy:
         assert response.status_code == 503
         assert response.headers["retry-after"] == "1"
         assert calls["count"] == 1
+
+    async def test_should_answer_503_when_reading_runs_meets_a_locked_database(
+        self, client, logged_in_headers, monkeypatch
+    ):
+        from langflow.services.evaluations import run_service
+
+        from .conftest import create_evaluation, create_flow
+
+        flow = await create_flow(client, logged_in_headers)
+        dataset = await create_dataset(client, logged_in_headers, "busy-runs", [("a", "a")])
+        evaluation = await create_evaluation(client, logged_in_headers, flow["id"], dataset["id"])
+
+        async def locked(*_args, **_kwargs):
+            raise _sqlite_lock_error()
+
+        monkeypatch.setattr(run_service, "reconcile_runs", locked)
+
+        response = await client.get(f"api/v1/evaluations/{evaluation['id']}/runs", headers=logged_in_headers)
+
+        assert response.status_code == 503
+        assert response.headers["retry-after"] == "1"
+        assert "INSERT" not in response.text

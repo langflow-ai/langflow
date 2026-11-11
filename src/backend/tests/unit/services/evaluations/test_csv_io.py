@@ -51,6 +51,16 @@ class TestPlanImport:
         assert plan.rows[0].expected_output is None
         assert plan.skipped == [(2, "Input is empty")]
 
+    def test_should_sum_skipped_rows_past_the_reported_limit_into_one_entry(self):
+        text = "q,a\n" + ",x\n" * 250 + "kept,y\n"
+
+        plan = plan_import(text, input_column="q", expected_column="a", max_rows=10)
+
+        assert len(plan.rows) == 1
+        assert len(plan.skipped) == 101
+        assert plan.skipped[99] == (101, "Input is empty")
+        assert plan.skipped[100] == (102, "This row and 149 more were also skipped")
+
     def test_should_allow_no_expected_column(self):
         plan = plan_import("q\nonly input\n", input_column="q", expected_column=None, max_rows=10)
         assert plan.rows[0].expected_output is None

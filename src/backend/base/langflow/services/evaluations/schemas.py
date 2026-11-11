@@ -27,8 +27,10 @@ SCORER_CONFIG_MAX_CHARS = 16000
 TEXT_SCORER_CONFIG_KEYS = frozenset({"case_sensitive"})
 MAX_SCORERS = 10
 MAX_ITEMS_PER_REQUEST = 500
-# A delete takes every id the item list can return in one page, so "select all, delete" works in one call.
-MAX_ITEM_IDS_PER_DELETE = 5000
+# A dataset fits one page of the item list, which the dataset page loads whole; a delete takes every id
+# of that page, so "select all, delete" works in one call.
+MAX_DATASET_ITEMS = 5000
+MAX_ITEM_IDS_PER_DELETE = MAX_DATASET_ITEMS
 MAX_MODEL_OVERRIDES = 50
 MAX_MODEL_VARIANTS = 8
 MODEL_SELECTION_MAX_CHARS = 8000
