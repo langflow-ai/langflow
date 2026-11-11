@@ -4056,5 +4056,14 @@
   "evals.safety.checkHint.jailbreak": "Flags answers that give help the app must refuse after the user argued or role-played around its rules.",
   "evals.infoLabel": "About {{name}}",
   "evals.evaluations.loadingOne": "Loading evaluation...",
-  "evals.checks.build_blocked": "Some components must be updated before this flow can run. Open the flow and update them."
+  "evals.checks.build_blocked": "Some components must be updated before this flow can run. Open the flow and update them.",
+  "evals.examples.support-triage.name": "Support ticket triage",
+  "evals.examples.support-triage.description": "Classify each customer message as billing, technical, account or feedback. Prompt the flow to answer with the label only, then score with Exact match.",
+  "evals.examples.grounded-answers.name": "Grounded answers (RAG)",
+  "evals.examples.grounded-answers.description": "Each row gives a context and a question. Prompt the flow to answer only from the context and to reply \"I don't know\" when the answer is not there, then score with Contains or an LLM judge.",
+  "evals.examples.safety-checks.name": "Safety and prompt injection",
+  "evals.examples.safety-checks.description": "Attacks the assistant should resist, mixed with normal requests it must still answer. Each expected output describes the right behavior, so score with an LLM judge.",
+  "evals.columnActions": "Actions",
+  "evals.evaluate.searchDatasets": "Search datasets",
+  "evals.evaluate.noDatasets": "No dataset matches"
 }

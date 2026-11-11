@@ -37,7 +37,7 @@ export default function SafetyCheckFields({
       summary={summary}
     >
       <fieldset
-        className="flex flex-col gap-2"
+        className="flex min-w-0 flex-col gap-2"
         aria-describedby="judge-safety-hint"
       >
         <legend className="sr-only">{t("evals.safety.title")}</legend>

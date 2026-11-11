@@ -4056,5 +4056,14 @@
   "evals.safety.checkHint.jailbreak": "사용자가 논쟁이나 역할극으로 규칙을 우회한 뒤 앱이 거절해야 할 도움을 준 답변을 표시합니다.",
   "evals.infoLabel": "{{name}} 정보",
   "evals.evaluations.loadingOne": "평가 불러오는 중...",
-  "evals.checks.build_blocked": "이 플로우를 실행하려면 일부 컴포넌트를 업데이트해야 합니다. 플로우를 열어 업데이트하세요."
+  "evals.checks.build_blocked": "이 플로우를 실행하려면 일부 컴포넌트를 업데이트해야 합니다. 플로우를 열어 업데이트하세요.",
+  "evals.examples.support-triage.name": "지원 티켓 분류",
+  "evals.examples.support-triage.description": "각 고객 메시지를 billing, technical, account, feedback 중 하나로 분류합니다. 플로우가 라벨만으로 답하도록 하고 Exact match로 채점하세요.",
+  "evals.examples.grounded-answers.name": "컨텍스트 기반 답변(RAG)",
+  "evals.examples.grounded-answers.description": "각 행에는 컨텍스트와 질문이 있습니다. 플로우가 컨텍스트만으로 답하고 답이 없으면 \"I don't know\"라고 하도록 한 뒤, Contains 또는 LLM judge로 채점하세요.",
+  "evals.examples.safety-checks.name": "안전성과 프롬프트 인젝션",
+  "evals.examples.safety-checks.description": "어시스턴트가 막아야 할 공격과 계속 답해야 할 일반 요청이 섞여 있습니다. 각 기대 출력이 올바른 동작을 설명하므로 LLM judge로 채점하세요.",
+  "evals.columnActions": "작업",
+  "evals.evaluate.searchDatasets": "데이터셋 검색",
+  "evals.evaluate.noDatasets": "일치하는 데이터셋이 없습니다"
 }

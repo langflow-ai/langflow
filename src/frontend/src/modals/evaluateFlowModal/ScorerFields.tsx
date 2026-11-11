@@ -58,7 +58,8 @@ export default function ScorerFields({
   const { options, ready } = useModelOptions(flowId, judgeOn);
 
   return (
-    <fieldset className="flex flex-col gap-3">
+    // A fieldset is min-content wide by default; min-w-0 lets a long line truncate instead of widening the dialog.
+    <fieldset className="flex min-w-0 flex-col gap-3">
       <legend className="pb-2 text-sm font-medium">
         {t("evals.evaluate.scorers")}
       </legend>
@@ -120,7 +121,7 @@ export default function ScorerFields({
       {judgeOn && (
         <div className="flex flex-col gap-4 rounded-lg border px-4 py-4">
           <div className="flex flex-col gap-2 [&_button]:h-10">
-            <Label htmlFor="judge-model">
+            <Label id="judge-model-label">
               {t("evals.evaluate.judgeModel")}
             </Label>
             <ModelInputComponent
@@ -134,7 +135,7 @@ export default function ScorerFields({
               placeholder={t("evals.evaluate.judgeModelPlaceholder")}
               modelType="llm"
               showEmptyState
-              aria-label={t("evals.evaluate.judgeModel")}
+              ariaLabelledBy="judge-model-label"
             />
           </div>
           <div className="flex flex-col gap-2">

@@ -16,7 +16,7 @@ export default function HintTooltip({
   const [open, setOpen] = useState(false);
   // Focusing a trigger at the viewport edge scrolls it into view, and a tooltip closes on any scroll:
   // open again once that scroll has happened, or keyboard users would never see the hint.
-  const openAfterFocusScroll = (event: FocusEvent<HTMLSpanElement>) => {
+  const openAfterFocusScroll = (event: FocusEvent<HTMLButtonElement>) => {
     const trigger = event.currentTarget;
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
@@ -33,18 +33,19 @@ export default function HintTooltip({
       open={open}
       setOpen={setOpen}
     >
-      {/* biome-ignore lint/a11y/noStaticElementInteractions: focus only opens the tooltip; Radix wires aria-describedby */}
-      <span
-        tabIndex={0}
+      {/* A button, not a focusable span: a tabbable element needs a widget role. A tap toggles the hint. */}
+      <button
+        type="button"
         onFocus={openAfterFocusScroll}
         onBlur={() => setOpen(false)}
+        onClick={() => setOpen(!open)}
         className={cn(
-          "cursor-help rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          "cursor-help rounded-sm bg-transparent p-0 text-inherit [font:inherit] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           underline && "underline decoration-dotted underline-offset-4",
         )}
       >
         {children}
-      </span>
+      </button>
     </ShadTooltip>
   );
 }

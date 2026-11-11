@@ -21,8 +21,8 @@ const LIST_HEIGHT =
 
 import DatasetPreview from "./DatasetPreview";
 import EvaluationPreflight from "./EvaluationPreflight";
-import FlowPicker from "./FlowPicker";
 import FlowReadiness from "./FlowReadiness";
+import SearchablePicker from "./SearchablePicker";
 
 interface SetupStepProps {
   /** Opened from the canvas: the flow is given, only the dataset is chosen. */
@@ -69,11 +69,18 @@ export default function SetupStep({
         {!flowFixed && (
           <div className="flex flex-col gap-2">
             <Label htmlFor="evaluation-flow">{t("evals.evaluate.flow")}</Label>
-            <FlowPicker
+            <SearchablePicker
               id="evaluation-flow"
-              flows={flowOptions}
+              testId="evaluate-flow"
+              options={flowOptions.map((flow) => ({
+                id: flow.id,
+                label: flow.name,
+              }))}
               value={flowId}
               onChange={onPickFlow}
+              placeholder={t("evals.evaluate.chooseFlow")}
+              searchPlaceholder={t("evals.evaluate.searchFlows")}
+              emptyText={t("evals.evaluate.noFlows")}
             />
           </div>
         )}
@@ -81,33 +88,24 @@ export default function SetupStep({
           <Label htmlFor="evaluation-dataset">
             {t("evals.evaluate.dataset")}
           </Label>
-          <Select
+          <SearchablePicker
+            id="evaluation-dataset"
+            testId="evaluate-dataset"
+            options={(datasets ?? []).map((dataset) => ({
+              id: dataset.id,
+              label: t("evals.evaluate.datasetOption", {
+                name: dataset.name,
+                count: dataset.item_count,
+              }),
+              disabled: dataset.item_count === 0,
+            }))}
             value={datasetId}
-            onValueChange={onDataset}
+            onChange={onDataset}
             disabled={!hasDatasets}
-          >
-            <SelectTrigger
-              id="evaluation-dataset"
-              data-testid="evaluate-dataset"
-              className={cn("h-9", QUIET_SELECT_TRIGGER)}
-            >
-              <SelectValue placeholder={t("evals.evaluate.chooseDataset")} />
-            </SelectTrigger>
-            <SelectContent className={LIST_HEIGHT}>
-              {(datasets ?? []).map((dataset) => (
-                <SelectItem
-                  key={dataset.id}
-                  value={dataset.id}
-                  disabled={dataset.item_count === 0}
-                >
-                  {t("evals.evaluate.datasetOption", {
-                    name: dataset.name,
-                    count: dataset.item_count,
-                  })}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            placeholder={t("evals.evaluate.chooseDataset")}
+            searchPlaceholder={t("evals.evaluate.searchDatasets")}
+            emptyText={t("evals.evaluate.noDatasets")}
+          />
           {datasets && !hasDatasets && (
             <button
               type="button"

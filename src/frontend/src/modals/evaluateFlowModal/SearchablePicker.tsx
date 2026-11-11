@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,23 +15,41 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/utils/utils";
 
-interface FlowPickerProps {
+export interface PickerOption {
   id: string;
-  flows: { id: string; name: string }[];
-  value: string;
-  onChange: (flowId: string) => void;
+  label: string;
+  disabled?: boolean;
 }
 
-/** A searchable flow list: users can have dozens of flows, too many for a plain select. */
-export default function FlowPicker({
+interface SearchablePickerProps {
+  id: string;
+  options: PickerOption[];
+  value: string;
+  onChange: (id: string) => void;
+  placeholder: string;
+  searchPlaceholder: string;
+  emptyText: string;
+  testId: string;
+  disabled?: boolean;
+}
+
+/**
+ * A searchable list as wide as its field, opened under it: users can have dozens of flows or datasets,
+ * too many for a plain select.
+ */
+export default function SearchablePicker({
   id,
-  flows,
+  options,
   value,
   onChange,
-}: FlowPickerProps) {
-  const { t } = useTranslation();
+  placeholder,
+  searchPlaceholder,
+  emptyText,
+  testId,
+  disabled = false,
+}: SearchablePickerProps) {
   const [open, setOpen] = useState(false);
-  const selected = flows.find((flow) => flow.id === value);
+  const selected = options.find((option) => option.id === value);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -43,13 +60,14 @@ export default function FlowPicker({
           variant="primary"
           role="combobox"
           aria-expanded={open}
-          data-testid="evaluate-flow"
+          disabled={disabled}
+          data-testid={testId}
           className="h-9 w-full justify-between px-4 font-normal focus-visible:ring-1 focus-visible:ring-offset-0"
         >
           <span
             className={cn("truncate", !selected && "text-muted-foreground")}
           >
-            {selected?.name ?? t("evals.evaluate.chooseFlow")}
+            {selected?.label ?? placeholder}
           </span>
           <ForwardedIconComponent
             name="ChevronsUpDown"
@@ -62,7 +80,7 @@ export default function FlowPicker({
         className="w-[--radix-popover-trigger-width] p-0"
       >
         <Command
-          // Plain substring match: fuzzy matching surfaces unrelated flow names.
+          // Plain substring match: fuzzy matching surfaces unrelated names.
           filter={(itemValue, search) =>
             itemValue.toLowerCase().includes(search.trim().toLowerCase())
               ? 1
@@ -70,24 +88,27 @@ export default function FlowPicker({
           }
         >
           <CommandInput
-            placeholder={t("evals.evaluate.searchFlows")}
-            aria-label={t("evals.evaluate.searchFlows")}
-            data-testid="evaluate-flow-search"
+            placeholder={searchPlaceholder}
+            aria-label={searchPlaceholder}
+            data-testid={`${testId}-search`}
           />
           <CommandList className="max-h-64">
-            <CommandEmpty>{t("evals.evaluate.noFlows")}</CommandEmpty>
-            {flows.map((flow) => (
+            <CommandEmpty>{emptyText}</CommandEmpty>
+            {options.map((option) => (
               <CommandItem
-                key={flow.id}
-                value={`${flow.name} ${flow.id}`}
+                key={option.id}
+                value={`${option.label} ${option.id}`}
+                disabled={option.disabled}
                 onSelect={() => {
-                  onChange(flow.id);
+                  onChange(option.id);
                   setOpen(false);
                 }}
                 className="flex items-center justify-between gap-2"
               >
-                <span className="truncate">{flow.name}</span>
-                {flow.id === value && (
+                <span className="truncate" title={option.label}>
+                  {option.label}
+                </span>
+                {option.id === value && (
                   <ForwardedIconComponent
                     name="Check"
                     aria-hidden="true"

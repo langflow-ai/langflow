@@ -86,9 +86,11 @@ describe("ModelComparison", () => {
       "data-hint",
       expect.stringContaining("The same pass rate as #1"),
     );
-    expect(
-      within(rows[1]).getByText("Tie").closest("[tabindex]"),
-    ).toHaveAttribute("tabindex", "0");
+    // Reachable by keyboard, as a real button rather than a focusable span.
+    expect(within(rows[1]).getByText("Tie").closest("button")).toHaveAttribute(
+      "type",
+      "button",
+    );
   });
 
   it("should compare the safety checks of every version that has them", () => {
@@ -133,7 +135,9 @@ describe("ModelComparison", () => {
     );
 
     await userEvent.click(
-      within(screen.getAllByTestId("comparison-row")[1]).getByRole("button"),
+      within(screen.getAllByTestId("comparison-row")[1]).getByRole("button", {
+        name: /^Show the results of version/,
+      }),
     );
 
     expect(onSelect).toHaveBeenCalledWith("run-0");

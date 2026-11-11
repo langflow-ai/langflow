@@ -223,6 +223,39 @@ test(
 );
 
 test(
+  "user imports a CSV into a new dataset and sees the result once",
+  { tag: ["@release", "@workspace"] },
+  async ({ page }) => {
+    await awaitBootstrapTest(page, { skipModal: true });
+    await page.getByTestId("sidebar-evaluations").click();
+    await page.getByTestId("evals-tab-datasets").click();
+    await expect(page.getByTestId("datasets-title")).toBeVisible();
+
+    // The dataset starts empty, so the first rows swap its empty state for the table under the open dialog.
+    await page.setInputFiles('[data-testid="import-dataset-button-input"]', {
+      name: `capitals-${Date.now()}.csv`,
+      mimeType: "text/csv",
+      buffer: Buffer.from(
+        "question,answer\nCapital of France?,Paris\nCapital of Japan?,Tokyo\nCapital of Italy?,Rome\n",
+      ),
+    });
+    await expect(page.getByTestId("csv-import-submit")).toBeEnabled({
+      timeout: 15000,
+    });
+    await page.getByTestId("csv-import-submit").click();
+
+    await expect(page.getByTestId("csv-import-result")).toHaveText(
+      "3 rows imported",
+    );
+    await page.getByTestId("csv-import-submit").click();
+    await expect(page.getByRole("dialog")).toBeHidden();
+    await expect(page.locator(".ag-center-cols-container .ag-row")).toHaveCount(
+      3,
+    );
+  },
+);
+
+test(
   "user compares two model versions of a flow and re-runs the comparison",
   { tag: ["@release", "@workspace"] },
   async ({ page }) => {
@@ -320,7 +353,10 @@ test(
     await page.runA11yScan("evals-comparison-tooltip");
     await page.keyboard.press("Escape");
     // A version's row opens its results, where the other versions are one click away.
-    await rows.nth(1).getByRole("button").click();
+    await rows
+      .nth(1)
+      .getByRole("button", { name: /^Show the results of version/ })
+      .click();
     await expect(page.getByTestId("detail-tab-results")).toHaveAttribute(
       "aria-selected",
       "true",

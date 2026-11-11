@@ -254,29 +254,30 @@ export default function DatasetDetailPage() {
           }}
           getRowId={(params) => params.data.id}
           gridOptions={{ paginationAutoPageSize: true, tooltipShowDelay: 400 }}
-        >
-          <DatasetItemDialog
-            datasetId={datasetId}
-            open={editorOpen}
-            setOpen={setEditorOpen}
-            item={editing}
-          />
-          <CsvImportDialog
-            datasetId={datasetId}
-            open={importOpen}
-            setOpen={handleImportOpenChange}
-            initialFile={importFile}
-          />
-          <DeleteConfirmationModal
-            open={pendingDelete.length > 0}
-            setOpen={(next) => !next && setPendingDelete([])}
-            description={t("evals.items.deleteDescription", {
-              count: pendingDelete.length,
-            })}
-            onConfirm={handleConfirmDeleteItems}
-          />
-        </DataTableTab>
+        />
       )}
+      {/* Outside the table: it renders its children in a different tree once the first rows arrive, which
+          remounted an open dialog (a finished CSV import fell back to its column mapping). */}
+      <DatasetItemDialog
+        datasetId={datasetId}
+        open={editorOpen}
+        setOpen={setEditorOpen}
+        item={editing}
+      />
+      <CsvImportDialog
+        datasetId={datasetId}
+        open={importOpen}
+        setOpen={handleImportOpenChange}
+        initialFile={importFile}
+      />
+      <DeleteConfirmationModal
+        open={pendingDelete.length > 0}
+        setOpen={(next) => !next && setPendingDelete([])}
+        description={t("evals.items.deleteDescription", {
+          count: pendingDelete.length,
+        })}
+        onConfirm={handleConfirmDeleteItems}
+      />
     </EvalsPageShell>
   );
 }

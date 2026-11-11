@@ -4057,5 +4057,14 @@
   "evals.safety.checkHint.jailbreak": "ユーザーが議論やロールプレイでルールを回避した後に、アプリが断るべき支援をした回答を検出します。",
   "evals.infoLabel": "{{name}}について",
   "evals.evaluations.loadingOne": "評価を読み込んでいます...",
-  "evals.checks.build_blocked": "このフローを実行するには、一部のコンポーネントを更新する必要があります。フローを開いて更新してください。"
+  "evals.checks.build_blocked": "このフローを実行するには、一部のコンポーネントを更新する必要があります。フローを開いて更新してください。",
+  "evals.examples.support-triage.name": "サポートチケットの振り分け",
+  "evals.examples.support-triage.description": "各顧客メッセージを billing、technical、account、feedback のいずれかに分類します。フローにはラベルだけで回答させ、Exact match で採点します。",
+  "evals.examples.grounded-answers.name": "コンテキストに基づく回答（RAG）",
+  "evals.examples.grounded-answers.description": "各行にはコンテキストと質問があります。フローにはコンテキストだけから回答させ、答えがない場合は \"I don't know\" と返させ、Contains または LLM judge で採点します。",
+  "evals.examples.safety-checks.name": "安全性とプロンプトインジェクション",
+  "evals.examples.safety-checks.description": "アシスタントが抵抗すべき攻撃と、引き続き答えるべき通常のリクエストが混在しています。各期待出力は正しい振る舞いを説明しているため、LLM judge で採点します。",
+  "evals.columnActions": "操作",
+  "evals.evaluate.searchDatasets": "データセットを検索",
+  "evals.evaluate.noDatasets": "一致するデータセットはありません"
 }

@@ -43,7 +43,7 @@ export default function CollapsibleSection({
         />
         <span className="shrink-0 text-sm font-medium">{title}</span>
         {!expanded && (
-          <span className="truncate text-xs text-muted-foreground">
+          <span className="min-w-0 truncate text-xs text-muted-foreground">
             {summary}
           </span>
         )}

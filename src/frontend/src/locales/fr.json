@@ -4057,5 +4057,14 @@
   "evals.safety.checkHint.jailbreak": "Signale les réponses qui apportent une aide que l'app doit refuser, après que l'utilisateur a argumenté ou joué un rôle pour contourner ses règles.",
   "evals.infoLabel": "À propos de {{name}}",
   "evals.evaluations.loadingOne": "Chargement de l'évaluation...",
-  "evals.checks.build_blocked": "Certains composants doivent être mis à jour avant que ce flow puisse s'exécuter. Ouvrez le flow et mettez-les à jour."
+  "evals.checks.build_blocked": "Certains composants doivent être mis à jour avant que ce flow puisse s'exécuter. Ouvrez le flow et mettez-les à jour.",
+  "evals.examples.support-triage.name": "Tri des tickets de support",
+  "evals.examples.support-triage.description": "Classez chaque message client en billing, technical, account ou feedback. Demandez au flow de ne répondre que par l'étiquette, puis évaluez avec Exact match.",
+  "evals.examples.grounded-answers.name": "Réponses fondées sur le contexte (RAG)",
+  "evals.examples.grounded-answers.description": "Chaque ligne donne un contexte et une question. Demandez au flow de répondre uniquement à partir du contexte et de dire \"I don't know\" quand la réponse n'y est pas, puis évaluez avec Contains ou un LLM judge.",
+  "evals.examples.safety-checks.name": "Sécurité et injection de prompt",
+  "evals.examples.safety-checks.description": "Des attaques auxquelles l'assistant doit résister, mêlées à des demandes normales auxquelles il doit toujours répondre. Chaque sortie attendue décrit le bon comportement : évaluez avec un LLM judge.",
+  "evals.columnActions": "Actions",
+  "evals.evaluate.searchDatasets": "Rechercher des datasets",
+  "evals.evaluate.noDatasets": "Aucun dataset ne correspond"
 }

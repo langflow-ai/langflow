@@ -33,11 +33,14 @@ function nameCell(icon: string) {
 }
 
 function actionsColumn<T>(
+  t: TranslateFn,
   label: (row: T) => string,
   actions: (row: T) => RowAction[],
 ): ColDef {
   return {
-    headerName: "",
+    // Visually empty, like the Files table, but named so the column header is not announced blank.
+    headerName: t("evals.columnActions"),
+    headerClass: "ag-sr-only-header",
     colId: "actions",
     width: 64,
     sortable: false,
@@ -97,6 +100,7 @@ export function datasetColumns(
       valueFormatter: (params) => formatRunDate(params.value),
     },
     actionsColumn<Dataset>(
+      t,
       (dataset) => t("evals.moreActionsFor", { name: dataset.name }),
       (dataset) => [
         {
@@ -180,13 +184,16 @@ export function evaluationColumns(
     {
       headerName: t("evals.passRate"),
       colId: "pass_rate",
-      width: 120,
+      // Grows with the table: a fixed width cut the header in longer languages ("Taxa de apr…").
+      flex: 1,
+      minWidth: 140,
       sortable: false,
       cellClass: MUTED_CELL,
       valueGetter: (params) =>
         formatPercent(params.data?.last_run?.summary?.pass_rate),
     },
     actionsColumn<Evaluation>(
+      t,
       (evaluation) => t("evals.moreActionsFor", { name: evaluation.name }),
       (evaluation) => [
         {
@@ -234,6 +241,7 @@ export function datasetItemColumns(
       valueFormatter: (params) => params.value ?? "—",
     },
     actionsColumn<DatasetItem>(
+      t,
       () => t("evals.items.actions"),
       (item) => [
         {

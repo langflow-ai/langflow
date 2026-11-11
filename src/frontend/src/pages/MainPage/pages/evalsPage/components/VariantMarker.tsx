@@ -1,8 +1,9 @@
 import { cn } from "@/utils/utils";
 
 // The number carries the identity; the color only helps the eye match a version across screens.
+// Each background keeps the number at 4.5:1 or more in both themes (accent blue reached 3.6:1 in light).
 const MARKER_COLORS = [
-  "bg-accent-blue-foreground",
+  "bg-datatype-blue",
   "bg-accent-amber-foreground",
   "bg-accent-emerald-foreground",
   "bg-accent-pink-foreground",

@@ -46,7 +46,8 @@ export default function ModelOverrideRow({
   return (
     <div className="flex flex-col gap-2" data-testid={id}>
       <div className="flex items-center justify-between gap-2">
-        <Label htmlFor={id} className="truncate leading-5">
+        {/* Named by reference, not htmlFor: while the picker loads it renders no element with that id. */}
+        <Label id={`${id}-label`} className="truncate leading-5">
           {label}
         </Label>
         {changed && (
@@ -83,7 +84,7 @@ export default function ModelOverrideRow({
           providerScope={{ flowId }}
           modelType={kind}
           showEmptyState
-          aria-label={label}
+          ariaLabelledBy={`${id}-label`}
         />
       </div>
       {/* Once a model is chosen the note has nothing left to say. */}

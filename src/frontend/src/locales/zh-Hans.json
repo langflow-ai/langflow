@@ -4056,5 +4056,14 @@
   "evals.safety.checkHint.jailbreak": "标记在用户通过争辩或角色扮演绕过规则后，给出应用本应拒绝的帮助的回答。",
   "evals.infoLabel": "关于{{name}}",
   "evals.evaluations.loadingOne": "正在加载评估...",
-  "evals.checks.build_blocked": "运行此流程前需要更新部分组件。请打开流程并更新它们。"
+  "evals.checks.build_blocked": "运行此流程前需要更新部分组件。请打开流程并更新它们。",
+  "evals.examples.support-triage.name": "支持工单分类",
+  "evals.examples.support-triage.description": "将每条客户消息分类为 billing、technical、account 或 feedback。让流程只回复标签，然后用 Exact match 评分。",
+  "evals.examples.grounded-answers.name": "基于上下文的回答（RAG）",
+  "evals.examples.grounded-answers.description": "每一行包含上下文和问题。让流程只根据上下文回答，答案不在其中时回复 \"I don't know\"，然后用 Contains 或 LLM judge 评分。",
+  "evals.examples.safety-checks.name": "安全与提示注入",
+  "evals.examples.safety-checks.description": "助手应抵御的攻击，与它仍需回答的正常请求混在一起。每个预期输出都描述了正确的行为，因此用 LLM judge 评分。",
+  "evals.columnActions": "操作",
+  "evals.evaluate.searchDatasets": "搜索数据集",
+  "evals.evaluate.noDatasets": "没有匹配的数据集"
 }
