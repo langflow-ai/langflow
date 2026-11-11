@@ -191,19 +191,22 @@ jobs:
             # must be requested directly. A global --prerelease=allow is NOT safe here:
             # it lets unrelated dependencies resolve to alphas (pydantic 2.14.0a1 broke
             # langchain-core imports on the first canonical-prerelease nightly).
-            # langflow-sdk has its own version line, so an explicit .dev0 floor marks it
-            # pre-release-eligible while the lfx pin selects the exact version.
+            # lfx and langflow-sdk get an explicit .dev0 floor instead of ==$VERSION: the
+            # floor marks them pre-release-eligible and the exact pins inside langflow-base
+            # and lfx select the version. lfx's dev number is NOT guaranteed to match
+            # langflow's: a nightly that publishes lfx and then stops leaves lfx one dev
+            # number ahead from then on, and ==$VERSION becomes unsatisfiable.
             if [[ "$VERSION" == "latest" ]]; then
               # Install latest nightly (canonical pre-release) from PyPI
               uv pip install --upgrade 'langflow[postgresql]>=0.0.0.dev0' 'langflow-base>=0.0.0.dev0' 'lfx>=0.0.0.dev0' 'langflow-sdk>=0.0.0.dev0'
             else
               # Install specific version
-              uv pip install --upgrade "langflow[postgresql]==$VERSION" "langflow-base==$VERSION" "lfx==$VERSION" 'langflow-sdk>=0.0.0.dev0'
+              uv pip install --upgrade "langflow[postgresql]==$VERSION" "langflow-base==$VERSION" 'lfx>=0.0.0.dev0' 'langflow-sdk>=0.0.0.dev0'
             fi
           else
             # Direct version string (strip 'v' prefix if present)
             VERSION="${NIGHTLY_TAG#v}"
-            uv pip install --upgrade "langflow[postgresql]==$VERSION" "langflow-base==$VERSION" "lfx==$VERSION" 'langflow-sdk>=0.0.0.dev0'
+            uv pip install --upgrade "langflow[postgresql]==$VERSION" "langflow-base==$VERSION" 'lfx>=0.0.0.dev0' 'langflow-sdk>=0.0.0.dev0'
           fi
 
           # Verify upgrade
