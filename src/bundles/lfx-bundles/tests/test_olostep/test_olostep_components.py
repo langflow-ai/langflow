@@ -15,8 +15,8 @@ import pytest
 from lfx.custom.custom_component.component import Component
 from lfx_bundles.olostep.olostep_answer import OlostepAnswerComponent
 from lfx_bundles.olostep.olostep_common import API_BASE_URL
-from lfx_bundles.olostep.olostep_crawl import OlostepCrawlComponent
-from lfx_bundles.olostep.olostep_map import OlostepMapComponent
+from lfx_bundles.olostep.olostep_crawl import _MAX_PAGE_REQUESTS, OlostepCrawlComponent
+from lfx_bundles.olostep.olostep_map import MAX_CURSOR_PAGES, OlostepMapComponent
 from lfx_bundles.olostep.olostep_scrape import OlostepScrapeComponent
 from lfx_bundles.olostep.olostep_search import OlostepSearchComponent
 
@@ -298,6 +298,33 @@ class TestOlostepMap:
         assert request.call_args.kwargs["json"]["cursor"] == "next"
         assert [item.text for item in data] == ["https://example.com/1", "https://example.com/2"]
 
+    @pytest.mark.parametrize("has_more_results", [False, True])
+    def test_map_request_limit_reports_incomplete_results(self, *, has_more_results: bool) -> None:
+        response_count = MAX_CURSOR_PAGES + int(has_more_results)
+        responses = [
+            _response(
+                json_body={
+                    "urls": [f"https://example.com/{index}"],
+                    "cursor": str(index + 1) if index + 1 < response_count else None,
+                }
+            )
+            for index in range(response_count)
+        ]
+        component = _make(OlostepMapComponent, url="https://example.com")
+        with patch("httpx.Client.request", side_effect=responses) as request:
+            data = component.map_site()
+
+        assert request.call_count == MAX_CURSOR_PAGES
+        if has_more_results:
+            assert len(data) == 1
+            assert "incomplete" in data[0].data["error"].lower()
+            assert component.status == data[0].data["error"]
+        else:
+            assert [item.data["url"] for item in data] == [
+                f"https://example.com/{index}" for index in range(response_count)
+            ]
+            assert component.status == f"Found {response_count} URLs."
+
     def test_rejects_non_http_url_without_a_request(self) -> None:
         with patch("httpx.Client.request") as request:
             data = _make(OlostepMapComponent, url="example.com").map_site()
@@ -308,6 +335,34 @@ class TestOlostepMap:
 
 @pytest.mark.unit
 class TestOlostepCrawl:
+    @pytest.mark.parametrize("has_more_results", [False, True])
+    def test_crawl_request_limit_reports_incomplete_results(self, *, has_more_results: bool) -> None:
+        response_count = _MAX_PAGE_REQUESTS + int(has_more_results)
+        responses = [_response(json_body={"id": "crawl_limit", "status": "completed"})]
+        responses.extend(
+            _response(
+                json_body={
+                    "pages": [{"url": f"https://example.com/{index}", "markdown_content": f"Page {index}"}],
+                    "cursor": index + 1 if index + 1 < response_count else None,
+                }
+            )
+            for index in range(response_count)
+        )
+        component = _make(OlostepCrawlComponent, start_url="https://example.com", max_pages=response_count)
+        with patch("httpx.Client.request", side_effect=responses) as request:
+            data = component.crawl()
+
+        assert request.call_count == _MAX_PAGE_REQUESTS + 1
+        if has_more_results:
+            assert len(data) == 1
+            assert "incomplete" in data[0].data["error"].lower()
+            assert component.status == data[0].data["error"]
+        else:
+            assert [item.data["url"] for item in data] == [
+                f"https://example.com/{index}" for index in range(response_count)
+            ]
+            assert component.status == f"Crawled {response_count} pages."
+
     def test_crawl_waits_then_returns_pages(self) -> None:
         responses = [
             _response(json_body={"id": "crawl_1", "status": "in_progress"}),

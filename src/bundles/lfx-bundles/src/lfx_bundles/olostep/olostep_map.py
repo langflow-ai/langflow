@@ -118,6 +118,12 @@ class OlostepMapComponent(Component):
                 if not cursor:
                     break
                 payload["cursor"] = cursor
+            else:
+                msg = (
+                    f"Olostep map results are incomplete after {MAX_CURSOR_PAGES} page requests. "
+                    "Reduce Top N or narrow Include Paths."
+                )
+                raise OlostepAPIError(msg)
         except OlostepAPIError as exc:
             logger.error(str(exc))
             self.status = str(exc)

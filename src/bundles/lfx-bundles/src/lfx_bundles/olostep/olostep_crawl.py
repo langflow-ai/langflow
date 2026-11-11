@@ -140,6 +140,12 @@ class OlostepCrawlComponent(Component):
                 if cursor is None or not batch:
                     break
                 params["cursor"] = cursor
+            else:
+                msg = (
+                    f"Olostep crawl results are incomplete after {_MAX_PAGE_REQUESTS} page requests. "
+                    "Reduce Max Pages or narrow Include Paths."
+                )
+                raise OlostepAPIError(msg)
         except OlostepAPIError as exc:
             logger.error(str(exc))
             self.status = str(exc)
