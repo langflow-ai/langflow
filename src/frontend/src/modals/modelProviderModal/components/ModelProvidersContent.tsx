@@ -110,6 +110,7 @@ const ModelProvidersContent = ({
     !!syncedSelectedProvider &&
     typedModelCount === 0 &&
     !awaitingLiveDiscovery &&
+    !syncedSelectedProvider.discovery_error &&
     !hasProviderOwnedEmptyState(syncedSelectedProvider.provider, modelType);
 
   return (
@@ -187,6 +188,11 @@ const ModelProvidersContent = ({
         <div
           className={cn("px-4 pt-4 pb-6", !syncedSelectedProvider && "hidden")}
         >
+          {syncedSelectedProvider?.discovery_error && (
+            <p role="alert" className="text-sm text-destructive">
+              {t("modelProviders.decisionDiscoveryError")}
+            </p>
+          )}
           <CustomModelProvidersEmptyState
             kind="models"
             show={showNoAvailableModels}
