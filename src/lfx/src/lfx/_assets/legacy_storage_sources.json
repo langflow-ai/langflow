@@ -5156,6 +5156,909 @@
           "tag": "v1.11.6"
         }
       ]
+    },
+    {
+      "sha256": "864c316604fabaca6048d51c0f2b454895e65a71ab7ff61a57c88f2732361350",
+      "module": "lfx.base.mrscraper.retired",
+      "class_name": "MrscraperAiScraper",
+      "sources": [
+        {
+          "commit": "38c5df331b73bd0fc644da5e288b7a6a0e8eef9b",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_ai_scraper.py",
+          "kind": "module",
+          "tag": "v1.12.0"
+        }
+      ]
+    },
+    {
+      "sha256": "acf628e174cac211ef37cbdc838b63718406b3202b5a12eb01ef637cc5ceb19f",
+      "module": "lfx.base.mrscraper.retired",
+      "class_name": "MrscraperAiScraper",
+      "sources": [
+        {
+          "commit": "38c5df331b73bd0fc644da5e288b7a6a0e8eef9b",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_ai_scraper.py",
+          "kind": "class",
+          "tag": "v1.12.0"
+        },
+        {
+          "commit": "a397dc3a8ef37843411921ffd2c1276b9eb9ffbf",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_ai_scraper.py",
+          "kind": "class",
+          "tag": "v1.12.1"
+        },
+        {
+          "commit": "996a57aaab4f4224bd17d08e1ce4d5ace70bf71b",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_ai_scraper.py",
+          "kind": "class",
+          "tag": "v1.12.2"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_ai_scraper.py",
+          "kind": "class",
+          "tag": "v1.12.3"
+        },
+        {
+          "commit": "356043ba2964b55c8ffedf80752e953b1e542d47",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_ai_scraper.py",
+          "kind": "class",
+          "tag": "v1.12.4"
+        },
+        {
+          "commit": "72e235ea73ef5aa3d9641cb31e952728e705c03f",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_ai_scraper.py",
+          "kind": "class",
+          "tag": "v1.12.5"
+        },
+        {
+          "commit": "20456860ff19d6a6ab3eebb2446a0f99c4aecf0e",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_ai_scraper.py",
+          "kind": "class",
+          "tag": "v1.12.6"
+        },
+        {
+          "commit": "4bc1f7ba0453599b913b3ed4f985f3227e0a813f",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_ai_scraper.py",
+          "kind": "class",
+          "tag": "v1.12.7"
+        },
+        {
+          "commit": "ef7ebe0e0ad3243c6a4c0a2701522d28b91c93f3",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_ai_scraper.py",
+          "kind": "class",
+          "tag": "v1.12.8"
+        }
+      ]
+    },
+    {
+      "sha256": "d4ecc145f39592d4ade28b0db291af09645ce1a81a9024e09df00f830f3a039e",
+      "module": "lfx.base.mrscraper.retired",
+      "class_name": "MrscraperAiScraper",
+      "sources": [
+        {
+          "commit": "a397dc3a8ef37843411921ffd2c1276b9eb9ffbf",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_ai_scraper.py",
+          "kind": "module",
+          "tag": "v1.12.1"
+        },
+        {
+          "commit": "996a57aaab4f4224bd17d08e1ce4d5ace70bf71b",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_ai_scraper.py",
+          "kind": "module",
+          "tag": "v1.12.2"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_ai_scraper.py",
+          "kind": "module",
+          "tag": "v1.12.3"
+        },
+        {
+          "commit": "356043ba2964b55c8ffedf80752e953b1e542d47",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_ai_scraper.py",
+          "kind": "module",
+          "tag": "v1.12.4"
+        },
+        {
+          "commit": "72e235ea73ef5aa3d9641cb31e952728e705c03f",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_ai_scraper.py",
+          "kind": "module",
+          "tag": "v1.12.5"
+        },
+        {
+          "commit": "20456860ff19d6a6ab3eebb2446a0f99c4aecf0e",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_ai_scraper.py",
+          "kind": "module",
+          "tag": "v1.12.6"
+        },
+        {
+          "commit": "4bc1f7ba0453599b913b3ed4f985f3227e0a813f",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_ai_scraper.py",
+          "kind": "module",
+          "tag": "v1.12.7"
+        },
+        {
+          "commit": "ef7ebe0e0ad3243c6a4c0a2701522d28b91c93f3",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_ai_scraper.py",
+          "kind": "module",
+          "tag": "v1.12.8"
+        }
+      ]
+    },
+    {
+      "sha256": "2f21c1740da2c6a341ddaac6d50cdc430ff1bf44982643678d1beea7028050ab",
+      "module": "lfx.base.mrscraper.retired",
+      "class_name": "MrscraperBatchScrape",
+      "sources": [
+        {
+          "commit": "a397dc3a8ef37843411921ffd2c1276b9eb9ffbf",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_batch_scrape.py",
+          "kind": "module",
+          "tag": "v1.12.1"
+        },
+        {
+          "commit": "996a57aaab4f4224bd17d08e1ce4d5ace70bf71b",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_batch_scrape.py",
+          "kind": "module",
+          "tag": "v1.12.2"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_batch_scrape.py",
+          "kind": "module",
+          "tag": "v1.12.3"
+        },
+        {
+          "commit": "356043ba2964b55c8ffedf80752e953b1e542d47",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_batch_scrape.py",
+          "kind": "module",
+          "tag": "v1.12.4"
+        },
+        {
+          "commit": "72e235ea73ef5aa3d9641cb31e952728e705c03f",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_batch_scrape.py",
+          "kind": "module",
+          "tag": "v1.12.5"
+        },
+        {
+          "commit": "20456860ff19d6a6ab3eebb2446a0f99c4aecf0e",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_batch_scrape.py",
+          "kind": "module",
+          "tag": "v1.12.6"
+        },
+        {
+          "commit": "4bc1f7ba0453599b913b3ed4f985f3227e0a813f",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_batch_scrape.py",
+          "kind": "module",
+          "tag": "v1.12.7"
+        },
+        {
+          "commit": "ef7ebe0e0ad3243c6a4c0a2701522d28b91c93f3",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_batch_scrape.py",
+          "kind": "module",
+          "tag": "v1.12.8"
+        }
+      ]
+    },
+    {
+      "sha256": "b4a99221a1e17be67943297a384c3730efa0a37bcca0652abe1622ae6c36539e",
+      "module": "lfx.base.mrscraper.retired",
+      "class_name": "MrscraperBatchScrape",
+      "sources": [
+        {
+          "commit": "38c5df331b73bd0fc644da5e288b7a6a0e8eef9b",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_batch_scrape.py",
+          "kind": "class",
+          "tag": "v1.12.0"
+        },
+        {
+          "commit": "a397dc3a8ef37843411921ffd2c1276b9eb9ffbf",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_batch_scrape.py",
+          "kind": "class",
+          "tag": "v1.12.1"
+        },
+        {
+          "commit": "996a57aaab4f4224bd17d08e1ce4d5ace70bf71b",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_batch_scrape.py",
+          "kind": "class",
+          "tag": "v1.12.2"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_batch_scrape.py",
+          "kind": "class",
+          "tag": "v1.12.3"
+        },
+        {
+          "commit": "356043ba2964b55c8ffedf80752e953b1e542d47",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_batch_scrape.py",
+          "kind": "class",
+          "tag": "v1.12.4"
+        },
+        {
+          "commit": "72e235ea73ef5aa3d9641cb31e952728e705c03f",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_batch_scrape.py",
+          "kind": "class",
+          "tag": "v1.12.5"
+        },
+        {
+          "commit": "20456860ff19d6a6ab3eebb2446a0f99c4aecf0e",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_batch_scrape.py",
+          "kind": "class",
+          "tag": "v1.12.6"
+        },
+        {
+          "commit": "4bc1f7ba0453599b913b3ed4f985f3227e0a813f",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_batch_scrape.py",
+          "kind": "class",
+          "tag": "v1.12.7"
+        },
+        {
+          "commit": "ef7ebe0e0ad3243c6a4c0a2701522d28b91c93f3",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_batch_scrape.py",
+          "kind": "class",
+          "tag": "v1.12.8"
+        }
+      ]
+    },
+    {
+      "sha256": "f11555c104b68b4c1e30b417dc0fac7e51daffc6c818d46f48c8cf88371e57d3",
+      "module": "lfx.base.mrscraper.retired",
+      "class_name": "MrscraperBatchScrape",
+      "sources": [
+        {
+          "commit": "38c5df331b73bd0fc644da5e288b7a6a0e8eef9b",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_batch_scrape.py",
+          "kind": "module",
+          "tag": "v1.12.0"
+        }
+      ]
+    },
+    {
+      "sha256": "69723bc2e9014ec96fd3936c3ca2bd1eb6fed802c05ff2a5d90782503a77e9fc",
+      "module": "lfx.base.mrscraper.retired",
+      "class_name": "MrscraperCrawlWebsite",
+      "sources": [
+        {
+          "commit": "38c5df331b73bd0fc644da5e288b7a6a0e8eef9b",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_crawl_website.py",
+          "kind": "module",
+          "tag": "v1.12.0"
+        }
+      ]
+    },
+    {
+      "sha256": "c00cece7e0efaab68796d8e02ca8cd4300b200ea61bd76ecf64bb9a6088fc458",
+      "module": "lfx.base.mrscraper.retired",
+      "class_name": "MrscraperCrawlWebsite",
+      "sources": [
+        {
+          "commit": "38c5df331b73bd0fc644da5e288b7a6a0e8eef9b",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_crawl_website.py",
+          "kind": "class",
+          "tag": "v1.12.0"
+        },
+        {
+          "commit": "a397dc3a8ef37843411921ffd2c1276b9eb9ffbf",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_crawl_website.py",
+          "kind": "class",
+          "tag": "v1.12.1"
+        },
+        {
+          "commit": "996a57aaab4f4224bd17d08e1ce4d5ace70bf71b",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_crawl_website.py",
+          "kind": "class",
+          "tag": "v1.12.2"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_crawl_website.py",
+          "kind": "class",
+          "tag": "v1.12.3"
+        },
+        {
+          "commit": "356043ba2964b55c8ffedf80752e953b1e542d47",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_crawl_website.py",
+          "kind": "class",
+          "tag": "v1.12.4"
+        },
+        {
+          "commit": "72e235ea73ef5aa3d9641cb31e952728e705c03f",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_crawl_website.py",
+          "kind": "class",
+          "tag": "v1.12.5"
+        },
+        {
+          "commit": "20456860ff19d6a6ab3eebb2446a0f99c4aecf0e",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_crawl_website.py",
+          "kind": "class",
+          "tag": "v1.12.6"
+        },
+        {
+          "commit": "4bc1f7ba0453599b913b3ed4f985f3227e0a813f",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_crawl_website.py",
+          "kind": "class",
+          "tag": "v1.12.7"
+        },
+        {
+          "commit": "ef7ebe0e0ad3243c6a4c0a2701522d28b91c93f3",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_crawl_website.py",
+          "kind": "class",
+          "tag": "v1.12.8"
+        }
+      ]
+    },
+    {
+      "sha256": "d98f28b50bed96944861c1135a26dfadfb54c04fb3eefc41709cc66baba8d740",
+      "module": "lfx.base.mrscraper.retired",
+      "class_name": "MrscraperCrawlWebsite",
+      "sources": [
+        {
+          "commit": "a397dc3a8ef37843411921ffd2c1276b9eb9ffbf",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_crawl_website.py",
+          "kind": "module",
+          "tag": "v1.12.1"
+        },
+        {
+          "commit": "996a57aaab4f4224bd17d08e1ce4d5ace70bf71b",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_crawl_website.py",
+          "kind": "module",
+          "tag": "v1.12.2"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_crawl_website.py",
+          "kind": "module",
+          "tag": "v1.12.3"
+        },
+        {
+          "commit": "356043ba2964b55c8ffedf80752e953b1e542d47",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_crawl_website.py",
+          "kind": "module",
+          "tag": "v1.12.4"
+        },
+        {
+          "commit": "72e235ea73ef5aa3d9641cb31e952728e705c03f",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_crawl_website.py",
+          "kind": "module",
+          "tag": "v1.12.5"
+        },
+        {
+          "commit": "20456860ff19d6a6ab3eebb2446a0f99c4aecf0e",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_crawl_website.py",
+          "kind": "module",
+          "tag": "v1.12.6"
+        },
+        {
+          "commit": "4bc1f7ba0453599b913b3ed4f985f3227e0a813f",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_crawl_website.py",
+          "kind": "module",
+          "tag": "v1.12.7"
+        },
+        {
+          "commit": "ef7ebe0e0ad3243c6a4c0a2701522d28b91c93f3",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_crawl_website.py",
+          "kind": "module",
+          "tag": "v1.12.8"
+        }
+      ]
+    },
+    {
+      "sha256": "1e295c28f2e444f46f9d4a4c99e46f1dac5f0555a9a36fd48e81f231b72d01d5",
+      "module": "lfx.base.mrscraper.retired",
+      "class_name": "MrscraperGetResult",
+      "sources": [
+        {
+          "commit": "38c5df331b73bd0fc644da5e288b7a6a0e8eef9b",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_result.py",
+          "kind": "class",
+          "tag": "v1.12.0"
+        },
+        {
+          "commit": "a397dc3a8ef37843411921ffd2c1276b9eb9ffbf",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_result.py",
+          "kind": "class",
+          "tag": "v1.12.1"
+        },
+        {
+          "commit": "996a57aaab4f4224bd17d08e1ce4d5ace70bf71b",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_result.py",
+          "kind": "class",
+          "tag": "v1.12.2"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_result.py",
+          "kind": "class",
+          "tag": "v1.12.3"
+        },
+        {
+          "commit": "356043ba2964b55c8ffedf80752e953b1e542d47",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_result.py",
+          "kind": "class",
+          "tag": "v1.12.4"
+        },
+        {
+          "commit": "72e235ea73ef5aa3d9641cb31e952728e705c03f",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_result.py",
+          "kind": "class",
+          "tag": "v1.12.5"
+        },
+        {
+          "commit": "20456860ff19d6a6ab3eebb2446a0f99c4aecf0e",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_result.py",
+          "kind": "class",
+          "tag": "v1.12.6"
+        },
+        {
+          "commit": "4bc1f7ba0453599b913b3ed4f985f3227e0a813f",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_result.py",
+          "kind": "class",
+          "tag": "v1.12.7"
+        },
+        {
+          "commit": "ef7ebe0e0ad3243c6a4c0a2701522d28b91c93f3",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_result.py",
+          "kind": "class",
+          "tag": "v1.12.8"
+        }
+      ]
+    },
+    {
+      "sha256": "23eb69fd0060915d37274e0fe89464a0150fedea11380f894f9292bb3fd67fb3",
+      "module": "lfx.base.mrscraper.retired",
+      "class_name": "MrscraperGetResult",
+      "sources": [
+        {
+          "commit": "38c5df331b73bd0fc644da5e288b7a6a0e8eef9b",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_result.py",
+          "kind": "module",
+          "tag": "v1.12.0"
+        }
+      ]
+    },
+    {
+      "sha256": "ef97f70c1bcedcb227e4fe132a48157074aac1f4665b05c445e3ddbba1af1db4",
+      "module": "lfx.base.mrscraper.retired",
+      "class_name": "MrscraperGetResult",
+      "sources": [
+        {
+          "commit": "a397dc3a8ef37843411921ffd2c1276b9eb9ffbf",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_result.py",
+          "kind": "module",
+          "tag": "v1.12.1"
+        },
+        {
+          "commit": "996a57aaab4f4224bd17d08e1ce4d5ace70bf71b",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_result.py",
+          "kind": "module",
+          "tag": "v1.12.2"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_result.py",
+          "kind": "module",
+          "tag": "v1.12.3"
+        },
+        {
+          "commit": "356043ba2964b55c8ffedf80752e953b1e542d47",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_result.py",
+          "kind": "module",
+          "tag": "v1.12.4"
+        },
+        {
+          "commit": "72e235ea73ef5aa3d9641cb31e952728e705c03f",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_result.py",
+          "kind": "module",
+          "tag": "v1.12.5"
+        },
+        {
+          "commit": "20456860ff19d6a6ab3eebb2446a0f99c4aecf0e",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_result.py",
+          "kind": "module",
+          "tag": "v1.12.6"
+        },
+        {
+          "commit": "4bc1f7ba0453599b913b3ed4f985f3227e0a813f",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_result.py",
+          "kind": "module",
+          "tag": "v1.12.7"
+        },
+        {
+          "commit": "ef7ebe0e0ad3243c6a4c0a2701522d28b91c93f3",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_result.py",
+          "kind": "module",
+          "tag": "v1.12.8"
+        }
+      ]
+    },
+    {
+      "sha256": "78e8f2d1a30808dd92a61495217d8de5a0cd77afec5862f5f1e816dd095aadc8",
+      "module": "lfx.base.mrscraper.retired",
+      "class_name": "MrscraperGetResults",
+      "sources": [
+        {
+          "commit": "38c5df331b73bd0fc644da5e288b7a6a0e8eef9b",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_results.py",
+          "kind": "class",
+          "tag": "v1.12.0"
+        },
+        {
+          "commit": "a397dc3a8ef37843411921ffd2c1276b9eb9ffbf",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_results.py",
+          "kind": "class",
+          "tag": "v1.12.1"
+        },
+        {
+          "commit": "996a57aaab4f4224bd17d08e1ce4d5ace70bf71b",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_results.py",
+          "kind": "class",
+          "tag": "v1.12.2"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_results.py",
+          "kind": "class",
+          "tag": "v1.12.3"
+        },
+        {
+          "commit": "356043ba2964b55c8ffedf80752e953b1e542d47",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_results.py",
+          "kind": "class",
+          "tag": "v1.12.4"
+        },
+        {
+          "commit": "72e235ea73ef5aa3d9641cb31e952728e705c03f",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_results.py",
+          "kind": "class",
+          "tag": "v1.12.5"
+        },
+        {
+          "commit": "20456860ff19d6a6ab3eebb2446a0f99c4aecf0e",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_results.py",
+          "kind": "class",
+          "tag": "v1.12.6"
+        },
+        {
+          "commit": "4bc1f7ba0453599b913b3ed4f985f3227e0a813f",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_results.py",
+          "kind": "class",
+          "tag": "v1.12.7"
+        },
+        {
+          "commit": "ef7ebe0e0ad3243c6a4c0a2701522d28b91c93f3",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_results.py",
+          "kind": "class",
+          "tag": "v1.12.8"
+        }
+      ]
+    },
+    {
+      "sha256": "a09a2c47fd1f29a0099022251488463b55efed3e8f9fe97ae6c4e25831308f2e",
+      "module": "lfx.base.mrscraper.retired",
+      "class_name": "MrscraperGetResults",
+      "sources": [
+        {
+          "commit": "38c5df331b73bd0fc644da5e288b7a6a0e8eef9b",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_results.py",
+          "kind": "module",
+          "tag": "v1.12.0"
+        }
+      ]
+    },
+    {
+      "sha256": "e6756d3687f3b9fd2be29b306f4ac5eee7e7d3a193d984a2af2fb6b16c761510",
+      "module": "lfx.base.mrscraper.retired",
+      "class_name": "MrscraperGetResults",
+      "sources": [
+        {
+          "commit": "a397dc3a8ef37843411921ffd2c1276b9eb9ffbf",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_results.py",
+          "kind": "module",
+          "tag": "v1.12.1"
+        },
+        {
+          "commit": "996a57aaab4f4224bd17d08e1ce4d5ace70bf71b",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_results.py",
+          "kind": "module",
+          "tag": "v1.12.2"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_results.py",
+          "kind": "module",
+          "tag": "v1.12.3"
+        },
+        {
+          "commit": "356043ba2964b55c8ffedf80752e953b1e542d47",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_results.py",
+          "kind": "module",
+          "tag": "v1.12.4"
+        },
+        {
+          "commit": "72e235ea73ef5aa3d9641cb31e952728e705c03f",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_results.py",
+          "kind": "module",
+          "tag": "v1.12.5"
+        },
+        {
+          "commit": "20456860ff19d6a6ab3eebb2446a0f99c4aecf0e",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_results.py",
+          "kind": "module",
+          "tag": "v1.12.6"
+        },
+        {
+          "commit": "4bc1f7ba0453599b913b3ed4f985f3227e0a813f",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_results.py",
+          "kind": "module",
+          "tag": "v1.12.7"
+        },
+        {
+          "commit": "ef7ebe0e0ad3243c6a4c0a2701522d28b91c93f3",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_get_results.py",
+          "kind": "module",
+          "tag": "v1.12.8"
+        }
+      ]
+    },
+    {
+      "sha256": "6c348367af76b59d79ac7b35e3a79ed760aaf3c7f2722699e43833e8306f9e25",
+      "module": "lfx.base.mrscraper.retired",
+      "class_name": "MrscraperRunAiScraper",
+      "sources": [
+        {
+          "commit": "38c5df331b73bd0fc644da5e288b7a6a0e8eef9b",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_ai_scraper.py",
+          "kind": "class",
+          "tag": "v1.12.0"
+        },
+        {
+          "commit": "a397dc3a8ef37843411921ffd2c1276b9eb9ffbf",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_ai_scraper.py",
+          "kind": "class",
+          "tag": "v1.12.1"
+        },
+        {
+          "commit": "996a57aaab4f4224bd17d08e1ce4d5ace70bf71b",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_ai_scraper.py",
+          "kind": "class",
+          "tag": "v1.12.2"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_ai_scraper.py",
+          "kind": "class",
+          "tag": "v1.12.3"
+        },
+        {
+          "commit": "356043ba2964b55c8ffedf80752e953b1e542d47",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_ai_scraper.py",
+          "kind": "class",
+          "tag": "v1.12.4"
+        },
+        {
+          "commit": "72e235ea73ef5aa3d9641cb31e952728e705c03f",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_ai_scraper.py",
+          "kind": "class",
+          "tag": "v1.12.5"
+        },
+        {
+          "commit": "20456860ff19d6a6ab3eebb2446a0f99c4aecf0e",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_ai_scraper.py",
+          "kind": "class",
+          "tag": "v1.12.6"
+        },
+        {
+          "commit": "4bc1f7ba0453599b913b3ed4f985f3227e0a813f",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_ai_scraper.py",
+          "kind": "class",
+          "tag": "v1.12.7"
+        },
+        {
+          "commit": "ef7ebe0e0ad3243c6a4c0a2701522d28b91c93f3",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_ai_scraper.py",
+          "kind": "class",
+          "tag": "v1.12.8"
+        }
+      ]
+    },
+    {
+      "sha256": "d11f4196fa0703054af9510a62b463270b15317307ad65147e4971cbb5bc35d8",
+      "module": "lfx.base.mrscraper.retired",
+      "class_name": "MrscraperRunAiScraper",
+      "sources": [
+        {
+          "commit": "a397dc3a8ef37843411921ffd2c1276b9eb9ffbf",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_ai_scraper.py",
+          "kind": "module",
+          "tag": "v1.12.1"
+        },
+        {
+          "commit": "996a57aaab4f4224bd17d08e1ce4d5ace70bf71b",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_ai_scraper.py",
+          "kind": "module",
+          "tag": "v1.12.2"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_ai_scraper.py",
+          "kind": "module",
+          "tag": "v1.12.3"
+        },
+        {
+          "commit": "356043ba2964b55c8ffedf80752e953b1e542d47",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_ai_scraper.py",
+          "kind": "module",
+          "tag": "v1.12.4"
+        },
+        {
+          "commit": "72e235ea73ef5aa3d9641cb31e952728e705c03f",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_ai_scraper.py",
+          "kind": "module",
+          "tag": "v1.12.5"
+        },
+        {
+          "commit": "20456860ff19d6a6ab3eebb2446a0f99c4aecf0e",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_ai_scraper.py",
+          "kind": "module",
+          "tag": "v1.12.6"
+        },
+        {
+          "commit": "4bc1f7ba0453599b913b3ed4f985f3227e0a813f",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_ai_scraper.py",
+          "kind": "module",
+          "tag": "v1.12.7"
+        },
+        {
+          "commit": "ef7ebe0e0ad3243c6a4c0a2701522d28b91c93f3",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_ai_scraper.py",
+          "kind": "module",
+          "tag": "v1.12.8"
+        }
+      ]
+    },
+    {
+      "sha256": "e05744eb5835de9be0f9d153ae3d83a60d718c95615adbf943817a705ff250cc",
+      "module": "lfx.base.mrscraper.retired",
+      "class_name": "MrscraperRunAiScraper",
+      "sources": [
+        {
+          "commit": "38c5df331b73bd0fc644da5e288b7a6a0e8eef9b",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_ai_scraper.py",
+          "kind": "module",
+          "tag": "v1.12.0"
+        }
+      ]
+    },
+    {
+      "sha256": "0e1ecf6dd7bdc8d5536e178e0bd832edb8d0dfd933635893e3405629dc5fe282",
+      "module": "lfx.base.mrscraper.retired",
+      "class_name": "MrscraperRunManualScraper",
+      "sources": [
+        {
+          "commit": "38c5df331b73bd0fc644da5e288b7a6a0e8eef9b",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_manual_scraper.py",
+          "kind": "class",
+          "tag": "v1.12.0"
+        },
+        {
+          "commit": "a397dc3a8ef37843411921ffd2c1276b9eb9ffbf",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_manual_scraper.py",
+          "kind": "class",
+          "tag": "v1.12.1"
+        },
+        {
+          "commit": "996a57aaab4f4224bd17d08e1ce4d5ace70bf71b",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_manual_scraper.py",
+          "kind": "class",
+          "tag": "v1.12.2"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_manual_scraper.py",
+          "kind": "class",
+          "tag": "v1.12.3"
+        },
+        {
+          "commit": "356043ba2964b55c8ffedf80752e953b1e542d47",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_manual_scraper.py",
+          "kind": "class",
+          "tag": "v1.12.4"
+        },
+        {
+          "commit": "72e235ea73ef5aa3d9641cb31e952728e705c03f",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_manual_scraper.py",
+          "kind": "class",
+          "tag": "v1.12.5"
+        },
+        {
+          "commit": "20456860ff19d6a6ab3eebb2446a0f99c4aecf0e",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_manual_scraper.py",
+          "kind": "class",
+          "tag": "v1.12.6"
+        },
+        {
+          "commit": "4bc1f7ba0453599b913b3ed4f985f3227e0a813f",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_manual_scraper.py",
+          "kind": "class",
+          "tag": "v1.12.7"
+        },
+        {
+          "commit": "ef7ebe0e0ad3243c6a4c0a2701522d28b91c93f3",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_manual_scraper.py",
+          "kind": "class",
+          "tag": "v1.12.8"
+        }
+      ]
+    },
+    {
+      "sha256": "98b6e9a8ee27454a274c3a0385168430f9a0db602ec2d67b2c662a966bdea037",
+      "module": "lfx.base.mrscraper.retired",
+      "class_name": "MrscraperRunManualScraper",
+      "sources": [
+        {
+          "commit": "a397dc3a8ef37843411921ffd2c1276b9eb9ffbf",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_manual_scraper.py",
+          "kind": "module",
+          "tag": "v1.12.1"
+        },
+        {
+          "commit": "996a57aaab4f4224bd17d08e1ce4d5ace70bf71b",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_manual_scraper.py",
+          "kind": "module",
+          "tag": "v1.12.2"
+        },
+        {
+          "commit": "fec71dca901949c09ed4d63315804337cd2eb13d",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_manual_scraper.py",
+          "kind": "module",
+          "tag": "v1.12.3"
+        },
+        {
+          "commit": "356043ba2964b55c8ffedf80752e953b1e542d47",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_manual_scraper.py",
+          "kind": "module",
+          "tag": "v1.12.4"
+        },
+        {
+          "commit": "72e235ea73ef5aa3d9641cb31e952728e705c03f",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_manual_scraper.py",
+          "kind": "module",
+          "tag": "v1.12.5"
+        },
+        {
+          "commit": "20456860ff19d6a6ab3eebb2446a0f99c4aecf0e",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_manual_scraper.py",
+          "kind": "module",
+          "tag": "v1.12.6"
+        },
+        {
+          "commit": "4bc1f7ba0453599b913b3ed4f985f3227e0a813f",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_manual_scraper.py",
+          "kind": "module",
+          "tag": "v1.12.7"
+        },
+        {
+          "commit": "ef7ebe0e0ad3243c6a4c0a2701522d28b91c93f3",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_manual_scraper.py",
+          "kind": "module",
+          "tag": "v1.12.8"
+        }
+      ]
+    },
+    {
+      "sha256": "f6967834efc98e68a8be82b7d96105ec10b1aef1a771cf166b8f28d6d5049afa",
+      "module": "lfx.base.mrscraper.retired",
+      "class_name": "MrscraperRunManualScraper",
+      "sources": [
+        {
+          "commit": "38c5df331b73bd0fc644da5e288b7a6a0e8eef9b",
+          "path": "src/bundles/lfx-bundles/src/lfx_bundles/mrscraper/mrscraper_run_manual_scraper.py",
+          "kind": "module",
+          "tag": "v1.12.0"
+        }
+      ]
     }
   ]
 }

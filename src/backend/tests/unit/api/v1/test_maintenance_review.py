@@ -1,5 +1,6 @@
 """Review regressions at the CLI, WebSocket, and authentication boundaries."""
 
+import asyncio
 import json
 from unittest.mock import AsyncMock
 from urllib.parse import urlencode
@@ -114,3 +115,60 @@ def test_unrelated_authentication_outages_keep_their_existing_http_contract():
     assert response.status_code == 503
     assert response.detail == "Authentication is temporarily unavailable"
     assert response.headers == {"Retry-After": "1"}
+
+
+@pytest.mark.parametrize("surface", ["v1", "v1_advanced", "v2"])
+async def test_admitted_run_returns_its_completed_result_when_maintenance_starts(
+    client, simple_api_test, created_api_key, logged_in_headers_super_user, monkeypatch, surface
+):
+    from langflow.api.v1 import endpoints
+    from langflow.api.v2 import workflow_execution
+    from langflow.exceptions.api import WorkflowServiceUnavailableError
+    from langflow.services.task.service import TaskService
+
+    finished = asyncio.Event()
+    release = asyncio.Event()
+    module = workflow_execution if surface == "v2" else endpoints
+    run_graph = module.run_graph_internal
+
+    async def hold_completed_graph(**kwargs):
+        result = await run_graph(**kwargs)
+        finished.set()
+        await release.wait()
+        return result
+
+    monkeypatch.setattr(module, "run_graph_internal", hold_completed_graph)
+    flow_id = simple_api_test["id"]
+    if surface == "v2":
+        url = "/api/v2/workflows"
+        payload = {"flow_id": flow_id, "mode": "sync", "input_value": "completed before maintenance"}
+    elif surface == "v1_advanced":
+        url = f"/api/v1/run/advanced/{flow_id}"
+        payload = {"inputs": [{"input_value": "completed before maintenance", "components": [], "type": "text"}]}
+    else:
+        url = f"/api/v1/run/{flow_id}?stream=false"
+        payload = {"input_value": "completed before maintenance", "output_type": "text"}
+    request = asyncio.create_task(
+        client.post(
+            url,
+            headers={"x-api-key": created_api_key.api_key},
+            json=payload,
+        )
+    )
+    try:
+        await asyncio.wait_for(finished.wait(), timeout=30)
+        enabled = await client.post(maintenance_fixtures.ON, json={}, headers=logged_in_headers_super_user)
+        assert enabled.status_code == 200
+        with pytest.raises(WorkflowServiceUnavailableError, match="maintenance"):
+            await TaskService._admit_task()
+    finally:
+        release.set()
+    response = await asyncio.wait_for(request, timeout=30)
+    assert response.status_code == 200, response.text
+    assert response.json()["outputs"]
+    refused = await client.post(
+        f"/api/v1/run/{simple_api_test['id']}",
+        headers={"x-api-key": created_api_key.api_key},
+        json={"input_value": "new work"},
+    )
+    assert refused.status_code == 503
