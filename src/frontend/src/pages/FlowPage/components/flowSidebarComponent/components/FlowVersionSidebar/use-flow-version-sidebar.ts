@@ -72,7 +72,7 @@ export function useFlowVersionSidebar(flowId: string) {
     data: versionResponse,
     isLoading,
     isError: isListError,
-  } = useGetFlowVersions({ flowId }, { refetchInterval: 10000 });
+  } = useGetFlowVersions({ flowId, all: true }, { refetchInterval: 10000 });
 
   const versions = versionResponse?.entries;
   const maxEntries = versionResponse?.max_entries;

@@ -50,6 +50,7 @@ from langflow.services.database.models.audit_event.model import as_utc
 # Imported at runtime: FastAPI resolves the dependency annotation below.
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import session_scope
+from langflow.utils.csv_safety import csv_safe_cell
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -359,13 +360,6 @@ def _stable_json(value: dict[str, Any] | None) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":")) if value else ""
 
 
-def _csv_cell(value: object) -> str:
-    """Neutralize spreadsheet formulas; the csv writer does the RFC 4180 quoting."""
-    text = "" if value is None else str(value)
-    first_visible = text.lstrip("\x00\t\n\r ")[:1]
-    return f"'{text}" if first_visible and first_visible in "=+-@" else text
-
-
 def _csv_values(feed_row: AuditFeedRow) -> list[object]:
     """The CSV columns straight from the stored row; building the response model per row halves throughput."""
     row = feed_row.row
@@ -391,7 +385,9 @@ def _csv_values(feed_row: AuditFeedRow) -> list[object]:
 
 def _csv_chunk(records: list[list[object]]) -> str:
     buffer = io.StringIO()
-    csv.writer(buffer, lineterminator="\r\n").writerows([_csv_cell(value) for value in record] for record in records)
+    csv.writer(buffer, lineterminator="\r\n").writerows(
+        [csv_safe_cell(value) for value in record] for record in records
+    )
     return buffer.getvalue()
 
 
