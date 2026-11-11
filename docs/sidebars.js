@@ -559,6 +559,7 @@ module.exports = {
             "Components/bundles-empiriolabs",
             "Components/bundles-exa",
             "Components/bundles-faiss",
+            "Components/bundles-famulor",
             "Components/bundles-figranium",
             "Components/bundles-files-ingestion",
             "Components/bundles-firecrawl",
