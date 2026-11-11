@@ -133,11 +133,11 @@ def ensure_branch(client: GitHubClient, repository: str, plan: BranchPlan) -> st
 
 
 def verify_protection(repository: str, branch: str, verifier: Any) -> dict[str, str]:
-    """Verify LE-3344 policy through the configured JSON bridge."""
+    """Verify release-protection policy through the configured JSON bridge."""
     if verifier(repository, branch) is not True:
         msg = f"release protection verification failed for {branch}"
         raise BranchAutomationError(msg)
-    return {"status": "verified", "owner": "LE-3344"}
+    return {"status": "verified", "owner": "release-protection"}
 
 
 def command_verifier(command_json: str):

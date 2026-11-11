@@ -38,7 +38,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_EVENT_PATH: ${{ github.event_path }}
-          # JSON argv array for the protected LE-3344 ruleset verifier, for
+          # JSON argv array for the protected release-protection verifier, for
           # example ["/opt/release/bin/verify-protection"]. The verifier reads
           # {"repository":"...","branch":"..."} on stdin and returns
           # {"verified":true}. Missing configuration fails before any ref write.

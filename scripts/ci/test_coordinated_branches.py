@@ -142,7 +142,7 @@ def test_process_event_creates_both_branches_without_publishing() -> None:
     report = process_event(event(pr), client, repository=REPOSITORY, protection_verifier=lambda *_: True)
     assert [item["branch"] for item in report["branches"]] == ["release-1.14.1", "release-1.15.0"]
     assert client.branches == {"release-1.14.1": HEAD, "release-1.15.0": MERGE}
-    assert all(item["status"] == "verified" and item["owner"] == "LE-3344" for item in report["branches"])
+    assert all(item["status"] == "verified" and item["owner"] == "release-protection" for item in report["branches"])
     assert all(path.endswith("/git/refs") for path, _ in client.posts)
 
 
