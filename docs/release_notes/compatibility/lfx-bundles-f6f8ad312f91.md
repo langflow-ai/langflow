@@ -4,7 +4,7 @@ Saved component `ext:altk:ALTKAgentComponent@official` is retired in the target 
 
 Replace the saved ALTK node manually with the [Agent component](https://docs.langflow.org/components-agents). Reconfigure its model and tools from the retained settings, reconnect its edges, and test the flow. Review the former tool-validation and post-tool reflection requirements before enabling it. The Agent component does not automatically reproduce those ALTK behaviors.
 
-Release comparison `lfx-bundles` 1.3.6 to 1.3.7.
+Release comparison `lfx-bundles` 1.3.5 to 1.3.7.
 
 - Break identity `f6f8ad312f910f2881bbb9d88f011ae39b657dec48c84d9d01c102886814632a`
 - Previous contract `b01738200e023dd642142dd5e9b4f18866a42057cc9043ffb0102d73265b8600`
