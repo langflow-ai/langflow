@@ -10036,7 +10036,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-bundles"
-version = "1.3.6"
+version = "1.3.7"
 source = { editable = "src/bundles/lfx-bundles" }
 dependencies = [
     { name = "lfx" },
@@ -10106,6 +10106,7 @@ all = [
     { name = "smolagents" },
     { name = "spider-client" },
     { name = "supabase" },
+    { name = "supermemory" },
     { name = "twelvelabs" },
     { name = "upstash-vector" },
     { name = "vlmrun", extra = ["all"] },
@@ -10170,6 +10171,7 @@ all-no-torch = [
     { name = "scrapegraph-py", version = "2.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "spider-client" },
     { name = "supabase" },
+    { name = "supermemory" },
     { name = "twelvelabs" },
     { name = "upstash-vector" },
     { name = "vlmrun", extra = ["all"] },
@@ -10362,6 +10364,9 @@ spider = [
 supabase = [
     { name = "langchain-community" },
     { name = "supabase" },
+]
+supermemory = [
+    { name = "supermemory" },
 ]
 twelvelabs = [
     { name = "twelvelabs" },
@@ -10596,6 +10601,8 @@ requires-dist = [
     { name = "lfx-bundles", extras = ["spider"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["supabase"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["supabase"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["supermemory"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["supermemory"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["tavily"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["tavily"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["twelvelabs"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
@@ -10656,6 +10663,7 @@ requires-dist = [
     { name = "smolagents", marker = "extra == 'codeagents'", specifier = ">=1.8.0" },
     { name = "spider-client", marker = "extra == 'spider'", specifier = ">=0.0.27,<1.0.0" },
     { name = "supabase", marker = "extra == 'supabase'", specifier = ">=2.6.0,<3.0.0" },
+    { name = "supermemory", marker = "extra == 'supermemory'", specifier = ">=5.0.0,<6.0.0" },
     { name = "twelvelabs", marker = "extra == 'twelvelabs'", specifier = ">=0.4.7,<1.0.0" },
     { name = "upstash-vector", marker = "extra == 'upstash'", specifier = "==0.6.0" },
     { name = "vlmrun", extras = ["all"], marker = "extra == 'vlmrun'", specifier = ">=0.2.0" },
@@ -10666,7 +10674,7 @@ requires-dist = [
     { name = "youtube-transcript-api", marker = "extra == 'youtube'", specifier = ">=1.0.0,<2.0.0" },
     { name = "zep-python", marker = "extra == 'zep'", specifier = "==2.0.2" },
 ]
-provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "baidu", "bing", "chroma", "cleanlab", "clickhouse", "cloudflare", "codeagents", "cometapi", "composio", "confluence", "couchbase", "cuga", "deepseek", "elastic", "faiss", "figranium", "funasr", "git", "glean", "google", "groq", "homeassistant", "huggingface", "icosacomputing", "jigsawstack", "keenable", "langwatch", "litellm", "lmstudio", "maritalk", "mem0", "milvus", "mistral", "mongodb", "mrscraper", "needle", "notdiamond", "notion", "novita", "nvidia", "olivya", "ollama", "openrouter", "orcarouter", "perplexity", "pgvector", "pinecone", "plivo", "qdrant", "redis", "sambanova", "scrapegraph", "searchapi", "serpapi", "spider", "supabase", "tavily", "twelvelabs", "unstructured", "upstash", "vectara", "vertexai", "vlmrun", "weaviate", "wikipedia", "wolframalpha", "xai", "yahoosearch", "youtube", "zep", "all", "all-no-torch"]
+provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "baidu", "bing", "chroma", "cleanlab", "clickhouse", "cloudflare", "codeagents", "cometapi", "composio", "confluence", "couchbase", "cuga", "deepseek", "elastic", "faiss", "figranium", "funasr", "git", "glean", "google", "groq", "homeassistant", "huggingface", "icosacomputing", "jigsawstack", "keenable", "langwatch", "litellm", "lmstudio", "maritalk", "mem0", "milvus", "mistral", "mongodb", "mrscraper", "needle", "notdiamond", "notion", "novita", "nvidia", "olivya", "ollama", "openrouter", "orcarouter", "perplexity", "pgvector", "pinecone", "plivo", "qdrant", "redis", "sambanova", "scrapegraph", "searchapi", "serpapi", "spider", "supabase", "supermemory", "tavily", "twelvelabs", "unstructured", "upstash", "vectara", "vertexai", "vlmrun", "weaviate", "wikipedia", "wolframalpha", "xai", "yahoosearch", "youtube", "zep", "all", "all-no-torch"]
 
 [[package]]
 name = "lfx-cohere"
@@ -20667,6 +20675,23 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/84/5d/61c2446ed26a57fa5543f9c270a731320911569202340d15341f72cdba7c/supabase_functions-2.31.0.tar.gz", hash = "sha256:4ad027b3ae3bd28b31233339f4db1da6965affd3546f655b421baf40cee2690f", size = 4683, upload-time = "2026-06-04T13:37:28.878Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/90/79/1a8162ce7d705381a4f2668c0da68e097b103c1aa701418a31da52905c7b/supabase_functions-2.31.0-py3-none-any.whl", hash = "sha256:3fdc4c4766152bfda63bdd0e286fc8a06f50e1280711fae4a1dfc9b7e9ebabc6", size = 8794, upload-time = "2026-06-04T13:37:28.022Z" },
+]
+
+[[package]]
+name = "supermemory"
+version = "5.0.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "pydantic", version = "2.13.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.15'" },
+    { name = "pydantic", version = "2.14.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.15'" },
+    { name = "pydantic-core", version = "2.46.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.15'" },
+    { name = "pydantic-core", version = "2.50.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.15'" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c4/26/b1cf2715a7c47404ce3218192b9f25ede496ae740867cb63ac2f13cda2a9/supermemory-5.0.1.tar.gz", hash = "sha256:1d7088fa4e01d756334d8d16924b959af4680d2be9b23e16f11b6df4d642aea8", size = 302762, upload-time = "2026-10-26T02:25:47.011Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/81/ae/0d5b2c9f495ca24a4b42c66823de53d13a15432d04f67ecd84f3b2bdb011/supermemory-5.0.1-py3-none-any.whl", hash = "sha256:462b87e91f156840576066fbea3ea64aad455d232710e087d44885c6b19e3e09", size = 267537, upload-time = "2026-10-26T02:25:45.587Z" },
 ]
 
 [[package]]

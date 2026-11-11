@@ -1,0 +1,59 @@
+---
+title: Supermemory
+slug: /bundles-supermemory
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Supermemory** bundle.
+
+[Supermemory](https://supermemory.ai) is a hosted memory API for AI agents.
+It stores content, extracts memories from it, keeps a profile for each namespace, and returns relevant context on search.
+
+To use the bundle, create an API key in the [Supermemory console](https://console.supermemory.ai) and enter it in the **Supermemory API Key** field, or store it in a [global variable](/configuration-global-variables).
+
+For more information, see the [Supermemory documentation](https://supermemory.ai/docs).
+
+## Supermemory Chat Memory
+
+The **Supermemory Chat Memory** component retrieves and stores chat messages using Supermemory.
+
+Every request is scoped to a **Namespace**, which is any string that isolates one set of memories from another, such as a user ID or a project ID.
+
+Supermemory processes ingested messages asynchronously, so a message that was just ingested can take a few minutes to appear in search results and in the profile.
+
+### Supermemory Chat Memory parameters
+
+<PartialParams />
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| supermemory_api_key | Supermemory API Key | Input parameter. The API key for Supermemory. |
+| namespace | Namespace | Input parameter. The identifier that isolates memories, such as a user ID or a project ID. |
+| ingest_message | Message to Ingest | Input parameter. The message content to be ingested into Supermemory. |
+| existing_memory | Existing Memory Instance | Input parameter. An optional existing Supermemory client. |
+| search_query | Search Query | Input parameter. The input text for searching related memories in Supermemory. |
+| document_id | Document ID | Input parameter. An optional ID for the ingested document. Reuse the same ID for one conversation or session so new messages are appended to the same document. |
+| metadata | Metadata | Input parameter. The additional metadata to associate with the ingested message. Values must be strings, numbers, or booleans. |
+| search_limit | Search Limit | Input parameter. The maximum number of search results to return. Default: `10`. |
+| search_mode | Search Mode | Input parameter. The search surface. `hybrid` combines memories with source chunks, `memories` returns learned context only, and `chunks` returns source passages only. Default: `hybrid`. |
+| threshold | Threshold | Input parameter. The minimum relevance score, from 0 to 1. Default: `0.3`. |
+
+### Supermemory Chat Memory output
+
+The **Supermemory Chat Memory** component can output **Supermemory Memory** ([`Memory`](/data-types#memory)), **Search Results** ([`JSON`](/data-types#json)), or **Profile** ([`JSON`](/data-types#json)).
+You can select the output type near the component's output port.
+
+Use the **Supermemory Memory** output to ingest a message and pass the Supermemory client to another **Supermemory Chat Memory** component.
+
+Use the **Search Results** output to retrieve specific memories based on a search query.
+Each result has an `id`, the `memory` or `chunk` text, a `similarity` score, and `metadata`.
+
+Use the **Profile** output to retrieve the profile that Supermemory maintains for the namespace.
+The profile has `static` facts, `dynamic` context, and named `buckets`.

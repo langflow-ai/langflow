@@ -49,7 +49,7 @@ MIGRATION_RELEASE = "1.11.0"
 # that introduced them (one ``bare_class_name`` row per component).  They stay in
 # ``PROVIDER_DEPS`` so re-running the script keeps their extras managed, but the
 # move + migration-discovery steps are skipped for them.
-PRE_CONSOLIDATED_PROVIDERS: frozenset[str] = frozenset({"figranium", "keenable", "mrscraper"})
+PRE_CONSOLIDATED_PROVIDERS: frozenset[str] = frozenset({"figranium", "keenable", "mrscraper", "supermemory"})
 
 # Shared spec for providers whose components go through langchain_community
 # wrappers (the wrapper itself; whatever SDK the wrapper lazy-imports at
@@ -106,6 +106,7 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "needle": ["needle-python>=0.4.0"],
     "scrapegraph": ["scrapegraph-py>=1.12.0"],
     "serpapi": ["google-search-results>=2.4.1,<3.0.0", _LC_COMMUNITY],
+    "supermemory": ["supermemory>=5.0.0,<6.0.0"],  # new in 1.14.0, never lived under lfx.components
     "unstructured": ["langchain-unstructured~=1.0.0"],
     "youtube": ["pytube==15.0.0", "youtube-transcript-api>=1.0.0,<2.0.0", "google-api-python-client~=2.161"],
     "zep": ["zep-python==2.0.2"],
