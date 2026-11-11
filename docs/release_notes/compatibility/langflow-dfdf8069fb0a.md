@@ -8,10 +8,7 @@ Supported local Knowledge Base and Memory Base storage upgrades are separate fro
 
 Release comparison `langflow` 1.13.2 to 1.14.0.
 
-<<<<<<<< HEAD:docs/release_notes/compatibility/langflow-dfdf8069fb0a.md
 - Break identity `dfdf8069fb0abee403a6fa5b17031d2bd9abaedb10d294bdea96b7d4481eb9e1`
-========
 - Break identity `dfdf8069fb0abee403a6fa5b17031d2bd9abaedb10d294bdea96b7d4481eb9e1`
->>>>>>>> upstream/release-1.14.0:docs/release_notes/compatibility/langflow-c65e648b5431.md
 - Previous contract `02f2cf302bcd204b65e3e2aaac44c8f5d7c6dd63c7e800411f69cb3cf0e9ab55`
 - Target contract `c5dec403563d038a2118640a7dc1c61ef9eda86e8a4cee8fe101bb4903fc0406`

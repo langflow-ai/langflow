@@ -6,10 +6,7 @@ Replace the saved ALTK node manually with the [Agent component](https://docs.lan
 
 Release comparison `lfx-bundles` 1.3.5 to 1.3.6.
 
-<<<<<<<< HEAD:docs/release_notes/compatibility/lfx-bundles-533ed283ac77.md
 - Break identity `533ed283ac77e82047c92068cab872a998fb082257201840094ef9b7dc1889ff`
-========
 - Break identity `533ed283ac77e82047c92068cab872a998fb082257201840094ef9b7dc1889ff`
->>>>>>>> upstream/release-1.14.0:docs/release_notes/compatibility/lfx-bundles-a4043bd241ac.md
 - Previous contract `b01738200e023dd642142dd5e9b4f18866a42057cc9043ffb0102d73265b8600`
 - Target contract `7a2cf766b1ddc25ce32c1253fe0b4c5443e53eedd226d9cdd8b292ece9d414d5`
