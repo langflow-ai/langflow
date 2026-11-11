@@ -52,10 +52,11 @@ def _consented_scopes(provider: str, returned: list[str], consented: list[str]) 
 
 
 def _ensure_consent_owner(row: Connection, user_id: UUID) -> None:
-    if row.provider_key == "servicenow" and (
+    if row.provider_key in {"servicenow", "salesforce"} and (
         row.ownership_mode != ConnectionOwnershipMode.USER.value or row.owner_id != user_id
     ):
-        msg = "Only the owner may authorize a personal ServiceNow connection."
+        provider = "ServiceNow" if row.provider_key == "servicenow" else "Salesforce"
+        msg = f"Only the owner may authorize a personal {provider} connection."
         raise OAuthError(msg)
 
 

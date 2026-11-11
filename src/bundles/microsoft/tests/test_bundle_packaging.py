@@ -82,7 +82,7 @@ def test_pyproject_declares_the_extension_entry_point_and_the_lfx_floor() -> Non
     project = meta["project"]
     assert project["name"] == "lfx-microsoft"
     assert project["entry-points"]["langflow.extensions"] == {"lfx-microsoft": "lfx_microsoft"}
-    assert project["dependencies"] == ["lfx>=1.13.0.dev0,<2.0.0"]
+    assert project["dependencies"] == ["lfx>=1.14.0.dev0,<2.0.0"]
 
 
 @requires_source_tree

@@ -29,6 +29,8 @@ from .provider_queries import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Collection
+
     from lfx.services.model_provider_policy import ModelProviderPolicySnapshot
 
 MODEL_STATUS_KEY_SEPARATOR = "::"
@@ -231,9 +233,17 @@ def provider_variable_from_env(var_key: str) -> str | None:
 
 
 def get_all_variables_for_provider(
-    user_id: UUID | str | None, provider: str, *, include_secrets: bool = True
+    user_id: UUID | str | None,
+    provider: str,
+    *,
+    include_secrets: bool = True,
+    exclude: Collection[str] = (),
 ) -> dict[str, str]:
-    """Get configured provider variables, optionally resolving only non-secret settings."""
+    """Get configured provider variables, optionally resolving only non-secret settings.
+
+    ``exclude`` names variables the caller is about to replace: they are never read, so a stored
+    value that can no longer be decrypted doesn't block saving a new one.
+    """
     result: dict[str, str] = {}
     account_absences: set[str] = set()
 
@@ -241,6 +251,8 @@ def get_all_variables_for_provider(
     provider_vars = get_provider_all_variables(provider)
     if not include_secrets:
         provider_vars = [variable for variable in provider_vars if not variable.get("is_secret")]
+    if exclude:
+        provider_vars = [variable for variable in provider_vars if variable.get("variable_key") not in exclude]
     if not provider_vars:
         return result
 
@@ -707,10 +719,35 @@ def validate_model_provider_key(
             if not is_reasoning_model:
                 llm_kwargs["max_tokens"] = 1
             base_url = variables.get("OPENAI_BASE_URL")
+            if not base_url:
+                if is_env_fallback_disabled():
+                    base_url = "https://api.openai.com/v1"
+                else:
+                    try:
+                        from langchain_openai.chat_models.base import _resolve_gateway_config
+                    except ImportError:
+                        # Older SDKs do not route through the LangSmith gateway.
+                        base_url = os.getenv("OPENAI_API_BASE") or os.getenv("OPENAI_BASE_URL")
+                    else:
+                        # Use the SDK's resolver before construction so its gateway
+                        # destination receives the same credential policy check.
+                        base_url = _resolve_gateway_config(
+                            base_url=None,
+                            api_key=api_key,
+                            provider_path="openai/v1",
+                            base_url_env="OPENAI_API_BASE",
+                            api_key_env="OPENAI_API_KEY",  # pragma: allowlist secret
+                        ).base_url or os.getenv("OPENAI_BASE_URL")
             if base_url:
                 from lfx.utils.util import transform_localhost_url
 
                 transformed_base_url = transform_localhost_url(base_url)
+                ensure_credential_endpoint_allowed(
+                    api_key,
+                    transformed_base_url,
+                    default_url="https://api.openai.com/v1",
+                    sdk_env_fallback="OPENAI_API_KEY",
+                )
                 validate_connector_url_for_ssrf(transformed_base_url)
                 # A key from the server's environment may only go to OpenAI's own endpoint or an
                 # operator-allowlisted host, as for a flow's OpenAI components: a user's saved base URL

@@ -13,6 +13,11 @@ entry-point.  After install, restart your Langflow server; the bundle's
 components will appear in the palette under the `valkey` group with
 the namespaced IDs `ext:valkey:<Class>@official`.
 
+The Valkey Vector Store requires Python 3.10 through 3.14 on Linux or macOS.
+Its GLIDE driver has no Python 3.15 wheel, and the source build omits a required
+generated protobuf module. The vector store reports this limitation before
+calling the driver. Valkey Chat Memory remains available on Python 3.15.
+
 ## Develop
 
 ```bash

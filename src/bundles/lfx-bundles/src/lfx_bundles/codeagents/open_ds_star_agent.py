@@ -483,7 +483,7 @@ class OpenDsStarAgentComponent(ToolCallingAgentComponent):
             recursion_limit = max(100, actual_agent.max_steps * 10)
             stream_gen = actual_agent._graph.graph.stream(  # noqa: SLF001
                 agent._build_graph_input(input_text, actual_agent),  # noqa: SLF001
-                config={"recursion_limit": recursion_limit},
+                config={"recursion_limit": recursion_limit, "callbacks": self.get_langchain_callbacks()},
                 stream_mode="values",
             )
 
