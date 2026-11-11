@@ -263,6 +263,6 @@ def test_represented_identity_and_release_migrations_have_one_head():
     scripts = ScriptDirectory(str(Path(NEW.__file__).resolve().parents[1]))
     head = scripts.get_current_head()
     assert head == NEW.revision
-    assert NEW.down_revision == "9c4b7e2a6d10"  # pragma: allowlist secret
+    assert NEW.down_revision == "310c015b3c92"  # pragma: allowlist secret
     revisions = {revision.revision for revision in scripts.iterate_revisions(head, "base")}
     assert {NEW.revision, "c6a81d3e9502", "f6a2c8e4b901"} <= revisions  # pragma: allowlist secret

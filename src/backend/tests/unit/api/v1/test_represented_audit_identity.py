@@ -300,6 +300,8 @@ async def test_mcp_mutations_bind_identity_before_updating_settings(
     """Bind trusted MCP identities and reject invalid assertions before settings change."""
     settings = get_settings_service().settings
     monkeypatch.setattr(settings, "mcp_composer_enabled", composer_enabled)
+    # This test covers identity binding for an owner allowed to configure MCP.
+    monkeypatch.setattr(settings, "custom_component_admin_only", False)
     plain_headers = {"x-api-key": trusted_key.api_key}
     created = await client.post("api/v1/projects/", json={"name": f"mcp-{uuid4().hex}"}, headers=plain_headers)
     assert created.status_code == 201, created.text
