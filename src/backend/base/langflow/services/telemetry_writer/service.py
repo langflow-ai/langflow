@@ -807,9 +807,7 @@ class TelemetryWriterService(Service):
                 return
             self._heartbeat_owner_file()
             try:
-                async with async_writing(
-                    name="telemetry_retention", session_maker=self._session_maker
-                ) as let_in:
+                async with async_writing(name="telemetry_retention", session_maker=self._session_maker) as let_in:
                     if let_in:
                         await self._run_retention_pass()
             except Exception:  # noqa: BLE001
