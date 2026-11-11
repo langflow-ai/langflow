@@ -19,12 +19,15 @@ from __future__ import annotations
 
 import os
 import ssl
+from email.message import Message
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 from urllib.parse import urljoin, urlparse
 
 import httpx
 import requests
+from urllib3 import HTTPResponse
 
 from lfx.utils.ssrf_protection import SSRFProtectionError, validate_and_resolve_url
 from lfx.utils.ssrf_transport import SSRFProtectedSyncTransport, pin_host_for_url
@@ -40,6 +43,83 @@ DEFAULT_MAX_REDIRECTS = 30
 # when it follows redirects itself; because we follow redirects manually with
 # ``allow_redirects=False`` we must reproduce that protection. Compared lowercase.
 SENSITIVE_REDIRECT_HEADERS = frozenset({"authorization", "cookie", "proxy-authorization"})
+
+
+class _SSRFHTTPAdapter(requests.adapters.HTTPAdapter):
+    """Validate and pin each request while Requests manages redirects and authentication."""
+
+    def send(self, request, stream=False, timeout=None, verify=True, cert=None, proxies=None):  # noqa: FBT002
+        """Validate each hop and return a buffered Requests response from the pinned transport.
+
+        Operator exemptions and proxy routing retain the standard Requests adapter.
+        """
+        validated_url, validated_ips = validate_and_resolve_url(request.url)
+        if not validated_ips or requests.utils.select_proxy(validated_url, proxies or {}):
+            return super().send(request, stream=stream, timeout=timeout, verify=verify, cert=cert, proxies=proxies)
+
+        if isinstance(timeout, tuple):
+            connect_timeout, read_timeout = timeout
+            timeout = httpx.Timeout(
+                connect=connect_timeout, read=read_timeout, write=read_timeout, pool=connect_timeout
+            )
+        if isinstance(verify, str):
+            verify = (
+                ssl.create_default_context(capath=verify)
+                if Path(verify).is_dir()
+                else ssl.create_default_context(cafile=verify)
+            )
+        try:
+            transport = SSRFProtectedSyncTransport(
+                pinned_ips={pin_host_for_url(validated_url): validated_ips}, verify=verify, cert=cert
+            )
+            with httpx.Client(transport=transport) as client:
+                result = client.request(
+                    request.method,
+                    validated_url,
+                    headers=request.headers,
+                    content=request.body,
+                    timeout=timeout,
+                    follow_redirects=False,
+                )
+        except httpx.InvalidURL as exc:
+            raise requests.exceptions.InvalidURL(str(exc)) from exc
+        except httpx.ConnectTimeout as exc:
+            raise requests.ConnectTimeout(str(exc)) from exc
+        except httpx.ReadTimeout as exc:
+            raise requests.ReadTimeout(str(exc)) from exc
+        except httpx.TimeoutException as exc:
+            raise requests.Timeout(str(exc)) from exc
+        except httpx.ConnectError as exc:
+            raise requests.ConnectionError(str(exc)) from exc
+        except httpx.RequestError as exc:
+            raise requests.RequestException(str(exc)) from exc
+
+        # Requests reads the original headers to retain cookies across validated redirects.
+        original_headers = Message()
+        for key, value in result.headers.multi_items():
+            original_headers.add_header(key, value)
+        raw = HTTPResponse(
+            body=result.content,
+            headers=result.headers,
+            status=result.status_code,
+            reason=result.reason_phrase,
+            original_response=SimpleNamespace(msg=original_headers),
+            decode_content=False,
+        )
+        response = self.build_response(request, raw)
+        response._content = result.content  # noqa: SLF001 - httpx has already buffered and decoded the body
+        response._content_consumed = True  # noqa: SLF001
+        return response
+
+
+def ssrf_safe_request(method: str, url: str, **kwargs: Any) -> requests.Response:
+    """Make a request with strict URL validation and DNS pinning on every redirect hop."""
+    # Check the original spelling before Requests normalizes the URL.
+    validated_url, _ = validate_and_resolve_url(url)
+    with requests.Session() as session:
+        session.mount("http://", _SSRFHTTPAdapter())
+        session.mount("https://", _SSRFHTTPAdapter())
+        return session.request(method, validated_url, **kwargs)
 
 
 def _pinned_get(

@@ -72,6 +72,7 @@ class SearchAPIComponent(LCToolComponent):
         return tool
 
     def run_model(self) -> list[Data]:
+        """Run the search with workflow callbacks and return the result snippets as data."""
         tool = self.build_tool()
         results = tool.run(
             {
@@ -79,7 +80,8 @@ class SearchAPIComponent(LCToolComponent):
                 "params": self.search_params or {},
                 "max_results": self.max_results,
                 "max_snippet_length": self.max_snippet_length,
-            }
+            },
+            callbacks=self.get_langchain_callbacks(),
         )
 
         data_list = [Data(data=result, text=result.get("snippet", "")) for result in results]

@@ -215,6 +215,11 @@ class BackgroundMetricsCollector:
             ot.update_gauge("langflow_bg_job_duration_p50_seconds", p50, {"backend": backend})
             ot.update_gauge("langflow_bg_job_duration_p95_seconds", p95, {"backend": backend})
 
+            from langflow.services.triggers.metrics import publish_trigger_metrics, query_trigger_metrics
+
+            trigger_metrics = await query_trigger_metrics(session, now=now, window_seconds=self.duration_window_seconds)
+            publish_trigger_metrics(ot, trigger_metrics, backend=backend, window_seconds=self.duration_window_seconds)
+
             # Full-history aggregates are more expensive than the indexed gauges.
             # Keep their last exported values between refreshes; a monotonic clock
             # prevents wall-clock adjustments from changing the polling cadence.

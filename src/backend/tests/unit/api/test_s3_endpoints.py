@@ -245,6 +245,7 @@ class TestS3FileEndpoints:
             mock_file.read = AsyncMock(return_value=b"file content")
             # An UploadFile always has its spooled body here; S3 hashes it before the upload starts.
             mock_file.file = io.BytesIO(b"file content")
+            mock_file.close = AsyncMock(side_effect=mock_file.file.close)
 
             with patch("langflow.api.v2.files.upload_user_file"):
                 from langflow.api.v2.files import save_file_routine
@@ -257,4 +258,5 @@ class TestS3FileEndpoints:
                 call = mock_storage_service.save_upload_stream.call_args
                 assert call.args[:2] == ("user-user_123", "upload.txt")
                 assert call.kwargs["md5"] == hashlib.md5(b"file content", usedforsecurity=False).hexdigest()
-                assert mock_file.file.tell() == 0  # rewound for the upload to read from the start
+                mock_file.close.assert_awaited_once()
+                assert mock_file.file.closed

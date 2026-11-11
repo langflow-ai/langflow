@@ -1,5 +1,6 @@
 """Flow component operations utilities for Langflow."""
 
+import copy
 from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid4
@@ -7,6 +8,7 @@ from uuid import UUID, uuid4
 from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
 
+from langflow.api.v1.flow_conflict import claim_version_token
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.services.database.models.flow.guards import ensure_flow_unlocked, lock_flow_for_update
 from langflow.services.database.models.flow.model import Flow
@@ -238,7 +240,8 @@ async def update_component_field_value(
         flow_id_str = str(flow.id)
 
         # Find the component in the flow data
-        flow_data = flow.data.copy()
+        reviewed_version_token = getattr(flow, "version_token", None)
+        flow_data = copy.deepcopy(flow.data)
         nodes = flow_data.get("nodes", [])
 
         component_found = False
@@ -284,13 +287,15 @@ async def update_component_field_value(
             # Check the row while its write lock is held through commit.
             ensure_flow_unlocked(db_flow)
 
+            claimed = await claim_version_token(session, db_flow, reviewed_version_token)
+
             # Update the flow data
             db_flow.data = flow_data
             db_flow.updated_at = datetime.now(timezone.utc)
             # Same reason as the assistant runner: a graph write that does not
             # rotate the token is invisible to every open editor, whose next save
             # then overwrites it without anyone being told.
-            db_flow.version_token = uuid4()
+            db_flow.version_token = claimed or uuid4()
             # The signature accepts either form; the column is a UUID on Postgres.
             db_flow.last_modified_by = user_id if isinstance(user_id, UUID) else UUID(str(user_id))
             session.add(db_flow)
