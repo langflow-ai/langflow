@@ -381,7 +381,7 @@ class TestAGUIModeDispatch:
 class TestV2WorkflowAdmission:
     """Route-level admission checks before workflow execution dispatch."""
 
-    def test_non_owner_data_override_is_dropped_not_denied(self):
+    def test_non_owner_data_override_is_dropped_not_denied(self, monkeypatch):
         """Execute-only callers run the stored graph; their injected data never reaches it.
 
         This asserted a 404 until LE-1905. The Playground always posts the
@@ -392,9 +392,11 @@ class TestV2WorkflowAdmission:
         does not run.
         """
         from langflow.api.v2 import workflow as workflow_module
+        from langflow.services.deps import get_settings_service
         from lfx.schema.workflow import WorkflowRunRequest
         from lfx.workflow.converters import parse_workflow_run_request
 
+        monkeypatch.setattr(get_settings_service().settings, "custom_component_admin_only", False)
         flow_id = uuid4()
         flow = SimpleNamespace(
             id=flow_id,

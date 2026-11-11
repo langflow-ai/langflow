@@ -502,8 +502,15 @@ def handle_model_input_update(
         from lfx.inputs.inputs import decision_model_field_settings
 
         model_config.update(decision_model_field_settings(field_value))
-        options_func = get_options_func or unified_models_module.get_decision_model_options
-        model_config["options"] = options_func(user_id=component.user_id)
+        if get_options_func is not None:
+            model_config["options"] = get_options_func(user_id=component.user_id)
+        else:
+            discovery_errors: dict[str, str] = {}
+            model_config["options"] = unified_models_module.get_decision_model_options(
+                user_id=component.user_id, discovery_errors=discovery_errors
+            )
+            base_info = getattr(declared_input, "info", "") or ""
+            model_config["info"] = " ".join([base_info, *discovery_errors.values()]).strip()
         if field_name == model_field_name:
             model_config["value"] = field_value
         # Preserve an unavailable saved selection so execution can explain the
