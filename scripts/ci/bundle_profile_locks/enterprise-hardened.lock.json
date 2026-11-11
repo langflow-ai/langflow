@@ -18,9 +18,9 @@
       "providers": [
         "lfx-amazon"
       ],
-      "requested": ">=0.3.0,<1.0.0",
-      "requirement": "lfx-amazon==0.3.0",
-      "resolved_version": "0.3.0"
+      "requested": ">=0.3.1,<1.0.0",
+      "requirement": "lfx-amazon==0.3.1",
+      "resolved_version": "0.3.1"
     },
     {
       "distribution": "lfx-anthropic",
@@ -58,9 +58,9 @@
       "providers": [
         "lfx-confluence"
       ],
-      "requested": ">=0.1.0,<1.0.0",
-      "requirement": "lfx-confluence==0.1.0",
-      "resolved_version": "0.1.0"
+      "requested": ">=0.1.1,<1.0.0",
+      "requirement": "lfx-confluence==0.1.1",
+      "resolved_version": "0.1.1"
     },
     {
       "distribution": "lfx-datastax",
@@ -68,9 +68,19 @@
       "providers": [
         "lfx-datastax"
       ],
-      "requested": ">=0.2.1,<1.0.0",
-      "requirement": "lfx-datastax==0.2.1",
-      "resolved_version": "0.2.1"
+      "requested": ">=0.3.0,<1.0.0",
+      "requirement": "lfx-datastax==0.3.0",
+      "resolved_version": "0.3.0"
+    },
+    {
+      "distribution": "lfx-discord",
+      "extras": [],
+      "providers": [
+        "lfx-discord"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-discord==0.1.0",
+      "resolved_version": "0.1.0"
     },
     {
       "distribution": "lfx-docling",
@@ -88,9 +98,9 @@
       "providers": [
         "lfx-github"
       ],
-      "requested": ">=0.1.0,<1.0.0",
-      "requirement": "lfx-github==0.1.0",
-      "resolved_version": "0.1.0"
+      "requested": ">=0.1.1,<1.0.0",
+      "requirement": "lfx-github==0.1.1",
+      "resolved_version": "0.1.1"
     },
     {
       "distribution": "lfx-gitlab",
@@ -98,9 +108,9 @@
       "providers": [
         "lfx-gitlab"
       ],
-      "requested": ">=0.1.0,<1.0.0",
-      "requirement": "lfx-gitlab==0.1.0",
-      "resolved_version": "0.1.0"
+      "requested": ">=0.1.1,<1.0.0",
+      "requirement": "lfx-gitlab==0.1.1",
+      "resolved_version": "0.1.1"
     },
     {
       "distribution": "lfx-google",
@@ -108,9 +118,9 @@
       "providers": [
         "lfx-google"
       ],
-      "requested": ">=0.4.0,<1.0.0",
-      "requirement": "lfx-google==0.4.0",
-      "resolved_version": "0.4.0"
+      "requested": ">=0.4.1,<1.0.0",
+      "requirement": "lfx-google==0.4.1",
+      "resolved_version": "0.4.1"
     },
     {
       "distribution": "lfx-ibm",
@@ -128,9 +138,9 @@
       "providers": [
         "lfx-jira"
       ],
-      "requested": ">=0.1.0,<1.0.0",
-      "requirement": "lfx-jira==0.1.0",
-      "resolved_version": "0.1.0"
+      "requested": ">=0.1.1,<1.0.0",
+      "requirement": "lfx-jira==0.1.1",
+      "resolved_version": "0.1.1"
     },
     {
       "distribution": "lfx-microsoft",
@@ -138,9 +148,9 @@
       "providers": [
         "lfx-microsoft"
       ],
-      "requested": ">=0.1.5,<1.0.0",
-      "requirement": "lfx-microsoft==0.1.5",
-      "resolved_version": "0.1.5"
+      "requested": ">=0.2.0,<1.0.0",
+      "requirement": "lfx-microsoft==0.2.0",
+      "resolved_version": "0.2.0"
     },
     {
       "distribution": "lfx-ollama",
@@ -178,9 +188,19 @@
       "providers": [
         "lfx-oracle"
       ],
-      "requested": ">=0.4.0,<1.0.0",
-      "requirement": "lfx-oracle==0.4.0",
-      "resolved_version": "0.4.0"
+      "requested": ">=0.4.1,<1.0.0",
+      "requirement": "lfx-oracle==0.4.1",
+      "resolved_version": "0.4.1"
+    },
+    {
+      "distribution": "lfx-salesforce",
+      "extras": [],
+      "providers": [
+        "lfx-salesforce"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-salesforce==0.1.0",
+      "resolved_version": "0.1.0"
     },
     {
       "distribution": "lfx-servicenow",
@@ -188,9 +208,9 @@
       "providers": [
         "lfx-servicenow"
       ],
-      "requested": ">=0.1.0,<1.0.0",
-      "requirement": "lfx-servicenow==0.1.0",
-      "resolved_version": "0.1.0"
+      "requested": ">=0.1.1,<1.0.0",
+      "requirement": "lfx-servicenow==0.1.1",
+      "resolved_version": "0.1.1"
     },
     {
       "distribution": "lfx-slack",
@@ -198,9 +218,19 @@
       "providers": [
         "lfx-slack"
       ],
-      "requested": ">=0.2.3,<1.0.0",
-      "requirement": "lfx-slack==0.2.3",
-      "resolved_version": "0.2.3"
+      "requested": ">=0.3.0,<1.0.0",
+      "requirement": "lfx-slack==0.3.0",
+      "resolved_version": "0.3.0"
+    },
+    {
+      "distribution": "lfx-telegram",
+      "extras": [],
+      "providers": [
+        "lfx-telegram"
+      ],
+      "requested": ">=0.1.1,<1.0.0",
+      "requirement": "lfx-telegram==0.1.1",
+      "resolved_version": "0.1.1"
     },
     {
       "distribution": "lfx-toolguard",
@@ -208,9 +238,9 @@
       "providers": [
         "lfx-toolguard"
       ],
-      "requested": ">=0.3.1,<1.0.0",
-      "requirement": "lfx-toolguard==0.3.1",
-      "resolved_version": "0.3.1"
+      "requested": ">=0.3.2,<1.0.0",
+      "requirement": "lfx-toolguard==0.3.2",
+      "resolved_version": "0.3.2"
     },
     {
       "distribution": "lfx-vllm",
@@ -221,6 +251,16 @@
       "requested": ">=0.2.1,<1.0.0",
       "requirement": "lfx-vllm==0.2.1",
       "resolved_version": "0.2.1"
+    },
+    {
+      "distribution": "lfx-whatsapp",
+      "extras": [],
+      "providers": [
+        "lfx-whatsapp"
+      ],
+      "requested": ">=0.1.1,<1.0.0",
+      "requirement": "lfx-whatsapp==0.1.1",
+      "resolved_version": "0.1.1"
     }
   ],
   "image_families": [
@@ -230,7 +270,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:e543711d47b8d176",
+  "profile_digest": "sha256:899409775d2f43d3",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",
@@ -238,6 +278,7 @@
     "lfx-cohere",
     "lfx-confluence",
     "lfx-datastax",
+    "lfx-discord",
     "lfx-docling",
     "lfx-github",
     "lfx-gitlab",
@@ -249,10 +290,13 @@
     "lfx-openai",
     "lfx-openai-compatible",
     "lfx-oracle",
+    "lfx-salesforce",
     "lfx-servicenow",
     "lfx-slack",
+    "lfx-telegram",
     "lfx-toolguard",
-    "lfx-vllm"
+    "lfx-vllm",
+    "lfx-whatsapp"
   ],
   "python": ">=3.11,<3.16",
   "schema_version": 1

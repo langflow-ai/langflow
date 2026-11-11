@@ -209,7 +209,7 @@ TORCH_EXTRAS = frozenset({"cuga", "codeagents"})
 # generated aggregate extras because Langflow already installs them directly.
 COMPATIBILITY_EXTRAS = {
     "azure": ["lfx-azure>=0.1.0,<1.0.0"],
-    "google": ["lfx-google>=0.2.5,<1.0.0"],
+    "google": ["lfx-google>=0.4.1,<1.0.0"],
     "ollama": ["lfx-ollama>=0.1.0,<1.0.0"],
 }
 

@@ -1,5 +1,6 @@
 import { useContext, useEffect, useMemo } from "react";
 import { Outlet } from "react-router-dom";
+import { ExternalAuthMaintenanceNotice } from "@/components/common/changesPausedNotice/external-auth-maintenance-notice";
 import { AuthContext } from "@/contexts/authContext";
 import {
   useGetAuthSession,
@@ -32,7 +33,11 @@ export function AppInitPage() {
   const { isFetched: isLoaded } = useCustomPrimaryLoading();
 
   // Validate session on app init to restore auth state from HttpOnly cookies
-  const { data: sessionData, isFetched: isSessionFetched } = useGetAuthSession({
+  const {
+    data: sessionData,
+    isFetched: isSessionFetched,
+    isExternalAuthenticationPaused,
+  } = useGetAuthSession({
     enabled: isLoaded,
   });
 
@@ -60,6 +65,7 @@ export function AppInitPage() {
 
   // Update auth state when session data is available
   useEffect(() => {
+    if (isExternalAuthenticationPaused) return;
     if (sessionData?.authenticated && sessionData.user) {
       // Keep AuthContext and the auth store in sync, as the playground gate
       // does: on a reload this probe is the only thing that restores the user,
@@ -80,7 +86,7 @@ export function AppInitPage() {
       // Explicitly not authenticated, and auto-login hasn't signed the page in.
       setIsAuthenticated(false);
     }
-  }, [sessionData]);
+  }, [sessionData, isExternalAuthenticationPaused]);
 
   useEffect(() => {
     if (isConfigFetched) {
@@ -99,6 +105,10 @@ export function AppInitPage() {
   const isAutoLoginComplete = isFetched || isAuthenticated;
 
   const isReady = isAutoLoginComplete && isExamplesFetched && isSessionReady;
+
+  if (isExternalAuthenticationPaused) {
+    return <ExternalAuthMaintenanceNotice />;
+  }
 
   return (
     <>

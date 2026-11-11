@@ -361,12 +361,24 @@ def test_published_images_pin_hardened_package_managers() -> None:
         ("TAR_VERSION", "7.5.22", "tar", 'tar: "7.5.22"'),
         ("UNDICI_VERSION", "6.29.1", "undici", 'undici: "6.29.1"'),
         ("POSTCSS_SELECTOR_PARSER_VERSION", "7.1.6", "postcss-selector-parser", '"postcss-selector-parser": "7.1.6"'),
+        ("GLOB_VERSION", "14.0.2", "glob", 'glob: "14.0.2"'),
+        ("MINIMATCH_VERSION", "11.0.1", "minimatch", 'minimatch: "11.0.1"'),
+        ("PATH_SCURRY_VERSION", "3.0.0", "path-scurry", '"path-scurry": "3.0.0"'),
+        (
+            "NONRECURSIVE_GLOB_MATCH_VERSION",
+            "1.0.1",
+            "@isaacs/nonrecursive-glob-match",
+            '"@isaacs/nonrecursive-glob-match": "1.0.1"',
+        ),
     ):
         assert f'{variable}="{version}"' in install_script
         assert f'"{package}@${{{variable}}}"' in install_script
         assert validation_entry in install_script
 
-    assert "for package in ip-address brace-expansion tar undici postcss-selector-parser; do" in install_script
+    assert (
+        "for package in ip-address brace-expansion tar undici postcss-selector-parser "
+        "glob minimatch path-scurry @isaacs/nonrecursive-glob-match; do"
+    ) in install_script
     for validation_entry in (
         'sigstore: "5.0.0"',
         '"@sigstore/core": "4.0.1"',

@@ -89,6 +89,7 @@ class MCPToolsComponent(ComponentWithCache):
     # (server_name, header-hash) pair is a distinct entry; without a bound a
     # tenant that rotates session tokens would grow this map without limit.
     SHARED_SERVERS_CACHE_MAX_ENTRIES: int = 64
+    SHARED_SELECTIONS_CACHE_MAX_ENTRIES: int = 64
 
     schema_inputs: list = []
     tools: list[StructuredTool] = []
@@ -133,11 +134,6 @@ class MCPToolsComponent(ComponentWithCache):
         servers_value = safe_cache_get(self._shared_component_cache, "servers")
         if servers_value is None:
             safe_cache_set(self._shared_component_cache, "servers", {})
-
-        # Check if last_selected_server key exists and is not CacheMiss
-        last_server_value = safe_cache_get(self._shared_component_cache, "last_selected_server")
-        if last_server_value is None:
-            safe_cache_set(self._shared_component_cache, "last_selected_server", "")
 
     def _normalized_headers_for_cache(self) -> dict[str, str]:
         """Component headers as a dict for stable cache keying (auth / tweaks)."""
@@ -202,6 +198,29 @@ class MCPToolsComponent(ComponentWithCache):
         payload = json.dumps(cache_data, sort_keys=True)
         digest = hashlib.sha256(payload.encode()).hexdigest()[:16]
         return f"{server_name}:{digest}"
+
+    def _mcp_selected_server_cache_key(self, build_config: dict) -> str | None:
+        """Keep selection history within the authenticated editor node's flow."""
+        user_id = self._mcp_cache_user_id()
+        flow_id = getattr(self, "_flow_id", None)
+        node_context = build_config.get("_frontend_node_id")
+        node_id = node_context.get("value") if isinstance(node_context, dict) else None
+        if not user_id or not flow_id or not isinstance(node_id, str) or not node_id:
+            return None
+        payload = json.dumps([user_id, str(flow_id), node_id])
+        return f"mcp_selected_server:{hashlib.sha256(payload.encode()).hexdigest()}"
+
+    def _remember_selected_server(self, selection_cache_key: str | None, server_name: str) -> None:
+        self._last_selected_server = server_name
+        if not selection_cache_key:
+            return
+        selections = safe_cache_get(self._shared_component_cache, "mcp_selected_servers", {})
+        if not isinstance(selections, dict):
+            selections = {}
+        while len(selections) >= self.SHARED_SELECTIONS_CACHE_MAX_ENTRIES and selection_cache_key not in selections:
+            selections.pop(next(iter(selections)))
+        selections[selection_cache_key] = server_name
+        safe_cache_set(self._shared_component_cache, "mcp_selected_servers", selections)
 
     def _mcp_cache_user_id(self) -> str | None:
         """Return the authenticated user id without requiring a fully attached graph.
@@ -426,6 +445,7 @@ class MCPToolsComponent(ComponentWithCache):
         return server_name, server_config
 
     async def update_tool_list(self, mcp_server_value=None):
+        """Resolve account variables and refresh the selected server's available tools."""
         # Accepts mcp_server_value as dict {name, config} or uses self.mcp_server
         mcp_server = mcp_server_value if mcp_server_value is not None else getattr(self, "mcp_server", None)
         server_name, server_config_from_value = self._normalize_mcp_server_value(mcp_server)
@@ -666,6 +686,7 @@ class MCPToolsComponent(ComponentWithCache):
                     mcp_streamable_http_client=self.streamable_http_client,
                     request_variables=request_variables,
                     url_variables=db_variables,
+                    strict_variables=bound_variables is not None,
                     tool_execution_timeout=timeout,
                     current_user_id=self.user_id,
                     end_user_id=end_user_id,
@@ -798,19 +819,31 @@ class MCPToolsComponent(ComponentWithCache):
                 build_config["tool_placeholder"]["tool_mode"] = True
 
                 current_server_name = normalized_server_name
-                build_config_server_value = build_config.get("mcp_server", {}).get("value")
+                previous_server_context = build_config.get("_frontend_node_previous_mcp_server")
+                has_previous_server = isinstance(previous_server_context, dict) and "value" in previous_server_context
+                build_config_server_value = (
+                    previous_server_context["value"]
+                    if has_previous_server
+                    else build_config.get("mcp_server", {}).get("value")
+                )
                 build_config_server_name = (
                     build_config_server_value.get("name")
                     if isinstance(build_config_server_value, dict)
                     else build_config_server_value
                 )
                 servers_cache_key_ui = self._mcp_servers_cache_key(current_server_name) if current_server_name else ""
-                _last_selected_server = safe_cache_get(self._shared_component_cache, "last_selected_server", "")
+                selection_cache_key = self._mcp_selected_server_cache_key(build_config)
+                selections = safe_cache_get(self._shared_component_cache, "mcp_selected_servers", {})
+                _last_selected_server = self._last_selected_server or ""
+                if selection_cache_key:
+                    _last_selected_server = (
+                        selections.get(selection_cache_key, "") if isinstance(selections, dict) else ""
+                    )
                 # Only treat as a server change if there was a previous server selection.
                 # Cold cache (_last_selected_server="") on initial flow load is NOT a server change —
                 # the user didn't switch anything, the backend just hasn't seen this component yet.
                 server_changed = bool(
-                    (_last_selected_server and current_server_name != _last_selected_server)
+                    (not has_previous_server and _last_selected_server and current_server_name != _last_selected_server)
                     or (build_config_server_name and current_server_name != build_config_server_name)
                 )
 
@@ -833,7 +866,7 @@ class MCPToolsComponent(ComponentWithCache):
                     else:
                         if not is_in_tool_mode:
                             build_config["tool"]["show"] = True
-                        safe_cache_set(self._shared_component_cache, "last_selected_server", current_server_name)
+                        self._remember_selected_server(selection_cache_key, current_server_name)
                         return build_config
 
                 # To avoid unnecessary updates, only proceed if the server has actually changed
@@ -855,7 +888,7 @@ class MCPToolsComponent(ComponentWithCache):
                                     return build_config
                     else:
                         return build_config
-                safe_cache_set(self._shared_component_cache, "last_selected_server", current_server_name)
+                self._remember_selected_server(selection_cache_key, current_server_name)
 
                 # When cache is disabled, clear any cached data for this server
                 # This ensures we always fetch fresh data from the database
@@ -887,6 +920,13 @@ class MCPToolsComponent(ComponentWithCache):
                 # This ensures fresh tools are fetched after database edits
                 if is_refresh or not cached_tools or not use_cache:
                     self.tools = []  # Clear previous tools to force refresh
+
+                selected_tool = build_config.get("tool", {}).get("value")
+                previous_inputs = {
+                    key: value.copy()
+                    for key, value in build_config.items()
+                    if key not in self.default_keys and isinstance(value, dict)
+                }
 
                 # Clear previous tool inputs if:
                 # 1. Server actually changed
@@ -928,6 +968,8 @@ class MCPToolsComponent(ComponentWithCache):
                     # server_changed is only True for real user-initiated changes (not initial load).
                     if server_changed:
                         build_config["tool"]["value"] = uuid.uuid4()
+                    elif selected_tool and any(tool.name == selected_tool for tool in self.tools):
+                        await self._update_tool_config(build_config, selected_tool, previous_inputs=previous_inputs)
                 else:
                     # Keep the tool dropdown hidden if in tool_mode
                     self._not_load_actions = True
@@ -1066,16 +1108,24 @@ class MCPToolsComponent(ComponentWithCache):
             if key not in self.default_keys:
                 build_config.pop(key)
 
-    async def _update_tool_config(self, build_config: dict, tool_name: str) -> None:
+    async def _update_tool_config(
+        self, build_config: dict, tool_name: str, *, previous_inputs: dict[str, dict[str, Any]] | None = None
+    ) -> None:
         """Update tool configuration with proper error handling."""
-        if not self.tools:
-            self.tools, build_config["mcp_server"]["value"] = await self.update_tool_list()
+        tools_refreshed = not self.tools
+        server_info = None
+        if tools_refreshed:
+            self.tools, server_info = await self.update_tool_list()
 
         if not tool_name:
+            if tools_refreshed:
+                build_config["mcp_server"]["value"] = server_info
             return
 
         tool_obj = next((tool for tool in self.tools if tool.name == tool_name), None)
         if not tool_obj:
+            if tools_refreshed:
+                build_config["mcp_server"]["value"] = server_info
             msg = f"Tool {tool_name} not found in available tools: {self.tools}"
             self.remove_non_default_keys(build_config)
             build_config["tool"]["value"] = ""
@@ -1083,6 +1133,14 @@ class MCPToolsComponent(ComponentWithCache):
             return
 
         try:
+            schema_inputs = await self._validate_schema_inputs(tool_obj)
+            for schema_input in schema_inputs:
+                if schema_input and hasattr(schema_input, "name"):
+                    self._validate_tool_argument_name(schema_input.name)
+
+            if tools_refreshed:
+                build_config["mcp_server"]["value"] = server_info
+
             # Store current values before removing inputs (only for the current tool)
             current_values = {}
             for key, value in build_config.items():
@@ -1092,8 +1150,7 @@ class MCPToolsComponent(ComponentWithCache):
             # Remove ALL non-default keys (all previous tool inputs)
             self.remove_non_default_keys(build_config)
 
-            # Get and validate new inputs for the selected tool
-            self.schema_inputs = await self._validate_schema_inputs(tool_obj)
+            self.schema_inputs = schema_inputs
             if not self.schema_inputs:
                 msg = f"No input parameters to configure for tool '{tool_name}'"
                 await logger.ainfo(msg)
@@ -1118,6 +1175,13 @@ class MCPToolsComponent(ComponentWithCache):
                     # Preserve existing value if the parameter name exists in current_values
                     if name in current_values:
                         build_config[name]["value"] = current_values[name]
+                    if previous_inputs is not None and name in previous_inputs:
+                        saved_input = previous_inputs[name]
+                        if "value" in saved_input:
+                            build_config[name]["value"] = saved_input["value"]
+                        for key in ("show", "advanced", "load_from_db"):
+                            if isinstance(saved_input.get(key), bool):
+                                build_config[name][key] = saved_input[key]
 
                 except (AttributeError, KeyError, TypeError) as e:
                     msg = f"Error processing schema input {schema_input}: {e!s}"

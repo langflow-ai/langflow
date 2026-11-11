@@ -40,7 +40,9 @@ def connection_input(capability: str) -> ConnectionRefInput:
 
 
 def repository_input() -> StrInput:
-    return StrInput(name="repository", display_name="Repository", required=True, info="GitHub.com owner/repository.")
+    return StrInput(
+        name="repository", display_name="Repository", required=True, info="GitHub.com owner/repository.", tool_mode=True
+    )
 
 
 class GitHubActionComponent(Component):
