@@ -86,6 +86,9 @@ def test_runtime_cases_run_in_required_gate_without_lightweight_job_dependencies
             "test_acknowledged_changes_are_rendered_into_release_notes",
             "test_invalid_acknowledgments_cannot_allow_a_break",
             "test_provider_identity_and_saved_field_removal_use_the_shared_rule",
+            "test_break_identity_survives_a_patch_release_of_the_baseline",
+            "test_break_identity_tracks_the_contract_not_the_comparison_baseline",
+            "test_acknowledged_break_stays_valid_after_the_baseline_moves",
         },
         "test_component_registry_snapshot.py": {"test_provider_projection_uses_only_production_language_model_fields"},
         "test_component_release_plan.py": {
