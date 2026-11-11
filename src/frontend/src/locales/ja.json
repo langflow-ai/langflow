@@ -3561,5 +3561,9 @@
   "triggers.events.state.skipped": "スキップ",
   "triggers.events.filters.skipped": "スキップ",
   "triggers.eventError.sender_not_allowed": "送信者が許可された送信者番号に含まれていません。",
-  "triggers.events.skippedCannotReplay": "スキップされたイベントは再実行できません。送信者フィルターを更新し、新しいメッセージを送信してください。"
+  "triggers.events.skippedCannotReplay": "スキップされたイベントは再実行できません。送信者フィルターを更新し、新しいメッセージを送信してください。",
+  "modelProviders.openRouterModelHint": "一覧からモデルを選択するか、OpenRouterの判断モデルIDを入力してください。モデルが対応するリクエストはOpenRouterが決定します。",
+  "modelProviders.searchOrAddModel": "モデルIDを検索または追加…",
+  "modelProviders.addDecisionModel": "判断モデル「{{name}}」を追加",
+  "modelProviders.decisionDiscoveryError": "意思決定モデルを読み込めませんでした。このプロバイダーの認証情報を確認して、もう一度お試しください。他のプロバイダーは引き続き利用できます。"
 }
