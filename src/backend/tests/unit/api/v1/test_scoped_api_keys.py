@@ -205,10 +205,12 @@ async def test_restricted_key_cannot_modify_its_owner_profile(client, logged_in_
     assert response.status_code == 403
 
 
-@pytest.mark.anyio
-@pytest.mark.parametrize("operation", ["list", "options", "create", "edit", "delete", "store"])
-async def test_restricted_key_cannot_administer_credentials(client, logged_in_headers, monkeypatch, operation):
-    from langflow.services.deps import get_settings_service
+@pytest.fixture
+async def restricted_api_key(active_user, monkeypatch):
+    """Issue the test credential in a committed transaction before HTTP assertions."""
+    from langflow.services.database.models.api_key.crud import create_api_key
+    from langflow.services.database.models.api_key.model import ApiKeyCreate
+    from langflow.services.deps import get_settings_service, session_scope
 
     monkeypatch.setattr(get_settings_service().auth_settings, "AUTHZ_ENABLED", True)
     monkeypatch.setattr(get_settings_service().auth_settings, "API_KEY_SCOPES_ENABLED", True)
@@ -217,13 +219,26 @@ async def test_restricted_key_cannot_administer_credentials(client, logged_in_he
         validate_api_key_permissions=AsyncMock(),
     )
     monkeypatch.setattr("langflow.services.database.models.api_key.crud.get_authorization_service", lambda: plugin)
-    created = await client.post(
-        "api/v1/api_key/",
-        json={"name": "Restricted", "permissions": {"restrictions": [{"resource_type": "flow", "actions": ["read"]}]}},
-        headers=logged_in_headers,
-    )
-    assert created.status_code == 200, created.text
-    key = created.json()
+    async with session_scope() as session:
+        created = await create_api_key(
+            session,
+            ApiKeyCreate(
+                name="Restricted", permissions={"restrictions": [{"resource_type": "flow", "actions": ["read"]}]}
+            ),
+            user_id=active_user.id,
+        )
+    return created.model_dump(mode="json")
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("operation", ["list", "options", "create", "edit", "delete", "store"])
+async def test_restricted_key_cannot_administer_credentials(client, active_user, restricted_api_key, operation):
+    key = restricted_api_key
+    client.cookies.clear()
+    authenticated = await client.get("api/v1/users/whoami", headers={"x-api-key": key["api_key"]})
+    assert authenticated.status_code == 200, authenticated.text
+    assert authenticated.json()["id"] == str(active_user.id)
+
     requests = {
         "list": ("GET", "api/v1/api_key/", None),
         "options": ("GET", "api/v1/api_key/permission-options", None),
