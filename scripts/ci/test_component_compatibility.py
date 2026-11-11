@@ -176,3 +176,56 @@ def test_provider_identity_and_saved_field_removal_use_the_shared_rule():
     current = snapshot({"Other": component()})
     [change] = compare_registries(previous, current, "lfx-example")
     assert change.reasons[0]["code"] == "component_removed"
+
+
+def break_against_baseline(source: str, target: str = "1.14.0"):
+    """Compare a retiring-output contract against a baseline published at ``source``."""
+    previous = snapshot(version=source)
+    current = snapshot(version=target)
+    current["all_types"]["test"]["Example"]["outputs"] = []
+    [change] = compare_registries(previous, current, "lfx-example")
+    return change
+
+
+@pytest.mark.component_runtime
+def test_break_identity_survives_a_patch_release_of_the_baseline():
+    """Publishing a patch release must not invalidate a reviewed acknowledgment.
+
+    ``source_version`` is whichever published release the plan picks, so it moves
+    whenever the support line ships a patch. The identity must not follow it, or
+    every acknowledgment goes stale at once even though no contract changed.
+    """
+    first = break_against_baseline("1.13.1")
+    later = break_against_baseline("1.13.2")
+    oldest = break_against_baseline("1.13.0")
+
+    assert first.source_version == "1.13.1"
+    assert later.source_version == "1.13.2"
+    assert first.source_version != later.source_version
+    assert first.id == later.id == oldest.id
+
+
+@pytest.mark.component_runtime
+def test_break_identity_tracks_the_contract_not_the_comparison_baseline():
+    """The identity still distinguishes breaks that differ in contract content."""
+    baseline = break_against_baseline("1.13.1")
+
+    other_target = break_against_baseline("1.13.1", target="1.15.0")
+    assert baseline.id != other_target.id
+
+    previous = snapshot(version="1.13.1")
+    current = snapshot(version="1.14.0")
+    del current["all_types"]["test"]["Example"]["template"]["hidden_input"]
+    [removed] = compare_registries(previous, current, "lfx-example")
+    assert baseline.id != removed.id
+
+
+@pytest.mark.component_runtime
+def test_acknowledged_break_stays_valid_after_the_baseline_moves(tmp_path):
+    """A review recorded before a patch release still matches afterwards."""
+    first = break_against_baseline("1.13.1")
+    document = acknowledgment([first], tmp_path)
+    later = break_against_baseline("1.13.2")
+
+    assert review_acknowledgments([later], document, tmp_path)
+    assert document["breaks"][0]["id"] == later.id
