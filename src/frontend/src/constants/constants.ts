@@ -852,6 +852,16 @@ export * from "./file-upload-constants";
 
 export const componentsToIgnoreUpdate = ["CustomComponent"];
 
+/**
+ * Map of old types to new types for migration compatibility.
+ * Allows edges saved with old types (Data/DataFrame) to work with new types (JSON/Table).
+ * Must match TYPE_MIGRATIONS in src/lfx/src/lfx/graph/edge/base.py.
+ */
+export const TYPE_MIGRATIONS: Record<string, string> = {
+  Data: "JSON",
+  DataFrame: "Table",
+};
+
 export const ERROR_UPDATING_COMPONENT =
   "An unexpected error occurred while updating the Component. Please try again.";
 export const TITLE_ERROR_UPDATING_COMPONENT =

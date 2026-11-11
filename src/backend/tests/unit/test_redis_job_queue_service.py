@@ -108,6 +108,20 @@ async def _stop_service(service: RedisJobQueueService) -> None:
     service._client = None
 
 
+@pytest.fixture(params=[0, 0.1], ids=["normal-admission", "delayed-admission"])
+def maintenance_admission_delay(request, monkeypatch):
+    """Exercise cancellation after normal or slow maintenance admission."""
+    from langflow.api.utils import migration_pause
+
+    write_refusal = migration_pause.write_refusal
+
+    async def delayed_write_refusal(*args, **kwargs):
+        await asyncio.sleep(request.param)
+        return await write_refusal(*args, **kwargs)
+
+    monkeypatch.setattr(migration_pause, "write_refusal", delayed_write_refusal)
+
+
 class _BlockingXaddClient:
     """Redis client wrapper that blocks inside xadd until the caller cancels it."""
 
@@ -432,6 +446,8 @@ async def test_redis_service_cleanup_deletes_redis_keys_when_cancelled():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("maintenance_admission_delay", [0, 0.4], indirect=True)
+@pytest.mark.usefixtures("maintenance_admission_delay")
 async def test_redis_service_cleanup_swallows_redis_delete_error():
     """cleanup_job must not raise when Redis DEL fails.
 
@@ -568,6 +584,8 @@ async def test_redis_service_get_job_owner_returns_none_for_unknown_job():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("maintenance_admission_delay", [0, 0.4], indirect=True)
+@pytest.mark.usefixtures("maintenance_admission_delay")
 async def test_redis_service_bridge_publishes_sentinel_on_end():
     """The bridge task publishes the end-of-stream sentinel when the build ends."""
     service, fake_client = await _make_service()
@@ -580,8 +598,9 @@ async def test_redis_service_bridge_publishes_sentinel_on_end():
 
         service.start_job(job_id, _build())
 
-        # Wait long enough for the bridge to publish.
-        await asyncio.sleep(0.2)
+        # Admission may wait for maintenance checks before the producer runs.
+        # The bridge finishes only after publishing the end-of-stream sentinel.
+        await asyncio.wait_for(service._bridge_tasks[job_id], timeout=2.0)
 
         stream_key = f"langflow:queue:{job_id}"
         messages = await fake_client.xrange(stream_key)
@@ -670,6 +689,7 @@ async def test_streaming_disconnect_cancels_queue_wrapper_without_event_task():
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("maintenance_admission_delay")
 async def test_cross_worker_disconnect_publishes_signal_cancel():
     """Disconnect on a non-owner worker publishes signal_cancel so the producer worker cancels its task.
 
@@ -684,8 +704,10 @@ async def test_cross_worker_disconnect_publishes_signal_cancel():
         job_id = str(uuid.uuid4())
         svc_producer.create_queue(job_id)
         cancelled_event = asyncio.Event()
+        started = asyncio.Event()
 
         async def _long_running():
+            started.set()
             try:
                 await asyncio.Event().wait()
             except asyncio.CancelledError:
@@ -693,7 +715,7 @@ async def test_cross_worker_disconnect_publishes_signal_cancel():
                 raise
 
         svc_producer.start_job(job_id, _long_running())
-        await asyncio.sleep(0.05)
+        await asyncio.wait_for(started.wait(), timeout=2.0)
 
         # Cross-worker poll: consumer opens a Redis-backed queue wrapper.
         queue, *_ = svc_consumer.get_queue_data(job_id)
@@ -1384,6 +1406,7 @@ async def test_streaming_heartbeat_runs_independent_of_event_yield(monkeypatch):
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("maintenance_admission_delay")
 async def test_concurrent_cancels_from_multiple_workers_are_idempotent():
     """signal_cancel from two workers concurrently must produce exactly one cancel.
 

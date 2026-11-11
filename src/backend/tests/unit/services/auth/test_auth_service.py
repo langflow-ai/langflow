@@ -808,6 +808,8 @@ def test_create_user_api_key(auth_service: AuthService):
 def _login_session_db():
     """Async execution returns a synchronous SQLAlchemy result."""
     db = AsyncMock()
+    db.exec.return_value = MagicMock()
+    db.exec.return_value.first.return_value = False
     db.execute.return_value = SimpleNamespace(scalar_one_or_none=lambda: "registered-session")
     return db
 
