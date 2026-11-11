@@ -25,4 +25,6 @@ export const connectionsKeys = {
       "registrations",
       provider ?? "*",
     ] as const,
+  savedRegistrations: () =>
+    [...connectionsKeys.all, "oauth", "saved-registrations"] as const,
 } as const;

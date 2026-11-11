@@ -169,7 +169,8 @@ class PythonREPLToolComponent(LCToolComponent):
         return tool
 
     def run_model(self) -> list[Data]:
+        """Execute the configured Python code with workflow callbacks and return its output."""
         tool = self.build_tool()
         code_input = "" if self.python_code is None else self.python_code
-        result = tool.run({"code": code_input})
+        result = tool.run({"code": code_input}, callbacks=self.get_langchain_callbacks())
         return [Data(data={"result": result})]

@@ -24,6 +24,12 @@ def policy(*, blocked=(), allowed=("typesafe", "perplexity", "openai")):
     )
 
 
+@pytest.fixture(autouse=True)
+def no_discovery_credentials(monkeypatch):
+    # These seed/policy tests must not depend on a developer's TypeSafe account.
+    monkeypatch.setattr("lfx.base.models.model_utils.get_provider_variable_value", lambda *_: None)
+
+
 def test_all_mandatory_decision_models_have_capabilities():
     options = get_decision_model_options(provider_policy=policy())
     assert {(item["provider"], item["name"]) for item in options} == {

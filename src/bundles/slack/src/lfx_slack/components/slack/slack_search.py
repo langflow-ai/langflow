@@ -35,6 +35,7 @@ class SlackSearchComponent(SlackBaseComponent):
             display_name="Query",
             required=True,
             info="Slack search query, using the same modifiers as the Slack search bar (for example 'in:#general').",
+            tool_mode=True,
         ),
         IntInput(
             name="count",
@@ -42,6 +43,7 @@ class SlackSearchComponent(SlackBaseComponent):
             value=20,
             info=f"Between {MIN_COUNT} and {MAX_COUNT}.",
             advanced=True,
+            tool_mode=True,
         ),
         DropdownInput(
             name="sort",
@@ -49,6 +51,7 @@ class SlackSearchComponent(SlackBaseComponent):
             options=["score", "timestamp"],
             value="score",
             advanced=True,
+            tool_mode=True,
         ),
         DropdownInput(
             name="sort_dir",
@@ -56,12 +59,14 @@ class SlackSearchComponent(SlackBaseComponent):
             options=["desc", "asc"],
             value="desc",
             advanced=True,
+            tool_mode=True,
         ),
         StrInput(
             name="cursor",
             display_name="Cursor",
             info="Cursor from a previous run's Pagination output. Leave empty for the first page.",
             advanced=True,
+            tool_mode=True,
         ),
     ]
 

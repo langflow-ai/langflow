@@ -90,10 +90,16 @@ class ComponentVertex(Vertex):
             if edge.target_id == target_id:
                 yield edge
 
-    async def _get_result(self, requester: Vertex, target_handle_name: str | None = None) -> Any:
+    async def _get_result(
+        self,
+        requester: Vertex,
+        target_handle_name: str | None = None,
+        source_handle_name: str | None = None,
+    ) -> Any:
         """Retrieves the result of the built component.
 
         If the component has not been built yet, a ValueError is raised.
+        The optional source handle selects an output when several feed the same input.
 
         Returns:
             The built result if use_result is True, else the built object.
@@ -133,6 +139,7 @@ class ComponentVertex(Vertex):
                 edge is not None
                 and edge.source_handle.name in self.results
                 and edge.target_handle.field_name == target_handle_name
+                and (source_handle_name is None or edge.source_handle.name == source_handle_name)
             ):
                 # Get the result from the output instead of the results dict
                 try:
