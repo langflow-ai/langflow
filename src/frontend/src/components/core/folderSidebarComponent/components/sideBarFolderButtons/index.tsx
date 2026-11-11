@@ -691,7 +691,7 @@ const SideBarFoldersButtonsComponent = ({
             {/* Evals has its own flag and routes; it does not depend on file management. */}
             {evalsEnabled && (
               <SidebarMenuButton
-                onClick={() => _navigate("/assets/evaluations")}
+                onClick={() => _navigate("/assets/datasets")}
                 size="md"
                 className={cn("text-sm", projectSidebar.footerItemClassName)}
                 data-testid="sidebar-evaluations"

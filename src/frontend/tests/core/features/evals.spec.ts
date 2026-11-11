@@ -75,8 +75,8 @@ test(
     await awaitBootstrapTest(page, { skipModal: true });
     const flowId = await seedEchoFlow(page, `Evals echo ${suffix}`);
 
+    // The sidebar entry opens on Datasets, the first step of an evaluation.
     await page.getByTestId("sidebar-evaluations").click();
-    await page.getByTestId("evals-tab-datasets").click();
     await expect(page.getByTestId("datasets-title")).toBeVisible();
     await page.runA11yScan("evals-datasets-list");
     // One click creates the dataset and opens it with its name ready to type.
@@ -168,6 +168,7 @@ test(
     await expect(page.getByTestId("run-row")).toHaveCount(2);
 
     await page.getByTestId("sidebar-evaluations").click();
+    await page.getByTestId("evals-tab-evaluations").click();
     await expect(page.getByTestId("evaluations-title")).toBeVisible();
     await expect(page.getByTestId("evaluation-detail-title")).toBeHidden();
     await expect(

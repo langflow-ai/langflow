@@ -104,7 +104,7 @@ const router = createBrowserRouter(
                       element={
                         <CustomNavigate
                           replace
-                          to={ENABLE_FILE_MANAGEMENT ? "files" : "evaluations"}
+                          to={ENABLE_FILE_MANAGEMENT ? "files" : "datasets"}
                         />
                       }
                     />

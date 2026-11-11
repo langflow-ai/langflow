@@ -197,7 +197,7 @@ export default function EvaluationDetailPage() {
               loading={cancelRun.isPending}
               data-testid="cancel-run-button"
             >
-              <ForwardedIconComponent name="Square" className="h-4 w-4" />
+              <ForwardedIconComponent name="CircleStop" className="h-4 w-4" />
               {t("evals.runs.cancel")}
             </Button>
           ) : (
