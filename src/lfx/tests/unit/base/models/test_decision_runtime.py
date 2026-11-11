@@ -57,6 +57,7 @@ def test_provider_key_uses_canonical_metadata_and_typed_policy(execution):
     model["metadata"] = {"model_type": "llm", "base_url": "https://attacker.invalid", "capabilities": []}
     result = evaluate_decision(request, model=[model])
     assert result.probability_true == 0.8
+    # pragma: allowlist nextline secret
     transport.assert_called_once_with("OpenAI", "gpt-6-luna", request, api_key="sk-explicit-test", timeout=60)
 
 
@@ -164,6 +165,23 @@ def test_a_switched_off_model_never_reaches_its_provider(execution, monkeypatch,
     transport.assert_not_called()
 
 
+def test_a_switched_off_discovered_model_never_reaches_its_provider(execution, monkeypatch, model_switches):
+    """A live-discovered model skips the catalog check, but not the user's switch-off."""
+    request, model, transport = execution
+    policy = ModelProviderPolicySnapshot(
+        context=ModelProviderPolicyContext(),
+        purpose=ModelProviderPolicyPurpose.USE,
+        candidate_provider_ids=frozenset({"openrouter"}),
+        allowed_provider_ids=frozenset({"openrouter"}),
+    )
+    monkeypatch.setattr("lfx.services.model_provider_policy.resolve_model_provider_policy", lambda **_: policy)
+    model.update(provider="OpenRouter", name="typesafe/jev-1.14")
+    model_switches.add("typesafe/jev-1.14")
+    with pytest.raises(DecisionConfigurationError, match=r"typesafe/jev-1\.14 is switched off in Model Providers\."):
+        evaluate_decision(request, model=model, user_id=USER_ID)
+    transport.assert_not_called()
+
+
 def test_another_switched_off_model_doesnt_stop_this_one(execution, model_switches):
     request, model, transport = execution
     model_switches.add("jev-latest")
@@ -245,6 +263,7 @@ def test_standalone_request_credentials_work_without_environment(execution, monk
     finally:
         reset_request_variables(variables)
         reset_no_env_fallback(token)
+    # pragma: allowlist nextline secret
     assert transport.call_args.kwargs["api_key"] == "sk-request-key"
 
 
@@ -268,7 +287,9 @@ def test_standalone_request_endpoint_cannot_be_ignored(execution, monkeypatch):
 
 def test_callers_per_request_key_for_its_own_provider_comes_first(execution):
     request, model, transport = execution
+    # pragma: allowlist nextline secret
     evaluate_decision(request, model=model, request_variables={"OPENAI_API_KEY": "sk-header-key"})
+    # pragma: allowlist nextline secret
     assert transport.call_args.kwargs["api_key"] == "sk-header-key"
 
 
@@ -307,6 +328,7 @@ def test_request_key_skips_broken_saved_secret(execution, saved_provider_variabl
         )
     finally:
         reset_no_env_fallback(token)
+    # pragma: allowlist nextline secret
     assert transport.call_args.kwargs["api_key"] == "sk-request-key"
     names = [call.kwargs["name"] for call in saved_provider_variables.get_variable.await_args_list]
     assert names == ["OPENAI_BASE_URL"]
@@ -342,6 +364,7 @@ def test_request_key_still_reads_saved_credential_endpoint(execution, saved_prov
             request,
             model=model,
             user_id="00000000-0000-0000-0000-000000000001",
+            # pragma: allowlist nextline secret
             request_variables={"OPENAI_API_KEY": "sk-request-key"},
         )
     transport.assert_not_called()
@@ -350,6 +373,7 @@ def test_request_key_still_reads_saved_credential_endpoint(execution, saved_prov
 @pytest.mark.parametrize("variable", ["OPENAI_BASE_URL", "OPENAI_API_BASE"])
 def test_callers_per_request_endpoint_cannot_be_ignored(execution, variable):
     request, model, transport = execution
+    # pragma: allowlist nextline secret
     request_variables = {variable: "https://proxy.example/v1", "OPENAI_API_KEY": "sk-proxy-key"}
     with pytest.raises(DecisionConfigurationError, match="official OpenAI endpoint"):
         evaluate_decision(request, model=model, request_variables=request_variables)
@@ -396,6 +420,7 @@ def test_a_proxy_endpoint_in_the_request_variables_json_cannot_be_ignored(execut
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.setenv(
         "LANGFLOW_REQUEST_VARIABLES",
+        # pragma: allowlist nextline secret
         json.dumps({"OPENAI_API_KEY": "sk-proxy-key", "OPENAI_API_BASE": "https://proxy.example/v1"}),
     )
     with pytest.raises(DecisionConfigurationError, match="official OpenAI endpoint"):
@@ -430,6 +455,7 @@ def test_aliased_endpoint_in_the_serve_request_scope_cannot_be_ignored(execution
 def test_callers_key_in_any_request_form_beats_the_ambient_key(execution, name):
     request, model, transport = execution  # the fixture leaves an ambient OPENAI_API_KEY set
     evaluate_decision(request, model=model, request_variables={name: "sk-caller-key"})
+    # pragma: allowlist nextline secret
     assert transport.call_args.kwargs["api_key"] == "sk-caller-key"
 
 
@@ -438,12 +464,15 @@ def test_prefixed_environment_key_is_used(execution, monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY")
     monkeypatch.setenv("LANGFLOW_OPENAI_API_KEY", "sk-prefixed-test")
     evaluate_decision(request, model=model)
+    # pragma: allowlist nextline secret
     assert transport.call_args.kwargs["api_key"] == "sk-prefixed-test"
 
 
 def test_per_request_keys_for_other_providers_are_ignored(execution):
     request, model, transport = execution
+    # pragma: allowlist nextline secret
     evaluate_decision(request, model=model, request_variables={"ANTHROPIC_API_KEY": "sk-ant-other"})
+    # pragma: allowlist nextline secret
     assert transport.call_args.kwargs["api_key"] == "sk-explicit-test"
 
 
