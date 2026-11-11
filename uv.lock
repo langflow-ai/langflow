@@ -43,6 +43,7 @@ members = [
     "lfx-confluence",
     "lfx-confluent",
     "lfx-datastax",
+    "lfx-discord",
     "lfx-docling",
     "lfx-duckduckgo",
     "lfx-empiriolabs",
@@ -60,6 +61,7 @@ members = [
     "lfx-openai-compatible",
     "lfx-oracle",
     "lfx-paddle",
+    "lfx-salesforce",
     "lfx-serpingapi",
     "lfx-serply",
     "lfx-servicenow",
@@ -8455,6 +8457,7 @@ dependencies = [
     { name = "lfx-cohere" },
     { name = "lfx-confluence" },
     { name = "lfx-datastax" },
+    { name = "lfx-discord" },
     { name = "lfx-docling" },
     { name = "lfx-github" },
     { name = "lfx-gitlab" },
@@ -8466,6 +8469,7 @@ dependencies = [
     { name = "lfx-openai" },
     { name = "lfx-openai-compatible" },
     { name = "lfx-oracle" },
+    { name = "lfx-salesforce" },
     { name = "lfx-servicenow" },
     { name = "lfx-slack" },
     { name = "lfx-telegram" },
@@ -8596,6 +8600,7 @@ requires-dist = [
     { name = "lfx-confluence", editable = "src/bundles/confluence" },
     { name = "lfx-confluent", marker = "extra == 'bundles'", editable = "src/bundles/confluent" },
     { name = "lfx-datastax", editable = "src/bundles/datastax" },
+    { name = "lfx-discord", editable = "src/bundles/discord" },
     { name = "lfx-docling", editable = "src/bundles/docling" },
     { name = "lfx-docling", extras = ["chunking"], marker = "extra == 'docling-chunking'", editable = "src/bundles/docling" },
     { name = "lfx-docling", extras = ["image-description"], marker = "extra == 'docling-image-description'", editable = "src/bundles/docling" },
@@ -8616,6 +8621,7 @@ requires-dist = [
     { name = "lfx-openai-compatible", editable = "src/bundles/openai-compatible" },
     { name = "lfx-oracle", editable = "src/bundles/oracle" },
     { name = "lfx-paddle", marker = "extra == 'bundles'", editable = "src/bundles/paddle" },
+    { name = "lfx-salesforce", editable = "src/bundles/salesforce" },
     { name = "lfx-serpingapi", marker = "extra == 'bundles'", editable = "src/bundles/serpingapi" },
     { name = "lfx-serply", marker = "extra == 'bundles'", editable = "src/bundles/serply" },
     { name = "lfx-servicenow", editable = "src/bundles/servicenow" },
@@ -9053,7 +9059,7 @@ pinecone = [
     { name = "langchain-pinecone", marker = "python_full_version < '3.14'" },
 ]
 postgresql = [
-    { name = "sqlalchemy", extra = ["postgresql-psycopg", "postgresql-psycopg2binary"] },
+    { name = "sqlalchemy", extra = ["postgresql-psycopg2binary", "postgresql-psycopgbinary"] },
 ]
 pyarrow = [
     { name = "pyarrow" },
@@ -9397,8 +9403,8 @@ requires-dist = [
     { name = "spider-client", specifier = ">=0.0.27,<1.0.0" },
     { name = "spider-client", marker = "extra == 'spider'", specifier = ">=0.0.27,<1.0.0" },
     { name = "sqlalchemy", extras = ["aiosqlite"], specifier = ">=2.0.38,<3.0.0" },
-    { name = "sqlalchemy", extras = ["postgresql-psycopg"], marker = "extra == 'postgresql'", specifier = ">=2.0.38,<3.0.0" },
     { name = "sqlalchemy", extras = ["postgresql-psycopg2binary"], marker = "extra == 'postgresql'", specifier = ">=2.0.38,<3.0.0" },
+    { name = "sqlalchemy", extras = ["postgresql-psycopgbinary"], marker = "extra == 'postgresql'", specifier = ">=2.0.38,<3.0.0" },
     { name = "sqlmodel", specifier = "~=0.0.46" },
     { name = "sseclient-py", marker = "extra == 'sseclient'", specifier = "==1.8.0" },
     { name = "starlette", specifier = ">=1.5.0" },
@@ -10030,7 +10036,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-bundles"
-version = "1.3.5"
+version = "1.3.6"
 source = { editable = "src/bundles/lfx-bundles" }
 dependencies = [
     { name = "lfx" },
@@ -10742,6 +10748,21 @@ requires-dist = [
 ]
 
 [[package]]
+name = "lfx-discord"
+version = "0.1.0"
+source = { editable = "src/bundles/discord" }
+dependencies = [
+    { name = "httpx" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.27.0,<1.0.0" },
+    { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
 name = "lfx-docling"
 version = "0.3.0"
 source = { editable = "src/bundles/docling" }
@@ -11116,6 +11137,17 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.24.0,<1.0.0" },
     { name = "lfx", editable = "src/lfx" },
 ]
+
+[[package]]
+name = "lfx-salesforce"
+version = "0.1.0"
+source = { editable = "src/bundles/salesforce" }
+dependencies = [
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "lfx", editable = "src/lfx" }]
 
 [[package]]
 name = "lfx-serpingapi"
@@ -20406,13 +20438,13 @@ aiosqlite = [
     { name = "greenlet" },
     { name = "typing-extensions" },
 ]
-postgresql-psycopg = [
-    { name = "psycopg", version = "3.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.15'" },
-    { name = "psycopg", version = "3.3.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.15'" },
-]
 postgresql-psycopg2binary = [
     { name = "psycopg2-binary", version = "2.9.12", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.15'" },
     { name = "psycopg2-binary", version = "2.9.13", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.15'" },
+]
+postgresql-psycopgbinary = [
+    { name = "psycopg", version = "3.3.4", source = { registry = "https://pypi.org/simple" }, extra = ["binary"], marker = "python_full_version < '3.15'" },
+    { name = "psycopg", version = "3.3.6", source = { registry = "https://pypi.org/simple" }, extra = ["binary"], marker = "python_full_version >= '3.15'" },
 ]
 
 [[package]]

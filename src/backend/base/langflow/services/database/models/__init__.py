@@ -38,6 +38,7 @@ from .ingestion_run import IngestionRun, IngestionRunStatus
 from .jobs import ExecutionSignal, Job, JobCheckpoint, JobEvent, JobMetricTotals, SignalType
 from .knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
 from .knowledge_base_storage_migration import KnowledgeBaseStorageMigration
+from .maintenance import MaintenanceState
 from .mcp_server import MCPServer
 from .memory_base import MemoryBase, MemoryBaseSession, MemoryBaseWorkflowRun, MessageIngestionRecord
 from .message import MessageTable
@@ -57,6 +58,7 @@ from .trigger import (
     TriggerSourceVersion,
     TriggerSubscription,
 )
+from .upgrade_report import UpgradeReport, UpgradeReportRepair
 from .user import User
 from .variable import Variable
 from .worker_registry import WorkerRegistry, WorkerState
@@ -101,6 +103,7 @@ __all__ = [
     "KnowledgeBaseStatus",
     "KnowledgeBaseStorageMigration",
     "MCPServer",
+    "MaintenanceState",
     "MemoryBase",
     "MemoryBaseSession",
     "MemoryBaseWorkflowRun",
@@ -131,6 +134,8 @@ __all__ = [
     "TriggerRenewalObservation",
     "TriggerSourceVersion",
     "TriggerSubscription",
+    "UpgradeReport",
+    "UpgradeReportRepair",
     "User",
     "Variable",
     "WorkerRegistry",

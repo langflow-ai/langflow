@@ -1,0 +1,27 @@
+{
+  "format_version": 1,
+  "limitations": [
+    {
+      "release": "v1.12.6",
+      "fixture": "mcp_tools_arguments.json",
+      "node_id": "MCPTools-BS8An",
+      "component": "MCPTools",
+      "fixture_sha256": "7107086421c6017ed57cc16b8e86b11bcc0a525f785afabaef11330330fc8884",
+      "target_contract_sha256": "a0f263659103282db3d9056de574ae9fcfd753826ef43861ede2c23a82c40c87",
+      "expected": "no_action",
+      "observed": "outdated_breaking",
+      "reason": "Generated saved fields have no provenance. The static classifier remains conservative pending a reviewed provenance-aware change."
+    },
+    {
+      "release": "v1.13.0",
+      "fixture": "mcp_tools_arguments.json",
+      "node_id": "MCPTools-4BbE9",
+      "component": "MCPTools",
+      "fixture_sha256": "be2353e7063a910cdb8fde0730a3964f9e2316948124ea204ed76fb34d8c264f",
+      "target_contract_sha256": "a0f263659103282db3d9056de574ae9fcfd753826ef43861ede2c23a82c40c87",
+      "expected": "no_action",
+      "observed": "outdated_breaking",
+      "reason": "Generated saved fields have no provenance. The static classifier remains conservative pending a reviewed provenance-aware change."
+    }
+  ]
+}

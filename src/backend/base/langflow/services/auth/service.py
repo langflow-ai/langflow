@@ -36,6 +36,7 @@ from langflow.services.auth.context import (
 from langflow.services.auth.exceptions import (
     AuthBackendUnavailableError,
     AuthenticationError,
+    ExternalAuthMaintenanceError,
     InactiveUserError,
     InvalidCredentialsError,
     MissingCredentialsError,
@@ -960,6 +961,10 @@ class AuthService(BaseAuthService):
         from sqlmodel import select
 
         from langflow.services.database.models.auth import SSOUserProfile
+        from langflow.services.maintenance.state import maintenance_enabled
+
+        if await maintenance_enabled(db):
+            raise ExternalAuthMaintenanceError
 
         profile_stmt = select(SSOUserProfile).where(
             SSOUserProfile.sso_provider == identity.provider,
@@ -1583,7 +1588,9 @@ class AuthService(BaseAuthService):
         )
         if not await create_refresh_session(session_id, str(user_id), expires_at, db):
             raise HTTPException(status_code=401, detail="User account is inactive or no longer exists")
-        if update_last_login:
+        from langflow.services.maintenance.state import maintenance_enabled
+
+        if update_last_login and not await maintenance_enabled(db):
             await update_user_last_login_at(user_id, db)
         return tokens
 

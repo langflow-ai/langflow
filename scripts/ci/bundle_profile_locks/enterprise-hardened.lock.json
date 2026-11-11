@@ -73,6 +73,16 @@
       "resolved_version": "0.3.0"
     },
     {
+      "distribution": "lfx-discord",
+      "extras": [],
+      "providers": [
+        "lfx-discord"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-discord==0.1.0",
+      "resolved_version": "0.1.0"
+    },
+    {
       "distribution": "lfx-docling",
       "extras": [],
       "providers": [
@@ -183,6 +193,16 @@
       "resolved_version": "0.4.1"
     },
     {
+      "distribution": "lfx-salesforce",
+      "extras": [],
+      "providers": [
+        "lfx-salesforce"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-salesforce==0.1.0",
+      "resolved_version": "0.1.0"
+    },
+    {
       "distribution": "lfx-servicenow",
       "extras": [],
       "providers": [
@@ -250,7 +270,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:b00b51d9a02b8674",
+  "profile_digest": "sha256:899409775d2f43d3",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",
@@ -258,6 +278,7 @@
     "lfx-cohere",
     "lfx-confluence",
     "lfx-datastax",
+    "lfx-discord",
     "lfx-docling",
     "lfx-github",
     "lfx-gitlab",
@@ -269,6 +290,7 @@
     "lfx-openai",
     "lfx-openai-compatible",
     "lfx-oracle",
+    "lfx-salesforce",
     "lfx-servicenow",
     "lfx-slack",
     "lfx-telegram",

@@ -20,6 +20,7 @@ from lfx.custom.utils import (
     build_custom_component_template,
     get_instance_name,
     update_component_build_config,
+    update_rebuilt_node,
 )
 from lfx.exceptions.tweaks import TweakRefusedError
 from lfx.graph.graph.base import Graph
@@ -96,7 +97,7 @@ from langflow.api.v1.schemas import (
 from langflow.api.validation_errors import redact_validation_errors
 from langflow.api.warm_graph import try_warm_run_graph
 from langflow.events.event_manager import create_stream_tokens_event_manager
-from langflow.exceptions.api import APIException, InvalidChatInputError
+from langflow.exceptions.api import APIException, InvalidChatInputError, WorkflowServiceUnavailableError
 from langflow.exceptions.serialization import SerializationError
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.interface.initialize.loading import update_params_with_load_from_db_fields
@@ -662,7 +663,7 @@ async def simple_run_flow(
                     session_id=session_id,
                     job_id=_run_id_uuid,
                 )
-            except (RuntimeError, ValueError, OSError):
+            except (RuntimeError, ValueError, OSError, WorkflowServiceUnavailableError):
                 await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
 
         return RunResponse(outputs=task_result, session_id=session_id)
@@ -1131,6 +1132,8 @@ async def _run_flow_internal(
                 run_id=run_id,
             ),
         )
+        if (typed := integration_http_error(exc, expose_details=expose_error_details)) is not None:
+            raise typed from exc
         if "badly formed hexadecimal UUID string" in str(exc):
             # This means the Flow ID is not a valid UUID which means it can't find the flow
             http_error = HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
@@ -1141,11 +1144,6 @@ async def _run_flow_internal(
         if "not found" in str(exc):
             http_error = HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
             raise error_for_client(http_error, expose_details=expose_error_details) from exc
-        # A connection the caller may not use is not a server fault: keep the
-        # typed body and the provider's status (403/401/429) instead of flattening
-        # it into a 500 whose message a client cannot act on.
-        if (typed := integration_http_error(exc, expose_details=expose_error_details)) is not None:
-            raise typed from exc
         client_error = error_for_client(exc, expose_details=expose_error_details)
         raise APIException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -1775,7 +1773,7 @@ async def experimental_run_flow(
                 session_id=session_id,
                 job_id=_run_id_uuid,
             )
-        except (RuntimeError, ValueError, OSError):
+        except (RuntimeError, ValueError, OSError, WorkflowServiceUnavailableError):
             await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
 
     return _v1_run_response(RunResponse(outputs=task_result, session_id=session_id))
@@ -1981,19 +1979,10 @@ async def custom_component(
                 user_id=user.id,
                 parameters=_raw_component_parameters(current_template),
             )
-        if raw_code.frontend_node is not None:
-            with connection_configuration_context(user_id=user.id):
-                built_frontend_node = await component_instance.update_frontend_node(
-                    built_frontend_node,
-                    raw_code.frontend_node,
-                )
-
-        tool_mode: bool = built_frontend_node.get("tool_mode", False)
-        if isinstance(component_instance, Component):
-            await component_instance.run_and_validate_update_outputs(
-                frontend_node=built_frontend_node,
-                field_name="tool_mode",
-                field_value=tool_mode,
+        update_warnings = []
+        with connection_configuration_context(user_id=user.id):
+            built_frontend_node = await update_rebuilt_node(
+                component_instance, built_frontend_node, raw_code.frontend_node, warnings=update_warnings
             )
     except IntegrationPolicyError as exc:
         # Same reasoning as the model-provider denial below: a governed
@@ -2014,7 +2003,7 @@ async def custom_component(
             built_frontend_node = translate_component_node(type_, built_frontend_node, locale)
         except Exception:  # noqa: BLE001
             logger.exception("Failed to translate component node", extra={"locale": locale})
-    return CustomComponentResponse(data=built_frontend_node, type=type_)
+    return CustomComponentResponse(data=built_frontend_node, type=type_, warnings=update_warnings)
 
 
 @router.post("/custom_component/update", status_code=HTTPStatus.OK, include_in_schema=False)
