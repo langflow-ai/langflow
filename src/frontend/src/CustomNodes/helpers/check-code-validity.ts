@@ -54,17 +54,20 @@ const targetFieldName = (edge: EdgeType): string | undefined => {
   }
 };
 
-// Maps each node id to the fields a connection goes into. Must match _connected_fields_by_node in
-// src/lfx/src/lfx/upgrade/checker.py.
+// Null marks a target whose connections cannot be read. Later readable edges must not erase that
+// uncertainty. Must match _connected_fields_by_node in src/lfx/src/lfx/upgrade/checker.py.
 export const connectedFieldsByNode = (
   edges: EdgeType[],
-): Map<string, Set<string>> => {
-  const connected = new Map<string, Set<string>>();
+): Map<string, Set<string> | null> => {
+  const connected = new Map<string, Set<string> | null>();
   for (const edge of edges) {
     const fieldName = targetFieldName(edge);
-    if (!fieldName) continue;
-    if (!connected.has(edge.target)) connected.set(edge.target, new Set());
-    connected.get(edge.target)!.add(fieldName);
+    if (typeof fieldName !== "string" || !fieldName) {
+      connected.set(edge.target, null);
+    } else if (connected.get(edge.target) !== null) {
+      if (!connected.has(edge.target)) connected.set(edge.target, new Set());
+      connected.get(edge.target)!.add(fieldName);
+    }
   }
   return connected;
 };

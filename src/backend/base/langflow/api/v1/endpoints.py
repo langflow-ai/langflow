@@ -96,7 +96,7 @@ from langflow.api.v1.schemas import (
 from langflow.api.validation_errors import redact_validation_errors
 from langflow.api.warm_graph import try_warm_run_graph
 from langflow.events.event_manager import create_stream_tokens_event_manager
-from langflow.exceptions.api import APIException, InvalidChatInputError
+from langflow.exceptions.api import APIException, InvalidChatInputError, WorkflowServiceUnavailableError
 from langflow.exceptions.serialization import SerializationError
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.interface.initialize.loading import update_params_with_load_from_db_fields
@@ -662,7 +662,7 @@ async def simple_run_flow(
                     session_id=session_id,
                     job_id=_run_id_uuid,
                 )
-            except (RuntimeError, ValueError, OSError):
+            except (RuntimeError, ValueError, OSError, WorkflowServiceUnavailableError):
                 await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
 
         return RunResponse(outputs=task_result, session_id=session_id)
@@ -1772,7 +1772,7 @@ async def experimental_run_flow(
                 session_id=session_id,
                 job_id=_run_id_uuid,
             )
-        except (RuntimeError, ValueError, OSError):
+        except (RuntimeError, ValueError, OSError, WorkflowServiceUnavailableError):
             await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
 
     return _v1_run_response(RunResponse(outputs=task_result, session_id=session_id))

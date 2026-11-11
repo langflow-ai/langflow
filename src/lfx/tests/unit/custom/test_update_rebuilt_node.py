@@ -11,6 +11,56 @@ from lfx.custom.utils import build_custom_component_template, update_rebuilt_nod
 from lfx.schema.dotdict import dotdict
 
 SEO_V1_11_6 = Path(__file__).parents[2] / "fixtures" / "starter_flows" / "v1.11.6" / "seo_keyword_generator.json"
+PROMPT_V1_13_0 = (
+    Path(__file__).parents[2] / "data" / "component_compat" / "hard_flows" / "v1.13.0" / "prompt_variables.json"
+)
+
+
+async def test_update_rebuilt_node_keeps_prompt_variables_without_template_text() -> None:
+    flow = json.loads(PROMPT_V1_13_0.read_text(encoding="utf-8"))
+    saved = next(node for node in flow["data"]["nodes"] if node["id"] == "Prompt Template-ZPhy9")["data"]["node"]
+    assert saved["template"]["template"]["value"] == ""
+    variables = saved["custom_fields"]["template"]
+    assert set(variables) == {"question", "context"}
+    before = copy.deepcopy(saved)
+    code = Path(inspect.getsourcefile(PromptComponent)).read_text(encoding="utf-8")
+    built, component = build_custom_component_template(Component(_code=code))
+    warnings = []
+
+    updated = await update_rebuilt_node(component, built, saved, warnings=warnings)
+
+    assert updated["custom_fields"]["template"] == variables
+    assert {name: updated["template"][name] for name in variables} == {
+        name: saved["template"][name] for name in variables
+    }
+    assert warnings == []
+    assert saved == before
+
+
+async def test_prompt_update_uses_nonempty_template_variables_and_rejects_saved_metadata_names() -> None:
+    flow = json.loads(PROMPT_V1_13_0.read_text(encoding="utf-8"))
+    saved = next(node for node in flow["data"]["nodes"] if node["id"] == "Prompt Template-ZPhy9")["data"]["node"]
+    code = Path(inspect.getsourcefile(PromptComponent)).read_text(encoding="utf-8")
+    saved["template"]["template"]["value"] = "Answer {question}"
+    built, component = build_custom_component_template(Component(_code=code))
+
+    updated = await update_rebuilt_node(component, built, saved)
+
+    assert updated["custom_fields"]["template"] == ["question"]
+    assert "context" not in updated["template"]
+
+    saved["template"]["template"]["value"] = ""
+    saved["custom_fields"]["template"] = ["_frontend_node_flow_id", "code", "template", "question.bad"]
+    for name in saved["custom_fields"]["template"]:
+        if name not in saved["template"]:
+            saved["template"][name] = {"type": "str", "value": "untrusted"}
+    built, component = build_custom_component_template(Component(_code=code))
+
+    updated = await update_rebuilt_node(component, built, saved)
+
+    assert updated["custom_fields"]["template"] == []
+    assert "_frontend_node_flow_id" not in updated["template"]
+    assert "question.bad" not in updated["template"]
 
 
 async def test_update_rebuilt_node_keeps_saved_prompt_variables() -> None:

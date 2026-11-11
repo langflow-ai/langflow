@@ -14,6 +14,7 @@ Each case holds:
 - `name` and `description`.
 - `saved_node`: the node as a flow saves it (`data.node`).
 - `connected_fields`: the fields of the saved node that an edge goes into. A narrowed or emptied input is breaking only when it is connected, and so is a field that, on a node in tool mode, the component now marks `tool_mode`. A field whose type changed is breaking when it is connected or holds a value. Both tests turn this list into edges.
+- `edges` (optional): saved edges that replace the generated edges, for cases where incomplete handle metadata leaves connectivity unknown.
 - `component`: the current component (its registry or template entry), or `null` when no component has that type.
 - `expected`: the status `lfx upgrade` reports, one of `ok`, `outdated_safe`, `outdated_breaking`, `blocked`, `retired`, `customized`.
 
@@ -50,6 +51,8 @@ The test reads the releases from git tags. If a tag is missing, the test skips l
 ```bash
 git fetch origin --force tag v1.12.6 tag v1.13.0
 ```
+
+The test also enforces `scripts/ci/historical_compatibility_limitations.json`, the same reviewed ledger used by release CI. Two MCP Tools fixtures retain their original `no_action` expectations while static discovery conservatively reports `outdated_breaking`. Each exception requires the exact saved fixture digest, target contract digest, and expected and observed statuses. A new difference or an exception that no longer applies fails the test. The test records these reviewed limitations as a JUnit property and runs with the rest of the suite.
 
 ## `hard_flows/<release>/`
 

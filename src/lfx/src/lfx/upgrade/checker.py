@@ -195,8 +195,9 @@ def _holds_value(field: Mapping[str, Any]) -> bool:
 def retyped_field_keys(registry_template: Mapping[str, Any], flow_template: Mapping[str, Any]) -> set[str]:
     """Return the fields both sides have whose ``type`` changed.
 
-    On a node the checker calls safe these fields are empty and unconnected, so
-    ``apply_safe_upgrades`` replaces each one with the registry's declaration, as the editor does.
+    On a safe node these fields are normally empty and unconnected. The explicit ChatOutput
+    migration also preserves strings and connections. ``apply_safe_upgrades`` replaces each
+    declaration and carries over the values that migration supports, as the editor does.
     """
     return {
         key
@@ -224,7 +225,8 @@ def _shared_field_reasons(
     - A changed field ``type`` is breaking when an edge goes into the field, because the editor
       keeps an edge only when the handle's field ``type`` is equal. It is also breaking when the
       saved field holds a value, because an update copies a saved value only when the field
-      ``type`` is equal (``lfx.template.utils.update_template_field``).
+      ``type`` is equal (``lfx.template.utils.update_template_field``), except for the explicit
+      ChatOutput string-to-handle migration, which preserves strings and rewrites the handle.
     - Every type a connected field accepted must still be accepted (historical type names count
       as the same type). Narrowing breaks the saved edges, and an emptied ``input_types`` list
       means the field no longer takes connections at all. Widening is safe.
@@ -439,15 +441,20 @@ def _target_handle(edge: Mapping[str, Any]) -> Mapping[str, Any] | None:
     return handle if isinstance(handle, Mapping) else None
 
 
-def _connected_fields_by_node(edges: list[dict] | None) -> dict[str, set[str]] | None:
-    """Map each node id to the fields a connection goes into. ``None`` when the edges are unknown."""
+def _connected_fields_by_node(edges: list[dict] | None) -> dict[str, set[str] | None] | None:
+    """Map each node id to its connected fields, or ``None`` when its handles are unknown."""
     if edges is None:
         return None
-    connected: dict[str, set[str]] = {}
+    connected: dict[str, set[str] | None] = {}
     for edge in edges:
+        target = edge.get("target")
+        if not isinstance(target, str):
+            return None
         field_name = (_target_handle(edge) or {}).get("fieldName")
-        if field_name:
-            connected.setdefault(edge.get("target"), set()).add(field_name)
+        if not isinstance(field_name, str) or not field_name:
+            connected[target] = None
+        elif (fields := connected.setdefault(target, set())) is not None:
+            fields.add(field_name)
     return connected
 
 
@@ -503,7 +510,12 @@ def iter_flow_nodes(
         nested = nested_flow.get("nodes")
         if nested:
             nested_edges = None
-            if edges is not None and nested_flow.get("edges") is not None:
+            if (
+                edges is not None
+                and connected is not None
+                and connected.get(node_id, set()) is not None
+                and nested_flow.get("edges") is not None
+            ):
                 nested_edges = list(nested_flow["edges"])
                 for edge in edges:
                     handle = _target_handle(edge) if edge.get("target") == node_id else None

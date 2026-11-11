@@ -94,6 +94,19 @@ def test_metadata_probe_retains_only_the_current_semantic_convention_flag(monkey
         assert engine._refused_calls == ["subprocess.Popen"]
 
 
+@pytest.mark.parametrize(("value", "allowed"), [("0x1F5:0x0:0x0", True), ("modified", False)])
+def test_metadata_probe_retains_only_the_current_macos_encoding(monkeypatch, value, allowed):
+    if not Path("/usr/bin/file").is_file():
+        pytest.skip("system metadata probe is unavailable")
+    monkeypatch.setenv("__CF_USER_TEXT_ENCODING", "0x1F5:0x0:0x0")
+    assert (
+        is_local_metadata_probe(
+            ("file", ["file", "-b", sys.executable], None, {"PATH": os.defpath, "__CF_USER_TEXT_ENCODING": value})
+        )
+        is allowed
+    )
+
+
 @pytest.mark.parametrize(
     "variant",
     ["path", "extra_arg", "shell", "lookalike", "argv_lookalike", "injected_env", "wrong_target", "relative_target"],

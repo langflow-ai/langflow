@@ -4044,5 +4044,154 @@
       "input_value"
     ],
     "expected": "outdated_breaking"
+  },
+  {
+    "name": "input_types narrowed, unreadable connection",
+    "description": "An unreadable saved target handle keeps connectivity unknown rather than treating a connected input as disconnected.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message",
+            "Data"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [
+      "input_value"
+    ],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_breaking",
+    "edges": [
+      {
+        "id": "unknown",
+        "source": "other",
+        "target": "n1",
+        "targetHandle": "unreadable"
+      }
+    ]
+  },
+  {
+    "name": "field retyped, incomplete cached connection",
+    "description": "Incomplete cached handle metadata cannot make a live encoded connection safe to drop.",
+    "saved_node": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "OLD"
+        },
+        "input_value": {
+          "type": "str",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "connected_fields": [
+      "input_value"
+    ],
+    "component": {
+      "template": {
+        "_type": "Component",
+        "code": {
+          "type": "code",
+          "value": "NEW"
+        },
+        "input_value": {
+          "type": "int",
+          "required": false,
+          "value": "",
+          "input_types": [
+            "Message",
+            "JSON"
+          ]
+        }
+      },
+      "outputs": [
+        {
+          "name": "out",
+          "display_name": "Out",
+          "types": [
+            "Message"
+          ],
+          "method": "build",
+          "allows_loop": false
+        }
+      ]
+    },
+    "expected": "outdated_breaking",
+    "edges": [
+      {
+        "id": "cached",
+        "source": "other",
+        "target": "n1",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œn1œ,œtypeœ:œstrœ}",
+        "data": {
+          "targetHandle": {}
+        }
+      }
+    ]
   }
 ]

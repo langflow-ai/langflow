@@ -46,7 +46,16 @@ export function* walkFlowNodes(
     if (!nested?.nodes) continue;
 
     let nestedEdges: EdgeType[] | undefined;
-    if (edges !== undefined && Array.isArray(nested.edges)) {
+    const unknownIncoming = edges?.some((edge) => {
+      if (edge.target !== node.id) return false;
+      const fieldName = targetHandle(edge)?.fieldName;
+      return typeof fieldName !== "string" || !fieldName;
+    });
+    if (
+      edges !== undefined &&
+      !unknownIncoming &&
+      Array.isArray(nested.edges)
+    ) {
       nestedEdges = [...nested.edges];
       for (const edge of edges) {
         if (edge.target !== node.id) continue;

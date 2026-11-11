@@ -31,7 +31,7 @@ async function unusedPort(): Promise<number> {
 }
 
 async function stopServer(server: ChildProcess | undefined) {
-  if (!server || server.exitCode !== null) return;
+  if (!server || server.exitCode !== null || server.signalCode !== null) return;
   await new Promise<void>((resolve) => {
     server.once("exit", () => resolve());
     server.kill("SIGTERM");
@@ -101,7 +101,7 @@ test.beforeAll(async () => {
     await expect
       .poll(
         async () => {
-          if (mcpServer?.exitCode !== null)
+          if (mcpServer?.exitCode !== null || mcpServer?.signalCode !== null)
             throw new Error("MCP fixture exited before startup");
           try {
             return (await fetch(mcpUrl)).status;
@@ -123,6 +123,8 @@ test.afterAll(async () => stopServer(mcpServer));
 test.afterEach(async ({ page }, testInfo) => {
   const resources = createdResources.get(testInfo.testId);
   if (!resources) return;
+  // Leaving the canvas closes its flow-event stream before fixture teardown.
+  await page.goto("/all");
   for (const name of resources.servers) {
     const response = await page.request.delete(`/api/v2/mcp/servers/${name}`);
     expect(response.ok()).toBeTruthy();

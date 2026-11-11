@@ -861,7 +861,7 @@ class BackgroundExecutionService(Service):
             from langflow.api.utils.migration_pause import writes_paused
 
             while await writes_paused():  # noqa: ASYNC110
-                await asyncio.sleep(1)
+                await asyncio.sleep(0.1)
             await self.sweep_orphans_on_startup()
 
         # A recovering task can observe a new pause in its next sweep. Replace

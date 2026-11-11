@@ -7,6 +7,7 @@ import sqlite3
 import sys
 import time
 from contextlib import asynccontextmanager, contextmanager, nullcontext
+from contextvars import ContextVar
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -48,6 +49,8 @@ from langflow.services.deps import get_settings_service
 from langflow.services.utils import teardown_superuser
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from lfx.services.settings.service import SettingsService
 
 
@@ -66,6 +69,17 @@ _PG_VERSION_QUERY = sa.text("SELECT current_setting('server_version_num'), curre
 _MIGRATION_ADVISORY_LOCK_ID = 0x4C616E67666C6F77  # ASCII "Langflow"
 _MIGRATION_LOCK_DEFAULT_TIMEOUT_S = 300.0
 _MIGRATION_LOCK_POLL_INTERVAL_S = 2.0
+_readonly_connections: ContextVar[bool] = ContextVar("readonly_database_connections", default=False)
+
+
+@contextmanager
+def readonly_database_connections() -> Iterator[None]:
+    """Keep diagnostic connections from applying persistent SQLite settings."""
+    token = _readonly_connections.set(True)
+    try:
+        yield
+    finally:
+        _readonly_connections.reset(token)
 
 
 def _migration_lock_timeout_s() -> float:
@@ -264,6 +278,7 @@ class DatabaseService(Service):
 
     def __init__(self, settings_service: SettingsService):
         self._logged_pragma = False
+        self.database_initialized = False
         self.settings_service = settings_service
         if settings_service.settings.database_url is None:
             msg = "No database URL provided"
@@ -441,6 +456,8 @@ class DatabaseService(Service):
             from langflow.services.audit.search_sql import register_sqlite_search_functions
 
             register_sqlite_search_functions(dbapi_connection)
+            if _readonly_connections.get():
+                return
             pragmas: dict = self.settings_service.settings.sqlite_pragmas or {}
             pragmas_list = []
             for key, val in pragmas.items():
@@ -912,10 +929,11 @@ class DatabaseService(Service):
     async def teardown(self) -> None:
         await logger.adebug("Tearing down database")
         try:
-            settings_service = get_settings_service()
-            # When AUTO_LOGIN is off, remove the unused default superuser (see teardown_superuser).
-            async with session_scope() as session:
-                await teardown_superuser(settings_service, session)
+            if getattr(self, "database_initialized", False):
+                settings_service = get_settings_service()
+                # When AUTO_LOGIN is off, remove the unused default superuser (see teardown_superuser).
+                async with session_scope() as session:
+                    await teardown_superuser(settings_service, session)
         except Exception:
             await logger.aexception("Error tearing down database")
             raise

@@ -232,6 +232,144 @@ def test_dry_run_keeps_outputs_the_component_rebuilds(target):
     assert [(reason.code, reason.field) for reason in reasons] == [("output_changed", "branch_request_changes")]
 
 
+SAVED_STATE_COMPONENT = """
+from lfx.custom import Component
+from lfx.io import DictInput, FileInput, StrInput, Output
+from lfx.schema import Message
+
+class SavedStateFixture(Component):
+    display_name = "Saved state fixture"
+    inputs = [FileInput(name="path", file_types=["txt"]), SAVED_INPUT]
+    outputs = [Output(name="result", method="result")]
+
+    async def update_frontend_node(self, new_frontend_node, current_frontend_node):
+        updated = await super().update_frontend_node(new_frontend_node, current_frontend_node)
+        MUTATION
+        return updated
+
+    def result(self) -> Message:
+        return Message(text=self.text)
+"""
+
+
+def _saved_state_flow(mutation="pass", *, input_declaration='StrInput(name="text", value="default")'):
+    code = SAVED_STATE_COMPONENT.replace("MUTATION", mutation).replace("SAVED_INPUT", input_declaration)
+    entry, _ = build_custom_component_template(Component(_code=code))
+    saved = copy.deepcopy(entry)
+    saved["template"]["code"]["value"] += "\n# previous release\n"
+    saved["template"]["text"].update(value="saved selection", load_from_db=False)
+    flow = {"nodes": [{"id": "saved-state", "data": {"type": "SavedStateFixture", "node": saved}}], "edges": []}
+    return flow, Target.from_registry({"fixtures": {"SavedStateFixture": entry}})
+
+
+def test_dry_run_cannot_claim_preservation_when_an_uploaded_file_is_unavailable():
+    flow, target = _saved_state_flow()
+    saved = flow["nodes"][0]["data"]["node"]
+    saved["template"]["path"].update(value="uploaded.txt", file_path=f"{OWNER}/{uuid4()}.txt")
+
+    [result], _ = check_nodes(flow, target, user_id=OWNER)
+
+    assert (result.status, result.dry_run) == ("could_not_verify", {"result": "could_not_verify"})
+    assert [(reason["code"], reason["field"]) for reason in result.reasons] == [("could_not_verify", "path")]
+    assert flow_status([result]) == "warn"
+    assert saved["template"]["path"]["value"] == "uploaded.txt"
+
+
+def test_unverified_file_does_not_hide_an_independent_breaking_change():
+    flow, target = _saved_state_flow()
+    saved = flow["nodes"][0]["data"]["node"]
+    saved["template"]["path"].update(value="uploaded.txt", file_path=f"{OWNER}/{uuid4()}.txt")
+    saved["template"]["text"].update(type="int", value=123)
+
+    [result], _ = check_nodes(flow, target, user_id=OWNER)
+
+    assert (result.status, result.dry_run) == ("outdated_breaking", {"result": "could_not_verify"})
+    assert [(reason["code"], reason["field"]) for reason in result.reasons] == [
+        ("value_dropped", "text"),
+        ("could_not_verify", "path"),
+    ]
+    assert flow_status([result]) == "fail"
+
+
+def test_dry_run_keeps_an_uploaded_file_available_to_its_owner(tmp_path, monkeypatch):
+    from lfx.services.deps import get_settings_service
+
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "config_dir", str(tmp_path))
+    monkeypatch.setattr(settings, "storage_type", "local")
+    owner_directory = tmp_path / OWNER
+    owner_directory.mkdir()
+    (owner_directory / "uploaded.txt").write_text("saved contents", encoding="utf-8")
+    flow, target = _saved_state_flow()
+    flow["nodes"][0]["data"]["node"]["template"]["path"].update(value="uploaded.txt", file_path=f"{OWNER}/uploaded.txt")
+
+    [result], _ = check_nodes(flow, target, user_id=OWNER)
+
+    assert (result.status, result.dry_run, result.reasons) == ("outdated_safe", {"result": "keeps"}, [])
+    assert (owner_directory / "uploaded.txt").read_text(encoding="utf-8") == "saved contents"
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        'updated["template"]["text"]["value"] = "replacement"',
+        'updated["template"]["text"]["load_from_db"] = True',
+    ],
+    ids=["saved-value-changed", "literal-became-global-reference"],
+)
+def test_dry_run_reports_saved_state_changed_by_a_completed_update(mutation):
+    flow, target = _saved_state_flow(mutation)
+
+    [result], _ = check_nodes(flow, target, user_id=OWNER)
+
+    assert (result.status, result.dry_run) == ("outdated_breaking", {"result": "loses"})
+    assert [(reason["code"], reason["field"]) for reason in result.reasons] == [("value_dropped", "text")]
+    assert flow_status([result]) == "fail"
+
+
+@pytest.mark.parametrize(
+    ("input_declaration", "saved_value", "replacement"),
+    [
+        ('StrInput(name="text", value="default")', "", "replacement"),
+        ('StrInput(name="text", list=True, value=["default"])', [], ["replacement"]),
+        ('DictInput(name="text", value={"default": "value"})', {}, {"replacement": "value"}),
+    ],
+    ids=["empty-string", "empty-list", "empty-dictionary"],
+)
+@pytest.mark.parametrize("changed", [True, False], ids=["changed", "preserved"])
+def test_dry_run_compares_explicit_empty_values(input_declaration, saved_value, replacement, changed):
+    mutation = f'updated["template"]["text"]["value"] = {replacement!r}' if changed else "pass"
+    flow, target = _saved_state_flow(mutation, input_declaration=input_declaration)
+    flow["nodes"][0]["data"]["node"]["template"]["text"]["value"] = saved_value
+
+    [result], _ = check_nodes(flow, target, user_id=OWNER)
+
+    if changed:
+        assert (result.status, result.dry_run) == ("outdated_breaking", {"result": "loses"})
+        assert [(reason["code"], reason["field"]) for reason in result.reasons] == [("value_dropped", "text")]
+    else:
+        assert (result.status, result.dry_run, result.reasons) == ("outdated_safe", {"result": "keeps"}, [])
+
+
+def test_dry_run_does_not_treat_an_absent_value_as_a_saved_selection():
+    flow, target = _saved_state_flow()
+    del flow["nodes"][0]["data"]["node"]["template"]["text"]["value"]
+
+    [result], _ = check_nodes(flow, target, user_id=OWNER)
+
+    assert (result.status, result.dry_run, result.reasons) == ("outdated_safe", {"result": "keeps"}, [])
+
+
+@pytest.mark.parametrize("load_from_db", [False, True], ids=["literal", "global-reference"])
+def test_dry_run_keeps_saved_values_and_their_reference_mode(load_from_db):
+    flow, target = _saved_state_flow()
+    flow["nodes"][0]["data"]["node"]["template"]["text"]["load_from_db"] = load_from_db
+
+    [result], _ = check_nodes(flow, target, user_id=OWNER)
+
+    assert (result.status, result.dry_run, result.reasons) == ("outdated_safe", {"result": "keeps"}, [])
+
+
 def test_dry_run_loses_a_connection(target):
     """A later URL component stops taking connections into urls, which an edge reaches through two groups."""
     flow = _hard_flow("v1.12.6", "nested_groups.json")

@@ -10,6 +10,7 @@ from sqlmodel import and_, col, or_, select
 from langflow.services.data_subjects.audit_redaction import redact_audit_rows
 from langflow.services.data_subjects.batching import clear_reference_batch, delete_batch, delete_job_batch
 from langflow.services.data_subjects.transactions import builder_transactions
+from langflow.services.data_subjects.upgrade_reports import erase_upgrade_reports
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.auth.authz import (
     AuthzAccessException,
@@ -38,6 +39,7 @@ from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.policy_bundle.model import PolicyBundleRevision
 from langflow.services.database.models.project_replacement_operation import ProjectReplacementOperation
 from langflow.services.database.models.transactions.model import TransactionTable
+from langflow.services.database.models.upgrade_report import UpgradeReportRepair
 from langflow.services.database.models.variable.model import Variable
 
 if TYPE_CHECKING:
@@ -46,9 +48,9 @@ if TYPE_CHECKING:
 
     from sqlmodel.ext.asyncio.session import AsyncSession
 
-    from langflow.services.data_subjects.context import EraseContext
+    from langflow.services.data_subjects.context import EraseContext, EraseStepPending
 
-    Step = Callable[[AsyncSession, EraseContext], Awaitable[int]]
+    Step = Callable[[AsyncSession, EraseContext], Awaitable[int | EraseStepPending]]
 
 
 def _owned_folder_ids(user_id: UUID):
@@ -215,4 +217,7 @@ BUILDER_ACCOUNT_STEPS: tuple[tuple[str, Step], ...] = (
     ("folders", erase_folders),
     # Append steps to preserve the positions saved in in-flight request cursors.
     ("maintenance_actor", clear_maintenance_actor),
+    ("maintenance_setter", clear_maintenance_actor),
+    ("upgrade_repair_author", _delete_by_user(UpgradeReportRepair, UpgradeReportRepair.created_by)),
+    ("upgrade_reports", erase_upgrade_reports),
 )

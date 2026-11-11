@@ -49,10 +49,14 @@ def _all_types(index_blob: dict) -> dict:
 @pytest.mark.parametrize("case", CASES, ids=[case["name"] for case in CASES])
 def test_shared_case(case):
     node = {"id": "n1", "data": {"id": "n1", "type": "TestComponent", "node": case["saved_node"]}}
-    edges = [
-        {"source": "other", "target": "n1", "data": {"targetHandle": {"fieldName": field_name, "id": "n1"}}}
-        for field_name in case["connected_fields"]
-    ]
+    edges = (
+        case.get("edges")
+        if "edges" in case
+        else [
+            {"source": "other", "target": "n1", "data": {"targetHandle": {"fieldName": field_name, "id": "n1"}}}
+            for field_name in case["connected_fields"]
+        ]
+    )
     all_types = {"Test": {"TestComponent": case["component"]}} if case["component"] else {}
 
     report = check_flow_compatibility({"nodes": [node], "edges": edges}, all_types)
@@ -150,7 +154,7 @@ def _retired_bundle_templates() -> dict:
     }
 
 
-def test_source_release_statuses():
+def test_source_release_statuses(monkeypatch, record_property):
     """Every node saved on a supported source release keeps the result recorded for it.
 
     The result is ``no_action`` for ok and outdated_safe, otherwise the status itself.
@@ -166,21 +170,18 @@ def test_source_release_statuses():
         return
 
     expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
-    changed = [
-        f"{tag} {source} {key}: {expected.get(tag, {}).get(source, {}).get(key)} -> {status}"
-        for tag, sources in actual.items()
-        for source, statuses in sources.items()
-        for key, status in statuses.items()
-        if expected.get(tag, {}).get(source, {}).get(key) != status
-    ]
-    changed += [
-        f"{tag} {source} {key}: {status} -> missing"
-        for tag, sources in expected.items()
-        for source, statuses in sources.items()
-        for key, status in statuses.items()
-        if key not in actual.get(tag, {}).get(source, {})
-    ]
-    assert not changed, "Results changed. If intended, rerun with UPDATE_COMPAT_EXPECTED=1:\n" + "\n".join(changed)
+    ci_dir = DATA_DIR.parents[4] / "scripts" / "ci"
+    monkeypatch.syspath_prepend(str(ci_dir))
+    from historical_compatibility_gate import check_pins
+
+    messages = check_pins(
+        expected,
+        actual,
+        json.loads((ci_dir / "historical_compatibility_limitations.json").read_text(encoding="utf-8")),
+        DATA_DIR / "hard_flows",
+        lookup,
+    )
+    record_property("reviewed_limitations", messages)
 
 
 @cache
@@ -252,3 +253,34 @@ def test_hard_flow_status_after_a_component_change(release, flow_name, component
     report = check_flow_compatibility(flow, {}, registry={**lookup, component_type: entry})
 
     assert {node.status for node in report.nodes if node.component_type == component_type} == {expected}
+@pytest.mark.parametrize("handle", [None, "not-a-handle", "null", '{"fieldName": 9}'])
+@pytest.mark.parametrize("unknown_first", [False, True])
+def test_unreadable_target_handle_requires_review_only_for_its_target(handle, unknown_first):
+    """An existing edge cannot become an unconnected safe update when its handle is unreadable."""
+    case = next(case for case in CASES if case["name"] == "input_types narrowed, connected")
+    nodes = [
+        {"id": node_id, "data": {"id": node_id, "type": "TestComponent", "node": copy.deepcopy(case["saved_node"])}}
+        for node_id in ("connected", "unconnected")
+    ]
+    unreadable = {"source": "other", "target": "connected", "targetHandle": handle}
+    readable = {"source": "other", "target": "connected", "data": {"targetHandle": {"fieldName": "another_field"}}}
+    edges = [unreadable, readable] if unknown_first else [readable, unreadable]
+    report = check_flow_compatibility({"nodes": nodes, "edges": edges}, {"Test": {"TestComponent": case["component"]}})
+    assert {node.node_id: node.status for node in report.nodes} == {
+        "connected": "outdated_breaking",
+        "unconnected": "outdated_safe",
+    }
+
+
+def test_unreadable_edge_into_group_keeps_nested_connectivity_unknown():
+    case = next(case for case in CASES if case["name"] == "input_types narrowed, connected")
+    child = {"id": "child", "data": {"id": "child", "type": "TestComponent", "node": case["saved_node"]}}
+    group = {
+        "id": "group",
+        "data": {"node": {"flow": {"data": {"nodes": [child], "edges": []}}, "template": {}}},
+    }
+    report = check_flow_compatibility(
+        {"nodes": [group], "edges": [{"source": "other", "target": "group", "targetHandle": "unreadable"}]},
+        {"Test": {"TestComponent": case["component"]}},
+    )
+    assert next(node for node in report.nodes if node.node_id == "child").status == "outdated_breaking"

@@ -88,6 +88,23 @@ describe("saved group traversal", () => {
     },
   );
 
+  it("keeps descendants' connectivity unknown after an unreadable incoming group edge", () => {
+    const { group } = fixture();
+    const incoming = {
+      id: "incoming",
+      source: "outer",
+      target: "group",
+      targetHandle: "str|exposed|group",
+      data: { targetHandle: {} },
+    } as EdgeType;
+
+    const context = [...walkFlowNodes([group], [incoming])].find(
+      ({ node }) => node.id === "leaf",
+    )!;
+
+    expect(context.edges).toBeUndefined();
+  });
+
   it("copies group values, file paths, and variable references without changing either saved node", () => {
     const { leaf, group } = fixture();
     const context = [...walkFlowNodes([group], [])].find(

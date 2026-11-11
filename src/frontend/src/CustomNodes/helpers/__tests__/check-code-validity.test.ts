@@ -15,6 +15,7 @@ const sharedCases: {
   description: string;
   saved_node: CheckArgs[0]["node"];
   connected_fields: string[];
+  edges?: EdgeType[];
   component: CheckArgs[1][string] | null;
   expected: string;
 }[] = JSON.parse(
@@ -29,20 +30,23 @@ const sharedCases: {
 
 describe("checkCodeValidity shared cases", () => {
   it.each(sharedCases.map((c) => [c.name, c] as const))("%s", (_name, c) => {
-    const edges = c.connected_fields.map(
-      (fieldName) =>
-        ({
-          id: `other-${fieldName}`,
-          source: "other",
-          target: "n1",
-          data: { targetHandle: { fieldName, id: "n1" } },
-        }) as EdgeType,
-    );
+    const edges =
+      c.edges ??
+      c.connected_fields.map(
+        (fieldName) =>
+          ({
+            id: `other-${fieldName}`,
+            source: "other",
+            target: "n1",
+            data: { targetHandle: { fieldName, id: "n1" } },
+          }) as EdgeType,
+      );
+    const fields = connectedFieldsByNode(edges).get("n1");
     const result = checkCodeValidity(
       { id: "n1", type: "TestComponent", node: c.saved_node } as CheckArgs[0],
       c.component ? { TestComponent: c.component } : {},
       true,
-      connectedFieldsByNode(edges).get("n1") ?? new Set(),
+      fields === null ? undefined : (fields ?? new Set()),
     );
     const status = !result
       ? undefined
@@ -89,6 +93,33 @@ describe("checkCodeValidity retired", () => {
 });
 
 describe("connectedFieldsByNode", () => {
+  it.each([undefined, "unreadable", "null", '{"fieldName":9}'])(
+    "keeps an unreadable incoming handle unknown (%s)",
+    (targetHandle) => {
+      const edge = {
+        id: "unknown",
+        source: "a",
+        target: "b",
+        targetHandle,
+      } as EdgeType;
+      const readable = {
+        id: "readable",
+        source: "a",
+        target: "b",
+        data: { targetHandle: { fieldName: "other", id: "b" } },
+      } as EdgeType;
+
+      for (const edges of [
+        [edge, readable],
+        [readable, edge],
+      ]) {
+        const connected = connectedFieldsByNode(edges);
+        expect(connected.get("b")).toBeNull();
+        expect(connected.has("unrelated")).toBe(false);
+      }
+    },
+  );
+
   it("reads the field from the escaped handle string when an edge has no data", () => {
     const edge = {
       id: "e1",

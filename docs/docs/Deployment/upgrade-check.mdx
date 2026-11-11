@@ -20,7 +20,7 @@ Starter projects are skipped, because Langflow recreates them at startup.
 
 For each node, the command reports the following:
 
-- The node's status uses the same rule as [`lfx upgrade`](/lfx-compatibility#check-and-upgrade-flows-with-lfx-upgrade), with `ok`, `outdated_safe`, `outdated_breaking`, `retired`, `customized`, or `blocked`. The checker also reports `could_not_verify` when an outdated node's generated fields cannot be verified and no independent breaking change is confirmed.
+- The node's status uses the same rule as [`lfx upgrade`](/lfx-compatibility#check-and-upgrade-flows-with-lfx-upgrade), with `ok`, `outdated_safe`, `outdated_breaking`, `retired`, `customized`, or `blocked`. The checker also reports `could_not_verify` when an outdated node's generated fields or saved file references cannot be verified and no independent breaking change is confirmed.
 - For an outdated node, the result of a dry run of the visual editor's **Update**. The node is rebuilt from the new release's code with its saved values, and nothing is saved. A completed dry run is breaking when it drops a connection, a value, a field, or an output. An incomplete update records uncertainty, and any independent breaking finding still takes precedence.
 - What the upgraded server runs for the node under the settings you pass: its saved code (`saved_code`), the server's own code (`server_code`), or nothing (`refused`). The catalog rules saved in the database apply too.
 
@@ -224,8 +224,10 @@ If the check can't finish, the last line is `{"event": "error", "code": "...", "
 - `source`: the database's dialect, its credential-free identity, its Alembic revision, and how many flows, saved components, and running flow versions the check read.
 - `target`: the Langflow and LFX versions, the hash of the component index, the installed bundles, and the custom components folders and how many components they hold.
 - `settings`: every setting the check used, and the catalog rules it applied.
+- `inputs`: the resolved output path, or `null` when no output was requested, and whether JSON events were selected.
+- `network_policy`: component callbacks cannot use Python network audit events. Only allowlisted local system metadata probes may launch a process. Explicit source database connections are read-only. This guard is not an operating system sandbox.
 - `summary`: the number of flows by status, and the number of nodes by status.
-- `flows`: every flow with a node that needs a look (`outdated_safe` included) or an unreadable row. Each flow has its owner, project, last edit, and those nodes. A flow whose nodes are all `ok` isn't listed. Each node lists its `status`, what it `runs`, its `reasons`, and its `dry_run` result: `keeps`, `loses`, `could_not_verify`, or `build_failed`.
+- `flows`: every checked flow, saved component, and running flow version, including healthy rows. Each row has its owner, project, last edit, separate Editor and Serving usage, and nodes that need review. Each node lists its `status`, what it `runs`, its `reasons`, and its `dry_run` result: `keeps`, `loses`, `could_not_verify`, or `build_failed`.
 - `errors`: saved rows that couldn't be read, and catalog rules that couldn't be read, which stop the upgraded server from starting.
 
 The source identity contains a `kind`, a structured `locator`, and a `sha256` fingerprint of that locator.
@@ -237,9 +239,32 @@ Changing only credentials does not change the identity when the endpoint and sel
 The identity's shape and fingerprint are validated together.
 This identifies the selected locator. It does not authenticate an installation or prove that its data stayed unchanged.
 
-The output file must be separate from the SQLite source database and its WAL, shared-memory, and journal files.
+The output file must be separate from the SQLite source databases and their WAL, shared-memory, and journal files.
 The command refuses paths, symlinks, and hard links that alias those files before checking any flows.
 It replaces a report file atomically rather than truncating an inode through a hard link.
+
+## Flow usage and retained history
+
+The JSON report includes every checked flow, including healthy flows. Each flow carries separate Editor and Serving usage. The text summary still lists flows that need review.
+
+Usage comes from the existing job table. Only workflow jobs with execution evidence count as runs. The supported execution states are `in_progress`, `completed`, `failed`, `timed_out`, and `suspended`. A suspended graph already executed before it paused for human input. Errors count failed and timed-out jobs. Queued jobs do not count. Canceled jobs cannot establish whether execution started, so they are excluded and flagged. Ingestion, evaluation, and unclassified job types are excluded.
+
+The last run uses the newest creation time among jobs with execution evidence. This timestamp marks job creation because older schemas do not retain a separate execution-start timestamp. Stored timestamp components are validated before UTC normalization. SQLite and PostgreSQL timestamps retain microsecond precision. Retained coverage shows the oldest and newest workflow job creation times observed, including queued and canceled records.
+
+Zero retained executions does not establish that a flow never ran. Job retention can remove records, and executions without job records are outside this evidence. The report keeps `coverage.complete` false and leaves the retention policy unknown because it does not load the source server's settings. Missing tables, missing required columns, and unavailable databases produce explicit unknown values and limitation codes. They do not become zero counts or compatibility failures.
+
+To read Serving usage, pass its existing database through a read-only account. This adapter requires the preserved Editor flow ID in `job.flow_id`. It needs no new route on the older Serving release.
+
+```bash
+langflow upgrade-check \
+  --database-url "postgresql://langflow_check:CHANGE_ME@editor-db.example.com:5432/langflow" \
+  --serving-database-url "postgresql://langflow_check:CHANGE_ME@serving-db.example.com:5432/langflow" \
+  --output upgrade-check.json
+```
+
+Editor and Serving counts stay separate. A missing Serving configuration or missing preserved Editor ID is visible in the report. Saved flow versions reuse their owning flow's usage with a limitation that the counts are not version-specific. Saved components have no execution history.
+
+Both databases are read before any component dry run begins. Read transactions end before component checks. The report binds each available usage source to its credential-free database identity and never contains its connection URL. A scan across multiple short reads is not one database snapshot.
 
 ## Limits
 
