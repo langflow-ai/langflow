@@ -769,7 +769,8 @@ async def update_flow(
                 raise HTTPException(status_code=404, detail="Flow not found")
             # Compared against the row we just re-read under lock, so a writer that
             # committed between the client's read and this attempt is still caught.
-            await ensure_version_precondition(session, db_flow_for_attempt, expected_version_token)
+            if flow.data is not None and flow.data != db_flow_for_attempt.data:
+                await ensure_version_precondition(session, db_flow_for_attempt, expected_version_token)
             # TOCTOU: a concurrent PATCH could have moved this flow to a
             # different workspace/folder between the destination check above
             # and this retry attempt. Re-authorize against the freshly
@@ -1034,10 +1035,11 @@ async def upsert_flow(
                         raise deny_to_404(exc, detail="Flow not found") from exc
                 effective_flow_data = flow.data if flow.data is not None else existing_flow_for_attempt.data
                 _validate_catalog_policy_for_write(effective_flow_data, snapshot=catalog_policy_snapshot)
+                if flow.data is not None and flow.data != existing_flow_for_attempt.data:
+                    await ensure_version_precondition(session, existing_flow_for_attempt, expected_version_token)
                 await stage_mcp_secrets(
                     carried_secrets, secret_variables, writer_id, session, masked_targets=masked_targets
                 )
-                await ensure_version_precondition(session, existing_flow_for_attempt, expected_version_token)
                 return await _update_existing_flow(
                     session=session,
                     existing_flow=existing_flow_for_attempt,
