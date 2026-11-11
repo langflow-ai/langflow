@@ -1,0 +1,64 @@
+name: Create next release branches
+
+# This automation runs only after a release branch has actually merged into
+# main.  pull_request_target keeps the workflow definition and checked-out
+# helper on the trusted default branch; no pull-request source is executed.
+on:
+  pull_request_target:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: create-release-branches-${{ github.event.pull_request.id || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  create:
+    if: >-
+      vars.RELEASE_BRANCH_AUTOMATION_ENABLED == 'true' &&
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref == 'main' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.event.pull_request.head.ref, 'release-')
+    runs-on: ${{ vars.RELEASE_BRANCH_AUTOMATION_RUNNER || 'ubuntu-latest' }}
+    steps:
+      - name: Checkout trusted default branch
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Create immutable next release branches
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+          # JSON argv array for the protected LE-3344 ruleset verifier, for
+          # example ["/opt/release/bin/verify-protection"]. The verifier reads
+          # {"repository":"...","branch":"..."} on stdin and returns
+          # {"verified":true}. Missing configuration fails before any ref write.
+          RELEASE_PROTECTION_BRIDGE: ${{ vars.RELEASE_PROTECTION_BRIDGE }}
+        run: |
+          set -euo pipefail
+          python -m scripts.ci.coordinated_release.branches \
+            --event "$GITHUB_EVENT_PATH" \
+            --repository "$GITHUB_REPOSITORY" \
+            | tee release-branch-report.json
+
+      - name: Publish branch report
+        if: always()
+        run: |
+          if [ -f release-branch-report.json ]; then
+            {
+              echo '## Release branch automation'
+              echo
+              echo '```json'
+              cat release-branch-report.json
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi

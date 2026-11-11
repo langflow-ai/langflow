@@ -1,0 +1,30 @@
+name: Coordinated release contract tests
+
+on:
+  pull_request:
+    paths:
+      - scripts/ci/coordinated_release/**
+      - scripts/ci/test_coordinated_*.py
+      - .github/workflows/coordinated-release*.yml
+      - .github/workflows/create-next-release-branches.yml
+      - docs/release/coordinated-releases.md
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@v10.0.0
+        with:
+          enable-cache: false
+      - name: Test isolated release fixtures
+        run: uv run --no-project --with pytest --with pyyaml --with packaging python -m pytest -o addopts='' scripts/ci/test_coordinated_*.py

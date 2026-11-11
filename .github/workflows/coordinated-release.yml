@@ -1,0 +1,217 @@
+name: Coordinated OSS Release Build
+run-name: ${{ inputs.invocation_id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_request:
+        description: Contract v1 release envelope JSON
+        required: true
+        type: string
+      invocation_id:
+        description: Exact coordinator invocation identity
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+# This workflow is a staging component build only. Customer publication and
+# official tag promotion remain in the operator coordinator's protected action.
+concurrency:
+  group: coordinated-oss-${{ inputs.invocation_id }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build exact coordinated source
+    if: github.ref == 'refs/heads/main' && vars.COORDINATED_RELEASE_ENABLED == 'true'
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ${{ fromJSON(vars.COORDINATED_RELEASE_RUNNER || '["self-hosted","linux","coordinated-release"]') }}
+    environment: coordinated-release-staging
+    timeout-minutes: 120
+    steps:
+      # The workflow definition and helper are trusted automation. The source
+      # checkout below is a separate detached checkout of request.source.commit.
+      - name: Check out trusted automation
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Set up uv for disposable source packaging
+        uses: astral-sh/setup-uv@v10.0.0
+        with:
+          version: latest-known
+          enable-cache: false
+
+      - name: Validate and persist request envelope
+        id: request
+        env:
+          RELEASE_REQUEST: ${{ inputs.release_request }}
+          INVOCATION_ID: ${{ inputs.invocation_id }}
+        run: |
+          set -euo pipefail
+          python -c 'import os, pathlib; pathlib.Path("release-envelope.json").write_text(os.environ["RELEASE_REQUEST"] + "\n")'
+          PYTHONPATH=scripts/ci python -m coordinated_release.build validate \
+            --request-file release-envelope.json \
+            --invocation-id "$INVOCATION_ID" > validated-envelope.json
+          python -c 'import json, pathlib; pathlib.Path("request.json").write_text(json.dumps(json.load(open("validated-envelope.json"))["request"], sort_keys=True, indent=2) + "\n")'
+          python -c 'import json, os; r=json.load(open("request.json")); print("release_id=" + r["release_id"]); print("source_repository=" + r["source"]["repository"]); print("source_commit=" + r["source"]["commit"]); print("destination=" + r["destination"]); print("request_digest=" + json.load(open("validated-envelope.json"))["request_digest"])' >> "$GITHUB_OUTPUT"
+
+      - name: Validate result artifact retention
+        run: |
+          set -euo pipefail
+          test "$GITHUB_RETENTION_DAYS" -ge 90
+          test "$GITHUB_RETENTION_DAYS" -le 90
+
+      - name: Verify coordinator run identity and protected ref
+        env:
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          WORKFLOW_REF: ${{ github.ref }}
+          INVOCATION_ID: ${{ inputs.invocation_id }}
+        run: |
+          set -euo pipefail
+          test "$RUN_ATTEMPT" = "1"
+          test "$WORKFLOW_REF" = "refs/heads/main"
+          python -c 'import json,os; json.dump({"provider":"github","pipeline_id":"coordinated-release.yml","id":os.environ["RUN_ID"],"url":os.environ["RUN_URL"]}, open("run.json", "w"), sort_keys=True, indent=2)'
+
+      - name: Check out exact requested source SHA
+        env:
+          SOURCE_REPOSITORY: ${{ steps.request.outputs.source_repository }}
+          SOURCE_COMMIT: ${{ steps.request.outputs.source_commit }}
+        run: |
+          set -euo pipefail
+          git clone --filter=blob:none --no-checkout "$SOURCE_REPOSITORY" source
+          git -C source fetch --no-tags origin "$SOURCE_COMMIT"
+          git -C source checkout --detach "$SOURCE_COMMIT"
+          test "$(git -C source rev-parse HEAD)" = "$SOURCE_COMMIT"
+          PYTHONPATH=scripts/ci python -c 'from coordinated_release.execution import verify_checkout; import os; verify_checkout("source", os.environ["SOURCE_COMMIT"])'
+
+      - name: Resolve release and package versions
+        id: version
+        run: |
+          set -euo pipefail
+          PYTHONPATH=scripts/ci python -m coordinated_release.build version --request-file request.json > version.json
+          python -c 'import json; v=json.load(open("version.json")); print("release_id=" + v["release_id"]); print("python_version=" + v["python_version"])' >> "$GITHUB_OUTPUT"
+
+      - name: Materialize coordinated package and frontend versions
+        env:
+          RELEASE_ID: ${{ steps.version.outputs.release_id }}
+          PYTHON_VERSION: ${{ steps.version.outputs.python_version }}
+        run: |
+          set -euo pipefail
+          PYTHONPATH=scripts/ci python -m coordinated_release.build materialize \
+            --source source --release-id "$RELEASE_ID" --python-version "$PYTHON_VERSION"
+          PYTHONPATH=scripts/ci python -m coordinated_release.build lock \
+            --source source --python-version "$PYTHON_VERSION"
+          (cd source && uv lock --check)
+
+      - name: Validate protected staging destination
+        env:
+          COORDINATED_STAGING_REPOSITORIES: ${{ vars.COORDINATED_STAGING_REPOSITORIES }}
+          COORDINATED_RESERVE_IMAGE: ${{ vars.COORDINATED_RESERVE_IMAGE }}
+          COORDINATED_RESERVATION_ENABLED: ${{ vars.COORDINATED_RESERVATION_ENABLED }}
+          DESTINATION: ${{ steps.request.outputs.destination }}
+          RELEASE_ID: ${{ steps.version.outputs.release_id }}
+          REQUEST_DIGEST: ${{ steps.request.outputs.request_digest }}
+        run: |
+          set -euo pipefail
+          test -n "$COORDINATED_STAGING_REPOSITORIES"
+          test -n "$COORDINATED_RESERVE_IMAGE"
+          test "$COORDINATED_RESERVATION_ENABLED" = "true"
+          PYTHONPATH=scripts/ci python -m coordinated_release.build reserve \
+            --command "$COORDINATED_RESERVE_IMAGE" \
+            --allowlist "$COORDINATED_STAGING_REPOSITORIES" \
+            --destination "$DESTINATION" \
+            --request-file request.json --run-file run.json
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Set up QEMU for platform smoke checks
+        uses: docker/setup-qemu-action@v3
+
+      - name: Log in to staging registry
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ vars.COORDINATED_STAGING_REGISTRY }}
+          username: ${{ secrets.COORDINATED_STAGING_USERNAME }}
+          password: ${{ secrets.COORDINATED_STAGING_TOKEN }}
+
+      - name: Build and push staging image
+        env:
+          DESTINATION: ${{ steps.request.outputs.destination }}
+          RELEASE_ID: ${{ steps.version.outputs.release_id }}
+          PYTHON_VERSION: ${{ steps.version.outputs.python_version }}
+          SOURCE_COMMIT: ${{ steps.request.outputs.source_commit }}
+          REQUEST_DIGEST: ${{ steps.request.outputs.request_digest }}
+          PLATFORMS_JSON: ${{ toJSON(fromJSON(inputs.release_request).request.platforms) }}
+        run: |
+          set -euo pipefail
+          platforms=$(python -c 'import json,os; print(",".join(json.loads(os.environ["PLATFORMS_JSON"])))')
+          image="$DESTINATION:$RELEASE_ID"
+          docker buildx build \
+            --file source/docker/build_and_push.Dockerfile \
+            --target full \
+            --platform "$platforms" \
+            --build-arg MAIN_VERSION="$PYTHON_VERSION" \
+            --build-arg BASE_VERSION="$PYTHON_VERSION" \
+            --label "org.opencontainers.image.revision=$SOURCE_COMMIT" \
+            --label "org.opencontainers.image.version=$RELEASE_ID" \
+            --label "langflow.org/release-request=$REQUEST_DIGEST" \
+            --provenance=true --sbom=true --metadata-file build-metadata.json --push --tag "$image" source
+          echo "$image" > image-reference.txt
+
+      - name: Inspect immutable image index and platform manifests
+        env:
+          IMAGE: ${{ steps.request.outputs.destination }}:${{ steps.version.outputs.release_id }}
+          PLATFORMS_JSON: ${{ toJSON(fromJSON(inputs.release_request).request.platforms) }}
+        run: |
+          set -euo pipefail
+          index_digest=$(python -c 'import json; print(json.load(open("build-metadata.json"))["containerimage.digest"])')
+          PYTHONPATH=scripts/ci python -m coordinated_release.registry \
+            --request-file request.json --index-digest "$index_digest" --output image.json
+
+      - name: Run per-platform package smoke checks
+        env:
+          IMAGE: ${{ steps.request.outputs.destination }}:${{ steps.version.outputs.release_id }}
+          PYTHON_VERSION: ${{ steps.version.outputs.python_version }}
+        run: |
+          set -euo pipefail
+          PYTHONPATH=scripts/ci python -m coordinated_release.build smoke \
+            --image-record image.json --python-version "$PYTHON_VERSION"
+
+      - name: Write immutable Contract v1 component result
+        env:
+          RUN_ID: ${{ github.run_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RELEASE_ID: ${{ steps.version.outputs.release_id }}
+          SOURCE_COMMIT: ${{ steps.request.outputs.source_commit }}
+          REQUEST_DIGEST: ${{ steps.request.outputs.request_digest }}
+        run: |
+          set -euo pipefail
+          PYTHONPATH=scripts/ci python -m coordinated_release.build result \
+            --request-file request.json \
+            --run-id "$RUN_ID" --run-url "$RUN_URL" \
+            --image image.json \
+            --output component-result.json
+
+      - name: Upload run-specific immutable result artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-result-${{ inputs.invocation_id }}
+          retention-days: 90
+          if-no-files-found: error
+          include-hidden-files: true
+          path: |
+            component-result.json
