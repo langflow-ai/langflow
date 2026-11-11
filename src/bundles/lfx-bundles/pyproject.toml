@@ -1,6 +1,6 @@
 [project]
 name = "lfx-bundles"
-version = "1.2.9"
+version = "1.2.10"
 description = "Langflow's long-tail provider bundles as a single manifest-less metapackage (the langchain-community model)."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -57,6 +57,7 @@ glean = []
 google = ["lfx-google>=0.2.5,<1.0.0"]
 groq = ["langchain-groq~=1.1.1"]
 homeassistant = ["requests>=2.32.0"]
+hubris = ["langchain-openai>=1.1.6"]
 huggingface = ["langchain-huggingface~=1.2.0; sys_platform != 'darwin' or platform_machine != 'x86_64'", "huggingface-hub>=1.0.0,<2.0.0", "langchain-community>=0.4.1,<1.0.0"]
 icosacomputing = ["requests>=2.32.0"]
 jigsawstack = ["jigsawstack==0.2.7"]
@@ -130,6 +131,7 @@ all = [
     "lfx-bundles[glean]",
     "lfx-bundles[groq]",
     "lfx-bundles[homeassistant]",
+    "lfx-bundles[hubris]",
     "lfx-bundles[huggingface]",
     "lfx-bundles[icosacomputing]",
     "lfx-bundles[jigsawstack]",
@@ -201,6 +203,7 @@ all-no-torch = [
     "lfx-bundles[glean]",
     "lfx-bundles[groq]",
     "lfx-bundles[homeassistant]",
+    "lfx-bundles[hubris]",
     "lfx-bundles[huggingface]",
     "lfx-bundles[icosacomputing]",
     "lfx-bundles[jigsawstack]",

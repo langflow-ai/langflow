@@ -1,0 +1,44 @@
+---
+title: Hubris
+slug: /bundles-hubris
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Hubris** bundle.
+
+To configure Hubris once for all flows, you can also use the [**OpenAI Compatible**](./bundles-openai-compatible) model provider with the base URL `https://api.hubris.pw/v1`.
+
+For more information about Hubris features and functionality used by Hubris components, see the [Hubris documentation](https://hubris.pw/docs).
+
+## Hubris text generation
+
+This component generates text using models served through the Hubris gateway, which fronts Anthropic, OpenAI, Google, DeepSeek, Moonshot, xAI and others behind one API key.
+
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+
+Use the **Language Model** output when you want to use a Hubris model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Transform** component.
+
+For more information, see [Language model components](/components-models).
+
+Create an API key at [hubris.pw/keys](https://hubris.pw/keys). The key is shown once, at creation time.
+
+The model dropdown is filled from the live catalogue at `GET https://api.hubris.pw/v1/models`, which is public and needs no key. Model IDs take the form `vendor/model`, for example `anthropic/claude-sonnet-5`, and are resolved exactly, with no aliasing.
+
+### Hubris text generation parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_key | SecretString | Input parameter. Your Hubris API key for authentication. |
+| model_name | Dropdown | Input parameter. The model to use for chat completion. Options are fetched live from the Hubris model catalog. |
+| temperature | Float | Input parameter. Controls randomness in the output. Range: [0.0, 2.0]. Default: 0.7. |
+| max_tokens | Integer | Input parameter. The maximum number of tokens to generate. |
+| json_mode | Boolean | Input parameter. If enabled, the model returns JSON regardless of passing a schema. |
