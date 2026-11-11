@@ -75,6 +75,16 @@ REMEDIATIONS: tuple[Remediation, ...] = (
         ),
         overrides={"temperature": None},
     ),
+    Remediation(
+        name="top-k-unsupported",
+        markers=("`top_k` is deprecated",),
+        overrides={"top_k": None},
+    ),
+    Remediation(
+        name="top-p-unsupported",
+        markers=("`top_p` is deprecated",),
+        overrides={"top_p": None},
+    ),
 )
 
 
@@ -139,6 +149,8 @@ def apply_overrides_to_model(model: Any, overrides: dict[str, Any]) -> bool:
     fix re-raises the provider error instead of retrying an unchanged request.
     Unknown attributes are never created: silently attaching one would turn a
     clear provider error into a request that fails again for a hidden reason.
+    Cleared fields are also removed from ``additional_model_request_fields``
+    when that dictionary carries them, even if a matching attribute exists.
 
     Mutating in place (rather than rebuilding) is what lets the fix reach a model
     already wrapped in a prompt chain or ``with_config`` binding — those hold a
@@ -147,10 +159,18 @@ def apply_overrides_to_model(model: Any, overrides: dict[str, Any]) -> bool:
     if not overrides:
         return False
     for key, value in overrides.items():
-        if not hasattr(model, key):
+        fields = getattr(model, "additional_model_request_fields", None)
+        in_fields = value is None and isinstance(fields, dict) and key in fields
+        has_attribute = hasattr(model, key)
+        if not in_fields and not has_attribute:
             return False
         try:
-            setattr(model, key, value)
+            if in_fields:
+                # Bedrock Converse carries top_k only in this dictionary. Replace
+                # it so clearing a field leaves shared input dictionaries intact.
+                model.additional_model_request_fields = {k: v for k, v in fields.items() if k != key}
+            if has_attribute:
+                setattr(model, key, value)
         except (AttributeError, TypeError, ValueError):
             return False
     return True

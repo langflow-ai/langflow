@@ -134,21 +134,77 @@ def test_generating_model_cannot_be_used_as_decision_model(execution):
     transport.assert_not_called()
 
 
-def test_switched_off_model_still_runs_like_a_language_model(execution, monkeypatch):
-    """Model Providers' switches shape the picker only, so lfx run and serve, which have none, can run any model."""
+USER_ID = "00000000-0000-0000-0000-000000000001"
+
+
+@pytest.fixture
+def model_switches(monkeypatch):
+    """Saved Model Providers settings with the given models switched off."""
     from lfx.base.models.unified_models import model_catalog
 
-    async def switched_off(*_args, **_kwargs):
-        return {"gpt-6-luna"}, set()
+    switched_off: set[str] = set()
 
+    async def status(*_args, **_kwargs):
+        return switched_off, set()
+
+    monkeypatch.setattr(model_catalog, "_keeps_model_settings", lambda: True)
+    monkeypatch.setattr(model_catalog, "_get_model_status", status)
+    return switched_off
+
+
+def test_a_switched_off_model_never_reaches_its_provider(execution, monkeypatch, model_switches):
+    """The provider would receive the flow's messages, so a flow saved before the switch-off stops."""
     request, model, transport = execution
-    monkeypatch.setattr(model_catalog, "_get_model_status", switched_off)
+    model_switches.add("gpt-6-luna")
+    credentials = Mock(side_effect=AssertionError("Credentials must not be read"))
+    monkeypatch.setattr(unified_models, "get_all_variables_for_provider", credentials)
+    with pytest.raises(DecisionConfigurationError, match=r"gpt-6-luna is switched off in Model Providers\."):
+        evaluate_decision(request, model=model, user_id=USER_ID)
+    credentials.assert_not_called()
+    transport.assert_not_called()
+
+
+def test_another_switched_off_model_doesnt_stop_this_one(execution, model_switches):
+    request, model, transport = execution
+    model_switches.add("jev-latest")
     variables = activate_request_variables({"OPENAI_API_KEY": "sk-request-key"})
     try:
-        evaluate_decision(request, model=model, user_id="00000000-0000-0000-0000-000000000001")
+        evaluate_decision(request, model=model, user_id=USER_ID)
     finally:
         reset_request_variables(variables)
     transport.assert_called_once()
+
+
+@pytest.mark.usefixtures("model_switches")
+def test_a_model_never_switched_on_runs_with_a_request_key(execution):
+    """Only an explicit switch-off stops a run: a key sent with the request still works without setup."""
+    request, model, transport = execution
+    variables = activate_request_variables({"OPENAI_API_KEY": "sk-request-key"})
+    try:
+        evaluate_decision(request, model=model, user_id=USER_ID)
+    finally:
+        reset_request_variables(variables)
+    transport.assert_called_once()
+
+
+def test_without_saved_settings_no_model_is_switched_off(execution, monkeypatch):
+    """Standalone lfx run and serve keep no Model Providers settings, so no switch can stop a run."""
+    from lfx.base.models.unified_models import model_catalog
+
+    request, model, transport = execution
+    status = AsyncMock(return_value=({"gpt-6-luna"}, set()))
+    monkeypatch.setattr(model_catalog, "_get_model_status", status)
+    evaluate_decision(request, model=model, user_id=USER_ID)
+    status.assert_not_called()
+    transport.assert_called_once()
+
+
+@pytest.mark.parametrize(("model", "message"), [([], "Pick a Decision Model."), ([{}, {}], "Pick one Decision Model.")])
+def test_an_empty_field_asks_for_a_model(execution, model, message):
+    request, _, transport = execution
+    with pytest.raises(DecisionConfigurationError, match=f"^{message}$"):
+        evaluate_decision(request, model=model)
+    transport.assert_not_called()
 
 
 def test_unoffered_model_and_capability_are_authoritative(execution, monkeypatch):
@@ -218,7 +274,7 @@ def test_callers_per_request_key_for_its_own_provider_comes_first(execution):
 
 @pytest.fixture
 def saved_provider_variables(monkeypatch):
-    from lfx.base.models.unified_models import credentials
+    from lfx.base.models.unified_models import credentials, model_catalog
 
     @asynccontextmanager
     async def session_scope():
@@ -231,6 +287,8 @@ def saved_provider_variables(monkeypatch):
         return SecretStr("https://api.openai.com/v1")
 
     service = Mock(get_variable=AsyncMock(side_effect=read_variable))
+    # Saved settings come with Model Providers' switches; none is switched off here.
+    monkeypatch.setattr(model_catalog, "_get_model_status", AsyncMock(return_value=(set(), set())))
     monkeypatch.setattr(credentials, "session_scope", session_scope)
     monkeypatch.setattr(credentials, "get_variable_service", lambda: service)
     return service

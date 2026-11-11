@@ -3,7 +3,7 @@
 import os
 import tempfile
 import warnings
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi import HTTPException
@@ -394,49 +394,31 @@ class TestRefreshTokenSecurity:
                     assert "inactive" in str(exc_info.value.detail).lower()
 
     @pytest.mark.asyncio
-    async def test_refresh_token_valid_flow(self):
+    async def test_refresh_token_valid_flow(self, active_user):
         """Test that valid refresh tokens work correctly."""
-        from uuid import uuid4
-
-        from langflow.services.auth.service import AuthService
+        import jwt
         from langflow.services.auth.utils import create_refresh_token
+        from langflow.services.database.models.auth.refresh_token import RefreshTokenSession
+        from langflow.services.deps import get_auth_service, session_scope
+        from sqlmodel import select
 
-        mock_db = AsyncMock()
-        mock_user = MagicMock()
-        mock_user.is_active = True  # Active user
-        user_id = uuid4()
-        mock_user.id = user_id
+        auth_service = get_auth_service()
+        async with session_scope() as db:
+            original = await auth_service.create_user_tokens(active_user.id, db)
+        async with session_scope() as db:
+            result = await create_refresh_token(original["refresh_token"], db)
+            sessions = (
+                await db.exec(select(RefreshTokenSession).where(RefreshTokenSession.user_id == active_user.id))
+            ).all()
 
-        # Create a langflow AuthService instance (not lfx) with mocked settings
-        mock_settings_service = MagicMock()
-        auth_service = AuthService(mock_settings_service)
-
-        with (
-            patch("langflow.services.auth.utils._auth_service", return_value=auth_service),
-            patch("langflow.services.auth.service.jwt.decode") as mock_decode,
-        ):
-            mock_decode.return_value = {"sub": str(user_id), "type": "refresh"}  # Correct type
-
-            with patch("langflow.services.auth.utils.get_jwt_verification_key") as mock_verification_key:
-                mock_verification_key.return_value = "secret"
-
-                with patch("langflow.services.auth.service.get_user_by_id", new_callable=AsyncMock) as mock_get_user:
-                    mock_get_user.return_value = mock_user
-
-                    with patch.object(auth_service, "create_user_tokens", new_callable=AsyncMock) as mock_create_tokens:
-                        expected_access = "new-access-token"
-                        expected_refresh = "new-refresh-token"
-                        mock_create_tokens.return_value = {
-                            "access_token": expected_access,
-                            "refresh_token": expected_refresh,
-                        }
-
-                        result = await create_refresh_token("fake-token", mock_db)
-
-                        assert result["access_token"] == expected_access
-                        assert result["refresh_token"] == expected_refresh
-                        # user_id is converted to string in JWT payload, then back to UUID in service
-                        mock_create_tokens.assert_called_once_with(str(user_id), mock_db)
+        assert result["access_token"]
+        assert result["refresh_token"] != original["refresh_token"]
+        original_claims = jwt.decode(original["refresh_token"], options={"verify_signature": False})
+        new_claims = jwt.decode(result["refresh_token"], options={"verify_signature": False})
+        assert new_claims["sub"] == str(active_user.id)
+        assert new_claims["sid"] == original_claims["sid"]
+        assert len(sessions) == 1
+        assert sessions[0].revoked is False
 
     def test_refresh_cookie_defaults_support_same_site_http(self):
         """Refresh cookies use the same safe, HTTP-compatible defaults as access cookies."""
