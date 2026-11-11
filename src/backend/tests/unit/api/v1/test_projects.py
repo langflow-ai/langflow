@@ -509,6 +509,34 @@ async def test_delete_project_recovers_from_concurrent_write_lock(
     assert get_resp.status_code == status.HTTP_404_NOT_FOUND
 
 
+async def test_delete_project_with_an_api_key_recovers_from_concurrent_write_lock(
+    client: AsyncClient, logged_in_headers, created_api_key, basic_case, monkeypatch
+):
+    """An API-key caller is a detached snapshot: the retry must not try to refresh it like a session row."""
+    from langflow.api.v1 import projects as projects_module
+
+    create_resp = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+    project_id = create_resp.json()["id"]
+    original_check = projects_module.check_project_has_deployments
+    attempts = {"count": 0}
+
+    async def check_with_competing_commit(session, *, project_id):
+        attempts["count"] += 1
+        if attempts["count"] == 1:
+            async with session_scope() as competing_session:
+                competing_session.add(Folder(name=f"competing-write-{uuid4()}", user_id=None))
+        return await original_check(session, project_id=project_id)
+
+    monkeypatch.setattr(projects_module, "check_project_has_deployments", check_with_competing_commit)
+    # The login above left a session cookie, which would authenticate first and hide the API key.
+    client.cookies.clear()
+
+    delete_resp = await client.delete(f"api/v1/projects/{project_id}", headers={"x-api-key": created_api_key.api_key})
+
+    assert attempts["count"] >= 2, "the first attempt never lost the race, so no retry ran"
+    assert delete_resp.status_code == status.HTTP_204_NO_CONTENT, delete_resp.text
+
+
 async def test_delete_project_retry_does_not_leak_stale_memory_base_handle(
     client: AsyncClient, active_user, logged_in_headers, basic_case, monkeypatch
 ):

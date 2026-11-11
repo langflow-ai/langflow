@@ -2348,7 +2348,9 @@ async def delete_project(
         if attempt == 0:
             target = project
         else:
-            await session.refresh(current_user)
+            # An API-key caller is a detached snapshot, which the rollback does not expire.
+            if isinstance(current_user, User) and current_user in session:
+                await session.refresh(current_user)
             target = await _load_project()
         if target is None:
             return

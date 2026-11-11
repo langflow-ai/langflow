@@ -16,6 +16,7 @@ from langflow.services.evaluations import csv_io, dataset_service
 from langflow.services.evaluations.access import ensure_dataset_create, load_eval_dataset
 from langflow.services.evaluations.examples import EXAMPLES, find_example
 from langflow.services.evaluations.schemas import (
+    MAX_ITEM_IDS_PER_DELETE,
     CsvImportResult,
     CsvPreview,
     DatasetCreate,
@@ -36,7 +37,7 @@ router = APIRouter(prefix="/datasets", tags=["Evals"])
 PageParam = Annotated[int, Query(ge=1)]
 SizeParam = Annotated[int, Query(ge=1, le=200)]
 # Tables that page on the client load a whole dataset or run (both capped at a few thousand rows).
-LargeSizeParam = Annotated[int, Query(ge=1, le=5000)]
+LargeSizeParam = Annotated[int, Query(ge=1, le=MAX_ITEM_IDS_PER_DELETE)]
 SearchParam = Annotated[str | None, Query(max_length=200)]
 
 

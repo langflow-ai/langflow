@@ -27,6 +27,8 @@ SCORER_CONFIG_MAX_CHARS = 16000
 TEXT_SCORER_CONFIG_KEYS = frozenset({"case_sensitive"})
 MAX_SCORERS = 10
 MAX_ITEMS_PER_REQUEST = 500
+# A delete takes every id the item list can return in one page, so "select all, delete" works in one call.
+MAX_ITEM_IDS_PER_DELETE = 5000
 MAX_MODEL_OVERRIDES = 50
 MAX_MODEL_VARIANTS = 8
 MODEL_SELECTION_MAX_CHARS = 8000
@@ -105,7 +107,7 @@ class DatasetItemRead(BaseModel):
 
 
 class DatasetItemsDelete(BaseModel):
-    ids: list[UUID] = Field(min_length=1, max_length=MAX_ITEMS_PER_REQUEST)
+    ids: list[UUID] = Field(min_length=1, max_length=MAX_ITEM_IDS_PER_DELETE)
 
 
 class CsvPreview(BaseModel):

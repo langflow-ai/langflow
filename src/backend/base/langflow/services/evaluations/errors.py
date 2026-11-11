@@ -12,3 +12,7 @@ class EvalsConflictError(EvalsError):
 
 class EvalsValidationError(EvalsError):
     """The request is well-formed but cannot be executed, e.g. an unsupported flow (422)."""
+
+
+class EvalsDatabaseBusyError(EvalsError):
+    """SQLite already waited out its busy timeout on another writer; retrying would only wait again (503)."""

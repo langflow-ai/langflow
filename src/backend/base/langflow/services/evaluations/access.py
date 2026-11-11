@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
+from sqlmodel import select
 
 from langflow.services.authorization import DatasetAction, FlowAction, ensure_dataset_permission, ensure_flow_permission
 from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
@@ -45,6 +46,9 @@ async def load_eval_dataset(session: AsyncSession, user: User, dataset_id: UUID,
     dataset = await authorized_or_owner_scoped(
         session, Dataset, id_column=Dataset.id, resource_id=dataset_id, owner_column=Dataset.user_id, owner_id=user.id
     )
+    if dataset is None and user.is_superuser:
+        # The OSS floor is owner or superuser; the permission check below still has the last word.
+        dataset = (await session.exec(select(Dataset).where(Dataset.id == dataset_id))).first()
     if dataset is None:
         msg = "Dataset not found"
         raise EvalsNotFoundError(msg)

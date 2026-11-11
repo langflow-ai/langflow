@@ -1,5 +1,6 @@
+import asyncio
 from urllib.parse import quote
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from langflow.services.deps import session_scope
@@ -70,6 +71,32 @@ class TestDatasetCrud:
         response = await client.get(f"api/v1/datasets/{uuid4()}", headers=logged_in_headers)
         assert response.status_code == 404
 
+    async def test_should_let_a_superuser_read_and_duplicate_another_users_dataset(
+        self, client, logged_in_headers_super_user, user_two
+    ):
+        from langflow.services.database.models.evaluation import Dataset, DatasetItem
+
+        async with session_scope() as session:
+            theirs = Dataset(user_id=user_two.id, name="evl-ds-priv")
+            session.add(theirs)
+            await session.flush()
+            session.add_all(
+                [DatasetItem(dataset_id=theirs.id, position=i, input={"text": t}) for i, t in enumerate("ab")]
+            )
+            theirs_id = str(theirs.id)
+
+        read = await client.get(f"api/v1/datasets/{theirs_id}", headers=logged_in_headers_super_user)
+        items = await client.get(f"api/v1/datasets/{theirs_id}/items", headers=logged_in_headers_super_user)
+        copy = await client.post(f"api/v1/datasets/{theirs_id}/duplicate", headers=logged_in_headers_super_user)
+
+        assert read.status_code == 200
+        assert items.json()["total"] == 2
+        assert copy.status_code == 201, copy.text
+        assert (copy.json()["name"], copy.json()["item_count"]) == ("evl-ds-priv (copy)", 2)
+        async with session_scope() as session:
+            copied = await session.get(Dataset, UUID(copy.json()["id"]))
+            assert copied.user_id != user_two.id
+
 
 class TestDatasetItems:
     async def test_should_add_edit_delete_and_bump_revision(self, client, logged_in_headers):
@@ -95,6 +122,29 @@ class TestDatasetItems:
         after = (await client.get(f"api/v1/datasets/{dataset['id']}", headers=logged_in_headers)).json()
         assert after["item_count"] == 1
         assert after["revision"] > dataset["revision"]
+
+    async def test_should_delete_more_items_than_one_add_request_holds(self, client, logged_in_headers):
+        dataset = await create_dataset(client, logged_in_headers, "big", [(f"q{i}", None) for i in range(999)])
+        page = await client.get(f"api/v1/datasets/{dataset['id']}/items?size=5000", headers=logged_in_headers)
+        ids = [item["id"] for item in page.json()["items"]]
+
+        removed = await client.post(
+            f"api/v1/datasets/{dataset['id']}/items/delete", json={"ids": ids}, headers=logged_in_headers
+        )
+
+        assert removed.status_code == 200, removed.text
+        assert removed.json() == {"deleted": 999}
+
+    async def test_should_reject_a_delete_larger_than_one_item_page(self, client, logged_in_headers):
+        dataset = await create_dataset(client, logged_in_headers, "huge-delete", [])
+
+        response = await client.post(
+            f"api/v1/datasets/{dataset['id']}/items/delete",
+            json={"ids": [str(uuid4()) for _ in range(5001)]},
+            headers=logged_in_headers,
+        )
+
+        assert response.status_code == 422
 
     async def test_should_reject_an_empty_input(self, client, logged_in_headers):
         dataset = await create_dataset(client, logged_in_headers, "strict", [])
@@ -235,7 +285,8 @@ class TestDatasetExamples:
 
     async def test_should_hide_another_users_dataset_from_example_fill(self, client, logged_in_headers, user_two):
         created = await client.post("api/v1/datasets/", json={"name": "Private"}, headers=logged_in_headers)
-        login = await client.post("api/v1/login", data={"username": user_two.username, "password": "hashed_password"})
+        credentials = {"username": user_two.username, "password": "hashed_password"}  # pragma: allowlist secret
+        login = await client.post("api/v1/login", data=credentials)
         other_headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
 
         response = await client.post(
@@ -250,3 +301,60 @@ class TestDatasetExamples:
         response = await client.post(f"api/v1/datasets/{created.json()['id']}/examples/nope", headers=logged_in_headers)
 
         assert response.status_code == 404
+
+
+def _sqlite_lock_error():
+    import sqlite3
+
+    from sqlalchemy.exc import OperationalError
+
+    return OperationalError("INSERT INTO dataset_item ...", {}, sqlite3.OperationalError("database is locked"))
+
+
+class TestDatabaseBusy:
+    async def test_should_retry_a_write_that_lost_a_snapshot_race(self, client, logged_in_headers, monkeypatch):
+        from langflow.services.evaluations import dataset_service
+
+        dataset = await create_dataset(client, logged_in_headers, "busy-once", [])
+        real_add = dataset_service.add_items
+        calls = {"count": 0}
+
+        async def lose_once(*args, **kwargs):
+            calls["count"] += 1
+            if calls["count"] == 1:
+                raise _sqlite_lock_error()
+            return await real_add(*args, **kwargs)
+
+        monkeypatch.setattr(dataset_service, "add_items", lose_once)
+
+        response = await client.post(
+            f"api/v1/datasets/{dataset['id']}/items", json={"items": [{"input": "x"}]}, headers=logged_in_headers
+        )
+
+        assert response.status_code == 201, response.text
+        assert calls["count"] == 2
+
+    async def test_should_answer_503_at_once_when_another_writer_held_the_lock(
+        self, client, logged_in_headers, monkeypatch
+    ):
+        from langflow.api.v1 import evals_errors
+        from langflow.services.evaluations import dataset_service
+
+        dataset = await create_dataset(client, logged_in_headers, "busy-long", [])
+        calls = {"count": 0}
+
+        async def wait_then_fail(*_args, **_kwargs):
+            calls["count"] += 1
+            await asyncio.sleep(0.05)
+            raise _sqlite_lock_error()
+
+        monkeypatch.setattr(evals_errors, "LOCK_WAIT_GIVE_UP_SECONDS", 0.01)
+        monkeypatch.setattr(dataset_service, "add_items", wait_then_fail)
+
+        response = await client.post(
+            f"api/v1/datasets/{dataset['id']}/items", json={"items": [{"input": "x"}]}, headers=logged_in_headers
+        )
+
+        assert response.status_code == 503
+        assert response.headers["retry-after"] == "1"
+        assert calls["count"] == 1
