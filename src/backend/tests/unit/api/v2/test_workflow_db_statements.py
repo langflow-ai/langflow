@@ -192,6 +192,10 @@ _ROUND_TRIPS = {
 # Execution reloads key, owner, and flow together in one additional checkout.
 _JOB_KEY_AUTHORIZATION_ROUND_TRIPS = {"sync": (4, 1), "stream": (5, 2)}
 
+# Shared maintenance is checked at request entry, hook admission, and hook start.
+# Each check uses a fresh read-only session so pods see each other's changes.
+_MAINTENANCE_ROUND_TRIPS = (3, 3)
+
 
 def _assert_round_trips(recorder: _Recorder, expected: tuple[int, int], *, maintenance_reads: int) -> None:
     # Every admission reads the shared flag through its own read-only session.

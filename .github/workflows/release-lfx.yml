@@ -126,11 +126,22 @@ jobs:
       - name: Set up Python preview builds
         if: matrix.python-version == '3.15'
         uses: ./.github/actions/setup-python-preview
+      # The component compatibility tests read flows saved on these releases from their tags.
+      # --force because v1.13.0 still moves until 1.13 is final.
+      - name: Fetch source release tags
+        run: git fetch --depth=1 --force origin tag v1.12.6 tag v1.13.0
 
       - name: Run LFX tests
         run: |
           cd src/lfx
-          make test
+          make test args="--deselect=tests/unit/upgrade/test_component_compat.py::test_source_release_statuses"
+
+      - name: Enforce exact historical LFX pins
+        run: >-
+          uv run --project src/lfx --no-sync python scripts/ci/historical_compatibility_gate.py
+          --ledger scripts/ci/historical_compatibility_limitations.json --output src/lfx/historical-pins.json
+        env:
+          DO_NOT_TRACK: true
 
       - name: Test CLI installation
         run: |
