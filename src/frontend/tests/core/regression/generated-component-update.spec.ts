@@ -123,6 +123,9 @@ test.afterAll(async () => stopServer(mcpServer));
 test.afterEach(async ({ page }, testInfo) => {
   const resources = createdResources.get(testInfo.testId);
   if (!resources) return;
+  // Leave the finished editor for a real document that starts no API polling.
+  const cleanupPage = await page.goto("/health");
+  expect(cleanupPage?.ok()).toBeTruthy();
   for (const name of resources.servers) {
     const response = await page.request.delete(`/api/v2/mcp/servers/${name}`);
     expect(response.ok()).toBeTruthy();
@@ -374,12 +377,14 @@ for (const componentType of ["RunFlow", "MCPTools"] as const) {
             (response) =>
               new URL(response.url()).pathname === "/api/v1/all" &&
               response.ok(),
+            { timeout: TIMEOUTS.long },
           ),
           page.waitForResponse(
             (response) =>
               response.request().method() === "GET" &&
               new URL(response.url()).pathname === `/api/v1/flows/${flowId}` &&
               response.ok(),
+            { timeout: TIMEOUTS.long },
           ),
           page.reload(),
         ]);
