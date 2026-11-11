@@ -45,10 +45,11 @@ def evaluate_decision(
 ) -> DecisionResult:
     """Authorize the canonical catalog identity before resolving credentials or invoking HTTP."""
     if isinstance(model, list):
-        if len(model) != 1:
+        if len(model) > 1:
             msg = "Pick one Decision Model."
             raise DecisionConfigurationError(msg)
-        model = model[0]
+        # An empty field, such as one cleared because its model was switched off, falls to "Pick a".
+        model = model[0] if model else None
     if not isinstance(model, dict):
         msg = "Pick a Decision Model."
         raise DecisionConfigurationError(msg)
@@ -71,8 +72,12 @@ def evaluate_decision(
     if provider is None:
         msg = "The Decision Model's provider isn't available here. Pick another Decision Model."
         raise DecisionConfigurationError(msg)
-    # Flow-supplied capabilities and endpoints are not authoritative. As for a language model, a run
-    # checks policy and the catalog, not Model Providers' on/off switches: those only shape the picker.
+    # A decision model sends the flow's messages to its provider, so a model the user switched off in
+    # Model Providers never runs, even from a flow saved before it was switched off.
+    if unified_models.is_decision_model_switched_off(user_id, provider, model_name):
+        msg = f"{model_name} is switched off in Model Providers. Turn it on there, or pick another Decision Model."
+        raise DecisionConfigurationError(msg)
+    # Flow-supplied capabilities and endpoints are not authoritative.
     choices = unified_models.get_decision_model_options(provider_policy=policy, require_configured=False)
     selected = next((row for row in choices if row["provider"] == provider and row["name"] == model_name), None)
     if selected is None:

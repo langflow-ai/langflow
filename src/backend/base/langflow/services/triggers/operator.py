@@ -112,7 +112,7 @@ async def _run(
     apply: Callable[[Trigger, _Audit], Awaitable[None]],
     audit_action: str,
     actor_id: UUID,
-    on_refusal: Callable[[UUID, str], Awaitable[None]] | None = None,
+    on_refusal: Callable[[UUID, ValueError], Awaitable[None]] | None = None,
 ) -> TriggerBulkResult:
     changed: list[UUID] = []
     unchanged: list[UUID] = []
@@ -137,7 +137,7 @@ async def _run(
                 # enable-time refusal, after dropping all admission locks.
                 await session.rollback()
                 if on_refusal is not None:
-                    await on_refusal(trigger_id, str(exc))
+                    await on_refusal(trigger_id, exc)
                 failed.append(TriggerBulkFailure(trigger_id=trigger_id, detail=str(exc)))
                 continue
             if row is None or not eligible(row):
@@ -155,7 +155,7 @@ async def _run(
                     # refused resume must also succeed with its required audit.
                     await session.rollback()
                     if on_refusal is not None:
-                        await on_refusal(trigger_id, str(exc))
+                        await on_refusal(trigger_id, exc)
                     failed.append(TriggerBulkFailure(trigger_id=trigger_id, detail=str(exc)))
                     continue
         except Exception:  # noqa: BLE001 - one trigger must not stop an incident response
@@ -207,18 +207,23 @@ async def bulk_resume(
         # records that failure on the trigger, as it does for the owner's resume.
         await service.activate_push_source(session, row=enabled)
 
-    async def release(trigger_id: UUID, detail: str) -> None:
+    async def release(trigger_id: UUID, refusal: ValueError) -> None:
         """The operator released it, so it must stop reading as paused by an administrator."""
+        from langflow.services.triggers.policy import TriggerPolicyError, TriggerPolicyPurpose, stage_policy_denial
+
         row = await _current(session, trigger_id, lock=True)
         if row is None or not _resumable(row):
             await session.rollback()
             return
         row.admin_paused_at = None
+        detail = str(refusal)
         row.last_error = f"An administrator resumed this trigger, but it could not start: {detail}"
         session.add(row)
         audit = _Audit(AUDIT_ADMIN_RESUME, actor_id=actor_id, row=row)
         audit.entry["details"].update(outcome="enable_refused", reason=detail)
         audit.stage(session)
+        if isinstance(refusal, TriggerPolicyError):
+            stage_policy_denial(session, row=row, purpose=TriggerPolicyPurpose.ENABLE, actor_user_id=actor_id)
         await session.commit()
 
     return await _run(

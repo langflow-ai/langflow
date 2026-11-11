@@ -144,6 +144,7 @@ async def replace_model_provider_policy_state(
         # the integration ceiling and its action deny-list.
         approved_integration_provider_ids=bundle.approved_integration_provider_ids,
         blocked_integration_action_keys=bundle.blocked_integration_action_keys,
+        approved_trigger_kinds=bundle.approved_trigger_kinds,
         actor_user_id=actor_user_id,
         reason=reason,
     )

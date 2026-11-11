@@ -116,6 +116,14 @@ describe("SIDEBAR_BUNDLES", () => {
   });
 });
 
+it("uses the Salesforce logo for its integration palette group", () => {
+  expect(SIDEBAR_BUNDLES).toContainEqual({
+    display_name: "Salesforce",
+    name: "salesforce",
+    icon: "Salesforce",
+  });
+});
+
 it("uses the WhatsApp logo for its integration palette group", () => {
   expect(SIDEBAR_BUNDLES).toContainEqual({
     display_name: "WhatsApp",
@@ -153,5 +161,13 @@ it("uses the Telegram logo for its integration palette group", () => {
     display_name: "Telegram",
     name: "telegram",
     icon: "Telegram",
+  });
+});
+
+it("uses the Discord logo for its integration palette group", () => {
+  expect(SIDEBAR_BUNDLES).toContainEqual({
+    display_name: "Discord",
+    name: "discord",
+    icon: "discord",
   });
 });
