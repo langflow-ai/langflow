@@ -120,8 +120,24 @@ class InProcessExecutor:
                 # Keep the trusted caller when the worker starts this task,
                 # independently of the context in which the pool was created.
                 while True:
+                    # stop() can begin after this worker claimed the job above. Creating the
+                    # task would then run it unwatched while the loop is torn down, so the
+                    # closed check has to happen BEFORE create_task, not after: create_task
+                    # schedules the coroutine immediately and its first statement runs before
+                    # the worker can look at _closed again.
+                    if self._closed:
+                        self._queue.put_nowait((key, coro_factory, caller_id))
+                        self._queue.task_done()
+                        return
                     async with write_admission("task", name="background_start", caller_id=caller_id) as refusal:
                         if refusal is None:
+                            # write_admission is a suspension point, so stop() may have run
+                            # between the check above and here. Re-check before scheduling,
+                            # otherwise the coroutine's first statement still runs.
+                            if self._closed:
+                                self._queue.put_nowait((key, coro_factory, caller_id))
+                                self._queue.task_done()
+                                return
                             task = asyncio.create_task(coro_factory())
                             writing_on(task, name="background_run")
                             break
@@ -133,6 +149,7 @@ class InProcessExecutor:
                 return
             if self._closed:
                 # Shutdown may begin while this worker waits for a job or a pause.
+                task.cancel()
                 self._queue.put_nowait((key, coro_factory, caller_id))
                 self._queue.task_done()
                 return
