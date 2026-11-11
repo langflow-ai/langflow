@@ -7,6 +7,7 @@ import type { APIClassType, APIObjectType } from "../../../src/types/api";
 import type { FlowType, GenericNodeType } from "../../../src/types/flow";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TIMEOUTS } from "../../utils/constants/timeouts";
 import { waitForFlowEditorReady } from "../../utils/flow/wait-for-flow-editor-ready";
 
 const hardFlows = path.resolve(
@@ -122,8 +123,9 @@ test.afterAll(async () => stopServer(mcpServer));
 test.afterEach(async ({ page }, testInfo) => {
   const resources = createdResources.get(testInfo.testId);
   if (!resources) return;
-  // Leaving the canvas closes its flow-event stream before fixture teardown.
-  await page.goto("/all");
+  // Leave the finished editor for a real document that starts no API polling.
+  const cleanupPage = await page.goto("/health");
+  expect(cleanupPage?.ok()).toBeTruthy();
   for (const name of resources.servers) {
     const response = await page.request.delete(`/api/v2/mcp/servers/${name}`);
     expect(response.ok()).toBeTruthy();
@@ -364,10 +366,11 @@ for (const componentType of ["RunFlow", "MCPTools"] as const) {
             state: before,
           });
         await page.reload();
-        await waitForFlowEditorReady(page);
         await expect(page.getByTestId("div-generic-node")).toHaveCount(
           flow.data!.nodes.length,
+          { timeout: TIMEOUTS.long },
         );
+        await waitForFlowEditorReady(page);
         await expect(page.locator(".react-flow__edge")).toHaveCount(
           before.edges.length,
         );
