@@ -409,9 +409,9 @@ async def test_graph_scope_refuses_supplied_foreign_read_and_delete(client):  # 
     assert attacker == []
 
 
-async def test_legacy_chat_memory_requires_matching_ambient_scope(client):  # noqa: ARG001
+async def test_legacy_chat_memory_requires_matching_ambient_scope(client, active_user):  # noqa: ARG001
     victim_flow, own_flow = uuid4(), uuid4()
-    victim_owner, own_owner = uuid4(), uuid4()
+    victim_owner, own_owner = uuid4(), active_user.id
     session_id = "shared-legacy-memory"
     await _store(session_id, victim_flow, victim_owner, "victim")
     await _store(session_id, own_flow, own_owner, "own")
@@ -422,6 +422,7 @@ async def test_legacy_chat_memory_requires_matching_ambient_scope(client):  # no
 
     flow_token = set_current_flow_id(own_flow)
     owner_token = set_current_message_owner_id(own_owner)
+    executor_token = set_current_message_executor_id(own_owner)
     try:
         messages = await memory.aget_messages()
         assert [message.content for message in messages] == ["own"]
@@ -437,6 +438,7 @@ async def test_legacy_chat_memory_requires_matching_ambient_scope(client):  # no
     finally:
         reset_current_flow_id(flow_token)
         reset_current_message_owner_id(owner_token)
+        reset_current_message_executor_id(executor_token)
 
     victim = await aget_messages(session_id=session_id, flow_id=victim_flow, user_id=victim_owner)
     assert [message.text for message in victim] == ["victim"]
@@ -465,7 +467,7 @@ async def test_frozen_memory_uses_serving_end_user_owner(client):  # noqa: ARG00
     assert "bob private history" not in text
 
 
-async def test_frozen_message_store_readback_uses_serving_end_user(client):  # noqa: ARG001
+async def test_frozen_message_store_readback_uses_serving_end_user(client, active_user):  # noqa: ARG001
     """The indexed legacy source still passes graph.user_id, not graph.end_user_id."""
     index = json.loads(files("lfx").joinpath("_assets/component_index.json").read_text())
     code = next(
@@ -476,7 +478,7 @@ async def test_frozen_message_store_readback_uses_serving_end_user(client):  # n
     assert "user_id_scope = graph_user_id" in code
     frozen_class = eval_custom_component_code(code)
 
-    flow_id, executor_id = uuid4(), uuid4()
+    flow_id, executor_id = uuid4(), active_user.id
     session_id = "shared-frozen-store"
     chat_input = ChatInput(_id="frozen_store_input")
     chat_input.set(input_value="alice stored text", should_store_message=False)
@@ -495,9 +497,9 @@ async def test_frozen_message_store_readback_uses_serving_end_user(client):  # n
     assert executor_rows == []
 
 
-async def test_deactivated_message_store_fills_missing_owner_from_graph(client):  # noqa: ARG001
+async def test_deactivated_message_store_fills_missing_owner_from_graph(client, active_user):  # noqa: ARG001
     """Older saved code calls astore_message without user_id, then aget_messages()."""
-    flow_id, executor_id = uuid4(), uuid4()
+    flow_id, executor_id = uuid4(), active_user.id
     owner_id = derive_message_owner_uuid("alice")
     session_id = "shared-deactivated-store"
     message = Message(text="alice deactivated text", sender="User", sender_name="User", session_id=session_id)
@@ -519,9 +521,9 @@ async def test_deactivated_message_store_fills_missing_owner_from_graph(client):
 
 
 @pytest.mark.parametrize("frozen", [False, True])
-async def test_nested_chat_output_copies_child_message_into_parent_scope(client, frozen):  # noqa: ARG001
+async def test_nested_chat_output_copies_child_message_into_parent_scope(client, frozen, active_user):  # noqa: ARG001
     """Saved Chat Output source overwrites flow_id but keeps the child row's ID."""
-    child_flow, parent_flow, owner_id = uuid4(), uuid4(), uuid4()
+    child_flow, parent_flow, owner_id = uuid4(), uuid4(), active_user.id
     session_id = f"nested-output-{frozen}"
     child = (
         await aadd_messages(
@@ -558,9 +560,9 @@ async def test_nested_chat_output_copies_child_message_into_parent_scope(client,
 
 
 @pytest.mark.parametrize("persist_messages", [True, False])
-async def test_run_flow_child_inherits_end_user_and_persistence(client, persist_messages):  # noqa: ARG001
+async def test_run_flow_child_inherits_end_user_and_persistence(client, persist_messages, active_user):  # noqa: ARG001
     """A Run Flow child and its parent store replies under the same end user."""
-    child_flow, parent_flow, service_user = uuid4(), uuid4(), uuid4()
+    child_flow, parent_flow, service_user = uuid4(), uuid4(), active_user.id
     session_id = f"run-flow-end-user-{persist_messages}"
     owner_id = derive_message_owner_uuid("alice")
 
@@ -639,8 +641,8 @@ async def test_graph_write_rejects_foreign_flow_and_owner(client):  # noqa: ARG0
 
 
 @pytest.mark.parametrize("foreign_dimension", ["flow", "owner"])
-async def test_graph_id_operations_cannot_modify_foreign_messages(client, foreign_dimension):  # noqa: ARG001
-    own_flow, own_owner = uuid4(), uuid4()
+async def test_graph_id_operations_cannot_modify_foreign_messages(client, foreign_dimension, active_user):  # noqa: ARG001
+    own_flow, own_owner = uuid4(), active_user.id
     foreign_flow = uuid4() if foreign_dimension == "flow" else own_flow
     foreign_owner = uuid4() if foreign_dimension == "owner" else own_owner
     session_id = f"id-scope-{foreign_dimension}"
@@ -662,6 +664,7 @@ async def test_graph_id_operations_cannot_modify_foreign_messages(client, foreig
 
     flow_token = set_current_flow_id(own_flow)
     owner_token = set_current_message_owner_id(own_owner)
+    executor_token = set_current_message_executor_id(own_owner)
     try:
         foreign.text = "overwritten"
         with pytest.raises(ValueError, match="not found"):
@@ -690,6 +693,7 @@ async def test_graph_id_operations_cannot_modify_foreign_messages(client, foreig
     finally:
         reset_current_flow_id(flow_token)
         reset_current_message_owner_id(owner_token)
+        reset_current_message_executor_id(executor_token)
 
     own_rows = await aget_messages(session_id=session_id, flow_id=own_flow, user_id=own_owner)
     foreign_rows = await aget_messages(session_id=session_id, flow_id=foreign_flow, user_id=foreign_owner)

@@ -6,6 +6,8 @@ import runpy
 import sys
 from pathlib import Path
 
+import pytest
+from packaging.markers import Marker
 from packaging.requirements import Requirement
 from packaging.version import Version
 
@@ -133,23 +135,42 @@ def test_published_extras_enforce_patched_gitpython_floor() -> None:
     assert generator["PROVIDER_DEPS"]["git"] == bundle_extras["git"]
 
 
-def test_workspace_constraints_enforce_patched_pymongo_and_tornado() -> None:
-    """Check the MongoDB and Tornado fixes in constraints and locked versions."""
+def test_workspace_constraints_enforce_patched_pymongo() -> None:
     constraints = _load_pyproject("pyproject.toml")["tool"]["uv"]["constraint-dependencies"]
 
     pymongo = _requirement(constraints, "pymongo")
     _assert_floor(pymongo, "4.18.3")
     _assert_specifier(pymongo, "<", "5.0.0")
 
-    _assert_floor(_requirement(constraints, "tornado"), "6.5.10")
+    with (REPO_ROOT / "uv.lock").open("rb") as lock_file:
+        packages = tomllib.load(lock_file)["package"]
+    versions = [Version(package["version"]) for package in packages if package["name"] == "pymongo"]
+    assert versions
+    assert min(versions) >= Version("4.18.3")
+
+
+@pytest.mark.parametrize(("python_version", "minimum"), [("3.11", "6.6"), ("3.14", "6.6"), ("3.15", "6.6")])
+def test_tornado_floor_and_lock_match_supported_python(python_version: str, minimum: str) -> None:
+    env = {"python_version": python_version, "python_full_version": python_version + ".0"}
+    constraints = _load_pyproject("pyproject.toml")["tool"]["uv"]["constraint-dependencies"]
+    applicable = [
+        req
+        for req in map(Requirement, constraints)
+        if req.name == "tornado" and (not req.marker or req.marker.evaluate(env))
+    ]
+    assert len(applicable) == 1
+    _assert_floor(applicable[0], minimum)
 
     with (REPO_ROOT / "uv.lock").open("rb") as lock_file:
         packages = tomllib.load(lock_file)["package"]
-    for name, minimum in (("pymongo", "4.18.3"), ("tornado", "6.5.10")):
-        matches = [package for package in packages if package["name"] == name]
-        assert matches
-        for package in matches:
-            assert Version(package["version"]) >= Version(minimum)
+    versions = [
+        Version(pkg["version"])
+        for pkg in packages
+        if pkg["name"] == "tornado"
+        and (not pkg.get("resolution-markers") or any(Marker(m).evaluate(env) for m in pkg["resolution-markers"]))
+    ]
+    assert len(versions) == 1
+    assert versions[0] >= Version(minimum)
 
 
 def test_published_packages_enforce_patched_pymongo_floor() -> None:
@@ -203,7 +224,7 @@ def test_workspace_security_overrides_enforce_current_python_floors() -> None:
     overrides = project["tool"]["uv"]["override-dependencies"]
 
     oauthlib = _requirement(constraints, "oauthlib")
-    _assert_floor(oauthlib, "4.0.0")
+    _assert_floor(oauthlib, "4.0.1")
     _assert_specifier(oauthlib, "<", "5.0.0")
 
     pyjwt = _requirement(overrides, "PyJWT")
@@ -226,7 +247,7 @@ def test_workspace_security_overrides_enforce_current_python_floors() -> None:
     with (REPO_ROOT / "uv.lock").open("rb") as lock_file:
         packages = tomllib.load(lock_file)["package"]
     for name, minimum in (
-        ("oauthlib", "4.0.0"),
+        ("oauthlib", "4.0.1"),
         ("pyjwt", "2.15.1"),
         ("urllib3", "2.8.0"),
         ("litellm", "1.103.10"),
@@ -249,11 +270,11 @@ def test_published_packages_enforce_current_python_floors() -> None:
     google_dependencies = _load_pyproject("src/bundles/google/pyproject.toml")["project"]["dependencies"]
 
     oauthlib = _requirement(root_dependencies, "oauthlib")
-    _assert_floor(oauthlib, "4.0.0")
+    _assert_floor(oauthlib, "4.0.1")
     _assert_specifier(oauthlib, "<", "5.0.0")
 
     google_oauthlib = _requirement(google_dependencies, "oauthlib")
-    _assert_floor(google_oauthlib, "4.0.0")
+    _assert_floor(google_oauthlib, "4.0.1")
     _assert_specifier(google_oauthlib, "<", "5.0.0")
 
     for requirements in (base_project["dependencies"], lfx_dependencies):
@@ -287,3 +308,11 @@ def test_published_packages_enforce_current_python_floors() -> None:
 
     generator = runpy.run_path(str(REPO_ROOT / "scripts/migrate/consolidate_bundles.py"))
     assert generator["PROVIDER_DEPS"]["cuga"] == bundle_extras["cuga"]
+
+
+def test_standalone_lfx_bundles_extra_requires_patched_legacy_metadata() -> None:
+    """Standalone bundle installs must retain the published PyMongo security floor."""
+    extras = _load_pyproject("src/lfx/pyproject.toml")["project"]["optional-dependencies"]
+    legacy_bundle = _requirement(extras["bundles"], "lfx-bundles")
+    assert "1.1.40" not in legacy_bundle.specifier
+    assert "1.1.41" in legacy_bundle.specifier

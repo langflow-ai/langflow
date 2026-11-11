@@ -17,10 +17,14 @@ from __future__ import annotations
 import asyncio
 import contextlib
 from collections.abc import Awaitable, Callable
+from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
 
-from langflow.api.utils.migration_pause import is_paused, writing_on
+from langflow.api.utils.migration_pause import admitted_maintenance_caller, write_admission, writing_on
+
+if TYPE_CHECKING:
+    from uuid import UUID
 
 CoroFactory = Callable[[], Awaitable[None]]
 
@@ -31,7 +35,7 @@ class InProcessExecutor:
     def __init__(self, max_concurrency: int = 5) -> None:
         """Initialize the queue, worker registry, and concurrency limit."""
         self._max_concurrency = max(int(max_concurrency), 1)
-        self._queue: asyncio.Queue[tuple[str, CoroFactory]] = asyncio.Queue()
+        self._queue: asyncio.Queue[tuple[str, CoroFactory, UUID | None]] = asyncio.Queue()
         self._workers: list[asyncio.Task] = []
         # Maps a job key to its in-flight task so cancel() can reach it.
         self._in_flight: dict[str, asyncio.Task] = {}
@@ -53,7 +57,7 @@ class InProcessExecutor:
         # otherwise leave the worker's ``await task`` in cancellation limbo, so we
         # do not rely on cancellation propagating through the worker. Awaiting the
         # job tasks here lets each one's shielded terminal reconcile finish BEFORE
-        # teardown — without it a reconcile write races a closing DB engine and a
+        # teardown 鈥?without it a reconcile write races a closing DB engine and a
         # "Task was destroyed but it is pending" warning is logged.
         # return_exceptions swallows the CancelledError each task raises so one
         # cancel cannot mask the others.
@@ -75,7 +79,7 @@ class InProcessExecutor:
         if self._closed:
             msg = "Executor is closed"
             raise RuntimeError(msg)
-        await self._queue.put((key, coro_factory))
+        await self._queue.put((key, coro_factory, admitted_maintenance_caller()))
 
     async def cancel(self, key: str) -> bool:
         """Cancel the in-flight task for ``key``; return False if it is absent."""
@@ -91,7 +95,7 @@ class InProcessExecutor:
         # A bare ``await task`` relies on the task's own wakeup of its awaiter. On
         # Python 3.10, when stop() cancels this worker while the job task is also
         # finishing, that wakeup is lost: the job task completes but the worker is
-        # never rescheduled, so the event loop idles forever in select(None) — a
+        # never rescheduled, so the event loop idles forever in select(None) 鈥?a
         # hard deadlock in stop(). A done-callback + Event is immune (it is the
         # same mechanism stop()'s own asyncio.gather uses, which never hangs).
         done = asyncio.Event()
@@ -109,28 +113,31 @@ class InProcessExecutor:
         # it would run unwatched while the event loop is torn down.
         while not self._closed:
             try:
-                key, coro_factory = await self._queue.get()
+                key, coro_factory, caller_id = await self._queue.get()
             except asyncio.CancelledError:
                 return
             try:
-                # A paused instance starts nothing: the job waits here, still queued, until the pause ends.
-                # The pause is a file that another process writes, so there is no event to wait on.
-                while is_paused():  # noqa: ASYNC110
+                # Keep the trusted caller when the worker starts this task,
+                # independently of the context in which the pool was created.
+                while True:
+                    async with write_admission("task", name="background_start", caller_id=caller_id) as refusal:
+                        if refusal is None:
+                            task = asyncio.create_task(coro_factory())
+                            writing_on(task, name="background_run")
+                            break
                     await asyncio.sleep(1)
             except asyncio.CancelledError:
                 # stop() arrived during the pause. The job goes back, so the next start() still runs it.
-                self._queue.put_nowait((key, coro_factory))
+                self._queue.put_nowait((key, coro_factory, caller_id))
                 self._queue.task_done()
                 return
             if self._closed:
                 # Shutdown may begin while this worker waits for a job or a pause.
-                self._queue.put_nowait((key, coro_factory))
+                self._queue.put_nowait((key, coro_factory, caller_id))
                 self._queue.task_done()
                 return
-            task = asyncio.create_task(coro_factory())
             # A migration pause waits for the task and not only for the job's status: a run that is
             # told to stop is marked as cancelled at once, and still writes until its task ends.
-            writing_on(task, name="background_run")
             self._in_flight[key] = task
             try:
                 await self._await_task(task)
