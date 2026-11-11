@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { DatasetExample } from "@/controllers/API/queries/evals/types";
 import {
   useAddExampleToDataset,
   useCreateDatasetFromExample,
@@ -7,6 +8,7 @@ import {
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAlertStore from "@/stores/alertStore";
 import { extractApiErrorMessages } from "@/utils/apiError";
+import { exampleLabels } from "../utils/example-labels";
 
 /**
  * Adds a ready-made dataset: with `datasetId` its rows fill that dataset, otherwise a new
@@ -26,18 +28,21 @@ export function useAddExampleDataset(datasetId?: string) {
     setErrorData({ title, list: extractApiErrorMessages(error) });
   const settle = () => setPendingKey(null);
 
-  const add = (key: string) => {
+  const add = (example: DatasetExample) => {
     if (pendingKey) return;
+    const { key } = example;
+    // The dataset takes the name and description the user reads; the rows keep the example's text.
+    const labels = exampleLabels(t, example);
     setPendingKey(key);
     if (datasetId) {
       fillFromExample.mutate(
-        { key },
+        { key, description: labels.description },
         { onError: fail(t("evals.examples.fillError")), onSettled: settle },
       );
       return;
     }
     createFromExample.mutate(
-      { key },
+      { key, ...labels },
       {
         onSuccess: (dataset) => navigate(`/assets/datasets/${dataset.id}`),
         onError: fail(t("evals.datasets.createError")),

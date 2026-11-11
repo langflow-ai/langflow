@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useGetDatasetExamples } from "@/controllers/API/queries/evals/use-datasets";
 import { useAddExampleDataset } from "../hooks/use-add-example-dataset";
+import { exampleLabels } from "../utils/example-labels";
 import { EXAMPLE_ICONS } from "./DatasetExamples";
 
 /** The examples again, from the toolbar, once the page already lists datasets. */
@@ -35,7 +36,7 @@ export default function ExamplesMenu() {
         {examples.map((example) => (
           <DropdownMenuItem
             key={example.key}
-            onSelect={() => add(example.key)}
+            onSelect={() => add(example)}
             className="flex items-start gap-2"
             data-testid={`dataset-example-menu-${example.key}`}
           >
@@ -45,7 +46,7 @@ export default function ExamplesMenu() {
               className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
             />
             <span className="flex flex-col">
-              <span className="text-sm">{example.name}</span>
+              <span className="text-sm">{exampleLabels(t, example).name}</span>
               <span className="text-xs text-muted-foreground">
                 {t("evals.examples.items", { count: example.item_count })}
               </span>

@@ -11,7 +11,7 @@ from sqlmodel import col, select
 
 from langflow.services.database.models.evaluation import Dataset, DatasetItem
 from langflow.services.evaluations.errors import EvalsConflictError, EvalsNotFoundError
-from langflow.services.evaluations.schemas import DatasetItemRead, DatasetRead
+from langflow.services.evaluations.schemas import DatasetItemRead, DatasetRead, ExampleLabels
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -184,11 +184,13 @@ async def duplicate_dataset(session: AsyncSession, dataset: Dataset, owner_id: U
     return copy
 
 
-async def create_from_example(session: AsyncSession, user_id: UUID, example: DatasetExample) -> Dataset:
+async def create_from_example(
+    session: AsyncSession, user_id: UUID, example: DatasetExample, labels: ExampleLabels | None = None
+) -> Dataset:
     dataset = Dataset(
         user_id=user_id,
-        name=await _unique_name(session, user_id, example.name),
-        description=example.description,
+        name=await _unique_name(session, user_id, (labels and labels.name) or example.name),
+        description=(labels and labels.description) or example.description,
     )
     session.add(dataset)
     await _flush_or_conflict(session, dataset.name)
@@ -196,10 +198,12 @@ async def create_from_example(session: AsyncSession, user_id: UUID, example: Dat
     return dataset
 
 
-async def add_example(session: AsyncSession, dataset: Dataset, example: DatasetExample) -> Dataset:
+async def add_example(
+    session: AsyncSession, dataset: Dataset, example: DatasetExample, labels: ExampleLabels | None = None
+) -> Dataset:
     """Append an example's rows; a dataset without a description takes the example's."""
     if not dataset.description:
-        dataset.description = example.description
+        dataset.description = (labels and labels.description) or example.description
     await add_items(session, dataset, example.rows, source="manual")
     return dataset
 

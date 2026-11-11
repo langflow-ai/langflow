@@ -3,6 +3,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { useGetDatasetExamples } from "@/controllers/API/queries/evals/use-datasets";
 import { cn } from "@/utils/utils";
 import { useAddExampleDataset } from "../hooks/use-add-example-dataset";
+import { exampleLabels } from "../utils/example-labels";
 
 export const EXAMPLE_ICONS: Record<string, string> = {
   "support-triage": "Tags",
@@ -37,7 +38,7 @@ export default function DatasetExamples({ datasetId }: { datasetId?: string }) {
                 type="button"
                 aria-busy={pending}
                 disabled={pendingKey !== null}
-                onClick={() => add(example.key)}
+                onClick={() => add(example)}
                 data-testid={`dataset-example-${example.key}`}
                 className={cn(
                   "flex w-full flex-col gap-2 rounded-lg border px-4 py-3 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed",
@@ -57,10 +58,10 @@ export default function DatasetExamples({ datasetId }: { datasetId?: string }) {
                       pending && "animate-spin motion-reduce:animate-none",
                     )}
                   />
-                  {example.name}
+                  {exampleLabels(t, example).name}
                 </span>
                 <span className="line-clamp-3 text-xs text-muted-foreground">
-                  {example.description}
+                  {exampleLabels(t, example).description}
                 </span>
                 <span className="mt-auto text-xs text-muted-foreground">
                   {t("evals.examples.items", { count: example.item_count })}

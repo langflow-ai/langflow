@@ -240,6 +240,29 @@ class TestDatasetExamples:
         assert first["input"] == "I was charged twice for my subscription this month."
         assert first["expected_output"] == "billing"
 
+    async def test_should_name_an_example_dataset_in_the_callers_language(self, client, logged_in_headers):
+        labels = {"name": "Triagem de chamados", "description": "Classifique cada mensagem."}
+
+        created = await client.post("api/v1/datasets/examples/support-triage", json=labels, headers=logged_in_headers)
+
+        assert created.status_code == 201, created.text
+        assert (created.json()["name"], created.json()["description"]) == (labels["name"], labels["description"])
+        assert created.json()["item_count"] == 12
+
+    async def test_should_describe_a_filled_dataset_in_the_callers_language(self, client, logged_in_headers):
+        dataset_id = (await client.post("api/v1/datasets/", json={"name": "Vazio"}, headers=logged_in_headers)).json()[
+            "id"
+        ]
+
+        filled = await client.post(
+            f"api/v1/datasets/{dataset_id}/examples/grounded-answers",
+            json={"description": "Respostas com base no contexto."},
+            headers=logged_in_headers,
+        )
+
+        assert filled.status_code == 200, filled.text
+        assert (filled.json()["name"], filled.json()["description"]) == ("Vazio", "Respostas com base no contexto.")
+
     async def test_should_pick_a_free_name_when_added_twice(self, client, logged_in_headers):
         await client.post("api/v1/datasets/examples/safety-checks", headers=logged_in_headers)
         again = await client.post("api/v1/datasets/examples/safety-checks", headers=logged_in_headers)

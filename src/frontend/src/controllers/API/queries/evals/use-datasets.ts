@@ -271,34 +271,47 @@ export const useGetDatasetExamples: useQueryFunctionType<
   );
 };
 
+/** The example's key, plus its name and description in the interface language. */
+interface ExampleChoice {
+  key: string;
+  name?: string;
+  description?: string;
+}
+
 export const useCreateDatasetFromExample: useMutationFunctionType<
   undefined,
-  { key: string },
+  ExampleChoice,
   Dataset
 > = (options) => {
   const { mutate } = UseRequestProcessor();
   const invalidate = useInvalidateDatasets();
   return mutate(
     ["useCreateDatasetFromExample"],
-    async ({ key }) =>
-      (await api.post<Dataset>(`${getURL("DATASETS")}/examples/${key}`)).data,
+    async ({ key, name, description }) =>
+      (
+        await api.post<Dataset>(`${getURL("DATASETS")}/examples/${key}`, {
+          name,
+          description,
+        })
+      ).data,
     { retry: false, ...options, onSettled: () => invalidate() },
   );
 };
 
 export const useAddExampleToDataset: useMutationFunctionType<
   { datasetId: string },
-  { key: string },
+  ExampleChoice,
   Dataset
 > = ({ datasetId }, options) => {
   const { mutate } = UseRequestProcessor();
   const invalidate = useInvalidateDatasets();
   return mutate(
     ["useAddExampleToDataset", datasetId],
-    async ({ key }) =>
+    async ({ key, description }) =>
       (
         await api.post<Dataset>(
           `${getURL("DATASETS")}/${datasetId}/examples/${key}`,
+          { description },
         )
       ).data,
     { retry: false, ...options, onSettled: () => invalidate(datasetId) },

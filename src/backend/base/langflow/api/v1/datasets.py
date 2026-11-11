@@ -29,6 +29,7 @@ from langflow.services.evaluations.schemas import (
     DatasetPage,
     DatasetRead,
     DatasetUpdate,
+    ExampleLabels,
     SkippedRow,
 )
 
@@ -85,13 +86,15 @@ async def list_dataset_examples(current_user: CurrentActiveUser) -> list[Dataset
 
 
 @router.post("/examples/{key}", response_model=DatasetRead, status_code=status.HTTP_201_CREATED)
-async def create_dataset_from_example(key: str, current_user: CurrentActiveUser, session: DbSession) -> DatasetRead:
+async def create_dataset_from_example(
+    key: str, current_user: CurrentActiveUser, session: DbSession, labels: ExampleLabels | None = None
+) -> DatasetRead:
     example = find_example(key)
     if example is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No example dataset named {key!r}")
     async with evals_http_errors():
         await ensure_dataset_create(current_user)
-        dataset = await dataset_service.create_from_example(session, current_user.id, example)
+        dataset = await dataset_service.create_from_example(session, current_user.id, example, labels)
     return dataset_service.to_dataset_read(dataset, len(example.rows))
 
 
@@ -163,7 +166,11 @@ async def add_dataset_items(
 
 @router.post("/{dataset_id}/examples/{key}", response_model=DatasetRead)
 async def add_example_to_dataset(
-    dataset_id: UUID, key: str, current_user: CurrentActiveUser, session: DbSession
+    dataset_id: UUID,
+    key: str,
+    current_user: CurrentActiveUser,
+    session: DbSession,
+    labels: ExampleLabels | None = None,
 ) -> DatasetRead:
     example = find_example(key)
     if example is None:
@@ -172,7 +179,7 @@ async def add_example_to_dataset(
     async def operation() -> Dataset:
         dataset = await load_eval_dataset(session, current_user, dataset_id, DatasetAction.WRITE)
         await dataset_service.ensure_idle(session, dataset.id)
-        return await dataset_service.add_example(session, dataset, example)
+        return await dataset_service.add_example(session, dataset, example, labels)
 
     async with evals_http_errors():
         dataset = await evals_write(session, "add_example_to_dataset", operation)

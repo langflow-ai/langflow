@@ -48,6 +48,13 @@ class DatasetCreate(BaseModel):
         return stripped
 
 
+class ExampleLabels(BaseModel):
+    """The example's name and description in the caller's language; the rows keep the example's text."""
+
+    name: str | None = Field(default=None, min_length=1, max_length=DATASET_NAME_MAX_LENGTH)
+    description: str | None = Field(default=None, max_length=2000)
+
+
 class DatasetUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=DATASET_NAME_MAX_LENGTH)
     description: str | None = Field(default=None, max_length=2000)
