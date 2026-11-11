@@ -1,4 +1,4 @@
-const SvgSpecStream = ({ isDark: _isDark, ...props }) => (
+const SvgSpecStream = ({ isDark: _isDark = false, ...props }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     viewBox="236 286 800 580"
