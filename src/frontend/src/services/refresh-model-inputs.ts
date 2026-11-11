@@ -157,12 +157,16 @@ const outputPresentation = ["display_name", "info"] as const;
 
 function refreshState(node: APIClassType | undefined) {
   return {
-    // Field-mount requests populate options and provider-field visibility.
-    // Flow/project identity is checked separately against the captured scope.
+    // Field-mount requests populate options and provider-field visibility and
+    // echo transport hints. These do not represent user edits. Flow/project
+    // identity is checked separately against the captured scope.
     template: mapValues(
       omit(node?.template, [
         "_frontend_node_flow_id",
         "_frontend_node_folder_id",
+        "_frontend_node_id",
+        "_frontend_node_previous_mcp_server",
+        "is_refresh",
       ]),
       (field) =>
         field && typeof field === "object"

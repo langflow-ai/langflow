@@ -338,6 +338,9 @@ async def test_v1_streaming_run_requests_a_streaming_warm_copy(monkeypatch: pyte
     """The V1 streaming flag reaches the warm-copy stream-mode override."""
     from langflow.api.v1 import endpoints
     from langflow.api.v1.schemas import SimplifiedAPIRequest
+    from langflow.services.deps import get_settings_service
+
+    monkeypatch.setattr(get_settings_service().settings, "custom_component_admin_only", False)
 
     captured: dict = {}
     graph = SimpleNamespace(vertices=[], run_id=None)

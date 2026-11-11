@@ -96,6 +96,22 @@ jobs:
           fi
           echo "✅ PR title is complete."
 
+  check-migration-head:
+    name: Check Alembic Migration Head
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Require one migration head
+        run: >-
+          python src/backend/base/langflow/alembic/migration_graph.py
+          src/backend/base/langflow/alembic/versions
+
   check-nightly-status:
     name: Check PyPI Version Update
     runs-on: ubuntu-latest
@@ -323,6 +339,7 @@ jobs:
     with:
       tests_folder: ${{ inputs.frontend-tests-folder }}
       release: ${{ inputs.release || false }}
+      # Pin the default PR runner to a version supported by Playwright 1.60.
       runs-on: ${{ inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-24.04' }}
       ref: ${{ inputs.ref || github.ref }}
   test-docs-build:
@@ -515,6 +532,7 @@ jobs:
     needs:
       [
         validate-pr-title,
+        check-migration-head,
         test-backend,
         test-frontend-unit,
         test-frontend,

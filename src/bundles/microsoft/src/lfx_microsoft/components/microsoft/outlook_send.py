@@ -52,16 +52,27 @@ class OutlookSendComponent(MicrosoftGraphComponent):
             info="Recipient addresses.",
             is_list=True,
             required=True,
+            tool_mode=True,
         ),
-        MessageTextInput(name="cc", display_name="Cc", info="Carbon-copy addresses.", is_list=True),
-        MessageTextInput(name="bcc", display_name="Bcc", info="Blind-carbon-copy addresses.", is_list=True),
-        MessageTextInput(name="subject", display_name="Subject", required=True),
-        MultilineInput(name="body", display_name="Body", required=True),
+        MessageTextInput(
+            name="cc", display_name="Cc", info="Carbon-copy addresses.", is_list=True, tool_mode=True, value=[]
+        ),
+        MessageTextInput(
+            name="bcc",
+            display_name="Bcc",
+            info="Blind-carbon-copy addresses.",
+            is_list=True,
+            tool_mode=True,
+            value=[],
+        ),
+        MessageTextInput(name="subject", display_name="Subject", required=True, tool_mode=True),
+        MultilineInput(name="body", display_name="Body", required=True, tool_mode=True),
         BoolInput(
             name="body_is_html",
             display_name="Body is HTML",
             info="Send the body as HTML instead of plain text.",
             value=False,
+            tool_mode=True,
         ),
         FileInput(
             name="attachments",
@@ -75,6 +86,7 @@ class OutlookSendComponent(MicrosoftGraphComponent):
             display_name="Save to Sent Items",
             value=True,
             advanced=True,
+            tool_mode=True,
         ),
     ]
 

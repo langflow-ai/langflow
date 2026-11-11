@@ -1,3 +1,5 @@
+import pandas as pd
+
 from lfx.custom.custom_component.component import Component
 from lfx.helpers.data import safe_convert
 from lfx.inputs.inputs import BoolInput, HandleInput, MessageTextInput, MultilineInput, TabInput
@@ -126,8 +128,17 @@ class ParserComponent(Component):
 
         lines = []
         if df is not None:
-            for _, row in df.iterrows():
-                formatted_text = self.pattern.format(**row.to_dict())
+            legacy_rows = None
+            # Preserve column types and keep zero-column rows by iterating with the index.
+            for position, row in enumerate(df.itertuples(name=None)):
+                values = dict(zip(df.columns, row[1:], strict=True))
+                if any(value is pd.NA for value in values.values()):
+                    # Match iterrows' coercion for pd.NA without inferring a Series dtype on other rows.
+                    if legacy_rows is None:
+                        legacy_rows = df.to_numpy()
+                    legacy_values = pd.Series(legacy_rows[position], index=df.columns).to_dict()
+                    values = {key: legacy_values[key] if value is pd.NA else value for key, value in values.items()}
+                formatted_text = self.pattern.format(**values)
                 lines.append(formatted_text)
         elif data is not None:
             data_items = data if isinstance(data, list) else [data]

@@ -521,40 +521,48 @@ describe("AddConnectionDialog ownership", () => {
     );
   });
 
-  it("does not offer instance sharing for ServiceNow or retain it from another provider", async () => {
-    mockCreate.mockResolvedValue({
-      ...createdRow("user"),
-      provider_key: "servicenow",
-    });
-    const user = userEvent.setup();
-    render(
-      <AddConnectionDialog
-        open
-        onOpenChange={jest.fn()}
-        providers={[
-          google,
-          { ...google, provider_id: "servicenow", display_name: "ServiceNow" },
-        ]}
-        canCreateInstance
-      />,
-    );
-    await user.click(screen.getByTestId("connection-instance-owned"));
-    await selectProvider(user, "ServiceNow");
-    expect(
-      screen.queryByTestId("connection-instance-owned"),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByText(/cannot be shared with the instance/),
-    ).toBeVisible();
-    await fillDetails(user);
-    await user.click(screen.getByTestId("connection-continue"));
-    expect(mockCreate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        provider_key: "servicenow",
-        ownership_mode: "user",
-      }),
-    );
-  });
+  it.each([
+    ["servicenow", "ServiceNow"],
+    ["salesforce", "Salesforce"],
+  ])(
+    "does not offer instance sharing for %s or retain it from another provider",
+    async (providerId, displayName) => {
+      mockCreate.mockResolvedValue({
+        ...createdRow("user"),
+        provider_key: providerId,
+      });
+      const user = userEvent.setup();
+      render(
+        <AddConnectionDialog
+          open
+          onOpenChange={jest.fn()}
+          providers={[
+            google,
+            { ...google, provider_id: providerId, display_name: displayName },
+          ]}
+          canCreateInstance
+        />,
+      );
+      await user.click(screen.getByTestId("connection-instance-owned"));
+      await selectProvider(user, displayName);
+      expect(
+        screen.queryByTestId("connection-instance-owned"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByText(
+          `${displayName} connections belong to an individual user and cannot be shared with the instance.`,
+        ),
+      ).toBeVisible();
+      await fillDetails(user);
+      await user.click(screen.getByTestId("connection-continue"));
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          provider_key: providerId,
+          ownership_mode: "user",
+        }),
+      );
+    },
+  );
 
   it("reports the authorized row when Done closes the dialog", async () => {
     const pending = createdRow("instance");

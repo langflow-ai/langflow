@@ -165,6 +165,7 @@ class BackgroundExecutionService(Service):
         self._deadline_task: asyncio.Task | None = None
         self._retention_task: asyncio.Task | None = None
         self._lease_expiry_task: asyncio.Task | None = None
+        self._maintenance_recovery_task: asyncio.Task | None = None
         self.set_ready()
 
     @property
@@ -204,13 +205,19 @@ class BackgroundExecutionService(Service):
         self._start_retention_sweep()
 
     async def stop(self) -> None:
-        tasks = (self._deadline_task, self._retention_task, self._lease_expiry_task)
+        tasks = (
+            self._deadline_task,
+            self._retention_task,
+            self._lease_expiry_task,
+            self._maintenance_recovery_task,
+        )
         watchdogs = [task for task in tasks if task is not None]
         for task in watchdogs:
             task.cancel()
         self._deadline_task = None
         self._retention_task = None
         self._lease_expiry_task = None
+        self._maintenance_recovery_task = None
         if watchdogs:
             await asyncio.gather(*watchdogs, return_exceptions=True)
         await self._backend.teardown()
@@ -227,10 +234,14 @@ class BackgroundExecutionService(Service):
         interval = self._settings.background_watchdog_interval_s
 
         async def _loop() -> None:
+            from langflow.api.utils.migration_pause import async_writing
+
             while True:
                 await asyncio.sleep(interval)
                 with contextlib.suppress(Exception):
-                    await self.sweep_input_deadlines()
+                    async with async_writing(name="background_deadlines") as let_in:
+                        if let_in:
+                            await self.sweep_input_deadlines()
 
         self._deadline_task = asyncio.create_task(_loop())
 
@@ -250,9 +261,15 @@ class BackgroundExecutionService(Service):
             return
 
         async def _sweep_after_lease() -> None:
+            from langflow.api.utils.migration_pause import async_writing, writes_paused
+
             await asyncio.sleep(lease_ttl_s)
+            while await writes_paused():  # noqa: ASYNC110
+                await asyncio.sleep(0.1)
             try:
-                await get_job_service().sweep_orphans(lease_ttl_s=lease_ttl_s, require_heartbeat=True)
+                async with async_writing(name="background_lease_expiry") as let_in:
+                    if let_in:
+                        await get_job_service().sweep_orphans(lease_ttl_s=lease_ttl_s, require_heartbeat=True)
             except Exception:  # noqa: BLE001 -- a failed pass must not surface as an unretrieved task error
                 await logger.aexception("Orphan sweep after the startup lease expired failed")
 
@@ -279,6 +296,8 @@ class BackgroundExecutionService(Service):
             return
 
         async def _loop() -> None:
+            from langflow.api.utils.migration_pause import async_writing
+
             job_service = get_job_service()
             delay = _RETENTION_INITIAL_DELAY_S
             while True:
@@ -290,9 +309,12 @@ class BackgroundExecutionService(Service):
                 batches = 0
                 for _ in range(_RETENTION_MAX_BATCHES_PER_TICK):
                     try:
-                        deleted = await job_service.purge_terminal_jobs(
-                            older_than_days=retention_days, limit=_RETENTION_BATCH_SIZE
-                        )
+                        async with async_writing(name="background_retention") as let_in:
+                            if not let_in:
+                                break
+                            deleted = await job_service.purge_terminal_jobs(
+                                older_than_days=retention_days, limit=_RETENTION_BATCH_SIZE
+                            )
                     except Exception:  # noqa: BLE001
                         # Log and stop this tick: a purge that cannot run must be
                         # visible, not silently skipped until the table is huge.
@@ -829,6 +851,23 @@ class BackgroundExecutionService(Service):
 
     # ----------------------------------------------------------- startup sweep
 
+    def _schedule_maintenance_recovery(self) -> None:
+        """Retry interrupted startup work after maintenance ends, with one waiting task."""
+        task = self._maintenance_recovery_task
+        if task is not None and not task.done() and task is not asyncio.current_task():
+            return
+
+        async def recover_after_maintenance() -> None:
+            from langflow.api.utils.migration_pause import writes_paused
+
+            while await writes_paused():  # noqa: ASYNC110
+                await asyncio.sleep(0.1)
+            await self.sweep_orphans_on_startup()
+
+        # A recovering task can observe a new pause in its next sweep. Replace
+        # that current task rather than losing the remaining queued work.
+        self._maintenance_recovery_task = asyncio.create_task(recover_after_maintenance())
+
     async def sweep_orphans_on_startup(self) -> None:
         """Reconcile jobs left mid-flight by a crashed process.
 
@@ -848,7 +887,12 @@ class BackgroundExecutionService(Service):
         reconstructed request. Best-effort per job so one bad row can't block the
         rest. The scaled backend reconciles via its worker-side watchdog.
         """
+        from langflow.api.utils.migration_pause import writes_paused
+
         await self.start()
+        if await writes_paused():
+            self._schedule_maintenance_recovery()
+            return
         if self._scaled:
             return
         job_service = get_job_service()
@@ -876,6 +920,9 @@ class BackgroundExecutionService(Service):
         # sweep would fail worker_lost. The runner's execute_with_status performs
         # the real QUEUED->IN_PROGRESS flip once it actually starts emitting.
         for job in await self._queued_workflow_jobs():
+            if await writes_paused():
+                self._schedule_maintenance_recovery()
+                return
             lease_heartbeat = datetime.now(timezone.utc).isoformat()
             if not await job_service.claim_queued_lease(
                 job.job_id,
