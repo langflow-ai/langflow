@@ -211,9 +211,7 @@ async def write_admission(
 ) -> AsyncIterator[str | None]:
     """Keep the file pause's drain slot and name the source that denied admission."""
     with writing(kind, method=method, path=path, name=name) as let_in:
-        refusal = (
-            await write_refusal(caller_id, check_file=False, session_maker=session_maker) if let_in else REFUSAL
-        )
+        refusal = await write_refusal(caller_id, check_file=False, session_maker=session_maker) if let_in else REFUSAL
         token = _maintenance_caller.set(caller_id if refusal is None else None)
         try:
             yield refusal
@@ -231,9 +229,7 @@ async def async_writing(
     session_maker: Callable[[], AbstractAsyncContextManager[AsyncSession]] | None = None,
 ) -> AsyncIterator[bool]:
     """Keep the file pause's drain slot and also honor database maintenance."""
-    async with write_admission(
-        kind, method=method, path=path, name=name, session_maker=session_maker
-    ) as refusal:
+    async with write_admission(kind, method=method, path=path, name=name, session_maker=session_maker) as refusal:
         yield refusal is None
 
 
