@@ -1,9 +1,11 @@
 import asyncio
+import hashlib
 import json
 import shutil
 import time
 import uuid
 from contextlib import aclosing
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -66,10 +68,23 @@ class IngestionCancelledError(Exception):
     """Custom error for when an ingestion job is cancelled."""
 
 
+@dataclass
+class DocumentWriteResult:
+    """Track accepted chunks separately from new writes during ingestion."""
+
+    processed: int = 0
+    created: int = 0
+
+
 # Split points tried after a user-supplied separator (the splitter's own
 # defaults). Without them, text between two separators that is longer than
 # ``chunk_size`` has nowhere else to split and is stored as one oversized chunk.
 _FALLBACK_CHUNK_SEPARATORS: tuple[str, ...] = ("\n\n", "\n", " ", "")
+
+
+def stable_document_id(*identity: str | int) -> str:
+    """Identify a chunk independently of its ingestion job and mutable metadata."""
+    return hashlib.sha256(json.dumps(identity, ensure_ascii=False).encode()).hexdigest()
 
 
 def chunk_text_for_ingestion(
@@ -642,7 +657,11 @@ class KBIngestionHelper:
             await job_service.start_keep_alive(task_job_id)
             embeddings = await KBIngestionHelper.build_embeddings(embedding_provider, embedding_model, current_user)
             backend = await backend_for_name(
-                owner.id, kb_name, embedding_function=embeddings, expected_record=kb_record
+                owner.id,
+                kb_name,
+                embedding_function=embeddings,
+                expected_record=kb_record,
+                preserve_existing_documents=True,
             )
 
             job_id_str = str(task_job_id)
@@ -701,6 +720,13 @@ class KBIngestionHelper:
                 )
                 docs = [
                     Document(
+                        id=stable_document_id(
+                            source.source_type.value,
+                            source_name,
+                            item.source_url or item.item_id,
+                            i,
+                            c,
+                        ),
                         page_content=c,
                         metadata={
                             METADATA_KEY_SOURCE: source_name or content_obj.file_name,
@@ -720,13 +746,13 @@ class KBIngestionHelper:
                 # the outer handler so the whole run can roll back
                 # uncommitted chunks. Only per-item fetch/extraction
                 # failures are caught and continue (above).
-                item_chunks_written = await KBIngestionHelper.write_documents_to_backend(
+                item_write = await KBIngestionHelper.write_documents_to_backend(
                     documents=docs,
                     backend=backend,
                     task_job_id=task_job_id,
                     job_service=job_service,
                 )
-                if item_chunks_written < len(docs):
+                if item_write.processed < len(docs):
                     # Job was cancelled mid-item — bail out and let the
                     # outer handler roll the run back.
                     raise IngestionCancelledError
@@ -736,7 +762,7 @@ class KBIngestionHelper:
                         item_id=item.item_id,
                         display_name=item.display_name,
                         status=IngestionItemStatus.SUCCEEDED,
-                        chunks_created=item_chunks_written,
+                        chunks_created=item_write.created,
                     ),
                     size_bytes=size_bytes,
                 )
@@ -934,7 +960,7 @@ class KBIngestionHelper:
         backend: BaseVectorStoreBackend,
         task_job_id: uuid.UUID,
         job_service: JobService,
-    ) -> int:
+    ) -> DocumentWriteResult:
         """Write pre-built Documents through a ``BaseVectorStoreBackend``.
 
         The single write primitive for every ingestion path — file-based
@@ -947,24 +973,24 @@ class KBIngestionHelper:
         Documents must already be chunked with metadata populated.
 
         Returns:
-            Number of documents successfully written. Less than
-            ``len(documents)`` when the job is cancelled mid-write.
+            Processed and newly written chunk counts. A processed count below
+            ``len(documents)`` means the job was cancelled mid-write.
 
         Raises:
             Exception: Re-raises any non-cancellation write failure
                 after the retry budget is exhausted.
         """
-        written = 0
+        result = DocumentWriteResult()
         for i in range(0, len(documents), INGESTION_BATCH_SIZE):
             if await KBIngestionHelper.is_job_cancelled(job_service, task_job_id):
-                return written
+                return result
 
             batch = documents[i : i + INGESTION_BATCH_SIZE]
             for attempt in range(MAX_RETRY_ATTEMPTS):
                 if await KBIngestionHelper.is_job_cancelled(job_service, task_job_id):
-                    return written
+                    return result
                 try:
-                    await backend.add_documents(batch)
+                    created = await backend.add_documents(batch)
                     break
                 except (BackendConfigurationError, StorageUnavailableError):
                     # A stale source/routing fence requires a new job snapshot.
@@ -980,10 +1006,11 @@ class KBIngestionHelper:
                     await logger.awarning("Write failed, retrying in %ds: %s", wait, exc)
                     await asyncio.sleep(wait)
 
-            written += len(batch)
+            result.processed += len(batch)
+            result.created += created if isinstance(created, int) else len(batch)
             await asyncio.sleep(0.01)
 
-        return written
+        return result
 
     @staticmethod
     async def is_job_cancelled(job_service: JobService, job_id: uuid.UUID) -> bool:

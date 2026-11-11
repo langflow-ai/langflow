@@ -225,8 +225,10 @@ class ProviderSourcePollAdapter(PollingListenerAdapter):
     async def poll(self, ctx: ListenerContext) -> int:
         from lfx.services.deps import session_scope_readonly
 
+        from langflow.api.utils.migration_pause import async_writing
         from langflow.services.database.models.trigger.model import Trigger
         from langflow.services.deps import session_scope
+        from langflow.services.maintenance.state import maintenance_enabled
         from langflow.services.triggers.source_clients import source_lease
         from langflow.services.triggers.source_errors import SourceConfigurationError
         from langflow.services.triggers.source_poll import collect_source, commit_source
@@ -235,42 +237,56 @@ class ProviderSourcePollAdapter(PollingListenerAdapter):
         for snapshot in ctx.triggers:
             if ctx.stopping.is_set() or not self._supports(snapshot):
                 continue
-            async with session_scope_readonly() as session:
-                row = await session.get(Trigger, snapshot.id)
-                if (
-                    row is None
-                    or row.connection_id != ctx.connection_id
-                    or row.state != "active"
-                    or row.kind != snapshot.kind
-                    or row.provider != snapshot.provider
-                    or (row.config or {}).get("mechanism_id") != snapshot.mechanism_id
-                ):
-                    continue
-                lease = await source_lease(session, row, family=FAMILY_TRIGGER_LISTENER)
-                detached = Trigger(**row.model_dump())
-            try:
-                source_round = await collect_source(detached, lease)
-            except SourceConfigurationError as exc:
-                if ctx.source_failed is None:
+            # A listener can outlive the flag change by hours. Admit each round,
+            # retaining the file pause's drain slot while provider I/O is active.
+            async with async_writing(name="trigger_source_poll") as let_in:
+                if not let_in:
+                    return appended
+                async with session_scope_readonly() as session:
+                    row = await session.get(Trigger, snapshot.id)
+                    if (
+                        row is None
+                        or row.connection_id != ctx.connection_id
+                        or row.state != "active"
+                        or row.kind != snapshot.kind
+                        or row.provider != snapshot.provider
+                        or (row.config or {}).get("mechanism_id") != snapshot.mechanism_id
+                    ):
+                        continue
+                    lease = await source_lease(session, row, family=FAMILY_TRIGGER_LISTENER)
+                    detached = Trigger(**row.model_dump())
+                try:
+                    source_round = await collect_source(detached, lease)
+                except ListenerDeliveryRejectedError as exc:
+                    if exc.reason == "maintenance":
+                        return appended
                     raise
-                await ctx.source_failed(
-                    trigger_id=snapshot.id,
-                    message=str(exc),
-                    expected_config=detached.config,
-                    expected_kind=detached.kind,
-                )
-                continue
-            if ctx.stopping.is_set():
-                break
-            async with session_scope() as session:
-                appended += await commit_source(session, trigger_id=snapshot.id, source_round=source_round)
-            if ctx.source_succeeded is not None:
-                await ctx.source_succeeded(
-                    trigger_id=snapshot.id,
-                    expected_config=detached.config,
-                    expected_kind=detached.kind,
-                    observed_error=detached.last_error,
-                )
+                except SourceConfigurationError as exc:
+                    if ctx.source_failed is None:
+                        raise
+                    await ctx.source_failed(
+                        trigger_id=snapshot.id,
+                        message=str(exc),
+                        expected_config=detached.config,
+                        expected_kind=detached.kind,
+                        terminal=exc.terminal,
+                    )
+                    continue
+                if ctx.stopping.is_set():
+                    break
+                async with session_scope() as session:
+                    # A freeze during collection leaves both cursor and events
+                    # untouched so the same page can be collected after resume.
+                    if await maintenance_enabled(session):
+                        return appended
+                    appended += await commit_source(session, trigger_id=snapshot.id, source_round=source_round)
+                if ctx.source_succeeded is not None:
+                    await ctx.source_succeeded(
+                        trigger_id=snapshot.id,
+                        expected_config=detached.config,
+                        expected_kind=detached.kind,
+                        observed_error=detached.last_error,
+                    )
         return appended
 
 

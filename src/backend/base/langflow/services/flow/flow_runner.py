@@ -66,7 +66,7 @@ class LangflowRunnerExperimental:
         cache: str | None = None,
         stream: bool = False,
         user_id: str | None = None,
-        generate_user: bool = False,  # If True, generates a new user for the flow
+        generate_user: bool = False,  # Generate a new user even when user_id is supplied
         cleanup: bool = True,  # If True, clears flow state after execution
         tweaks_values: dict | None = None,
     ):
@@ -75,7 +75,7 @@ class LangflowRunnerExperimental:
             await self.init_db_if_needed()
             # Update settings with cache and components path
             await update_settings(cache=cache)
-            if generate_user:
+            if generate_user or user_id is None:
                 user = await self.generate_user()
                 user_id = str(user.id)
             flow_dict = await self.prepare_flow_and_add_to_db(
@@ -168,9 +168,9 @@ class LangflowRunnerExperimental:
 
     async def generate_user(self) -> User:
         async with session_scope() as session:
-            user_id = str(uuid4())
+            user_id = uuid4()
             hashed = get_auth_service().get_password_hash(str(uuid4()))
-            user = User(id=user_id, username=user_id, password=hashed, is_active=True)
+            user = User(id=user_id, username=str(user_id), password=hashed, is_active=True)
             session.add(user)
             await session.flush()
             await session.refresh(user)
@@ -180,7 +180,10 @@ class LangflowRunnerExperimental:
     async def add_flow_to_db(flow_dict: dict, user_id: str | None):
         async with session_scope() as session:
             flow_db = Flow(
-                name=flow_dict.get("name"), id=UUID(flow_dict["id"]), data=flow_dict.get("data", {}), user_id=user_id
+                name=flow_dict.get("name"),
+                id=UUID(flow_dict["id"]),
+                data=flow_dict.get("data", {}),
+                user_id=UUID(str(user_id)) if user_id else None,
             )
             session.add(flow_db)
 
@@ -243,13 +246,14 @@ class LangflowRunnerExperimental:
         )
 
         memory_base_cleanups: list[FlowMemoryBaseCleanup] = []
+        user_uuid = UUID(str(user_id))
         async with session_scope() as session:
-            flows = await session.exec(select(Flow.id).where(Flow.user_id == user_id))
-            flow_ids: list[UUID] = [fid for fid in flows.scalars().all() if fid is not None]
+            flows = await session.exec(select(Flow.id).where(Flow.user_id == user_uuid))
+            flow_ids: list[UUID] = [fid for fid in flows.all() if fid is not None]
             for flow_id in flow_ids:
                 await cascade_delete_flow(session, flow_id, memory_base_cleanups=memory_base_cleanups)
-            await session.exec(delete(Variable).where(Variable.user_id == user_id))
-            await session.exec(delete(User).where(User.id == user_id))
+            await session.exec(delete(Variable).where(Variable.user_id == user_uuid))
+            await session.exec(delete(User).where(User.id == user_uuid))
         # session_scope committed on exit; drop the external resources now.
         await finalize_flow_memory_base_cleanup(memory_base_cleanups)
 

@@ -51,7 +51,6 @@ from lfx.integrations.errors import (
 )
 from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest
 from lfx.log.logger import logger
-from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from pydantic import ValidationError
 from sqlmodel import col, select
 
@@ -60,6 +59,7 @@ from langflow.services.database.models.connection.model import Connection
 from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.database.models.trigger.schemas import TriggerState
 from langflow.services.deps import get_connection_resolver_service, get_settings_service, session_scope
+from langflow.services.maintenance.state import maintenance_enabled
 from langflow.services.triggers import ledger
 from langflow.services.triggers.connection_recovery import record_connection_failure
 from langflow.services.triggers.constants import (
@@ -69,6 +69,7 @@ from langflow.services.triggers.constants import (
     SLACK_PROVIDER_STATE_APP_ID,
     SLACK_TRIGGER_KINDS,
 )
+from langflow.services.triggers.error_codes import CodedTriggerError, TriggerErrorCode
 from langflow.services.triggers.listeners import connection_leases, replicas
 from langflow.services.triggers.listeners.adapters import (
     ListenerContext,
@@ -80,6 +81,7 @@ from langflow.services.triggers.listeners.adapters import (
 )
 from langflow.services.triggers.ownership import UNUSABLE_CONNECTION_STATUSES, is_owned_by, owned_by_trigger_owner
 from langflow.services.triggers.principal import trigger_execution_principal
+from langflow.services.triggers.source_errors import SourceConfigurationError
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -281,6 +283,7 @@ class ConnectionWorker:
     last_error: str | None = None
     last_renewed_at: datetime = field(default_factory=_now)
     succeeded_since_failure: bool = False
+    connection_updated_at: datetime | None = None
 
     @property
     def running(self) -> bool:
@@ -350,8 +353,9 @@ class ListenerSupervisor:
         self.workers.clear()
         with contextlib.suppress(Exception):
             async with session_scope() as session:
-                await connection_leases.release_all(session, holder=self.holder)
-                await replicas.withdraw(session, holder=self.holder)
+                if not await maintenance_enabled(session):
+                    await connection_leases.release_all(session, holder=self.holder)
+                    await replicas.withdraw(session, holder=self.holder)
 
     async def _loop(self) -> None:
         settings = get_settings_service().settings
@@ -377,19 +381,15 @@ class ListenerSupervisor:
 
     async def reconcile(self) -> None:
         """One pass toward agreement between the table and the held set."""
-        if not FEATURE_FLAGS.instance_migration:
-            await self._reconcile()
-            return
-        # Loaded only where an instance can be paused, so the listener process carries none of the API otherwise.
-        from langflow.api.utils.migration_pause import writing
+        from langflow.api.utils.migration_pause import async_writing, is_database_paused
 
         # A paused instance takes no events: a listener that starts during a pause announces and
         # claims nothing until it ends. The place is held for the pass, so a pause that is written
         # meanwhile waits for it and then finds this listener's lease.
-        with writing(name="trigger_listener") as let_in:
+        async with async_writing(name="trigger_listener") as let_in:
             if let_in:
                 await self._reconcile()
-            elif self.last_reconcile_at is not None:
+            elif self.last_reconcile_at is not None and not await is_database_paused():
                 # A listener that was already running still holds its connections, and a pause finds it by
                 # its lease. A pause that is tried again and again stays written for longer than a lease
                 # lasts, so the lease is renewed here and nothing else is done.
@@ -567,7 +567,8 @@ class ListenerSupervisor:
         if release_lease:
             with contextlib.suppress(Exception):
                 async with session_scope() as session:
-                    await connection_leases.release(session, connection_id=connection_id, holder=self.holder)
+                    if not await maintenance_enabled(session):
+                        await connection_leases.release(session, connection_id=connection_id, holder=self.holder)
 
     async def _stop_worker(self, worker: ConnectionWorker) -> None:
         worker.stopping.set()
@@ -595,6 +596,10 @@ class ListenerSupervisor:
         worker.task = asyncio.create_task(self._run_worker(worker))
 
     async def _run_worker(self, worker: ConnectionWorker) -> None:
+        from langflow.api.utils.migration_pause import is_database_paused
+
+        if await is_database_paused():
+            return
         ctx = self._context(worker)
         try:
             await worker.adapter.start(ctx)
@@ -606,6 +611,25 @@ class ListenerSupervisor:
             # fresh adapter if this replica still owns a desired connection.
             if self.workers.get(worker.connection_id) is worker and worker.task is asyncio.current_task():
                 await self._drop(worker.connection_id, release_lease=False)
+        except CodedTriggerError as exc:
+            if exc.code == TriggerErrorCode.BACKGROUND_RUNS_NOT_ALLOWED.value:
+                await self._needs_reconnect(worker, exc)
+            else:
+                await self._failed(worker, exc)
+        except SourceConfigurationError as exc:
+            if not exc.terminal:
+                await self._failed(worker, exc)
+                return
+            with contextlib.suppress(ListenerDeliveryRejectedError):
+                for trigger in ctx.triggers:
+                    await ctx.source_failed(
+                        trigger_id=trigger.id,
+                        message=str(exc),
+                        expected_config=trigger.config,
+                        expected_kind=trigger.kind,
+                        configuration_invalid=True,
+                    )
+            await self._drop(worker.connection_id)
         except _NEEDS_RECONNECT_ERRORS as exc:
             if is_local_configuration_failure(exc):
                 await self._failed(worker, exc)
@@ -639,8 +663,6 @@ class ListenerSupervisor:
             target = next((target for target in worker.triggers if target.id == trigger_id), None)
             config = expected_config if expected_config is not None else target.config if target else None
             kind = expected_kind if expected_kind is not None else target.kind if target else None
-            if stopping.is_set():
-                raise ListenerDeliveryRejectedError(reason="lease_changed")
             # Connection deletion locks its parent before updating trigger and
             # lease FKs. Use that same order, including a fanout destination,
             # so neither transaction can hold a child while waiting on its
@@ -657,6 +679,8 @@ class ListenerSupervisor:
             for identifier in sorted(connection_ids, key=str):
                 if identifier not in connections:
                     connections[identifier] = await lock_connection(session, identifier)
+            if await maintenance_enabled(session):
+                raise ListenerDeliveryRejectedError(reason="maintenance")
             if connections[worker.connection_id] is None:
                 raise ListenerDeliveryRejectedError(reason="connection_changed")
             if (
@@ -827,6 +851,8 @@ class ListenerSupervisor:
                 if exc.reason == "target_removed":
                     return
                 stopping.set()
+                if exc.reason == "maintenance":
+                    return
             else:
                 if row.kind in SLACK_TRIGGER_KINDS and (provider_state or {}).get(SLACK_PROVIDER_STATE_APP_ID):
                     slack_apps[row.id] = provider_state[SLACK_PROVIDER_STATE_APP_ID]
@@ -847,6 +873,10 @@ class ListenerSupervisor:
             cross-process coordinator the API uses, so two processes refreshing
             one token still mint one.
             """
+            from langflow.api.utils.migration_pause import is_database_paused
+
+            if await is_database_paused():
+                raise ListenerDeliveryRejectedError(reason="maintenance")
             target = next((t for t in worker.triggers if trigger_id is None or t.id == trigger_id), None)
             if target is None:
                 # A trigger id that is not armed on this connection (or none at
@@ -860,6 +890,7 @@ class ListenerSupervisor:
             if row is None or trigger_row is None:
                 handle = f"connection:{worker.connection_id}"
                 raise ConnectionUnresolvedError(handle)
+            worker.connection_updated_at = row.updated_at
             try:
                 request = ConnectionResolutionRequest(
                     ref=ConnectionRef(provider=row.provider_key, name=row.name),
@@ -882,13 +913,23 @@ class ListenerSupervisor:
                 await self._succeeded(worker)
 
         async def source_failed(
-            *, trigger_id: UUID, message: str, expected_config: dict[str, Any], expected_kind: str
+            *,
+            trigger_id: UUID,
+            message: str,
+            expected_config: dict[str, Any],
+            expected_kind: str,
+            terminal: bool = False,
+            configuration_invalid: bool = False,
         ) -> None:
             async with session_scope() as session:
                 row = await lock_target(
                     session, trigger_id=trigger_id, expected_config=expected_config, expected_kind=expected_kind
                 )
-                row.last_error = f"{_SOURCE_POLLING_ERROR_PREFIX}{message}"
+                row.last_error = message if configuration_invalid else f"{_SOURCE_POLLING_ERROR_PREFIX}{message}"
+                if configuration_invalid:
+                    row.state = TriggerState.PENDING.value
+                elif terminal:
+                    row.state = TriggerState.ERROR.value
                 row.updated_at = _now()
                 session.add(row)
 
@@ -932,6 +973,10 @@ class ListenerSupervisor:
 
     async def _succeeded(self, worker: ConnectionWorker) -> None:
         """A delivery landed: forget the failure history and the error banner."""
+        from langflow.api.utils.migration_pause import is_database_paused
+
+        if await is_database_paused():
+            return
         had_failures = worker.consecutive_failures >= get_settings_service().settings.listener_failure_threshold
         worker.consecutive_failures = 0
         worker.next_attempt_at = None
@@ -943,6 +988,10 @@ class ListenerSupervisor:
                     await clear_listener_error(session, trigger_ids=[t.id for t in worker.triggers])
 
     async def _failed(self, worker: ConnectionWorker, exc: Exception) -> None:
+        from langflow.api.utils.migration_pause import is_database_paused
+
+        if await is_database_paused():
+            return
         settings = get_settings_service().settings
         local_configuration = is_local_configuration_failure(exc)
         worker.consecutive_failures += 1
@@ -996,24 +1045,47 @@ class ListenerSupervisor:
 
     async def _needs_reconnect(self, worker: ConnectionWorker, exc: Exception) -> None:
         """Stop retrying: only a human re-granting consent fixes this."""
+        from langflow.api.utils.migration_pause import is_database_paused
+
+        if await is_database_paused():
+            return
         await logger.awarning(
             "Listener connection %s needs reconnect (%s): %s", worker.connection_id, type(exc).__name__, exc
         )
         with contextlib.suppress(Exception):
             async with session_scope() as session:
+                credentials_changed = False
+                if isinstance(exc, AuthExpiredError) and worker.connection_updated_at is not None:
+                    from langflow.services.connection.health import mark_credential_rejected
+                    from langflow.services.triggers.connection_recovery import as_utc
+
+                    connection = await lock_connection(session, worker.connection_id)
+                    credentials_changed = connection is not None and (
+                        as_utc(connection.updated_at) != as_utc(worker.connection_updated_at)
+                    )
+                    if not credentials_changed:
+                        await mark_credential_rejected(
+                            session,
+                            connection_id=worker.connection_id,
+                            observed_updated_at=worker.connection_updated_at,
+                        )
                 consent_required = (
                     isinstance(exc, ConnectionNotAuthorizedError) and exc.reason == "non-interactive-opt-in-required"
+                ) or (
+                    isinstance(exc, CodedTriggerError)
+                    and exc.code == TriggerErrorCode.BACKGROUND_RUNS_NOT_ALLOWED.value
                 )
-                await mark_needs_reconnect(
-                    session,
-                    trigger_ids=[t.id for t in worker.triggers],
-                    reason=(
-                        CONNECTION_NOT_AUTHORIZED_ERROR
-                        if consent_required
-                        else "The connection is no longer authorized. Reconnect it to resume this trigger."
-                    ),
-                    consent_required=consent_required,
-                )
+                if not credentials_changed:
+                    await mark_needs_reconnect(
+                        session,
+                        trigger_ids=[t.id for t in worker.triggers],
+                        reason=(
+                            CONNECTION_NOT_AUTHORIZED_ERROR
+                            if consent_required
+                            else "The connection is no longer authorized. Reconnect it to resume this trigger."
+                        ),
+                        consent_required=consent_required,
+                    )
         await self._drop(worker.connection_id)
 
     # ------------------------------------------------------------------ #

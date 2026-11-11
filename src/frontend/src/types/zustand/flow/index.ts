@@ -71,6 +71,10 @@ export type ComponentsToUpdateType = {
   blocked: boolean;
   breakingChange: boolean;
   userEdited: boolean;
+  /** Retired components are reported on the component, never updated. */
+  retired?: boolean;
+  retiredIn?: string;
+  replacement?: string[];
 };
 
 export type AutoSaveFlowType = ((flow?: FlowType) => void) & {
@@ -106,7 +110,7 @@ export type FlowStoreType = {
       | ComponentsToUpdateType[]
       | ((oldState: ComponentsToUpdateType[]) => ComponentsToUpdateType[]),
   ) => void;
-  updateComponentsToUpdate: (nodes: AllNodeType[]) => void;
+  updateComponentsToUpdate: (nodes: AllNodeType[], edges?: EdgeType[]) => void;
   onFlowPage: boolean;
   setOnFlowPage: (onFlowPage: boolean) => void;
   flowPool: FlowPoolType;
@@ -263,12 +267,20 @@ export type FlowStoreType = {
     runId?: string;
     verticesToRun: string[];
   } | null;
-  updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => void;
+  updateBuildStatus: (
+    nodeIdList: string[],
+    status: BuildStatus,
+    branchSkip?: { skippedBy: string; takenOutputs: string[] },
+  ) => void;
   revertBuiltStatusFromBuilding: () => void;
   flowBuildStatus: {
     [key: string]: {
       status: BuildStatus;
       timestamp?: string;
+      /** The branch component (If-Else, Smart Router) whose route skipped this node. */
+      skippedBy?: string;
+      /** The outputs of `skippedBy` that the router took instead. */
+      takenOutputs?: string[];
     };
   };
   updateFlowPool: (

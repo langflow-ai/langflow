@@ -27,6 +27,104 @@ if TYPE_CHECKING:
 pytestmark = pytest.mark.no_blockbuster
 
 
+@pytest.fixture
+async def servicenow_connection(client):  # noqa: ARG001
+    async with session_scope() as session:
+        owner = User(username=f"servicenow-owner-{uuid4().hex}", password=uuid4().hex, is_active=True)
+        session.add(owner)
+        await session.flush()
+        row = Connection(provider_key="servicenow", name="other", display_name="Other", owner_id=owner.id)
+        session.add(row)
+        await session.flush()
+        return row.id
+
+
+@pytest.mark.usefixtures("servicenow_connection")
+@pytest.mark.parametrize(
+    ("superuser", "active", "interactive", "restricted", "kind", "name", "error"),
+    [
+        (True, True, True, False, "actor", "other", ConnectionNotAuthorizedError),
+        (False, True, True, False, "actor", "other", ConnectionUnresolvedError),
+        (True, False, True, False, "actor", "other", ConnectionUnresolvedError),
+        (True, True, False, False, "actor", "other", ConnectionUnresolvedError),
+        (True, True, True, True, "actor", "other", ConnectionUnresolvedError),
+        (True, True, True, False, "actor", "missing", ConnectionUnresolvedError),
+        (True, True, True, False, "flow_owner", "other", ConnectionUnresolvedError),
+    ],
+)
+async def test_visible_foreign_servicenow_handle_is_not_authorized(
+    monkeypatch, superuser, active, interactive, restricted, kind, name, error
+):
+    monkeypatch.setattr(connection_service, "current_auth_is_restricted_api_key", lambda: restricted)
+    async with session_scope() as session:
+        actor = User(
+            username=f"servicenow-actor-{uuid4().hex}",
+            password=uuid4().hex,
+            is_active=active,
+            is_superuser=superuser,
+        )
+        session.add(actor)
+        await session.flush()
+        actor_id = str(actor.id)
+    request = ConnectionResolutionRequest(
+        ref=ConnectionRef(provider="servicenow", name=name),
+        principal=ExecutionPrincipal(kind=kind, user_id=actor_id, family="v1_run", interactive=interactive),
+    )
+    with _loaded_connection_ids() as loaded, pytest.raises(error):
+        await get_connection_resolver_service().resolve(request)
+    assert loaded == []
+
+
+@pytest.mark.usefixtures("servicenow_connection")
+@pytest.mark.parametrize("record_id", ["id", "a" * 32])
+async def test_servicenow_component_denial_precedes_record_validation(record_id):
+    from langflow.api.utils.execution_errors import integration_http_error
+    from lfx.graph import Graph
+    from lfx_servicenow.components.servicenow import ServiceNowReadRecordComponent
+
+    async with session_scope() as session:
+        actor = User(
+            username=f"servicenow-admin-{uuid4().hex}", password=uuid4().hex, is_active=True, is_superuser=True
+        )
+        session.add(actor)
+        await session.flush()
+        actor_id = str(actor.id)
+    node = ServiceNowReadRecordComponent(connection="servicenow/other", record_id=record_id)
+    graph = Graph(start=node, end=node)
+    graph.execution_principal = ExecutionPrincipal(kind="actor", user_id=actor_id, family="v1_run", interactive=True)
+
+    with pytest.raises(ConnectionNotAuthorizedError) as refused:
+        await node.read_record()
+
+    response = integration_http_error(refused.value, expose_details=True)
+    assert response is not None
+    assert response.status_code == 403
+    assert response.detail["error_code"] == "connection-not-authorized"
+    assert response.detail["hint"] == "Use an owned or explicitly shared connection."
+
+
+@pytest.mark.usefixtures("servicenow_connection")
+async def test_owned_servicenow_handle_takes_precedence_over_foreign_connection():
+    async with session_scope() as session:
+        actor = User(
+            username=f"servicenow-admin-{uuid4().hex}", password=uuid4().hex, is_active=True, is_superuser=True
+        )
+        session.add(actor)
+        await session.flush()
+        row = Connection(provider_key="servicenow", name="other", display_name="Mine", owner_id=actor.id)
+        session.add(row)
+        await session.flush()
+        actor_id, connection_id = str(actor.id), str(row.id)
+    policy = await get_connection_resolver_service()._get_access_policy(
+        ConnectionResolutionRequest(
+            ref=ConnectionRef(provider="servicenow", name="other"),
+            principal=ExecutionPrincipal(kind="actor", user_id=actor_id, family="v1_run", interactive=True),
+        )
+    )
+    assert policy.connection_id == connection_id
+    assert policy.connection_owner_id == actor_id
+
+
 class _ShareAuthz:
     """Authorization plugin stand-in that supports cross-user fetch."""
 
