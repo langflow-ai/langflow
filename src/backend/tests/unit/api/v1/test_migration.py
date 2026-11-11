@@ -551,17 +551,61 @@ async def test_a_version_the_move_cannot_use_is_refused_before_anything_runs(
     }
 
 
-async def test_a_second_run_waits_for_the_live_one(client, logged_in_headers_super_user):
+async def test_a_second_run_waits_for_the_live_one(client, logged_in_headers_super_user, monkeypatch):
     headers = logged_in_headers_super_user
     seen = {}
+    process = None
+    create_subprocess = asyncio.create_subprocess_exec
+    # Middleware may deliver the first event after a fast preflight child has exited.
+    # Run the real CLI, holding its first check until the request disconnects.
+    held_preflight = """
+import sys
+import langflow.__main__ as cli
+
+echo_check = cli._echo_check
+first = True
+
+def hold_first_check(*args, **kwargs):
+    global first
+    echo_check(*args, **kwargs)
+    if first:
+        first = False
+        sys.stdout.flush()
+        sys.stdin.buffer.read(1)
+
+cli._echo_check = hold_first_check
+sys.argv[0] = "langflow"
+cli.main()
+"""
+
+    async def start_preflight(*args, **kwargs):
+        nonlocal process
+        if process is None and args[1:4] == ("-m", "langflow", "migration-preflight"):
+            process = await create_subprocess(
+                args[0], "-c", held_preflight, *args[3:], stdin=asyncio.subprocess.PIPE, **kwargs
+            )
+            return process
+        return await create_subprocess(*args, **kwargs)
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", start_preflight)
 
     async def while_running():
         seen["refused"] = await client.post(
             "api/v1/migration/checks", json={"target_version": VERSION}, headers=headers
         )
         seen["migration"] = await _migration(client, headers)
+        assert process is not None
+        assert process.returncode is None
+        assert psutil.pid_exists(process.pid)
 
-    await _run_and_hang_up(client, headers, while_running)
+    try:
+        await asyncio.wait_for(_run_and_hang_up(client, headers, while_running), timeout=60)
+    finally:
+        if process:
+            if process.returncode is None:
+                process.kill()
+            process.stdin.close()
+            await process.wait()
 
     assert seen["refused"].status_code == 409
     detail = seen["refused"].json()["detail"]
@@ -569,7 +613,10 @@ async def test_a_second_run_waits_for_the_live_one(client, logged_in_headers_sup
     assert detail["by"] == "activeuser"
     step = seen["migration"]["record"]["steps"]["check_source"]
     assert step["status"] == "running"
+    assert process is not None
+    assert step["pid"] == process.pid
     assert detail["started_at"] == step["started_at"]
+    assert not psutil.pid_exists(process.pid)
     # The run ends with its request, so the next one starts.
     await _run_checks(client, headers)
 

@@ -174,32 +174,17 @@ async def test_permission_patch_refusal_preserves_key_and_audits_denial(
 
 
 @pytest.mark.anyio
-async def test_restricted_key_cannot_modify_its_owner_profile(client, logged_in_headers, active_user, monkeypatch):
-    from langflow.services.deps import get_settings_service
-
-    settings = get_settings_service()
-    monkeypatch.setattr(settings.auth_settings, "AUTHZ_ENABLED", True)
-    monkeypatch.setattr(settings.auth_settings, "API_KEY_SCOPES_ENABLED", True)
-    plugin = SimpleNamespace(
-        supports_api_key_scopes=AsyncMock(return_value=True),
-        validate_api_key_permissions=AsyncMock(),
-    )
-    monkeypatch.setattr("langflow.services.database.models.api_key.crud.get_authorization_service", lambda: plugin)
-    response = await client.post(
-        "api/v1/api_key/",
-        json={
-            "name": "Profile-limited",
-            "permissions": {"restrictions": [{"resource_type": "flow", "actions": ["read"]}]},
-        },
-        headers=logged_in_headers,
-    )
-    assert response.status_code == 200
-
+async def test_restricted_key_cannot_modify_its_owner_profile(client, active_user, restricted_api_key):
     client.cookies.clear()
+    headers = {"x-api-key": restricted_api_key["api_key"]}
+    authenticated = await client.get("api/v1/users/whoami", headers=headers)
+    assert authenticated.status_code == 200, authenticated.text
+    assert authenticated.json()["id"] == str(active_user.id)
+
     response = await client.patch(
         f"api/v1/users/{active_user.id}",
         json={"username": "changed-through-scoped-key"},
-        headers={"x-api-key": response.json()["api_key"]},
+        headers=headers,
     )
 
     assert response.status_code == 403
