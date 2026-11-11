@@ -115,6 +115,8 @@ def test_unrelated_authentication_outages_keep_their_existing_http_contract():
     assert response.status_code == 503
     assert response.detail == "Authentication is temporarily unavailable"
     assert response.headers == {"Retry-After": "1"}
+
+
 @pytest.mark.parametrize("surface", ["v1", "v1_advanced", "v2"])
 async def test_admitted_run_returns_its_completed_result_when_maintenance_starts(
     client, simple_api_test, created_api_key, logged_in_headers_super_user, monkeypatch, surface
