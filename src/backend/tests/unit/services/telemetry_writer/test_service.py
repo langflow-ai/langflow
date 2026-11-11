@@ -1052,9 +1052,8 @@ async def test_retention_survives_an_unreadable_maintenance_flag(writer_with_eng
     Reading an unavailable flag as maintenance silently starves the caller: nothing
     recorded the pause and nothing retries it, so retention stops pruning for good.
     """
-    from sqlalchemy.exc import OperationalError
-
     from langflow.api.utils import migration_pause
+    from sqlalchemy.exc import OperationalError
 
     writer, engine = writer_with_engine
     writer.settings_service.settings.max_vertex_builds_per_vertex = 3
