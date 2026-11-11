@@ -368,6 +368,34 @@ def _slow_execute_row(delay: float):
 
 
 class TestStoppingRuns:
+    async def test_should_refuse_a_cancel_that_arrives_as_the_run_finishes(
+        self, client, logged_in_headers, monkeypatch
+    ):
+        from langflow.services.evaluations import run_service
+
+        monkeypatch.setattr(runner, "execute_row", _slow_execute_row(5))
+        flow = await create_flow(client, logged_in_headers)
+        dataset = await create_dataset(client, logged_in_headers, "late-cancel", [("q", "q")])
+        evaluation = await create_evaluation(client, logged_in_headers, flow["id"], dataset["id"])
+        started = await start_run(client, logged_in_headers, evaluation["id"])
+        real_get_run = run_service.get_run
+
+        async def finished_right_after_the_read(session, user, run_id):
+            run = await real_get_run(session, user, run_id)
+            # The worker finalizes the run between the cancel's read and its update.
+            async with session_scope() as other:
+                row = await other.get(EvaluationRun, run_id)
+                row.status = "completed"
+                other.add(row)
+            return run
+
+        monkeypatch.setattr(run_service, "get_run", finished_right_after_the_read)
+
+        cancelled = await client.post(f"api/v1/evaluation-runs/{started['id']}/cancel", headers=logged_in_headers)
+
+        assert cancelled.status_code == 409, cancelled.text
+        assert "already finished (completed)" in cancelled.json()["detail"]
+
     async def test_should_cancel_a_running_evaluation_and_keep_finished_rows(
         self, client, logged_in_headers, monkeypatch
     ):

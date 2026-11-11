@@ -186,14 +186,18 @@ async def cancel_evaluation_run(session: AsyncSession, run: EvaluationRun) -> Ev
     if run.status in TERMINAL_RUN_STATUSES:
         msg = f"The run already finished ({run.status})."
         raise EvalsConflictError(msg)
-    await session.exec(
+    cancelled = await session.exec(
         update(EvaluationRun)
         .where(EvaluationRun.id == run.id, col(EvaluationRun.status).in_(ACTIVE_STATUSES))
         .values(status="cancelled", finished_at=_now())
     )
     await session.commit()
-    cancel_local_run(run.id)
     await session.refresh(run)
+    if not cancelled.rowcount:
+        # The run finished between the read above and this update: the cancel came too late.
+        msg = f"The run already finished ({run.status})."
+        raise EvalsConflictError(msg)
+    cancel_local_run(run.id)
     return run
 
 
