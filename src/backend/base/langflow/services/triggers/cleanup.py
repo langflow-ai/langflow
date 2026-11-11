@@ -9,6 +9,7 @@ from sqlmodel import col, delete
 from langflow.services.database.models.trigger.model import (
     Trigger,
     TriggerEvent,
+    TriggerRenewalObservation,
     TriggerSourceVersion,
     TriggerSubscription,
 )
@@ -33,6 +34,9 @@ async def delete_triggers(session: AsyncSession, *, trigger_ids: Sequence[UUID])
 
     for trigger_id in trigger_ids:
         await revoke_for_trigger(session, trigger_id=trigger_id)
+    await session.exec(
+        delete(TriggerRenewalObservation).where(col(TriggerRenewalObservation.trigger_id).in_(trigger_ids))
+    )
     await session.exec(delete(TriggerSubscription).where(col(TriggerSubscription.trigger_id).in_(trigger_ids)))
     await session.exec(delete(TriggerSourceVersion).where(col(TriggerSourceVersion.trigger_id).in_(trigger_ids)))
     await session.exec(delete(TriggerEvent).where(col(TriggerEvent.trigger_id).in_(trigger_ids)))

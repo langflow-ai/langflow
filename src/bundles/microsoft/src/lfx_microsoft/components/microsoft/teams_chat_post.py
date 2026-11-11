@@ -39,17 +39,19 @@ class TeamsChatPostComponent(MicrosoftGraphComponent):
             display_name="Chat ID",
             info="The id of an existing chat the connected user belongs to.",
             required=True,
+            tool_mode=True,
         ),
-        MultilineInput(name="content", display_name="Message", required=True),
+        MultilineInput(name="content", display_name="Message", required=True, tool_mode=True),
         DropdownInput(
             name="content_type",
             display_name="Content Type",
             options=CONTENT_TYPES,
             value="text",
             advanced=True,
+            tool_mode=True,
         ),
-        DataInput(name="mentions", display_name="Mentions", is_list=True, advanced=True),
-        DataInput(name="attachments", display_name="Attachments", is_list=True, advanced=True),
+        DataInput(name="mentions", display_name="Mentions", is_list=True, advanced=True, tool_mode=True),
+        DataInput(name="attachments", display_name="Attachments", is_list=True, advanced=True, tool_mode=True),
     ]
 
     outputs = [Output(display_name="Message", name="message", method="post_message")]

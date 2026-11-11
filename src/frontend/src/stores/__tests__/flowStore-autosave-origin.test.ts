@@ -37,6 +37,7 @@ jest.mock("../tweaksStore", () => ({
 
 jest.mock("@/CustomNodes/helpers/check-code-validity", () => ({
   checkCodeValidity: jest.fn(() => null),
+  connectedFieldsByNode: jest.fn(() => new Map()),
 }));
 
 import useFlowStore from "../flowStore";

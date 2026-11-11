@@ -19,6 +19,7 @@ from langflow.services.auth.cookies import auth_cookie_name
 from langflow.services.auth.exceptions import (
     AuthBackendUnavailableError,
     AuthenticationError,
+    ExternalAuthMaintenanceError,
     InsufficientPermissionsError,
     InvalidCredentialsError,
     MissingCredentialsError,
@@ -192,7 +193,9 @@ def _auth_error_to_http(e: AuthenticationError) -> HTTPException:
     if isinstance(e, AuthBackendUnavailableError):
         return HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=e.message,
+            detail={"code": e.error_code, "message": e.message}
+            if isinstance(e, ExternalAuthMaintenanceError)
+            else e.message,
             headers={"Retry-After": "1"},
         )
     if isinstance(
@@ -378,8 +381,7 @@ async def get_optional_user(
 async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
     """Get the user for webhook execution.
 
-    When WEBHOOK_AUTH_ENABLE=false, allows execution as the flow owner without API key.
-    When WEBHOOK_AUTH_ENABLE=true, requires API key authentication and validates flow ownership.
+    Requires API key authentication and validates flow ownership regardless of the legacy flag.
 
     Args:
         flow_id: The ID of the flow being executed
@@ -392,12 +394,7 @@ async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
         HTTPException: If authentication fails or user doesn't have permission
     """
     user = await _auth_service().get_webhook_user(flow_id, request)
-    # Public webhooks execute as the owner without authenticating their caller.
-    authenticated = get_settings_service().auth_settings.WEBHOOK_AUTH_ENABLE
-    if authenticated:
-        set_authenticated_telemetry_user(user)
-    else:
-        clear_current_telemetry_user()
+    set_authenticated_telemetry_user(user)
     return user
 
 

@@ -29,7 +29,15 @@ export function useAssistantRevert(): UseAssistantRevertReturn {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { mutateAsync: createSnapshot } = usePostCreateSnapshot();
-  const { restore, isRestoring } = useRestoreVersion(currentFlowId ?? "");
+  const versionToken = useFlowsManagerStore((state) =>
+    state.currentFlow?.id === currentFlowId
+      ? state.currentFlow.version_token
+      : undefined,
+  );
+  const { restore, isRestoring } = useRestoreVersion(
+    currentFlowId ?? "",
+    versionToken,
+  );
   const [isSnapshotting, setIsSnapshotting] = useState(false);
 
   const revert = useCallback(
