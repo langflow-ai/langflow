@@ -359,6 +359,7 @@
         "orcarouter",
         "perplexity",
         "pgvector",
+        "piloterr",
         "pinecone",
         "plivo",
         "qdrant",
