@@ -61,6 +61,24 @@ def test_warning_survives_caller_aware_sanitization(custom_agent_flow, inline, i
         )
 
 
+@pytest.mark.parametrize("node_type", [{"bad": 1}, ["Agent"]], ids=["dict", "list"])
+@pytest.mark.parametrize("inline", [False, True], ids=["stored", "inline"])
+def test_node_with_a_non_string_type_gets_no_warning(custom_agent_flow, monkeypatch, node_type, inline):
+    """The warning walks the flow with custom components allowed too, and a malformed type is no component."""
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "allow_custom_components", True)
+    monkeypatch.setattr(settings, "custom_component_admin_only", False)
+    flow = custom_agent_flow
+    flow.data["nodes"][0]["data"]["type"] = node_type
+    parsed = ParsedWorkflowRun(flow_id=str(flow.id), data=flow.data if inline else None)
+
+    gated = _validate_flow_data_for_execution(
+        parsed, flow, SimpleNamespace(id=flow.user_id, is_superuser=False), expose_error_details=True
+    )
+
+    assert gated.component_substitution_warning is None
+
+
 def test_execute_only_warning_omits_component_names(custom_agent_flow):
     gated = _validate_flow_data_for_execution(
         ParsedWorkflowRun(flow_id=str(custom_agent_flow.id)),
