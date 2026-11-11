@@ -27,6 +27,7 @@ import EvalsPageShell from "./components/EvalsPageShell";
 import { EvalsEmptyState, EvalsLoadingState } from "./components/EvalsStates";
 import ImportCsvButton from "./components/ImportCsvButton";
 import InlineEditableText from "./components/InlineEditableText";
+import { skipActionsHeader } from "./config/actions-header-navigation";
 import { datasetItemColumns } from "./config/columns";
 import { useShiftKey } from "./hooks/use-shift-key";
 import { downloadCsv } from "./utils/download-csv";
@@ -258,7 +259,11 @@ export default function DatasetDetailPage() {
             }
           }}
           getRowId={(params) => params.data.id}
-          gridOptions={{ paginationAutoPageSize: true, tooltipShowDelay: 400 }}
+          gridOptions={{
+            paginationAutoPageSize: true,
+            tooltipShowDelay: 400,
+            ...skipActionsHeader,
+          }}
         />
       )}
       {/* Outside the table: it renders its children in a different tree once the first rows arrive, which

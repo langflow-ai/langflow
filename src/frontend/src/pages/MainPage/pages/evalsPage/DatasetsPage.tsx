@@ -21,6 +21,7 @@ import { EvalsEmptyState, EvalsLoadingState } from "./components/EvalsStates";
 import EvalsTabs from "./components/EvalsTabs";
 import ExamplesMenu from "./components/ExamplesMenu";
 import ImportCsvButton from "./components/ImportCsvButton";
+import { skipActionsHeader } from "./config/actions-header-navigation";
 import { datasetColumns } from "./config/columns";
 import { useQuickCreateDataset } from "./hooks/use-quick-create-dataset";
 import { useShiftKey } from "./hooks/use-shift-key";
@@ -187,7 +188,7 @@ export default function DatasetsPage() {
               open(event.data);
           }}
           getRowId={(params) => params.data.id}
-          gridOptions={{ paginationAutoPageSize: true }}
+          gridOptions={{ paginationAutoPageSize: true, ...skipActionsHeader }}
         >
           <DeleteConfirmationModal
             open={pendingDelete.length > 0}

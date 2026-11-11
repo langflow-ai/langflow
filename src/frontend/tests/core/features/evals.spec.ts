@@ -94,6 +94,17 @@ test(
     );
     await waitForGridReady(page);
     await page.runA11yScan("evals-dataset-detail");
+    // The actions header is named only for screen readers, so keyboard focus skips its empty box.
+    await page.locator('.ag-header-cell[col-id="input"]').focus();
+    for (let step = 0; step < 4; step++)
+      await page.keyboard.press("ArrowRight");
+    await expect(
+      page.locator('.ag-header-cell[col-id="expected_output"]'),
+    ).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(
+      page.locator('.ag-row[row-index="0"] .ag-cell').first(),
+    ).toBeFocused();
 
     await page.setInputFiles('[data-testid="csv-import-button-input"]', {
       name: "extra.csv",

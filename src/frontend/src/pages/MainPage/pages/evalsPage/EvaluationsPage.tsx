@@ -18,6 +18,7 @@ import { extractApiErrorMessages } from "@/utils/apiError";
 import EvalsPageShell from "./components/EvalsPageShell";
 import { EvalsEmptyState, EvalsLoadingState } from "./components/EvalsStates";
 import EvalsTabs from "./components/EvalsTabs";
+import { skipActionsHeader } from "./config/actions-header-navigation";
 import { evaluationColumns } from "./config/columns";
 
 const LIST_SIZE = 200;
@@ -95,7 +96,7 @@ export default function EvaluationsPage() {
             if (event.data && !target?.closest("button")) open(event.data);
           }}
           getRowId={(params) => params.data.id}
-          gridOptions={{ paginationAutoPageSize: true }}
+          gridOptions={{ paginationAutoPageSize: true, ...skipActionsHeader }}
         >
           {createOpen && (
             <EvaluateFlowModal open={createOpen} setOpen={setCreateOpen} />
