@@ -52,11 +52,15 @@ export const URLs = {
   AGENTIC_FILES: `agentic/files`,
   POLICY_BUNDLE: `policy-bundle`,
   MIGRATION: `migration`,
+  MAINTENANCE: `maintenance`,
+  UPGRADE_REPORTS: `upgrade-reports`,
+  UPGRADE_REPAIRS: `upgrade-repairs`,
   CONNECTIONS: `connections`,
   TRIGGERS: `triggers`,
   INTEGRATIONS: `integrations`,
   EXTENSIONS: `extensions`,
   AUTHZ_ME_PERMISSIONS: `authz/me/permissions`,
+  AUTHZ_SHARES: `authz/shares`,
 } as const;
 
 // IMPORTANT: FOLDERS endpoint now points to 'projects' for backward compatibility

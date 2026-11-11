@@ -3,10 +3,13 @@
 import json
 from functools import partial
 from pathlib import Path
+from types import SimpleNamespace
 
 import httpx
 import pytest
+from conftest import Resolver
 from lfx.integrations.capabilities import IntegrationCapabilityManifest
+from lfx.services.authorization.base import ExecutionPrincipal
 from lfx_github.client import GitHubClient
 from lfx_github.components import github
 
@@ -35,6 +38,49 @@ CASES = [
     ),
     (github.GitHubCreateCommentComponent, "POST", "/repos/org/repo/issues/4/comments", {"number": 4, "body": "body"}),
 ]
+
+
+@pytest.mark.parametrize(("cls", "method", "path", "values"), CASES)
+async def test_action_tools_use_runtime_arguments_and_configured_connection(monkeypatch, cls, method, path, values):
+    requests = []
+    resolutions = []
+
+    class RecordingResolver(Resolver):
+        async def resolve(self, request):
+            resolutions.append(request)
+            return await super().resolve(request)
+
+    resolver = RecordingResolver()
+    monkeypatch.setattr("lfx.services.deps.get_connection_resolver", lambda: resolver)
+
+    def handle(request):
+        requests.append(request)
+        return httpx.Response(200, json={"id": len(requests)})
+
+    monkeypatch.setattr("lfx_github.base.GitHubClient", partial(GitHubClient, transport=httpx.MockTransport(handle)))
+    principal = ExecutionPrincipal(kind="actor", user_id="owner", interactive=True)
+    vertex = SimpleNamespace(outputs=[], graph=SimpleNamespace(execution_principal=principal, flow_id="flow-1"))
+    component = cls(connection="github/work", _vertex=vertex, _tracing_service=None)
+    tool = (await component.to_toolkit())[0]
+    schema = tool.args_schema.model_json_schema()
+    assert "repository" in schema["required"]
+    assert "connection" not in schema["properties"]
+    assert tool.name != "build_result"
+
+    first = await tool.ainvoke({"repository": "org/repo", **values})
+    second = await tool.ainvoke({"repository": "other/project", **values})
+
+    assert first != second
+    action_requests = [request for request in requests if request.url.path != "/installation/repositories"]
+    assert len(action_requests) == 2
+    assert [request.method for request in action_requests] == [method, method]
+    assert [request.url.path for request in action_requests] == [path, path.replace("org/repo", "other/project")]
+    if method in {"POST", "PATCH"}:
+        expected_body = {key: value for key, value in values.items() if key != "number"}
+        assert all(json.loads(request.content) == expected_body for request in action_requests)
+    assert len(resolutions) == 2
+    assert all(request.ref.to_handle() == "github/work" for request in resolutions)
+    assert all(request.principal == principal for request in resolutions)
 
 
 @pytest.mark.parametrize(("cls", "method", "path", "values"), CASES)

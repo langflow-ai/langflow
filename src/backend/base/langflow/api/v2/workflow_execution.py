@@ -65,7 +65,7 @@ from langflow.api.utils.flow_utils import get_authorized_legacy_flow_ids
 from langflow.api.v1.schemas import FlowDataRequest, RunResponse
 from langflow.api.v2.workflow_validation import _validate_output_ids
 from langflow.api.warm_graph import warm_deepcopy
-from langflow.exceptions.api import WorkflowTimeoutError, WorkflowValidationError
+from langflow.exceptions.api import WorkflowServiceUnavailableError, WorkflowTimeoutError, WorkflowValidationError
 from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.services.database.models.flow.model import AccessTypeEnum, FlowRead
 from langflow.services.database.models.user.model import UserRead
@@ -951,7 +951,7 @@ async def execute_sync_workflow(
     # The run starts right below in this request, so the row is born IN_PROGRESS rather
     # than QUEUED and then flipped: one statement less, and the startup sweep, which
     # re-enqueues QUEUED workflow rows as background runs, never sees a sync run QUEUED.
-    await job_service.create_job(
+    created_job = await job_service.create_job(
         job_id=job_id,
         flow_id=flow_id_str,
         user_id=current_user.id,
@@ -981,6 +981,7 @@ async def execute_sync_workflow(
                 run_coro_func=run_graph_internal,
                 mark_in_progress=False,
                 keep_alive=True,
+                created_job=created_job,
                 graph=graph,
                 flow_id=flow_id_str,
                 session_id=session_id,
@@ -1004,7 +1005,7 @@ async def execute_sync_workflow(
                     session_id=execution_session_id,
                     job_id=_run_id_uuid,
                 )
-            except (RuntimeError, ValueError, OSError):
+            except (RuntimeError, ValueError, OSError, WorkflowServiceUnavailableError):
                 await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
 
         # Build RunResponse

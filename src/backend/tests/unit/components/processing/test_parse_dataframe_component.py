@@ -1,5 +1,5 @@
 import asyncio
-import sys
+from datetime import datetime, timezone
 
 import pandas as pd
 import pytest
@@ -92,10 +92,6 @@ class TestParseDataFrameComponent(ComponentTestBaseWithoutClient):
         result = await asyncio.to_thread(component.parse_data)
         assert isinstance(result, Message)
 
-    @pytest.mark.skipif(
-        sys.version_info >= (3, 15),
-        reason="pandas 2.x ships no cp315 wheels; its source build segfaults in to_datetime",
-    )
     def test_various_data_types(self, component_class):
         """Test that the component correctly formats differing data types."""
         test_dataframe = DataFrame(
@@ -103,7 +99,10 @@ class TestParseDataFrameComponent(ComponentTestBaseWithoutClient):
                 "string_col": ["A", "B"],
                 "int_col": [1, 2],
                 "bool_col": [True, False],
-                "time_col": pd.to_datetime(["2023-01-01", "2023-01-02"]),
+                # Exercise datetime formatting without pandas 2.x's native conversion, which crashes on Python 3.15.
+                "time_col": pd.Series(
+                    [datetime(2023, 1, 1, tzinfo=timezone.utc), datetime(2023, 1, 2, tzinfo=timezone.utc)], dtype=object
+                ),
             }
         )
         template = "{string_col}-{int_col}-{bool_col}-{time_col}"

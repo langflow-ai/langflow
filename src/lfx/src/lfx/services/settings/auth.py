@@ -110,10 +110,8 @@ class AuthSettings(BaseSettings):
     This will be removed in v2.0"""
 
     WEBHOOK_AUTH_ENABLE: bool = True
-    """If True, webhook endpoints will require API key authentication.
-    If False, webhooks run as flow owner without authentication.
-    Defaults to True for secure-by-default behavior; set to False only in
-    trusted environments where unauthenticated webhook execution is acceptable."""
+    """Deprecated compatibility setting. Webhook endpoints always require API key authentication.
+    False remains accepted in existing configuration but no longer disables authentication."""
 
     ENABLE_SUPERUSER_CLI: bool = Field(
         default=True,
@@ -296,6 +294,13 @@ class AuthSettings(BaseSettings):
     AUTHZ_ENABLED: bool = Field(
         default=False,
         description="Enable authorization enforcement. Requires an authorization_service plugin.",
+    )
+    API_KEY_SCOPES_ENABLED: bool = Field(
+        default=False,
+        description=(
+            "Allow issuing and editing restricted API keys after every API and worker replica supports key scopes. "
+            "Existing restricted keys remain subject to enforcement when this switch is off."
+        ),
     )
     AUTHZ_SUPERUSER_BYPASS: bool = Field(
         default=True,

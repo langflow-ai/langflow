@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import ModelSelection from "../components/ModelSelection";
 import { Model } from "../components/types";
 
@@ -134,4 +134,67 @@ describe("ModelSelection live-discovery empty state", () => {
       screen.queryByTestId("live-discovery-empty-state"),
     ).not.toBeInTheDocument();
   });
+});
+
+it("lets users add an OpenRouter decision ID absent from discovery", () => {
+  const toggle = jest.fn();
+  render(
+    <ModelSelection
+      modelType="decision"
+      availableModels={[]}
+      onModelToggle={toggle}
+      providerName="OpenRouter"
+      liveDiscovery
+      isConfigured
+      isEnabledModel
+    />,
+  );
+  fireEvent.change(screen.getByTestId("model-search-input"), {
+    target: { value: "new-author/new-id:exacto" },
+  });
+  fireEvent.click(screen.getByTestId("add-custom-deployment-button"));
+  expect(toggle).toHaveBeenCalledWith(
+    "new-author/new-id:exacto",
+    true,
+    "decision",
+  );
+});
+
+it("never offers to add an OpenRouter ID as a decision model outside the decision view", () => {
+  render(
+    <ModelSelection
+      modelType="all"
+      availableModels={[
+        { model_name: "openai/gpt-chat", metadata: { model_type: "llm" } },
+      ]}
+      onModelToggle={noop}
+      providerName="OpenRouter"
+      liveDiscovery
+      isConfigured
+      isEnabledModel
+    />,
+  );
+  fireEvent.change(screen.getByTestId("model-search-input"), {
+    target: { value: "openai/another-chat" },
+  });
+  expect(
+    screen.queryByTestId("add-custom-decision-deployment-button"),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByTestId("custom-deployment-hint"),
+  ).not.toBeInTheDocument();
+});
+
+it("shows OpenRouter credential guidance in the decision view", () => {
+  render(
+    <ModelSelection
+      modelType="decision"
+      availableModels={[]}
+      onModelToggle={noop}
+      providerName="OpenRouter"
+      liveDiscovery
+      isConfigured={false}
+    />,
+  );
+  expect(screen.getByTestId("live-discovery-empty-state")).toBeInTheDocument();
 });

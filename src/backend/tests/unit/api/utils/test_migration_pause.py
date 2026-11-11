@@ -14,6 +14,7 @@ import os
 import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
@@ -64,7 +65,6 @@ from tests.unit.api.v1 import test_connection_oauth as oauth
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Awaitable, Callable
-    from pathlib import Path
 
 RECORD = {"target": {}, "steps": {}, "accepted_findings": []}
 PAUSED = {**RECORD, "pause": {"frozen_at": "2026-10-05T12:00:00+00:00", "frozen_by": "admin"}}
@@ -77,6 +77,7 @@ CHANGES = {
     # Each adds a row to the audit log, which says who read a person's data.
     "/api/v1/data-subjects/end-users",
     "/api/v1/data-subjects/requests/{request_id}/export",
+    "/api/v1/upgrade-reports/{report_id}/export",
     "/api/v1/users/me/data-export",
 }
 # Every other path that answers a GET or a HEAD. Each was read to its end, with what it depends on, and
@@ -111,6 +112,7 @@ READS = frozenset(
         "/api/v1/agentic/mcp/",
         "/api/v1/all",
         "/api/v1/api_key/",
+        "/api/v1/api_key/permission-options",
         "/api/v1/audits",
         "/api/v1/audits/",
         "/api/v1/audits/export",
@@ -141,6 +143,7 @@ READS = frozenset(
         "/api/v1/config",
         "/api/v1/connections",
         "/api/v1/connections/oauth/registrations",
+        "/api/v1/connections/oauth/registrations/saved",
         "/api/v1/data-subjects/requests",
         "/api/v1/data-subjects/requests/{request_id}",
         "/api/v1/data-subjects/requests/{request_id}/dry-run",
@@ -203,6 +206,7 @@ READS = frozenset(
         "/api/v1/memories/{memory_base_id}/messages",
         "/api/v1/memories/{memory_base_id}/mismatch",
         "/api/v1/memories/{memory_base_id}/sessions",
+        "/api/v1/maintenance/status",
         "/api/v1/model-provider-policy",
         "/api/v1/model-provider-policy/",
         "/api/v1/model_options/embedding",
@@ -247,6 +251,12 @@ READS = frozenset(
         "/api/v1/triggers/{trigger_id}",
         "/api/v1/triggers/{trigger_id}/events",
         "/api/v1/triggers/{trigger_id}/ingress",
+        # These return stored reports/results; export only emits the allowed
+        # authorization audit record and never executes the imported report.
+        "/api/v1/upgrade-reports",
+        "/api/v1/upgrade-reports/{report_id}",
+        "/api/v1/upgrade-reports/{report_id}/export",
+        "/api/v1/upgrade-reports/{report_id}/repairs",
         "/api/v1/users/",
         "/api/v1/users/me/deletion-request",
         "/api/v1/users/whoami",
@@ -260,6 +270,9 @@ READS = frozenset(
         "/api/v2/files/{file_id}",
         "/api/v2/mcp/servers",
         "/api/v2/mcp/servers/{server_name}",
+        "/api/v2/policy-bundle",
+        "/api/v2/policy-bundle/",
+        "/api/v2/policy-bundle/history",
         "/api/v2/registration/",
         "/api/v2/workflows",
         "/api/v2/workflows/pending",
@@ -588,8 +601,14 @@ def test_every_get_route_says_whether_it_changes_the_instance():
         # plugin mounts is the plugin's to answer for.
         ours = getattr(route.endpoint, "__module__", "").startswith(("langflow.", "lfx."))
         if ours and (route.methods or set()) & {"GET", "HEAD"}:
-            depends_on = getattr(route, "dependencies", None) or []
-            says_so = any(depends.dependency is changes_the_instance for depends in depends_on)
+            # A parameter dependency can follow authentication intentionally, so
+            # non-admin callers still receive 403 before the maintenance guard.
+            pending = list(route.dependant.dependencies)
+            says_so = False
+            while pending:
+                dependency = pending.pop()
+                says_so |= dependency.call is changes_the_instance
+                pending.extend(dependency.dependencies)
             served[route.path] = served.get(route.path, False) or says_so
     changes = {path for path, says_so in served.items() if says_so}
     # The migration's own routes are let through on purpose: they are the steps the pause is for.
@@ -598,7 +617,7 @@ def test_every_get_route_says_whether_it_changes_the_instance():
     assert unread == [], (
         "A migration pause lets every GET through as a read, and these routes are new. Read each one to its "
         "end, with what it depends on. A route that leaves the instance as it is goes in READS, in this file. "
-        "A route that changes it takes dependencies=[Depends(changes_the_instance)], which makes a pause "
+        "A route that changes it depends on changes_the_instance, which makes a pause "
         "refuse it, and goes in CHANGES."
     )
     assert changes == CHANGES
@@ -634,6 +653,44 @@ async def test_a_data_subject_read_that_records_who_read_is_refused_while_paused
     _write_record(config_dir, RECORD)
     assert (await client.get(path, headers=logged_in_headers_super_user)).status_code == answer_after
     assert await recorded() == rows_after
+
+
+async def test_an_upgrade_report_export_is_refused_without_an_audit_write_while_paused(
+    client, logged_in_headers_super_user, config_dir, monkeypatch
+):
+    auth_settings = get_settings_service().auth_settings
+    monkeypatch.setattr(auth_settings, "AUTHZ_AUDIT_ENABLED", True)
+    monkeypatch.setattr(auth_settings, "AUTHZ_AUDIT_DURABLE", True)
+    document = (Path(__file__).parents[1] / "v1" / "fixtures" / "upgrade-report-v1.json").read_bytes()
+    imported = await client.post("api/v1/upgrade-reports", content=document, headers=logged_in_headers_super_user)
+    assert imported.status_code == 201, imported.text
+    report_id = imported.json()["id"]
+    report_path = f"api/v1/upgrade-reports/{report_id}"
+
+    async def exports_recorded() -> int:
+        async with session_scope() as session:
+            rows = await session.exec(
+                select(AuthzAuditLog).where(
+                    AuthzAuditLog.action == "upgrade-report:export", AuthzAuditLog.resource_id == UUID(report_id)
+                )
+            )
+            return len(rows.all())
+
+    _write_record(config_dir, PAUSED)
+    for path in ("api/v1/upgrade-reports", report_path, f"{report_path}/repairs"):
+        response = await client.get(path, headers=logged_in_headers_super_user)
+        assert response.status_code == 200, response.text
+
+    refused = await client.get(f"{report_path}/export", headers=logged_in_headers_super_user)
+    assert refused.status_code == 503, refused.text
+    assert refused.json() == REFUSAL
+    assert await exports_recorded() == 0
+
+    _write_record(config_dir, RECORD)
+    exported = await client.get(f"{report_path}/export", headers=logged_in_headers_super_user)
+    assert exported.status_code == 200, exported.text
+    assert exported.content == document
+    assert await exports_recorded() == 1
 
 
 async def test_a_lock_that_cannot_be_taken_stops_no_change(client, logged_in_headers, config_dir):
@@ -889,7 +946,7 @@ async def test_a_record_that_says_paused_changes_nothing_while_the_feature_is_of
     _write_record(config_dir, PAUSED)
 
     assert not is_paused()
-    assert MigrationPauseMiddleware not in [middleware.cls for middleware in create_app().user_middleware]
+    assert MigrationPauseMiddleware in [middleware.cls for middleware in create_app().user_middleware]
     assert (await client.post("api/v1/flows/", json=NEW_FLOW, headers=logged_in_headers)).status_code == 201
     listener = ListenerSupervisor()
     sync = asyncio.create_task(sync_flows_from_fs())

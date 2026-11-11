@@ -23,8 +23,9 @@ export function modelKindOfField(field: unknown): ModelType | null {
 }
 
 /**
- * Decision models are never filled, swapped or cleared on the user's behalf:
- * the chosen provider receives the flow's messages, so only the user picks it.
+ * Decision models are never filled or swapped on the user's behalf: the chosen
+ * provider receives the flow's messages, so only the user picks it. One the
+ * user switched off in Model Providers is cleared, never replaced.
  */
 export function isUserOwnedModelKind(kind: ModelType | null): boolean {
   return kind === "decision";

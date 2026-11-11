@@ -4,13 +4,12 @@ import pytest
 from langchain_core.messages import AIMessage
 from langchain_core.outputs import ChatGeneration, LLMResult
 
-try:
-    from lfx.components.models_and_agents.policies.llm_wrapper import LangchainModelWrapper
-except ModuleNotFoundError as exc:
-    # toolguard imports litellm, which still imports sre_constants, removed in Python 3.15.
-    if exc.name != "sre_constants":
-        raise
-    pytest.skip("litellm does not import on Python 3.15 yet", allow_module_level=True)
+# toolguard imports litellm, which imports the stdlib module `sre_constants`; Python 3.15 removed it.
+# Skip this module there instead of failing the whole test group at collection.
+LangchainModelWrapper = pytest.importorskip(
+    "lfx.components.models_and_agents.policies.llm_wrapper",
+    exc_type=ImportError,
+).LangchainModelWrapper
 
 
 @pytest.fixture

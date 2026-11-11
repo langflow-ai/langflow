@@ -46,6 +46,7 @@ from langflow.services.triggers.constants import (
     KIND_SLACK_MESSAGE,
     KIND_SLACK_REACTION,
     MICROSOFT_SOURCE_KINDS,
+    POLICY_BLOCKED_ERROR,
     PROVIDER_SLACK,
     SLACK_TRIGGER_KINDS,
 )
@@ -232,7 +233,10 @@ def apply_config_verdict(row: Trigger, error: str | None) -> bool:
         if row.state == TriggerState.ERROR.value:
             row.state = TriggerState.ACTIVE.value
             row.next_fire_at = None
-        if row.state in _VERDICT_STATES and row.last_error != NODE_REMOVED_ERROR:
+        if row.state in _VERDICT_STATES and row.last_error not in {
+            NODE_REMOVED_ERROR,
+            POLICY_BLOCKED_ERROR,
+        }:
             row.last_error = None
     return (row.state, row.last_error, row.next_fire_at) != before
 
@@ -498,6 +502,12 @@ async def reconcile_flow_triggers(
             touched += 1
         renamed = sync_display_name(row, config if error is None else None)
         config_changed = row.config != config
+        subscription_changed = config_changed
+        if kind in {"gitlab.issue", "gitlab.merge_request"}:
+            receiver_filters = {"actions", "include_self_events", "include_bot_events"}
+            subscription_changed = {
+                key: value for key, value in (row.config or {}).items() if key not in receiver_filters
+            } != {key: value for key, value in config.items() if key not in receiver_filters}
         changed = config_changed or row.session_policy != session_policy or renamed
         if changed:
             if schedule_timing_changed(row.config or {}, config):
@@ -542,7 +552,7 @@ async def reconcile_flow_triggers(
             verdict = await _apply_slack_verdict(session, row, error=error, moved=moved, filters_changed=config_changed)
             changed = verdict or changed
         elif kind in source_kinds():
-            if row.state == TriggerState.ACTIVE.value and (error or config_changed or moved):
+            if row.state == TriggerState.ACTIVE.value and (error or subscription_changed or moved):
                 from langflow.services.triggers.subscriptions import revoke_for_trigger
 
                 await revoke_for_trigger(session, trigger_id=row.id)
@@ -550,7 +560,11 @@ async def reconcile_flow_triggers(
                 row.last_error = error or SOURCE_SETTINGS_CHANGED_ERROR
                 row.provider_state = {}
                 changed = True
-            elif row.last_error != error and row.state != TriggerState.ACTIVE.value:
+            elif (
+                row.last_error != error
+                and row.state != TriggerState.ACTIVE.value
+                and (row.state != TriggerState.ERROR.value or error is not None or config_changed or moved)
+            ):
                 row.last_error = error
                 changed = True
         if changed:

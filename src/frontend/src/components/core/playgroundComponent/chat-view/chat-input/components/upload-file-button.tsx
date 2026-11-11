@@ -50,7 +50,10 @@ const UploadFileButton = ({
           unstyled
           aria-label={t("chat.attachFileTooltip")}
         >
-          <ForwardedIconComponent className="h-[18px] w-[18px]" name="File" />
+          <ForwardedIconComponent
+            className="h-[18px] w-[18px]"
+            name="Paperclip"
+          />
         </Button>
       </div>
     </ShadTooltip>

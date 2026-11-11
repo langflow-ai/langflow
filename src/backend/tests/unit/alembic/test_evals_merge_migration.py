@@ -13,8 +13,8 @@ from .test_migration_execution import _engine_url, _make_alembic_cfg, db_url  # 
 
 @pytest.mark.parametrize(
     "starting_revision",
-    ["a1d7e3c5b9f2", "f2d6b8c4a901"],  # pragma: allowlist secret
-    ids=["evals", "release"],
+    ["a1d7e3c5b9f2", "f2d6b8c4a901", "d7e9f1a3b5c7", "9c4b7e2a6d10"],  # pragma: allowlist secret
+    ids=["evals", "release", "evals-merged", "release-upgrade-reports"],
 )
 def test_evals_and_release_upgrade_preserves_data(db_url, starting_revision):  # noqa: F811
     """Both existing heads must upgrade to one head without losing stored data."""
@@ -32,7 +32,8 @@ def test_evals_and_release_upgrade_preserves_data(db_url, starting_revision):  #
                 ),
                 {"id": owner_id, "username": f"evals-upgrade-{owner_id}"},
             )
-            if starting_revision == "a1d7e3c5b9f2":  # pragma: allowlist secret
+            has_evals = inspect(connection).has_table("dataset")
+            if has_evals:
                 connection.execute(
                     text(
                         "INSERT INTO dataset (id, user_id, name, revision, created_at, updated_at) "
@@ -50,7 +51,7 @@ def test_evals_and_release_upgrade_preserves_data(db_url, starting_revision):  #
             assert "completed_registration_id" in {
                 column["name"] for column in inspect(connection).get_columns("connection_oauth")
             }
-            if starting_revision == "a1d7e3c5b9f2":  # pragma: allowlist secret
+            if has_evals:
                 assert (
                     connection.execute(text("SELECT name FROM dataset WHERE id = :id"), {"id": dataset_id}).scalar()
                     == "retained-dataset"
@@ -61,10 +62,8 @@ def test_evals_and_release_upgrade_preserves_data(db_url, starting_revision):  #
 
         command.downgrade(config, starting_revision)
         with engine.connect() as connection:
-            assert set(MigrationContext.configure(connection).get_current_heads()) == {
-                "a1d7e3c5b9f2",  # pragma: allowlist secret
-                "f2d6b8c4a901",  # pragma: allowlist secret
-            }
+            # The other history keeps whatever head it reached, so only this side is pinned.
+            assert starting_revision in set(MigrationContext.configure(connection).get_current_heads())
             assert inspect(connection).has_table("dataset")
             assert "completed_registration_id" in {
                 column["name"] for column in inspect(connection).get_columns("connection_oauth")

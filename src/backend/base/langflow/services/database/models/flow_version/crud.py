@@ -3,10 +3,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from lfx.log import logger
+from sqlalchemy import ColumnElement, or_
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlmodel import col, delete, func, select, update
 
 from langflow.services.database.models.deployment.model import Deployment
+from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow_version.exceptions import (
     FlowVersionConflictError,
     FlowVersionDeployedError,
@@ -30,6 +32,16 @@ if TYPE_CHECKING:
 
 MAX_VERSION_RETRIES = 3
 MAX_VERSION_ID_FILTER_SIZE = 50
+
+
+def _visible_to(user_id: UUID) -> ColumnElement[bool]:
+    """A version is visible to its author and to the owner of its flow.
+
+    ``user_id`` names the author, and an overwrite files the replaced version under
+    whoever last wrote it, so scoping to the author alone hides it from the owner.
+    """
+    owned_flows = select(Flow.id).where(Flow.user_id == user_id)
+    return or_(FlowVersion.user_id == user_id, col(FlowVersion.flow_id).in_(owned_flows))
 
 
 async def get_next_version_number(session: AsyncSession, flow_id: UUID) -> int:
@@ -189,7 +201,7 @@ async def get_flow_version_list_simple(
     """
     stmt = (
         select(FlowVersion)
-        .where(FlowVersion.flow_id == flow_id, FlowVersion.user_id == user_id)
+        .where(FlowVersion.flow_id == flow_id, _visible_to(user_id))
         .order_by(col(FlowVersion.version_number).desc())
         .offset(offset)
         .limit(limit)
@@ -230,7 +242,7 @@ async def get_flow_versions_with_provider_status(
             deployed_subquery.c.flow_version_id.isnot(None).label("is_deployed"),
         )
         .outerjoin(deployed_subquery, deployed_subquery.c.flow_version_id == FlowVersion.id)
-        .where(FlowVersion.flow_id == flow_id, FlowVersion.user_id == user_id)
+        .where(FlowVersion.flow_id == flow_id, _visible_to(user_id))
     )
     stmt = stmt.order_by(col(FlowVersion.version_number).desc()).offset(offset).limit(limit)
     rows = (await session.exec(stmt)).all()
@@ -242,7 +254,7 @@ async def get_flow_version_entry(
     version_id: UUID,
     user_id: UUID,
 ) -> FlowVersion | None:
-    result = await session.exec(select(FlowVersion).where(FlowVersion.id == version_id, FlowVersion.user_id == user_id))
+    result = await session.exec(select(FlowVersion).where(FlowVersion.id == version_id, _visible_to(user_id)))
     return result.first()
 
 
@@ -264,7 +276,7 @@ async def get_flow_version_entries_by_ids(
 
     stmt = select(FlowVersion).where(
         col(FlowVersion.id).in_(version_ids),
-        FlowVersion.user_id == user_id,
+        _visible_to(user_id),
     )
     rows = (await session.exec(stmt)).all()
     return {row.id: row for row in rows}
@@ -373,7 +385,7 @@ async def lock_flow_version_entry(
     """
     conditions = [FlowVersion.id == version_id]
     if user_id is not None:
-        conditions.append(FlowVersion.user_id == user_id)
+        conditions.append(_visible_to(user_id))
     dialect = session.get_bind().dialect.name
     if dialect == "sqlite":
         # SQLite ignores FOR UPDATE. A no-op write takes its transaction-wide
@@ -425,7 +437,7 @@ async def delete_flow_version_entry(
         raise FlowVersionRetainedError(msg)
 
     # The entry can disappear after the preflight reads under concurrent DELETEs.
-    result = await session.exec(delete(FlowVersion).where(FlowVersion.id == version_id, FlowVersion.user_id == user_id))
+    result = await session.exec(delete(FlowVersion).where(FlowVersion.id == version_id, _visible_to(user_id)))
     if result.rowcount == 0:
         msg = f"Version entry {version_id} not found"
         raise FlowVersionNotFoundError(msg)

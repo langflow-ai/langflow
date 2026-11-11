@@ -72,11 +72,13 @@ class LangflowClient:
         use_env_global_vars: bool = True,
         use_env_proxies: bool = True,
         pinned_ips: dict[str, list[str]] | None = None,
+        auth_headers: dict[str, str] | None = None,
     ):
         self.server_url = (server_url or os.environ.get("LANGFLOW_SERVER_URL", "http://localhost:7860")).rstrip("/")
         # HTTP mounts must not substitute process credentials for their caller.
         self.api_key = api_key or (os.environ.get("LANGFLOW_API_KEY") if use_env_api_key else None)
         self.access_token = access_token
+        self._auth_headers = dict(auth_headers or {})
         # Keep environment-based configuration consistent for this client's lifetime.
         self.global_var_headers = _global_var_headers() if use_env_global_vars else {}
         self._use_env_proxies = use_env_proxies
@@ -103,7 +105,7 @@ class LangflowClient:
 
     async def _check_request_origin(self, request: httpx.Request) -> None:
         """Keep environment overrides on the configured server's origin."""
-        if not self.global_var_headers and not self._pinned_ips:
+        if not self.global_var_headers and not self._pinned_ips and not self._auth_headers:
             return
         server = httpx.URL(self.server_url)
         defaults = {"http": 80, "https": 443}
@@ -133,6 +135,7 @@ class LangflowClient:
         # The prefix is the whole allowlist, so this cannot collide with the auth
         # headers above or leak anything else out of the environment.
         headers.update(self.global_var_headers)
+        headers.update(self._auth_headers)
         return headers
 
     def _url(self, path: str) -> str:

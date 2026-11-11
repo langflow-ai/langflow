@@ -91,7 +91,7 @@ async def test_a_trigger_cannot_be_created_on_a_connection_its_owner_does_not_ow
 
     assert response.status_code == 422, response.text
     # One answer for "not yours" and "does not exist": no oracle for foreign ids.
-    assert "connection its owner owns" in response.json()["detail"]
+    assert "The trigger's connection is unavailable." in response.json()["detail"]
 
 
 async def test_a_trigger_cannot_be_repointed_at_someone_elses_connection(

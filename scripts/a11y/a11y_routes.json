@@ -194,6 +194,11 @@
       "path": "/assets/evaluations/:evaluationId",
       "surface": "Evaluation runs page",
       "currentBehavior": "Redirects to /flows unless the backend runs with LANGFLOW_FEATURE_EVALS=true. Scan with that flag on and an evaluation ID."
+    },
+    {
+      "path": "/settings/upgrade-reports",
+      "surface": "Admin upgrade reports",
+      "currentBehavior": "Requires an active superuser. Dedicated upgrade-reports.a11y.spec.ts covers import, empty and populated reports, preview, results, saved outcomes, validation, and mobile layout."
     }
   ],
   "excluded": [

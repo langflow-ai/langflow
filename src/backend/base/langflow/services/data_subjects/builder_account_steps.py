@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import delete
+from sqlalchemy import delete, update
 from sqlmodel import and_, col, or_, select
 
 from langflow.services.data_subjects.audit_redaction import redact_audit_rows
 from langflow.services.data_subjects.batching import clear_reference_batch, delete_batch, delete_job_batch
 from langflow.services.data_subjects.evaluation_steps import EVALUATION_STEPS
 from langflow.services.data_subjects.transactions import builder_transactions
+from langflow.services.data_subjects.upgrade_reports import erase_upgrade_reports
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.auth.authz import (
     AuthzAccessException,
@@ -21,6 +22,7 @@ from langflow.services.database.models.auth.authz import (
     AuthzShare,
     AuthzTeamMember,
 )
+from langflow.services.database.models.auth.refresh_token import RefreshTokenSession
 from langflow.services.database.models.auth.sso import SSOConfig, SSOUserProfile
 from langflow.services.database.models.catalog_policy.model import CatalogPolicyRule
 from langflow.services.database.models.connection.model import Connection
@@ -32,11 +34,13 @@ from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.ingestion_run.model import IngestionRun
 from langflow.services.database.models.jobs.model import Job
+from langflow.services.database.models.maintenance import MAINTENANCE_ID, MaintenanceState
 from langflow.services.database.models.mcp_server.model import MCPServer
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.policy_bundle.model import PolicyBundleRevision
 from langflow.services.database.models.project_replacement_operation import ProjectReplacementOperation
 from langflow.services.database.models.transactions.model import TransactionTable
+from langflow.services.database.models.upgrade_report import UpgradeReportRepair
 from langflow.services.database.models.variable.model import Variable
 
 if TYPE_CHECKING:
@@ -45,9 +49,9 @@ if TYPE_CHECKING:
 
     from sqlmodel.ext.asyncio.session import AsyncSession
 
-    from langflow.services.data_subjects.context import EraseContext
+    from langflow.services.data_subjects.context import EraseContext, EraseStepPending
 
-    Step = Callable[[AsyncSession, EraseContext], Awaitable[int]]
+    Step = Callable[[AsyncSession, EraseContext], Awaitable[int | EraseStepPending]]
 
 
 def _owned_folder_ids(user_id: UUID):
@@ -70,6 +74,15 @@ async def erase_transactions_elsewhere(session: AsyncSession, ctx: EraseContext)
 
 async def erase_ingestion_runs(session: AsyncSession, ctx: EraseContext) -> int:
     return await delete_batch(session, IngestionRun, IngestionRun.user_id == ctx.subject_user_id)
+
+
+async def erase_refresh_sessions(session: AsyncSession, ctx: EraseContext) -> int:
+    return await delete_batch(
+        session,
+        RefreshTokenSession,
+        RefreshTokenSession.user_id == ctx.subject_user_id,
+        pk=RefreshTokenSession.session_digest,
+    )
 
 
 async def erase_shares(session: AsyncSession, ctx: EraseContext) -> int:
@@ -145,6 +158,16 @@ async def erase_project_receipts(session: AsyncSession, ctx: EraseContext) -> in
     return result.rowcount or 0
 
 
+async def clear_maintenance_actor(session: AsyncSession, ctx: EraseContext) -> int:
+    """Clear the erased actor without overwriting a concurrent maintenance change."""
+    result = await session.exec(
+        update(MaintenanceState)
+        .where(MaintenanceState.id == MAINTENANCE_ID, MaintenanceState.set_by == ctx.subject_user_id)
+        .values(set_by=None)
+    )
+    return result.rowcount or 0
+
+
 async def erase_folders(session: AsyncSession, ctx: EraseContext) -> int:
     """Leaf folders first, so a parent is never deleted while a child still points at it."""
     uid = ctx.subject_user_id
@@ -168,6 +191,7 @@ BUILDER_ACCOUNT_STEPS: tuple[tuple[str, Step], ...] = (
     ("files", _delete_by_user(File, File.user_id)),
     ("variables", _delete_by_user(Variable, Variable.user_id)),
     ("api_keys", _delete_by_user(ApiKey, ApiKey.user_id)),
+    ("refresh_sessions", erase_refresh_sessions),
     ("connections", erase_connections),
     ("provider_accounts", _delete_by_user(DeploymentProviderAccount, DeploymentProviderAccount.user_id)),
     ("sso_profiles", _delete_by_user(SSOUserProfile, SSOUserProfile.user_id)),
@@ -193,4 +217,8 @@ BUILDER_ACCOUNT_STEPS: tuple[tuple[str, Step], ...] = (
     ("audit_subject", _clear_reference(AuthzAuditLog, AuthzAuditLog.user_id)),
     ("project_receipts", erase_project_receipts),
     ("folders", erase_folders),
+    # Append steps to preserve the positions saved in in-flight request cursors.
+    ("maintenance_setter", clear_maintenance_actor),
+    ("upgrade_repair_author", _delete_by_user(UpgradeReportRepair, UpgradeReportRepair.created_by)),
+    ("upgrade_reports", erase_upgrade_reports),
 )

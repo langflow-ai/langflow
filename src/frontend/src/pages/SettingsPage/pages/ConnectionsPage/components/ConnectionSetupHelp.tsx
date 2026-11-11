@@ -11,11 +11,13 @@ import {
 export default function ConnectionSetupHelp({
   providerId,
   noRegistration,
+  registrationError,
   usesToken = false,
   docsUrl,
 }: {
   providerId: string;
   noRegistration: boolean;
+  registrationError?: string | null;
   usesToken?: boolean;
   docsUrl?: string | null;
 }) {
@@ -24,7 +26,8 @@ export default function ConnectionSetupHelp({
   const guide = connectionSetupGuide(providerId, usesToken, docsUrl);
   const { host, protocol } = customGetHostProtocol();
   const callbackUrl = suggestedCallbackUrl(providerId, `${protocol}//${host}`);
-  const needsSetup = noRegistration && !usesToken;
+  const discoveryError = usesToken ? null : registrationError;
+  const needsSetup = noRegistration && !usesToken && !discoveryError;
 
   const copyCallback = async () => {
     if (!callbackUrl) return;
@@ -36,10 +39,15 @@ export default function ConnectionSetupHelp({
     }
   };
 
-  if (!guide && !needsSetup) return null;
+  if (!guide && !needsSetup && !discoveryError) return null;
 
   return (
     <div className="space-y-2 text-xs" data-testid="connection-setup-help">
+      {discoveryError && (
+        <p className="text-destructive" role="alert">
+          {discoveryError}
+        </p>
+      )}
       {needsSetup && (
         <p className="text-destructive" role="alert">
           {t("connections.add.noRegistration")}

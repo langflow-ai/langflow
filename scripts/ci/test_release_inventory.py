@@ -86,12 +86,15 @@ def test_contract_required_files_exist_in_sources() -> None:
         "lfx-azure": REPO_ROOT / "src" / "bundles" / "azure" / "src",
         "lfx-datastax": REPO_ROOT / "src" / "bundles" / "datastax" / "src",
         "lfx-google": REPO_ROOT / "src" / "bundles" / "google" / "src",
+        "lfx-discord": REPO_ROOT / "src" / "bundles" / "discord" / "src",
         "lfx-github": REPO_ROOT / "src" / "bundles" / "github" / "src",
         "lfx-microsoft": REPO_ROOT / "src" / "bundles" / "microsoft" / "src",
         "lfx-ollama": REPO_ROOT / "src" / "bundles" / "ollama" / "src",
         "lfx-openai": REPO_ROOT / "src" / "bundles" / "openai" / "src",
         "lfx-slack": REPO_ROOT / "src" / "bundles" / "slack" / "src",
+        "lfx-telegram": REPO_ROOT / "src" / "bundles" / "telegram" / "src",
         "lfx-toolguard": REPO_ROOT / "src" / "bundles" / "toolguard" / "src",
+        "lfx-whatsapp": REPO_ROOT / "src" / "bundles" / "whatsapp" / "src",
         "lfx-bundles": REPO_ROOT / "src" / "bundles" / "lfx-bundles" / "src",
     }
 
