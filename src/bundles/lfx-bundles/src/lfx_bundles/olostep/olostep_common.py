@@ -62,6 +62,7 @@ def require_http_url(value: Any) -> str:
 
 
 def _redact(text: str, api_key: str) -> str:
+    """Replace the API key in text with ***."""
     return text.replace(api_key, "***") if api_key else text
 
 
@@ -76,6 +77,7 @@ def _error_detail(body: Any) -> str:
 
 
 def _error_message(response: httpx.Response, api_key: str) -> str:
+    """Build a short, key-free error message from a failed API response."""
     try:
         detail = _error_detail(response.json())
     except ValueError:

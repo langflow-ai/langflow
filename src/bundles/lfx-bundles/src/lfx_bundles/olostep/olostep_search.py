@@ -130,4 +130,5 @@ class OlostepSearchComponent(Component):
         return data
 
     def search_dataframe(self) -> DataFrame:
+        """Return the search results as a table, one row per result."""
         return DataFrame(self.search())

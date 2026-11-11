@@ -105,8 +105,9 @@ This component crawls a website from a start URL and returns each page's content
 
 It returns the pages as a [`Table`](/data-types#table), with one row per page, with the page's `url` and `markdown_content`.
 
-The component waits for the crawl to finish, up to **Max Wait**.
+The component waits up to **Max Wait** for the crawl to finish.
 The crawl is told to stop in time, so the component returns the pages crawled by then instead of failing.
+**Max Wait** limits only this wait. Starting the crawl and fetching each page's content afterwards take extra time, so the component can run longer than **Max Wait**.
 
 ### Olostep Crawl parameters
 
@@ -118,7 +119,7 @@ The crawl is told to stop in time, so the component returns the pages crawled by
 | Include Paths (`include_urls`) | String | Input parameter. Optional. Only crawl URLs matching these glob patterns, comma-separated, such as `/blog/**`. |
 | Exclude Paths (`exclude_urls`) | String | Input parameter. Optional. Never crawl URLs matching these glob patterns, comma-separated. |
 | Max Depth (`max_depth`) | Integer | Input parameter. Optional. How many links deep to follow from the start URL. `0` means no limit. Default: `0`. |
-| Max Wait (seconds) (`wait_seconds`) | Float | Input parameter. How long to wait for the crawl. Default: `180`. |
+| Max Wait (seconds) (`wait_seconds`) | Float | Input parameter. How long to wait for the crawl to finish. Fetching the pages' content afterwards takes extra time. Default: `180`. |
 
 ## See also
 

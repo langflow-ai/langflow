@@ -81,7 +81,10 @@ class OlostepCrawlComponent(Component):
         FloatInput(
             name="wait_seconds",
             display_name="Max Wait (seconds)",
-            info="How long to wait for the crawl. The crawl stops in time and returns the pages done by then.",
+            info=(
+                "How long to wait for the crawl to finish. The crawl stops in time and returns the pages done "
+                "by then. Fetching the pages' content afterwards takes extra time."
+            ),
             value=DEFAULT_WAIT_SECONDS,
             advanced=True,
         ),
@@ -92,6 +95,7 @@ class OlostepCrawlComponent(Component):
     ]
 
     def _request(self, method: str, path: str, **kwargs) -> dict:
+        """Call the Olostep API with this component's key."""
         return olostep_request(method, path, api_key=self.api_key, timeout=DEFAULT_TIMEOUT_SECONDS, **kwargs)
 
     def crawl(self) -> list[Data]:
@@ -159,4 +163,5 @@ class OlostepCrawlComponent(Component):
         return data
 
     def crawl_dataframe(self) -> DataFrame:
+        """Return the crawled pages as a table, one row per page."""
         return DataFrame(self.crawl())

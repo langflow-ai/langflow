@@ -128,4 +128,5 @@ class OlostepMapComponent(Component):
         return data
 
     def map_dataframe(self) -> DataFrame:
+        """Return the website's URLs as a table, one row per URL."""
         return DataFrame(self.map_site())

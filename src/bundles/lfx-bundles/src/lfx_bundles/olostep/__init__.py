@@ -43,4 +43,5 @@ def __getattr__(attr_name: str) -> Any:
 
 
 def __dir__() -> list[str]:
+    """List the lazily imported component names."""
     return list(__all__)
