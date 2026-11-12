@@ -213,6 +213,78 @@ async def run_pre_creation_hooks(context: PreCreationContext) -> None:
             )
 
 
+# ---------------------------------------------------------------------------
+# Post-creation hooks
+# ---------------------------------------------------------------------------
+# A second, separate registry: hooks that run AFTER a knowledge base or a variable has been created and committed.
+# They cannot veto the creation (it already happened). A plugin uses one to add rows that belong with the new
+# resource, for example a share. They are kept apart from the pre-creation resources so that registering a
+# pre-creation hook for ``knowledge_base`` still fails loudly instead of silently never running.
+#
+# Call points (OSS): ``knowledge_base`` - ``langflow.api.v1.knowledge_bases.create_knowledge_base``;
+# ``variable`` - ``langflow.api.v1.variable.create_variable``. Other ways a row can appear (startup import of
+# environment variables, flow components creating a knowledge base, migrations) are deliberately not hooked.
+#
+# Contract: hooks are awaited in registration order, once per successful create, with no session: the row is
+# committed, so a hook opens its own. An ``HTTPException`` raised by a hook propagates verbatim (the resource then
+# exists but the request fails, which is the hook's way of saying "the follow-up work failed, look at it"). Any
+# other exception is logged and ignored, like a pre-creation hook that breaks.
+RESOURCE_KNOWLEDGE_BASE = "knowledge_base"
+RESOURCE_VARIABLE = "variable"
+
+POST_CREATION_RESOURCES: tuple[str, ...] = (RESOURCE_KNOWLEDGE_BASE, RESOURCE_VARIABLE)
+
+
+@dataclass(frozen=True)
+class PostCreationContext:
+    """What a post-creation hook is told about the resource that was just created."""
+
+    resource: str
+    resource_id: UUID
+    owner_id: UUID
+    name: str | None = None
+    extra: Mapping[str, Any] = field(default_factory=dict)
+
+
+PostCreationHook = Callable[[PostCreationContext], Awaitable[None]]
+
+_post_creation_hooks: dict[str, list[PostCreationHook]] = {resource: [] for resource in POST_CREATION_RESOURCES}
+
+
+def register_post_creation_hook(resource: str, hook: PostCreationHook) -> bool:
+    """Register ``hook`` for ``resource``; return False if it was already registered.
+
+    Raises ``ValueError`` for an unknown resource, like :func:`register_pre_creation_hook`.
+    """
+    if resource not in _post_creation_hooks:
+        msg = f"Unknown post-creation resource {resource!r}; expected one of {', '.join(POST_CREATION_RESOURCES)}"
+        raise ValueError(msg)
+    hooks = _post_creation_hooks[resource]
+    if hook in hooks:
+        return False
+    hooks.append(hook)
+    return True
+
+
+def registered_post_creation_hooks(resource: str) -> list[PostCreationHook]:
+    """Return a copy of the hooks registered for ``resource`` (empty if unknown)."""
+    return list(_post_creation_hooks.get(resource, []))
+
+
+async def run_post_creation_hooks(context: PostCreationContext) -> None:
+    """Run every hook registered for ``context.resource``; see the contract above."""
+    for hook in list(_post_creation_hooks.get(context.resource, [])):
+        try:
+            await hook(context)
+        except HTTPException:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            await logger.awarning(
+                f"Post-creation hook {_hook_name(hook)} for {context.resource!r} failed and was ignored: "
+                f"{type(exc).__name__}"
+            )
+
+
 def pre_creation_denied_to_http(exc: PreCreationDenied) -> HTTPException:
     """Map a denial onto the single OSS wire shape: 403 + code header + structured detail."""
     return HTTPException(
@@ -254,17 +326,25 @@ __all__ = [
     "ERROR_CODE_FEATURE_NOT_IN_TIER",
     "ERROR_CODE_HEADER",
     "ERROR_CODE_TIER_LIMIT_REACHED",
+    "POST_CREATION_RESOURCES",
     "RESOURCES",
+    "RESOURCE_KNOWLEDGE_BASE",
     "RESOURCE_PROJECT",
     "RESOURCE_ROLE",
     "RESOURCE_USER",
+    "RESOURCE_VARIABLE",
+    "PostCreationContext",
+    "PostCreationHook",
     "PreCreationContext",
     "PreCreationDenied",
     "PreCreationHook",
     "enforce_pre_creation",
     "http_denial_error_code",
     "pre_creation_denied_to_http",
+    "register_post_creation_hook",
     "register_pre_creation_hook",
+    "registered_post_creation_hooks",
     "registered_pre_creation_hooks",
+    "run_post_creation_hooks",
     "run_pre_creation_hooks",
 ]

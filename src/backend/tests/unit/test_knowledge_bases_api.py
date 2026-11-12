@@ -526,6 +526,83 @@ class TestKnowledgeBaseAPI:
         # certainly no metadata sidecar.
         assert not (tmp_path / active_user.username / kb_name).exists()
 
+    @pytest.fixture
+    def post_creation_registry(self):
+        from langflow.services import creation_hooks
+
+        saved = {resource: list(hooks) for resource, hooks in creation_hooks._post_creation_hooks.items()}
+        yield creation_hooks
+        for resource, hooks in saved.items():
+            creation_hooks._post_creation_hooks[resource][:] = hooks
+
+    @staticmethod
+    def _opensearch_create_body(kb_name: str) -> dict:
+        return {
+            "name": kb_name,
+            "embedding_provider": "OpenAI",
+            "embedding_model": "text-embedding-3-small",
+            "model_selection": {
+                "id": "text-embedding-3-small",
+                "name": "text-embedding-3-small",
+                "provider": "OpenAI",
+                "metadata": {"model_type": "embeddings"},
+            },
+            "backend_type": "opensearch",
+            "backend_config": {"url_variable": "OPENSEARCH_URL", "index_name": ""},
+        }
+
+    async def test_create_knowledge_base_runs_post_creation_hooks_after_the_record_is_saved(
+        self, post_creation_registry, client: AsyncClient, logged_in_headers, active_user
+    ):
+        from lfx.base.knowledge_bases.backends.base import TestConnectionResult
+        from lfx.base.knowledge_bases.backends.opensearch import OpenSearchBackend
+
+        seen = []
+
+        async def hook(context):
+            # The record is durable by now: a hook can read it back through the service's own session.
+            record = await knowledge_base_service.get_by_user_and_name(context.owner_id, context.name)
+            seen.append((context, record is not None))
+
+        post_creation_registry.register_post_creation_hook(post_creation_registry.RESOURCE_KNOWLEDGE_BASE, hook)
+        with patch.object(
+            OpenSearchBackend, "test_connection", new=AsyncMock(return_value=TestConnectionResult(ok=True, message=""))
+        ):
+            response = await client.post(
+                "api/v1/knowledge_bases", headers=logged_in_headers, json=self._opensearch_create_body("Hooked_KB")
+            )
+
+        assert response.status_code == 201
+        assert len(seen) == 1
+        context, record_was_there = seen[0]
+        assert record_was_there is True
+        assert context.resource == "knowledge_base"
+        assert context.owner_id == active_user.id
+        assert str(context.resource_id) == response.json()["id"]
+        assert context.name == "Hooked_KB"
+
+    async def test_create_knowledge_base_keeps_the_record_when_a_hook_fails_the_request(
+        self, post_creation_registry, client: AsyncClient, logged_in_headers, active_user
+    ):
+        from fastapi import HTTPException
+        from lfx.base.knowledge_bases.backends.base import TestConnectionResult
+        from lfx.base.knowledge_bases.backends.opensearch import OpenSearchBackend
+
+        async def hook(_context):
+            raise HTTPException(status_code=500, detail="follow-up failed")
+
+        post_creation_registry.register_post_creation_hook(post_creation_registry.RESOURCE_KNOWLEDGE_BASE, hook)
+        with patch.object(
+            OpenSearchBackend, "test_connection", new=AsyncMock(return_value=TestConnectionResult(ok=True, message=""))
+        ):
+            response = await client.post(
+                "api/v1/knowledge_bases", headers=logged_in_headers, json=self._opensearch_create_body("Failing_KB")
+            )
+
+        assert response.status_code == 500
+        assert response.json()["detail"] == "follow-up failed"
+        assert await knowledge_base_service.get_by_user_and_name(active_user.id, "Failing_KB") is not None
+
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_fresh_chroma_client", create=True)
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_create_legacy_request_without_model_selection(

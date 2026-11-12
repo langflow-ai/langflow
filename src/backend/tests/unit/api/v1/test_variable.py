@@ -67,6 +67,61 @@ async def test_create_variable(client: AsyncClient, generic_variable, logged_in_
     assert generic_variable["value"] == result["value"]
 
 
+@pytest.fixture
+def post_creation_registry():
+    from langflow.services import creation_hooks
+
+    saved = {resource: list(hooks) for resource, hooks in creation_hooks._post_creation_hooks.items()}
+    yield creation_hooks
+    for resource, hooks in saved.items():
+        creation_hooks._post_creation_hooks[resource][:] = hooks
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_create_variable_runs_post_creation_hooks_after_the_row_is_committed(
+    post_creation_registry, client: AsyncClient, generic_variable, logged_in_headers, active_user
+):
+    seen = []
+
+    async def hook(context):
+        # A separate session sees the row only if the route committed before calling the hook.
+        from langflow.services.database.models.variable.model import Variable
+        from langflow.services.deps import session_scope
+
+        async with session_scope() as other:
+            seen.append((context, await other.get(Variable, context.resource_id) is not None))
+
+    post_creation_registry.register_post_creation_hook(post_creation_registry.RESOURCE_VARIABLE, hook)
+
+    response = await client.post("api/v1/variables/", json=generic_variable, headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert len(seen) == 1
+    context, row_was_visible = seen[0]
+    assert row_was_visible is True
+    assert context.resource == "variable"
+    assert context.owner_id == active_user.id
+    assert str(context.resource_id) == response.json()["id"]
+    assert context.name == generic_variable["name"]
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_create_variable_keeps_the_row_when_a_hook_fails_the_request(
+    post_creation_registry, client: AsyncClient, generic_variable, logged_in_headers
+):
+    async def hook(_context):
+        raise HTTPException(status_code=500, detail="follow-up failed")
+
+    post_creation_registry.register_post_creation_hook(post_creation_registry.RESOURCE_VARIABLE, hook)
+
+    response = await client.post("api/v1/variables/", json=generic_variable, headers=logged_in_headers)
+
+    assert response.status_code == 500
+    assert response.json()["detail"] == "follow-up failed"
+    listed = await client.get("api/v1/variables/", headers=logged_in_headers)
+    assert generic_variable["name"] in [item["name"] for item in listed.json()]
+
+
 @pytest.mark.usefixtures("active_user")
 async def test_create_variable__variable_name_already_exists(client: AsyncClient, generic_variable, logged_in_headers):
     await client.post("api/v1/variables/", json=generic_variable, headers=logged_in_headers)
