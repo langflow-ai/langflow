@@ -117,9 +117,11 @@ For more examples, see the [Complete Agent Example on PyPI](https://pypi.org/pro
 
 | Option | Description |
 |---|---|
+| `--check-dependencies` / `--no-check-dependencies` | Preflight the flow's required packages; fail fast with install guidance when any are missing. Default: check. |
 | `--check-variables` / `--no-check-variables` | Validate the flow's global variables. Default: check. |
 | `--flow-json` | Load inline JSON flow content as a string. |
 | `--format`, `-f` | Output format: `json`, `text`, `message`, or `result`. Default: `json`. |
+| `--human-input` / `--no-human-input` | Interactive human-in-the-loop. Default auto-enables it when the flow has a pausing node and the terminal is interactive. |
 | `--input-value` | Input value to pass to the graph. Required with `--stdin` and `--flow-json`. |
 | `--session-id` | Session ID for conversation tracking. Auto-generated if not set. |
 | `--stdin` | Read JSON flow content from `stdin`. |
