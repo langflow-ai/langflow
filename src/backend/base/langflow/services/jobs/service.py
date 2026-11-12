@@ -38,7 +38,7 @@ from langflow.services.database.models.jobs.model import (
     JobType,
     SignalType,
 )
-from langflow.services.deps import session_scope
+from langflow.services.deps import get_db_service, session_scope
 from langflow.services.jobs.exceptions import (
     HUMAN_INPUT_REQUIRED_EVENT,
     DuplicateJobError,
@@ -948,9 +948,12 @@ class JobService(Service):
 
     async def _beat(self, job_id: UUID) -> bool:
         """Heartbeat ``job_id`` if it is still IN_PROGRESS. False once it is not."""
-        # session_scope logs a failed write; a transient DB error must not end the heartbeat.
+        # A transient DB error must not end the heartbeat (the suppress). The beat runs on a
+        # DEDICATED pool (session_scope_for_heartbeat), not the shared application pool: a run
+        # whose pool is saturated by concurrent requests must still record liveness, or
+        # sweep_orphans reaps it as worker_lost though it is alive and finishing (LE-3302 F-03).
         with contextlib.suppress(Exception):
-            async with session_scope() as session:
+            async with get_db_service().session_scope_for_heartbeat() as session:
                 # The row lock keeps a concurrent job_metadata write from being lost
                 # under this read-modify-write on Postgres. SQLite has no row locks.
                 job = await session.get(Job, job_id, with_for_update=True)
