@@ -104,7 +104,6 @@ export function AddConnectionDialog({
     reauthorize?.provider_key ?? providers[0]?.provider_id ?? "",
   );
   const [name, setName] = useState("");
-  const [displayName, setDisplayName] = useState("");
   const [identity, setIdentity] = useState<IntegrationIdentity>(
     reauthorize?.executing_identity?.identity ?? "user_delegated",
   );
@@ -547,7 +546,7 @@ export function AddConnectionDialog({
     name.length <= CONNECTION_NAME_MAX_LENGTH;
   const canContinue =
     !!provider &&
-    (!!reauthorize || (handleValid && displayName.trim().length > 0)) &&
+    (!!reauthorize || handleValid) &&
     (usesToken
       ? slackToken.expiresAtValid &&
         (providerId === "slack"
@@ -562,7 +561,7 @@ export function AddConnectionDialog({
     try {
       const row = await slackToken.createWithToken({
         name,
-        displayName: displayName.trim(),
+        displayName: name,
       });
       setStep("authorize");
       setAuthorize({ kind: "connected", connection: row });
@@ -577,7 +576,7 @@ export function AddConnectionDialog({
       const row = await create.mutateAsync({
         provider_key: provider.provider_id,
         name,
-        display_name: displayName.trim(),
+        display_name: name,
         ownership_mode: requiresUserOwnership ? "user" : ownership,
         executing_identity: { identity },
       });
@@ -633,7 +632,6 @@ export function AddConnectionDialog({
     cleanupGeneration.current += 1;
     setIsCleaningUp(false);
     setName("");
-    setDisplayName("");
     setFieldError(null);
     slackToken.reset();
     onOpenChange(false);
@@ -719,7 +717,7 @@ export function AddConnectionDialog({
                     docsUrl={provider?.docs_url}
                   />
 
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-4">
                     <div className="flex flex-col gap-1.5">
                       <div className="flex items-center gap-1.5">
                         <Label htmlFor="connection-name">
@@ -772,39 +770,6 @@ export function AddConnectionDialog({
                           max: CONNECTION_NAME_MAX_LENGTH,
                         })}
                       </p>
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex items-center gap-1.5">
-                        <Label htmlFor="connection-display-name">
-                          {t("connections.add.displayName")}
-                        </Label>
-                        <ShadTooltip
-                          content={t("connections.add.displayNameTooltip")}
-                          side="top"
-                          avoidCollisions
-                        >
-                          <button
-                            type="button"
-                            aria-label={t(
-                              "connections.add.displayNameHelpLabel",
-                            )}
-                            className="cursor-help rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                            data-testid="connection-display-name-help"
-                          >
-                            <ForwardedIconComponent
-                              name="Info"
-                              className="h-3.5 w-3.5 text-muted-foreground"
-                              ariaHidden
-                            />
-                          </button>
-                        </ShadTooltip>
-                      </div>
-                      <Input
-                        id="connection-display-name"
-                        value={displayName}
-                        onChange={(event) => setDisplayName(event.target.value)}
-                        data-testid="connection-display-name"
-                      />
                     </div>
                   </div>
                 </>
