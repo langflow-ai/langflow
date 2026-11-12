@@ -4972,6 +4972,36 @@
       "added_in": "1.13.0"
     },
     {
+      "bare_class_name": "LokutorTextToSpeechComponent",
+      "target": "ext:lokutor:LokutorTextToSpeechComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "import_path": "lfx_bundles.lokutor.lokutor_text_to_speech.LokutorTextToSpeechComponent",
+      "target": "ext:lokutor:LokutorTextToSpeechComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "import_path": "lfx_bundles.lokutor.LokutorTextToSpeechComponent",
+      "target": "ext:lokutor:LokutorTextToSpeechComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "LokutorSpeechToTextComponent",
+      "target": "ext:lokutor:LokutorSpeechToTextComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "import_path": "lfx_bundles.lokutor.lokutor_speech_to_text.LokutorSpeechToTextComponent",
+      "target": "ext:lokutor:LokutorSpeechToTextComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "import_path": "lfx_bundles.lokutor.LokutorSpeechToTextComponent",
+      "target": "ext:lokutor:LokutorSpeechToTextComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
       "bare_class_name": "PlivoLookupNumberComponent",
       "target": "ext:plivo:PlivoLookupNumberComponent@official",
       "added_in": "1.13.0"
