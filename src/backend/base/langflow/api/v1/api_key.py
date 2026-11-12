@@ -9,8 +9,7 @@ from langflow.services.auth import utils as auth_utils
 from langflow.services.auth.cookies import auth_cookie_name
 from langflow.services.authorization.lifecycle import safe_identity_mutation_committed, stage_identity_mutation
 from langflow.services.authorization.utils import audit_decision
-
-# Assuming you have these methods in your service layer
+from langflow.services.database.lock_retry import run_with_lock_retry, sanitize_database_error
 from langflow.services.database.models.api_key.crud import (
     create_api_key,
     delete_api_key,
@@ -120,21 +119,27 @@ async def create_api_key_route(
     current_user: CurrentActiveUser,
     db: DbSession,
 ) -> UnmaskedApiKeyRead:
+    # A retry rolls back and expires the user loaded by authentication.
+    user_id = current_user.id
+
+    async def create_attempt(_attempt: int) -> UnmaskedApiKeyRead:
+        return await create_api_key(db, req, user_id=user_id)
+
     try:
-        user_id = current_user.id
-        created_key = await create_api_key(db, req, user_id=user_id)
+        # SQLite can already wait for its busy timeout on each insert.
+        created_key = await run_with_lock_retry(create_attempt, session=db, description="create API key", attempts=2)
     except PermissionError as e:
         await db.rollback()
         raise HTTPException(status_code=403, detail=str(e)) from e
     except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        raise HTTPException(status_code=400, detail=sanitize_database_error(e, "Failed to create API key.")) from e
 
     mutation = AuthorizationMutation(
         kind=AuthorizationMutationKind.API_KEY_CREATED,
         entity_id=created_key.id,
-        actor_user_id=current_user.id,
-        affected_user_ids=(current_user.id,),
+        actor_user_id=user_id,
+        affected_user_ids=(user_id,),
         policy_relevant_fields=("is_active", "expires_at"),
     )
     authorization_service = get_authorization_service()
@@ -148,7 +153,7 @@ async def create_api_key_route(
 
     await safe_identity_mutation_committed(authorization_service, mutation)
     await audit_decision(
-        user_id=current_user.id,
+        user_id=user_id,
         action="api_key:create",
         obj=f"api_key:{created_key.id}",
         result="allow",

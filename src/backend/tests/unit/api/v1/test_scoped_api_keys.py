@@ -71,6 +71,47 @@ async def test_owner_can_replace_and_remove_permissions_without_rotating_secret(
 
 
 @pytest.mark.anyio
+async def test_scoped_creation_retries_a_stale_sqlite_snapshot(client, logged_in_headers, monkeypatch):
+    from datetime import datetime, timezone
+
+    from langflow.services.database.models.user.model import User
+    from langflow.services.deps import get_settings_service, session_scope
+    from sqlalchemy import text
+
+    settings = get_settings_service().auth_settings
+    monkeypatch.setattr(settings, "AUTHZ_ENABLED", True)
+    monkeypatch.setattr(settings, "API_KEY_SCOPES_ENABLED", True)
+
+    requested_permissions = {"restrictions": [{"resource_type": "flow", "actions": ["read"]}]}
+
+    async def commit_concurrent_write(*, session, user_id, permissions):
+        assert permissions == requested_permissions
+        if validate.await_count == 1:
+            # SQLite's legacy transaction mode does not start a transaction on SELECT.
+            await session.execute(text("BEGIN"))
+            await session.get(User, user_id, populate_existing=True)
+            async with session_scope() as writer:
+                user = await writer.get(User, user_id)
+                user.last_login_at = datetime.now(timezone.utc)
+
+    validate = AsyncMock(side_effect=commit_concurrent_write)
+    plugin = SimpleNamespace(
+        supports_api_key_scopes=AsyncMock(return_value=True), validate_api_key_permissions=validate
+    )
+    monkeypatch.setattr("langflow.services.database.models.api_key.crud.get_authorization_service", lambda: plugin)
+    created = await client.post(
+        "api/v1/api_key/", json={"name": "Restricted", "permissions": requested_permissions}, headers=logged_in_headers
+    )
+
+    assert created.status_code == 200
+    assert created.json()["permissions"] == requested_permissions
+    assert validate.await_count == 2
+    keys = await client.get("api/v1/api_key/", headers=logged_in_headers)
+    assert keys.status_code == 200
+    assert [key["id"] for key in keys.json()["api_keys"]] == [created.json()["id"]]
+
+
+@pytest.mark.anyio
 async def test_scoped_creation_is_refused_without_enforcement(client, logged_in_headers):
     response = await client.post(
         "api/v1/api_key/",
