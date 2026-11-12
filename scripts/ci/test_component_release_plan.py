@@ -186,3 +186,91 @@ def test_runner_preserves_venv_python_and_retains_other_breaks_after_failed_base
     assert len(seen) == 3
     assert "lfx-example" in (output / "candidate-breaks.md").read_text()
     assert not (output / "release-notes.md").exists()
+
+
+@pytest.mark.component_runtime
+def test_runner_keeps_historical_acknowledgments_after_publication(monkeypatch, tmp_path):
+    import copy
+    import sys
+    from types import SimpleNamespace
+
+    import run_component_compatibility as runner
+    from component_compatibility import CompatibilityGateError, compare_registries
+    from test_component_compatibility import component, snapshot
+
+    package = "lfx-bundles"
+    previous = snapshot({"Retired": component(), "Supported": component()}, package=package, version="1.3.5")
+    published = copy.deepcopy(previous)
+    published["distributions"][package] = "1.3.6"
+    published["all_types"]["test"]["Retired"]["retired_in"] = "1.3.6"
+    checkout = copy.deepcopy(published)
+    [change] = compare_registries(previous, checkout, package)
+
+    git(tmp_path, "init", "-q")
+    git(tmp_path, "config", "user.name", "Fixture")
+    git(tmp_path, "config", "user.email", "fixture@example.test")
+    write_project(tmp_path / "pyproject.toml", package, "1.3.6")
+    git(tmp_path, "add", "pyproject.toml")
+    git(tmp_path, "-c", "core.hooksPath=/dev/null", "commit", "-qm", "fixture")
+    base = git(tmp_path, "rev-parse", "HEAD")
+
+    note = tmp_path / "docs/release_notes/compatibility/retired.md"
+    note.parent.mkdir(parents=True)
+    note.write_text(f"Replace Retired in saved flows.\nBreak identity {change.id}\n")
+    acknowledgments = tmp_path / "acknowledgments.json"
+    acknowledgments.write_text(
+        json.dumps(
+            {
+                "format_version": 2,
+                "breaks": [
+                    {
+                        "id": change.id,
+                        "distribution": package,
+                        "source_version": "1.3.5",
+                        "target_version": "1.3.6",
+                        "reason": "Retire an obsolete component",
+                        "release_note": str(note.relative_to(tmp_path)),
+                    }
+                ],
+            }
+        )
+    )
+
+    plan_path = tmp_path / "plan.json"
+    output = tmp_path / "evidence"
+    baseline = previous
+
+    def export(_interpreter, _exporter, output_path, _home):
+        return checkout if output_path.name == "current.json" else baseline
+
+    monkeypatch.setattr(runner, "__file__", str(tmp_path / "scripts/ci/run_component_compatibility.py"))
+    monkeypatch.setattr(runner, "snapshot", export)
+    monkeypatch.setattr(runner, "run", lambda _command: None)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "runner",
+            "--plan",
+            str(plan_path),
+            "--output-dir",
+            str(output),
+            "--acknowledgments",
+            str(acknowledgments),
+        ],
+    )
+
+    plan_path.write_text(json.dumps(release_plan(tmp_path, base, SimpleNamespace(get_versions=lambda _: ("1.3.5",)))))
+    assert runner.main() == 0
+    assert change.id in (output / "release-notes.md").read_text()
+
+    baseline = published
+    index = SimpleNamespace(get_versions=lambda _: ("1.3.5", "1.3.6"))
+    plan_path.write_text(json.dumps(release_plan(tmp_path, base, index)))
+    assert runner.main() == 0
+    assert change.id not in (output / "release-notes.md").read_text()
+
+    checkout["all_types"]["test"]["Supported"]["outputs"] = []
+    [new_break] = compare_registries(published, checkout, package)
+    with pytest.raises(CompatibilityGateError, match=f"unacknowledged component breaks {new_break.id}"):
+        runner.main()

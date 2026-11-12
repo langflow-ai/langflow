@@ -9,6 +9,11 @@ runs:
     - name: Enable the HTTP/3 API required by impit source builds
       shell: bash
       run: echo "RUSTFLAGS=${RUSTFLAGS:+$RUSTFLAGS }--cfg reqwest_unstable" >> "$GITHUB_ENV"
+    - name: Keep implicit declarations a warning for older C extensions
+      if: runner.os == 'Linux'
+      shell: bash
+      # GCC 14+ (ubuntu-26.04) makes this an error; ibm-db 3.2.9 calls towupper without its header.
+      run: echo "CFLAGS=${CFLAGS:+$CFLAGS }-Wno-error=implicit-function-declaration" >> "$GITHUB_ENV"
     - name: Install Linux native build dependencies
       if: runner.os == 'Linux'
       shell: bash
