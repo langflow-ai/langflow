@@ -1,10 +1,12 @@
-import { mkdtempSync } from "node:fs";
+import { mkdirSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { defineConfig } from "@playwright/test";
 import base from "./playwright.config";
 
 const directory = mkdtempSync(path.join(tmpdir(), "langflow-upgrade-qa-"));
+const knowledgeBasesDirectory = path.join(directory, "knowledge-bases");
+mkdirSync(knowledgeBasesDirectory);
 
 export default defineConfig({
   ...base,
@@ -24,6 +26,7 @@ export default defineConfig({
       env: {
         LANGFLOW_DATABASE_URL: `sqlite:///${path.join(directory, "qa.db")}`,
         LANGFLOW_CONFIG_DIR: path.join(directory, "config"),
+        LANGFLOW_KNOWLEDGE_BASES_DIR: knowledgeBasesDirectory,
         LANGFLOW_AUTO_LOGIN: "true",
         LANGFLOW_DEACTIVATE_TRACING: "true",
         DO_NOT_TRACK: "true",
