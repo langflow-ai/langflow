@@ -1,0 +1,24 @@
+[project]
+name = "lfx-sendblue"
+version = "0.1.0"
+description = "Sendblue messaging tools for Langflow"
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+license = {text = "MIT"}
+authors = [{name = "Sendblue", email = "support@sendblue.com"}]
+dependencies = ["lfx>=1.13.0.dev0,<2.0.0", "httpx>=0.28.1,<1.0.0"]
+
+[project.entry-points."langflow.extensions"]
+lfx-sendblue = "lfx_sendblue"
+
+[build-system]
+requires = ["hatchling==1.31.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lfx_sendblue"]
+include = ["src/lfx_sendblue/extension.json", "src/lfx_sendblue/**/*.py"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
