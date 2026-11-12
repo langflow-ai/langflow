@@ -13,10 +13,12 @@ import asyncio
 import shutil
 import tempfile
 import warnings
+from contextlib import asynccontextmanager
 from pathlib import Path
 from uuid import uuid4
 
 import pytest
+from langflow.api.utils import migration_pause
 from langflow.services.database.models.transactions.model import TransactionBase, TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildBase, VertexBuildTable
 from langflow.services.telemetry_writer.service import (
@@ -28,6 +30,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel
+from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
 
 class _FakeSettings:
@@ -94,7 +97,7 @@ def _make_vertex_build_row(flow_id, vertex_id="v1") -> dict:
 
 
 @pytest.fixture
-async def writer_with_engine():
+async def writer_with_engine(monkeypatch):
     """Yield (writer, engine) wired together with a fresh in-memory SQLite."""
     engine = create_async_engine(
         "sqlite+aiosqlite://",
@@ -103,6 +106,14 @@ async def writer_with_engine():
     )
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
+
+    # Admission must read this writer's database, not a prior test app's maintenance flag.
+    @asynccontextmanager
+    async def readonly_session():
+        async with SQLModelAsyncSession(engine) as session:
+            yield session
+
+    monkeypatch.setattr(migration_pause, "session_scope_readonly", readonly_session)
     writer = _build_writer()
     writer._engine = engine
     writer._session_maker = async_sessionmaker(engine, expire_on_commit=False)

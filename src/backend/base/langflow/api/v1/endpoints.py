@@ -1153,6 +1153,18 @@ async def _run_flow_internal(
         http_error = HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
         raise error_for_client(http_error, expose_details=expose_error_details) from exc
     except HTTPException as exc:
+        # Job failures arrive as APIException, or a redacted HTTPException for shared flows.
+        if exc.status_code >= status.HTTP_500_INTERNAL_SERVER_ERROR:
+            await _record_run_telemetry(
+                telemetry_service,
+                RunPayload(
+                    run_is_webhook=False,
+                    run_seconds=int(time.perf_counter() - start_time),
+                    run_success=False,
+                    run_error_message=str(exc),
+                    run_id=run_id,
+                ),
+            )
         if expose_error_details:
             raise
         raise error_for_client(exc, expose_details=expose_error_details) from exc
