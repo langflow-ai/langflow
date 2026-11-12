@@ -135,12 +135,16 @@ async def create_api_key_route(
     retry predicate, so this is inert there.
     """
     authorization_service = get_authorization_service()
+    # Read the columns once, before the retry loop: a rollback expires the instance,
+    # and re-reading it on the next attempt would fire a lazy load outside the
+    # greenlet that owns the connection.
+    user_id = current_user.id
     committed: AuthorizationMutation | None = None
 
     async def _create_attempt(_attempt: int) -> UnmaskedApiKeyRead:
         nonlocal committed
         try:
-            created_key = await create_api_key(db, req, user_id=current_user.id)
+            created_key = await create_api_key(db, req, user_id=user_id)
         except PermissionError as e:
             await db.rollback()
             raise HTTPException(status_code=403, detail=str(e)) from e
@@ -160,8 +164,8 @@ async def create_api_key_route(
         mutation = AuthorizationMutation(
             kind=AuthorizationMutationKind.API_KEY_CREATED,
             entity_id=created_key.id,
-            actor_user_id=current_user.id,
-            affected_user_ids=(current_user.id,),
+            actor_user_id=user_id,
+            affected_user_ids=(user_id,),
             policy_relevant_fields=("is_active", "expires_at"),
         )
         try:
@@ -182,7 +186,7 @@ async def create_api_key_route(
     if committed is not None:
         await safe_identity_mutation_committed(authorization_service, committed)
     await audit_decision(
-        user_id=current_user.id,
+        user_id=user_id,
         action="api_key:create",
         obj=f"api_key:{created_key.id}",
         result="allow",
@@ -198,12 +202,15 @@ async def delete_api_key_route(
     current_user: CurrentActiveUser,
 ):
     authorization_service = get_authorization_service()
+    # Same reason as in :func:`create_api_key_route`: the expiry from a rollback must
+    # not turn into a lazy load on the retry attempt.
+    user_id = current_user.id
     committed: AuthorizationMutation | None = None
 
     async def _delete_attempt(_attempt: int) -> None:
         nonlocal committed
         try:
-            await delete_api_key(db, api_key_id, current_user.id)
+            await delete_api_key(db, api_key_id, user_id)
         except PermissionError as e:
             raise HTTPException(status_code=403, detail=str(e)) from e
         except ValueError as e:
@@ -216,8 +223,8 @@ async def delete_api_key_route(
         mutation = AuthorizationMutation(
             kind=AuthorizationMutationKind.API_KEY_DELETED,
             entity_id=api_key_id,
-            actor_user_id=current_user.id,
-            affected_user_ids=(current_user.id,),
+            actor_user_id=user_id,
+            affected_user_ids=(user_id,),
             policy_relevant_fields=("revoked",),
         )
         await db.flush()
@@ -231,7 +238,7 @@ async def delete_api_key_route(
     if committed is not None:
         await safe_identity_mutation_committed(authorization_service, committed)
     await audit_decision(
-        user_id=current_user.id,
+        user_id=user_id,
         action="api_key:delete",
         obj=f"api_key:{api_key_id}",
         result="allow",
