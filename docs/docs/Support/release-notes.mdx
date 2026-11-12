@@ -46,78 +46,25 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 
     If you made changes to your flows in the isolated installation, you might want to export and import those flows back to your upgraded primary installation so you don't have to repeat the component upgrade process.
 
-## 1.13.x
+## 1.14.x
 
 Highlights of this release include the following changes. For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases/latest).
 
-### Breaking changes
-
-- Official packages require authentication by default
-
-    Official Python packages, tagged source archives, and Docker images now set `LANGFLOW_AUTO_LOGIN=false`.
-    Set `LANGFLOW_SUPERUSER_PASSWORD`, then sign in as `langflow` or the username in `LANGFLOW_SUPERUSER`.
-
-    Before upgrading an auto-login installation, [prepare that account for password sign-in](/api-keys-and-authentication#upgrade-from-auto-login).
-
-    If you already upgraded and can't sign in, see [recover access](/troubleshoot#recover-access-after-upgrading).
-
-    For more information, see [API keys and authentication](/api-keys-and-authentication#langflow-auto-login).
-
-- Chroma and Local DB components are removed
-
-    Langflow 1.13 stores local Knowledge and Memory in SQLite, instead of a local Chroma database.
-    The [**Chroma DB**](/components-bundle-components#legacy-bundles) and [**Local DB**](/components-bundle-components#legacy-bundles) components are legacy.
-
-    Replace **Chroma** and **Local DB** with a [knowledge base](/knowledge#knowledge-bases), or with a supported remote vector store.
-
-    For more information, see [Upgrade Knowledge and Memory storage](/knowledge-storage-upgrade).
-
 ### New features
-
-- Audit logging
-
-    Set `LANGFLOW_AUDIT_ENABLED=true` to record an append-only history of flow and project operations, including who attempted a change, on which resource, when, how it completed, and a description of what was written.
-    Query events with `GET /api/v1/flows/audits` and `GET /api/v1/projects/audits`.
-
-    For more information, see [Audit logging](./audit-logging).
 
 - Connections
 
-    Langflow stores Google Workspace, Microsoft 365, and Slack accounts as persistent connections.
+    Langflow 1.14 includes new persistent connections to Jira Cloud, GitHub, GitLab, Confluence Cloud, ServiceNow, Telegram, and WhatsApp Business accounts.
     For more information, see [Connections](./connections).
 
-- Concurrent editing
+- Secret-key audit and rotation
 
-    Langflow now protects a flow that is open by more than one user.
-    For more information, see [Concurrent editing](./concurrent-editing).
+    The Langflow CLI command `langflow secrets audit` reads stored encrypted values, and `langflow secrets rotate` rewraps the secret values under a new root key.
+    For more information, see [langflow secrets audit](./configuration-cli#langflow-secrets-audit) and [langflow secrets rotate](./configuration-cli#langflow-secrets-rotate).
 
-- Instance migration
+## 1.13.x
 
-    Langflow provides a guided workflow to migrate users, projects, flows, settings, local files, and local knowledge bases to a new instance.
-    The workflow checks the source instance, pauses writes, creates a backup, copies applicable data to the target instance's storage, verifies the copy, and provides recovery steps.
-
-    For more information, see [Migrate a Langflow instance](/instance-migration).
-
-- Administration API and CLI
-
-    Superusers can manage users, teams, and roles with the API or the `langflow admin` command.
-    For more information, see [Administer users and teams with the API and CLI](./admin-api-cli).
-
-## Component changes
-
-- The ALTK component is removed
-
-    The [**ALTK**](/components-bundle-components) component is removed.
-
-    Replace **ALTK** with the [**Agent**](/components-agents) component.
-
-- MrScraper components are removed
-
-    The [**MrScraper**](/bundles-mrscraper) bundle now provides three components.
-
-    Instead, use the **Scraper API** or **Web Search** components.
-
-    For more information, see [Update existing flows](/bundles-mrscraper#updating-existing-flows).
+For 1.13.x release notes, see the [1.13.x documentation](@site/versioned_docs/version-1.13.0/Support/release-notes.mdx).
 
 ## 1.12.x
 
