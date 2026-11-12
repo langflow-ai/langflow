@@ -7,6 +7,7 @@ from uuid import UUID
 from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.messages import BaseMessage
 from lfx.log.logger import logger
+from lfx.memory.flow_context import is_evals_memory_isolated
 from lfx.utils.async_helpers import run_until_complete
 from sqlalchemy import delete
 from sqlmodel import col, select
@@ -176,6 +177,8 @@ def get_messages(
     Returns:
         List[Data]: A list of Data objects representing the retrieved messages.
     """
+    if is_evals_memory_isolated():
+        return []
     return run_until_complete(
         aget_messages(
             sender,
@@ -218,6 +221,8 @@ async def aget_messages(
     Returns:
         List[Data]: A list of Data objects representing the retrieved messages.
     """
+    if is_evals_memory_isolated():
+        return []
     # Session and context IDs are caller-controlled and may collide across users.
     # Frozen saved components also call this function without either scope.
     flow_id, user_id = _message_scope(flow_id, user_id)
