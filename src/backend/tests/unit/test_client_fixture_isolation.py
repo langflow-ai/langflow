@@ -7,8 +7,10 @@ import pytest
 from filelock import FileLock
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.models.user.model import User
 from langflow.services.database.service import DatabaseService
-from langflow.services.deps import session_scope
+from langflow.services.deps import get_auth_service, session_scope
+from lfx.services.settings.password_hashing import PasswordContext
 from sqlmodel import select, text
 
 
@@ -67,3 +69,26 @@ async def test_client_seeds_starters_while_another_database_starts(client_with_o
             await session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME, Folder.user_id.is_(None)))
         ).first()
     assert starter is not None
+
+
+async def test_fixture_hashes_keep_real_login_and_restore_salted_hashing(client, active_user):
+    async with session_scope() as session:
+        user = await session.get(User, active_user.id)
+        bootstrap = (await session.exec(select(User).where(User.username == "langflow"))).one()
+        assert user.password.startswith("$2b$12$")
+        assert bootstrap.password.startswith("$2b$12$")
+        assert PasswordContext.verify("test-superuser-password", bootstrap.password)
+
+    auth = get_auth_service()
+    assert auth.settings.auth_settings.pwd_context.hash is PasswordContext.hash
+    assert auth.get_password_hash("testpassword") != user.password
+    valid = await client.post(
+        "/api/v1/login",
+        data={"username": active_user.username, "password": "testpassword"},  # pragma: allowlist secret
+    )
+    assert valid.status_code == 200
+    invalid = await client.post(
+        "/api/v1/login",
+        data={"username": active_user.username, "password": "wrong-password"},  # pragma: allowlist secret
+    )
+    assert invalid.status_code == 401
