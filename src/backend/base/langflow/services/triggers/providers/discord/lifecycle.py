@@ -7,6 +7,7 @@ from sqlmodel import select
 from langflow.services.database.models.connection.model import Connection
 from langflow.services.database.models.trigger.model import TriggerCleanup, TriggerSubscription
 from langflow.services.triggers.source_errors import SourceConfigurationError
+from langflow.services.triggers.subscriptions import audit_subscription_creation
 
 MESSAGE_CONTENT_REQUIRED = "Enable and, when required, obtain approval for Message Content Intent."
 
@@ -91,6 +92,7 @@ async def prepare(session, trigger) -> None:
     except IntegrityError:
         msg = "This Discord bot already has a receiver. Choose a different bot."
         raise SourceConfigurationError(msg) from None
+    await audit_subscription_creation(session, trigger_id=trigger.id)
     trigger.provider_state = {"bot_id": bot_id}
     session.add(trigger)
     await session.flush()
