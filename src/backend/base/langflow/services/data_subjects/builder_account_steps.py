@@ -9,6 +9,7 @@ from sqlmodel import and_, col, or_, select
 
 from langflow.services.data_subjects.audit_redaction import redact_audit_rows
 from langflow.services.data_subjects.batching import clear_reference_batch, delete_batch, delete_job_batch
+from langflow.services.data_subjects.evaluation_steps import EVALUATION_STEPS
 from langflow.services.data_subjects.transactions import builder_transactions
 from langflow.services.data_subjects.upgrade_reports import erase_upgrade_reports
 from langflow.services.database.models.api_key.model import ApiKey
@@ -185,6 +186,7 @@ BUILDER_ACCOUNT_STEPS: tuple[tuple[str, Step], ...] = (
     ("messages_elsewhere", erase_messages_elsewhere),
     ("transactions_elsewhere", erase_transactions_elsewhere),
     ("ingestion_runs", erase_ingestion_runs),
+    *EVALUATION_STEPS,
     ("mcp_servers", _delete_by_user(MCPServer, MCPServer.user_id)),
     ("files", _delete_by_user(File, File.user_id)),
     ("variables", _delete_by_user(Variable, Variable.user_id)),
