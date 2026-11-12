@@ -67,7 +67,7 @@ def require_trigger_ceiling(kind: str) -> None:
         if snapshot.approved_integration_provider_ids is not None and (
             not available or provider not in snapshot.approved_integration_provider_ids
         ):
-            raise TriggerPolicyError
+            raise TriggerPolicyError(str(IntegrationPolicyError(provider, IntegrationPolicyPurpose.DISCOVER)))
 
 
 async def require_trigger_policy(context: TriggerPolicyContext) -> None:
@@ -87,7 +87,7 @@ async def require_trigger_policy(context: TriggerPolicyContext) -> None:
             )
             integration_policy.require_provider(provider)
         except IntegrationPolicyError as exc:
-            raise TriggerPolicyError from exc
+            raise TriggerPolicyError(str(exc)) from exc
 
 
 async def require_trigger_allowed(context: TriggerPolicyContext, *, service: TriggerService | None = None) -> None:

@@ -730,7 +730,13 @@ async def audit_subscription_creation(session: AsyncSession, *, trigger_id: UUID
     if not settings.AUTHZ_AUDIT_ENABLED:
         return
     if settings.AUTHZ_AUDIT_DURABLE:
-        await _audit_subscription(AUDIT_SUBSCRIPTION_CREATE, trigger_id=trigger_id, count=1, session=session)
+        from langflow.services.authorization.audit import AuditPersistenceError
+
+        try:
+            await _audit_subscription(AUDIT_SUBSCRIPTION_CREATE, trigger_id=trigger_id, count=1, session=session)
+            await session.flush()
+        except Exception:  # noqa: BLE001 - audit storage errors can contain credentials
+            raise AuditPersistenceError from None
         return
     try:
         # An independent writer could commit a create audit after this transaction

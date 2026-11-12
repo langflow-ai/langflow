@@ -1,5 +1,6 @@
 """Provider receiver reservations retain the shared subscription audit contract."""
 
+import traceback
 from uuid import uuid4
 
 import pytest
@@ -12,7 +13,9 @@ from langflow.services.triggers.providers.discord import lifecycle as discord
 from langflow.services.triggers.providers.github import runtime as github
 from langflow.services.triggers.providers.telegram import lifecycle as telegram
 from langflow.services.triggers.providers.whatsapp import lifecycle as whatsapp
+from sqlalchemy import event
 from sqlmodel import select
+from structlog.testing import capture_logs
 
 pytestmark = pytest.mark.no_blockbuster
 
@@ -141,7 +144,10 @@ async def test_provider_creation_audit_rolls_back_with_reservation(provider_trig
 
 
 @pytest.mark.parametrize("durable", [False, True], ids=["best-effort", "durable"])
-async def test_provider_creation_respects_audit_failure_mode(provider_trigger, lifecycle, monkeypatch, durable, caplog):
+@pytest.mark.parametrize("failure_point", ["stage", "insert"])
+async def test_provider_creation_respects_audit_failure_mode(
+    provider_trigger, lifecycle, monkeypatch, durable, caplog, failure_point
+):
     settings = get_settings_service().auth_settings
     monkeypatch.setattr(settings, "AUTHZ_AUDIT_ENABLED", True)
     monkeypatch.setattr(settings, "AUTHZ_AUDIT_DURABLE", durable)
@@ -150,14 +156,23 @@ async def test_provider_creation_respects_audit_failure_mode(provider_trigger, l
         message = "private-provider-audit-detail"
         raise RuntimeError(message)
 
-    monkeypatch.setattr(audit, "_stage_audit_entries", fail_stage)
-    if durable:
-        with pytest.raises(RuntimeError, match="private-provider-audit-detail"):
-            async with session_scope() as session:
-                await _new_reservation(session, lifecycle, provider_trigger)
+    if failure_point == "stage":
+        monkeypatch.setattr(audit, "_stage_audit_entries", fail_stage)
     else:
-        async with session_scope() as session:
-            await _new_reservation(session, lifecycle, provider_trigger)
+        event.listen(AuthzAuditLog, "before_insert", fail_stage)
+    try:
+        with capture_logs() as records:
+            if durable:
+                with pytest.raises(audit.AuditPersistenceError) as raised:
+                    async with session_scope() as session:
+                        await _new_reservation(session, lifecycle, provider_trigger)
+                assert "private-provider-audit-detail" not in "".join(traceback.format_exception(raised.value))
+            else:
+                async with session_scope() as session:
+                    await _new_reservation(session, lifecycle, provider_trigger)
+    finally:
+        if failure_point == "insert":
+            event.remove(AuthzAuditLog, "before_insert", fail_stage)
     async with session_scope() as session:
         rows = (
             await session.exec(select(TriggerSubscription).where(TriggerSubscription.trigger_id == provider_trigger))
@@ -165,6 +180,7 @@ async def test_provider_creation_respects_audit_failure_mode(provider_trigger, l
         assert len(rows) == (0 if durable else 1)
         assert await _creation_audits(session, provider_trigger) == []
     assert "private-provider-audit-detail" not in caplog.text
+    assert "private-provider-audit-detail" not in str(records)
 
 
 async def test_provider_creation_keeps_auditing_disabled(provider_trigger, lifecycle, monkeypatch):
