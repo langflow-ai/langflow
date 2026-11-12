@@ -1,0 +1,258 @@
+import { useTranslation } from "react-i18next";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { cn } from "@/utils/utils";
+import type { ComparisonEntry } from "../utils/comparison";
+import {
+  formatDuration,
+  formatPercent,
+  formatRange,
+  formatRatio,
+  formatTokenCount,
+  formatUsd,
+} from "../utils/format";
+import HintTooltip from "./HintTooltip";
+import RunStatusBadge from "./RunStatusBadge";
+import VariantLabel, { variantName } from "./VariantLabel";
+
+interface ComparisonLeaderboardProps {
+  /** Ranked versions first, then the ones still running or not run. */
+  entries: ComparisonEntry[];
+  cheapest: ComparisonEntry | null;
+  fastest: ComparisonEntry | null;
+  selectedRunId: string | null;
+  onSelect: (runId: string) => void;
+}
+
+function PassRateCell({ entry }: { entry: ComparisonEntry }) {
+  const { t } = useTranslation();
+  if (entry.passRate === null) return <>—</>;
+  return (
+    <div className="ml-auto flex w-28 flex-col items-end gap-1">
+      <span className="flex items-center gap-1.5 font-medium">
+        {(entry.matchesTop || entry.tiedWithTop) && (
+          <HintTooltip
+            hint={
+              entry.matchesTop
+                ? t("evals.compare.tieHint")
+                : t("evals.compare.tiedHint")
+            }
+          >
+            <Badge variant="secondaryStatic" size="tag">
+              {entry.matchesTop
+                ? t("evals.compare.tie")
+                : t("evals.compare.tied")}
+            </Badge>
+          </HintTooltip>
+        )}
+        {formatPercent(entry.passRate)}
+      </span>
+      <span
+        className="h-1 w-full overflow-hidden rounded-full bg-muted"
+        aria-hidden="true"
+      >
+        <span
+          className="block h-full rounded-full bg-primary"
+          style={{ width: `${Math.round(entry.passRate * 100)}%` }}
+        />
+      </span>
+      {entry.interval && (
+        <span className="text-xs text-muted-foreground">
+          <HintTooltip hint={t("evals.compare.intervalHint")} underline>
+            {formatRange(
+              formatPercent(entry.interval[0]),
+              formatPercent(entry.interval[1]),
+            )}
+          </HintTooltip>
+        </span>
+      )}
+    </div>
+  );
+}
+
+/** A column's value, bold with a tag when it leads, else how many times the leader's it is. */
+function LeadCell({
+  value,
+  leads,
+  ratio,
+  tag,
+  extra,
+  hint,
+}: {
+  value: string;
+  leads: boolean;
+  ratio: string | null;
+  tag: string;
+  extra?: string;
+  /** A detail kept out of the cell, on hover or focus of the value. */
+  hint?: string;
+}) {
+  const { t } = useTranslation();
+  const shown = <span className={cn(leads && "font-semibold")}>{value}</span>;
+  return (
+    <span className="flex flex-col items-end">
+      {hint ? (
+        <HintTooltip hint={hint} underline>
+          {shown}
+        </HintTooltip>
+      ) : (
+        shown
+      )}
+      {(leads || ratio) && (
+        <span className="text-xs text-muted-foreground">
+          {leads ? tag : t("evals.compare.timesMin", { ratio })}
+        </span>
+      )}
+      {extra && <span className="text-xs text-muted-foreground">{extra}</span>}
+    </span>
+  );
+}
+
+export default function ComparisonLeaderboard({
+  entries,
+  cheapest,
+  fastest,
+  selectedRunId,
+  onSelect,
+}: ComparisonLeaderboardProps) {
+  const { t } = useTranslation();
+  return (
+    <div className="overflow-x-auto rounded-lg border">
+      <Table aria-label={t("evals.compare.leaderboard")}>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-10">{t("evals.compare.rank")}</TableHead>
+            <TableHead>{t("evals.compare.models")}</TableHead>
+            <TableHead className="text-right">
+              <HintTooltip hint={t("evals.compare.passRateHint")} underline>
+                {t("evals.passRate")}
+              </HintTooltip>
+            </TableHead>
+            <TableHead className="text-right">{t("evals.cost")}</TableHead>
+            <TableHead className="text-right">
+              {t("evals.results.p50")}
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {entries.map((entry) => {
+            const run = entry.run;
+            const selected = run !== null && run.id === selectedRunId;
+            const label = (
+              <VariantLabel index={entry.index} overrides={entry.overrides} />
+            );
+            return (
+              <TableRow
+                key={entry.index}
+                data-testid="comparison-row"
+                aria-selected={selected}
+                className={cn(selected && "bg-muted")}
+              >
+                <TableCell className="font-semibold tabular-nums">
+                  {entry.rank ?? "—"}
+                </TableCell>
+                <TableCell className="max-w-72">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {run ? (
+                      <button
+                        type="button"
+                        className="min-w-0 rounded-sm text-left underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        onClick={() => onSelect(run.id)}
+                        aria-label={t("evals.compare.open", {
+                          version: entry.index + 1,
+                          models: variantName(entry.overrides, t),
+                        })}
+                      >
+                        {label}
+                      </button>
+                    ) : (
+                      label
+                    )}
+                    {entry.state !== "completed" &&
+                      (run ? (
+                        <RunStatusBadge status={run.status} />
+                      ) : (
+                        <Badge variant="gray" size="tag">
+                          {t(`evals.compare.state.${entry.state}`)}
+                        </Badge>
+                      ))}
+                  </div>
+                  {run &&
+                    (entry.completed < entry.total || entry.errored > 0) && (
+                      <span className="mt-1 block text-xs text-muted-foreground">
+                        {entry.completed < entry.total &&
+                          t("evals.compare.rowsDone", {
+                            done: formatTokenCount(entry.completed),
+                            total: formatTokenCount(entry.total),
+                          })}
+                        {entry.completed < entry.total &&
+                          entry.errored > 0 &&
+                          " · "}
+                        {entry.errored > 0 && (
+                          <span className="text-destructive">
+                            {t("evals.compare.errorCount", {
+                              count: entry.errored,
+                            })}
+                          </span>
+                        )}
+                      </span>
+                    )}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  <PassRateCell entry={entry} />
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  <LeadCell
+                    value={formatUsd(entry.cost, { precise: true })}
+                    leads={entry === cheapest}
+                    ratio={
+                      entry.rank !== null
+                        ? formatRatio(entry.cost, cheapest?.cost)
+                        : null
+                    }
+                    tag={t("evals.compare.cheapestTag")}
+                    extra={
+                      entry.costPerRow !== null
+                        ? t("evals.compare.perRow", {
+                            value: formatUsd(entry.costPerRow, {
+                              precise: true,
+                            }),
+                          })
+                        : undefined
+                    }
+                  />
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  <LeadCell
+                    value={formatDuration(entry.p50)}
+                    leads={entry === fastest}
+                    ratio={
+                      entry.rank !== null
+                        ? formatRatio(entry.p50, fastest?.p50)
+                        : null
+                    }
+                    tag={t("evals.compare.fastestTag")}
+                    hint={
+                      entry.p90 !== null
+                        ? t("evals.compare.p90", {
+                            value: formatDuration(entry.p90),
+                          })
+                        : undefined
+                    }
+                  />
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
