@@ -1,7 +1,29 @@
 """MCP telemetry honors configured settings, environment overrides, and consent."""
 
+import json
+from contextlib import nullcontext
+from types import SimpleNamespace
+
+import httpx
 import pytest
 from lfx.services.deps import get_settings_service
+
+
+@pytest.fixture(autouse=True)
+def segment_requests(monkeypatch):
+    requests = []
+    real_client = httpx.AsyncClient
+
+    def capture(request):
+        requests.append(json.loads(request.content))
+        return httpx.Response(200)
+
+    # Keep the shared AsyncClient class intact for MCP's import-time annotations.
+    monkeypatch.setattr(
+        "lfx.services.telemetry.service.httpx",
+        SimpleNamespace(AsyncClient=lambda **kwargs: real_client(transport=httpx.MockTransport(capture), **kwargs)),
+    )
+    return requests
 
 
 @pytest.mark.asyncio
@@ -81,3 +103,37 @@ async def test_lifespan_respects_both_opt_out_sources(tmp_path, monkeypatch, con
         assert not (tmp_path / "telemetry_id").exists()
 
     assert server._telemetry is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("fails", [False, True])
+@pytest.mark.parametrize("opt_out", [False, True])
+async def test_lifespan_delivers_process_events(tmp_path, monkeypatch, segment_requests, fails, opt_out):
+    from lfx.mcp import server
+    from lfx.services.telemetry import MCPToolPayload
+
+    monkeypatch.setenv("LANGFLOW_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("LANGFLOW_SEGMENT_WRITE_KEY", "test-key")
+    monkeypatch.delenv("DO_NOT_TRACK", raising=False)
+    monkeypatch.setattr(get_settings_service().settings, "do_not_track", opt_out)
+    with pytest.raises(ValueError, match="forced failure") if fails else nullcontext():
+        async with server._telemetry_lifespan(server.mcp):
+            service = server._telemetry
+            await service.log_mcp_tool(MCPToolPayload(tool="list_flows", success=True))
+            if fails:
+                message = "forced failure"
+                raise ValueError(message)
+
+    assert [(event["event"], event["properties"]["object"]) for event in segment_requests] == (
+        [("Started Process", "version"), ("Ran Process", "mcp_tool"), ("Ended Process", "shutdown")]
+        if not opt_out
+        else []
+    )
+    for event in segment_requests:
+        assert event["properties"]["subProductTitle"] == "Langflow MCP"
+    if not opt_out:
+        assert segment_requests[-1]["properties"]["timeRunning"] >= 0
+    assert server._telemetry is None
+    assert not service._running
+    assert service._client is None
+    assert service._queue.empty()
