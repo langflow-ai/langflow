@@ -501,6 +501,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Memories", name: "memories", icon: "Cpu" },
   { display_name: "Microsoft 365", name: "microsoft", icon: "Microsoft" },
   { display_name: "Milvus", name: "milvus", icon: "Milvus" },
+  { display_name: "MiniCPM OCR", name: "minicpm", icon: "FileSearch" },
   { display_name: "MistralAI", name: "mistral", icon: "MistralAI" },
   { display_name: "MongoDB", name: "mongodb", icon: "MongoDB" },
   { display_name: "MrScraper", name: "mrscraper", icon: "MrScraper" },
