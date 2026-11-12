@@ -117,11 +117,11 @@ For more examples, see the [Complete Agent Example on PyPI](https://pypi.org/pro
 
 | Option | Description |
 |---|---|
-| `--check-dependencies` / `--no-check-dependencies` | Preflight the flow's required packages; fail fast with install guidance when any are missing. Default: check. |
+| `--check-dependencies` / `--no-check-dependencies` | Best-effort preflight of a JSON flow's required packages; fails fast with install guidance when packages are positively identified as missing. Skipped for `.py` scripts and when the analysis itself can't complete. Default: check. |
 | `--check-variables` / `--no-check-variables` | Validate the flow's global variables. Default: check. |
 | `--flow-json` | Load inline JSON flow content as a string. |
 | `--format`, `-f` | Output format: `json`, `text`, `message`, or `result`. Default: `json`. |
-| `--human-input` / `--no-human-input` | Interactive human-in-the-loop. Default auto-enables it when the flow has a pausing node and the terminal is interactive. |
+| `--human-input` / `--no-human-input` | Interactive human-in-the-loop. Default auto-enables it when the flow has a pausing node and the terminal is interactive; with `--stdin`, stdin isn't a terminal, so a pausing node doesn't wait for a decision unless `--human-input` is passed explicitly. |
 | `--input-value` | Input value to pass to the graph. Required with `--stdin` and `--flow-json`. |
 | `--session-id` | Session ID for conversation tracking. Auto-generated if not set. |
 | `--stdin` | Read JSON flow content from `stdin`. |
