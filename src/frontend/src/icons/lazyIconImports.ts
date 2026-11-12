@@ -520,6 +520,10 @@ export const lazyIconsMapping = {
     import("@/icons/Timelinesai").then((mod) => ({
       default: mod.TimelinesaiIcon,
     })),
+  TurboNotify: () =>
+    import("@/icons/TurboNotify").then((mod) => ({
+      default: mod.TurboNotifyIcon,
+    })),
   TwelveLabs: () =>
     import("@/icons/TwelveLabs").then((mod) => ({
       default: mod.TwelveLabsIcon,

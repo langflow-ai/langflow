@@ -5057,6 +5057,36 @@
       "added_in": "1.13.0"
     },
     {
+      "bare_class_name": "TurboNotifySendTextComponent",
+      "target": "ext:turbo_notify:TurboNotifySendTextComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "TurboNotifySendMediaComponent",
+      "target": "ext:turbo_notify:TurboNotifySendMediaComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "TurboNotifyReplyComponent",
+      "target": "ext:turbo_notify:TurboNotifyReplyComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "TurboNotifyGetMessagesComponent",
+      "target": "ext:turbo_notify:TurboNotifyGetMessagesComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "TurboNotifyGetMessageStatusComponent",
+      "target": "ext:turbo_notify:TurboNotifyGetMessageStatusComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "TurboNotifyListGroupsComponent",
+      "target": "ext:turbo_notify:TurboNotifyListGroupsComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
       "bare_class_name": "GmailSendComponent",
       "target": "ext:google:GmailSendComponent@official",
       "added_in": "1.13.0"

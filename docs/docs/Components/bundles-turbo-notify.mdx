@@ -1,0 +1,128 @@
+---
+title: Turbo Notify
+slug: /bundles-turbo-notify
+---
+
+import Icon from "@site/src/components/icon";
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+<GraduatedBundleInstall packageName="turbo-notify" />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Turbo Notify** bundle.
+
+[Turbo Notify](https://turbonotify.com) is a third-party service that links an ordinary WhatsApp number to an account as a linked device and exposes it through a REST API.
+It is not the Meta WhatsApp Business Platform. To use the Meta Cloud API instead, see the [**WhatsApp** bundle](./bundles-whatsapp).
+
+The components send and read messages from your own number, with your own Turbo Notify API key.
+Create the key in the Turbo Notify dashboard under **API keys**.
+For details on the API, see the [Turbo Notify documentation](https://docs.turbonotify.com/en/messages/send/).
+
+All components use the same connection inputs:
+
+| Name | Type | Description |
+|------|------|-------------|
+| Turbo Notify API Key (`api_key`) | SecretString | Input parameter. Your Turbo Notify API key. |
+| Number (`number_alias`) | String | Input parameter. The number to use: `main`, the alias of an extra number, or its `num_` ID. Default: `main`. |
+| Base URL (`base_url`) | String | Input parameter. Advanced. The API address. Default: `https://api.turbonotify.com`. |
+
+All components support [tool mode](/agents-tools). The API key, number, and base URL stay configured on the component, and the agent supplies the other inputs.
+Each tool is named after its method, for example `turbo_notify_send_text`.
+
+Every value is checked before a request is made.
+If a value is refused, or if Turbo Notify rejects the request, the component stops with an error that starts with the error code, followed by a description.
+For example, a key without the right permission fails with `insufficient_scope` and names the scope it needs, and a throttled request fails with `rate_limit_exceeded` and the number of seconds to wait.
+
+## Turbo Notify: Send Text
+
+This component sends a text message to a phone number, a contact, or a group.
+
+Fill in exactly one recipient. The message is accepted immediately and delivered later. Use **Turbo Notify: Get Message Status** to follow it.
+
+It outputs the API response as [`Data`](/data-types#data): `message_id` and a `status` object with `state`, `at`, and `error`.
+
+### Turbo Notify: Send Text parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Phone Number (`phone`) | String | Input parameter. A phone number in international format, such as `+12025550123`. Spaces, dashes, and parentheses are removed. It must have 7 to 15 digits after the `+`. |
+| Contact ID (`contact_id`) | String | Input parameter. A Turbo Notify contact ID: `ct_` followed by 32 hexadecimal characters. |
+| Group ID (`group_id`) | String | Input parameter. A Turbo Notify group ID: `grp_` followed by 32 hexadecimal characters. Sending to a group depends on your Turbo Notify plan. |
+| Text (`text`) | String | Input parameter. The message, 1 to 4096 characters. |
+
+## Turbo Notify: Send Media
+
+This component sends an image, video, audio file, document, or sticker from a public `http://` or `https://` address. Turbo Notify downloads the file before it goes to WhatsApp.
+
+Fill in exactly one recipient. It outputs the API response as `Data`, like **Turbo Notify: Send Text**.
+
+### Turbo Notify: Send Media parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Phone Number (`phone`), Contact ID (`contact_id`), Group ID (`group_id`) | String | Input parameters. The recipient, as in **Turbo Notify: Send Text**. |
+| Media Type (`media_type`) | Dropdown | Input parameter. `image`, `video`, `audio`, `document`, or `sticker`. Default: `image`. |
+| Media URL (`media_url`) | String | Input parameter. A public `http://` or `https://` address of the file. |
+| Caption (`caption`) | String | Input parameter. Optional, 1 to 1024 characters. For an image, video, or document only. |
+| File Name (`filename`) | String | Input parameter. Advanced. Optional. The name shown on a document in the chat. For a document only. |
+
+## Turbo Notify: Reply
+
+This component replies to an earlier message and quotes it in the chat. It outputs the API response as `Data`.
+
+### Turbo Notify: Reply parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Message ID (`message_id`) | String | Input parameter. The message to quote: `msg_` followed by 32 hexadecimal characters. The message must belong to the same number. |
+| Text (`text`) | String | Input parameter. The reply, 1 to 4096 characters. |
+
+## Turbo Notify: Get Messages
+
+This component reads the recent messages of a number, newest first.
+
+It outputs `Data` with `messages` (a list), `has_more`, and `cursor`. To read the next page, pass the returned `cursor` back with the same filters.
+
+### Turbo Notify: Get Messages parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Direction (`direction`) | Dropdown | Input parameter. `inbound` for received messages, `outbound` for sent messages, or `any` for both. Default: `any`. |
+| Contact ID (`contact_id`) | String | Input parameter. Optional. Only messages this contact sent or received. |
+| Group ID (`group_id`) | String | Input parameter. Optional. Only messages of this group. |
+| Limit (`limit`) | Integer | Input parameter. How many messages to return, from `1` to `200`. Default: `20`. |
+| Cursor (`cursor`) | String | Input parameter. Advanced. Optional. The cursor of the previous page. |
+
+## Turbo Notify: Get Message Status
+
+This component reads the delivery state of one message.
+
+It outputs `Data` with `message_id`, `state`, `at`, and `error`, and the full `status` object.
+`state` is one of `pending`, `sent`, `delivered`, `read`, or `failed`. When `state` is `failed`, `error` describes the reason.
+
+### Turbo Notify: Get Message Status parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Message ID (`message_id`) | String | Input parameter. The `message_id` returned when the message was sent. |
+
+## Turbo Notify: List Groups
+
+This component lists the groups of the number, with the IDs that **Turbo Notify: Send Text** and **Turbo Notify: Get Messages** accept.
+
+It outputs `Data` with `groups` (a list), `has_more`, and `cursor`.
+
+### Turbo Notify: List Groups parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Name Contains (`group_name`) | String | Input parameter. Optional. Only groups whose name contains this text. |
+| Limit (`limit`) | Integer | Input parameter. How many groups to return, from `1` to `200`. Default: `50`. |
+| Include Groups Left (`include_left`) | Boolean | Input parameter. Advanced. Also list groups the number has already left. Default: `false`. |
+| Cursor (`cursor`) | String | Input parameter. Advanced. Optional. The cursor of the previous page. |
+
+## See also
+
+* [**WhatsApp** bundle](./bundles-whatsapp)
+* [**Plivo** bundle](./bundles-plivo)

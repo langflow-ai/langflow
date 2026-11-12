@@ -68,6 +68,7 @@ members = [
     "lfx-slack",
     "lfx-telegram",
     "lfx-toolguard",
+    "lfx-turbo-notify",
     "lfx-valkey",
     "lfx-vllm",
     "lfx-whatsapp",
@@ -8495,6 +8496,7 @@ bundles = [
     { name = "lfx-paddle" },
     { name = "lfx-serpingapi" },
     { name = "lfx-serply" },
+    { name = "lfx-turbo-notify" },
     { name = "lfx-valkey" },
 ]
 cassio = [
@@ -8628,6 +8630,7 @@ requires-dist = [
     { name = "lfx-slack", editable = "src/bundles/slack" },
     { name = "lfx-telegram", editable = "src/bundles/telegram" },
     { name = "lfx-toolguard", editable = "src/bundles/toolguard" },
+    { name = "lfx-turbo-notify", marker = "extra == 'bundles'", editable = "src/bundles/turbo-notify" },
     { name = "lfx-valkey", marker = "extra == 'bundles'", editable = "src/bundles/valkey" },
     { name = "lfx-vllm", editable = "src/bundles/vllm" },
     { name = "lfx-whatsapp", editable = "src/bundles/whatsapp" },
@@ -11239,6 +11242,21 @@ requires-dist = [
     { name = "lfx", editable = "src/lfx" },
     { name = "litellm", specifier = ">=1.103.10,!=1.104.0rc1,<1.104.0,!=1.107.0" },
     { name = "toolguard", specifier = ">=0.2.20,<1.0.0" },
+]
+
+[[package]]
+name = "lfx-turbo-notify"
+version = "0.1.0"
+source = { editable = "src/bundles/turbo-notify" }
+dependencies = [
+    { name = "httpx" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.24.0,<1.0.0" },
+    { name = "lfx", editable = "src/lfx" },
 ]
 
 [[package]]
