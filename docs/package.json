@@ -116,7 +116,7 @@
     "serve-handler": {
       ".": "^6.1.7"
     },
-    "follow-redirects": "^1.16.2",
+    "follow-redirects": "^1.16.3",
     "open@^10": "^11.0.4",
     "glob": "^14.0.3"
   }

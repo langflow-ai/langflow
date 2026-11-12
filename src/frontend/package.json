@@ -62,7 +62,7 @@
       "@modelcontextprotocol/sdk": "^1.32.1"
     },
     "qs": "^6.17.1",
-    "follow-redirects": "^1.16.2",
+    "follow-redirects": "^1.16.3",
     "modern-tar": "^0.8.6",
     "open": "^11.0.4"
   },
