@@ -450,6 +450,9 @@ class AuthService(BaseAuthService):
                     except InvalidCredentialsError:
                         raise
                     except Exception as api_key_err:
+                        # A busy or lost database never judged the key: retryable, not a rejection.
+                        if _is_retryable_backend_failure(api_key_err):
+                            raise AuthBackendUnavailableError from api_key_err
                         logger.error(f"Unexpected error during API key authentication: {api_key_err}")
                         msg = "API key authentication failed"
                         raise InvalidCredentialsError(msg) from api_key_err
@@ -481,6 +484,8 @@ class AuthService(BaseAuthService):
             except InvalidCredentialsError:
                 raise
             except Exception as e:
+                if _is_retryable_backend_failure(e):
+                    raise AuthBackendUnavailableError from e
                 logger.error(f"Unexpected error during API key authentication: {e}")
                 msg = "API key authentication failed"
                 raise InvalidCredentialsError(msg) from e
