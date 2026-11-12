@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { Page } from "@playwright/test";
+import type { Page, Response } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
@@ -62,11 +62,19 @@ async function openAgentTab(page: Page, flowId: string) {
   await expect(page.getByTestId("agent-publish-switch")).toBeVisible();
 }
 
-// If the flow's folder is apikey-gated, the live JSON-RPC endpoint needs an
-// x-api-key. Mint one and paste it; on a public folder the field never shows.
-async function fillTestKeyIfNeeded(page: Page) {
+function waitForAgentCard(page: Page, flowId: string) {
+  return page.waitForResponse((response) =>
+    response.url().endsWith(`/a2a/${flowId}/.well-known/agent-card.json`),
+  );
+}
+
+// If the resolved card requires an API key, mint one and wait for its field.
+// The field may not have rendered yet when the card response arrives.
+async function fillTestKeyIfNeeded(page: Page, cardResponse: Response) {
+  expect(cardResponse.ok()).toBe(true);
+  const card = await cardResponse.json();
   const keyField = page.getByTestId("agent-test-apikey");
-  if (await keyField.isVisible().catch(() => false)) {
+  if (Array.isArray(card.security) && card.security.length > 0) {
     const key = await page.evaluate(async () => {
       const r = await fetch("/api/v1/api_key/", {
         method: "POST",
@@ -150,6 +158,45 @@ test.describe("A2A Agent tab", () => {
   );
 
   test(
+    "waits for the agent card before sending a test message",
+    { tag: ["@release", "@api"] },
+    async ({ page }) => {
+      await awaitBootstrapTest(page, { skipModal: true });
+      const flowId = await seedFlow(page, ECHO_FLOW, {
+        flowType: "agent",
+        published: true,
+      });
+      let releaseCard!: () => void;
+      let cardRequested = false;
+      const cardCanLoad = new Promise<void>((resolve) => {
+        releaseCard = resolve;
+      });
+      await page.route(
+        `**/api/v1/a2a/${flowId}/.well-known/agent-card.json`,
+        async (route) => {
+          cardRequested = true;
+          await cardCanLoad;
+          await route.continue();
+        },
+      );
+      const cardResponse = waitForAgentCard(page, flowId);
+      try {
+        await openAgentTab(page, flowId);
+        await expect.poll(() => cardRequested).toBe(true);
+        await page.getByTestId("agent-test-input").fill("hello delayed card");
+        await expect(page.getByTestId("agent-test-send")).toBeDisabled();
+      } finally {
+        releaseCard();
+      }
+      await fillTestKeyIfNeeded(page, await cardResponse);
+      await page.getByTestId("agent-test-send").click();
+      await expect(
+        page.getByTestId("agent-transcript").getByText("completed"),
+      ).toBeVisible({ timeout: 60000 });
+    },
+  );
+
+  test(
     "runs a multi-turn conversation over the live endpoint",
     { tag: ["@release", "@api"] },
     async ({ page }) => {
@@ -158,8 +205,9 @@ test.describe("A2A Agent tab", () => {
         flowType: "agent",
         published: true,
       });
+      const cardResponse = waitForAgentCard(page, flowId);
       await openAgentTab(page, flowId);
-      await fillTestKeyIfNeeded(page);
+      await fillTestKeyIfNeeded(page, await cardResponse);
 
       const transcript = page.getByTestId("agent-transcript");
 
@@ -186,8 +234,9 @@ test.describe("A2A Agent tab", () => {
         flowType: "agent",
         published: true,
       });
+      const cardResponse = waitForAgentCard(page, flowId);
       await openAgentTab(page, flowId);
-      await fillTestKeyIfNeeded(page);
+      await fillTestKeyIfNeeded(page, await cardResponse);
 
       const transcript = page.getByTestId("agent-transcript");
 
