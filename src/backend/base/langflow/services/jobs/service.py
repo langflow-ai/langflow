@@ -1801,12 +1801,12 @@ class JobService(Service):
                 success write so a stale run cannot complete a row that has since
                 been reconciled or re-claimed. Keyword-only, and not passed on to
                 run_coro_func.
-            keep_alive: Heartbeat the job while run_coro_func runs (``start_keep_alive``),
+            keep_alive: Heartbeat the job through execution and the terminal status write,
                 for a run outside the background runner, which heartbeats its own jobs.
-                Insert the row with ``create_job(heartbeat=True)``: the first heartbeat
-                waits one interval. The heartbeat stops before the terminal status write,
-                and on a pause, which leaves the row IN_PROGRESS. run_coro_func must not
-                write ``job_metadata``. Keyword-only, and not passed on to run_coro_func.
+                Insert the row with ``create_job(heartbeat=True)`` so the first heartbeat
+                can wait one interval. Cleanup stops the heartbeat before returning or
+                propagating a pause, which leaves the row IN_PROGRESS. run_coro_func must
+                not write ``job_metadata``. Keyword-only, and not passed on to run_coro_func.
             created_job: The server-created row for a run starting immediately in this
                 request. Reuses its admission metadata when ``mark_in_progress=False``.
                 Queued, retried, or resumed work must load the current row instead.
@@ -1825,6 +1825,7 @@ class JobService(Service):
         await logger.ainfo(f"Starting job execution: job_id={job_id}")
 
         previous_context = get_current_auth_context()
+        keep_alive_started = False
         try:
             if mark_in_progress:
                 await logger.adebug(f"Updating job {job_id} status to IN_PROGRESS")
@@ -1845,13 +1846,10 @@ class JobService(Service):
 
             if keep_alive:
                 await self.start_keep_alive(job_id, beat_now=False)
-            try:
-                # Execute the wrapped function
-                await logger.ainfo(f"Executing job function for job_id={job_id}")
-                result = await run_coro_func(*args, **kwargs)
-            finally:
-                if keep_alive:
-                    await self.stop_keep_alive(job_id)
+                keep_alive_started = True
+            # Execute the wrapped function
+            await logger.ainfo(f"Executing job function for job_id={job_id}")
+            result = await run_coro_func(*args, **kwargs)
 
         except JobNotClaimable:
             # Claim loss is a handoff, not this runner's terminal verdict.
@@ -1906,7 +1904,12 @@ class JobService(Service):
                 )
             return result
         finally:
-            set_current_auth_context(previous_context)
+            try:
+                # The terminal write can wait for the application pool while this run stays live.
+                if keep_alive_started:
+                    await self.stop_keep_alive(job_id)
+            finally:
+                set_current_auth_context(previous_context)
 
     async def authorize_job_start(
         self, job_id: UUID, *, job: Job | None = None, owner: str | None = None

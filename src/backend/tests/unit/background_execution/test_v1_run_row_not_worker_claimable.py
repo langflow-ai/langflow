@@ -28,7 +28,9 @@ watchdog reaper, and the F-03 test exhausts a real pool.
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
+from contextvars import ContextVar
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
@@ -183,6 +185,97 @@ async def test_f03_heartbeat_survives_main_pool_exhaustion(real_services_job_ser
                 await tiny.teardown()
         if original_db_service is not None:
             manager.services[ServiceType.DATABASE_SERVICE] = original_db_service
+
+
+@pytest.mark.real_services
+@pytest.mark.parametrize("outcome", ["completed", "failed", "cancelled"])
+async def test_f03_heartbeat_survives_terminal_write_pool_exhaustion(real_services_job_service, monkeypatch, outcome):
+    """A worker must not reap a run waiting for its terminal write's connection."""
+    import langflow.services.jobs.service as jobs_module
+    import lfx.services.deps as lfx_deps
+    from langflow.services.database.factory import DatabaseServiceFactory
+    from langflow.services.deps import get_db_service, get_settings_service
+    from langflow.services.jobs.service import JobService
+
+    settings_service = get_settings_service()
+    settings = settings_service.settings
+    worker_db = get_db_service()
+    monkeypatch.setattr(
+        settings,
+        "db_connection_settings",
+        {**settings.db_connection_settings, "pool_size": 1, "max_overflow": 0, "pool_timeout": 10},
+    )
+    monkeypatch.setattr(settings, "background_heartbeat_interval_s", 0.1)
+    api_db = DatabaseServiceFactory().create(settings_service)
+    task_db = ContextVar("terminal_write_test_db", default=api_db)
+    # Each simulated process keeps its own application pool against the same database.
+    monkeypatch.setattr(lfx_deps, "get_db_service", task_db.get)
+    monkeypatch.setattr(jobs_module, "get_db_service", task_db.get)
+    service = real_services_job_service
+    worker = JobService()
+    job_id = uuid4()
+    entered = asyncio.Event()
+    finish = asyncio.Event()
+    terminal_write = asyncio.Event()
+    terminalize = service.terminalize_live_job
+
+    async def observe_terminal_write(*args, **kwargs):
+        terminal_write.set()
+        return await terminalize(*args, **kwargs)
+
+    monkeypatch.setattr(service, "terminalize_live_job", observe_terminal_write)
+
+    async def run_flow():
+        entered.set()
+        await finish.wait()
+        if outcome == "failed":
+            message = "flow failed"
+            raise ValueError(message)
+        if outcome == "cancelled":
+            message = "LANGFLOW_USER_CANCELLED"
+            raise asyncio.CancelledError(message)
+        return "flow result"
+
+    run = None
+    try:
+        await service.create_job(
+            job_id=job_id, flow_id=uuid4(), job_type=JobType.WORKFLOW, status=JobStatus.IN_PROGRESS, heartbeat=True
+        )
+        run = asyncio.create_task(service.execute_with_status(job_id, run_flow, keep_alive=True))
+        await asyncio.wait_for(entered.wait(), timeout=5)
+        async with api_db.engine.connect():
+            finish.set()
+            await asyncio.wait_for(terminal_write.wait(), timeout=5)
+            assert not run.done()
+            token = task_db.set(worker_db)
+            try:
+                # The held connection outlasts the lease while dedicated heartbeats continue.
+                await asyncio.sleep(0.8)
+                swept = await worker.sweep_orphans(lease_ttl_s=0.5)
+                assert job_id not in swept
+            finally:
+                task_db.reset(token)
+
+        if outcome == "failed":
+            with pytest.raises(ValueError, match="flow failed"):
+                await asyncio.wait_for(run, timeout=5)
+        elif outcome == "cancelled":
+            with pytest.raises(asyncio.CancelledError, match="LANGFLOW_USER_CANCELLED"):
+                await asyncio.wait_for(run, timeout=5)
+        else:
+            assert await asyncio.wait_for(run, timeout=5) == "flow result"
+
+        job = await service.get_job_by_job_id(job_id)
+        assert job.status == JobStatus(outcome)
+        assert job.finished_timestamp is not None
+        assert (job.error or {}).get("type") != "worker_lost"
+        assert job_id not in service._keep_alives
+    finally:
+        finish.set()
+        if run is not None:
+            await asyncio.gather(run, return_exceptions=True)
+        await service.stop_keep_alive(job_id)
+        await api_db.teardown()
 
 
 async def test_simple_run_flow_creates_the_row_in_progress(monkeypatch):
