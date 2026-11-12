@@ -175,8 +175,12 @@ jest.mock("../../utils/reactflowUtils", () => {
 
 import { applyEdgeChanges } from "@xyflow/react";
 import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
-import type { LogsLogType, VertexBuildTypeAPI } from "@/types/api";
-import type { AllNodeType, EdgeType } from "@/types/flow";
+import type {
+  APIClassType,
+  LogsLogType,
+  VertexBuildTypeAPI,
+} from "@/types/api";
+import type { AllNodeType, EdgeType, FlowType } from "@/types/flow";
 import i18n from "../../i18n";
 import fr from "../../locales/fr.json";
 import { scapedJSONStringfy } from "../../utils/reactflowUtils";
@@ -1138,6 +1142,67 @@ describe("useFlowStore", () => {
         new Set(),
       );
     });
+
+    it.each([false, true])(
+      "reports an outer Parser beside an inner group after import=%s",
+      async (prepareImport) => {
+        const { walkFlowNodes } = jest.requireActual<
+          typeof import("@/utils/grouped-nodes")
+        >("@/utils/grouped-nodes");
+        const { processDataFromFlow, updateGroupRecursion } =
+          jest.requireActual<typeof import("@/utils/reactflowUtils")>(
+            "@/utils/reactflowUtils",
+          );
+        const flow = JSON.parse(
+          JSON.stringify(
+            jest.requireActual(
+              "../../../../lfx/tests/data/component_compat/hard_flows/v1.13.0/nested_groups.json",
+            ),
+          ),
+        ) as FlowType;
+        const index = jest.requireActual<{
+          entries: [string, Record<string, APIClassType>][];
+        }>("../../../../lfx/src/lfx/_assets/component_index.json");
+        mockTemplates = Object.assign(
+          {},
+          ...index.entries.map(([, components]) => components),
+        );
+        const parser = [
+          ...walkFlowNodes(flow.data!.nodes, flow.data!.edges),
+        ].find(
+          ({ node }) =>
+            node.type === "genericNode" && node.data.type === "ParserComponent",
+        )?.node;
+        if (!parser || parser.type !== "genericNode") {
+          throw new Error("The historical nested group has no Parser");
+        }
+        parser.data.node!.outputs![0].method = "old_parse_method";
+        if (prepareImport) {
+          await processDataFromFlow(flow);
+          for (const node of flow.data!.nodes) {
+            updateGroupRecursion(node, flow.data!.edges, undefined, undefined);
+          }
+        }
+        (checkCodeValidity as jest.Mock).mockImplementation(
+          realCheckCodeValidity,
+        );
+
+        useFlowStore
+          .getState()
+          .updateComponentsToUpdate(flow.data!.nodes, flow.data!.edges);
+
+        expect(useFlowStore.getState().componentsToUpdate).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              type: "ParserComponent",
+              breakingChange: true,
+            }),
+            expect.objectContaining({ type: "URLComponent" }),
+            expect.objectContaining({ type: "SplitText" }),
+          ]),
+        );
+      },
+    );
 
     it.each(["structured", "escaped", "legacy"])(
       "reports breaking nodes inside nested groups through %s proxy handles",
