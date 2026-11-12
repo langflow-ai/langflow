@@ -3,6 +3,7 @@ import path from "node:path";
 import type { Page, Response } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TIMEOUTS } from "../../utils/constants/timeouts";
 
 // Two no-LLM agents (the same fixtures the backend a2a tests use, with canvas
 // positions added so the editor can render them). Echo returns the caller's
@@ -52,19 +53,25 @@ async function seedFlow(
   );
 }
 
-async function openAgentTab(page: Page, flowId: string) {
+async function openFlowPage(page: Page, flowId: string) {
   await page.goto(`/flow/${flowId}`);
-  // The tab is available for every flow; it renders its own three states.
+  // Reloading the editor can outlast the card response timeout on CI. Finish
+  // navigation before starting a waiter for the request triggered by the tab.
   await expect(page.getByTestId("sidebar-nav-agent")).toBeVisible({
-    timeout: 30000,
+    timeout: TIMEOUTS.long,
   });
+}
+
+async function openAgentTab(page: Page) {
   await page.getByTestId("sidebar-nav-agent").click();
   await expect(page.getByTestId("agent-publish-switch")).toBeVisible();
 }
 
 function waitForAgentCard(page: Page, flowId: string) {
-  return page.waitForResponse((response) =>
-    response.url().endsWith(`/a2a/${flowId}/.well-known/agent-card.json`),
+  return page.waitForResponse(
+    (response) =>
+      response.url().endsWith(`/a2a/${flowId}/.well-known/agent-card.json`),
+    { timeout: TIMEOUTS.long },
   );
 }
 
@@ -104,7 +111,8 @@ test.describe("A2A Agent tab", () => {
       const ineligibleId = await seedFlow(page, INELIGIBLE_FLOW, {
         flowType: "workflow",
       });
-      await openAgentTab(page, ineligibleId);
+      await openFlowPage(page, ineligibleId);
+      await openAgentTab(page);
       await expect(page.getByTestId("agent-status")).toHaveText("Unavailable");
       await expect(page.getByTestId("agent-publish-switch")).toBeDisabled();
       await expect(
@@ -115,7 +123,8 @@ test.describe("A2A Agent tab", () => {
       const eligibleId = await seedFlow(page, ECHO_FLOW, {
         flowType: "workflow",
       });
-      await openAgentTab(page, eligibleId);
+      await openFlowPage(page, eligibleId);
+      await openAgentTab(page);
       await expect(page.getByTestId("agent-status")).toHaveText("Draft");
       await expect(page.getByTestId("agent-publish-switch")).toBeEnabled();
     },
@@ -130,7 +139,8 @@ test.describe("A2A Agent tab", () => {
         flowType: "agent",
         published: false,
       });
-      await openAgentTab(page, flowId);
+      await openFlowPage(page, flowId);
+      await openAgentTab(page);
 
       // Draft: no live card, honest "publish to preview" note.
       await expect(page.getByTestId("agent-status")).toHaveText("Draft");
@@ -179,16 +189,23 @@ test.describe("A2A Agent tab", () => {
           await route.continue();
         },
       );
-      const cardResponse = waitForAgentCard(page, flowId);
-      try {
-        await openAgentTab(page, flowId);
-        await expect.poll(() => cardRequested).toBe(true);
-        await page.getByTestId("agent-test-input").fill("hello delayed card");
-        await expect(page.getByTestId("agent-test-send")).toBeDisabled();
-      } finally {
-        releaseCard();
-      }
-      await fillTestKeyIfNeeded(page, await cardResponse);
+      await openFlowPage(page, flowId);
+      const [cardResponse] = await Promise.all([
+        waitForAgentCard(page, flowId),
+        (async () => {
+          try {
+            await openAgentTab(page);
+            await expect.poll(() => cardRequested).toBe(true);
+            await page
+              .getByTestId("agent-test-input")
+              .fill("hello delayed card");
+            await expect(page.getByTestId("agent-test-send")).toBeDisabled();
+          } finally {
+            releaseCard();
+          }
+        })(),
+      ]);
+      await fillTestKeyIfNeeded(page, cardResponse);
       await page.getByTestId("agent-test-send").click();
       await expect(
         page.getByTestId("agent-transcript").getByText("completed"),
@@ -205,9 +222,12 @@ test.describe("A2A Agent tab", () => {
         flowType: "agent",
         published: true,
       });
-      const cardResponse = waitForAgentCard(page, flowId);
-      await openAgentTab(page, flowId);
-      await fillTestKeyIfNeeded(page, await cardResponse);
+      await openFlowPage(page, flowId);
+      const [cardResponse] = await Promise.all([
+        waitForAgentCard(page, flowId),
+        openAgentTab(page),
+      ]);
+      await fillTestKeyIfNeeded(page, cardResponse);
 
       const transcript = page.getByTestId("agent-transcript");
 
@@ -234,9 +254,12 @@ test.describe("A2A Agent tab", () => {
         flowType: "agent",
         published: true,
       });
-      const cardResponse = waitForAgentCard(page, flowId);
-      await openAgentTab(page, flowId);
-      await fillTestKeyIfNeeded(page, await cardResponse);
+      await openFlowPage(page, flowId);
+      const [cardResponse] = await Promise.all([
+        waitForAgentCard(page, flowId),
+        openAgentTab(page),
+      ]);
+      await fillTestKeyIfNeeded(page, cardResponse);
 
       const transcript = page.getByTestId("agent-transcript");
 
