@@ -986,25 +986,23 @@ def _substitute_global_variables(
 ) -> str:
     """Resolve a whole-value variable name, or ``{{NAME}}`` placeholders inside a value.
 
-    Strict resolution rejects references absent from the authoritative variable map.
-    Otherwise, unknown placeholders remain verbatim so missing values cannot silently
-    change the connection target. Substituted values are opaque and are not expanded again.
+    Explicit placeholders must exist before a connection can be opened. Strict account
+    resolution also rejects absent generated MCP names. Resolved values remain opaque.
     """
     if not value:
         return value
     request_variables = request_variables or {}
     if value in request_variables:
         return request_variables[value]
-    if strict_variables:
-        missing = {
-            match.group(1) for match in GLOBAL_VARIABLE_PLACEHOLDER_PATTERN.finditer(value)
-        } - request_variables.keys()
-        if value.startswith("MCP_"):
-            msg = "A deployment MCP variable is unavailable"
-            raise RuntimeVariableError(msg, reason="absent")
-        if missing:
-            msg = f"Deployment variables are unavailable ({', '.join(sorted(missing))})"
-            raise RuntimeVariableError(msg, reason="absent")
+    missing = {
+        match.group(1) for match in GLOBAL_VARIABLE_PLACEHOLDER_PATTERN.finditer(value)
+    } - request_variables.keys()
+    if strict_variables and value.startswith("MCP_"):
+        msg = "A deployment MCP variable is unavailable"
+        raise RuntimeVariableError(msg, reason="absent")
+    if missing:
+        msg = f"MCP variables are unavailable ({', '.join(sorted(missing))})"
+        raise RuntimeVariableError(msg, reason="absent")
     return GLOBAL_VARIABLE_PLACEHOLDER_PATTERN.sub(
         lambda match: request_variables.get(match.group(1), match.group(0)), value
     )
@@ -1122,9 +1120,6 @@ def _resolve_global_variables_in_headers(
     Returns:
         Dictionary with resolved header values
     """
-    if not request_variables and not strict_variables:
-        return headers
-
     return {
         key: _substitute_global_variables(value, request_variables, strict_variables=strict_variables)
         if isinstance(value, str)
@@ -2252,7 +2247,8 @@ class MCPStdioClient(_PooledSessionClient):
         validate_mcp_stdio_config(command, args, env)
         # Preserve opaque HTTP values for direct executables, but apply the shell
         # policy to the assembled argv when a wrapper will interpret those values.
-        final_args = _inject_mcp_stdio_headers(args, _process_headers(headers))
+        # Variables were resolved before transport selection. Treat their values as opaque.
+        final_args = _inject_mcp_stdio_headers(args, validate_headers(headers))
         is_windows_batch = False
         if sys.platform == "win32":
             from mcp.os.win32.utilities import get_windows_executable_command
@@ -2566,8 +2562,8 @@ class MCPStreamableHttpClient(_PooledSessionClient):
 
         ``preferred_transport="sse"`` connects over legacy SSE directly, without a Streamable HTTP probe.
         """
-        # Validate and sanitize headers early
-        validated_headers = _process_headers(headers)
+        # Sanitize resolved headers without expanding placeholder text inside credentials.
+        validated_headers = validate_headers(headers)
 
         if url is None:
             msg = "URL is required for StreamableHTTP or SSE mode"

@@ -25,15 +25,15 @@ class MaintenanceRead(MaintenanceStatus):
     migration: bool
 
 
-async def _read(session: DbSessionReadOnly) -> MaintenanceRead:
-    state = await maintenance_status(session)
+async def _read(session: DbSessionReadOnly, *, include_details: bool = True) -> MaintenanceRead:
+    state = await maintenance_status(session, include_details=include_details)
     migration = is_paused()
     return MaintenanceRead(**state.model_dump(), paused=state.maintenance or migration, migration=migration)
 
 
 @router.get("/status")
-async def read_status(_user: CurrentActiveUser, session: DbSessionReadOnly) -> MaintenanceRead:
-    return await _read(session)
+async def read_status(user: CurrentActiveUser, session: DbSessionReadOnly) -> MaintenanceRead:
+    return await _read(session, include_details=user.is_superuser)
 
 
 @router.post("/on")

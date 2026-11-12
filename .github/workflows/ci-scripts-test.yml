@@ -7,6 +7,7 @@ on:
       - "design/dedicated-integrations/**"
       - "design/dedicated-integrations-triggers/**"
       - ".github/workflows/ci-scripts-test.yml"
+      - ".github/workflows/component-compatibility.yml"
       - ".github/workflows/backend-unit-tests.yml"
       - ".github/workflows/python_test.yml"
       - ".github/workflows/store_pytest_durations.yml"
@@ -101,5 +102,6 @@ jobs:
       - name: Install dependencies
         run: pip install jsonschema orjson packaging pytest pytest-xdist pytest-rerunfailures pytest-timeout pyyaml requests
 
+      # The required component compatibility job runs the real LFX cases.
       - name: Run CI script tests
-        run: python -m pytest scripts/ci/ -v
+        run: python -m pytest scripts/ci/ -v -m 'not component_runtime'

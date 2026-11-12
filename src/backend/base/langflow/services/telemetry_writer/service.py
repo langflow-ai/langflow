@@ -724,6 +724,11 @@ class TelemetryWriterService(Service):
         consecutive_failures = 0
         while True:
             should_stop = self._shutdown_event.is_set()
+            if not self._tx_buffer and not self._vb_buffer:
+                if should_stop:
+                    return
+                await self._wait_or_shutdown(flush_interval, name="telemetry-writer-tick")
+                continue
             # A paused instance flushes nothing. The rows wait in memory, and teardown spills them to disk.
             # A flush holds a place from here until it is over, so a pause waits for one that is under way.
             place = AsyncExitStack()

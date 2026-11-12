@@ -97,11 +97,27 @@ it("shows shared maintenance even when instance migration is disabled", async ()
   expect(screen.getByRole("main")).toHaveTextContent("Playground");
   await waitFor(() =>
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Ordinary changes and flow runs are paused for maintenance",
+      "Ordinary changes and flow runs are paused for maintenance. Administrators can still make changes.",
     ),
   );
   expect(mockGet).toHaveBeenCalledTimes(1);
   expect(mockGet.mock.calls[0][0]).toContain("/api/v1/maintenance/status");
+});
+
+it("keeps the notice empty when migration is disabled and no pause is active", async () => {
+  useUtilityStore.setState({ featureFlags: { instance_migration: false } });
+  mockGet.mockResolvedValue({
+    data: { paused: false, maintenance: false, migration: false },
+  });
+  showPlayground();
+
+  await waitFor(() =>
+    expect(client.getQueryState(migrationKeys.pause)?.status).toBe("success"),
+  );
+  expect(mockGet).toHaveBeenCalledTimes(1);
+  expect(mockGet.mock.calls[0][0]).toContain("/api/v1/maintenance/status");
+  expect(screen.getByRole("main")).toHaveTextContent("Playground");
+  expect(screen.getByRole("status")).toBeEmptyDOMElement();
 });
 
 it("keeps the file pause notice until migration ends when both pauses are active", async () => {
@@ -127,7 +143,23 @@ it("keeps the file pause notice until migration ends when both pauses are active
   });
   await waitFor(() =>
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Ordinary changes and flow runs are paused for maintenance",
+      "Ordinary changes and flow runs are paused for maintenance. Administrators can still make changes.",
     ),
   );
+});
+
+it("keeps the notice empty when migration is disabled and no pause is active", async () => {
+  useUtilityStore.setState({ featureFlags: { instance_migration: false } });
+  mockGet.mockResolvedValue({
+    data: { paused: false, maintenance: false, migration: false },
+  });
+  showPlayground();
+
+  await waitFor(() =>
+    expect(client.getQueryState(migrationKeys.pause)?.status).toBe("success"),
+  );
+  expect(mockGet).toHaveBeenCalledTimes(1);
+  expect(mockGet.mock.calls[0][0]).toContain("/api/v1/maintenance/status");
+  expect(screen.getByRole("main")).toHaveTextContent("Playground");
+  expect(screen.getByRole("status")).toBeEmptyDOMElement();
 });
