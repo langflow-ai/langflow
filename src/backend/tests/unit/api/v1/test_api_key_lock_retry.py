@@ -21,7 +21,7 @@ from langflow.services.database.lock_retry import (
     is_retryable_write_error,
     run_with_lock_retry,
 )
-from sqlalchemy.exc import OperationalError, PendingRollbackError
+from sqlalchemy.exc import MissingGreenlet, OperationalError, PendingRollbackError
 
 
 def _lock_error() -> OperationalError:
@@ -110,3 +110,20 @@ async def test_retry_recovers_from_a_poisoned_transaction() -> None:
     assert await run_with_lock_retry(_attempt, session=session, description="create_api_key") == "ok"
     assert calls == [0, 1]
     assert session.rollback.await_count == 1
+
+
+def test_a_lazy_load_outside_the_greenlet_is_not_retried() -> None:
+    """A retry must not repeat a lazy load that cannot succeed.
+
+    ``MissingGreenlet`` means an expired attribute was read outside the greenlet
+    that owns the connection. Re-running the attempt would expire the instance
+    again and fail identically, so it has to surface instead of burning the retry
+    budget. The routes avoid it by reading the user columns before the loop.
+    """
+    message = (
+        "greenlet_spawn has not been called; can't call await_only() here. "
+        "Was IO attempted in an unexpected place?"
+    )
+    error = MissingGreenlet(message)
+
+    assert is_retryable_write_error(error) is False
