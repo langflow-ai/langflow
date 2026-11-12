@@ -1,0 +1,70 @@
+---
+title: Piloterr
+slug: /bundles-piloterr
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Piloterr** bundle.
+
+[Piloterr](https://www.piloterr.com) is a web data API: search engine results and web pages fetched from Piloterr's own infrastructure.
+
+Both components need a Piloterr API key.
+Create one in the [Piloterr dashboard](https://app.piloterr.com) and enter it in the **Piloterr API Key** field, or store it in a [global variable](/configuration-global-variables) named `PILOTERR_API_KEY`.
+
+For more information, see the [Piloterr documentation](https://docs.piloterr.com).
+
+## Piloterr Google Search
+
+This component searches Google with Piloterr.
+
+It returns the organic results as a [`Table`](/data-types#table), with one row per result.
+Each row has the result's `position`, `title`, `link`, and `snippet`.
+
+When the component is used as a [tool](/agents-tools), the agent sets the search query.
+Google operators such as `site:` work in the query.
+
+### Piloterr Google Search parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| Piloterr API Key (`api_key`) | SecretString | Input parameter. Your Piloterr API key. |
+| Search Query (`query`) | String | Input parameter. The query to search Google for. |
+| Max Results (`max_results`) | Integer | Input parameter. The number of results to request, from 1 to 100. Default: `10`. |
+| Country (`country`) | String | Input parameter. Two-letter country code to search from, such as `us`. |
+| Language (`language`) | String | Input parameter. Language code of the results, optionally with a region, such as `en` or `en-gb`. |
+| Location (`location`) | String | Input parameter. City or region to search from, such as `Paris, France`. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for Piloterr to answer. Default: `60`. |
+
+## Piloterr Website Scraper
+
+This component fetches one web page through Piloterr.
+
+It outputs a [`Data`](/data-types#json) object whose text is the readable text of the page, without scripts and styles.
+The object also has the page's `url`, `title`, `engine`, and full `html`.
+
+Piloterr downloads the page on its own infrastructure, so Langflow only sends the URL to `api.piloterr.com` and never connects to the page itself.
+
+When the component is used as a [tool](/agents-tools), the agent sets the URL.
+
+### Piloterr Website Scraper parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Piloterr API Key (`api_key`) | SecretString | Input parameter. Your Piloterr API key. |
+| URL (`url`) | String | Input parameter. The `http://` or `https://` URL of the page to fetch. |
+| Engine (`engine`) | String | Input parameter. `Crawler` fetches the page over HTTP, `Rendering` loads it in a headless browser for JavaScript pages, and `Web Unlocker` gets past anti-bot protection. Default: `Crawler`. |
+| Wait (seconds) (`wait_in_seconds`) | Integer | Input parameter. Rendering only: extra seconds to wait after the page loads, from 0 to 30. Default: `0`. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for Piloterr to answer. Default: `120`. |
+
+## See also
+
+* [**Web Search** component](/web-search)

@@ -519,6 +519,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "PaddleOCR", name: "paddle", icon: "FileSearch" },
   { display_name: "Perplexity", name: "perplexity", icon: "Perplexity" },
   { display_name: "pgvector", name: "pgvector", icon: "cpu" },
+  { display_name: "Piloterr", name: "piloterr", icon: "Piloterr" },
   { display_name: "Pinecone", name: "pinecone", icon: "Pinecone" },
   { display_name: "Plivo", name: "plivo", icon: "Plivo" },
   { display_name: "Qdrant", name: "qdrant", icon: "Qdrant" },

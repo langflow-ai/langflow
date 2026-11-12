@@ -622,6 +622,7 @@ module.exports = {
             "Components/bundles-paddle",
             "Components/bundles-perplexity",
             "Components/bundles-pgvector",
+            "Components/bundles-piloterr",
             "Components/bundles-pinecone",
             "Components/bundles-plivo",
             "Components/bundles-qdrant",

@@ -171,3 +171,15 @@ it("uses the Discord logo for its integration palette group", () => {
     icon: "discord",
   });
 });
+
+it("classifies Piloterr as a sidebar bundle", () => {
+  expect(SIDEBAR_BUNDLES).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        display_name: "Piloterr",
+        icon: "Piloterr",
+        name: "piloterr",
+      }),
+    ]),
+  );
+});
