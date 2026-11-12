@@ -115,10 +115,6 @@ const createdRow = (ownership: "user" | "instance"): ConnectionRead => ({
 
 const fillDetails = async (user: ReturnType<typeof userEvent.setup>) => {
   await user.type(screen.getByTestId("connection-name"), "team_calendar");
-  await user.type(
-    screen.getByTestId("connection-display-name"),
-    "Team calendar",
-  );
 };
 
 describe("AddConnectionDialog ownership", () => {
@@ -306,10 +302,6 @@ describe("AddConnectionDialog ownership", () => {
           screen.getByTestId("connection-name"),
           "confluence_work",
         );
-        await user.type(
-          screen.getByTestId("connection-display-name"),
-          "Confluence work",
-        );
       }
 
       expect(screen.getByRole("alert")).toHaveTextContent(
@@ -370,9 +362,6 @@ describe("AddConnectionDialog ownership", () => {
     fireEvent.change(screen.getByTestId("connection-name"), {
       target: { value: name },
     });
-    fireEvent.change(screen.getByTestId("connection-display-name"), {
-      target: { value: "Gmail" },
-    });
     expect(screen.getByTestId("connection-name")).toHaveAttribute(
       "aria-invalid",
       "true",
@@ -387,8 +376,9 @@ describe("AddConnectionDialog ownership", () => {
   });
 
   it.each(["gmail_qa", "g1", "a".repeat(64)])(
-    "accepts valid handle %s",
-    (name) => {
+    "uses valid handle %s as the display name for OAuth creation",
+    async (name) => {
+      mockCreate.mockResolvedValueOnce(createdRow("user"));
       render(
         <AddConnectionDialog
           open
@@ -397,13 +387,17 @@ describe("AddConnectionDialog ownership", () => {
           canCreateInstance={false}
         />,
       );
+      expect(screen.queryByLabelText("Display name")).not.toBeInTheDocument();
+      expect(screen.getByTestId("connection-continue")).toBeDisabled();
       fireEvent.change(screen.getByTestId("connection-name"), {
         target: { value: name },
       });
-      fireEvent.change(screen.getByTestId("connection-display-name"), {
-        target: { value: "Gmail" },
-      });
+
       expect(screen.getByTestId("connection-continue")).toBeEnabled();
+      await userEvent.click(screen.getByTestId("connection-continue"));
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ name, display_name: name }),
+      );
     },
   );
 
@@ -521,40 +515,48 @@ describe("AddConnectionDialog ownership", () => {
     );
   });
 
-  it("does not offer instance sharing for ServiceNow or retain it from another provider", async () => {
-    mockCreate.mockResolvedValue({
-      ...createdRow("user"),
-      provider_key: "servicenow",
-    });
-    const user = userEvent.setup();
-    render(
-      <AddConnectionDialog
-        open
-        onOpenChange={jest.fn()}
-        providers={[
-          google,
-          { ...google, provider_id: "servicenow", display_name: "ServiceNow" },
-        ]}
-        canCreateInstance
-      />,
-    );
-    await user.click(screen.getByTestId("connection-instance-owned"));
-    await selectProvider(user, "ServiceNow");
-    expect(
-      screen.queryByTestId("connection-instance-owned"),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByText(/cannot be shared with the instance/),
-    ).toBeVisible();
-    await fillDetails(user);
-    await user.click(screen.getByTestId("connection-continue"));
-    expect(mockCreate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        provider_key: "servicenow",
-        ownership_mode: "user",
-      }),
-    );
-  });
+  it.each([
+    ["servicenow", "ServiceNow"],
+    ["salesforce", "Salesforce"],
+  ])(
+    "does not offer instance sharing for %s or retain it from another provider",
+    async (providerId, displayName) => {
+      mockCreate.mockResolvedValue({
+        ...createdRow("user"),
+        provider_key: providerId,
+      });
+      const user = userEvent.setup();
+      render(
+        <AddConnectionDialog
+          open
+          onOpenChange={jest.fn()}
+          providers={[
+            google,
+            { ...google, provider_id: providerId, display_name: displayName },
+          ]}
+          canCreateInstance
+        />,
+      );
+      await user.click(screen.getByTestId("connection-instance-owned"));
+      await selectProvider(user, displayName);
+      expect(
+        screen.queryByTestId("connection-instance-owned"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByText(
+          `${displayName} connections belong to an individual user and cannot be shared with the instance.`,
+        ),
+      ).toBeVisible();
+      await fillDetails(user);
+      await user.click(screen.getByTestId("connection-continue"));
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          provider_key: providerId,
+          ownership_mode: "user",
+        }),
+      );
+    },
+  );
 
   it("reports the authorized row when Done closes the dialog", async () => {
     const pending = createdRow("instance");

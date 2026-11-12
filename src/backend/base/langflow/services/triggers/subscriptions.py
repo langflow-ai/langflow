@@ -37,7 +37,7 @@ from sqlmodel import col, select
 
 from langflow.services.database.models.connection.model import Connection
 from langflow.services.database.models.connection.schemas import PersistedConnectionStatus
-from langflow.services.database.models.trigger.model import Trigger, TriggerSubscription
+from langflow.services.database.models.trigger.model import Trigger, TriggerRenewalObservation, TriggerSubscription
 from langflow.services.database.models.trigger.schemas import TriggerState, TriggerSubscriptionState
 from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.triggers import leases
@@ -257,7 +257,7 @@ async def upsert_subscription(
     await session.flush()
     await session.refresh(row)
     if created:
-        await _audit_subscription_creation(session, trigger_id=trigger_id)
+        await audit_subscription_creation(session, trigger_id=trigger_id)
     return row
 
 
@@ -497,6 +497,7 @@ async def renew_one(session: AsyncSession, *, subscription_id: UUID, owner: str)
         session.add(row)
         await session.flush()
         return False
+    previous_expires_at = _as_aware(row.expires_at)
     try:
         expires_at = await renewer(session, row)
     except _ProviderUnavailableError:
@@ -511,6 +512,7 @@ async def renew_one(session: AsyncSession, *, subscription_id: UUID, owner: str)
                 await session.rollback()
                 return False
         await _record_renewal_failure(session, row=row, exc=exc)
+        _record_renewal_observation(session, row=row, previous_expires_at=previous_expires_at, outcome="failed")
         return False
 
     # Provider I/O finishes before taking any write lock. Suppress autoflush
@@ -538,7 +540,27 @@ async def renew_one(session: AsyncSession, *, subscription_id: UUID, owner: str)
     await session.flush()
     await _clear_renewal_error(session, trigger_id=row.trigger_id)
     _defer_audit(session, AUDIT_SUBSCRIPTION_RENEW, trigger_id=row.trigger_id, count=1)
+    _record_renewal_observation(session, row=row, previous_expires_at=previous_expires_at, outcome="renewed")
     return True
+
+
+def _record_renewal_observation(session, *, row, previous_expires_at: datetime | None, outcome: str) -> None:
+    """Stage only a fenced result, in the same commit as its subscription state."""
+    if previous_expires_at is None:
+        # A nonexpiring mechanism has no renewal-coverage boundary to measure.
+        return
+    now = _now()
+    session.add(
+        TriggerRenewalObservation(
+            trigger_id=row.trigger_id,
+            subscription_id=row.id,
+            observed_at=now,
+            previous_expires_at=previous_expires_at,
+            expires_at=row.expires_at if outcome == "renewed" else None,
+            outcome=outcome,
+            gap_seconds=max((now - previous_expires_at).total_seconds(), 0) if outcome == "renewed" else 0,
+        )
+    )
 
 
 async def _record_renewal_failure(session: AsyncSession, *, row: TriggerSubscription, exc: Exception) -> None:
@@ -702,7 +724,7 @@ def _defer_audit(session: AsyncSession, action: str, *, trigger_id: UUID, count:
     session.info.setdefault(_DEFERRED_AUDITS_KEY, []).append((action, trigger_id, count, result))
 
 
-async def _audit_subscription_creation(session: AsyncSession, *, trigger_id: UUID) -> None:
+async def audit_subscription_creation(session: AsyncSession, *, trigger_id: UUID) -> None:
     """Keep best-effort creation evidence inside the subscription transaction."""
     settings = get_settings_service().auth_settings
     if not settings.AUTHZ_AUDIT_ENABLED:

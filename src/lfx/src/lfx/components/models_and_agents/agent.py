@@ -991,6 +991,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
                 input_value=_extract_text_content(self.input_value),
                 run_prompt_fallback=_run_agent_for_fallback,
                 prefer_native=not has_tools,
+                config={"callbacks": self.get_langchain_callbacks()},
             )
         except (
             ExceptionWithMessageError,

@@ -511,12 +511,13 @@ async def teardown_superuser(settings_service: SettingsService, session: AsyncSe
 
 async def teardown_services() -> None:
     """Teardown all the services."""
-    async with session_scope() as session:
-        await teardown_superuser(get_settings_service(), session)
-
     from lfx.services.manager import get_service_manager
 
     service_manager = get_service_manager()
+    database_service = service_manager.services.get(ServiceType.DATABASE_SERVICE)
+    if database_service is not None and getattr(database_service, "database_initialized", False):
+        async with session_scope() as session:
+            await teardown_superuser(get_settings_service(), session)
     await service_manager.teardown()
 
 

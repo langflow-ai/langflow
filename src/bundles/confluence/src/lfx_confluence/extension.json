@@ -1,7 +1,7 @@
 {
   "$schema": "https://schemas.langflow.org/extension/v1.json",
   "id": "lfx-confluence",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "name": "Confluence Integrations",
   "description": "Confluence Cloud page actions and latest-state polling triggers.",
   "lfx": {

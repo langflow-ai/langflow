@@ -303,10 +303,6 @@ it("submits the GitHub installation payload accepted by the backend validator", 
   renderDialog();
   await user.type(screen.getByTestId("connection-name"), dialogPayload.name);
   await user.type(
-    screen.getByTestId("connection-display-name"),
-    dialogPayload.display_name,
-  );
-  await user.type(
     screen.getByTestId("connection-token"),
     dialogPayload.credentials.access_token,
   );
@@ -319,7 +315,10 @@ it("submits the GitHub installation payload accepted by the backend validator", 
   });
   await user.click(screen.getByTestId("connection-allow-background-runs"));
   await user.click(screen.getByTestId("connection-continue"));
-  expect(mockCreate).toHaveBeenCalledWith(dialogPayload);
+  expect(mockCreate).toHaveBeenCalledWith({
+    ...dialogPayload,
+    display_name: dialogPayload.name,
+  });
 });
 
 it.each([
@@ -337,10 +336,6 @@ it.each([
     const user = userEvent.setup();
     renderDialog();
     await user.type(screen.getByTestId("connection-name"), dialogPayload.name);
-    await user.type(
-      screen.getByTestId("connection-display-name"),
-      dialogPayload.display_name,
-    );
     await user.type(
       screen.getByTestId("connection-token"),
       dialogPayload.credentials.access_token,

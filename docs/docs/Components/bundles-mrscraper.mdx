@@ -86,4 +86,6 @@ For structured results, enter `python web scraping`, disable **Raw HTML**, and s
 
 The previous AI Agent Scraper, Batch Scrape URLs, Crawl Website, Get Result Detail, Get Results, Run AI Scraper, and Run Manual Scraper components have been removed. Their historical migration entries remain for old flow identification, but those operations have no equivalent in this three-component bundle. Replace affected nodes with **Scraper API** for page retrieval or **Web Search** for discovery, and update downstream parsing. A prompt-driven extraction workflow can connect page content to a language model; it requires rebuilding the workflow rather than an automatic node conversion.
 
+Flows saved with one of these components still load. `lfx upgrade` reports each such node as retired, and running the flow fails with a message that names **Scraper API** as the replacement.
+
 For more information, see the [MrScraper documentation](https://docs.mrscraper.com).
