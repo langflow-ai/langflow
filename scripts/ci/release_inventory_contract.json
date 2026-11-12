@@ -76,6 +76,7 @@
         "lfx-openai",
         "lfx-openai-compatible",
         "lfx-oracle",
+        "lfx-sendblue",
         "lfx-slack",
         "lfx-toolguard",
         "lfx-vllm"
@@ -112,6 +113,7 @@
           "lfx-openai",
           "lfx-openai-compatible",
           "lfx-oracle",
+          "lfx-sendblue",
           "lfx-slack",
           "lfx-toolguard",
           "lfx-vllm"
@@ -158,6 +160,10 @@
         "lfx-toolguard": [
           "lfx_toolguard/extension.json",
           "lfx_toolguard/components/models_and_agents/policies_component.py"
+        ],
+        "lfx-sendblue": [
+          "lfx_sendblue/extension.json",
+          "lfx_sendblue/components/sendblue/sendblue.py"
         ]
       },
       "module_checks": [
