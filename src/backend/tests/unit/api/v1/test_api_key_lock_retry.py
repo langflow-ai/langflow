@@ -16,8 +16,12 @@ import sqlite3
 from unittest.mock import AsyncMock
 
 import pytest
-from langflow.services.database.lock_retry import is_database_lock_error, run_with_lock_retry
-from sqlalchemy.exc import OperationalError
+from langflow.services.database.lock_retry import (
+    is_database_lock_error,
+    is_retryable_write_error,
+    run_with_lock_retry,
+)
+from sqlalchemy.exc import OperationalError, PendingRollbackError
 
 
 def _lock_error() -> OperationalError:
@@ -70,3 +74,39 @@ async def test_retry_does_not_swallow_other_errors() -> None:
         await run_with_lock_retry(_attempt, session=session, description="create_api_key")
     assert calls == [0]
     assert session.rollback.await_count == 0
+
+
+def _pending_rollback_error() -> PendingRollbackError:
+    message = "This Session's transaction has been rolled back due to a previous exception during flush."
+    return PendingRollbackError(message)
+
+
+def test_a_poisoned_transaction_is_retryable() -> None:
+    """A failed statement earlier in the request surfaces as a poisoned session.
+
+    SQLAlchemy refuses every later statement on a session that failed until it is
+    rolled back, so the lock the request actually hit arrives as
+    ``PendingRollbackError``. Only a fresh transaction fixes that, so it has to
+    reach the retry loop instead of being reported as a caller error.
+    """
+    error = _pending_rollback_error()
+
+    assert is_database_lock_error(error) is False
+    assert is_retryable_write_error(error) is True
+
+
+@pytest.mark.anyio
+async def test_retry_recovers_from_a_poisoned_transaction() -> None:
+    calls: list[int] = []
+
+    async def _attempt(attempt: int) -> str:
+        calls.append(attempt)
+        if attempt == 0:
+            raise _pending_rollback_error()
+        return "ok"
+
+    session = AsyncMock()
+
+    assert await run_with_lock_retry(_attempt, session=session, description="create_api_key") == "ok"
+    assert calls == [0, 1]
+    assert session.rollback.await_count == 1
