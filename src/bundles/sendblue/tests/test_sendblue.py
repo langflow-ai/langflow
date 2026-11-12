@@ -73,3 +73,21 @@ def test_secrets_not_exposed_as_tool_arguments():
     assert not getattr(inputs["api_key"], "tool_mode", False)
     assert not getattr(inputs["api_secret"], "tool_mode", False)
     assert not getattr(inputs["allow_sending"], "tool_mode", False)
+
+
+@pytest.mark.asyncio
+@respx.mock
+@pytest.mark.parametrize(
+    ("operation", "path", "kwargs", "response_data"),
+    [
+        ("List Lines", "/api/v2/lines/state", {}, [{"number": "+15555550124"}]),
+        ("Get Message Status", "/api/status", {"handle": "a&b"}, {"status": "DELIVERED"}),
+    ],
+)
+async def test_read_operations(operation, path, kwargs, response_data):
+    route = respx.get("https://api.sendblue.co" + path).mock(return_value=httpx.Response(200, json=response_data))
+    component = SendblueComponent(api_key="test-key", api_secret=TEST_SECRET, operation=operation, **kwargs)
+    result = await component.build_result()
+    assert result.data == (response_data if isinstance(response_data, dict) else {"data": response_data})
+    if operation == "Get Message Status":
+        assert route.calls[0].request.url.params["handle"] == "a&b"
