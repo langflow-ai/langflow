@@ -100,11 +100,13 @@ export default function AgentTestConversation({
   flowId,
   isPublished,
   serverEnabled,
+  cardReady,
   requiresApiKey,
 }: {
   flowId: string;
   isPublished: boolean;
   serverEnabled: boolean;
+  cardReady: boolean;
   requiresApiKey: boolean;
 }) {
   const { t } = useTranslation();
@@ -134,6 +136,7 @@ export default function AgentTestConversation({
   const canSend =
     isPublished &&
     serverEnabled &&
+    cardReady &&
     !!input.trim() &&
     !isSending &&
     (!requiresApiKey || !!apiKey.trim());

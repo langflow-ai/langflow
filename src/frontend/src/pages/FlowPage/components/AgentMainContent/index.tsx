@@ -62,6 +62,7 @@ export default function AgentMainContent() {
           flowId={flowId}
           isPublished={isPublished}
           serverEnabled={serverEnabled}
+          cardReady={!!card && !cardQuery.isFetching}
           requiresApiKey={cardRequiresApiKey(card)}
         />
       </div>
