@@ -171,3 +171,15 @@ it("uses the Discord logo for its integration palette group", () => {
     icon: "discord",
   });
 });
+
+it("classifies Autom as a sidebar bundle", () => {
+  expect(SIDEBAR_BUNDLES).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        display_name: "Autom",
+        icon: "Autom",
+        name: "autom",
+      }),
+    ]),
+  );
+});

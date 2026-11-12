@@ -1,0 +1,68 @@
+---
+title: Autom
+slug: /bundles-autom
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Autom** bundle.
+
+[Autom](https://autom.dev) is a SERP API that returns live Google results as JSON.
+
+Both components need an Autom API key.
+Create one in the [Autom dashboard](https://app.autom.dev) and enter it in the **Autom API Key** field, or store it in a [global variable](/configuration-global-variables) named `AUTOM_API_KEY`.
+
+For more information, see the [Autom documentation](https://docs.autom.dev).
+
+## Autom Google Search
+
+This component searches Google with Autom.
+
+It returns the organic results as a [`Table`](/data-types#table), with one row per result.
+Each row has the result's `position`, `title`, `link`, and `snippet`.
+
+When the component is used as a [tool](/agents-tools), the agent sets the search query.
+Google operators such as `site:` work in the query.
+
+### Autom Google Search parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| Autom API Key (`api_key`) | SecretString | Input parameter. Your Autom API key. |
+| Search Query (`query`) | String | Input parameter. The query to search Google for. |
+| Max Results (`max_results`) | Integer | Input parameter. The number of results to return, from 1 to 10. Default: `5`. |
+| Country (`country`) | String | Input parameter. Two-letter country code to search from, such as `us`. |
+| Language (`language`) | String | Input parameter. Language code of the results, such as `en`. |
+| Location (`location`) | String | Input parameter. City or region to search from, such as `Paris, France`. |
+| Time Range (`time_range`) | String | Input parameter. Only return pages published in the past day, week, month, or year. Default: `Any time`. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for Autom to answer. Default: `60`. |
+
+## Autom Google News
+
+This component searches Google News with Autom.
+
+It returns the articles as a [`Table`](/data-types#table), with one row per article.
+Each row has the article's `title`, `link`, `source`, `date`, and `snippet`.
+
+### Autom Google News parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Autom API Key (`api_key`) | SecretString | Input parameter. Your Autom API key. |
+| Search Query (`query`) | String | Input parameter. The news topic to search for. |
+| Max Results (`max_results`) | Integer | Input parameter. The number of articles to return, from 1 to 10. Default: `5`. |
+| Country (`country`) | String | Input parameter. Two-letter country code to search from, such as `us`. |
+| Language (`language`) | String | Input parameter. Language code of the results, such as `en`. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for Autom to answer. Default: `60`. |
+
+## See also
+
+* [**Web Search** component](/web-search)
