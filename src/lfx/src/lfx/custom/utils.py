@@ -8,6 +8,8 @@ import hashlib
 import inspect
 import re
 import traceback
+from collections.abc import Mapping
+from copy import deepcopy
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -24,20 +26,20 @@ from lfx.custom.directory_reader.utils import (
     merge_nested_dicts_with_renaming,
 )
 from lfx.custom.eval import eval_custom_component_code
-from lfx.custom.schema import MissingDefault
+from lfx.custom.schema import ComponentUpdateWarning, MissingDefault
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.helpers.custom import format_type
 from lfx.log.logger import logger
 from lfx.schema.dotdict import dotdict
 from lfx.template.field.base import Input
 from lfx.template.frontend_node.custom_components import ComponentFrontendNode, CustomComponentFrontendNode
+from lfx.template.utils import copy_saved_custom_field_values, update_template_values
 from lfx.type_extraction.type_extraction import extract_inner_type
+from lfx.utils.file_path_security import component_file_access_scopes
 from lfx.utils.util import get_base_classes
 
 if TYPE_CHECKING:
     from uuid import UUID
-
-    from lfx.custom.custom_component.custom_component import CustomComponent
 
 
 def _generate_code_hash(source_code: str, modname: str) -> str:
@@ -718,6 +720,259 @@ def build_custom_component_template(
                 "traceback": traceback.format_exc(),
             },
         ) from exc
+
+
+def _saved_refresh_fields(frontend_node: dict, saved_node: dict) -> list[str]:
+    template = frontend_node.get("template", {})
+    saved_template = saved_node.get("template", {})
+    order = [*(saved_node.get("field_order") or []), *saved_template]
+    return list(
+        dict.fromkeys(
+            name
+            for name in order
+            if name not in {"code", "tool_mode"}
+            and isinstance(template.get(name), dict)
+            and (template[name].get("real_time_refresh") or template[name].get("refresh_button"))
+            and isinstance(saved_template.get(name), dict)
+            and "value" in saved_template[name]
+            and saved_template[name]["value"] is not None
+            and saved_template[name]["value"] != ""
+        )
+    )
+
+
+def _saved_generated_fields(component: Component, frontend_node: dict, saved_node: dict) -> list[str]:
+    # These historical components did not mark generated inputs as dynamic or custom.
+    # Their saved declaration order distinguishes generated inputs from removed static inputs.
+    if type(component).__name__ not in {"RunFlowComponent", "MCPToolsComponent"}:
+        return []
+    field_order = saved_node.get("field_order")
+    if not isinstance(field_order, list) or not field_order:
+        return []
+    return [
+        name
+        for name, field in saved_node.get("template", {}).items()
+        if name not in field_order
+        and name not in frontend_node.get("template", {})
+        and name not in {"code", "tools_metadata"}
+        and not name.startswith("_")
+        and isinstance(field, dict)
+        and "type" in field
+    ]
+
+
+def _restore_empty_prompt_variables(component: Component, frontend_node: dict, saved_node: dict) -> None:
+    if type(component).__name__ != "PromptComponent":
+        return
+    template = frontend_node.get("template", {})
+    if template.get("template", {}).get("value") != "":
+        return
+    saved_custom_fields = saved_node.get("custom_fields")
+    if not isinstance(saved_custom_fields, dict):
+        return
+    names = saved_custom_fields.get("template", [])
+    if not isinstance(names, list):
+        return
+    from lfx.base.prompts.api_utils import add_new_variables_to_template, validate_prompt
+
+    preserved = []
+    for name in names:
+        if (
+            not isinstance(name, str)
+            or name in template
+            or not isinstance(saved_node.get("template", {}).get(name), dict)
+        ):
+            continue
+        try:
+            if validate_prompt("{" + name + "}") != [name]:
+                continue
+        except ValueError:
+            continue
+        preserved.append(name)
+    custom_fields = frontend_node.setdefault("custom_fields", {})
+    custom_fields.setdefault("template", [])
+    add_new_variables_to_template(preserved, custom_fields, template, "template")
+
+
+def _raise_rebuild_policy_error(error: Exception) -> None:
+    # Component hooks may wrap policy denials. Keep the original refusal visible to the caller.
+    seen: set[int] = set()
+    cause: BaseException | None = error
+    while cause is not None and id(cause) not in seen:
+        seen.add(id(cause))
+        if isinstance(cause, PermissionError) or (isinstance(cause, HTTPException) and cause.status_code in {401, 403}):
+            raise cause
+        cause = cause.__cause__ or cause.__context__
+
+
+def _copy_rebuilt_value(value: Any) -> Any:
+    # Hook mappings can be dotdicts, whose attribute fallback prevents deepcopy.
+    if isinstance(value, Mapping):
+        return {name: _copy_rebuilt_value(item) for name, item in value.items()}
+    if isinstance(value, list):
+        return [_copy_rebuilt_value(item) for item in value]
+    return deepcopy(value)
+
+
+def _restore_rebuilt_values(component: Component, frontend_node: dict, saved_node: dict) -> None:
+    template = frontend_node["template"]
+    saved_template = saved_node["template"]
+    update_template_values(
+        template,
+        saved_template,
+        component_file_access_scopes(component),
+        component_class_name=(frontend_node.get("metadata") or {}).get("component_class_name"),
+    )
+    for name in _saved_refresh_fields(frontend_node, saved_node):
+        field = template[name]
+        saved = saved_template[name]
+        if field.get("type") != saved.get("type") or not isinstance(saved.get("selected_metadata"), dict):
+            continue
+        field["selected_metadata"] = deepcopy(saved["selected_metadata"])
+        # Keep the selected flow visible while its options are refreshed independently.
+        if "options_metadata" in field and saved.get("value") not in (field.get("options") or []):
+            field["options"] = [*(field.get("options") or []), deepcopy(saved["value"])]
+            field["options_metadata"] = [*(field.get("options_metadata") or []), deepcopy(saved["selected_metadata"])]
+
+
+async def _replay_saved_refreshes(
+    component: Component, frontend_node: dict, saved_node: dict
+) -> tuple[list[str], bool]:
+    """Replay saved selectors declared refreshable by the rebuilt component.
+
+    This applies to every Component subclass that overrides the configuration hook.
+    Selectors follow saved declaration order and must still be refreshable in the current
+    template. Global variables are hydrated before hooks run, and hooks can access
+    configured services, so offline callers must provide their own execution isolation.
+    """
+    hook = component.update_build_config
+    if getattr(hook, "__func__", hook) is CustomComponent.update_build_config:
+        return [], False
+    refresh_fields = _saved_refresh_fields(frontend_node, saved_node)
+    if not refresh_fields:
+        return [], False
+    _restore_rebuilt_values(component, frontend_node, saved_node)
+    template = frontend_node["template"]
+    trusted_code = _copy_rebuilt_value(template.get("code"))
+    params = {
+        name: deepcopy(field.get("value"))
+        for name, field in template.items()
+        if name != "code" and not name.startswith("_") and isinstance(field, dict)
+    }
+    global_fields = [name for name in params if template[name].get("load_from_db") and template[name].get("value")]
+    try:
+        if global_fields:
+            from lfx.interface.initialize.loading import update_params_with_load_from_db_fields
+            from lfx.services.deps import get_settings_service
+
+            settings_service = get_settings_service()
+            fallback = bool(settings_service and settings_service.settings.fallback_to_env_var)
+            params = await update_params_with_load_from_db_fields(
+                component, params, global_fields, fallback_to_env_vars=fallback, allow_missing=True
+            )
+        component.set_attributes(params)
+    except Exception as exc:  # noqa: BLE001
+        _raise_rebuild_policy_error(exc)
+        return refresh_fields, True
+
+    failed = False
+    for name in refresh_fields:
+        _restore_rebuilt_values(component, frontend_node, saved_node)
+        if name not in frontend_node["template"]:
+            failed = True
+            continue
+        build_config = dotdict(deepcopy(frontend_node["template"]))
+        # MCP reads this mode context even when a normal-mode node omits the field.
+        temporary_mode = type(component).__name__ == "MCPToolsComponent" and "tools_metadata" not in build_config
+        if temporary_mode:
+            build_config["tools_metadata"] = {"show": bool(frontend_node.get("tool_mode", False))}
+        try:
+            result = await update_component_build_config(component, build_config, deepcopy(params.get(name)), name)
+            if result is not None:
+                if not isinstance(result, Mapping):
+                    message = "The component refresh did not return a field mapping"
+                    raise TypeError(message)
+                build_config = dotdict(result)
+        except Exception as exc:  # noqa: BLE001
+            _raise_rebuild_policy_error(exc)
+            failed = True
+            continue
+        if temporary_mode:
+            build_config.pop("tools_metadata", None)
+        if trusted_code is not None:
+            build_config["code"] = _copy_rebuilt_value(trusted_code)
+        frontend_node["template"] = _copy_rebuilt_value(build_config)
+    _restore_rebuilt_values(component, frontend_node, saved_node)
+    return refresh_fields, failed
+
+
+async def update_rebuilt_node(
+    component_instance: CustomComponent | Component,
+    frontend_node: dict[str, Any],
+    saved_node: dict[str, Any] | None,
+    *,
+    warnings: list[ComponentUpdateWarning] | None = None,
+) -> dict[str, Any]:
+    """Restore saved values and rerun declared configuration and output metadata hooks.
+
+    The editor's Update and upgrade check share this generic Component behavior. Callers
+    establish authorization and service access policy before invoking these hooks;
+    offline callers also isolate hooks that may use configured services.
+
+    Pass a warning list to collect missing fields and recoverable discovery failures
+    separately from the saved node. Omitting it preserves the legacy node-only return
+    behavior, which does not encode uncertainty. Authorization refusals continue to raise.
+    """
+    generated_fields = (
+        _saved_generated_fields(component_instance, frontend_node, saved_node)
+        if saved_node is not None and isinstance(component_instance, Component)
+        else []
+    )
+    refresh_fields: list[str] = []
+    refresh_failed = False
+    output_refresh_failed = False
+    if saved_node is not None:
+        frontend_node = await component_instance.update_frontend_node(frontend_node, saved_node)
+        if isinstance(component_instance, Component):
+            _restore_empty_prompt_variables(component_instance, frontend_node, saved_node)
+            refresh_fields, refresh_failed = await _replay_saved_refreshes(
+                component_instance, frontend_node, saved_node
+            )
+        copy_saved_custom_field_values(frontend_node, saved_node, component_file_access_scopes(component_instance))
+
+    if isinstance(component_instance, Component):
+        before_outputs = _copy_rebuilt_value(frontend_node)
+        try:
+            await component_instance.run_and_validate_update_outputs(
+                frontend_node=frontend_node,
+                field_name="tool_mode",
+                field_value=frontend_node.get("tool_mode", False),
+            )
+        except Exception as exc:
+            _raise_rebuild_policy_error(exc)
+            if not refresh_fields:
+                raise
+            frontend_node = before_outputs
+            output_refresh_failed = True
+    missing_fields = [name for name in generated_fields if name not in frontend_node.get("template", {})]
+    if warnings is not None and (missing_fields or refresh_failed or output_refresh_failed):
+        # MCP can swallow discovery failures and leave an empty catalog.
+        inputs_unverified = refresh_failed or (
+            bool(missing_fields)
+            and type(component_instance).__name__ == "MCPToolsComponent"
+            and not getattr(component_instance, "tools", None)
+        )
+        warnings.append(
+            {
+                "code": "generated_fields_not_restored",
+                "fields": missing_fields,
+                "refresh_fields": refresh_fields,
+                "unverified": inputs_unverified or output_refresh_failed,
+                "inputs_unverified": inputs_unverified,
+                "outputs_unverified": output_refresh_failed,
+            }
+        )
+    return frontend_node
 
 
 def create_component_template(

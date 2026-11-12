@@ -46,8 +46,16 @@ from langflow.services.triggers.constants import (
     KIND_SLACK_MESSAGE,
     KIND_SLACK_REACTION,
     MICROSOFT_SOURCE_KINDS,
+    POLICY_BLOCKED_ERROR,
     PROVIDER_SLACK,
     SLACK_TRIGGER_KINDS,
+)
+from langflow.services.triggers.error_codes import (
+    MULTIPLE_TRIGGERS_ERROR,
+    NODE_REMOVED_ERROR,
+    SOURCE_SETTINGS_CHANGED_ERROR,
+    CodedTriggerError,
+    TriggerErrorCode,
 )
 from langflow.services.triggers.locking import lock_trigger
 from langflow.services.triggers.providers.registry import component_kind, get_kind, source_kinds
@@ -181,17 +189,6 @@ def normalize_webhook_config(config: dict[str, Any]) -> dict[str, Any]:
     return normalized
 
 
-#: Why a trigger whose node left the canvas was paused. Reconciliation owns this
-#: reason: it blocks resuming while the node is gone, and the save that adds the
-#: node back clears it. A config verdict must not erase it, since a schedule edit
-#: through the API does not bring the node back.
-NODE_REMOVED_ERROR = "trigger node removed from the flow"
-
-#: Why an armed Microsoft or Google source was paused by a save that changed its
-#: settings: the provider subscription was retired with the old settings, so it
-#: takes an explicit enable to subscribe again with the new ones.
-SOURCE_SETTINGS_CHANGED_ERROR = "Source settings changed. Enable the trigger again to resubscribe."
-
 #: States whose ``last_error`` a schedule verdict owns. The provider states and
 #: the terminal ``dead`` state carry reasons that a schedule edit cannot fix.
 _VERDICT_STATES = frozenset(
@@ -236,7 +233,10 @@ def apply_config_verdict(row: Trigger, error: str | None) -> bool:
         if row.state == TriggerState.ERROR.value:
             row.state = TriggerState.ACTIVE.value
             row.next_fire_at = None
-        if row.state in _VERDICT_STATES and row.last_error != NODE_REMOVED_ERROR:
+        if row.state in _VERDICT_STATES and row.last_error not in {
+            NODE_REMOVED_ERROR,
+            POLICY_BLOCKED_ERROR,
+        }:
             row.last_error = None
     return (row.state, row.last_error, row.next_fire_at) != before
 
@@ -287,6 +287,23 @@ def _node_kind(node_type: Any) -> str | None:
     return BUNDLE_TRIGGER_COMPONENT_KINDS.get((match["bundle"], match["cls"])) or component_kind(
         match["bundle"], match["cls"]
     )
+
+
+def validate_single_trigger_per_flow(flow_data: dict[str, Any] | None) -> None:
+    """Reject extra canvas triggers before saving or enabling the flow."""
+    nodes = (flow_data or {}).get("nodes")
+    if not isinstance(nodes, list):
+        return
+    count = 0
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        node_data = node.get("data")
+        if not isinstance(node_data, dict) or _node_kind(node_data.get("type")) is None:
+            continue
+        count += 1
+        if count > 1:
+            raise CodedTriggerError(TriggerErrorCode.MULTIPLE_TRIGGERS, MULTIPLE_TRIGGERS_ERROR)
 
 
 def _display_name(config: dict[str, Any], kind: str) -> str:
@@ -485,6 +502,12 @@ async def reconcile_flow_triggers(
             touched += 1
         renamed = sync_display_name(row, config if error is None else None)
         config_changed = row.config != config
+        subscription_changed = config_changed
+        if kind in {"gitlab.issue", "gitlab.merge_request"}:
+            receiver_filters = {"actions", "include_self_events", "include_bot_events"}
+            subscription_changed = {
+                key: value for key, value in (row.config or {}).items() if key not in receiver_filters
+            } != {key: value for key, value in config.items() if key not in receiver_filters}
         changed = config_changed or row.session_policy != session_policy or renamed
         if changed:
             if schedule_timing_changed(row.config or {}, config):
@@ -529,7 +552,7 @@ async def reconcile_flow_triggers(
             verdict = await _apply_slack_verdict(session, row, error=error, moved=moved, filters_changed=config_changed)
             changed = verdict or changed
         elif kind in source_kinds():
-            if row.state == TriggerState.ACTIVE.value and (error or config_changed or moved):
+            if row.state == TriggerState.ACTIVE.value and (error or subscription_changed or moved):
                 from langflow.services.triggers.subscriptions import revoke_for_trigger
 
                 await revoke_for_trigger(session, trigger_id=row.id)
@@ -537,7 +560,11 @@ async def reconcile_flow_triggers(
                 row.last_error = error or SOURCE_SETTINGS_CHANGED_ERROR
                 row.provider_state = {}
                 changed = True
-            elif row.last_error != error and row.state != TriggerState.ACTIVE.value:
+            elif (
+                row.last_error != error
+                and row.state != TriggerState.ACTIVE.value
+                and (row.state != TriggerState.ERROR.value or error is not None or config_changed or moved)
+            ):
                 row.last_error = error
                 changed = True
         if changed:
@@ -625,6 +652,9 @@ async def reconcile_flow_triggers_safely(
     if owner_id is None:
         return
     try:
+        # Legacy graphs remain editable, but a metadata save cannot restart
+        # their stopped triggers before the extra canvas nodes are removed.
+        validate_single_trigger_per_flow(flow_data)
         async with session.begin_nested():
             await reconcile_flow_triggers(session, flow_id=flow_id, owner_id=owner_id, flow_data=flow_data)
     except DBAPIError:

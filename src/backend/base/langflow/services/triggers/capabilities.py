@@ -92,7 +92,11 @@ def trigger_reason(row: Trigger, *, recovery_reason: TriggerReason | None = None
     if state == TriggerState.ACTIVE.value:
         return TriggerReason.DEGRADED if row.last_error else None
     if state == TriggerState.PENDING.value:
-        return TriggerReason.CONFIG_INVALID if row.last_error else TriggerReason.PENDING
+        if row.last_error:
+            return TriggerReason.CONFIG_INVALID
+        if row.kind == "whatsapp.event" and not row.signing_secret_encrypted:
+            return TriggerReason.READY_TO_RESUME
+        return TriggerReason.PENDING
     if state == TriggerState.PAUSED.value:
         return _paused_reason(row)
     if state == TriggerState.NEEDS_RECONNECT.value:
@@ -147,11 +151,17 @@ def _decide(
 
 
 def trigger_capabilities(
-    row: Trigger, *, caller: TriggerCaller, recovery_reason: TriggerReason | None = None
+    row: Trigger,
+    *,
+    caller: TriggerCaller,
+    recovery_reason: TriggerReason | None = None,
+    resume_block: TriggerReason | None = None,
 ) -> TriggerCapabilities:
     """The server's answer for ``caller`` on ``row``, in ``TriggerAction`` display order."""
     reason = trigger_reason(row, recovery_reason=recovery_reason)
     decisions = _decide(row, reason, caller)
+    if resume_block is not None and TriggerAction.RESUME in decisions and row.state != TriggerState.DEAD.value:
+        decisions[TriggerAction.RESUME] = resume_block
     allowed: list[TriggerAction] = []
     blocked: dict[TriggerAction, TriggerReason] = {}
     for action in TriggerAction:

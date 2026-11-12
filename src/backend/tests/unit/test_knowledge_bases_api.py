@@ -1,6 +1,9 @@
+import asyncio
 import io
 import json
+import threading
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
 import pandas as pd
@@ -204,7 +207,8 @@ class TestWriteDocumentsRetry:
                 job_service=self._fresh_job_service(),
             )
 
-        assert written == 1
+        assert written.processed == 1
+        assert written.created == 1
         assert backend.add_documents.await_count == 2  # retried once, then succeeded
 
 
@@ -1386,6 +1390,134 @@ class TestKnowledgeBaseAPI:
 
         assert response.status_code == 500
         assert not (tmp_path / "activeuser" / "Rollback_KB").exists()
+
+    @pytest.mark.parametrize(
+        ("failure", "expected_status"),
+        [("duplicate", 409), ("persist", 500), ("validation", 500)],
+    )
+    async def test_create_knowledge_base_rollback_runs_off_event_loop(
+        self, client: AsyncClient, logged_in_headers, tmp_path, failure, expected_status
+    ):
+        from sqlalchemy.exc import IntegrityError
+
+        kb_path = tmp_path / "Rollback_KB"
+        loop_thread = threading.get_ident()
+        cleanup_threads = []
+        delete_storage = KBStorageHelper.delete_storage
+
+        async def validate_backend(**_kwargs):
+            kb_path.mkdir()
+            (kb_path / "partial.txt").write_text("partial data")
+            if failure == "validation":
+                msg = "backend initialization failed"
+                raise RuntimeError(msg)
+
+        def cleanup(path, name):
+            cleanup_threads.append(threading.get_ident())
+            return delete_storage(path, name)
+
+        persist_error = (
+            IntegrityError("insert", {}, RuntimeError("duplicate"))
+            if failure == "duplicate"
+            else RuntimeError("db unavailable")
+        )
+        with (
+            patch("langflow.api.v1.knowledge_bases._resolve_kb_store_path", return_value=kb_path),
+            patch("langflow.api.v1.knowledge_bases._validate_create_backend", side_effect=validate_backend),
+            patch("langflow.api.v1.knowledge_bases.knowledge_base_service.create_record", side_effect=persist_error),
+            patch.object(KBStorageHelper, "delete_storage", side_effect=cleanup),
+        ):
+            response = await client.post(
+                "api/v1/knowledge_bases",
+                headers=logged_in_headers,
+                json={
+                    "name": "Rollback KB",
+                    "embedding_provider": "OpenAI",
+                    "embedding_model": "text-embedding-3-small",
+                },
+            )
+
+        assert response.status_code == expected_status, response.text
+        assert len(cleanup_threads) == 1
+        assert cleanup_threads[0] != loop_thread
+        assert not kb_path.exists()
+
+    @pytest.mark.parametrize("failure", ["duplicate", "persist", "validation"])
+    async def test_create_knowledge_base_cancellation_preserves_queued_rollback(
+        self, client: AsyncClient, logged_in_headers, tmp_path, failure
+    ):
+        from sqlalchemy.exc import IntegrityError
+
+        kb_path = tmp_path / "Rollback_KB"
+        queued = asyncio.Event()
+        release_worker = threading.Event()
+        to_thread = asyncio.to_thread
+        cleanup_futures = []
+
+        async def validate_backend(**_kwargs):
+            kb_path.mkdir()
+            (kb_path / "partial.txt").write_text("partial data")
+            if failure == "validation":
+                msg = "backend initialization failed"
+                raise RuntimeError(msg)
+
+        persist_error = (
+            IntegrityError("insert", {}, RuntimeError("duplicate"))
+            if failure == "duplicate"
+            else RuntimeError("db unavailable")
+        )
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            executor.submit(release_worker.wait)
+
+            async def queue_cleanup(func, *args, **kwargs):
+                if func is not KBStorageHelper.delete_storage:
+                    return await to_thread(func, *args, **kwargs)
+                future = executor.submit(func, *args, **kwargs)
+                cleanup_futures.append(future)
+                queued.set()
+                return await asyncio.wrap_future(future)
+
+            with (
+                patch("langflow.api.v1.knowledge_bases._resolve_kb_store_path", return_value=kb_path),
+                patch("langflow.api.v1.knowledge_bases._validate_create_backend", side_effect=validate_backend),
+                patch(
+                    "langflow.api.v1.knowledge_bases.knowledge_base_service.create_record", side_effect=persist_error
+                ),
+                patch("langflow.api.v1.knowledge_bases.asyncio.to_thread", side_effect=queue_cleanup),
+            ):
+                request = asyncio.create_task(
+                    client.post(
+                        "api/v1/knowledge_bases",
+                        headers=logged_in_headers,
+                        json={
+                            "name": "Rollback KB",
+                            "embedding_provider": "OpenAI",
+                            "embedding_model": "text-embedding-3-small",
+                        },
+                    )
+                )
+                rollback_queued = asyncio.create_task(queued.wait())
+                try:
+                    # Auth, database access, and async logging precede rollback. Wait for the
+                    # queue event rather than imposing a request-speed deadline on this test.
+                    done, _ = await asyncio.wait({rollback_queued, request}, return_when=asyncio.FIRST_COMPLETED)
+                    if request in done:
+                        response = await request
+                        pytest.fail(
+                            f"Request completed before rollback was queued: {response.status_code} {response.text}"
+                        )
+                    assert kb_path.exists()
+                    request.cancel()
+                    with pytest.raises(asyncio.CancelledError):
+                        await request
+                finally:
+                    release_worker.set()
+                    rollback_queued.cancel()
+                    request.cancel()
+                    await asyncio.gather(rollback_queued, request, return_exceptions=True)
+                await asyncio.wait_for(asyncio.wrap_future(cleanup_futures[0]), timeout=5)
+
+        assert not kb_path.exists()
 
     async def test_delete_knowledge_base(self, client, logged_in_headers, seed_kb):
         record = await seed_kb("To_Delete", backend_type="opensearch")

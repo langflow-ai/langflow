@@ -21,7 +21,7 @@ caller's effective flow permissions.
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
 from lfx.integrations.errors import IntegrationPolicyBlockedError
@@ -44,13 +44,16 @@ from langflow.services.database.models.connection.model import Connection, Conne
 from langflow.services.database.models.connection.schemas import PersistedConnectionStatus
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.folder.model import Folder
-from langflow.services.database.models.trigger.model import Trigger
-from langflow.services.database.models.trigger.schemas import TriggerRead, TriggerReason, TriggerState
+from langflow.services.database.models.jobs.model import Job
+from langflow.services.database.models.trigger.model import Trigger, TriggerCleanup, TriggerEvent
+from langflow.services.database.models.trigger.schemas import TriggerEventRead, TriggerRead, TriggerReason, TriggerState
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service
 from langflow.services.triggers.capabilities import NO_ACCESS, TriggerCaller, trigger_capabilities
 from langflow.services.triggers.connection_recovery import as_utc, connection_failure
+from langflow.services.triggers.error_codes import CodedTriggerError, last_error_code
 from langflow.services.triggers.ownership import is_owned_by
+from langflow.services.triggers.reconciliation import validate_single_trigger_per_flow
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -59,6 +62,8 @@ if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.database.models.user.model import UserRead
+
+_MAX_JOB_ERROR_DEPTH = 8
 
 
 async def _may(user: User | UserRead, flow: Flow, action: FlowAction) -> bool:
@@ -139,6 +144,21 @@ async def present(
         if connection_ids
         else {}
     )
+    resume_blocks = await _canvas_resume_blocks(session, rows)
+    cleanup_errors: dict[UUID, str] = {}
+    if rows:
+        failures = (
+            await session.exec(
+                select(TriggerCleanup.trigger_id, TriggerCleanup.last_error)
+                .where(
+                    col(TriggerCleanup.trigger_id).in_([row.id for row, _flow, _owner in rows]),
+                    col(TriggerCleanup.last_error).is_not(None),
+                )
+                .order_by(col(TriggerCleanup.available_at).desc())
+            )
+        ).all()
+        for trigger_id, error in failures:
+            cleanup_errors.setdefault(trigger_id, f"Remote webhook cleanup is pending. {error}.")
     callers: dict[UUID, TriggerCaller] = {}
     responses: list[TriggerRead] = []
     for row, flow, owner_username in rows:
@@ -153,11 +173,18 @@ async def present(
             if row.state == TriggerState.NEEDS_RECONNECT.value
             else None
         )
-        caps = trigger_capabilities(row, caller=replace(caller, owns_connection=owns), recovery_reason=recovery_reason)
+        caps = trigger_capabilities(
+            row,
+            caller=replace(caller, owns_connection=owns),
+            recovery_reason=recovery_reason,
+            resume_block=resume_blocks.get(flow.id),
+        )
         responses.append(
             TriggerRead.model_validate(row).model_copy(
                 update={
                     "reason": caps.reason,
+                    "last_error_code": last_error_code(row.last_error),
+                    "last_error": " ".join(filter(None, (row.last_error, cleanup_errors.get(row.id)))) or None,
                     "allowed_actions": list(caps.allowed_actions),
                     "blocked_actions": dict(caps.blocked_actions),
                     "flow_name": flow.name if with_flow_name else None,
@@ -166,6 +193,97 @@ async def present(
             )
         )
     return responses
+
+
+def _whatsapp_job_error_detail(value: Any) -> str | None:
+    """Project fixed provider guidance without returning a job's private error text."""
+    try:
+        from lfx_whatsapp._client import PUBLIC_ERROR_MESSAGES
+    except ImportError:
+        return None
+
+    pending = [value]
+    for _ in range(64):
+        if not pending:
+            break
+        item = pending.pop()
+        if isinstance(item, str):
+            for message in PUBLIC_ERROR_MESSAGES:
+                if message in item[:8192]:
+                    return message
+        elif isinstance(item, dict):
+            pending.extend(list(item.values())[:16])
+        elif isinstance(item, list):
+            pending.extend(item[:16])
+    return None
+
+
+def _job_error_message(value: Any, *, depth: int = 0) -> str | None:
+    """Read the primary error field without copying traceback or diagnostic metadata."""
+    if depth >= _MAX_JOB_ERROR_DEPTH:
+        return None
+    if isinstance(value, str):
+        return value.strip() or None
+    if isinstance(value, dict):
+        for key in ("message", "error", "detail", "text"):
+            if message := _job_error_message(value.get(key), depth=depth + 1):
+                return message
+    return None
+
+
+async def present_events(
+    session: AsyncSession, trigger: Trigger, rows: list[TriggerEvent], user: User | UserRead
+) -> list[TriggerEventRead]:
+    """Add safe failure guidance after the route has authorized this trigger's flow."""
+    jobs = {}
+    # Discord flow owners retain the same primary diagnostics as their workflow
+    # run API. Sharing flow read access does not share those private run errors.
+    owner_diagnostics = trigger.kind in {"discord.message", "discord.mention"} and trigger.user_id == user.id
+    job_ids = {
+        row.job_id for row in rows if row.state == "failed" and row.error == "job_failed" and row.job_id is not None
+    }
+    if (trigger.kind == "whatsapp.event" or owner_diagnostics) and job_ids:
+        statement = select(Job.job_id, Job.error).where(
+            col(Job.job_id).in_(job_ids), Job.flow_id == trigger.flow_id, Job.user_id == trigger.user_id
+        )
+        if owner_diagnostics:
+            # A transfer can leave historical jobs and triggers under the old
+            # execution owner. Read sharing must not restore owner diagnostics.
+            statement = statement.join(Flow, Flow.id == Job.flow_id).where(Flow.user_id == user.id)
+        jobs = dict((await session.exec(statement)).all())
+    return [
+        TriggerEventRead.model_validate(row).model_copy(
+            update={
+                "error_detail": (
+                    _job_error_message(jobs[row.job_id])
+                    if owner_diagnostics
+                    else _whatsapp_job_error_detail(jobs[row.job_id])
+                )
+                if row.job_id in jobs
+                else None
+            }
+        )
+        for row in rows
+    ]
+
+
+async def _canvas_resume_blocks(
+    session: AsyncSession, rows: list[tuple[Trigger, Flow, str | None]]
+) -> dict[UUID, TriggerReason]:
+    """Check the displayed resume candidates in one query without loading every flow."""
+    flow_ids = {
+        flow.id for row, flow, _ in rows if row.state not in {TriggerState.ACTIVE.value, TriggerState.DEAD.value}
+    }
+    if not flow_ids:
+        return {}
+    blocks: dict[UUID, TriggerReason] = {}
+    canvases = await session.exec(select(Flow.id, col(Flow.data)["nodes"]).where(col(Flow.id).in_(flow_ids)))
+    for flow_id, nodes in canvases:
+        try:
+            validate_single_trigger_per_flow({"nodes": nodes})
+        except CodedTriggerError:
+            blocks[flow_id] = TriggerReason.MULTIPLE_TRIGGERS
+    return blocks
 
 
 async def _connection_recovery_reason(
@@ -235,7 +353,7 @@ async def present_one(session: AsyncSession, user: User | UserRead, row: Trigger
     """
     flow = await session.get(Flow, row.flow_id)
     if flow is None:  # pragma: no cover - the FK cascade deletes the trigger with its flow
-        return TriggerRead.model_validate(row)
+        return TriggerRead.model_validate(row).model_copy(update={"last_error_code": last_error_code(row.last_error)})
     (response,) = await present(session, [(row, flow, None)], user, with_flow_name=False)
     return response
 

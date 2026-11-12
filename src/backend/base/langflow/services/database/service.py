@@ -7,6 +7,7 @@ import sqlite3
 import sys
 import time
 from contextlib import asynccontextmanager, contextmanager, nullcontext
+from contextvars import ContextVar
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -35,14 +36,21 @@ from langflow.services.database.constants import (
     MIN_POSTGRESQL_MAJOR_VERSION,
     POSTGRESQL_VERSION_REQUIRED_MESSAGE,
 )
-from langflow.services.database.migration import get_current_alembic_heads
 from langflow.services.database.models.user.crud import get_user_by_username
+from langflow.services.database.revision import (
+    RevisionState,
+    classify_revisions,
+    read_revisions_before_startup,
+    script_directory,
+)
 from langflow.services.database.session import NoopSession
 from langflow.services.database.utils import Result, TableResults
 from langflow.services.deps import get_settings_service
 from langflow.services.utils import teardown_superuser
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from lfx.services.settings.service import SettingsService
 
 
@@ -61,6 +69,17 @@ _PG_VERSION_QUERY = sa.text("SELECT current_setting('server_version_num'), curre
 _MIGRATION_ADVISORY_LOCK_ID = 0x4C616E67666C6F77  # ASCII "Langflow"
 _MIGRATION_LOCK_DEFAULT_TIMEOUT_S = 300.0
 _MIGRATION_LOCK_POLL_INTERVAL_S = 2.0
+_readonly_connections: ContextVar[bool] = ContextVar("readonly_database_connections", default=False)
+
+
+@contextmanager
+def readonly_database_connections() -> Iterator[None]:
+    """Keep diagnostic connections from applying persistent SQLite settings."""
+    token = _readonly_connections.set(True)
+    try:
+        yield
+    finally:
+        _readonly_connections.reset(token)
 
 
 def _migration_lock_timeout_s() -> float:
@@ -259,6 +278,7 @@ class DatabaseService(Service):
 
     def __init__(self, settings_service: SettingsService):
         self._logged_pragma = False
+        self.database_initialized = False
         self.settings_service = settings_service
         if settings_service.settings.database_url is None:
             msg = "No database URL provided"
@@ -436,6 +456,8 @@ class DatabaseService(Service):
             from langflow.services.audit.search_sql import register_sqlite_search_functions
 
             register_sqlite_search_functions(dbapi_connection)
+            if _readonly_connections.get():
+                return
             pragmas: dict = self.settings_service.settings.sqlite_pragmas or {}
             pragmas_list = []
             for key, val in pragmas.items():
@@ -449,7 +471,9 @@ class DatabaseService(Service):
                     for pragma in pragmas_list:
                         try:
                             cursor.execute(pragma)
-                        except OperationalError:
+                        # The raw DBAPI cursor raises sqlite3's error, not SQLAlchemy's. A read-only
+                        # connection, such as the upgrade check's, cannot change the journal mode.
+                        except (OperationalError, sqlite3.OperationalError):
                             logger.exception(f"Failed to set PRAGMA {pragma}")
                         except GeneratorExit:
                             logger.error(f"Failed to set PRAGMA {pragma}")
@@ -470,6 +494,27 @@ class DatabaseService(Service):
             # Provides efficient session creation and proper connection pooling
             async with self.async_session_maker() as session:
                 yield session
+
+    @asynccontextmanager
+    async def session_scope_for_sync_validation(self):
+        """Keep temporary validation loops from borrowing the application's pool."""
+        url = self.engine.url
+        database = url.database or ""
+        in_memory = url.get_backend_name() == "sqlite" and (
+            database in {"", ":memory:"} or database.startswith("file::memory:") or url.query.get("mode") == "memory"
+        )
+        if self.settings_service.settings.use_noop_database or in_memory:
+            # A new SQLite memory connection would lose the existing database.
+            async with self._with_session() as session:
+                yield session
+            return
+
+        engine = self._create_engine()
+        try:
+            async with SQLModelAsyncSession(engine, expire_on_commit=False) as session:
+                yield session
+        finally:
+            await engine.dispose()
 
     async def ensure_postgresql_version(self) -> None:
         """If the database is PostgreSQL, ensure it is version 15 or higher.
@@ -650,10 +695,16 @@ class DatabaseService(Service):
         # The advisory lock serialises concurrent migration runs across workers
         # so they do not race on CREATE TYPE / CREATE TABLE against a fresh PG.
         with _postgres_migration_lock(self.database_url), buffer_context as buffer:
+            state = classify_revisions(self._current_alembic_revisions(), script_directory(self.script_location))
+            state.require_supported()
             alembic_cfg = Config(stdout=buffer)
             # alembic_cfg.attributes["connection"] = session
             alembic_cfg.set_main_option("script_location", str(self.script_location))
             alembic_cfg.set_main_option("sqlalchemy.url", self.database_url.replace("%", "%%"))
+
+            if state.upgrade_from:
+                # Only the recognized single-revision 1.10.3 branch is restamped.
+                command.stamp(alembic_cfg, state.upgrade_from, purge=True)
 
             if should_initialize_alembic:
                 try:
@@ -687,17 +738,26 @@ class DatabaseService(Service):
                 self.try_downgrade_upgrade_until_success(alembic_cfg)
 
     async def run_migrations(self, *, fix=False) -> None:
-        async with session_scope() as session:
-            should_initialize_alembic = not await get_current_alembic_heads(session)
-            if should_initialize_alembic:
-                await logger.adebug("Alembic not initialized")
+        state = await self.validate_database_revision()
+        should_initialize_alembic = not state.revisions
+        if should_initialize_alembic:
+            await logger.adebug("Alembic not initialized")
         await asyncio.to_thread(self._run_migrations, should_initialize_alembic, fix)
+
+    async def validate_database_revision(self) -> RevisionState:
+        """Reject unsupported revisions before any application schema writes."""
+        revisions = await read_revisions_before_startup(self.engine)
+        state = classify_revisions(revisions, script_directory(self.script_location))
+        state.require_supported()
+        return state
 
     def _current_alembic_revisions(self) -> set[str]:
         """Read current revisions from the configured database, never alembic.ini."""
         engine = sa.create_engine(_normalize_sync_postgres_url(self.database_url))
         try:
             with engine.connect() as connection:
+                if not sa.inspect(connection).has_table("alembic_version"):
+                    return set()
                 return set(connection.execute(sa.text("SELECT version_num FROM alembic_version")).scalars())
         finally:
             engine.dispose()
@@ -869,10 +929,11 @@ class DatabaseService(Service):
     async def teardown(self) -> None:
         await logger.adebug("Tearing down database")
         try:
-            settings_service = get_settings_service()
-            # When AUTO_LOGIN is off, remove the unused default superuser (see teardown_superuser).
-            async with session_scope() as session:
-                await teardown_superuser(settings_service, session)
+            if getattr(self, "database_initialized", False):
+                settings_service = get_settings_service()
+                # When AUTO_LOGIN is off, remove the unused default superuser (see teardown_superuser).
+                async with session_scope() as session:
+                    await teardown_superuser(settings_service, session)
         except Exception:
             await logger.aexception("Error tearing down database")
             raise

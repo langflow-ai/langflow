@@ -36,6 +36,7 @@ from langflow.services.database.models.memory_base.model import MemoryBase
 from langflow.services.database.models.user.model import User
 from langflow.services.database.models.variable.model import Variable
 from langflow.services.deps import get_authorization_service
+from langflow.services.variable.constants import is_oauth_registration_variable
 
 router = APIRouter(prefix="/authz/shares", tags=["Authorization"], include_in_schema=False)
 
@@ -73,6 +74,8 @@ async def _resolve_resource_owner(
         row = await session.get(MemoryBase, resource_id)
     if row is None:
         return None
+    if resource_type == "variable" and is_oauth_registration_variable(row.name):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
     return getattr(row, owner_attr, None)
 
 
@@ -335,6 +338,8 @@ async def create_share(
             current_user,
             ShareAction.CREATE,
             share_user_id=owner_id,
+            backing_resource_type=payload.resource_type,
+            backing_resource_id=payload.resource_id,
         )
         _ensure_supported_share_permission(
             resource_type=payload.resource_type,
@@ -408,11 +413,16 @@ async def list_shares(
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[ShareRead]:
     """List share rows visible to the caller (paginated, max 200)."""
-    await ensure_share_permission(
-        current_user,
-        ShareAction.READ,
-        share_user_id=current_user.id,
-    )
+    from langflow.services.auth.context import get_current_auth_context
+
+    credential = get_current_auth_context()
+    restricted_key = bool(credential and credential.api_key_restricted)
+    if not restricted_key:
+        await ensure_share_permission(
+            current_user,
+            ShareAction.READ,
+            share_user_id=current_user.id,
+        )
 
     stmt = select(AuthzShare)
     if resource_type is not None:
@@ -430,12 +440,14 @@ async def list_shares(
         stmt = stmt.where(AuthzShare.scope == scope_value)
 
     # Stable ordering with offset/limit pagination.
-    stmt = stmt.order_by(AuthzShare.created_at.desc(), AuthzShare.id).offset(offset).limit(limit)
+    stmt = stmt.order_by(AuthzShare.created_at.desc(), AuthzShare.id)
+    if not restricted_key:
+        stmt = stmt.offset(offset).limit(limit)
 
     rows = list(await session.exec(stmt))
 
     is_superuser = getattr(current_user, "is_superuser", False)
-    if is_superuser:
+    if is_superuser and not restricted_key:
         return await _serialize_shares(session, rows)
 
     # Pre-fetch team memberships (avoid N+1 per row).
@@ -453,13 +465,31 @@ async def list_shares(
                 resource_type=row.resource_type,
                 resource_id=row.resource_id,
             )
-        if _row_visible_to(
+        if is_superuser or _row_visible_to(
             row=row,
             user_id=current_user.id,
             resource_owner_id=owner_cache[key],
             caller_team_ids=caller_team_ids,
         ):
+            if restricted_key:
+                try:
+                    await ensure_share_permission(
+                        current_user,
+                        ShareAction.READ,
+                        share_id=row.id,
+                        share_user_id=owner_cache[key],
+                        backing_resource_type=row.resource_type,
+                        backing_resource_id=row.resource_id,
+                    )
+                except HTTPException as exc:
+                    if exc.status_code not in {403, 404}:
+                        raise
+                    continue
             visible.append(row)
+            if restricted_key and len(visible) >= offset + limit:
+                break
+    if restricted_key:
+        visible = visible[offset : offset + limit]
     return await _serialize_shares(session, visible)
 
 
@@ -503,6 +533,8 @@ async def get_share(
         ShareAction.READ,
         share_id=share_id,
         share_user_id=owner_id,
+        backing_resource_type=row.resource_type,
+        backing_resource_id=row.resource_id,
     )
 
     if not getattr(current_user, "is_superuser", False) and not await _user_can_see_share(
@@ -542,6 +574,8 @@ async def update_share(
         ShareAction.UPDATE,
         share_id=share_id,
         share_user_id=owner_id,
+        backing_resource_type=row.resource_type,
+        backing_resource_id=row.resource_id,
     )
     _ensure_supported_share_permission(
         resource_type=row.resource_type,
@@ -612,6 +646,8 @@ async def delete_share(
         ShareAction.DELETE,
         share_id=share_id,
         share_user_id=owner_id,
+        backing_resource_type=row.resource_type,
+        backing_resource_id=row.resource_id,
     )
 
     snapshot = ShareRuleSnapshot(

@@ -1,7 +1,6 @@
 import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Switch } from "@/components/ui/switch";
-import { getAxiosErrorDetail } from "@/controllers/API/helpers/get-axios-error-message";
 import {
   useGetConnections,
   useUpdateConnectionMutation,
@@ -12,7 +11,9 @@ import {
   useEnableTriggerMutation,
 } from "@/controllers/API/queries/triggers";
 import useAlertStore from "@/stores/alertStore";
+import { BlockableButton } from "./BlockableButton";
 import { isTriggerEnabled } from "./helpers/trigger-enabled";
+import { triggerRefusalText } from "./helpers/trigger-error-text";
 import {
   availabilityOf,
   blockedReasonKey,
@@ -73,14 +74,22 @@ function TriggerNodeControlsBody({ trigger }: { trigger: TriggerRead }) {
     connection !== undefined && !connection.allow_non_interactive;
 
   const enabled = isTriggerEnabled(trigger, enableRequested);
-  const toggle = availabilityOf(trigger, enabled ? "pause" : "resume");
+  const whatsappResume =
+    trigger.provider === "whatsapp" &&
+    trigger.state !== "active" &&
+    !enableRequested
+      ? availabilityOf(trigger, "resume")
+      : undefined;
+  const toggle =
+    whatsappResume ?? availabilityOf(trigger, enabled ? "pause" : "resume");
+  const resuming = toggle?.action === "resume";
   const blockedReason = toggle?.blockedReason;
   const busy = enable.isPending || disable.isPending;
   // Blocked stays focusable (aria-disabled) so the reason reaches keyboard
   // and screen-reader users; only an in-flight request truly disables it.
-  const switchBlocked = Boolean(blockedReason) || (!enabled && needsConsent);
+  const switchBlocked = Boolean(blockedReason) || (resuming && needsConsent);
   const hint =
-    needsConsent && !enabled
+    needsConsent && resuming
       ? t("triggers.node.consentFirst")
       : blockedReason
         ? t(blockedReasonKey(blockedReason))
@@ -101,7 +110,7 @@ function TriggerNodeControlsBody({ trigger }: { trigger: TriggerRead }) {
         title: next
           ? t("triggers.alerts.resumeFailed", { name: trigger.name })
           : t("triggers.alerts.pauseFailed", { name: trigger.name }),
-        list: [getAxiosErrorDetail(error, t("triggers.errors.unknown"))],
+        list: [triggerRefusalText(error, t)],
       });
     }
   };
@@ -116,7 +125,7 @@ function TriggerNodeControlsBody({ trigger }: { trigger: TriggerRead }) {
     } catch (error) {
       setErrorData({
         title: t("triggers.alerts.consentFailed"),
-        list: [getAxiosErrorDetail(error, t("triggers.errors.unknown"))],
+        list: [triggerRefusalText(error, t)],
       });
     }
   };
@@ -153,34 +162,52 @@ function TriggerNodeControlsBody({ trigger }: { trigger: TriggerRead }) {
           )}
         </div>
       )}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex flex-col">
-          <span id={enabledLabelId} className="text-sm font-medium">
-            {t("triggers.node.enabled")}
-          </span>
-          {hint && (
-            <span id={enabledHintId} className="text-xs text-muted-foreground">
-              {hint}
+      {trigger.provider === "whatsapp" ? (
+        toggle && (
+          <BlockableButton
+            size="sm"
+            variant="outline"
+            blockedReason={hint ?? undefined}
+            loading={busy}
+            onClick={() => void onToggle(resuming)}
+            data-testid="trigger-node-toggle"
+          >
+            {t(resuming ? "triggers.actions.resume" : "triggers.actions.pause")}
+          </BlockableButton>
+        )
+      ) : (
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-col">
+            <span id={enabledLabelId} className="text-sm font-medium">
+              {t("triggers.node.enabled")}
             </span>
+            {hint && (
+              <span
+                id={enabledHintId}
+                className="text-xs text-muted-foreground"
+              >
+                {hint}
+              </span>
+            )}
+          </div>
+          {toggle && (
+            <Switch
+              checked={enabled}
+              disabled={busy}
+              aria-disabled={switchBlocked || undefined}
+              className={
+                switchBlocked ? "cursor-not-allowed opacity-50" : undefined
+              }
+              onCheckedChange={(next) => {
+                if (!switchBlocked) void onToggle(next);
+              }}
+              aria-labelledby={enabledLabelId}
+              aria-describedby={hint ? enabledHintId : undefined}
+              data-testid="trigger-node-enabled"
+            />
           )}
         </div>
-        {toggle && (
-          <Switch
-            checked={enabled}
-            disabled={busy}
-            aria-disabled={switchBlocked || undefined}
-            className={
-              switchBlocked ? "cursor-not-allowed opacity-50" : undefined
-            }
-            onCheckedChange={(next) => {
-              if (!switchBlocked) void onToggle(next);
-            }}
-            aria-labelledby={enabledLabelId}
-            aria-describedby={hint ? enabledHintId : undefined}
-            data-testid="trigger-node-enabled"
-          />
-        )}
-      </div>
+      )}
     </div>
   );
 }

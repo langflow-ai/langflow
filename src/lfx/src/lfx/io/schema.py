@@ -12,6 +12,7 @@ from lfx.inputs.inputs import (
     FloatInput,
     InputTypes,
     IntInput,
+    JSONInput,
     MessageTextInput,
     NestedDictInput,
 )
@@ -331,6 +332,7 @@ def create_input_schema(inputs: list["InputTypes"]) -> type[BaseModel]:
     for input_model in inputs:
         if input_model.field_type == FieldTypes.CONNECTION_REF:
             continue
+        is_json_input = isinstance(input_model, JSONInput) and input_model.field_type == FieldTypes.OTHER
         # Create a Pydantic Field for each input field
         field_type = input_model.field_type
         if isinstance(field_type, FieldTypes):
@@ -338,6 +340,8 @@ def create_input_schema(inputs: list["InputTypes"]) -> type[BaseModel]:
         else:
             msg = f"Invalid field type: {field_type}"
             raise TypeError(msg)
+        if is_json_input:
+            field_type = dict
         # Skip enum for large option lists to avoid token waste
         if (
             hasattr(input_model, "options")
@@ -360,7 +364,11 @@ def create_input_schema(inputs: list["InputTypes"]) -> type[BaseModel]:
             "description": input_model.info or "",
         }
         if input_model.required is False:
-            field_dict["default"] = _coerce_default_value(input_model.value)  # type: ignore[assignment]
+            default = _coerce_default_value(input_model.value)
+            if is_json_input and (default is None or default == ""):
+                field_type = field_type | None
+                default = None
+            field_dict["default"] = default
         pydantic_field = Field(**field_dict)
 
         fields[input_model.name] = (field_type, pydantic_field)
@@ -379,12 +387,18 @@ def create_input_schema_from_dict(inputs: list[dotdict], param_key: str | None =
     for input_model in inputs:
         if input_model.type == FieldTypes.CONNECTION_REF.value:
             continue
+        is_json_input = input_model.type == FieldTypes.OTHER.value and input_model.get("_input_type") in {
+            "JSONInput",
+            "DataInput",
+        }
         # Create a Pydantic Field for each input field
         try:
             field_type = _serialized_field_type_to_type[input_model.type]
         except (KeyError, TypeError) as err:
             msg = f"Unsupported serialized field type: {input_model.type!r}"
             raise TypeError(msg) from err
+        if is_json_input:
+            field_type = dict
         # Skip enum for large option lists to avoid token waste
         if (
             hasattr(input_model, "options")
@@ -393,7 +407,7 @@ def create_input_schema_from_dict(inputs: list[dotdict], param_key: str | None =
             and len(input_model.options) <= MAX_OPTIONS_FOR_TOOL_ENUM
         ):
             field_type = Literal[tuple(input_model.options)]
-        if hasattr(input_model, "is_list") and input_model.is_list:
+        if input_model.get("is_list", input_model.get("list", False)):
             field_type = list[field_type]  # type: ignore[valid-type]
         if input_model.name:
             name = input_model.name.replace("_", " ").title()
@@ -407,7 +421,11 @@ def create_input_schema_from_dict(inputs: list[dotdict], param_key: str | None =
             "description": input_model.info or "",
         }
         if input_model.required is False:
-            field_dict["default"] = _coerce_default_value(input_model.value)  # type: ignore[assignment]
+            default = _coerce_default_value(input_model.value)
+            if is_json_input and (default is None or default == ""):
+                field_type = field_type | None
+                default = None
+            field_dict["default"] = default
         pydantic_field = Field(**field_dict)
 
         fields[input_model.name] = (field_type, pydantic_field)

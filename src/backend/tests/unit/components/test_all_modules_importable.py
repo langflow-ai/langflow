@@ -16,6 +16,7 @@ system functionality AND the actual module code quality are validated.
 import asyncio
 import importlib
 import pkgutil
+import sys
 from pathlib import Path
 
 import pytest
@@ -429,6 +430,14 @@ class TestDirectModuleImports:
                 # Run import in thread pool to avoid blocking
                 await asyncio.to_thread(importlib.import_module, modname)
             except ImportError as e:
+                # ToolGuard's LiteLLM dependency still imports this removed stdlib module.
+                if (
+                    sys.version_info >= (3, 15)
+                    and modname == "lfx.components.models_and_agents.policies.llm_wrapper"
+                    and isinstance(e, ModuleNotFoundError)
+                    and e.name == "sre_constants"
+                ):
+                    return ("skipped", modname, "ToolGuard dependency does not support Python 3.15+ yet")
                 error_msg = str(e)
                 # Check if it's a missing optional dependency (expected)
                 if any(
@@ -456,6 +465,8 @@ class TestDirectModuleImports:
                         "altk",
                         "langchain_ibm",
                         "ibm_watsonx_ai",
+                        # litellm (via toolguard) still imports sre_constants, removed in Python 3.15.
+                        "sre_constants",
                         # Bundle distributions that can be temporarily unpublished;
                         # the relocation shim raises with the distribution name.
                         "lfx-openai",

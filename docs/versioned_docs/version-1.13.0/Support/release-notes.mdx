@@ -13,6 +13,11 @@ Due to strict SemVer requirements, Langflow Desktop can have different patch ver
 
 ## Prepare to upgrade
 
+For an existing 1.11.x Python installation, follow [Upgrade from Langflow 1.11.x](/get-started-installation#upgrade-from-langflow-111).
+An in-place package upgrade can retain incompatible optional providers from the old full installation.
+The procedure uses a new environment with the `bundles` extra and preserves the instance's database, encryption key, files, and knowledge storage.
+Keep backups taken before the first new-version startup so you can restore them if needed.
+
 :::warning
 Whenever possible, the Langflow team recommends installing new Langflow versions in a new virtual environment or VM before upgrading your primary installation.
 This allows you to [import flows](/concepts-flows-import#import-a-flow) from your existing installation and test them in the new version without disrupting your existing installation.
@@ -62,6 +67,18 @@ Highlights of this release include the following changes. For all changes, see t
     If you already upgraded and can't sign in, see [recover access](/troubleshoot#recover-access-after-upgrading).
 
     For more information, see [API keys and authentication](/api-keys-and-authentication#langflow-auto-login).
+
+- Project MCP and A2A endpoints require authentication by default
+
+    In 1.13.2, new projects default to API-key authentication, including auto-login installations.
+    Existing projects with unset authentication settings adopt that default at startup.
+    When `LANGFLOW_AUTO_LOGIN=false`, startup also changes projects set to **None** to API-key authentication.
+
+    Update existing MCP clients with the configuration from the project's **MCP Server** tab.
+    For protected A2A requests, send the flow owner's Langflow API key in the `x-api-key` header.
+    Public A2A agent-card discovery remains available without credentials.
+
+    See [MCP authentication](/mcp-server#authentication) and [A2A authentication](/a2a-server#authentication) for client setup and the supported public-project and superuser exceptions.
 
 - Chroma and Local DB components are removed
 
@@ -117,7 +134,7 @@ Highlights of this release include the following changes. For all changes, see t
 
     Instead, use the **Scraper API** or **Web Search** components.
 
-    For more information, see [Update existing flows](/bundles-mrscraper).
+    For more information, see [Update existing flows](/bundles-mrscraper#updating-existing-flows).
 
 ## 1.12.x
 

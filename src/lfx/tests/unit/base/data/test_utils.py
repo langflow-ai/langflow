@@ -79,7 +79,11 @@ class TestReadTextFile:
     @pytest.mark.parametrize("detected_encoding", ["Windows-1252", "Windows-1254", "MacRoman"])
     @pytest.mark.parametrize(
         ("content", "encoding"),
-        [("Hello 😀\n", "gb18030"), ("It’s fine: „9„9\n", "cp1252")],  # noqa: RUF001
+        [
+            ("Hello 😀\n", "gb18030"),
+            ("It’s fine: „9„9\n", "cp1252"),  # noqa: RUF001
+            ("Hello 😀\n", "utf-8"),
+        ],
     )
     async def test_four_byte_encoding_with_ambiguous_detection(
         self, tmp_path, monkeypatch, reader, detected_encoding, content, encoding

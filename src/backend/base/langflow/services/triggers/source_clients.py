@@ -14,10 +14,14 @@ from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest, 
 
 from langflow.services.database.models.connection.model import Connection
 from langflow.services.deps import get_connection_resolver_service
+from langflow.services.triggers.constants import FAMILY_TRIGGER_LISTENER
+from langflow.services.triggers.error_codes import CodedTriggerError, TriggerErrorCode
 from langflow.services.triggers.ownership import is_owned_by
 from langflow.services.triggers.principal import trigger_execution_principal
 
 if TYPE_CHECKING:
+    from lfx.integrations.errors import AuthExpiredError
+    from lfx.integrations.models import ResolvedCredential
     from sqlmodel.ext.asyncio.session import AsyncSession
     from typing_extensions import Self
 
@@ -27,6 +31,26 @@ GRAPH_ORIGIN = "https://graph.microsoft.com"
 GOOGLE_CALENDAR_ORIGIN = "https://www.googleapis.com"
 GOOGLE_DRIVE_ORIGIN = "https://www.googleapis.com"
 GOOGLE_GMAIL_ORIGIN = "https://gmail.googleapis.com"
+
+
+async def _require_listener_credential_admission() -> None:
+    from langflow.api.utils.migration_pause import is_database_paused
+    from langflow.services.triggers.listeners.adapters import ListenerDeliveryRejectedError
+
+    if await is_database_paused():
+        raise ListenerDeliveryRejectedError(reason="maintenance")
+
+
+class _ListenerSourceCredentialLease(CredentialLease):
+    """A poll admitted before maintenance cannot start a later token refresh."""
+
+    async def get_credential(self) -> ResolvedCredential:
+        await _require_listener_credential_admission()
+        return await super().get_credential()
+
+    async def get_token_after_auth_error(self, error: AuthExpiredError, *, rejected_token: str | None = None) -> str:
+        await _require_listener_credential_admission()
+        return await super().get_token_after_auth_error(error, rejected_token=rejected_token)
 
 
 async def source_lease(session: AsyncSession, trigger: Trigger, *, family: str) -> CredentialLease:
@@ -40,7 +64,7 @@ async def source_lease(session: AsyncSession, trigger: Trigger, *, family: str) 
         raise ValueError(msg)
     if not connection.allow_non_interactive:
         msg = "Allow background runs on the source connection before enabling this trigger."
-        raise ValueError(msg)
+        raise CodedTriggerError(TriggerErrorCode.BACKGROUND_RUNS_NOT_ALLOWED, msg)
     await check_ready(
         session,
         kind=trigger.kind,
@@ -53,7 +77,8 @@ async def source_lease(session: AsyncSession, trigger: Trigger, *, family: str) 
         required_scopes=frozenset(get_kind(trigger.kind).required_scopes) if get_kind(trigger.kind) else frozenset(),
         capability_ids=capability_ids(trigger.kind),
     )
-    return CredentialLease(get_connection_resolver_service(), request)
+    lease_type = _ListenerSourceCredentialLease if family == FAMILY_TRIGGER_LISTENER else CredentialLease
+    return lease_type(get_connection_resolver_service(), request)
 
 
 class SourceHTTP:

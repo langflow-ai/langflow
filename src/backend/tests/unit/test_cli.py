@@ -62,6 +62,31 @@ def test_components_path(runner, default_settings, tmp_path):
     assert str(temp_dir) in settings_service.settings.components_path
 
 
+def test_cli_tls_options_reach_application_settings(runner, default_settings, tmp_path):
+    cert_file = str(tmp_path / "test-cert.pem")
+    key_file = str(tmp_path / "test-key.pem")
+    original = deps.get_settings_service()
+    settings_service = SettingsService(
+        settings=original.settings.model_copy(deep=True),
+        auth_settings=original.auth_settings.model_copy(deep=True),
+    )
+    settings_service.settings.ssl_cert_file = None
+    settings_service.settings.ssl_key_file = None
+    with (
+        patch("langflow.__main__.get_settings_service", return_value=settings_service),
+        patch("langflow.__main__.configure"),
+        patch("langflow.__main__.use_direct_uvicorn", return_value=True),
+        patch("langflow.__main__.setup_app", side_effect=typer.Exit(code=0)),
+    ):
+        result = runner.invoke(
+            app,
+            ["run", "--ssl-cert-file-path", cert_file, "--ssl-key-file-path", key_file, *default_settings],
+        )
+    assert result.exit_code == 0, result.output
+    assert settings_service.settings.ssl_cert_file == cert_file
+    assert settings_service.settings.ssl_key_file == key_file
+
+
 @pytest.mark.xdist_group(name="serial-superuser-tests")
 class TestSuperuserCommand:
     """Deterministic tests for the superuser CLI command."""
@@ -550,6 +575,8 @@ def _stop_midway(tmp_path, command: str, *args: str, signum: int) -> subprocess.
         source = f"sqlite:///{tmp_path / 'langflow.db'}"
         upgrade_to_head(source)
         args = (*args, "--source", source, "--target", silent)
+    elif command == "upgrade-check":
+        args = (*args, "--database-url", silent)
     else:
         env["LANGFLOW_DATABASE_URL"] = silent
     child = subprocess.Popen(  # noqa: S603 - the interpreter running the tests, fixed arguments
@@ -585,6 +612,7 @@ def _stop_midway(tmp_path, command: str, *args: str, signum: int) -> subprocess.
         ("convert-sqlite-to-postgres", [], signal.SIGINT),
         ("check-integrity", [], signal.SIGTERM),
         ("migration-preflight", [], signal.SIGINT),
+        ("upgrade-check", [], signal.SIGTERM),
     ],
 )
 def test_a_migration_command_stopped_by_a_signal_ends_its_stream_with_an_error(tmp_path, command, args, signum):

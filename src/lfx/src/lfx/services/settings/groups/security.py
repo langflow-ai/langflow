@@ -82,7 +82,9 @@ class SecuritySettings(BaseModel):
     exempted — a hostname that *resolves* to loopback is still blocked, so DNS-rebinding cannot
     abuse this. When SSRF validation is enabled, credential-bearing URLs guarded by
     ``lfx.base.models.provider_ssrf`` use the strict path and require an explicit
-    ``ssrf_allowed_hosts`` entry for loopback. Has no effect on the API Request component,
+    ``ssrf_allowed_hosts`` entry for loopback. MCP HTTP and SSE servers also require that
+    explicit entry, including when listing a registered server's tools.
+    Has no effect on the API Request component,
     database URLs, or git URLs, which validate loopback independently."""
 
     kb_allowed_hosts: list[str] = []
@@ -129,7 +131,7 @@ class SecuritySettings(BaseModel):
 
     Note: this is a beta feature. For security in a multi-tenant environment,
     use hardware-level isolation to restrict access."""
-    custom_component_admin_only: bool = False
+    custom_component_admin_only: bool = True
     """If set to True, only admin users can edit custom component code. Regular editors
     are blocked from modifying custom component templates."""
 

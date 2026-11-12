@@ -51,6 +51,7 @@ export const TRIGGER_STATE_REASONS = [
 
 /** Caller reasons: only ever values in `blocked_actions`. */
 export const TRIGGER_CALLER_REASONS = [
+  "multiple_triggers",
   "insufficient_permission",
   "not_connection_owner",
   "reconnect_not_needed",
@@ -80,6 +81,8 @@ export interface TriggerRead {
   next_fire_at: Iso8601 | null;
   last_fired_at: Iso8601 | null;
   last_error: string | null;
+  /** Stable code for `last_error`; the UI shows a known one in the reader's language. */
+  last_error_code?: string | null;
   admin_paused_at?: Iso8601 | null;
   created_at: Iso8601 | null;
   updated_at: Iso8601 | null;
@@ -108,6 +111,7 @@ export const TRIGGER_EVENT_STATES = [
   "claimed",
   "dispatched",
   "completed",
+  "skipped",
   "failed",
   "dead",
 ] as const;
@@ -125,7 +129,11 @@ export interface TriggerSessionRead {
 }
 
 /** The events drawer's filters the server applies; "all" sends none. */
-export type TriggerEventFilterParam = "failed" | "replays" | "tests";
+export type TriggerEventFilterParam =
+  | "failed"
+  | "skipped"
+  | "replays"
+  | "tests";
 
 export interface TriggerEventRead {
   id: string;
@@ -140,6 +148,8 @@ export interface TriggerEventRead {
   job_id: string | null;
   replay_of_event_id: string | null;
   error: string | null;
+  /** Bounded public explanation supplied by the server, never a raw traceback. */
+  error_detail?: string | null;
   created_at: Iso8601 | null;
   updated_at: Iso8601 | null;
 }

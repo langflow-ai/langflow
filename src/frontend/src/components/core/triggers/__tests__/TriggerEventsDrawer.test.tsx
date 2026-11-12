@@ -78,6 +78,83 @@ describe("TriggerEventsDrawer", () => {
       <TriggerEventsDrawer trigger={makeTrigger()} onOpenChange={jest.fn()} />,
     );
 
+  it.each(["job_failed", "job_cancelled", "job_timed_out"])(
+    "keeps receipt successful when flow execution ends with %s",
+    async (error) => {
+      mockEvents = [makeEvent({ id: "discord-event", state: "failed", error })];
+      open();
+
+      const row = screen.getByTestId("trigger-event-discord-event");
+      const detail = screen.getByTestId("trigger-event-detail");
+      const lineage = screen.getByTestId("trigger-event-lineage");
+      for (const surface of [row, detail, lineage]) {
+        expect(
+          within(surface).getAllByTestId("trigger-event-receipt")[0],
+        ).toHaveTextContent(/^Received$/);
+        expect(
+          within(surface).getAllByTestId("trigger-event-state")[0],
+        ).toHaveTextContent("Flow: Failed");
+      }
+      expect(detail).toHaveTextContent(
+        "The event was received successfully. Flow execution is tracked separately.",
+      );
+      expect(
+        screen.getByTestId("trigger-events-filter-failed"),
+      ).toHaveTextContent("Needs attention");
+      expect(await axe(document.body)).toHaveNoViolations();
+    },
+  );
+
+  it.each([
+    ["failed", "connection_not_authorized", "Processing: Failed"],
+    ["pending", "submit_failed:TimeoutError", "Processing: Queued"],
+    ["dead", "submit_failed:TimeoutError", "Processing: Dead-lettered"],
+    ["completed", null, "Processing: Completed"],
+    ["skipped", "sender_not_allowed", "Processing: Skipped"],
+  ] as const)(
+    "shows receipt separately when processing is %s without a flow job",
+    (state, error, status) => {
+      mockEvents = [makeEvent({ state, error, job_id: null })];
+      open();
+
+      const detail = screen.getByTestId("trigger-event-detail");
+      expect(
+        within(detail).getAllByTestId("trigger-event-receipt")[0],
+      ).toHaveTextContent(/^Received$/);
+      expect(
+        within(detail).getAllByTestId("trigger-event-state")[0],
+      ).toHaveTextContent(status);
+      expect(detail).not.toHaveTextContent("Flow: Completed");
+      expect(detail).not.toHaveTextContent("Flow: Failed");
+    },
+  );
+
+  it("shows a dispatched job as submitted without claiming execution has started", () => {
+    mockEvents = [makeEvent({ state: "dispatched" })];
+    open();
+
+    expect(
+      within(screen.getByTestId("trigger-event-detail")).getAllByTestId(
+        "trigger-event-state",
+      )[0],
+    ).toHaveTextContent("Flow: Submitted");
+  });
+
+  it("keeps an unknown processing error separate from successful receipt", () => {
+    mockEvents = [
+      makeEvent({ state: "failed", error: "unexpected_error", job_id: null }),
+    ];
+    open();
+
+    const detail = screen.getByTestId("trigger-event-detail");
+    expect(detail).toHaveTextContent("Event processing did not complete.");
+    expect(detail).toHaveTextContent("unexpected_error");
+    expect(detail).not.toHaveTextContent("The event failed.");
+    expect(
+      within(detail).getAllByTestId("trigger-event-receipt")[0],
+    ).toHaveTextContent(/^Received$/);
+  });
+
   it("shows the newest event's normalized payload and mapped error", () => {
     open();
     const detail = screen.getByTestId("trigger-event-detail");
@@ -89,6 +166,163 @@ describe("TriggerEventsDrawer", () => {
       within(detail).getByText("The run didn't complete."),
     ).toBeInTheDocument();
     expect(within(detail).getByText("3 of 3")).toBeInTheDocument();
+  });
+
+  it("resets the payload tree when selecting a different event", async () => {
+    const user = userEvent.setup();
+    mockEvents = [
+      makeEvent({ id: "first", payload: { data: { text: "First payload" } } }),
+      makeEvent({
+        id: "second",
+        payload: { data: { text: "Second payload" } },
+      }),
+    ];
+    open();
+    await user.click(screen.getByText("data", { exact: true }));
+    expect(await screen.findByText('\"First payload\"')).toBeInTheDocument();
+
+    await user.click(screen.getByTestId("trigger-event-second"));
+
+    const payload = screen.getByTestId("trigger-event-payload");
+    expect(within(payload).queryByText('\"First payload\"')).toBeNull();
+    expect(within(payload).queryByText('\"Second payload\"')).toBeNull();
+    await user.click(within(payload).getByText("data", { exact: true }));
+    expect(
+      await within(payload).findByText('\"Second payload\"'),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the safe run failure detail beside its error code", () => {
+    mockEvents = [
+      makeEvent({
+        state: "failed",
+        error: "job_failed",
+        error_detail: "Use a WhatsApp inbound message event.",
+      }),
+    ];
+    open();
+
+    expect(screen.getByTestId("trigger-event-detail")).toHaveTextContent(
+      "Use a WhatsApp inbound message event.",
+    );
+    expect(screen.getByTestId("trigger-event-detail")).toHaveTextContent(
+      "job_failed",
+    );
+  });
+
+  it("shows a failed delivery separately from the completed flow run", () => {
+    mockEvents = [
+      makeEvent({
+        payload: {
+          provider: "whatsapp",
+          data: {
+            event: "status",
+            status: "failed",
+            delivery_error:
+              "The message could not be delivered to this recipient.",
+            delivery_error_code: 131026,
+          },
+        },
+      }),
+    ];
+    open();
+
+    const detail = screen.getByTestId("trigger-event-detail");
+    expect(
+      within(detail).getByTestId("trigger-event-delivery-error"),
+    ).toHaveTextContent(
+      "The message could not be delivered to this recipient.",
+    );
+    expect(
+      within(detail).getAllByTestId("trigger-event-state")[0],
+    ).toHaveTextContent("Completed");
+  });
+
+  it("shows a skipped sender without offering a replay that bypasses its filter", async () => {
+    mockEvents = [
+      makeEvent({
+        state: "skipped",
+        error: "sender_not_allowed",
+        job_id: null,
+        payload: { provider: "whatsapp", data: { event: "message" } },
+      }),
+    ];
+    open();
+
+    const detail = screen.getByTestId("trigger-event-detail");
+    expect(
+      within(detail).getAllByTestId("trigger-event-state")[0],
+    ).toHaveTextContent("Skipped");
+    expect(detail).toHaveTextContent(
+      "The sender is not in Allowed Sender Numbers.",
+    );
+    const replay = screen.getByTestId("trigger-event-replay");
+    expect(replay).toHaveAttribute("aria-disabled", "true");
+    await userEvent.click(replay);
+    expect(screen.queryByTestId("trigger-replay-dialog")).toBeNull();
+  });
+
+  it("filters skipped senders across the server's event history", async () => {
+    mockFiltered.skipped = [
+      makeEvent({
+        id: "skipped",
+        state: "skipped",
+        error: "sender_not_allowed",
+      }),
+    ];
+    open();
+
+    await userEvent.click(screen.getByTestId("trigger-events-filter-skipped"));
+
+    expect(mockEventsQuery).toHaveBeenLastCalledWith("trg-1", {
+      filter: "skipped",
+      enabled: true,
+    });
+    expect(screen.getByTestId("trigger-event-skipped")).toHaveTextContent(
+      "Skipped",
+    );
+    expect(screen.queryByTestId("trigger-event-failed")).toBeNull();
+  });
+
+  it("renders failure details as text and preserves accessible replay guidance", async () => {
+    mockEvents = [
+      makeEvent({
+        error_detail: '<img src=x onerror="alert(1)">',
+        error: "job_failed",
+        state: "failed",
+      }),
+    ];
+    open();
+
+    expect(screen.getByTestId("trigger-event-detail")).toHaveTextContent(
+      '<img src=x onerror="alert(1)">',
+    );
+    expect(
+      screen.getByTestId("trigger-event-detail").querySelector("img"),
+    ).toBeNull();
+    expect(await axe(document.body)).toHaveNoViolations();
+  });
+
+  it.each([
+    [
+      "connection_unusable",
+      "This trigger's connection was revoked or has expired. Reconnect it, then resume the trigger.",
+      "The connection doesn't allow background runs.",
+    ],
+    [
+      "connection_not_authorized",
+      "The connection doesn't allow background runs.",
+      "This trigger's connection was revoked or has expired. Reconnect it, then resume the trigger.",
+    ],
+  ])("explains a failed event with %s", (error, message, unrelatedMessage) => {
+    mockEvents = [makeEvent({ state: "failed", error, job_id: null })];
+
+    open();
+
+    const detail = screen.getByTestId("trigger-event-detail");
+    expect(within(detail).getByText(message)).toBeInTheDocument();
+    expect(within(detail).getByText(error)).toBeInTheDocument();
+    expect(within(detail).queryByText(unrelatedMessage)).toBeNull();
   });
 
   it("filters to tests and names an event without text by its origin", async () => {

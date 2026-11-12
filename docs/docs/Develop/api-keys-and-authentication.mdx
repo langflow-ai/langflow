@@ -34,7 +34,7 @@ By default, most Langflow API endpoints, such as `/v1/run/$FLOW_ID`, require aut
 Langflow validates API keys against keys stored in the database, but you can configure Langflow to validate API keys against an environment variable instead.
 For more information, see [`LANGFLOW_API_KEY_SOURCE`](#langflow-api-key-source).
 
-Webhook endpoints require API key authentication by default. To disable authentication for webhook endpoints, use the [`LANGFLOW_WEBHOOK_AUTH_ENABLE`](/webhook#require-authentication-for-webhooks) environment variable.
+Webhook endpoints require an API key belonging to the flow owner. See [Require authentication for webhooks](/webhook#require-authentication-for-webhooks) for configuration and upgrade instructions.
 To configure authentication for Langflow MCP servers, see [Use Langflow as an MCP server](/mcp-server).
 
 ### Langflow API key permissions
@@ -611,6 +611,8 @@ Use commas to separate Couchbase bootstrap hosts. With connector SSRF validation
 
 In 1.12.4, PGVector connections to `localhost` or `127.0.0.1` are blocked by default, matching the SQL Database components. To keep a trusted local PGVector flow working, set `LANGFLOW_SSRF_ALLOWED_HOSTS=localhost` (and include `127.0.0.1` if used). Connector checks validate bootstrap addresses, but MongoDB, Redis Sentinel, Couchbase, and Valkey clients can discover additional peers after connecting or resolve a validated name again. Use network egress controls to prevent those clients from reaching internal services.
 
+MCP servers using HTTP or SSE require an explicit `LANGFLOW_SSRF_ALLOWED_HOSTS` entry for loopback addresses, even when `LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK=true`. This applies to tool discovery and execution. Add only the hosts your deployment trusts, such as `localhost,127.0.0.1` for an intended local MCP server. When validated DNS addresses are available, MCP connections pin those addresses and bypass environment HTTP proxies. Allowlisted hosts that produce no validated addresses use the default HTTP transport and can use environment HTTP proxies.
+
 #### Model provider endpoints {#provider-allowed-hosts}
 
 Custom model provider endpoints require HTTPS unless the operator explicitly permits HTTP through `LANGFLOW_SSRF_ALLOWED_HOSTS`.
@@ -706,17 +708,13 @@ External tracing integrations such as Langfuse and Arize are _process-wide_, not
 
 ### LANGFLOW_WEBHOOK_AUTH_ENABLE {#langflow-webhook-auth-enable}
 
-This variable controls whether API key authentication is required for webhook endpoints.
+This deprecated variable remains accepted for configuration compatibility. Webhook endpoints always require API key authentication.
 
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
-| `LANGFLOW_WEBHOOK_AUTH_ENABLE` | Boolean | `True` | When `True`, webhook endpoints require API key authentication and validate that the authenticated user owns the flow being executed. When `False`, no Langflow API key is required and all requests to the webhook endpoint are treated as being sent by the flow owner. |
+| `LANGFLOW_WEBHOOK_AUTH_ENABLE` | Boolean | `True` | Deprecated. Webhook endpoints require an API key belonging to the flow owner, including when this variable is `False`. |
 
-By default, webhooks require API key authentication with `LANGFLOW_WEBHOOK_AUTH_ENABLE=True`.
-
-To allow webhooks to run without authentication (not recommended; use only in trusted environments), in your Langflow `.env` file, set `LANGFLOW_WEBHOOK_AUTH_ENABLE=False`.
-
-When webhook authentication is enabled, you must provide a Langflow API key with each webhook request as an HTTP header or query parameter. For more information, see [Require authentication for webhooks](/webhook#require-authentication-for-webhooks).
+Starting in 1.13.2, deployments that previously set this variable to `False` must configure webhook senders to include the flow owner's API key. Requests without a key receive HTTP 403. For configuration and migration details, see [Require authentication for webhooks](/webhook#require-authentication-for-webhooks).
 
 ## Configure JWT token signing {#configure-jwt-token-signing}
 
@@ -917,6 +915,17 @@ When an access token expires, the client can use the refresh token to get a new 
 LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS=3600    # 1 hour
 LANGFLOW_REFRESH_TOKEN_EXPIRE_SECONDS=604800 # 7 days
 ```
+
+Starting with Langflow 1.13.2, logout revokes the native login session on the server.
+
+* Refresh tokens from that session cannot create new access tokens after logout, including earlier tokens and tokens returned by concurrent refresh requests.
+* Session revocation persists across server restarts.
+* Other login sessions remain active, and concurrent refresh requests within an active session continue to work.
+* Access tokens already issued remain valid until they expire.
+
+The database upgrade adds a refresh-session table containing the account ID, hashed session identifiers, expiration times, and revocation state. Account erasure deletes these records.
+
+After upgrading to 1.13.2, users must sign in again. Refresh tokens issued before the upgrade lack session identifiers and are rejected. Previously issued access tokens remain valid until they expire.
 
 ## Start a Langflow server with authentication enabled {#start-a-langflow-server-with-authentication-enabled}
 

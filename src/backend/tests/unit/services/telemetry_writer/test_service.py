@@ -13,10 +13,12 @@ import asyncio
 import shutil
 import tempfile
 import warnings
+from contextlib import asynccontextmanager
 from pathlib import Path
 from uuid import uuid4
 
 import pytest
+from langflow.api.utils import migration_pause
 from langflow.services.database.models.transactions.model import TransactionBase, TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildBase, VertexBuildTable
 from langflow.services.telemetry_writer.service import (
@@ -28,6 +30,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel
+from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
 
 class _FakeSettings:
@@ -94,7 +97,7 @@ def _make_vertex_build_row(flow_id, vertex_id="v1") -> dict:
 
 
 @pytest.fixture
-async def writer_with_engine():
+async def writer_with_engine(monkeypatch):
     """Yield (writer, engine) wired together with a fresh in-memory SQLite."""
     engine = create_async_engine(
         "sqlite+aiosqlite://",
@@ -103,6 +106,14 @@ async def writer_with_engine():
     )
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
+
+    # Admission must read this writer's database, not a prior test app's maintenance flag.
+    @asynccontextmanager
+    async def readonly_session():
+        async with SQLModelAsyncSession(engine) as session:
+            yield session
+
+    monkeypatch.setattr(migration_pause, "session_scope_readonly", readonly_session)
     writer = _build_writer()
     writer._engine = engine
     writer._session_maker = async_sessionmaker(engine, expire_on_commit=False)
@@ -965,3 +976,28 @@ async def test_teardown_cancelled_still_spills_buffer(writer_with_engine, tmp_pa
     reader = _build_writer()
     reader._restore_from_disk(own_dir, kind="transactions", buffer=reader._tx_buffer)
     assert [row["cancelled_spill"] for row in reader._tx_buffer] == [0, 1, 2]
+
+
+async def test_empty_writer_does_not_query_maintenance_admission(monkeypatch):
+    """An idle telemetry writer must not read the application database on every flush tick."""
+    from contextlib import asynccontextmanager
+
+    from langflow.services.telemetry_writer import service as writer_module
+
+    writer = _build_writer()
+    writer._shutdown_event = asyncio.Event()
+    admissions = 0
+
+    @asynccontextmanager
+    async def admission(**_kwargs):
+        nonlocal admissions
+        admissions += 1
+        yield True
+
+    async def stop_after_idle_tick(_timeout, **_kwargs):
+        writer._shutdown_event.set()
+
+    monkeypatch.setattr(writer_module, "async_writing", admission)
+    monkeypatch.setattr(writer, "_wait_or_shutdown", stop_after_idle_tick)
+    await writer._run_writer()
+    assert admissions == 0

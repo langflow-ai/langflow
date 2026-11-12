@@ -28,7 +28,7 @@ from langflow.api.utils import (
     custom_params,
 )
 from langflow.api.utils.mcp.flow_secrets import extract_and_strip_mcp_secrets, mcp_server_names, stage_mcp_secrets
-from langflow.api.v1.auth_helpers import handle_auth_settings_update
+from langflow.api.v1.auth_helpers import get_default_project_auth_settings, handle_auth_settings_update
 from langflow.api.v1.flows import (
     _flow_read_for_caller,
     _handle_unique_constraint_error,
@@ -60,6 +60,7 @@ from langflow.api.v1.schemas.replacement_operations import (
     ProjectReplacementRequest,
     ProjectReplacementResult,
 )
+from langflow.api.v2.mcp import mcp_stdio_restricted_for_user
 from langflow.initial_setup.constants import ASSISTANT_FOLDER_NAME, STARTER_FOLDER_NAME
 from langflow.services.audit import vocabulary as audit_vocab
 from langflow.services.audit.operations import (
@@ -71,6 +72,7 @@ from langflow.services.audit.operations import (
     stage_flow_succeeded,
     stage_project_succeeded,
 )
+from langflow.services.auth.context import current_auth_is_restricted_api_key
 from langflow.services.auth.mcp_encryption import encrypt_auth_settings
 from langflow.services.authorization import (
     FlowAction,
@@ -134,6 +136,7 @@ from langflow.services.deps import (
     get_settings_service,
     get_storage_service,
 )
+from langflow.services.evaluations.cleanup import delete_project_evaluations
 from langflow.services.schema import ServiceType
 from langflow.services.storage.service import StorageService
 from langflow.services.triggers.reconciliation import reconcile_flow_triggers_safely
@@ -297,7 +300,7 @@ async def _new_project(
             new_project.name = f"{new_project.name} (1)"
 
     settings_service = get_settings_service()
-    mcp_auth: dict = {"auth_type": "none"}
+    mcp_auth = get_default_project_auth_settings(settings_service.auth_settings, current_user)
     # Whether the API key below is something the caller asked for or something
     # this endpoint chose for them. It decides what happens if the deployment
     # refuses to issue one: a request is answered, a convenience is dropped.
@@ -306,13 +309,11 @@ async def _new_project(
     if project.auth_settings:
         mcp_auth = project.auth_settings.copy()
         new_project.auth_settings = encrypt_auth_settings(mcp_auth)
-    # If AUTO_LOGIN is false, automatically enable API key authentication
-    elif not settings_service.auth_settings.AUTO_LOGIN:
-        mcp_auth = {"auth_type": "apikey"}
+    elif mcp_auth["auth_type"] == "apikey":
         auth_was_chosen_for_caller = True
         new_project.auth_settings = encrypt_auth_settings(mcp_auth)
         await logger.adebug(
-            "Auto-enabled API key authentication for project %s (%s) due to AUTO_LOGIN=false",
+            "Auto-enabled API key authentication for project %s (%s) to match MCP authentication requirements",
             new_project.name,
             new_project.id,
         )
@@ -322,7 +323,9 @@ async def _new_project(
     await session.refresh(new_project)
 
     # Auto-register MCP server for this project with configured default auth
-    if get_settings_service().settings.add_projects_to_mcp_servers:
+    if settings_service.settings.add_projects_to_mcp_servers and not mcp_stdio_restricted_for_user(
+        current_user, settings_service.settings
+    ):
         try:
             await register_mcp_servers_for_project(
                 new_project, mcp_auth, current_user, session, owns_transaction=owns_transaction
@@ -721,7 +724,7 @@ async def read_project(
         # caller (i.e. reached via a share grant), show all flows in the
         # project — the share grant on the project implies access to its
         # contents. Otherwise keep the existing owner-scoped flow filter.
-        treat_as_shared = share_aware and project.user_id != current_user.id
+        treat_as_shared = share_aware and (project.user_id != current_user.id or current_auth_is_restricted_api_key())
 
         # DB-layer authz prefilter for the project's flows. Only meaningful for
         # shared-project reads (owner reads are already owner-scoped and run no
@@ -813,13 +816,13 @@ async def read_project(
                 visible_flows = [
                     flow
                     for flow in project.flows
-                    if flow.user_id == current_user.id
-                    or resource_visible_in_scope(
+                    if resource_visible_in_scope(
                         resource_id=flow.id,
                         workspace_id=project.workspace_id,
                         project_id=flow.folder_id,
                         project_is_personal=project.is_personal,
                         visibility=visibility_scope,
+                        is_owner=flow.user_id == current_user.id,
                     )
                 ]
             else:
@@ -1211,12 +1214,9 @@ async def _replace_project_operation_once(
                     headers={ERROR_CODE_HEADER: "replacement_project_name_conflict"},
                 )
 
-            mcp_auth: dict = {"auth_type": "none"}
-            project_auth_settings = None
             settings_service = get_settings_service()
-            if not settings_service.auth_settings.AUTO_LOGIN:
-                mcp_auth = {"auth_type": "apikey"}
-                project_auth_settings = encrypt_auth_settings(mcp_auth)
+            mcp_auth = get_default_project_auth_settings(settings_service.auth_settings, current_user)
+            project_auth_settings = encrypt_auth_settings(mcp_auth) if mcp_auth["auth_type"] == "apikey" else None
             project = Folder(
                 id=project_id,
                 name=request_body.project_name,
@@ -1228,7 +1228,9 @@ async def _replace_project_operation_once(
             session.add(project)
             await session.flush()
             newly_created_project = project
-            if settings_service.settings.add_projects_to_mcp_servers:
+            if settings_service.settings.add_projects_to_mcp_servers and not mcp_stdio_restricted_for_user(
+                current_user, settings_service.settings
+            ):
                 try:
                     await register_mcp_servers_for_project(
                         project,
@@ -1239,11 +1241,7 @@ async def _replace_project_operation_once(
                         owns_transaction=False,
                     )
                 except ApiKeyIssuanceDeniedError as denial:
-                    # This branch always auto-chooses apikey auth — there is no
-                    # caller-supplied auth_settings on a replacement request —
-                    # so a denial mirrors _new_project's AUTO_LOGIN=false
-                    # default: create the project without the MCP server
-                    # rather than failing on a credential nothing asked for.
+                    # A refused default key skips MCP registration without failing project creation.
                     project.auth_settings = None
                     await logger.awarning(
                         "Skipped MCP auto-registration for project %s (%s): %s",
@@ -2310,6 +2308,7 @@ async def delete_project(
                     await cascade_delete_flow(session, flow.id, memory_base_cleanups=memory_base_cleanups)
 
             await check_project_has_deployments(session, project_id=project_id)
+            await delete_project_evaluations(session, project_id)
             await session.delete(target)
             # Flush eagerly so guard/constraint errors surface in-request rather than at teardown commit.
             await session.flush()
@@ -2349,7 +2348,9 @@ async def delete_project(
         if attempt == 0:
             target = project
         else:
-            await session.refresh(current_user)
+            # An API-key caller is a detached snapshot, which the rollback does not expire.
+            if isinstance(current_user, User) and current_user in session:
+                await session.refresh(current_user)
             target = await _load_project()
         if target is None:
             return
