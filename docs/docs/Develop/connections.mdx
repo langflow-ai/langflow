@@ -17,9 +17,9 @@ Only the **Authorize** step differs between different connections.
 * Sign in to the Langflow server. Any signed-in user can create their own connection.
 * For Google, Microsoft, Slack, or Jira, an operator must configure the provider's OAuth registration before users can connect an account.
   See [Configure connection OAuth](./connection-oauth).
-  Jira also needs the Atlassian app and site UUID on [Jira Cloud integration](./bundles-jira#configure-the-atlassian-app).
+  Jira requires the Atlassian app and site UUID on [Jira Cloud components](./bundles-jira#configure-the-atlassian-app).
 * For GitHub, create a GitHub App installation token first.
-  See [GitHub integration](./bundles-github#create-an-installation-token).
+  For more information, see [GitHub components](./bundles-github#create-an-installation-token).
 
 ## Add a connection
 
@@ -84,8 +84,8 @@ Only the **Authorize** step differs between different connections.
 
 ## Use a connection in a flow
 
-1. Add a component for that integration, such as [**Gmail: Send Email**](./bundles-google), a [Microsoft 365 component](./bundles-microsoft), a [Slack component](./bundles-slack), a [Jira Cloud component](./bundles-jira), or a [GitHub component](./bundles-github).
-2. In the component's connection field, select the connection.
+1. Add a component that uses the Connection, such as [**Gmail: Send Email**](./bundles-google), a [Microsoft 365 component](./bundles-microsoft), a [Slack component](./bundles-slack), a [Jira Cloud component](./bundles-jira), or a [GitHub component](./bundles-github).
+2. In the component's Connection field, select the Connection.
    The field shows the scope that action requires.
    The flow stores the handle. The token stays on the server.
 
