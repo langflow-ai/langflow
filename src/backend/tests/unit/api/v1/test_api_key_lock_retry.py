@@ -121,8 +121,7 @@ def test_a_lazy_load_outside_the_greenlet_is_not_retried() -> None:
     budget. The routes avoid it by reading the user columns before the loop.
     """
     message = (
-        "greenlet_spawn has not been called; can't call await_only() here. "
-        "Was IO attempted in an unexpected place?"
+        "greenlet_spawn has not been called; can't call await_only() here. Was IO attempted in an unexpected place?"
     )
     error = MissingGreenlet(message)
 
