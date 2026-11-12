@@ -366,11 +366,6 @@ module.exports = {
           id: "Deployment/security",
           label: "Security",
         },
-        {
-          type: "doc",
-          id: "administration/secret-key-rotation",
-          label: "Offline secret-key audit and rotation",
-        },
       ],
     },
     {
@@ -570,6 +565,7 @@ module.exports = {
             "Components/bundles-files-ingestion",
             "Components/bundles-firecrawl",
             "Components/bundles-glean",
+            "Components/bundles-github",
             "Components/bundles-gitlab",
             "Components/bundles-google",
             "Components/bundles-groq",
