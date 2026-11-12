@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Request, Response
+from lfx.log.logger import logger
 from lfx.services.authorization import AuthorizationMutation, AuthorizationMutationKind
 
 from langflow.api.utils import CurrentActiveUser, DbSession
@@ -9,7 +10,7 @@ from langflow.services.auth import utils as auth_utils
 from langflow.services.auth.cookies import auth_cookie_name
 from langflow.services.authorization.lifecycle import safe_identity_mutation_committed, stage_identity_mutation
 from langflow.services.authorization.utils import audit_decision
-from langflow.services.database.lock_retry import is_database_lock_error, run_with_lock_retry, sanitize_database_error
+from langflow.services.database.lock_retry import is_retryable_write_error, run_with_lock_retry, sanitize_database_error
 
 # Assuming you have these methods in your service layer
 from langflow.services.database.models.api_key.crud import (
@@ -148,9 +149,12 @@ async def create_api_key_route(
             # is pointless because the loop rolls back too, and wrapping it in an
             # HTTPException would make it look like a caller error, so the write
             # would never be retried against a fresh snapshot.
-            if is_database_lock_error(e):
+            if is_retryable_write_error(e):
                 raise
             await db.rollback()
+            # The client gets a generic message so no SQL or bound parameters leak,
+            # which leaves this as the only record of what actually failed.
+            await logger.aexception("Failed to create an API key")
             raise HTTPException(status_code=400, detail=sanitize_database_error(e, API_KEY_CREATE_FAILED)) from e
 
         mutation = AuthorizationMutation(
@@ -205,7 +209,7 @@ async def delete_api_key_route(
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
         except Exception as e:
-            if is_database_lock_error(e):
+            if is_retryable_write_error(e):
                 raise
             raise HTTPException(status_code=400, detail=sanitize_database_error(e, API_KEY_DELETE_FAILED)) from e
 
@@ -276,7 +280,7 @@ async def save_store_api_key(
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e)) from e
     except Exception as e:
-        if is_database_lock_error(e):
+        if is_retryable_write_error(e):
             # Should be unreachable: the retry loop already exhausted its budget.
             raise HTTPException(status_code=503, detail=API_KEY_STORE_FAILED) from e
         raise HTTPException(status_code=400, detail=sanitize_database_error(e, API_KEY_STORE_FAILED)) from e
