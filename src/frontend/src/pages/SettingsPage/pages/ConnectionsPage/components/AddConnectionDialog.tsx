@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getAxiosErrorDetail } from "@/controllers/API/helpers/get-axios-error-message";
+import type { ProviderScopeParams } from "@/controllers/API/helpers/provider-scope";
 import {
   CONNECTION_NAME_MAX_LENGTH,
   CONNECTION_NAME_PATTERN,
@@ -73,6 +74,8 @@ export interface AddConnectionDialogProps {
   providers: IntegrationProviderRead[];
   /** Superusers may create connections the whole instance shares. */
   canCreateInstance: boolean;
+  /** Reuse the canvas's provider palette when opened from a component. */
+  providerScope?: ProviderScopeParams;
   /** Re-authorizing an existing connection instead of creating one. */
   reauthorize?: ConnectionRead;
   /** Which deployment this is (`GET /integrations`); hosted offers no pasted tokens. */
@@ -87,6 +90,7 @@ export function AddConnectionDialog({
   onOpenChange,
   providers,
   canCreateInstance,
+  providerScope,
   reauthorize,
   deploymentContext,
   onConnected,
@@ -94,7 +98,7 @@ export function AddConnectionDialog({
   const { t } = useTranslation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const typesData = useTypesStore((state) => state.data);
-  useGetTypes({ enabled: open });
+  useGetTypes({ ...providerScope, enabled: open });
 
   const [providerId, setProviderId] = useState(
     reauthorize?.provider_key ?? providers[0]?.provider_id ?? "",
