@@ -35,6 +35,12 @@ from langflow.services.authorization import VariableAction, ensure_variable_perm
 from langflow.services.authorization.audit import AUDIT_DENY, audit_decision
 from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
 from langflow.services.authorization.listing import filter_visible_resources, visible_scope_prefilter
+from langflow.services.creation_hooks import (
+    RESOURCE_VARIABLE,
+    PostCreationContext,
+    registered_post_creation_hooks,
+    run_post_creation_hooks,
+)
 from langflow.services.database.models.flow_version.crud import get_flow_version_entries_by_ids
 from langflow.services.database.models.variable.model import Variable, VariableCreate, VariableRead, VariableUpdate
 from langflow.services.deps import get_variable_service
@@ -264,6 +270,19 @@ async def create_variable(
         response.has_value = has_variable_value(created_variable)
         response.is_owner = True
         response.can_manage_shares = True
+        if registered_post_creation_hooks(RESOURCE_VARIABLE):
+            # The service only flushes; the request would commit after the route returns. Hooks must see a durable
+            # row, so commit here, but only when one is registered: stock behaviour is unchanged.
+            variable_id = created_variable.id
+            await session.commit()
+            await run_post_creation_hooks(
+                PostCreationContext(
+                    resource=RESOURCE_VARIABLE,
+                    resource_id=variable_id,
+                    owner_id=current_user.id,
+                    name=variable.name,
+                )
+            )
         return response
 
 
