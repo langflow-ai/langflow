@@ -16,6 +16,7 @@ from lfx.processing.process import process_tweaks_on_graph, validate_targeted_in
 from lfx.schema.legacy_render import project_payload_to_v1
 from lfx.schema.schema import InputValueRequest
 from lfx.utils.file_path_security import LocalFileAccessError
+from lfx.utils.flow_validation import prepare_flow_build_for_user
 from sqlmodel import select
 
 from langflow.api.disconnect import DisconnectHandlerStreamingResponse
@@ -549,6 +550,11 @@ async def _generate_flow_events(
             # Why: re-dispatching here (resume/job_id still set) recurses to RecursionError; a missing
             # or expired checkpoint is unrecoverable, so surface a clean 404 instead.
             raise HTTPException(status_code=404, detail="Checkpoint expired or not found; cannot resume this run.")
+        sanitized_payload = await prepare_flow_build_for_user(
+            checkpoint.flow_payload, is_superuser=current_user.is_superuser
+        )
+        if sanitized_payload is not None:
+            checkpoint = checkpoint.model_copy(update={"flow_payload": sanitized_payload})
         graph = LfxGraph.resume_from_checkpoint(checkpoint, checkpoint_store=store)
         # A checkpoint stores flow payload + user_id and deliberately never persists an
         # execution principal, so a restored graph carries ``unknown()`` and would deny

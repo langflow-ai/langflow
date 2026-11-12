@@ -1066,8 +1066,8 @@ class BackgroundExecutionService(Service):
     def _user_stub(user_id: UUID | None) -> UserRead | None:
         """A minimal UserRead carrying only ``id``.
 
-        The default frame source only reads ``user.id`` (to fetch the flow), so
-        a partial object is sufficient. Returns None for legacy ownerless jobs.
+        The default frame source reloads the user by ``id`` before checking
+        current privileges and fetching the flow. Returns None for legacy ownerless jobs.
         """
         if user_id is None:
             return None

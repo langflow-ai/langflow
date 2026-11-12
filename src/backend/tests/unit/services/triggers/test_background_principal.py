@@ -1,5 +1,6 @@
 """Trigger identity must reach the real background factory and durable replay."""
 
+from contextlib import asynccontextmanager
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from uuid import uuid4
@@ -8,6 +9,7 @@ import pytest
 from langflow.api.utils.execution_principal import execution_principal_for
 from langflow.api.v2 import workflow
 from langflow.services.database.models.trigger.model import Trigger, TriggerEvent
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_background_execution_service
 from langflow.services.triggers.dispatcher import build_submit_request
 from pydantic import ValidationError
@@ -23,7 +25,21 @@ async def test_trigger_background_connection_principal_stays_non_interactive(mon
     event = TriggerEvent(trigger_id=trigger.id, dedupe_key="tick")
     request = build_submit_request(trigger=trigger, event=event, binding_data=None, family=family)
     user = SimpleNamespace(id=owner_id)
-    flow = SimpleNamespace(id=flow_id, user_id=owner_id, name="Flow")
+    flow = SimpleNamespace(id=flow_id, user_id=owner_id, name="Flow", data={"nodes": [], "edges": []})
+    hydrated_user = User(
+        id=owner_id,
+        username="trigger-test-owner",
+        password="not-a-login",  # noqa: S106  # pragma: allowlist secret
+        is_active=True,
+        is_superuser=False,
+    )
+
+    @asynccontextmanager
+    async def fake_session():
+        yield None
+
+    monkeypatch.setattr(workflow, "session_scope", fake_session)
+    monkeypatch.setattr(workflow, "get_user_by_id", AsyncMock(return_value=hydrated_user))
     monkeypatch.setattr(workflow, "resolve_flow_for_execution", AsyncMock(return_value=flow))
     seen = []
 
