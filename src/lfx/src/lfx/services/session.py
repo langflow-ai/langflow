@@ -37,8 +37,8 @@ class NoopSession:
     async def rollback(self):
         pass
 
-    async def execute(self, *args, **kwargs):
-        return await self.exec(*args, **kwargs)
+    async def execute(self, *args, **kwargs):  # noqa: ARG002
+        return None
 
     async def query(self, *args, **kwargs):  # noqa: ARG002
         return []
@@ -63,9 +63,6 @@ class NoopSession:
 
     async def exec(self, *args, **kwargs):  # noqa: ARG002
         class _NoopResult:
-            def scalars(self):
-                return self
-
             def first(self):
                 return None
 

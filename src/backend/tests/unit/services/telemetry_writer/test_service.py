@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import asyncio
 import shutil
-import sqlite3
 import tempfile
 import warnings
 from contextlib import asynccontextmanager
@@ -27,7 +26,7 @@ from langflow.services.telemetry_writer.service import (
     TelemetryWriterService,
     _write_owner_file,
 )
-from sqlalchemy import func, select, update
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel
@@ -761,15 +760,6 @@ async def test_in_flight_batch_returned_on_cancel(writer_with_engine) -> None:
     # so the writer is guaranteed to be blocked mid-flush when we cancel.
     hang = asyncio.Event()  # never set
 
-    class _EmptyResult:
-        """Answer the maintenance probe the writer runs before it drains."""
-
-        def scalars(self):
-            return self
-
-        def first(self):
-            return None
-
     class _HangingSessionMaker:
         def __call__(self):
             return self
@@ -780,13 +770,8 @@ async def test_in_flight_batch_returned_on_cancel(writer_with_engine) -> None:
         async def __aexit__(self, *_):
             return False
 
-        async def execute(self, statement, *_, **__):
-            # Only the insert that carries the batch hangs; the writer reads the
-            # maintenance flag through this same engine first.
-            if "INSERT" in str(statement).upper():
-                await hang.wait()
-                return _EmptyResult()
-            return _EmptyResult()
+        async def execute(self, *_, **__):
+            await hang.wait()
 
         async def commit(self):
             pass
@@ -1016,71 +1001,3 @@ async def test_empty_writer_does_not_query_maintenance_admission(monkeypatch):
     monkeypatch.setattr(writer, "_wait_or_shutdown", stop_after_idle_tick)
     await writer._run_writer()
     assert admissions == 0
-
-
-async def test_retention_honors_maintenance_in_its_own_engine(writer_with_engine):
-    """The sweep answers from the database it prunes, not from the service manager's.
-
-    The writer owns a dedicated engine. Reading the shared flag through the service
-    manager points at a different database, so that database decides whether this
-    writer ever prunes — including when it cannot be read at all.
-    """
-    from langflow.services.database.models.maintenance import MAINTENANCE_ID, MaintenanceState
-
-    writer, engine = writer_with_engine
-    writer.settings_service.settings.max_vertex_builds_per_vertex = 3
-    writer.settings_service.settings.max_vertex_builds_to_keep = 10_000
-    flow_id = uuid4()
-    vb_batch = [_make_vertex_build_row(flow_id, vertex_id="v1") for _ in range(8)]
-    await writer._flush([], vb_batch)
-
-    async def count() -> int:
-        async with AsyncSession(engine) as session:
-            return await session.scalar(select(func.count()).select_from(VertexBuildTable))
-
-    # The flag needs its singleton row, which migrations normally seed.
-    async with AsyncSession(engine) as session:
-        session.add(MaintenanceState(id=MAINTENANCE_ID, enabled=True))
-        await session.commit()
-
-    # Paused in its own database: the sweep leaves the rows alone.
-    await writer._run_retention_pass()
-    assert await count() == 8
-
-    # Unpaused there: the cap applies. A writer that asked the service manager could
-    # not reach this branch, because that database has no maintenance row to read.
-    async with AsyncSession(engine) as session:
-        await session.execute(
-            update(MaintenanceState).where(MaintenanceState.id == MAINTENANCE_ID).values(enabled=False)
-        )
-        await session.commit()
-    await writer._run_retention_pass()
-    assert await count() == 3
-
-
-async def test_retention_survives_an_unreadable_maintenance_flag(writer_with_engine, monkeypatch):
-    """An unreadable flag must not starve the sweep — the write reports its own failure.
-
-    Reading an unavailable flag as maintenance silently starves the caller: nothing
-    recorded the pause and nothing retries it, so retention stops pruning for good.
-    """
-    from langflow.api.utils import migration_pause
-    from sqlalchemy.exc import OperationalError
-
-    writer, engine = writer_with_engine
-    writer.settings_service.settings.max_vertex_builds_per_vertex = 3
-    writer.settings_service.settings.max_vertex_builds_to_keep = 10_000
-    flow_id = uuid4()
-    vb_batch = [_make_vertex_build_row(flow_id, vertex_id="v1") for _ in range(8)]
-    await writer._flush([], vb_batch)
-
-    async def _unreadable(*_args, **_kwargs):
-        statement = "SELECT 1"
-        raise OperationalError(statement, {}, sqlite3.OperationalError("database is locked"))
-
-    monkeypatch.setattr(migration_pause, "maintenance_enabled", _unreadable)
-    await writer._run_retention_pass()
-
-    async with AsyncSession(engine) as session:
-        count = await session.scalar(select(func.count()).select_from(VertexBuildTable))
-    assert count == 3

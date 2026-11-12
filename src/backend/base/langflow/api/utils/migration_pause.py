@@ -59,9 +59,6 @@ except ImportError:  # Windows
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable, Iterator
-    from contextlib import AbstractAsyncContextManager
-
-    from sqlalchemy.ext.asyncio import AsyncSession
 
 _READ_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 # What the admin still needs: a session, and the migration steps, which include ending the pause.
@@ -118,42 +115,15 @@ async def is_database_paused() -> bool:
     return await _database_pause_status() is not False
 
 
-async def _database_pause_status(
-    session_maker: Callable[[], AbstractAsyncContextManager[AsyncSession]] | None = None,
-    *,
-    warn: bool = True,
-) -> bool | None:
-    """Keep an unavailable flag distinct from a verified maintenance decision.
-
-    A caller that owns its own engine passes its session maker so the decision is
-    taken against the database it would write to. The shared flag is not a property
-    of the process: an embedded writer can point at a different database than the
-    one the service manager holds.
-    """
+async def _database_pause_status() -> bool | None:
+    """Keep an unavailable flag distinct from a verified maintenance decision."""
     try:
-        if session_maker is None:
-            async with session_scope_readonly() as session:
-                return await maintenance_enabled(session)
-        async with session_maker() as session:
+        async with session_scope_readonly() as session:
             return await maintenance_enabled(session)
     except SQLAlchemyError:
         # A failed read cannot authorize a write while the shared flag is unknown.
-        if warn:
-            await logger.awarning("Maintenance status is unavailable. New changes are paused.")
+        await logger.awarning("Maintenance status is unavailable. New changes are paused.")
         return None
-
-
-async def maintenance_pauses_writes(
-    session_maker: Callable[[], AbstractAsyncContextManager[AsyncSession]],
-) -> bool:
-    """Whether the maintenance flag refuses writes, read through ``session_maker``.
-
-    Only a verified flag pauses. An unreadable one does not, because the caller
-    writes through the same engine: the write reports its own failure instead of
-    being preceded by a pause nobody recorded. Reading it as a pause starves the
-    caller silently, which is how a telemetry writer stops pruning for good.
-    """
-    return await _database_pause_status(session_maker, warn=False) is True
 
 
 async def writes_paused() -> bool:
@@ -166,20 +136,10 @@ def admitted_maintenance_caller() -> UUID | None:
     return _maintenance_caller.get()
 
 
-async def write_refusal(
-    caller_id: UUID | None = None,
-    *,
-    check_file: bool = True,
-    session_maker: Callable[[], AbstractAsyncContextManager[AsyncSession]] | None = None,
-) -> str | None:
+async def write_refusal(caller_id: UUID | None = None, *, check_file: bool = True) -> str | None:
     """Apply both sources without deriving repair access from a resource owner."""
     if check_file and is_paused():
         return REFUSAL
-    if session_maker is not None:
-        # A caller that writes through its own engine is answered from that engine.
-        # An unreadable flag there must not read as maintenance: nothing recorded a
-        # pause, and the caller's own write would have reported the real failure.
-        return MAINTENANCE_REFUSAL if await maintenance_pauses_writes(session_maker) else None
     paused = await _database_pause_status()
     if paused is False:
         return None
@@ -207,11 +167,10 @@ async def write_admission(
     path: str | None = None,
     name: str | None = None,
     caller_id: UUID | None = None,
-    session_maker: Callable[[], AbstractAsyncContextManager[AsyncSession]] | None = None,
 ) -> AsyncIterator[str | None]:
     """Keep the file pause's drain slot and name the source that denied admission."""
     with writing(kind, method=method, path=path, name=name) as let_in:
-        refusal = await write_refusal(caller_id, check_file=False, session_maker=session_maker) if let_in else REFUSAL
+        refusal = await write_refusal(caller_id, check_file=False) if let_in else REFUSAL
         token = _maintenance_caller.set(caller_id if refusal is None else None)
         try:
             yield refusal
@@ -221,15 +180,10 @@ async def write_admission(
 
 @contextlib.asynccontextmanager
 async def async_writing(
-    kind: str = "loop",
-    *,
-    method: str | None = None,
-    path: str | None = None,
-    name: str | None = None,
-    session_maker: Callable[[], AbstractAsyncContextManager[AsyncSession]] | None = None,
+    kind: str = "loop", *, method: str | None = None, path: str | None = None, name: str | None = None
 ) -> AsyncIterator[bool]:
     """Keep the file pause's drain slot and also honor database maintenance."""
-    async with write_admission(kind, method=method, path=path, name=name, session_maker=session_maker) as refusal:
+    async with write_admission(kind, method=method, path=path, name=name) as refusal:
         yield refusal is None
 
 
