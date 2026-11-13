@@ -25,7 +25,7 @@ All components use the same connection inputs:
 |------|------|-------------|
 | Turbo Notify API Key (`api_key`) | SecretString | Input parameter. Your Turbo Notify API key. |
 | Number (`number_alias`) | String | Input parameter. The number to use: `main`, the alias of an extra number, or its `num_` ID. Default: `main`. |
-| Base URL (`base_url`) | String | Input parameter. Advanced. The API address. Default: `https://api.turbonotify.com`. |
+| Base URL (`base_url`) | String | Input parameter. Advanced. The API address. It must start with `https://`, because the API key is sent with every request. Plain `http://` is accepted only for `localhost`, `127.0.0.1`, and `[::1]`, to reach a local test server. Default: `https://api.turbonotify.com`. |
 
 All components support [tool mode](/agents-tools). The API key, number, and base URL stay configured on the component, and the agent supplies the other inputs.
 Each tool is named after its method, for example `turbo_notify_send_text`.
@@ -33,6 +33,22 @@ Each tool is named after its method, for example `turbo_notify_send_text`.
 Every value is checked before a request is made.
 If a value is refused, or if Turbo Notify rejects the request, the component stops with an error that starts with the error code, followed by a description.
 For example, a key without the right permission fails with `insufficient_scope` and names the scope it needs, and a throttled request fails with `rate_limit_exceeded` and the number of seconds to wait.
+
+Only a `2xx` answer counts as success. A redirect or any other answer is an error, and redirects are not followed, so the API key is never sent to another address.
+When a send fails after the request may have been transmitted, for example a timeout while waiting for the answer, the error says that the message may have gone out.
+Check **Turbo Notify: Get Messages** before sending it again, or repeat the send with the same **Idempotency Key**.
+A send that failed while connecting never reached Turbo Notify, so the error carries no such note.
+
+## Send without duplicates {#idempotency}
+
+**Turbo Notify: Send Text**, **Turbo Notify: Send Media**, and **Turbo Notify: Reply** have an advanced **Idempotency Key** input.
+It is sent as the `Idempotency-Key` header.
+Turbo Notify keeps the key per number: if a send is repeated with the same key on the same number, the message is not sent again, and the answer carries the `message_id` of the original message.
+Without a key, repeating a send can deliver the message twice.
+
+Use a value that is unique for each message and comes from something stable on your side, such as the ID of the order that triggers it, and reuse the same value when you repeat that send.
+Do not type one fixed value into a component that sends different messages, because every later send with that key is treated as a repeat of the first.
+The key has 1 to 255 printable characters, without line breaks or tabs. An empty input sends no key.
 
 ## Turbo Notify: Send Text
 
@@ -49,7 +65,8 @@ It outputs the API response as [`Data`](/data-types#data): `message_id` and a `s
 | Phone Number (`phone`) | String | Input parameter. A phone number in international format, such as `+12025550123`. Spaces, dashes, and parentheses are removed. It must have 7 to 15 digits after the `+`. |
 | Contact ID (`contact_id`) | String | Input parameter. A Turbo Notify contact ID: `ct_` followed by 32 hexadecimal characters. |
 | Group ID (`group_id`) | String | Input parameter. A Turbo Notify group ID: `grp_` followed by 32 hexadecimal characters. Sending to a group depends on your Turbo Notify plan. |
-| Text (`text`) | String | Input parameter. The message, 1 to 4096 characters. |
+| Text (`text`) | String | Input parameter. The message, 1 to 4096 characters. It is sent exactly as written, including spaces and line breaks at the start or end, and the limit counts them. A text with only white space is refused. |
+| Idempotency Key (`idempotency_key`) | String | Input parameter. Advanced. Optional. See [Send without duplicates](#idempotency). |
 
 ## Turbo Notify: Send Media
 
@@ -57,15 +74,18 @@ This component sends an image, video, audio file, document, or sticker from a pu
 
 Fill in exactly one recipient. It outputs the API response as `Data`, like **Turbo Notify: Send Text**.
 
+The address must be public. A host written as `localhost`, or as a loopback, private, link-local, or unspecified IP address, is refused before any request is made. The check reads the host as written and does not resolve DNS, so a name that resolves to a private address is not covered.
+
 ### Turbo Notify: Send Media parameters
 
 | Name | Type | Description |
 |------|------|-------------|
 | Phone Number (`phone`), Contact ID (`contact_id`), Group ID (`group_id`) | String | Input parameters. The recipient, as in **Turbo Notify: Send Text**. |
 | Media Type (`media_type`) | Dropdown | Input parameter. `image`, `video`, `audio`, `document`, or `sticker`. Default: `image`. |
-| Media URL (`media_url`) | String | Input parameter. A public `http://` or `https://` address of the file. |
-| Caption (`caption`) | String | Input parameter. Optional, 1 to 1024 characters. For an image, video, or document only. |
+| Media URL (`media_url`) | String | Input parameter. A public `http://` or `https://` address of the file. Local and private addresses are refused. |
+| Caption (`caption`) | String | Input parameter. Optional, 1 to 1024 characters, sent exactly as written. For an image, video, or document only. |
 | File Name (`filename`) | String | Input parameter. Advanced. Optional. The name shown on a document in the chat. For a document only. |
+| Idempotency Key (`idempotency_key`) | String | Input parameter. Advanced. Optional. See [Send without duplicates](#idempotency). |
 
 ## Turbo Notify: Reply
 
@@ -76,7 +96,8 @@ This component replies to an earlier message and quotes it in the chat. It outpu
 | Name | Type | Description |
 |------|------|-------------|
 | Message ID (`message_id`) | String | Input parameter. The message to quote: `msg_` followed by 32 hexadecimal characters. The message must belong to the same number. |
-| Text (`text`) | String | Input parameter. The reply, 1 to 4096 characters. |
+| Text (`text`) | String | Input parameter. The reply, 1 to 4096 characters, sent exactly as written. |
+| Idempotency Key (`idempotency_key`) | String | Input parameter. Advanced. Optional. See [Send without duplicates](#idempotency). |
 
 ## Turbo Notify: Get Messages
 

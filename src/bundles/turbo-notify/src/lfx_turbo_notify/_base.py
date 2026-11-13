@@ -38,6 +38,20 @@ def base_url_input() -> MessageTextInput:
     )
 
 
+def idempotency_key_input() -> MessageTextInput:
+    """Return the advanced Idempotency Key input shared by the components that send."""
+    return MessageTextInput(
+        name="idempotency_key",
+        display_name="Idempotency Key",
+        advanced=True,
+        info=(
+            "Optional, 1 to 255 printable characters. If a send is repeated with the same key on the same number, "
+            "the message is not sent again. Use a value that is unique per message, such as an order ID, and "
+            "reuse it when you repeat that send."
+        ),
+    )
+
+
 class TurboNotifyComponent(Component):
     """Base class: builds the client from the shared inputs."""
 

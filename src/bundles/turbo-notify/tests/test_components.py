@@ -195,7 +195,7 @@ class TestSendMedia:
         await component.turbo_notify_send_media()
         assert network.last_json["content"] == {
             f"{media_type}_url": "http://cdn.example.test/f",
-            "caption": "Look at this",
+            "caption": "  Look at this  ",
         }
 
     async def test_filename_goes_with_a_document(self, network):

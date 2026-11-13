@@ -1,7 +1,7 @@
 from lfx.io import DropdownInput, MessageTextInput, Output
 from lfx.schema.data import Data
 from lfx_turbo_notify import _validation as check
-from lfx_turbo_notify._base import TurboNotifyComponent, base_url_input, connection_inputs
+from lfx_turbo_notify._base import TurboNotifyComponent, base_url_input, connection_inputs, idempotency_key_input
 
 
 class TurboNotifySendMediaComponent(TurboNotifyComponent):
@@ -59,6 +59,7 @@ class TurboNotifySendMediaComponent(TurboNotifyComponent):
             advanced=True,
             tool_mode=True,
         ),
+        idempotency_key_input(),
         base_url_input(),
     ]
 
@@ -70,7 +71,10 @@ class TurboNotifySendMediaComponent(TurboNotifyComponent):
         content = check.media_content(
             media_type=self.media_type, media_url=self.media_url, caption=self.caption, filename=self.filename
         )
+        key = check.idempotency_key(self.idempotency_key)
         client = self.client()
-        body = await client.request("POST", client.number_path("/messages"), body={"to": to, "content": content})
+        body = await client.request(
+            "POST", client.number_path("/messages"), body={"to": to, "content": content}, idempotency_key=key
+        )
         self.status = f"Message {body.get('message_id', '')} accepted."
         return Data(data=body)

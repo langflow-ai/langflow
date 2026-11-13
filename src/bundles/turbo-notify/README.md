@@ -33,8 +33,16 @@ restart your Langflow server; the components appear in the palette's **Bundles**
 ## Configure
 
 Set the **Turbo Notify API Key** input to your own key, created in the Turbo Notify dashboard.
-**Number** defaults to `main`. **Base URL** is advanced and defaults to `https://api.turbonotify.com`.
-The components do nothing until a key is supplied. See the
+**Number** defaults to `main`. **Base URL** is advanced and defaults to `https://api.turbonotify.com`;
+it must use `https://` because the key is sent with every request (plain `http://` is accepted only for
+`localhost`, `127.0.0.1` and `[::1]`). The components do nothing until a key is supplied.
+
+Send Text, Send Media and Reply have an advanced **Idempotency Key**, sent as the `Idempotency-Key`
+header. Turbo Notify keeps it per number, so repeating a send with the same key does not send the message
+again. Use a value that is unique per message (an order ID, for example) and reuse it when you repeat
+that send. Text and captions are sent exactly as written. A media URL must be public: `localhost` and
+private, loopback, link-local or unspecified IP addresses are refused (DNS names are not resolved).
+Only a `2xx` answer counts as success and redirects are not followed. See the
 [Turbo Notify documentation](https://docs.turbonotify.com/en/messages/send/) for the API.
 
 ## Develop

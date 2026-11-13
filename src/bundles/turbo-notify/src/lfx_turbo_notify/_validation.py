@@ -6,7 +6,10 @@ person (or the agent in Tool mode) learns what to change without a round trip.
 
 from __future__ import annotations
 
+import ipaddress
+import math
 import re
+import socket
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -18,6 +21,7 @@ MAX_FILENAME_LENGTH = 255
 MAX_URL_LENGTH = 2083
 MAX_CURSOR_LENGTH = 2048
 MAX_PAGE_SIZE = 200
+MAX_IDEMPOTENCY_KEY_LENGTH = 255
 
 DIRECTIONS = ("any", "inbound", "outbound")
 MEDIA_TYPES = ("image", "video", "audio", "document", "sticker")
@@ -28,30 +32,38 @@ _PHONE_SEPARATORS = re.compile(r"[\s\-()]")
 _MESSAGE_ID = re.compile(r"msg_[0-9a-f]{32}")
 _CONTACT_ID = re.compile(r"ct_[0-9a-f]{32}")
 _GROUP_ID = re.compile(r"grp_[0-9a-f]{32}")
+_IDEMPOTENCY_KEY = re.compile(r"[\x20-\x7e]+")
 
 
-def as_text(value: Any) -> str:
-    """Return the stripped text of an input value, or an empty string when it holds none.
+def raw_text(value: Any) -> str:
+    """Return the text of an input value exactly as written, or an empty string when it holds none.
 
     A value connected from another component may arrive as a ``Message`` or ``Data``
     object; those carry their text in ``.text``.
     """
-    if value is None:
+    if value is None or isinstance(value, bool):
         return ""
     if isinstance(value, str):
-        return value.strip()
-    if isinstance(value, bool):
-        return ""
+        return value
     if isinstance(value, int | float):
         return str(value)
     text = getattr(value, "text", None)
-    return text.strip() if isinstance(text, str) else ""
+    return text if isinstance(text, str) else ""
+
+
+def as_text(value: Any) -> str:
+    """Return the text of an input value without surrounding white space."""
+    return raw_text(value).strip()
 
 
 def require_text(value: Any, *, field: str, code: str, maximum: int) -> str:
-    """Return a non-empty text of at most ``maximum`` characters."""
-    text = as_text(value)
-    if not text:
+    """Return a text of at most ``maximum`` characters, exactly as written.
+
+    The text must not be blank, but it is checked with its white space trimmed only to
+    decide that: what the person wrote is what is sent, and the limit counts what is sent.
+    """
+    text = raw_text(value)
+    if not text.strip():
         msg = f"{field} is empty. Provide the text to send."
         raise TurboNotifyError(msg, code)
     if len(text) > maximum:
@@ -61,8 +73,8 @@ def require_text(value: Any, *, field: str, code: str, maximum: int) -> str:
 
 
 def optional_text(value: Any, *, field: str, code: str, maximum: int) -> str | None:
-    """Return the text, or ``None`` when the input is blank."""
-    if not as_text(value):
+    """Return the text exactly as written, or ``None`` when the input is blank."""
+    if not raw_text(value).strip():
         return None
     return require_text(value, field=field, code=code, maximum=maximum)
 
@@ -118,15 +130,68 @@ def recipient(*, phone: Any, contact: Any, group: Any) -> dict[str, str]:
     return {"group_id": group_id(group)}
 
 
+def _is_local_name(host: str) -> bool:
+    name = host.rstrip(".").lower()
+    return name == "localhost" or name.endswith(".localhost")
+
+
+def _literal_address(host: str) -> ipaddress.IPv4Address | ipaddress.IPv6Address | None:
+    """Return the address a literal IP host stands for, including the short forms a resolver accepts.
+
+    ``127.1``, ``0x7f.0.0.1`` and ``2130706433`` all mean 127.0.0.1 to the system resolver.
+    A name that is not an address returns ``None``.
+    """
+    try:
+        return ipaddress.ip_address(host)
+    except ValueError:
+        pass
+    try:
+        return ipaddress.IPv4Address(socket.inet_aton(host))
+    except OSError:
+        return None
+
+
+def _is_non_public(address: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
+    if isinstance(address, ipaddress.IPv6Address) and address.ipv4_mapped is not None:
+        address = address.ipv4_mapped
+    return (
+        address.is_loopback
+        or address.is_private
+        or address.is_link_local
+        or address.is_unspecified
+        or address.is_multicast
+        or not address.is_global
+    )
+
+
 def http_url(value: Any, *, field: str, code: str) -> str:
-    """Return a public ``http://`` or ``https://`` address."""
+    """Return a public ``http://`` or ``https://`` address.
+
+    A host that is written as ``localhost`` or as a loopback, private, link-local, unspecified or
+    otherwise non-public IP address (IPv4 or IPv6) is refused, because Turbo Notify downloads the
+    file from this address and a local address is never a public file.
+
+    Only the written host is checked. The check does not resolve DNS: a name that resolves to a
+    private address is not covered here and must be refused by whoever fetches the file.
+    """
     text = as_text(value)
     if not text or len(text) > MAX_URL_LENGTH or re.search(r"\s", text):
-        msg = f"{field} must be a full web address of at most {MAX_URL_LENGTH} characters, for example https://example.com/file.jpg."
+        msg = (
+            f"{field} must be a full web address of at most {MAX_URL_LENGTH} characters, "
+            "for example https://example.com/file.jpg."
+        )
         raise TurboNotifyError(msg, code)
     parts = urlsplit(text)
-    if parts.scheme not in {"http", "https"} or not parts.hostname:
+    host = parts.hostname
+    if parts.scheme not in {"http", "https"} or not host:
         msg = f"{field} must start with http:// or https:// and name a host, for example https://example.com/file.jpg."
+        raise TurboNotifyError(msg, code)
+    address = _literal_address(host)
+    if _is_local_name(host) or (address is not None and _is_non_public(address)):
+        msg = (
+            f"{field} points to a local or private address (localhost, loopback, private, link-local or "
+            "unspecified). Use a public address that Turbo Notify can download from."
+        )
         raise TurboNotifyError(msg, code)
     return text
 
@@ -147,7 +212,7 @@ def media_content(*, media_type: Any, media_url: Any, caption: Any = None, filen
             msg = "An audio file or a sticker takes no caption. Leave Caption empty."
             raise TurboNotifyError(msg, "invalid_caption")
         content["caption"] = text
-    name = optional_text(filename, field="File Name", code="invalid_filename", maximum=MAX_FILENAME_LENGTH)
+    name = optional_text(as_text(filename), field="File Name", code="invalid_filename", maximum=MAX_FILENAME_LENGTH)
     if name is not None:
         if kind != "document":
             msg = "Only a document takes a file name. Leave File Name empty."
@@ -160,14 +225,13 @@ def page_size(value: Any, *, default: int) -> int:
     """Return a page size from 1 to 200."""
     if value is None or value == "":
         return default
-    if isinstance(value, bool) or not isinstance(value, int | float | str):
-        number = None
-    else:
+    number: float | None = None
+    if not isinstance(value, bool) and isinstance(value, int | float | str):
         try:
             number = float(value)
-        except ValueError:
+        except (ValueError, OverflowError):
             number = None
-    if number is None or number != int(number) or not 1 <= number <= MAX_PAGE_SIZE:
+    if number is None or not math.isfinite(number) or number != int(number) or not 1 <= number <= MAX_PAGE_SIZE:
         msg = f"Limit must be a whole number from 1 to {MAX_PAGE_SIZE}."
         raise TurboNotifyError(msg, "invalid_limit")
     return int(number)
@@ -191,3 +255,20 @@ def cursor(value: Any) -> str | None:
         msg = "Cursor is not valid. Pass back the cursor value of the previous page unchanged."
         raise TurboNotifyError(msg, "invalid_cursor")
     return text
+
+
+def idempotency_key(value: Any) -> str | None:
+    """Return the ``Idempotency-Key`` value, or ``None`` when the input is blank.
+
+    The key has 1 to 255 printable ASCII characters. Control characters (tab, new line) are refused.
+    """
+    key = as_text(value)
+    if not key:
+        return None
+    if len(key) > MAX_IDEMPOTENCY_KEY_LENGTH or not _IDEMPOTENCY_KEY.fullmatch(key):
+        msg = (
+            f"Idempotency Key must have 1 to {MAX_IDEMPOTENCY_KEY_LENGTH} printable characters (letters, digits, "
+            "punctuation and spaces, without line breaks or tabs), for example order-4711."
+        )
+        raise TurboNotifyError(msg, "invalid_idempotency_key")
+    return key

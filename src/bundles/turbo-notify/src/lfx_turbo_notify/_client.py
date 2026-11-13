@@ -23,13 +23,12 @@ WRITE_TIMEOUT_SECONDS = 60.0
 
 _API_KEY_PATTERN = re.compile(r"[\x21-\x7e]+")
 _MAX_ALIAS_LENGTH = 128
-_HTTP_ERROR_STATUS = httpx.codes.BAD_REQUEST
+_SUCCESS_STATUSES = range(200, 300)
+_REDIRECT_STATUSES = range(300, 400)
 _SERVER_ERROR_STATUS = httpx.codes.INTERNAL_SERVER_ERROR
+_LOCAL_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 
-_SEND_SERVER_HINT = (
-    "The failure happened on the Turbo Notify side and the message may have gone out. "
-    "Check Get Messages before sending it again."
-)
+_SEND_SERVER_HINT = "The message may have gone out. Check Get Messages before sending it again."
 
 
 class TurboNotifyError(ValueError):
@@ -58,7 +57,12 @@ class TurboNotifyError(ValueError):
 
 
 def normalize_base_url(raw: str | None) -> str:
-    """Return the API origin without a trailing slash or ``/v1``, or refuse an unusable address."""
+    """Return the API origin without a trailing slash or ``/v1``, or refuse an unusable address.
+
+    The API key travels in the ``Authorization`` header, so the address must use ``https``.
+    Plain ``http`` is accepted only for this machine (``localhost``, ``127.0.0.1`` or ``[::1]``),
+    which is how a local test server is reached.
+    """
     text = (raw or "").strip() or DEFAULT_BASE_URL
     text = text.rstrip("/").removesuffix("/v1")
     parts = urlsplit(text)
@@ -74,6 +78,12 @@ def normalize_base_url(raw: str | None) -> str:
         msg = (
             "Base URL must be a full web address such as https://api.turbonotify.com, "
             "without a login, query or fragment."
+        )
+        raise TurboNotifyError(msg, "invalid_base_url")
+    if parts.scheme == "http" and parts.hostname not in _LOCAL_HOSTS:
+        msg = (
+            "Base URL must start with https:// because the API key is sent with every request. "
+            "Plain http:// is accepted only for localhost, 127.0.0.1 and [::1]."
         )
         raise TurboNotifyError(msg, "invalid_base_url")
     return text
@@ -159,6 +169,11 @@ def error_from_response(response: httpx.Response, *, is_send: bool) -> TurboNoti
     if code == "validation_error":
         description = _validation_fields(body) or description
     description = description or response.reason_phrase or "The request did not complete."
+    if status in _REDIRECT_STATUSES:
+        description = (
+            f"{description} Turbo Notify answered with a redirect, which is not followed so the API key "
+            "is not sent to another address. Check the Base URL."
+        )
 
     retry_after = None
     if code == "insufficient_scope":
@@ -172,6 +187,21 @@ def error_from_response(response: httpx.Response, *, is_send: bool) -> TurboNoti
     elif status >= _SERVER_ERROR_STATUS and is_send:
         description = f"{description} {_SEND_SERVER_HINT}"
     return TurboNotifyError(description, code, status=status, retry_after=retry_after)
+
+
+def _transport_error(error: httpx.HTTPError, *, timeout: float, is_send: bool) -> TurboNotifyError:
+    """Describe a failure with no answer.
+
+    A send that failed while connecting never reached Turbo Notify, so it is safe to repeat. Any other
+    failure of a send may have happened after the request was transmitted, so it carries the hint to
+    check Get Messages before sending again.
+    """
+    failed_before_transmitting = isinstance(error, httpx.ConnectError | httpx.ConnectTimeout)
+    hint = f" {_SEND_SERVER_HINT}" if is_send and not failed_before_transmitting else ""
+    if isinstance(error, httpx.TimeoutException):
+        return TurboNotifyError(f"Turbo Notify did not answer within {timeout:g} seconds.{hint}", "timeout")
+    msg = f"Could not reach Turbo Notify. Check the Base URL and the network of this Langflow server.{hint}"
+    return TurboNotifyError(msg, "unreachable")
 
 
 class TurboNotifyClient:
@@ -193,30 +223,31 @@ class TurboNotifyClient:
         *,
         body: dict[str, Any] | None = None,
         params: dict[str, Any] | None = None,
+        idempotency_key: str | None = None,
     ) -> dict[str, Any]:
-        """Call ``/v1{path}`` and return the decoded JSON object."""
+        """Call ``/v1{path}`` and return the decoded JSON object.
+
+        ``idempotency_key`` is sent as the ``Idempotency-Key`` header: repeating a send with the
+        same key on the same number does not send the message again.
+        """
         is_send = method != "GET"
         headers = {
             "Authorization": f"Bearer {self._api_key}",
             "Accept": "application/json",
             "User-Agent": USER_AGENT,
         }
+        if idempotency_key:
+            headers["Idempotency-Key"] = idempotency_key
         timeout = WRITE_TIMEOUT_SECONDS if is_send else READ_TIMEOUT_SECONDS
         try:
             async with make_http_client(timeout) as http:
                 response = await http.request(
                     method, f"{self._base_url}/v1{path}", json=body, params=params, headers=headers
                 )
-        except httpx.TimeoutException:
-            msg = f"Turbo Notify did not answer within {timeout:g} seconds."
-            if is_send:
-                msg = f"{msg} {_SEND_SERVER_HINT}"
-            raise TurboNotifyError(msg, "timeout") from None
-        except httpx.HTTPError:
-            msg = "Could not reach Turbo Notify. Check the Base URL and the network of this Langflow server."
-            raise TurboNotifyError(msg, "unreachable") from None
+        except httpx.HTTPError as error:
+            raise _transport_error(error, timeout=timeout, is_send=is_send) from None
 
-        if response.status_code >= _HTTP_ERROR_STATUS:
+        if response.status_code not in _SUCCESS_STATUSES:
             raise error_from_response(response, is_send=is_send)
         payload = _payload_of(response)
         if not isinstance(payload, dict):
