@@ -114,6 +114,18 @@ describe("SIDEBAR_BUNDLES", () => {
       ]),
     );
   });
+
+  it("classifies Olostep as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "Olostep",
+          icon: "Olostep",
+          name: "olostep",
+        }),
+      ]),
+    );
+  });
 });
 
 it("registers the Fortytwo bundle", () => {
@@ -169,5 +181,13 @@ it("uses the Telegram logo for its integration palette group", () => {
     display_name: "Telegram",
     name: "telegram",
     icon: "Telegram",
+  });
+});
+
+it("uses the Discord logo for its integration palette group", () => {
+  expect(SIDEBAR_BUNDLES).toContainEqual({
+    display_name: "Discord",
+    name: "discord",
+    icon: "discord",
   });
 });

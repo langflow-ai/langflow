@@ -366,7 +366,7 @@ class TriggerService(Service):
                         row.signing_secret_encrypted = encrypt_api_key(mint_signing_secret())
                 if extension.prepare is not None:
                     await extension.prepare(session, row)
-            if arming.mechanism_id in push_mechanisms():
+            if arming.mechanism_id in push_mechanisms() or (extension is not None and extension.validate_source):
                 if not row.public_id:
                     row.public_id = mint_public_id()
                 # The route commits this intent before any provider I/O. The
@@ -425,10 +425,16 @@ class TriggerService(Service):
         Commits ``session`` first, so callers must not hold a savepoint open
         across this call.
         """
+        from langflow.services.triggers.providers.registry import get_provider
+
+        extension = get_provider(row.provider or "")
         if (
             row.state != TriggerState.PENDING.value
             or row.kind not in source_kinds()
-            or (row.config or {}).get("mechanism_id") not in push_mechanisms()
+            or (
+                (row.config or {}).get("mechanism_id") not in push_mechanisms()
+                and (extension is None or extension.validate_source is None)
+            )
         ):
             return row
         from langflow.services.triggers.source_runtime import initialize_source

@@ -239,6 +239,26 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Deployment/upgrade-check",
+          label: "Check flows before an upgrade"
+        },
+        {
+          type: "doc",
+          id: "Deployment/upgrade-reports",
+          label: "Review upgrade reports"
+        },
+        {
+          type: "doc",
+          id: "Deployment/admin-flow-repairs",
+          label: "Repair selected flows"
+        },
+        {
+          type: "doc",
+          id: "Deployment/maintenance-mode",
+          label: "Maintenance mode"
+        },
+        {
+          type: "doc",
           id: "Deployment/deployment-public-server",
           label: "Deploy a public Langflow server"
         },
@@ -560,6 +580,7 @@ module.exports = {
             "Components/bundles-cuga",
             "Components/bundles-datastax",
             "Components/bundles-deepseek",
+            "Components/bundles-discord",
             "Components/bundles-docling",
             "Components/bundles-duckduckgo",
             "Components/bundles-elastic",
@@ -593,6 +614,7 @@ module.exports = {
             "Components/bundles-novita",
             "Components/bundles-nvidia",
             "Components/bundles-ollama",
+            "Components/bundles-olostep",
             "Components/bundles-openai",
             "Components/bundles-openai-compatible",
             "Components/bundles-openrouter",
@@ -700,6 +722,7 @@ module.exports = {
         "Contributing/contributing-components",
         "Contributing/contributing-bundles",
         "Contributing/contributing-component-tests",
+        "Contributing/contributing-component-compatibility",
         "Contributing/contributing-templates",
       ],
     },

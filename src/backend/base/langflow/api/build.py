@@ -40,6 +40,7 @@ from langflow.api.v1.schemas import (
     VertexBuildResponse,
 )
 from langflow.events.event_manager import EventManager
+from langflow.exceptions.api import WorkflowServiceUnavailableError
 from langflow.exceptions.component import ComponentBuildError
 from langflow.schema.message import ErrorMessage
 from langflow.schema.schema import OutputValue
@@ -1188,7 +1189,7 @@ async def _generate_flow_events(
                 session_id=graph.session_id or str(flow_id),
                 job_id=_run_id_uuid,
             )
-        except (RuntimeError, ValueError, OSError):
+        except (RuntimeError, ValueError, OSError, WorkflowServiceUnavailableError):
             await logger.awarning("Memory base hook scheduling failed for flow %s", flow_id, exc_info=True)
 
     await event_manager.queue.put((None, None, time.time()))

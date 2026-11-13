@@ -210,6 +210,7 @@ export const useProviderConfiguration = ({
       ...selectedProvider,
       is_enabled: freshProvider.is_enabled,
       is_configured: freshProvider.is_configured,
+      discovery_error: freshProvider.discovery_error,
       models: freshProvider.models || selectedProvider.models,
     };
   }, [hasSettledProviderCatalog, modelProviders, selectedProvider]);
