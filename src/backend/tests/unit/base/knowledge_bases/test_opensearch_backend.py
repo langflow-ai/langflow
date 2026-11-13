@@ -431,14 +431,19 @@ async def test_writes_pass_configured_metric_even_after_store_was_built(tmp_path
     store.aadd_documents = AsyncMock()
     backend._vector_store = store
     if write == "ingest":
-        docs = [Document(page_content="doc")]
+        docs = [Document(id="chunk", page_content="doc")]
         await backend.add_documents(docs)
-        store.aadd_documents.assert_awaited_once_with(docs, space_type="cosinesimil")
+        # Each chunk also carries its own id in metadata, for the per-job read's sort.
+        store.aadd_documents.assert_awaited_once_with(
+            [Document(id="chunk", page_content="doc", metadata={"kb_chunk_id": "chunk"})],
+            ids=["chunk"],
+            space_type="cosinesimil",
+        )
     else:
         docs = [IngestedDocument(id="chunk", content="doc", embedding=[1.0, 0.0])]
         await backend.add_embedded_documents(docs)
         store.add_embeddings.assert_called_once_with(
-            [("doc", [1.0, 0.0])], metadatas=[{}], ids=["chunk"], space_type="cosinesimil"
+            [("doc", [1.0, 0.0])], metadatas=[{"kb_chunk_id": "chunk"}], ids=["chunk"], space_type="cosinesimil"
         )
 
 
@@ -1070,3 +1075,76 @@ class TestOpenSearchDestinationPolicy:
         assert result.ok is False
         assert result.details["type"] == "SSRFProtectionError"
         assert "not allowed" in result.message
+
+
+class TestJobReadSortField:
+    """Which field the per-job read sorts on, without a live cluster."""
+
+    @staticmethod
+    def _backend(tmp_path, *, mapped: bool, missing: int = 0, mapping_error: Exception | None = None):
+        from lfx.base.knowledge_bases.backends.opensearch import CHUNK_ID_SORT_FIELD
+
+        backend = _make_backend(tmp_path)
+        backend._os_index = "test_index"
+        client = MagicMock()
+        if mapping_error is not None:
+            client.indices.get_field_mapping.side_effect = mapping_error
+        else:
+            client.indices.get_field_mapping.return_value = {
+                "test_index": {"mappings": {CHUNK_ID_SORT_FIELD: {"mapping": {}}} if mapped else {}}
+            }
+        client.count.return_value = {"count": missing}
+        return backend, client
+
+    async def test_every_chunk_carrying_the_field_sorts_on_it(self, tmp_path):
+        from lfx.base.knowledge_bases.backends.opensearch import CHUNK_ID_SORT_FIELD
+
+        backend, client = self._backend(tmp_path, mapped=True)
+        assert await backend._job_sort_field(client, {"match_all": {}}) == CHUNK_ID_SORT_FIELD
+
+    async def test_a_chunk_without_the_field_keeps_the_id_sort(self, tmp_path):
+        backend, client = self._backend(tmp_path, mapped=True, missing=3)
+        assert await backend._job_sort_field(client, {"match_all": {}}) == "_id"
+
+    @pytest.mark.parametrize("missing", [0, 3])
+    async def test_a_partial_missing_field_count_stops_the_job_read(self, tmp_path, missing):
+        backend, client = self._backend(tmp_path, mapped=True, missing=missing)
+        backend._os_client = client
+        backend._os_text_field = DEFAULT_TEXT_FIELD
+        backend._os_vector_field = DEFAULT_VECTOR_FIELD
+        client.count.return_value = {
+            "count": missing,
+            "_shards": {"total": 2, "successful": 1, "failed": 1},
+        }
+        client.search.return_value = {"hits": {"hits": []}, "_shards": {"total": 2, "successful": 2, "failed": 0}}
+
+        with pytest.raises(RuntimeError, match="OpenSearch count did not complete on all shards"):
+            await anext(backend.iter_job_documents("job-a"))
+
+        client.search.assert_not_called()
+
+    async def test_an_index_that_never_mapped_the_field_keeps_the_id_sort(self, tmp_path):
+        backend, client = self._backend(tmp_path, mapped=False)
+        assert await backend._job_sort_field(client, {"match_all": {}}) == "_id"
+        client.count.assert_not_called()
+
+    async def test_a_mapping_lookup_that_fails_keeps_the_id_sort(self, tmp_path):
+        backend, client = self._backend(tmp_path, mapped=True, mapping_error=OSError("no index"))
+        assert await backend._job_sort_field(client, {"match_all": {}}) == "_id"
+
+
+async def test_reads_by_id_do_not_hand_back_the_chunk_id_field(tmp_path):
+    from lfx.base.knowledge_bases.backends.opensearch import CHUNK_ID_KEY
+
+    backend = _make_backend(tmp_path)
+    backend._vector_store = MagicMock()
+    backend._os_index = "test_index"
+    backend._os_text_field = "text"
+    backend._os_client = MagicMock()
+    backend._os_client.mget.return_value = {
+        "docs": [{"_id": "a", "found": True, "_source": {"text": "t", "metadata": {"job_id": "j", CHUNK_ID_KEY: "a"}}}]
+    }
+
+    [doc] = await backend.get_documents_by_ids(["a"])
+
+    assert doc.metadata == {"job_id": "j"}

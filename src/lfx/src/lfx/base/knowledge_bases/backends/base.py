@@ -431,6 +431,32 @@ class BaseVectorStoreBackend(ABC):
         if False:  # pragma: no cover — keeps this an async generator
             yield []
 
+    async def iter_job_documents(
+        self,
+        job_id: str | None,  # noqa: ARG002 — subclass override signature
+        *,
+        batch_size: int = 5000,  # noqa: ARG002 — subclass override signature
+        after_id: str | None = None,  # noqa: ARG002 — subclass override signature
+    ) -> AsyncIterator[list[IngestedDocument]]:
+        """Stream one job's chunks with their vectors, in id order; ``None`` reads every chunk.
+
+        ``after_id`` resumes after the last chunk already handled: a copy gets a
+        short window per request, so restarting from the first chunk each time
+        would never finish a job larger than one window.
+
+        There is deliberately no fallback: yielding nothing would read as a job
+        with no chunks, and a deploy would report success without them.
+        """
+        msg = f"{type(self).__name__} does not support reading chunks by ingestion job"
+        raise NotImplementedError(msg)
+        if False:  # pragma: no cover — keeps this an async generator
+            yield []
+
+    async def count_job(self, job_id: str) -> int:
+        """How many chunks one ingestion job has in this store. Backends override this."""
+        msg = f"{type(self).__name__} does not support counting chunks by ingestion job"
+        raise NotImplementedError(msg)
+
     async def storage_size_bytes(self) -> int:  # pragma: no cover
         """Default: unknown. Subclasses override where meaningful."""
         return 0
