@@ -1,4 +1,5 @@
 import contextlib
+import csv
 import json
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -587,6 +588,71 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
             # Should only have .csv once, not .csv.csv
             assert "test_output.csv" in result.text
             assert "test_output.csv.csv" not in result.text
+
+    @staticmethod
+    def _csv_rows(path: Path) -> list[list[str]]:
+        with path.open(encoding="utf-8", newline="") as stream:
+            return list(csv.reader(stream))
+
+    @staticmethod
+    def _csv_saver(component, input_kind: str):
+        save = getattr(component, f"_save_{input_kind}")
+        wrap = (lambda payload: Data(data=payload)) if input_kind == "data" else DataFrame
+        return lambda payload, path: save(wrap(payload), path, "csv")
+
+    @pytest.mark.parametrize("input_kind", ["data", "dataframe"])
+    @pytest.mark.parametrize("columns", [["a", "b"], ["first,name", 'last\n"name"'], [1, 2]])
+    def test_csv_append_writes_values_under_the_existing_header(self, component_class, tmp_path, input_kind, columns):
+        component = component_class()
+        component.set_attributes({"append_mode": True})
+        path = tmp_path / "rows.csv"
+        save = self._csv_saver(component, input_kind)
+
+        save({columns[0]: [1], columns[1]: [2]}, path)
+        save({columns[1]: [3], columns[0]: [4]}, path)
+
+        assert self._csv_rows(path) == [[str(column) for column in columns], ["1", "2"], ["4", "3"]]
+
+    @pytest.mark.parametrize("input_kind", ["data", "dataframe"])
+    @pytest.mark.parametrize("columns", [["a"], ["a", "c"], ["a", "b", "c"]])
+    def test_csv_append_rejects_other_columns_without_changing_the_file(
+        self, component_class, tmp_path, input_kind, columns
+    ):
+        component = component_class()
+        component.set_attributes({"append_mode": True})
+        path = tmp_path / "rows.csv"
+        save = self._csv_saver(component, input_kind)
+        save({"a": [1], "b": [2]}, path)
+        original = path.read_bytes()
+
+        with pytest.raises(ValueError, match="columns of the existing CSV file"):
+            save({column: [3] for column in columns}, path)
+
+        assert path.read_bytes() == original
+
+    @pytest.mark.parametrize("input_kind", ["data", "dataframe"])
+    def test_csv_append_to_an_empty_file_writes_the_header(self, component_class, tmp_path, input_kind):
+        component = component_class()
+        component.set_attributes({"append_mode": True})
+        path = tmp_path / "rows.csv"
+        path.touch()
+
+        self._csv_saver(component, input_kind)({"a": [1], "b": [2]}, path)
+
+        assert self._csv_rows(path) == [["a", "b"], ["1", "2"]]
+
+    @pytest.mark.parametrize("columns", [["same", "same"], pd.MultiIndex.from_tuples([("a", "x"), ("b", "y")])])
+    def test_csv_append_keeps_identical_duplicate_or_multilevel_headers(self, component_class, tmp_path, columns):
+        component = component_class()
+        component.set_attributes({"append_mode": True})
+        path = tmp_path / "rows.csv"
+        frame = DataFrame(pd.DataFrame([[1, 2]], columns=columns))
+        component._save_dataframe(frame, path, "csv")
+        original = path.read_bytes()
+
+        component._save_dataframe(frame, path, "csv")
+
+        assert path.read_bytes() == original + frame.to_csv(index=False, header=False).encode("utf-8")
 
     @pytest.mark.asyncio
     async def test_append_mode_txt_file(self, component_class):

@@ -1,6 +1,9 @@
 import contextlib
+import csv
 import json
 from collections.abc import AsyncIterator, Iterator
+from io import StringIO
+from itertools import islice
 from pathlib import Path, PurePath, PureWindowsPath
 from typing import Any
 
@@ -460,13 +463,46 @@ class SaveToFileComponent(Component):
                     append=False,
                 )
 
+    def _write_csv(self, frame: pd.DataFrame, path: Path, *, append: bool) -> None:
+        """Write CSV rows; an append to a non-empty file follows the file's own header."""
+        if append and path.stat().st_size > 0:
+            frame = self._align_to_csv_header(frame, path)
+            frame.to_csv(path, index=False, mode="a", header=False)
+        else:
+            frame.to_csv(path, index=False)
+
+    @staticmethod
+    def _align_to_csv_header(frame: pd.DataFrame, path: Path) -> pd.DataFrame:
+        """Reorder columns to the existing header, or refuse before the file is touched."""
+        new_header = list(csv.reader(StringIO(frame.iloc[:0].to_csv(index=False))))
+        with path.open(encoding="utf-8-sig", newline="") as stream:
+            existing_header = list(islice(csv.reader(stream), len(new_header)))
+        if existing_header == new_header:
+            return frame
+        # Only a single header row of distinct names can be matched up by name.
+        new_columns = new_header[0] if len(new_header) == 1 else []
+        existing_columns = existing_header[0] if len(existing_header) == 1 else []
+        if (
+            len(new_header) != 1
+            or len(set(new_columns)) != len(new_columns)
+            or sorted(new_columns) != sorted(existing_columns)
+        ):
+            msg = (
+                f"Cannot append to '{path.name}': the columns {new_columns or new_header} do not match "
+                f"the columns of the existing CSV file {existing_columns or existing_header}. "
+                "Send the same columns, or write to a new file."
+            )
+            raise ValueError(msg)
+        positions = {column: index for index, column in enumerate(new_columns)}
+        return frame.iloc[:, [positions[column] for column in existing_columns]]
+
     def _save_dataframe(self, dataframe: DataFrame, path: Path, fmt: str) -> str:
         """Save a DataFrame to the specified file format."""
         append_mode = getattr(self, "append_mode", False)
         should_append = append_mode and path.exists() and self._is_plain_text_format(fmt)
 
         if fmt == "csv":
-            dataframe.to_csv(path, index=False, mode="a" if should_append else "w", header=not should_append)
+            self._write_csv(dataframe, path, append=should_append)
         elif fmt == "excel":
             dataframe.to_excel(path, index=False, engine="openpyxl")
         elif fmt == "json":
@@ -512,12 +548,7 @@ class SaveToFileComponent(Component):
         should_append = append_mode and path.exists() and self._is_plain_text_format(fmt)
 
         if fmt == "csv":
-            pd.DataFrame(data.data).to_csv(
-                path,
-                index=False,
-                mode="a" if should_append else "w",
-                header=not should_append,
-            )
+            self._write_csv(pd.DataFrame(data.data), path, append=should_append)
         elif fmt == "excel":
             pd.DataFrame(data.data).to_excel(path, index=False, engine="openpyxl")
         elif fmt == "json":
