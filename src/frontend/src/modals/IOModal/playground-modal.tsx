@@ -440,7 +440,7 @@ export default function IOModal({
                   />
                 )}
                 {sidebarOpen && showPublishOptions && (
-                  <div className="absolute bottom-2 left-0 flex w-full flex-col gap-8 border-t border-border px-2 py-4 transition-all">
+                  <div className="absolute bottom-[calc(theme(spacing.2)+env(safe-area-inset-bottom))] left-0 flex w-full flex-col gap-8 border-t border-border px-2 py-4 transition-all">
                     <div className="flex items-center justify-between px-2">
                       <div className="text-sm">{t("modal.io.theme")}</div>
                       <ThemeButtons />

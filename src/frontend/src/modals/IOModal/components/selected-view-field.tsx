@@ -19,7 +19,7 @@ export const SelectedViewField = ({
     <>
       <div
         className={cn(
-          "flex h-full w-full flex-col items-start gap-4 p-4",
+          "flex h-full w-full flex-col items-start gap-4 px-4 pb-[calc(theme(spacing.4)+env(safe-area-inset-bottom))] pt-4",
           !selectedViewField ? "hidden" : "",
         )}
       >

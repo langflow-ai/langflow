@@ -3,7 +3,10 @@
   <head>
     <base href="/" />
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
     <link rel="icon" href="/favicon.ico" />
     <link rel="manifest" href="/manifest.json" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -20,7 +23,14 @@
   </head>
   <body id="body" class="dark" style="width: 100%; height: 100%">
     <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div style="width: 100vw; height: 100vh" id="root"></div>
+    <div
+      style="
+        width: 100vw;
+        height: 100vh;
+        height: 100dvh;
+      "
+      id="root"
+    ></div>
     <script type="module" src="/src/index.tsx"></script>
   </body>
 </html>
