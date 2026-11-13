@@ -2464,11 +2464,9 @@ class TestAGUISyncStillWorksAfterTupleYieldRefactor:
 class TestAGUIBackgroundTasksLifecycle:
     """Tasks the v1 build path queues via ``BackgroundTasks`` must fire.
 
-    ``generate_flow_events`` registers telemetry, tracing teardown, and other
-    callbacks on the ``BackgroundTasks`` instance it is handed. In FastAPI's
-    request lifecycle those run after the response is sent. The background-mode
-    code path has no response carrying that container, so the buffer task must
-    drain the queue explicitly or every queued callback is silently dropped.
+    ``generate_flow_events`` owns its callback queue independently of the HTTP
+    response. Observe callback execution across all queues so a detached build
+    cannot silently drop telemetry, tracing teardown, or other queued work.
     """
 
     async def test_background_run_drains_queued_background_tasks(
@@ -2478,23 +2476,35 @@ class TestAGUIBackgroundTasksLifecycle:
         chatbot_flow,
         monkeypatch: pytest.MonkeyPatch,
     ):
-        """After a background run ends, the BackgroundTasks queue must be invoked."""
+        """After a background run ends, every queued callback has run once."""
         from langflow.api.v2 import workflow as _workflow_module
+        from starlette.background import BackgroundTask
         from starlette.background import BackgroundTasks as _Real
 
         instances: list[_Real] = []
 
         class RecordingBackgroundTasks(_Real):
-            """Observe ``__call__`` so we can verify the queue was drained."""
+            """Record admission and execution without replacing callback behavior."""
 
             def __init__(self) -> None:
+                """Track request and build queues with separate execution receipts."""
                 super().__init__()
-                self.called = False
+                self.queued = []
+                self.executed = []
                 instances.append(self)
 
-            async def __call__(self, *args, **kwargs):
-                self.called = True
-                return await super().__call__(*args, **kwargs)
+            def add_task(self, func, *args, **kwargs):
+                """Wrap the real task to record each successful execution."""
+                super().add_task(func, *args, **kwargs)
+                task = self.tasks[-1]
+                self.queued.append(task)
+
+                async def record_execution():
+                    """Run the original callback and retain its completion receipt."""
+                    await task()
+                    self.executed.append(task)
+
+                self.tasks[-1] = BackgroundTask(record_execution)
 
         monkeypatch.setattr(_workflow_module, "BackgroundTasks", RecordingBackgroundTasks)
 
@@ -2526,15 +2536,12 @@ class TestAGUIBackgroundTasksLifecycle:
             await _asyncio.sleep(0.1)
 
         assert instances, "No RecordingBackgroundTasks instance was constructed"
-        bg = instances[0]
-        assert bg.tasks, (
+        assert any(bg.queued for bg in instances), (
             "generate_flow_events queued no background tasks for the chatbot flow; "
             "this test is vacuous without at least one queued callback"
         )
-        assert bg.called, (
-            "fresh BackgroundTasks queue was never drained; telemetry, tracing teardown, "
-            "and every other callback queued by the v1 build path is silently dropped"
-        )
+        for bg in instances:
+            assert bg.executed == bg.queued, "Every admitted callback must complete exactly once"
 
 
 class TestMemoryBaseHookBackgroundMode:

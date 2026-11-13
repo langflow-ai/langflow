@@ -1,4 +1,5 @@
 import { expect, test } from "../fixtures";
+import { TIMEOUTS } from "../utils/constants/timeouts";
 import type { LangflowPage } from "../utils/types";
 
 async function disableAutoLogin(page: LangflowPage) {
@@ -26,6 +27,14 @@ async function disableAnimations(page: LangflowPage) {
         scroll-behavior: auto !important;
       }
     `,
+  });
+}
+
+async function waitForAuthForm(page: LangflowPage, name: RegExp) {
+  // App initialization waits for the session and starter examples before
+  // mounting these routes. Use the page-load budget for the first form.
+  await expect(page.getByRole("button", { name })).toBeVisible({
+    timeout: TIMEOUTS.standard,
   });
 }
 
@@ -71,7 +80,7 @@ async function driveLoginEmpty(page: LangflowPage) {
   await disableAutoLogin(page);
   await page.goto("/login");
   await disableAnimations(page);
-  await expect(page.getByRole("button", { name: /sign in/i })).toBeVisible();
+  await waitForAuthForm(page, /sign in/i);
 }
 
 async function expectPageToReflow(page: LangflowPage) {
@@ -92,7 +101,7 @@ async function driveLoginValidation(page: LangflowPage) {
   await disableAutoLogin(page);
   await page.goto("/login");
   await disableAnimations(page);
-  await expect(page.getByRole("button", { name: /sign in/i })).toBeVisible();
+  await waitForAuthForm(page, /sign in/i);
   await page.getByRole("button", { name: /sign in/i }).click();
   await expect(page.getByRole("alert").first()).toBeVisible();
 }
@@ -102,7 +111,7 @@ async function driveLoginErrorToast(page: LangflowPage) {
   await mockLoginError(page);
   await page.goto("/login");
   await disableAnimations(page);
-  await expect(page.getByRole("button", { name: /sign in/i })).toBeVisible();
+  await waitForAuthForm(page, /sign in/i);
   await page.getByRole("textbox", { name: /^Username \*$/ }).fill("alice");
   await page.getByLabel(/^Password/).fill("wrong-password");
   await page.getByRole("button", { name: /sign in/i }).click();
@@ -141,7 +150,7 @@ async function driveSignupEmpty(page: LangflowPage) {
   await disableAutoLogin(page);
   await page.goto("/signup");
   await disableAnimations(page);
-  await expect(page.getByRole("button", { name: /sign up/i })).toBeVisible();
+  await waitForAuthForm(page, /sign up/i);
 }
 
 async function driveSignupMobile(page: LangflowPage) {
@@ -154,7 +163,7 @@ async function driveSignupMismatch(page: LangflowPage) {
   await disableAutoLogin(page);
   await page.goto("/signup");
   await disableAnimations(page);
-  await expect(page.getByRole("button", { name: /sign up/i })).toBeVisible();
+  await waitForAuthForm(page, /sign up/i);
   await page.getByLabel(/^Password/).fill("first-password");
   await page.getByLabel(/^Confirm your password/).fill("second-password");
   await page.getByLabel(/^Confirm your password/).blur();
@@ -168,7 +177,7 @@ async function driveSignupErrorToast(page: LangflowPage) {
   await mockSignupError(page);
   await page.goto("/signup");
   await disableAnimations(page);
-  await expect(page.getByRole("button", { name: /sign up/i })).toBeVisible();
+  await waitForAuthForm(page, /sign up/i);
   await page.getByRole("textbox", { name: /^Username \*$/ }).fill("alice");
   await page.getByLabel(/^Password/).fill("same-password");
   await page.getByLabel(/^Confirm your password/).fill("same-password");
@@ -187,7 +196,7 @@ async function driveAdminLoginEmpty(page: LangflowPage) {
   await disableAutoLogin(page);
   await page.goto("/login/admin");
   await disableAnimations(page);
-  await expect(page.getByRole("button", { name: /login/i })).toBeVisible();
+  await waitForAuthForm(page, /login/i);
 }
 
 async function driveAdminLoginErrorToast(page: LangflowPage) {
@@ -195,7 +204,7 @@ async function driveAdminLoginErrorToast(page: LangflowPage) {
   await mockLoginError(page);
   await page.goto("/login/admin");
   await disableAnimations(page);
-  await expect(page.getByRole("button", { name: /login/i })).toBeVisible();
+  await waitForAuthForm(page, /login/i);
   await page.getByPlaceholder(/^Username$/).fill("alice");
   await page.getByPlaceholder(/^Password$/).fill("wrong-password");
   await page.getByRole("button", { name: /login/i }).click();

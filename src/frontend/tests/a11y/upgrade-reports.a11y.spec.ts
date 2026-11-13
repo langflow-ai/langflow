@@ -144,11 +144,13 @@ test(
       .check();
     await expect(apply).toBeEnabled();
     await apply.click();
-    await expect(
-      page.getByRole("list", { name: "Update results" }).getByRole("link", {
+    const recovery = page
+      .getByRole("list", { name: "Update results" })
+      .getByRole("link", {
         name: "Review protected recovery version for Customer support",
-      }),
-    ).toHaveAttribute(
+      });
+    await expect(recovery).toBeVisible();
+    await expect(recovery).toHaveAttribute(
       "href",
       `/flow/${updated.flow_id}?version=${updated.recovery_version_id}`,
     );

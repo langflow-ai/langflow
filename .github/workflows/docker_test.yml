@@ -31,11 +31,17 @@ jobs:
     name: Test Docker images (verify or retry)
     needs: test-docker-first
     if: ${{ always() && !cancelled() && needs.test-docker-first.outputs.succeeded != 'true' }}
-    runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb-ephemeral]
+    # Retry on a separate ARM64 runner pool if the ephemeral runner is interrupted.
+    runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
+
+      - name: Free disk space for Docker builds
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /opt/hostedtoolcache
+          df -h /
 
       - name: Build and test Docker images
         run: bash scripts/ci/test_docker_images.sh

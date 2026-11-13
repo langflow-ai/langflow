@@ -99,7 +99,7 @@ def migration_enabled(monkeypatch: pytest.MonkeyPatch):
 
 
 @pytest.fixture(autouse=True)
-def config_dir(migration_enabled, client, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:  # noqa: ARG001
+async def config_dir(migration_enabled, client, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:  # noqa: ARG001
     """The migration record is written under CONFIG_DIR, so keep it out of the real one.
 
     The feature is turned on first: the app registers the pause middleware when it is built.
@@ -109,6 +109,13 @@ def config_dir(migration_enabled, client, tmp_path: Path, monkeypatch: pytest.Mo
     monkeypatch.setattr(migration_module, "_secrets", {"for": {}})
     # A profile named in the developer's shell would decide how every S3 client here is built.
     monkeypatch.delenv("AWS_PROFILE", raising=False)
+    # These endpoint tests isolate the change they hold open. The app's disk-sync loop is
+    # also a legitimate change, and a slow startup pass can outlast their short drain.
+    # Its pause behavior is covered separately in test_migration_pause.py.
+    syncing = [task for task in asyncio.all_tasks() if getattr(task.get_coro(), "__name__", "") == "sync_flows_from_fs"]
+    for task in syncing:
+        task.cancel()
+    await asyncio.gather(*syncing, return_exceptions=True)
     return tmp_path
 
 
@@ -611,17 +618,61 @@ async def test_a_version_the_move_cannot_use_is_refused_before_anything_runs(
     }
 
 
-async def test_a_second_run_waits_for_the_live_one(client, logged_in_headers_super_user):
+async def test_a_second_run_waits_for_the_live_one(client, logged_in_headers_super_user, monkeypatch):
     headers = logged_in_headers_super_user
     seen = {}
+    process = None
+    create_subprocess = asyncio.create_subprocess_exec
+    # Middleware may deliver the first event after a fast preflight child has exited.
+    # Run the real CLI, holding its first check until the request disconnects.
+    held_preflight = """
+import sys
+import langflow.__main__ as cli
+
+echo_check = cli._echo_check
+first = True
+
+def hold_first_check(*args, **kwargs):
+    global first
+    echo_check(*args, **kwargs)
+    if first:
+        first = False
+        sys.stdout.flush()
+        sys.stdin.buffer.read(1)
+
+cli._echo_check = hold_first_check
+sys.argv[0] = "langflow"
+cli.main()
+"""
+
+    async def start_preflight(*args, **kwargs):
+        nonlocal process
+        if process is None and args[1:4] == ("-m", "langflow", "migration-preflight"):
+            process = await create_subprocess(
+                args[0], "-c", held_preflight, *args[3:], stdin=asyncio.subprocess.PIPE, **kwargs
+            )
+            return process
+        return await create_subprocess(*args, **kwargs)
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", start_preflight)
 
     async def while_running():
         seen["refused"] = await client.post(
             "api/v1/migration/checks", json={"target_version": VERSION}, headers=headers
         )
         seen["migration"] = await _migration(client, headers)
+        assert process is not None
+        assert process.returncode is None
+        assert psutil.pid_exists(process.pid)
 
-    await _run_and_hang_up(client, headers, while_running)
+    try:
+        await asyncio.wait_for(_run_and_hang_up(client, headers, while_running), timeout=60)
+    finally:
+        if process:
+            if process.returncode is None:
+                process.kill()
+            process.stdin.close()
+            await process.wait()
 
     assert seen["refused"].status_code == 409
     detail = seen["refused"].json()["detail"]
@@ -629,7 +680,10 @@ async def test_a_second_run_waits_for_the_live_one(client, logged_in_headers_sup
     assert detail["by"] == "activeuser"
     step = seen["migration"]["record"]["steps"]["check_source"]
     assert step["status"] == "running"
+    assert process is not None
+    assert step["pid"] == process.pid
     assert detail["started_at"] == step["started_at"]
+    assert not psutil.pid_exists(process.pid)
     # The run ends with its request, so the next one starts.
     await _run_checks(client, headers)
 
@@ -1069,30 +1123,37 @@ async def test_the_pause_is_refused_while_a_change_let_in_before_it_is_still_goi
         monkeypatch.setattr(migration_pause, "fcntl", None)
     arrived, release = asyncio.Event(), asyncio.Event()
     uploading = asyncio.create_task(_upload_held_open(client, headers, arrived, release))
-    await arrived.wait()
+    try:
+        await asyncio.wait_for(arrived.wait(), timeout=10)
 
-    # The upload was let in and has not sent the end of its file. Paused now, it would write while paused.
-    refused = await client.post(PAUSE, headers=headers)
+        # The upload was let in and has not sent the end of its file. Paused now, it would write while paused.
+        refused = await client.post(PAUSE, headers=headers)
 
-    assert refused.status_code == 409, refused.text
-    detail = refused.json()["detail"]
-    # The admin is told what the pause waited for, and since when.
-    [change] = detail.pop("changes")
-    assert detail == {"code": "requests_active", "jobs": [], "listeners": [], "elsewhere": False}
-    assert {**change, "since": None} == {
-        "kind": "request",
-        "method": "POST",
-        "path": "/api/v2/files/",
-        "name": None,
-        "since": None,
-    }
-    assert datetime.fromisoformat(change["since"]) <= datetime.now(timezone.utc)
-    assert not {"pause", "pausing"} & (await _migration(client, headers))["record"].keys()
-
-    release.set()
+        assert refused.status_code == 409, refused.text
+        detail = refused.json()["detail"]
+        # The admin is told what the pause waited for, and since when.
+        [change] = detail.pop("changes")
+        assert detail == {"code": "requests_active", "jobs": [], "listeners": [], "elsewhere": False}
+        assert {**change, "since": None} == {
+            "kind": "request",
+            "method": "POST",
+            "path": "/api/v2/files/",
+            "name": None,
+            "since": None,
+        }
+        assert datetime.fromisoformat(change["since"]) <= datetime.now(timezone.utc)
+        assert not {"pause", "pausing"} & (await _migration(client, headers))["record"].keys()
+    finally:
+        release.set()
+        try:
+            uploaded = await asyncio.wait_for(uploading, timeout=10)
+        finally:
+            if not uploading.done():
+                uploading.cancel()
+            await asyncio.gather(uploading, return_exceptions=True)
 
     # It ends as a change made before any pause, because the pause was taken out again.
-    assert await uploading == 201
+    assert uploaded == 201
     assert (await _migration(client, headers))["instance"]["files"]["local"] is True
     assert (await client.post(PAUSE, headers=headers)).status_code == 200
 
