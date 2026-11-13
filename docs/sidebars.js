@@ -614,6 +614,7 @@ module.exports = {
             "Components/bundles-novita",
             "Components/bundles-nvidia",
             "Components/bundles-ollama",
+            "Components/bundles-olostep",
             "Components/bundles-openai",
             "Components/bundles-openai-compatible",
             "Components/bundles-openrouter",

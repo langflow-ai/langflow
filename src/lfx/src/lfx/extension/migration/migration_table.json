@@ -5280,6 +5280,31 @@
       "bare_class_name": "KeenableSearchComponent",
       "target": "ext:keenable:KeenableSearchComponent@official",
       "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "OlostepAnswerComponent",
+      "target": "ext:olostep:OlostepAnswerComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "OlostepCrawlComponent",
+      "target": "ext:olostep:OlostepCrawlComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "OlostepMapComponent",
+      "target": "ext:olostep:OlostepMapComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "OlostepScrapeComponent",
+      "target": "ext:olostep:OlostepScrapeComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "OlostepSearchComponent",
+      "target": "ext:olostep:OlostepSearchComponent@official",
+      "added_in": "1.14.0"
     }
   ],
   "ambiguous_bare_names": [
