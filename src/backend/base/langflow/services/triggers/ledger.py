@@ -16,13 +16,18 @@ from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 from lfx.log.logger import logger
+from sqlalchemy import and_, func, not_, or_
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, select
 
-from langflow.services.database.models.trigger.model import TriggerEvent
-from langflow.services.database.models.trigger.schemas import TERMINAL_EVENT_STATES, TriggerEventState
-from langflow.services.triggers.constants import REPLAY_DEDUPE_PREFIX
+from langflow.services.database.models.trigger.model import Trigger, TriggerEvent, TriggerRenewalObservation
+from langflow.services.database.models.trigger.schemas import (
+    TERMINAL_EVENT_STATES,
+    TriggerEventFilter,
+    TriggerEventState,
+)
+from langflow.services.triggers.constants import REPLAY_DEDUPE_PREFIX, SESSION_PREFIX, TEST_DEDUPE_PREFIX
 from langflow.services.triggers.errors import ReplayWindowExpiredError, TriggerEventNotFoundError
 
 if TYPE_CHECKING:
@@ -54,6 +59,8 @@ async def append_event(
     payload: dict[str, Any] | None = None,
     available_at: datetime | None = None,
     replay_of_event_id: UUID | None = None,
+    state: TriggerEventState = TriggerEventState.PENDING,
+    error: str | None = None,
 ) -> tuple[TriggerEvent, bool]:
     """Append one ledger row. Returns ``(row, created)``.
 
@@ -65,7 +72,8 @@ async def append_event(
     event = TriggerEvent(
         trigger_id=trigger_id,
         dedupe_key=dedupe_key,
-        state=TriggerEventState.PENDING.value,
+        state=state.value,
+        error=error,
         attempt=0,
         available_at=available_at or _now(),
         payload=payload or {},
@@ -86,6 +94,7 @@ async def append_event(
                 attempt=event.attempt,
                 available_at=event.available_at,
                 payload=event.payload,
+                error=event.error,
                 replay_of_event_id=replay_of_event_id,
             )
             .on_conflict_do_nothing(index_elements=["trigger_id", "dedupe_key"])
@@ -114,7 +123,14 @@ async def append_event(
     return event, True
 
 
-async def append_events(session: AsyncSession, *, trigger_id: UUID, events: list[tuple[str, dict[str, Any]]]) -> int:
+async def append_events(
+    session: AsyncSession,
+    *,
+    trigger_id: UUID,
+    events: list[tuple[str, dict[str, Any]]],
+    state: TriggerEventState = TriggerEventState.PENDING,
+    error: str | None = None,
+) -> int:
     """Insert a source batch atomically, deduplicating at the database boundary."""
     from sqlalchemy.dialects.postgresql import insert as pg_insert
 
@@ -122,7 +138,9 @@ async def append_events(session: AsyncSession, *, trigger_id: UUID, events: list
     if dialect not in {"sqlite", "postgresql"}:
         created = 0
         for key, payload in events:
-            _, inserted = await append_event(session, trigger_id=trigger_id, dedupe_key=key, payload=payload)
+            _, inserted = await append_event(
+                session, trigger_id=trigger_id, dedupe_key=key, payload=payload, state=state, error=error
+            )
             created += int(inserted)
         return created
     insert = sqlite_insert if dialect == "sqlite" else pg_insert
@@ -136,7 +154,8 @@ async def append_events(session: AsyncSession, *, trigger_id: UUID, events: list
                 "trigger_id": trigger_id,
                 "dedupe_key": key,
                 "payload": payload,
-                "state": TriggerEventState.PENDING.value,
+                "state": state.value,
+                "error": error,
                 "attempt": 0,
                 "available_at": now,
             }
@@ -169,21 +188,70 @@ async def get_event(session: AsyncSession, *, trigger_id: UUID, event_id: UUID) 
     return row
 
 
+def _matches(event_filter: TriggerEventFilter):
+    """The ledger condition for ``event_filter``; the events drawer labels rows by the same rules."""
+    if event_filter is TriggerEventFilter.FAILED:
+        return col(TriggerEvent.state).in_((TriggerEventState.FAILED.value, TriggerEventState.DEAD.value))
+    if event_filter is TriggerEventFilter.SKIPPED:
+        return TriggerEvent.state == TriggerEventState.SKIPPED.value
+    is_replay = or_(
+        col(TriggerEvent.replay_of_event_id).is_not(None),
+        col(TriggerEvent.dedupe_key).startswith(f"{REPLAY_DEDUPE_PREFIX}:"),
+    )
+    if event_filter is TriggerEventFilter.REPLAYS:
+        return is_replay
+    return and_(col(TriggerEvent.dedupe_key).startswith(f"{TEST_DEDUPE_PREFIX}:"), not_(is_replay))
+
+
 async def list_events(
     session: AsyncSession,
     *,
     trigger_id: UUID,
     limit: int = 50,
     offset: int = 0,
+    event_filter: TriggerEventFilter | None = None,
 ) -> list[TriggerEvent]:
+    """A page of ``trigger_id``'s events, newest first, optionally only those ``event_filter`` matches."""
+    statement = select(TriggerEvent).where(TriggerEvent.trigger_id == trigger_id)
+    if event_filter is not None:
+        statement = statement.where(_matches(event_filter))
     statement = (
-        select(TriggerEvent)
-        .where(TriggerEvent.trigger_id == trigger_id)
-        .order_by(col(TriggerEvent.created_at).desc(), col(TriggerEvent.id).desc())
-        .offset(offset)
-        .limit(limit)
+        statement.order_by(col(TriggerEvent.created_at).desc(), col(TriggerEvent.id).desc()).offset(offset).limit(limit)
     )
     return list((await session.exec(statement)).all())
+
+
+async def session_origins(
+    session: AsyncSession,
+    *,
+    flow_id: UUID,
+    session_ids: list[str],
+) -> list[tuple[str, Trigger, datetime]]:
+    """For each of ``session_ids`` a trigger on ``flow_id`` started: the trigger and its first event's time.
+
+    A run's session id is the correlation key between the run and its event,
+    so the ledger already knows what started each one. Other ids are skipped.
+    """
+    trigger_sessions = [sid for sid in session_ids if sid.startswith(f"{SESSION_PREFIX}:")]
+    if not trigger_sessions:
+        return []
+    started_at = func.min(TriggerEvent.created_at)
+    statement = (
+        select(TriggerEvent.session_id, TriggerEvent.trigger_id, started_at)
+        .join(Trigger, col(Trigger.id) == col(TriggerEvent.trigger_id))
+        .where(Trigger.flow_id == flow_id, col(TriggerEvent.session_id).in_(trigger_sessions))
+        .group_by(TriggerEvent.session_id, TriggerEvent.trigger_id)
+    )
+    starts = (await session.exec(statement)).all()
+    triggers = {
+        row.id: row
+        for row in (
+            await session.exec(select(Trigger).where(col(Trigger.id).in_({trigger_id for _, trigger_id, _ in starts})))
+        ).all()
+    }
+    return [
+        (session_id, triggers[trigger_id], first) for session_id, trigger_id, first in starts if trigger_id in triggers
+    ]
 
 
 async def replay_event(
@@ -212,6 +280,10 @@ async def replay_event(
         dedupe_key=dedupe_key,
         payload=original.payload,
         replay_of_event_id=original.id,
+        state=TriggerEventState.SKIPPED
+        if original.state == TriggerEventState.SKIPPED.value
+        else TriggerEventState.PENDING,
+        error=original.error if original.state == TriggerEventState.SKIPPED.value else None,
     )
     return replay
 
@@ -228,6 +300,7 @@ async def purge_events(
     not happened yet, however old it looks. Returns the number of rows removed.
     """
     cutoff = (now or _now()) - timedelta(days=retention_days)
+    await session.exec(delete(TriggerRenewalObservation).where(TriggerRenewalObservation.observed_at < cutoff))
     statement = delete(TriggerEvent).where(
         col(TriggerEvent.state).in_(sorted(TERMINAL_EVENT_STATES)),
         col(TriggerEvent.created_at) < cutoff,

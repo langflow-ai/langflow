@@ -2,6 +2,7 @@
 
 from langflow.services.authorization.actions import (
     ConnectionAction,
+    DatasetAction,
     DeploymentAction,
     FileAction,
     FlowAction,
@@ -23,6 +24,7 @@ from langflow.services.authorization.fetch import authorized_or_owner_scoped, de
 from langflow.services.authorization.guards import (
     capability_probe,
     ensure_connection_permission,
+    ensure_dataset_permission,
     ensure_deployment_permission,
     ensure_file_permission,
     ensure_flow_audit_read_permission,
@@ -54,6 +56,7 @@ from langflow.services.authorization.service import LangflowAuthorizationService
 __all__ = [
     "AuditPersistenceError",
     "ConnectionAction",
+    "DatasetAction",
     "DeploymentAction",
     "FileAction",
     "FlowAction",
@@ -72,6 +75,7 @@ __all__ = [
     "deny_to_404",
     "drain_pending_audit_writes",
     "ensure_connection_permission",
+    "ensure_dataset_permission",
     "ensure_deployment_permission",
     "ensure_file_permission",
     "ensure_flow_audit_read_permission",

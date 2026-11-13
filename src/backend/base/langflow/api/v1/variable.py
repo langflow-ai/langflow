@@ -1,9 +1,11 @@
 import asyncio
 import json
 import logging
+from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
+from lfx.base.models.decision_constants import DECISION_MODELS_DETAILED, DECISION_ONLY_PROVIDERS
 from lfx.base.models.unified_models import (
     get_all_variables_for_provider,
     get_model_provider_variable_mapping,
@@ -12,6 +14,7 @@ from lfx.base.models.unified_models import (
     validate_model_provider_key,
 )
 from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+from lfx.services.settings.constants import AGENTIC_VARIABLES
 from sqlalchemy.exc import NoResultFound
 
 from langflow.api.utils import CurrentActiveUser, DbSession
@@ -20,23 +23,55 @@ from langflow.api.v1.models import (
     DISABLED_MODELS_VAR,
     ENABLED_MODELS_VAR,
     _aresolve_policy,
+    _policy_denial_as_not_found,
     _require_provider,
     build_model_providers_by_name,
     get_provider_from_variable_name,
     normalize_model_status_entries,
 )
 from langflow.api.v1.schemas.deployments import DetectVarsRequest, DetectVarsResponse
+from langflow.services.auth.context import current_auth_is_restricted_api_key
 from langflow.services.authorization import VariableAction, ensure_variable_permission
+from langflow.services.authorization.audit import AUDIT_DENY, audit_decision
 from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
-from langflow.services.authorization.listing import visible_scope_prefilter
+from langflow.services.authorization.listing import filter_visible_resources, visible_scope_prefilter
 from langflow.services.database.models.flow_version.crud import get_flow_version_entries_by_ids
 from langflow.services.database.models.variable.model import Variable, VariableCreate, VariableRead, VariableUpdate
 from langflow.services.deps import get_variable_service
-from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
+from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE, is_oauth_registration_variable
 from langflow.services.variable.service import DatabaseVariableService, has_variable_value
 
 router = APIRouter(prefix="/variables", tags=["Variables"])
 logger = logging.getLogger(__name__)
+
+
+async def _guard_credential_mutation(
+    user: CurrentActiveUser,
+    action: VariableAction,
+    *variables: Variable | VariableCreate | VariableUpdate,
+    session: DbSession,
+) -> None:
+    """Keep credential changes outside a restricted key's permissions."""
+    if not current_auth_is_restricted_api_key():
+        return
+    if not any(
+        (variable.type or CREDENTIAL_TYPE) == CREDENTIAL_TYPE
+        or get_provider_from_variable_name(variable.name) is not None
+        for variable in variables
+    ):
+        return
+    variable_id = getattr(variables[0], "id", None)
+    # These routes have only read the candidate row at this point. Release
+    # their connection before a durable denial audit checks out another one.
+    await session.rollback()
+    await audit_decision(
+        user_id=user.id,
+        obj=f"variable:{variable_id or '*'}",
+        action=f"variable:{action.value}",
+        result=AUDIT_DENY,
+        details={"reason": "restricted_api_key_credential_management"},
+    )
+    raise HTTPException(status_code=403, detail="Restricted API keys cannot manage credentials")
 
 
 async def _cleanup_model_list_variable(
@@ -134,6 +169,23 @@ async def _cleanup_provider_models(
     )
 
 
+_DECISION_PROVIDERS = frozenset(row["provider"] for row in DECISION_MODELS_DETAILED)
+
+
+def _validates_on_save(provider: str, checked_model_type: str | None) -> bool:
+    """Whether saving this provider's key runs a chat check, as it does for any chat provider.
+
+    A decision check is billed, so a key is never checked again here after one: a decision-only
+    provider's key, which Model Providers checks with /models/validate-provider, and a mixed
+    provider's key the caller says it just checked for decision models (``checked_model_type`` is
+    "decision", sent when a decision picker saves OpenAI's key). A key with only Decisions access
+    then saves without chat access. A provider with no decision models is always checked.
+    """
+    if provider in DECISION_ONLY_PROVIDERS:
+        return False
+    return not (checked_model_type == "decision" and provider in _DECISION_PROVIDERS)
+
+
 @router.post("/", response_model=VariableRead, status_code=201, include_in_schema=False)
 async def create_variable(
     *,
@@ -141,8 +193,12 @@ async def create_variable(
     variable: VariableCreate,
     current_user: CurrentActiveUser,
     provider_policy_attributes: ProviderPolicyAttributesDependency,
+    checked_model_type: Annotated[Literal["decision"] | None, Query()] = None,
 ):
     """Create a new variable."""
+    if is_oauth_registration_variable(variable.name):
+        raise HTTPException(status_code=422, detail="OAuth registrations must be managed from Connections settings.")
+    await _guard_credential_mutation(current_user, VariableAction.CREATE, variable, session=session)
     await ensure_variable_permission(
         current_user,
         VariableAction.CREATE,
@@ -172,14 +228,21 @@ async def create_variable(
     if variable.name in await variable_service.list_variables(user_id=current_user.id, session=session):
         raise HTTPException(status_code=400, detail="Variable name already exists")
 
-    if provider is not None and variable.name == get_model_provider_variable_mapping().get(provider):
+    if (
+        provider is not None
+        and variable.name == get_model_provider_variable_mapping().get(provider)
+        and _validates_on_save(provider, checked_model_type)
+    ):
         provider_vars = await asyncio.to_thread(get_all_variables_for_provider, current_user.id, provider)
         try:
-            await asyncio.to_thread(
-                validate_model_provider_key,
-                provider,
-                {**provider_vars, variable.name: variable.value},
-            )
+            with _policy_denial_as_not_found():
+                await asyncio.to_thread(
+                    validate_model_provider_key,
+                    provider,
+                    {**provider_vars, variable.name: variable.value},
+                    user_id=current_user.id,
+                    policy_attributes=provider_policy_attributes,
+                )
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -218,11 +281,12 @@ async def read_variables(
 
     Returns a list of variables.
     """
-    await ensure_variable_permission(
-        current_user,
-        VariableAction.READ,
-        variable_user_id=current_user.id,
-    )
+    if not current_auth_is_restricted_api_key():
+        await ensure_variable_permission(
+            current_user,
+            VariableAction.READ,
+            variable_user_id=current_user.id,
+        )
     provider_policy = await _aresolve_policy(
         current_user,
         ModelProviderPolicyPurpose.CONFIGURE,
@@ -250,8 +314,15 @@ async def read_variables(
             user_id=current_user.id,
             session=session,
             visibility=visibility,
-            include_empty_names=resettable_provider_variables,
+            include_empty_names=resettable_provider_variables | set(AGENTIC_VARIABLES),
         )
+        if visibility is None and current_auth_is_restricted_api_key():
+            all_variables = await filter_visible_resources(
+                current_user,
+                resource_type="variable",
+                candidates=all_variables,
+                act=VariableAction.READ,
+            )
 
         # Filter out internal variables (those starting and ending with __)
         filtered_variables = []
@@ -290,6 +361,7 @@ async def update_variable(
     variable: VariableUpdate,
     current_user: CurrentActiveUser,
     provider_policy_attributes: ProviderPolicyAttributesDependency,
+    checked_model_type: Annotated[Literal["decision"] | None, Query()] = None,
 ):
     """Update a variable."""
     variable_service = get_variable_service()
@@ -307,12 +379,24 @@ async def update_variable(
             owner_column=Variable.user_id,
             owner_id=current_user.id,
         )
-        if existing_variable is None:
+        if existing_variable is None or is_oauth_registration_variable(existing_variable.name):
             raise HTTPException(status_code=404, detail="Variable not found")
+        if is_oauth_registration_variable(variable.name):
+            raise HTTPException(
+                status_code=422, detail="OAuth registrations must be managed from Connections settings."
+            )
+        if current_auth_is_restricted_api_key():
+            session.expunge(existing_variable)
+            await session.rollback()
         # Pass the *resource* owner so the owner-override only fast-paths the real
         # owner; a non-owner falls through to the plugin's enforce(). Plugin deny
         # → 404 (UUID privacy), matching the flow/deployment routes.
         owner_id = existing_variable.user_id
+        effective_variable = VariableUpdate(
+            id=variable_id,
+            name=variable.name or existing_variable.name,
+            type=variable.type or existing_variable.type,
+        )
         try:
             await ensure_variable_permission(
                 current_user,
@@ -323,6 +407,13 @@ async def update_variable(
         except HTTPException as exc:
             raise deny_to_404(exc, detail="Variable not found") from exc
 
+        await _guard_credential_mutation(
+            current_user,
+            VariableAction.WRITE,
+            existing_variable,
+            effective_variable,
+            session=session,
+        )
         # Validate provider variables using their effective post-update name.
         # This closes the rename path from a generic variable into a hidden
         # provider credential while still allowing rename/delete cleanup.
@@ -335,15 +426,26 @@ async def update_variable(
                 ModelProviderPolicyPurpose.CONFIGURE,
                 provider_policy_attributes,
             )
-            if variable.value and effective_name == get_model_provider_variable_mapping().get(provider):
+            if (
+                variable.value
+                and effective_name == get_model_provider_variable_mapping().get(provider)
+                and _validates_on_save(provider, checked_model_type)
+            ):
                 # Run validation off the event loop; owner context (not caller) for share-aware updates.
-                provider_vars = await asyncio.to_thread(get_all_variables_for_provider, owner_id, provider)
+                # The key being replaced is never read: if its stored value can no longer be decrypted
+                # (a changed LANGFLOW_SECRET_KEY), reading it would block saving the new one.
+                provider_vars = await asyncio.to_thread(
+                    get_all_variables_for_provider, owner_id, provider, exclude=(effective_name,)
+                )
                 try:
-                    await asyncio.to_thread(
-                        validate_model_provider_key,
-                        provider,
-                        {**provider_vars, effective_name: variable.value},
-                    )
+                    with _policy_denial_as_not_found():
+                        await asyncio.to_thread(
+                            validate_model_provider_key,
+                            provider,
+                            {**provider_vars, effective_name: variable.value},
+                            user_id=current_user.id,
+                            policy_attributes=provider_policy_attributes,
+                        )
                 except ValueError as e:
                     raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -402,8 +504,11 @@ async def delete_variable(
             owner_column=Variable.user_id,
             owner_id=current_user.id,
         )
-        if variable_to_delete is None:
+        if variable_to_delete is None or is_oauth_registration_variable(variable_to_delete.name):
             raise HTTPException(status_code=404, detail="Variable not found")
+        if current_auth_is_restricted_api_key():
+            session.expunge(variable_to_delete)
+            await session.rollback()
         owner_id = variable_to_delete.user_id
         try:
             await ensure_variable_permission(
@@ -415,6 +520,7 @@ async def delete_variable(
         except HTTPException as exc:
             raise deny_to_404(exc, detail="Variable not found") from exc
 
+        await _guard_credential_mutation(current_user, VariableAction.DELETE, variable_to_delete, session=session)
         # Check if this variable is a model provider credential
         provider = get_provider_from_variable_name(variable_to_delete.name)
 

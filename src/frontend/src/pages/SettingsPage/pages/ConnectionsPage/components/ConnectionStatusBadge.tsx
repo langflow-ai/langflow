@@ -4,6 +4,7 @@ import type { ConnectionRead } from "@/controllers/API/queries/connections";
 
 export interface ConnectionStatusBadgeProps {
   connection: ConnectionRead;
+  unavailable?: boolean;
   /** Offers the fix inline for the states a user can act on. */
   onAuthorize?: (connection: ConnectionRead) => void;
 }
@@ -11,18 +12,24 @@ export interface ConnectionStatusBadgeProps {
 /** The connection's status, plus the one action that resolves it. */
 export function ConnectionStatusBadge({
   connection,
+  unavailable = false,
   onAuthorize,
 }: ConnectionStatusBadgeProps) {
   const { t } = useTranslation();
   const { status } = connection;
   const oauthReason =
-    connection.status_reason === "oauth-denied"
-      ? t("connections.add.denied")
-      : connection.status_reason === "oauth-expired"
-        ? t("connections.add.expired")
-        : connection.status_reason === "oauth-failed"
-          ? t("connections.add.failed")
-          : null;
+    connection.provider_key === "jira" &&
+    connection.status_reason === "oauth-refresh-token-missing"
+      ? t("connections.add.jiraRefreshMissing")
+      : connection.status_reason === "oauth-refresh-token-missing"
+        ? t("connections.add.refreshMissing")
+        : connection.status_reason === "oauth-denied"
+          ? t("connections.add.denied")
+          : connection.status_reason === "oauth-expired"
+            ? t("connections.add.expired")
+            : connection.status_reason === "oauth-failed"
+              ? t("connections.add.failed")
+              : null;
 
   const action = (label: string) =>
     onAuthorize ? (
@@ -35,6 +42,19 @@ export function ConnectionStatusBadge({
         {label}
       </button>
     ) : null;
+
+  if (unavailable) {
+    return (
+      <div className="flex flex-col gap-1">
+        <Badge variant="secondaryStatic" size="xq" className="w-fit">
+          {t("connections.status.unavailable")}
+        </Badge>
+        <span className="max-w-[16rem] text-xs text-muted-foreground">
+          {t("connections.status.reasonOwnerOnly")}
+        </span>
+      </div>
+    );
+  }
 
   if (status === "ready") {
     return (

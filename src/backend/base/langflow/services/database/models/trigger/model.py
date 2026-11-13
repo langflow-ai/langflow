@@ -28,7 +28,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 import sqlalchemy as sa
-from sqlalchemy import CheckConstraint, ForeignKey, Index, UniqueConstraint
+from sqlalchemy import CheckConstraint, ForeignKey, Index, UniqueConstraint, event
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql.naming import conv
 from sqlmodel import JSON, Column, DateTime, Field, SQLModel, func
@@ -129,6 +129,13 @@ class Trigger(SQLModel, table=True):  # type: ignore[call-arg]
     next_fire_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
     last_fired_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
     last_error: str | None = Field(default=None, sa_column=Column(sa.Text(), nullable=True))
+    # Set when an operator's bulk pause took this trigger out of service, so the
+    # owner sees who paused it and the operator's bulk resume re-arms only what
+    # it paused. A column rather than a ``last_error`` sentinel because a canvas
+    # save rewrites ``last_error`` on paused rows. Meaningful only while
+    # ``state`` is ``paused``: any write of another state clears it (see
+    # ``_release_admin_pause`` below), whichever code path makes the write.
+    admin_paused_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
     created_at: datetime | None = Field(
         default=None,
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
@@ -137,6 +144,21 @@ class Trigger(SQLModel, table=True):  # type: ignore[call-arg]
         default=None,
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False),
     )
+
+
+@event.listens_for(Trigger.state, "set")
+def _release_admin_pause(target: Trigger, value: str, _old: Any, _initiator: Any) -> None:
+    """An operator's pause marker never outlives the pause it explains.
+
+    Enforced on the attribute rather than in ``TriggerService.set_state``
+    because the dispatcher, listener supervisor, subscription renewal and
+    reconciliation all write ``state`` directly. A marker left on a row that
+    moved to ``needs_reconnect`` and was later paused for another reason would
+    otherwise read as "paused by an administrator", and the operator's bulk
+    resume would re-arm it.
+    """
+    if value != TriggerState.PAUSED.value:
+        target.admin_paused_at = None
 
 
 class TriggerEvent(SQLModel, table=True):  # type: ignore[call-arg]
@@ -209,6 +231,32 @@ class TriggerLease(SQLModel, table=True):  # type: ignore[call-arg]
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
     )
     expires_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
+
+
+class TriggerRenewalObservation(SQLModel, table=True):  # type: ignore[call-arg]
+    """One fenced renewal result, retaining the old and new coverage boundary.
+
+    A subscription row changes its expiry on every renewal. These bounded,
+    credential-free observations preserve enough history to distinguish an
+    on-time renewal from recovery after an observed coverage gap.
+    """
+
+    __tablename__ = "trigger_renewal_observation"
+    __table_args__ = (
+        CheckConstraint("outcome IN ('renewed', 'failed')", name=conv("ck_trigger_renewal_outcome")),
+        CheckConstraint("gap_seconds >= 0", name=conv("ck_trigger_renewal_gap_nonnegative")),
+    )
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    trigger_id: UUID = Field(
+        sa_column=Column(sa.Uuid(), ForeignKey("trigger.id", ondelete="CASCADE"), nullable=False, index=True)
+    )
+    subscription_id: UUID = Field(sa_column=Column(sa.Uuid(), nullable=False))
+    observed_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False, index=True))
+    previous_expires_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
+    expires_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
+    outcome: str = Field(sa_column=Column(sa.String(16), nullable=False))
+    gap_seconds: float = Field(default=0, sa_column=Column(sa.Float(), nullable=False))
 
 
 class TriggerListenerLease(SQLModel, table=True):  # type: ignore[call-arg]

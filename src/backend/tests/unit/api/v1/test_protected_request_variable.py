@@ -22,6 +22,7 @@ async def test_bing_url_header_does_not_override_owner_global_variable():
         _user_id=user_id,
     )
     with patch("lfx.custom.custom_component.custom_component.get_variable_service") as service:
+        service.return_value.get_account_bound_variable = AsyncMock(return_value=None)
         service.return_value.get_variable = AsyncMock(return_value="https://api.bing.microsoft.com/v7.0/search")
         result = await CustomComponent.get_variable(component, "BING_SEARCH_URL", "bing_search_url", object())
 

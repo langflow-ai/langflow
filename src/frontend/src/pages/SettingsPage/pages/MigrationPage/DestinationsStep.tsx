@@ -9,7 +9,13 @@ import {
   type ProbeResult,
   useSaveDestinationsMutation,
 } from "@/controllers/API/queries/migration";
-import { destinationsRequest, formatTime, hasStarted, PROBES } from "./catalog";
+import {
+  destinationsRequest,
+  formatTime,
+  hasStarted,
+  needsDestinationSecrets,
+  PROBES,
+} from "./catalog";
 
 /** The body of "Where your data goes": one section for each kind of data this instance keeps on its own server. */
 export function DestinationsStep({
@@ -25,6 +31,7 @@ export function DestinationsStep({
   const [editing, setEditing] = useState(false);
   const { instance } = migration;
   const saved = migration.record.destinations;
+  const credentialsMissing = needsDestinationSecrets(migration);
   // What the last test found: this page's own, or the one the record keeps while the step is refused.
   // A request that failed tested nothing, so the record's results are not shown as its outcome.
   const results =
@@ -32,7 +39,11 @@ export function DestinationsStep({
     (state.state === "blocked" && !save.isError ? saved?.results : undefined);
 
   // A form that was open when the new instance started closes with it: the server saves no other destination.
-  if (state.state === "done" && !(editing && !hasStarted(migration))) {
+  if (
+    state.state === "done" &&
+    !credentialsMissing &&
+    !(editing && !hasStarted(migration))
+  ) {
     return (
       <div className="flex flex-col items-start gap-3">
         <p className="text-sm">
@@ -225,7 +236,14 @@ function Field({
   const id = `migration-destination-${name}`;
   return (
     <div className="flex flex-col gap-1.5">
-      <Label htmlFor={id}>{label}</Label>
+      <div className="flex items-center gap-1">
+        <Label htmlFor={id}>{label}</Label>
+        {input.required && (
+          <span aria-hidden="true" className="text-destructive">
+            *
+          </span>
+        )}
+      </div>
       <Input
         id={id}
         name={name}

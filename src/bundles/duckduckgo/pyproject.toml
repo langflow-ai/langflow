@@ -1,9 +1,9 @@
 [project]
 name = "lfx-duckduckgo"
-version = "0.2.2"
+version = "0.3.0"
 description = "DuckDuckGo Search component as a standalone Langflow Extension Bundle."
 readme = "README.md"
-requires-python = ">=3.10,<3.15"
+requires-python = ">=3.10,<3.16"
 license = { text = "MIT" }
 authors = [
     { name = "Langflow", email = "contact@langflow.org" },
@@ -11,11 +11,10 @@ authors = [
 keywords = ["langflow", "lfx", "extension", "bundle", "duckduckgo", "search"]
 
 # Runtime deps: lfx (the BUNDLE_API surface), langchain-community, and ddgs.
-# This backport supports the lfx 1.13 line and stops below 1.14 so its higher
-# patch version cannot replace that newer line's bundle. BUNDLE_API compatibility
+# This release supports the lfx 1.14 line. BUNDLE_API compatibility
 # is enforced separately via extension.json's "lfx": {"compat": [...]} contract.
 dependencies = [
-    "lfx>=1.13.0.dev0,<1.14.0.dev0",
+    "lfx>=1.14.0.dev0,<2.0.0",
     "langchain-community>=0.4.1,<1.0.0",
     "ddgs>=9.0.0",
     "brotli>=1.2.1",

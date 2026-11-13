@@ -225,13 +225,29 @@ jobs:
       - name: Set up Python preview builds
         if: matrix.python-version == '3.15'
         uses: ./.github/actions/setup-python-preview
-      # The compatibility tests read historical flows and component indexes from these tags.
+      # The component compatibility tests read flows saved on these releases from their tags.
+      # --force because v1.13.0 still moves until 1.13 is final.
       - name: Fetch source release tags
         run: git fetch --depth=1 --force origin tag v1.12.6 tag v1.13.0
       - name: Run lfx tests
-        run: make lfx_tests
+        # Preserve the original snapshots; the next step binds the two known limits to exact digests.
+        run: make lfx_tests args="--deselect=tests/unit/upgrade/test_component_compat.py::test_source_release_statuses"
         env:
           DO_NOT_TRACK: true # disable telemetry reporting
+      - name: Enforce exact historical LFX pins
+        run: >-
+          uv run --project src/lfx --no-sync python scripts/ci/historical_compatibility_gate.py
+          --ledger scripts/ci/historical_compatibility_limitations.json --output src/lfx/historical-pins.json
+        env:
+          DO_NOT_TRACK: true
+      - name: Retain historical LFX evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: lfx-historical-pins-py${{ matrix.python-version }}
+          path: src/lfx/historical-pins.json
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v7

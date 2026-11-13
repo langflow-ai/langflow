@@ -28,7 +28,7 @@ from lfx.services.storage.service import StorageService
 from lfx.template.utils import update_frontend_node_with_template_values
 from lfx.type_extraction import post_process_type
 from lfx.utils.async_helpers import run_until_complete
-from lfx.utils.file_path_security import validate_storage_key
+from lfx.utils.file_path_security import component_file_access_scopes, validate_storage_key
 from lfx.utils.flow_validation import is_protected_tweak_field
 
 if TYPE_CHECKING:
@@ -487,6 +487,19 @@ class CustomComponent(BaseComponent):
         Returns:
             The variable for the current user with the specified name.
         """
+        # Serving-plane execution accounts may require their own persisted
+        # credentials even when a request supplies a same-named override.
+        variable_service = get_variable_service()
+        resolve_bound = getattr(variable_service, "get_account_bound_variable", None)
+        try:
+            bound_user_id = self.user_id
+        except (AttributeError, ValueError):
+            bound_user_id = None
+        if resolve_bound is not None and bound_user_id:
+            bound = await resolve_bound(user_id=bound_user_id, name=name, field=field, session=session)
+            if bound is not None:
+                return bound.value
+
         # Check graph context for request-level variable overrides first
         # This allows run_flow to work without user_id when variables are passed
         if hasattr(self, "graph") and self.graph and hasattr(self.graph, "context"):
@@ -667,7 +680,9 @@ class CustomComponent(BaseComponent):
         This function is called after the code validation is done.
         """
         return update_frontend_node_with_template_values(
-            frontend_node=new_frontend_node, raw_frontend_node=current_frontend_node
+            frontend_node=new_frontend_node,
+            raw_frontend_node=current_frontend_node,
+            scope_ids=component_file_access_scopes(self),
         )
 
     def get_langchain_callbacks(self) -> list[BaseCallbackHandler]:

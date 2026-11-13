@@ -1,5 +1,12 @@
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  type ReactNode,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
@@ -51,6 +58,7 @@ import type { FolderType } from "../../../../../pages/MainPage/entities";
 import useAlertStore from "../../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../../stores/foldersStore";
+import { useUtilityStore } from "../../../../../stores/utilityStore";
 import { handleKeyDown } from "../../../../../utils/reactflowUtils";
 import { cn } from "../../../../../utils/utils";
 import useFileDrop from "../../hooks/use-on-file-drop";
@@ -90,6 +98,9 @@ const SideBarFoldersButtonsComponent = ({
   const loading = !folders;
   const projectSidebar = useCustomProjectSidebar(folders);
   const refInput = useRef<HTMLInputElement>(null);
+  const projectMenuRef = useRef<HTMLUListElement>(null);
+  const [activeIndicatorStyle, setActiveIndicatorStyle] =
+    useState<CSSProperties>({ opacity: 0 });
 
   const _navigate = useCustomNavigate();
 
@@ -114,6 +125,31 @@ const SideBarFoldersButtonsComponent = ({
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
   const folderId = useParams().folderId ?? myCollectionId ?? "";
+
+  useLayoutEffect(() => {
+    if (!projectSidebar.activeIndicatorClassName) return;
+
+    const menu = projectMenuRef.current;
+    const activeButton = menu?.querySelector<HTMLElement>(
+      '[data-sidebar="menu-button"][data-active="true"]',
+    );
+    if (!menu || !activeButton) {
+      setActiveIndicatorStyle((style) => ({ ...style, opacity: 0 }));
+      return;
+    }
+
+    const menuBounds = menu.getBoundingClientRect();
+    const buttonBounds = activeButton.getBoundingClientRect();
+    setActiveIndicatorStyle({
+      height: buttonBounds.height,
+      opacity: 1,
+      transform: `translateY(${buttonBounds.top - menuBounds.top}px)`,
+    });
+  }, [
+    pathname,
+    projectSidebar.activeIndicatorClassName,
+    projectSidebar.projects,
+  ]);
 
   const { dragOver, dragEnter, dragLeave, onDrop } = useFileDrop(folderId);
   const uploadFlow = useUploadFlow();
@@ -183,7 +219,16 @@ const SideBarFoldersButtonsComponent = ({
 
       getObjectsFromFilelist<UploadedFlowFile>(files)
         .then((objects) => {
-          if (objects.every((flow) => flow.data?.nodes)) {
+          if (
+            objects.every(
+              (flow) =>
+                flow &&
+                (("data" in flow && flow.data?.nodes) ||
+                  ("flows" in flow &&
+                    Array.isArray(flow.flows) &&
+                    !("folder_name" in flow))),
+            )
+          ) {
             uploadFlow({ files })
               .then(() => {
                 setSuccessData({
@@ -193,9 +238,7 @@ const SideBarFoldersButtonsComponent = ({
               .catch((error) => {
                 setErrorData({
                   title: t("errors.upload"),
-                  list: [
-                    error instanceof Error ? error.message : String(error),
-                  ],
+                  list: extractApiErrorMessages(error),
                 });
               });
           } else {
@@ -214,10 +257,7 @@ const SideBarFoldersButtonsComponent = ({
                     console.error(err);
                     setErrorData({
                       title: t("sidebar.projectUploadError"),
-                      list: [
-                        err?.response?.data?.detail ??
-                          (err instanceof Error ? err.message : String(err)),
-                      ],
+                      list: extractApiErrorMessages(err),
                     });
                   },
                 },
@@ -228,7 +268,7 @@ const SideBarFoldersButtonsComponent = ({
         .catch((error) => {
           setErrorData({
             title: t("errors.upload"),
-            list: [error instanceof Error ? error.message : String(error)],
+            list: extractApiErrorMessages(error),
           });
         });
     });
@@ -441,12 +481,22 @@ const SideBarFoldersButtonsComponent = ({
     _navigate("/assets/knowledge-bases");
   };
 
+  const evalsEnabled = useUtilityStore(
+    (state) => state.featureFlags.evals === true,
+  );
+
   return (
     <Sidebar
+      aria-hidden={
+        projectSidebar.secondaryNavigationState === "closed" || undefined
+      }
+      data-secondary-navigation-state={projectSidebar.secondaryNavigationState}
       collapsible={isMobile ? "offcanvas" : "none"}
       className={projectSidebar.className}
       data-testid="project-sidebar"
       aria-labelledby="project-sidebar-title"
+      id="project-sidebar"
+      inert={projectSidebar.secondaryNavigationState === "closed" || undefined}
     >
       <SidebarHeader
         className={cn("px-4 py-1", projectSidebar.headerContainerClassName)}
@@ -472,7 +522,20 @@ const SideBarFoldersButtonsComponent = ({
                 .map((folder) => folder.id ?? "")
                 .filter(Boolean)}
             >
-              <SidebarMenu>
+              <SidebarMenu
+                className={cn(
+                  projectSidebar.activeIndicatorClassName && "relative",
+                )}
+                ref={projectMenuRef}
+              >
+                {projectSidebar.activeIndicatorClassName ? (
+                  <span
+                    aria-hidden="true"
+                    className={projectSidebar.activeIndicatorClassName}
+                    data-testid="project-active-indicator"
+                    style={activeIndicatorStyle}
+                  />
+                ) : null}
                 {!loading ? (
                   projectSidebar.projects.length === 0 ? (
                     <div className="px-2 py-5 text-center text-sm text-muted-foreground">
@@ -604,7 +667,7 @@ const SideBarFoldersButtonsComponent = ({
           </div>
         )}
       </SidebarContent>
-      {(projectSidebar.footer || ENABLE_FILE_MANAGEMENT) && (
+      {(projectSidebar.footer || ENABLE_FILE_MANAGEMENT || evalsEnabled) && (
         <SidebarFooter
           className={cn("border-t", projectSidebar.footerClassName)}
         >
@@ -615,33 +678,40 @@ const SideBarFoldersButtonsComponent = ({
             )}
           >
             {projectSidebar.footer}
+            {ENABLE_FILE_MANAGEMENT && ENABLE_KNOWLEDGE_BASES && (
+              <SidebarMenuButton
+                onClick={handleKnowledgeNavigation}
+                size="md"
+                className={cn("text-sm", projectSidebar.footerItemClassName)}
+              >
+                <ForwardedIconComponent name="Library" className="h-4 w-4" />
+                {t("sidebar.knowledge")}
+              </SidebarMenuButton>
+            )}
+            {/* Evals has its own flag and routes; it does not depend on file management. */}
+            {evalsEnabled && (
+              <SidebarMenuButton
+                onClick={() => _navigate("/assets/datasets")}
+                size="md"
+                className={cn("text-sm", projectSidebar.footerItemClassName)}
+                data-testid="sidebar-evaluations"
+              >
+                <ForwardedIconComponent
+                  name="FlaskConical"
+                  className="h-4 w-4"
+                />
+                {t("sidebar.evaluations")}
+              </SidebarMenuButton>
+            )}
             {ENABLE_FILE_MANAGEMENT && (
-              <>
-                {ENABLE_KNOWLEDGE_BASES && (
-                  <SidebarMenuButton
-                    onClick={handleKnowledgeNavigation}
-                    size="md"
-                    className={cn(
-                      "text-sm",
-                      projectSidebar.footerItemClassName,
-                    )}
-                  >
-                    <ForwardedIconComponent
-                      name="Library"
-                      className="h-4 w-4"
-                    />
-                    {t("sidebar.knowledge")}
-                  </SidebarMenuButton>
-                )}
-                <SidebarMenuButton
-                  onClick={handleFilesNavigation}
-                  size="md"
-                  className={cn("text-sm", projectSidebar.footerItemClassName)}
-                >
-                  <ForwardedIconComponent name="File" className="h-4 w-4" />
-                  {t("sidebar.myFiles")}
-                </SidebarMenuButton>
-              </>
+              <SidebarMenuButton
+                onClick={handleFilesNavigation}
+                size="md"
+                className={cn("text-sm", projectSidebar.footerItemClassName)}
+              >
+                <ForwardedIconComponent name="File" className="h-4 w-4" />
+                {t("sidebar.myFiles")}
+              </SidebarMenuButton>
             )}
           </div>
         </SidebarFooter>

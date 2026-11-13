@@ -458,6 +458,54 @@ describe("useModelToggleQueue", () => {
       expect(updated.enabled_models["Azure AI Foundry"].shared).toBe(true);
     });
 
+    it.each([
+      ["a decision model", "decision", { llm: false, decision: true }, true],
+      ["the last enabled kind", "llm", { llm: false, decision: false }, false],
+    ] as const)(
+      "keeps the flat union in step across three kinds when disabling the llm entry leaves %s",
+      (_label, _remaining, after, flat) => {
+        const { result } = renderHook(() =>
+          useModelToggleQueue({ providerName: "OpenAI" }),
+        );
+
+        act(() => {
+          invokeTypedToggle(
+            result.current.handleModelToggle,
+            "gpt-6-luna",
+            false,
+            "llm",
+          );
+        });
+
+        const updater = trackingQueryClient.setQueryData.mock.calls[0][1] as (
+          old: unknown,
+        ) => unknown;
+        const updated = updater({
+          enabled_models: { OpenAI: { "gpt-6-luna": true } },
+          enabled_models_by_type: {
+            OpenAI: {
+              llm: { "gpt-6-luna": true },
+              decision: { "gpt-6-luna": after.decision },
+            },
+          },
+        }) as {
+          enabled_models: Record<string, Record<string, boolean>>;
+          enabled_models_by_type: Record<
+            string,
+            Partial<Record<ModelType, Record<string, boolean>>>
+          >;
+        };
+
+        expect(updated.enabled_models_by_type.OpenAI.llm?.["gpt-6-luna"]).toBe(
+          after.llm,
+        );
+        expect(
+          updated.enabled_models_by_type.OpenAI.decision?.["gpt-6-luna"],
+        ).toBe(after.decision);
+        expect(updated.enabled_models.OpenAI["gpt-6-luna"]).toBe(flat);
+      },
+    );
+
     it("falls back per provider when only another provider has typed status", () => {
       const { result } = renderHook(() =>
         useModelToggleQueue({ providerName: "OpenAI" }),

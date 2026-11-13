@@ -341,7 +341,7 @@ async def test_repeated_cancellation_cannot_strand_the_run(
 async def test_disconnected_playground_stream_finalizes_the_run(
     client, logged_in_headers, active_user, monkeypatch, tmp_path
 ):
-    """Leaving the flow drops the stream; the run must still end cancelled.
+    """Leaving the flow drops the stream and the run must still end canceled.
 
     Use the same shielded teardown as ``_stream_event_frames`` after Starlette
     cancels the response's AnyIO scope on disconnect.

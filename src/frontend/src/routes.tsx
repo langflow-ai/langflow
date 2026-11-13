@@ -17,6 +17,7 @@ import {
   ENABLE_CUSTOM_PARAM,
   ENABLE_FILE_MANAGEMENT,
   ENABLE_KNOWLEDGE_BASES,
+  ENABLE_TRIGGERS,
 } from "./customization/feature-flags";
 import { CustomAuthRoutesStore } from "./customization/utils/custom-auth-routes-store";
 import { CustomRoutesStore } from "./customization/utils/custom-routes-store";
@@ -26,6 +27,11 @@ import { AppInitPage } from "./pages/AppInitPage";
 import { AppWrapperPage } from "./pages/AppWrapperPage";
 import FlowPage from "./pages/FlowPage";
 import LoginPage from "./pages/LoginPage";
+import DatasetDetailPage from "./pages/MainPage/pages/evalsPage/DatasetDetailPage";
+import DatasetsPage from "./pages/MainPage/pages/evalsPage/DatasetsPage";
+import EvalsRoute from "./pages/MainPage/pages/evalsPage/EvalsRoute";
+import EvaluationDetailPage from "./pages/MainPage/pages/evalsPage/EvaluationDetailPage";
+import EvaluationsPage from "./pages/MainPage/pages/evalsPage/EvaluationsPage";
 import FilesPage from "./pages/MainPage/pages/filesPage";
 import HomePage from "./pages/MainPage/pages/homePage";
 import KnowledgePage from "./pages/MainPage/pages/knowledgePage";
@@ -43,6 +49,8 @@ import MigrationPage from "./pages/SettingsPage/pages/MigrationPage";
 import ModelProvidersPage from "./pages/SettingsPage/pages/ModelProvidersPage";
 import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
 import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
+import TriggersPage from "./pages/SettingsPage/pages/TriggersPage";
+import UpgradeReportsPage from "./pages/SettingsPage/pages/UpgradeReportsPage";
 
 const LoginAdminPage = lazy(() => import("./pages/AdminPage/LoginPage"));
 
@@ -89,27 +97,67 @@ const router = createBrowserRouter(
                     index
                     element={<CustomNavigate replace to={"flows"} />}
                   />
-                  {ENABLE_FILE_MANAGEMENT && (
-                    <Route path="assets">
-                      <Route
-                        index
-                        element={<CustomNavigate replace to="files" />}
-                      />
-                      <Route path="files" element={<FilesPage />} />
-                      {ENABLE_KNOWLEDGE_BASES && (
-                        <>
-                          <Route
-                            path="knowledge-bases"
-                            element={<KnowledgePage />}
-                          />
-                          <Route
-                            path="knowledge-bases/:sourceId/chunks"
-                            element={<SourceChunksPage />}
-                          />
-                        </>
-                      )}
-                    </Route>
-                  )}
+                  {/* Evals has its own flag (checked by EvalsRoute), so its routes do not depend on file management. */}
+                  <Route path="assets">
+                    <Route
+                      index
+                      element={
+                        <CustomNavigate
+                          replace
+                          to={ENABLE_FILE_MANAGEMENT ? "files" : "datasets"}
+                        />
+                      }
+                    />
+                    <Route
+                      path="datasets"
+                      element={
+                        <EvalsRoute>
+                          <DatasetsPage />
+                        </EvalsRoute>
+                      }
+                    />
+                    <Route
+                      path="datasets/:datasetId"
+                      element={
+                        <EvalsRoute>
+                          <DatasetDetailPage />
+                        </EvalsRoute>
+                      }
+                    />
+                    <Route
+                      path="evaluations"
+                      element={
+                        <EvalsRoute>
+                          <EvaluationsPage />
+                        </EvalsRoute>
+                      }
+                    />
+                    <Route
+                      path="evaluations/:evaluationId"
+                      element={
+                        <EvalsRoute>
+                          <EvaluationDetailPage />
+                        </EvalsRoute>
+                      }
+                    />
+                    {ENABLE_FILE_MANAGEMENT && (
+                      <>
+                        <Route path="files" element={<FilesPage />} />
+                        {ENABLE_KNOWLEDGE_BASES && (
+                          <>
+                            <Route
+                              path="knowledge-bases"
+                              element={<KnowledgePage />}
+                            />
+                            <Route
+                              path="knowledge-bases/:sourceId/chunks"
+                              element={<SourceChunksPage />}
+                            />
+                          </>
+                        )}
+                      </>
+                    )}
+                  </Route>
                   <Route
                     path="flows/"
                     element={<HomePage key="flows" type="flows" />}
@@ -158,6 +206,9 @@ const router = createBrowserRouter(
                   <Route path="db-providers" element={<DBProvidersPage />} />
                   <Route path="mcp-servers" element={<MCPServersPage />} />
                   <Route path="connections" element={<ConnectionsPage />} />
+                  {ENABLE_TRIGGERS && (
+                    <Route path="triggers" element={<TriggersPage />} />
+                  )}
                   <Route path="mcp-client" element={<McpClientPage />} />
 
                   <Route path="api-keys" element={<ApiKeysPage />} />
@@ -172,6 +223,10 @@ const router = createBrowserRouter(
                   <Route path="shortcuts" element={<ShortcutsPage />} />
                   <Route path="messages" element={<MessagesPage />} />
                   <Route path="migration" element={<MigrationPage />} />
+                  <Route
+                    path="upgrade-reports"
+                    element={<UpgradeReportsPage />}
+                  />
                   {CustomRoutesStore()}
                 </Route>
                 {CustomRoutesStorePages()}

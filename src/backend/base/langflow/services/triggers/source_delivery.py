@@ -15,8 +15,10 @@ from typing import TYPE_CHECKING, Any
 from sqlmodel import col, select, update
 
 from langflow.services.database.models.trigger.model import Trigger, TriggerSourceVersion
+from langflow.services.database.models.trigger.schemas import TriggerEventState
 from langflow.services.triggers import ledger
-from langflow.services.triggers.constants import PUSH_MECHANISMS
+from langflow.services.triggers.providers.registry import push_mechanisms
+from langflow.services.triggers.source_items import validate_source_items
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -65,6 +67,7 @@ async def append_and_advance(
     database uniqueness constraint collapses replays, including a push and a
     poll of the same provider item.
     """
+    validate_source_items(items)
     if session.get_bind().dialect.name == "sqlite":
         # FOR UPDATE is ignored by SQLite. Serialize before reading the cursor
         # so a second collector cannot commit against the same stale version.
@@ -165,11 +168,21 @@ async def append_and_advance(
             version=f"deleted:{removed_version}" if removed_version is not None else version,
         )
         events.append((key, item))
-    created = await ledger.append_events(session, trigger_id=trigger_id, events=events)
+    pending = [(key, item) for key, item in events if not item.get("skip_reason")]
+    skipped = [(key, item) for key, item in events if item.get("skip_reason") == "sender_not_allowed"]
+    created = await ledger.append_events(session, trigger_id=trigger_id, events=pending)
+    if skipped:
+        created += await ledger.append_events(
+            session,
+            trigger_id=trigger_id,
+            events=skipped,
+            state=TriggerEventState.SKIPPED,
+            error="sender_not_allowed",
+        )
     if cursor is not None:
         row.provider_state = {**state, **cursor}
         row.updated_at = datetime.now(timezone.utc)
-        if expected_mechanism_id in PUSH_MECHANISMS:
+        if expected_mechanism_id in push_mechanisms():
             # Provider notifications may be dropped. The dispatcher scans the
             # source independently even when no notification arrives.
             row.next_fire_at = row.updated_at + timedelta(minutes=5)

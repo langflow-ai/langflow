@@ -2,9 +2,11 @@
 
 This module tests the following bug fixes:
 1. Input port visibility: ModelInput should always show connection handle based on model_type.
-2. Model defaults (cb6208f0ab): The first 5 models from each provider should be marked as default.
+2. Model defaults (cb6208f0ab): The first 5 non-decision models from each provider should be marked as default.
 """
 
+import pytest
+from lfx.base.models.decision_constants import is_decision_row
 from lfx.base.models.unified_models import get_unified_models_detailed
 from lfx.inputs.inputs import ModelInput
 
@@ -79,16 +81,22 @@ class TestModelInputValueNormalization:
         assert model_input.value is None
 
 
+def _default_groups(models: list[dict]) -> tuple[list[dict], list[dict]]:
+    """Separate language and embedding models from decision models."""
+    return [m for m in models if not is_decision_row(m)], [m for m in models if is_decision_row(m)]
+
+
 class TestUnifiedModelsDefaults:
-    """Test that first 5 models per provider are marked as default (fix: cb6208f0ab)."""
+    """Test that each provider's first 5 non-decision models are marked as default."""
 
     def test_first_five_models_marked_default(self):
-        """First 5 models from each provider should have default=True in metadata."""
+        """Each provider's first 5 non-decision models should have default=True in metadata."""
         all_providers = get_unified_models_detailed()
 
         for provider_data in all_providers:
             provider = provider_data["provider"]
-            models = provider_data["models"]
+            models, decision_models = _default_groups(provider_data["models"])
+            assert all(model["metadata"].get("default") is False for model in decision_models)
 
             # Check first 5 models (or all if less than 5)
             num_to_check = min(5, len(models))
@@ -99,31 +107,27 @@ class TestUnifiedModelsDefaults:
                 )
 
     def test_models_after_five_not_default(self):
-        """Models after the first 5 should not be marked as default."""
+        """Non-decision models after the first 5 and all decision models should stay disabled."""
         all_providers = get_unified_models_detailed()
 
         for provider_data in all_providers:
             provider = provider_data["provider"]
-            models = provider_data["models"]
-
-            # Check models after first 5
-            if len(models) > 5:
-                for i in range(5, len(models)):
-                    model = models[i]
-                    # These should not have default=True
-                    assert model["metadata"].get("default") is not True, (
-                        f"Model {i} in provider {provider} should not be marked as default"
-                    )
+            models, decision_models = _default_groups(provider_data["models"])
+            assert all(model["metadata"].get("default") is False for model in decision_models)
+            for i in range(5, len(models)):
+                assert models[i]["metadata"].get("default") is not True, (
+                    f"Model {i} in provider {provider} should not be marked as default"
+                )
 
     def test_only_defaults_filter_works(self):
-        """When only_defaults=True, only first 5 models per provider are returned."""
+        """When only_defaults=True, each provider returns at most 5 non-decision models."""
         all_providers = get_unified_models_detailed(only_defaults=True)
 
         for provider_data in all_providers:
             provider = provider_data["provider"]
             models = provider_data["models"]
 
-            # Should have at most 5 models
+            assert not any(is_decision_row(model) for model in models)
             assert len(models) <= 5, f"Provider {provider} should have at most 5 models when only_defaults=True"
 
             # All returned models should have default=True
@@ -132,22 +136,15 @@ class TestUnifiedModelsDefaults:
                     f"All models from {provider} with only_defaults=True should be marked as default"
                 )
 
-    def test_defaults_not_affected_by_deprecated_filter(self):
-        """Default marking should work independently of deprecated filtering."""
-        providers_normal = get_unified_models_detailed(include_deprecated=False)
-        providers_with_deprecated = get_unified_models_detailed(include_deprecated=True)
+    @pytest.mark.parametrize("include_deprecated", [False, True])
+    def test_defaults_not_affected_by_deprecated_filter(self, include_deprecated):
+        """Deprecated filtering preserves non-decision defaults and leaves decision models disabled."""
+        providers = get_unified_models_detailed(include_deprecated=include_deprecated)
 
-        # Both should have defaults marked
-        for provider_data in providers_normal:
-            models = provider_data["models"]
+        for provider_data in providers:
+            models, decision_models = _default_groups(provider_data["models"])
+            assert all(model["metadata"].get("default") is False for model in decision_models)
             if models:
-                # At least first model should be default (if any models exist)
-                assert models[0]["metadata"].get("default") is True
-
-        for provider_data in providers_with_deprecated:
-            models = provider_data["models"]
-            if models:
-                # At least first model should be default (if any models exist)
                 assert models[0]["metadata"].get("default") is True
 
     def test_defaults_applied_after_filtering(self):
@@ -157,7 +154,8 @@ class TestUnifiedModelsDefaults:
 
         if providers:
             provider_data = providers[0]
-            models = provider_data["models"]
+            models, decision_models = _default_groups(provider_data["models"])
+            assert all(model["metadata"].get("default") is False for model in decision_models)
 
             # First 5 in the filtered list should be marked as default
             num_to_check = min(5, len(models))

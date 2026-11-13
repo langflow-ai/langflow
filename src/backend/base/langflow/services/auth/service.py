@@ -30,11 +30,13 @@ from langflow.services.auth.context import (
     AUTH_METHOD_JWT,
     AuthCredentialContext,
     clear_current_auth_context,
+    current_auth_is_restricted_api_key,
     set_current_auth_context,
 )
 from langflow.services.auth.exceptions import (
     AuthBackendUnavailableError,
     AuthenticationError,
+    ExternalAuthMaintenanceError,
     InactiveUserError,
     InvalidCredentialsError,
     MissingCredentialsError,
@@ -448,6 +450,9 @@ class AuthService(BaseAuthService):
                     except InvalidCredentialsError:
                         raise
                     except Exception as api_key_err:
+                        # A busy or lost database never judged the key: retryable, not a rejection.
+                        if _is_retryable_backend_failure(api_key_err):
+                            raise AuthBackendUnavailableError from api_key_err
                         logger.error(f"Unexpected error during API key authentication: {api_key_err}")
                         msg = "API key authentication failed"
                         raise InvalidCredentialsError(msg) from api_key_err
@@ -479,6 +484,8 @@ class AuthService(BaseAuthService):
             except InvalidCredentialsError:
                 raise
             except Exception as e:
+                if _is_retryable_backend_failure(e):
+                    raise AuthBackendUnavailableError from e
                 logger.error(f"Unexpected error during API key authentication: {e}")
                 msg = "API key authentication failed"
                 raise InvalidCredentialsError(msg) from e
@@ -959,6 +966,10 @@ class AuthService(BaseAuthService):
         from sqlmodel import select
 
         from langflow.services.database.models.auth import SSOUserProfile
+        from langflow.services.maintenance.state import maintenance_enabled
+
+        if await maintenance_enabled(db):
+            raise ExternalAuthMaintenanceError
 
         profile_stmt = select(SSOUserProfile).where(
             SSOUserProfile.sso_provider == identity.provider,
@@ -1321,7 +1332,7 @@ class AuthService(BaseAuthService):
         return current_user
 
     async def get_current_active_superuser(self, current_user: User | UserRead) -> User | UserRead | None:
-        if not current_user.is_active or not current_user.is_superuser:
+        if current_auth_is_restricted_api_key() or not current_user.is_active or not current_user.is_superuser:
             return None
         set_current_model_provider_policy_context(user_id=current_user.id, attributes={"is_superuser": True})
         return current_user
@@ -1462,7 +1473,9 @@ class AuthService(BaseAuthService):
 
     def create_token(self, data: dict, expires_delta: timedelta):
         from langflow.services.auth.utils import get_jwt_signing_key
+        from langflow.services.database.models.api_key.policy import ensure_api_key_management_allowed
 
+        ensure_api_key_management_allowed()
         settings_service = self.settings
         to_encode = data.copy()
         expire = datetime.now(timezone.utc) + expires_delta
@@ -1580,7 +1593,9 @@ class AuthService(BaseAuthService):
         )
         if not await create_refresh_session(session_id, str(user_id), expires_at, db):
             raise HTTPException(status_code=401, detail="User account is inactive or no longer exists")
-        if update_last_login:
+        from langflow.services.maintenance.state import maintenance_enabled
+
+        if update_last_login and not await maintenance_enabled(db):
             await update_user_last_login_at(user_id, db)
         return tokens
 

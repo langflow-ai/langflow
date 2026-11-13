@@ -5,13 +5,24 @@ from __future__ import annotations
 import contextlib
 from typing import TYPE_CHECKING, Any
 
+from lfx.base.models.decision_constants import LIVE_DECISION_PROVIDERS, is_decision_row
 from lfx.base.models.model_metadata import EXPLICIT_ENABLE_ONLY_PROVIDERS, get_provider_param_mapping
 from lfx.base.models.model_utils import apply_metadata_filters, inject_custom_enabled_models, replace_with_live_models
 from lfx.utils.async_helpers import run_until_complete
 
 from .class_registry import EMBEDDING_PARAM_MAPPINGS, EMBEDDING_PROVIDER_CLASS_MAPPING
-from .credentials import _fetch_enabled_providers_for_user, _get_model_status, model_status_contains
-from .provider_queries import get_model_providers, get_models_detailed, model_provider_metadata
+from .credentials import (
+    _fetch_enabled_providers_for_user,
+    _get_model_status,
+    _keeps_model_settings,
+    model_status_contains,
+)
+from .provider_queries import (
+    get_model_providers,
+    get_models_detailed,
+    get_provider_secret_variable_key,
+    model_provider_metadata,
+)
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -47,8 +58,9 @@ def get_unified_models_detailed(
         are filtered out.
     only_defaults : bool
         When True, only models marked as default are returned.
-        The first 5 models from each provider (in list order) are automatically
-        marked as default. Defaults to False to maintain backward compatibility.
+        The first 5 non-decision models from each provider (in list order) are
+        automatically marked as default. Decision models require explicit selection.
+        Defaults to False to maintain backward compatibility.
     **metadata_filters
         Arbitrary key/value pairs to match against the model's metadata.
         Example: ``get_unified_models_detailed(size="4k", context_window=8192)``
@@ -121,8 +133,14 @@ def get_unified_models_detailed(
 
     for prov, models in provider_map.items():
         models.sort(key=_sort_key)
-        for i, model in enumerate(models):
-            model["metadata"]["default"] = i < default_model_count
+        # Decision models require explicit selection and never displace a provider's chat defaults.
+        seen = 0
+        for model in models:
+            if is_decision_row(model):
+                model["metadata"]["default"] = False
+                continue
+            model["metadata"]["default"] = seen < default_model_count
+            seen += 1
 
         # If only_defaults is True, filter to only default models
         if only_defaults:
@@ -514,3 +532,105 @@ def normalize_model_names_to_dicts(
             )
 
     return result
+
+
+def get_decision_model_options(
+    user_id: UUID | str | None = None,
+    *,
+    provider_policy: ModelProviderPolicySnapshot | None = None,
+    require_configured: bool = True,
+    provider_filter: str | None = None,
+    discovery_errors: dict[str, str] | None = None,
+) -> list[dict[str, Any]]:
+    """Return enabled decision models; configuration read failures propagate.
+
+    Without a user, and in standalone lfx, which keeps no Model Providers settings, any
+    catalog model policy allows can be selected; its credentials come from request
+    variables or the environment. With saved settings, a user's providers and switches apply.
+    Discovery failures omit that provider's live rows and populate discovery_errors when supplied,
+    or log a warning for standalone callers. They do not remove healthy providers' options.
+    """
+    # A component outside a graph reports the placeholder user id "None".
+    if isinstance(user_id, str) and user_id == "None":
+        user_id = None
+    if provider_policy is None:
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
+
+        provider_policy = resolve_model_provider_policy(
+            user_id=user_id,
+            providers=get_model_providers(),
+            purpose=ModelProviderPolicyPurpose.USE,
+        )
+    disabled: set[str] = set()
+    enabled: set[str] = set()
+    configured: set[str] | None = None
+    saved_settings = bool(user_id) and _keeps_model_settings()
+    if saved_settings:
+        disabled, enabled = run_until_complete(_get_model_status(user_id, strict=True))
+        if require_configured:
+            configured = run_until_complete(_fetch_enabled_providers_for_user(user_id, provider_policy=provider_policy))
+    options: list[dict[str, Any]] = []
+    groups = get_unified_models_detailed(
+        model_type="decision", providers=[provider_filter] if provider_filter else None
+    )
+    from lfx.base.models.model_utils import get_provider_variable_value
+
+    # Discover only where a key could run the result. Without one, OpenRouter's public list would
+    # still be fetched (failing offline installs) and TypeSafe's seed would be replaced by nothing.
+    live = {
+        provider
+        for provider in LIVE_DECISION_PROVIDERS
+        if provider_filter in (None, provider)
+        and provider_policy.allows(provider)
+        and (configured is None or provider in configured)
+        and get_provider_variable_value(user_id, get_provider_secret_variable_key(provider))
+    }
+    replace_with_live_models(groups, user_id, live, "decision", model_provider_metadata, tolerate_discovery_errors=True)
+    for group in groups:
+        if error := group.get("discovery_error"):
+            if discovery_errors is not None:
+                discovery_errors[group["provider"]] = error
+            else:
+                from lfx.log.logger import logger
+
+                logger.warning(error)
+    inject_custom_enabled_models(groups, enabled, model_type="decision")
+    for group in groups:
+        if provider_filter is not None and group["provider"] != provider_filter:
+            continue
+        provider = group["provider"]
+        if not provider_policy.allows(provider) or (configured is not None and provider not in configured):
+            continue
+        for row in group["models"]:
+            name, metadata = row["model_name"], row["metadata"]
+            if not provider_policy.allows_model(provider, name, model_type="decision"):
+                continue
+            if model_status_contains(disabled, provider, name, model_type="decision"):
+                continue
+            explicitly_on = model_status_contains(enabled, provider, name, model_type="decision")
+            if saved_settings and not (metadata.get("default", False) or explicitly_on):
+                continue
+            options.append(
+                {
+                    "name": name,
+                    "provider": provider,
+                    "category": provider,
+                    "icon": group.get("icon", "Bot"),
+                    "metadata": dict(metadata),
+                }
+            )
+    return options
+
+
+def is_decision_model_switched_off(user_id: UUID | str | None, provider: str, model_name: str) -> bool:
+    """Whether the user switched this decision model off in Model Providers.
+
+    Only an explicit switch-off counts: a model never switched on can still run with a key sent in
+    the request, as without saved settings.
+    """
+    if isinstance(user_id, str) and user_id == "None":
+        user_id = None
+    if not user_id or not _keeps_model_settings():
+        return False
+    disabled, _enabled = run_until_complete(_get_model_status(user_id, strict=True))
+    return model_status_contains(disabled, provider, model_name, model_type="decision")

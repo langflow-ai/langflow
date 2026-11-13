@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "providers": [
+    {
+      "provider_id": "confluence",
+      "contract": "contracts/confluence.v1.json"
+    },
+    {
+      "provider_id": "discord",
+      "contract": "contracts/discord.v1.json"
+    },
+    {
+      "provider_id": "github",
+      "contract": "contracts/github.v1.json"
+    },
+    {
+      "provider_id": "gitlab",
+      "contract": "contracts/gitlab.v1.json"
+    },
+    {
+      "provider_id": "jira",
+      "contract": "contracts/jira.v1.json"
+    },
+    {
+      "provider_id": "salesforce",
+      "contract": "contracts/salesforce.v1.json"
+    },
+    {
+      "provider_id": "servicenow",
+      "contract": "contracts/servicenow.v1.json"
+    },
+    {
+      "provider_id": "telegram",
+      "contract": "contracts/telegram.v1.json"
+    },
+    {
+      "provider_id": "whatsapp",
+      "contract": "contracts/whatsapp.v1.json"
+    }
+  ]
+}

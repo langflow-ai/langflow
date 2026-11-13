@@ -9,7 +9,8 @@
     "build": "docusaurus build",
     "deploy": "docusaurus deploy",
     "serve": "docusaurus serve",
-    "docs:version": "docusaurus docs:version"
+    "docs:version": "node scripts/cut-docs-version.mjs",
+    "docs:llm-snapshot": "node scripts/snapshot-llm-docs.mjs"
   },
   "dependencies": {
     "@docusaurus/core": "3.10.2",

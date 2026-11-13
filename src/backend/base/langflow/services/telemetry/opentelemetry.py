@@ -253,6 +253,20 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             labels={"backend": mandatory_label},
         )
         self._add_metric(
+            name="langflow_bg_workers_online",
+            description="Background workers heartbeating within the online window",
+            unit="",
+            metric_type=MetricType.OBSERVABLE_GAUGE,
+            labels={"backend": mandatory_label},
+        )
+        self._add_metric(
+            name="langflow_bg_workers",
+            description="Online background workers by what they are doing",
+            unit="",
+            metric_type=MetricType.OBSERVABLE_GAUGE,
+            labels={"state": mandatory_label, "backend": mandatory_label},
+        )
+        self._add_metric(
             name="langflow_bg_jobs_started_total",
             description="Background jobs started",
             unit="",
@@ -293,6 +307,39 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             metric_type=MetricType.OBSERVABLE_GAUGE,
             labels={"backend": mandatory_label},
         )
+
+        self._add_metric(
+            name="langflow_trigger_events",
+            description="Retained canonical trigger events accepted within the collection window",
+            unit="",
+            metric_type=MetricType.OBSERVABLE_GAUGE,
+            labels={"backend": mandatory_label, "origin": mandatory_label, "state": mandatory_label},
+        )
+        self._add_metric(
+            name="langflow_trigger_renewals",
+            description="Fenced subscription renewal results within the collection window",
+            unit="",
+            metric_type=MetricType.OBSERVABLE_GAUGE,
+            labels={"backend": mandatory_label, "outcome": mandatory_label},
+        )
+        for name, description, unit in (
+            ("metrics_window_seconds", "Trigger metric cohort lookback window", "s"),
+            ("dispatch_latency_p50_seconds", "Median durable acceptance to first observed run start", "s"),
+            ("dispatch_latency_p95_seconds", "p95 durable acceptance to first observed run start", "s"),
+            ("dispatch_latency_samples", "Known first-start samples in the trigger cohort", ""),
+            ("missing_first_starts", "Submitted cohort events without retained first-start evidence", ""),
+            ("oldest_pending_seconds", "Age of the oldest pending canonical source event", "s"),
+            ("renewals_with_gap", "Recovered renewals with an observed expiry gap in the collection window", ""),
+            ("renewal_gap_seconds", "Sum of recovered renewal coverage gaps in the collection window", "s"),
+            ("expired_subscriptions", "Nonretired subscriptions whose provider expiry has passed", ""),
+        ):
+            self._add_metric(
+                name=f"langflow_trigger_{name}",
+                description=description,
+                unit=unit,
+                metric_type=MetricType.OBSERVABLE_GAUGE,
+                labels={"backend": mandatory_label},
+            )
 
     def __init__(self, *, prometheus_enabled: bool = True):
         # Only initialize once. The _metrics check is a self-heal: shutdown() (or a service

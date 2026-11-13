@@ -22,6 +22,7 @@ from langflow.services.policy_bundle import (
 )
 from lfx.extension.loader._types import LoadedIntegration
 from lfx.integrations.capabilities import IntegrationCapabilityManifest
+from lfx.integrations.policy_constants import INTEGRATION_POLICY_DENY_ALL_PROVIDER_ID
 from lfx.services.deps import injectable_session_scope, injectable_session_scope_readonly
 from lfx.services.policy_bundle import PolicyBundleSnapshot
 
@@ -30,9 +31,11 @@ async def _unused_session():
     yield SimpleNamespace()
 
 
-def _client(monkeypatch, *, superuser: bool = True):
+def _client(monkeypatch, *, superuser: bool = True, include_v2: bool = True):
     app = FastAPI()
     app.include_router(policy_api.router, prefix="/api/v1")
+    if include_v2:
+        app.include_router(policy_api.router_v2, prefix="/api/v2")
     admin = SimpleNamespace(id=uuid4(), is_superuser=True)
 
     if superuser:
@@ -49,7 +52,7 @@ def _client(monkeypatch, *, superuser: bool = True):
 
     app.dependency_overrides[injectable_session_scope] = _unused_session
     app.dependency_overrides[injectable_session_scope_readonly] = _unused_session
-    read_state = AsyncMock()
+    read_state = AsyncMock(return_value=PolicyBundleSnapshot(revision=7))
     replace_state = AsyncMock()
     list_history = AsyncMock()
     rollback_state = AsyncMock()
@@ -87,8 +90,9 @@ def _snapshot(*, revision: int, actor_id=None, reason: str | None = None) -> Pol
     )
 
 
-def test_router_exposes_only_the_shared_bundle_administration_contract():
-    routes = [route for route in policy_api.router.routes if isinstance(route, APIRoute)]
+@pytest.mark.parametrize("router", [policy_api.router, policy_api.router_v2])
+def test_router_exposes_only_the_shared_bundle_administration_contract(router):
+    routes = [route for route in router.routes if isinstance(route, APIRoute)]
     schema_routes = [route for route in routes if route.include_in_schema]
 
     assert {(route.path, frozenset(route.methods)) for route in schema_routes} == {
@@ -109,6 +113,10 @@ def test_router_exposes_only_the_shared_bundle_administration_contract():
         ("put", "/api/v1/policy-bundle"),
         ("get", "/api/v1/policy-bundle/history"),
         ("post", "/api/v1/policy-bundle/rollback/1"),
+        ("get", "/api/v2/policy-bundle"),
+        ("put", "/api/v2/policy-bundle"),
+        ("get", "/api/v2/policy-bundle/history"),
+        ("post", "/api/v2/policy-bundle/rollback/1"),
     ],
 )
 def test_policy_bundle_routes_reject_non_superusers_without_database_access(monkeypatch, method, path):
@@ -150,6 +158,7 @@ def test_get_returns_the_complete_active_bundle_with_stable_sorted_lists(monkeyp
         "blocked_model_keys": ["anthropic::claude-blocked", "openai::gpt-blocked"],
         "approved_integration_provider_ids": ["google", "slack"],
         "blocked_integration_action_keys": ["integrations.google.drive.delete"],
+        "approved_trigger_kinds": None,
         "content_hash": f"{4:064x}",
         "created_by": str(admin.id),
         "created_at": "2026-08-05T12:30:00Z",
@@ -177,6 +186,7 @@ def test_put_forwards_one_complete_cas_replacement_and_publishes_committed_snaps
         "blocked_model_keys": ["OpenAI::gpt-blocked", "openai::gpt-blocked", "claude-blocked"],
         "approved_integration_provider_ids": ["Slack", "google"],
         "blocked_integration_action_keys": [f"  Integrations.{provider}.Drive.Delete  "],
+        "approved_trigger_kinds": None,
         "reason": "quarterly policy refresh",
     }
 
@@ -194,6 +204,7 @@ def test_put_forwards_one_complete_cas_replacement_and_publishes_committed_snaps
         blocked_model_keys=["claude-blocked", "openai::gpt-blocked"],
         approved_integration_provider_ids=["google", "slack"],
         blocked_integration_action_keys=[f"integrations.{provider.casefold()}.drive.delete"],
+        approved_trigger_kinds=None,
         actor_user_id=admin.id,
         reason="quarterly policy refresh",
     )
@@ -201,12 +212,12 @@ def test_put_forwards_one_complete_cas_replacement_and_publishes_committed_snaps
     read_state.assert_not_awaited()
 
 
-def test_put_without_integration_fields_governs_no_integration_for_legacy_writers(monkeypatch):
+def test_put_without_integration_fields_leaves_integrations_unrestricted_for_legacy_writers(monkeypatch):
     """QA: OSS pass-through remains unchanged when no integration policy is set (INT-7)."""
     client, admin, _read_state, replace_state, _list_history, _rollback_state, apply_state = _client(monkeypatch)
     committed = replace(
         _snapshot(revision=8, actor_id=admin.id),
-        approved_integration_provider_ids=frozenset(),
+        approved_integration_provider_ids=None,
         blocked_integration_action_keys=frozenset(),
     )
     replace_state.return_value = committed
@@ -223,14 +234,138 @@ def test_put_without_integration_fields_governs_no_integration_for_legacy_writer
     )
 
     assert response.status_code == status.HTTP_200_OK
-    assert replace_state.await_args.kwargs["approved_integration_provider_ids"] == []
+    assert replace_state.await_args.kwargs["approved_integration_provider_ids"] is None
     assert replace_state.await_args.kwargs["blocked_integration_action_keys"] == []
     assert response.json()["approved_integration_provider_ids"] == []
     assert response.json()["blocked_integration_action_keys"] == []
     apply_state.assert_called_once_with(committed)
     published = apply_state.call_args.args[0]
-    assert published.approved_integration_provider_ids == frozenset()
+    assert published.approved_integration_provider_ids is None
     assert published.blocked_integration_action_keys == frozenset()
+
+
+@pytest.mark.parametrize(
+    ("version", "ceiling", "wire_ceiling"),
+    [
+        ("v1", None, []),
+        ("v1", frozenset(), [INTEGRATION_POLICY_DENY_ALL_PROVIDER_ID]),
+        ("v1", frozenset({"google"}), ["google"]),
+        ("v2", None, None),
+        ("v2", frozenset(), []),
+        ("v2", frozenset({"google"}), ["google"]),
+    ],
+)
+def test_versioned_read_modify_write_preserves_integration_intent(monkeypatch, version, ceiling, wire_ceiling):
+    """A catalog edit must preserve both unrestricted and deny-all policies."""
+    client, admin, read_state, replace_state, _history, _rollback, apply_state = _client(monkeypatch)
+    active = replace(_snapshot(revision=7, actor_id=admin.id), approved_integration_provider_ids=ceiling)
+    read_state.return_value = active
+    committed = replace(active, revision=8)
+    replace_state.return_value = committed
+    path = f"/api/{version}/policy-bundle"
+
+    current = client.get(path)
+    assert current.status_code == status.HTTP_200_OK
+    assert current.json()["approved_integration_provider_ids"] == wire_ceiling
+    payload = current.json()
+    payload["expected_revision"] = payload.pop("revision")
+    payload["blocked_component_keys"] = ["AnotherComponent"]
+    response = client.put(path, json=payload)
+
+    assert response.status_code == status.HTTP_200_OK
+    forwarded = replace_state.await_args.kwargs["approved_integration_provider_ids"]
+    assert forwarded == (None if ceiling is None else sorted(ceiling))
+    assert response.json()["approved_integration_provider_ids"] == wire_ceiling
+    apply_state.assert_called_once_with(committed)
+
+
+def test_stale_browser_empty_list_stays_unrestricted_on_new_server(monkeypatch):
+    client, admin, _read_state, replace_state, _history, _rollback, _apply = _client(monkeypatch)
+    replace_state.return_value = replace(
+        _snapshot(revision=8, actor_id=admin.id), approved_integration_provider_ids=None
+    )
+
+    response = client.put(
+        "/api/v1/policy-bundle",
+        json={
+            "expected_revision": 7,
+            "approved_provider_ids": [],
+            "blocked_component_keys": ["AnotherComponent"],
+            "blocked_template_keys": [],
+            # This is the old browser builder's `null ?? []` payload.
+            "approved_integration_provider_ids": [],
+        },
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert replace_state.await_args.kwargs["approved_integration_provider_ids"] is None
+
+
+@pytest.mark.parametrize("method", ["get", "put"])
+def test_old_replica_does_not_accept_the_new_contract(monkeypatch, method):
+    client, _admin, _read_state, replace_state, _history, _rollback, apply_state = _client(
+        monkeypatch, include_v2=False
+    )
+    payload = {
+        "expected_revision": 7,
+        "approved_provider_ids": [],
+        "blocked_component_keys": [],
+        "blocked_template_keys": [],
+        "approved_integration_provider_ids": [],
+    }
+
+    response = getattr(client, method)("/api/v2/policy-bundle", **({"json": payload} if method == "put" else {}))
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    replace_state.assert_not_awaited()
+    apply_state.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("version", "ceiling"),
+    [
+        ("v1", [INTEGRATION_POLICY_DENY_ALL_PROVIDER_ID, "google"]),
+        ("v2", [INTEGRATION_POLICY_DENY_ALL_PROVIDER_ID]),
+        ("v2", [INTEGRATION_POLICY_DENY_ALL_PROVIDER_ID, "google"]),
+    ],
+)
+def test_reserved_marker_cannot_be_mixed_with_real_providers(monkeypatch, version, ceiling):
+    client, _admin, _read_state, replace_state, _history, _rollback, apply_state = _client(monkeypatch)
+
+    response = client.put(
+        f"/api/{version}/policy-bundle",
+        json={
+            "expected_revision": 7,
+            "approved_provider_ids": [],
+            "blocked_component_keys": [],
+            "blocked_template_keys": [],
+            "approved_integration_provider_ids": ceiling,
+        },
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    replace_state.assert_not_awaited()
+    apply_state.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("version", "wire_ceiling"),
+    [("v1", [INTEGRATION_POLICY_DENY_ALL_PROVIDER_ID]), ("v2", [])],
+)
+def test_history_and_rollback_use_the_requested_wire_contract(monkeypatch, version, wire_ceiling):
+    client, admin, _read_state, _replace_state, list_history, rollback_state, apply_state = _client(monkeypatch)
+    deny_all = replace(_snapshot(revision=8, actor_id=admin.id), approved_integration_provider_ids=frozenset())
+    list_history.return_value = [deny_all]
+    rollback_state.return_value = replace(deny_all, revision=9)
+
+    history = client.get(f"/api/{version}/policy-bundle/history")
+    rollback = client.post(f"/api/{version}/policy-bundle/rollback/8", json={"expected_revision": 8})
+
+    assert history.status_code == status.HTTP_200_OK
+    assert history.json()["items"][0]["approved_integration_provider_ids"] == wire_ceiling
+    assert rollback.status_code == status.HTTP_200_OK
+    assert rollback.json()["approved_integration_provider_ids"] == wire_ceiling
+    apply_state.assert_called_once_with(rollback_state.return_value)
 
 
 @pytest.mark.parametrize(
@@ -313,9 +448,46 @@ def _integration_put(client, blocked_integration_action_keys: list[str], **overr
             "blocked_component_keys": [],
             "blocked_template_keys": [],
             "blocked_integration_action_keys": blocked_integration_action_keys,
+            "approved_trigger_kinds": None,
             **overrides,
         },
     )
+
+
+@pytest.mark.parametrize("version", ["v1", "v2"])
+@pytest.mark.parametrize("change", ["omitted", None, [], ["Slack.Message", "google.gmail"]])
+def test_trigger_ceiling_api_distinguishes_omission_clear_and_deny_all(monkeypatch, version, change):
+    client, _admin, read_state, replace_state, *_ = _client(monkeypatch)
+    original = replace(_snapshot(revision=7), approved_trigger_kinds=frozenset({"google.calendar"}))
+    read_state.return_value = original
+    expected = (
+        original.approved_trigger_kinds
+        if change == "omitted"
+        else (None if change is None else frozenset(value.casefold() for value in change))
+    )
+    replace_state.return_value = replace(original, revision=8, approved_trigger_kinds=expected)
+    payload = {
+        "expected_revision": 7,
+        "approved_provider_ids": [],
+        "blocked_component_keys": [],
+        "blocked_template_keys": [],
+    }
+    if change != "omitted":
+        payload["approved_trigger_kinds"] = change
+    response = client.put(f"/api/{version}/policy-bundle", json=payload)
+    assert response.status_code == 200
+    assert replace_state.await_args.kwargs["approved_trigger_kinds"] == (
+        expected if change == "omitted" else (None if expected is None else sorted(expected))
+    )
+    assert response.json()["approved_trigger_kinds"] == (None if expected is None else sorted(expected))
+
+
+@pytest.mark.parametrize("kind", ["", "google..gmail", "google/*", "a" * 65])
+def test_trigger_ceiling_api_rejects_malformed_kinds(monkeypatch, kind):
+    client, _admin, _read_state, replace_state, *_ = _client(monkeypatch)
+    response = _integration_put(client, [], approved_trigger_kinds=[kind])
+    assert response.status_code == 422
+    replace_state.assert_not_awaited()
 
 
 def test_put_rejects_a_newly_blocked_key_its_loaded_provider_does_not_declare(monkeypatch):
@@ -421,8 +593,9 @@ def test_put_without_model_keys_blocks_no_models_for_legacy_writers(monkeypatch)
         blocked_component_keys=[],
         blocked_template_keys=[],
         blocked_model_keys=[],
-        approved_integration_provider_ids=[],
+        approved_integration_provider_ids=None,
         blocked_integration_action_keys=[],
+        approved_trigger_kinds=None,
         actor_user_id=admin.id,
         reason=None,
     )

@@ -25,9 +25,13 @@ def _load_pyproject(relative_path: str) -> dict:
 
 
 def _requirement(requirements: list[str], name: str) -> Requirement:
-    matches = [requirement for spec in requirements if (requirement := Requirement(spec)).name.lower() == name.lower()]
-    assert len(matches) == 1, f"Expected one {name} requirement, found {matches}"
-    assert matches[0].marker is None, f"Security floor for {name} must be unconditional"
+    """Find the unconditional security floor, allowing extra Python-specific constraints."""
+    matches = [
+        requirement
+        for spec in requirements
+        if (requirement := Requirement(spec)).name.lower() == name.lower() and requirement.marker is None
+    ]
+    assert len(matches) == 1, f"Expected one unconditional {name} requirement, found {matches}"
     return matches[0]
 
 
@@ -145,7 +149,7 @@ def test_workspace_constraints_enforce_patched_pymongo() -> None:
     assert min(versions) >= Version("4.18.3")
 
 
-@pytest.mark.parametrize(("python_version", "minimum"), [("3.10", "6.5.10"), ("3.11", "6.6"), ("3.14", "6.6")])
+@pytest.mark.parametrize(("python_version", "minimum"), [("3.11", "6.6"), ("3.14", "6.6"), ("3.15", "6.6")])
 def test_tornado_floor_and_lock_match_supported_python(python_version: str, minimum: str) -> None:
     env = {"python_version": python_version, "python_full_version": python_version + ".0"}
     constraints = _load_pyproject("pyproject.toml")["tool"]["uv"]["constraint-dependencies"]

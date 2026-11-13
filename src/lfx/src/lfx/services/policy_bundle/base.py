@@ -5,9 +5,11 @@ from __future__ import annotations
 import abc
 import hashlib
 import json
+import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from lfx.integrations.policy_constants import INTEGRATION_POLICY_DENY_ALL_PROVIDER_ID
 from lfx.services.base import Service
 from lfx.services.schema import ServiceType
 
@@ -16,6 +18,48 @@ if TYPE_CHECKING:
     from datetime import datetime
     from uuid import UUID
 
+_MAX_TRIGGER_KIND_LENGTH = 64
+
+
+def normalize_trigger_kind(kind: str) -> str:
+    """Validate a stable trigger kind, including the core schedule/webhook kinds."""
+    value = kind.strip().casefold()
+    if (
+        not value
+        or len(value) > _MAX_TRIGGER_KIND_LENGTH
+        or re.fullmatch(r"[a-z0-9][a-z0-9_-]*(?:\.[a-z0-9][a-z0-9_-]*)*", value) is None
+    ):
+        msg = "Trigger kinds must use stable lowercase identifier syntax and at most 64 characters"
+        raise ValueError(msg)
+    return value
+
+
+def encode_integration_provider_ids(provider_ids: Collection[str] | None) -> list[str]:
+    """Encode a semantic ceiling for storage and the legacy API.
+
+    Preserve the old meaning of an empty list across rolling upgrades. A
+    reserved, nonempty allowlist makes deny-all enforceable by old replicas.
+    """
+    if provider_ids is None:
+        return []
+    if INTEGRATION_POLICY_DENY_ALL_PROVIDER_ID in provider_ids:
+        msg = "The integration deny-all identity is reserved for policy storage"
+        raise ValueError(msg)
+    return sorted(set(provider_ids)) if provider_ids else [INTEGRATION_POLICY_DENY_ALL_PROVIDER_ID]
+
+
+def decode_integration_provider_ids(provider_ids: Collection[str] | None) -> frozenset[str] | None:
+    """Read legacy empty ceilings and the rolling-upgrade-safe deny-all marker."""
+    if not provider_ids:
+        return None
+    providers = frozenset(provider_ids)
+    if INTEGRATION_POLICY_DENY_ALL_PROVIDER_ID in providers:
+        if len(providers) != 1:
+            msg = "The integration deny-all identity cannot be combined with provider IDs"
+            raise ValueError(msg)
+        return frozenset()
+    return providers
+
 
 def policy_bundle_content_hash(
     *,
@@ -23,16 +67,15 @@ def policy_bundle_content_hash(
     blocked_component_keys: Collection[str],
     blocked_template_keys: Collection[str],
     blocked_model_keys: Collection[str] = (),
-    approved_integration_provider_ids: Collection[str] = (),
+    approved_integration_provider_ids: Collection[str] | None = None,
     blocked_integration_action_keys: Collection[str] = (),
+    approved_trigger_kinds: Collection[str] | None = None,
 ) -> str:
     """Return the SHA-256 of the canonical complete decision payload.
 
-    ``blocked_model_keys``, ``approved_integration_provider_ids`` and
-    ``blocked_integration_action_keys`` join the canonical payload only when
-    non-empty so every revision hashed before those fields existed keeps its
-    stored hash, and a bundle without model blocks or integration governance
-    hashes identically across releases.
+    Optional facets join the canonical payload only when their legacy storage
+    representation is nonempty. Thus unrestricted policies retain their old
+    hashes, and deny-all hashes agree with old replicas carrying its marker.
     """
     payload = {
         "approved_provider_ids": sorted(set(approved_provider_ids)),
@@ -41,10 +84,13 @@ def policy_bundle_content_hash(
     }
     if blocked_model_keys:
         payload["blocked_model_keys"] = sorted(set(blocked_model_keys))
-    if approved_integration_provider_ids:
-        payload["approved_integration_provider_ids"] = sorted(set(approved_integration_provider_ids))
+    integration_providers = encode_integration_provider_ids(approved_integration_provider_ids)
+    if integration_providers:
+        payload["approved_integration_provider_ids"] = integration_providers
     if blocked_integration_action_keys:
         payload["blocked_integration_action_keys"] = sorted(set(blocked_integration_action_keys))
+    if approved_trigger_kinds is not None:
+        payload["approved_trigger_kinds"] = sorted({normalize_trigger_kind(kind) for kind in approved_trigger_kinds})
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
     return hashlib.sha256(encoded).hexdigest()
 
@@ -60,12 +106,13 @@ class PolicyBundleSnapshot:
     blocked_component_keys: frozenset[str] = frozenset()
     blocked_template_keys: frozenset[str] = frozenset()
     blocked_model_keys: frozenset[str] = frozenset()
-    # Integration governance (INT-7). Both default to empty so every caller
-    # written before integrations existed keeps producing an identical bundle.
-    # An empty persisted ceiling means "unrestricted". Plugins must not silently
-    # reinterpret existing rows on installation; external deny-all is explicit.
-    approved_integration_provider_ids: frozenset[str] = frozenset()
+    # ``None`` means unrestricted, while an explicit empty set means deny all.
+    # This keeps the operator intent distinct without a second policy-mode flag.
+    approved_integration_provider_ids: frozenset[str] | None = None
     blocked_integration_action_keys: frozenset[str] = frozenset()
+    # Kinds are provider-qualified (for example google.gmail). None preserves
+    # unrestricted OSS behavior; an explicit empty set denies every trigger.
+    approved_trigger_kinds: frozenset[str] | None = None
     content_hash: str = ""
     created_at: datetime | None = None
     created_by: UUID | None = None
@@ -80,16 +127,33 @@ class PolicyBundleSnapshot:
         object.__setattr__(self, "blocked_component_keys", frozenset(self.blocked_component_keys))
         object.__setattr__(self, "blocked_template_keys", frozenset(self.blocked_template_keys))
         object.__setattr__(self, "blocked_model_keys", frozenset(self.blocked_model_keys))
-        object.__setattr__(
-            self,
-            "approved_integration_provider_ids",
-            frozenset(self.approved_integration_provider_ids),
-        )
+        if self.approved_integration_provider_ids is not None:
+            object.__setattr__(
+                self,
+                "approved_integration_provider_ids",
+                frozenset(self.approved_integration_provider_ids),
+            )
         object.__setattr__(
             self,
             "blocked_integration_action_keys",
             frozenset(self.blocked_integration_action_keys),
         )
+        if self.approved_trigger_kinds is not None:
+            object.__setattr__(
+                self,
+                "approved_trigger_kinds",
+                frozenset(normalize_trigger_kind(kind) for kind in self.approved_trigger_kinds),
+            )
+
+    def allows_trigger_kind(self, kind: str) -> bool:
+        """Return the provider/kind ceiling decision without widening unknown kinds."""
+        if self.approved_trigger_kinds is None:
+            return True
+        try:
+            normalized = normalize_trigger_kind(kind)
+        except ValueError:
+            return False
+        return normalized in self.approved_trigger_kinds
 
 
 class BasePolicyBundleService(Service, abc.ABC):

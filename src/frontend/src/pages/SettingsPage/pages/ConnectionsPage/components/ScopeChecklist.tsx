@@ -4,6 +4,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { normalizeScope } from "@/utils/connection-scopes";
 import { type ScopeRequirement, shortScope } from "../helpers/scopes";
 
+const SERVICENOW_PERMISSION_KEYS: Record<string, string> = {
+  langflow_table_read: "connections.scope.servicenow.read",
+  langflow_table_write: "connections.scope.servicenow.write",
+};
+
 export interface ScopeChecklistProps {
   providerId: string;
   requirements: ScopeRequirement[];
@@ -12,6 +17,7 @@ export interface ScopeChecklistProps {
   onToggle: (scope: string, checked: boolean) => void;
   /** Scopes the connection already holds, marked so a cleared one stays recognizable. */
   granted?: Set<string>;
+  requiredScopes?: string[];
 }
 
 /** One checkbox per scope an authorization request may ask for. */
@@ -22,6 +28,7 @@ export function ScopeChecklist({
   selected,
   onToggle,
   granted,
+  requiredScopes = [],
 }: ScopeChecklistProps) {
   const { t } = useTranslation();
   return (
@@ -30,20 +37,42 @@ export function ScopeChecklist({
         const matches = (value: string) =>
           normalizeScope(providerId, value) ===
           normalizeScope(providerId, scope);
-        const actions = requirements.filter(
-          (requirement) =>
-            requirement.requiredScopes.some(matches) ||
-            requirement.conditionalScopes.some((entry) => matches(entry.scope)),
-        );
+        const required = requiredScopes.some(matches);
+        const permissionKey =
+          providerId === "servicenow"
+            ? SERVICENOW_PERMISSION_KEYS[normalizeScope(providerId, scope)]
+            : undefined;
+        const actions = required
+          ? []
+          : requirements.filter(
+              (requirement) =>
+                requirement.requiredScopes.some(matches) ||
+                requirement.conditionalScopes.some((entry) =>
+                  matches(entry.scope),
+                ),
+            );
         return (
           <label key={scope} className="flex items-start gap-2 text-xs">
             <Checkbox
               className="mt-0.5"
-              checked={selected.has(scope)}
+              checked={required || selected.has(scope)}
+              disabled={required}
               onCheckedChange={(checked) => onToggle(scope, Boolean(checked))}
               data-testid={`connection-scope-${scope}`}
             />
             <span className="flex min-w-0 flex-1 flex-col gap-1">
+              {permissionKey && (
+                <span className="font-medium">{t(permissionKey)}</span>
+              )}
+              {required && (
+                <span
+                  className={
+                    permissionKey ? "text-muted-foreground" : "font-medium"
+                  }
+                >
+                  {t("connections.scope.required")}
+                </span>
+              )}
               {actions.map((action) => (
                 <span
                   key={action.capabilityId}

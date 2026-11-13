@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING, Any, Literal
 from uuid import UUID, uuid4
 
 from lfx.log.logger import logger
+from lfx.services.variable.exceptions import RuntimeVariableError
 from lfx.utils.env_var_security import safe_getenv
 
 # Who controls a resolved secret's value. A Langflow variable is written by the
@@ -242,7 +243,9 @@ class BaseVectorStoreBackend(ABC):
                             return value.get_secret_value(), "variable"  # type: ignore[union-attr]
                         except AttributeError:
                             return str(value), "variable"
-            except Exception as exc:  # noqa: BLE001 — fall through to env
+            except RuntimeVariableError:
+                raise
+            except Exception as exc:  # noqa: BLE001 — ordinary lookup failures may fall back to env
                 logger.debug("variable_service lookup for %s failed: %s", variable_name, exc)
 
         from lfx.services.deps import get_settings_service

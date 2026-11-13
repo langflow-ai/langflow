@@ -224,6 +224,51 @@ the deserialize half is covered by
 
 ## Changelog
 
+- **Connection configuration identity (2026-11-09).**
+  `Component.resolve_connection()` uses the authenticated configuring user's
+  identity when a configuration hook resolves a connection without a graph
+  vertex. `connection_configuration_context()` scopes that identity to the hook.
+  Graph execution keeps its existing principal, and `BUNDLE_API_VERSION` remains `1`.
+
+- **Integration policy upgrade compatibility (2026-11-06).** `IntegrationProvider`
+  reserves `langflow-reserved.integration-policy.deny-all` for policy storage and
+  rejects manifests that claim it as a provider identity. The nonempty marker
+  makes deny-all enforceable by older replicas, while persisted empty lists keep
+  their unrestricted meaning. API v2 and process-local policy snapshots use
+  `null`/`None` for unrestricted access and an empty provider set for deny-all; API v1
+  retains the legacy representation. Clients using the tri-state contract must
+  use `/api/v2/policy-bundle` without falling back to v1. Existing bundle provider
+  identities and public symbols are unchanged; `BUNDLE_API_VERSION` remains `1`.
+
+- **Raw model provider selections (2026-11-04).** The public module
+  `lfx.base.models.provider_selection` exports `raw_model_provider_names` and
+  selector constants. Before input hydration,
+  `Component._selected_model_provider_policy_ids` uses this pure helper to read
+  provider selections. First-selection, canonical `provider` override, and legacy
+  `agent_llm` behavior remain unchanged. No existing signature or selection
+  semantics change, so `BUNDLE_API_VERSION` remains `1`.
+
+- **Headless integration context checks (2026-10-28).** `Component` checks the
+  selected capability's declared deployment contexts before resolving a
+  connection or running an integration action. Unsupported headless actions
+  raise `IntegrationContextUnsupportedError` with the existing
+  `action-unsupported` code instead of suggesting credential setup. Supported
+  contexts and public signatures are unchanged, so `BUNDLE_API_VERSION` remains `1`.
+
+- **Decision model inputs (2026-10-22).** `ModelInput` accepts `model_type="decision"`:
+  such a field never connects other models (`input_types=[]`, no external options), and
+  `value="connect_other_models"` is refused. `FloatInput` gains `preserve_empty`
+  (default `False`); when `True`, a blank value stays `None` instead of becoming `0.0`,
+  and a Boolean is refused. Both are additive and existing defaults are unchanged, so
+  `BUNDLE_API_VERSION` remains `1`.
+- **Restricted-mode build note reads connections (2026-10-26).** When a build fails
+  with custom components blocked, `Component.send_error` now passes the vertex's
+  incoming connections to the compatibility rule, so its note about a saved
+  component that no longer matches the server's agrees with `lfx upgrade` and the
+  editor. `explain_restricted_component_mismatch` gains an optional
+  `connected_fields` argument; existing calls keep working. No existing symbol is
+  removed or renamed, so `BUNDLE_API_VERSION` remains `1`.
+
 - **Google Workspace network diagnostics (2026-10-15).** `lfx.integrations` exports
   `IntegrationNetworkError` with the additive `network-error` code. Google transport
   failures report a fixed reason and API hostname, with server-network guidance in

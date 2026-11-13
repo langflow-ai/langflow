@@ -98,6 +98,7 @@ class IngressRequest:
     body: bytes
     headers: Mapping[str, str]
     query: Mapping[str, str]
+    method: str = "POST"
 
     def header(self, name: str) -> str | None:
         """Case-insensitive header lookup.
@@ -139,6 +140,9 @@ class IngressSecrets:
     resource_id: str | None = None
     pubsub_service_account: str | None = None
     pubsub_audience: str | None = None
+    target_config: dict[str, Any] = field(default_factory=dict)
+    target_kind: str | None = None
+    verification_token_digest: str | None = None
 
 
 def _utf8(value: str) -> bytes:
@@ -185,6 +189,10 @@ class Verified:
     #: needs re-authorization looks perfectly healthy until they are acted on.
     #: They are not events: nothing is written to the ledger for one.
     lifecycle: tuple[tuple[str, str], ...] = ()
+    source_items: tuple[dict[str, Any], ...] | None = None
+    response_body: str | None = None
+    response_media_type: str = "application/json"
+    response_status: int = 202
 
 
 #: Graph's validationToken is a short opaque string it expects echoed verbatim.
@@ -413,9 +421,12 @@ async def verify_gmail_pubsub(request: IngressRequest, secrets: IngressSecrets) 
         update = json.loads(base64.b64decode(encoded, validate=True))
     except (ValueError, TypeError, binascii.Error) as exc:
         raise IngressRejected(REASON_BAD_PAYLOAD) from exc
-    if not isinstance(update, dict) or not isinstance(update.get("historyId"), str):
+    history_id = update.get("historyId") if isinstance(update, dict) else None
+    if type(history_id) is int and history_id >= 0:
+        history_id = str(history_id)
+    if not isinstance(history_id, str) or not history_id.isascii() or not history_id.isdecimal():
         raise IngressRejected(REASON_BAD_PAYLOAD)
-    return Verified(payload={"history_id": update["historyId"]}, dedupe_suffix=f"pubsub:{message_id}")
+    return Verified(payload={"history_id": history_id}, dedupe_suffix=f"pubsub:{message_id}")
 
 
 def verify_webhook(request: IngressRequest, secrets: IngressSecrets, *, tolerance_s: int) -> Verified:
@@ -448,11 +459,20 @@ _VERIFIERS = {
 
 def verify(request: IngressRequest, secrets: IngressSecrets, *, tolerance_s: int) -> Verified:
     """Dispatch to the provider's verifier. Unknown providers are rejected."""
-    verifier = _VERIFIERS.get(request.provider)
+    from langflow.services.triggers.providers.registry import get_provider
+
+    extension = get_provider(request.provider)
+    verifier = (
+        (extension.verify_get if request.method == "GET" else extension.verify)
+        if extension is not None
+        else _VERIFIERS.get(request.provider)
+    )
     if verifier is None:
         raise IngressRejected(REASON_UNKNOWN_PROVIDER)
     try:
-        return verifier(request, secrets, tolerance_s=tolerance_s)
+        result = verifier(request, secrets, tolerance_s=tolerance_s)
+        if not isinstance(result, Verified):
+            raise IngressRejected(REASON_VERIFIER_ERROR)
     except IngressRejected:
         raise
     except Exception as exc:
@@ -461,6 +481,8 @@ def verify(request: IngressRequest, secrets: IngressSecrets, *, tolerance_s: int
         # produce. The uniform answer must not depend on every parsing branch
         # being exception-tight; the distinct reason keeps the bug findable.
         raise IngressRejected(REASON_VERIFIER_ERROR) from exc
+    else:
+        return result
 
 
 def sign_webhook_payload(secret: str, *, timestamp: int, body: bytes) -> str:

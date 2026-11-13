@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
@@ -9,9 +10,15 @@ import {
   PopoverContentWithoutPortal,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { connectionsKeys } from "@/controllers/API/queries/connections/keys";
+import type { ConnectionRead } from "@/controllers/API/queries/connections/types";
+import { useIntegrationsQuery } from "@/controllers/API/queries/connections/use-connections";
 import { useGetConnections } from "@/controllers/API/queries/connections/use-get-connections";
+import AddConnectionDialog from "@/pages/SettingsPage/pages/ConnectionsPage/components/AddConnectionDialog";
+import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { activeRequiredScopes } from "@/utils/connection-scopes";
 import { cn } from "@/utils/utils";
 import type { InputProps } from "../../types";
@@ -56,14 +63,32 @@ export default function ConnectionRefComponent({
   ariaLabelledBy,
 }: InputProps<string, ConnectionRefComponentType>) {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   const currentUserId = useAuthStore((state) => state.userData?.id);
+  const isSuperuser = useAuthStore((state) =>
+    Boolean(state.userData?.is_superuser),
+  );
   const flowOwnerId = useFlowStore((state) => state.currentFlow?.user_id);
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const ownerId = flowOwnerId ?? currentUserId;
   const [open, setOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
   const { data, isLoading, isError, isSuccess, isFetching, refetch } =
     useGetConnections({ provider }, { enabled: Boolean(provider) });
+  const integrations = useIntegrationsQuery({
+    provider,
+    enabled: Boolean(provider) && !disabled && (open || dialogOpen),
+  });
+  // The ordinary catalog omits providers and actions denied by policy. A
+  // provider's enabled flag means it already has a connection, so it cannot
+  // gate creation of the first connection.
+  const availableProvider = integrations.data?.providers.find(
+    (item) => item.provider_id === provider && item.approved,
+  );
+  const canCreate = integrations.isSuccess && Boolean(availableProvider);
 
   // What the run will ask the resolver to cover: the field's required scopes
   // plus the conditional ones the node's current inputs switch on.
@@ -101,6 +126,34 @@ export default function ConnectionRefComponent({
     setOpen(false);
   };
 
+  const onConnected = (connection: ConnectionRead) => {
+    if (disabled || connection.provider_key !== provider) return;
+    // Show the authorized row immediately while the shared dialog's query
+    // invalidation refreshes the list in the background.
+    queryClient.setQueryData<ConnectionRead[]>(
+      connectionsKeys.list(provider),
+      (current = []) => [
+        ...current.filter((row) => row.id !== connection.id),
+        connection,
+      ],
+    );
+    const [option] = buildConnectionOptions(
+      [connection],
+      scopes,
+      identityKind,
+      ownershipMode,
+      ownerId,
+    );
+    if (!option.usable) {
+      setErrorData({
+        title: t("connections.picker.createdUnavailable"),
+        list: [connectionOptionReason(option, t) ?? ""],
+      });
+      return;
+    }
+    select(option.handle);
+  };
+
   const triggerLabel =
     selectedHandle ||
     placeholder ||
@@ -109,146 +162,227 @@ export default function ConnectionRefComponent({
       : t("connections.picker.select"));
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          id={id}
-          ref={triggerRef}
-          disabled={disabled}
-          variant="primary"
-          size="xs"
-          role="combobox"
-          aria-expanded={open}
-          aria-label={!ariaLabelledBy ? triggerLabel : undefined}
-          aria-labelledby={ariaLabelledBy}
-          data-testid={id}
-          className={cn(
-            "dropdown-component-false-outline py-2",
-            "w-full justify-between font-normal focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:bg-muted disabled:text-muted-foreground",
-          )}
-        >
-          <span className="flex w-full items-center gap-2 overflow-hidden">
-            {selected && (
-              <ForwardedIconComponent
-                name={STATUS_ICON[selected.connection.status] ?? "Plug"}
-                className={cn(
-                  "h-4 w-4 flex-shrink-0",
-                  selected.usable
-                    ? "text-accent-emerald-foreground"
-                    : "text-destructive",
-                )}
-              />
+    <>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            id={id}
+            ref={triggerRef}
+            disabled={disabled}
+            variant="primary"
+            size="xs"
+            role="combobox"
+            aria-expanded={open}
+            aria-label={!ariaLabelledBy ? triggerLabel : undefined}
+            aria-labelledby={ariaLabelledBy}
+            data-testid={id}
+            className={cn(
+              "dropdown-component-false-outline py-2",
+              "w-full justify-between font-normal focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:bg-muted disabled:text-muted-foreground",
             )}
-            {isDangling && (
-              <ForwardedIconComponent
-                name="CircleAlert"
-                className="h-4 w-4 flex-shrink-0 text-destructive"
-              />
-            )}
-            <span
-              className={cn(
-                "truncate",
-                !selectedHandle && "text-muted-foreground",
+          >
+            <span className="flex w-full items-center gap-2 overflow-hidden">
+              {selected && (
+                <ForwardedIconComponent
+                  name={
+                    isUnavailableServiceNow(selected)
+                      ? "CircleOff"
+                      : (STATUS_ICON[selected.connection.status] ?? "Plug")
+                  }
+                  className={cn(
+                    "h-4 w-4 flex-shrink-0",
+                    selected.usable
+                      ? "text-accent-emerald-foreground"
+                      : "text-destructive",
+                  )}
+                />
               )}
-              data-testid={`value-connection-${id}`}
-              title={triggerLabel}
-            >
-              {triggerLabel}
-            </span>
-            {isDangling && (
-              <Badge
-                variant="secondaryStatic"
-                size="sq"
-                className="shrink-0 whitespace-nowrap text-xs"
+              {isDangling && (
+                <ForwardedIconComponent
+                  name="CircleAlert"
+                  className="h-4 w-4 flex-shrink-0 text-destructive"
+                />
+              )}
+              <span
+                className={cn(
+                  "truncate",
+                  !selectedHandle && "text-muted-foreground",
+                )}
+                data-testid={`value-connection-${id}`}
+                title={triggerLabel}
               >
-                {t("connections.picker.notFound")}
-              </Badge>
-            )}
-          </span>
-          <ForwardedIconComponent
-            name={disabled ? "Lock" : "ChevronsUpDown"}
-            className="ml-2 h-4 w-4 shrink-0 text-foreground"
-          />
-        </Button>
-      </PopoverTrigger>
+                {triggerLabel}
+              </span>
+              {isDangling && (
+                <Badge
+                  variant="secondaryStatic"
+                  size="sq"
+                  className="shrink-0 whitespace-nowrap text-xs"
+                >
+                  {t("connections.picker.notFound")}
+                </Badge>
+              )}
+            </span>
+            <ForwardedIconComponent
+              name={disabled ? "Lock" : "ChevronsUpDown"}
+              className="ml-2 h-4 w-4 shrink-0 text-foreground"
+            />
+          </Button>
+        </PopoverTrigger>
 
-      <PopoverContentWithoutPortal
-        side="bottom"
-        avoidCollisions
-        onOpenAutoFocus={focusCommandListOnOpen}
-        className="noflow nowheel nopan nodelete nodrag p-0"
-        style={{ minWidth: triggerRef.current?.clientWidth ?? "260px" }}
-      >
-        <Command
-          label={t("connections.title")}
-          className="flex flex-col"
-          onKeyDown={refocusSelectedCommandItemOnNavigate}
+        <PopoverContentWithoutPortal
+          side="bottom"
+          avoidCollisions
+          onOpenAutoFocus={focusCommandListOnOpen}
+          onCloseAutoFocus={(event) => {
+            if (dialogOpen) event.preventDefault();
+          }}
+          className="noflow nowheel nopan nodelete nodrag p-0"
+          style={{ minWidth: triggerRef.current?.clientWidth ?? "260px" }}
         >
-          <CommandList className="max-h-[300px] overflow-y-auto">
-            {isLoading && (
-              <div className="px-3 py-3 text-xs text-muted-foreground">
-                {t("connections.loading")}
-              </div>
-            )}
-            {isError && !isLoading && (
-              <div className="px-3 py-3 text-xs text-destructive">
-                {t("connections.picker.loadFailed")}
-              </div>
-            )}
-            {!isLoading && !isError && options.length === 0 && (
-              <div className="px-3 py-3 text-xs text-muted-foreground">
-                {provider
-                  ? t("connections.picker.emptyProvider", { provider })
-                  : t("connections.picker.empty")}
-              </div>
-            )}
-            {options.map((option) => (
-              <ConnectionOptionItem
-                key={option.handle}
-                option={option}
-                selected={option.handle === selectedHandle}
-                onSelect={() => select(option.handle)}
-              />
-            ))}
-          </CommandList>
-        </Command>
+          <Command
+            label={t("connections.title")}
+            className="flex flex-col"
+            onKeyDown={refocusSelectedCommandItemOnNavigate}
+          >
+            <CommandList className="max-h-[300px] overflow-y-auto">
+              {isLoading && (
+                <div className="px-3 py-3 text-xs text-muted-foreground">
+                  {t("connections.loading")}
+                </div>
+              )}
+              {isError && !isLoading && (
+                <div className="px-3 py-3 text-xs text-destructive">
+                  {t("connections.picker.loadFailed")}
+                </div>
+              )}
+              {!isLoading && !isError && options.length === 0 && (
+                <div className="px-3 py-3 text-xs text-muted-foreground">
+                  {provider
+                    ? t("connections.picker.emptyProvider", { provider })
+                    : t("connections.picker.empty")}
+                </div>
+              )}
+              {options.map((option) => (
+                <ConnectionOptionItem
+                  key={option.handle}
+                  option={option}
+                  selected={option.handle === selectedHandle}
+                  onSelect={() => select(option.handle)}
+                />
+              ))}
+            </CommandList>
+          </Command>
 
-        <div className="flex items-center justify-between gap-2 border-t border-border bg-background px-3 py-2">
-          <span className="truncate text-[11px] text-muted-foreground">
-            {scopes.length
-              ? t("connections.picker.requires", {
-                  scopes: scopes.map(shortScope).join(", "),
-                })
-              : t("connections.picker.noScopes")}
-          </span>
-          <div className="flex items-center gap-1">
-            {selectedHandle && (
+          <div className="flex items-center justify-between gap-2 border-t border-border bg-background px-3 py-2">
+            <span className="truncate text-[11px] text-muted-foreground">
+              {scopes.length
+                ? t("connections.picker.requires", {
+                    scopes: scopes.map(shortScope).join(", "),
+                  })
+                : t("connections.picker.noScopes")}
+            </span>
+            <div className="flex items-center gap-1">
+              {selectedHandle && (
+                <Button
+                  unstyled
+                  className="px-1 text-xs text-muted-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
+                  data-testid={`clear-connection-${id}`}
+                  onClick={() => select("")}
+                >
+                  {t("connections.picker.clear")}
+                </Button>
+              )}
               <Button
                 unstyled
-                className="px-1 text-xs text-muted-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
-                data-testid={`clear-connection-${id}`}
-                onClick={() => select("")}
+                className="flex items-center gap-1 px-1 text-xs text-muted-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
+                data-testid={`refresh-connections-${id}`}
+                onClick={() => {
+                  void refetch();
+                  void integrations.refetch();
+                }}
               >
-                {t("connections.picker.clear")}
+                <ForwardedIconComponent
+                  name="RefreshCcw"
+                  className={cn("h-3 w-3", isFetching && "animate-spin")}
+                />
+                {t("connections.picker.refresh")}
               </Button>
-            )}
-            <Button
-              unstyled
-              className="flex items-center gap-1 px-1 text-xs text-muted-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
-              data-testid={`refresh-connections-${id}`}
-              onClick={() => refetch()}
-            >
-              <ForwardedIconComponent
-                name="RefreshCcw"
-                className={cn("h-3 w-3", isFetching && "animate-spin")}
-              />
-              {t("connections.picker.refresh")}
-            </Button>
+            </div>
           </div>
-        </div>
-      </PopoverContentWithoutPortal>
-    </Popover>
+          {provider && (
+            <div className="flex flex-col gap-2 border-t border-border px-3 py-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={disabled || !canCreate}
+                onClick={() => {
+                  setOpen(false);
+                  setDialogOpen(true);
+                }}
+                data-testid={`add-connection-${id}`}
+              >
+                <ForwardedIconComponent name="Plus" className="h-3 w-3" />
+                {t("connections.add.title")}
+              </Button>
+              {integrations.isPending && (
+                <p className="text-xs text-muted-foreground">
+                  {t("common.loading")}
+                </p>
+              )}
+              {(integrations.isError ||
+                (integrations.isSuccess && !availableProvider)) && (
+                <p className="text-xs text-muted-foreground">
+                  {t(
+                    integrations.isError
+                      ? "connections.picker.providersLoadFailed"
+                      : "connections.picker.providerUnavailable",
+                  )}
+                </p>
+              )}
+            </div>
+          )}
+        </PopoverContentWithoutPortal>
+      </Popover>
+      {dialogOpen && availableProvider && (
+        <AddConnectionDialog
+          open={dialogOpen}
+          providers={[availableProvider]}
+          canCreateInstance={isSuperuser && ownershipMode !== "user"}
+          providerScope={currentFlowId ? { flowId: currentFlowId } : undefined}
+          deploymentContext={integrations.data?.deployment_context}
+          onConnected={onConnected}
+          onOpenChange={(next) => {
+            setDialogOpen(next);
+            if (!next) requestAnimationFrame(() => triggerRef.current?.focus());
+          }}
+        />
+      )}
+    </>
   );
+}
+
+function isUnavailableServiceNow(option: ConnectionOption): boolean {
+  return (
+    option.connection.provider_key === "servicenow" &&
+    option.unusableReason === "userOwnedRequired"
+  );
+}
+
+function connectionOptionReason(
+  option: ConnectionOption,
+  t: ReturnType<typeof useTranslation>["t"],
+): string | undefined {
+  const { connection, unusableReason } = option;
+  return unusableReason === "status"
+    ? t(`connections.status.${connection.status}`)
+    : unusableReason === "scopes"
+      ? t("connections.picker.missingScopes", {
+          scopes: option.missingScopes.map(shortScope).join(", "),
+        })
+      : unusableReason
+        ? t(`connections.picker.${unusableReason}`)
+        : undefined;
 }
 
 function ConnectionOptionItem({
@@ -261,17 +395,9 @@ function ConnectionOptionItem({
   onSelect: () => void;
 }) {
   const { t } = useTranslation();
-  const { connection, usable, unusableReason } = option;
-  const reason =
-    unusableReason === "status"
-      ? t(`connections.status.${connection.status}`)
-      : unusableReason === "scopes"
-        ? t("connections.picker.missingScopes", {
-            scopes: option.missingScopes.map(shortScope).join(", "),
-          })
-        : unusableReason
-          ? t(`connections.picker.${unusableReason}`)
-          : undefined;
+  const { connection, usable } = option;
+  const unavailable = isUnavailableServiceNow(option);
+  const reason = connectionOptionReason(option, t);
   return (
     <CommandItem
       value={option.handle}
@@ -283,7 +409,11 @@ function ConnectionOptionItem({
     >
       <div className="flex w-full items-center gap-2">
         <ForwardedIconComponent
-          name={STATUS_ICON[connection.status] ?? "Plug"}
+          name={
+            unavailable
+              ? "CircleOff"
+              : (STATUS_ICON[connection.status] ?? "Plug")
+          }
           className={cn(
             "ml-2 h-4 w-4 shrink-0",
             usable ? "text-accent-emerald-foreground" : "text-muted-foreground",
@@ -304,7 +434,9 @@ function ConnectionOptionItem({
                 className="max-w-[50%] shrink-0 whitespace-nowrap text-xs"
                 title={reason}
               >
-                <span className="truncate">{reason}</span>
+                <span className="truncate">
+                  {unavailable ? t("connections.status.unavailable") : reason}
+                </span>
               </Badge>
             )}
           </div>

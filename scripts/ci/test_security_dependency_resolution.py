@@ -10,6 +10,7 @@ import pytest
 import tomllib
 from packaging.markers import Marker
 from packaging.requirements import Requirement
+from packaging.specifiers import SpecifierSet
 from packaging.version import Version
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -18,6 +19,7 @@ MANIFESTS = [
     "src/lfx/pyproject.toml",
     "src/bundles/nextplaid/pyproject.toml",
 ]
+PROJECT_PYTHON = SpecifierSet(tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["requires-python"])
 
 
 def locked_packages(environment: dict[str, str]) -> dict[str, str]:
@@ -33,10 +35,10 @@ def locked_packages(environment: dict[str, str]) -> dict[str, str]:
     return packages
 
 
-@pytest.mark.parametrize("python", ["3.10", "3.11", "3.14"])
+@pytest.mark.parametrize("python", [version for version in ("3.10", "3.11", "3.14") if version in PROJECT_PYTHON])
 @pytest.mark.parametrize("platform", ["linux", "darwin", "win32"])
 def test_fixed_dependencies_resolve_on_every_supported_python_line(python: str, platform: str) -> None:
-    """Check patched versions while retaining compatible Python 3.10 resolutions."""
+    """Check patched versions for the Python runtimes supported by this checkout."""
     environment = {
         "python_version": python,
         "python_full_version": f"{python}.0",
@@ -71,6 +73,7 @@ def test_fixed_dependencies_resolve_on_every_supported_python_line(python: str, 
 
     for name, minimum in {
         "black": "26.10.1",
+        "brotli": "1.2.1",
         "certifi": "2026.10.19",
         "docling-core": "2.103.0",
         "fastmcp": "3.4.10",

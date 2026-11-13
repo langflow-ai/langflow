@@ -852,6 +852,16 @@ export * from "./file-upload-constants";
 
 export const componentsToIgnoreUpdate = ["CustomComponent"];
 
+/**
+ * Map of old types to new types for migration compatibility.
+ * Allows edges saved with old types (Data/DataFrame) to work with new types (JSON/Table).
+ * Must match TYPE_MIGRATIONS in src/lfx/src/lfx/graph/edge/base.py.
+ */
+export const TYPE_MIGRATIONS: Record<string, string> = {
+  Data: "JSON",
+  DataFrame: "Table",
+};
+
 export const ERROR_UPDATING_COMPONENT =
   "An unexpected error occurred while updating the Component. Please try again.";
 export const TITLE_ERROR_UPDATING_COMPONENT =
@@ -1023,8 +1033,17 @@ export const OPENAI_VOICES = [
 export const DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH = 2000;
 
 export const DEFAULT_POLLING_INTERVAL = 5000;
+
+/** Trigger state poll, mirroring the backend's `trigger_polling_interval`. */
+export const DEFAULT_TRIGGER_POLLING_INTERVAL = 5000;
+/** The backend refuses anything faster; a bad value never hammers the API. */
+export const MIN_TRIGGER_POLLING_INTERVAL = 1000;
+
+export const normalizeTriggerPollingInterval = (value: unknown): number =>
+  typeof value === "number" && Number.isFinite(value)
+    ? Math.max(MIN_TRIGGER_POLLING_INTERVAL, Math.round(value))
+    : DEFAULT_TRIGGER_POLLING_INTERVAL;
 export const DEFAULT_TIMEOUT = 30000;
-export const DEFAULT_FILE_PICKER_TIMEOUT = 60000;
 export const DISCORD_URL = "https://discord.com/invite/EqksyE2EX9";
 export const GITHUB_URL = "https://github.com/langflow-ai/langflow";
 export const TWITTER_URL = "https://x.com/langflow_ai";

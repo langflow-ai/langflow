@@ -4,12 +4,14 @@ import type {
   ConnectionCreate,
   ConnectionRead,
   ConnectionRevokeRead,
+  ConnectionTokenRenewal,
   ConnectionUpdate,
   EffectiveIntegrationPolicyRead,
   IntegrationListRead,
   OAuthRegistrationListRead,
   OAuthRegistrationRead,
   OAuthStartResponse,
+  SavedOAuthRegistrationRead,
 } from "./types";
 
 const connections = () => getURL("CONNECTIONS");
@@ -57,6 +59,14 @@ export async function testConnection(
   const { data } = await api.post<ConnectionRead>(`${one(id)}/test`, {
     required_scopes: requiredScopes,
   });
+  return data;
+}
+
+export async function renewConnectionToken(
+  id: string,
+  payload: ConnectionTokenRenewal,
+): Promise<ConnectionRead> {
+  const { data } = await api.post<ConnectionRead>(`${one(id)}/token`, payload);
   return data;
 }
 
@@ -138,4 +148,32 @@ export async function getEffectiveIntegrationPolicy(): Promise<EffectiveIntegrat
     `${integrations()}/policy/effective`,
   );
   return data;
+}
+
+/** List saved registration metadata without retrieving secrets for the superuser panel. */
+export async function listSavedOAuthRegistrations(): Promise<
+  SavedOAuthRegistrationRead[]
+> {
+  const { data } = await api.get<{
+    registrations: SavedOAuthRegistrationRead[];
+  }>(`${connections()}/oauth/registrations/saved`);
+  return asArray<SavedOAuthRegistrationRead>(data?.registrations);
+}
+
+/** Omitted secret fields keep their saved values, while explicit null clears a secret. */
+export async function saveOAuthRegistration(
+  id: string,
+  registration: Record<string, unknown>,
+): Promise<void> {
+  await api.put(
+    `${connections()}/oauth/registrations/saved/${encodeURIComponent(id)}`,
+    { registration },
+  );
+}
+
+/** Delete saved configuration while leaving an environment registration with this ID intact. */
+export async function deleteSavedOAuthRegistration(id: string): Promise<void> {
+  await api.delete(
+    `${connections()}/oauth/registrations/saved/${encodeURIComponent(id)}`,
+  );
 }

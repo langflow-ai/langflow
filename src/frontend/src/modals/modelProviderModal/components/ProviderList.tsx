@@ -5,6 +5,7 @@ import type { ProviderScopeParams } from "@/controllers/API/helpers/provider-sco
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import CustomModelProvidersEmptyState from "@/customization/components/custom-model-providers-empty-state";
 import type { ModelTypeFilter } from "@/types/models";
+import { modelsOfFilter, providerServesFilter } from "../helpers/view-kinds";
 import ProviderListItem from "./ProviderListItem";
 import { Provider } from "./types";
 
@@ -46,14 +47,21 @@ const ProviderList = ({
       providerName.toLowerCase().includes(trimmedQuery);
 
     return rawProviders
-      .filter((provider) => matchesQuery(provider.provider))
+      .filter(
+        (provider) =>
+          matchesQuery(provider.provider) &&
+          providerServesFilter(
+            provider?.models,
+            modelType,
+            provider?.live_discovery,
+            provider.provider,
+          ),
+      )
       .map((provider) => {
-        const matchingModels =
-          provider?.models?.filter((model) =>
-            modelType === "all"
-              ? true
-              : model?.metadata?.model_type === modelType,
-          ) || [];
+        const matchingModels = modelsOfFilter(
+          provider?.models ?? [],
+          modelType,
+        );
 
         return {
           provider: provider.provider,
@@ -64,6 +72,7 @@ const ProviderList = ({
           models: matchingModels,
           api_docs_url: provider.api_docs_url,
           live_discovery: provider.live_discovery,
+          discovery_error: provider.discovery_error,
         };
       });
   }, [rawProviders, modelType, trimmedQuery]);

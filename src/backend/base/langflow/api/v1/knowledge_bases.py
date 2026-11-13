@@ -32,7 +32,7 @@ from lfx.services.model_provider_policy import (
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
 
-from langflow.api.utils import CurrentActiveUser, ingestion_run_service, knowledge_base_service
+from langflow.api.utils import EMPTY_FILE_DETAIL, CurrentActiveUser, ingestion_run_service, knowledge_base_service
 from langflow.api.utils.execution_errors import integration_http_error
 from langflow.api.utils.kb_helpers import (
     KBIngestionHelper,
@@ -60,11 +60,12 @@ from langflow.schema.knowledge_base import (
     TestBackendConnectionRequest,
     TestBackendConnectionResponse,
 )
+from langflow.services.auth.context import current_auth_is_restricted_api_key
 from langflow.services.authorization import (
     KnowledgeBaseAction,
     ensure_knowledge_base_permission,
 )
-from langflow.services.authorization.listing import visible_scope_prefilter
+from langflow.services.authorization.listing import filter_visible_resources, visible_scope_prefilter
 from langflow.services.database.models.jobs.model import JobStatus, JobType
 from langflow.services.database.models.knowledge_base.model import KnowledgeBaseRecord
 from langflow.services.deps import get_job_service, get_settings_service, get_task_service
@@ -1058,8 +1059,11 @@ async def ingest_files_to_knowledge_base(
 
         files_data = []
 
+        # The loop only reads bytes: every file is checked before the KB, job or task is touched.
         for uploaded_file in files:
             file_size = uploaded_file.size
+            if file_size == 0:
+                raise HTTPException(status_code=400, detail=EMPTY_FILE_DETAIL)
             if file_size > max_file_size_upload * 1024 * 1024:
                 raise HTTPException(
                     status_code=413,
@@ -1314,7 +1318,8 @@ async def list_knowledge_bases(
     # but a role with ``knowledge_base:read`` revoked entirely is rejected
     # here. Per-row filtering is the authorization plugin's responsibility once
     # KB share grants exist.
-    await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.READ, kb_name=None)
+    if not current_auth_is_restricted_api_key():
+        await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.READ, kb_name=None)
     try:
         knowledge_bases: list[KnowledgeBaseInfo] = []
         kb_ids_to_fetch: list[uuid.UUID] = []
@@ -1329,6 +1334,13 @@ async def list_knowledge_bases(
             if visibility is None
             else await knowledge_base_service.list_owned_or_visible(current_user.id, visibility)
         )
+        if visibility is None and current_auth_is_restricted_api_key():
+            rows = await filter_visible_resources(
+                current_user,
+                resource_type="knowledge_base",
+                candidates=rows,
+                act=KnowledgeBaseAction.READ,
+            )
 
         for row in rows:
             metadata = knowledge_base_service.record_to_metadata_dict(row)

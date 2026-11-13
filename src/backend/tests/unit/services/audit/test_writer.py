@@ -24,12 +24,18 @@ from langflow.services.audit.vocabulary import (
     AuditOperation,
     AuditResult,
 )
-from langflow.services.audit.writer import build_audit_event, stage_audit_event
+from langflow.services.audit.writer import (
+    batch_audit_events,
+    build_audit_event,
+    flush_audit_event_batch,
+    stage_audit_event,
+)
 from langflow.services.auth.context import AuthCredentialContext, clear_current_auth_context, set_current_auth_context
 from langflow.services.database.models.audit_event.model import AuditEvent
 from lfx.services.session import NoopSession
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Route
@@ -66,6 +72,38 @@ async def test_a_staged_event_disappears_when_the_mutation_rolls_back(audit_sess
     await audit_session.rollback()
 
     assert await _stored(audit_session) == []
+
+
+async def test_another_session_cannot_flush_the_replacement_batch(audit_session, audit_engine, audit_enabled):  # noqa: ARG001
+    """Keep buffered events in their owning transaction until its explicit flush."""
+    async with AsyncSession(audit_engine, expire_on_commit=False) as other_session:
+        with batch_audit_events(audit_session):
+            staged = await stage_audit_event(audit_session, project_patch_draft())
+            await flush_audit_event_batch(other_session)
+            assert await _stored(other_session) == []
+            assert staged not in audit_session
+            await flush_audit_event_batch(audit_session)
+        await audit_session.commit()
+        assert [row.id for row in await _stored(other_session)] == [staged.id]
+
+
+async def test_an_aborted_batch_does_not_leak_into_the_next_transaction(audit_session, audit_enabled):  # noqa: ARG001
+    """Discard an aborted attempt and leave later unbatched writes usable."""
+
+    async def abort_attempt():
+        """Leave the batch scope before its buffered events can be flushed."""
+        with batch_audit_events(audit_session):
+            await stage_audit_event(audit_session, project_patch_draft())
+            message = "aborted"
+            raise RuntimeError(message)
+
+    with pytest.raises(RuntimeError, match="aborted"):
+        await abort_attempt()
+    await flush_audit_event_batch(audit_session)
+    assert await _stored(audit_session) == []
+    kept = await stage_audit_event(audit_session, project_patch_draft())
+    await audit_session.commit()
+    assert [row.id for row in await _stored(audit_session)] == [kept.id]
 
 
 async def test_nothing_is_staged_when_auditing_is_off(audit_session, audit_disabled):  # noqa: ARG001

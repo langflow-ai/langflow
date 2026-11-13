@@ -60,6 +60,7 @@ from lfx.graph.flow_builder import (
 from lfx.graph.flow_builder import (
     remove_connection as fb_remove_connection,
 )
+from lfx.graph.flow_builder.component import _keep_row_ids
 from lfx.graph.flow_builder.spec import validate_spec_references
 from lfx.log.logger import logger
 from lfx.mcp.client import LangflowClient
@@ -96,8 +97,10 @@ async def _telemetry_lifespan(_server: FastMCP) -> AsyncIterator[dict]:
     svc.start()
     _telemetry = svc
     try:
+        await svc.log_package_version()
         yield {}
     finally:
+        await svc.log_package_shutdown()
         await svc.stop()
         _telemetry = None
 
@@ -792,6 +795,7 @@ async def configure_component(
             else:
                 # Set value in template before sending
                 if key in template and isinstance(template[key], dict):
+                    value = _keep_row_ids(template[key].get("value"), value)
                     template[key]["value"] = value
                     # A value explicitly supplied to this tool is a literal.
                     # Preserve component defaults, but do not let the refresh

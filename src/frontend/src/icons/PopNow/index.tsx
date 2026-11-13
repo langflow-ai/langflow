@@ -1,10 +1,10 @@
-import type React from "react";
-import { forwardRef } from "react";
+import { forwardRef, type SVGProps } from "react";
 import SvgPopNow from "./PopNowIcon";
 
-export const PopNowIcon = forwardRef<
-  SVGSVGElement,
-  React.PropsWithChildren<{}>
->((props, ref) => {
-  return <SvgPopNow ref={ref} {...props} />;
-});
+type PopNowIconProps = SVGProps<SVGSVGElement> & {
+  isDark?: boolean;
+};
+
+export const PopNowIcon = forwardRef<SVGSVGElement, PopNowIconProps>(
+  ({ isDark: _isDark, ...props }, ref) => <SvgPopNow ref={ref} {...props} />,
+);

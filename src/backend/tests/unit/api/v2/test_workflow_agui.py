@@ -1746,6 +1746,9 @@ class TestAGUIBackgroundJobStatus:
                 return []
 
         class FakeJobService:
+            async def authorize_job_start(self, *_args, **_kwargs):
+                return None
+
             async def update_job_status(self, seen_job_id, status, *, finished_timestamp=False):
                 updates.append((seen_job_id, status, finished_timestamp))
 
@@ -1821,6 +1824,9 @@ class TestAGUIBackgroundJobStatus:
         captured: dict = {}
 
         class FakeJobService:
+            async def authorize_job_start(self, *_args, **_kwargs):
+                return None
+
             async def update_job_status(self, *_args, **_kwargs):
                 return None
 
@@ -1893,6 +1899,9 @@ class TestAGUIBackgroundJobStatus:
         captured: dict = {}
 
         class FakeJobService:
+            async def authorize_job_start(self, *_args, **_kwargs):
+                return None
+
             async def update_job_status(self, *_args, **_kwargs):
                 return None
 
@@ -1957,6 +1966,9 @@ class TestAGUIBackgroundJobStatus:
         captured: dict = {}
 
         class FakeJobService:
+            async def authorize_job_start(self, *_args, **_kwargs):
+                return None
+
             async def update_job_status(self, *_args, **_kwargs):
                 return None
 

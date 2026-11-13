@@ -28,6 +28,14 @@ from langflow.services.job_queue.service import (
     RedisQueueWrapper,
 )
 
+
+@pytest.fixture(autouse=True)
+def unpaused_database(monkeypatch):
+    # These tests own FakeRedis, not an application database. Keep admission
+    # explicit so a global database left by another test cannot hold their jobs.
+    monkeypatch.setattr("langflow.api.utils.migration_pause._database_pause_status", AsyncMock(return_value=False))
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -98,6 +106,20 @@ async def _stop_service(service: RedisJobQueueService) -> None:
     if service._client and getattr(service, "_owns_test_client", True):
         await service._client.aclose()
     service._client = None
+
+
+@pytest.fixture(params=[0, 0.1], ids=["normal-admission", "delayed-admission"])
+def maintenance_admission_delay(request, monkeypatch):
+    """Exercise cancellation after normal or slow maintenance admission."""
+    from langflow.api.utils import migration_pause
+
+    write_refusal = migration_pause.write_refusal
+
+    async def delayed_write_refusal(*args, **kwargs):
+        await asyncio.sleep(request.param)
+        return await write_refusal(*args, **kwargs)
+
+    monkeypatch.setattr(migration_pause, "write_refusal", delayed_write_refusal)
 
 
 class _BlockingXaddClient:
@@ -424,6 +446,8 @@ async def test_redis_service_cleanup_deletes_redis_keys_when_cancelled():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("maintenance_admission_delay", [0, 0.4], indirect=True)
+@pytest.mark.usefixtures("maintenance_admission_delay")
 async def test_redis_service_cleanup_swallows_redis_delete_error():
     """cleanup_job must not raise when Redis DEL fails.
 
@@ -458,7 +482,9 @@ async def test_redis_service_cleanup_swallows_redis_delete_error():
             await asyncio.sleep(0)
 
         service.start_job(job_id, _noop())
-        await asyncio.sleep(0.05)
+        task = service._queues[job_id][2]
+        assert task is not None
+        await asyncio.wait_for(task, timeout=2.0)
 
         # Must not raise — the warning path absorbs the Redis error and the
         # rest of cleanup_job (local state, super().cleanup_job) still runs.
@@ -534,12 +560,6 @@ async def test_redis_service_owner_cleaned_up_after_cleanup_job():
         user_id = uuid.uuid4()
 
         service.create_queue(job_id)
-
-        async def _noop():
-            await asyncio.sleep(0)
-
-        service.start_job(job_id, _noop())
-        await asyncio.sleep(0.05)
         await service.register_job_owner(job_id, user_id)
 
         assert await service.get_job_owner(job_id) == user_id
@@ -564,6 +584,8 @@ async def test_redis_service_get_job_owner_returns_none_for_unknown_job():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("maintenance_admission_delay", [0, 0.4], indirect=True)
+@pytest.mark.usefixtures("maintenance_admission_delay")
 async def test_redis_service_bridge_publishes_sentinel_on_end():
     """The bridge task publishes the end-of-stream sentinel when the build ends."""
     service, fake_client = await _make_service()
@@ -576,8 +598,9 @@ async def test_redis_service_bridge_publishes_sentinel_on_end():
 
         service.start_job(job_id, _build())
 
-        # Wait long enough for the bridge to publish.
-        await asyncio.sleep(0.2)
+        # Admission may wait for maintenance checks before the producer runs.
+        # The bridge finishes only after publishing the end-of-stream sentinel.
+        await asyncio.wait_for(service._bridge_tasks[job_id], timeout=2.0)
 
         stream_key = f"langflow:queue:{job_id}"
         messages = await fake_client.xrange(stream_key)
@@ -666,6 +689,7 @@ async def test_streaming_disconnect_cancels_queue_wrapper_without_event_task():
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("maintenance_admission_delay")
 async def test_cross_worker_disconnect_publishes_signal_cancel():
     """Disconnect on a non-owner worker publishes signal_cancel so the producer worker cancels its task.
 
@@ -680,8 +704,10 @@ async def test_cross_worker_disconnect_publishes_signal_cancel():
         job_id = str(uuid.uuid4())
         svc_producer.create_queue(job_id)
         cancelled_event = asyncio.Event()
+        started = asyncio.Event()
 
         async def _long_running():
+            started.set()
             try:
                 await asyncio.Event().wait()
             except asyncio.CancelledError:
@@ -689,7 +715,7 @@ async def test_cross_worker_disconnect_publishes_signal_cancel():
                 raise
 
         svc_producer.start_job(job_id, _long_running())
-        await asyncio.sleep(0.05)
+        await asyncio.wait_for(started.wait(), timeout=2.0)
 
         # Cross-worker poll: consumer opens a Redis-backed queue wrapper.
         queue, *_ = svc_consumer.get_queue_data(job_id)
@@ -814,8 +840,10 @@ async def test_redis_service_same_worker_cancel_wakes_active_consumer_before_fir
         job_id = str(uuid.uuid4())
         svc.create_queue(job_id)
         cancelled_event = asyncio.Event()
+        producer_started = asyncio.Event()
 
         async def _long_running():
+            producer_started.set()
             try:
                 await asyncio.Event().wait()
             except asyncio.CancelledError:
@@ -823,7 +851,7 @@ async def test_redis_service_same_worker_cancel_wakes_active_consumer_before_fir
                 raise
 
         svc.start_job(job_id, _long_running())
-        await asyncio.sleep(0.05)
+        await asyncio.wait_for(producer_started.wait(), timeout=2.0)
 
         queue, _, event_task, _ = svc.get_queue_data(job_id)
         assert event_task is not None
@@ -1378,6 +1406,7 @@ async def test_streaming_heartbeat_runs_independent_of_event_yield(monkeypatch):
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("maintenance_admission_delay")
 async def test_concurrent_cancels_from_multiple_workers_are_idempotent():
     """signal_cancel from two workers concurrently must produce exactly one cancel.
 
@@ -1396,8 +1425,10 @@ async def test_concurrent_cancels_from_multiple_workers_are_idempotent():
         job_id = str(uuid.uuid4())
         producer.create_queue(job_id)
         cancelled = asyncio.Event()
+        producer_started = asyncio.Event()
 
         async def _long_running():
+            producer_started.set()
             try:
                 await asyncio.Event().wait()
             except asyncio.CancelledError:
@@ -1405,7 +1436,7 @@ async def test_concurrent_cancels_from_multiple_workers_are_idempotent():
                 raise
 
         producer.start_job(job_id, _long_running())
-        await asyncio.sleep(0.05)
+        await asyncio.wait_for(producer_started.wait(), timeout=2.0)
 
         # Two workers publish cancel at the same time.
         await asyncio.gather(pub_a.signal_cancel(job_id), pub_b.signal_cancel(job_id))
@@ -1567,16 +1598,23 @@ async def test_cancel_dispatcher_reconnects_after_pubsub_error():
     Without this resilience, a Redis blip kills the dispatcher silently and the
     worker becomes blind to cross-worker cancels until restart.
     """
+    resubscribed = asyncio.Event()
 
     class _FlakeyPubSub:
         """Fakes pubsub.listen() raising once then yielding normally."""
 
-        def __init__(self, real: Any, *, raise_on_listen_count: int = 1) -> None:
+        def __init__(
+            self, real: Any, *, raise_on_listen_count: int = 1, subscribed: asyncio.Event | None = None
+        ) -> None:
             self._real = real
             self._raises_left = raise_on_listen_count
+            self._subscribed = subscribed
 
         async def psubscribe(self, *args: Any, **kwargs: Any) -> Any:
-            return await self._real.psubscribe(*args, **kwargs)
+            result = await self._real.psubscribe(*args, **kwargs)
+            if self._subscribed is not None:
+                self._subscribed.set()
+            return result
 
         async def punsubscribe(self, *args: Any, **kwargs: Any) -> Any:
             return await self._real.punsubscribe(*args, **kwargs)
@@ -1608,7 +1646,11 @@ async def test_cancel_dispatcher_reconnects_after_pubsub_error():
             self._pubsub_count += 1
             base = self._real.pubsub()
             # Only the first dispatcher's pubsub fails; subsequent reconnects succeed.
-            return _FlakeyPubSub(base, raise_on_listen_count=1 if self._pubsub_count == 1 else 0)
+            return _FlakeyPubSub(
+                base,
+                raise_on_listen_count=1 if self._pubsub_count == 1 else 0,
+                subscribed=resubscribed if self._pubsub_count > 1 else None,
+            )
 
         # Delegate everything else.
         def __getattr__(self, item: str) -> Any:
@@ -1623,11 +1665,10 @@ async def test_cancel_dispatcher_reconnects_after_pubsub_error():
     svc_producer._cleanup_task = asyncio.create_task(svc_producer._periodic_cleanup())
     svc_producer._cancel_dispatcher_task = asyncio.create_task(svc_producer._run_cancel_dispatcher())
     svc_producer.ready = True
-    # Allow the first (flakey) subscribe + the reconnect to settle.
-    await asyncio.sleep(0.6)
-
     svc_other, _ = await _make_service(shared_client=real_client)
     try:
+        # Wait for the replacement subscription before publishing a cancel.
+        await asyncio.wait_for(resubscribed.wait(), timeout=2.0)
         # After reconnect, a publish should still reach the dispatcher.
         job_id = str(uuid.uuid4())
         svc_producer.create_queue(job_id)
