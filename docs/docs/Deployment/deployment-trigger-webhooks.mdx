@@ -3,7 +3,7 @@ title: Receive provider events with trigger webhooks
 slug: /deployment-trigger-webhooks
 ---
 
-A trigger runs a flow when something happens outside Langflow. This page is for providers that post that event to a Langflow URL: Slack, Microsoft, Google, or your own system.
+A trigger runs a flow when something happens outside Langflow. This page is for providers that post that event to a Langflow URL: Slack, Microsoft, Google, GitHub, or your own system.
 
 Langflow must be reachable over public HTTPS. If it is not, use [trigger listeners](./deployment-trigger-listeners.mdx). Listeners call out and hold the connection, and they need no public URL.
 
@@ -18,7 +18,7 @@ but its triggers cannot be activated until the extra nodes are removed.
 1. Langflow is reachable at a public HTTPS URL.
 2. The flow is saved, and the trigger is enabled.
 3. The connection on the trigger belongs to the flow owner, and **Allow background runs** is on.
-4. For Slack, Microsoft, or Google, the provider app is already registered. Slack setup is on [Slack triggers](../Components/bundles-slack.mdx#slack-triggers). Google setup is on [Google Workspace source triggers](../Components/bundles-google.mdx#google-workspace-source-triggers).
+4. For Slack, Microsoft, or Google, the provider app is already registered. For more information, see [Slack triggers](./bundles-slack#slack-triggers) and [Google Workspace source triggers](./bundles-google#google-workspace-source-triggers). For GitHub, Langflow creates the repository webhook when you enable the trigger. For more information, see [GitHub components](./bundles-github#enable-triggers).
 
 ## Send events from your own system
 
@@ -78,6 +78,8 @@ POST /api/v1/triggers/ingress/slack/apps/{registration_id}
 ```
 
 `registration_id` is the app's name in `LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS`. Put that app's signing secret on the registration as `signing_secret`.
+
+GitHub does not use a Request URL that you paste into the provider. When you enable **GitHub: On Issue** or **GitHub: On Pull Request**, Langflow creates the repository webhook. The instance still needs public HTTPS ingress.
 
 Each provider proves the delivery in its own way:
 
