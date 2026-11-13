@@ -8,6 +8,7 @@ Values" operation.
 """
 
 import copy
+import json
 
 import pandas as pd
 import pytest
@@ -62,6 +63,52 @@ class TestOperationsComponent(ComponentTestBaseWithoutClient):
 )
 def test_legacy_operations_components_point_to_unified_replacement(legacy_component):
     assert legacy_component.replacement == ["processing.Operations"]
+
+
+def _path_selection(component_class, payload: dict):
+    kwargs = (
+        {"input_type": "JSON", "operation": [{"name": "Path Selection"}]}
+        if component_class is OperationsComponent
+        else {"operations": [{"name": "Path Selection"}]}
+    )
+    component = component_class(data=Data(data=payload), **kwargs)
+    config = component.update_build_config(
+        dotdict({"selected_key": {"options": [], "show": False}}), json.dumps(payload), "mapped_json_display"
+    )
+    return component, config["selected_key"]["options"]
+
+
+@pytest.mark.parametrize("component_class", [OperationsComponent, DataOperationsComponent])
+class TestPathSelectionLiteralKeys:
+    """Every path the picker offers must select the key it names, through the real jq binding."""
+
+    @pytest.mark.parametrize(
+        "key",
+        ["document.id", "full name", 'say "hi"', "back\\slash", "0id", "", "名前", "\\(1 + 1)", "dash-key", "a\nb"],
+    )
+    def test_should_select_the_literal_key_when_it_is_not_an_identifier(self, component_class, key):
+        payload = {key: [{"value": 42}], "document": {"id": [{"value": -1}]}}
+        component, options = _path_selection(component_class, payload)
+
+        selected = options[2]
+        component.set(selected_key=selected)
+
+        assert component.as_data().data == {"result": 42}
+
+    def test_should_quote_a_dotted_key_instead_of_reading_the_nested_field(self, component_class):
+        payload = {"document.id": [{"value": 42}], "document": {"id": [{"value": -1}]}}
+
+        _, options = _path_selection(component_class, payload)
+
+        assert options[:3] == ['."document.id"', '."document.id"[0]', '."document.id"[0].value']
+        assert ".document.id[0].value" in options
+
+    def test_should_keep_the_dot_form_when_keys_are_identifiers(self, component_class):
+        payload = {"user": {"tags": [{"_id2": 1}]}, "if": True}
+
+        _, options = _path_selection(component_class, payload)
+
+        assert options == [".user", ".user.tags", ".user.tags[0]", ".user.tags[0]._id2", ".if"]
 
 
 class TestOperationCatalog:

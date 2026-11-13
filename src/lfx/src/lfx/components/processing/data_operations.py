@@ -90,7 +90,9 @@ class DataOperationsComponent(Component):
         paths = []
         if isinstance(obj, dict):
             for k, v in obj.items():
-                new_path = f"{path}.{k}" if path else f".{k}"
+                # jq reads only ASCII identifiers bare; any other key must be a quoted string.
+                field = k if k.isascii() and k.isidentifier() else json.dumps(k, ensure_ascii=False)
+                new_path = f"{path}.{field}"
                 paths.append(new_path)
                 paths.extend(DataOperationsComponent.extract_all_paths(v, new_path))
         elif isinstance(obj, list) and obj:
