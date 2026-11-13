@@ -1114,32 +1114,46 @@ async def test_the_pause_is_refused_while_a_change_let_in_before_it_is_still_goi
     if counted_by == "this worker's count alone":
         # As on Windows, which has no flock.
         monkeypatch.setattr(migration_pause, "fcntl", None)
+    # This case isolates the held upload. The app's disk-sync loop is also a
+    # legitimate change, and a slow startup pass can outlast the short drain.
+    # Its pause behavior is covered separately in test_migration_pause.py.
+    syncing = [task for task in asyncio.all_tasks() if getattr(task.get_coro(), "__name__", "") == "sync_flows_from_fs"]
+    for task in syncing:
+        task.cancel()
+    await asyncio.gather(*syncing, return_exceptions=True)
     arrived, release = asyncio.Event(), asyncio.Event()
     uploading = asyncio.create_task(_upload_held_open(client, headers, arrived, release))
-    await arrived.wait()
+    try:
+        await asyncio.wait_for(arrived.wait(), timeout=10)
 
-    # The upload was let in and has not sent the end of its file. Paused now, it would write while paused.
-    refused = await client.post(PAUSE, headers=headers)
+        # The upload was let in and has not sent the end of its file. Paused now, it would write while paused.
+        refused = await client.post(PAUSE, headers=headers)
 
-    assert refused.status_code == 409, refused.text
-    detail = refused.json()["detail"]
-    # The admin is told what the pause waited for, and since when.
-    [change] = detail.pop("changes")
-    assert detail == {"code": "requests_active", "jobs": [], "listeners": [], "elsewhere": False}
-    assert {**change, "since": None} == {
-        "kind": "request",
-        "method": "POST",
-        "path": "/api/v2/files/",
-        "name": None,
-        "since": None,
-    }
-    assert datetime.fromisoformat(change["since"]) <= datetime.now(timezone.utc)
-    assert not {"pause", "pausing"} & (await _migration(client, headers))["record"].keys()
-
-    release.set()
+        assert refused.status_code == 409, refused.text
+        detail = refused.json()["detail"]
+        # The admin is told what the pause waited for, and since when.
+        [change] = detail.pop("changes")
+        assert detail == {"code": "requests_active", "jobs": [], "listeners": [], "elsewhere": False}
+        assert {**change, "since": None} == {
+            "kind": "request",
+            "method": "POST",
+            "path": "/api/v2/files/",
+            "name": None,
+            "since": None,
+        }
+        assert datetime.fromisoformat(change["since"]) <= datetime.now(timezone.utc)
+        assert not {"pause", "pausing"} & (await _migration(client, headers))["record"].keys()
+    finally:
+        release.set()
+        try:
+            uploaded = await asyncio.wait_for(uploading, timeout=10)
+        finally:
+            if not uploading.done():
+                uploading.cancel()
+            await asyncio.gather(uploading, return_exceptions=True)
 
     # It ends as a change made before any pause, because the pause was taken out again.
-    assert await uploading == 201
+    assert uploaded == 201
     assert (await _migration(client, headers))["instance"]["files"]["local"] is True
     assert (await client.post(PAUSE, headers=headers)).status_code == 200
 
