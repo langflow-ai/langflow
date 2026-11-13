@@ -1,0 +1,86 @@
+---
+title: GitHub components
+slug: /bundles-github
+---
+
+import Icon from "@site/src/components/icon";
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+The **GitHub** components use a [Connection](./connections) to GitHub.com.
+Create the installation token in GitHub, then save it with [Add a connection](./connections?integration=github#add-a-connection).
+In the visual editor the components appear under <Icon name="Blocks" aria-hidden="true" /> **Bundles**, in the **GitHub** group.
+These components are in preview.
+
+<GraduatedBundleInstall packageName="github" />
+
+To use the components, create an installation token and then add the Connection.
+
+## Create an installation token
+
+Create and install the GitHub App, keep its private key in GitHub, and generate an installation access token for the repositories the flows use.
+For more information, see [Registering a GitHub App](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app), [Choosing permissions for a GitHub App](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/choosing-permissions-for-a-github-app), and [Authenticating as a GitHub App installation](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/authenticating-as-a-github-app-installation).
+
+After you have generated an installation access token, follow [Add a connection](./connections#add-a-connection).
+Langflow checks that GitHub accepts the token as an installation token _before_ saving it.
+
+Actions in Langflow require the following repository permissions:
+
+| Component | Repository permission |
+| --- | --- |
+| Get Repository | Metadata read |
+| Get Issue | Issues read |
+| Create or update Issue | Issues write |
+| Get Pull Request | Pull requests read |
+| Create or update Pull Request | Pull requests write and Contents read |
+| Create Issue Comment | Issues write |
+| On Issue | Issues read and Webhooks write |
+| On Pull Request | Pull requests read and Webhooks write |
+
+## Run actions
+
+Select the Connection on the component.
+For more information, see [Use a connection in a flow](./connections#use-a-connection-in-a-flow).
+
+To run an action, do the following:
+
+1. Set **Repository** to `owner/repository` on GitHub.com.
+2. Fill the fields for that action.
+   Update components send only a nonempty title or body, and a state change you select explicitly.
+   Leave **Title** and **Body** empty to keep the current values.
+   **State Change** defaults to unchanged.
+   An update with no changes is rejected before Langflow resolves the credential.
+3. Run the flow.
+
+**GitHub: Create Issue Comment** accepts an issue or pull request number.
+For inline review comments, see [GitHub's pull request review comments](https://docs.github.com/en/rest/pulls/comments).
+For how to open a pull request, see [Creating a pull request](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request).
+**GitHub: Update Pull Request** updates the title, body, or open or closed state.
+This preview reads and updates issues and pull requests.
+
+## Enable triggers
+
+Triggers need a Langflow instance that GitHub can reach over public HTTPS.
+Set `LANGFLOW_TRIGGER_INGRESS_ORIGIN` to that origin, such as `https://flows.example.com`.
+Desktop and private Langflow instances can run actions.
+Arming a trigger requires public HTTPS ingress.
+
+The Connection must allow background runs.
+For more information, see [Add a connection](./connections?integration=github#add-a-connection).
+
+To enable a trigger, do the following:
+
+1. Add **GitHub: On Issue** or **GitHub: On Pull Request** at the start of a flow you own.
+2. Select your Connection and one repository.
+   Select the event actions that should run the flow.
+   The **Events** field lists the actions this trigger accepts.
+   Opened, closed, and reopened are selected by default.
+3. Enable the trigger.
+
+Langflow creates the repository webhook for that trigger and stores the signing secret.
+For more information, see [About webhooks](https://docs.github.com/en/webhooks/about-webhooks) and [Receive provider events with trigger webhooks](./deployment-trigger-webhooks).
+
+**Include Bot Events** is off by default so an update the app writes does not start the flow again.
+Turn it on only when the flow can handle its own updates.
+
+If GitHub removes or disables the webhook, disable the trigger and enable it again to recreate it.
+After a repository rename, update **Repository** and enable the trigger again.
