@@ -46,7 +46,6 @@ from langflow.services.database.revision import (
 from langflow.services.database.session import NoopSession
 from langflow.services.database.utils import Result, TableResults
 from langflow.services.deps import get_settings_service
-from langflow.services.utils import teardown_superuser
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -998,15 +997,7 @@ class DatabaseService(Service):
     async def teardown(self) -> None:
         await logger.adebug("Tearing down database")
         try:
-            if getattr(self, "database_initialized", False):
-                settings_service = get_settings_service()
-                # When AUTO_LOGIN is off, remove the unused default superuser (see teardown_superuser).
-                async with session_scope() as session:
-                    await teardown_superuser(settings_service, session)
-        except Exception:
-            await logger.aexception("Error tearing down database")
-            raise
-        finally:
             if self._heartbeat_engine is not None:
                 await self._heartbeat_engine.dispose()
+        finally:
             await self.engine.dispose()
