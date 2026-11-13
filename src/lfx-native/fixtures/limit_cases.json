@@ -30,6 +30,12 @@
       "rule": "depth-limit",
       "json": "{\"nodes\": [{\"id\": \"a\", \"data\": {\"node\": {\"template\": {\"x\": {\"value\": [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}}}}}], \"edges\": []}",
       "error": {"error": "FlowDataValidationError", "code": "FLOW_GRAPH_INVALID"}
+    },
+    {
+      "name": "a flow with a number too large for a double",
+      "rule": "finite-numbers",
+      "json": "{\"nodes\": [], \"edges\": [], \"zoom\": 1e400}",
+      "error": {"error": "FlowDataValidationError", "code": "FLOW_GRAPH_INVALID"}
     }
   ],
   "accepted": [

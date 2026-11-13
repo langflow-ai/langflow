@@ -77,6 +77,29 @@
       "operations": []
     },
     {
+      "name": "a handle's type lists in another order are the same edge",
+      "rule": "handle-type-sets",
+      "base": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str", "value": ""}}}}}
+        ],
+        "edges": [
+          {"id": "e", "source": "a", "target": "b", "sourceHandle": "{œidœ:œaœ,œnameœ:œoutœ,œoutput_typesœ:[œMessageœ,œDataœ]}", "targetHandle": "{œfieldNameœ:œfœ,œidœ:œbœ,œinputTypesœ:[œDataœ,œMessageœ,œTableœ],œtypeœ:œstrœ}", "data": {"sourceHandle": {"id": "a", "name": "out", "output_types": ["Message", "Data"]}, "targetHandle": {"fieldName": "f", "id": "b", "inputTypes": ["Data", "Message", "Table"], "type": "str"}}}
+        ]
+      },
+      "target": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str", "value": ""}}}}}
+        ],
+        "edges": [
+          {"id": "e", "source": "a", "target": "b", "sourceHandle": "{œidœ:œaœ,œnameœ:œoutœ,œoutput_typesœ:[œDataœ,œMessageœ]}", "targetHandle": "{œfieldNameœ:œfœ,œidœ:œbœ,œinputTypesœ:[œTableœ,œMessageœ,œDataœ],œtypeœ:œstrœ}", "data": {"sourceHandle": {"id": "a", "name": "out", "output_types": ["Data", "Message"]}, "targetHandle": {"fieldName": "f", "id": "b", "inputTypes": ["Table", "Message", "Data"], "type": "str"}}}
+        ]
+      },
+      "operations": []
+    },
+    {
       "name": "a value edit writes the whole value unit",
       "rule": "schema-units",
       "base": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "value": "a", "load_from_db": false}}}}}], "edges": []},
@@ -215,8 +238,8 @@
     {
       "name": "an output toggle is a write inside that output",
       "rule": "keyed-list-items-by-key",
-      "base": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "a"}, {"name": "b"}]}}}], "edges": []},
-      "target": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "a"}, {"name": "b", "hidden": true}]}}}], "edges": []},
+      "base": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "a", "__pos__": 1}, {"name": "b", "__pos__": 2}]}}}], "edges": []},
+      "target": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "a", "__pos__": 1}, {"name": "b", "__pos__": 2, "hidden": true}]}}}], "edges": []},
       "operations": [
         {"type": "update_nodes", "updates": [{"id": "n", "path": ["data", "node", "outputs", {"key": "b"}, "hidden"], "op": "set_field", "value": true}]}
       ]
@@ -224,21 +247,43 @@
     {
       "name": "added and removed outputs are writes at their keys",
       "rule": "keyed-list-items-by-key",
-      "base": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "a"}, {"name": "b"}]}}}], "edges": []},
-      "target": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "b"}, {"name": "c"}]}}}], "edges": []},
+      "base": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "a", "__pos__": 1}, {"name": "b", "__pos__": 2}]}}}], "edges": []},
+      "target": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "b", "__pos__": 2}, {"name": "c", "__pos__": 3}]}}}], "edges": []},
       "operations": [
         {
           "type": "update_nodes",
           "updates": [
-            {"id": "n", "path": ["data", "node", "outputs", {"key": "c"}], "op": "set_field", "value": {"name": "c"}},
+            {"id": "n", "path": ["data", "node", "outputs", {"key": "c"}], "op": "set_field", "value": {"name": "c", "__pos__": 3}},
             {"id": "n", "path": ["data", "node", "outputs", {"key": "a"}], "op": "delete_field"}
           ]
         }
       ]
     },
     {
-      "name": "reordered outputs are written whole",
-      "rule": "keyed-list-items-by-key",
+      "name": "moved outputs are writes to their __pos__",
+      "rule": "keyed-list-order",
+      "base": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "a", "__pos__": 1}, {"name": "b", "__pos__": 2}]}}}], "edges": []},
+      "target": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "b", "__pos__": 1}, {"name": "a", "__pos__": 2}]}}}], "edges": []},
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {"id": "n", "path": ["data", "node", "outputs", {"key": "b"}, "__pos__"], "op": "set_field", "value": 1},
+            {"id": "n", "path": ["data", "node", "outputs", {"key": "a"}, "__pos__"], "op": "set_field", "value": 2}
+          ]
+        }
+      ]
+    },
+    {
+      "name": "the array order of outputs is not a change",
+      "rule": "keyed-list-order",
+      "base": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "a", "__pos__": 1}, {"name": "b", "__pos__": 2}]}}}], "edges": []},
+      "target": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "b", "__pos__": 2}, {"name": "a", "__pos__": 1}]}}}], "edges": []},
+      "operations": []
+    },
+    {
+      "name": "reordered outputs without positions are written whole",
+      "rule": "legacy-keyed-lists",
       "base": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "a"}, {"name": "b"}]}}}], "edges": []},
       "target": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "b"}, {"name": "a"}]}}}], "edges": []},
       "operations": [
@@ -252,7 +297,7 @@
         "nodes": [
           {
             "id": "n",
-            "data": {"node": {"template": {"tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "on": true}, {"tags": ["fetch"], "on": true}]}}}}
+            "data": {"node": {"template": {"tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "on": true, "__pos__": 1}, {"tags": ["fetch"], "on": true, "__pos__": 2}]}}}}
           }
         ],
         "edges": []
@@ -264,7 +309,7 @@
             "data": {
               "node": {
                 "template": {
-                  "tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "on": true}, {"tags": ["fetch"], "on": false, "name": "fetch_page"}]}
+                  "tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "on": true, "__pos__": 1}, {"tags": ["fetch"], "on": false, "name": "fetch_page", "__pos__": 2}]}
                 }
               }
             }
@@ -283,8 +328,8 @@
       ]
     },
     {
-      "name": "reordered tool actions are written whole",
-      "rule": "keyed-list-items-by-key",
+      "name": "reordered tool actions without positions are written whole",
+      "rule": "legacy-keyed-lists",
       "base": {
         "nodes": [
           {

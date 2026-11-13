@@ -1,12 +1,13 @@
 //! `canonical_cases.json`: canonical text, value equality, graph equality and handles.
 
+use lfx::json;
 use lfx::ops::canonical::{canonical_json, graph_hash, graphs_equal, parse_handle, values_equal};
+use lfx::value::AnyValue;
 use libtest_mimic::{Failed, Trial};
-use serde_json::{Value, json};
 
 use crate::support::{assert_json_eq, error_json, load, section_cases};
 
-fn parse(text: &str) -> Result<Value, Failed> {
+fn parse(text: &str) -> Result<AnyValue, Failed> {
     serde_json::from_str(text).map_err(|error| format!("not JSON: {error}").into())
 }
 
@@ -37,7 +38,7 @@ pub fn trials() -> Vec<Trial> {
     trials.push(Trial::test(
         "canonical_cases::equality_samples",
         move || {
-            let samples: Vec<(Value, &str)> = samples
+            let samples: Vec<(AnyValue, &str)> = samples
                 .as_array()
                 .into_iter()
                 .flatten()
@@ -75,7 +76,7 @@ pub fn trials() -> Vec<Trial> {
         trials.push(Trial::test(
             format!("canonical_cases::handles::{name}"),
             move || {
-                let parsed = parse_handle(&case["handle"]).map_or(Value::Null, Value::Object);
+                let parsed = parse_handle(&case["handle"]).map_or(AnyValue::Null, AnyValue::Object);
                 assert_json_eq("parsed handle", &parsed, &case["parsed"])
             },
         ));
@@ -93,7 +94,7 @@ fn limit_trials() -> Vec<Trial> {
                 format!("limit_cases::{section}::{name}"),
                 move || {
                     let actual = match lfx::ops::api::canonical_json(
-                        case["json"].as_str().unwrap_or_default(),
+                        case["json"].as_str().unwrap_or_default().into(),
                     ) {
                         Ok(text) => json!({"canonical": text}),
                         Err(error) => {

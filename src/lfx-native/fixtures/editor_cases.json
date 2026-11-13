@@ -1,5 +1,5 @@
 {
-  "description": "The editor's side of table rows and restore fixes. `assign` gives rows the ids and positions the editor writes (withTableRowIds): unlike the server, it renumbers a table 1..n in stored order when a gap has no room left. `append` adds rows after a table (appendTableRows). `assign_nodes` gives row ids to the tables nodes add or change against the same nodes as they were (withNodesTableRowIds). `edge_fixes` turns a revision's edges as read into the edges its preview shows (edgeFixes); `fixes_for_edges` keeps the fixes of the flagged edges (fixesForEdges). Random row ids appear as `<generated row id>`; positions compare by value. Each case names the rule it checks in `rule`; README.md lists the rules. The expected outputs are reviewed data that every engine must meet.",
+  "description": "The editor's side of table rows and restore fixes. `assign` gives rows the ids and positions the editor writes (withTableRowIds): unlike the server, it renumbers a table 1..n when a gap has no room left. The new numbers keep the table's order: by `(__pos__, __id__)`, with each new row first placed at the midpoint of its array neighbours. `append` adds rows after a table (appendTableRows). `assign_nodes` gives row ids to the tables nodes add or change against the same nodes as they were (withNodesTableRowIds). `edge_fixes` turns a revision's edges as read into the edges its preview shows (edgeFixes); `fixes_for_edges` keeps the fixes of the flagged edges (fixesForEdges). Random row ids appear as `<generated row id>`; positions compare by value. Each case names the rule it checks in `rule`; README.md lists the rules. The expected outputs are reviewed data that every engine must meet.",
   "assign": [
     {
       "name": "rows that have ids and positions are left as they are",
@@ -35,10 +35,22 @@
       ]
     },
     {
-      "name": "a gap with no room left renumbers the table in stored order",
+      "name": "a gap with no room left renumbers the table in position order",
       "rule": "table-row-positions",
-      "rows": [{"__id__": "a", "__pos__": 1}, {"k": 1}, {"__id__": "b", "__pos__": 1.0000000000000002}],
-      "expected": [{"__id__": "a", "__pos__": 1}, {"k": 1, "__id__": "<generated row id>", "__pos__": 2}, {"__id__": "b", "__pos__": 3}]
+      "rows": [
+        {"__id__": "z", "__pos__": 0.5},
+        {"__id__": "a", "__pos__": 1},
+        {"__id__": "m", "k": 1},
+        {"__id__": "b", "__pos__": 1.0000000000000002},
+        {"__id__": "y", "__pos__": 0.25}
+      ],
+      "expected": [
+        {"__id__": "z", "__pos__": 2},
+        {"__id__": "a", "__pos__": 3},
+        {"__id__": "m", "k": 1, "__pos__": 4},
+        {"__id__": "b", "__pos__": 5},
+        {"__id__": "y", "__pos__": 1}
+      ]
     },
     {
       "name": "a run before the first position counts down",

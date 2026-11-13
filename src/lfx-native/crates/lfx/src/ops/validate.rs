@@ -24,11 +24,10 @@
 //!   apply never disagree.
 
 use std::borrow::Cow;
-use std::collections::{HashMap, HashSet};
 use std::fmt;
 
-use indexmap::IndexMap;
-use serde_json::{Map, Value};
+use crate::ops::maps::{HashMap, HashSet, IndexMap};
+use crate::value::{AnyMap, AnyValue};
 
 use crate::ops::canonical::{is_finite_number, is_row_position, values_equal};
 use crate::ops::edges::{
@@ -59,6 +58,9 @@ pub enum ViolationCode {
     TableRowIdMissing,
     TableRowIdDuplicate,
     TableRowPosInvalid,
+    /// An item of an outputs or tool action list that a write adds or
+    /// changes has no finite numeric `__pos__`.
+    ListItemMissingPos,
     /// A table's column definition names a column after a row key the engine owns.
     TableColumnReserved,
     /// A handle has one of its two forms, and the other is valid.
@@ -93,6 +95,7 @@ impl ViolationCode {
             Self::TableRowIdMissing => "TABLE_ROW_ID_MISSING",
             Self::TableRowIdDuplicate => "TABLE_ROW_ID_DUPLICATE",
             Self::TableRowPosInvalid => "TABLE_ROW_POS_INVALID",
+            Self::ListItemMissingPos => "LIST_ITEM_MISSING_POS",
             Self::TableColumnReserved => "TABLE_COLUMN_RESERVED",
             Self::EdgeHandleFormMissing => "EDGE_HANDLE_FORM_MISSING",
             Self::EdgeHandleInvalid => "EDGE_HANDLE_INVALID",
@@ -127,6 +130,7 @@ impl ViolationCode {
             Code::TableRowIdMissing => "assigned a generated row id",
             Code::TableRowIdDuplicate => "assigned a generated row id; the first row keeps the id",
             Code::TableRowPosInvalid => "assigned a position that keeps the row where it is stored",
+            Code::ListItemMissingPos => "assigned the midpoint of its array neighbours' positions",
             Code::EdgeHandleFormMissing => {
                 "derived the missing form of the handle from the one present"
             }
@@ -210,10 +214,10 @@ impl From<usize> for PathPart {
 
 impl PathPart {
     /// The part as JSON: a string key or an integer index.
-    pub(crate) fn to_value(&self) -> Value {
+    pub(crate) fn to_value(&self) -> AnyValue {
         match self {
-            Self::Key(key) => Value::from(key.as_str()),
-            Self::Index(index) => Value::from(*index),
+            Self::Key(key) => AnyValue::from(key.as_str()),
+            Self::Index(index) => AnyValue::from(*index),
         }
     }
 }
@@ -265,22 +269,22 @@ impl Violation {
 
     /// The violation as the API reports it.
     #[must_use]
-    pub fn to_value(&self) -> Value {
-        let mut object = Map::new();
-        object.insert("code".into(), Value::from(self.code.as_str()));
+    pub fn to_value(&self) -> AnyValue {
+        let mut object = AnyMap::new();
+        object.insert("code".into(), AnyValue::from(self.code.as_str()));
         object.insert(
             "path".into(),
-            Value::Array(self.path.iter().map(PathPart::to_value).collect()),
+            AnyValue::Array(self.path.iter().map(PathPart::to_value).collect()),
         );
-        object.insert("message".into(), Value::from(self.message.as_str()));
+        object.insert("message".into(), AnyValue::from(self.message.as_str()));
         object.insert(
             "resolution".into(),
-            Value::from(self.code.resolution().as_str()),
+            AnyValue::from(self.code.resolution().as_str()),
         );
         if let Some(edge_id) = &self.edge_id {
-            object.insert("edge_id".into(), Value::from(edge_id.as_str()));
+            object.insert("edge_id".into(), AnyValue::from(edge_id.as_str()));
         }
-        Value::Object(object)
+        AnyValue::Object(object)
     }
 }
 
@@ -299,20 +303,43 @@ impl Violation {
 /// Reading an edge's handles or a node's outputs failed in a way that is not
 /// a violation of the edge being checked.
 pub fn find_graph_violations(
-    flow: &Value,
+    flow: &AnyValue,
     numbers: Numbers,
-    base: Option<&Value>,
+    base: Option<&AnyValue>,
 ) -> Result<Vec<Violation>> {
-    let Value::Object(graph) = flow else {
-        return Ok(vec![Violation::new(
-            ViolationCode::FlowDataNotObject,
-            Vec::new(),
-            "flow data must be an object",
-        )]);
+    let AnyValue::Object(graph) = flow else {
+        return Ok(vec![not_an_object()]);
     };
+    let mut violations = structure_violations(graph);
+    if let Some(base) = base
+        && graph.get("nodes").is_some_and(AnyValue::is_array)
+    {
+        let structural = violations.is_empty();
+        violations.extend(find_table_violations(base, flow)?);
+        violations.extend(find_list_position_violations(base, flow)?);
+        if structural {
+            violations.extend(find_edge_violations(base, flow)?);
+        }
+    }
+    if numbers == Numbers::Check {
+        non_finite_violations(flow, &mut Vec::new(), &mut violations);
+    }
+    Ok(violations)
+}
+
+fn not_an_object() -> Violation {
+    Violation::new(
+        ViolationCode::FlowDataNotObject,
+        Vec::new(),
+        "flow data must be an object",
+    )
+}
+
+/// The structural rules `graph` breaks, in the order the graph lists them.
+fn structure_violations(graph: &AnyMap) -> Vec<Violation> {
     let mut violations = Vec::new();
-    let nodes = graph.get("nodes").and_then(Value::as_array);
-    let edges = graph.get("edges").and_then(Value::as_array);
+    let nodes = graph.get("nodes").and_then(AnyValue::as_array);
+    let edges = graph.get("edges").and_then(AnyValue::as_array);
     for (key, collection) in [("nodes", nodes), ("edges", edges)] {
         if collection.is_none() {
             violations.push(Violation::new(
@@ -323,7 +350,7 @@ pub fn find_graph_violations(
         }
     }
 
-    let mut node_ids = HashSet::new();
+    let mut node_ids = HashSet::default();
     if let Some(nodes) = nodes {
         for (index, node) in nodes.iter().enumerate() {
             node_violations(
@@ -335,7 +362,7 @@ pub fn find_graph_violations(
         }
     }
     if let Some(edges) = edges {
-        let mut edge_ids = HashSet::new();
+        let mut edge_ids = HashSet::default();
         for (index, edge) in edges.iter().enumerate() {
             edge_violations(
                 edge,
@@ -346,20 +373,7 @@ pub fn find_graph_violations(
             );
         }
     }
-
-    if let Some(base) = base
-        && nodes.is_some()
-    {
-        let structural = violations.is_empty();
-        violations.extend(find_table_violations(base, flow)?);
-        if structural {
-            violations.extend(find_edge_violations(base, flow)?);
-        }
-    }
-    if numbers == Numbers::Check {
-        non_finite_violations(flow, &mut Vec::new(), &mut violations);
-    }
-    Ok(violations)
+    violations
 }
 
 /// Fail with every violation `flow` has, if it has any.
@@ -369,12 +383,21 @@ pub fn find_graph_violations(
 /// An invalid graph error listing the violations, or what
 /// [`find_graph_violations`] fails with.
 pub fn validate_flow_data(
-    flow: &Value,
+    flow: &AnyValue,
     numbers: Numbers,
     context: &str,
-    base: Option<&Value>,
+    base: Option<&AnyValue>,
 ) -> Result<()> {
-    let violations = find_graph_violations(flow, numbers, base)?;
+    violations_error(find_graph_violations(flow, numbers, base)?, context)
+}
+
+/// Fail with `violations`, if there are any. The message names the first one
+/// and counts the others; `context` names the graph.
+///
+/// # Errors
+///
+/// An invalid graph error listing the violations.
+fn violations_error(violations: Vec<Violation>, context: &str) -> Result<()> {
     let Some(first) = violations.first() else {
         return Ok(());
     };
@@ -400,12 +423,12 @@ pub fn validate_flow_data(
 }
 
 fn node_violations<'a>(
-    node: &'a Value,
+    node: &'a AnyValue,
     path: &[PathPart],
     node_ids: &mut HashSet<&'a str>,
     violations: &mut Vec<Violation>,
 ) {
-    let Value::Object(node) = node else {
+    let AnyValue::Object(node) = node else {
         violations.push(Violation::new(
             ViolationCode::NodeNotObject,
             path.to_vec(),
@@ -436,12 +459,12 @@ fn node_violations<'a>(
 }
 
 /// The first of `data`, `data.node` and `data.node.template` that is not an object.
-fn missing_node_object(node: &Map<String, Value>) -> Option<&'static [&'static str]> {
+fn missing_node_object(node: &AnyMap) -> Option<&'static [&'static str]> {
     let mut value = node;
     for object_path in NODE_OBJECT_PATHS {
         let key = object_path[object_path.len() - 1];
         match value.get(key) {
-            Some(Value::Object(object)) => value = object,
+            Some(AnyValue::Object(object)) => value = object,
             _ => return Some(object_path),
         }
     }
@@ -449,13 +472,13 @@ fn missing_node_object(node: &Map<String, Value>) -> Option<&'static [&'static s
 }
 
 fn edge_violations<'a>(
-    edge: &'a Value,
+    edge: &'a AnyValue,
     path: &[PathPart],
     edge_ids: &mut HashSet<&'a str>,
     node_ids: &HashSet<&str>,
     violations: &mut Vec<Violation>,
 ) {
-    let Value::Object(edge) = edge else {
+    let AnyValue::Object(edge) = edge else {
         violations.push(Violation::new(
             ViolationCode::EdgeNotObject,
             path.to_vec(),
@@ -492,23 +515,47 @@ fn edge_violations<'a>(
     }
 }
 
-fn non_finite_violations(value: &Value, path: &mut GraphPath, violations: &mut Vec<Violation>) {
+/// A step of a path that a walk holds while it reads, borrowed from the graph.
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum Step<'a> {
+    Key(&'a str),
+    Index(usize),
+}
+
+/// A walk's path as a graph path, its keys copied: for a violation or a fix.
+pub(crate) fn owned_path(steps: &[Step<'_>]) -> GraphPath {
+    steps
+        .iter()
+        .map(|step| match *step {
+            Step::Key(key) => PathPart::Key(key.to_owned()),
+            Step::Index(index) => PathPart::Index(index),
+        })
+        .collect()
+}
+
+/// Every number in `value` that is not finite, in document order. The walk
+/// borrows each key; a path is copied only for a violation.
+fn non_finite_violations<'a>(
+    value: &'a AnyValue,
+    path: &mut Vec<Step<'a>>,
+    violations: &mut Vec<Violation>,
+) {
     match value {
-        Value::Number(number) if !is_finite_number(number) => violations.push(Violation::new(
+        AnyValue::Number(number) if !is_finite_number(number) => violations.push(Violation::new(
             ViolationCode::NonFiniteNumber,
-            path.clone(),
+            owned_path(path),
             "NaN, Infinity and integers too large for a double are not valid JSON",
         )),
-        Value::Object(map) => {
+        AnyValue::Object(map) => {
             for (key, item) in map {
-                path.push(PathPart::Key(key.clone()));
+                path.push(Step::Key(key));
                 non_finite_violations(item, path, violations);
                 path.pop();
             }
         }
-        Value::Array(items) => {
+        AnyValue::Array(items) => {
             for (index, item) in items.iter().enumerate() {
-                path.push(PathPart::Index(index));
+                path.push(Step::Index(index));
                 non_finite_violations(item, path, violations);
                 path.pop();
             }
@@ -522,8 +569,8 @@ fn non_finite_violations(value: &Value, path: &mut GraphPath, violations: &mut V
 /// A structurally valid graph, indexed for the edge rules without copying it.
 #[derive(Debug)]
 pub(crate) struct GraphView<'a> {
-    nodes: HashMap<&'a str, &'a Value>,
-    edges: HashMap<&'a str, &'a Map<String, Value>>,
+    nodes: HashMap<&'a str, &'a AnyValue>,
+    edges: HashMap<&'a str, &'a AnyMap>,
     edges_at: HashMap<&'a str, Vec<&'a str>>,
 }
 
@@ -534,11 +581,11 @@ impl<'a> GraphView<'a> {
     ///
     /// A node does not have the shape of a node, which structural validation
     /// refuses first.
-    pub fn new(graph: &'a Value) -> Result<Self> {
+    pub fn new(graph: &'a AnyValue) -> Result<Self> {
         let mut view = Self {
-            nodes: HashMap::new(),
-            edges: HashMap::new(),
-            edges_at: HashMap::new(),
+            nodes: HashMap::default(),
+            edges: HashMap::default(),
+            edges_at: HashMap::default(),
         };
         for node in list(graph, "nodes") {
             let Some(map) = node.as_object() else {
@@ -546,7 +593,7 @@ impl<'a> GraphView<'a> {
             };
             view.nodes.insert(NodeRef::new(map)?.id(), node);
         }
-        for edge in list(graph, "edges").iter().filter_map(Value::as_object) {
+        for edge in list(graph, "edges").iter().filter_map(AnyValue::as_object) {
             let id = edge.id();
             view.edges.insert(id, edge);
             let (source, target) = (endpoint(edge, "source"), endpoint(edge, "target"));
@@ -564,14 +611,14 @@ impl GraphRead for GraphView<'_> {
         self.nodes.contains_key(id)
     }
 
-    fn node_value(&self, id: &str, path: &[&str]) -> Option<Cow<'_, Value>> {
+    fn node_value(&self, id: &str, path: &[&str]) -> Option<Cow<'_, AnyValue>> {
         let node = self.nodes.get(id)?;
         path.iter()
             .try_fold(*node, |value, key| value.get(key))
             .map(Cow::Borrowed)
     }
 
-    fn edge(&self, id: &str) -> Option<&Map<String, Value>> {
+    fn edge(&self, id: &str) -> Option<&AnyMap> {
         self.edges.get(id).copied()
     }
 
@@ -580,10 +627,10 @@ impl GraphRead for GraphView<'_> {
     }
 }
 
-fn list<'a>(graph: &'a Value, key: &str) -> &'a [Value] {
+fn list<'a>(graph: &'a AnyValue, key: &str) -> &'a [AnyValue] {
     graph
         .get(key)
-        .and_then(Value::as_array)
+        .and_then(AnyValue::as_array)
         .map(Vec::as_slice)
         .unwrap_or_default()
 }
@@ -600,10 +647,10 @@ fn list<'a>(graph: &'a Value, key: &str) -> &'a [Value] {
 ///
 /// A compared value holds a number that is not finite, or an outputs list
 /// that a write changes is not a valid keyed list.
-pub fn changed_edges(base: &Value, target: &Value) -> Result<Vec<usize>> {
-    let stored: HashMap<&str, &Map<String, Value>> = list(base, "edges")
+pub fn changed_edges(base: &AnyValue, target: &AnyValue) -> Result<Vec<usize>> {
+    let stored: HashMap<&str, &AnyMap> = list(base, "edges")
         .iter()
-        .filter_map(Value::as_object)
+        .filter_map(AnyValue::as_object)
         .filter_map(|edge| Some((edge.get("id")?.as_str()?, edge)))
         .collect();
     let removed = removed_ends(base, target)?;
@@ -631,14 +678,14 @@ struct RemovedEnds {
 }
 
 /// The template fields and outputs `target` removes from the nodes it keeps, by node id.
-fn removed_ends(base: &Value, target: &Value) -> Result<HashMap<String, RemovedEnds>> {
-    let stored: HashMap<&str, &Map<String, Value>> = list(base, "nodes")
+fn removed_ends(base: &AnyValue, target: &AnyValue) -> Result<HashMap<String, RemovedEnds>> {
+    let stored: HashMap<&str, &AnyMap> = list(base, "nodes")
         .iter()
-        .filter_map(Value::as_object)
+        .filter_map(AnyValue::as_object)
         .map(|node| (node.id(), node))
         .collect();
-    let mut removed = HashMap::new();
-    for node in list(target, "nodes").iter().filter_map(Value::as_object) {
+    let mut removed = HashMap::default();
+    for node in list(target, "nodes").iter().filter_map(AnyValue::as_object) {
         let Some(stored) = stored.get(node.id()) else {
             continue;
         };
@@ -653,36 +700,32 @@ fn removed_ends(base: &Value, target: &Value) -> Result<HashMap<String, RemovedE
 }
 
 /// The template keys `before` has and `after` does not.
-fn removed_fields(before: &Map<String, Value>, after: &Map<String, Value>) -> HashSet<String> {
+fn removed_fields(before: &AnyMap, after: &AnyMap) -> HashSet<String> {
     before
         .keys()
-        .filter(|key| !after.contains_key(*key))
-        .cloned()
+        .filter(|key| !after.contains_key(key))
+        .map(ToString::to_string)
         .collect()
 }
 
 /// The output names `before` has and `after` does not. Outputs that compare
 /// equal are not indexed, so a write that leaves them alone reads nothing.
-fn removed_outputs(
-    before: &Map<String, Value>,
-    after: &Map<String, Value>,
-    node_id: &str,
-) -> Result<HashSet<String>> {
+fn removed_outputs(before: &AnyMap, after: &AnyMap, node_id: &str) -> Result<HashSet<String>> {
     let Some(outputs_before) = before.get("outputs") else {
-        return Ok(HashSet::new());
+        return Ok(HashSet::default());
     };
     let outputs_after = after.get("outputs");
     if let Some(outputs_after) = outputs_after
         && values_equal(outputs_before, outputs_after)?
     {
-        return Ok(HashSet::new());
+        return Ok(HashSet::default());
     }
     let kept: HashSet<String> = match outputs_after {
         Some(outputs_after) => index_outputs(Cow::Borrowed(outputs_after), node_id)?
             .names()
             .map(str::to_owned)
             .collect(),
-        None => HashSet::new(),
+        None => HashSet::default(),
     };
     Ok(index_outputs(Cow::Borrowed(outputs_before), node_id)?
         .names()
@@ -696,7 +739,7 @@ fn removed_outputs(
 /// Applying the removal reads the handles of every edge at that node
 /// strictly, so an edge there whose handles cannot be read counts too, and
 /// the edge rules report it.
-fn is_cut(edge: &Map<String, Value>, removed: &HashMap<String, RemovedEnds>) -> bool {
+fn is_cut(edge: &AnyMap, removed: &HashMap<String, RemovedEnds>) -> bool {
     let source = removed.get(endpoint(edge, "source"));
     let target = removed.get(endpoint(edge, "target"));
     if source.is_none() && target.is_none() {
@@ -724,7 +767,7 @@ fn is_cut(edge: &Map<String, Value>, removed: &HashMap<String, RemovedEnds>) -> 
 /// # Errors
 ///
 /// A check failed in a way that is not an edge rule.
-pub fn find_edge_violations(base: &Value, target: &Value) -> Result<Vec<Violation>> {
+pub fn find_edge_violations(base: &AnyValue, target: &AnyValue) -> Result<Vec<Violation>> {
     let indexes = changed_edges(base, target)?;
     if indexes.is_empty() {
         return Ok(Vec::new());
@@ -737,7 +780,7 @@ pub fn find_edge_violations(base: &Value, target: &Value) -> Result<Vec<Violatio
         .enumerate()
         .filter_map(|(index, edge)| Some((edge.as_object().map(EntryExt::id)?, index)))
         .collect();
-    let mut violations: IndexMap<String, Violation> = IndexMap::new();
+    let mut violations: IndexMap<String, Violation> = IndexMap::default();
     for index in indexes {
         let Some(edge) = edges[index].as_object() else {
             continue;
@@ -784,9 +827,91 @@ pub struct ChangedTable<'a> {
     /// The name of the template field that holds the table.
     pub field: &'a str,
     #[expect(missing_docs, reason = "the name says what it is")]
-    pub rows: &'a [Value],
+    pub rows: &'a [AnyValue],
     /// The field's `table_schema`, which declares its columns; `None` when it has none.
-    pub table_schema: Option<&'a Value>,
+    pub table_schema: Option<&'a AnyValue>,
+}
+
+/// An outputs or tool action list a write adds or changes, and where it is.
+#[derive(Debug)]
+pub struct ChangedList<'a> {
+    /// Where the list is, for example `nodes.<index>.data.node.outputs`.
+    pub path: GraphPath,
+    #[expect(missing_docs, reason = "the name says what it is")]
+    pub items: &'a [AnyValue],
+}
+
+/// The outputs and tool action lists that `target` adds or changes relative
+/// to `base`, in the order the graph lists them.
+///
+/// # Errors
+///
+/// A compared list holds a number that is not finite.
+pub fn changed_keyed_lists<'a>(
+    base: &AnyValue,
+    target: &'a AnyValue,
+) -> Result<Vec<ChangedList<'a>>> {
+    let stored: HashMap<&str, &AnyValue> = list(base, "nodes")
+        .iter()
+        .filter_map(|node| Some((node.get("id")?.as_str()?, node)))
+        .collect();
+    let mut lists = Vec::new();
+    for (index, node) in list(target, "nodes").iter().enumerate() {
+        let stored_node = node
+            .get("id")
+            .and_then(AnyValue::as_str)
+            .and_then(|id| stored.get(id));
+        for (list_path, _) in NODE_SCHEMA.natural_lists() {
+            let Some(value) = list_path.iter().try_fold(node, |value, key| value.get(key)) else {
+                continue;
+            };
+            let AnyValue::Array(items) = value else {
+                continue;
+            };
+            let stored_list = stored_node.and_then(|stored| {
+                list_path
+                    .iter()
+                    .try_fold(*stored, |value, key| value.get(key))
+            });
+            if let Some(stored_list) = stored_list
+                && values_equal(stored_list, value)?
+            {
+                continue;
+            }
+            let path = ["nodes".into(), index.into()]
+                .into_iter()
+                .chain(list_path.iter().map(|key| PathPart::from(key.as_str())))
+                .collect();
+            lists.push(ChangedList { path, items });
+        }
+    }
+    Ok(lists)
+}
+
+/// A violation for every item without a finite numeric `__pos__` in the
+/// outputs and tool action lists that `target` adds or changes relative to
+/// `base`. Table rows have rules of their own ([`find_table_violations`]).
+///
+/// # Errors
+///
+/// A compared list holds a number that is not finite.
+pub fn find_list_position_violations(base: &AnyValue, target: &AnyValue) -> Result<Vec<Violation>> {
+    let position_key = &NODE_SCHEMA.table_keys.position;
+    let mut violations = Vec::new();
+    for changed in changed_keyed_lists(base, target)? {
+        for (index, item) in changed.items.iter().enumerate() {
+            if !item.get(position_key).is_some_and(is_row_position) {
+                let mut item_path = changed.path.clone();
+                item_path.extend([index.into(), position_key.as_str().into()]);
+                violations.push(Violation::new(
+                    ViolationCode::ListItemMissingPos,
+                    item_path,
+                    format!("list item must have a finite numeric {position_key}"),
+                ));
+            }
+        }
+    }
+    Ok(violations)
 }
 
 /// The table values `target` adds or changes relative to `base`, in the order the graph lists them.
@@ -794,11 +919,11 @@ pub struct ChangedTable<'a> {
 /// # Errors
 ///
 /// A compared table holds a number that is not finite.
-pub fn changed_tables<'a>(base: &Value, target: &'a Value) -> Result<Vec<ChangedTable<'a>>> {
-    let mut stored: HashMap<&str, &Map<String, Value>> = HashMap::new();
+pub fn changed_tables<'a>(base: &AnyValue, target: &'a AnyValue) -> Result<Vec<ChangedTable<'a>>> {
+    let mut stored: HashMap<&str, &AnyMap> = HashMap::default();
     for node in list(base, "nodes") {
         if let (Some(template), Some(id)) =
-            (node.template(), node.get("id").and_then(Value::as_str))
+            (node.template(), node.get("id").and_then(AnyValue::as_str))
         {
             stored.entry(id).or_insert(template);
         }
@@ -808,10 +933,11 @@ pub fn changed_tables<'a>(base: &Value, target: &'a Value) -> Result<Vec<Changed
         let Some(fields) = node.template() else {
             continue;
         };
-        let node_id = node.get("id").and_then(Value::as_str);
+        let node_id = node.get("id").and_then(AnyValue::as_str);
         let stored_fields = node_id.and_then(|id| stored.get(id));
         for (name, field) in fields {
-            let Some(Value::Array(rows)) = field.as_object().and_then(|field| field.get("value"))
+            let Some(AnyValue::Array(rows)) =
+                field.as_object().and_then(|field| field.get("value"))
             else {
                 continue;
             };
@@ -821,7 +947,7 @@ pub fn changed_tables<'a>(base: &Value, target: &'a Value) -> Result<Vec<Changed
             }
             let stored_value = stored_fields
                 .and_then(|fields| fields.get(name))
-                .and_then(Value::as_object)
+                .and_then(AnyValue::as_object)
                 .and_then(|field| field.get("value"));
             if let Some(stored_value) = stored_value
                 && values_equal(stored_value, &field["value"])?
@@ -853,7 +979,7 @@ pub fn changed_tables<'a>(base: &Value, target: &'a Value) -> Result<Vec<Changed
 /// # Errors
 ///
 /// A compared table holds a number that is not finite.
-pub fn find_table_violations(base: &Value, target: &Value) -> Result<Vec<Violation>> {
+pub fn find_table_violations(base: &AnyValue, target: &AnyValue) -> Result<Vec<Violation>> {
     let mut violations = Vec::new();
     for table in changed_tables(base, target)? {
         if let Some(table_schema) = table.table_schema {
@@ -871,17 +997,17 @@ pub fn find_table_violations(base: &Value, target: &Value) -> Result<Vec<Violati
 /// `table_schema` is a list of columns, or an object whose `columns` is that
 /// list. `path` is where `table_schema` is. Anything else declares no columns.
 #[must_use]
-pub fn table_column_violations(table_schema: &Value, path: &[PathPart]) -> Vec<Violation> {
+pub fn table_column_violations(table_schema: &AnyValue, path: &[PathPart]) -> Vec<Violation> {
     let (columns, columns_path) = match table_schema {
-        Value::Object(schema) => (schema.get("columns"), path_of(path, &["columns"])),
+        AnyValue::Object(schema) => (schema.get("columns"), path_of(path, &["columns"])),
         list => (Some(list), path.to_vec()),
     };
-    let Some(Value::Array(columns)) = columns else {
+    let Some(AnyValue::Array(columns)) = columns else {
         return Vec::new();
     };
     let mut violations = Vec::new();
     for (index, column) in columns.iter().enumerate() {
-        let Some(name) = column.get("name").and_then(Value::as_str) else {
+        let Some(name) = column.get("name").and_then(AnyValue::as_str) else {
             continue;
         };
         if is_row_key(name) {
@@ -905,13 +1031,13 @@ fn is_row_key(name: &str) -> bool {
 
 /// The row rules one table value breaks.
 #[must_use]
-pub fn table_row_violations(rows: &[Value], path: &[PathPart]) -> Vec<Violation> {
+pub fn table_row_violations(rows: &[AnyValue], path: &[PathPart]) -> Vec<Violation> {
     let (id_key, position_key) = (&NODE_SCHEMA.table_keys.id, &NODE_SCHEMA.table_keys.position);
     let mut violations = Vec::new();
-    let mut seen = HashSet::new();
+    let mut seen = HashSet::default();
     for (index, row) in rows.iter().enumerate() {
         let row_path: GraphPath = path.iter().cloned().chain([index.into()]).collect();
-        let Value::Object(row) = row else {
+        let AnyValue::Object(row) = row else {
             violations.push(Violation::new(
                 ViolationCode::TableRowNotObject,
                 row_path,

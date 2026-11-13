@@ -1,13 +1,15 @@
 //! The browser binding of lfx: the `lfx-native` npm package.
 //!
-//! Every function takes JSON text and returns JSON text. An engine error is
+//! Every function takes JSON text and returns JSON text, written as ASCII.
+//! Text is what the browser holds, and `JSON.parse` reads it faster than the
+//! binding could build JavaScript objects. An engine error is
 //! thrown as an `Error` whose `kind` names the matching Python exception class,
 //! whose `code` is its stable code, and whose `details` is the whole error as
 //! JSON text. The binding holds no rules: each function calls `lfx::ops::api`.
 
 use js_sys::{Error, Reflect};
-use lfx::ops::api::{self, ApiError, ApiResult};
-use lfx::ops::{ApplyOptions, Mode};
+use lfx::ops::api::{self, ApiError, ApiResult, Input};
+use lfx::ops::{ApplyOptions, ReplayOptions};
 use wasm_bindgen::prelude::*;
 
 fn thrown(error: &ApiError) -> JsValue {
@@ -15,7 +17,7 @@ fn thrown(error: &ApiError) -> JsValue {
     for (name, value) in [
         ("kind", error.kind().to_owned()),
         ("code", error.code().to_owned()),
-        ("details", error.0.to_string()),
+        ("details", api::json_text(&error.0)),
     ] {
         // Setting a property on a fresh Error cannot fail.
         let _ = Reflect::set(
@@ -31,31 +33,43 @@ fn run<T>(result: ApiResult<T>) -> Result<T, JsValue> {
     result.map_err(|error| thrown(&error))
 }
 
-/// Read the apply options from an options object: `{forward, backward, mode}`.
-/// `mode` is `"strict"` or `"preview"`, and `"strict"` when absent.
-fn apply_options(options: &JsValue, forward_by_default: bool) -> Result<ApplyOptions, JsValue> {
-    let get = |name: &str| Reflect::get(options, &JsValue::from_str(name)).ok();
-    let flag = |name: &str| get(name).and_then(|value| value.as_bool());
-    let mode = match get("mode").filter(|value| !value.is_undefined()) {
-        None => Mode::Strict,
-        Some(value) => {
-            let name = value
-                .as_string()
-                .ok_or_else(|| lfx::ops::Error::invalid("apply mode must be a string"));
-            run(name.and_then(|name| name.parse()).map_err(ApiError::from))?
-        }
-    };
-    Ok(ApplyOptions {
-        forward: flag("forward").unwrap_or(forward_by_default),
-        backward: flag("backward").unwrap_or(false),
-        mode,
-    })
+/// A result as JSON text, written as ASCII.
+fn text(result: ApiResult) -> Result<String, JsValue> {
+    run(result).map(|value| api::json_text(&value))
 }
 
-/// A flow graph that the engine keeps loaded, to apply many batches to it.
+/// An optional JSON text argument.
+fn optional(text: Option<&str>) -> Option<Input<'_>> {
+    text.map(Input::from)
+}
+
+/// A boolean option of an options object, or `None` when it is not a boolean.
+fn flag(options: &JsValue, name: &str) -> Option<bool> {
+    Reflect::get(options, &JsValue::from_str(name))
+        .ok()
+        .and_then(|value| value.as_bool())
+}
+
+/// Read the apply options from an options object: `{forward, backward}`.
+fn apply_options(options: &JsValue, forward_by_default: bool) -> ApplyOptions {
+    ApplyOptions {
+        forward: flag(options, "forward").unwrap_or(forward_by_default),
+        backward: flag(options, "backward").unwrap_or(false),
+    }
+}
+
+/// Read the replay options from an options object: `{backward}`.
+fn replay_options(options: &JsValue) -> ReplayOptions {
+    ReplayOptions {
+        backward: flag(options, "backward").unwrap_or(false),
+    }
+}
+
+/// A flow graph that the engine keeps loaded, to apply or replay many
+/// batches on it.
 ///
-/// History playback and rebase apply many batches to one graph and read it
-/// once. A refused batch changes nothing.
+/// History playback and rebase carry out many batches on one graph and read
+/// it once. A refused batch changes nothing.
 #[wasm_bindgen]
 #[derive(Debug)]
 pub struct GraphState {
@@ -68,25 +82,39 @@ impl GraphState {
     ///
     /// # Errors
     ///
-    /// The graph does not parse or breaks a structural rule.
+    /// The graph does not parse, or breaks a structural rule.
     #[wasm_bindgen(constructor)]
     pub fn new(flow: &str) -> Result<GraphState, JsValue> {
         Ok(Self {
-            state: run(api::graph_state(flow))?,
+            state: run(api::graph_state(flow.into()))?,
         })
     }
 
-    /// Apply a batch; returns what it did as JSON. `options` is
-    /// `{forward, backward, mode}`: the flags false and `mode` `"strict"` by default.
+    /// Apply a batch, with every rule; returns what it did as JSON.
+    /// `options` is `{forward, backward}`, both false by default.
     ///
     /// # Errors
     ///
     /// The operations do not parse, or the engine refuses the batch.
     pub fn apply(&mut self, operations: &str, options: &JsValue) -> Result<String, JsValue> {
-        run(api::apply_to(
+        text(api::apply_to(
             &mut self.state,
-            operations,
-            apply_options(options, false)?,
+            operations.into(),
+            apply_options(options, false),
+        ))
+    }
+
+    /// Replay stored operations, with no rule; returns what it did as JSON.
+    /// `options` is `{backward}`, false by default.
+    ///
+    /// # Errors
+    ///
+    /// The operations do not parse, or an operation cannot be carried out.
+    pub fn replay(&mut self, operations: &str, options: &JsValue) -> Result<String, JsValue> {
+        text(api::replay_to(
+            &mut self.state,
+            operations.into(),
+            replay_options(options),
         ))
     }
 
@@ -94,49 +122,49 @@ impl GraphState {
     #[wasm_bindgen(js_name = toJson)]
     #[must_use]
     pub fn to_json(&self) -> String {
-        self.state.to_string()
+        api::graph_json(&self.state)
     }
 }
 
-/// Apply operations to a graph; returns `{"flow_data", ...}` as JSON.
-/// `options` is `{forward, backward, mode}`; `forward` is true by default.
+/// Apply operations to a graph, with every rule; returns `{"flow_data", ...}`
+/// as JSON. `options` is `{forward, backward}`; `forward` is true by default.
 ///
 /// # Errors
 ///
 /// The graph or the operations do not parse, or the engine refuses the batch.
 #[wasm_bindgen]
 pub fn apply(flow: &str, operations: &str, options: &JsValue) -> Result<String, JsValue> {
-    run(api::apply(flow, operations, apply_options(options, true)?))
+    text(api::apply(
+        flow.into(),
+        operations.into(),
+        apply_options(options, true),
+    ))
 }
 
-/// Parse operations and print them as the engine records them.
+/// Replay stored operations on a graph, with no rule; returns
+/// `{"flow_data", ...}` as JSON. `options` is `{backward}`, false by default.
 ///
 /// # Errors
 ///
-/// The operations do not parse.
-#[wasm_bindgen(js_name = normalizeOperations)]
-pub fn normalize_operations(operations: &str) -> Result<String, JsValue> {
-    run(api::normalize_operations(operations))
-}
-
-/// The operations that turn `base` into `target`.
-///
-/// # Errors
-///
-/// A graph does not parse or breaks the rules.
+/// The graph or the operations do not parse, the graph breaks a structural rule,
+/// or an operation cannot be carried out.
 #[wasm_bindgen]
-pub fn diff(base: &str, target: &str) -> Result<String, JsValue> {
-    run(api::diff(base, target))
+pub fn replay(flow: &str, operations: &str, options: &JsValue) -> Result<String, JsValue> {
+    text(api::replay(
+        flow.into(),
+        operations.into(),
+        replay_options(options),
+    ))
 }
 
-/// The operations that turn `base` into `target`, verified by replay.
+/// The operations that turn `base` into `target`, checked by replay.
 ///
 /// # Errors
 ///
 /// A graph does not parse or breaks the rules, or the operations do not replay.
-#[wasm_bindgen]
-pub fn derive(base: &str, target: &str) -> Result<String, JsValue> {
-    run(api::derive(base, target))
+#[wasm_bindgen(js_name = opsDiff)]
+pub fn ops_diff(base: &str, target: &str) -> Result<String, JsValue> {
+    text(api::ops_diff(base.into(), target.into()))
 }
 
 /// Every rule a graph breaks, as a JSON list of violations.
@@ -154,9 +182,9 @@ pub fn validate(
     base: Option<String>,
     check_values: Option<bool>,
 ) -> Result<String, JsValue> {
-    run(api::validate(
-        flow,
-        base.as_deref(),
+    text(api::validate(
+        flow.into(),
+        optional(base.as_deref()),
         check_values.unwrap_or(true),
     ))
 }
@@ -172,7 +200,7 @@ pub fn validate(
     reason = "wasm-bindgen passes an optional string by value"
 )]
 pub fn repair(flow: &str, base: Option<String>) -> Result<String, JsValue> {
-    run(api::repair(flow, base.as_deref()))
+    text(api::repair(flow.into(), optional(base.as_deref())))
 }
 
 /// The SHA-256 hex digest of a graph's canonical form.
@@ -182,7 +210,7 @@ pub fn repair(flow: &str, base: Option<String>) -> Result<String, JsValue> {
 /// The graph does not parse, or holds a number that is not finite.
 #[wasm_bindgen(js_name = graphHash)]
 pub fn graph_hash(flow: &str) -> Result<String, JsValue> {
-    run(api::graph_hash(flow))
+    run(api::graph_hash(flow.into()))
 }
 
 /// Whether two graphs are the same graph.
@@ -192,7 +220,7 @@ pub fn graph_hash(flow: &str) -> Result<String, JsValue> {
 /// A graph does not parse, or a compared number is not finite.
 #[wasm_bindgen(js_name = graphsEqual)]
 pub fn graphs_equal(left: &str, right: &str) -> Result<bool, JsValue> {
-    run(api::graphs_equal(left, right))
+    run(api::graphs_equal(left.into(), right.into()))
 }
 
 /// Whether two JSON values are the same value.
@@ -202,7 +230,7 @@ pub fn graphs_equal(left: &str, right: &str) -> Result<bool, JsValue> {
 /// A value does not parse, or a compared number is not finite.
 #[wasm_bindgen(js_name = valuesEqual)]
 pub fn values_equal(left: &str, right: &str) -> Result<bool, JsValue> {
-    run(api::values_equal(left, right))
+    run(api::values_equal(left.into(), right.into()))
 }
 
 /// A JSON value in RFC 8785 canonical form.
@@ -212,17 +240,7 @@ pub fn values_equal(left: &str, right: &str) -> Result<bool, JsValue> {
 /// The value does not parse, or holds a number that is not finite.
 #[wasm_bindgen(js_name = canonicalJson)]
 pub fn canonical_json(value: &str) -> Result<String, JsValue> {
-    run(api::canonical_json(value))
-}
-
-/// The engine's part of a save.
-///
-/// # Errors
-///
-/// The inputs do not parse, a graph breaks the rules, or the engine fails.
-#[wasm_bindgen(js_name = prepareWrite)]
-pub fn prepare_write(stored: &str, target: &str, options: &str) -> Result<String, JsValue> {
-    run(api::prepare_write(stored, target, options))
+    run(api::canonical_json(value.into()))
 }
 
 /// A revision with a restore's fixes applied, after checking each one.
@@ -236,7 +254,11 @@ pub fn apply_restore_fixes(
     stored: &str,
     fixes: &str,
 ) -> Result<String, JsValue> {
-    run(api::apply_restore_fixes(revision_graph, stored, fixes))
+    text(api::apply_restore_fixes(
+        revision_graph.into(),
+        stored.into(),
+        fixes.into(),
+    ))
 }
 
 /// The fixes that turn a revision's edges as read into the edges its preview shows.
@@ -246,7 +268,7 @@ pub fn apply_restore_fixes(
 /// The inputs do not parse.
 #[wasm_bindgen(js_name = edgeFixes)]
 pub fn edge_fixes(read: &str, shown: &str) -> Result<String, JsValue> {
-    run(api::edge_fixes(read, shown))
+    text(api::edge_fixes(read.into(), shown.into()))
 }
 
 /// The part of the fixes that touches the given edges.
@@ -256,7 +278,7 @@ pub fn edge_fixes(read: &str, shown: &str) -> Result<String, JsValue> {
 /// The inputs do not parse.
 #[wasm_bindgen(js_name = fixesForEdges)]
 pub fn fixes_for_edges(fixes: &str, edge_ids: &str) -> Result<String, JsValue> {
-    run(api::fixes_for_edges(fixes, edge_ids))
+    text(api::fixes_for_edges(fixes.into(), edge_ids.into()))
 }
 
 /// Rows in order, by `(__pos__, __id__)`, or as stored for a legacy table.
@@ -266,7 +288,7 @@ pub fn fixes_for_edges(fixes: &str, edge_ids: &str) -> Result<String, JsValue> {
 /// The rows do not parse.
 #[wasm_bindgen(js_name = orderedRows)]
 pub fn ordered_rows(rows: &str) -> Result<String, JsValue> {
-    run(api::ordered_rows(rows))
+    text(api::ordered_rows(rows.into()))
 }
 
 /// Rows in order and without `__id__` and `__pos__`.
@@ -276,7 +298,7 @@ pub fn ordered_rows(rows: &str) -> Result<String, JsValue> {
 /// The rows do not parse.
 #[wasm_bindgen(js_name = stripRowKeys)]
 pub fn strip_row_keys(rows: &str) -> Result<String, JsValue> {
-    run(api::strip_row_keys(rows))
+    text(api::strip_row_keys(rows.into()))
 }
 
 /// A flow whose top-level tables have their rows in order and without `__id__` and `__pos__`.
@@ -286,7 +308,7 @@ pub fn strip_row_keys(rows: &str) -> Result<String, JsValue> {
 /// The flow does not parse.
 #[wasm_bindgen(js_name = stripFlowTableRowKeys)]
 pub fn strip_flow_table_row_keys(flow: &str) -> Result<String, JsValue> {
-    run(api::strip_flow_table_row_keys(flow))
+    text(api::strip_flow_table_row_keys(flow.into()))
 }
 
 /// Rows with the ids and positions a write needs. With `editor`, a gap with
@@ -305,9 +327,9 @@ pub fn assign_row_ids(
     previous: Option<String>,
     editor: Option<bool>,
 ) -> Result<String, JsValue> {
-    run(api::assign_row_ids(
-        rows,
-        previous.as_deref(),
+    text(api::assign_row_ids(
+        rows.into(),
+        optional(previous.as_deref()),
         editor.unwrap_or(true),
     ))
 }
@@ -319,7 +341,10 @@ pub fn assign_row_ids(
 /// The node does not parse.
 #[wasm_bindgen(js_name = assignTableRowIds)]
 pub fn assign_table_row_ids(node: &str, editor: Option<bool>) -> Result<String, JsValue> {
-    run(api::assign_table_row_ids(node, editor.unwrap_or(true)))
+    text(api::assign_table_row_ids(
+        node.into(),
+        editor.unwrap_or(true),
+    ))
 }
 
 /// `target` with ids on the tables it adds or changes relative to `base`.
@@ -333,9 +358,9 @@ pub fn assign_changed_table_row_ids(
     target: &str,
     editor: Option<bool>,
 ) -> Result<String, JsValue> {
-    run(api::assign_changed_table_row_ids(
-        base,
-        target,
+    text(api::assign_changed_table_row_ids(
+        base.into(),
+        target.into(),
         editor.unwrap_or(true),
     ))
 }
@@ -355,9 +380,9 @@ pub fn assign_changed_node_table_row_ids(
     previous: Option<String>,
     editor: Option<bool>,
 ) -> Result<String, JsValue> {
-    run(api::assign_changed_node_table_row_ids(
-        node,
-        previous.as_deref(),
+    text(api::assign_changed_node_table_row_ids(
+        node.into(),
+        optional(previous.as_deref()),
         editor.unwrap_or(true),
     ))
 }
@@ -369,7 +394,7 @@ pub fn assign_changed_node_table_row_ids(
 /// The inputs do not parse.
 #[wasm_bindgen(js_name = appendTableRows)]
 pub fn append_table_rows(rows: &str, new_rows: &str) -> Result<String, JsValue> {
-    run(api::append_table_rows(rows, new_rows))
+    text(api::append_table_rows(rows.into(), new_rows.into()))
 }
 
 /// The names of a node's template fields whose value is a table.
@@ -379,7 +404,7 @@ pub fn append_table_rows(rows: &str, new_rows: &str) -> Result<String, JsValue> 
 /// The node does not parse.
 #[wasm_bindgen(js_name = tableFields)]
 pub fn table_fields(node: &str) -> Result<String, JsValue> {
-    run(api::table_fields(node))
+    text(api::table_fields(node.into()))
 }
 
 /// A new random edge id in the editor's format.
