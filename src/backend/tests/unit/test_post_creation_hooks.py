@@ -7,7 +7,9 @@ from fastapi import HTTPException
 from langflow.services import creation_hooks
 from langflow.services.creation_hooks import (
     POST_CREATION_RESOURCES,
+    RESOURCE_FILE,
     RESOURCE_KNOWLEDGE_BASE,
+    RESOURCE_MEMORY_BASE,
     RESOURCE_PROJECT,
     RESOURCE_VARIABLE,
     PostCreationContext,
@@ -34,6 +36,16 @@ def test_nothing_is_registered_by_default():
     assert all(registered_post_creation_hooks(resource) == [] for resource in POST_CREATION_RESOURCES)
 
 
+def test_memory_bases_and_files_take_post_creation_hooks():
+    async def hook(_context):
+        return None
+
+    assert POST_CREATION_RESOURCES == (RESOURCE_KNOWLEDGE_BASE, RESOURCE_VARIABLE, RESOURCE_MEMORY_BASE, RESOURCE_FILE)
+    for resource in (RESOURCE_MEMORY_BASE, RESOURCE_FILE):
+        assert register_post_creation_hook(resource, hook) is True
+        assert registered_post_creation_hooks(resource) == [hook]
+
+
 def test_registering_twice_is_a_no_op():
     async def hook(_context):
         return None
@@ -51,13 +63,13 @@ def test_an_unknown_resource_fails_loudly_at_registration():
         register_post_creation_hook("flow", hook)
 
 
-def test_knowledge_base_and_variable_are_not_pre_creation_resources():
+def test_post_creation_resources_are_not_pre_creation_resources():
     """Registering a pre-creation hook for them would silently never run, so it must fail."""
 
     async def hook(_context):
         return None
 
-    for resource in (RESOURCE_KNOWLEDGE_BASE, RESOURCE_VARIABLE):
+    for resource in (RESOURCE_KNOWLEDGE_BASE, RESOURCE_VARIABLE, RESOURCE_MEMORY_BASE, RESOURCE_FILE):
         with pytest.raises(ValueError, match="Unknown pre-creation resource"):
             register_pre_creation_hook(resource, hook)
     with pytest.raises(ValueError, match="Unknown post-creation resource"):
