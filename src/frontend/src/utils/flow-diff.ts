@@ -1,6 +1,7 @@
 import i18n from "@/i18n";
 import type { APITemplateType, InputFieldType } from "@/types/api";
 import type { AllNodeType, EdgeType } from "@/types/flow";
+import { isTableField, stripTableRowIds } from "./table-row-ids";
 
 /**
  * Describing a graph difference in words people can act on.
@@ -100,6 +101,18 @@ export const isSecretEntry = (entry: InputFieldType | undefined): boolean =>
 
 const fieldLabel = (entry: InputFieldType | undefined, name: string): string =>
   entry?.display_name || name;
+
+/**
+ * A field's value as the reader sees it. A table's rows carry the editor's
+ * own keys, which are not the reader's change: they are taken off, and the
+ * rows put in order, before comparing or showing the table.
+ */
+const fieldValue = (entry: InputFieldType | undefined): unknown => {
+  const value = entry?.value;
+  return isTableField(entry) && Array.isArray(value)
+    ? stripTableRowIds(value)
+    : value;
+};
 
 /** Key order is not a change, so objects are sorted before comparison. Arrays keep theirs. */
 const sortDeep = (value: unknown): unknown => {
@@ -209,8 +222,8 @@ const diffNodeFields = (
   for (const name of names) {
     const baseEntry = baseTemplate[name];
     const nextEntry = nextTemplate[name];
-    const before = renderValue(baseEntry?.value);
-    const after = renderValue(nextEntry?.value);
+    const before = renderValue(fieldValue(baseEntry));
+    const after = renderValue(fieldValue(nextEntry));
     if (before === after) continue;
 
     const secret = isSecretEntry(nextEntry) || isSecretEntry(baseEntry);

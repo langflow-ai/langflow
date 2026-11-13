@@ -6,8 +6,14 @@ import {
   groupChangesByTarget,
   siblingChangeIds,
 } from "../flow-diff";
+import { TABLE_ROW_ID_KEY, TABLE_ROW_POS_KEY } from "../table-row-ids";
 
-type FieldSpec = { value: unknown; display_name?: string; password?: boolean };
+type FieldSpec = {
+  value: unknown;
+  display_name?: string;
+  password?: boolean;
+  type?: string;
+};
 
 const node = (
   id: string,
@@ -169,6 +175,50 @@ describe("diffGraphs", () => {
   it("should treat a missing graph as empty rather than throwing", () => {
     expect(diffGraphs(null, graph([node("a", "N")]))).toHaveLength(1);
     expect(diffGraphs(graph([node("a", "N")]), null)).toHaveLength(1);
+  });
+});
+
+describe("table fields", () => {
+  const row = (name: string, id?: string, pos?: number) => ({
+    name,
+    ...(id !== undefined && { [TABLE_ROW_ID_KEY]: id }),
+    ...(pos !== undefined && { [TABLE_ROW_POS_KEY]: pos }),
+  });
+  const table = (rows: unknown[]) =>
+    node("a", "Agent", { tools: { type: "table", value: rows } });
+
+  // The defect: the editor's row keys showed in the conflict dialog as the
+  // reader's own change.
+  it("should not report a change when the rows only gained their keys", () => {
+    const changes = diffGraphs(
+      graph([table([row("alpha"), row("beta")])]),
+      graph([table([row("alpha", "r1", 1), row("beta", "r2", 2)])]),
+    );
+
+    expect(changes).toEqual([]);
+  });
+
+  it("should compare rows in their order, not as stored", () => {
+    const changes = diffGraphs(
+      graph([table([row("alpha", "r1", 1), row("beta", "r2", 2)])]),
+      graph([table([row("beta", "r2", 2), row("alpha", "r1", 1)])]),
+    );
+
+    expect(changes).toEqual([]);
+  });
+
+  it("should still report a changed cell, without the row keys", () => {
+    const changes = diffGraphs(
+      graph([table([row("alpha", "r1", 1)])]),
+      graph([table([row("gamma", "r1", 1)])]),
+    );
+
+    expect(changes).toHaveLength(1);
+    expect(changes[0].fieldName).toBe("tools");
+    expect(changes[0].detail?.before).toContain("alpha");
+    expect(changes[0].detail?.after).toContain("gamma");
+    expect(changes[0].detail?.after).not.toContain(TABLE_ROW_ID_KEY);
+    expect(changes[0].detail?.after).not.toContain(TABLE_ROW_POS_KEY);
   });
 });
 

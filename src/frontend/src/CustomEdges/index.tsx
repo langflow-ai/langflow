@@ -4,7 +4,7 @@ import {
   getBezierPath,
   Position,
 } from "@xyflow/react";
-import { memo } from "react";
+import { type CSSProperties, memo } from "react";
 import { useTranslation } from "react-i18next";
 import IconComponent from "@/components/common/genericIconComponent";
 import {
@@ -13,7 +13,9 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { useEdgeChange } from "@/hooks/use-history-changes";
 import useFlowStore from "@/stores/flowStore";
+import { authorColor } from "@/utils/author-color";
 import { scapeJSONParse } from "@/utils/reactflowUtils";
 
 const UNRECOGNIZED_DOM_PROPS = [
@@ -37,6 +39,8 @@ export const DefaultEdge = memo(function DefaultEdge({
   const getNode = useFlowStore((state) => state.getNode);
   const edges = useFlowStore((state) => state.edges);
   const setEdges = useFlowStore((state) => state.setEdges);
+  // Who added this edge, while a point in history is previewed.
+  const addedBy = useEdgeChange(props.id);
 
   const sourceNode = getNode(source);
   const targetNode = getNode(target);
@@ -94,6 +98,13 @@ export const DefaultEdge = memo(function DefaultEdge({
         path={targetHandleObject.output_types ? edgePathLoop : edgePath}
         strokeDasharray={targetHandleObject.output_types ? "5 5" : "0"}
         {...domSafeProps}
+        {...(addedBy && {
+          className: "history-changed",
+          style: {
+            ...domSafeProps.style,
+            "--history-author": authorColor(addedBy.id),
+          } as CSSProperties,
+        })}
         data-animated={animated ? "true" : "false"}
         data-selectable={selectable ? "true" : "false"}
         data-deletable={deletable ? "true" : "false"}

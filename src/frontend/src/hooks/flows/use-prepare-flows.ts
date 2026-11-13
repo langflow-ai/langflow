@@ -18,6 +18,7 @@ import {
   processDataFromFlow,
   updateGroupRecursion,
 } from "@/utils/reactflowUtils";
+import { withNodesTableRowIds } from "@/utils/table-row-ids";
 
 const usePrepareFlows = () => {
   const { folderId } = useParams();
@@ -97,6 +98,11 @@ const usePrepareFlows = () => {
           globalVariablesEntries,
         );
       });
+      // Every table of a new flow (an import, a template, a copy) is new, so
+      // each row needs an id; rows that have one keep it.
+      if (flowData) {
+        flowData.nodes = withNodesTableRowIds(flowData.nodes);
+      }
       const newFlow = createNewFlow(flowData!, folder_id, flow);
       newFlow.name = getFolderScopedDuplicateName(
         newFlow,

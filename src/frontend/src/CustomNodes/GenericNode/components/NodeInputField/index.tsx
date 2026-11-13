@@ -12,8 +12,10 @@ import {
   CustomParameterLabel,
   getCustomParameterTitle,
 } from "@/customization/components/custom-parameter";
+import { useFieldChange } from "@/hooks/use-history-changes";
 import { useIsAutoLogin } from "@/hooks/use-is-auto-login";
 import useAuthStore from "@/stores/authStore";
+import { authorColor } from "@/utils/author-color";
 import { cn } from "@/utils/utils";
 import { default as IconComponent } from "../../../../components/common/genericIconComponent";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
@@ -69,6 +71,8 @@ export default function NodeInputField({
     parameterId: name,
   });
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
+  // Who last edited this field, while a point in history is previewed.
+  const changedBy = useFieldChange(data.id, name);
   const { handleNodeClass, applyNodeClassFromRefresh } = useHandleNodeClass(
     data.id,
   );
@@ -154,6 +158,15 @@ export default function NodeInputField({
         // Hide the entire field if showNode is false (but still render it for hooks to execute)
         !showNode && "hidden",
       )}
+      style={
+        changedBy
+          ? {
+              backgroundColor: authorColor(changedBy.id, 0.1),
+              boxShadow: `inset 3px 0 0 ${authorColor(changedBy.id)}`,
+            }
+          : undefined
+      }
+      data-history-change={changedBy ? "edited" : undefined}
     >
       {displayHandle && showNode && Handle}
       <div

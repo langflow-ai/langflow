@@ -11,20 +11,50 @@ import { useTranslation } from "react-i18next";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import {
+  isRevisionNotRetained,
+  useGetFlowHistoryTimeline,
+  useGetFlowRevision,
+  useGetFlowRevisions,
+} from "@/controllers/API/queries/flow-revisions";
+import {
   useDeleteVersionEntry,
   useGetFlowVersionEntry,
   useGetFlowVersions,
 } from "@/controllers/API/queries/flow-version";
+import { useFlowNames } from "@/hooks/use-history-changes";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
+import useRevisionPlaybackStore from "@/stores/revisionPlaybackStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import useVersionPreviewStore from "@/stores/versionPreviewStore";
+import type { FlowType } from "@/types/flow";
+import type { RevisionVersion } from "@/types/flow/revision";
 import type { FlowVersionEntry } from "@/types/flow/version";
+import type { FlowOperation } from "@/utils/flow-operations/apply";
 import {
+  type DescribeOptions,
+  describeOperation,
+  fieldLabelsFrom,
+} from "@/utils/flow-operations/describe";
+import { edgeFixes } from "@/utils/flow-operations/edge-fixes";
+import {
+  entryContaining,
+  graphAt,
+  operationAt,
+} from "@/utils/flow-operations/history";
+import {
+  cleanEdges,
   downloadFlow,
   processFlows,
   removeApiKeys,
 } from "@/utils/reactflowUtils";
-import { CURRENT_DRAFT_ID } from "./constants";
+import {
+  CURRENT_DRAFT_ID,
+  revisionOfSelection,
+  revisionSelectionId,
+} from "./constants";
+import { summarizeEntry } from "./fold";
+import { formatTimestamp, versionEntryOf } from "./utils";
 
 export function useFlowVersionSidebar(
   flowId: string,
@@ -34,12 +64,15 @@ export function useFlowVersionSidebar(
   const { t } = useTranslation();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setNoticeData = useAlertStore((state) => state.setNoticeData);
   const setPreview = useVersionPreviewStore((s) => s.setPreview);
   const clearPreview = useVersionPreviewStore((s) => s.clearPreview);
   const setPreviewLoading = useVersionPreviewStore((s) => s.setPreviewLoading);
   const storePreviewId = useVersionPreviewStore((s) => s.previewId);
 
   const [selectedId, setSelectedId] = useState<string>(CURRENT_DRAFT_ID);
+  const selectedIdRef = useRef(selectedId);
+  selectedIdRef.current = selectedId;
 
   useEffect(() => {
     setSelectedId(storePreviewId ?? CURRENT_DRAFT_ID);
@@ -71,12 +104,32 @@ export function useFlowVersionSidebar(
   const originalDraftNodesRef = useRef<any[] | null>(null);
   // biome-ignore lint/suspicious/noExplicitAny: legacy
   const originalDraftEdgesRef = useRef<any[] | null>(null);
+  // The flow's own copy of its graph, which store updates during a preview
+  // overwrite with the previewed graph: anything that saves the current flow
+  // later (the API dialog when the toolbar returns) would save that instead.
+  const originalDraftDataRef = useRef<FlowType["data"] | null>(null);
   if (originalDraftNodesRef.current === null) {
     originalDraftNodesRef.current =
       cloneDeep(useFlowStore.getState().nodes) ?? [];
     originalDraftEdgesRef.current =
       cloneDeep(useFlowStore.getState().edges) ?? [];
+    originalDraftDataRef.current =
+      cloneDeep(useFlowStore.getState().currentFlow?.data) ?? null;
   }
+  const restoreDraft = useCallback(() => {
+    const currentFlow = useFlowStore.getState().currentFlow;
+    useFlowStore.setState({
+      nodes: cloneDeep(originalDraftNodesRef.current),
+      edges: cloneDeep(originalDraftEdgesRef.current),
+      ...(currentFlow &&
+        originalDraftDataRef.current && {
+          currentFlow: {
+            ...currentFlow,
+            data: cloneDeep(originalDraftDataRef.current),
+          },
+        }),
+    });
+  }, []);
 
   const {
     data: versionResponse,
@@ -86,6 +139,81 @@ export function useFlowVersionSidebar(
 
   const versions = versionResponse?.entries;
   const maxEntries = versionResponse?.max_entries;
+
+  const flowHistoryEnabled = useUtilityStore(
+    (state) => state.flowHistoryEnabled,
+  );
+  const {
+    data: revisionPages,
+    fetchNextPage: loadOlderEntries,
+    hasNextPage: hasOlderEntries,
+    isFetchingNextPage: isLoadingOlderEntries,
+    refetch: refetchRevisions,
+  } = useGetFlowRevisions(flowId, {
+    // With flow history off nothing is recorded, and the sidebar lists the
+    // saved versions alone.
+    enabled: flowHistoryEnabled,
+    pollInterval: 10000,
+  });
+  // Saving or deleting a version changes the labels on the timeline without
+  // a new revision, so the timeline is loaded again when the versions change.
+  const shownVersionsRef = useRef(versionResponse);
+  useEffect(() => {
+    const previous = shownVersionsRef.current;
+    shownVersionsRef.current = versionResponse;
+    if (previous && versionResponse && previous !== versionResponse) {
+      refetchRevisions();
+    }
+  }, [versionResponse, refetchRevisions]);
+  const timelineEntries = useMemo(
+    () => revisionPages?.pages.flatMap((page) => page.entries) ?? [],
+    [revisionPages],
+  );
+  const earliestRevision = revisionPages?.pages[0]?.earliest_revision ?? null;
+  const latestRevision = revisionPages?.pages[0]?.latest_revision ?? null;
+  // Every retained revision, replayed, so the history slider and any
+  // selection can be drawn without asking the server again.
+  const { data: historyTimeline } = useGetFlowHistoryTimeline(
+    flowId,
+    latestRevision,
+  );
+  const setPlaybackTimeline = useRevisionPlaybackStore((s) => s.setTimeline);
+  const setPlaybackRevision = useRevisionPlaybackStore((s) => s.setRevision);
+  const setSelectRevision = useRevisionPlaybackStore(
+    (s) => s.setSelectRevision,
+  );
+  useEffect(() => {
+    setPlaybackTimeline(historyTimeline ?? null);
+  }, [historyTimeline, setPlaybackTimeline]);
+  useEffect(() => {
+    setSelectRevision((revision) =>
+      setSelectedId(revisionSelectionId(revision)),
+    );
+    return () => {
+      setSelectRevision(null);
+      setPlaybackTimeline(null);
+      setPlaybackRevision(null);
+    };
+  }, [setSelectRevision, setPlaybackTimeline, setPlaybackRevision]);
+  // Field labels and names for the timeline text, from the flow as it is
+  // now, then from its history.
+  const names = useFlowNames(timelineEntries);
+  const describeOptions = useMemo<DescribeOptions>(
+    () => ({ fieldLabel: fieldLabelsFrom(currentFlow?.data), names }),
+    [currentFlow?.data, names],
+  );
+  // Saved versions the timeline cannot place: saved before the flow had
+  // history, or older than the history still retained.
+  const olderVersions = useMemo(
+    () =>
+      (versions ?? []).filter(
+        (version) =>
+          version.operation_revision == null ||
+          earliestRevision === null ||
+          version.operation_revision < earliestRevision,
+      ),
+    [versions, earliestRevision],
+  );
 
   useEffect(() => {
     const newLen = versions?.length ?? 0;
@@ -98,15 +226,83 @@ export function useFlowVersionSidebar(
     prevVersionCountRef.current = newLen;
   }, [versions]);
 
-  const selectedVersionId = selectedId !== CURRENT_DRAFT_ID ? selectedId : "";
+  const selectedRevision = revisionOfSelection(selectedId);
+  // Before paint, like the canvas swap below: what the previewed point
+  // changed is drawn from this, so it must never outlast the preview onto
+  // the live canvas, even for a frame.
+  useLayoutEffect(() => {
+    setPlaybackRevision(selectedRevision);
+  }, [selectedRevision, setPlaybackRevision]);
+  // The slider can stop inside an entry; the entry stays selected throughout.
+  const selectedTimelineEntry =
+    selectedRevision === null
+      ? undefined
+      : entryContaining(timelineEntries, selectedRevision);
+  const localGraph =
+    historyTimeline && selectedRevision !== null
+      ? graphAt(historyTimeline, selectedRevision)
+      : null;
+  const operationHere =
+    historyTimeline && selectedRevision !== null
+      ? operationAt(historyTimeline, selectedRevision)
+      : null;
+  const selectedVersionId =
+    selectedId !== CURRENT_DRAFT_ID && selectedRevision === null
+      ? selectedId
+      : "";
   const {
-    data: selectedEntryFull,
-    isLoading: isLoadingEntry,
-    isError: isEntryError,
+    data: selectedVersionFull,
+    isLoading: isLoadingVersion,
+    isError: isVersionError,
   } = useGetFlowVersionEntry(
     { flowId, versionId: selectedVersionId },
     { enabled: !!selectedVersionId, gcTime: 0, staleTime: 0 },
   );
+  const {
+    data: selectedRevisionGraph,
+    isLoading: isLoadingRevision,
+    isError: isRevisionError,
+    error: revisionError,
+  } = useGetFlowRevision(
+    // Asked of the server only until the replayed history is ready.
+    { flowId, revision: localGraph ? null : selectedRevision },
+    { gcTime: 0, staleTime: 0 },
+  );
+  // Compaction removed the revision after the list loaded: the list is out
+  // of date, not broken. Load it again and go back to the current flow.
+  const revisionNotRetained = isRevisionNotRetained(revisionError);
+  useEffect(() => {
+    if (!revisionNotRetained) return;
+    setSelectedId(CURRENT_DRAFT_ID);
+    refetchRevisions();
+    setNoticeData({ title: t("flowHistory.notRetained") });
+  }, [revisionNotRetained, refetchRevisions, setNoticeData, t]);
+  const isLoadingEntry =
+    (!!selectedVersionId && isLoadingVersion) ||
+    (selectedRevision !== null && isLoadingRevision);
+  const isEntryError =
+    isVersionError || (isRevisionError && !revisionNotRetained);
+  // A timeline entry previews like a version: the flow at its last revision,
+  // labelled by when it was recorded and summarized by what changed.
+  const revisionData = localGraph ?? selectedRevisionGraph?.data;
+  const atEntryEnd = selectedTimelineEntry?.end_revision === selectedRevision;
+  const selectedEntryFull =
+    selectedRevision !== null
+      ? revisionData && {
+          data: revisionData,
+          version_tag: selectedTimelineEntry?.created_at
+            ? formatTimestamp(selectedTimelineEntry.created_at)
+            : t("flowHistory.previewLabel"),
+          // At an entry's end, everything the entry changed; inside it, the
+          // one change that produced this point.
+          description:
+            !atEntryEnd && operationHere
+              ? `${operationHere.actor.username ?? t("flowHistory.unknownAuthor")}: ${describeOperation(operationHere, t, describeOptions).join("; ")}`
+              : selectedTimelineEntry
+                ? summarizeEntry(selectedTimelineEntry, t, describeOptions)
+                : null,
+        }
+      : selectedVersionFull;
 
   useEffect(() => {
     setPreviewLoading(isLoadingEntry);
@@ -117,6 +313,7 @@ export function useFlowVersionSidebar(
     nodes: any[];
     // biome-ignore lint/suspicious/noExplicitAny: legacy
     edges: any[];
+    fixes?: FlowOperation[];
     error?: boolean;
     errorMessage?: string;
   } | null>(() => {
@@ -128,7 +325,17 @@ export function useFlowVersionSidebar(
       // biome-ignore lint/suspicious/noExplicitAny: legacy
       const flow = { data: clonedData, is_component: false } as any;
       processFlows([flow]);
-      return { nodes: flow.data.nodes, edges: flow.data.edges };
+      // As when a flow is opened: rebuild the edges' handle ids from the
+      // nodes, or edges stored in another spelling attach to nothing.
+      const { edges } = cleanEdges(flow.data.nodes, flow.data.edges);
+      return {
+        nodes: flow.data.nodes,
+        edges,
+        fixes: edgeFixes(
+          (selectedEntryFull.data.edges ?? []) as Record<string, unknown>[],
+          edges,
+        ),
+      };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       console.error("Failed to process version flow data for preview:", err);
@@ -155,16 +362,11 @@ export function useFlowVersionSidebar(
       previewedSomething.current &&
       (selectedId === CURRENT_DRAFT_ID || processedPreview?.error)
     ) {
-      useFlowStore.setState({
-        nodes: cloneDeep(originalDraftNodesRef.current),
-        edges: cloneDeep(originalDraftEdgesRef.current),
-      });
+      restoreDraft();
     }
-    // Fit the canvas to the new nodes after ReactFlow processes the state update.
-    requestAnimationFrame(() => {
-      useFlowStore.getState().reactFlowInstance?.fitView();
-    });
-  }, [processedPreview, selectedId]);
+    // The viewport is left alone: moving through history keeps the same part
+    // of the canvas in view, so changes can be compared in place.
+  }, [processedPreview, selectedId, restoreDraft]);
 
   useEffect(() => {
     if (processedPreview?.error) {
@@ -190,6 +392,7 @@ export function useFlowVersionSidebar(
         tag,
         selectedId,
         selectedEntryFull?.description ?? null,
+        processedPreview.fixes,
       );
     } else if (selectedId === CURRENT_DRAFT_ID || processedPreview?.error) {
       setPreview(
@@ -242,16 +445,14 @@ export function useFlowVersionSidebar(
           previewedSomething.current &&
           useFlowStore.getState().currentFlow?.id === flowId
         ) {
-          useFlowStore.setState({
-            nodes: cloneDeep(originalDraftNodesRef.current),
-            edges: cloneDeep(originalDraftEdgesRef.current),
-          });
+          restoreDraft();
         }
       } catch (err) {
         console.error("Version sidebar cleanup: failed to restore draft", err);
       }
 
       try {
+        useRevisionPlaybackStore.getState().setRevision(null);
         clearPreview();
       } catch (err) {
         console.error("Version sidebar cleanup: failed to clear preview", err);
@@ -294,7 +495,7 @@ export function useFlowVersionSidebar(
         );
       }
     };
-  }, [clearPreview, flowId]);
+  }, [clearPreview, flowId, restoreDraft]);
 
   useLayoutEffect(() => {
     // The canvas can register its autosave after the sidebar's first layout.
@@ -362,6 +563,9 @@ export function useFlowVersionSidebar(
         {
           onSuccess: () => {
             setSuccessData({ title: t("success.versionDeleted") });
+            // A version deleted from its timeline entry was not the one in
+            // preview: the selection stays.
+            if (selectedIdRef.current !== entry.id) return;
             // Select the next entry (triggers fetch + preview via existing
             // effects) instead of setting empty arrays into the store which
             // would cause a blank canvas flash.
@@ -386,6 +590,14 @@ export function useFlowVersionSidebar(
     [flowId, versions, deleteEntry, setSuccessData, setErrorData, clearPreview],
   );
 
+  // A saved version pinned on a timeline entry, as the version list has it.
+  const savedVersionEntry = useCallback(
+    (version: RevisionVersion): FlowVersionEntry =>
+      versions?.find((entry) => entry.id === version.id) ??
+      versionEntryOf(version, flowId),
+    [versions, flowId],
+  );
+
   const isViewingDraft = selectedId === CURRENT_DRAFT_ID;
 
   return {
@@ -395,6 +607,13 @@ export function useFlowVersionSidebar(
     setDeleteDialogEntry,
     versions,
     maxEntries,
+    timelineEntries,
+    selectedTimelineEntryId: selectedTimelineEntry?.id ?? null,
+    describeOptions,
+    olderVersions,
+    hasOlderEntries,
+    isLoadingOlderEntries,
+    loadOlderEntries,
     isLoading,
     isListError,
     isEntryError,
@@ -404,5 +623,6 @@ export function useFlowVersionSidebar(
     handleSelectEntry,
     handleExport,
     handleDelete,
+    savedVersionEntry,
   };
 }

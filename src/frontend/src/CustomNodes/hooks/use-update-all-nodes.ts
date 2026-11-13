@@ -1,5 +1,6 @@
 import { cloneDeep } from "lodash";
 import { useCallback } from "react";
+import { markNextSaveCause } from "@/stores/flowSaveCauseStore";
 import type { AllNodeType, FlowType, GenericNodeType } from "@/types/flow";
 import { copySavedFieldValues, walkFlowNodes } from "@/utils/grouped-nodes";
 import {
@@ -46,6 +47,8 @@ const useUpdateAllNodes = (
 ) => {
   const updateAllNodes = useCallback(
     (updates: UpdateNodesType[]) => {
+      // Everything these updates write is one change: the component updates.
+      markNextSaveCause("upgrade_component");
       setNodes((oldNodes) => {
         const newNodes = cloneDeep(oldNodes);
         const contexts = new Map(

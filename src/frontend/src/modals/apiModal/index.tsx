@@ -96,7 +96,10 @@ export default function ApiModal({
   }
 
   useEffect(() => {
-    if (!openEndpointName && endpointName !== flowEndpointName) handleSave();
+    // An unset endpoint name is null on the flow and "" here. Compared raw, they
+    // differed on every mount, so mounting this dialog saved the whole flow.
+    const changed = (endpointName || null) !== (flowEndpointName || null);
+    if (!openEndpointName && changed) handleSave();
     else if (openEndpointName) {
       setEndpointName(flowEndpointName ?? "");
     }

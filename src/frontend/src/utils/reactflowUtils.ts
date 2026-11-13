@@ -69,6 +69,7 @@ import {
   type MCPServerValue,
 } from "./helpers/clean-mcp-config";
 import { getFallbackGridPositions, getLayoutedNodes } from "./layoutUtils";
+import { stripTableRowIdsFromGraph } from "./table-row-ids";
 import { createRandomKey, toTitleCase } from "./utils";
 
 const uid = new ShortUniqueId();
@@ -144,8 +145,8 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
     // check if the source and target handle still exists
     const sourceHandle = edge.sourceHandle; //right
     const targetHandle = edge.targetHandle; //left
-    // Hold by reference: the target block rewrites edge.id on migration, so a second find-by-id in
-    // the source block would miss it and skip the source-handle migration (DataFrame stays). LE-1929.
+    // Hold by reference: both handle migrations below edit this same clone, so the source
+    // migration sees what the target migration wrote (LE-1929).
     const edgeInNewEdges = newEdges.find((e) => e.id === edge.id);
     if (targetHandle) {
       const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle);
@@ -259,14 +260,8 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
             edgeInNewEdges.data.targetHandle =
               scapeJSONParse(expectedTargetHandle);
           }
-          // Update edge ID to reflect new handles
-          edgeInNewEdges.id =
-            "reactflow__edge-" +
-            edgeInNewEdges.source +
-            (edgeInNewEdges.sourceHandle ?? "") +
-            "-" +
-            edgeInNewEdges.target +
-            expectedTargetHandle;
+          // The edge keeps its id: an id is the edge's identity, not a
+          // spelling of its handles, so the flow's history sees the same edge.
         }
       }
     }
@@ -350,14 +345,7 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
                 edgeInNewEdges.data.sourceHandle =
                   scapeJSONParse(expectedSourceHandle);
               }
-              // Update edge ID to reflect new handles
-              edgeInNewEdges.id =
-                "reactflow__edge-" +
-                edgeInNewEdges.source +
-                expectedSourceHandle +
-                "-" +
-                edgeInNewEdges.target +
-                (edgeInNewEdges.targetHandle ?? "");
+              // The edge keeps its id (see the target handle above).
             }
           }
         } else {
@@ -741,6 +729,7 @@ export function updateIds(
   const concatedEdges = [...edges, ...((selection?.edges as EdgeType[]) ?? [])];
   if (concatedEdges)
     concatedEdges.forEach((edge: EdgeType) => {
+      const { source: oldSource, target: oldTarget } = edge;
       edge.source = idsMap[edge.source];
       edge.target = idsMap[edge.target];
 
@@ -764,13 +753,11 @@ export function updateIds(
       if (edge.data?.targetHandle?.id) {
         edge.data.targetHandle.id = edge.target;
       }
-      edge.id =
-        "reactflow__edge-" +
-        edge.source +
-        edge.sourceHandle +
-        "-" +
-        edge.target +
-        edge.targetHandle;
+      // An edge between renamed nodes is a new edge; one whose ends kept
+      // their ids is the same edge and keeps its id.
+      if (edge.source !== oldSource || edge.target !== oldTarget) {
+        edge.id = newEdgeId();
+      }
     });
   return idsMap;
 }
@@ -1540,15 +1527,13 @@ export function getNodeId(nodeType: string) {
   return nodeType + "-" + uid.randomUUID(5);
 }
 
-export function getHandleId(
-  source: string,
-  sourceHandle: string,
-  target: string,
-  targetHandle: string,
-) {
-  return (
-    "reactflow__edge-" + source + sourceHandle + "-" + target + targetHandle
-  );
+/**
+ * An id for a new edge. Edge ids are opaque: nothing derives one from the
+ * edge's handles, so respelling or migrating a handle never changes which
+ * edge it is, and an existing edge keeps its id for good.
+ */
+export function newEdgeId(): string {
+  return `e-${uid.randomUUID(21)}`;
 }
 
 export function generateFlow(
@@ -2171,7 +2156,10 @@ export function createFlowComponent(
 }
 
 export async function downloadNode(NodeFLow: FlowType) {
-  await customDownloadNodeJson(NodeFLow);
+  // Exported components leave out table row ids, like exported flows.
+  const exported = cloneDeep(NodeFLow);
+  stripTableRowIdsFromGraph(exported.data);
+  await customDownloadNodeJson(exported);
 }
 
 export function updateComponentNameAndType(
@@ -2457,6 +2445,9 @@ export async function downloadFlow(
     const clonedFlow = cloneDeep(flow);
 
     removeFileNameFromComponents(clonedFlow);
+    // Row ids and positions are the editor's bookkeeping: exported files stay
+    // as older Langflow versions expect them.
+    stripTableRowIdsFromGraph(clonedFlow.data);
 
     const flowData = {
       ...clonedFlow,

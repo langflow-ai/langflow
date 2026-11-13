@@ -146,6 +146,47 @@ describe("mutateTemplate", () => {
     expect(callback).toHaveBeenCalled();
   });
 
+  it.each([
+    ["keeps a node's is_refresh", { is_refresh: false }, false],
+    ["adds no is_refresh to a node that has none", {}, undefined],
+  ])(
+    "%s when the response sends back the request's flag",
+    async (_name, stored, expected) => {
+      const node = {
+        template: { code: { value: "source" }, ...stored },
+        outputs: [],
+      } as unknown as APIClassType;
+      const setNodeClass = jest.fn();
+      // The backend sends back the template it was sent, with is_refresh set by the refresh button.
+      const mutateAsync = jest.fn().mockResolvedValue({
+        template: { code: { value: "source" }, is_refresh: true },
+        outputs: [],
+      } as unknown as APIClassType);
+      setStoreNodeCode("refreshed-node", "source");
+
+      await mutateTemplate(
+        "",
+        "refreshed-node",
+        node,
+        setNodeClass,
+        { mutateAsync } as never,
+        jest.fn(),
+        undefined,
+        undefined,
+        undefined,
+        true,
+      );
+      await new Promise((resolve) => setTimeout(resolve, 600));
+
+      expect(mutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ is_refresh: true }),
+      );
+      const saved = setNodeClass.mock.calls[0][0].template;
+      expect(saved.is_refresh).toBe(expected);
+      expect("is_refresh" in saved).toBe(expected !== undefined);
+    },
+  );
+
   it("applies a refresh while the component code is unchanged", async () => {
     const node = {
       template: {
@@ -485,5 +526,46 @@ describe("mutateTemplate", () => {
         }),
       }),
     );
+  });
+
+  it("gives the rows a refresh returns ids, and leaves an untouched legacy table alone", async () => {
+    const legacyRows = [{ key: "Accept", value: "json" }];
+    const node = {
+      template: {
+        code: { value: "source" },
+        curl_input: { value: "" },
+        headers: { type: "table", value: [] },
+        query_params: { type: "table", value: legacyRows },
+      },
+      outputs: [],
+    } as unknown as APIClassType;
+    const setNodeClass = jest.fn();
+    const mutateAsync = jest.fn().mockResolvedValue({
+      template: {
+        code: { value: "source" },
+        curl_input: { value: "curl -H 'X: 1' https://x" },
+        headers: { type: "table", value: [{ key: "X", value: "1" }] },
+        query_params: { type: "table", value: legacyRows },
+      },
+      outputs: [],
+    } as unknown as APIClassType);
+    setStoreNodeTemplate("api-node", node.template);
+
+    await mutateTemplate(
+      "curl -H 'X: 1' https://x",
+      "api-node",
+      node,
+      setNodeClass,
+      { mutateAsync } as never,
+      jest.fn(),
+      "curl_input",
+    );
+    await new Promise((resolve) => setTimeout(resolve, 600));
+
+    const template = setNodeClass.mock.calls[0][0].template;
+    expect(template.headers.value).toEqual([
+      { __id__: expect.any(String), __pos__: 1, key: "X", value: "1" },
+    ]);
+    expect(template.query_params.value).toEqual(legacyRows);
   });
 });

@@ -14,6 +14,11 @@ jest.mock("@/utils/reactflowUtils", () => ({
   downloadFlow: jest.fn(),
   processFlows: jest.fn(),
   // biome-ignore lint/suspicious/noExplicitAny: test doubles for untyped legacy stores
+  cleanEdges: jest.fn((_nodes: any, edges: any) => ({
+    edges,
+    brokenEdges: [],
+  })),
+  // biome-ignore lint/suspicious/noExplicitAny: test doubles for untyped legacy stores
   removeApiKeys: jest.fn((flow: any) => flow),
 }));
 
@@ -33,6 +38,28 @@ let entryQueryData: any = null;
 let entryQueryLoading = false;
 let entryQueryError = false;
 const getVersionEntryMock = jest.fn();
+
+// No recorded history: these specs cover the saved-version list.
+const useGetFlowRevisionsMock = jest.fn();
+jest.mock("@/controllers/API/queries/flow-revisions", () => ({
+  useGetFlowRevisions: (...args: unknown[]) => {
+    useGetFlowRevisionsMock(...args);
+    return {
+      data: undefined,
+      fetchNextPage: jest.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      refetch: jest.fn(),
+    };
+  },
+  useGetFlowHistoryTimeline: () => ({ data: undefined }),
+  useGetFlowRevision: () => ({
+    data: undefined,
+    isLoading: false,
+    isError: false,
+  }),
+  isRevisionNotRetained: () => false,
+}));
 
 jest.mock("@/controllers/API/queries/flow-version", () => ({
   useGetFlowVersions: () => ({
@@ -224,6 +251,7 @@ jest.mock("lodash", () => ({
 // Import the component AFTER all mocks are set up
 // ---------------------------------------------------------------------------
 
+import { useUtilityStore } from "@/stores/utilityStore";
 import FlowVersionSidebarContent from "../FlowVersionSidebarContent";
 
 // ---------------------------------------------------------------------------
@@ -250,6 +278,25 @@ describe("FlowVersionSidebarContent store behavior", () => {
     entryQueryLoading = false;
     entryQueryError = false;
     resetStoreState();
+  });
+
+  it("loads the history timeline only when flow history is on", () => {
+    useUtilityStore.setState({ flowHistoryEnabled: false });
+    const off = render(<FlowVersionSidebarContent flowId="flow-1" />);
+    expect(useGetFlowRevisionsMock).toHaveBeenLastCalledWith(
+      "flow-1",
+      expect.objectContaining({ enabled: false }),
+    );
+    off.unmount();
+
+    useUtilityStore.setState({ flowHistoryEnabled: true });
+    const on = render(<FlowVersionSidebarContent flowId="flow-1" />);
+    expect(useGetFlowRevisionsMock).toHaveBeenLastCalledWith(
+      "flow-1",
+      expect.objectContaining({ enabled: true }),
+    );
+    on.unmount();
+    useUtilityStore.setState({ flowHistoryEnabled: false });
   });
 
   it("disables auto-save on mount and restores on unmount", () => {
@@ -452,6 +499,39 @@ describe("FlowVersionSidebarContent store behavior", () => {
     expect(
       screen.getByText("This version's data could not be rendered for preview"),
     ).toBeTruthy();
+  });
+
+  it("puts back the flow's own graph a store update copied the preview into", () => {
+    entryQueryData = {
+      id: "entry-1",
+      version_tag: "v1",
+      data: { nodes: [{ id: "version-node" }], edges: [] },
+    };
+
+    const { unmount } = render(<FlowVersionSidebarContent flowId="flow-1" />);
+    const entryRow = screen
+      .getByText("v1")
+      .closest<HTMLElement>("[class*=cursor-pointer]");
+    if (entryRow) {
+      act(() => {
+        entryRow.click();
+      });
+    }
+    // Any node update during the preview (a field the editor corrects as the
+    // node renders) copies the canvas, which is the preview, into currentFlow.
+    storeState.currentFlow = {
+      ...mockCurrentFlow,
+      data: { nodes: [{ id: "version-node" }], edges: [] },
+    };
+
+    setStateMock.mockClear();
+    unmount();
+
+    expect(setStateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        currentFlow: expect.objectContaining({ data: mockCurrentFlow.data }),
+      }),
+    );
   });
 
   it("restores original draft when Current is clicked after previewing a version", () => {

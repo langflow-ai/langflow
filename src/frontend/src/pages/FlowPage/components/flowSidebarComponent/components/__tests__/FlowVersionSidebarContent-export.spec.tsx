@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 // ---------------------------------------------------------------------------
@@ -11,17 +11,26 @@ jest.mock("@tanstack/react-query", () => ({
 }));
 
 const downloadFlowMock = jest.fn();
+// biome-ignore lint/suspicious/noExplicitAny: legacy
 const removeApiKeysMock = jest.fn((flow: any) => flow);
 
 jest.mock("@/utils/reactflowUtils", () => ({
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   downloadFlow: (...args: any[]) => downloadFlowMock(...args),
   processFlows: jest.fn(),
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
+  cleanEdges: jest.fn((_nodes: any, edges: any) => ({
+    edges,
+    brokenEdges: [],
+  })),
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   removeApiKeys: (flow: any) => removeApiKeysMock(flow),
 }));
 
 // API mock — used by handleExportEntry to fetch the full version entry
 const apiGetMock = jest.fn();
 jest.mock("@/controllers/API/api", () => ({
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   api: { get: (...args: any[]) => apiGetMock(...args), post: jest.fn() },
 }));
 jest.mock("@/controllers/API/helpers/constants", () => ({
@@ -40,10 +49,41 @@ const mockVersions = [
     created_at: "2026-01-01T00:00:00Z",
   },
 ];
+// One object while it is unchanged, as the query returns it.
+let mockVersionList = { entries: mockVersions, max_entries: 50 };
+
+// No recorded history unless a test sets one.
+// biome-ignore lint/suspicious/noExplicitAny: test double
+let mockRevisionPages: any;
+const mockRefetchRevisions = jest.fn();
+let mockRevisionError: unknown = null;
+jest.mock("@/controllers/API/queries/flow-revisions", () => ({
+  useGetFlowRevisions: () => ({
+    data: mockRevisionPages,
+    fetchNextPage: jest.fn(),
+    hasNextPage: false,
+    isFetchingNextPage: false,
+    refetch: mockRefetchRevisions,
+  }),
+  useGetFlowHistoryTimeline: () => ({ data: undefined }),
+  // The server's answer for a selected revision; idle until one is selected.
+  useGetFlowRevision: ({ revision }: { revision: number | null }) =>
+    revision !== null && mockRevisionError
+      ? {
+          data: undefined,
+          isLoading: false,
+          isError: true,
+          error: mockRevisionError,
+        }
+      : { data: undefined, isLoading: false, isError: false, error: null },
+  isRevisionNotRetained: jest.requireActual(
+    "@/controllers/API/queries/flow-revisions/use-get-flow-revision",
+  ).isRevisionNotRetained,
+}));
 
 jest.mock("@/controllers/API/queries/flow-version", () => ({
   useGetFlowVersions: () => ({
-    data: { entries: mockVersions, max_entries: 50 },
+    data: mockVersionList,
     isLoading: false,
     isError: false,
   }),
@@ -69,6 +109,7 @@ const mockCurrentFlow = {
 };
 
 jest.mock("@/stores/flowStore", () => {
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const store: any = (selector: any) =>
     selector({
       currentFlow: mockCurrentFlow,
@@ -89,25 +130,31 @@ jest.mock("@/stores/flowStore", () => {
 });
 
 const setErrorDataMock = jest.fn();
+const setNoticeDataMock = jest.fn();
 jest.mock("@/stores/alertStore", () => ({
   __esModule: true,
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   default: (selector: any) =>
     selector({
       setSuccessData: jest.fn(),
       setErrorData: setErrorDataMock,
+      setNoticeData: setNoticeDataMock,
     }),
 }));
 
 jest.mock("@/utils/utils", () => ({
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   cn: (...args: any[]) => args.filter(Boolean).join(" "),
 }));
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   default: ({ name }: any) => <span data-testid={`icon-${name}`} />,
 }));
 
 jest.mock("@/components/ui/button", () => ({
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   Button: ({ children, onClick, ...rest }: any) => (
     <button onClick={onClick} {...rest}>
       {children}
@@ -116,14 +163,18 @@ jest.mock("@/components/ui/button", () => ({
 }));
 
 jest.mock("@/components/ui/dropdown-menu", () => ({
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   DropdownMenu: ({ children }: any) => <div>{children}</div>,
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   DropdownMenuContent: ({ children }: any) => <div>{children}</div>,
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   DropdownMenuItem: ({ children, onClick }: any) => (
     <div role="menuitem" onClick={onClick}>
       {children}
     </div>
   ),
   DropdownMenuSeparator: () => <hr />,
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   DropdownMenuTrigger: ({ children }: any) => <>{children}</>,
 }));
 
@@ -133,12 +184,15 @@ jest.mock("@/components/ui/checkbox", () => ({
 
 jest.mock("@/components/ui/sidebar", () => ({
   useSidebar: () => ({ setActiveSection: jest.fn() }),
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   SidebarGroupLabel: ({ children, className }: any) => (
     <div className={className}>{children}</div>
   ),
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   SidebarMenu: ({ children, className }: any) => (
     <div className={className}>{children}</div>
   ),
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   SidebarMenuButton: ({ children, onClick, isActive, className }: any) => (
     <div
       role="button"
@@ -148,10 +202,12 @@ jest.mock("@/components/ui/sidebar", () => ({
       {children}
     </div>
   ),
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   SidebarMenuItem: ({ children }: any) => <div>{children}</div>,
 }));
 
 jest.mock("lodash", () => ({
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   cloneDeep: jest.fn((obj: any) =>
     obj === undefined ? undefined : JSON.parse(JSON.stringify(obj)),
   ),
@@ -169,6 +225,7 @@ jest.mock("@/stores/versionPreviewStore", () => {
     clearPreview: jest.fn(),
     setPreviewLoading: jest.fn(),
   };
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const store: any = (selector: any) => selector(state);
   store.getState = () => state;
   store.setState = jest.fn();
@@ -188,6 +245,7 @@ import FlowVersionSidebarContent from "../FlowVersionSidebarContent";
 describe("FlowVersionSidebarContent export", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockRevisionPages = undefined;
   });
 
   it("exports a version entry using removeApiKeys + downloadFlow", async () => {
@@ -287,5 +345,145 @@ describe("FlowVersionSidebarContent export", () => {
 
     // downloadFlow should NOT have been called
     expect(downloadFlowMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("FlowVersionSidebarContent saved version on a timeline entry", () => {
+  const pinnedVersion = {
+    id: "entry-2",
+    version_number: 2,
+    version_tag: "v2",
+    description: "pinned version",
+    created_at: "2026-01-02T00:00:00Z",
+    operation_revision: 3,
+    saved_by: { id: "user-1", username: "Alice" },
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockVersionList = { entries: mockVersions, max_entries: 50 };
+    mockRevisionPages = {
+      pages: [
+        {
+          flow_id: "flow-1",
+          latest_revision: 3,
+          current_revision: 3,
+          earliest_revision: 1,
+          next_before: null,
+          entries: [
+            {
+              id: "e1",
+              start_revision: 1,
+              end_revision: 3,
+              created_at: "2026-01-02T00:00:00Z",
+              actors: [{ id: "user-1", username: "Alice" }],
+              request_ids: ["r1"],
+              versions: [pinnedVersion],
+              operations: null,
+            },
+          ],
+        },
+      ],
+    };
+  });
+
+  afterAll(() => {
+    mockRevisionPages = undefined;
+  });
+
+  // The defect: a version pinned on its timeline entry showed its tag only,
+  // with no way to export or delete it.
+  it("exports the pinned version", async () => {
+    const user = userEvent.setup();
+    const versionData = { nodes: [{ id: "v2-node" }], edges: [] };
+    apiGetMock.mockResolvedValueOnce({
+      data: { ...pinnedVersion, data: versionData },
+    });
+
+    render(<FlowVersionSidebarContent flowId="flow-1" />);
+
+    expect(screen.getByText("pinned version")).toBeInTheDocument();
+    // The timeline comes first, then the older version list.
+    const exportItems = screen.getAllByRole("menuitem", { name: /Export/i });
+    expect(exportItems).toHaveLength(2);
+    await user.click(exportItems[0]);
+
+    await waitFor(() => {
+      expect(apiGetMock).toHaveBeenCalledWith(
+        "/api/v1/flows/flow-1/versions/entry-2",
+      );
+    });
+    await waitFor(() => {
+      expect(downloadFlowMock).toHaveBeenCalledWith(
+        expect.objectContaining({ data: versionData }),
+        "Test Flow_v2",
+        "A test flow",
+      );
+    });
+  });
+
+  it("asks to confirm deleting the pinned version", async () => {
+    const user = userEvent.setup();
+
+    render(<FlowVersionSidebarContent flowId="flow-1" />);
+
+    const deleteItems = screen.getAllByRole("menuitem", { name: /Delete/i });
+    expect(deleteItems).toHaveLength(2);
+    await user.click(deleteItems[0]);
+
+    expect(
+      screen.getByText(
+        "This will permanently delete v2. This can't be undone.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  // Saving or deleting a version records no revision, so the poll of the
+  // history alone would not show the label change.
+  it("loads the timeline again when the saved versions change", () => {
+    const { rerender } = render(<FlowVersionSidebarContent flowId="flow-1" />);
+    rerender(<FlowVersionSidebarContent flowId="flow-1" />);
+    expect(mockRefetchRevisions).not.toHaveBeenCalled();
+
+    mockVersionList = { entries: [], max_entries: 50 };
+    rerender(<FlowVersionSidebarContent flowId="flow-1" />);
+
+    expect(mockRefetchRevisions).toHaveBeenCalledTimes(1);
+  });
+
+  // The defect: an entry compaction removed after the list loaded answered
+  // 410, and the sidebar showed a generic load error and stayed on it.
+  it("reloads the timeline and leaves the preview when the entry is gone", () => {
+    mockRevisionError = {
+      response: {
+        status: 410,
+        data: { detail: { code: "FLOW_REVISION_NOT_RETAINED" } },
+      },
+    };
+    try {
+      render(<FlowVersionSidebarContent flowId="flow-1" />);
+      expect(mockRefetchRevisions).not.toHaveBeenCalled();
+
+      act(() => {
+        screen
+          .getByText("Alice")
+          .closest<HTMLElement>("[role=button]")!
+          .click();
+      });
+
+      expect(mockRefetchRevisions).toHaveBeenCalledTimes(1);
+      expect(setNoticeDataMock).toHaveBeenCalledWith({
+        title:
+          "This change is no longer in the history. The history list was refreshed.",
+      });
+      expect(
+        screen.queryByText("Failed to load version data"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByText("Current").closest("[role=button]")!.className,
+      ).toContain("active");
+    } finally {
+      mockRevisionError = null;
+    }
   });
 });

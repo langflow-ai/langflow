@@ -213,7 +213,7 @@ describe("createUpdatedNode", () => {
     };
 
     const result = createUpdatedNode(currentNode, newTemplate);
-    expect(result.data.node.template).toBe(newTemplate);
+    expect(result.data.node.template).toEqual(newTemplate);
     expect(result.id).toBe(currentNode.id);
   });
 
@@ -367,8 +367,8 @@ describe("refreshAllModelInputs", () => {
         template: {
           model: {
             type: "model",
-            value: "gpt-4",
-            options: ["gpt-4"],
+            value: [GPT_4],
+            options: [GPT_4],
             required: true,
             list: false,
             show: true,
@@ -565,8 +565,8 @@ describe("refreshAllModelInputs", () => {
         template: {
           model: {
             type: "model",
-            value: "gpt-4",
-            options: ["gpt-4"],
+            value: [GPT_4],
+            options: [GPT_4],
             required: true,
             list: false,
             show: true,
@@ -798,8 +798,8 @@ describe("refreshAllModelInputs — outdated component guard", () => {
         template: {
           model: {
             type: "model",
-            value: "gpt-4",
-            options: ["gpt-4"],
+            value: [GPT_4],
+            options: [GPT_4],
             required: true,
             list: false,
             show: true,
@@ -840,8 +840,8 @@ describe("refreshAllModelInputs — outdated component guard", () => {
         template: {
           model: {
             type: "model",
-            value: "gpt-4",
-            options: ["gpt-4"],
+            value: [GPT_4],
+            options: [GPT_4],
             required: true,
             list: false,
             show: true,
@@ -883,8 +883,8 @@ describe("refreshAllModelInputs — outdated component guard", () => {
         template: {
           model: {
             type: "model",
-            value: "gpt-4",
-            options: ["gpt-4"],
+            value: [GPT_4],
+            options: [GPT_4],
             required: true,
             list: false,
             show: true,
@@ -1014,7 +1014,7 @@ describe("refreshAllModelInputs — disconnected provider", () => {
   it("should replace the saved model when its provider was disconnected", async () => {
     mockNodes = [createMockModelNodeWithValue("node-1", ANTHROPIC_SAVED_VALUE)];
 
-    (api.post as jest.Mock).mockResolvedValue({
+    answerWithSentModel({
       data: {
         template: {
           model: {
@@ -1041,7 +1041,7 @@ describe("refreshAllModelInputs — disconnected provider", () => {
   it("should not fall back to a sticky option that is listed first", async () => {
     mockNodes = [createMockModelNodeWithValue("node-1", ANTHROPIC_SAVED_VALUE)];
 
-    (api.post as jest.Mock).mockResolvedValue({
+    answerWithSentModel({
       data: {
         template: {
           model: {
@@ -1068,7 +1068,7 @@ describe("refreshAllModelInputs — disconnected provider", () => {
   it("should keep the saved model when no selectable option remains", async () => {
     mockNodes = [createMockModelNodeWithValue("node-1", ANTHROPIC_SAVED_VALUE)];
 
-    (api.post as jest.Mock).mockResolvedValue({
+    answerWithSentModel({
       data: {
         template: {
           model: {
@@ -1338,9 +1338,9 @@ describe("refreshAllModelInputs — disconnected provider", () => {
     });
     await refresh;
 
-    expect(getRefreshedModelValue()).toEqual([
-      expect.objectContaining({ name: "gpt-5.6", provider: "OpenAI" }),
-    ]);
+    // Applied, and the empty model stays empty rather than becoming options[0].
+    expect(mockSetNode).toHaveBeenCalledTimes(1);
+    expect(getRefreshedModelValue()).toEqual([]);
   });
 
   it("should keep the saved model when it is still enabled", async () => {
@@ -1349,7 +1349,7 @@ describe("refreshAllModelInputs — disconnected provider", () => {
     ];
     mockNodes = [createMockModelNodeWithValue("node-1", savedValue)];
 
-    (api.post as jest.Mock).mockResolvedValue({
+    answerWithSentModel({
       data: {
         template: {
           model: {
@@ -1387,7 +1387,7 @@ describe("refreshAllModelInputs — disconnected provider", () => {
     ];
     mockNodes = [createMockModelNodeWithValue("node-1", ANTHROPIC_SAVED_VALUE)];
 
-    (api.post as jest.Mock).mockResolvedValue({
+    answerWithSentModel({
       data: {
         template: {
           model: {
@@ -1430,7 +1430,7 @@ describe("refreshAllModelInputs — disconnected provider", () => {
       new Error("provider catalog unavailable"),
     );
 
-    (api.post as jest.Mock).mockResolvedValue({
+    answerWithSentModel({
       data: {
         template: {
           model: {
@@ -1474,7 +1474,7 @@ describe("refreshAllModelInputs — disconnected provider", () => {
     ];
     mockNodes = [createMockModelNodeWithValue("node-1", azureSavedValue)];
 
-    (api.post as jest.Mock).mockResolvedValue({
+    answerWithSentModel({
       data: {
         template: {
           model: {
@@ -1522,7 +1522,7 @@ describe("refreshAllModelInputs — disconnected provider", () => {
     ];
     mockNodes = [createMockModelNodeWithValue("node-1", legacySavedValue)];
 
-    (api.post as jest.Mock).mockResolvedValue({
+    answerWithSentModel({
       data: {
         template: {
           model: {
@@ -1550,11 +1550,111 @@ describe("refreshAllModelInputs — disconnected provider", () => {
 
     expect(getRefreshedModelValue()).toEqual(legacySavedValue);
   });
+
+  it("should keep an empty model empty", async () => {
+    mockNodes = [createMockModelNodeWithValue("node-1", "")];
+    (api.post as jest.Mock).mockResolvedValue({
+      data: {
+        template: {
+          model: { type: "model", value: [], options: [OPENAI_OPTION] },
+        },
+      },
+    });
+
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
+    await refreshAllModelInputs(mockQueryClient as any, { silent: true });
+
+    expect(api.post).toHaveBeenCalledTimes(1);
+    expect(getRefreshedModelValue()).toEqual([]);
+  });
+
+  it("should ask the backend again for the model it swapped in", async () => {
+    // The backend sets the provider's fields for the model it is sent, so the
+    // node must take its answer for the replacement, not for the old model.
+    mockNodes = [createMockModelNodeWithValue("node-1", ANTHROPIC_SAVED_VALUE)];
+    (api.post as jest.Mock).mockImplementation(async (_url, body) => ({
+      data: {
+        template: {
+          model: {
+            type: "model",
+            value: body.field_value,
+            options: [OPENAI_OPTION, STICKY_ANTHROPIC_OPTION],
+          },
+          api_key: {
+            type: "str",
+            show: body.field_value[0].provider === "OpenAI",
+          },
+        },
+      },
+    }));
+
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
+    await refreshAllModelInputs(mockQueryClient as any, { silent: true });
+
+    expect(api.post).toHaveBeenCalledTimes(2);
+    expect((api.post as jest.Mock).mock.calls[1][1].field_value).toEqual([
+      expect.objectContaining({ name: "gpt-5.6", provider: "OpenAI" }),
+    ]);
+    const [, updater] = mockSetNode.mock.calls[0];
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
+    const template = (updater(mockNodes[0]) as any).data.node.template;
+    expect(template.model.value).toEqual([
+      expect.objectContaining({ name: "gpt-5.6", provider: "OpenAI" }),
+    ]);
+    expect(template.api_key.show).toBe(true);
+  });
 });
 
-// ============================================================================
-// Hook Tests
-// ============================================================================
+describe("refreshAllModelInputs — is_refresh", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockModelProviders = [];
+    mockComponentsToUpdate = [];
+    mockAllowCustomComponents = true;
+    mockTemplates = {};
+    // The backend sends back the template it was sent, is_refresh included.
+    (api.post as jest.Mock).mockImplementation(async (_url, body) => ({
+      data: { template: body.template },
+    }));
+  });
+
+  // biome-ignore lint/suspicious/noExplicitAny: test node double
+  const savedTemplate = (node: AllNodeType): any => {
+    const [, updater] = mockSetNode.mock.calls[0];
+    // biome-ignore lint/suspicious/noExplicitAny: test node double
+    return (updater(node) as any).data.node.template;
+  };
+
+  it("should keep a restored node's is_refresh in the node that is saved", async () => {
+    // A restore puts the stored graph on the canvas, where the model node
+    // holds is_refresh: false, and refreshes its model inputs as an open does.
+    const restored = createMockModelNode("node-1");
+    // biome-ignore lint/suspicious/noExplicitAny: test node double
+    (restored.data as any).node.template.is_refresh = false;
+    mockNodes = [restored];
+
+    // biome-ignore lint/suspicious/noExplicitAny: test query-client double
+    await refreshAllModelInputs(mockQueryClient as any, {
+      silent: true,
+      origin: "load",
+    });
+
+    expect((api.post as jest.Mock).mock.calls[0][1].template.is_refresh).toBe(
+      true,
+    );
+    expect(savedTemplate(restored).is_refresh).toBe(false);
+  });
+
+  it("should not add is_refresh to a node that has none", async () => {
+    const node = createMockModelNode("node-1");
+    mockNodes = [node];
+
+    // biome-ignore lint/suspicious/noExplicitAny: test query-client double
+    await refreshAllModelInputs(mockQueryClient as any, { silent: true });
+
+    expect(savedTemplate(node)).not.toHaveProperty("is_refresh");
+  });
+});
 
 describe("useRefreshModelInputs", () => {
   beforeEach(() => {
@@ -1602,6 +1702,23 @@ describe("useRefreshModelInputs", () => {
 // ============================================================================
 // Test Helpers
 // ============================================================================
+
+const GPT_4 = { name: "gpt-4", provider: "OpenAI", icon: "OpenAI" };
+
+// The backend answers a model refresh for the model it was sent.
+function answerWithSentModel(response: {
+  data: { template: APITemplateType };
+}) {
+  (api.post as jest.Mock).mockImplementation(async (_url, body) => ({
+    data: {
+      ...response.data,
+      template: {
+        ...response.data.template,
+        model: { ...response.data.template.model, value: body.field_value },
+      },
+    },
+  }));
+}
 
 const OPENAI_OPTION = {
   name: "gpt-5.6",
@@ -1688,8 +1805,8 @@ function createMockCustomComponentModelNode(id: string): AllNodeType {
         template: {
           model: {
             type: "model",
-            value: "gpt-4",
-            options: ["gpt-4"],
+            value: [GPT_4],
+            options: [GPT_4],
             required: true,
             list: false,
             show: true,

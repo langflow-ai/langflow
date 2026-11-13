@@ -5,6 +5,7 @@ import type {
 } from "@/types/api";
 import type { AllNodeType } from "@/types/flow";
 import { isUserOwnedModelKind, modelKindOfField } from "./model-kind";
+import { withStoredRefreshFlag } from "@/utils/template-refresh-flag";
 
 /** Checks if a node has a model-type input field */
 export function isModelNode(node: AllNodeType): boolean {
@@ -44,7 +45,7 @@ export function buildRefreshPayload(
   };
 }
 
-/** Creates an updated node with new template data */
+/** Creates an updated node with new template data, keeping the node's own `is_refresh` */
 export function createUpdatedNode(
   currentNode: AllNodeType,
   updatedTemplate: APITemplateType,
@@ -56,7 +57,10 @@ export function createUpdatedNode(
       ...currentNode.data,
       node: {
         ...currentNode.data.node,
-        template: updatedTemplate,
+        template: withStoredRefreshFlag(
+          currentNode.data.node?.template,
+          updatedTemplate,
+        ),
         outputs: updatedOutputs ?? currentNode.data.node.outputs,
       },
     },
@@ -88,6 +92,9 @@ export function validateModelValue(
   const currentModel = Array.isArray(currentValue)
     ? currentValue[0]
     : currentValue;
+  // An empty model stays empty, as the backend and the model input leave it:
+  // filling it picks a provider the user never chose (LE-2168).
+  if (!currentModel) return template;
   const currentModelName = currentModel?.name;
   const currentProvider = currentModel?.provider;
   const currentProviderConfiguration = currentProvider
