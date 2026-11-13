@@ -440,31 +440,42 @@ class SaveToFileComponent(Component):
         from langflow.api.v2.files import upload_user_file
         from langflow.services.database.models.user.crud import get_user_by_id
 
-        # Append mode re-uploads the whole accumulated file, so it must replace the
-        # entry from earlier runs rather than add a numbered copy to My Files.
+        record_appended = None
         if getattr(self, "append_mode", False):
-            from langflow.api.v2.file_replace import replace_user_file as upload
-        else:
-            upload = upload_user_file
+            try:
+                from langflow.api.v2.file_replace import record_appended_user_file as record_appended
+            except ImportError:  # an older langflow-base: upload a copy as before
+                record_appended = None
 
         # Ensure the file exists
         if not file_path.exists():
             msg = f"File not found: {file_path}"
             raise FileNotFoundError(msg)
 
+        # Upload the file - always use append=False because the local file already contains
+        # the correct content (either new or appended locally)
         with file_path.open("rb") as f:
             async with session_scope() as db:
                 if not self.user_id:
                     msg = "User ID is required for file saving."
                     raise ValueError(msg)
                 current_user = await get_user_by_id(db, self.user_id)
+                storage_service = get_storage_service()
 
-                return await upload(
+                # An append to the file My Files already stores updates that entry
+                # instead of adding a numbered copy on every run.
+                if record_appended is not None:
+                    recorded = await record_appended(file_path, db, current_user, storage_service)
+                    if recorded is not None:
+                        return recorded
+
+                return await upload_user_file(
                     file=UploadFile(filename=file_path.name, file=f, size=file_path.stat().st_size),
                     session=db,
                     current_user=current_user,
-                    storage_service=get_storage_service(),
+                    storage_service=storage_service,
                     settings_service=get_settings_service(),
+                    append=False,
                 )
 
     def _write_csv(self, frame: pd.DataFrame, path: Path, *, append: bool) -> None:
