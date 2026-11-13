@@ -24645,6 +24645,238 @@
           },
           "tool_mode": false
         },
+        "DataFrameKeywordSearch": {
+          "base_classes": [
+            "Table"
+          ],
+          "beta": false,
+          "conditional_paths": [],
+          "custom_fields": {},
+          "description": "Search for keywords in a DataFrame column using any/all/coverage matching",
+          "display_name": "Keyword Search",
+          "documentation": "",
+          "edited": false,
+          "field_order": [
+            "dataframe",
+            "column",
+            "keywords",
+            "match_type",
+            "case_sensitive",
+            "number_candidates"
+          ],
+          "frozen": false,
+          "icon": "Search",
+          "legacy": false,
+          "metadata": {
+            "code_hash": "a9bd257f5cfb",
+            "component_class_name": "DataFrameKeywordSearch",
+            "dependencies": {
+              "dependencies": [
+                {
+                  "name": "pandas",
+                  "version": "2.3.3"
+                },
+                {
+                  "name": "lfx",
+                  "version": null
+                }
+              ],
+              "total_dependencies": 2
+            },
+            "module": "lfx.components.processing.dataframe_keyword_search.DataFrameKeywordSearch"
+          },
+          "minimized": false,
+          "output_types": [],
+          "outputs": [
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "Filtered DataFrame",
+              "group_outputs": false,
+              "method": "search",
+              "name": "result",
+              "selected": "Table",
+              "tool_mode": true,
+              "types": [
+                "Table"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ],
+          "pinned": false,
+          "template": {
+            "_type": "Component",
+            "case_sensitive": {
+              "_input_type": "BoolInput",
+              "advanced": true,
+              "api_editable": false,
+              "display_name": "Case Sensitive",
+              "dynamic": false,
+              "info": "Whether search is case-sensitive",
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "case_sensitive",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "bool",
+              "value": false
+            },
+            "code": {
+              "advanced": true,
+              "api_editable": false,
+              "dynamic": true,
+              "fileTypes": [],
+              "file_path": "",
+              "info": "",
+              "list": false,
+              "load_from_db": false,
+              "multiline": true,
+              "name": "code",
+              "password": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "type": "code",
+              "value": "import pandas as pd\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.io import BoolInput, DataFrameInput, DropdownInput, IntInput, MessageTextInput, Output\nfrom lfx.schema.dataframe import DataFrame\n\n\nclass DataFrameKeywordSearch(Component):\n    display_name = \"Keyword Search\"\n    description = \"Search for keywords in a DataFrame column using any/all/coverage matching\"\n    icon = \"Search\"\n\n    inputs = [\n        DataFrameInput(\n            name=\"dataframe\",\n            display_name=\"Table\",\n            info=\"Input table to search\",\n        ),\n        MessageTextInput(\n            name=\"column\",\n            display_name=\"Column\",\n            info=(\n                \"Column name to search in. Valid columns: 'file_path' (component file path) \"\n                \"and 'text' (component source code).\"\n            ),\n            tool_mode=True,\n        ),\n        MessageTextInput(\n            name=\"keywords\",\n            display_name=\"Keywords\",\n            info=\"Keywords to search for\",\n            is_list=True,\n            tool_mode=True,\n        ),\n        DropdownInput(\n            name=\"match_type\",\n            display_name=\"Match Type\",\n            options=[\"any\", \"all\", \"coverage\"],\n            value=\"any\",\n            info=\"'any' = OR logic, 'all' = AND logic, 'coverage' = keyword coverage ranking\",\n        ),\n        BoolInput(\n            name=\"case_sensitive\",\n            display_name=\"Case Sensitive\",\n            value=False,\n            advanced=True,\n            info=\"Whether search is case-sensitive\",\n        ),\n        IntInput(\n            name=\"number_candidates\",\n            display_name=\"Number of Candidates\",\n            value=10,\n            info=\"The number of candidates to filter and return in the dataframe output\",\n        ),\n    ]\n\n    outputs = [\n        Output(name=\"result\", display_name=\"Filtered DataFrame\", method=\"search\"),\n    ]\n\n    def search(self) -> DataFrame:\n        df = self.dataframe\n        column = self.column\n        keywords = self.keywords if isinstance(self.keywords, list) else []\n\n        if df is None or len(df) == 0:\n            return DataFrame(pd.DataFrame())\n\n        if column not in df.columns:\n            available = \", \".join(str(c) for c in df.columns)\n            msg = f\"Column '{column}' not found. Available columns: {available}\"\n            raise ValueError(msg)\n\n        keywords = [str(k).strip() for k in keywords if k is not None]\n        keywords = [k for k in keywords if k]\n        if not keywords:\n            return DataFrame(df.reset_index(drop=True)).head(self.number_candidates)\n\n        text_series = df[column].fillna(\"\").astype(str)\n\n        if not self.case_sensitive:\n            text_series = text_series.str.lower()\n            keywords = [k.lower() for k in keywords]\n\n        if self.match_type == \"any\":\n            mask = pd.Series([False] * len(df), index=df.index)\n            for keyword in keywords:\n                mask = mask | text_series.str.contains(keyword, regex=False)\n            result = df[mask]\n        elif self.match_type == \"all\":\n            mask = pd.Series([True] * len(df), index=df.index)\n            for keyword in keywords:\n                mask = mask & text_series.str.contains(keyword, regex=False)\n            result = df[mask]\n        elif self.match_type == \"coverage\":\n            total_keywords = len(keywords)\n            scores = [sum(1 for keyword in keywords if keyword in text) / total_keywords for text in text_series]\n            result = df.copy()\n            result[\"_score\"] = scores\n            result = result[result[\"_score\"] > 0].sort_values(\"_score\", ascending=False)\n        else:\n            msg = f\"Match Type must be one of any, all or coverage, not '{self.match_type}'.\"\n            raise ValueError(msg)\n\n        return DataFrame(result.reset_index(drop=True)).head(self.number_candidates)\n"
+            },
+            "column": {
+              "_input_type": "MessageTextInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Column",
+              "dynamic": false,
+              "info": "Column name to search in. Valid columns: 'file_path' (component file path) and 'text' (component source code).",
+              "input_types": [
+                "Message"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "name": "column",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": true,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "dataframe": {
+              "_input_type": "DataFrameInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Table",
+              "dynamic": false,
+              "info": "Input table to search",
+              "input_types": [
+                "DataFrame",
+                "Table"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "dataframe",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "other",
+              "value": ""
+            },
+            "keywords": {
+              "_input_type": "MessageTextInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Keywords",
+              "dynamic": false,
+              "info": "Keywords to search for",
+              "input_types": [
+                "Message"
+              ],
+              "list": true,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "name": "keywords",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": true,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "match_type": {
+              "_input_type": "DropdownInput",
+              "advanced": false,
+              "api_editable": false,
+              "combobox": false,
+              "dialog_inputs": {},
+              "display_name": "Match Type",
+              "dynamic": false,
+              "external_options": {},
+              "info": "'any' = OR logic, 'all' = AND logic, 'coverage' = keyword coverage ranking",
+              "name": "match_type",
+              "options": [
+                "any",
+                "all",
+                "coverage"
+              ],
+              "options_metadata": [],
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "toggle": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "str",
+              "value": "any"
+            },
+            "number_candidates": {
+              "_input_type": "IntInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Number of Candidates",
+              "dynamic": false,
+              "info": "The number of candidates to filter and return in the dataframe output",
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "number_candidates",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "int",
+              "value": 10
+            }
+          },
+          "tool_mode": false
+        },
         "DataFrameOperations": {
           "base_classes": [
             "Table"
@@ -33422,9 +33654,9 @@
     ]
   ],
   "metadata": {
-    "num_components": 131,
+    "num_components": 132,
     "num_modules": 17
   },
-  "sha256": "f9cc4856e23c10a879b84935e770ed8872459aec97306e232aac941b50d6b049",
+  "sha256": "b2336e56a46137b081c7613a14f3460e1c683d3765dafdc4256152abdaf2853d",
   "version": "1.14.0"
 }
