@@ -139,6 +139,37 @@ def test_google_tool_filter_checks_each_candidate_without_skipping() -> None:
     assert model_ids == ["gemini-c", "gemini-a"]
 
 
+def test_google_tool_model_list_keeps_gemini_models_with_the_real_chat_model() -> None:
+    """Gemini models that call tools stay listed; the TTS model, which cannot, is dropped."""
+
+    class FakeClient:
+        def __init__(self, *, api_key: str) -> None:  # noqa: ARG002
+            self.models = SimpleNamespace(
+                list=lambda: [
+                    SimpleNamespace(name="models/gemini-2.5-flash", supported_actions=["generateContent"]),
+                    SimpleNamespace(name="models/gemini-2.5-pro", supported_actions=["generateContent"]),
+                    SimpleNamespace(name="models/gemini-2.5-flash-preview-tts", supported_actions=["generateContent"]),
+                ]
+            )
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_value, traceback) -> None:
+            return None
+
+    component = GoogleGenerativeAIComponent()
+    component.api_key = TEST_API_KEY
+    component.tool_model_enabled = True
+
+    with patch.object(genai, "Client", FakeClient):
+        updated = component.update_build_config(
+            dotdict({"model_name": {}}), field_value=True, field_name="tool_model_enabled"
+        )
+
+    assert updated["model_name"]["options"] == ["gemini-2.5-pro", "gemini-2.5-flash"]
+
+
 def test_google_model_config_handles_no_tool_capable_models() -> None:
     component = GoogleGenerativeAIComponent()
     component.api_key = TEST_API_KEY
