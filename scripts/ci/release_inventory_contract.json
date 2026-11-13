@@ -362,6 +362,7 @@
         "pgvector",
         "pinecone",
         "plivo",
+        "popnow",
         "qdrant",
         "redis",
         "sambanova",
