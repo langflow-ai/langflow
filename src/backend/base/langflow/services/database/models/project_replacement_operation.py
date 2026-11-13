@@ -26,6 +26,7 @@ class ProjectReplacementOperation(SQLModel, table=True):
     # pruned operation_id retried with the same body must 410, never silently
     # re-execute and overwrite newer content. See _replace_project_operation_once.
     result: dict | None = Field(default=None, sa_column=Column(JSON, nullable=True))
+    project_name: str | None = Field(default=None, sa_column=Column(String(), nullable=True))
     project_user_id: UUID | None = Field(default=None, nullable=True)
     workspace_id: UUID | None = Field(default=None, nullable=True)
     created_at: datetime = Field(
