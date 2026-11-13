@@ -23,13 +23,13 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
-from langflow.api.utils import knowledge_base_service
+from langflow.api.utils import ingestion_run_service, knowledge_base_service
 from langflow.services.database.models.jobs.model import Job, JobStatus, JobType
 from langflow.services.deps import get_job_service, session_scope
-from lfx.base.knowledge_bases.ingestion_sources.base import IngestionRunStatus
+from lfx.base.knowledge_bases.ingestion_sources.base import IngestionRunStatus, IngestionSummary
 
 if TYPE_CHECKING:
     from httpx import AsyncClient
@@ -354,6 +354,55 @@ class TestRunStatusAfterJobEnds:
     sweep after a worker dies, a timeout, a cancel the run never saw), run
     history must follow the job instead of reading RUNNING forever.
     """
+
+    @pytest.mark.parametrize("job_status", [JobStatus.QUEUED, JobStatus.IN_PROGRESS])
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_cancel_records_finished_at(
+        self, mock_root, client: AsyncClient, logged_in_headers, active_user, tmp_path, job_status
+    ):
+        mock_root.return_value = tmp_path
+        kb_name = "cancel_kb"
+        (tmp_path / active_user.username / kb_name).mkdir(parents=True)
+        run_id = await _insert_run(
+            user_id=active_user.id,
+            kb_name=kb_name,
+            status=IngestionRunStatus.RUNNING if job_status == JobStatus.IN_PROGRESS else IngestionRunStatus.PENDING,
+            job_status=job_status,
+            source_type="folder",
+            succeeded=0,
+        )
+        with patch("langflow.api.v1.knowledge_bases.KBIngestionHelper.cleanup_chroma_chunks_by_job", new=AsyncMock()):
+            response = await client.post(f"api/v1/knowledge_bases/{kb_name}/cancel", headers=logged_in_headers)
+        assert response.status_code == 200, response.text
+
+        job_service = get_job_service()
+        job = await job_service.get_job_by_job_id(run_id)
+        assert job.status == JobStatus.CANCELLED
+        assert job.finished_timestamp is not None
+        finished_at = job.finished_timestamp
+
+        # The worker's finalization must preserve the cancellation timestamp.
+        await ingestion_run_service.finalize_run(
+            run_id,
+            summary=IngestionSummary(kb_name=kb_name, source_type="folder"),
+            status=IngestionRunStatus.CANCELLED,
+            error_message="ingestion cancelled by user",
+        )
+        assert await job_service.complete_live_job(run_id) is False
+        job = await job_service.get_job_by_job_id(run_id)
+        assert job.status == JobStatus.CANCELLED
+        assert job.finished_timestamp == finished_at
+
+        listed = await client.get(f"api/v1/knowledge_bases/{kb_name}/runs", headers=logged_in_headers)
+        assert listed.status_code == 200, listed.text
+        [run] = listed.json()["runs"]
+        detail = await client.get(f"api/v1/knowledge_bases/{kb_name}/runs/{run_id}", headers=logged_in_headers)
+        assert detail.status_code == 200, detail.text
+        for payload in (run, detail.json()):
+            assert payload["status"] == "cancelled"
+            assert payload["error_message"] == "ingestion cancelled by user"
+            assert payload["finished_at"] is not None
+            assert datetime.fromisoformat(payload["finished_at"]) == finished_at
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_run_orphaned_by_the_sweep_reads_failed(
