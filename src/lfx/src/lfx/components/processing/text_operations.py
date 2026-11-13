@@ -363,7 +363,7 @@ class TextOperations(Component):
         """Parse table lines into rows of cells."""
         rows = []
         for index, line in enumerate(lines):
-            cleaned_line = line.strip(separator)
+            cleaned_line = line.removeprefix(separator).removesuffix(separator)
             cells = [cell.strip() for cell in cleaned_line.split(separator)]
             # Skip the markdown delimiter row under the header instead of reading it as data.
             if has_header and index == 1 and all(MARKDOWN_DELIMITER_CELL.fullmatch(cell) for cell in cells):
