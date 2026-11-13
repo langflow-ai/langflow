@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import contextlib
-from collections import Counter
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.models.decision_constants import LIVE_DECISION_PROVIDERS, is_decision_row
@@ -59,8 +58,9 @@ def get_unified_models_detailed(
         are filtered out.
     only_defaults : bool
         When True, only models marked as default are returned.
-        The first 5 models from each provider (in list order) are automatically
-        marked as default. Defaults to False to maintain backward compatibility.
+        The first 5 non-decision models from each provider (in list order) are
+        automatically marked as default. Decision models require explicit selection.
+        Defaults to False to maintain backward compatibility.
     **metadata_filters
         Arbitrary key/value pairs to match against the model's metadata.
         Example: ``get_unified_models_detailed(size="4k", context_window=8192)``
@@ -133,13 +133,14 @@ def get_unified_models_detailed(
 
     for prov, models in provider_map.items():
         models.sort(key=_sort_key)
-        # Decision rows get their own first five, as language models do, so they never displace a
-        # provider's chat defaults.
-        seen = Counter()
+        # Decision models require explicit selection and never displace a provider's chat defaults.
+        seen = 0
         for model in models:
-            is_decision = is_decision_row(model)
-            model["metadata"]["default"] = seen[is_decision] < default_model_count
-            seen[is_decision] += 1
+            if is_decision_row(model):
+                model["metadata"]["default"] = False
+                continue
+            model["metadata"]["default"] = seen < default_model_count
+            seen += 1
 
         # If only_defaults is True, filter to only default models
         if only_defaults:
