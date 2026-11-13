@@ -139,7 +139,6 @@ def test_a_replacement_body_describes_the_project_name_and_requested_flow_count(
         ("replacement_duplicate_flow_names", 409, AuditErrorCode.FLOW_NAME_CONFLICT),
         ("replacement_flow_name_conflict", 409, AuditErrorCode.FLOW_NAME_CONFLICT),
         ("replacement_endpoint_name_conflict", 409, AuditErrorCode.FLOW_NAME_CONFLICT),
-        ("replacement_duplicate_flow_ids", 422, AuditErrorCode.FLOW_ID_CONFLICT),
         ("replacement_flow_belongs_to_another_project", 409, AuditErrorCode.FLOW_ID_CONFLICT),
         ("replacement_flow_not_found", 404, AuditErrorCode.FLOW_NOT_FOUND),
         ("replacement_receipt_expired", 410, AuditErrorCode.CONSTRAINT_VIOLATION),

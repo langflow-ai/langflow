@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
@@ -9,13 +10,14 @@ from uuid import UUID, uuid4
 import pytest
 from fastapi import HTTPException
 from langflow.api.v1 import projects as projects_module
+from langflow.api.v1.schemas.replacement_operations import ProjectReplacementRequest
 from langflow.services.audit.details import DESCRIPTION_LIMIT
 from langflow.services.authorization.refusal import mark_authorization_refusal
 from langflow.services.database.models.audit_event.model import AuditEvent
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.project_replacement_operation import ProjectReplacementOperation
-from langflow.services.deps import get_db_service, get_settings_service, session_scope
+from langflow.services.deps import get_db_service, get_settings_service, get_storage_service, session_scope
 from sqlalchemy import event as sqlalchemy_event
 from sqlalchemy.exc import OperationalError
 from sqlmodel import delete, select
@@ -388,8 +390,9 @@ async def test_replacement_respects_audit_settings(client, active_user, logged_i
     assert await events_for(flow["id"]) == []
 
 
+@pytest.mark.parametrize("cancelled", [False, True])
 async def test_replacement_cleanup_failure_does_not_record_a_failed_mutation(
-    client, active_user, logged_in_headers, monkeypatch
+    client, active_user, logged_in_headers, monkeypatch, cancelled
 ):
     """Preserve committed success when post-commit memory cleanup fails."""
     from langflow.services.memory_base import flow_cleanup
@@ -406,12 +409,40 @@ async def test_replacement_cleanup_failure_does_not_record_a_failed_mutation(
         return deleted
 
     monkeypatch.setattr(projects_module, "cascade_delete_flow", collect_cleanup)
-    cleanup = AsyncMock(side_effect=RuntimeError("cleanup unavailable"))
-    monkeypatch.setattr(flow_cleanup, "finalize_flow_memory_base_cleanup", cleanup)
-    response = await client.put(_url(project_id), json={"description": "after", "flows": []}, headers=logged_in_headers)
+    committed_during_cleanup = []
 
-    assert response.status_code == 200, response.text
+    async def fail_cleanup(_cleanups):
+        committed_during_cleanup.append(projects_module.current_operation().committed)
+        if cancelled:
+            raise asyncio.CancelledError
+        message = "cleanup unavailable"
+        raise RuntimeError(message)
+
+    cleanup = AsyncMock(side_effect=fail_cleanup)
+    monkeypatch.setattr(flow_cleanup, "finalize_flow_memory_base_cleanup", cleanup)
+    operation_id = uuid4()
+    url = _url(project_id, operation_id)
+    body = {"description": "after", "flows": []}
+    if cancelled:
+        # Starlette middleware translates a cancelled route into a missing response.
+        async with session_scope() as session:
+            with pytest.raises(asyncio.CancelledError):
+                await projects_module.replace_project_operation(
+                    session=session,
+                    project_id=project_id,
+                    operation_id=operation_id,
+                    request_body=ProjectReplacementRequest.model_validate(body),
+                    current_user=active_user,
+                    storage_service=get_storage_service(),
+                )
+    else:
+        response = await client.put(url, json=body, headers=logged_in_headers)
+        assert response.status_code == 200, response.text
+
     cleanup.assert_awaited_once()
+    assert committed_during_cleanup == [True]
+    receipt = await client.get(url, headers=logged_in_headers)
+    assert receipt.status_code == 200, receipt.text
     [event] = await events_for(project_id)
     assert event.result == "succeeded"
     [deleted] = await events_for(removed["id"])

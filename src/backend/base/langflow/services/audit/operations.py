@@ -66,7 +66,6 @@ _REPLACEMENT_FAILURE_CODES = {
     "replacement_flow_name_conflict": AuditErrorCode.FLOW_NAME_CONFLICT,
     "replacement_duplicate_flow_names": AuditErrorCode.FLOW_NAME_CONFLICT,
     "replacement_endpoint_name_conflict": AuditErrorCode.FLOW_NAME_CONFLICT,
-    "replacement_duplicate_flow_ids": AuditErrorCode.FLOW_ID_CONFLICT,
     "replacement_flow_belongs_to_another_project": AuditErrorCode.FLOW_ID_CONFLICT,
     "replacement_flow_not_found": AuditErrorCode.FLOW_NOT_FOUND,
     "replacement_receipt_expired": AuditErrorCode.CONSTRAINT_VIOLATION,
