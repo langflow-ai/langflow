@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from fastapi import status
+from fastapi import APIRouter, status
 from lfx.services.settings.feature_flags import FEATURE_FLAGS
 
 if TYPE_CHECKING:
@@ -17,10 +17,20 @@ if TYPE_CHECKING:
 # We'll use a mocked adapter so we don't need real credentials.
 # We need to mock the adapter resolution and the telemetry service.
 
-pytestmark = pytest.mark.skipif(
-    not FEATURE_FLAGS.wxo_deployments,
-    reason="wxo_deployments feature flag is disabled; deployment routes are not mounted.",
-)
+
+@pytest.fixture(autouse=True)
+def deployment_routes(monkeypatch: pytest.MonkeyPatch):
+    """Mount the routes for this module without requiring an environment flag."""
+    if FEATURE_FLAGS.wxo_deployments:
+        return
+
+    from langflow import main
+    from langflow.api.v1.deployments import router as deployment_router
+
+    test_router = APIRouter()
+    test_router.include_router(main.router)
+    test_router.include_router(deployment_router, prefix="/api/v1")
+    monkeypatch.setattr(main, "router", test_router)
 
 
 @pytest.fixture
@@ -98,6 +108,7 @@ def mock_db_crud(mock_mapper, active_user):
         _mock_val_proj = stack.enter_context(
             patch("langflow.api.v1.deployments.validate_project_scoped_flow_version_ids")
         )
+        mock_flow_deploy = stack.enter_context(patch("langflow.api.v1.deployments.ensure_flow_deploy_for_version_ids"))
         mock_list_att = stack.enter_context(
             patch("langflow.api.v1.deployments.list_deployment_attachments_for_flow_version_ids")
         )
@@ -174,7 +185,7 @@ def mock_db_crud(mock_mapper, active_user):
         mock_upd_fv.return_value = 1
         mock_count_deps.return_value = 0
 
-        yield
+        yield mock_flow_deploy
 
 
 @pytest.mark.asyncio
@@ -295,12 +306,19 @@ async def test_create_deployment_run_telemetry(
 
 @pytest.mark.asyncio
 async def test_update_snapshot_telemetry(
-    client: AsyncClient, mock_telemetry_service, mock_adapter, mock_mapper, mock_db_crud, logged_in_headers
+    client: AsyncClient, mock_telemetry_service, mock_adapter, mock_mapper, mock_db_crud, logged_in_headers, active_user
 ):
+    flow_version_id = uuid4()
     response = await client.patch(
-        "api/v1/deployments/snapshots/snap-1", json={"flow_version_id": str(uuid4())}, headers=logged_in_headers
+        "api/v1/deployments/snapshots/snap-1",
+        json={"flow_version_id": str(flow_version_id)},
+        headers=logged_in_headers,
     )
-    assert response.status_code == status.HTTP_200_OK
+    assert response.status_code == status.HTTP_200_OK, response.json()
+    mock_db_crud.assert_awaited_once()
+    assert mock_db_crud.await_args.kwargs["flow_version_ids"] == [flow_version_id]
+    assert mock_db_crud.await_args.kwargs["owner_id"] == active_user.id
+    mock_adapter.update_snapshot.assert_awaited_once()
     mock_telemetry_service.log_package_deployment.assert_awaited_once()
     payload = mock_telemetry_service.log_package_deployment.call_args[0][0]
     assert payload.deployment_action == "snapshot.update"
