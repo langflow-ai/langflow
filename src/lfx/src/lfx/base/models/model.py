@@ -4,7 +4,6 @@ import warnings
 from abc import abstractmethod
 from typing import Any
 
-from langchain_core.language_models import BaseChatModel
 from langchain_core.language_models.llms import LLM
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.output_parsers import BaseOutputParser
@@ -91,10 +90,12 @@ class LCModelComponent(Component):
         return str(e)
 
     def supports_tool_calling(self, model: LanguageModel) -> bool:
+        # Binding a tool succeeds for every model of a provider class, so the
+        # per-model profile decides when it knows; new models fall back to the probe.
+        profile = getattr(model, "profile", None)
+        if isinstance(profile, dict) and isinstance(profile.get("tool_calling"), bool):
+            return profile["tool_calling"]
         try:
-            # Compared on the class: a bound method is never the base function itself.
-            if type(model).bind_tools is BaseChatModel.bind_tools:
-                return False
 
             def test_tool(x: int) -> int:
                 return x

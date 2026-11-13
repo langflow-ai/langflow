@@ -140,7 +140,7 @@ def test_google_tool_filter_checks_each_candidate_without_skipping() -> None:
 
 
 def test_google_tool_model_list_keeps_gemini_models_with_the_real_chat_model() -> None:
-    """The real ChatGoogleGenerativeAI binds tools into a RunnableBinding; that must count as tool support."""
+    """Gemini models that call tools stay listed; the TTS model, which cannot, is dropped."""
 
     class FakeClient:
         def __init__(self, *, api_key: str) -> None:  # noqa: ARG002
@@ -148,6 +148,7 @@ def test_google_tool_model_list_keeps_gemini_models_with_the_real_chat_model() -
                 list=lambda: [
                     SimpleNamespace(name="models/gemini-2.5-flash", supported_actions=["generateContent"]),
                     SimpleNamespace(name="models/gemini-2.5-pro", supported_actions=["generateContent"]),
+                    SimpleNamespace(name="models/gemini-2.5-flash-preview-tts", supported_actions=["generateContent"]),
                 ]
             )
 

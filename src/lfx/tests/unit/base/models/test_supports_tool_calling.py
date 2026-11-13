@@ -61,3 +61,22 @@ def test_should_not_support_tools_when_bind_tools_raises_not_implemented():
 
 def test_should_not_support_tools_when_the_binding_carries_none():
     assert _supports(_EmptyBindingModel(messages=_messages())) is False
+
+
+def test_should_follow_the_profile_when_it_says_the_model_cannot_call_tools():
+    model = _BindingToolModel(messages=_messages(), profile={"tool_calling": False})
+    assert _supports(model) is False
+
+
+def test_should_follow_the_profile_when_it_says_the_model_calls_tools():
+    model = _BindingToolModel(messages=_messages(), profile={"tool_calling": True})
+    assert _supports(model) is True
+
+
+def test_should_probe_when_the_profile_does_not_know():
+    model = _BindingToolModel(messages=_messages(), profile={})
+    assert _supports(model) is True
+
+
+def test_should_support_tools_on_a_configured_wrapper():
+    assert _supports(_BindingToolModel(messages=_messages()).with_config(tags=["x"])) is True
