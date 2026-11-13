@@ -8,6 +8,20 @@ test(
   async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 600 });
     await awaitBootstrapTest(page, { skipModal: true });
+
+    // Hold the lazy Back icon so the header is measured with its loading placeholder.
+    let loadBackIcon = () => {};
+    const backIconReady = new Promise<void>((resolve) => {
+      loadBackIcon = resolve;
+    });
+    await page.route(
+      /\/chevron-left(?:-[^/?]+)?\.js(?:\?|$)/,
+      async (route) => {
+        await backIconReady;
+        await route.continue();
+      },
+    );
+
     await navigateSettingsPages(page, "Settings", "General");
     await expect(page.getByText("Profile Picture").first()).toBeVisible();
 
@@ -15,8 +29,14 @@ test(
     const menuItem = page.getByTestId("sidebar-nav-General");
     const content = page.getByTestId("settings-content-scroll");
 
+    const backButton = page.getByTestId("back_page_button");
+    await expect(backButton.locator(".animate-pulse")).toBeVisible();
     const titleBefore = await title.boundingBox();
     const menuBefore = await menuItem.boundingBox();
+
+    loadBackIcon();
+    await expect(backButton.getByTestId("icon-ChevronLeft")).toBeVisible();
+    expect(await title.boundingBox()).toEqual(titleBefore);
 
     const contentBox = await content.boundingBox();
     await page.mouse.move(
