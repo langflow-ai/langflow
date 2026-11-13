@@ -1012,6 +1012,8 @@ class KnowledgeComponent(Component):
             if not self.allow_duplicates and data_obj.data["_id"] in existing_ids:
                 continue
             doc = data_obj.to_lc_document()
+            if not self.allow_duplicates:
+                doc.id = doc.metadata["_id"]
             if user_metadata_tag:
                 doc.metadata["source_metadata"] = user_metadata_tag
             documents.append(doc)

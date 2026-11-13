@@ -31,7 +31,7 @@ on:
         description: "Runner to use for the tests"
         required: false
         type: string
-        default: "ubuntu-latest"
+        default: "ubuntu-24.04"
   workflow_dispatch:
     inputs:
       ref:
@@ -48,10 +48,11 @@ on:
         required: false
         type: choice
         options:
+          - ubuntu-24.04
           - ubuntu-latest
           - self-hosted
           - '["self-hosted", "linux", "ARM64", "langflow-ai-arm64-40gb-ephemeral"]'
-        default: ubuntu-latest
+        default: ubuntu-24.04
   pull_request:
     # ready_for_review matters: every job below is gated on the PR not being a draft, so a PR
     # opened as a draft and later marked ready has no run where that gate was ever true.
@@ -322,7 +323,8 @@ jobs:
     with:
       tests_folder: ${{ inputs.frontend-tests-folder }}
       release: ${{ inputs.release || false }}
-      runs-on: ${{ inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
+      # Pin the default PR runner to a version supported by Playwright 1.60.
+      runs-on: ${{ inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-24.04' }}
       ref: ${{ inputs.ref || github.ref }}
   test-docs-build:
     needs: path-filter

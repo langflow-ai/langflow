@@ -134,14 +134,14 @@ async def test_create_project(client: AsyncClient, logged_in_headers, basic_case
     assert "parent_id" in result, "The dictionary must contain a key called 'parent_id'"
 
 
-async def test_new_project_in_caller_transaction_rolls_back_with_mcp_registration(active_user):
+async def test_new_project_in_caller_transaction_rolls_back_with_mcp_registration(active_super_user):
     """A caller that owns the transaction can roll back the project and its MCP server together."""
     from langflow.api.v1.projects import _new_project
     from langflow.services.database.models.mcp_server import MCPServer
     from langflow.services.database.models.user.model import User
 
     async with session_scope() as session:
-        user = await session.get(User, active_user.id)
+        user = await session.get(User, active_super_user.id)
         project = await _new_project(
             session=session,
             project=FolderCreate(name="caller_owned_project"),
@@ -153,10 +153,10 @@ async def test_new_project_in_caller_transaction_rolls_back_with_mcp_registratio
 
     async with session_scope() as session:
         assert await session.get(Folder, project.id) is None
-        assert not (await session.exec(select(MCPServer).where(MCPServer.user_id == active_user.id))).all()
+        assert not (await session.exec(select(MCPServer).where(MCPServer.user_id == active_super_user.id))).all()
 
 
-async def test_a_lost_mcp_name_race_leaves_the_caller_transaction_usable(active_user):
+async def test_a_lost_mcp_name_race_leaves_the_caller_transaction_usable(active_super_user):
     """A duplicate server name must not poison the transaction the project is created in.
 
     On a borrowed transaction ``update_server`` re-raises the duplicate-name
@@ -183,7 +183,7 @@ async def test_a_lost_mcp_name_race_leaves_the_caller_transaction_usable(active_
         return await real_persist(session, owns_transaction=owns_transaction)
 
     async with session_scope() as session:
-        user = await session.get(User, active_user.id)
+        user = await session.get(User, active_super_user.id)
         with patch.object(mcp_v2, "_persist", lose_the_name):
             project = await _new_project(
                 session=session,
@@ -2946,7 +2946,10 @@ class TestProjectNameValidation:
 class TestCjkProjectsRegisterDistinctMcpServers:
     """The reported bug: a second all-CJK project used to 409 on the shared lf-unnamed name."""
 
-    async def test_two_cjk_projects_and_a_cjk_rename_do_not_conflict(self, client: AsyncClient, logged_in_headers):
+    async def test_two_cjk_projects_and_a_cjk_rename_do_not_conflict(
+        self, client: AsyncClient, logged_in_headers_super_user
+    ):
+        logged_in_headers = logged_in_headers_super_user
         with patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings:
             mock_settings = MagicMock()
             mock_settings.settings.add_projects_to_mcp_servers = True
