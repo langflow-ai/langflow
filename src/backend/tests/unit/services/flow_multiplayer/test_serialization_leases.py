@@ -377,7 +377,10 @@ async def test_outer_scope_keeps_completed_text_through_gzip_and_basehttp_send(a
 
     first = asyncio.create_task(app(scope(), receive, sender(0)))
     await asyncio.wait_for(sending[0].wait(), 5)
-    await asyncio.wait_for(inner_finished.wait(), 5)
+    if not actual_main:
+        # BaseHTTPMiddleware ends the inner response before the outer send ends. The actual app's
+        # middleware is plain ASGI, so its inner response ends with the send.
+        await asyncio.wait_for(inner_finished.wait(), 5)
     reference = entry.state.outputs[0]
     second = asyncio.create_task(app(scope(), receive, sender(1)))
     await asyncio.wait_for(sending[1].wait(), 5)
@@ -539,10 +542,11 @@ async def test_non_owner_response_redacts_without_losing_its_lease(monkeypatch, 
         assert entry._serialization is None
 
 
-def test_actual_app_registers_release_scope_outside_basehttp_and_gzip():
+def test_actual_app_registers_release_scope_outside_gzip():
     from langflow.main import create_app
 
     app = create_app()
     assert app.user_middleware[0].cls is SerializationResponseMiddleware
     assert any(middleware.cls is GZipMiddleware for middleware in app.user_middleware)
-    assert sum(middleware.cls is BaseHTTPMiddleware for middleware in app.user_middleware) >= 5
+    # Every request middleware is plain ASGI: none ends a response before its send ends.
+    assert not any(middleware.cls is BaseHTTPMiddleware for middleware in app.user_middleware)
