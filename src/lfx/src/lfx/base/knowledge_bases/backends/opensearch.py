@@ -972,6 +972,9 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             index=self._os_index,
             body={"query": {"bool": {"must": [query], "must_not": [{"exists": {"field": CHUNK_ID_SORT_FIELD}}]}}},
         )
+        if missing.get("_shards", {}).get("failed"):
+            msg = "OpenSearch count did not complete on all shards."
+            raise RuntimeError(msg)
         return CHUNK_ID_SORT_FIELD if missing.get("count") == 0 else "_id"
 
     async def iter_job_documents(

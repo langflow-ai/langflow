@@ -1106,6 +1106,23 @@ class TestJobReadSortField:
         backend, client = self._backend(tmp_path, mapped=True, missing=3)
         assert await backend._job_sort_field(client, {"match_all": {}}) == "_id"
 
+    @pytest.mark.parametrize("missing", [0, 3])
+    async def test_a_partial_missing_field_count_stops_the_job_read(self, tmp_path, missing):
+        backend, client = self._backend(tmp_path, mapped=True, missing=missing)
+        backend._os_client = client
+        backend._os_text_field = DEFAULT_TEXT_FIELD
+        backend._os_vector_field = DEFAULT_VECTOR_FIELD
+        client.count.return_value = {
+            "count": missing,
+            "_shards": {"total": 2, "successful": 1, "failed": 1},
+        }
+        client.search.return_value = {"hits": {"hits": []}, "_shards": {"total": 2, "successful": 2, "failed": 0}}
+
+        with pytest.raises(RuntimeError, match="OpenSearch count did not complete on all shards"):
+            await anext(backend.iter_job_documents("job-a"))
+
+        client.search.assert_not_called()
+
     async def test_an_index_that_never_mapped_the_field_keeps_the_id_sort(self, tmp_path):
         backend, client = self._backend(tmp_path, mapped=False)
         assert await backend._job_sort_field(client, {"match_all": {}}) == "_id"
