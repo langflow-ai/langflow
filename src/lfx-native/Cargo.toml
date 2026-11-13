@@ -1,0 +1,37 @@
+[workspace]
+resolver = "3"
+members = ["crates/lfx", "crates/lfx-python", "crates/lfx-wasm"]
+
+[workspace.package]
+version = "0.1.0"
+authors = ["Hamza Rashid <hamzarashid.mail@gmail.com>"]
+edition = "2024"
+rust-version = "1.99"
+license = "MIT"
+repository = "https://github.com/langflow-ai/langflow"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+missing_debug_implementations = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+dbg_macro = "warn"
+print_stdout = "warn"
+print_stderr = "warn"
+todo = "warn"
+unwrap_used = "warn"
+# Names such as `ops::OpsError` read better in full at call sites.
+module_name_repetitions = "allow"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+
+# The browser package favours size; the Python wheel uses the release profile.
+[profile.wasm]
+inherits = "release"
+opt-level = "s"

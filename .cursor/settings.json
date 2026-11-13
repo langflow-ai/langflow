@@ -1,3 +1,4 @@
 {
-  "biome.configurationPath": "src/frontend/biome.json"
+  "biome.configurationPath": "src/frontend/biome.json",
+  "rust-analyzer.linkedProjects": ["src/lfx-native/Cargo.toml"]
 }

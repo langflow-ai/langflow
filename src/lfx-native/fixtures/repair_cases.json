@@ -1,0 +1,1139 @@
+{
+  "description": "Repair: repair_flow_data(flow, base). A case gives `flow` (or `flow_json`) and an optional `base`, and either the repaired graph with the fixes in the order repair made them, or the error with the violations only the client can fix. Generated node ids are derived from content, so they are exact; edge and row ids are random, so they appear as `<generated edge id>` and `<generated row id>`. Each case names the rule it checks in `rule`; README.md lists the rules. The expected outputs are reviewed data that every engine must meet.",
+  "cases": [
+    {
+      "name": "a valid graph is returned unchanged with no fixes",
+      "rule": "repair-direct-only",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"id": "a", "type": "Prompt", "node": {"template": {}}}},
+          {"id": "b", "data": {"id": "b", "type": "Prompt", "node": {"template": {}}}}
+        ],
+        "edges": [{"id": "e", "source": "a", "target": "b", "sourceHandle": "S", "targetHandle": "T"}],
+        "viewport": {"zoom": 1}
+      },
+      "expected": {
+        "nodes": [
+          {"id": "a", "data": {"id": "a", "type": "Prompt", "node": {"template": {}}}},
+          {"id": "b", "data": {"id": "b", "type": "Prompt", "node": {"template": {}}}}
+        ],
+        "edges": [{"id": "e", "source": "a", "target": "b", "sourceHandle": "S", "targetHandle": "T"}],
+        "viewport": {"zoom": 1}
+      },
+      "fixes": []
+    },
+    {
+      "name": "flow data null becomes an empty flow",
+      "rule": "graph-structure",
+      "flow": null,
+      "expected": {"nodes": [], "edges": []},
+      "fixes": [{"code": "FLOW_DATA_NOT_OBJECT", "path": [], "action": "replaced with an empty flow"}]
+    },
+    {
+      "name": "flow data that is a list becomes an empty flow",
+      "rule": "graph-structure",
+      "flow": [],
+      "expected": {"nodes": [], "edges": []},
+      "fixes": [{"code": "FLOW_DATA_NOT_OBJECT", "path": [], "action": "replaced with an empty flow"}]
+    },
+    {
+      "name": "flow data that is a string becomes an empty flow",
+      "rule": "graph-structure",
+      "flow": "x",
+      "expected": {"nodes": [], "edges": []},
+      "fixes": [{"code": "FLOW_DATA_NOT_OBJECT", "path": [], "action": "replaced with an empty flow"}]
+    },
+    {
+      "name": "non-list collections become empty lists",
+      "rule": "graph-structure",
+      "flow": {"nodes": null, "edges": "x", "description": "kept"},
+      "expected": {"nodes": [], "edges": [], "description": "kept"},
+      "fixes": [
+        {"code": "COLLECTION_NOT_LIST", "path": ["nodes"], "action": "replaced with an empty list"},
+        {"code": "COLLECTION_NOT_LIST", "path": ["edges"], "action": "replaced with an empty list"}
+      ]
+    },
+    {
+      "name": "missing collections become empty lists",
+      "rule": "graph-structure",
+      "flow": {"description": "kept"},
+      "expected": {"description": "kept", "nodes": [], "edges": []},
+      "fixes": [
+        {"code": "COLLECTION_NOT_LIST", "path": ["nodes"], "action": "replaced with an empty list"},
+        {"code": "COLLECTION_NOT_LIST", "path": ["edges"], "action": "replaced with an empty list"}
+      ]
+    },
+    {
+      "name": "non-object entries are dropped",
+      "rule": "graph-structure",
+      "flow": {"nodes": [{"id": "a", "data": {"id": "a", "type": "Prompt", "node": {"template": {}}}}, 1], "edges": ["x"]},
+      "expected": {"nodes": [{"id": "a", "data": {"id": "a", "type": "Prompt", "node": {"template": {}}}}], "edges": []},
+      "fixes": [
+        {"code": "NODE_NOT_OBJECT", "path": ["nodes", 1], "action": "dropped the entry"},
+        {"code": "EDGE_NOT_OBJECT", "path": ["edges", 0], "action": "dropped the entry"}
+      ]
+    },
+    {
+      "name": "missing node objects become empty objects",
+      "rule": "node-objects",
+      "flow": {"nodes": [{"id": "a"}, {"id": "b", "data": {"node": {"template": null}}}], "edges": []},
+      "expected": {"nodes": [{"id": "a", "data": {"node": {"template": {}}}}, {"id": "b", "data": {"node": {"template": {}}}}], "edges": []},
+      "fixes": [
+        {"code": "NODE_DATA_NOT_OBJECT", "path": ["nodes", 0, "data"], "action": "replaced with an empty object"},
+        {"code": "NODE_DATA_NOT_OBJECT", "path": ["nodes", 0, "data", "node"], "action": "replaced with an empty object"},
+        {"code": "NODE_DATA_NOT_OBJECT", "path": ["nodes", 0, "data", "node", "template"], "action": "replaced with an empty object"},
+        {"code": "NODE_DATA_NOT_OBJECT", "path": ["nodes", 1, "data", "node", "template"], "action": "replaced with an empty object"}
+      ]
+    },
+    {
+      "name": "a missing node id gets a generated id in the editor shape",
+      "rule": "graph-structure",
+      "flow": {"nodes": [{"data": {"id": null, "type": "Prompt", "node": {"template": {}}}}], "edges": []},
+      "expected": {"nodes": [{"data": {"id": "Prompt-IVF1k", "type": "Prompt", "node": {"template": {}}}, "id": "Prompt-IVF1k"}], "edges": []},
+      "fixes": [{"code": "NODE_ID_MISSING", "path": ["nodes", 0, "id"], "action": "assigned a generated id"}]
+    },
+    {
+      "name": "duplicate node ids keep the first node and its edges",
+      "rule": "graph-structure",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"id": "a", "type": "Prompt", "node": {"template": {}}}},
+          {"id": "a", "data": {"id": "a", "type": "Prompt", "node": {"template": {}}}, "position": {"x": 1}},
+          {"id": "b", "data": {"id": "b", "type": "Prompt", "node": {"template": {}}}}
+        ],
+        "edges": [{"id": "e", "source": "a", "target": "b", "sourceHandle": "S", "targetHandle": "T"}]
+      },
+      "expected": {
+        "nodes": [
+          {"id": "a", "data": {"id": "a", "type": "Prompt", "node": {"template": {}}}},
+          {"id": "Prompt-lTJOZ", "data": {"id": "Prompt-lTJOZ", "type": "Prompt", "node": {"template": {}}}, "position": {"x": 1}},
+          {"id": "b", "data": {"id": "b", "type": "Prompt", "node": {"template": {}}}}
+        ],
+        "edges": [{"id": "e", "source": "a", "target": "b", "sourceHandle": "S", "targetHandle": "T"}]
+      },
+      "fixes": [{"code": "NODE_ID_DUPLICATE", "path": ["nodes", 1, "id"], "action": "assigned a generated id; the first node keeps the id and its edges"}]
+    },
+    {
+      "name": "a node id that is not a string gets a generated id",
+      "rule": "graph-structure",
+      "flow": {"nodes": [{"id": 3, "data": {"id": 3, "node": {"template": {}}}}], "edges": []},
+      "expected": {"nodes": [{"id": "node-wtFXP", "data": {"id": "node-wtFXP", "node": {"template": {}}}}], "edges": []},
+      "fixes": [{"code": "NODE_ID_MISSING", "path": ["nodes", 0, "id"], "action": "assigned a generated id"}]
+    },
+    {
+      "name": "edges to unknown nodes are dropped",
+      "rule": "graph-structure",
+      "flow": {
+        "nodes": [{"id": "a", "data": {"id": "a", "type": "Prompt", "node": {"template": {}}}}],
+        "edges": [{"id": "e1", "source": "a", "target": "zz", "sourceHandle": "S", "targetHandle": "T"}, {"id": "e2", "target": "a"}]
+      },
+      "expected": {"nodes": [{"id": "a", "data": {"id": "a", "type": "Prompt", "node": {"template": {}}}}], "edges": []},
+      "fixes": [
+        {"code": "EDGE_ENDPOINT_INVALID", "path": ["edges", 0, "target"], "action": "dropped the edge"},
+        {"code": "EDGE_ENDPOINT_INVALID", "path": ["edges", 1, "source"], "action": "dropped the edge"}
+      ]
+    },
+    {
+      "name": "missing and duplicate edge ids are opaque like the editor",
+      "rule": "graph-structure",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"id": "a", "type": "Prompt", "node": {"template": {}}}},
+          {"id": "b", "data": {"id": "b", "type": "Prompt", "node": {"template": {}}}}
+        ],
+        "edges": [
+          {"id": "e", "source": "a", "target": "b", "sourceHandle": "S", "targetHandle": "T"},
+          {"id": "e", "source": "b", "target": "a", "sourceHandle": "S", "targetHandle": "T"},
+          {"source": "a", "target": "b", "sourceHandle": "S", "targetHandle": "T"}
+        ]
+      },
+      "expected": {
+        "nodes": [
+          {"id": "a", "data": {"id": "a", "type": "Prompt", "node": {"template": {}}}},
+          {"id": "b", "data": {"id": "b", "type": "Prompt", "node": {"template": {}}}}
+        ],
+        "edges": [
+          {"id": "e", "source": "a", "target": "b", "sourceHandle": "S", "targetHandle": "T"},
+          {"id": "<generated edge id>", "source": "b", "target": "a", "sourceHandle": "S", "targetHandle": "T"},
+          {"source": "a", "target": "b", "sourceHandle": "S", "targetHandle": "T", "id": "<generated edge id>"}
+        ]
+      },
+      "fixes": [
+        {"code": "EDGE_ID_DUPLICATE", "path": ["edges", 1, "id"], "action": "assigned a generated id"},
+        {"code": "EDGE_ID_MISSING", "path": ["edges", 2, "id"], "action": "assigned a generated id"}
+      ]
+    },
+    {
+      "name": "non-finite numbers become null",
+      "rule": "finite-numbers",
+      "flow_json": "{\"nodes\": [{\"id\": \"a\", \"data\": {\"id\": \"a\", \"type\": \"Prompt\", \"node\": {\"template\": {}}}, \"position\": {\"x\": 1e400, \"y\": 1}}], \"edges\": [], \"zoom\": -1e400}",
+      "expected": {
+        "nodes": [{"id": "a", "data": {"id": "a", "type": "Prompt", "node": {"template": {}}}, "position": {"x": null, "y": 1}}],
+        "edges": [],
+        "zoom": null
+      },
+      "fixes": [
+        {"code": "NON_FINITE_NUMBER", "path": ["zoom"], "action": "replaced with null"},
+        {"code": "NON_FINITE_NUMBER", "path": ["nodes", 0, "position", "x"], "action": "replaced with null"}
+      ]
+    },
+    {
+      "name": "an integer too large for a double becomes null",
+      "rule": "finite-numbers",
+      "flow_json": "{\"nodes\": [{\"id\": \"a\", \"data\": {\"id\": \"a\", \"type\": \"Prompt\", \"node\": {\"template\": {}}}, \"position\": {\"x\": 1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000, \"y\": 9007199254740993}}], \"edges\": []}",
+      "expected": {
+        "nodes": [{"id": "a", "data": {"id": "a", "type": "Prompt", "node": {"template": {}}}, "position": {"x": null, "y": 9007199254740993}}],
+        "edges": []
+      },
+      "fixes": [{"code": "NON_FINITE_NUMBER", "path": ["nodes", 0, "position", "x"], "action": "replaced with null"}]
+    },
+    {
+      "name": "non-finite numbers in nested containers are found containers last first",
+      "rule": "finite-numbers",
+      "flow_json": "{\"nodes\": [], \"edges\": [], \"a\": [1e400, {\"b\": -1e400}], \"c\": {\"d\": [1e400], \"e\": 1e400}, \"f\": 1e400}",
+      "expected": {"nodes": [], "edges": [], "a": [null, {"b": null}], "c": {"d": [null], "e": null}, "f": null},
+      "fixes": [
+        {"code": "NON_FINITE_NUMBER", "path": ["f"], "action": "replaced with null"},
+        {"code": "NON_FINITE_NUMBER", "path": ["c", "e"], "action": "replaced with null"},
+        {"code": "NON_FINITE_NUMBER", "path": ["c", "d", 0], "action": "replaced with null"},
+        {"code": "NON_FINITE_NUMBER", "path": ["a", 0], "action": "replaced with null"},
+        {"code": "NON_FINITE_NUMBER", "path": ["a", 1, "b"], "action": "replaced with null"}
+      ]
+    },
+    {
+      "name": "a badly broken graph comes out following every rule",
+      "rule": "repair-direct-only",
+      "flow_json": "{\"nodes\": [null, {\"id\": 3}, {\"id\": \"a\", \"data\": []}, {\"id\": \"a\"}, {\"data\": {\"node\": {\"template\": 1}}}], \"edges\": [{\"id\": \"e\"}, {\"id\": \"e\", \"source\": \"a\", \"target\": \"a\", \"w\": 1e400}, 7]}",
+      "expected": {
+        "nodes": [
+          {"id": "node-YVbaX", "data": {"node": {"template": {}}, "id": "node-YVbaX"}},
+          {"id": "a", "data": {"node": {"template": {}}}},
+          {"id": "node-T6TMo", "data": {"node": {"template": {}}, "id": "node-T6TMo"}},
+          {"data": {"node": {"template": {}}, "id": "node-XHBqP"}, "id": "node-XHBqP"}
+        ],
+        "edges": [{"id": "e", "source": "a", "target": "a", "w": null}]
+      },
+      "fixes": [
+        {"code": "NON_FINITE_NUMBER", "path": ["edges", 1, "w"], "action": "replaced with null"},
+        {"code": "NODE_NOT_OBJECT", "path": ["nodes", 0], "action": "dropped the entry"},
+        {"code": "NODE_DATA_NOT_OBJECT", "path": ["nodes", 1, "data"], "action": "replaced with an empty object"},
+        {"code": "NODE_DATA_NOT_OBJECT", "path": ["nodes", 1, "data", "node"], "action": "replaced with an empty object"},
+        {"code": "NODE_DATA_NOT_OBJECT", "path": ["nodes", 1, "data", "node", "template"], "action": "replaced with an empty object"},
+        {"code": "NODE_DATA_NOT_OBJECT", "path": ["nodes", 2, "data"], "action": "replaced with an empty object"},
+        {"code": "NODE_DATA_NOT_OBJECT", "path": ["nodes", 2, "data", "node"], "action": "replaced with an empty object"},
+        {"code": "NODE_DATA_NOT_OBJECT", "path": ["nodes", 2, "data", "node", "template"], "action": "replaced with an empty object"},
+        {"code": "NODE_DATA_NOT_OBJECT", "path": ["nodes", 3, "data"], "action": "replaced with an empty object"},
+        {"code": "NODE_DATA_NOT_OBJECT", "path": ["nodes", 3, "data", "node"], "action": "replaced with an empty object"},
+        {"code": "NODE_DATA_NOT_OBJECT", "path": ["nodes", 3, "data", "node", "template"], "action": "replaced with an empty object"},
+        {"code": "NODE_DATA_NOT_OBJECT", "path": ["nodes", 4, "data", "node", "template"], "action": "replaced with an empty object"},
+        {"code": "NODE_ID_MISSING", "path": ["nodes", 1, "id"], "action": "assigned a generated id"},
+        {"code": "NODE_ID_DUPLICATE", "path": ["nodes", 3, "id"], "action": "assigned a generated id; the first node keeps the id and its edges"},
+        {"code": "NODE_ID_MISSING", "path": ["nodes", 4, "id"], "action": "assigned a generated id"},
+        {"code": "EDGE_ENDPOINT_INVALID", "path": ["edges", 0, "source"], "action": "dropped the edge"},
+        {"code": "EDGE_NOT_OBJECT", "path": ["edges", 2], "action": "dropped the entry"}
+      ]
+    },
+    {
+      "name": "a handle missing one form gets it from the other",
+      "rule": "edge-handle-forms",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [{"id": "e", "source": "a", "target": "b", "targetHandle": "{œfieldNameœ:œfœ,œidœ:œbœ}", "data": {"sourceHandle": {"id": "a", "name": "out"}}}]
+      },
+      "base": {"nodes": [], "edges": []},
+      "expected": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "targetHandle": "{œfieldNameœ:œfœ,œidœ:œbœ}",
+            "data": {"sourceHandle": {"id": "a", "name": "out"}, "targetHandle": {"fieldName": "f", "id": "b"}},
+            "sourceHandle": "{œidœ:œaœ,œnameœ:œoutœ}"
+          }
+        ]
+      },
+      "fixes": [{"code": "EDGE_HANDLE_FORM_MISSING", "path": ["edges", 0], "action": "derived the missing form of the handle from the one present"}]
+    },
+    {
+      "name": "an edge without data gets its handle objects from its strings",
+      "rule": "edge-handle-forms",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [{"id": "e", "source": "a", "target": "b", "sourceHandle": "{œidœ:œaœ,œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œfœ,œidœ:œbœ}"}]
+      },
+      "base": {"nodes": [], "edges": []},
+      "expected": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œidœ:œaœ,œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ,œidœ:œbœ}",
+            "data": {"sourceHandle": {"id": "a", "name": "out"}, "targetHandle": {"fieldName": "f", "id": "b"}}
+          }
+        ]
+      },
+      "fixes": [{"code": "EDGE_HANDLE_FORM_MISSING", "path": ["edges", 0], "action": "derived the missing form of the handle from the one present"}]
+    },
+    {
+      "name": "an edge that touches a note is dropped",
+      "rule": "edge-touches-note",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "note",
+            "sourceHandle": "{œidœ:œaœ,œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ,œidœ:œbœ}",
+            "data": {"sourceHandle": {"id": "a", "name": "out"}, "targetHandle": {"fieldName": "f", "id": "b"}}
+          }
+        ]
+      },
+      "base": {"nodes": [], "edges": []},
+      "expected": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": []
+      },
+      "fixes": [{"code": "EDGE_TOUCHES_NOTE", "path": ["edges", 0], "action": "dropped the edge"}]
+    },
+    {
+      "name": "a rule only the client can fix is refused",
+      "rule": "repair-direct-only",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œidœ:œaœ,œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œmissingœ,œidœ:œbœ}",
+            "data": {"sourceHandle": {"id": "a", "name": "out"}, "targetHandle": {"fieldName": "missing", "id": "b"}}
+          },
+          {
+            "id": "e-note",
+            "source": "a",
+            "target": "note",
+            "sourceHandle": "{œidœ:œaœ,œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œfœ,œidœ:œbœ}",
+            "data": {"sourceHandle": {"id": "a", "name": "out"}, "targetHandle": {"fieldName": "f", "id": "b"}}
+          }
+        ]
+      },
+      "base": {"nodes": [], "edges": []},
+      "error": {
+        "error": "FlowDataValidationError",
+        "code": "FLOW_GRAPH_INVALID",
+        "violations": [
+          {
+            "code": "EDGE_HANDLE_NOT_FOUND",
+            "path": ["edges", 0],
+            "message": "edge 'e': target node 'b' has no field 'missing'",
+            "resolution": "manual",
+            "edge_id": "e"
+          }
+        ]
+      }
+    },
+    {
+      "name": "edge data that is null is left to the client",
+      "rule": "repair-direct-only",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {"id": "e", "source": "a", "target": "b", "sourceHandle": "{œidœ:œaœ,œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œfœ,œidœ:œbœ}", "data": null}
+        ]
+      },
+      "base": {"nodes": [], "edges": []},
+      "error": {
+        "error": "FlowDataValidationError",
+        "code": "FLOW_GRAPH_INVALID",
+        "violations": [
+          {"code": "EDGE_HANDLE_INVALID", "path": ["edges", 0], "message": "edge 'e': data must be an object", "resolution": "manual", "edge_id": "e"}
+        ]
+      }
+    },
+    {
+      "name": "stored edges the write leaves alone are not repaired",
+      "rule": "edge-rules-scope",
+      "flow": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "targetHandle": "{œfieldNameœ:œfœ,œidœ:œbœ}",
+            "data": {"sourceHandle": {"id": "a", "name": "out"}, "targetHandle": {"fieldName": "f", "id": "b"}}
+          }
+        ]
+      },
+      "base": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "targetHandle": "{œfieldNameœ:œfœ,œidœ:œbœ}",
+            "data": {"sourceHandle": {"id": "a", "name": "out"}, "targetHandle": {"fieldName": "f", "id": "b"}}
+          }
+        ]
+      },
+      "expected": {
+        "nodes": [
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
+          {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e",
+            "source": "a",
+            "target": "b",
+            "targetHandle": "{œfieldNameœ:œfœ,œidœ:œbœ}",
+            "data": {"sourceHandle": {"id": "a", "name": "out"}, "targetHandle": {"fieldName": "f", "id": "b"}}
+          }
+        ]
+      },
+      "fixes": []
+    },
+    {
+      "name": "a legacy table gets ids and evenly spaced positions in row order",
+      "rule": "table-row-positions",
+      "flow": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {"type": "table", "_input_type": "TableInput", "value": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]},
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "base": {"nodes": [], "edges": []},
+      "expected": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {
+                    "type": "table",
+                    "_input_type": "TableInput",
+                    "value": [
+                      {"key": "Accept", "value": "json", "__id__": "<generated row id>", "__pos__": 1},
+                      {"key": "Auth", "value": "token", "__id__": "<generated row id>", "__pos__": 2}
+                    ]
+                  },
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "fixes": [
+        {
+          "code": "TABLE_ROW_ID_MISSING",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 0, "__id__"],
+          "action": "assigned a generated row id"
+        },
+        {
+          "code": "TABLE_ROW_ID_MISSING",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1, "__id__"],
+          "action": "assigned a generated row id"
+        },
+        {
+          "code": "TABLE_ROW_POS_INVALID",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 0, "__pos__"],
+          "action": "assigned a position that keeps the row where it is stored"
+        },
+        {
+          "code": "TABLE_ROW_POS_INVALID",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1, "__pos__"],
+          "action": "assigned a position that keeps the row where it is stored"
+        }
+      ]
+    },
+    {
+      "name": "an unchanged legacy table is left alone",
+      "rule": "legacy-tables",
+      "flow": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {"type": "table", "_input_type": "TableInput", "value": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]},
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "base": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {"type": "table", "_input_type": "TableInput", "value": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]},
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "expected": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {"type": "table", "_input_type": "TableInput", "value": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]},
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "fixes": []
+    },
+    {
+      "name": "a legacy table without a base is left alone",
+      "rule": "table-row-keys",
+      "flow": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {"type": "table", "_input_type": "TableInput", "value": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]},
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "expected": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {"type": "table", "_input_type": "TableInput", "value": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]},
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "fixes": []
+    },
+    {
+      "name": "a missing position is filled between its neighbours",
+      "rule": "table-row-positions",
+      "flow": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {
+                    "type": "table",
+                    "_input_type": "TableInput",
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"},
+                      {"__id__": "r9", "key": "New"},
+                      {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"}
+                    ]
+                  },
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "base": {"nodes": [], "edges": []},
+      "expected": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {
+                    "type": "table",
+                    "_input_type": "TableInput",
+                    "value": [
+                      {"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"},
+                      {"__id__": "r9", "key": "New", "__pos__": 1.5},
+                      {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"}
+                    ]
+                  },
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "fixes": [
+        {
+          "code": "TABLE_ROW_POS_INVALID",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1, "__pos__"],
+          "action": "assigned a position that keeps the row where it is stored"
+        }
+      ]
+    },
+    {
+      "name": "duplicate row ids are regenerated and the stored order is kept",
+      "rule": "table-row-ids-assigned",
+      "flow": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {
+                    "type": "table",
+                    "_input_type": "TableInput",
+                    "value": [
+                      {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"},
+                      {"__id__": "r2", "__pos__": 1, "key": "Accept", "value": "json"},
+                      "not a row"
+                    ]
+                  },
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "base": {"nodes": [], "edges": []},
+      "expected": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {
+                    "type": "table",
+                    "_input_type": "TableInput",
+                    "value": [
+                      {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"},
+                      {"__pos__": 1, "key": "Accept", "value": "json", "__id__": "<generated row id>"}
+                    ]
+                  },
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "fixes": [
+        {"code": "TABLE_ROW_NOT_OBJECT", "path": ["nodes", 0, "data", "node", "template", "headers", "value", 2], "action": "dropped the row"},
+        {
+          "code": "TABLE_ROW_ID_DUPLICATE",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1, "__id__"],
+          "action": "assigned a generated row id; the first row keeps the id"
+        }
+      ]
+    },
+    {
+      "name": "rows a table already held keep their ids",
+      "rule": "table-row-ids-assigned",
+      "flow": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {"type": "table", "_input_type": "TableInput", "value": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]},
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "base": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {
+                    "type": "table",
+                    "_input_type": "TableInput",
+                    "value": [{"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"}, {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"}]
+                  },
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "expected": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {
+                    "type": "table",
+                    "_input_type": "TableInput",
+                    "value": [{"key": "Accept", "value": "json", "__pos__": 1, "__id__": "r1"}, {"key": "Auth", "value": "token", "__pos__": 2, "__id__": "r2"}]
+                  },
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "fixes": [
+        {
+          "code": "TABLE_ROW_ID_MISSING",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 0, "__id__"],
+          "action": "assigned a generated row id"
+        },
+        {
+          "code": "TABLE_ROW_ID_MISSING",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1, "__id__"],
+          "action": "assigned a generated row id"
+        },
+        {
+          "code": "TABLE_ROW_POS_INVALID",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 0, "__pos__"],
+          "action": "assigned a position that keeps the row where it is stored"
+        },
+        {
+          "code": "TABLE_ROW_POS_INVALID",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1, "__pos__"],
+          "action": "assigned a position that keeps the row where it is stored"
+        }
+      ]
+    },
+    {
+      "name": "only a new row gets a new id",
+      "rule": "table-row-ids-assigned",
+      "flow": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {
+                    "type": "table",
+                    "_input_type": "TableInput",
+                    "value": [{"key": "Trace", "value": "on"}, {"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}]
+                  },
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "base": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {
+                    "type": "table",
+                    "_input_type": "TableInput",
+                    "value": [{"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"}, {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"}]
+                  },
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "expected": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {
+                    "type": "table",
+                    "_input_type": "TableInput",
+                    "value": [
+                      {"key": "Trace", "value": "on", "__id__": "<generated row id>", "__pos__": 0},
+                      {"key": "Accept", "value": "json", "__pos__": 1, "__id__": "r1"},
+                      {"key": "Auth", "value": "token", "__pos__": 2, "__id__": "r2"}
+                    ]
+                  },
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "fixes": [
+        {
+          "code": "TABLE_ROW_ID_MISSING",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 0, "__id__"],
+          "action": "assigned a generated row id"
+        },
+        {
+          "code": "TABLE_ROW_ID_MISSING",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1, "__id__"],
+          "action": "assigned a generated row id"
+        },
+        {
+          "code": "TABLE_ROW_ID_MISSING",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 2, "__id__"],
+          "action": "assigned a generated row id"
+        },
+        {
+          "code": "TABLE_ROW_POS_INVALID",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 0, "__pos__"],
+          "action": "assigned a position that keeps the row where it is stored"
+        },
+        {
+          "code": "TABLE_ROW_POS_INVALID",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1, "__pos__"],
+          "action": "assigned a position that keeps the row where it is stored"
+        },
+        {
+          "code": "TABLE_ROW_POS_INVALID",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 2, "__pos__"],
+          "action": "assigned a position that keeps the row where it is stored"
+        }
+      ]
+    },
+    {
+      "name": "rows before the first position count down from it",
+      "rule": "table-row-positions",
+      "flow": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {"type": "table", "_input_type": "TableInput", "value": [{"key": "x"}, {"key": "y"}, {"__id__": "r1", "__pos__": 5, "key": "z"}]},
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "base": {"nodes": [], "edges": []},
+      "expected": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {
+                    "type": "table",
+                    "_input_type": "TableInput",
+                    "value": [
+                      {"key": "x", "__id__": "<generated row id>", "__pos__": 3},
+                      {"key": "y", "__id__": "<generated row id>", "__pos__": 4},
+                      {"__id__": "r1", "__pos__": 5, "key": "z"}
+                    ]
+                  },
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "fixes": [
+        {
+          "code": "TABLE_ROW_ID_MISSING",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 0, "__id__"],
+          "action": "assigned a generated row id"
+        },
+        {
+          "code": "TABLE_ROW_ID_MISSING",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1, "__id__"],
+          "action": "assigned a generated row id"
+        },
+        {
+          "code": "TABLE_ROW_POS_INVALID",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 0, "__pos__"],
+          "action": "assigned a position that keeps the row where it is stored"
+        },
+        {
+          "code": "TABLE_ROW_POS_INVALID",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1, "__pos__"],
+          "action": "assigned a position that keeps the row where it is stored"
+        }
+      ]
+    },
+    {
+      "name": "rows after the last position count up from it",
+      "rule": "table-row-positions",
+      "flow": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {"type": "table", "_input_type": "TableInput", "value": [{"__id__": "r1", "__pos__": 2.5, "key": "z"}, {"key": "x"}, {"key": "y"}]},
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "base": {"nodes": [], "edges": []},
+      "expected": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {
+                    "type": "table",
+                    "_input_type": "TableInput",
+                    "value": [
+                      {"__id__": "r1", "__pos__": 2.5, "key": "z"},
+                      {"key": "x", "__id__": "<generated row id>", "__pos__": 3.5},
+                      {"key": "y", "__id__": "<generated row id>", "__pos__": 4.5}
+                    ]
+                  },
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "fixes": [
+        {
+          "code": "TABLE_ROW_ID_MISSING",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1, "__id__"],
+          "action": "assigned a generated row id"
+        },
+        {
+          "code": "TABLE_ROW_ID_MISSING",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 2, "__id__"],
+          "action": "assigned a generated row id"
+        },
+        {
+          "code": "TABLE_ROW_POS_INVALID",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1, "__pos__"],
+          "action": "assigned a position that keeps the row where it is stored"
+        },
+        {
+          "code": "TABLE_ROW_POS_INVALID",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 2, "__pos__"],
+          "action": "assigned a position that keeps the row where it is stored"
+        }
+      ]
+    },
+    {
+      "name": "a reserved column is left to the client",
+      "rule": "repair-direct-only",
+      "flow": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {
+                    "type": "table",
+                    "_input_type": "TableInput",
+                    "value": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}],
+                    "table_schema": [{"name": "key", "display_name": "Header"}, {"name": "value", "display_name": "Value"}, {"name": "__pos__"}]
+                  },
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "base": {"nodes": [], "edges": []},
+      "error": {
+        "error": "FlowDataValidationError",
+        "code": "FLOW_GRAPH_INVALID",
+        "violations": [
+          {
+            "code": "TABLE_COLUMN_RESERVED",
+            "path": ["nodes", 0, "data", "node", "template", "headers", "table_schema", 2, "name"],
+            "message": "table column must not be named __pos__",
+            "resolution": "manual"
+          }
+        ]
+      }
+    },
+    {
+      "name": "rows between out-of-order neighbours follow the one before",
+      "rule": "table-row-positions",
+      "flow": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {
+                    "type": "table",
+                    "_input_type": "TableInput",
+                    "value": [{"__id__": "r1", "__pos__": 3, "key": "a"}, {"key": "b"}, {"__id__": "r2", "__pos__": 1, "key": "c"}]
+                  },
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "base": {"nodes": [], "edges": []},
+      "expected": {
+        "nodes": [
+          {
+            "id": "api",
+            "data": {
+              "node": {
+                "template": {
+                  "headers": {
+                    "type": "table",
+                    "_input_type": "TableInput",
+                    "value": [
+                      {"__id__": "r1", "__pos__": 3, "key": "a"},
+                      {"key": "b", "__id__": "<generated row id>", "__pos__": 4},
+                      {"__id__": "r2", "__pos__": 1, "key": "c"}
+                    ]
+                  },
+                  "url": {"type": "str", "value": "http://x"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "fixes": [
+        {
+          "code": "TABLE_ROW_ID_MISSING",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1, "__id__"],
+          "action": "assigned a generated row id"
+        },
+        {
+          "code": "TABLE_ROW_POS_INVALID",
+          "path": ["nodes", 0, "data", "node", "template", "headers", "value", 1, "__pos__"],
+          "action": "assigned a position that keeps the row where it is stored"
+        }
+      ]
+    }
+  ]
+}

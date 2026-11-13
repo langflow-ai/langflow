@@ -1,0 +1,3333 @@
+{
+  "description": "Shared apply cases for every flow operation engine. Each case applies `operations` to `base` in order; it either yields `expected` and the normalized `forward_operations` (when absent they equal `operations`; the ids a delete reports are compared as a set, since node and edge order is not state), or raises the named `error` with its `code` and leaves `base` unchanged. Keyed lists follow node_schema.json. Edges carry each handle in both forms, the `data` object and the escaped string, as the editor writes them. Each case names the rule it checks in `rule`; README.md lists the rules. The expected outputs are reviewed data that every engine must meet.",
+  "cases": [
+    {
+      "name": "empty operation list leaves the flow unchanged",
+      "rule": "operation-types",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [],
+      "expected": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      }
+    },
+    {
+      "name": "add_nodes appends new nodes",
+      "rule": "operation-types",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [
+        {
+          "type": "add_nodes",
+          "nodes": [
+            {"id": "c", "position": {"x": 200, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          ]
+        }
+      ],
+      "expected": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "c", "position": {"x": 200, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      }
+    },
+    {
+      "name": "add_nodes rejects an existing id",
+      "rule": "operation-types",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [
+        {
+          "type": "add_nodes",
+          "nodes": [
+            {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "add_nodes rejects a duplicate id within the request",
+      "rule": "operation-types",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [
+        {
+          "type": "add_nodes",
+          "nodes": [
+            {"id": "c", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+            {"id": "c", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "add_nodes rejects a node without an id",
+      "rule": "operation-types",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [{"type": "add_nodes", "nodes": [{"type": "genericNode"}]}],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "set_field replaces a template value",
+      "rule": "operation-paths",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [
+        {"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": "hello"}]}
+      ],
+      "expected": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hello", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      }
+    },
+    {
+      "name": "set_field creates a missing final object key",
+      "rule": "operation-paths",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["data", "customColor"], "value": "#fff"}]}],
+      "expected": {
+        "nodes": [
+          {
+            "id": "a",
+            "position": {"x": 0, "y": 0},
+            "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}, "customColor": "#fff"}
+          },
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      }
+    },
+    {
+      "name": "set_field writes an output selected by name",
+      "rule": "keyed-list-items-by-key",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [
+        {"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "outputs", {"key": "out"}, "selected"], "value": "Data"}]}
+      ],
+      "expected": {
+        "nodes": [
+          {
+            "id": "a",
+            "position": {"x": 0, "y": 0},
+            "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out", "selected": "Data"}]}}
+          },
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      }
+    },
+    {
+      "name": "set_field replaces a whole position",
+      "rule": "operation-paths",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [{"type": "update_nodes", "updates": [{"id": "b", "op": "set_field", "path": ["position"], "value": {"x": 5, "y": 6}}]}],
+      "expected": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 5, "y": 6}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      }
+    },
+    {
+      "name": "set_field rejects an integer path segment",
+      "rule": "operation-paths",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "outputs", 3, "selected"], "value": "x"}]}],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "set_field rejects a missing intermediate key",
+      "rule": "operation-paths",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["data", "missing", "value"], "value": 1}]}],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "set_field rejects changing the node id",
+      "rule": "operation-paths",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["id"], "value": "z"}]}],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "set_field rejects replacing data.node.template whole",
+      "rule": "node-objects",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template"], "value": {}}]}],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "set_field rejects an unknown node",
+      "rule": "existence-preconditions",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [{"type": "update_nodes", "updates": [{"id": "zz", "op": "set_field", "path": ["position"], "value": {"x": 1, "y": 1}}]}],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "update_nodes rejects two updates to one path",
+      "rule": "operation-paths",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {"id": "a", "op": "set_field", "path": ["data", "customColor"], "value": "#fff"},
+            {"id": "a", "op": "delete_field", "path": ["data", "customColor"]}
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "delete_field removes an object key",
+      "rule": "operation-paths",
+      "base": {
+        "nodes": [
+          {
+            "id": "a",
+            "position": {"x": 0, "y": 0},
+            "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}, "customColor": "#000"}
+          },
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["data", "customColor"]}]}],
+      "expected": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      }
+    },
+    {
+      "name": "delete_field of a missing key changes and records nothing",
+      "rule": "records-only-changes",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["data", "customColor"]}]}],
+      "expected": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "forward_operations": []
+    },
+    {
+      "name": "delete_field rejects an integer path segment",
+      "rule": "operation-paths",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["data", "node", "outputs", 0]}]}],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "delete_nodes removes incident edges",
+      "rule": "edge-cascade",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [{"type": "delete_nodes", "ids": ["a"]}],
+      "expected": {
+        "nodes": [
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "forward_operations": [{"type": "delete_nodes", "ids": ["a"]}, {"type": "delete_edges", "ids": ["e-ab"]}]
+    },
+    {
+      "name": "delete_nodes rejects an unknown node",
+      "rule": "existence-preconditions",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [{"type": "delete_nodes", "ids": ["zz"]}],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "add_edges connects existing nodes",
+      "rule": "operation-types",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e-ba",
+              "source": "b",
+              "target": "a",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œtextœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          },
+          {
+            "id": "e-ba",
+            "source": "b",
+            "target": "a",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      }
+    },
+    {
+      "name": "add_edges rejects a missing endpoint",
+      "rule": "existence-preconditions",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e-az",
+              "source": "a",
+              "target": "zz",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œtextœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "add_edges rejects an existing id",
+      "rule": "operation-types",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e-ab",
+              "source": "a",
+              "target": "b",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œtextœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "add_edges after add_nodes in one batch",
+      "rule": "operation-types",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [
+        {
+          "type": "add_nodes",
+          "nodes": [
+            {"id": "c", "position": {"x": 200, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+          ]
+        },
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e-bc",
+              "source": "b",
+              "target": "c",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œtextœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "c", "position": {"x": 200, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          },
+          {
+            "id": "e-bc",
+            "source": "b",
+            "target": "c",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      }
+    },
+    {
+      "name": "delete_edges ignores unknown and repeated ids",
+      "rule": "records-only-changes",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [{"type": "delete_edges", "ids": ["zz", "e-ab", "e-ab"]}],
+      "expected": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "forward_operations": [{"type": "delete_edges", "ids": ["e-ab"]}]
+    },
+    {
+      "name": "base flow with duplicate node ids is rejected",
+      "rule": "base-graph-checked",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e-ab",
+            "source": "a",
+            "target": "b",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œtextœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "text"}}
+          }
+        ],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [],
+      "error": "FlowDataValidationError",
+      "code": "FLOW_GRAPH_INVALID"
+    },
+    {
+      "name": "base flow with an edge missing its source is rejected",
+      "rule": "base-graph-checked",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [{"id": "e", "target": "b"}],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [],
+      "error": "FlowDataValidationError",
+      "code": "FLOW_GRAPH_INVALID"
+    },
+    {
+      "name": "set_field changes a value's JSON type",
+      "rule": "type-change-is-a-write",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": 3}]}],
+      "expected": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": 3, "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      }
+    },
+    {
+      "name": "set_field refuses secret parts, which only the history stores",
+      "rule": "secrets-not-in-operations",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": "x", "secrets": [{"path": [], "kind": "literal"}]}]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "add_nodes rejects a node without data.node.template",
+      "rule": "node-objects",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [{"type": "add_nodes", "nodes": [{"id": "c", "data": {"node": {}}}]}],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "base flow with a node missing data.node is rejected",
+      "rule": "base-graph-checked",
+      "base": {
+        "nodes": [{"id": "a", "data": {}}],
+        "edges": [{"id": "e-ab", "source": "a", "target": "b", "sourceHandle": "a-out", "targetHandle": "b-in", "data": {}}],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [],
+      "error": "FlowDataValidationError",
+      "code": "FLOW_GRAPH_INVALID"
+    },
+    {
+      "name": "base flow with an edge to an unknown node is rejected",
+      "rule": "base-graph-checked",
+      "base": {
+        "nodes": [
+          {"id": "a", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}},
+          {"id": "b", "position": {"x": 100, "y": 0}, "data": {"node": {"template": {"text": {"value": "hi", "type": "str"}}, "outputs": [{"name": "out"}]}}}
+        ],
+        "edges": [{"id": "e-az", "source": "a", "target": "zz", "sourceHandle": "a-out", "targetHandle": "zz-in", "data": {}}],
+        "viewport": {"x": 0, "y": 0, "zoom": 1}
+      },
+      "operations": [],
+      "error": "FlowDataValidationError",
+      "code": "FLOW_GRAPH_INVALID"
+    },
+    {
+      "name": "list item: set_field edits one table cell by row id",
+      "rule": "keyed-list-items-by-key",
+      "base": {
+        "nodes": [
+          {
+            "id": "t",
+            "data": {
+              "node": {
+                "template": {
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
+                  "text": {"type": "str", "value": "a"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r2"}, "v"], "value": "w"}]
+        }
+      ],
+      "expected": {
+        "nodes": [
+          {
+            "id": "t",
+            "data": {
+              "node": {
+                "template": {
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "w"}]},
+                  "text": {"type": "str", "value": "a"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      }
+    },
+    {
+      "name": "list item: set_field at a new row id appends the row",
+      "rule": "keyed-list-items-by-key",
+      "base": {
+        "nodes": [
+          {
+            "id": "t",
+            "data": {
+              "node": {
+                "template": {
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
+                  "text": {"type": "str", "value": "a"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "t",
+              "op": "set_field",
+              "path": ["data", "node", "template", "rows", "value", {"key": "r3"}],
+              "value": {"__id__": "r3", "__pos__": 1.5, "v": "z"}
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "nodes": [
+          {
+            "id": "t",
+            "data": {
+              "node": {
+                "template": {
+                  "rows": {
+                    "type": "table",
+                    "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}, {"__id__": "r3", "__pos__": 1.5, "v": "z"}]
+                  },
+                  "text": {"type": "str", "value": "a"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      }
+    },
+    {
+      "name": "list item: setting a row's __pos__ changes only its position",
+      "rule": "table-row-order",
+      "base": {
+        "nodes": [
+          {
+            "id": "t",
+            "data": {
+              "node": {
+                "template": {
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
+                  "text": {"type": "str", "value": "a"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "__pos__"], "value": 3}]
+        }
+      ],
+      "expected": {
+        "nodes": [
+          {
+            "id": "t",
+            "data": {
+              "node": {
+                "template": {
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 3, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
+                  "text": {"type": "str", "value": "a"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      }
+    },
+    {
+      "name": "list item: two rows may share a position",
+      "rule": "table-row-order",
+      "base": {
+        "nodes": [
+          {
+            "id": "t",
+            "data": {
+              "node": {
+                "template": {
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
+                  "text": {"type": "str", "value": "a"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r0"}], "value": {"__id__": "r0", "__pos__": 2}}
+          ]
+        }
+      ],
+      "expected": {
+        "nodes": [
+          {
+            "id": "t",
+            "data": {
+              "node": {
+                "template": {
+                  "rows": {
+                    "type": "table",
+                    "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}, {"__id__": "r0", "__pos__": 2}]
+                  },
+                  "text": {"type": "str", "value": "a"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      }
+    },
+    {
+      "name": "list item: delete_field removes a table row by id",
+      "rule": "keyed-list-items-by-key",
+      "base": {
+        "nodes": [
+          {
+            "id": "t",
+            "data": {
+              "node": {
+                "template": {
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
+                  "text": {"type": "str", "value": "a"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "operations": [
+        {"type": "update_nodes", "updates": [{"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}]}]}
+      ],
+      "expected": {
+        "nodes": [
+          {
+            "id": "t",
+            "data": {
+              "node": {"template": {"rows": {"type": "table", "value": [{"__id__": "r2", "__pos__": 2, "v": "y"}]}, "text": {"type": "str", "value": "a"}}}
+            }
+          }
+        ],
+        "edges": []
+      }
+    },
+    {
+      "name": "list item: deleting a row lets the last row take its slot",
+      "rule": "table-row-order",
+      "base": {
+        "nodes": [
+          {
+            "id": "t",
+            "data": {
+              "node": {
+                "template": {
+                  "rows": {
+                    "type": "table",
+                    "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}, {"__id__": "r3", "__pos__": 3, "v": "z"}]
+                  },
+                  "text": {"type": "str", "value": "a"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "operations": [
+        {"type": "update_nodes", "updates": [{"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}]}]}
+      ],
+      "expected": {
+        "nodes": [
+          {
+            "id": "t",
+            "data": {
+              "node": {
+                "template": {
+                  "rows": {"type": "table", "value": [{"__id__": "r3", "__pos__": 3, "v": "z"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
+                  "text": {"type": "str", "value": "a"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      }
+    },
+    {
+      "name": "list item: delete_field of a missing row changes and records nothing",
+      "rule": "records-only-changes",
+      "base": {
+        "nodes": [
+          {
+            "id": "t",
+            "data": {
+              "node": {
+                "template": {
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
+                  "text": {"type": "str", "value": "a"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "operations": [
+        {"type": "update_nodes", "updates": [{"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "gone"}]}]}
+      ],
+      "expected": {
+        "nodes": [
+          {
+            "id": "t",
+            "data": {
+              "node": {
+                "template": {
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
+                  "text": {"type": "str", "value": "a"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "forward_operations": []
+    },
+    {
+      "name": "list item: editing a cell of a missing row fails",
+      "rule": "existence-preconditions",
+      "base": {
+        "nodes": [
+          {
+            "id": "t",
+            "data": {
+              "node": {
+                "template": {
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
+                  "text": {"type": "str", "value": "a"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "gone"}, "v"], "value": "x"}]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "list item: a row written at an id must carry that id",
+      "rule": "keyed-list-items-by-key",
+      "base": {
+        "nodes": [
+          {
+            "id": "t",
+            "data": {
+              "node": {
+                "template": {
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
+                  "text": {"type": "str", "value": "a"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r3"}], "value": {"__id__": "r4", "__pos__": 3}}
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "list item: a row's __id__ cannot be changed",
+      "rule": "keyed-list-items-by-key",
+      "base": {
+        "nodes": [
+          {
+            "id": "t",
+            "data": {
+              "node": {
+                "template": {
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
+                  "text": {"type": "str", "value": "a"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "__id__"], "value": "r9"}]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "list item: an item key needs a list the schema declares keyed",
+      "rule": "keyed-list-items-by-key",
+      "base": {
+        "nodes": [
+          {
+            "id": "t",
+            "data": {
+              "node": {
+                "template": {
+                  "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
+                  "text": {"type": "str", "value": "a"}
+                }
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "text", "value", {"key": "r1"}], "value": {"__id__": "r1"}}]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "list item: set_field edits an output selected by name",
+      "rule": "keyed-list-items-by-key",
+      "base": {
+        "nodes": [
+          {
+            "id": "k",
+            "data": {
+              "node": {
+                "template": {"tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": true}, {"tags": ["fetch"]}]}},
+                "outputs": [{"name": "a"}, {"name": "b"}]
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "operations": [
+        {"type": "update_nodes", "updates": [{"id": "k", "op": "set_field", "path": ["data", "node", "outputs", {"key": "b"}, "hidden"], "value": true}]}
+      ],
+      "expected": {
+        "nodes": [
+          {
+            "id": "k",
+            "data": {
+              "node": {
+                "template": {"tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": true}, {"tags": ["fetch"]}]}},
+                "outputs": [{"name": "a"}, {"name": "b", "hidden": true}]
+              }
+            }
+          }
+        ],
+        "edges": []
+      }
+    },
+    {
+      "name": "list item: set_field at a new output name appends it",
+      "rule": "keyed-list-items-by-key",
+      "base": {
+        "nodes": [
+          {
+            "id": "k",
+            "data": {
+              "node": {
+                "template": {"tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": true}, {"tags": ["fetch"]}]}},
+                "outputs": [{"name": "a"}, {"name": "b"}]
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "operations": [
+        {"type": "update_nodes", "updates": [{"id": "k", "op": "set_field", "path": ["data", "node", "outputs", {"key": "c"}], "value": {"name": "c"}}]}
+      ],
+      "expected": {
+        "nodes": [
+          {
+            "id": "k",
+            "data": {
+              "node": {
+                "template": {"tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": true}, {"tags": ["fetch"]}]}},
+                "outputs": [{"name": "a"}, {"name": "b"}, {"name": "c"}]
+              }
+            }
+          }
+        ],
+        "edges": []
+      }
+    },
+    {
+      "name": "list item: items are not selected by id",
+      "rule": "keyed-list-items-by-key",
+      "base": {
+        "nodes": [
+          {
+            "id": "k",
+            "data": {
+              "node": {
+                "template": {"tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": true}, {"tags": ["fetch"]}]}},
+                "outputs": [{"name": "a"}, {"name": "b"}]
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "operations": [
+        {"type": "update_nodes", "updates": [{"id": "k", "op": "set_field", "path": ["data", "node", "outputs", {"id": "a"}, "hidden"], "value": true}]}
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "list item: an output's name cannot be changed at its key",
+      "rule": "keyed-list-items-by-key",
+      "base": {
+        "nodes": [
+          {
+            "id": "k",
+            "data": {
+              "node": {
+                "template": {"tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": true}, {"tags": ["fetch"]}]}},
+                "outputs": [{"name": "a"}, {"name": "b"}]
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "operations": [
+        {"type": "update_nodes", "updates": [{"id": "k", "op": "set_field", "path": ["data", "node", "outputs", {"key": "a"}, "name"], "value": "z"}]}
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "list item: a tool action is selected by its first tag",
+      "rule": "keyed-list-items-by-key",
+      "base": {
+        "nodes": [
+          {
+            "id": "k",
+            "data": {
+              "node": {
+                "template": {"tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": true}, {"tags": ["fetch"]}]}},
+                "outputs": [{"name": "a"}, {"name": "b"}]
+              }
+            }
+          }
+        ],
+        "edges": []
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {"id": "k", "op": "set_field", "path": ["data", "node", "template", "tools_metadata", "value", {"key": "fetch"}, "status"], "value": false}
+          ]
+        }
+      ],
+      "expected": {
+        "nodes": [
+          {
+            "id": "k",
+            "data": {
+              "node": {
+                "template": {"tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": true}, {"tags": ["fetch"], "status": false}]}},
+                "outputs": [{"name": "a"}, {"name": "b"}]
+              }
+            }
+          }
+        ],
+        "edges": []
+      }
+    },
+    {
+      "name": "list item: a table stored out of position order is accepted",
+      "rule": "table-row-order",
+      "base": {
+        "nodes": [
+          {
+            "id": "t",
+            "data": {
+              "node": {"template": {"rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 2, "v": "x"}, {"__id__": "r2", "__pos__": 1, "v": "y"}]}}}
+            }
+          }
+        ],
+        "edges": []
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "v"], "value": "z"}]
+        }
+      ],
+      "expected": {
+        "nodes": [
+          {
+            "id": "t",
+            "data": {
+              "node": {"template": {"rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 2, "v": "z"}, {"__id__": "r2", "__pos__": 1, "v": "y"}]}}}
+            }
+          }
+        ],
+        "edges": []
+      }
+    },
+    {
+      "name": "list item: a table with two rows of one id is rejected",
+      "rule": "table-row-keys",
+      "base": {
+        "nodes": [
+          {
+            "id": "t",
+            "data": {
+              "node": {"template": {"rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r1", "__pos__": 2, "v": "y"}]}}}
+            }
+          }
+        ],
+        "edges": []
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "v"], "value": "z"}]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "list item: a row written without a numeric __pos__ is rejected",
+      "rule": "table-row-keys",
+      "base": {
+        "nodes": [
+          {
+            "id": "t",
+            "data": {
+              "node": {"template": {"rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]}}}
+            }
+          }
+        ],
+        "edges": []
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "t",
+              "op": "set_field",
+              "path": ["data", "node", "template", "rows", "value", {"key": "r3"}],
+              "value": {"__id__": "r3", "__pos__": "a3", "v": "z"}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "list item: a row written with a __pos__ too large for a double is rejected",
+      "rule": "table-row-keys",
+      "base": {
+        "nodes": [
+          {
+            "id": "t",
+            "data": {
+              "node": {"template": {"rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]}}}
+            }
+          }
+        ],
+        "edges": []
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [
+            {
+              "id": "t",
+              "op": "set_field",
+              "path": ["data", "node", "template", "rows", "value", {"key": "r3"}],
+              "value": {
+                "__id__": "r3",
+                "__pos__": 1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000,
+                "v": "z"
+              }
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "list item: a row's __pos__ cannot be deleted",
+      "rule": "table-row-keys",
+      "base": {
+        "nodes": [
+          {
+            "id": "t",
+            "data": {
+              "node": {"template": {"rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]}}}
+            }
+          }
+        ],
+        "edges": []
+      },
+      "operations": [
+        {
+          "type": "update_nodes",
+          "updates": [{"id": "t", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "__pos__"]}]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "list item: when one output has no name, no output can be written by key",
+      "rule": "keyed-list-items-by-key",
+      "base": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"display_name": "unnamed"}]}}}], "edges": []},
+      "operations": [
+        {"type": "update_nodes", "updates": [{"id": "n", "op": "set_field", "path": ["data", "node", "outputs", {"key": "out"}, "hidden"], "value": true}]}
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "set_field under a value that is not an object fails",
+      "rule": "operation-paths",
+      "base": {
+        "nodes": [
+          {
+            "id": "t",
+            "data": {
+              "node": {"template": {"rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]}}}
+            }
+          }
+        ],
+        "edges": []
+      },
+      "operations": [
+        {"type": "update_nodes", "updates": [{"id": "t", "op": "set_field", "path": ["data", "node", "template", "rows", "type", "x"], "value": 1}]}
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "edge change: an edge's handles change by deleting and adding it, both forms together",
+      "rule": "edge-change-delete-add",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [
+        {"type": "delete_edges", "ids": ["e1"]},
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e1",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œoneœ,œinputTypesœ:[œMessageœ]}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one", "inputTypes": ["Message"]}}
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ,œinputTypesœ:[œMessageœ]}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one", "inputTypes": ["Message"]}}
+          }
+        ]
+      }
+    },
+    {
+      "name": "update_edges is not an operation: an edge changes by delete and add",
+      "rule": "edge-change-delete-add",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [{"type": "update_edges", "updates": [{"id": "e1", "op": "set_field", "path": ["target"], "value": "s"}]}],
+      "error": "FlowOperationValidationError",
+      "code": "FLOW_OPERATION_INVALID"
+    },
+    {
+      "name": "edge change: re-adding an edge onto a field that does not exist fails",
+      "rule": "edge-change-delete-add",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [
+        {"type": "delete_edges", "ids": ["e1"]},
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e1",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œnopeœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "nope"}}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_NOT_FOUND"
+    },
+    {
+      "name": "edge change: re-adding an edge onto a free field applies",
+      "rule": "edge-change-delete-add",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [
+        {"type": "delete_edges", "ids": ["e1"]},
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e1",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œmanyœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many"}}
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œmanyœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many"}}
+          }
+        ]
+      }
+    },
+    {
+      "name": "edge change: re-adding a stale edge with other handles checks it again",
+      "rule": "edge-change-delete-add",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          },
+          {
+            "id": "e-stale",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œremovedœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "removed"}}
+          }
+        ]
+      },
+      "operations": [
+        {"type": "delete_edges", "ids": ["e-stale"]},
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e-stale",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œremovedœ,œinputTypesœ:[œDataœ]}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "removed", "inputTypes": ["Data"]}}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_NOT_FOUND"
+    },
+    {
+      "name": "edge change: re-adding a stale edge checks it, whatever changed",
+      "rule": "edge-change-delete-add",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          },
+          {
+            "id": "e-stale",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œremovedœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "removed"}}
+          }
+        ]
+      },
+      "operations": [
+        {"type": "delete_edges", "ids": ["e-stale"]},
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e-stale",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œremovedœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "removed"}, "note": "kept"}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_NOT_FOUND"
+    },
+    {
+      "name": "edge change: an added edge whose handle forms disagree fails",
+      "rule": "edge-handle-forms",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          },
+          {
+            "id": "e-stale",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œremovedœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "removed"}}
+          }
+        ]
+      },
+      "operations": [
+        {"type": "delete_edges", "ids": ["e1"]},
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e1",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œoneœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many"}}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_INVALID"
+    },
+    {
+      "name": "edge rules: add_edges rejects a target field that does not exist",
+      "rule": "edge-handle-endpoint",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œnopeœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "nope"}}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_NOT_FOUND"
+    },
+    {
+      "name": "edge rules: add_edges rejects a source output that does not exist",
+      "rule": "edge-handle-endpoint",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œnopeœ}",
+              "targetHandle": "{œfieldNameœ:œmanyœ}",
+              "data": {"sourceHandle": {"name": "nope"}, "targetHandle": {"fieldName": "many"}}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_NOT_FOUND"
+    },
+    {
+      "name": "edge rules: a single-input field takes one connection",
+      "rule": "edge-target-occupied",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "d",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œresœ}",
+              "targetHandle": "{œfieldNameœ:œoneœ}",
+              "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"fieldName": "one"}}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_TARGET_OCCUPIED"
+    },
+    {
+      "name": "edge rules: a list field takes several connections",
+      "rule": "edge-target-occupied",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œmanyœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many"}}
+            },
+            {
+              "id": "e3",
+              "source": "d",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œresœ}",
+              "targetHandle": "{œfieldNameœ:œmanyœ}",
+              "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"fieldName": "many"}}
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          },
+          {
+            "id": "e2",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œmanyœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many"}}
+          },
+          {
+            "id": "e3",
+            "source": "d",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œresœ}",
+            "targetHandle": "{œfieldNameœ:œmanyœ}",
+            "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"fieldName": "many"}}
+          }
+        ]
+      }
+    },
+    {
+      "name": "edge rules: a handle given only as a string is missing its data form",
+      "rule": "edge-handle-forms",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [
+        {"type": "add_edges", "edges": [{"id": "e2", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œmanyœ}"}]}
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_FORM_MISSING"
+    },
+    {
+      "name": "edge rules: a handle given only in data is missing its string form",
+      "rule": "edge-handle-forms",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [{"id": "e2", "source": "s", "target": "d", "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many"}}}]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_FORM_MISSING"
+    },
+    {
+      "name": "edge rules: a handle string that disagrees with its data fails",
+      "rule": "edge-handle-forms",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œoneœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many"}}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_INVALID"
+    },
+    {
+      "name": "edge rules: a handle string that does not parse fails",
+      "rule": "edge-handle-forms",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "d-many",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many"}}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_INVALID"
+    },
+    {
+      "name": "edge rules: a handle string with a NaN token does not parse",
+      "rule": "edge-handle-forms",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œmanyœ,œxœ:NaN}",
+              "data": {"sourceHandle": {"name": "out"}}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_INVALID"
+    },
+    {
+      "name": "edge rules: an edge without handles fails",
+      "rule": "edge-handle-forms",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [{"type": "add_edges", "edges": [{"id": "e2", "source": "s", "target": "d"}]}],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_INVALID"
+    },
+    {
+      "name": "edge rules: edge data that is not an object fails",
+      "rule": "edge-handle-forms",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [{"id": "e2", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œmanyœ}", "data": "handles"}]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_INVALID"
+    },
+    {
+      "name": "edge rules: edge data that is null fails",
+      "rule": "edge-handle-forms",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [{"id": "e2", "source": "s", "target": "d", "sourceHandle": "{œnameœ:œoutœ}", "targetHandle": "{œfieldNameœ:œmanyœ}", "data": null}]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_INVALID"
+    },
+    {
+      "name": "edge rules: a target handle naming both a field and an output fails",
+      "rule": "edge-handle-endpoint",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œmanyœ,œnameœ:œresœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many", "name": "res"}}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_INVALID"
+    },
+    {
+      "name": "edge rules: a target handle with a field and a null output name names both",
+      "rule": "edge-handle-endpoint",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {
+            "id": "d",
+            "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "allows_loop": true}]}}
+          }
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œmanyœ,œnameœ:null}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many", "name": null}}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_INVALID"
+    },
+    {
+      "name": "edge rules: a target handle with an output and a null field name names both",
+      "rule": "edge-handle-endpoint",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {
+            "id": "d",
+            "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res", "allows_loop": true}]}}
+          }
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:null,œnameœ:œresœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": null, "name": "res"}}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_INVALID"
+    },
+    {
+      "name": "edge rules: replacing a connection deletes before it adds",
+      "rule": "edge-target-occupied",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [
+        {"type": "delete_edges", "ids": ["e1"]},
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "d",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œresœ}",
+              "targetHandle": "{œfieldNameœ:œoneœ}",
+              "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"fieldName": "one"}}
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e2",
+            "source": "d",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œresœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      }
+    },
+    {
+      "name": "edge rules: group nodes are checked like any node",
+      "rule": "edge-handle-endpoint",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true}, {"name": "done"}]}}},
+          {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
+          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          },
+          {
+            "id": "e-fb",
+            "source": "d",
+            "target": "loop",
+            "sourceHandle": "{œnameœ:œresœ}",
+            "targetHandle": "{œnameœ:œitemœ}",
+            "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"name": "item"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "s",
+              "target": "group",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œnopeœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "nope"}}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_NOT_FOUND"
+    },
+    {
+      "name": "edge rules: an edge into a group's own field applies",
+      "rule": "edge-handle-endpoint",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true}, {"name": "done"}]}}},
+          {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
+          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          },
+          {
+            "id": "e-fb",
+            "source": "d",
+            "target": "loop",
+            "sourceHandle": "{œnameœ:œresœ}",
+            "targetHandle": "{œnameœ:œitemœ}",
+            "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"name": "item"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "s",
+              "target": "group",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œxœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "x"}}
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true}, {"name": "done"}]}}},
+          {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
+          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          },
+          {
+            "id": "e-fb",
+            "source": "d",
+            "target": "loop",
+            "sourceHandle": "{œnameœ:œresœ}",
+            "targetHandle": "{œnameœ:œitemœ}",
+            "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"name": "item"}}
+          },
+          {
+            "id": "e2",
+            "source": "s",
+            "target": "group",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œxœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "x"}}
+          }
+        ]
+      }
+    },
+    {
+      "name": "edge rules: an edge may not touch a note",
+      "rule": "edge-touches-note",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true}, {"name": "done"}]}}},
+          {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
+          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          },
+          {
+            "id": "e-fb",
+            "source": "d",
+            "target": "loop",
+            "sourceHandle": "{œnameœ:œresœ}",
+            "targetHandle": "{œnameœ:œitemœ}",
+            "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"name": "item"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "group",
+              "target": "note",
+              "sourceHandle": "{œnameœ:œyœ}",
+              "targetHandle": "{œfieldNameœ:œtextœ}",
+              "data": {"sourceHandle": {"name": "y"}, "targetHandle": {"fieldName": "text"}}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_TOUCHES_NOTE"
+    },
+    {
+      "name": "edge rules: a loop edge must target an output that allows loops",
+      "rule": "edge-handle-endpoint",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true}, {"name": "done"}]}}},
+          {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
+          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          },
+          {
+            "id": "e-fb",
+            "source": "d",
+            "target": "loop",
+            "sourceHandle": "{œnameœ:œresœ}",
+            "targetHandle": "{œnameœ:œitemœ}",
+            "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"name": "item"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "s",
+              "target": "loop",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œnameœ:œdoneœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"name": "done"}}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_NOT_FOUND"
+    },
+    {
+      "name": "edge rules: a loop output takes one connection",
+      "rule": "edge-target-occupied",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true}, {"name": "done"}]}}},
+          {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
+          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          },
+          {
+            "id": "e-fb",
+            "source": "d",
+            "target": "loop",
+            "sourceHandle": "{œnameœ:œresœ}",
+            "targetHandle": "{œnameœ:œitemœ}",
+            "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"name": "item"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "s",
+              "target": "loop",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œnameœ:œitemœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"name": "item"}}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_TARGET_OCCUPIED"
+    },
+    {
+      "name": "edge rules: a node without outputs has no handle to leave from",
+      "rule": "edge-handle-endpoint",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true}, {"name": "done"}]}}},
+          {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
+          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}},
+          {"id": "bare", "data": {"node": {"template": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          },
+          {
+            "id": "e-fb",
+            "source": "d",
+            "target": "loop",
+            "sourceHandle": "{œnameœ:œresœ}",
+            "targetHandle": "{œnameœ:œitemœ}",
+            "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"name": "item"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "bare",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œmanyœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many"}}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_NOT_FOUND"
+    },
+    {
+      "name": "edge rules: a loop feedback edge must target an existing output",
+      "rule": "edge-handle-endpoint",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true}, {"name": "done"}]}}},
+          {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
+          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          },
+          {
+            "id": "e-fb",
+            "source": "d",
+            "target": "loop",
+            "sourceHandle": "{œnameœ:œresœ}",
+            "targetHandle": "{œnameœ:œitemœ}",
+            "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"name": "item"}}
+          }
+        ]
+      },
+      "operations": [
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "s",
+              "target": "loop",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œnameœ:œnopeœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"name": "nope"}}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_HANDLE_NOT_FOUND"
+    },
+    {
+      "name": "cascade: deleting a template field deletes the edges into it",
+      "rule": "edge-cascade",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [{"type": "update_nodes", "updates": [{"id": "d", "op": "delete_field", "path": ["data", "node", "template", "one"]}]}],
+      "expected": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": []
+      },
+      "forward_operations": [
+        {"type": "update_nodes", "updates": [{"id": "d", "path": ["data", "node", "template", "one"], "op": "delete_field"}]},
+        {"type": "delete_edges", "ids": ["e1"]}
+      ]
+    },
+    {
+      "name": "cascade: replacing the outputs list deletes the edges of the outputs it drops",
+      "rule": "edge-cascade",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [{"type": "update_nodes", "updates": [{"id": "s", "op": "set_field", "path": ["data", "node", "outputs"], "value": [{"name": "other"}]}]}],
+      "expected": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "other"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": []
+      },
+      "forward_operations": [
+        {"type": "update_nodes", "updates": [{"id": "s", "op": "set_field", "path": ["data", "node", "outputs"], "value": [{"name": "other"}]}]},
+        {"type": "delete_edges", "ids": ["e1"]}
+      ]
+    },
+    {
+      "name": "cascade: an outputs list that keeps its names keeps its edges",
+      "rule": "edge-cascade",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [
+        {"type": "update_nodes", "updates": [{"id": "s", "op": "set_field", "path": ["data", "node", "outputs"], "value": [{"name": "out", "hidden": true}]}]}
+      ],
+      "expected": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out", "hidden": true}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      }
+    },
+    {
+      "name": "cascade: deleting an output deletes the edges from it and into it",
+      "rule": "edge-cascade",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true}, {"name": "done"}]}}},
+          {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
+          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          },
+          {
+            "id": "e-fb",
+            "source": "d",
+            "target": "loop",
+            "sourceHandle": "{œnameœ:œresœ}",
+            "targetHandle": "{œnameœ:œitemœ}",
+            "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"name": "item"}}
+          }
+        ]
+      },
+      "operations": [
+        {"type": "update_nodes", "updates": [{"id": "s", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "out"}]}]},
+        {"type": "update_nodes", "updates": [{"id": "loop", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "item"}]}]}
+      ],
+      "expected": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": []}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "done"}]}}},
+          {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
+          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}}
+        ],
+        "edges": []
+      },
+      "forward_operations": [
+        {"type": "update_nodes", "updates": [{"id": "s", "path": ["data", "node", "outputs", {"key": "out"}], "op": "delete_field"}]},
+        {"type": "delete_edges", "ids": ["e1"]},
+        {"type": "update_nodes", "updates": [{"id": "loop", "path": ["data", "node", "outputs", {"key": "item"}], "op": "delete_field"}]},
+        {"type": "delete_edges", "ids": ["e-fb"]}
+      ]
+    },
+    {
+      "name": "cascade: deleting a node deletes the edges at both its ends",
+      "rule": "edge-cascade",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true}, {"name": "done"}]}}},
+          {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
+          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          },
+          {
+            "id": "e-fb",
+            "source": "d",
+            "target": "loop",
+            "sourceHandle": "{œnameœ:œresœ}",
+            "targetHandle": "{œnameœ:œitemœ}",
+            "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"name": "item"}}
+          }
+        ]
+      },
+      "operations": [{"type": "delete_nodes", "ids": ["d"]}],
+      "expected": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "loop", "data": {"node": {"template": {}, "outputs": [{"name": "item", "allows_loop": true}, {"name": "done"}]}}},
+          {"id": "note", "data": {"node": {"template": {}}}, "type": "noteNode"},
+          {"id": "group", "data": {"node": {"template": {"x": {"type": "str"}}, "outputs": [{"name": "y"}], "flow": {}}}}
+        ],
+        "edges": []
+      },
+      "forward_operations": [{"type": "delete_nodes", "ids": ["d"]}, {"type": "delete_edges", "ids": ["e1", "e-fb"]}]
+    },
+    {
+      "name": "cascade: an edge re-added earlier in the batch goes with its new field",
+      "rule": "edge-cascade",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [
+        {"type": "delete_edges", "ids": ["e1"]},
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e1",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œmanyœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many"}}
+            }
+          ]
+        },
+        {"type": "update_nodes", "updates": [{"id": "d", "op": "delete_field", "path": ["data", "node", "template", "many"]}]}
+      ],
+      "expected": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": []
+      },
+      "forward_operations": [
+        {"type": "delete_edges", "ids": ["e1"]},
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e1",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œmanyœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many"}}
+            }
+          ]
+        },
+        {"type": "update_nodes", "updates": [{"id": "d", "op": "delete_field", "path": ["data", "node", "template", "many"]}]},
+        {"type": "delete_edges", "ids": ["e1"]}
+      ]
+    },
+    {
+      "name": "edge rules: an edge added earlier in the batch takes its single input",
+      "rule": "edge-target-occupied",
+      "base": {
+        "nodes": [
+          {"id": "s", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+          {"id": "d", "data": {"node": {"template": {"one": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": [{"name": "res"}]}}}
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "s",
+            "target": "d",
+            "sourceHandle": "{œnameœ:œoutœ}",
+            "targetHandle": "{œfieldNameœ:œoneœ}",
+            "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+          }
+        ]
+      },
+      "operations": [
+        {"type": "delete_edges", "ids": ["e1"]},
+        {
+          "type": "add_edges",
+          "edges": [
+            {
+              "id": "e2",
+              "source": "s",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œoutœ}",
+              "targetHandle": "{œfieldNameœ:œoneœ}",
+              "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one"}}
+            },
+            {
+              "id": "e3",
+              "source": "d",
+              "target": "d",
+              "sourceHandle": "{œnameœ:œresœ}",
+              "targetHandle": "{œfieldNameœ:œoneœ}",
+              "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"fieldName": "one"}}
+            }
+          ]
+        }
+      ],
+      "error": "FlowOperationValidationError",
+      "code": "EDGE_TARGET_OCCUPIED"
+    }
+  ]
+}
