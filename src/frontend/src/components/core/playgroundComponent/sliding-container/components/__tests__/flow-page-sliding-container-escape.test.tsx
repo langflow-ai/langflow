@@ -259,7 +259,7 @@ describe("FlowPageSlidingContainerContent — mobile system bars", () => {
     const footer = screen.getByTestId("input-chat-playground").parentElement
       ?.parentElement as HTMLElement;
     expect(footer.className).toContain(
-      "pb-[calc(1rem+env(safe-area-inset-bottom))]",
+      "pb-[calc(theme(spacing.4)+env(safe-area-inset-bottom))]",
     );
   });
 });

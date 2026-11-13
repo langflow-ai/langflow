@@ -115,7 +115,7 @@ export default function PlaygroundPage() {
 
   return (
     <main className="flex h-full w-full flex-col items-center justify-center align-middle">
-      <div className="fixed bottom-4 left-4 z-[999]">
+      <div className="fixed bottom-[calc(theme(spacing.4)+env(safe-area-inset-bottom))] left-4 z-[999]">
         <AlertDisplayArea />
       </div>
       {currentSavedFlow && (
