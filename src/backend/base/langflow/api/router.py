@@ -55,6 +55,9 @@ from langflow.api.v1 import (
 from langflow.api.v1.data_subjects import router as data_subjects_router
 from langflow.api.v1.data_subjects_self import router as data_subjects_self_router
 from langflow.api.v1.knowledge_base_storage import router as knowledge_base_storage_router
+from langflow.api.v1.maintenance import router as maintenance_router
+from langflow.api.v1.upgrade_repairs import router as upgrade_repairs_router
+from langflow.api.v1.upgrade_reports import router as upgrade_reports_router
 from langflow.api.v1.voice_mode import router as voice_mode_router
 from langflow.api.v2 import files_router as files_router_v2
 from langflow.api.v2 import mcp_router as mcp_router_v2
@@ -69,6 +72,9 @@ router_v1 = APIRouter(
     prefix="/v1",
 )
 router_v1.include_router(knowledge_base_storage_router)
+router_v1.include_router(maintenance_router)
+router_v1.include_router(upgrade_repairs_router)
+router_v1.include_router(upgrade_reports_router)
 
 router_v2 = APIRouter(
     prefix="/v2",
@@ -87,6 +93,16 @@ def include_migration_router(target_router: APIRouter) -> None:
     """Mount the instance migration routes only when the feature is enabled."""
     if FEATURE_FLAGS.instance_migration:
         target_router.include_router(migration_router)
+
+
+def include_evals_routers(target_router: APIRouter) -> None:
+    """Mount the Evals routes (datasets, evaluations, runs) only when the feature is enabled."""
+    if FEATURE_FLAGS.evals:
+        from langflow.api.v1.datasets import router as datasets_router
+        from langflow.api.v1.evaluations import router as evaluations_router
+
+        target_router.include_router(datasets_router)
+        target_router.include_router(evaluations_router)
 
 
 router_v1.include_router(flow_conflict_router)
@@ -149,6 +165,7 @@ router_v1.include_router(trigger_ingress_router)
 router_v1.include_router(extensions_router)
 include_deployment_router(router_v1)
 include_migration_router(router_v1)
+include_evals_routers(router_v1)
 
 
 # Agentic flow execution - lazy import to avoid circular dependency

@@ -12,7 +12,7 @@ from uuid import uuid4
 
 import pytest
 from langflow.services.database.models.connection.model import Connection
-from langflow.services.database.models.trigger.model import Trigger, TriggerSubscription
+from langflow.services.database.models.trigger.model import Trigger, TriggerRenewalObservation, TriggerSubscription
 from langflow.services.database.models.trigger.schemas import TriggerState, TriggerSubscriptionState
 from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.triggers import leases, subscriptions
@@ -679,6 +679,43 @@ async def test_subscription_creation_is_audited_once_and_updates_are_not(make_su
         assert "updated-client-state" not in str(rows[0].details)
 
 
+@pytest.mark.usefixtures("fake_renewer")
+async def test_renewal_records_the_previous_expiry_and_observed_gap(make_subscription):
+    trigger_id, _connection_id, subscription_id, _external = await make_subscription(lifetime=timedelta(seconds=-5))
+    previous = (await _subscription(subscription_id)).expires_at
+    await subscriptions.run_renewal_pass(owner="interval-metrics")
+    async with session_scope() as session:
+        evidence = (
+            await session.exec(
+                select(TriggerRenewalObservation).where(TriggerRenewalObservation.trigger_id == trigger_id)
+            )
+        ).one()
+        current = await session.get(TriggerSubscription, subscription_id)
+        assert evidence.previous_expires_at.replace(tzinfo=None) == previous.replace(tzinfo=None)
+        assert evidence.expires_at == current.expires_at
+        assert evidence.outcome == "renewed"
+        assert evidence.gap_seconds >= 5
+
+
+@pytest.mark.usefixtures("fake_renewer")
+async def test_renewal_observation_rolls_back_with_the_subscription(make_subscription):
+    trigger_id, _connection_id, subscription_id, _external = await make_subscription()
+    async with session_scope() as session:
+        row = await session.get(TriggerSubscription, subscription_id)
+        row.lease_owner = "rollback-test"
+        row.lease_until = _now() + timedelta(minutes=1)
+        session.add(row)
+    async with session_scope() as session:
+        assert await subscriptions.renew_one(session, subscription_id=subscription_id, owner="rollback-test")
+        await session.rollback()
+    async with session_scope() as session:
+        assert (
+            await session.exec(
+                select(TriggerRenewalObservation).where(TriggerRenewalObservation.trigger_id == trigger_id)
+            )
+        ).all() == []
+
+
 async def test_subscription_creation_and_its_durable_audit_roll_back_together(make_trigger, monkeypatch):
     from langflow.services.authorization import audit
     from langflow.services.database.models.auth import AuthzAuditLog
@@ -693,7 +730,7 @@ async def test_subscription_creation_and_its_durable_audit_roll_back_together(ma
         raise RuntimeError(message)
 
     monkeypatch.setattr(audit, "_stage_audit_entries", fail_stage)
-    with pytest.raises(RuntimeError, match="audit unavailable"):
+    with pytest.raises(audit.AuditPersistenceError):
         async with session_scope() as session:
             await subscriptions.upsert_subscription(
                 session,

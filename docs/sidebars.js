@@ -239,6 +239,26 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Deployment/upgrade-check",
+          label: "Check flows before an upgrade"
+        },
+        {
+          type: "doc",
+          id: "Deployment/upgrade-reports",
+          label: "Review upgrade reports"
+        },
+        {
+          type: "doc",
+          id: "Deployment/admin-flow-repairs",
+          label: "Repair selected flows"
+        },
+        {
+          type: "doc",
+          id: "Deployment/maintenance-mode",
+          label: "Maintenance mode"
+        },
+        {
+          type: "doc",
           id: "Deployment/deployment-public-server",
           label: "Deploy a public Langflow server"
         },
@@ -365,11 +385,6 @@ module.exports = {
           type: "doc",
           id: "Deployment/security",
           label: "Security",
-        },
-        {
-          type: "doc",
-          id: "administration/secret-key-rotation",
-          label: "Offline secret-key audit and rotation",
         },
       ],
     },
@@ -560,6 +575,7 @@ module.exports = {
             "Components/bundles-cuga",
             "Components/bundles-datastax",
             "Components/bundles-deepseek",
+            "Components/bundles-discord",
             "Components/bundles-docling",
             "Components/bundles-duckduckgo",
             "Components/bundles-elastic",
@@ -570,6 +586,7 @@ module.exports = {
             "Components/bundles-files-ingestion",
             "Components/bundles-firecrawl",
             "Components/bundles-glean",
+            "Components/bundles-github",
             "Components/bundles-gitlab",
             "Components/bundles-google",
             "Components/bundles-groq",
@@ -593,6 +610,7 @@ module.exports = {
             "Components/bundles-novita",
             "Components/bundles-nvidia",
             "Components/bundles-ollama",
+            "Components/bundles-olostep",
             "Components/bundles-openai",
             "Components/bundles-openai-compatible",
             "Components/bundles-openrouter",
@@ -603,8 +621,10 @@ module.exports = {
             "Components/bundles-pgvector",
             "Components/bundles-pinecone",
             "Components/bundles-plivo",
+            "Components/bundles-popnow",
             "Components/bundles-qdrant",
             "Components/bundles-redis",
+            "Components/bundles-salesforce",
             "Components/bundles-sambanova",
             "Components/bundles-searchapi",
             "Components/bundles-serper",
@@ -698,6 +718,7 @@ module.exports = {
         "Contributing/contributing-components",
         "Contributing/contributing-bundles",
         "Contributing/contributing-component-tests",
+        "Contributing/contributing-component-compatibility",
         "Contributing/contributing-templates",
       ],
     },

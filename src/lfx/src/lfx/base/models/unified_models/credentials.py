@@ -29,6 +29,8 @@ from .provider_queries import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Collection
+
     from lfx.services.model_provider_policy import ModelProviderPolicySnapshot
 
 MODEL_STATUS_KEY_SEPARATOR = "::"
@@ -231,9 +233,17 @@ def provider_variable_from_env(var_key: str) -> str | None:
 
 
 def get_all_variables_for_provider(
-    user_id: UUID | str | None, provider: str, *, include_secrets: bool = True
+    user_id: UUID | str | None,
+    provider: str,
+    *,
+    include_secrets: bool = True,
+    exclude: Collection[str] = (),
 ) -> dict[str, str]:
-    """Get configured provider variables, optionally resolving only non-secret settings."""
+    """Get configured provider variables, optionally resolving only non-secret settings.
+
+    ``exclude`` names variables the caller is about to replace: they are never read, so a stored
+    value that can no longer be decrypted doesn't block saving a new one.
+    """
     result: dict[str, str] = {}
     account_absences: set[str] = set()
 
@@ -241,6 +251,8 @@ def get_all_variables_for_provider(
     provider_vars = get_provider_all_variables(provider)
     if not include_secrets:
         provider_vars = [variable for variable in provider_vars if not variable.get("is_secret")]
+    if exclude:
+        provider_vars = [variable for variable in provider_vars if variable.get("variable_key") not in exclude]
     if not provider_vars:
         return result
 
@@ -595,6 +607,11 @@ def validate_model_provider_key(
     # provider and follows the same rule.
     # Provider IDs such as "typesafe" and display names reach the same decision checks.
     decision_provider = _canonical_provider_name(provider)
+    if decision_provider == "OpenRouter":
+        provider = decision_provider
+        if model_type == "decision" and not secret_value_to_str(variables.get("OPENROUTER_API_KEY"), strip=True):
+            msg = "Enter the OpenRouter API key."
+            raise ValueError(msg)
     if model_type is None and model_name and _is_decision_only_model(decision_provider, model_name):
         # An untyped request for a model that exists only as a decision model, such as a legacy
         # status update, must not be validated as a chat completion.
@@ -610,11 +627,21 @@ def validate_model_provider_key(
         purpose=ModelProviderPolicyPurpose.USE,
         attributes=policy_attributes,
     )
-    if model_type == "decision" or decision_provider in DECISION_ONLY_PROVIDERS:
+    if (model_type == "decision" and decision_provider != "OpenRouter") or decision_provider in DECISION_ONLY_PROVIDERS:
         from lfx.base.models.decision_constants import DECISION_MODELS_DETAILED
         from lfx.base.models.decisions.providers import validate_decision_provider_key
 
         offered = [row["name"] for row in DECISION_MODELS_DETAILED if row["provider"] == decision_provider]
+        if decision_provider == "TypeSafe":
+            from lfx.base.models.decisions.typesafe import get_models
+
+            # Explicit/pinned IDs are validated by System One; discover a default only when needed.
+            policy.require(decision_provider)
+            key = secret_value_to_str(variables.get("TYPESAFE_API_KEY"), strip=True)
+            if model_name:
+                offered = [model_name]
+            elif key:
+                offered = [row["name"] for row in get_models(key)]
         if not model_name and not offered:
             msg = f"{decision_provider} has no decision models."
             raise ValueError(msg)

@@ -373,6 +373,27 @@ To modify the Windows user environment variables, do the following:
 </TabItem>
 </Tabs>
 
+## Deployment variable declarations
+
+```bash
+export LANGFLOW_DEPLOYMENT_TYPED_VARIABLES_ENABLED=true
+```
+
+Enable typed declarations only when the destination supports version 7 deployment artifacts.
+This setting requires `LANGFLOW_VARIABLE_STORE=db` and defaults to `false`.
+Packages declare each referenced variable as `secret` or `plain` without including its value.
+Packaging fails when a referenced variable has no resolved kind. Restore the binding or set the variable's type before packaging again.
+
+Provision destination values separately. An artifact contains names and kinds and does not copy source values.
+A deployment extension can offer an explicitly authorized copy operation. Such a copy captures a snapshot of the selected source values.
+Later source edits and ordinary redeploys do not replace destination values.
+Secret values use the destination's encryption root. Plain values remain plain in the destination variable store.
+
+A deployment extension can also bind runtime lookups to an execution account.
+When that policy is active, credentials and MCP variable placeholders use approved destination values without process-environment fallback.
+A missing MCP placeholder stops the invocation before connecting and names the missing variable without its value.
+This policy takes precedence over `LANGFLOW_FALLBACK_TO_ENV_VAR`.
+
 ## Supported environment variables {#supported-variables}
 
 The following sections provide information about specific Langflow environment variables.

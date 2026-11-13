@@ -7,6 +7,7 @@ import sqlite3
 import sys
 import time
 from contextlib import asynccontextmanager, contextmanager, nullcontext
+from contextvars import ContextVar
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -48,6 +49,8 @@ from langflow.services.deps import get_settings_service
 from langflow.services.utils import teardown_superuser
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from lfx.services.settings.service import SettingsService
 
 
@@ -66,6 +69,17 @@ _PG_VERSION_QUERY = sa.text("SELECT current_setting('server_version_num'), curre
 _MIGRATION_ADVISORY_LOCK_ID = 0x4C616E67666C6F77  # ASCII "Langflow"
 _MIGRATION_LOCK_DEFAULT_TIMEOUT_S = 300.0
 _MIGRATION_LOCK_POLL_INTERVAL_S = 2.0
+_readonly_connections: ContextVar[bool] = ContextVar("readonly_database_connections", default=False)
+
+
+@contextmanager
+def readonly_database_connections() -> Iterator[None]:
+    """Keep diagnostic connections from applying persistent SQLite settings."""
+    token = _readonly_connections.set(True)
+    try:
+        yield
+    finally:
+        _readonly_connections.reset(token)
 
 
 def _migration_lock_timeout_s() -> float:
@@ -264,6 +278,7 @@ class DatabaseService(Service):
 
     def __init__(self, settings_service: SettingsService):
         self._logged_pragma = False
+        self.database_initialized = False
         self.settings_service = settings_service
         if settings_service.settings.database_url is None:
             msg = "No database URL provided"
@@ -302,6 +317,14 @@ class DatabaseService(Service):
             class_=SQLModelAsyncSession,  # SQLModel's AsyncSession with exec() support
             expire_on_commit=False,
         )
+
+        # Dedicated engine for the in-process keep-alive heartbeat, created lazily on first use.
+        # Its own small pool keeps a heartbeat write off the application pool, so a run whose
+        # pool is saturated by concurrent requests still records liveness and is not wrongly
+        # reaped as worker_lost though it completed (LE-3302 F-03). See session_scope_for_heartbeat.
+        self._heartbeat_engine: AsyncEngine | None = None
+        self._heartbeat_session_maker: async_sessionmaker | None = None
+        self._heartbeat_lock = asyncio.Lock()
 
         # Check if Alembic should log to stdout or a file.
         # If file, check if the provided path is absolute, cross-platform.
@@ -441,6 +464,8 @@ class DatabaseService(Service):
             from langflow.services.audit.search_sql import register_sqlite_search_functions
 
             register_sqlite_search_functions(dbapi_connection)
+            if _readonly_connections.get():
+                return
             pragmas: dict = self.settings_service.settings.sqlite_pragmas or {}
             pragmas_list = []
             for key, val in pragmas.items():
@@ -454,7 +479,9 @@ class DatabaseService(Service):
                     for pragma in pragmas_list:
                         try:
                             cursor.execute(pragma)
-                        except OperationalError:
+                        # The raw DBAPI cursor raises sqlite3's error, not SQLAlchemy's. A read-only
+                        # connection, such as the upgrade check's, cannot change the journal mode.
+                        except (OperationalError, sqlite3.OperationalError):
                             logger.exception(f"Failed to set PRAGMA {pragma}")
                         except GeneratorExit:
                             logger.error(f"Failed to set PRAGMA {pragma}")
@@ -496,6 +523,67 @@ class DatabaseService(Service):
                 yield session
         finally:
             await engine.dispose()
+
+    def _create_heartbeat_engine(self) -> AsyncEngine:
+        """A separate engine with its own small pool for keep-alive heartbeats.
+
+        Fixed, small sizing: a heartbeat is a sub-millisecond ``UPDATE`` released at once, so a
+        handful of connections serve every in-flight run's heartbeat while adding only that many
+        to the database connection budget. Postgres-only pool kwargs; SQLite serialises on its
+        own file lock and rejects pool sizing, so it gets a plain second engine (harmless for a
+        file database, and :memory: never reaches here -- see ``session_scope_for_heartbeat``).
+        Reuses the main engine's ``connect_args`` so the driver behaves identically.
+        """
+        kwargs: dict = {}
+        if not self.database_url.startswith("sqlite"):
+            kwargs = {"pool_size": 3, "max_overflow": 7, "pool_timeout": 5, "pool_pre_ping": True}
+        return create_async_engine(self.database_url, connect_args=self._get_connect_args(), **kwargs)
+
+    async def _heartbeat_maker(self) -> async_sessionmaker:
+        """Lazily build (once) the session maker bound to the dedicated heartbeat engine."""
+        if self._heartbeat_session_maker is None:
+            async with self._heartbeat_lock:
+                if self._heartbeat_session_maker is None:
+                    engine = self._create_heartbeat_engine()
+                    self._heartbeat_engine = engine
+                    self._heartbeat_session_maker = async_sessionmaker(
+                        engine, class_=SQLModelAsyncSession, expire_on_commit=False
+                    )
+        return self._heartbeat_session_maker
+
+    @asynccontextmanager
+    async def session_scope_for_heartbeat(self):
+        """A committing session on a small DEDICATED pool, isolated from the application pool.
+
+        The in-process keep-alive heartbeat (``JobService._beat``) must land even when the
+        application pool is exhausted by concurrent runs; otherwise a live run's lease goes stale
+        and ``sweep_orphans`` reaps it as ``worker_lost`` though it completed and returned 200
+        (LE-3302 F-03). A second engine with its own pool keeps a beat from queuing behind request
+        handlers. In-memory SQLite and the noop database fall back to the shared session: a second
+        engine to ``:memory:`` would be a different, empty database.
+        """
+        url = self.engine.url
+        database = url.database or ""
+        in_memory = url.get_backend_name() == "sqlite" and (
+            database in {"", ":memory:"} or database.startswith("file::memory:") or url.query.get("mode") == "memory"
+        )
+        if self.settings_service.settings.use_noop_database or in_memory:
+            async with self._with_session() as session:
+                try:
+                    yield session
+                    await session.commit()
+                except Exception:
+                    await session.rollback()
+                    raise
+            return
+        maker = await self._heartbeat_maker()
+        async with maker() as session:
+            try:
+                yield session
+                await session.commit()
+            except Exception:
+                await session.rollback()
+                raise
 
     async def ensure_postgresql_version(self) -> None:
         """If the database is PostgreSQL, ensure it is version 15 or higher.
@@ -910,12 +998,15 @@ class DatabaseService(Service):
     async def teardown(self) -> None:
         await logger.adebug("Tearing down database")
         try:
-            settings_service = get_settings_service()
-            # When AUTO_LOGIN is off, remove the unused default superuser (see teardown_superuser).
-            async with session_scope() as session:
-                await teardown_superuser(settings_service, session)
+            if getattr(self, "database_initialized", False):
+                settings_service = get_settings_service()
+                # When AUTO_LOGIN is off, remove the unused default superuser (see teardown_superuser).
+                async with session_scope() as session:
+                    await teardown_superuser(settings_service, session)
         except Exception:
             await logger.aexception("Error tearing down database")
             raise
         finally:
+            if self._heartbeat_engine is not None:
+                await self._heartbeat_engine.dispose()
             await self.engine.dispose()

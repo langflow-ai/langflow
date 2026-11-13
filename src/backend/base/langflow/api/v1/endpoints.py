@@ -20,6 +20,7 @@ from lfx.custom.utils import (
     build_custom_component_template,
     get_instance_name,
     update_component_build_config,
+    update_rebuilt_node,
 )
 from lfx.exceptions.tweaks import TweakRefusedError
 from lfx.graph.graph.base import Graph
@@ -52,6 +53,7 @@ from lfx.workflow.end_user_identity import (
 from pydantic import ValidationError
 
 from langflow.api.utils import (
+    EMPTY_FILE_DETAIL,
     CurrentActiveUser,
     DbSession,
     extract_global_variables_from_headers,
@@ -95,7 +97,7 @@ from langflow.api.v1.schemas import (
 from langflow.api.validation_errors import redact_validation_errors
 from langflow.api.warm_graph import try_warm_run_graph
 from langflow.events.event_manager import create_stream_tokens_event_manager
-from langflow.exceptions.api import APIException, InvalidChatInputError
+from langflow.exceptions.api import APIException, InvalidChatInputError, WorkflowServiceUnavailableError
 from langflow.exceptions.serialization import SerializationError
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.interface.initialize.loading import update_params_with_load_from_db_fields
@@ -115,7 +117,7 @@ from langflow.services.authorization.access_ceiling import (
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
-from langflow.services.database.models.jobs.model import JobType
+from langflow.services.database.models.jobs.model import JobStatus, JobType
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import (
     get_catalog_policy_service,
@@ -608,6 +610,17 @@ async def simple_run_flow(
                 # getattr: the warm-run path may hand back a lightweight graph stand-in without
                 # this attribute, matching every other end_user_id read in the codebase.
                 end_user_id=getattr(graph, "end_user_id", None),
+                # IN_PROGRESS from insert, not QUEUED: this run executes HERE, in the API
+                # process, so its row must never enter the scaled worker's QUEUED-claim path
+                # (queued_workflow_job_ids -> claim_queued_lease). A QUEUED row whose create-time
+                # heartbeat expired before the run started was claimed by a worker and re-run with
+                # an empty reconstructed request (LE-3302 F-02). create_job's own docstring
+                # prescribes IN_PROGRESS for a caller that starts the run in the same request.
+                # execute_with_status still runs (mark_in_progress defaults True): begin_live_job
+                # becomes a guarded IN_PROGRESS->IN_PROGRESS no-op that raises JobNotClaimable if a
+                # watchdog already terminalized the row, instead of returning a result over a
+                # FAILED row.
+                status=JobStatus.IN_PROGRESS,
                 # Live from insert, then kept alive by execute_with_status, so an orphan
                 # sweep cannot fail it mid-run. The run writes no job_metadata of its own.
                 heartbeat=True,
@@ -661,7 +674,7 @@ async def simple_run_flow(
                     session_id=session_id,
                     job_id=_run_id_uuid,
                 )
-            except (RuntimeError, ValueError, OSError):
+            except (RuntimeError, ValueError, OSError, WorkflowServiceUnavailableError):
                 await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
 
         return RunResponse(outputs=task_result, session_id=session_id)
@@ -1130,6 +1143,8 @@ async def _run_flow_internal(
                 run_id=run_id,
             ),
         )
+        if (typed := integration_http_error(exc, expose_details=expose_error_details)) is not None:
+            raise typed from exc
         if "badly formed hexadecimal UUID string" in str(exc):
             # This means the Flow ID is not a valid UUID which means it can't find the flow
             http_error = HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
@@ -1140,11 +1155,6 @@ async def _run_flow_internal(
         if "not found" in str(exc):
             http_error = HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
             raise error_for_client(http_error, expose_details=expose_error_details) from exc
-        # A connection the caller may not use is not a server fault: keep the
-        # typed body and the provider's status (403/401/429) instead of flattening
-        # it into a 500 whose message a client cannot act on.
-        if (typed := integration_http_error(exc, expose_details=expose_error_details)) is not None:
-            raise typed from exc
         client_error = error_for_client(exc, expose_details=expose_error_details)
         raise APIException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -1155,6 +1165,18 @@ async def _run_flow_internal(
         http_error = HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
         raise error_for_client(http_error, expose_details=expose_error_details) from exc
     except HTTPException as exc:
+        # Job failures arrive as APIException, or a redacted HTTPException for shared flows.
+        if exc.status_code >= status.HTTP_500_INTERNAL_SERVER_ERROR:
+            await _record_run_telemetry(
+                telemetry_service,
+                RunPayload(
+                    run_is_webhook=False,
+                    run_seconds=int(time.perf_counter() - start_time),
+                    run_success=False,
+                    run_error_message=str(exc),
+                    run_id=run_id,
+                ),
+            )
         if expose_error_details:
             raise
         raise error_for_client(exc, expose_details=expose_error_details) from exc
@@ -1566,8 +1588,6 @@ async def experimental_run_flow(
 ) -> RunResponse:
     """Executes a specified flow by ID with optional input values, output selection, tweaks, and streaming capability.
 
-    This endpoint supports running flows with caching to enhance performance and efficiency.
-
     ### Parameters:
     - `flow` (Flow): The flow object to be executed, resolved via dependency injection.
     - `inputs` (List[InputValueRequest], optional): A list of inputs specifying the input values and components
@@ -1578,8 +1598,8 @@ async def experimental_run_flow(
       The tweaks can be used to modify the flow's parameters and components.
       Tweaks can be overridden by the input values.
     - `stream` (bool, optional): Specifies whether the results should be streamed. Defaults to False.
-    - `session_id` (Union[None, str], optional): An optional session ID to utilize existing session data for the flow
-      execution.
+    - `session_id` (Union[None, str], optional): The chat-memory session for the run, as on `/run`. A new ID
+      starts a new session.
     - `api_key_user` (User): The user associated with the current API key. Automatically resolved from the API key.
 
     ### Returns:
@@ -1638,29 +1658,27 @@ async def experimental_run_flow(
             client_error = error_for_client(exc, expose_details=expose_error_details)
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(client_error)) from exc
         graph, _artifacts = session_data or (None, None)
-        if graph is None:
-            msg = f"Session {session_id} not found"
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=msg)
-        if not _graph_executes_as_actor(graph, api_key_user, flow_id=flow.id):
-            # Cache keys are legacy and not actor-scoped. Reusing an instantiated
-            # graph across principals would retain the first actor's component
-            # credentials, variables, files, and tweaks. Rebuild the immutable
-            # stored flow under the current actor instead.
-            await logger.awarning(
-                "Ignoring advanced-run graph cached under another execution principal for flow %s",
-                flow.id,
-            )
-            graph = None
-        elif admin_only_build_required(is_superuser=bool(getattr(api_key_user, "is_superuser", False))):
-            # The cached graph was compiled under whatever component policy was in force when
-            # it was cached. Session cache keys carry no policy generation, so a graph cached
-            # while admin-only mode was off still embeds the caller's own component source and
-            # would execute it unchecked. Rebuild from stored data through the policy instead.
-            await logger.awarning(
-                "Ignoring advanced-run cached graph that predates the admin-only component policy for flow %s",
-                flow.id,
-            )
-            graph = None
+        if graph is not None:
+            if not _graph_executes_as_actor(graph, api_key_user, flow_id=flow.id):
+                # Cache keys are legacy and not actor-scoped. Reusing an instantiated
+                # graph across principals would retain the first actor's component
+                # credentials, variables, files, and tweaks. Rebuild the immutable
+                # stored flow under the current actor instead.
+                await logger.awarning(
+                    "Ignoring advanced-run graph cached under another execution principal for flow %s",
+                    flow.id,
+                )
+                graph = None
+            elif admin_only_build_required(is_superuser=bool(getattr(api_key_user, "is_superuser", False))):
+                # The cached graph was compiled under whatever component policy was in force when
+                # it was cached. Session cache keys carry no policy generation, so a graph cached
+                # while admin-only mode was off still embeds the caller's own component source and
+                # would execute it unchecked. Rebuild from stored data through the policy instead.
+                await logger.awarning(
+                    "Ignoring advanced-run cached graph that predates the admin-only component policy for flow %s",
+                    flow.id,
+                )
+                graph = None
 
     if graph is None:
         if flow.data is None:
@@ -1778,7 +1796,7 @@ async def experimental_run_flow(
                 session_id=session_id,
                 job_id=_run_id_uuid,
             )
-        except (RuntimeError, ValueError, OSError):
+        except (RuntimeError, ValueError, OSError, WorkflowServiceUnavailableError):
             await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
 
     return _v1_run_response(RunResponse(outputs=task_result, session_id=session_id))
@@ -1854,6 +1872,9 @@ async def create_upload_file(
         max_file_size_upload = settings_service.settings.max_file_size_upload
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    if file.size == 0:
+        raise HTTPException(status_code=400, detail=EMPTY_FILE_DETAIL)
 
     if file.size is not None and file.size > max_file_size_upload * 1024 * 1024:
         raise HTTPException(
@@ -1981,19 +2002,10 @@ async def custom_component(
                 user_id=user.id,
                 parameters=_raw_component_parameters(current_template),
             )
-        if raw_code.frontend_node is not None:
-            with connection_configuration_context(user_id=user.id):
-                built_frontend_node = await component_instance.update_frontend_node(
-                    built_frontend_node,
-                    raw_code.frontend_node,
-                )
-
-        tool_mode: bool = built_frontend_node.get("tool_mode", False)
-        if isinstance(component_instance, Component):
-            await component_instance.run_and_validate_update_outputs(
-                frontend_node=built_frontend_node,
-                field_name="tool_mode",
-                field_value=tool_mode,
+        update_warnings = []
+        with connection_configuration_context(user_id=user.id):
+            built_frontend_node = await update_rebuilt_node(
+                component_instance, built_frontend_node, raw_code.frontend_node, warnings=update_warnings
             )
     except IntegrationPolicyError as exc:
         # Same reasoning as the model-provider denial below: a governed
@@ -2014,7 +2026,7 @@ async def custom_component(
             built_frontend_node = translate_component_node(type_, built_frontend_node, locale)
         except Exception:  # noqa: BLE001
             logger.exception("Failed to translate component node", extra={"locale": locale})
-    return CustomComponentResponse(data=built_frontend_node, type=type_)
+    return CustomComponentResponse(data=built_frontend_node, type=type_, warnings=update_warnings)
 
 
 @router.post("/custom_component/update", status_code=HTTPStatus.OK, include_in_schema=False)

@@ -64,7 +64,7 @@ from langflow.api.utils.flow_utils import get_authorized_legacy_flow_ids
 from langflow.api.v1.schemas import FlowDataRequest, RunResponse
 from langflow.api.v2.workflow_validation import _validate_output_ids
 from langflow.api.warm_graph import warm_deepcopy
-from langflow.exceptions.api import WorkflowTimeoutError, WorkflowValidationError
+from langflow.exceptions.api import WorkflowServiceUnavailableError, WorkflowTimeoutError, WorkflowValidationError
 from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.services.database.models.flow.model import AccessTypeEnum, FlowRead
 from langflow.services.database.models.user.model import UserRead
@@ -991,7 +991,7 @@ async def execute_sync_workflow(
                     session_id=execution_session_id,
                     job_id=_run_id_uuid,
                 )
-            except (RuntimeError, ValueError, OSError):
+            except (RuntimeError, ValueError, OSError, WorkflowServiceUnavailableError):
                 await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
 
         # Build RunResponse

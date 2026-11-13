@@ -41,27 +41,31 @@ class SharePointFetchComponent(MicrosoftGraphComponent):
 
     inputs = [
         connection_input(capability_id),
-        MessageTextInput(name="item_id", display_name="Item ID", info="The driveItem id to fetch."),
+        MessageTextInput(name="item_id", display_name="Item ID", info="The driveItem id to fetch.", tool_mode=True),
         MessageTextInput(
             name="path",
             display_name="Item Path",
             info="File path relative to the drive root, used when no item id is given.",
+            tool_mode=True,
         ),
         MessageTextInput(
             name="drive_id",
             display_name="Drive ID",
             info="Another user's or a shared drive. Requires Files.Read.All.",
+            tool_mode=True,
         ),
         MessageTextInput(
             name="site_id",
             display_name="Site ID",
             info="A SharePoint site's default document library. Requires Sites.Read.All.",
+            tool_mode=True,
         ),
         MessageTextInput(
             name="range",
             display_name="Byte Range",
             info="Optional HTTP Range value, for example bytes=0-1023.",
             advanced=True,
+            tool_mode=True,
         ),
         IntInput(
             name="max_bytes",
@@ -69,6 +73,7 @@ class SharePointFetchComponent(MicrosoftGraphComponent):
             info="Truncate at this many bytes, up to a maximum of 25 MiB.",
             value=DEFAULT_MAX_BYTES,
             advanced=True,
+            tool_mode=True,
         ),
     ]
 

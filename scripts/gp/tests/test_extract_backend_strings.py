@@ -373,6 +373,72 @@ class TestInstalledBundleWalk:
         assert flat == {}
 
 
+@pytest.mark.parametrize(
+    ("component_name", "constants", "expected"),
+    [
+        (
+            "DecisionModel",
+            {"_TABLE": {"Choice": ("Options", "Choose an option."), "Score": ("Levels", "Ordered levels.")}},
+            {
+                "inputs.candidates.display_name": "Levels",
+                "inputs.candidates.info": "Ordered levels.",
+            },
+        ),
+        (
+            "SmartRouter",
+            {
+                "_ELSE_INFO": {"score": "Score errors reach Else."},
+                "_DECISION_QUESTION_INFO": {"boolean": "Ask yes or no.", "score": "Ask for a level."},
+                "_MINIMUM_PROBABILITY_INFO": {"boolean": "Use the more likely answer."},
+                "_CUSTOM_PROMPT_DECISION_INFO": "Unused in Decision Model mode.",
+            },
+            {
+                "inputs.enable_else_output.info": "Score errors reach Else.",
+                "inputs.decision_question.info": "Ask for a level.",
+                "inputs.minimum_probability.info": "Use the more likely answer.",
+                "inputs.custom_prompt.info": "Unused in Decision Model mode.",
+            },
+        ),
+    ],
+)
+def test_emitting_a_component_keeps_its_dynamic_decision_type_strings(monkeypatch, component_name, constants, expected):
+    import sys
+    import types
+
+    module = types.ModuleType("fixture_decision_component")
+    for name, value in constants.items():
+        setattr(module, name, value)
+    monkeypatch.setitem(sys.modules, module.__name__, module)
+    component = type(
+        "FixtureComponent",
+        (),
+        {
+            "__module__": module.__name__,
+            "code_class_base_inheritance": True,
+            "name": component_name,
+            "display_name": component_name,
+            "inputs": [],
+            "outputs": [],
+        },
+    )
+    helpers = _fake_i18n_key_helpers()
+    flat: dict[str, str] = {}
+
+    extract_mod.emit_component_strings(
+        component,
+        flat,
+        set(),
+        component_field_key=helpers.component_field_key,
+        normalize_component_key=helpers.normalize_component_key,
+    )
+
+    for field, value in expected.items():
+        assert flat[helpers.component_field_key(component_name.lower(), field, value)] == value
+    if component_name == "SmartRouter":
+        value = constants["_DECISION_QUESTION_INFO"]["boolean"]
+        assert flat[helpers.component_field_key("smartrouter", "inputs.decision_question.info", value)] == value
+
+
 class TestCollectStringsWithBundles:
     """End-to-end over collect_strings(), with both component sources faked."""
 

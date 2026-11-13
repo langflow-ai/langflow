@@ -36,6 +36,12 @@ def test_normal_revisions_and_a_fresh_database_are_supported():
     assert classify_revisions({LEGACY_BRANCH_POINT}).kind == "known"
 
 
+def test_upgrade_qa_and_release_histories_have_one_common_head():
+    script = script_directory()
+    ancestry = {revision.revision for revision in script.iterate_revisions(script.get_current_head(), "base")}
+    assert {"3d7f9a1c5e80", "9b1d3f5a7c8e", "f6a2c8e4b901"} <= ancestry  # pragma: allowlist secret
+
+
 @pytest.mark.parametrize(
     "revisions",
     [
@@ -240,3 +246,32 @@ async def test_an_unknown_database_is_rejected_before_any_schema_or_data_changes
         assert not list(tmp_path.glob("future.db-*"))
     finally:
         await service.engine.dispose()
+
+
+async def test_refused_startup_teardown_never_opens_an_application_connection(tmp_path, monkeypatch):
+    from langflow.services import utils
+    from lfx.services.manager import get_service_manager
+    from lfx.services.schema import ServiceType
+    from sqlalchemy.ext.asyncio import async_sessionmaker
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
+    database = tmp_path / "future.db"
+    _record_revision(database, "unknown_future_revision")
+    before = database.read_bytes()
+    service = _service(database)
+    service.settings_service.settings.use_noop_database = False
+    service.async_session_maker = async_sessionmaker(service.engine, class_=AsyncSession, expire_on_commit=False)
+    service.ensure_postgresql_version = AsyncMock()
+    cleanup = AsyncMock(side_effect=AssertionError("refused startup must not change users"))
+    monkeypatch.setattr(utils, "teardown_superuser", cleanup)
+    monkeypatch.setattr("langflow.services.database.service.teardown_superuser", cleanup)
+    monkeypatch.setattr("langflow.services.deps.get_db_service", lambda: service)
+    manager = get_service_manager()
+    monkeypatch.setattr(manager, "services", {ServiceType.DATABASE_SERVICE: service})
+    event.listen(service.engine.sync_engine, "connect", lambda *_: pytest.fail("refusal cleanup opened the database"))
+    with pytest.raises(DatabaseRevisionError):
+        await initialize_database()
+    await utils.teardown_services()
+    assert database.read_bytes() == before
+    assert not list(tmp_path.glob("future.db-*"))
+    cleanup.assert_not_awaited()
