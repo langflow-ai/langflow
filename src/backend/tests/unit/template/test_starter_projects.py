@@ -29,6 +29,7 @@ from langflow.utils.template_validation import (
 # distribution, so it turns back into a no-op whenever the bundle is installed.
 _OPTIONAL_BUNDLE_MODULES = {
     "lfx_arxiv": "lfx_arxiv",
+    "lfx_atlascloud": "lfx_atlascloud",
     "lfx_duckduckgo": "lfx_duckduckgo",
     "lfx_empiriolabs": "lfx_empiriolabs",
     "lfx_exa": "lfx_exa",
@@ -102,6 +103,7 @@ def get_basic_template_files():
     "bundle_module",
     [
         "lfx_arxiv",
+        "lfx_atlascloud",
         "lfx_duckduckgo",
         "lfx_empiriolabs",
         "lfx_exa",
