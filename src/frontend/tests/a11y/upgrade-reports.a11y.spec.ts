@@ -82,7 +82,12 @@ test(
     });
     await page.route("**/api/v1/maintenance/status", (route) =>
       route.fulfill({
-        json: { maintenance: true, migration: false, paused: true },
+        json: {
+          maintenance: true,
+          migration: false,
+          paused: true,
+          running_jobs: 0,
+        },
       }),
     );
     await page.route("**/api/v1/upgrade-repairs/preview", (route) =>
@@ -139,11 +144,16 @@ test(
       .check();
     await expect(apply).toBeEnabled();
     await apply.click();
-    await expect(
-      page
-        .getByRole("list", { name: "Update results" })
-        .getByText("Protected recovery version recovery-1"),
-    ).toBeVisible();
+    const recovery = page
+      .getByRole("list", { name: "Update results" })
+      .getByRole("link", {
+        name: "Review protected recovery version for Customer support",
+      });
+    await expect(recovery).toBeVisible();
+    await expect(recovery).toHaveAttribute(
+      "href",
+      `/flow/${updated.flow_id}?version=${updated.recovery_version_id}`,
+    );
     await page.runA11yScan("upgrade-reports-results");
     await page.getByText("Saved update outcomes", { exact: true }).click();
     await expect(page.getByText("Showing 1 of 1 saved outcomes")).toBeVisible();
