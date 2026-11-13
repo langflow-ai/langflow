@@ -10,6 +10,7 @@ its UTF-8 bytes straight from the driver: both engines read bytes, so making a
 
 from __future__ import annotations
 
+import functools
 import hashlib
 import uuid
 from dataclasses import dataclass
@@ -17,7 +18,6 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 import orjson
-from psycopg.adapt import Loader
 from sqlalchemy import text
 
 if TYPE_CHECKING:
@@ -179,11 +179,20 @@ class FlowData:
     version_token: UUID | None
 
 
-class _TextAsBytes(Loader):
-    """Load a ``text`` value as its UTF-8 bytes, without making a ``str``."""
+@functools.cache
+def _text_as_bytes_loader() -> type:
+    """A psycopg loader that loads a ``text`` value as its UTF-8 bytes, without making a ``str``.
 
-    def load(self, data: Any) -> bytes:
-        return bytes(data)
+    psycopg is an optional dependency (the ``postgresql`` extra), so it is imported only
+    when the session's driver is psycopg.
+    """
+    from psycopg.adapt import Loader
+
+    class TextAsBytes(Loader):
+        def load(self, data: Any) -> bytes:
+            return bytes(data)
+
+    return TextAsBytes
 
 
 async def read_flow_data(session: AsyncSession, flow_id: UUID, *, as_bytes: bool = False) -> FlowData | None:
@@ -195,7 +204,7 @@ async def read_flow_data(session: AsyncSession, flow_id: UUID, *, as_bytes: bool
         driver = await _psycopg_connection(session)
         if driver is not None:
             async with driver.cursor() as cursor:
-                cursor.adapters.register_loader("text", _TextAsBytes)
+                cursor.adapters.register_loader("text", _text_as_bytes_loader())
                 await cursor.execute(_FLOW_DATA_PG, {"flow_id": flow_id})
                 row = await cursor.fetchone()
         else:

@@ -31,7 +31,6 @@ from typing import TYPE_CHECKING
 
 import httpx
 import orjson
-import psycopg
 import pytest
 
 if TYPE_CHECKING:
@@ -39,6 +38,8 @@ if TYPE_CHECKING:
 
 ADMIN_URL = os.environ.get("LANGFLOW_TEST_MULTIPLAYER_ADMIN_URL")
 DB_URL = os.environ.get("LANGFLOW_TEST_MULTIPLAYER_DB_URL")
+
+psycopg = pytest.importorskip("psycopg")
 
 pytestmark = pytest.mark.skipif(
     not (ADMIN_URL and DB_URL), reason="LANGFLOW_TEST_MULTIPLAYER_ADMIN_URL and _DB_URL not set"
