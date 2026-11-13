@@ -18,9 +18,7 @@ interface MockButtonProps extends Record<string, unknown> {
   children: ReactNode;
 }
 
-interface MockStoreSelectorFn<T> {
-  (state: T): unknown;
-}
+type MockStoreSelectorFn<T> = (state: T) => unknown;
 
 let mockCurrentFlowId = "flow-one";
 
@@ -233,6 +231,32 @@ describe("Dropdown value reset bug", () => {
       />,
     );
 
+    expect(mockOnSelect).not.toHaveBeenCalledWith("", undefined, true);
+  });
+
+  it("should_show_a_saved_combobox_value_that_is_not_an_option", () => {
+    const mockOnSelect = jest.fn();
+
+    render(
+      <Dropdown
+        value="08:15"
+        options={["08:00", "09:00"]}
+        combobox
+        onSelect={mockOnSelect}
+        name="time_of_day"
+        nodeId="test-node"
+        nodeClass={mockNodeClass}
+        handleNodeClass={jest.fn()}
+        id="test-dropdown"
+        editNode={false}
+        handleOnNewValue={jest.fn()}
+        disabled={false}
+      />,
+    );
+
+    expect(
+      screen.getByTestId("value-dropdown-test-dropdown"),
+    ).toHaveTextContent("08:15");
     expect(mockOnSelect).not.toHaveBeenCalledWith("", undefined, true);
   });
 });
@@ -570,5 +594,43 @@ describe("legacy provider dropdown policy", () => {
 
     expect(screen.queryByText("Anthropic")).not.toBeInTheDocument();
     expect(screen.getByTestId("provider-dropdown")).toBeDisabled();
+  });
+});
+
+describe("Dropdown option labels", () => {
+  it("should_show_translated_labels_and_select_the_option_value", () => {
+    const mockOnSelect = jest.fn();
+
+    render(
+      <Dropdown
+        value="Weekly"
+        options={["Daily", "Weekly"]}
+        optionLabels={{ Daily: "每天", Weekly: "每周" }}
+        onSelect={mockOnSelect}
+        name="schedule_type"
+        nodeId="test-node"
+        nodeClass={mockNodeClass}
+        handleNodeClass={jest.fn()}
+        id="test-dropdown"
+        editNode={false}
+        handleOnNewValue={jest.fn()}
+        disabled={false}
+      />,
+    );
+
+    expect(
+      screen.getByTestId("value-dropdown-test-dropdown"),
+    ).toHaveTextContent("每周");
+    const daily = screen.getByTestId("Daily-0-option");
+    expect(daily).toHaveTextContent("每天");
+
+    fireEvent.click(daily);
+
+    expect(mockOnSelect).toHaveBeenCalledWith(
+      "Daily",
+      undefined,
+      undefined,
+      undefined,
+    );
   });
 });

@@ -1,6 +1,6 @@
 import warnings
 from collections.abc import AsyncIterator, Iterator
-from typing import Any, TypeAlias, get_args
+from typing import Any, Literal, TypeAlias, get_args
 
 from pandas import DataFrame
 from pydantic import Field, SecretStr, field_validator, model_validator
@@ -1072,6 +1072,21 @@ class DurationInput(BaseInputMixin, MetadataTraceMixin, ToolModeMixin):
         return {"value": int(v.get("value", 0) or 0), "unit": v.get("unit", "Days")}
 
 
+class TimeInput(StrInput):
+    """A time of day, saved as 24-hour ``HH:MM`` and shown in the reader's clock format.
+
+    Set ``is_list`` to let the user add several times.
+    """
+
+    input_format: Literal["time"] = "time"
+
+
+class DateTimeInput(StrInput):
+    """A local date and time, saved as ``YYYY-MM-DDTHH:MM`` and shown in the reader's format."""
+
+    input_format: Literal["datetime"] = "datetime"
+
+
 class FileInput(BaseInputMixin, ListableInputMixin, FileMixin, MetadataTraceMixin, ToolModeMixin):
     """Represents a file field.
 
@@ -1162,6 +1177,8 @@ InputTypes: TypeAlias = (
     | TabInput
     | ActionPickerInput
     | DurationInput
+    | TimeInput
+    | DateTimeInput
     | DataDisplayInput
 )
 

@@ -7,6 +7,7 @@ import ModelInputComponent from "@/components/core/parameterRenderComponent/comp
 import SliderComponent from "@/components/core/parameterRenderComponent/components/sliderComponent";
 import TableNodeComponent from "@/components/core/parameterRenderComponent/components/TableNodeComponent";
 import TabComponent from "@/components/core/parameterRenderComponent/components/tabComponent";
+import TimeOfDayComponent from "@/components/core/parameterRenderComponent/components/timeOfDayComponent";
 import { TEXT_FIELD_TYPES } from "@/constants/constants";
 import CustomConnectionComponent from "@/customization/components/custom-connectionComponent";
 import CustomConnectionRefComponent from "@/customization/components/custom-connectionRefComponent";
@@ -18,6 +19,7 @@ import { CONNECTION_REF_FIELD_TYPE } from "@/utils/connection-ref-gate";
 import { templateInputValues } from "@/utils/connection-scopes";
 import AccordionPromptComponent from "./components/accordionPromptComponent";
 import ActionPickerComponent from "./components/actionPickerComponent";
+import DateTimeComponent from "./components/dateTimeComponent";
 import DictComponent from "./components/dictComponent";
 import DurationComponent from "./components/durationComponent";
 import { EmptyParameterComponent } from "./components/emptyParameterComponent";
@@ -101,6 +103,19 @@ export function ParameterRenderComponent({
     };
 
     if (TEXT_FIELD_TYPES.includes(templateData.type ?? "")) {
+      if (templateData.input_format === "time") {
+        return (
+          <TimeOfDayComponent
+            {...baseInputProps}
+            list={Boolean(templateData.list)}
+            componentName={name}
+            id={`timeofday_${id}`}
+          />
+        );
+      }
+      if (templateData.input_format === "datetime") {
+        return <DateTimeComponent {...baseInputProps} id={`datetime_${id}`} />;
+      }
       if (templateData.list) {
         if (!templateData.options) {
           return (
@@ -117,6 +132,7 @@ export function ParameterRenderComponent({
             <MultiselectComponent
               {...baseInputProps}
               combobox={templateData.combobox}
+              optionLabels={templateData.option_labels}
               options={
                 (Array.isArray(templateData.options)
                   ? templateData.options

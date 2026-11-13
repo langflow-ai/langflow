@@ -230,12 +230,22 @@ def build_component_display_names(all_types_en: dict[str, Any]) -> dict[str, dic
     }
 
 
+def _option_labels(norm: str, field_name: str, options: list[Any], locale: str) -> dict[str, str]:
+    """Each option's label in ``locale``; the options stay the values saved in the flow."""
+    return {
+        option: translate(component_field_key(norm, f"inputs.{field_name}.options", option), locale, option)
+        for option in options
+        if isinstance(option, str)
+    }
+
+
 def translate_component_node(comp_name: str, node: dict[str, Any], locale: str) -> dict[str, Any]:
     """Translate display strings in a single component's frontend node dict.
 
     Covers three tiers:
       - component-level display_name and description
-      - template field display_name, info, placeholder
+      - template field display_name, info, placeholder, and option labels
+        for fields marked ``translate_options``
       - output display_name and info
 
     Translation is idempotent: if a field already holds a translated value its
@@ -263,6 +273,8 @@ def translate_component_node(comp_name: str, node: dict[str, Any], locale: str) 
                         field_updates[sub] = translate(
                             component_field_key(norm, f"inputs.{field_name}.{sub}", val), locale, val
                         )
+                if field.get("translate_options") is True and isinstance(field.get("options"), list):
+                    field_updates["option_labels"] = _option_labels(norm, field_name, field["options"], locale)
                 if field_updates:
                     translated["template"][field_name] = {**field, **field_updates}
 
