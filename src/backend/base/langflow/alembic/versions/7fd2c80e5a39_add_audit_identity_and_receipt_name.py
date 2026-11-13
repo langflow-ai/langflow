@@ -19,7 +19,46 @@ depends_on = None
 
 TABLE = "audit_events"
 CHECK = "ck_audit_events_represented_pair"
+CHECK_EXPRESSION = (
+    "(represented_issuer IS NULL AND represented_subject IS NULL) "
+    "OR (represented_issuer IS NOT NULL AND represented_subject IS NOT NULL)"
+)
 RECEIPTS = "project_replacement_operation"
+# Bound the B-tree keys. The issuer remains in the table for exact filtering.
+INDEXES = {
+    "ix_audit_events_acting_timeline": ["acting_subject", "timestamp"],
+    "ix_audit_events_represented_timeline": ["represented_subject", "timestamp"],
+}
+
+
+def _postgres_upgrade(
+    conn: sa.Connection, missing: list[sa.Column], indexes: dict[str, list[str]], *, add_check: bool
+) -> None:
+    for column in missing:
+        op.add_column(TABLE, column)
+    if add_check:
+        op.create_check_constraint(op.f(CHECK), TABLE, CHECK_EXPRESSION, postgresql_not_valid=True)
+
+    # A cancelled concurrent build can leave an index present but unusable.
+    invalid = set(
+        conn.scalars(
+            sa.text(
+                "SELECT c.relname FROM pg_class c JOIN pg_index i ON i.indexrelid = c.oid "
+                "WHERE i.indrelid = 'audit_events'::regclass AND NOT i.indisvalid AND c.relname = ANY(:names)"
+            ),
+            {"names": list(INDEXES)},
+        )
+    )
+    # Commit the short exclusive lock before scanning existing rows. Validation
+    # and concurrent index builds allow the other replicas to keep writing.
+    with op.get_context().autocommit_block():
+        op.execute(f"ALTER TABLE {TABLE} VALIDATE CONSTRAINT {CHECK}")
+        for name, columns in INDEXES.items():
+            if indexes.get(name) == columns and name not in invalid:
+                continue
+            if name in indexes:
+                op.drop_index(name, table_name=TABLE, postgresql_concurrently=True)
+            op.create_index(name, TABLE, columns, postgresql_concurrently=True)
 
 
 def upgrade() -> None:
@@ -30,31 +69,31 @@ def upgrade() -> None:
 
     if not migration.table_exists(TABLE, conn):
         return
+    inspector = sa.inspect(conn)
+    existing_columns = {column["name"] for column in inspector.get_columns(TABLE)}
     missing = [
-        name for name in ("represented_issuer", "represented_subject") if not migration.column_exists(TABLE, name, conn)
+        sa.Column(name, sa.String(length), nullable=True)
+        for name, length in (("represented_issuer", 2048), ("represented_subject", 512))
+        if name not in existing_columns
     ]
-    checks = {item["name"] for item in sa.inspect(conn).get_check_constraints(TABLE)}
-    if missing or CHECK not in checks:
-        with op.batch_alter_table(TABLE) as batch:
-            for name in missing:
-                batch.add_column(sa.Column(name, sa.String(2048 if name.endswith("issuer") else 512), nullable=True))
-            if CHECK not in checks:
-                batch.create_check_constraint(
-                    op.f(CHECK),
-                    "(represented_issuer IS NULL AND represented_subject IS NULL) "
-                    "OR (represented_issuer IS NOT NULL AND represented_subject IS NOT NULL)",
-                )
-    indexes = {item["name"]: item for item in sa.inspect(conn).get_indexes(TABLE)}
-    for prefix in ("acting", "represented"):
-        name = f"ix_audit_events_{prefix}_timeline"
-        columns = [f"{prefix}_subject", "timestamp"]
-        existing = indexes.get(name)
-        if existing is not None:
-            if existing["column_names"] == columns:
-                continue
+    add_check = CHECK not in {item["name"] for item in inspector.get_check_constraints(TABLE)}
+    indexes = {item["name"]: item["column_names"] for item in inspector.get_indexes(TABLE)}
+    if conn.dialect.name == "postgresql":
+        _postgres_upgrade(conn, missing, indexes, add_check=add_check)
+        return
+
+    rebuild_indexes = {name: columns for name, columns in INDEXES.items() if indexes.get(name) != columns}
+    # Drop old definitions before the SQLite batch reflects and recreates indexes.
+    for name in rebuild_indexes:
+        if name in indexes:
             op.drop_index(name, table_name=TABLE)
-        # A subject uses at most 2048 UTF-8 bytes. Keep the full issuer stored
-        # and filtered separately so PostgreSQL's B-tree key limit is respected.
+    if missing or add_check:
+        with op.batch_alter_table(TABLE) as batch:
+            for column in missing:
+                batch.add_column(column)
+            if add_check:
+                batch.create_check_constraint(op.f(CHECK), CHECK_EXPRESSION)
+    for name, columns in rebuild_indexes.items():
         op.create_index(name, TABLE, columns)
 
 
