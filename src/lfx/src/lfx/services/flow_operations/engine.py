@@ -34,6 +34,7 @@ and ``editor=True``); the Python engine does not, as no server path calls them.
 
 from __future__ import annotations
 
+import hashlib
 import os
 from typing import Any
 
@@ -256,6 +257,11 @@ class PythonEngine:
     @staticmethod
     def graph_hash(flow: Any) -> str:
         return graph_hash_checked(read_data(flow))
+
+    @staticmethod
+    def text_sha256(text: str | bytes) -> str:
+        """The SHA-256 hex digest of ``text`` (a ``str`` as UTF-8): a checkpoint's stored-text hash."""
+        return hashlib.sha256(text.encode() if isinstance(text, str) else text).hexdigest()
 
     @staticmethod
     def graphs_equal(left: Any, right: Any) -> bool:
@@ -509,6 +515,7 @@ class RustEngine:
     validate = _rust_function("validate")
     repair = _rust_function("repair")
     graph_hash = _rust_function("graph_hash")
+    text_sha256 = _rust_function("text_sha256")
     graphs_equal = _rust_function("graphs_equal")
     values_equal = _rust_function("values_equal")
     canonical_json = _rust_function("canonical_json")

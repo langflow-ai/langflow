@@ -30,7 +30,6 @@ first batch on a newly built graph (the engine checks the whole graph before its
 from __future__ import annotations
 
 import asyncio
-import hashlib
 import time
 from collections import OrderedDict
 from contextlib import asynccontextmanager
@@ -54,8 +53,11 @@ class EntryGoneError(Exception):
 
 
 def text_hash(text: str | bytes) -> str:
-    """A checkpoint's hash: the SHA-256 (hex) of the exact JSON text its row stores, as UTF-8 bytes."""
-    return hashlib.sha256(text.encode() if isinstance(text, str) else text).hexdigest()
+    """A checkpoint's hash: the SHA-256 (hex) of the exact JSON text its row stores, as UTF-8 bytes.
+
+    The engine hashes it: Rust hashes a ``str``'s own buffer without the GIL, Python encodes it first.
+    """
+    return config.engine().text_sha256(text)
 
 
 def is_large(payload: bytes, count: int) -> bool:

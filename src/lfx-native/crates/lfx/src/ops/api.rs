@@ -533,6 +533,19 @@ pub fn plain_ops_diff(base: &GraphPlain, target: &GraphPlain) -> ApiResult<AnyVa
 
 // --- Canonical form -------------------------------------------------------------------------
 
+/// The SHA-256 hex digest of `text`, byte for byte: the hash a checkpoint
+/// row stores for its JSON text.
+#[must_use]
+pub fn text_sha256(text: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    Sha256::digest(text)
+        .iter()
+        .flat_map(|byte| [HEX[usize::from(byte >> 4)], HEX[usize::from(byte & 0xf)]])
+        .map(char::from)
+        .collect()
+}
+
 /// The SHA-256 hex digest of a graph's canonical form.
 ///
 /// # Errors
