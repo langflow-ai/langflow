@@ -251,3 +251,15 @@ describe("FlowPageSlidingContainerContent — session list mounting", () => {
     expect(screen.queryByTestId("chat-sidebar")).not.toBeInTheDocument();
   });
 });
+
+describe("FlowPageSlidingContainerContent — mobile system bars", () => {
+  it("pads the chat input by the bottom safe-area inset", () => {
+    renderPanel();
+
+    const footer = screen.getByTestId("input-chat-playground").parentElement
+      ?.parentElement as HTMLElement;
+    expect(footer.className).toContain(
+      "pb-[calc(1rem+env(safe-area-inset-bottom))]",
+    );
+  });
+});

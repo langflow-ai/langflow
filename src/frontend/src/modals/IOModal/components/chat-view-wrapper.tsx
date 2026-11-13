@@ -30,7 +30,8 @@ export const ChatViewWrapper = ({
   return (
     <div
       className={cn(
-        "flex h-full w-full flex-col justify-between px-4 pb-4 pt-2",
+        "flex h-full w-full flex-col justify-between px-4 pt-2",
+        playgroundPage ? "pb-[calc(1rem+env(safe-area-inset-bottom))]" : "pb-4",
         selectedViewField ? "hidden" : "",
       )}
     >
