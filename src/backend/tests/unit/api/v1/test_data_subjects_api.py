@@ -203,7 +203,7 @@ async def test_should_find_a_builder_by_username_or_email(client: AsyncClient, l
     assert exact.status_code == status.HTTP_200_OK, exact.text
     assert missing.status_code == status.HTTP_404_NOT_FOUND
     assert missing.json()["detail"]["code"] == "subject_not_found"
-    assert both.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert both.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 @pytest.mark.usefixtures("feature_on")
@@ -241,7 +241,7 @@ async def test_should_suggest_end_user_ids_by_part_of_the_id(
         {"end_user_id": f"julio-{tag}", "messages": 1},
     ]
     assert narrowed.json() == [{"end_user_id": f"Julia-{tag}", "messages": 2}]
-    assert too_short.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert too_short.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 @pytest.mark.usefixtures("feature_on")
@@ -297,7 +297,7 @@ async def test_should_reject_an_ambiguous_end_user_id_with_a_stable_code(
         headers=logged_in_headers_super_user,
     )
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     assert response.json()["detail"]["code"] == "invalid_end_user_id"
     assert response.headers["X-Langflow-Error-Code"] == "invalid_end_user_id"
 
