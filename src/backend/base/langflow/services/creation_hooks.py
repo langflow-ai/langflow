@@ -216,14 +216,18 @@ async def run_pre_creation_hooks(context: PreCreationContext) -> None:
 # ---------------------------------------------------------------------------
 # Post-creation hooks
 # ---------------------------------------------------------------------------
-# A second, separate registry: hooks that run AFTER a knowledge base or a variable has been created and committed.
+# A second, separate registry: hooks that run AFTER a knowledge base, variable, memory base or file has been created
+# and committed.
 # They cannot veto the creation (it already happened). A plugin uses one to add rows that belong with the new
 # resource, for example a share. They are kept apart from the pre-creation resources so that registering a
 # pre-creation hook for ``knowledge_base`` still fails loudly instead of silently never running.
 #
 # Call points (OSS): ``knowledge_base`` - ``langflow.api.v1.knowledge_bases.create_knowledge_base``;
-# ``variable`` - ``langflow.api.v1.variable.create_variable``. Other ways a row can appear (startup import of
-# environment variables, flow components creating a knowledge base, migrations) are deliberately not hooked.
+# ``variable`` - ``langflow.api.v1.variable.create_variable``; ``memory_base`` -
+# ``langflow.api.v1.memories.create_memory_base``; ``file`` - ``langflow.api.v2.files.upload_user_file`` (a new
+# tracked file only: an append to an existing file and an ephemeral upload create no row). Other ways a row can
+# appear (startup import of environment variables, flow components creating a knowledge base, migrations) are
+# deliberately not hooked.
 #
 # Contract: hooks are awaited in registration order, once per successful create, with no session: the row is
 # committed, so a hook opens its own. An ``HTTPException`` raised by a hook propagates verbatim (the resource then
@@ -231,8 +235,15 @@ async def run_pre_creation_hooks(context: PreCreationContext) -> None:
 # other exception is logged and ignored, like a pre-creation hook that breaks.
 RESOURCE_KNOWLEDGE_BASE = "knowledge_base"
 RESOURCE_VARIABLE = "variable"
+RESOURCE_MEMORY_BASE = "memory_base"
+RESOURCE_FILE = "file"
 
-POST_CREATION_RESOURCES: tuple[str, ...] = (RESOURCE_KNOWLEDGE_BASE, RESOURCE_VARIABLE)
+POST_CREATION_RESOURCES: tuple[str, ...] = (
+    RESOURCE_KNOWLEDGE_BASE,
+    RESOURCE_VARIABLE,
+    RESOURCE_MEMORY_BASE,
+    RESOURCE_FILE,
+)
 
 
 @dataclass(frozen=True)
@@ -328,7 +339,9 @@ __all__ = [
     "ERROR_CODE_TIER_LIMIT_REACHED",
     "POST_CREATION_RESOURCES",
     "RESOURCES",
+    "RESOURCE_FILE",
     "RESOURCE_KNOWLEDGE_BASE",
+    "RESOURCE_MEMORY_BASE",
     "RESOURCE_PROJECT",
     "RESOURCE_ROLE",
     "RESOURCE_USER",

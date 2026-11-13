@@ -31,6 +31,12 @@ from langflow.services.authorization.listing import (
     restrict_to_owned_or_visible_scope,
     visible_scope_prefilter,
 )
+from langflow.services.creation_hooks import (
+    RESOURCE_FILE,
+    PostCreationContext,
+    registered_post_creation_hooks,
+    run_post_creation_hooks,
+)
 from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.settings.service import SettingsService
@@ -522,7 +528,21 @@ async def upload_user_file(
         # Optionally, you could also delete the file from disk if the DB insert fails.
         raise HTTPException(status_code=500, detail=f"Database error: {e}") from e
 
-    return UploadFileResponse(id=new_file.id, name=new_file.name, path=new_file.path, size=new_file.size)
+    response = UploadFileResponse(id=new_file.id, name=new_file.name, path=new_file.path, size=new_file.size)
+    if not existing_file and registered_post_creation_hooks(RESOURCE_FILE):
+        # The route only flushed; the request would commit after it returns. Hooks must see a durable row, so commit
+        # here, but only when one is registered: stock behaviour is unchanged. An append to an existing file is not
+        # a creation.
+        await session.commit()
+        await run_post_creation_hooks(
+            PostCreationContext(
+                resource=RESOURCE_FILE,
+                resource_id=response.id,
+                owner_id=current_user.id,
+                name=response.name,
+            )
+        )
+    return response
 
 
 async def get_file_by_name(
