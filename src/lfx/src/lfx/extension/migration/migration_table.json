@@ -5280,6 +5280,26 @@
       "bare_class_name": "KeenableSearchComponent",
       "target": "ext:keenable:KeenableSearchComponent@official",
       "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "DatacircleBestComponent",
+      "target": "ext:datacircle:DatacircleBestComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "DatacircleListAPIsComponent",
+      "target": "ext:datacircle:DatacircleListAPIsComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "DatacircleProviderComponent",
+      "target": "ext:datacircle:DatacircleProviderComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "DatacircleSearchPlansComponent",
+      "target": "ext:datacircle:DatacircleSearchPlansComponent@official",
+      "added_in": "1.14.0"
     }
   ],
   "ambiguous_bare_names": [
