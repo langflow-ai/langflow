@@ -476,6 +476,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Firecrawl", name: "firecrawl", icon: "FirecrawlCrawlApi" },
   { display_name: "Git", name: "git", icon: "GitLoader" },
   { display_name: "GitHub", name: "github", icon: "Github" },
+  { display_name: "Fortytwo", name: "fortytwo", icon: "Fortytwo" },
   { display_name: "GitLab", name: "gitlab", icon: "Gitlab" },
   { display_name: "Glean", name: "glean", icon: "Glean" },
   { display_name: "Google", name: "google", icon: "Google" },
