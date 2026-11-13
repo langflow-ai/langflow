@@ -8,6 +8,7 @@ allowing for better code organization.
 # Re-export everything from core and flow_utils modules to maintain backward compatibility
 from langflow.api.utils.core import (
     API_WORDS,
+    EMPTY_FILE_DETAIL,
     MAX_PAGE_SIZE,
     MIN_PAGE_SIZE,
     PARAMS_MAX_PAGE_SIZE,
@@ -59,6 +60,7 @@ from langflow.api.utils.flow_utils import (
 __all__ = [
     # Constants
     "API_WORDS",
+    "EMPTY_FILE_DETAIL",
     "MAX_PAGE_SIZE",
     "MIN_PAGE_SIZE",
     "PARAMS_MAX_PAGE_SIZE",
