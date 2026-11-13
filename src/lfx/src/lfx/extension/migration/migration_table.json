@@ -5310,6 +5310,21 @@
       "bare_class_name": "OlostepSearchComponent",
       "target": "ext:olostep:OlostepSearchComponent@official",
       "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "SocialScrapePostsComponent",
+      "target": "ext:socialscrape:SocialScrapePostsComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "SocialScrapeProfileComponent",
+      "target": "ext:socialscrape:SocialScrapeProfileComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "SocialScrapeTranscriptComponent",
+      "target": "ext:socialscrape:SocialScrapeTranscriptComponent@official",
+      "added_in": "1.14.0"
     }
   ],
   "ambiguous_bare_names": [

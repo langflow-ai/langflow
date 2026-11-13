@@ -535,6 +535,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Serply", name: "serply", icon: "Search" },
   { display_name: "ServiceNow", name: "servicenow", icon: "ServiceNow" },
   { display_name: "Slack", name: "slack", icon: "Slack" },
+  { display_name: "SocialScrape", name: "socialscrape", icon: "Share2" },
   { display_name: "Spider", name: "spider", icon: "Spider" },
   { display_name: "Supabase", name: "supabase", icon: "Supabase" },
   { display_name: "Tavily", name: "tavily", icon: "TavilyIcon" },
