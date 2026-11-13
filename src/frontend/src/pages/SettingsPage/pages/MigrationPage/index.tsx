@@ -22,7 +22,14 @@ import { BackupStep } from "./BackupStep";
 import { CheckStep } from "./CheckStep";
 import { CheckTargetStep } from "./CheckTargetStep";
 import { CopyStep } from "./CopyStep";
-import { copyCounts, formatTime, isCopy, PARTS, targetCheck } from "./catalog";
+import {
+  copyCounts,
+  formatTime,
+  isCopy,
+  needsDestinationSecrets,
+  PARTS,
+  targetCheck,
+} from "./catalog";
 import { DestinationsStep } from "./DestinationsStep";
 import { PausedBanner, PauseStep, Recovery } from "./PauseStep";
 import { SecretKeyStep } from "./SecretKeyStep";
@@ -128,6 +135,8 @@ export default function MigrationPage() {
 
 function Migration({ migration }: { migration: MigrationState }) {
   const { t, i18n } = useTranslation();
+  const [revealDestinations, setRevealDestinations] = useState(0);
+  const credentialsMissing = needsDestinationSecrets(migration);
   const { instance } = migration;
   const stateOf = (id: MigrationStepState["id"]) =>
     migration.steps?.find((step) => step.id === id) ?? { id, ...NOT_LISTED };
@@ -183,6 +192,26 @@ function Migration({ migration }: { migration: MigrationState }) {
   return (
     <>
       <PausedBanner migration={migration} />
+      {credentialsMissing && (
+        <Alert variant="destructive">
+          <AlertDescription className="flex flex-col items-start gap-2">
+            <p>
+              {t("settings.migration.dest.credentialsLost", {
+                step: t("settings.migration.step.destinations.title"),
+              })}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setRevealDestinations((value) => value + 1)}
+              ignoreTitleCase
+            >
+              {t("settings.migration.dest.reenter")}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
       <section className="overflow-hidden rounded-lg border">
         <div className="flex flex-col gap-3 p-4">
           <h3 className="text-sm font-medium">
@@ -279,6 +308,8 @@ function Migration({ migration }: { migration: MigrationState }) {
                   summary = t("settings.migration.check.doneSummary", {
                     time: formatTime(run?.finished_at, i18n.language),
                   });
+                } else if (step.id === "connect_target" && credentialsMissing) {
+                  summary = t("settings.migration.dest.credentialsMissing");
                 } else if (
                   step.id === "connect_target" &&
                   state.state === "done"
@@ -457,6 +488,9 @@ function Migration({ migration }: { migration: MigrationState }) {
                         (isCheck || state.reason === "recheck_pending"))
                     }
                     expandable={Boolean(body) && state.state === "done"}
+                    reveal={
+                      step.id === "connect_target" ? revealDestinations : 0
+                    }
                   >
                     {body}
                   </StepItem>
@@ -490,6 +524,7 @@ function StepItem({
   state,
   running,
   expandable,
+  reveal,
   children,
 }: {
   number: number;
@@ -499,6 +534,8 @@ function StepItem({
   running: boolean;
   /** A done step the admin can open again, such as the check. */
   expandable: boolean;
+  /** Incremented when the warning sends the admin to this step. */
+  reveal: number;
   children?: ReactNode;
 }) {
   const { t } = useTranslation();
@@ -515,6 +552,12 @@ function StepItem({
     state.reason === "not_available" || (frontier && !children);
   // When the step before this one finishes, keyboard and screen reader users land on what to do next.
   const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (reveal) {
+      setOpen(true);
+      heading.current?.focus();
+    }
+  }, [reveal]);
   const wasLocked = useRef(locked);
   useEffect(() => {
     if (wasLocked.current && frontier && !comingSoon) heading.current?.focus();

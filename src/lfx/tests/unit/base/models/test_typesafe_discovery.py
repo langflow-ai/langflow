@@ -53,6 +53,7 @@ def catalog(monkeypatch):
 
 def test_list_uses_fixed_authenticated_endpoint_and_isolates_cached_credentials(catalog):
     first = typesafe.get_models("first-key")
+    assert all(row["default"] is False for row in first)
     first[0]["capabilities"].clear()
     assert typesafe.get_models("first-key")[0]["capabilities"] == ["choice", "boolean", "score"]
     assert typesafe.get_models("second-key")[0]["name"] == "future-model"
@@ -103,6 +104,7 @@ def test_default_validation_discovers_using_unsaved_key(monkeypatch, catalog):
     monkeypatch.setattr("lfx.services.model_provider_policy.resolve_model_provider_policy", lambda **_: policy())
     validate = Mock()
     monkeypatch.setattr(providers, "validate_decision_provider_key", validate)
+    # pragma: allowlist nextline secret
     credentials.validate_model_provider_key("TypeSafe", {"TYPESAFE_API_KEY": "second-key"})
     assert validate.call_args.args[2] == "future-model"
     assert catalog.call_args.args[0].headers["authorization"] == "Bearer second-key"
@@ -118,9 +120,10 @@ def test_pinned_execution_uses_request_key_without_discovery(monkeypatch, catalo
     evaluate_decision(
         request,
         model={"provider": "TypeSafe", "name": "jev-1.14.0"},
+        # pragma: allowlist nextline secret
         request_variables={"TYPESAFE_API_KEY": "request-key"},
     )
-    assert transport.call_args.kwargs["api_key"] == "request-key"
+    assert transport.call_args.kwargs["api_key"] == "request-key"  # pragma: allowlist secret
     catalog.assert_not_called()
 
 
@@ -129,6 +132,7 @@ def test_explicit_typesafe_ids_are_validated_by_system_one(monkeypatch, catalog,
     monkeypatch.setattr("lfx.services.model_provider_policy.resolve_model_provider_policy", lambda **_: policy())
     validate = Mock()
     monkeypatch.setattr(providers, "validate_decision_provider_key", validate)
+    # pragma: allowlist nextline secret
     credentials.validate_model_provider_key("TypeSafe", {"TYPESAFE_API_KEY": "first-key"}, model_name=name)
     assert validate.call_args.args[2] == name
     catalog.assert_not_called()

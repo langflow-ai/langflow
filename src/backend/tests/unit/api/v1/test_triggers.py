@@ -9,7 +9,7 @@ cannot see the flow at all.
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from langflow.services.database.models.flow.model import Flow
@@ -300,6 +300,33 @@ async def test_policy_denial_is_durable_even_when_optional_authz_audit_is_disabl
         assert len(rows) == 1
         assert rows[0].result == "deny"
         assert rows[0].details["kind"] == "schedule"
+
+
+async def test_provider_ceiling_refusal_names_the_integration(client, logged_in_headers, flow, monkeypatch):
+    from lfx.services.policy_bundle import PolicyBundleService, PolicyBundleSnapshot
+
+    created = await _create(client, logged_in_headers, flow.id)
+    async with session_scope() as session:
+        row = await session.get(Trigger, UUID(created["id"]))
+        row.kind = "google.calendar"
+        row.provider = "google"
+        session.add(row)
+    bundle = PolicyBundleService()
+    bundle.publish(
+        PolicyBundleSnapshot(
+            revision=2,
+            approved_trigger_kinds=frozenset({"google.calendar"}),
+            approved_integration_provider_ids=frozenset({"slack"}),
+        )
+    )
+    monkeypatch.setattr("lfx.services.deps.get_policy_bundle_service", lambda: bundle)
+    response = await client.post(f"api/v1/triggers/{created['id']}/enable", headers=logged_in_headers)
+    assert response.status_code == 403, response.text
+    assert response.json()["detail"] == {
+        "code": "governance_blocked",
+        "message": "The 'google' integration is not available: it is outside the approved "
+        "integration set. Ask an administrator to approve it.",
+    }
 
 
 async def test_a_trigger_created_through_the_api_is_owned_by_the_flow_owner(

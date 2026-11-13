@@ -147,6 +147,10 @@ jobs:
           mkdir -p test-results
           CI_TEST_COMMIT=$(git rev-parse HEAD)
           export CI_TEST_COMMIT
+          uv run --no-sync python scripts/ci/log_runner_resources.py \
+            --parent-pid "$$" --interval 15 --output test-results/resources.jsonl &
+          monitor_pid=$!
+          trap 'kill "$monitor_pid" 2>/dev/null || true; wait "$monitor_pid" 2>/dev/null || true' EXIT
           /usr/bin/time -v -o test-results/resources.txt \
             uv run --no-sync python -m pytest src/backend/tests/unit \
             --ignore=src/backend/tests/unit/template -m 'not api_key_required' \

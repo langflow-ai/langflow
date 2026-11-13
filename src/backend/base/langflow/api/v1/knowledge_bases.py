@@ -32,7 +32,7 @@ from lfx.services.model_provider_policy import (
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
 
-from langflow.api.utils import CurrentActiveUser, ingestion_run_service, knowledge_base_service
+from langflow.api.utils import EMPTY_FILE_DETAIL, CurrentActiveUser, ingestion_run_service, knowledge_base_service
 from langflow.api.utils.execution_errors import integration_http_error
 from langflow.api.utils.kb_helpers import (
     KBIngestionHelper,
@@ -1059,8 +1059,11 @@ async def ingest_files_to_knowledge_base(
 
         files_data = []
 
+        # The loop only reads bytes: every file is checked before the KB, job or task is touched.
         for uploaded_file in files:
             file_size = uploaded_file.size
+            if file_size == 0:
+                raise HTTPException(status_code=400, detail=EMPTY_FILE_DETAIL)
             if file_size > max_file_size_upload * 1024 * 1024:
                 raise HTTPException(
                     status_code=413,
