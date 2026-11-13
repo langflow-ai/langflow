@@ -18,7 +18,19 @@ class ServiceFactory:
             msg = "service_class is required"
             raise ValueError(msg)
         self.service_class = service_class
-        self.dependencies = infer_service_types(self, import_all_services_into_a_dict())
+        self._dependencies: list[ServiceType] | None = None
+
+    @property
+    def dependencies(self) -> list[ServiceType]:
+        # Inferred on first use: get_*_service() builds a factory on every call (a request
+        # calls several), and only the service manager's first create reads its dependencies.
+        if self._dependencies is None:
+            self._dependencies = infer_service_types(self, import_all_services_into_a_dict())
+        return self._dependencies
+
+    @dependencies.setter
+    def dependencies(self, value: list[ServiceType]) -> None:
+        self._dependencies = value
 
     def create(self, *args, **kwargs) -> "Service":
         return self.service_class(*args, **kwargs)
