@@ -33,6 +33,7 @@ class InProcessExecutor:
     """A bounded worker pool over an asyncio.Queue."""
 
     def __init__(self, max_concurrency: int = 5) -> None:
+        """Initialize the queue, worker registry, and concurrency limit."""
         self._max_concurrency = max(int(max_concurrency), 1)
         self._queue: asyncio.Queue[tuple[str, CoroFactory, UUID | None]] = asyncio.Queue()
         self._workers: list[asyncio.Task] = []
@@ -41,6 +42,7 @@ class InProcessExecutor:
         self._closed = False
 
     async def start(self) -> None:
+        """Start the bounded worker pool unless it is already running."""
         if self._workers:
             return
         self._closed = False
@@ -48,13 +50,14 @@ class InProcessExecutor:
         await logger.adebug(f"InProcessExecutor started with {self._max_concurrency} workers")
 
     async def stop(self) -> None:
+        """Cancel active jobs and workers, preserving jobs not yet started."""
         self._closed = True
         # Cancel the in-flight JOB tasks directly first, then await them. A job
         # that catches its cancel (a user-stop reconciles to CANCELLED) would
         # otherwise leave the worker's ``await task`` in cancellation limbo, so we
         # do not rely on cancellation propagating through the worker. Awaiting the
         # job tasks here lets each one's shielded terminal reconcile finish BEFORE
-        # teardown — without it a reconcile write races a closing DB engine and a
+        # teardown 鈥?without it a reconcile write races a closing DB engine and a
         # "Task was destroyed but it is pending" warning is logged.
         # return_exceptions swallows the CancelledError each task raises so one
         # cancel cannot mask the others.
@@ -72,14 +75,14 @@ class InProcessExecutor:
         self._workers.clear()
 
     async def submit(self, key: str, coro_factory: CoroFactory) -> None:
-        """Enqueue a job. A free worker picks it up and invokes the factory."""
+        """Enqueue a job for the next available worker."""
         if self._closed:
             msg = "Executor is closed"
             raise RuntimeError(msg)
         await self._queue.put((key, coro_factory, admitted_maintenance_caller()))
 
     async def cancel(self, key: str) -> bool:
-        """Cancel the in-flight task for ``key``. Returns False if not in flight."""
+        """Cancel the in-flight task for ``key``; return False if it is absent."""
         task = self._in_flight.get(key)
         if task is None or task.done():
             return False
@@ -88,20 +91,27 @@ class InProcessExecutor:
 
     @staticmethod
     async def _await_task(task: asyncio.Task) -> None:
+        """Wait for task completion without losing the worker's cancellation."""
         # A bare ``await task`` relies on the task's own wakeup of its awaiter. On
         # Python 3.10, when stop() cancels this worker while the job task is also
         # finishing, that wakeup is lost: the job task completes but the worker is
-        # never rescheduled, so the event loop idles forever in select(None) — a
+        # never rescheduled, so the event loop idles forever in select(None) 鈥?a
         # hard deadlock in stop(). A done-callback + Event is immune (it is the
-        # same mechanism stop()'s own asyncio.gather uses, which never hangs), and
-        # task.result() re-raises CancelledError/exception exactly like await task.
+        # same mechanism stop()'s own asyncio.gather uses, which never hangs).
         done = asyncio.Event()
         task.add_done_callback(lambda _t: done.set())
         await done.wait()
-        task.result()
+        # A cancelled job leaves its worker available. Cancellation of the
+        # worker itself must propagate from done.wait(), including loop shutdown.
+        with contextlib.suppress(asyncio.CancelledError):
+            task.result()
 
     async def _worker(self, worker_id: int) -> None:
-        while True:
+        """Run queued jobs until shutdown, returning claimed work to the queue."""
+        # stop() snapshots _in_flight before awaiting the job cancels it makes, so a
+        # worker that survives that cancellation must not pick up the next queued job:
+        # it would run unwatched while the event loop is torn down.
+        while not self._closed:
             try:
                 key, coro_factory, caller_id = await self._queue.get()
             except asyncio.CancelledError:
@@ -110,8 +120,24 @@ class InProcessExecutor:
                 # Keep the trusted caller when the worker starts this task,
                 # independently of the context in which the pool was created.
                 while True:
+                    # stop() can begin after this worker claimed the job above. Creating the
+                    # task would then run it unwatched while the loop is torn down, so the
+                    # closed check has to happen BEFORE create_task, not after: create_task
+                    # schedules the coroutine immediately and its first statement runs before
+                    # the worker can look at _closed again.
+                    if self._closed:
+                        self._queue.put_nowait((key, coro_factory, caller_id))
+                        self._queue.task_done()
+                        return
                     async with write_admission("task", name="background_start", caller_id=caller_id) as refusal:
                         if refusal is None:
+                            # write_admission is a suspension point, so stop() may have run
+                            # between the check above and here. Re-check before scheduling,
+                            # otherwise the coroutine's first statement still runs.
+                            if self._closed:
+                                self._queue.put_nowait((key, coro_factory, caller_id))
+                                self._queue.task_done()
+                                return
                             task = asyncio.create_task(coro_factory())
                             writing_on(task, name="background_run")
                             break
@@ -121,22 +147,17 @@ class InProcessExecutor:
                 self._queue.put_nowait((key, coro_factory, caller_id))
                 self._queue.task_done()
                 return
+            if self._closed:
+                # Shutdown may begin while this worker waits for a job or a pause.
+                task.cancel()
+                self._queue.put_nowait((key, coro_factory, caller_id))
+                self._queue.task_done()
+                return
             # A migration pause waits for the task and not only for the job's status: a run that is
             # told to stop is marked as cancelled at once, and still writes until its task ends.
             self._in_flight[key] = task
             try:
                 await self._await_task(task)
-            except asyncio.CancelledError:
-                # A cancelled job must not take the worker down with it — but a
-                # cancel aimed at the WORKER (stop()) must. ``Task.cancelling()``
-                # is Python 3.11+; the project supports 3.10, so we distinguish
-                # the two with an explicit ``_closed`` flag set by ``stop()``
-                # rather than that version-specific API. When ``stop()`` ran, the
-                # cancel targets the worker — re-raise to exit. Otherwise it was
-                # a ``cancel(key)`` aimed at the job — swallow and keep serving.
-                if self._closed:
-                    raise
-                await logger.adebug(f"Background job {key} cancelled on worker {worker_id}")
             except Exception as exc:  # noqa: BLE001
                 await logger.aerror(f"Background job {key} failed on worker {worker_id}: {exc}", exc_info=True)
             finally:
