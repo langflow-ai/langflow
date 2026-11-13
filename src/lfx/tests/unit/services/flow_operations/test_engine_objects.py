@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import copy
 import json
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -306,6 +307,66 @@ def test_the_staged_graph_is_the_graph_keep_makes(engine):
     with pytest.raises(RuntimeError, match="no batch is staged"):
         state.to_json(staged=True)
     assert state.to_json() == staged
+
+
+def test_a_state_hashes_as_its_text_does(engine):
+    """``GraphState.graph_hash`` is ``GraphPlain.graph_hash`` of the state's JSON text, committed or staged."""
+    state = engine.GraphState(FLOW)
+    assert state.graph_hash() == engine.GraphPlain(state.to_json().encode()).graph_hash()
+    with pytest.raises(RuntimeError, match="no batch is staged"):
+        state.graph_hash(staged=True)
+    state.stage(set_value("y"))
+    staged = state.graph_hash(staged=True)
+    assert staged == engine.GraphPlain(state.to_json(staged=True).encode()).graph_hash()
+    assert staged != state.graph_hash()
+    state.keep()
+    assert state.graph_hash() == staged
+
+
+def test_a_snapshot_keeps_the_graph_as_it_was(engine):
+    """A snapshot writes and hashes the committed graph as it was, whatever batches come after."""
+    state = engine.GraphState(FLOW)
+    text, hashed = state.to_json(), state.graph_hash()
+    snapshot = state.snapshot()
+    state.apply(set_value("y"))
+    state.stage(set_value("z"))
+    assert (snapshot.to_json(), snapshot.graph_hash()) == (text, hashed)
+    later = state.snapshot()
+    assert (later.to_json(), later.graph_hash()) == (state.to_json(), state.graph_hash())
+    assert value_of(json.loads(later.to_json())) == "y"
+
+
+def test_a_snapshot_is_read_on_another_thread_while_batches_go_on(engine):
+    """A server writes and hashes a snapshot on a worker thread while its event loop applies batches."""
+    template = {f"f{index}": {"value": "x" * 100, "type": "str"} for index in range(20)}
+    nodes = [{"id": f"n{index}", "data": {"node": {"template": template}}} for index in range(300)]
+    state = engine.GraphState({"nodes": nodes, "edges": []})
+
+    def write_field(node_id: str, field: str, value: str) -> None:
+        path = ["data", "node", "template", field, "value"]
+        update = {"id": node_id, "op": "set_field", "path": path, "value": value}
+        state.apply([{"type": "update_nodes", "updates": [update]}])
+
+    expected, snapshots = [], []
+    for index in range(5):
+        expected.append((state.to_json(), state.graph_hash()))
+        snapshots.append(state.snapshot())
+        write_field("n0", "f0", f"v{index}")
+    seen: list[tuple[str, str]] = []
+
+    def read() -> None:
+        seen.extend((snapshot.to_json(), snapshot.graph_hash()) for snapshot in snapshots)
+
+    def write() -> None:
+        for index in range(200):
+            write_field(f"n{index}", "f1", "w")
+
+    threads = [threading.Thread(target=read), threading.Thread(target=write)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert seen == expected
 
 
 def _two_nodes_and_an_edge() -> dict[str, Any]:

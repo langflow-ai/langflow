@@ -153,8 +153,8 @@ def drop_statements(dialect: str) -> tuple[str, ...]:
     return ()
 
 
-async def delete_history_rows(session: AsyncSession, statement: Executable) -> None:
-    """Run a ``DELETE`` of ``flow_operation`` rows that Langflow itself decided on.
+async def delete_history_rows(session: AsyncSession, statement: Executable) -> int:
+    """Run a ``DELETE`` of ``flow_operation`` rows that Langflow itself decided on; return the rows deleted.
 
     On PostgreSQL the transaction is marked as maintenance for the statement.
     SQLite's trigger refuses every delete, so it is lifted for the statement
@@ -164,15 +164,15 @@ async def delete_history_rows(session: AsyncSession, statement: Executable) -> N
     if dialect == "postgresql":
         await session.exec(text(f"SET LOCAL {MAINTENANCE_SETTING} = 'on'"))
         try:
-            await session.exec(statement)
+            result = await session.exec(statement)
         finally:
             await session.exec(text(f"SET LOCAL {MAINTENANCE_SETTING} = 'off'"))
-        return
+        return result.rowcount
     if dialect != "sqlite":
-        await session.exec(statement)
-        return
+        return (await session.exec(statement)).rowcount
     await session.exec(text(f"DROP TRIGGER IF EXISTS {DELETE_TRIGGER}"))
     try:
-        await session.exec(statement)
+        result = await session.exec(statement)
     finally:
         await session.exec(text(_SQLITE_DELETE_TRIGGER))
+    return result.rowcount

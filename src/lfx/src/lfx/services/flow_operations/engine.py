@@ -6,7 +6,7 @@ A server picks an engine by constructing a different object, or by the
 ``lfx_native.ops``:
 
 - ``GraphState(flow)``: a graph kept loaded between batches, with
-  ``apply(operations, forward=, backward=)``, ``stage(...)``, ``keep()``,
+  ``apply(operations, forward=, backward=, forward_json=)``, ``stage(...)``, ``keep()``,
   ``drop()``, ``replay(operations, backward=)``, ``staged``, ``to_dict()``
   and ``to_json(staged=)``;
 - ``GraphPlain(flow)``: a graph read once, with ``validate(base,
@@ -55,7 +55,7 @@ from lfx.services.flow_operations.exceptions import (
     RestoreFixNotAllowedError,
 )
 from lfx.services.flow_operations.ids import new_edge_id, new_table_row_id
-from lfx.services.flow_operations.json_io import copy_json, dumps, read_data, read_operations
+from lfx.services.flow_operations.json_io import copy_json, dump_bytes, dumps, read_data, read_operations
 from lfx.services.flow_operations.parse import parse_operations
 from lfx.services.flow_operations.plain import GraphPlain as _CorePlain
 from lfx.services.flow_operations.schema import NODE_SCHEMA_PATH, load_node_schema
@@ -82,6 +82,13 @@ def _rows(value: Any, name: str) -> list[Any]:
 # --- The Python engine ----------------------------------------------------------------------------
 
 
+def _with_forward_json(result: dict[str, Any], *, forward: bool) -> dict[str, Any]:
+    """``result`` with ``forward_operations_json``, and without ``forward_operations`` unless ``forward`` asks."""
+    operations = result["forward_operations"] if forward else result.pop("forward_operations")
+    result["forward_operations_json"] = [dump_bytes(operation) for operation in operations]
+    return result
+
+
 class PythonGraphState:
     """A flow graph that the Python engine keeps loaded, to apply or replay many batches on it."""
 
@@ -90,13 +97,28 @@ class PythonGraphState:
     def __init__(self, flow: Any) -> None:
         self._state = _state.GraphState(read_data(flow, finite=True))
 
-    def apply(self, operations: Any, *, forward: bool = False, backward: bool = False) -> dict[str, Any]:
-        """Apply a batch, with every rule; returns what it did."""
-        return copy_json(self._state.apply(read_operations(operations), forward=forward, backward=backward))
+    def apply(
+        self, operations: Any, *, forward: bool = False, backward: bool = False, forward_json: bool = False
+    ) -> dict[str, Any]:
+        """Apply a batch, with every rule; returns what it did.
 
-    def stage(self, operations: Any, *, forward: bool = False, backward: bool = False) -> dict[str, Any]:
+        With ``forward_json``, ``forward_operations_json`` lists each forward operation as the JSON text
+        ``to_json`` writes, one ``bytes`` each: the text an operation log stores.
+        """
+        result = self._state.apply(read_operations(operations), forward=forward or forward_json, backward=backward)
+        return copy_json(_with_forward_json(result, forward=forward) if forward_json else result)
+
+    def stage(
+        self, operations: Any, *, forward: bool = False, backward: bool = False, forward_json: bool = False
+    ) -> dict[str, Any]:
         """Apply a batch, as ``apply`` does, and keep it staged until ``keep`` or ``drop``."""
-        return copy_json(self._state.stage(read_operations(operations), forward=forward, backward=backward))
+        result = self._state.stage(read_operations(operations), forward=forward or forward_json, backward=backward)
+        return copy_json(_with_forward_json(result, forward=forward) if forward_json else result)
+
+    def stage_json(self, operations: Any) -> list[bytes]:
+        """``stage(operations, forward_json=True)["forward_operations_json"]``, without the rest of the result."""
+        result = self._state.stage(read_operations(operations), forward=True, backward=False)
+        return [dump_bytes(operation) for operation in result["forward_operations"]]
 
     def keep(self) -> None:
         self._state.keep()
@@ -115,6 +137,14 @@ class PythonGraphState:
     def to_json(self, *, staged: bool = False) -> str:
         """The committed graph as JSON text; with ``staged``, the graph with the staged batch."""
         return self._state.to_json(staged=staged)
+
+    def graph_hash(self, *, staged: bool = False) -> str:
+        """The committed graph's ``graph_hash``; with ``staged``, the graph with the staged batch."""
+        return self._state.graph_hash(staged=staged)
+
+    def snapshot(self) -> _state.GraphSnapshot:
+        """The committed graph as it is now, to write (``to_json``) and hash (``graph_hash``) while batches go on."""
+        return self._state.snapshot()
 
     def to_dict(self) -> dict[str, Any]:
         return self._state.to_dict()
@@ -359,11 +389,30 @@ class RustGraphState:
     def __init__(self, flow: Any) -> None:
         self._state = _call(_native().GraphState, flow)
 
-    def apply(self, operations: Any, *, forward: bool = False, backward: bool = False) -> dict[str, Any]:
-        return _call(self._state.apply, operations, forward=forward, backward=backward)
+    def apply(
+        self, operations: Any, *, forward: bool = False, backward: bool = False, forward_json: bool = False
+    ) -> dict[str, Any]:
+        return _call(self._state.apply, operations, forward=forward, backward=backward, forward_json=forward_json)
 
-    def stage(self, operations: Any, *, forward: bool = False, backward: bool = False) -> dict[str, Any]:
-        return _call(self._state.stage, operations, forward=forward, backward=backward)
+    def stage(
+        self, operations: Any, *, forward: bool = False, backward: bool = False, forward_json: bool = False
+    ) -> dict[str, Any]:
+        # The write path calls this once per batch: the native call is inlined, without ``_call``.
+        try:
+            return self._state.stage(operations, forward=forward, backward=backward, forward_json=forward_json)
+        except _native().EngineError as error:
+            raise _error_from_native(error) from None
+
+    def stage_json(self, operations: Any) -> list[bytes]:
+        """``stage(operations, forward_json=True)["forward_operations_json"]``, without the rest of the result.
+
+        The native ``stage`` with only ``forward_json`` returns just that list, so no other part is built.
+        """
+        try:
+            result = self._state.stage(operations, forward_json=True)
+        except _native().EngineError as error:
+            raise _error_from_native(error) from None
+        return result.get("forward_operations_json") or []
 
     def keep(self) -> None:
         self._state.keep()
@@ -381,8 +430,29 @@ class RustGraphState:
     def to_json(self, *, staged: bool = False) -> str:
         return self._state.to_json(staged=staged)
 
+    def graph_hash(self, *, staged: bool = False) -> str:
+        return _call(self._state.graph_hash, staged=staged)
+
+    def snapshot(self) -> RustGraphSnapshot:
+        return RustGraphSnapshot(self._state.snapshot())
+
     def to_dict(self) -> dict[str, Any]:
         return self._state.to_dict()
+
+
+class RustGraphSnapshot:
+    """A graph as a ``RustGraphState`` held it when ``snapshot`` took it (``lfx_native.ops.GraphSnapshot``)."""
+
+    __slots__ = ("_snapshot",)
+
+    def __init__(self, snapshot: Any) -> None:
+        self._snapshot = snapshot
+
+    def to_json(self) -> str:
+        return self._snapshot.to_json()
+
+    def graph_hash(self) -> str:
+        return _call(self._snapshot.graph_hash)
 
 
 class RustGraphPlain:

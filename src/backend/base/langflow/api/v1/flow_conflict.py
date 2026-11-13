@@ -131,7 +131,11 @@ async def ensure_version_precondition(
     await require_repaired_flow_token(session, db_flow, expected)
     if expected is None or db_flow.version_token is None:
         return
-    if db_flow.version_token == expected:
+    from langflow.services.flow_history.recorder import response_version_token
+
+    # In WAL mode the token also names the log's head (multiplayer writes never touch the row).
+    current = await response_version_token(session, db_flow)
+    if current == expected:
         return
 
     author_name = await resolve_author_name(session, db_flow.last_modified_by)
@@ -140,7 +144,7 @@ async def ensure_version_precondition(
         detail=build_conflict_detail(
             flow_id=db_flow.id,
             expected=expected,
-            current=db_flow.version_token,
+            current=current,
             author_id=db_flow.last_modified_by,
             author_name=author_name,
             modified_at=db_flow.updated_at,

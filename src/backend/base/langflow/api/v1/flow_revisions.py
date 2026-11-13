@@ -26,7 +26,7 @@ from langflow.api.v1.authz_route_dependencies import AuthorizedReadFlow, Authori
 from langflow.api.v1.flow_conflict import parse_if_match
 from langflow.api.v1.flows import _validate_catalog_policy_for_write
 from langflow.api.v1.flows_helpers import _export_variable_names, _patch_flow
-from langflow.services.database.models.flow.guards import lock_flow_for_read, lock_flow_for_update
+from langflow.services.database.models.flow.guards import lock_flow_for_update
 from langflow.services.database.models.flow.model import FlowUpdate, FlowWriteRead
 from langflow.services.database.models.flow_version.crud import create_flow_version_entry
 from langflow.services.database.models.flow_version.model import FlowVersion
@@ -35,7 +35,7 @@ from langflow.services.deps import get_catalog_policy_service, get_storage_servi
 from langflow.services.flow_history.envelope import RESTORE_CAUSE
 from langflow.services.flow_history.errors import FlowHistoryError
 from langflow.services.flow_history.maintenance import purge_history
-from langflow.services.flow_history.recorder import flow_history_enabled
+from langflow.services.flow_history.recorder import flow_history_enabled, log_head
 from langflow.services.flow_history.replay import reconstruct_graph
 from langflow.services.flow_history.restore_fixes import RESTORE_FIXES_DESCRIPTION, RestoreFix, apply_restore_fixes
 from langflow.services.flow_history.secrets import strip_graph_secrets
@@ -131,7 +131,7 @@ async def list_revisions(
     if unknown:
         raise HTTPException(status_code=422, detail=f"Unknown include value(s): {', '.join(sorted(unknown))}")
 
-    await lock_flow_for_read(session, flow)
+    # No lock: the timeline is one statement, and a read never waits for a writer.
     try:
         page = await read_timeline(
             session,
@@ -147,7 +147,7 @@ async def list_revisions(
     usernames = await _usernames(session, page.entries)
     return RevisionPage(
         flow_id=flow.id,
-        latest_revision=flow.latest_revision,
+        latest_revision=max(flow.latest_revision, await log_head(session, flow.id)),
         current_revision=flow.current_revision,
         earliest_revision=page.earliest_revision,
         entries=[_entry(entry, usernames) for entry in page.entries],
@@ -204,18 +204,17 @@ async def read_revision(
     revision: int,
 ) -> RevisionGraph:
     """Return the flow's graph as it was at ``revision``."""
-    await lock_flow_for_read(session, flow)
+    # No lock: a read that races compaction retries (see ``reconstruct_graph``).
+    latest_revision = max(flow.latest_revision, await log_head(session, flow.id))
     try:
-        graph = await reconstruct_graph(
-            session, flow.id, revision, latest_revision=flow.latest_revision, verify_anchor=True
-        )
+        graph = await reconstruct_graph(session, flow.id, revision, latest_revision=latest_revision, verify_anchor=True)
     except FlowHistoryError as exc:
         raise history_http_error(exc) from exc
     known_variable_names = await _export_variable_names(session, flow.user_id)
     return RevisionGraph(
         flow_id=flow.id,
         revision=revision,
-        latest_revision=flow.latest_revision,
+        latest_revision=latest_revision,
         data=strip_graph_secrets(graph, known_variable_names),
     )
 

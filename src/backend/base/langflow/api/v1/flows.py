@@ -110,6 +110,7 @@ from langflow.services.database.lock_retry import (
 from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
 )
+from langflow.services.database.models.flow.guards import lock_flows_oplog
 from langflow.services.database.models.flow.model import (
     Flow,
     FlowCreate,
@@ -616,11 +617,21 @@ async def read_flows(
 @router.get("/{flow_id}", response_model=FlowRead, status_code=200)
 async def read_flow(
     *,
-    flow_id: UUID,  # noqa: ARG001
-    flow: AuthorizedReadFlow,
+    flow_id: UUID,
+    session: DbSession,
     current_user: CurrentActiveUser,
 ):
-    """Read a flow."""
+    """Read a flow.
+
+    With the flow history on PostgreSQL, the graph is the current one in every write mode
+    (the cached graph, or ``Flow.data`` plus the log rows after it), sent as JSON text.
+    """
+    from langflow.api.v1.authz_route_dependencies import get_authorized_flow_for_read
+    from langflow.api.v2.flows import multiplayer_available, v1_current_flow_response
+
+    if multiplayer_available(session):
+        return await v1_current_flow_response(session, flow_id, current_user)
+    flow = await get_authorized_flow_for_read(flow_id, current_user, session)
     return _flow_read_for_caller(flow, current_user.id)
 
 
@@ -1366,6 +1377,8 @@ async def upload_file(
     owned_existing_flows_by_id: dict[UUID, Flow] = {}
     foreign_existing_ids: set[UUID] = set()
     if requested_ids:
+        # The flows' write locks before their row locks, in the order multiplayer writers take them.
+        await lock_flows_oplog(session, requested_ids)
         owned_existing_flows = (
             await session.exec(
                 select(Flow).where(col(Flow.id).in_(requested_ids), Flow.user_id == current_user.id).with_for_update()

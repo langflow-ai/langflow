@@ -26,11 +26,17 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex, PoisonError, TryLockError};
 
-use crate::value::{FiniteValue, Map, Value};
+use crate::json_out::{self, Ascii};
+use crate::value::{AnyMap, AnyString, AnyValue, FiniteAnyValue};
+#[path = "snapshot_rows.rs"]
+mod snapshot_rows;
 use indexmap::{IndexMap, IndexSet};
 use serde::ser::{Serialize, SerializeMap, Serializer};
 
+use crate::ops::canonical;
 use crate::ops::edges::{EdgeIndex, GraphRead};
 use crate::ops::entry::EntryExt;
 use crate::ops::error::{Error, Result};
@@ -38,11 +44,135 @@ use crate::ops::fields::{self, FieldLayer};
 use crate::ops::keyed::ListIndex;
 use crate::ops::ops::{Edge, Node, PathExt, Segment};
 use crate::ops::schema::{KeyedList, NODE_SCHEMA};
-use crate::ops::validate::{
-    Numbers, PathPart, find_load_violations, validate_flow_data, violations_error,
-};
+use crate::ops::validate::{Numbers, PathPart, validate_flow_data};
 
 // --- Layers --------------------------------------------------------------------------------
+
+/// Entries by key in insertion order, as a Python `dict` keeps them.
+///
+/// A removal leaves a hole in its slot, which iteration skips, so it moves no
+/// other entry. A replaced entry keeps its slot, and a new one, or one added
+/// again after a removal, goes last. Once holes outnumber the entries,
+/// [`Self::pack_if_sparse`] packs them, which moves each entry at most once
+/// for every removal since the last packing.
+#[derive(Debug)]
+pub(crate) struct Slots<V> {
+    entries: Vec<Option<(String, V)>>,
+    /// The slot of each entry.
+    index: HashMap<String, usize>,
+}
+
+impl<V> Slots<V> {
+    fn new() -> Self {
+        Self {
+            entries: Vec::new(),
+            index: HashMap::new(),
+        }
+    }
+
+    /// The number of entries.
+    pub fn len(&self) -> usize {
+        self.index.len()
+    }
+
+    /// The number of slots, holes included.
+    #[cfg(test)]
+    fn slots(&self) -> usize {
+        self.entries.len()
+    }
+
+    pub fn get(&self, key: &str) -> Option<&V> {
+        let slot = *self.index.get(key)?;
+        self.entries[slot].as_ref().map(|(_, value)| value)
+    }
+
+    pub fn get_mut(&mut self, key: &str) -> Option<&mut V> {
+        let slot = *self.index.get(key)?;
+        self.entries[slot].as_mut().map(|(_, value)| value)
+    }
+
+    pub fn contains_key(&self, key: &str) -> bool {
+        self.index.contains_key(key)
+    }
+
+    /// The slot of the entry with `key`.
+    pub fn get_index_of(&self, key: &str) -> Option<usize> {
+        self.index.get(key).copied()
+    }
+
+    /// Replace the entry with `key` in its slot, or add it last.
+    pub fn insert(&mut self, key: String, value: V) {
+        if let Some(&slot) = self.index.get(&key) {
+            if let Some((_, stored)) = &mut self.entries[slot] {
+                *stored = value;
+            }
+            return;
+        }
+        self.index.insert(key.clone(), self.entries.len());
+        self.entries.push(Some((key, value)));
+    }
+
+    /// Remove the entry with `key`, leaving a hole in its slot.
+    pub fn remove(&mut self, key: &str) -> Option<V> {
+        let slot = self.index.remove(key)?;
+        self.entries[slot].take().map(|(_, value)| value)
+    }
+
+    /// Pack the entries when holes outnumber them. Returns whether it did,
+    /// which moves their slots.
+    fn pack_if_sparse(&mut self) -> bool {
+        if self.entries.len() - self.index.len() <= self.index.len() {
+            return false;
+        }
+        self.entries.retain(Option::is_some);
+        if self.entries.capacity() > 4 * self.entries.len().max(4) {
+            self.entries.shrink_to_fit();
+        }
+        for (slot, (key, _)) in self.entries.iter().flatten().enumerate() {
+            *self.index.get_mut(key).expect("an entry is indexed") = slot;
+        }
+        true
+    }
+
+    /// The entries, in order.
+    pub fn iter(&self) -> impl Iterator<Item = (&String, &V)> {
+        self.entries
+            .iter()
+            .flatten()
+            .map(|(key, value)| (key, value))
+    }
+
+    #[cfg(test)]
+    pub fn keys(&self) -> impl Iterator<Item = &String> {
+        self.iter().map(|(key, _)| key)
+    }
+
+    pub fn values(&self) -> impl Iterator<Item = &V> {
+        self.iter().map(|(_, value)| value)
+    }
+
+    fn into_values(self) -> impl Iterator<Item = V> {
+        self.entries.into_iter().flatten().map(|(_, value)| value)
+    }
+}
+
+impl<V> FromIterator<(String, V)> for Slots<V> {
+    fn from_iter<I: IntoIterator<Item = (String, V)>>(entries: I) -> Self {
+        let mut slots = Self::new();
+        for (key, value) in entries {
+            slots.insert(key, value);
+        }
+        slots
+    }
+}
+
+impl<V> std::ops::Index<&str> for Slots<V> {
+    type Output = V;
+
+    fn index(&self, key: &str) -> &V {
+        self.get(key).expect("an entry with this key")
+    }
+}
 
 /// A map that a batch changes through a layer of its own.
 ///
@@ -52,10 +182,11 @@ use crate::ops::validate::{
 ///
 /// Entries keep their order, as the nodes and edges of a flow keep theirs in
 /// the Python engine and in the editor: a removal keeps the order of the
-/// others, a replaced entry keeps its place, and a new one goes last.
+/// others, a replaced entry keeps its place, and a new one goes last
+/// ([`Slots`]).
 #[derive(Debug)]
 pub(crate) struct Layered<V> {
-    stored: IndexMap<String, V>,
+    stored: Slots<V>,
     /// What the batch wrote, by key: the new value, or `None` for a stored
     /// entry that the batch removed.
     layer: IndexMap<String, Option<V>>,
@@ -69,7 +200,7 @@ impl<V: Clone> Layered<V> {
 
     fn with_stored(stored: IndexMap<String, V>) -> Self {
         Self {
-            stored,
+            stored: stored.into_iter().collect(),
             layer: IndexMap::new(),
         }
     }
@@ -140,48 +271,29 @@ impl<V: Clone> Layered<V> {
     }
 
     /// Make the batch's changes part of the stored map, in time proportional
-    /// to them, and for removals to the entries after the removed ones.
-    pub fn fold(&mut self) {
-        let mut removed = Vec::new();
-        for (key, written) in std::mem::take(&mut self.layer) {
+    /// to them. Returns whether the stored map packed its slots, which moves
+    /// them ([`Slots::pack_if_sparse`]).
+    pub fn fold(&mut self) -> bool {
+        for (key, written) in self.layer.drain(..) {
             match written {
-                Some(value) => {
-                    self.stored.insert(key, value);
-                }
-                None => removed.extend(self.stored.get_index_of(&key)),
+                Some(value) => self.stored.insert(key, value),
+                None => drop(self.stored.remove(&key)),
             }
         }
-        self.remove_slots(removed);
+        self.shrink_large_layer();
+        self.stored.pack_if_sparse()
     }
 
-    /// Remove the stored entries at `slots`, keeping the order of the others.
-    ///
-    /// Removing one entry moves every entry after it up one place. When that
-    /// moves fewer entries in all than the map holds, as for entries near
-    /// the end, each is removed in turn, from the last; else one pass keeps
-    /// the entries not removed.
-    fn remove_slots(&mut self, mut slots: Vec<usize>) {
-        let len = self.stored.len();
-        slots.sort_unstable();
-        let moved: usize = slots.iter().map(|slot| len - slot).sum();
-        if moved <= len {
-            for slot in slots.into_iter().rev() {
-                self.stored.shift_remove_index(slot);
-            }
-            return;
+    fn shrink_large_layer(&mut self) {
+        if self.layer.capacity() > fields::MAX_RETAINED_BATCH_ENTRIES {
+            self.layer.shrink_to_fit();
         }
-        let mut slots = slots.into_iter().peekable();
-        let mut slot = 0;
-        self.stored.retain(|_, _| {
-            let keep = slots.next_if_eq(&slot).is_none();
-            slot += 1;
-            keep
-        });
     }
 
     /// Drop the batch's changes.
     pub fn discard(&mut self) {
         self.layer.clear();
+        self.shrink_large_layer();
     }
 
     /// The stored entries, without a staged batch's layer. Never in the
@@ -204,7 +316,7 @@ impl<V: Clone> Layered<V> {
         let added = self
             .layer
             .iter()
-            .filter(|(key, _)| !self.stored.contains_key(*key))
+            .filter(|(key, _)| !self.stored.contains_key(key))
             .filter_map(|(key, written)| written.as_ref().map(|value| (key, value)));
         kept.chain(added)
     }
@@ -216,18 +328,52 @@ impl<V: Clone> Layered<V> {
     }
 }
 
+/// The committed entries slot for slot ([`Slots`]): `None` in a hole.
+type SnapshotRows = snapshot_rows::Rows<Option<AnyMap>>;
+
+/// Mirror the batch's layer into `mirror`, before [`Layered::fold`] folds it:
+/// a hole for each removal, and each new entry last, in the order fold adds
+/// them.
+fn mirror_layer<V>(
+    mirror: &mut SnapshotRows,
+    entries: &Layered<V>,
+    object: impl Fn(&V) -> &AnyMap,
+) {
+    for (id, written) in &entries.layer {
+        match (written, entries.stored.get_index_of(id)) {
+            (Some(value), Some(slot)) => mirror.set(slot, Some(object(value).clone())),
+            (Some(value), None) => mirror.push_back(Some(object(value).clone())),
+            (None, Some(slot)) => mirror.set(slot, None),
+            (None, None) => {}
+        }
+    }
+}
+
+/// A mirror of `entries` after they packed their slots.
+fn packed_mirror<V>(entries: &Layered<V>, object: impl Fn(&V) -> &AnyMap) -> SnapshotRows {
+    entries
+        .stored
+        .values()
+        .map(|value| Some(object(value).clone()))
+        .collect()
+}
+
 // --- The graph -----------------------------------------------------------------------------
 
 /// The ids of the edges at each node.
 #[derive(Debug)]
-pub(crate) struct EdgesAt(Layered<IndexSet<String>>);
+pub(crate) struct EdgesAt(Layered<IndexSet<AnyString>>);
 
 impl EdgesAt {
     fn attach(&mut self, id: &str, edge: &Edge) {
+        let Some(AnyValue::String(key)) = edge.as_map().get("id") else {
+            unreachable!("an edge has a string id");
+        };
+        debug_assert_eq!(id, key.as_str());
         for end in ends(edge) {
             self.0
                 .get_or_insert_with(end, IndexSet::new)
-                .insert(id.to_owned());
+                .insert(key.clone());
         }
     }
 
@@ -243,13 +389,11 @@ impl EdgesAt {
     }
 }
 
-fn ends(edge: &Edge) -> Vec<&str> {
+fn ends(edge: &Edge) -> impl Iterator<Item = &str> {
     let (source, target) = (edge.source(), edge.target());
-    if source == target {
-        vec![source]
-    } else {
-        vec![source, target]
-    }
+    [source, target]
+        .into_iter()
+        .take(if source == target { 1 } else { 2 })
 }
 
 /// Nodes and edges by id, edges by the nodes they touch, and the batch's field writes.
@@ -267,7 +411,12 @@ pub(crate) struct Graph {
 
 impl Graph {
     /// The ids of the edges at a node.
-    pub fn edges_at(&self, node_id: &str) -> impl Iterator<Item = &String> {
+    pub fn edges_at(&self, node_id: &str) -> impl Iterator<Item = &str> {
+        self.edge_keys_at(node_id).map(AnyString::as_str)
+    }
+
+    /// The shared ids of the edges at a node, in the same order as `edges_at`.
+    pub(crate) fn edge_keys_at(&self, node_id: &str) -> impl Iterator<Item = &AnyString> {
         self.edges_at.0.get(node_id).into_iter().flatten()
     }
 
@@ -293,7 +442,7 @@ impl Graph {
         &'g self,
         id: &str,
         path: &[Segment],
-        step: impl FnMut(&'g Value, usize, bool) -> Result<Option<&'g Value>>,
+        step: impl FnMut(&'g AnyValue, usize, bool) -> Result<Option<&'g AnyValue>>,
     ) -> Result<Option<fields::Walked<'g>>> {
         let Some(node) = self.nodes.get(id) else {
             return Ok(None);
@@ -319,7 +468,7 @@ impl GraphRead for Graph {
         self.nodes.contains(id)
     }
 
-    fn node_value(&self, id: &str, path: &[&str]) -> Option<Cow<'_, Value>> {
+    fn node_value(&self, id: &str, path: &[&str]) -> Option<Cow<'_, AnyValue>> {
         let node = self.nodes.get(id)?;
         let path: Vec<Segment> = path
             .iter()
@@ -330,12 +479,12 @@ impl GraphRead for Graph {
             .expect("a read of object keys cannot fail")
     }
 
-    fn edge(&self, id: &str) -> Option<&Map> {
+    fn edge(&self, id: &str) -> Option<&AnyMap> {
         self.edges.get(id).map(Edge::as_map)
     }
 
     fn edge_ids_at(&self, node_id: &str) -> impl Iterator<Item = &str> {
-        self.edges_at(node_id).map(String::as_str)
+        self.edges_at(node_id)
     }
 }
 
@@ -353,12 +502,12 @@ pub(crate) fn field_value<'g>(
     id: &str,
     path: &[Segment],
     context: &dyn fmt::Display,
-) -> Result<Option<Cow<'g, Value>>> {
+) -> Result<Option<Cow<'g, AnyValue>>> {
     let Some(node) = graph.nodes.get(id) else {
         return Ok(None);
     };
     let stored = graph.is_stored_node(id);
-    let step = |value: &'g Value, index: usize, in_entry: bool| {
+    let step = |value: &'g AnyValue, index: usize, in_entry: bool| {
         let (parent, segment) = (&path[..index], &path[index]);
         let (Segment::Item(key), true, Some(list_path)) =
             (segment, stored && !in_entry, parent.to_list())
@@ -394,7 +543,7 @@ impl Lists {
         node_id: &str,
         path: &[&str],
         keyed: &'static KeyedList,
-        items: &[Value],
+        items: &[AnyValue],
     ) -> &mut ListIndex {
         let lists = self.by_node.entry(node_id.to_owned()).or_default();
         let position = if let Some(position) = lists
@@ -440,32 +589,41 @@ impl Lists {
 pub struct GraphState {
     /// The flow's top-level object; `nodes` and `edges` hold placeholders.
     /// No operation writes its other keys, which are view state.
-    root: Map,
+    root: AnyMap,
     pub(crate) graph: Graph,
     pub(crate) edge_index: EdgeIndex,
     pub(crate) lists: Lists,
-    /// Whether the flow passed the structural rules since it was loaded or
-    /// last replayed. Apply checks them once, before its first batch.
-    base_checked: bool,
     /// Whether a batch is staged: its layers wait for [`Self::keep`] or
     /// [`Self::drop_staged`].
     staged: bool,
+    /// The length of the graph's last JSON text, to size the next one's
+    /// buffer: growing a buffer of megabytes copies it each time. Its
+    /// snapshots share it.
+    text_len: Arc<AtomicUsize>,
+    snapshot_nodes: SnapshotRows,
+    snapshot_edges: SnapshotRows,
+    snapshot_cache: Mutex<Option<Arc<SnapshotData>>>,
 }
 
 impl GraphState {
     /// Load a flow graph and build its indexes.
     ///
-    /// Loading checks only what the indexes need: flow data is an object,
-    /// `nodes` and `edges` are lists of objects, ids are unique, and each node
-    /// and edge has its shape. Apply checks the other structural rules before
-    /// its first batch; replay does not check them.
+    /// Loading checks every structural rule: flow data is an object, `nodes`
+    /// and `edges` are lists of objects, ids are present and unique, each
+    /// node and edge has its shape, and each edge's source and target nodes
+    /// exist. Apply then checks only what its batch changes, and replay
+    /// checks nothing.
+    ///
+    /// Values are not walked for numbers that are not finite: that check
+    /// belongs to whoever accepts a graph from outside, and skipping it keeps
+    /// the check proportional to the number of nodes and edges.
     ///
     /// # Errors
     ///
-    /// The graph breaks a rule that the indexes need.
-    pub fn new(flow: Value) -> Result<Self> {
-        violations_error(find_load_violations(&flow), "flow.data")?;
-        let Value::Object(mut root) = flow else {
+    /// The graph breaks a structural rule.
+    pub fn new(flow: AnyValue) -> Result<Self> {
+        validate_flow_data(&flow, Numbers::Skip, "flow.data", None)?;
+        let AnyValue::Object(mut root) = flow else {
             unreachable!("the load check refuses flow data that is not an object")
         };
         let nodes = by_id(take_list(&mut root, "nodes"), Node::try_from)?;
@@ -475,8 +633,19 @@ impl GraphState {
             edges_at.attach(id, edge);
         }
         edges_at.0.fold();
+        let snapshot_nodes = nodes
+            .values()
+            .map(|node| Some(node.as_map().clone()))
+            .collect();
+        let snapshot_edges = edges
+            .values()
+            .map(|edge| Some(edge.as_map().clone()))
+            .collect();
         Ok(Self {
             root,
+            snapshot_nodes,
+            snapshot_edges,
+            snapshot_cache: Mutex::new(None),
             graph: Graph {
                 nodes: Layered::with_stored(nodes),
                 edges: Layered::with_stored(edges),
@@ -485,70 +654,9 @@ impl GraphState {
             },
             edge_index: EdgeIndex::default(),
             lists: Lists::default(),
-            base_checked: false,
             staged: false,
+            text_len: Arc::default(),
         })
-    }
-
-    /// Load a flow graph that apply changes next, after checking it against
-    /// the structural rules. It does what the first batch would do, without
-    /// a copy of the flow.
-    ///
-    /// Values are not walked for numbers that are not finite: that check
-    /// belongs to whoever accepts a graph from outside, and skipping it keeps
-    /// the check proportional to the number of nodes and edges.
-    ///
-    /// # Errors
-    ///
-    /// The graph breaks a structural rule.
-    pub(crate) fn checked(flow: Value) -> Result<Self> {
-        validate_flow_data(&flow, Numbers::Skip, "flow.data", None)?;
-        Ok(Self {
-            base_checked: true,
-            ..Self::new(flow)?
-        })
-    }
-
-    /// Check the flow against the structural rules, unless it passed them
-    /// since it was loaded or last replayed. Apply calls this before a batch.
-    ///
-    /// # Errors
-    ///
-    /// The graph breaks a structural rule.
-    pub(crate) fn check_base(&mut self) -> Result<()> {
-        if self.base_checked {
-            return Ok(());
-        }
-        // Loading checked every structural rule but one: that each edge's
-        // nodes exist. Apply and replay keep the others (they refuse a
-        // repeated id, a node or edge without its shape, and a write of a
-        // whole node object). So the graph passes when every edge's nodes
-        // exist, which is checked in place. Else the whole check runs on a
-        // copy, for the error and its violations in document order.
-        let nodes = &self.graph.nodes.stored;
-        let sound = self
-            .graph
-            .edges
-            .stored
-            .values()
-            .all(|edge| nodes.contains_key(edge.source()) && nodes.contains_key(edge.target()));
-        if !sound {
-            validate_flow_data(&self.to_value(), Numbers::Skip, "flow.data", None)?;
-        }
-        self.base_checked = true;
-        Ok(())
-    }
-
-    /// Note that a replay changed the flow, so apply checks it again.
-    pub(crate) fn uncheck_base(&mut self) {
-        self.base_checked = false;
-    }
-
-    /// Whether the next batch that apply or stage carries out checks the
-    /// whole graph against the structural rules first ([`Self::check_base`]).
-    #[must_use]
-    pub fn needs_check(&self) -> bool {
-        !self.base_checked
     }
 
     /// The number of nodes and edges of the committed graph: a measure of
@@ -560,29 +668,29 @@ impl GraphState {
 
     /// The graph as a JSON value.
     #[must_use]
-    pub fn to_value(&self) -> Value {
-        let mut out = Map::with_capacity(self.root.len());
+    pub fn to_value(&self) -> AnyValue {
+        let mut out = AnyMap::with_capacity(self.root.len());
         for (key, value) in &self.root {
             let value = match key.as_str() {
-                "nodes" => Value::Array(
+                "nodes" => AnyValue::Array(
                     self.graph
                         .nodes
                         .values()
                         .map(|node| node.as_value().clone())
                         .collect(),
                 ),
-                "edges" => Value::Array(
+                "edges" => AnyValue::Array(
                     self.graph
                         .edges
                         .values()
-                        .map(|edge| Value::Object(edge.as_map().clone()))
+                        .map(|edge| AnyValue::Object(edge.as_map().clone()))
                         .collect(),
                 ),
                 _ => value.clone(),
             };
-            out.insert(key.clone(), value);
+            out.insert_shared(key.clone(), value);
         }
-        Value::Object(out)
+        AnyValue::Object(out)
     }
 
     /// The graph as JSON text: the text of [`GraphState::to_value`], written
@@ -615,6 +723,154 @@ impl GraphState {
         self.staged.then_some(StagedJson(self))
     }
 
+    /// An empty buffer with room for the graph's last JSON text and a little more.
+    fn text_buffer(&self) -> Vec<u8> {
+        let last = self.text_len.load(Ordering::Relaxed);
+        Vec::with_capacity(last + last / 16)
+    }
+
+    /// The graph as ASCII JSON text ([`crate::ops::api::json_text`]): what
+    /// [`GraphState::json`] writes, with every character above U+007F
+    /// escaped.
+    pub(crate) fn json_text(&self) -> Vec<u8> {
+        let out = graph_text(
+            &self.root,
+            self.graph.nodes.values().map(Node::as_map),
+            self.graph.edges.values().map(Edge::as_map),
+            self.text_buffer(),
+        );
+        self.text_len.store(out.len(), Ordering::Relaxed);
+        out
+    }
+
+    /// The committed graph as it is now, without a staged batch, to read
+    /// while the state goes on changing ([`GraphSnapshot`]). Capturing shares
+    /// the current mirror roots. A later write copies only its search path
+    /// and a bounded leaf while an earlier snapshot remains alive.
+    #[must_use]
+    pub fn snapshot(&self) -> GraphSnapshot {
+        let mut cache = self
+            .snapshot_cache
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
+        self.snapshot_cached(&mut cache)
+    }
+
+    /// Capture the current version without waiting for another capture.
+    /// A caller with the GIL can wait without it when this returns `None`.
+    #[must_use]
+    pub fn try_snapshot(&self) -> Option<GraphSnapshot> {
+        let mut cache = match self.snapshot_cache.try_lock() {
+            Ok(cache) => cache,
+            Err(TryLockError::Poisoned(error)) => error.into_inner(),
+            Err(TryLockError::WouldBlock) => return None,
+        };
+        Some(self.snapshot_cached(&mut cache))
+    }
+
+    fn snapshot_cached(&self, cache: &mut Option<Arc<SnapshotData>>) -> GraphSnapshot {
+        let data = cache.get_or_insert_with(|| {
+            Arc::new(SnapshotData {
+                root: self.root.clone(),
+                nodes: self.snapshot_nodes.clone(),
+                edges: self.snapshot_edges.clone(),
+                text_len: Arc::clone(&self.text_len),
+            })
+        });
+        GraphSnapshot {
+            data: Arc::clone(data),
+        }
+    }
+
+    /// The graph with its staged batch as ASCII JSON text: what
+    /// [`GraphState::staged_json`] writes, with every character above U+007F
+    /// escaped. `None` when no batch is staged.
+    pub(crate) fn staged_json_text(&self) -> Option<Vec<u8>> {
+        if !self.staged {
+            return None;
+        }
+        let graph = &self.graph;
+        let mut out = self.text_buffer();
+        json_out::write_entries(
+            &mut out,
+            self.root
+                .iter()
+                .map(|(key, value)| (key, (key.as_str(), value))),
+            |out, (key, value)| match key {
+                "nodes" => json_out::write_seq(out, self.staged_nodes(), |out, node| {
+                    json_out::write_value(out, &node, Ascii::Escape);
+                }),
+                "edges" => {
+                    json_out::write_seq(out, graph.edges.staged_entries(), |out, (_, edge)| {
+                        json_out::write_map(out, edge.as_map(), Ascii::Escape);
+                    });
+                }
+                _ => json_out::write_value(out, value, Ascii::Escape),
+            },
+            Ascii::Escape,
+        );
+        self.text_len.store(out.len(), Ordering::Relaxed);
+        Some(out)
+    }
+
+    /// The nodes with the staged batch, in the order [`Layered::fold`] gives
+    /// them: a node the batch writes as a copy with the writes, as the fold
+    /// makes them, and any other node as it is.
+    fn staged_nodes(&self) -> impl Iterator<Item = Cow<'_, AnyValue>> {
+        let graph = &self.graph;
+        graph
+            .nodes
+            .staged_entries()
+            .map(|(id, node)| match graph.fields.node(id) {
+                Some(writes) => {
+                    let mut value = node.as_value().clone();
+                    fields::make_writes(&mut value, writes.clone(), &mut Vec::new(), None);
+                    Cow::Owned(value)
+                }
+                None => Cow::Borrowed(node.as_value()),
+            })
+    }
+
+    /// The SHA-256 hex digest of the graph's canonical form: what
+    /// [`canonical::graph_hash`] gives for [`GraphState::to_value`], from the
+    /// loaded graph without a copy. The committed graph, without a staged batch.
+    ///
+    /// # Errors
+    ///
+    /// A number that is not finite as JavaScript reads it.
+    pub fn graph_hash(&self) -> Result<String> {
+        canonical::loaded_graph_hash(
+            &self.root,
+            self.graph
+                .nodes
+                .values()
+                .map(|node| Cow::Borrowed(node.as_value()))
+                .collect(),
+            self.graph.edges.values().map(Edge::as_map).collect(),
+        )
+    }
+
+    /// [`GraphState::graph_hash`] of the graph with its staged batch, as
+    /// [`GraphState::keep`] will make it, or `None` when no batch is staged.
+    ///
+    /// # Errors
+    ///
+    /// A number that is not finite as JavaScript reads it.
+    #[must_use]
+    pub fn staged_graph_hash(&self) -> Option<Result<String>> {
+        if !self.staged {
+            return None;
+        }
+        let graph = &self.graph;
+        let nodes = self.staged_nodes().collect();
+        let edges = graph
+            .edges
+            .staged_entries()
+            .map(|(_, edge)| edge.as_map())
+            .collect();
+        Some(canonical::loaded_graph_hash(&self.root, nodes, edges))
+    }
+
     /// The graph's top-level keys in order, each with what [`GraphState::to_value`]
     /// puts there, borrowed from the graph: for a binding that builds the graph
     /// in its own language without a copy.
@@ -631,25 +887,25 @@ impl GraphState {
 
     /// The graph as a JSON value, without copying it.
     #[must_use]
-    pub fn into_value(self) -> Value {
+    pub fn into_value(self) -> AnyValue {
         let Self {
             mut root, graph, ..
         } = self;
         root.insert(
             "nodes".into(),
-            Value::Array(graph.nodes.into_values().map(Node::into_value).collect()),
+            AnyValue::Array(graph.nodes.into_values().map(Node::into_value).collect()),
         );
         root.insert(
             "edges".into(),
-            Value::Array(
+            AnyValue::Array(
                 graph
                     .edges
                     .into_values()
-                    .map(|edge| Value::Object(edge.into_map()))
+                    .map(|edge| AnyValue::Object(edge.into_map()))
                     .collect(),
             ),
         );
-        Value::Object(root)
+        AnyValue::Object(root)
     }
 
     // --- Batches ---------------------------------------------------------------------
@@ -660,15 +916,40 @@ impl GraphState {
     /// a node the batch deleted and added again is written after it is
     /// added.
     pub(crate) fn commit(&mut self) {
+        self.snapshot_cache
+            .get_mut()
+            .unwrap_or_else(PoisonError::into_inner)
+            .take();
         let graph = &mut self.graph;
-        graph.nodes.fold();
-        graph.edges.fold();
+        mirror_layer(&mut self.snapshot_nodes, &graph.nodes, Node::as_map);
+        mirror_layer(&mut self.snapshot_edges, &graph.edges, Edge::as_map);
+        if graph.nodes.fold() {
+            self.snapshot_nodes = packed_mirror(&graph.nodes, Node::as_map);
+        }
+        if graph.edges.fold() {
+            self.snapshot_edges = packed_mirror(&graph.edges, Edge::as_map);
+        }
         graph.edges_at.0.fold();
-        for (id, writes) in graph.fields.take() {
+        for (id, writes) in graph.fields.drain() {
+            let slot = graph
+                .nodes
+                .stored
+                .get_index_of(&id)
+                .expect("a field write's node exists");
+            // A unique mirror must release its ref before the in-place write.
+            let snapshot_slot = self
+                .snapshot_nodes
+                .get_mut(slot)
+                .expect("mirror slot exists");
+            let previous = snapshot_slot.take();
+            drop(previous);
             let node = graph
                 .nodes
                 .stored_mut(&id)
                 .expect("a field write's node exists");
+            // A plain field write cannot invalidate an index that was never
+            // built. Avoid allocating path keys merely to discover there is none.
+            let indexed = self.lists.by_node.contains_key(&id);
             let mut lists = fields::NodeLists {
                 lists: &mut self.lists,
                 id: &id,
@@ -677,9 +958,11 @@ impl GraphState {
                 node.as_value_mut(),
                 writes,
                 &mut Vec::new(),
-                Some(&mut lists),
+                indexed.then_some(&mut lists),
             );
+            *snapshot_slot = Some(node.as_map().clone());
         }
+        graph.fields.finish();
         self.edge_index.fold();
     }
 
@@ -739,7 +1022,7 @@ impl GraphState {
     /// A copy of the node `id` as the batch sees it, for the backward operations.
     pub(crate) fn node_copy(&self, id: &str) -> Option<Node> {
         let node = self.graph.node_value(id, &[])?.into_owned();
-        let Value::Object(node) = node else {
+        let AnyValue::Object(node) = node else {
             unreachable!("a node is a JSON object")
         };
         Some(Node::try_from(node).expect("a field write keeps the shape of a node"))
@@ -779,11 +1062,11 @@ impl GraphState {
 
 /// Nodes or edges by id, in their order, each made by `make`. The load check
 /// passed, so each one is an object with its shape and a unique id.
-fn by_id<T>(items: Vec<Value>, make: fn(Map) -> Result<T>) -> Result<IndexMap<String, T>> {
+fn by_id<T>(items: Vec<AnyValue>, make: fn(AnyMap) -> Result<T>) -> Result<IndexMap<String, T>> {
     items
         .into_iter()
         .map(|item| {
-            let Value::Object(item) = item else {
+            let AnyValue::Object(item) = item else {
                 unreachable!("the load check refuses nodes and edges that are not objects")
             };
             Ok((item.id().to_owned(), make(item)?))
@@ -825,6 +1108,104 @@ impl Serialize for GraphJson<'_> {
     }
 }
 
+/// A graph as a [`GraphState`] held it when [`GraphState::snapshot`] took
+/// it: read only, and unchanged by the state's later batches. A server takes
+/// one while it holds the state, and writes and hashes it after, on another
+/// thread, while batches go on.
+#[derive(Debug, Clone)]
+pub struct GraphSnapshot {
+    data: Arc<SnapshotData>,
+}
+
+#[derive(Debug)]
+struct SnapshotData {
+    /// The flow's top-level object; `nodes` and `edges` hold placeholders.
+    root: AnyMap,
+    // Snapshots only read objects. Avoid copying each node's tagged value
+    // representation when all that is needed is its shared object pointer.
+    nodes: SnapshotRows,
+    edges: SnapshotRows,
+    /// The length of the state's last JSON text, shared with the state.
+    text_len: Arc<AtomicUsize>,
+}
+
+impl GraphSnapshot {
+    /// Transfer unique payload destruction to a worker; shared releases are cheap.
+    #[must_use]
+    pub fn into_unshared_data(self) -> Option<impl Send + 'static> {
+        Arc::into_inner(self.data)
+    }
+
+    /// The number of nodes and edges: a measure of what work on the whole graph costs.
+    #[must_use]
+    pub fn item_count(&self) -> usize {
+        self.data.nodes.len() + self.data.edges.len()
+    }
+
+    /// The graph as ASCII JSON text: what [`GraphState`] wrote when the
+    /// snapshot was taken ([`crate::ops::api::json_text`]).
+    pub(crate) fn json_text(&self) -> Vec<u8> {
+        let last = self.data.text_len.load(Ordering::Relaxed);
+        let out = graph_text(
+            &self.data.root,
+            self.data.nodes.iter().flatten(),
+            self.data.edges.iter().flatten(),
+            Vec::with_capacity(last + last / 16),
+        );
+        self.data.text_len.store(out.len(), Ordering::Relaxed);
+        out
+    }
+
+    /// The SHA-256 hex digest of the graph's canonical form: what
+    /// [`GraphState::graph_hash`] gave when the snapshot was taken.
+    ///
+    /// # Panics
+    ///
+    /// An internal committed snapshot-row invariant is broken.
+    ///
+    /// # Errors
+    ///
+    /// A number that is not finite as JavaScript reads it.
+    pub fn graph_hash(&self) -> Result<String> {
+        canonical::loaded_graph_hash(
+            &self.data.root,
+            self.data
+                .nodes
+                .iter()
+                .flatten()
+                .map(|node| Cow::Owned(AnyValue::Object(node.clone())))
+                .collect(),
+            self.data.edges.iter().flatten().collect(),
+        )
+    }
+}
+
+/// A loaded graph as ASCII JSON text, into `out`: the top-level keys in
+/// order, with `nodes` and `edges` in their place.
+fn graph_text<'g>(
+    root: &'g AnyMap,
+    nodes: impl IntoIterator<Item = &'g AnyMap>,
+    edges: impl IntoIterator<Item = &'g AnyMap>,
+    mut out: Vec<u8>,
+) -> Vec<u8> {
+    let (mut nodes, mut edges) = (Some(nodes), Some(edges));
+    json_out::write_entries(
+        &mut out,
+        root.iter().map(|(key, value)| (key, (key.as_str(), value))),
+        |out, (key, value)| match key {
+            "nodes" => json_out::write_seq(out, nodes.take().into_iter().flatten(), |out, node| {
+                json_out::write_map(out, node, Ascii::Escape);
+            }),
+            "edges" => json_out::write_seq(out, edges.take().into_iter().flatten(), |out, edge| {
+                json_out::write_map(out, edge, Ascii::Escape);
+            }),
+            _ => json_out::write_value(out, value, Ascii::Escape),
+        },
+        Ascii::Escape,
+    );
+    out
+}
+
 /// Writes a [`GraphState`] with its staged batch ([`GraphState::staged_json`]).
 struct StagedJson<'s>(&'s GraphState);
 
@@ -847,18 +1228,7 @@ struct StagedNodesJson<'s>(&'s GraphState);
 
 impl Serialize for StagedNodesJson<'_> {
     fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
-        let graph = &self.0.graph;
-        serializer.collect_seq(graph.nodes.staged_entries().map(|(id, node)| {
-            match graph.fields.node(id) {
-                // A node the batch writes: a copy with the writes, as the fold makes them.
-                Some(writes) => {
-                    let mut value = node.as_value().clone();
-                    fields::make_writes(&mut value, writes.clone(), &mut Vec::new(), None);
-                    Cow::Owned(value)
-                }
-                None => Cow::Borrowed(node.as_value()),
-            }
-        }))
+        serializer.collect_seq(self.0.staged_nodes())
     }
 }
 
@@ -896,7 +1266,7 @@ impl Serialize for EdgesJson<'_> {
 #[derive(Debug, Clone, Copy)]
 pub enum Entry<'s> {
     /// A key that no operation writes, as stored.
-    Value(&'s Value),
+    Value(&'s AnyValue),
     /// The nodes, in the graph's order.
     Nodes(Nodes<'s>),
     /// The edges, in the graph's order.
@@ -909,7 +1279,7 @@ pub struct Nodes<'s>(&'s Layered<Node>);
 
 impl<'s> Nodes<'s> {
     /// Each node's JSON object.
-    pub fn iter(self) -> impl Iterator<Item = &'s Value> {
+    pub fn iter(self) -> impl Iterator<Item = &'s AnyValue> {
         self.0.values().map(Node::as_value)
     }
 }
@@ -920,30 +1290,30 @@ pub struct Edges<'s>(&'s Layered<Edge>);
 
 impl<'s> Edges<'s> {
     /// Each edge's JSON object.
-    pub fn iter(self) -> impl Iterator<Item = &'s Map> {
+    pub fn iter(self) -> impl Iterator<Item = &'s AnyMap> {
         self.0.values().map(Edge::as_map)
     }
 }
 
 /// The list at `key`, moved out. The load check passed, so it is a list.
-fn take_list(root: &mut Map, key: &str) -> Vec<Value> {
+fn take_list(root: &mut AnyMap, key: &str) -> Vec<AnyValue> {
     match root.get_mut(key).map(std::mem::take) {
-        Some(Value::Array(items)) => items,
+        Some(AnyValue::Array(items)) => items,
         _ => unreachable!("the load check refuses nodes and edges that are not lists"),
     }
 }
 
 /// Parse JSON text, reporting a parse failure as an invalid graph.
-pub(crate) fn parse_json(text: &str) -> Result<Value> {
+pub(crate) fn parse_json(text: &str) -> Result<AnyValue> {
     serde_json::from_str(text).map_err(|error| graph_not_json(&error))
 }
 
 /// Parse JSON text as [`parse_json`] does, refusing a number that is not
-/// finite as a double ([`FiniteValue`]): for a graph that the engine holds
+/// finite as a double ([`FiniteAnyValue`]): for a graph that the engine holds
 /// and changes, as a Python `float` that is not finite is refused.
-pub(crate) fn parse_finite_json(text: &str) -> Result<Value> {
+pub(crate) fn parse_finite_json(text: &str) -> Result<AnyValue> {
     serde_json::from_str(text)
-        .map(|FiniteValue(value)| value)
+        .map(|FiniteAnyValue(value)| value)
         .map_err(|error| graph_not_json(&error))
 }
 
@@ -968,7 +1338,7 @@ pub(crate) fn parse_problem(error: &serde_json::Error) -> String {
 }
 
 /// The value at a path of object keys and array indexes.
-pub(crate) fn resolve<'v>(root: &'v Value, steps: &[PathPart]) -> Option<&'v Value> {
+pub(crate) fn resolve<'v>(root: &'v AnyValue, steps: &[PathPart]) -> Option<&'v AnyValue> {
     steps.iter().try_fold(root, |value, step| match step {
         PathPart::Key(key) => value.as_object()?.get(key),
         PathPart::Index(index) => value.as_array()?.get(*index),
@@ -976,7 +1346,10 @@ pub(crate) fn resolve<'v>(root: &'v Value, steps: &[PathPart]) -> Option<&'v Val
 }
 
 /// The value at a path of object keys and array indexes, to change it.
-pub(crate) fn resolve_mut<'v>(root: &'v mut Value, steps: &[PathPart]) -> Option<&'v mut Value> {
+pub(crate) fn resolve_mut<'v>(
+    root: &'v mut AnyValue,
+    steps: &[PathPart],
+) -> Option<&'v mut AnyValue> {
     steps.iter().try_fold(root, |value, step| match step {
         PathPart::Key(key) => value.as_object_mut()?.get_mut(key),
         PathPart::Index(index) => value.as_array_mut()?.get_mut(*index),
@@ -986,6 +1359,93 @@ pub(crate) fn resolve_mut<'v>(root: &'v mut Value, steps: &[PathPart]) -> Option
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn retained_batch_maps_release_removed_and_refused_payloads() {
+        let payload = Arc::new(());
+        let weak = Arc::downgrade(&payload);
+        let mut layer = Layered::new();
+        layer.insert("a".into(), payload);
+        layer.fold();
+        let capacity = layer.layer.capacity();
+        assert!(capacity > 0);
+        layer.remove("a");
+        layer.fold();
+        assert_eq!(layer.layer.capacity(), capacity);
+        assert!(weak.upgrade().is_none());
+        let refused = Arc::new(());
+        let weak = Arc::downgrade(&refused);
+        layer.insert("refused".into(), refused);
+        layer.discard();
+        assert!(weak.upgrade().is_none());
+    }
+
+    #[test]
+    fn large_batch_maps_are_not_retained_after_success_or_rollback() {
+        let mut layer = Layered::new();
+        for i in 0..=fields::MAX_RETAINED_BATCH_ENTRIES {
+            layer.insert(i.to_string(), Arc::new(()));
+        }
+        layer.fold();
+        assert_eq!(layer.layer.capacity(), 0);
+        assert_eq!(layer.stored.len(), fields::MAX_RETAINED_BATCH_ENTRIES + 1);
+        for i in 0..=fields::MAX_RETAINED_BATCH_ENTRIES {
+            layer.remove(&i.to_string());
+        }
+        layer.fold();
+        assert_eq!(layer.layer.capacity(), 0);
+        assert_eq!(layer.stored.len(), 0);
+        let payload = Arc::new(());
+        let weak = Arc::downgrade(&payload);
+        layer.insert("refused".into(), payload);
+        for i in 0..=fields::MAX_RETAINED_BATCH_ENTRIES {
+            layer.insert(i.to_string(), Arc::new(()));
+        }
+        layer.discard();
+        assert_eq!(layer.layer.capacity(), 0);
+        assert!(weak.upgrade().is_none());
+    }
+
+    #[test]
+    fn a_snapshot_keeps_the_graph_as_it_was() {
+        use crate::json;
+        use crate::ops::api::{graph_json, snapshot_json, state_graph_hash};
+        use crate::ops::{ApplyOptions, Operation};
+        let node = |id: &str| json!({"id": id, "data": {"node": {"template": {"t": {"value": "x", "type": "str"}}}}});
+        let flow = json!({"nodes": [node("a"), node("b")], "edges": [{"id": "e", "source": "a", "target": "b"}], "name": "f"});
+        let mut state = GraphState::new(flow).unwrap();
+        let (text, hash) = (graph_json(&state), state_graph_hash(&state).unwrap());
+        let snapshot = state.snapshot();
+        let write = json!([{"type": "update_nodes", "updates": [
+            {"id": "a", "op": "set_field", "path": ["data", "node", "template", "t", "value"], "value": "y"}
+        ]}]);
+        let delete = json!([{"type": "delete_nodes", "ids": ["b"]}]);
+        for batch in [write, delete] {
+            let operations = Operation::list_from_value(batch).unwrap();
+            state.apply(operations, ApplyOptions::default()).unwrap();
+        }
+        // A staged batch is not in a snapshot either.
+        let staged = json!([{"type": "update_nodes", "updates": [
+            {"id": "a", "op": "set_field", "path": ["data", "node", "template", "t", "value"], "value": "z"}
+        ]}]);
+        state
+            .stage(
+                Operation::list_from_value(staged).unwrap(),
+                ApplyOptions::default(),
+            )
+            .unwrap();
+        let later = state.snapshot();
+        assert_eq!(
+            (snapshot_json(&snapshot), snapshot.graph_hash().unwrap()),
+            (text, hash)
+        );
+        assert_eq!(snapshot_json(&later), graph_json(&state));
+        assert_eq!(
+            later.graph_hash().unwrap(),
+            state_graph_hash(&state).unwrap()
+        );
+        assert_ne!(later.graph_hash().unwrap(), snapshot.graph_hash().unwrap());
+    }
 
     fn stored(keys: &[&str]) -> Layered<u32> {
         let map = keys
@@ -1075,5 +1535,225 @@ mod tests {
         assert!(!map.remove("x"));
         map.fold();
         assert_eq!(keys(&map), ["a"]);
+    }
+
+    #[test]
+    fn loading_refuses_an_edge_without_its_node() {
+        let node = crate::json!({"id": "a", "data": {"node": {"template": {}}}});
+        let edge = crate::json!({"id": "e", "source": "a", "target": "gone"});
+        let flow = crate::json!({"nodes": [node], "edges": [edge]});
+        let error = GraphState::new(flow).unwrap_err();
+        assert_eq!(error.code.as_str(), "FLOW_GRAPH_INVALID", "{error}");
+        let violation = &error.violations[0];
+        assert_eq!(
+            violation.code,
+            crate::ops::validate::ViolationCode::EdgeEndpointInvalid
+        );
+    }
+
+    #[test]
+    fn cached_snapshots_follow_kept_batches_and_ignore_refused_or_dropped_batches() {
+        let mut state =
+            GraphState::new(crate::json!({"nodes":[mirror_node("a").into_value()],"edges":[]}))
+                .unwrap();
+        let before = state.snapshot();
+        assert!(Arc::ptr_eq(&before.data, &state.snapshot().data));
+        let batch = |id: &str| {
+            crate::ops::Operation::list_from_value(crate::json!([{"type":"update_nodes","updates":[{"id":id,"op":"set_field","path":["data","node","template","t","value"],"value":"new"}]}])).unwrap()
+        };
+        state
+            .stage(batch("a"), crate::ops::ApplyOptions::default())
+            .unwrap();
+        assert!(Arc::ptr_eq(&before.data, &state.snapshot().data));
+        assert!(state.drop_staged());
+        assert!(Arc::ptr_eq(&before.data, &state.snapshot().data));
+        assert!(
+            state
+                .apply(batch("missing"), crate::ops::ApplyOptions::default())
+                .is_err()
+        );
+        assert!(Arc::ptr_eq(&before.data, &state.snapshot().data));
+        state
+            .stage(batch("a"), crate::ops::ApplyOptions::default())
+            .unwrap();
+        assert!(state.keep());
+        assert!(!Arc::ptr_eq(&before.data, &state.snapshot().data));
+        assert_ne!(before.graph_hash().unwrap(), state.graph_hash().unwrap());
+    }
+
+    #[test]
+    fn concurrent_snapshot_last_owners_transfer_one_old_payload() {
+        let mut state =
+            GraphState::new(crate::json!({"nodes":[mirror_node("a").into_value()],"edges":[]}))
+                .unwrap();
+        let first = state.snapshot();
+        let second = state.snapshot();
+        let old_map = first.data.nodes[0].as_ref().unwrap().clone();
+        let batch = crate::ops::Operation::list_from_value(crate::json!([{"type":"update_nodes","updates":[{"id":"a","op":"set_field","path":["data","node","template","t","value"],"value":"new"}]}])).unwrap();
+        state
+            .apply(batch, crate::ops::ApplyOptions::default())
+            .unwrap();
+        let barrier = Arc::new(std::sync::Barrier::new(2));
+        let threads: Vec<_> = [first, second]
+            .into_iter()
+            .map(|snapshot| {
+                let barrier = barrier.clone();
+                std::thread::spawn(move || {
+                    barrier.wait();
+                    snapshot.into_unshared_data()
+                })
+            })
+            .collect();
+        let payloads: Vec<_> = threads
+            .into_iter()
+            .map(|thread| thread.join().unwrap())
+            .collect();
+        assert_eq!(payloads.iter().flatten().count(), 1);
+        assert!(old_map.clone().into_unshared_entries().is_none());
+        drop(payloads);
+        assert!(old_map.into_unshared_entries().is_some());
+    }
+
+    #[test]
+    fn a_current_snapshot_cache_does_not_retain_deleted_nodes() {
+        let mut state =
+            GraphState::new(crate::json!({"nodes":[mirror_node("a").into_value()],"edges":[]}))
+                .unwrap();
+        drop(state.snapshot());
+        let witness = state.graph.nodes.stored["a"].as_map().clone();
+        state.remove_node("a");
+        state.commit();
+        assert!(witness.into_unshared_entries().is_some());
+        assert_mirrors(&state);
+    }
+
+    #[test]
+    fn nonblocking_snapshot_reports_capture_contention() {
+        let state = GraphState::new(crate::json!({"nodes":[],"edges":[]})).unwrap();
+        let guard = state.snapshot_cache.lock().unwrap();
+        assert!(state.try_snapshot().is_none());
+        drop(guard);
+        assert!(state.try_snapshot().is_some());
+    }
+
+    #[test]
+    fn slots_keep_order_as_a_python_dict_does() {
+        // A plain list with shifting removal is the order a Python dict keeps.
+        let mut slots = Slots::new();
+        let mut reference: Vec<(String, usize)> = Vec::new();
+        let mut seed = 0x9e37_79b9_7f4a_7c15_u64;
+        for step in 0..20_000 {
+            seed ^= seed << 13;
+            seed ^= seed >> 7;
+            seed ^= seed << 17;
+            let key = format!("k{}", seed % 97);
+            if seed.is_multiple_of(3) {
+                let removed = slots.remove(&key);
+                let position = reference.iter().position(|(k, _)| *k == key);
+                assert_eq!(removed, position.map(|at| reference.remove(at).1));
+            } else {
+                slots.insert(key.clone(), step);
+                match reference.iter_mut().find(|(k, _)| *k == key) {
+                    Some(entry) => entry.1 = step,
+                    None => reference.push((key, step)),
+                }
+            }
+            if seed.is_multiple_of(5) {
+                slots.pack_if_sparse();
+            }
+            assert_eq!(slots.len(), reference.len());
+            assert!(slots.slots() - slots.len() <= slots.len() + reference.len().max(64));
+        }
+        let order: Vec<(String, usize)> = slots.iter().map(|(k, v)| (k.clone(), *v)).collect();
+        assert_eq!(order, reference);
+        for (key, value) in &reference {
+            assert_eq!(slots.get(key), Some(value));
+            assert_eq!(slots[key.as_str()], *value);
+        }
+    }
+
+    fn mirror_node(id: &str) -> Node {
+        let value =
+            crate::json!({"id":id,"data":{"node":{"template":{"t":{"type":"str","value":"x"}}}}});
+        Node::try_from(value.as_object().unwrap().clone()).unwrap()
+    }
+
+    fn assert_mirrors(state: &GraphState) {
+        // One mirror row per slot, a hole where the map has one, and never
+        // more holes than entries.
+        for (mirror, stored) in [
+            (&state.snapshot_nodes, state.graph.nodes.stored.slots()),
+            (&state.snapshot_edges, state.graph.edges.stored.slots()),
+        ] {
+            assert_eq!(mirror.len(), stored);
+        }
+        let live = state.snapshot_nodes.iter().flatten().count();
+        assert_eq!(live, state.graph.nodes.stored.len());
+        assert!(state.snapshot_nodes.len() - live <= live);
+        let live = state.snapshot_edges.iter().flatten().count();
+        assert_eq!(live, state.graph.edges.stored.len());
+        assert!(state.snapshot_edges.len() - live <= live);
+        assert_eq!(
+            crate::ops::api::snapshot_json(&state.snapshot()),
+            crate::ops::api::graph_json(state)
+        );
+    }
+
+    #[test]
+    fn persistent_mirrors_keep_order_through_churn_and_discard() {
+        let nodes = (0..128)
+            .map(|i| mirror_node(&format!("n{i}")).into_value())
+            .collect::<Vec<_>>();
+        let mut state = GraphState::new(crate::json!({"nodes":nodes,"edges":[]})).unwrap();
+        let before = state.snapshot();
+        let text = crate::ops::api::snapshot_json(&before);
+        for _ in 0..64 {
+            state.remove_node("n32");
+            state.remove_node("n64");
+            state.commit();
+            assert_mirrors(&state);
+            state.insert_node(mirror_node("n64"));
+            state.insert_node(mirror_node("n32"));
+            state.commit();
+            assert_mirrors(&state);
+            state.remove_node("n0");
+            state.insert_node(mirror_node("discarded"));
+            state.discard();
+            assert_mirrors(&state);
+        }
+        assert_eq!(state.graph.nodes.stored.len(), 128);
+        assert_eq!(crate::ops::api::snapshot_json(&before), text);
+    }
+
+    #[test]
+    fn a_dropped_snapshot_does_not_force_later_node_copies() {
+        let nodes = (0..128)
+            .map(|i| mirror_node(&format!("n{i}")).into_value())
+            .collect::<Vec<_>>();
+        let mut state = GraphState::new(crate::json!({"nodes":nodes,"edges":[]})).unwrap();
+        drop(state.snapshot());
+        let before = std::ptr::from_ref(state.graph.nodes.stored["n0"].as_map().get("id").unwrap());
+        let operations = crate::ops::Operation::list_from_value(crate::json!([{"type":"update_nodes","updates":[{"id":"n0","op":"set_field","path":["data","node","template","t","value"],"value":"y"}]}])).unwrap();
+        state
+            .apply(operations, crate::ops::ApplyOptions::default())
+            .unwrap();
+        let after = std::ptr::from_ref(state.graph.nodes.stored["n0"].as_map().get("id").unwrap());
+        assert_eq!(before, after);
+        assert_mirrors(&state);
+    }
+
+    #[test]
+    fn live_mirrors_release_deleted_and_replaced_payloads_immediately() {
+        let mut state = GraphState::new(crate::json!({"nodes":[mirror_node("a").into_value(),mirror_node("b").into_value()],"edges":[]})).unwrap();
+        let deleted = state.graph.nodes.stored["a"].as_map().clone();
+        state.remove_node("a");
+        state.commit();
+        assert!(deleted.into_unshared_entries().is_some());
+        let replaced = state.graph.nodes.stored["b"].as_map().clone();
+        state.remove_node("b");
+        state.insert_node(mirror_node("b"));
+        state.commit();
+        assert!(replaced.into_unshared_entries().is_some());
+        assert_mirrors(&state);
     }
 }

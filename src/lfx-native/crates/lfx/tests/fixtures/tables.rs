@@ -6,18 +6,18 @@ use lfx::ops::keyed::{
     Renumber, assign_changed_table_row_ids, assign_row_ids, assign_table_row_ids,
     fill_missing_positions, strip_flow_table_row_keys, strip_row_keys,
 };
-use lfx::value::Value;
+use lfx::value::AnyValue;
 use libtest_mimic::{Failed, Trial};
 
 use crate::support::{assert_json_matches, load, section_cases};
 
-type Check = fn(&Value) -> Result<(), Failed>;
+type Check = fn(&AnyValue) -> Result<(), Failed>;
 
-fn rows(case: &Value, key: &str) -> Vec<Value> {
+fn rows(case: &AnyValue, key: &str) -> Vec<AnyValue> {
     case[key].as_array().cloned().unwrap_or_default()
 }
 
-fn strip(case: &Value) -> Result<(), Failed> {
+fn strip(case: &AnyValue) -> Result<(), Failed> {
     assert_json_matches(
         "stripped rows",
         &strip_row_keys(&case["rows"]),
@@ -25,13 +25,13 @@ fn strip(case: &Value) -> Result<(), Failed> {
     )
 }
 
-fn ordered(case: &Value) -> Result<(), Failed> {
+fn ordered(case: &AnyValue) -> Result<(), Failed> {
     let rows = rows(case, "rows");
-    let ordered: Vec<Value> = ordered_rows(&rows).into_iter().cloned().collect();
-    assert_json_matches("ordered rows", &Value::Array(ordered), &case["expected"])
+    let ordered: Vec<AnyValue> = ordered_rows(&rows).into_iter().cloned().collect();
+    assert_json_matches("ordered rows", &AnyValue::Array(ordered), &case["expected"])
 }
 
-fn fill_positions(case: &Value) -> Result<(), Failed> {
+fn fill_positions(case: &AnyValue) -> Result<(), Failed> {
     let mut rows = rows(case, "rows");
     let filled = fill_missing_positions(&mut rows, Renumber::Never);
     assert_json_matches(
@@ -41,7 +41,7 @@ fn fill_positions(case: &Value) -> Result<(), Failed> {
     )
 }
 
-fn assign(case: &Value) -> Result<(), Failed> {
+fn assign(case: &AnyValue) -> Result<(), Failed> {
     let mut rows = rows(case, "rows");
     assign_row_ids(
         &mut rows,
@@ -49,23 +49,23 @@ fn assign(case: &Value) -> Result<(), Failed> {
         Renumber::Never,
     )
     .map_err(|error| error.to_string())?;
-    assert_json_matches("assigned rows", &Value::Array(rows), &case["expected"])
+    assert_json_matches("assigned rows", &AnyValue::Array(rows), &case["expected"])
 }
 
-fn assign_node(case: &Value) -> Result<(), Failed> {
+fn assign_node(case: &AnyValue) -> Result<(), Failed> {
     let mut node = case["node"].clone();
     assign_table_row_ids(&mut node, Renumber::Never).map_err(|error| error.to_string())?;
     assert_json_matches("node", &node, &case["expected"])
 }
 
-fn assign_changed(case: &Value) -> Result<(), Failed> {
+fn assign_changed(case: &AnyValue) -> Result<(), Failed> {
     let mut target = case["target"].clone();
     assign_changed_table_row_ids(&case["base"], &mut target, Renumber::Never)
         .map_err(|error| error.to_string())?;
     assert_json_matches("target", &target, &case["expected"])
 }
 
-fn strip_flow(case: &Value) -> Result<(), Failed> {
+fn strip_flow(case: &AnyValue) -> Result<(), Failed> {
     let mut flow = case["flow"].clone();
     strip_flow_table_row_keys(&mut flow);
     assert_json_matches("flow", &flow, &case["expected"])

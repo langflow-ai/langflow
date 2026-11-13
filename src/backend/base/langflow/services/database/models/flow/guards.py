@@ -5,7 +5,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Iterable, Mapping
+    from uuid import UUID
 
     from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -19,12 +20,17 @@ class LockedFlowError(RuntimeError):
 
 
 async def lock_flow_for_update(session: AsyncSession, flow: Flow) -> None:
-    """Refresh *flow* while holding its database row lock until transaction end.
+    """Refresh *flow* while holding the flow's write lock until transaction end.
 
     Every writer of a flow's graph takes this lock before reading the flow and
     holds it through commit, conditional or not: the history's revision head is
     extended under it, and two writers extending it from the same head would
     record two transitions from one state.
+
+    On PostgreSQL the lock is the flow's operation-log advisory lock
+    (``pg_advisory_xact_lock``), the same lock the multiplayer writers take,
+    and not the flow's row lock: a multiplayer writer in WAL mode never touches
+    the flow row. The refresh that follows the lock reads the flow as committed.
 
     SQLite ignores ``FOR UPDATE``. A no-op write takes its database-wide write
     lock instead, which is held until the transaction ends, and the refresh
@@ -40,28 +46,27 @@ async def lock_flow_for_update(session: AsyncSession, flow: Flow) -> None:
         )
         await session.refresh(flow)
         return
-    await session.refresh(flow, with_for_update=True)
+    await lock_flow_oplog(session, flow.id)
+    await session.refresh(flow)
 
 
-async def lock_flow_for_read(session: AsyncSession, flow: Flow) -> None:
-    """Hold *flow*'s row in shared mode until transaction end, for a consistent read of its history.
+async def lock_flow_oplog(session: AsyncSession, flow_id: UUID) -> None:
+    """Take the flow's operation-log advisory lock until transaction end (PostgreSQL; no-op elsewhere).
 
-    On PostgreSQL, ``FOR SHARE`` lets readers proceed together while history
-    maintenance, which deletes old rows under the exclusive lock, waits for
-    them. Take it before any other read of the history: at READ COMMITTED
-    every later statement then sees the state the lock was granted on, and
-    nothing can delete rows under the read.
-
-    SQLite has no row locks and is left alone; a read there that races
-    maintenance sees a gap and retries (see ``flow_history.replay``).
+    Take it before any row lock on the flow: multiplayer writers take this lock
+    first and then write the flow row, so the reverse order could deadlock.
     """
-    if session.get_bind().dialect.name == "sqlite":
+    if session.get_bind().dialect.name != "postgresql":
         return
-    from sqlmodel import select
+    from langflow.services.flow_multiplayer.oplog import lock_flow
 
-    from langflow.services.database.models.flow.model import Flow
+    await lock_flow(session, flow_id)
 
-    await session.exec(select(Flow.id).where(Flow.id == flow.id).with_for_update(read=True))
+
+async def lock_flows_oplog(session: AsyncSession, flow_ids: Iterable[UUID]) -> None:
+    """Take several flows' operation-log locks, in one order (sorted ids), so two callers never deadlock."""
+    for flow_id in sorted(set(flow_ids), key=str):
+        await lock_flow_oplog(session, flow_id)
 
 
 def ensure_flow_unlocked(flow: Flow) -> None:

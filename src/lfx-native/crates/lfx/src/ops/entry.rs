@@ -3,7 +3,7 @@
 //! The engine keeps every key of a node or an edge, so it never turns them
 //! into typed structs. These methods name the few things it reads from them.
 
-use crate::value::{Map, Value};
+use crate::value::{AnyMap, AnyValue};
 
 /// What the engine reads from a node, an edge or a table row.
 pub(crate) trait EntryExt {
@@ -15,29 +15,31 @@ pub(crate) trait EntryExt {
     fn id(&self) -> &str;
 
     /// A node's template: `data.node.template`.
-    fn template(&self) -> Option<&Map>;
+    fn template(&self) -> Option<&AnyMap>;
 
     /// The value of a node's template field: `data.node.template.<field>.value`.
-    fn field_value(&self, field: &str) -> Option<&Value> {
+    fn field_value(&self, field: &str) -> Option<&AnyValue> {
         self.template()?.get(field)?.get("value")
     }
 }
 
-impl EntryExt for Map {
+impl EntryExt for AnyMap {
     fn non_empty_str(&self, key: &str) -> Option<&str> {
         self.get(key)?.as_str().filter(|text| !text.is_empty())
     }
 
     fn id(&self) -> &str {
-        self.get("id").and_then(Value::as_str).unwrap_or_default()
+        self.get("id")
+            .and_then(AnyValue::as_str)
+            .unwrap_or_default()
     }
 
-    fn template(&self) -> Option<&Map> {
+    fn template(&self) -> Option<&AnyMap> {
         self.get("data")?.get("node")?.get("template")?.as_object()
     }
 }
 
-impl EntryExt for Value {
+impl EntryExt for AnyValue {
     fn non_empty_str(&self, key: &str) -> Option<&str> {
         self.as_object()?.non_empty_str(key)
     }
@@ -46,7 +48,7 @@ impl EntryExt for Value {
         self.as_object().map_or("", EntryExt::id)
     }
 
-    fn template(&self) -> Option<&Map> {
+    fn template(&self) -> Option<&AnyMap> {
         self.as_object()?.template()
     }
 }

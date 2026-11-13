@@ -16,6 +16,7 @@ from langflow.services.flow_history import maintenance
 from langflow.services.flow_history.errors import FlowRevisionNotRetainedError
 from langflow.services.flow_history.replay import reconstruct_graph
 from lfx.services.flow_operations import graphs_equal
+from sqlalchemy import inspect as sa_inspect
 from sqlalchemy import update
 from sqlmodel import col, func, select
 
@@ -151,6 +152,31 @@ async def test_compaction_keeps_the_window_and_the_row_that_produced_the_cutoff(
     assert 9 - earliest_start + 1 >= thresholds.flow_revision_retention_window
     for revision in range(earliest_end, 10):
         assert graphs_equal(await _reconstruct(flow_id, revision), _graph(str(revision)))
+
+
+async def test_the_cutoff_is_chosen_without_loading_its_graph(client: AsyncClient, logged_in_headers, thresholds):
+    flow_id = await _flow(client, logged_in_headers)
+    # Checkpoints at 3 and 6, then two saves more: the checkpoint at 3 leaves the window of five after it.
+    for value in range(1, 9):
+        await _save(client, logged_in_headers, flow_id, str(value))
+        if value <= 6:
+            await _run(flow_id)
+    async with session_scope() as session:
+        flow = await session.get(Flow, UUID(flow_id))
+        await maintenance.use_log_head(session, flow)
+        cutoff = await maintenance._cutoff_checkpoint(session, flow, keep=thresholds.flow_revision_retention_window)
+        assert cutoff is not None
+        # What a save asks under the flow's lock reads no graph.
+        assert "data" in sa_inspect(cutoff).unloaded
+        # Compacting to it checks the SHA-256 of its stored text, still without loading its graph.
+        await maintenance.compact_to(session, flow, cutoff)
+        assert "data" in sa_inspect(cutoff).unloaded
+        revision = cutoff.operation_revision
+        await session.commit()
+    assert revision == 3
+    earliest_start, earliest_end = await _retained(flow_id)
+    assert earliest_end == revision
+    assert 8 - earliest_start + 1 >= thresholds.flow_revision_retention_window
 
 
 async def test_compaction_keeps_a_retained_checkpoint(client: AsyncClient, logged_in_headers):

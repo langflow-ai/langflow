@@ -66,6 +66,8 @@ from langflow.api.v2 import policy_bundle_router as policy_bundle_router_v2
 from langflow.api.v2 import registration_router as registration_router_v2
 from langflow.api.v2 import workflow_background_router as workflow_background_router_v2
 from langflow.api.v2 import workflow_public_router as workflow_public_router_v2
+from langflow.api.v2.flows import bench_router as flow_ops_bench_router_v2
+from langflow.api.v2.flows import router as flows_router_v2
 from langflow.api.v2.workflow_host import LangflowWorkflowHost
 
 router_v1 = APIRouter(
@@ -191,6 +193,8 @@ def _include_agentic_router():
 _include_agentic_router()
 
 router_v2.include_router(files_router_v2)
+router_v2.include_router(flows_router_v2)
+router_v2.include_router(flow_ops_bench_router_v2)
 router_v2.include_router(mcp_router_v2)
 router_v2.include_router(policy_bundle_router_v2)
 router_v2.include_router(registration_router_v2)

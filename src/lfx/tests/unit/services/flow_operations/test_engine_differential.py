@@ -38,6 +38,7 @@ from typing import Any
 import pytest
 from lfx.services.flow_operations.engine import PythonEngine, RustEngine
 from lfx.services.flow_operations.exceptions import FlowOperationError
+from lfx.services.flow_operations.json_io import dump_bytes
 
 lfx_native = pytest.importorskip("lfx_native")
 
@@ -80,6 +81,10 @@ def _normalized(result: dict[str, Any]) -> dict[str, Any]:
     out = {}
     if "forward_operations" in result:
         out["forward"] = result["forward_operations"]
+    if "forward_operations_json" in result:
+        # The log's text of each forward operation: what ``to_json`` writes for it, the same bytes from both engines.
+        out["forward_json"] = result["forward_operations_json"]
+        assert out["forward_json"] == [dump_bytes(operation) for operation in result["forward_operations"]]
     if "backward_operations" in result:
         out["backward"] = result["backward_operations"]
     return out
@@ -104,10 +109,10 @@ def _run(state: Any, mode: str, batch: Any, before: str | None = None) -> tuple[
 
     def run() -> dict[str, Any]:
         if mode == "apply":
-            return _normalized(state.apply(batch, forward=True, backward=True))
+            return _normalized(state.apply(batch, forward=True, backward=True, forward_json=True))
         if mode == "replay":
             return _normalized(state.replay(batch, backward=True))
-        result = _normalized(state.stage(batch, forward=True, backward=True))
+        result = _normalized(state.stage(batch, forward=True, backward=True, forward_json=True))
         assert state.to_json() == before, "to_json while a batch is staged is not the committed text"
         # The graph with the staged batch: compared between the engines with the result.
         result["staged"] = state.to_json(staged=True)

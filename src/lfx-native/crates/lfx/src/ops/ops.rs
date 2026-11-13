@@ -1,6 +1,6 @@
 //! Operation types and their strict parser.
 //!
-//! Each type reads itself from a parsed JSON value (`FromValue`), so the
+//! Each type reads itself from a parsed JSON value (`FromAnyValue`), so the
 //! parser accepts exactly the shapes the operation protocol defines: no
 //! unknown keys, no missing fields, no wrong types. A path names a list item
 //! by its key, never by its index. An operation that is parsed and printed
@@ -11,11 +11,11 @@ use std::ops::Deref;
 use std::str::FromStr;
 
 use crate::json;
-use crate::value::{Map, Value};
+use crate::value::{AnyMap, AnyValue};
 
 use crate::ops::entry::EntryExt;
 use crate::ops::error::{Error, Result, quoted};
-use crate::ops::from_value::{FromValue, FromValueError, missing, read, unexpected};
+use crate::ops::from_value::{FromAnyValue, FromAnyValueError, missing, read, unexpected};
 use crate::ops::schema::{KeyWrite, NODE_OBJECT_PATHS, NODE_SCHEMA};
 
 /// One step of a field path.
@@ -43,18 +43,18 @@ impl Segment {
     /// The segment as a path writes it in JSON: an object key as a string,
     /// a list item as `{"key": ...}`. For example, `Key("outputs")` gives
     /// `"outputs"`, and `Item("r1")` gives `{"key": "r1"}`.
-    fn to_value(&self) -> Value {
+    fn to_value(&self) -> AnyValue {
         match self {
-            Self::Key(key) => Value::from(key.as_str()),
+            Self::Key(key) => AnyValue::from(key.as_str()),
             Self::Item(key) => json!({"key": key}),
         }
     }
 
     /// The same JSON as [`Self::to_value`], but it moves the key into the
     /// value instead of copying it.
-    fn into_value(self) -> Value {
+    fn into_value(self) -> AnyValue {
         match self {
-            Self::Key(key) => Value::String(key),
+            Self::Key(key) => AnyValue::from(key),
             Self::Item(key) => json!({"key": key}),
         }
     }
@@ -140,14 +140,14 @@ impl<T: AsKey> PathExt for [T] {
 /// `["outputs",{"key":"text"},"name"]`.
 #[must_use]
 pub fn path_label(path: &[Segment]) -> String {
-    Value::Array(path.iter().map(Segment::to_value).collect()).to_string()
+    AnyValue::Array(path.iter().map(Segment::to_value).collect()).to_string()
 }
 
 /// What a field update does at its path.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Change {
     /// Write this value.
-    Set(Value),
+    Set(AnyValue),
     /// Remove the value.
     Delete,
 }
@@ -171,15 +171,15 @@ impl NodePath {
 
     /// Check that a field update may write `path`. For example, `["id"]`
     /// fails with `cannot change the node's id`.
-    fn check(path: &[Segment]) -> Result<(), FromValueError> {
+    fn check(path: &[Segment]) -> Result<(), FromAnyValueError> {
         if path.is_empty() {
-            return Err(FromValueError::new("must not be empty"));
+            return Err(FromAnyValueError::new("must not be empty"));
         }
         if path[0].as_key() == Some("id") {
-            return Err(FromValueError::new("cannot change the node's id"));
+            return Err(FromAnyValueError::new("cannot change the node's id"));
         }
         if let Some(object) = NODE_OBJECT_PATHS.iter().find(|object| path.equals(object)) {
-            return Err(FromValueError::new(format!(
+            return Err(FromAnyValueError::new(format!(
                 "cannot write the whole of {}; write inside it",
                 object.join(".")
             )));
@@ -206,8 +206,8 @@ impl TryFrom<Path> for NodePath {
     }
 }
 
-impl FromValue for NodePath {
-    fn from_value(value: Value) -> Result<Self, FromValueError> {
+impl FromAnyValue for NodePath {
+    fn from_value(value: AnyValue) -> Result<Self, FromAnyValueError> {
         let path = Path::from_value(value)?;
         Self::check(&path)?;
         Ok(Self(path))
@@ -234,7 +234,7 @@ impl FieldUpdate {
 
     /// A `set_field` of `value` at `path`.
     #[must_use]
-    pub fn set(id: &str, path: NodePath, value: Value) -> Self {
+    pub fn set(id: &str, path: NodePath, value: AnyValue) -> Self {
         Self {
             id: id.to_owned(),
             path,
@@ -259,8 +259,14 @@ impl FieldUpdate {
 /// `data.node.template` are objects. A `Node` cannot be made without these
 /// checks, and a field update cannot undo them (see [`NodePath`]), so no
 /// reader checks them again.
+///
+/// A node is shared, not copied: a clone of a node, a snapshot of a graph
+/// ([`crate::ops::GraphSnapshot`]) and the forward operations of a batch all
+/// hold the same objects ([`AnyMap`]). A write copies only the objects on
+/// the way to the value it writes, and only while another holder still has
+/// them.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Node(Value);
+pub struct Node(AnyValue);
 
 impl Node {
     /// The node's id.
@@ -271,40 +277,41 @@ impl Node {
 
     /// The node as a JSON object.
     #[must_use]
-    pub fn as_map(&self) -> &Map {
+    pub fn as_map(&self) -> &AnyMap {
         match &self.0 {
-            Value::Object(node) => node,
+            AnyValue::Object(node) => node,
             _ => unreachable!("a node is a JSON object"),
         }
     }
 
     /// The node as a JSON object, moved out.
     #[must_use]
-    pub fn into_map(self) -> Map {
-        match self.0 {
-            Value::Object(node) => node,
+    pub fn into_map(self) -> AnyMap {
+        match self.into_value() {
+            AnyValue::Object(node) => node,
             _ => unreachable!("a node is a JSON object"),
         }
     }
 
     /// The node as a JSON value, for reading a path in it.
-    pub(crate) fn as_value(&self) -> &Value {
+    pub(crate) fn as_value(&self) -> &AnyValue {
         &self.0
     }
 
     /// The node as a JSON value, for writing a path in it. A field update's
-    /// [`NodePath`] keeps the node's shape.
-    pub(crate) fn as_value_mut(&mut self) -> &mut Value {
+    /// [`NodePath`] keeps the node's shape. Each object on the way to the
+    /// value written is copied first while another holder shares it.
+    pub(crate) fn as_value_mut(&mut self) -> &mut AnyValue {
         &mut self.0
     }
 
     /// The node as a JSON value, moved out.
-    pub(crate) fn into_value(self) -> Value {
+    pub(crate) fn into_value(self) -> AnyValue {
         self.0
     }
 
     /// Check that `node` has the shape of a node.
-    fn check(node: &Map) -> Result<(), FromValueError> {
+    fn check(node: &AnyMap) -> Result<(), FromAnyValueError> {
         NodeRef::read(node).map(|_| ())
     }
 }
@@ -316,38 +323,38 @@ impl Node {
 /// compares through it, so neither checks a node's shape twice.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct NodeRef<'a> {
-    node: &'a Map,
-    body: &'a Map,
-    template: &'a Map,
+    node: &'a AnyMap,
+    body: &'a AnyMap,
+    template: &'a AnyMap,
 }
 
 impl<'a> NodeRef<'a> {
     /// Check that `node` has the shape of a node, and borrow it.
-    pub(crate) fn new(node: &'a Map) -> Result<Self> {
+    pub(crate) fn new(node: &'a AnyMap) -> Result<Self> {
         Self::read(node).map_err(|error| error.into_error("node"))
     }
 
     /// Borrow `node` and find its objects. For example, a node without
     /// `data.node` fails with `data.node: must be an object (node 'a')`.
-    fn read(node: &'a Map) -> Result<Self, FromValueError> {
+    fn read(node: &'a AnyMap) -> Result<Self, FromAnyValueError> {
         let Some(id) = node.non_empty_str("id") else {
-            return Err(FromValueError::new("must be a non-empty string").at_key("id"));
+            return Err(FromAnyValueError::new("must be a non-empty string").at_key("id"));
         };
         let not_object = |path: &[&'static str]| {
-            let error = FromValueError::new(format!("must be an object (node {})", quoted(id)));
+            let error = FromAnyValueError::new(format!("must be an object (node {})", quoted(id)));
             // An error takes its innermost key first.
             path.iter()
                 .rev()
                 .fold(error, |error, key| error.at_key(key))
         };
         let [data_path, body_path, template_path] = NODE_OBJECT_PATHS;
-        let Some(Value::Object(data)) = node.get("data") else {
+        let Some(AnyValue::Object(data)) = node.get("data") else {
             return Err(not_object(data_path));
         };
-        let Some(Value::Object(body)) = data.get("node") else {
+        let Some(AnyValue::Object(body)) = data.get("node") else {
             return Err(not_object(body_path));
         };
-        let Some(Value::Object(template)) = body.get("template") else {
+        let Some(AnyValue::Object(template)) = body.get("template") else {
             return Err(not_object(template_path));
         };
         Ok(Self {
@@ -363,31 +370,31 @@ impl<'a> NodeRef<'a> {
     }
 
     /// The node's `data.node`.
-    pub(crate) fn body(self) -> &'a Map {
+    pub(crate) fn body(self) -> &'a AnyMap {
         self.body
     }
 
     /// The node's `data.node.template`.
-    pub(crate) fn template(self) -> &'a Map {
+    pub(crate) fn template(self) -> &'a AnyMap {
         self.template
     }
 }
 
-impl TryFrom<Map> for Node {
+impl TryFrom<AnyMap> for Node {
     type Error = Error;
 
     /// Check `node`, and keep it as a node.
-    fn try_from(node: Map) -> Result<Self> {
+    fn try_from(node: AnyMap) -> Result<Self> {
         Self::check(&node).map_err(|error| error.into_error("node"))?;
-        Ok(Self(Value::Object(node)))
+        Ok(Self(AnyValue::Object(node)))
     }
 }
 
-impl FromValue for Node {
-    fn from_value(value: Value) -> Result<Self, FromValueError> {
-        let node = Map::from_value(value)?;
+impl FromAnyValue for Node {
+    fn from_value(value: AnyValue) -> Result<Self, FromAnyValueError> {
+        let node = AnyMap::from_value(value)?;
         Self::check(&node)?;
-        Ok(Self(Value::Object(node)))
+        Ok(Self(AnyValue::Object(node)))
     }
 }
 
@@ -396,9 +403,10 @@ impl FromValue for Node {
 /// Its `id`, `source` and `target` are non-empty strings. An `Edge` cannot be
 /// made without these checks, and an edge is never written in place, so no
 /// reader checks them again. Whether the nodes and handles it names exist
-/// depends on the flow, so apply checks that.
+/// depends on the flow, so apply checks that. Like a [`Node`], an edge is
+/// shared, not copied.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Edge(Map);
+pub struct Edge(AnyMap);
 
 impl Edge {
     /// The edge's id.
@@ -421,40 +429,40 @@ impl Edge {
 
     /// The edge as a JSON object.
     #[must_use]
-    pub fn as_map(&self) -> &Map {
+    pub fn as_map(&self) -> &AnyMap {
         &self.0
     }
 
     /// The edge as a JSON object, moved out.
     #[must_use]
-    pub fn into_map(self) -> Map {
+    pub fn into_map(self) -> AnyMap {
         self.0
     }
 
     /// Check that `edge` has the shape of an edge.
-    fn check(edge: &Map) -> Result<(), FromValueError> {
+    fn check(edge: &AnyMap) -> Result<(), FromAnyValueError> {
         for key in ["id", "source", "target"] {
             if edge.non_empty_str(key).is_none() {
-                return Err(FromValueError::new("must be a non-empty string").at_key(key));
+                return Err(FromAnyValueError::new("must be a non-empty string").at_key(key));
             }
         }
         Ok(())
     }
 }
 
-impl TryFrom<Map> for Edge {
+impl TryFrom<AnyMap> for Edge {
     type Error = Error;
 
     /// Check `edge`, and keep it as an edge.
-    fn try_from(edge: Map) -> Result<Self> {
+    fn try_from(edge: AnyMap) -> Result<Self> {
         Self::check(&edge).map_err(|error| error.into_error("edge"))?;
         Ok(Self(edge))
     }
 }
 
-impl FromValue for Edge {
-    fn from_value(value: Value) -> Result<Self, FromValueError> {
-        let edge = Map::from_value(value)?;
+impl FromAnyValue for Edge {
+    fn from_value(value: AnyValue) -> Result<Self, FromAnyValueError> {
+        let edge = AnyMap::from_value(value)?;
         Self::check(&edge)?;
         Ok(Self(edge))
     }
@@ -505,20 +513,20 @@ impl OperationKind {
 
     /// The kind an operation object names in its `type`. It only borrows the
     /// object and reads its `type`, so the caller can consume the object after.
-    fn from_map(object: &Map) -> Result<Self, FromValueError> {
+    fn from_map(object: &AnyMap) -> Result<Self, FromAnyValueError> {
         match object.get("type") {
-            None => Err(FromValueError::new("type is missing")),
-            Some(Value::String(name)) => name.parse(),
-            _ => Err(FromValueError::new("must be a string").at_key("type")),
+            None => Err(FromAnyValueError::new("type is missing")),
+            Some(AnyValue::String(name)) => name.parse(),
+            _ => Err(FromAnyValueError::new("must be a string").at_key("type")),
         }
     }
 }
 
 impl FromStr for OperationKind {
-    type Err = FromValueError;
+    type Err = FromAnyValueError;
 
     /// The kind that a `type` names.
-    fn from_str(name: &str) -> Result<Self, FromValueError> {
+    fn from_str(name: &str) -> Result<Self, FromAnyValueError> {
         match name {
             "add_nodes" => Ok(Self::AddNodes),
             "update_nodes" => Ok(Self::UpdateNodes),
@@ -527,7 +535,7 @@ impl FromStr for OperationKind {
             "delete_edges" => Ok(Self::DeleteEdges),
             _ => {
                 let message = format!("unsupported operation type {}", quoted(name));
-                Err(FromValueError::new(message).at_key("type"))
+                Err(FromAnyValueError::new(message).at_key("type"))
             }
         }
     }
@@ -552,14 +560,14 @@ impl Operation {
     ///
     /// Fails when `operations` is not a JSON list, or when one of its
     /// operations is not a valid operation.
-    pub fn list_from_value(operations: Value) -> Result<Vec<Self>> {
+    pub fn list_from_value(operations: AnyValue) -> Result<Vec<Self>> {
         Vec::from_value(operations).map_err(|error| error.into_error("operations"))
     }
 
     /// The operation as JSON. It copies every payload; a caller that owns
     /// the operation and drops it after printing uses [`Self::into_value`].
     #[must_use]
-    pub fn to_value(&self) -> Value {
+    pub fn to_value(&self) -> AnyValue {
         match self {
             Self::AddNodes(nodes) => json!({
                 "type": "add_nodes",
@@ -580,51 +588,51 @@ impl Operation {
 
     /// The operation as JSON, with its payload moved into the result instead of copied.
     #[must_use]
-    pub fn into_value(self) -> Value {
+    pub fn into_value(self) -> AnyValue {
         let (kind, key, payload) = match self {
             Self::AddNodes(nodes) => ("add_nodes", "nodes", objects(nodes, Node::into_map)),
             Self::UpdateNodes(updates) => (
                 "update_nodes",
                 "updates",
-                Value::Array(updates.into_iter().map(FieldUpdate::into_value).collect()),
+                AnyValue::Array(updates.into_iter().map(FieldUpdate::into_value).collect()),
             ),
             Self::DeleteNodes(ids) => ("delete_nodes", "ids", strings(ids)),
             Self::AddEdges(edges) => ("add_edges", "edges", objects(edges, Edge::into_map)),
             Self::DeleteEdges(ids) => ("delete_edges", "ids", strings(ids)),
         };
-        let mut operation = Map::new();
-        operation.insert("type".into(), Value::from(kind));
+        let mut operation = AnyMap::new();
+        operation.insert("type".into(), AnyValue::from(kind));
         operation.insert(key.into(), payload);
-        Value::Object(operation)
+        AnyValue::Object(operation)
     }
 }
 
-fn objects<T>(objects: Vec<T>, into_map: fn(T) -> Map) -> Value {
-    Value::Array(
+fn objects<T>(objects: Vec<T>, into_map: fn(T) -> AnyMap) -> AnyValue {
+    AnyValue::Array(
         objects
             .into_iter()
-            .map(|object| Value::Object(into_map(object)))
+            .map(|object| AnyValue::Object(into_map(object)))
             .collect(),
     )
 }
 
-fn strings(strings: Vec<String>) -> Value {
-    Value::Array(strings.into_iter().map(Value::String).collect())
+fn strings(strings: Vec<String>) -> AnyValue {
+    AnyValue::Array(strings.into_iter().map(AnyValue::from).collect())
 }
 
-impl TryFrom<Value> for Operation {
+impl TryFrom<AnyValue> for Operation {
     type Error = Error;
 
     /// Parse one operation. It fails unless the operation has exactly one of
     /// the protocol's shapes.
-    fn try_from(operation: Value) -> Result<Self> {
+    fn try_from(operation: AnyValue) -> Result<Self> {
         Self::from_value(operation).map_err(|error| error.into_error("operation"))
     }
 }
 
-impl FromValue for Operation {
-    fn from_value(value: Value) -> Result<Self, FromValueError> {
-        let object = Map::from_value(value)?;
+impl FromAnyValue for Operation {
+    fn from_value(value: AnyValue) -> Result<Self, FromAnyValueError> {
+        let object = AnyMap::from_value(value)?;
         Ok(match OperationKind::from_map(&object)? {
             OperationKind::AddNodes => {
                 let nodes: Vec<Node> = payload(object, "nodes")?;
@@ -651,11 +659,11 @@ impl FromValue for Operation {
 
 /// Fail when an id repeats in one operation. For example, the second of two
 /// nodes `a` fails with `[1].id: repeats the id 'a'`.
-fn no_repeated_ids<'a>(ids: impl Iterator<Item = &'a str>) -> Result<(), FromValueError> {
+fn no_repeated_ids<'a>(ids: impl Iterator<Item = &'a str>) -> Result<(), FromAnyValueError> {
     let mut seen = HashSet::new();
     for (index, id) in ids.enumerate() {
         if !seen.insert(id) {
-            let error = FromValueError::new(format!("repeats the id {}", quoted(id)));
+            let error = FromAnyValueError::new(format!("repeats the id {}", quoted(id)));
             return Err(error.at_key("id").at_index(index));
         }
     }
@@ -664,7 +672,7 @@ fn no_repeated_ids<'a>(ids: impl Iterator<Item = &'a str>) -> Result<(), FromVal
 
 /// Fail when one `update_nodes` writes one path of one node twice, which is a
 /// client bug.
-fn no_repeated_paths(updates: &[FieldUpdate]) -> Result<(), FromValueError> {
+fn no_repeated_paths(updates: &[FieldUpdate]) -> Result<(), FromAnyValueError> {
     let mut seen = HashSet::new();
     for (index, update) in updates.iter().enumerate() {
         if !seen.insert((update.id.as_str(), &*update.path)) {
@@ -673,7 +681,7 @@ fn no_repeated_paths(updates: &[FieldUpdate]) -> Result<(), FromValueError> {
                 path_label(&update.path),
                 quoted(&update.id)
             );
-            return Err(FromValueError::new(message).at_index(index));
+            return Err(FromAnyValueError::new(message).at_index(index));
         }
     }
     Ok(())
@@ -681,7 +689,7 @@ fn no_repeated_paths(updates: &[FieldUpdate]) -> Result<(), FromValueError> {
 
 /// The value of an operation's one payload key, read as `T`. The operation
 /// may hold only `type` and `key`.
-fn payload<T: FromValue>(object: Map, key: &'static str) -> Result<T, FromValueError> {
+fn payload<T: FromAnyValue>(object: AnyMap, key: &'static str) -> Result<T, FromAnyValueError> {
     let mut payload = None;
     for (name, value) in object {
         match name.as_str() {
@@ -696,8 +704,8 @@ fn payload<T: FromValue>(object: Map, key: &'static str) -> Result<T, FromValueE
 impl FieldUpdate {
     /// The update as JSON. It copies the value; see [`Self::into_value`].
     #[must_use]
-    pub fn to_value(&self) -> Value {
-        let path = Value::Array(self.path.iter().map(Segment::to_value).collect());
+    pub fn to_value(&self) -> AnyValue {
+        let path = AnyValue::Array(self.path.iter().map(Segment::to_value).collect());
         match &self.change {
             Change::Set(value) => {
                 json!({"id": self.id, "path": path, "op": "set_field", "value": value})
@@ -708,12 +716,12 @@ impl FieldUpdate {
 
     /// The update as JSON, with its path and value moved into the result instead of copied.
     #[must_use]
-    pub fn into_value(self) -> Value {
-        let mut update = Map::new();
-        update.insert("id".into(), Value::String(self.id));
+    pub fn into_value(self) -> AnyValue {
+        let mut update = AnyMap::new();
+        update.insert("id".into(), AnyValue::from(self.id));
         update.insert(
             "path".into(),
-            Value::Array(
+            AnyValue::Array(
                 self.path
                     .into_segments()
                     .into_iter()
@@ -723,26 +731,28 @@ impl FieldUpdate {
         );
         match self.change {
             Change::Set(value) => {
-                update.insert("op".into(), Value::from("set_field"));
+                update.insert("op".into(), AnyValue::from("set_field"));
                 update.insert("value".into(), value);
             }
             Change::Delete => {
-                update.insert("op".into(), Value::from("delete_field"));
+                update.insert("op".into(), AnyValue::from("delete_field"));
             }
         }
-        Value::Object(update)
+        AnyValue::Object(update)
     }
 }
 
-impl FromValue for FieldUpdate {
-    fn from_value(value: Value) -> Result<Self, FromValueError> {
-        let object = Map::from_value(value)?;
+impl FromAnyValue for FieldUpdate {
+    fn from_value(value: AnyValue) -> Result<Self, FromAnyValueError> {
+        let object = AnyMap::from_value(value)?;
         let set = match object.get("op") {
-            None => return Err(FromValueError::new("op is missing")),
-            Some(Value::String(op)) if op == "set_field" => true,
-            Some(Value::String(op)) if op == "delete_field" => false,
+            None => return Err(FromAnyValueError::new("op is missing")),
+            Some(AnyValue::String(op)) if op == "set_field" => true,
+            Some(AnyValue::String(op)) if op == "delete_field" => false,
             Some(_) => {
-                return Err(FromValueError::new("must be set_field or delete_field").at_key("op"));
+                return Err(
+                    FromAnyValueError::new("must be set_field or delete_field").at_key("op")
+                );
             }
         };
         let mut id: Option<String> = None;
@@ -759,7 +769,7 @@ impl FromValue for FieldUpdate {
         }
         let id = id.ok_or_else(|| missing("id"))?;
         if id.is_empty() {
-            return Err(FromValueError::new("must not be empty").at_key("id"));
+            return Err(FromAnyValueError::new("must not be empty").at_key("id"));
         }
         let path = path.ok_or_else(|| missing("path"))?;
         let change = if set {
@@ -777,7 +787,7 @@ impl FieldUpdate {
     /// Check that the update keeps the key of every list item on its path. An
     /// item's key is its id, so no write may change it, as no write may change
     /// a node's `id`. To give an item another key, delete it and add it again.
-    fn check_keys_kept(&self) -> Result<(), FromValueError> {
+    fn check_keys_kept(&self) -> Result<(), FromAnyValueError> {
         for (index, segment) in self.path.iter().enumerate() {
             let Segment::Item(key) = segment else {
                 continue;
@@ -792,11 +802,11 @@ impl FieldUpdate {
                         "a list item written at its key must carry the same key: {}",
                         quoted(key)
                     );
-                    return Err(FromValueError::new(message).at_key("value"));
+                    return Err(FromAnyValueError::new(message).at_key("value"));
                 }
                 _ => {
                     return Err(
-                        FromValueError::new("cannot change a list item's key").at_key("path")
+                        FromAnyValueError::new("cannot change a list item's key").at_key("path")
                     );
                 }
             }
@@ -805,18 +815,19 @@ impl FieldUpdate {
     }
 }
 
-impl FromValue for Segment {
-    fn from_value(value: Value) -> Result<Self, FromValueError> {
-        let invalid =
-            || FromValueError::new(r#"must be an object key or {"key": ...} with a non-empty key"#);
+impl FromAnyValue for Segment {
+    fn from_value(value: AnyValue) -> Result<Self, FromAnyValueError> {
+        let invalid = || {
+            FromAnyValueError::new(r#"must be an object key or {"key": ...} with a non-empty key"#)
+        };
         match value {
-            Value::String(key) => Ok(Self::Key(key)),
-            Value::Number(_) => Err(FromValueError::new(
+            AnyValue::String(key) => Ok(Self::Key(key.to_string())),
+            AnyValue::Number(_) => Err(FromAnyValueError::new(
                 r#"integer list indexes are not allowed; name a list item with {"key": ...}"#,
             )),
-            Value::Object(item) if item.len() == 1 => match item.into_iter().next() {
-                Some((name, Value::String(key))) if name == "key" && !key.is_empty() => {
-                    Ok(Self::Item(key))
+            AnyValue::Object(item) if item.len() == 1 => match item.into_iter().next() {
+                Some((name, AnyValue::String(key))) if name == "key" && !key.is_empty() => {
+                    Ok(Self::Item(key.to_string()))
                 }
                 _ => Err(invalid()),
             },

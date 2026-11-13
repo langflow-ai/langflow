@@ -32,8 +32,10 @@ from lfx.observability import (
 )
 from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
+from starlette.datastructures import URL, Headers, MutableHeaders, QueryParams
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.middleware.gzip import DEFAULT_EXCLUDED_CONTENT_TYPES, GZipMiddleware
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from langflow.api import log_router
 from langflow.api.health_check_router import health_check_router
@@ -158,27 +160,145 @@ class RequestCancelledMiddleware(BaseHTTPMiddleware):
         return await handler_task
 
 
-class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        """Convert serialization failures into an HTTP response."""
+class JavaScriptMIMETypeMiddleware:
+    """Serve ``.js`` paths as ``text/javascript`` and report response serialization failures.
+
+    Pure ASGI: a BaseHTTPMiddleware layer adds task and stream work to every request.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        path = URL(scope=scope).path
+        if "files/" in path or not path.endswith(".js"):
+            send_response = send
+        else:
+
+            async def send_response(message: Message) -> None:
+                if message["type"] == "http.response.start" and message["status"] == HTTPStatus.OK:
+                    message["headers"] = list(message.get("headers", []))
+                    MutableHeaders(raw=message["headers"])["Content-Type"] = "text/javascript"
+                await send(message)
+
         try:
-            response = await call_next(request)
-        except Exception as exc:
-            if isinstance(exc, PydanticSerializationError):
-                message = (
-                    "Something went wrong while serializing the response. "
-                    "Please share this error on our GitHub repository."
-                )
-                error_messages = json.dumps([message, str(exc)])
-                raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail=error_messages) from exc
-            raise
-        if (
-            "files/" not in request.url.path
-            and request.url.path.endswith(".js")
-            and response.status_code == HTTPStatus.OK
-        ):
-            response.headers["Content-Type"] = "text/javascript"
-        return response
+            await self.app(scope, receive, send_response)
+        except PydanticSerializationError as exc:
+            message = (
+                "Something went wrong while serializing the response. Please share this error on our GitHub repository."
+            )
+            error_messages = json.dumps([message, str(exc)])
+            raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail=error_messages) from exc
+
+
+async def check_boundary(request: Request, call_next: RequestResponseEndpoint) -> Response:
+    """Require a multipart boundary for file-upload requests."""
+    content_type = request.headers.get("Content-Type")
+
+    if not content_type or "multipart/form-data" not in content_type or "boundary=" not in content_type:
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            content={"detail": "Content-Type header must be 'multipart/form-data' with a boundary parameter."},
+        )
+
+    boundary = content_type.split("boundary=")[-1].strip()
+
+    if not re.match(r"^[\w\-]{1,70}$", boundary):
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            content={"detail": "Invalid boundary format"},
+        )
+
+    body = await request.body()
+
+    boundary_start = f"--{boundary}".encode()
+    # The multipart/form-data spec doesn't require a newline after the boundary, however many clients do
+    # implement it that way
+    boundary_end = f"--{boundary}--\r\n".encode()
+    boundary_end_no_newline = f"--{boundary}--".encode()
+
+    if not body.startswith(boundary_start) or not body.endswith((boundary_end, boundary_end_no_newline)):
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            content={"detail": "Invalid multipart formatting"},
+        )
+
+    return await call_next(request)
+
+
+class RequestContextMiddleware:
+    """Per-request scope preparation, in this order (outermost first).
+
+    1. Locale: parse ``Accept-Language`` into ``request.state.locale``. Quality values
+       ("fr-FR,fr;q=0.9,en;q=0.8" -> "fr") are handled, zh-Hans stays a full tag, and any
+       other locale is reduced to its language code. Unknown values fall back to "en", so
+       client headers cannot pollute the per-locale cache.
+    2. Query lists: expand comma-separated query values into repeated parameters.
+    3. Forwarded prefix: honour ``X-Forwarded-Prefix`` from a reverse proxy, only when
+       ``root_path`` is configured (the operator opted into reverse-proxy mode). The prefix
+       goes into the ASGI ``root_path``, so transports like MCP SSE include it in the
+       POST-back URLs they hand to clients. The header wins over the static setting.
+    4. Upload boundary: file uploads must carry a valid multipart boundary
+       (``check_boundary``). That check needs the buffered body, so only upload requests
+       pass through a BaseHTTPMiddleware.
+    5. Execution client: bind the caller's self-declared client (a header, because the v2
+       run model rejects extra body fields) for the request. It is self-reported and
+       spoofable, and ``execution_client`` drops unknown values: never use it for
+       authorization.
+
+    Pure ASGI: these were five ``@app.middleware("http")`` layers, each a BaseHTTPMiddleware
+    that adds task and stream work to every request.
+    """
+
+    def __init__(self, app: ASGIApp, settings) -> None:
+        self.app = app
+        self.settings = settings
+        self.supported_locales: frozenset[str] | None = None
+        self.upload_guard = BaseHTTPMiddleware(self.bind_execution_client, dispatch=check_boundary)
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        headers = Headers(scope=scope)
+        scope.setdefault("state", {})["locale"] = self.locale(headers.get("Accept-Language", "en"))
+
+        flattened: list[tuple[str, str]] = []
+        for key, value in QueryParams(scope["query_string"]).multi_items():
+            if key in VERBATIM_QUERY_PARAMS:
+                flattened.append((key, value))
+            else:
+                flattened.extend((key, entry) for entry in value.split(","))
+        scope["query_string"] = urlencode(flattened, doseq=True).encode("utf-8")
+
+        if self.settings.root_path:
+            prefix = headers.get("X-Forwarded-Prefix", "").rstrip("/")
+            # Restrict transport URLs to path segments that cannot change their origin.
+            if re.fullmatch(r"(?:/[a-zA-Z0-9._~-]+)+", prefix) and not any(
+                part in {".", ".."} for part in prefix.split("/")
+            ):
+                scope["root_path"] = prefix
+
+        if "/api/v1/files/upload" in URL(scope=scope).path:
+            await self.upload_guard(scope, receive, send)
+        else:
+            await self.bind_execution_client(scope, receive, send)
+
+    async def bind_execution_client(self, scope: Scope, receive: Receive, send: Send) -> None:
+        with execution_client(Headers(scope=scope).get(EXECUTION_CLIENT_HEADER)):
+            await self.app(scope, receive, send)
+
+    def locale(self, accept_lang: str) -> str:
+        if self.supported_locales is None:
+            from langflow.utils.i18n import get_supported_locales
+
+            self.supported_locales = frozenset(get_supported_locales())
+        primary = accept_lang.split(",")[0].strip()
+        locale = "zh-Hans" if primary.lower().startswith("zh-hans") else primary.split("-")[0]
+        return locale if locale in self.supported_locales else "en"
 
 
 async def load_bundles_with_error_handling():
@@ -1071,122 +1191,9 @@ def create_app():
     )
     app.add_middleware(JavaScriptMIMETypeMiddleware)
     app.add_middleware(AuditRequestContextMiddleware)
-
-    @app.middleware("http")
-    async def bind_execution_client(request: Request, call_next):
-        """Bind the caller's self-declared client for the life of the request.
-
-        Middleware rather than per-route wiring because every surface wants it and a route that
-        forgot would silently report nothing. The value is read from a header rather than the
-        request body: the v2 run model rejects extra fields, so a body field would be a public
-        schema change, and this is advisory metadata rather than part of the contract.
-
-        Self-reported, so it is spoofable, and execution_client drops anything outside the known
-        vocabulary. Never use it for authorization.
-        """
-        with execution_client(request.headers.get(EXECUTION_CLIENT_HEADER)):
-            return await call_next(request)
-
-    @app.middleware("http")
-    async def check_boundary(request: Request, call_next):
-        """Require a multipart boundary for file-upload requests."""
-        if "/api/v1/files/upload" in request.url.path:
-            content_type = request.headers.get("Content-Type")
-
-            if not content_type or "multipart/form-data" not in content_type or "boundary=" not in content_type:
-                return JSONResponse(
-                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                    content={"detail": "Content-Type header must be 'multipart/form-data' with a boundary parameter."},
-                )
-
-            boundary = content_type.split("boundary=")[-1].strip()
-
-            if not re.match(r"^[\w\-]{1,70}$", boundary):
-                return JSONResponse(
-                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                    content={"detail": "Invalid boundary format"},
-                )
-
-            body = await request.body()
-
-            boundary_start = f"--{boundary}".encode()
-            # The multipart/form-data spec doesn't require a newline after the boundary, however many clients do
-            # implement it that way
-            boundary_end = f"--{boundary}--\r\n".encode()
-            boundary_end_no_newline = f"--{boundary}--".encode()
-
-            if not body.startswith(boundary_start) or not body.endswith((boundary_end, boundary_end_no_newline)):
-                return JSONResponse(
-                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                    content={"detail": "Invalid multipart formatting"},
-                )
-
-        return await call_next(request)
-
-    @app.middleware("http")
-    async def forwarded_prefix_middleware(request: Request, call_next):
-        """Honour X-Forwarded-Prefix set by a reverse proxy.
-
-        When a reverse proxy (e.g. Nginx) strips a URL prefix before forwarding
-        the request, it can advertise the original prefix via X-Forwarded-Prefix.
-        We propagate this into the ASGI ``root_path`` so that transports like
-        MCP SSE include the prefix in the POST-back URLs they hand to clients.
-
-        This middleware is only active when ``root_path`` is configured in
-        settings (i.e. the operator has explicitly opted into reverse-proxy
-        mode).  The header value takes precedence over the static setting
-        because the proxy is the runtime source of truth for the prefix.
-        """
-        if not settings.root_path:
-            return await call_next(request)
-
-        prefix = request.headers.get("X-Forwarded-Prefix", "").rstrip("/")
-        # Restrict transport URLs to path segments that cannot change their origin.
-        if re.fullmatch(r"(?:/[a-zA-Z0-9._~-]+)+", prefix) and not any(
-            part in {".", ".."} for part in prefix.split("/")
-        ):
-            request.scope["root_path"] = prefix
-        return await call_next(request)
-
-    @app.middleware("http")
-    async def flatten_query_string_lists(request: Request, call_next):
-        """Expand comma-separated query values into repeated query parameters."""
-        flattened: list[tuple[str, str]] = []
-        for key, value in request.query_params.multi_items():
-            if key in VERBATIM_QUERY_PARAMS:
-                flattened.append((key, value))
-            else:
-                flattened.extend((key, entry) for entry in value.split(","))
-
-        request.scope["query_string"] = urlencode(flattened, doseq=True).encode("utf-8")
-
-        return await call_next(request)
-
-    _supported_locales: frozenset[str] | None = None
-
-    @app.middleware("http")
-    async def set_locale(request: Request, call_next):
-        """Parse Accept-Language header and store normalised locale in request.state.
-
-        Handles quality values ("fr-FR,fr;q=0.9,en;q=0.8" → "fr") and preserves
-        zh-Hans as a full tag. All other locales are reduced to the language code.
-        Validates against the loaded locale files and falls back to "en" for unknown
-        values — prevents client-supplied headers from polluting the per-locale cache.
-        Result is available as request.state.locale in any endpoint.
-        """
-        nonlocal _supported_locales
-        if _supported_locales is None:
-            from langflow.utils.i18n import get_supported_locales
-
-            _supported_locales = frozenset(get_supported_locales())
-
-        accept_lang = request.headers.get("Accept-Language", "en")
-        primary = accept_lang.split(",")[0].strip()
-        locale = "zh-Hans" if primary.lower().startswith("zh-hans") else primary.split("-")[0]
-        if locale not in _supported_locales:
-            locale = "en"
-        request.state.locale = locale
-        return await call_next(request)
+    # One pure ASGI layer for locale, query lists, forwarded prefix, upload boundary and
+    # execution client (formerly five @app.middleware("http") layers, in the same order).
+    app.add_middleware(RequestContextMiddleware, settings=settings)
 
     if prome_port_str := os.environ.get("LANGFLOW_PROMETHEUS_PORT"):
         # set here for create_app() entry point
@@ -1337,6 +1344,18 @@ def create_app():
     limiter = get_rate_limiter()
     app.state.limiter = limiter
 
+    # Multiplayer flow-ops measurement (LANGFLOW_OPS_BENCH=1): wraps response middleware and sends.
+    from langflow.services.flow_multiplayer import config as flow_multiplayer_config
+
+    if flow_multiplayer_config.bench_enabled():
+        from langflow.services.flow_multiplayer.bench import BenchMiddleware
+
+        app.add_middleware(BenchMiddleware)
+
+    # This pure-ASGI scope must wrap every response transformation and send.
+    from langflow.services.flow_multiplayer.serialization_response import SerializationResponseMiddleware
+
+    app.add_middleware(SerializationResponseMiddleware)
     return app
 
 

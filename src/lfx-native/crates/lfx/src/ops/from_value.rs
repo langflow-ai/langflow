@@ -1,6 +1,6 @@
 //! Reading typed values out of a parsed JSON value.
 //!
-//! A type that implements [`FromValue`] reads itself from an owned [`Value`]
+//! A type that implements [`FromAnyValue`] reads itself from an owned [`AnyValue`]
 //! and moves the parts it keeps out of it, so parsing copies nothing. Each
 //! type checks its own JSON type: a `Vec<String>` refuses `["a", 5]`.
 //! An object type loops over its keys once, moves each value it allows into
@@ -11,17 +11,17 @@
 
 use std::fmt::Write as _;
 
-use crate::value::{Map, Value};
+use crate::value::{AnyMap, AnyValue};
 
 use crate::ops::error::{Error, quoted};
 
 /// A type that reads itself from a JSON value.
-pub(crate) trait FromValue: Sized {
+pub(crate) trait FromAnyValue: Sized {
     /// Read `value` as this type. It takes `value` and moves the parts it
     /// keeps into the result, so nothing is copied; a part it does not keep
     /// is dropped. On failure, it says why `value` does not have this type's
     /// shape.
-    fn from_value(value: Value) -> Result<Self, FromValueError>;
+    fn from_value(value: AnyValue) -> Result<Self, FromAnyValueError>;
 }
 
 /// One step into a JSON value.
@@ -38,7 +38,7 @@ enum Place {
 /// It is `pub` because the public `FromStr` for `OperationKind` returns it.
 /// Its module is private, so code outside the crate cannot name it.
 #[derive(Debug)]
-pub struct FromValueError {
+pub struct FromAnyValueError {
     /// The steps from the value that was read to the one that failed,
     /// innermost first. As in a stack trace, the error passes back up through
     /// the readers, and each one adds its own step on the way out, after the
@@ -47,7 +47,7 @@ pub struct FromValueError {
     message: String,
 }
 
-impl FromValueError {
+impl FromAnyValueError {
     /// An error at the value being read.
     pub(crate) fn new(message: impl Into<String>) -> Self {
         Self {
@@ -96,34 +96,34 @@ impl FromValueError {
     }
 }
 
-impl FromValue for Value {
-    fn from_value(value: Value) -> Result<Self, FromValueError> {
+impl FromAnyValue for AnyValue {
+    fn from_value(value: AnyValue) -> Result<Self, FromAnyValueError> {
         Ok(value)
     }
 }
 
-impl FromValue for String {
-    fn from_value(value: Value) -> Result<Self, FromValueError> {
+impl FromAnyValue for String {
+    fn from_value(value: AnyValue) -> Result<Self, FromAnyValueError> {
         match value {
-            Value::String(string) => Ok(string),
-            _ => Err(FromValueError::new("must be a string")),
+            AnyValue::String(string) => Ok(string.to_string()),
+            _ => Err(FromAnyValueError::new("must be a string")),
         }
     }
 }
 
-impl FromValue for Map {
-    fn from_value(value: Value) -> Result<Self, FromValueError> {
+impl FromAnyValue for AnyMap {
+    fn from_value(value: AnyValue) -> Result<Self, FromAnyValueError> {
         match value {
-            Value::Object(object) => Ok(object),
-            _ => Err(FromValueError::new("must be an object")),
+            AnyValue::Object(object) => Ok(object),
+            _ => Err(FromAnyValueError::new("must be an object")),
         }
     }
 }
 
-impl<T: FromValue> FromValue for Vec<T> {
-    fn from_value(value: Value) -> Result<Self, FromValueError> {
-        let Value::Array(items) = value else {
-            return Err(FromValueError::new("must be a list"));
+impl<T: FromAnyValue> FromAnyValue for Vec<T> {
+    fn from_value(value: AnyValue) -> Result<Self, FromAnyValueError> {
+        let AnyValue::Array(items) = value else {
+            return Err(FromAnyValueError::new("must be a list"));
         };
         items
             .into_iter()
@@ -134,19 +134,22 @@ impl<T: FromValue> FromValue for Vec<T> {
 }
 
 /// Read the value of the object key `key` as `T`, naming the key in any error.
-/// It takes `value` (see [`FromValue::from_value`]).
-pub(crate) fn read<T: FromValue>(value: Value, key: &'static str) -> Result<T, FromValueError> {
+/// It takes `value` (see [`FromAnyValue::from_value`]).
+pub(crate) fn read<T: FromAnyValue>(
+    value: AnyValue,
+    key: &'static str,
+) -> Result<T, FromAnyValueError> {
     T::from_value(value).map_err(|error| error.at_key(key))
 }
 
 /// The error for a key that an object must have.
-pub(crate) fn missing(key: &'static str) -> FromValueError {
-    FromValueError::new(format!("{key} is missing"))
+pub(crate) fn missing(key: &'static str) -> FromAnyValueError {
+    FromAnyValueError::new(format!("{key} is missing"))
 }
 
 /// The error for a key that an object may not have.
-pub(crate) fn unexpected(key: &str) -> FromValueError {
-    FromValueError::new(format!("unexpected key {}", quoted(key)))
+pub(crate) fn unexpected(key: &str) -> FromAnyValueError {
+    FromAnyValueError::new(format!("unexpected key {}", quoted(key)))
 }
 
 #[cfg(test)]
@@ -155,7 +158,7 @@ mod tests {
 
     use super::*;
 
-    fn message<T: FromValue + std::fmt::Debug>(value: Value) -> String {
+    fn message<T: FromAnyValue + std::fmt::Debug>(value: AnyValue) -> String {
         T::from_value(value).unwrap_err().into_error("root").message
     }
 

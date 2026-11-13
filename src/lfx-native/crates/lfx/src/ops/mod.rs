@@ -42,4 +42,4 @@ pub use ops::{
 pub use plain::GraphPlain;
 pub use repair::{Fix, Repaired, repair_flow_data};
 pub use replay::{ReplayOptions, Replayed, replay_flow_operations};
-pub use state::{Edges, Entry, GraphState, Nodes};
+pub use state::{Edges, Entry, GraphSnapshot, GraphState, Nodes};

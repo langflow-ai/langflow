@@ -54,22 +54,21 @@ from lfx.services.flow_operations import (
     FlowDataValidationError,
     FlowOperation,
     FlowOperationError,
-    GraphFix,
     UpdateNodesOp,
     dump_flow_operation,
-    find_graph_violations,
-    graph_hash,
-    graphs_equal,
-    repair_flow_data,
+    parse_flow_operation,
 )
 from lfx.services.flow_operations.limits import check_graph_limits
-from sqlmodel import select
+from sqlalchemy import JSON, Text, bindparam, cast
+from sqlalchemy.orm.attributes import set_committed_value
+from sqlalchemy.types import TypeDecorator
+from sqlmodel import func, select
 
 from langflow.services.database.models.flow_operation import FlowOperation as FlowOperationRow
 from langflow.services.database.models.flow_version.crud import create_flow_version_entry
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_flow_operation_service, get_settings_service, get_variable_service
+from langflow.services.deps import get_settings_service, get_variable_service
 from langflow.services.flow_history.envelope import (
     RecordedOperation,
     batch_header,
@@ -88,15 +87,124 @@ from langflow.services.flow_history.errors import (
 from langflow.services.flow_history.replay import reconstruct_graph, replay_from
 from langflow.services.flow_history.secrets import SecretFinder
 from langflow.services.flow_history.store import has_anchor, latest_anchor_at_or_before
+from langflow.services.flow_multiplayer import config as multiplayer
 
 if TYPE_CHECKING:
-    from lfx.services.flow_operations import GraphViolation
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.database.models.flow.model import Flow, FlowGraphWriteOptions
     from langflow.services.flow_history.secrets import OperationSecrets, WriteSecrets
 
 REPAIRED_ORIGINAL_DESCRIPTION = "Original before automatic repair"
+
+
+async def _engine(name: str, *args: Any, **kwargs: Any) -> Any:
+    """Run one function of the process's flow engine (``LANGFLOW_FLOW_ENGINE``) on whole graphs.
+
+    Every call here reads or builds a whole flow, so it runs in a worker thread, as the
+    multiplayer path runs its large calls (both engines alike): the event loop serves other
+    requests meanwhile. Each call is measured (``eng_<function>`` wall and CPU) when the
+    request is measured.
+    """
+    from langflow.services.flow_multiplayer.cache import whole_flow
+
+    return await whole_flow(name, *args, **kwargs)
+
+
+@dataclass(frozen=True)
+class EngineViolation:
+    """A graph rule violation as the engine object reports it (a dict), with the ``to_dict`` errors expect."""
+
+    value: dict[str, Any]
+
+    def to_dict(self) -> dict[str, Any]:
+        return dict(self.value)
+
+    def __getattr__(self, name: str) -> Any:
+        try:
+            return self.value[name]
+        except KeyError:
+            raise AttributeError(name) from None
+
+
+async def log_head(session: AsyncSession, flow_id: UUID) -> int:
+    """The flow's head revision, read from its operation log (0 when it has no rows)."""
+    head = (
+        await session.exec(select(func.max(FlowOperationRow.end_revision)).where(FlowOperationRow.flow_id == flow_id))
+    ).one()
+    return int(head or 0)
+
+
+def _multiplayer_cached(session: AsyncSession) -> bool:
+    """Whether the head graph comes from the multiplayer cache (modes cache and wal, PostgreSQL)."""
+    return session.get_bind().dialect.name == "postgresql" and multiplayer.uses_cache()
+
+
+def _wal(session: AsyncSession) -> bool:
+    return session.get_bind().dialect.name == "postgresql" and multiplayer.write_mode() == "wal"
+
+
+def current_version_token(session: AsyncSession, flow: Flow, head: int) -> UUID | None:
+    """The token ``If-Match`` names: in WAL mode it also changes with every revision of the log."""
+    if _wal(session) and flow.user_id is not None and flow_history_enabled():
+        from langflow.services.flow_multiplayer.oplog import wal_version_token
+
+        return wal_version_token(flow.version_token, flow.id, head)
+    return flow.version_token
+
+
+async def response_version_token(session: AsyncSession, flow: Flow) -> UUID | None:
+    """The token a write's response carries: in WAL mode, the token of the log's head."""
+    if not _wal(session):
+        return flow.version_token
+    return current_version_token(session, flow, await log_head(session, flow.id))
+
+
+async def graph_at_head(session: AsyncSession, flow_id: UUID, head: int) -> bytes:
+    """The graph at ``head`` as JSON text, from the multiplayer cache caught up from the log."""
+    from langflow.services.flow_multiplayer.cache import EntryGoneError, entry_at_head
+
+    for _attempt in range(3):
+        entry = await entry_at_head(session, flow_id, head)
+        if entry is None:
+            break
+        try:
+            async with await entry.serialized() as serialized:
+                if serialized.revision == head:
+                    return serialized.text.encode()
+        except EntryGoneError:
+            continue
+    msg = f"Could not read flow {flow_id} at revision {head}"
+    raise FlowHistoryError(msg)
+
+
+def _wal_reads_log(session: AsyncSession, flow: Flow) -> bool:
+    """Whether the flow's current graph is the log's head and not ``Flow.data`` (WAL, as the v1 read)."""
+    return _wal(session) and flow.user_id is not None and flow_history_enabled()
+
+
+async def refresh_after_write(session: AsyncSession, flow: Flow) -> None:
+    """Refresh ``flow`` after a v1 write, with the current graph on it for the answer and follow-up work.
+
+    A legacy save that records a change writes ``Flow.data`` at the new head in every mode.
+    In WAL mode a write that records nothing (no graph in the request, or an unchanged graph)
+    can leave ``Flow.data`` at an older revision, since multiplayer writers do not touch the
+    row. Then the flow gets the graph at the log's head, as the v1 read answers, from the
+    cached graph's coalesced serialization, parsed in a worker thread. Never writes ``Flow.data``.
+    """
+    await session.refresh(flow)
+    if not _wal_reads_log(session, flow):
+        return
+    head = await log_head(session, flow.id)
+    if flow.current_revision >= head:
+        return
+    import anyio
+    import orjson
+
+    text = await graph_at_head(session, flow.id, head)
+    set_committed_value(flow, "data", await anyio.to_thread.run_sync(orjson.loads, text))
+    set_committed_value(flow, "latest_revision", max(head, flow.latest_revision))
+    set_committed_value(flow, "current_revision", head)
 
 
 @dataclass
@@ -170,17 +278,29 @@ async def write_flow_graph(
         )
         return result
 
-    if (
-        expected_version_token is not None
-        and flow.version_token is not None
-        and flow.version_token != expected_version_token
-    ):
-        if graphs_equal(normalize_absent_graph(target), normalize_absent_graph(flow.data)):
+    # The head comes from the log: a multiplayer writer in WAL mode records
+    # revisions without touching the flow row. The caller holds the flow's write lock.
+    head = await log_head(session, flow.id)
+    if head > flow.latest_revision:
+        # Only WAL writers leave the row behind the log; the row catches up with this write.
+        flow.latest_revision = head
+        result.latest_revision = head
+    from_cache = _multiplayer_cached(session)
+    head_graph: bytes | None = None
+
+    current_token = current_version_token(session, flow, head)
+    if expected_version_token is not None and current_token is not None and current_token != expected_version_token:
+        if from_cache and flow.latest_revision > 0 and not flow.history_paused:
+            head_graph = await graph_at_head(session, flow.id, head)
+            unchanged = await _engine("graphs_equal", normalize_absent_graph(target), head_graph)
+        else:
+            unchanged = await _engine("graphs_equal", normalize_absent_graph(target), normalize_absent_graph(flow.data))
+        if unchanged:
             return result
         raise FlowVersionConflictError(
             flow.id,
             expected=expected_version_token,
-            current=flow.version_token,
+            current=current_token,
             author_id=flow.last_modified_by,
             author_name=await _username(session, flow.last_modified_by),
             modified_at=flow.updated_at,
@@ -191,7 +311,10 @@ async def write_flow_graph(
     # starts again as if it had none, and its stored graph is checked like one.
     resuming = flow.history_paused
     started = not resuming and (flow.latest_revision > 0 or await has_anchor(session, flow.id))
-    if started:
+    if started and from_cache:
+        # The graph at the log's head, not Flow.data (which is only a checkpoint in WAL mode).
+        base = head_graph if head_graph is not None else await graph_at_head(session, flow.id, head)
+    elif started:
         if not await projection_matches(session, flow):
             if not repair_mismatch:
                 raise FlowRevisionMismatchError(
@@ -206,57 +329,64 @@ async def write_flow_graph(
         base = flow.data
     else:
         base = normalize_absent_graph(flow.data)
-        violations = _graph_violations(base, graph="stored")
+        violations = await _graph_violations(base, graph="stored")
         if violations:
             if not repair_invalid:
                 raise FlowGraphInvalidError(violations, graph="stored")
             await _keep_repaired_original(session, flow, actor_id)
-            repaired = repair_flow_data(base)
-            base = repaired.flow_data
+            repaired = await _engine("repair", base)
+            base = repaired["flow_data"]
             stored_repaired = True
-            result.graph_repairs.extend(_fix_entry("stored", fix) for fix in repaired.fixes)
+            result.graph_repairs.extend(_fix_entry("stored", fix) for fix in repaired["fixes"])
 
     target = normalize_absent_graph(target)
     # Against the stored graph, so the table rules apply to the tables this
     # write adds or changes, while a table it leaves alone is accepted as stored.
-    violations = _graph_violations(target, graph="submitted", base=base)
+    violations = await _graph_violations(target, graph="submitted", base=base)
     if violations:
         if not repair_invalid:
             raise FlowGraphInvalidError(violations, graph="submitted")
         try:
-            repaired = repair_flow_data(target, base=base)
+            repaired = await _engine("repair", target, base)
         except FlowDataValidationError as exc:
             # What repair leaves needs the person's intent, so the client fixes it.
             raise FlowGraphInvalidError(exc.violations, graph="submitted") from exc
-        target = repaired.flow_data
-        result.graph_repairs.extend(_fix_entry("submitted", fix) for fix in repaired.fixes)
+        target = repaired["flow_data"]
+        result.graph_repairs.extend(_fix_entry("submitted", fix) for fix in repaired["fixes"])
 
     try:
-        derived = get_flow_operation_service().derive(base, target)
+        derived_operations = [parse_flow_operation(operation) for operation in await _engine("ops_diff", base, target)]
     except FlowOperationError as exc:
         # Both graphs follow the rules, so this is a defect in the diff or the
         # engine. Refusing the write keeps the history complete.
         msg = f"Could not record the change to flow {flow.id} as operations"
         raise FlowHistoryError(msg) from exc
 
+    # Every mode, WAL included: the stored graph becomes the graph at the new head, under the
+    # flow's advisory lock. The checkpoint moves Flow.data only to a newer revision, so it
+    # cannot put an older graph back over this one.
     flow.data = target
-    if derived.operations or result.flow_repaired or stored_repaired:
+    if started and from_cache and flow.current_revision != head:
+        # The stored graph becomes the graph at the head (WAL mode: a checkpoint for free).
+        flow.latest_revision = flow.current_revision = head
+        result.current_revision = head
+    if derived_operations or result.flow_repaired or stored_repaired:
         flow.version_token = uuid4()
         flow.last_modified_by = actor_id
-    if not derived.operations:
+    if not derived_operations:
         return result
 
     if not started:
         # Revision 0, or one past the revisions recorded before history paused.
         anchor = flow.latest_revision + 1 if resuming else 0
-        session.add(checkpoint_system(flow, base, revision=anchor))
+        await checkpoint_system(session, flow, base, revision=anchor)
         flow.latest_revision = flow.current_revision = anchor
         flow.history_paused = False
 
     recorded = _sequence(
-        derived.operations,
+        derived_operations,
         flow=flow,
-        secret_finder=SecretFinder(target, await _owner_variable_names(session, flow, derived.operations)),
+        secret_finder=SecretFinder(target, await _owner_variable_names(session, flow, derived_operations)),
         actor_id=actor_id,
         request_id=request_id,
         cause=options.cause if options else None,
@@ -277,8 +407,17 @@ async def write_flow_graph(
     flow.current_revision = recorded[-1].revision
     result.start_revision = recorded[0].revision
     result.end_revision = recorded[-1].revision
-    result.latest_revision = flow.latest_revision
+    result.latest_revision = recorded[-1].revision
     result.current_revision = flow.current_revision
+
+    if from_cache:
+        # Modes cache and wal: the multiplayer checkpoint task checkpoints and compacts after the
+        # commit, as for a multiplayer write, with the lock held only for its deletes. Legacy
+        # maintenance would read and hash whole large graphs under the lock.
+        from langflow.services.flow_multiplayer.checkpoint import request_after_commit
+
+        request_after_commit(session, flow.id, recorded[-1].revision)
+        return result
 
     # Imported here: maintenance builds on this module.
     from langflow.services.flow_history.maintenance import needs_maintenance, request_maintenance
@@ -288,9 +427,9 @@ async def write_flow_graph(
     return result
 
 
-def _graph_violations(
+async def _graph_violations(
     flow_data: Any, *, graph: Literal["stored", "submitted"], base: Any = None
-) -> list[GraphViolation]:
+) -> list[EngineViolation]:
     """Return the rules a graph breaks, refusing a graph the engine cannot read.
 
     A graph that breaks the JSON limits (a lone surrogate, or nesting deeper
@@ -298,7 +437,7 @@ def _graph_violations(
     with no violations, and repair cannot fix it.
     """
     try:
-        return find_graph_violations(flow_data, base=base)
+        return [EngineViolation(violation) for violation in await _engine("validate", flow_data, base)]
     except FlowDataValidationError as exc:
         raise FlowGraphInvalidError(exc.violations, graph=graph, reason=str(exc)) from exc
 
@@ -360,14 +499,28 @@ async def _username(session: AsyncSession, user_id: UUID | None) -> str | None:
 
 
 async def projection_matches(session: AsyncSession, flow: Flow) -> bool:
-    """Return whether ``flow.data`` is the graph its ``current_revision`` replays to."""
+    """Return whether ``flow.data`` is the graph its ``current_revision`` replays to.
+
+    At a checkpoint's revision, the stored text of ``Flow.data`` that hashes to the
+    checkpoint's hash is the checkpoint's text, so it matches without the engine. Other
+    text can still be the same graph (a save that changed only view state, or the same
+    graph written by another serializer), so the engine compares the graphs then.
+    """
     anchor = await latest_anchor_at_or_before(session, flow.id, flow.current_revision)
     if anchor is None:
         raise FlowHistoryCorruptionError(flow.id, "no checkpoint to replay from", revision=flow.current_revision)
     try:
         if anchor.operation_revision == flow.current_revision:
-            return graph_hash(flow.data) == anchor.graph_hash
-        return graphs_equal(await replay_from(session, flow.id, anchor, flow.current_revision), flow.data)
+            from langflow.services.database.models.flow.model import Flow
+            from langflow.services.flow_multiplayer.cache import call, text_hash
+
+            stored = (await session.exec(select(cast(Flow.data, Text)).where(Flow.id == flow.id))).first()
+            if stored is not None and await call(text_hash, stored, large=True, name="hash") == anchor.graph_hash:
+                return True
+            return await _engine("graphs_equal", anchor.data, flow.data)
+        return await _engine(
+            "graphs_equal", await replay_from(session, flow.id, anchor, flow.current_revision), flow.data
+        )
     except FlowOperationError:
         # Stored data that cannot even be canonicalized is not the recorded graph.
         return False
@@ -378,7 +531,9 @@ async def checkpoint_fields(session: AsyncSession, flow: Flow) -> dict[str, Any]
 
     A version is an anchor only when the stored graph is exactly the graph at
     the flow's current revision; otherwise, or before history starts, it is a
-    plain snapshot and replay never starts from it.
+    plain snapshot and replay never starts from it. The caller stores a copy of
+    ``flow.data`` as a dict, which SQLAlchemy serializes with ``json.dumps`` and its
+    defaults (SQLite and psycopg alike), so the hash is of that same text.
     """
     if (
         flow.user_id is None
@@ -390,21 +545,62 @@ async def checkpoint_fields(session: AsyncSession, flow: Flow) -> dict[str, Any]
     try:
         if not await projection_matches(session, flow):
             return {}
-        return {"operation_revision": flow.current_revision, "graph_hash": graph_hash(flow.data)}
     except (FlowHistoryError, FlowOperationError):
         return {}
+    from langflow.services.flow_multiplayer.cache import call
+
+    _, graph_hash = await call(_dump_and_hash, flow.data, large=True, name="hash")
+    return {"operation_revision": flow.current_revision, "graph_hash": graph_hash}
 
 
-def checkpoint_system(flow: Flow, flow_data: dict[str, Any], *, revision: int) -> FlowVersion:
-    """Build a system checkpoint: no version number, never listed or pruned."""
-    return FlowVersion(
+class _JsonText(TypeDecorator):
+    """A JSON column's value that is JSON text already: bound as it is, never serialized again.
+
+    PostgreSQL's ``json`` keeps its input text byte for byte; SQLite stores the string.
+    """
+
+    impl = JSON
+    cache_ok = True
+
+    def bind_processor(self, dialect: Any) -> None:  # noqa: ARG002
+        return None
+
+
+async def checkpoint_system(
+    session: AsyncSession, flow: Flow, flow_data: dict[str, Any], *, revision: int, text: str | None = None
+) -> FlowVersion:
+    """Add a system checkpoint (no version number, never listed or pruned) and flush it.
+
+    ``text`` is ``flow_data`` already serialized (``Flow.data``'s stored text); without
+    it ``flow_data`` is serialized here, once. The row stores that text as it is and its
+    hash is the SHA-256 of that text. ``data`` is expired after the flush: a query loads it.
+    """
+    from langflow.services.flow_multiplayer.cache import call, text_hash
+
+    if text is None:
+        text, graph_hash = await call(_dump_and_hash, flow_data, large=True, name="hash")
+    else:
+        graph_hash = await call(text_hash, text, large=True, name="hash")
+    checkpoint = FlowVersion(
         flow_id=flow.id,
         user_id=flow.user_id,
-        data=copy.deepcopy(flow_data),
         version_number=None,
         operation_revision=revision,
-        graph_hash=graph_hash(flow_data),
+        graph_hash=graph_hash,
     )
+    checkpoint.data = bindparam(None, text, type_=_JsonText())
+    session.add(checkpoint)
+    await session.flush()
+    session.expire(checkpoint, ["data"])
+    return checkpoint
+
+
+def _dump_and_hash(graph: Any) -> tuple[str, str]:
+    """The JSON text SQLAlchemy stores for ``graph`` (``json.dumps``, defaults) and its SHA-256."""
+    from langflow.services.flow_multiplayer.cache import text_hash
+
+    text = json.dumps(graph)
+    return text, text_hash(text)
 
 
 async def _keep_repaired_original(session: AsyncSession, flow: Flow, actor_id: UUID) -> None:
@@ -419,8 +615,8 @@ async def _keep_repaired_original(session: AsyncSession, flow: Flow, actor_id: U
     )
 
 
-def _fix_entry(graph: str, fix: GraphFix) -> dict[str, Any]:
-    return {"graph": graph, **fix.to_dict()}
+def _fix_entry(graph: str, fix: dict[str, Any]) -> dict[str, Any]:
+    return {"graph": graph, **fix}
 
 
 # --- Numbering and storing operations -------------------------------------------------

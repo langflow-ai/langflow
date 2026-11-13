@@ -34,7 +34,7 @@ use crate::ops::edges::GraphRead;
 use crate::ops::error::{Result, bail, quoted};
 use crate::ops::ops::{Edge, FieldUpdate, Operation};
 use crate::ops::state::GraphState;
-use crate::value::Value;
+use crate::value::AnyValue;
 
 /// What a replay returns besides the flow.
 #[derive(Debug, Clone, Copy, Default)]
@@ -56,6 +56,10 @@ impl GraphState {
     /// Replay stored operations in order, with no rule. On an error nothing
     /// is replayed.
     ///
+    /// Replay carries out the operations as written. It refuses no graph it
+    /// leaves: a node it deletes keeps its edges unless the operations
+    /// delete them.
+    ///
     /// # Errors
     ///
     /// An operation cannot be carried out on the flow.
@@ -68,28 +72,8 @@ impl GraphState {
             forward: false,
             backward: options.backward,
         });
-        let deleted: Vec<String> = operations
-            .iter()
-            .filter_map(|operation| match operation {
-                Operation::DeleteNodes(ids) => Some(ids.iter().cloned()),
-                _ => None,
-            })
-            .flatten()
-            .collect();
         self.run_batch(operations, &mut report, Self::replay_operation)?;
         self.commit();
-        // Replay checks no rule. Of the structural rules that apply checks
-        // before its first batch, the only one a replay can break is that an
-        // edge's nodes exist: replay deletes no edge with its node. Stored
-        // operations delete those edges in the same batch, so the graph
-        // stays checked unless a node the batch deleted still has edges.
-        // Then apply checks the whole graph again, and refuses it.
-        if deleted
-            .iter()
-            .any(|id| !self.graph.has_node(id) && self.graph.edges_at(id).next().is_some())
-        {
-            self.uncheck_base();
-        }
         Ok(Replayed {
             backward: report.into_applied().backward,
         })
@@ -165,17 +149,18 @@ impl GraphState {
 /// Replay stored operations on a flow graph, with no rule, and return the
 /// result with what the replay did.
 ///
-/// Loading the flow checks only what the indexes need, so a stored flow that
-/// breaks a rule added later still replays.
+/// Loading the flow checks the structural rules ([`GraphState::new`]); the
+/// replay checks none.
 ///
 /// # Errors
 ///
-/// The flow cannot be indexed, or an operation cannot be carried out on it.
+/// The flow breaks a structural rule, or an operation cannot be carried out
+/// on it.
 pub fn replay_flow_operations(
-    base: Value,
+    base: AnyValue,
     operations: Vec<Operation>,
     options: ReplayOptions,
-) -> Result<(Value, Replayed)> {
+) -> Result<(AnyValue, Replayed)> {
     let mut state = GraphState::new(base)?;
     let replayed = state.replay(operations, options)?;
     Ok((state.into_value(), replayed))
@@ -188,72 +173,21 @@ mod tests {
     use super::*;
 
     #[test]
-    fn apply_checks_the_flow_again_after_a_replay() {
-        let node = |id: &str| json!({"id": id, "data": {"node": {"template": {}}}});
+    fn a_replay_that_deletes_a_node_but_not_its_edges_does_not_refuse() {
+        let node = |id: &str| json!({"id": id, "data": {"node": {"template": {"f": {"value": "", "type": "str"}}}}});
         let edge = json!({"id": "e", "source": "a", "target": "b"});
         let flow = json!({"nodes": [node("a"), node("b")], "edges": [edge]});
         let mut state = GraphState::new(flow).unwrap();
-        state.apply(Vec::new(), ApplyOptions::default()).unwrap();
         let delete = json!([{"type": "delete_nodes", "ids": ["a"]}]);
         let delete = Operation::list_from_value(delete).unwrap();
         state.replay(delete, ReplayOptions::default()).unwrap();
-        // The replay left edge `e` without its source node.
-        let error = state
-            .apply(Vec::new(), ApplyOptions::default())
-            .unwrap_err();
-        assert_eq!(error.code.as_str(), "FLOW_GRAPH_INVALID", "{error}");
-    }
-
-    #[test]
-    fn the_first_batch_refuses_a_loaded_flow_with_an_edge_without_its_node() {
-        let node = |id: &str| json!({"id": id, "data": {"node": {"template": {}}}});
-        let flow = json!({
-            "nodes": [node("a")],
-            "edges": [{"id": "e", "source": "a", "target": "gone"}],
-        });
-        let expected = crate::ops::validate::validate_flow_data(
-            &flow,
-            crate::ops::validate::Numbers::Skip,
-            "flow.data",
-            None,
-        )
-        .unwrap_err();
-        let mut state = GraphState::new(flow).unwrap();
-        let error = state
-            .apply(Vec::new(), ApplyOptions::default())
-            .unwrap_err();
-        assert_eq!(error, expected);
-        assert!(
-            state.needs_check(),
-            "a refused check leaves the flow unchecked"
-        );
-    }
-
-    #[test]
-    fn a_replay_that_leaves_every_edge_its_nodes_keeps_the_flow_checked() {
-        let node =
-            |id: &str| json!({"id": id, "data": {"node": {"template": {"f": {"value": ""}}}}});
-        let edge = json!({"id": "e", "source": "a", "target": "b"});
-        let flow = json!({"nodes": [node("a"), node("b"), node("c")], "edges": [edge]});
-        let mut state = GraphState::new(flow).unwrap();
-        assert!(
-            state.needs_check(),
-            "a loaded flow is checked before its first batch"
-        );
-        state.apply(Vec::new(), ApplyOptions::default()).unwrap();
-        assert!(!state.needs_check());
-        let batches = [
-            json!([{"type": "update_nodes", "updates": [
-                {"id": "a", "op": "set_field", "path": ["data", "node", "template", "f", "value"], "value": "x"},
-            ]}]),
-            // A stored delete: the node, then its edges.
-            json!([{"type": "delete_nodes", "ids": ["a"]}, {"type": "delete_edges", "ids": ["e"]}]),
-            json!([{"type": "delete_nodes", "ids": ["c"]}]),
-        ];
-        for batch in batches {
-            let batch = Operation::list_from_value(batch).unwrap();
-            state.replay(batch, ReplayOptions::default()).unwrap();
-            assert!(!state.needs_check());
-        }
+        assert!(!state.graph.has_node("a"));
+        assert!(state.graph.has_edge("e"));
+        // The next apply checks only its own batch.
+        let write = json!([{"type": "update_nodes", "updates": [
+            {"id": "b", "op": "set_field", "path": ["data", "node", "template", "f", "value"], "value": "x"},
+        ]}]);
+        let write = Operation::list_from_value(write).unwrap();
+        state.apply(write, ApplyOptions::default()).unwrap();
     }
 }

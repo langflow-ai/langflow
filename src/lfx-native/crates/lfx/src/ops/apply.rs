@@ -27,7 +27,7 @@ use std::borrow::Cow;
 use std::collections::HashSet;
 use std::fmt;
 
-use crate::value::Value;
+use crate::value::{AnyString, AnyValue};
 use indexmap::IndexSet;
 
 use crate::ops::edges::{GraphRead, check_edge, reads_before, removed_endpoints};
@@ -133,12 +133,12 @@ impl GraphState {
     /// Apply a batch of operations in order, with every rule. On an error
     /// nothing is applied.
     ///
-    /// Before its first batch, apply checks the flow against the structural
-    /// rules. It checks again after a replay.
+    /// Apply checks only what its batch changes. It never walks the whole
+    /// graph: loading checked it ([`GraphState::new`]).
     ///
     /// # Errors
     ///
-    /// The flow breaks a structural rule, or an operation is invalid for it.
+    /// An operation is invalid for the flow.
     pub fn apply(&mut self, operations: Vec<Operation>, options: ApplyOptions) -> Result<Applied> {
         let applied = self.apply_layered(operations, options)?;
         self.commit();
@@ -156,7 +156,7 @@ impl GraphState {
     ///
     /// # Errors
     ///
-    /// The flow breaks a structural rule, or an operation is invalid for it.
+    /// An operation is invalid for the flow.
     pub fn stage(&mut self, operations: Vec<Operation>, options: ApplyOptions) -> Result<Applied> {
         let applied = self.apply_layered(operations, options)?;
         self.set_staged();
@@ -170,12 +170,6 @@ impl GraphState {
         operations: Vec<Operation>,
         options: ApplyOptions,
     ) -> Result<Applied> {
-        // A batch that panicked, which a binding turns into an exception,
-        // left its layers behind, and so does a staged batch nobody kept.
-        // The graph itself is as it was before it.
-        self.drop_staged();
-        self.discard();
-        self.check_base()?;
         let mut report = Report::new(options);
         self.run_batch(operations, &mut report, Self::apply_operation)?;
         Ok(report.into_applied())
@@ -190,6 +184,9 @@ impl GraphState {
         report: &mut Report,
         step: OperationStep,
     ) -> Result<()> {
+        // A batch that panicked, which a binding turns into an exception,
+        // left its layers behind, and so does a staged batch nobody kept.
+        // The graph itself is as it was before it.
         self.drop_staged();
         self.discard();
         for operation in operations {
@@ -292,7 +289,7 @@ impl GraphState {
     fn edges_at_removed(
         &mut self,
         update: &FieldUpdate,
-        before: Option<&Value>,
+        before: Option<&AnyValue>,
     ) -> Result<IndexSet<String>> {
         let node_id = update.id.as_str();
         let graph = &self.graph;
@@ -325,7 +322,7 @@ impl GraphState {
             }
         }
         let incident = self.remove_nodes(&ids, report);
-        self.remove_edges(incident.iter().map(String::as_str), report);
+        self.remove_edges(incident.iter().map(AnyString::as_str), report);
         Ok(())
     }
 
@@ -337,22 +334,26 @@ impl GraphState {
         &mut self,
         ids: &IndexSet<&str>,
         report: &mut Report,
-    ) -> IndexSet<String> {
+    ) -> IndexSet<AnyString> {
         let mut removed = Vec::new();
+        let mut changed = false;
         let mut removed_nodes = Vec::new();
         let mut incident = IndexSet::new();
         for &id in ids {
             if !self.graph.has_node(id) {
                 continue;
             }
-            incident.extend(self.graph.edges_at(id).cloned());
+            incident.extend(self.graph.edge_keys_at(id).cloned());
             if report.options.backward {
                 removed_nodes.extend(self.node_copy(id));
             }
             self.remove_node(id);
-            removed.push(id.to_owned());
+            changed = true;
+            if report.options.forward {
+                removed.push(id.to_owned());
+            }
         }
-        if !removed.is_empty() {
+        if changed {
             report.record(Operation::DeleteNodes(removed));
             report.record_backward(Operation::AddNodes(removed_nodes));
         }
@@ -426,18 +427,21 @@ impl GraphState {
     fn remove_edges<'i>(&mut self, ids: impl IntoIterator<Item = &'i str>, report: &mut Report) {
         let mut removed = Vec::new();
         let mut copies = Vec::new();
-        let mut seen = HashSet::new();
+        let mut changed = false;
         for id in ids {
-            if !seen.insert(id) || !self.graph.has_edge(id) {
+            if !self.graph.has_edge(id) {
                 continue;
             }
             if report.options.backward {
                 copies.extend(self.edge_copy(id));
             }
             self.remove_edge(id);
-            removed.push(id.to_owned());
+            changed = true;
+            if report.options.forward {
+                removed.push(id.to_owned());
+            }
         }
-        if removed.is_empty() {
+        if !changed {
             return;
         }
         report.record(Operation::DeleteEdges(removed));
@@ -557,7 +561,7 @@ impl GraphState {
         let mut list_problem = None;
         let mut step = fields::step_fn(|value, index, in_entry| match &path[index] {
             Segment::Key(key) => {
-                let Value::Object(map) = value else {
+                let AnyValue::Object(map) = value else {
                     bail!(
                         "{context}.path[{index}]: {} reads a key of a value that is not an object",
                         quoted(key)
@@ -639,7 +643,7 @@ impl GraphState {
     /// Write or delete the last segment of the path: in the value of the
     /// write on the way, or as the write at the path itself. Apply and
     /// replay both write this way, after [`Self::walk_update`].
-    pub(crate) fn write_update(&mut self, placed: &PlacedUpdate<'_>, walk: &Walk, value: Value) {
+    pub(crate) fn write_update(&mut self, placed: &PlacedUpdate<'_>, walk: &Walk, value: AnyValue) {
         let update = placed.update;
         let (id, path) = (update.id.as_str(), &update.path);
         let last = path.len() - 1;
@@ -703,11 +707,11 @@ fn check_written_item(placed: &PlacedUpdate<'_>, walk: &Walk) -> Result<()> {
 /// The value an update writes, or `Null` for a delete. It moves out of the
 /// update, unless `keep_update` keeps the update whole for the forward
 /// operations.
-pub(crate) fn written_value(update: &mut FieldUpdate, keep_update: bool) -> Value {
+pub(crate) fn written_value(update: &mut FieldUpdate, keep_update: bool) -> AnyValue {
     match &mut update.change {
         Change::Set(value) if keep_update => value.clone(),
         Change::Set(value) => std::mem::take(value),
-        Change::Delete => Value::Null,
+        Change::Delete => AnyValue::Null,
     }
 }
 
@@ -740,7 +744,7 @@ enum Before {
     Nothing,
     /// A value. It is kept only for a cascade delete that reads it
     /// ([`reads_before`]).
-    Value(Option<Value>),
+    Value(Option<AnyValue>),
 }
 
 /// A field update, with its place in its `update_nodes` for error messages.
@@ -843,7 +847,7 @@ fn keyed_list<'p>(
     graph: &Graph,
     placed: &PlacedUpdate<'p>,
     index: usize,
-    value: &Value,
+    value: &AnyValue,
 ) -> Result<(&'static KeyedList, Vec<&'p str>)> {
     let (id, path, context) = (
         placed.update.id.as_str(),
@@ -883,7 +887,7 @@ impl FieldBackward {
     /// Add what undoes `update`, called before it is applied: a write that
     /// puts back `current`, what the path holds, or deletes the path when it
     /// holds nothing.
-    fn add(&mut self, update: &FieldUpdate, current: Option<&Value>) {
+    fn add(&mut self, update: &FieldUpdate, current: Option<&AnyValue>) {
         let path = update.path.clone();
         match current {
             Some(current) => self
@@ -922,11 +926,11 @@ impl FieldBackward {
 ///
 /// The graph breaks a structural rule, or an operation is invalid for it.
 pub fn apply_flow_operations(
-    base: Value,
+    base: AnyValue,
     operations: Vec<Operation>,
     options: ApplyOptions,
-) -> Result<(Value, Applied)> {
-    let mut state = GraphState::checked(base)?;
+) -> Result<(AnyValue, Applied)> {
+    let mut state = GraphState::new(base)?;
     let applied = state.apply(operations, options)?;
     Ok((state.into_value(), applied))
 }
@@ -934,18 +938,18 @@ pub fn apply_flow_operations(
 #[cfg(test)]
 mod tests {
     use crate::json;
-    use crate::value::Value;
+    use crate::value::AnyValue;
 
     use super::*;
     use crate::ops::edges::escape_handle;
     use crate::ops::replay::ReplayOptions;
     use crate::ops::schema::OUTPUTS_PATH;
 
-    fn target_handle(field: &str) -> Value {
+    fn target_handle(field: &str) -> AnyValue {
         json!({"fieldName": field, "id": "T", "inputTypes": ["Message"], "type": "str"})
     }
 
-    fn edge(id: &str, field: &str) -> Value {
+    fn edge(id: &str, field: &str) -> AnyValue {
         let source =
             json!({"dataType": "X", "id": "S", "name": "out", "output_types": ["Message"]});
         json!({
@@ -956,8 +960,74 @@ mod tests {
         })
     }
 
-    fn operations(value: Value) -> Vec<Operation> {
+    fn operations(value: AnyValue) -> Vec<Operation> {
         Operation::list_from_value(value).unwrap()
+    }
+
+    #[test]
+    fn deletion_options_preserve_cascade_order_duplicates_and_rollback() {
+        let field = json!({"type": "str", "value": ""});
+        let graph = json!({
+            "nodes": [
+                {"id": "S", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+                {"id": "T", "data": {"node": {"template": {"A": field, "B": field}}}},
+            ],
+            "edges": [edge("e1", "A"), edge("e2", "B")],
+        });
+        for forward in [false, true] {
+            for backward in [false, true] {
+                let options = ApplyOptions { forward, backward };
+                let mut state = GraphState::new(graph.clone()).unwrap();
+                let before = state.to_json();
+                let applied = state
+                    .apply(
+                        operations(json!([
+                            {"type": "delete_nodes", "ids": ["T", "S", "T"]},
+                            {"type": "delete_edges", "ids": ["e1", "e1", "absent"]},
+                        ])),
+                        options,
+                    )
+                    .unwrap();
+                assert_eq!(state.to_value()["nodes"], json!([]));
+                assert_eq!(state.to_value()["edges"], json!([]));
+                if forward {
+                    assert_eq!(
+                        applied.forward,
+                        operations(json!([
+                            {"type": "delete_nodes", "ids": ["T", "S"]},
+                            {"type": "delete_edges", "ids": ["e1", "e2"]},
+                        ]))
+                    );
+                } else {
+                    assert_eq!(applied.forward, Vec::<Operation>::new());
+                }
+                if backward {
+                    assert_eq!(applied.backward.len(), 2);
+                    assert_eq!(applied.backward[1], Vec::<Operation>::new());
+                    for batch in applied.backward.into_iter().rev() {
+                        state.replay(batch, ReplayOptions::default()).unwrap();
+                    }
+                    assert_eq!(
+                        state.graph_hash().unwrap(),
+                        GraphState::new(graph.clone())
+                            .unwrap()
+                            .graph_hash()
+                            .unwrap()
+                    );
+                } else {
+                    assert_eq!(applied.backward, Vec::<Vec<Operation>>::new());
+                }
+                let mut state = GraphState::new(graph.clone()).unwrap();
+                let refused = operations(json!([
+                    {"type": "delete_edges", "ids": ["e1", "e1"]},
+                    {"type": "delete_nodes", "ids": ["T", "absent", "S"]},
+                ]));
+                let error = state.apply(refused, options).unwrap_err();
+                assert!(error.to_string().contains("absent"));
+                assert_eq!(state.to_json(), before);
+                assert!(!state.is_staged());
+            }
+        }
     }
 
     #[test]
@@ -1037,26 +1107,26 @@ mod tests {
         assert!(state.edge_index.has_connections("T"));
     }
 
-    fn set(id: &str, path: Value, value: Value) -> Value {
+    fn set(id: &str, path: AnyValue, value: AnyValue) -> AnyValue {
         let mut update = json!({"id": id, "op": "set_field"});
         update["path"] = path;
         update["value"] = value;
         update
     }
 
-    fn delete(id: &str, path: Value) -> Value {
+    fn delete(id: &str, path: AnyValue) -> AnyValue {
         let mut update = json!({"id": id, "op": "delete_field"});
         update["path"] = path;
         update
     }
 
-    fn updates(updates: Vec<Value>) -> Vec<Operation> {
+    fn updates(updates: Vec<AnyValue>) -> Vec<Operation> {
         let mut operation = json!({"type": "update_nodes"});
-        operation["updates"] = Value::Array(updates);
-        operations(Value::Array(vec![operation]))
+        operation["updates"] = AnyValue::Array(updates);
+        operations(AnyValue::Array(vec![operation]))
     }
 
-    fn table_node() -> Value {
+    fn table_node() -> AnyValue {
         let row = |id: &str, pos: u32| json!({"__id__": id, "__pos__": pos, "v": "x"});
         json!({"id": "t", "data": {"node": {"template": {
             "rows": {"type": "table", "value": [row("r1", 1), row("r2", 2), row("r3", 3)]},
@@ -1064,7 +1134,7 @@ mod tests {
         }}}})
     }
 
-    fn rows_path(key: Option<&str>) -> Value {
+    fn rows_path(key: Option<&str>) -> AnyValue {
         let mut path = json!(["data", "node", "template", "rows", "value"]);
         if let Some(key) = key {
             path.as_array_mut().unwrap().push(json!({"key": key}));
@@ -1072,7 +1142,7 @@ mod tests {
         path
     }
 
-    fn cell_path(key: &str) -> Value {
+    fn cell_path(key: &str) -> AnyValue {
         let mut path = rows_path(Some(key));
         path.as_array_mut().unwrap().push(json!("v"));
         path
@@ -1186,7 +1256,7 @@ mod tests {
     #[test]
     fn a_list_written_in_the_batch_is_checked_when_a_write_reads_its_items() {
         let graph = json!({"nodes": [table_node()], "edges": []});
-        let update = |update: Value| json!({"type": "update_nodes", "updates": [update]});
+        let update = |update: AnyValue| json!({"type": "update_nodes", "updates": [update]});
         let batch = operations(json!([
             update(set("t", rows_path(None), json!([1, 2]))),
             update(delete("t", rows_path(Some("r1")))),
@@ -1205,7 +1275,7 @@ mod tests {
         let node = json!({"id": "n", "data": {"node": {"template": {},
             "outputs": [output("a", 1), output("b", 2), output("c", 3)]}}});
         let outputs = |key: &str| json!(["data", "node", "outputs", {"key": key}]);
-        let update = |update: Value| json!({"type": "update_nodes", "updates": [update]});
+        let update = |update: AnyValue| json!({"type": "update_nodes", "updates": [update]});
         let batch = operations(json!([
             update(delete("n", outputs("a"))),
             update(set("n", outputs("d"), output("d", 4))),
@@ -1324,7 +1394,7 @@ mod tests {
         assert!(state.is_staged());
         assert_eq!(state.to_value(), before);
         assert_eq!(
-            serde_json::from_str::<Value>(&state.to_json()).unwrap(),
+            serde_json::from_str::<AnyValue>(&state.to_json()).unwrap(),
             before
         );
         // The staged graph is the graph that keep makes, while the committed graph stays.

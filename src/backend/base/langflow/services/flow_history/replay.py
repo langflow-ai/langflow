@@ -12,10 +12,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from lfx.services.flow_operations import FlowOperationError, apply_flow_operations, graph_hash
+from lfx.services.flow_operations import FlowOperationError, dump_flow_operation
+from sqlalchemy import Text, cast
 from sqlmodel import func, select
 
 from langflow.services.database.models.flow_operation import FlowOperation
+from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.flow_history.envelope import decode_row
 from langflow.services.flow_history.errors import (
     FlowHistoryCorruptionError,
@@ -28,8 +30,6 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from sqlmodel.ext.asyncio.session import AsyncSession
-
-    from langflow.services.database.models.flow_version.model import FlowVersion
 
 
 async def reconstruct_graph(
@@ -51,10 +51,11 @@ async def reconstruct_graph(
         msg = f"Flow {flow_id} has no revision {revision}"
         raise FlowRevisionNotFoundError(msg)
 
-    # SQLite reads are not isolated from compaction the way PostgreSQL's share
-    # lock isolates them, so a read that races it can see a gap. Compaction
-    # only ever leaves a consistent state behind, so one more read settles it.
-    attempts = 2 if session.get_bind().dialect.name == "sqlite" else 1
+    # Reads take no lock, so a read that races compaction can pick a checkpoint
+    # whose rows compaction then deletes, and see a gap. Compaction only ever
+    # leaves a consistent state behind, so another read settles it; real damage
+    # fails every attempt.
+    attempts = 3
     for attempt in range(attempts):
         try:
             return await _reconstruct(session, flow_id, revision, latest_revision, verify_anchor=verify_anchor)
@@ -83,13 +84,13 @@ async def _reconstruct(
     anchor = await latest_anchor_at_or_before(session, flow_id, revision)
     if anchor is not None and anchor.operation_revision == revision:
         if verify_anchor:
-            verify_checkpoint(anchor)
+            await verify_checkpoint(session, anchor)
         return anchor.data
     try:
         if anchor is None:
             raise FlowHistoryCorruptionError(flow_id, "no checkpoint to replay from", revision=revision)
         if verify_anchor:
-            verify_checkpoint(anchor)
+            await verify_checkpoint(session, anchor)
         return await replay_from(session, flow_id, anchor, revision)
     except FlowHistoryCorruptionError:
         # Below the cutoff, missing history was compacted away on purpose.
@@ -99,13 +100,13 @@ async def _reconstruct(
         raise
 
 
-def verify_checkpoint(checkpoint: FlowVersion) -> None:
-    """Raise when a checkpoint's graph no longer hashes to its stored hash."""
-    try:
-        matches = graph_hash(checkpoint.data) == checkpoint.graph_hash
-    except FlowOperationError:
-        matches = False
-    if not matches:
+async def verify_checkpoint(session: AsyncSession, checkpoint: FlowVersion) -> None:
+    """Raise when a checkpoint's stored text no longer hashes to its stored hash (worker thread: a whole graph)."""
+    from langflow.services.flow_multiplayer.cache import call, text_hash
+
+    statement = select(cast(FlowVersion.data, Text)).where(FlowVersion.id == checkpoint.id)
+    stored = (await session.exec(statement)).first()
+    if stored is None or await call(text_hash, stored, large=True, name="hash") != checkpoint.graph_hash:
         raise FlowHistoryCorruptionError(
             checkpoint.flow_id, "checkpoint does not match its hash", revision=checkpoint.operation_revision
         )
@@ -114,6 +115,9 @@ def verify_checkpoint(checkpoint: FlowVersion) -> None:
 async def replay_from(session: AsyncSession, flow_id: UUID, anchor: FlowVersion, revision: int) -> dict[str, Any]:
     """Apply the recorded operations after ``anchor`` up to and including ``revision``."""
     anchor_revision = anchor.operation_revision or 0
+    # Each apply reads and builds the whole graph: a worker thread, as for the multiplayer path.
+    from langflow.services.flow_multiplayer.cache import whole_flow
+
     graph: dict[str, Any] = anchor.data
     expected = anchor_revision + 1
     for row in await rows_covering(session, flow_id, after=anchor_revision, through=revision):
@@ -126,7 +130,9 @@ async def replay_from(session: AsyncSession, flow_id: UUID, anchor: FlowVersion,
             if recorded.revision != expected:
                 raise FlowHistoryCorruptionError(flow_id, "missing revisions", revision=expected)
             try:
-                graph = apply_flow_operations(graph, [recorded.operation]).flow_data
+                graph = (await whole_flow("apply", graph, [dump_flow_operation(recorded.operation)], forward=False))[
+                    "flow_data"
+                ]
             except FlowOperationError as exc:
                 raise FlowHistoryCorruptionError(flow_id, "operation does not apply", revision=expected) from exc
             expected += 1

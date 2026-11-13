@@ -306,6 +306,20 @@ def test_the_staged_graph_is_the_graph_keep_makes():
         state.to_json(staged=True)
 
 
+@pytest.mark.parametrize("call", ["apply", "stage"])
+def test_forward_json_gives_each_forward_operation_as_ascii_text(call):
+    value = 'x"\\\n\u00e9\u2028\U0001f600'
+    with_objects = getattr(ops.GraphState(FLOW), call)(set_value(value), forward=True, forward_json=True)
+    texts = with_objects["forward_operations_json"]
+    assert all(isinstance(text, bytes) and text.isascii() for text in texts)
+    operations = with_objects["forward_operations"]
+    assert [json.loads(text) for text in texts] == operations
+    # The text ``to_json`` writes for the same value: compact, every character above U+007F escaped.
+    assert texts == [json.dumps(operation, separators=(",", ":")).encode() for operation in operations]
+    only_text = getattr(ops.GraphState(FLOW), call)(set_value(value), forward_json=True)
+    assert only_text == {"forward_operations_json": texts}
+
+
 def test_a_dropped_batch_leaves_the_graph_as_it_was():
     state = ops.GraphState(FLOW)
     state.stage(set_value("y"))
@@ -397,3 +411,87 @@ def test_threads_share_one_plain_graph():
     for thread in threads:
         thread.join()
     assert results == [expected] * 800
+
+
+def test_large_graphs_dropped_from_many_threads_leave_the_engine_working():
+    """A large graph is dropped on the engine's drop thread, or where it is when that thread is busy."""
+    template = {f"f{index}": {"value": "x" * 100, "type": "str"} for index in range(20)}
+    nodes = [{"id": f"n{index}", "data": {"node": {"template": template}}} for index in range(500)]
+    text = json.dumps({"nodes": nodes, "edges": []}).encode()
+    expected = ops.GraphPlain(text).graph_hash()
+
+    hashes: list[str] = []
+
+    def churn() -> None:
+        for _ in range(10):
+            state = ops.GraphState(text)
+            plain = ops.GraphPlain(text)
+            hashes.extend([state.graph_hash(), plain.graph_hash()])
+            del state, plain
+
+    threads = [threading.Thread(target=churn) for _ in range(4)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert hashes == [expected] * 80
+    assert ops.GraphState(text).graph_hash() == expected
+
+
+def test_a_state_hashes_as_its_text_does():
+    state = ops.GraphState(FLOW)
+    assert state.graph_hash() == ops.GraphPlain(state.to_json().encode()).graph_hash()
+    with pytest.raises(RuntimeError, match="no batch is staged"):
+        state.graph_hash(staged=True)
+    state.stage(set_value("y"))
+    staged = state.graph_hash(staged=True)
+    assert staged == ops.GraphPlain(state.to_json(staged=True).encode()).graph_hash()
+    assert staged != state.graph_hash()
+    state.keep()
+    assert state.graph_hash() == staged
+
+
+def test_a_snapshot_keeps_the_graph_as_it_was():
+    state = ops.GraphState(FLOW)
+    text, hashed = state.to_json(), state.graph_hash()
+    snapshot = state.snapshot()
+    state.apply(set_value("y"))
+    state.stage(set_value("z"))
+    assert (snapshot.to_json(), snapshot.graph_hash()) == (text, hashed)
+    later = state.snapshot()
+    assert (later.to_json(), later.graph_hash()) == (state.to_json(), state.graph_hash())
+    assert value_of(json.loads(later.to_json())) == "y"
+
+
+def test_a_snapshot_is_read_on_another_thread_while_batches_go_on():
+    """A server writes and hashes a snapshot on a worker thread while its event loop applies batches."""
+    template = {f"f{index}": {"value": "x" * 100, "type": "str"} for index in range(20)}
+    nodes = [{"id": f"n{index}", "data": {"node": {"template": template}}} for index in range(500)]
+    state = ops.GraphState({"nodes": nodes, "edges": []})
+
+    def write_field(node_id: str, field: str, value: str) -> None:
+        path = ["data", "node", "template", field, "value"]
+        update = {"id": node_id, "op": "set_field", "path": path, "value": value}
+        state.apply([{"type": "update_nodes", "updates": [update]}])
+
+    expected = []
+    snapshots = []
+    for index in range(5):
+        expected.append((state.to_json(), state.graph_hash()))
+        snapshots.append(state.snapshot())
+        write_field("n0", "f0", f"v{index}")
+    seen: list[tuple[str, str]] = []
+
+    def read() -> None:
+        seen.extend((snapshot.to_json(), snapshot.graph_hash()) for snapshot in snapshots)
+
+    def write() -> None:
+        for index in range(200):
+            write_field(f"n{index}", "f1", "w")
+
+    threads = [threading.Thread(target=read), threading.Thread(target=write)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert seen == expected

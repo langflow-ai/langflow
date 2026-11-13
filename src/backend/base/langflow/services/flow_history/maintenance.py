@@ -26,17 +26,24 @@ and a checkpoint sits exactly there; reads below it are "not retained".
 At most one task runs per flow: on PostgreSQL a transaction-scoped advisory
 lock keyed on the flow lets a second worker exit at once; SQLite admits one
 writer anyway, and an in-process guard skips duplicates.
+
+On PostgreSQL the task then takes the flow's operation-log advisory lock
+(the lock every writer takes) and reads the head from the log, since a
+multiplayer writer in WAL mode does not update the flow row. It takes no row
+lock: reads take no lock, and a read that races compaction retries.
 """
 
 from __future__ import annotations
 
 import asyncio
+import contextvars
 import zlib
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
-from sqlalchemy import event, text
-from sqlalchemy.orm import Session
+from sqlalchemy import Text, cast, event, text
+from sqlalchemy.orm import Session, defer
+from sqlalchemy.orm.attributes import set_committed_value
 from sqlmodel import col, delete, func, select
 
 from langflow.services.database.models.flow.guards import lock_flow_for_update
@@ -46,7 +53,7 @@ from langflow.services.database.models.flow_operation.append_only import delete_
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.flow_history.errors import FlowHistoryCorruptionError, FlowRevisionMismatchError
-from langflow.services.flow_history.recorder import checkpoint_system, projection_matches
+from langflow.services.flow_history.recorder import checkpoint_system, log_head, projection_matches
 from langflow.services.flow_history.replay import verify_checkpoint
 from langflow.services.flow_history.store import anchors_of, has_anchor
 
@@ -76,7 +83,8 @@ def _schedule_after_commit(session: Session) -> None:
     except RuntimeError:
         return
     for flow_id in flow_ids:
-        task = loop.create_task(run_maintenance(flow_id))
+        # An empty context: the task never adds to the measurement record of the request that committed.
+        task = loop.create_task(run_maintenance(flow_id), context=contextvars.Context())
         _tasks.add(task)
         task.add_done_callback(_tasks.discard)
 
@@ -113,6 +121,7 @@ async def perform_maintenance(flow_id: UUID) -> None:
             if flow is None or flow.user_id is None:
                 return
             await lock_flow_for_update(session, flow)
+            await use_log_head(session, flow)
             await checkpoint_if_due(session, flow)
             await compact_if_due(session, flow)
     except Exception as exc:  # noqa: BLE001 -- maintenance is retried by the next write that needs it
@@ -123,6 +132,13 @@ async def perform_maintenance(flow_id: UUID) -> None:
         )
     finally:
         _running.discard(flow_id)
+
+
+async def use_log_head(session: AsyncSession, flow: Flow) -> None:
+    """Read the head from the log into ``flow.latest_revision`` without marking the row changed."""
+    head = await log_head(session, flow.id)
+    if head > flow.latest_revision:
+        set_committed_value(flow, "latest_revision", head)
 
 
 async def checkpoint_if_due(session: AsyncSession, flow: Flow) -> FlowVersion | None:
@@ -146,10 +162,9 @@ async def write_checkpoint(session: AsyncSession, flow: Flow) -> FlowVersion | N
             revision=flow.current_revision,
         )
         return None
-    checkpoint = checkpoint_system(flow, flow.data, revision=flow.current_revision)
-    session.add(checkpoint)
-    await session.flush()
-    return checkpoint
+    # The row stores Flow.data's stored text as it is (no serialization), so the two are byte-identical.
+    stored = (await session.exec(select(cast(Flow.data, Text)).where(Flow.id == flow.id))).first()
+    return await checkpoint_system(session, flow, flow.data, revision=flow.current_revision, text=stored)
 
 
 async def compact_if_due(session: AsyncSession, flow: Flow) -> int | None:
@@ -168,6 +183,7 @@ async def purge_history(session: AsyncSession, flow: Flow) -> None:
     matches its history cannot be purged until that is repaired, since the
     checkpoint left behind must be the recorded graph.
     """
+    await use_log_head(session, flow)
     if flow.latest_revision == 0 and not await has_anchor(session, flow.id):
         return
     if flow.history_paused:
@@ -214,8 +230,9 @@ async def compact_to(session: AsyncSession, flow: Flow, checkpoint: FlowVersion,
     With ``keep_row`` the row that ends at the checkpoint stays, so the
     operations that produced it remain in the timeline. Purge drops it too.
     """
-    # It becomes the only anchor for everything after it, so it must still be intact.
-    verify_checkpoint(checkpoint)
+    # It becomes the only anchor for everything after it, so it must still be intact. Only its
+    # stored text is read for that (``_cutoff_checkpoint`` chose it without its graph).
+    await verify_checkpoint(session, checkpoint)
     revision = checkpoint.operation_revision
     ending_row = (
         await session.exec(
@@ -245,10 +262,14 @@ async def compact_to(session: AsyncSession, flow: Flow, checkpoint: FlowVersion,
 
 
 async def _cutoff_checkpoint(session: AsyncSession, flow: Flow, *, keep: int) -> FlowVersion | None:
-    """Pick the newest system checkpoint that ends a row and still leaves ``keep`` operations after it."""
+    """Pick the newest system checkpoint that ends a row and still leaves ``keep`` operations after it.
+
+    Its graph is not loaded: a save asks this under the flow's lock, and ``compact_to`` reads it.
+    """
     candidates = (
         await session.exec(
             select(FlowVersion)
+            .options(defer(FlowVersion.data))
             .join(
                 FlowOperation,
                 (FlowOperation.flow_id == FlowVersion.flow_id)

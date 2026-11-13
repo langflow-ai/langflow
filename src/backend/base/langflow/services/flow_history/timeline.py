@@ -69,11 +69,18 @@ async def read_timeline(
     known_variable_names: Collection[str],
 ) -> TimelinePage:
     """Return one page of the flow's timeline, newest entry first."""
-    statement = select(FlowOperation).where(FlowOperation.flow_id == flow.id)
+    # The earliest retained revision comes from the same statement as the rows, so both
+    # describe one snapshot: reads take no lock, and compaction may run in between statements.
+    earliest_revision = (
+        select(func.min(FlowOperation.start_revision)).where(FlowOperation.flow_id == flow.id).scalar_subquery()
+    )
+    statement = select(FlowOperation, earliest_revision).where(FlowOperation.flow_id == flow.id)
     if before is not None:
         statement = statement.where(col(FlowOperation.start_revision) < before)
     statement = statement.order_by(col(FlowOperation.start_revision).desc()).limit(limit + 1)
-    rows = list((await session.exec(statement)).all())
+    result = list((await session.exec(statement)).all())
+    rows = [row for row, _earliest in result]
+    earliest = result[0][1] if result else None
     has_more = len(rows) > limit
     rows = rows[:limit]
 
@@ -93,9 +100,6 @@ async def read_timeline(
         entries.append(entry)
 
     await _pin_versions(session, flow, entries)
-    earliest = (
-        await session.exec(select(func.min(FlowOperation.start_revision)).where(FlowOperation.flow_id == flow.id))
-    ).one()
     return TimelinePage(
         entries=entries,
         next_before=rows[-1].start_revision if has_more and rows else None,
