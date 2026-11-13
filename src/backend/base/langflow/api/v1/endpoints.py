@@ -53,6 +53,7 @@ from lfx.workflow.end_user_identity import (
 from pydantic import ValidationError
 
 from langflow.api.utils import (
+    EMPTY_FILE_DETAIL,
     CurrentActiveUser,
     DbSession,
     extract_global_variables_from_headers,
@@ -1860,6 +1861,9 @@ async def create_upload_file(
         max_file_size_upload = settings_service.settings.max_file_size_upload
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    if file.size == 0:
+        raise HTTPException(status_code=400, detail=EMPTY_FILE_DETAIL)
 
     if file.size is not None and file.size > max_file_size_upload * 1024 * 1024:
         raise HTTPException(
