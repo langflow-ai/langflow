@@ -45,7 +45,8 @@ dependencies = [
     "langchain-weaviate>=0.0.6",
     "langchain-core>=1.3.3,<2.0.0",
     "langchainhub~=0.1.15",
-    "loguru>=0.7.1,<1.0.0",
+    "loguru>=0.7.1,<1.0.0; python_version < '3.14'",
+    "loguru>=0.8.0,<1.0.0; python_version >= '3.14'",
     "structlog>=25.4.0,<26.0.0",
     "rich>=13.7.0,<14.0.0",
     "langchain-experimental~=0.4.1",
@@ -426,7 +427,10 @@ jigsawstack = ["jigsawstack==0.2.7"]
 assemblyai = ["assemblyai==0.35.1"]
 
 # Data processing
-datasets = ["datasets>2.14.7,<6.0.0"]
+datasets = [
+    "datasets>2.14.7,<6.0.0; python_version < '3.11'",
+    "datasets>=5.2.0,<6.0.0; python_version >= '3.11'",
+]
 fastparquet = ["fastparquet>=2024.11.0,<2025.0.0"]
 
 # Vision / ML
