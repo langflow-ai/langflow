@@ -388,7 +388,9 @@ class TestWorkflowStop:
             assert "cancelled successfully" in result["message"]
             mock_task_service.revoke_task.assert_awaited_once_with(UUID(job_id))
             mock_bg_service.stop_job.assert_awaited_once()
-            mock_job_service.update_job_status.assert_awaited_once_with(UUID(job_id), JobStatus.CANCELLED)
+            mock_job_service.update_job_status.assert_awaited_once_with(
+                UUID(job_id), JobStatus.CANCELLED, finished_timestamp=True
+            )
 
     async def test_stop_workflow_with_celery_task_service(
         self,
@@ -437,7 +439,9 @@ class TestWorkflowStop:
         assert "cancelled successfully" in response.json()["message"]
         celery_backend.revoke_task.assert_called_once_with(str(job_id))
         mock_bg_service.stop_job.assert_awaited_once()
-        mock_job_service.update_job_status.assert_awaited_once_with(job_id, JobStatus.CANCELLED)
+        mock_job_service.update_job_status.assert_awaited_once_with(
+            job_id, JobStatus.CANCELLED, finished_timestamp=True
+        )
 
     @pytest.mark.parametrize(
         ("job_metadata", "job_status", "expected_mode"),
