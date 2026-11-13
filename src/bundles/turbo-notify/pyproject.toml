@@ -1,6 +1,6 @@
 [project]
 name = "lfx-turbo-notify"
-version = "0.1.0"
+version = "1.5.13"
 description = "Turbo Notify WhatsApp messaging components (send, reply, read, status, groups) as a standalone Langflow Extension Bundle."
 readme = "README.md"
 requires-python = ">=3.10,<3.16"

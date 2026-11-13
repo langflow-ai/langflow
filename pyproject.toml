@@ -224,7 +224,7 @@ bundles = [
     "lfx-paddle>=0.2.1,<1.0.0",
     "lfx-serpingapi>=0.1.1,<1.0.0",
     "lfx-serply>=0.1.1,<1.0.0",
-    "lfx-turbo-notify>=0.1.0,<1.0.0",
+    "lfx-turbo-notify>=1.5.13,<2.0.0",
     "lfx-valkey>=0.3.0,<1.0.0",
 ]
 

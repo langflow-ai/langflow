@@ -11246,7 +11246,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-turbo-notify"
-version = "0.1.0"
+version = "1.5.13"
 source = { editable = "src/bundles/turbo-notify" }
 dependencies = [
     { name = "httpx" },
