@@ -26,6 +26,7 @@ OPT_IN_STANDALONE_EXTENSIONS = {
     "lfx-nextplaid",
     "lfx-paddle",
     "lfx-serpingapi",
+    "lfx-serpkite",
     "lfx-serply",
     "lfx-valkey",
 }

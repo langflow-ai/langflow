@@ -63,6 +63,7 @@ members = [
     "lfx-paddle",
     "lfx-salesforce",
     "lfx-serpingapi",
+    "lfx-serpkite",
     "lfx-serply",
     "lfx-servicenow",
     "lfx-slack",
@@ -8494,6 +8495,7 @@ bundles = [
     { name = "lfx-nextplaid" },
     { name = "lfx-paddle" },
     { name = "lfx-serpingapi" },
+    { name = "lfx-serpkite" },
     { name = "lfx-serply" },
     { name = "lfx-valkey" },
 ]
@@ -8623,6 +8625,7 @@ requires-dist = [
     { name = "lfx-paddle", marker = "extra == 'bundles'", editable = "src/bundles/paddle" },
     { name = "lfx-salesforce", editable = "src/bundles/salesforce" },
     { name = "lfx-serpingapi", marker = "extra == 'bundles'", editable = "src/bundles/serpingapi" },
+    { name = "lfx-serpkite", marker = "extra == 'bundles'", editable = "src/bundles/serpkite" },
     { name = "lfx-serply", marker = "extra == 'bundles'", editable = "src/bundles/serply" },
     { name = "lfx-servicenow", editable = "src/bundles/servicenow" },
     { name = "lfx-slack", editable = "src/bundles/slack" },
@@ -11153,6 +11156,21 @@ requires-dist = [{ name = "lfx", editable = "src/lfx" }]
 name = "lfx-serpingapi"
 version = "0.1.1"
 source = { editable = "src/bundles/serpingapi" }
+dependencies = [
+    { name = "httpx" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.24.0,<1.0.0" },
+    { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-serpkite"
+version = "0.1.0"
+source = { editable = "src/bundles/serpkite" }
 dependencies = [
     { name = "httpx" },
     { name = "lfx" },

@@ -99,6 +99,7 @@
         "lfx-nextplaid",
         "lfx-paddle",
         "lfx-serpingapi",
+        "lfx-serpkite",
         "lfx-serply",
         "lfx-valkey"
       ],
@@ -249,6 +250,7 @@
         "lfx-nextplaid",
         "lfx-paddle",
         "lfx-serpingapi",
+        "lfx-serpkite",
         "lfx-serply",
         "lfx-valkey"
       ],
@@ -263,6 +265,7 @@
         "lfx-nextplaid",
         "lfx-paddle",
         "lfx-serpingapi",
+        "lfx-serpkite",
         "lfx-serply",
         "lfx-valkey"
       ],
@@ -296,6 +299,7 @@
           "lfx-paddle",
           "lfx-salesforce",
           "lfx-serpingapi",
+          "lfx-serpkite",
           "lfx-serply",
           "lfx-servicenow",
           "lfx-slack",
