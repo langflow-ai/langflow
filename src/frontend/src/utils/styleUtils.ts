@@ -464,6 +464,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "CrewAI", name: "crewai", icon: "CrewAI" },
   { display_name: "CUGA", name: "cuga", icon: "Bot" },
   { display_name: "DataStax", name: "datastax", icon: "AstraDB" },
+  { display_name: "deAPI", name: "deapi", icon: "deAPI" },
   { display_name: "DeepSeek", name: "deepseek", icon: "DeepSeek" },
   { display_name: "Discord", name: "discord", icon: "discord" },
   { display_name: "Docling", name: "docling", icon: "Docling" },
