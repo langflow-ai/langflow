@@ -162,13 +162,13 @@ describe("transportOf", () => {
 describe("sourceKeyOf", () => {
   it.each([
     ["gitlab", "Gitlab"],
-    ["whatsapp", "MessageCircle"],
-    ["discord", "MessageCircle"],
-    ["telegram", "Send"],
-    ["salesforce", "Cloud"],
-    ["servicenow", "Server"],
+    ["whatsapp", "WhatsApp"],
+    ["discord", "discord"],
+    ["telegram", "Telegram"],
+    ["salesforce", "Salesforce"],
+    ["servicenow", "ServiceNow"],
     ["jira", "Jira"],
-    ["confluence", "BookOpen"],
+    ["confluence", "Confluence"],
   ])("shows the %s provider icon", (provider, icon) => {
     expect(sourceIconOf(makeTrigger({ provider }))).toBe(icon);
   });
@@ -249,9 +249,9 @@ describe("eventOriginOf", () => {
 });
 
 describe("eventDisplayStateOf", () => {
-  it("shows both in-flight states as running", () => {
-    expect(eventDisplayStateOf({ state: "claimed" })).toBe("running");
-    expect(eventDisplayStateOf({ state: "dispatched" })).toBe("running");
+  it("distinguishes a queued claim from a submitted job", () => {
+    expect(eventDisplayStateOf({ state: "claimed" })).toBe("queued");
+    expect(eventDisplayStateOf({ state: "dispatched" })).toBe("submitted");
   });
 
   it("shows pending as queued", () => {
@@ -263,6 +263,11 @@ describe("eventErrorKeyOf", () => {
   it.each([
     [null, null],
     ["owner_inactive", "triggers.eventError.owner_inactive"],
+    [
+      "connection_not_authorized",
+      "triggers.eventError.connection_not_authorized",
+    ],
+    ["connection_unusable", "triggers.serverError.connection_unusable"],
     ["job_failed", "triggers.eventError.job"],
     ["job_cancelled", "triggers.eventError.job"],
     ["submit_failed:TimeoutError", "triggers.eventError.submit"],

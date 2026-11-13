@@ -1,0 +1,1137 @@
+{
+  "data": {
+    "edges": [
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-96AS8",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "context",
+            "id": "DecisionModel-pDhEt",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-96AS8{œdataTypeœ:œChatInputœ,œidœ:œChatInput-96AS8œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-DecisionModel-pDhEt{œfieldNameœ:œcontextœ,œidœ:œDecisionModel-pDhEtœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-96AS8",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-96AS8œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "DecisionModel-pDhEt",
+        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œDecisionModel-pDhEtœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "DecisionModel",
+            "id": "DecisionModel-pDhEt",
+            "name": "result",
+            "output_types": [
+              "JSON"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-D3xpA",
+            "inputTypes": [
+              "Data",
+              "JSON",
+              "DataFrame",
+              "Table",
+              "Message"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-DecisionModel-pDhEt{œdataTypeœ:œDecisionModelœ,œidœ:œDecisionModel-pDhEtœ,œnameœ:œresultœ,œoutput_typesœ:[œJSONœ]}-ChatOutput-D3xpA{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-D3xpAœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "DecisionModel-pDhEt",
+        "sourceHandle": "{œdataTypeœ: œDecisionModelœ, œidœ: œDecisionModel-pDhEtœ, œnameœ: œresultœ, œoutput_typesœ: [œJSONœ]}",
+        "target": "ChatOutput-D3xpA",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-D3xpAœ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œotherœ}"
+      }
+    ],
+    "nodes": [
+      {
+        "data": {
+          "id": "ChatInput-96AS8",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Get chat inputs from the Playground.",
+            "display_name": "Chat Input",
+            "documentation": "https://docs.langflow.org/chat-input-and-output",
+            "edited": false,
+            "field_order": [
+              "input_value",
+              "should_store_message",
+              "sender",
+              "sender_name",
+              "session_id",
+              "context_id",
+              "files"
+            ],
+            "frozen": false,
+            "icon": "MessagesSquare",
+            "legacy": false,
+            "metadata": {
+              "code_hash": "45974e6b1909",
+              "component_class_name": "ChatInput",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 1
+              },
+              "module": "lfx.components.input_output.chat.ChatInput"
+            },
+            "minimized": true,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Chat Message",
+                "group_outputs": false,
+                "method": "message_response",
+                "name": "message",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "api_editable": false,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from lfx.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom lfx.base.io.chat import ChatComponent\nfrom lfx.inputs.inputs import BoolInput\nfrom lfx.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom lfx.schema.image import get_file_paths\nfrom lfx.schema.message import Message\nfrom lfx.services.deps import get_settings_service\nfrom lfx.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\nfrom lfx.utils.file_path_security import (\n    component_file_access_scopes,\n    enforce_local_file_access,\n    is_local_file_access_restricted,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    documentation: str = \"https://docs.langflow.org/chat-input-and-output\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"context_id\",\n            display_name=\"Context ID\",\n            info=\"The context ID of the chat. Adds an extra layer to the local memory.\",\n            value=\"\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n            temp_file=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Chat Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        # Ensure files is a list and filter out empty/None values\n        files = self.files if self.files else []\n        if files and not isinstance(files, list):\n            files = [files]\n        # Filter out None/empty values\n        files = [f for f in files if f is not None and f != \"\"]\n\n        # Build endpoints inject caller-controlled file references directly into\n        # ChatInput. Resolve and validate local references before the Message can\n        # later read them while constructing model attachment content.\n        if files:\n            settings_service = get_settings_service()\n            storage_type = getattr(getattr(settings_service, \"settings\", None), \"storage_type\", \"local\")\n            # The storage factory falls back to local storage for unsupported\n            # values, so only the explicitly configured S3 backend may bypass\n            # filesystem containment.\n            if str(storage_type).lower() != \"s3\" and is_local_file_access_restricted():\n                scope_ids = list(component_file_access_scopes(self))\n                # Public executions replace graph.flow_id with a per-visitor\n                # virtual ID. Only the server-populated source provenance may\n                # restore the already-validated public attachment namespace.\n                source_flow_id = getattr(self.graph, \"source_flow_id\", None)\n                if source_flow_id:\n                    scope_ids.append(source_flow_id)\n                for file_path in get_file_paths(files):\n                    enforce_local_file_access(file_path, scope_ids=scope_ids)\n\n        session_id = self.session_id or self.graph.session_id or \"\"\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=session_id,\n            context_id=self.context_id,\n            files=files,\n        )\n        if session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
+              },
+              "context_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Context ID",
+                "dynamic": false,
+                "info": "The context ID of the chat. Adds an extra layer to the local memory.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "context_id",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "files": {
+                "_input_type": "FileInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Files",
+                "dynamic": false,
+                "fileTypes": [
+                  "csv",
+                  "json",
+                  "pdf",
+                  "txt",
+                  "md",
+                  "mdx",
+                  "yaml",
+                  "yml",
+                  "xml",
+                  "html",
+                  "htm",
+                  "docx",
+                  "py",
+                  "sh",
+                  "sql",
+                  "js",
+                  "ts",
+                  "tsx",
+                  "jpg",
+                  "jpeg",
+                  "png",
+                  "bmp",
+                  "image"
+                ],
+                "file_path": "",
+                "info": "Files to be sent with the message.",
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "files",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "temp_file": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "file",
+                "value": ""
+              },
+              "input_value": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "ai_enabled": false,
+                "api_editable": false,
+                "copy_field": false,
+                "display_name": "Input Text",
+                "dynamic": false,
+                "info": "Message to be passed as input.",
+                "input_types": [],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "input_value",
+                "override_skip": false,
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "sender": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "api_editable": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Sender Type",
+                "dynamic": false,
+                "external_options": {},
+                "info": "Type of sender.",
+                "name": "sender",
+                "options": [
+                  "Machine",
+                  "User"
+                ],
+                "options_metadata": [],
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "str",
+                "value": "User"
+              },
+              "sender_name": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Sender Name",
+                "dynamic": false,
+                "info": "Name of the sender.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "sender_name",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "User"
+              },
+              "session_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Session ID",
+                "dynamic": false,
+                "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "session_id",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "should_store_message": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Store Messages",
+                "dynamic": false,
+                "info": "Store the message in the history.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "should_store_message",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": true
+              }
+            },
+            "tool_mode": false
+          },
+          "type": "ChatInput"
+        },
+        "dragging": false,
+        "id": "ChatInput-96AS8",
+        "measured": {
+          "height": 234,
+          "width": 320
+        },
+        "position": {
+          "x": 0,
+          "y": 0.0
+        },
+        "positionAbsolute": {
+          "x": 0,
+          "y": 0.0
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "DecisionModel-pDhEt",
+          "node": {
+            "base_classes": [
+              "JSON"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Evaluate a choice, probability, or ordered score",
+            "display_name": "Decision Model",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "model",
+              "kind",
+              "context",
+              "question",
+              "candidates",
+              "yes_description",
+              "no_description",
+              "structured_context",
+              "timeout"
+            ],
+            "frozen": false,
+            "icon": "Split",
+            "legacy": false,
+            "metadata": {
+              "code_hash": "0d9c8a32d5a0",
+              "component_class_name": "DecisionModelComponent",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 1
+              },
+              "module": "lfx.components.llm_operations.decision_model.DecisionModelComponent"
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Decision Result",
+                "group_outputs": false,
+                "method": "evaluate",
+                "name": "result",
+                "selected": "JSON",
+                "tool_mode": true,
+                "types": [
+                  "JSON"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "candidates": {
+                "_input_type": "TableInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "Options",
+                "dynamic": false,
+                "info": "The options to choose between, 2 to 255. ID is a short unique key the result uses, such as refund; Label is the name the model reads.",
+                "input_types": [],
+                "is_list": true,
+                "list_add_label": "Add More",
+                "name": "candidates",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "table_icon": "Table",
+                "table_schema": [
+                  {
+                    "description": "A short unique key, such as refund. The result uses it.",
+                    "display_name": "ID",
+                    "edit_mode": "inline",
+                    "name": "id",
+                    "type": "str"
+                  },
+                  {
+                    "description": "The name the model reads. Labels must differ, ignoring case.",
+                    "display_name": "Label",
+                    "edit_mode": "inline",
+                    "name": "label",
+                    "type": "str"
+                  },
+                  {
+                    "default": "",
+                    "description": "Optional: more about when this one applies.",
+                    "display_name": "Description",
+                    "edit_mode": "popover",
+                    "name": "description",
+                    "type": "str"
+                  }
+                ],
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "trigger_icon": "Table",
+                "trigger_text": "Open table",
+                "type": "table",
+                "value": [
+                  {
+                    "description": "Asks how something works or how to do something",
+                    "id": "question",
+                    "label": "Question"
+                  },
+                  {
+                    "description": "Reports something broken, an error or unexpected behavior",
+                    "id": "bug",
+                    "label": "Bug report"
+                  },
+                  {
+                    "description": "Asks for something new or a change",
+                    "id": "feature",
+                    "label": "Feature request"
+                  },
+                  {
+                    "description": "Invoices, payments, refunds, plans or pricing",
+                    "id": "billing",
+                    "label": "Billing"
+                  }
+                ]
+              },
+              "code": {
+                "advanced": true,
+                "api_editable": false,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from lfx.base.models.decisions.runtime import decision_token_usage, evaluate_decision, request_variables_of\nfrom lfx.base.models.decisions.schema import DecisionConfigurationError, decision_request\nfrom lfx.base.models.unified_models import handle_model_input_update\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.io import DropdownInput, FloatInput, HandleInput, MessageTextInput, ModelInput, Output, TableInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.table import EditMode\n\n_KINDS = (\"Choice\", \"Boolean\", \"Score\")\n# The table's name and help follow the Decision Type.\n_TABLE = {\n    \"Choice\": (\n        \"Options\",\n        \"The options to choose between, 2 to 255. ID is a short unique key the result uses, such as refund; \"\n        \"Label is the name the model reads.\",\n    ),\n    \"Score\": (\n        \"Levels\",\n        \"Levels ordered from lowest to highest, 2 to 10. The model scores the input from 0 (the first level) up \"\n        \"to one less than the number of levels. ID is a short unique key the result uses; Label is the name the \"\n        \"model reads.\",\n    ),\n}\n# What an agent learns about this component when it is a tool.\n_RESULT_INFO = (\n    \"Answers this component's fixed question about the text you pass as context, and returns JSON. Choice gives \"\n    \"probabilities by option ID and, when the provider names one, selected_option (otherwise take the most \"\n    \"probable option); Boolean gives probability_true, the \"\n    \"probability the answer is yes, from 0 to 1; Score gives score, from 0 (the first level) up to one less than \"\n    \"the number of levels, and probabilities by level ID. confidence is the provider's own measure, not an \"\n    \"option's probability.\"\n)\n\n# Follow-ups, deferred until there is demand:\n# - Several named questions in one request, answered as one typed object. All three providers take\n#   them, but Perplexity's full model answers grouped questions jointly (an answer can change with\n#   its group) and its flash model bills the context once per question, so keep it opt-in.\n# - Images: TypeSafe `assets` behind its TypeSafe-Danger-Zone-Images header, Perplexity image parts\n#   in `state`, OpenAI image inputs. Needs size limits and SSRF checks for each format.\n# - Pinned model versions, such as pplx-decider-v1.2: policy allows models by name, so each version\n#   needs its own catalog and policy entry.\n\n\nclass DecisionModelComponent(Component):\n    \"\"\"Evaluates one judgment through the same runtime as the Smart Router.\"\"\"\n\n    display_name = \"Decision Model\"\n    description = \"Evaluate a choice, probability, or ordered score\"\n    name = \"DecisionModel\"\n    icon = \"Split\"\n\n    inputs = [\n        ModelInput(\n            model_type=\"decision\", name=\"model\", display_name=\"Decision Model\", required=True, real_time_refresh=True\n        ),\n        DropdownInput(\n            name=\"kind\",\n            display_name=\"Decision Type\",\n            options=list(_KINDS),\n            value=\"Choice\",\n            info=\"Choice picks one option. Boolean answers yes or no. Score places the input on ordered levels.\",\n            real_time_refresh=True,\n        ),\n        MessageTextInput(\n            name=\"context\",\n            display_name=\"Context\",\n            # Also the argument description an Agent reads when this is a tool, so the purpose comes first.\n            info=(\n                \"The text the question is about, such as a message or a document. \"\n                \"Required unless a Structured Context is connected.\"\n            ),\n            # Not marked required: a connected Structured Context replaces it, and the editor can't see that.\n            placeholder=\"Required, or Structured Context\",\n            tool_mode=True,\n        ),\n        MessageTextInput(\n            name=\"question\",\n            display_name=\"Question\",\n            info='What to decide about the Context, such as \"Which team should handle this message?\"',\n            required=True,\n        ),\n        TableInput(\n            name=\"candidates\",\n            display_name=_TABLE[\"Choice\"][0],\n            # Options are typed in, not connected: connected rows arrive with NaN cells and number IDs.\n            input_types=[],\n            value=[\n                {\"id\": \"low\", \"label\": \"Low\", \"description\": \"\"},\n                {\"id\": \"medium\", \"label\": \"Medium\", \"description\": \"\"},\n                {\"id\": \"high\", \"label\": \"High\", \"description\": \"\"},\n            ],\n            info=_TABLE[\"Choice\"][1],\n            table_schema=[\n                {\n                    \"name\": \"id\",\n                    \"display_name\": \"ID\",\n                    \"type\": \"str\",\n                    \"description\": \"A short unique key, such as refund. The result uses it.\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n                {\n                    \"name\": \"label\",\n                    \"display_name\": \"Label\",\n                    \"type\": \"str\",\n                    \"description\": \"The name the model reads. Labels must differ, ignoring case.\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n                {\n                    \"name\": \"description\",\n                    \"display_name\": \"Description\",\n                    \"type\": \"str\",\n                    \"description\": \"Optional: more about when this one applies.\",\n                    \"edit_mode\": EditMode.POPOVER,\n                    \"default\": \"\",\n                },\n            ],\n        ),\n        MessageTextInput(\n            name=\"yes_description\",\n            display_name=\"What Yes Means (Optional)\",\n            info=(\n                \"Optional: what a Yes answer means. Some decision models don't accept this; if yours \"\n                \"doesn't, the run stops and asks you to clear it.\"\n            ),\n            show=False,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"no_description\",\n            display_name=\"What No Means (Optional)\",\n            info=(\n                \"Optional: what a No answer means. Some decision models don't accept this; if yours \"\n                \"doesn't, the run stops and asks you to clear it.\"\n            ),\n            show=False,\n            advanced=True,\n        ),\n        HandleInput(\n            name=\"structured_context\",\n            display_name=\"Structured Context\",\n            info=(\n                \"Optional: JSON to judge in place of Context, such as a record from another component. \"\n                \"Use Context or Structured Context, not both.\"\n            ),\n            input_types=[\"Data\", \"JSON\"],\n            advanced=True,\n        ),\n        FloatInput(\n            name=\"timeout\",\n            display_name=\"Timeout (seconds)\",\n            info=\"How long to wait for the decision model: more than 0 and at most 300 seconds.\",\n            value=60,\n            advanced=True,\n        ),\n    ]\n    outputs = [Output(name=\"result\", display_name=\"Decision Result\", method=\"evaluate\", info=_RESULT_INFO)]\n\n    def _context(self) -> str | dict:\n        \"\"\"Context as text, or Structured Context as JSON; exactly one of them.\"\"\"\n        text = str(self.context or \"\").strip()\n        structured = self.structured_context\n        # An unconnected handle holds an empty string.\n        connected = structured not in (None, \"\")\n        if isinstance(structured, Data):\n            structured = structured.data\n        # Empty JSON gives the model nothing to judge.\n        if not structured:\n            structured = None\n        if structured is None:\n            if connected or not text:\n                msg = (\n                    \"Structured Context is empty. Give the component it comes from at least one field, or use Context.\"\n                    if connected\n                    else \"Enter a Context, or connect a Structured Context.\"\n                )\n                raise DecisionConfigurationError(msg)\n            return self.context\n        if text:\n            msg = \"Use Context or Structured Context, not both.\"\n            raise DecisionConfigurationError(msg)\n        return structured\n\n    def evaluate(self) -> Data:\n        # A tweak can send anything here; the dropdown only offers these three.\n        if self.kind not in _KINDS:\n            msg = \"Pick a Decision Type: Choice, Boolean or Score.\"\n            raise DecisionConfigurationError(msg)\n        kind = self.kind.lower()\n        boolean = kind == \"boolean\"\n        request = decision_request(\n            kind=kind,\n            question=self.question,\n            context=self._context(),\n            options=self.candidates if kind == \"choice\" else (),\n            levels=self.candidates if kind == \"score\" else (),\n            # Hidden for other types, so a value left from Boolean never applies to them.\n            yes_description=(self.yes_description or \"\") if boolean else \"\",\n            no_description=(self.no_description or \"\") if boolean else \"\",\n        )\n        result = evaluate_decision(\n            request,\n            model=self.model,\n            user_id=self.user_id,\n            request_variables=request_variables_of(self),\n            timeout=self.timeout,\n        )\n        self._token_usage = decision_token_usage(result)\n        # Only what this decision returned and asked: no empty fields from the other types.\n        data = Data(\n            data={\n                **result.model_dump(mode=\"json\", exclude_none=True),\n                \"request\": request.model_dump(mode=\"json\", exclude={\"context\"}, exclude_defaults=True),\n            }\n        )\n        self.status = data\n        return data\n\n    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"Re-apply the saved Decision Type's fields after a code update.\n\n        Update rebuilds the node from the class, which shows Choice's fields, and copies only values back.\n        Without this a Boolean node came back with What Yes Means and What No Means hidden, so the run\n        dropped them.\n        \"\"\"\n        await super().update_frontend_node(new_frontend_node, current_frontend_node)\n        template = new_frontend_node.get(\"template\", {})\n        self._show_fields(template, (template.get(\"kind\") or {}).get(\"value\", \"Choice\"))\n        return new_frontend_node\n\n    def update_build_config(self, build_config: dict, field_value, field_name: str | None = None) -> dict:\n        config = handle_model_input_update(self, build_config, field_value, field_name)\n        self._show_fields(\n            config, field_value if field_name == \"kind\" else config.get(\"kind\", {}).get(\"value\", \"Choice\")\n        )\n        return config\n\n    @staticmethod\n    def _show_fields(config: dict, kind: str) -> None:\n        \"\"\"Show the table and the Yes/No meanings for this Decision Type, and name the table for it.\"\"\"\n        config[\"candidates\"][\"show\"] = kind != \"Boolean\"\n        if kind in _TABLE:\n            config[\"candidates\"][\"display_name\"], config[\"candidates\"][\"info\"] = _TABLE[kind]\n        for name in (\"yes_description\", \"no_description\"):\n            if name in config:\n                config[name][\"show\"] = kind == \"Boolean\"\n"
+              },
+              "context": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "Context",
+                "dynamic": false,
+                "info": "The text the question is about, such as a message or a document. Required unless a Structured Context is connected.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "context",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "kind": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "api_editable": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Decision Type",
+                "dynamic": false,
+                "external_options": {},
+                "info": "Choice picks one option. Boolean answers yes or no. Score places the input on ordered levels.",
+                "name": "kind",
+                "options": [
+                  "Choice",
+                  "Boolean",
+                  "Score"
+                ],
+                "options_metadata": [],
+                "override_skip": false,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "str",
+                "value": "Choice"
+              },
+              "model": {
+                "_input_type": "ModelInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "Decision Model",
+                "dynamic": false,
+                "external_options": {},
+                "info": "",
+                "input_types": [],
+                "list": false,
+                "list_add_label": "Add More",
+                "model_type": "decision",
+                "name": "model",
+                "override_skip": false,
+                "placeholder": "Setup Provider",
+                "real_time_refresh": true,
+                "refresh_button": true,
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "track_in_telemetry": false,
+                "type": "model",
+                "value": [
+                  {
+                    "category": "TypeSafe",
+                    "icon": "Bot",
+                    "metadata": {
+                      "capabilities": [
+                        "choice",
+                        "boolean",
+                        "score"
+                      ],
+                      "created": 0,
+                      "default": true,
+                      "deprecated": false,
+                      "icon": "Bot",
+                      "model_type": "decision",
+                      "not_supported": false,
+                      "preview": false,
+                      "reasoning": false,
+                      "search": false,
+                      "tool_calling": false
+                    },
+                    "name": "jev-latest",
+                    "provider": "TypeSafe"
+                  }
+                ]
+              },
+              "no_description": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "What No Means (Optional)",
+                "dynamic": false,
+                "info": "Optional: what a No answer means. Some decision models don't accept this; if yours doesn't, the run stops and asks you to clear it.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "no_description",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "question": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "Question",
+                "dynamic": false,
+                "info": "What to decide about the Context, such as \"Which team should handle this message?\"",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "question",
+                "override_skip": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "What kind of message is this?"
+              },
+              "structured_context": {
+                "_input_type": "HandleInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Structured Context",
+                "dynamic": false,
+                "info": "Optional: JSON to judge in place of Context, such as a record from another component. Use Context or Structured Context, not both.",
+                "input_types": [
+                  "Data",
+                  "JSON"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "structured_context",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "other",
+                "value": ""
+              },
+              "timeout": {
+                "_input_type": "FloatInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Timeout (seconds)",
+                "dynamic": false,
+                "info": "How long to wait for the decision model: more than 0 and at most 300 seconds.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "timeout",
+                "override_skip": false,
+                "placeholder": "",
+                "preserve_empty": false,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "float",
+                "value": 60.0
+              },
+              "yes_description": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "What Yes Means (Optional)",
+                "dynamic": false,
+                "info": "Optional: what a Yes answer means. Some decision models don't accept this; if yours doesn't, the run stops and asks you to clear it.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "yes_description",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "type": "DecisionModel"
+        },
+        "dragging": false,
+        "id": "DecisionModel-pDhEt",
+        "measured": {
+          "height": 760,
+          "width": 320
+        },
+        "position": {
+          "x": 480,
+          "y": 0.0
+        },
+        "positionAbsolute": {
+          "x": 480,
+          "y": 0.0
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "ChatOutput-D3xpA",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Display a chat message in the Playground.",
+            "display_name": "Chat Output",
+            "documentation": "https://docs.langflow.org/chat-input-and-output",
+            "edited": false,
+            "field_order": [
+              "input_value",
+              "should_store_message",
+              "sender",
+              "sender_name",
+              "session_id",
+              "context_id",
+              "data_template",
+              "clean_data"
+            ],
+            "frozen": false,
+            "icon": "MessagesSquare",
+            "legacy": false,
+            "metadata": {
+              "code_hash": "0aab1c78e1dc",
+              "component_class_name": "ChatOutput",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "orjson",
+                    "version": "3.11.9"
+                  },
+                  {
+                    "name": "fastapi",
+                    "version": "0.139.2"
+                  },
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 3
+              },
+              "module": "lfx.components.input_output.chat_output.ChatOutput"
+            },
+            "minimized": true,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Output Message",
+                "group_outputs": false,
+                "method": "message_response",
+                "name": "message",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "clean_data": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Basic Clean Data",
+                "dynamic": false,
+                "info": "Whether to clean data before converting to string.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "clean_data",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": true
+              },
+              "code": {
+                "advanced": true,
+                "api_editable": false,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from collections.abc import Generator\nfrom typing import Any\n\nimport orjson\nfrom fastapi.encoders import jsonable_encoder\n\nfrom lfx.base.io.chat import ChatComponent\nfrom lfx.helpers.data import safe_convert\nfrom lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, MessageTextInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.message import Message\nfrom lfx.schema.properties import Source\nfrom lfx.template.field.base import Output\nfrom lfx.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_AI,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    documentation: str = \"https://docs.langflow.org/chat-input-and-output\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n    minimized = True\n\n    inputs = [\n        HandleInput(\n            name=\"input_value\",\n            display_name=\"Inputs\",\n            info=\"Message to be passed as output.\",\n            input_types=[\"Data\", \"JSON\", \"DataFrame\", \"Table\", \"Message\"],\n            required=True,\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"context_id\",\n            display_name=\"Context ID\",\n            info=\"The context ID of the chat. Adds an extra layer to the local memory.\",\n            value=\"\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n        BoolInput(\n            name=\"clean_data\",\n            display_name=\"Basic Clean Data\",\n            value=True,\n            advanced=True,\n            info=\"Whether to clean data before converting to string.\",\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Output Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            # Handle case where source is a ChatOpenAI object\n            if hasattr(source, \"model_name\"):\n                source_dict[\"source\"] = source.model_name\n            elif hasattr(source, \"model\"):\n                source_dict[\"source\"] = str(source.model)\n            else:\n                source_dict[\"source\"] = str(source)\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        # First convert the input to string if needed\n        text = self.convert_to_string()\n\n        # Get source properties\n        source, _, display_name, source_id = self.get_properties_from_source_component()\n\n        # Create or use existing Message object\n        if isinstance(self.input_value, Message) and not self.is_connected_to_chat_input():\n            message = self.input_value\n            # Update message properties\n            message.text = text\n            # Preserve existing session_id from the incoming message if it exists\n            existing_session_id = message.session_id\n        else:\n            message = Message(text=text)\n            existing_session_id = None\n\n        # Set message properties\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        # Preserve session_id from incoming message, or use component/graph session_id\n        message.session_id = (\n            self.session_id or existing_session_id or (self.graph.session_id if hasattr(self, \"graph\") else None) or \"\"\n        )\n        message.context_id = self.context_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n\n        # Store message if needed\n        if message.session_id and self.should_store_message:\n            stored_message = await self.send_message(message)\n            self.message.value = stored_message\n            message = stored_message\n\n        # Set accumulated token usage from all upstream LLM vertices.\n        # This must happen AFTER send_message() because streaming captures\n        # usage from chunks and would overwrite accumulated totals.\n        if hasattr(self, \"_vertex\") and self._vertex is not None:\n            accumulated_usage = self._vertex._accumulate_upstream_token_usage()  # noqa: SLF001\n            if accumulated_usage:\n                message.properties.usage = accumulated_usage\n                if self.should_store_message and message.get_id():\n                    message = await self._update_stored_message(message)\n                    await self._send_message_event(message, id_=message.get_id())\n\n        self.status = message\n        return message\n\n    def _serialize_data(self, data: Data) -> str:\n        \"\"\"Serialize Data object to JSON string.\"\"\"\n        # Convert data.data to JSON-serializable format\n        serializable_data = jsonable_encoder(data.data)\n        # Serialize with orjson, enabling pretty printing with indentation\n        json_bytes = orjson.dumps(serializable_data, option=orjson.OPT_INDENT_2)\n        # Convert bytes to string and wrap in Markdown code blocks\n        return \"```json\\n\" + json_bytes.decode(\"utf-8\") + \"\\n```\"\n\n    def _validate_input(self) -> None:\n        \"\"\"Validate the input data and raise ValueError if invalid.\"\"\"\n        if self.input_value is None:\n            msg = \"Input data cannot be None\"\n            raise ValueError(msg)\n        if isinstance(self.input_value, list) and not all(\n            isinstance(item, Message | Data | DataFrame | str) for item in self.input_value\n        ):\n            invalid_types = [\n                type(item).__name__\n                for item in self.input_value\n                if not isinstance(item, Message | Data | DataFrame | str)\n            ]\n            msg = f\"Expected Data or DataFrame or Message or str, got {invalid_types}\"\n            raise TypeError(msg)\n        if not isinstance(\n            self.input_value,\n            Message | Data | DataFrame | str | list | Generator | type(None),\n        ):\n            type_name = type(self.input_value).__name__\n            msg = f\"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}\"\n            raise TypeError(msg)\n\n    def convert_to_string(self) -> str | Generator[Any, None, None]:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        self._validate_input()\n        clean_data: bool = getattr(self, \"clean_data\", False)\n        if isinstance(self.input_value, list):\n            return \"\\n\".join([safe_convert(item, clean_data=clean_data) for item in self.input_value])\n        if isinstance(self.input_value, Generator):\n            return self.input_value\n        return safe_convert(self.input_value, clean_data=clean_data)\n"
+              },
+              "context_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Context ID",
+                "dynamic": false,
+                "info": "The context ID of the chat. Adds an extra layer to the local memory.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "context_id",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "data_template": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Data Template",
+                "dynamic": false,
+                "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "data_template",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "{text}"
+              },
+              "input_value": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "Inputs",
+                "dynamic": false,
+                "info": "Message to be passed as output.",
+                "input_types": [
+                  "Data",
+                  "JSON",
+                  "DataFrame",
+                  "Table",
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "input_value",
+                "override_skip": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "other",
+                "value": ""
+              },
+              "sender": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "api_editable": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Sender Type",
+                "dynamic": false,
+                "external_options": {},
+                "info": "Type of sender.",
+                "name": "sender",
+                "options": [
+                  "Machine",
+                  "User"
+                ],
+                "options_metadata": [],
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "str",
+                "value": "Machine"
+              },
+              "sender_name": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Sender Name",
+                "dynamic": false,
+                "info": "Name of the sender.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "sender_name",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "AI"
+              },
+              "session_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Session ID",
+                "dynamic": false,
+                "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "session_id",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "should_store_message": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "api_editable": false,
+                "display_name": "Store Messages",
+                "dynamic": false,
+                "info": "Store the message in the history.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "should_store_message",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": true
+              }
+            },
+            "tool_mode": false
+          },
+          "type": "ChatOutput"
+        },
+        "dragging": false,
+        "id": "ChatOutput-D3xpA",
+        "measured": {
+          "height": 206,
+          "width": 320
+        },
+        "position": {
+          "x": 960,
+          "y": 0.0
+        },
+        "positionAbsolute": {
+          "x": 960,
+          "y": 0.0
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "note-mc001",
+          "node": {
+            "description": "# 🏷️ Message Classifier\n\nClassifies each message as a **Question**, **Bug report**, **Feature request**, or **Billing** with a **decision model**, which returns a probability for every category instead of generated text. The **Chat Output** shows the full result, so you can see how sure the model is.\n\n## Setup\n1. Open **Model Providers**, choose a provider that offers decision models, and save its API key. Saving sends one small, billed check.\n2. In the **Decision Model** component, check that **Decision Model** names a model from that provider, and pick one if it doesn't.\n\n## Use\n1. Open the **Playground**.\n2. Send a message, such as `The export button does nothing when I click it.`\n3. Read the result: `probabilities` has one entry per category **ID**, and they add up to 1.\n\n## Tune it\n- Edit the **Options** table to change the categories. **ID** is the key in the result, **Label** is the name the model reads, and **Description** says when the category applies.\n- Set **Decision Type** to **Boolean** for a yes or no question, or **Score** to place the message on ordered levels.\n- To route on the answer instead of reading it, use a **Smart Router** in **Decision Model** mode, as in the **Support Ticket Routing** template.",
+            "display_name": "",
+            "documentation": "",
+            "i18n_key": "template_notes.message_classifier.6dedd9f6",
+            "template": {
+              "backgroundColor": "blue"
+            }
+          },
+          "type": "note"
+        },
+        "dragging": false,
+        "height": 700,
+        "id": "note-mc001",
+        "measured": {
+          "height": 700,
+          "width": 466
+        },
+        "position": {
+          "x": 0,
+          "y": -420.0
+        },
+        "positionAbsolute": {
+          "x": 0,
+          "y": -420.0
+        },
+        "resizing": false,
+        "selected": false,
+        "type": "noteNode",
+        "width": 466
+      }
+    ],
+    "viewport": {
+      "x": 0,
+      "y": 0,
+      "zoom": 1
+    }
+  },
+  "description": "Classify a message with a decision model and see the probability of every category.",
+  "endpoint_name": null,
+  "id": "85198147-11ba-442c-bb6b-72f0db6d8203",
+  "is_component": false,
+  "last_tested_version": "1.13.0",
+  "name": "Message Classifier",
+  "tags": [
+    "classification"
+  ]
+}

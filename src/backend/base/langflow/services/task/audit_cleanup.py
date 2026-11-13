@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 from lfx.log.logger import logger
 
-from langflow.api.utils.migration_pause import writing
+from langflow.api.utils.migration_pause import async_writing
 from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.utils import clean_authz_audit_log
 
@@ -139,7 +139,7 @@ class AuditLogCleanupWorker:
                 break
             # A paused instance prunes nothing. The next sweep removes what this one left.
             # A sweep holds a place, so a pause waits for one that is under way.
-            with writing(name="audit_cleanup") as let_in:
+            async with async_writing(name="audit_cleanup") as let_in:
                 if let_in:
                     await self._run_once()
 

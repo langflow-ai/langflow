@@ -216,13 +216,13 @@ async def test_secrets_encrypted_at_rest(client):  # noqa: ARG001  (boots servic
 # Backward compat — existing file-based users are migrated into the table
 # ---------------------------------------------------------------------------
 @pytest.mark.asyncio
-async def test_backfill_from_legacy_file(client, active_user):  # noqa: ARG001  (boots services)
+async def test_backfill_from_legacy_file(client, administrator_user):  # noqa: ARG001  (boots services)
     """A user's legacy _mcp_servers file is imported into mcp_server (secrets encrypted); re-running is a no-op."""
     from langflow.api.utils.mcp.backfill import backfill_mcp_servers_from_files
     from langflow.api.v2.mcp import upload_server_config
     from langflow.services.deps import get_settings_service, get_storage_service, session_scope
 
-    user = SimpleNamespace(id=active_user.id)
+    user = administrator_user
     legacy = {
         "mcpServers": {
             "weather": {"command": "uvx", "args": ["mcp-server-weather"]},

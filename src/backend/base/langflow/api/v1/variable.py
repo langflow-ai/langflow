@@ -14,6 +14,7 @@ from lfx.base.models.unified_models import (
     validate_model_provider_key,
 )
 from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+from lfx.services.settings.constants import AGENTIC_VARIABLES
 from sqlalchemy.exc import NoResultFound
 
 from langflow.api.utils import CurrentActiveUser, DbSession
@@ -37,7 +38,7 @@ from langflow.services.authorization.listing import filter_visible_resources, vi
 from langflow.services.database.models.flow_version.crud import get_flow_version_entries_by_ids
 from langflow.services.database.models.variable.model import Variable, VariableCreate, VariableRead, VariableUpdate
 from langflow.services.deps import get_variable_service
-from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
+from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE, is_oauth_registration_variable
 from langflow.services.variable.service import DatabaseVariableService, has_variable_value
 
 router = APIRouter(prefix="/variables", tags=["Variables"])
@@ -195,6 +196,8 @@ async def create_variable(
     checked_model_type: Annotated[Literal["decision"] | None, Query()] = None,
 ):
     """Create a new variable."""
+    if is_oauth_registration_variable(variable.name):
+        raise HTTPException(status_code=422, detail="OAuth registrations must be managed from Connections settings.")
     await _guard_credential_mutation(current_user, VariableAction.CREATE, variable, session=session)
     await ensure_variable_permission(
         current_user,
@@ -311,7 +314,7 @@ async def read_variables(
             user_id=current_user.id,
             session=session,
             visibility=visibility,
-            include_empty_names=resettable_provider_variables,
+            include_empty_names=resettable_provider_variables | set(AGENTIC_VARIABLES),
         )
         if visibility is None and current_auth_is_restricted_api_key():
             all_variables = await filter_visible_resources(
@@ -376,8 +379,12 @@ async def update_variable(
             owner_column=Variable.user_id,
             owner_id=current_user.id,
         )
-        if existing_variable is None:
+        if existing_variable is None or is_oauth_registration_variable(existing_variable.name):
             raise HTTPException(status_code=404, detail="Variable not found")
+        if is_oauth_registration_variable(variable.name):
+            raise HTTPException(
+                status_code=422, detail="OAuth registrations must be managed from Connections settings."
+            )
         if current_auth_is_restricted_api_key():
             session.expunge(existing_variable)
             await session.rollback()
@@ -425,7 +432,11 @@ async def update_variable(
                 and _validates_on_save(provider, checked_model_type)
             ):
                 # Run validation off the event loop; owner context (not caller) for share-aware updates.
-                provider_vars = await asyncio.to_thread(get_all_variables_for_provider, owner_id, provider)
+                # The key being replaced is never read: if its stored value can no longer be decrypted
+                # (a changed LANGFLOW_SECRET_KEY), reading it would block saving the new one.
+                provider_vars = await asyncio.to_thread(
+                    get_all_variables_for_provider, owner_id, provider, exclude=(effective_name,)
+                )
                 try:
                     with _policy_denial_as_not_found():
                         await asyncio.to_thread(
@@ -493,7 +504,7 @@ async def delete_variable(
             owner_column=Variable.user_id,
             owner_id=current_user.id,
         )
-        if variable_to_delete is None:
+        if variable_to_delete is None or is_oauth_registration_variable(variable_to_delete.name):
             raise HTTPException(status_code=404, detail="Variable not found")
         if current_auth_is_restricted_api_key():
             session.expunge(variable_to_delete)

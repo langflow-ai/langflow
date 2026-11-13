@@ -9,7 +9,7 @@ cannot see the flow at all.
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from langflow.services.database.models.flow.model import Flow
@@ -274,6 +274,61 @@ async def test_trigger_kind_must_match_the_registry_grammar(
         assert response.status_code == 422, f"{bad_kind!r} was accepted: {response.text}"
 
 
+@pytest.mark.parametrize("operation", ["create", "enable"])
+async def test_policy_denial_is_durable_even_when_optional_authz_audit_is_disabled(
+    client, logged_in_headers, flow, monkeypatch, operation
+):
+    from langflow.services.database.models.auth.authz import AuthzAuditLog
+    from langflow.services.deps import get_settings_service
+    from lfx.services.policy_bundle import PolicyBundleService, PolicyBundleSnapshot
+
+    created = await _create(client, logged_in_headers, flow.id)
+    bundle = PolicyBundleService()
+    bundle.publish(PolicyBundleSnapshot(revision=2, approved_trigger_kinds=frozenset()))
+    monkeypatch.setattr("lfx.services.deps.get_policy_bundle_service", lambda: bundle)
+    monkeypatch.setattr(get_settings_service().auth_settings, "AUTHZ_AUDIT_ENABLED", False)
+    if operation == "create":
+        response = await client.post(
+            "api/v1/triggers", json=_payload(flow.id, state="active"), headers=logged_in_headers
+        )
+    else:
+        response = await client.post(f"api/v1/triggers/{created['id']}/enable", headers=logged_in_headers)
+    assert response.status_code == 403, response.text
+    assert response.json()["detail"]["code"] == "policy_blocked"
+    async with session_scope() as session:
+        rows = (await session.exec(select(AuthzAuditLog).where(AuthzAuditLog.action == "trigger:policy_denied"))).all()
+        assert len(rows) == 1
+        assert rows[0].result == "deny"
+        assert rows[0].details["kind"] == "schedule"
+
+
+async def test_provider_ceiling_refusal_names_the_integration(client, logged_in_headers, flow, monkeypatch):
+    from lfx.services.policy_bundle import PolicyBundleService, PolicyBundleSnapshot
+
+    created = await _create(client, logged_in_headers, flow.id)
+    async with session_scope() as session:
+        row = await session.get(Trigger, UUID(created["id"]))
+        row.kind = "google.calendar"
+        row.provider = "google"
+        session.add(row)
+    bundle = PolicyBundleService()
+    bundle.publish(
+        PolicyBundleSnapshot(
+            revision=2,
+            approved_trigger_kinds=frozenset({"google.calendar"}),
+            approved_integration_provider_ids=frozenset({"slack"}),
+        )
+    )
+    monkeypatch.setattr("lfx.services.deps.get_policy_bundle_service", lambda: bundle)
+    response = await client.post(f"api/v1/triggers/{created['id']}/enable", headers=logged_in_headers)
+    assert response.status_code == 403, response.text
+    assert response.json()["detail"] == {
+        "code": "governance_blocked",
+        "message": "The 'google' integration is not available: it is outside the approved "
+        "integration set. Ask an administrator to approve it.",
+    }
+
+
 async def test_a_trigger_created_through_the_api_is_owned_by_the_flow_owner(
     client: AsyncClient,  # noqa: ARG001
     active_user,
@@ -423,6 +478,17 @@ async def test_trigger_routes_enforce_partial_flow_permissions(
     assert fired.status_code == execute_status, fired.text
     replayed = await client.post(f"{url}/replay", json={"event_id": str(event_id)}, headers=logged_in_headers)
     assert replayed.status_code == execute_status, replayed.text
+    from langflow.services.database.models.auth import AuthzAuditLog
+
+    async with session_scope() as session:
+        audits = (await session.exec(select(AuthzAuditLog).where(AuthzAuditLog.resource_id == trigger_id))).all()
+        mutations = [entry for entry in audits if (entry.details or {}).get("event") == "mutation"]
+        expected_actions = ({"trigger:resume", "trigger:pause"} if management_status == 200 else set()) | (
+            {"trigger:replay"} if execute_status == 202 else set()
+        )
+        assert {entry.action for entry in mutations} == expected_actions
+        assert all(entry.user_id == active_user.id and entry.actor_id == active_user.id for entry in mutations)
+        assert all(entry.user_id != owner.id for entry in mutations)
     deleted = await client.delete(url, headers=logged_in_headers)
     assert deleted.status_code == (204 if management_status == 200 else management_status), deleted.text
 

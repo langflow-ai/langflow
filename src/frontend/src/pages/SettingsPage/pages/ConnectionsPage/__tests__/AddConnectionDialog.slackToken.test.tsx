@@ -9,8 +9,15 @@ import type {
 import i18n from "@/i18n";
 import { axe } from "@/utils/a11y-test";
 import AddConnectionDialog from "../components/AddConnectionDialog";
+import { selectProvider } from "./provider-select-utils";
 
 jest.unmock("react-i18next");
+
+beforeAll(() => {
+  Element.prototype.hasPointerCapture ??= jest.fn(() => false);
+  Element.prototype.releasePointerCapture ??= jest.fn();
+  Element.prototype.scrollIntoView ??= jest.fn();
+});
 
 const mockCreate = jest.fn();
 const mockRenew = jest.fn();
@@ -218,7 +225,6 @@ const choosePastedToken = async (
 ) => {
   await user.selectOptions(screen.getByTestId("connection-method"), "token");
   await user.type(screen.getByTestId("connection-name"), "socket_app");
-  await user.type(screen.getByTestId("connection-display-name"), "Socket app");
   await user.type(screen.getByTestId("connection-token"), token);
 };
 
@@ -250,10 +256,6 @@ describe("AddConnectionDialog: pasted Slack tokens", () => {
       "Langflow checks the token",
     );
     await user.type(screen.getByTestId("connection-name"), "work");
-    await user.type(
-      screen.getByTestId("connection-display-name"),
-      "Pilot work",
-    );
     await user.type(screen.getByTestId("connection-token"), "provider-token");
     expect(await axe(document.body)).toHaveNoViolations();
     await user.click(screen.getByTestId("connection-continue"));
@@ -333,10 +335,6 @@ describe("AddConnectionDialog: pasted Slack tokens", () => {
     );
     expect(identity).toHaveValue("user_delegated");
     await user.type(screen.getByTestId("connection-name"), "work");
-    await user.type(
-      screen.getByTestId("connection-display-name"),
-      "Pilot user",
-    );
     await user.type(screen.getByTestId("connection-token"), "provider-token");
     expect(await axe(document.body)).toHaveNoViolations();
     await user.click(screen.getByTestId("connection-continue"));
@@ -390,10 +388,6 @@ describe("AddConnectionDialog: pasted Slack tokens", () => {
     mockCreate.mockResolvedValue(created({ provider_key: "pilot" }));
     renderDialog([expiringPilot()], "self_managed");
     await user.type(screen.getByTestId("connection-name"), "work");
-    await user.type(
-      screen.getByTestId("connection-display-name"),
-      "Pilot work",
-    );
     await user.type(screen.getByTestId("connection-token"), "provider-token");
     const expiration = screen.getByLabelText("Token expiration");
     expect(expiration).toBeRequired();
@@ -442,10 +436,6 @@ describe("AddConnectionDialog: pasted Slack tokens", () => {
     const user = userEvent.setup();
     renderDialog([expiringPilot()], "self_managed");
     await user.type(screen.getByTestId("connection-name"), "work");
-    await user.type(
-      screen.getByTestId("connection-display-name"),
-      "Pilot work",
-    );
     await user.type(screen.getByTestId("connection-token"), "provider-token");
     const expiration = screen.getByLabelText("Token expiration");
     fireEvent.change(expiration, { target: { value: gap } });
@@ -465,15 +455,9 @@ describe("AddConnectionDialog: pasted Slack tokens", () => {
     fireEvent.change(screen.getByLabelText("Token expiration"), {
       target: { value: "2100-06-15T12:30" },
     });
-    await user.selectOptions(
-      screen.getByTestId("connection-provider"),
-      "slack",
-    );
+    await selectProvider(user, slack.display_name);
     expect(screen.queryByLabelText("Token expiration")).not.toBeInTheDocument();
-    await user.selectOptions(
-      screen.getByTestId("connection-provider"),
-      "pilot",
-    );
+    await selectProvider(user, pilot.display_name);
     expect(screen.getByLabelText("Token expiration")).toHaveValue("");
   });
 
@@ -543,7 +527,7 @@ describe("AddConnectionDialog: pasted Slack tokens", () => {
     expect(mockCreate).toHaveBeenCalledWith({
       provider_key: "slack",
       name: "socket_app",
-      display_name: "Socket app",
+      display_name: "socket_app",
       ownership_mode: "user",
       executing_identity: { identity: "bot" },
       granted_scopes: [],

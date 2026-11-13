@@ -130,6 +130,21 @@ export interface OAuthRegistrationListRead {
   registrations: OAuthRegistrationRead[];
 }
 
+/** A registration a superuser saved from Settings; secrets are never returned. */
+export interface SavedOAuthRegistrationRead {
+  id: string;
+  registration: Record<string, unknown>;
+  has_secret: boolean;
+  saved_by: string;
+  updated_at?: Iso8601 | null;
+  /**
+   * active: in use since the server started; pending: saved since then and waits for a
+   * restart; removed: no longer saved, in use until a restart; overridden: the server
+   * environment defines the same ID.
+   */
+  status: "active" | "overridden" | "pending" | "removed";
+}
+
 export interface IntegrationCapabilityRead {
   id: string;
   display_name: string;

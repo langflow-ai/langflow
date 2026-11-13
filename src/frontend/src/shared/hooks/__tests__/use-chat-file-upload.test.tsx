@@ -1,12 +1,12 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { AxiosError } from "axios";
+import type { ChangeEvent } from "react";
+import { useState } from "react";
 import {
   FS_ERROR_TEXT,
   SN_ERROR_TEXT,
 } from "@/constants/file-upload-constants";
 import { useChatFileUpload } from "@/shared/hooks/use-chat-file-upload";
-import { useState } from "react";
-import type { ChangeEvent } from "react";
 import type { FilePreviewType } from "@/types/components";
 
 const mutateMock = jest.fn();
@@ -115,17 +115,14 @@ describe("useChatFileUpload", () => {
     });
   });
 
-  it("error path: when mutate fails it marks file errored and shows alert", async () => {
+  function renderWithUploadError(error: AxiosError<{ detail?: unknown }>) {
     mutateMock.mockImplementation(
       (
         _variables: unknown,
         options: {
-          onError: (error: AxiosError<{ detail?: string }>) => void;
+          onError: (error: AxiosError<{ detail?: unknown }>) => void;
         },
       ) => {
-        const error = {
-          response: { data: { detail: "upload failed" } },
-        } as unknown as AxiosError<{ detail?: string }>;
         options.onError(error);
       },
     );
@@ -140,31 +137,60 @@ describe("useChatFileUpload", () => {
     });
 
     act(() => {
-      result.current.handleFiles(makeFileList(new File(["x"], "a.png")));
+      result.current.handleFiles(makeFileList(new File([""], "notes.txt")));
     });
+
+    return result;
+  }
+
+  function expectErroredChip(files: FilePreviewType[]) {
+    expect(files).toHaveLength(1);
+    const entry = files[0] as { loading: boolean; error: boolean };
+    expect(entry.loading).toBe(false);
+    expect(entry.error).toBe(true);
+  }
+
+  it("should show the server detail and mark the chip errored when upload returns 400 with detail", async () => {
+    const result = renderWithUploadError({
+      response: { status: 400, data: { detail: "Empty file not allowed" } },
+    } as unknown as AxiosError<{ detail?: unknown }>);
 
     await waitFor(() => {
-      expect(result.current.files).toHaveLength(1);
-      const entry = result.current.files[0] as {
-        loading: boolean;
-        error: boolean;
-      };
-      expect(entry.loading).toBe(false);
-      expect(entry.error).toBe(true);
-      expect(setErrorDataMock).toHaveBeenCalled();
-
-      const [payload] = setErrorDataMock.mock.calls[0] as [
-        { title?: string; list?: unknown },
-      ];
-      expect(payload).toEqual(
-        expect.objectContaining({
-          title: "Error uploading file",
-          list: expect.any(Array),
-        }),
-      );
-      expect(payload.list as unknown[]).not.toHaveLength(0);
+      expectErroredChip(result.current.files);
+      expect(setErrorDataMock).toHaveBeenCalledWith({
+        title: "Error uploading file",
+        list: ["Empty file not allowed"],
+      });
     });
   });
+
+  it.each([
+    ["no response (network error)", { message: "Network Error" }],
+    ["500 without detail", { response: { status: 500, data: {} } }],
+    ["blank detail", { response: { status: 400, data: { detail: "  " } } }],
+    [
+      "non-string detail",
+      { response: { status: 422, data: { detail: [{ msg: "bad" }] } } },
+    ],
+  ])(
+    "should keep the extension text and mark the chip errored when error has %s",
+    async (_label, error) => {
+      const result = renderWithUploadError(
+        error as unknown as AxiosError<{ detail?: unknown }>,
+      );
+
+      await waitFor(() => {
+        expectErroredChip(result.current.files);
+        expect(setErrorDataMock).toHaveBeenCalledWith({
+          title: "Error uploading file",
+          list: [
+            "Please ensure your file has one of the following extensions:",
+            SN_ERROR_TEXT,
+          ],
+        });
+      });
+    },
+  );
 
   it("validation path: rejects disallowed file types before upload", () => {
     isAllowedChatAttachmentFileMock.mockReturnValue(false);
