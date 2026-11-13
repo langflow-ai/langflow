@@ -281,6 +281,14 @@ def find_trigger_nodes(flow_data: dict[str, Any] | None) -> list[tuple[str, str,
     return found
 
 
+def schedule_pick_error(row: Trigger, flow_data: dict[str, Any] | None) -> str | None:
+    """The picker's message for ``row``'s node on ``flow_data``, or None when its pick is usable."""
+    for node_id, kind, config in find_trigger_nodes(flow_data):
+        if node_id == row.node_id and kind == "schedule":
+            return config.get(SCHEDULE_PICK_ERROR)
+    return None
+
+
 def _apply_schedule_pick(node_data: dict[str, Any], config: dict[str, Any]) -> None:
     """Compile the picked schedule into ``config``.
 

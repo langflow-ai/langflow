@@ -115,6 +115,33 @@ async def test_enabling_an_unusable_pick_says_what_to_fix(trigger_owner, owned_f
     assert refusal_detail(refusal.value)["code"] is None
 
 
+@pytest.mark.parametrize(
+    "picked",
+    [
+        {"schedule_type": "Weekly", "times_of_day": ["08:00"], "days_of_week": []},
+        {"schedule_type": "Monthly", "times_of_day": ["08:00"], "days_of_month": []},
+    ],
+)
+async def test_resuming_an_unusable_pick_after_pausing_says_what_to_fix(trigger_owner, owned_flow, picked) -> None:
+    """Pausing clears the trigger's reason, so the refusal must come from the saved node, not a hidden cron."""
+    from langflow.services.database.models.flow.model import Flow
+
+    data = _flow_data(_picked_schedule_node("0 8 * * 1-5", **picked))
+    async with session_scope() as session:
+        flow = await session.get(Flow, owned_flow)
+        flow.data = data
+        session.add(flow)
+        await reconcile_flow_triggers(session, flow_id=owned_flow, owner_id=trigger_owner, flow_data=data)
+    [row] = await _triggers(owned_flow)
+    async with session_scope() as session:
+        await get_trigger_service().set_state(
+            session, row=await session.get(Trigger, row.id), state=TriggerState.PAUSED
+        )
+    async with session_scope() as session:
+        with pytest.raises(ValueError, match=r"^Pick at least one day of the (week|month)\.$"):
+            await get_trigger_service().enable(session, row=await session.get(Trigger, row.id))
+
+
 def test_loading_langflow_before_lfx_components_keeps_component_importable() -> None:
     """The reconciler's lfx import must not run while ``lfx.inputs`` is half loaded."""
     code = "import langflow.utils.i18n_keys\nfrom lfx.custom.custom_component.component import Component"
