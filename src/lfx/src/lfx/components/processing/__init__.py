@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from lfx.components.processing.converter import TypeConverterComponent
     from lfx.components.processing.create_list import CreateListComponent
     from lfx.components.processing.data_operations import DataOperationsComponent
+    from lfx.components.processing.dataframe_keyword_search import DataFrameKeywordSearch
     from lfx.components.processing.dataframe_operations import DataFrameOperationsComponent
     from lfx.components.processing.json_cleaner import JSONCleaner
     from lfx.components.processing.operations import OperationsComponent
@@ -26,6 +27,7 @@ _dynamic_imports = {
     "TypeConverterComponent": "converter",
     "CreateListComponent": "create_list",
     "DataOperationsComponent": "data_operations",
+    "DataFrameKeywordSearch": "dataframe_keyword_search",
     "DataFrameOperationsComponent": "dataframe_operations",
     "JSONCleaner": "json_cleaner",
     "OperationsComponent": "operations",
@@ -40,6 +42,7 @@ _dynamic_imports = {
 __all__ = [
     "CombineTextComponent",
     "CreateListComponent",
+    "DataFrameKeywordSearch",
     "DataFrameOperationsComponent",
     "DataOperationsComponent",
     "JSONCleaner",
