@@ -1,6 +1,6 @@
 # Type stubs for the native part of lfx_native. Every Json value is JSON text.
 
-from typing import Literal, TypeAlias
+from typing import TypeAlias
 
 Json: TypeAlias = str | bytes
 
@@ -11,24 +11,12 @@ class EngineError(Exception):
 
 class GraphState:
     def __init__(self, flow: Json) -> None: ...
-    def apply(
-        self,
-        operations: Json,
-        *,
-        forward: bool = False,
-        backward: bool = False,
-        mode: Literal["strict", "preview"] = "strict",
-    ) -> str: ...
+    def apply(self, operations: Json, *, forward: bool = False, backward: bool = False) -> str: ...
+    def replay(self, operations: Json, *, backward: bool = False) -> str: ...
     def to_json(self) -> str: ...
 
-def apply(
-    flow: Json,
-    operations: Json,
-    *,
-    forward: bool = True,
-    backward: bool = False,
-    mode: Literal["strict", "preview"] = "strict",
-) -> str: ...
+def apply(flow: Json, operations: Json, *, forward: bool = True, backward: bool = False) -> str: ...
+def replay(flow: Json, operations: Json, *, backward: bool = False) -> str: ...
 def normalize_operations(operations: Json) -> str: ...
 def diff(base: Json, target: Json) -> str: ...
 def derive(base: Json, target: Json) -> str: ...

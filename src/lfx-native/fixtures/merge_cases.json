@@ -18,12 +18,12 @@
               },
               "legacy": {"type": "table", "value": [{"v": "1"}]}
             },
-            "outputs": [{"name": "text_output"}, {"name": "model_output"}]
+            "outputs": [{"name": "text_output", "__pos__": 1}, {"name": "model_output", "__pos__": 2}]
           }
         }
       },
-      {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message"}]}}},
-      {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
+      {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message", "__pos__": 1}]}}},
+      {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt", "__pos__": 1}]}}}
     ],
     "edges": [
       {
@@ -78,12 +78,12 @@
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
-                "outputs": [{"name": "text_output"}, {"name": "model_output"}]
+                "outputs": [{"name": "text_output", "__pos__": 1}, {"name": "model_output", "__pos__": 2}]
               }
             }
           },
-          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message"}]}}},
-          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
+          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message", "__pos__": 1}]}}},
+          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -138,12 +138,12 @@
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
-                "outputs": [{"name": "text_output"}, {"name": "model_output"}]
+                "outputs": [{"name": "text_output", "__pos__": 1}, {"name": "model_output", "__pos__": 2}]
               }
             }
           },
-          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message"}]}}},
-          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
+          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message", "__pos__": 1}]}}},
+          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -198,12 +198,12 @@
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
-                "outputs": [{"name": "text_output"}, {"name": "model_output"}]
+                "outputs": [{"name": "text_output", "__pos__": 1}, {"name": "model_output", "__pos__": 2}]
               }
             }
           },
-          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message"}]}}},
-          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
+          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message", "__pos__": 1}]}}},
+          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -253,12 +253,12 @@
                   "headers": {"type": "table", "value": [{"__id__": "r2", "__pos__": 2, "v": "token"}, {"__id__": "r3", "__pos__": 3, "v": "en"}]},
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
-                "outputs": [{"name": "text_output"}, {"name": "model_output"}]
+                "outputs": [{"name": "text_output", "__pos__": 1}, {"name": "model_output", "__pos__": 2}]
               }
             }
           },
-          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message"}]}}},
-          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
+          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message", "__pos__": 1}]}}},
+          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -306,12 +306,12 @@
                   "headers": {"type": "table", "value": [{"__id__": "r2", "__pos__": 2, "v": "token"}, {"__id__": "r3", "__pos__": 3, "v": "en"}]},
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
-                "outputs": [{"name": "text_output"}, {"name": "model_output"}]
+                "outputs": [{"name": "text_output", "__pos__": 1}, {"name": "model_output", "__pos__": 2}]
               }
             }
           },
-          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message"}]}}},
-          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
+          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message", "__pos__": 1}]}}},
+          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -366,12 +366,12 @@
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
-                "outputs": [{"name": "text_output"}, {"name": "model_output"}]
+                "outputs": [{"name": "text_output", "__pos__": 1}, {"name": "model_output", "__pos__": 2}]
               }
             }
           },
-          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message"}]}}},
-          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
+          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message", "__pos__": 1}]}}},
+          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -426,12 +426,12 @@
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
-                "outputs": [{"name": "text_output"}, {"name": "model_output"}]
+                "outputs": [{"name": "text_output", "__pos__": 1}, {"name": "model_output", "__pos__": 2}]
               }
             }
           },
-          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message"}]}}},
-          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
+          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message", "__pos__": 1}]}}},
+          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -502,12 +502,12 @@
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
-                "outputs": [{"name": "text_output"}, {"name": "model_output"}]
+                "outputs": [{"name": "text_output", "__pos__": 1}, {"name": "model_output", "__pos__": 2}]
               }
             }
           },
-          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message"}]}}},
-          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
+          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message", "__pos__": 1}]}}},
+          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -568,12 +568,12 @@
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
-                "outputs": [{"name": "text_output"}, {"name": "model_output"}]
+                "outputs": [{"name": "text_output", "__pos__": 1}, {"name": "model_output", "__pos__": 2}]
               }
             }
           },
-          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message"}]}}},
-          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
+          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message", "__pos__": 1}]}}},
+          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -628,12 +628,12 @@
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
-                "outputs": [{"name": "text_output"}, {"name": "model_output"}]
+                "outputs": [{"name": "text_output", "__pos__": 1}, {"name": "model_output", "__pos__": 2}]
               }
             }
           },
-          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message"}]}}},
-          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
+          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message", "__pos__": 1}]}}},
+          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -708,12 +708,12 @@
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
-                "outputs": [{"name": "text_output"}, {"name": "model_output"}]
+                "outputs": [{"name": "text_output", "__pos__": 1}, {"name": "model_output", "__pos__": 2}]
               }
             }
           },
-          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message"}]}}},
-          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
+          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message", "__pos__": 1}]}}},
+          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -763,12 +763,12 @@
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
-                "outputs": [{"name": "text_output"}]
+                "outputs": [{"name": "text_output", "__pos__": 1}]
               }
             }
           },
-          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message"}]}}},
-          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
+          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message", "__pos__": 1}]}}},
+          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt", "__pos__": 1}]}}}
         ],
         "edges": [
           {
@@ -827,12 +827,12 @@
                   },
                   "legacy": {"type": "table", "value": [{"v": "1"}]}
                 },
-                "outputs": [{"name": "text_output"}, {"name": "model_output"}]
+                "outputs": [{"name": "text_output", "__pos__": 1}, {"name": "model_output", "__pos__": 2}]
               }
             }
           },
-          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message"}]}}},
-          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
+          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message", "__pos__": 1}]}}},
+          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt", "__pos__": 1}]}}}
         ],
         "edges": []
       }
@@ -848,8 +848,8 @@
       "outcomes": {"A": "applied", "B": {"error": "FlowOperationValidationError", "code": "FLOW_OPERATION_INVALID"}},
       "expected": {
         "nodes": [
-          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message"}]}}},
-          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt"}]}}}
+          {"id": "ChatInput-1", "data": {"node": {"template": {}, "outputs": [{"name": "message", "__pos__": 1}]}}},
+          {"id": "Prompt-1", "data": {"node": {"template": {}, "outputs": [{"name": "prompt", "__pos__": 1}]}}}
         ],
         "edges": []
       }

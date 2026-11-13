@@ -243,7 +243,7 @@ cases("backward_cases.json", "cases", (c) => {
   const state = new ops.GraphState(dump(c.base));
   const applied = parse(state.apply(dump(c.operations), { backward: true }));
   check(matches, "backward operations", unordered(applied.backward_operations), unordered(c.backward));
-  for (const backward of [...applied.backward_operations].reverse()) state.apply(dump(backward), { mode: "preview" });
+  for (const backward of [...applied.backward_operations].reverse()) state.replay(dump(backward), {});
   assert.ok(ops.graphsEqual(state.toJson(), dump(c.base)));
 });
 
@@ -254,6 +254,65 @@ cases("backward_cases.json", "undo", (c) => {
   check(matches, "undo", unordered([undo]), unordered([c.undo]));
   state.apply(dump(undo), {});
   assert.ok(ops.graphsEqual(state.toJson(), dump(c.base)));
+});
+
+// --- replay_cases.json -------------------------------------------------------------------------
+
+cases("replay_cases.json", "cases", (c) => {
+  const created = outcome(() => new ops.GraphState(dump(c.base)));
+  if (created.error) return check(strict, "error", failure(created.error), { error: c.error, code: c.code });
+  const state = created.value;
+  const replayed = outcome(() => parse(state.replay(dump(c.operations), { backward: "backward" in c })));
+  if (replayed.error) {
+    check(strict, "error", failure(replayed.error), { error: c.error, code: c.code });
+    return check(strict, "state after the failed replay", parse(state.toJson()), c.base);
+  }
+  assert.ok(!c.error, "expected the replay to fail");
+  check(strict, "flow data", ignoringOrder(parse(state.toJson())), ignoringOrder(c.expected));
+  if (!("backward" in c)) return;
+  check(matches, "backward operations", unordered(replayed.value.backward_operations), unordered(c.backward));
+  for (const backward of [...replayed.value.backward_operations].reverse()) state.replay(dump(backward), {});
+  assert.ok(ops.graphsEqual(state.toJson(), dump(c.base)));
+});
+
+/** Replay in one call and in one call per operation; both give the same graph. */
+function oneCallPerOperation(base, operations) {
+  const batch = new ops.GraphState(dump(base));
+  batch.replay(dump(operations), {});
+  const single = new ops.GraphState(dump(base));
+  for (const operation of operations) single.replay(dump([operation]), {});
+  assert.ok(ops.graphsEqual(batch.toJson(), single.toJson()), "one call and one call per operation differ");
+  return batch.toJson();
+}
+
+cases("replay_cases.json", "cases", (c) => {
+  if (!c.error) oneCallPerOperation(c.base, c.operations);
+});
+
+cases("apply_cases.json", "cases", (c) => {
+  if (c.error) return;
+  const state = new ops.GraphState(dump(c.base));
+  const forward = parse(state.apply(dump(c.operations), { forward: true })).forward_operations;
+  assert.ok(ops.graphsEqual(oneCallPerOperation(c.base, forward), state.toJson()));
+});
+
+/** Apply each batch and keep the forward operations of each one that applies; replaying them gives apply's graph. */
+function logReplay(base, batches) {
+  const applied = new ops.GraphState(dump(base));
+  const replayed = new ops.GraphState(dump(base));
+  for (const batch of batches) {
+    const result = outcome(() => parse(applied.apply(dump(batch), { forward: true })));
+    if (result.error) continue;
+    replayed.replay(dump(result.value.forward_operations), {});
+  }
+  assert.ok(ops.graphsEqual(applied.toJson(), replayed.toJson()), "the replayed log differs from apply");
+}
+
+cases("merge_cases.json", "cases", (c) => logReplay(merge.base, c.order.map((name) => c.transactions[name])));
+cases("property_cases.json", "sequences", (s) => logReplay(property.base, s.transactions));
+cases("diff_cases.json", "cases", (c) => {
+  const derived = parse(ops.derive(dump(c.base), dump(c.target))).operations;
+  assert.ok(ops.graphsEqual(oneCallPerOperation(c.base, derived), dump(c.target)));
 });
 
 // --- restore_cases.json, write_cases.json ----------------------------------------------------------
@@ -276,8 +335,8 @@ cases("write_cases.json", "cases", (c) => {
 
 const FIXTURE_FILES = [
   "apply_cases.json", "backward_cases.json", "canonical_cases.json", "diff_cases.json", "editor_cases.json",
-  "limit_cases.json", "merge_cases.json", "property_cases.json", "repair_cases.json", "restore_cases.json",
-  "table_cases.json", "validation_cases.json", "write_cases.json",
+  "limit_cases.json", "merge_cases.json", "property_cases.json", "repair_cases.json", "replay_cases.json",
+  "restore_cases.json", "table_cases.json", "validation_cases.json", "write_cases.json",
 ];
 
 test("every fixture file is run", () => {

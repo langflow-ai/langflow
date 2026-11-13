@@ -1,4 +1,4 @@
-"""The flow operation engine: apply, diff, validate, repair and hash flow graphs.
+"""The flow operation engine: apply, replay, diff, validate, repair and hash flow graphs.
 
 Every function takes JSON text and returns JSON text. An engine error is
 raised as ``EngineError``: ``kind`` names the matching Python exception class
@@ -32,6 +32,7 @@ from lfx_native._native import (
     ordered_rows,
     prepare_write,
     repair,
+    replay,
     strip_flow_table_row_keys,
     strip_row_keys,
     table_fields,
@@ -63,6 +64,7 @@ __all__ = [
     "ordered_rows",
     "prepare_write",
     "repair",
+    "replay",
     "strip_flow_table_row_keys",
     "strip_row_keys",
     "table_fields",

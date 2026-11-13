@@ -1,6 +1,6 @@
 # lfx-native
 
-The native core of lfx, written in Rust. It is one crate, `lfx`, with one module per feature. The first module is `lfx::ops`, the flow operation engine. It applies, diffs, validates, repairs and hashes flow graphs. It knows flow graphs, not storage: the flow history service owns stored rows, revision numbers, requests, actors and damaged history.
+The native core of lfx, written in Rust. It is one crate, `lfx`, with one module per feature. The first module is `lfx::ops`, the flow operation engine. It applies, replays, diffs, validates, repairs and hashes flow graphs. It knows flow graphs, not storage: the flow history service owns stored rows, revision numbers, requests, actors and damaged history.
 
 The server and the editor use the same engine, through two thin bindings:
 
@@ -34,8 +34,9 @@ The modules of `lfx::ops`:
 | --- | --- |
 | `api` | JSON in, JSON out: the functions the bindings call |
 | `ops` | operation types, the strict parser, and the dump |
-| `state` | `GraphState`, the indexed graph that apply works on, kept between batches |
-| `apply` | apply, with backward operations |
+| `state` | `GraphState`, the indexed graph that apply and replay work on, kept between batches |
+| `apply` | apply, with every rule, and the steps that carry out an operation |
+| `replay` | replay of stored operations, with no rule |
 | `diff` | diff, and the check that its operations replay to the target |
 | `validate` | graph rules and violations, with codes and resolutions |
 | `repair` | the repairs of violations that have one fix |
@@ -57,7 +58,8 @@ This table maps each part of the engine to its callers today, in the Python engi
 
 | Part | Python (`lfx_native.ops`) | Browser (`lfx-native`) | Backend callers | Editor callers |
 | --- | --- | --- | --- | --- |
-| Apply operations | `apply`, `GraphState.apply` | `apply`, `GraphState.apply` | replay (`flow_history/replay.py`), restore fixes (`flow_history/restore_fixes.py`) | history playback (`flow-operations/history.ts`) |
+| Apply operations, with every rule | `apply`, `GraphState.apply` | `apply`, `GraphState.apply` | restore fixes (`flow_history/restore_fixes.py`) | none yet |
+| Replay stored operations, with no rule | `replay`, `GraphState.replay` | `replay`, `GraphState.replay` | replay (`flow_history/replay.py`) | history playback (`flow-operations/history.ts`) |
 | Assign row ids to a table | `assign_row_ids`, `assign_changed_table_row_ids` | `assignRowIds`, `assignChangedTableRowIds`, `assignChangedNodeTableRowIds` | the assistant (`agentic/utils/assistant_runner.py`, `flow_component.py`), the MCP patch (`lfx/mcp/server.py`) | `flowStore.ts`, `use-add-flow.ts`, template hooks, `mutate-template.ts`, `TableNodeComponent` |
 | Strip row ids and order rows | `strip_row_keys`, `strip_flow_table_row_keys`, `ordered_rows` | `stripRowKeys`, `stripFlowTableRowKeys`, `orderedRows` | flow export (`api/utils/core.py`), MCP export, the component run (`lfx/graph/vertex/param_handler.py`), the refresh endpoint (`api/v1/endpoints.py`) | download and export (`reactflowUtils.ts`), `TableNodeComponent` |
 | Canonical equality | `graphs_equal`, `values_equal` | `graphsEqual`, `valuesEqual` | the save's no-op check and the check that the stored graph matches its latest revision (`flow_history/recorder.py`) | inside the editor's engine only |
@@ -77,7 +79,7 @@ This table maps each part of the engine to its callers today, in the Python engi
 
 | Part | Browser (`lfx-native`) | Editor callers |
 | --- | --- | --- |
-| Backward operations, and applying them | `GraphState.apply` with `backward` and `mode: preview` | history timeline (`buildHistoryTimeline` and `graphAt` in `history.ts`) |
+| Backward operations, and replaying them | `GraphState.replay` with `backward`, then `GraphState.replay` of each list | history timeline (`buildHistoryTimeline` and `graphAt` in `history.ts`) |
 | A user's undo and redo | `GraphState.apply` with `backward`; the backward operation lists, last first, sent as one ordinary batch | none yet; for multiplayer undo and redo |
 | Append rows, and renumber a full gap | `appendTableRows`, and `assignRowIds` with renumbering (the default in the browser) | `TableNodeComponent` |
 | Edge fixes for a refused restore | `edgeFixes`, `fixesForEdges` | `use-flow-version-sidebar.ts`, `refused-restore.ts` |

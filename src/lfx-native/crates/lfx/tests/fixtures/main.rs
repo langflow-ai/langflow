@@ -9,6 +9,7 @@ mod canonical;
 mod diff;
 mod editor;
 mod repair;
+mod replay;
 mod support;
 mod tables;
 mod validate;
@@ -25,6 +26,7 @@ fn main() {
         diff::trials(),
         editor::trials(),
         repair::trials(),
+        replay::trials(),
         tables::trials(),
         validate::trials(),
         write::trials(),
