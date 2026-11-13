@@ -378,7 +378,7 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
 
         try:
             with (
-                patch("langflow.api.v2.files.upload_user_file", new_callable=AsyncMock) as mock_upload,
+                patch("langflow.api.v2.file_replace.replace_user_file", new_callable=AsyncMock) as mock_upload,
                 patch("lfx.services.deps.session_scope") as mock_session,
                 patch(
                     "langflow.services.database.models.user.crud.get_user_by_id", new_callable=AsyncMock
@@ -695,6 +695,29 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         assert path.read_bytes() == original + frame.to_csv(index=False, header=False).encode("utf-8")
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize(("append_mode", "expected"), [(True, "replace"), (False, "upload")])
+    async def test_append_mode_replaces_the_my_files_entry_instead_of_adding_a_copy(
+        self, component_class, tmp_path, append_mode, expected
+    ):
+        saved = tmp_path / "ledger.csv"
+        saved.write_text("a,b\n1,2\n", encoding="utf-8")
+        component = component_class(_user_id=str(uuid4()))
+        component.set_attributes({"append_mode": append_mode})
+
+        with (
+            patch("langflow.api.v2.files.upload_user_file", new_callable=AsyncMock) as upload,
+            patch("langflow.api.v2.file_replace.replace_user_file", new_callable=AsyncMock) as replace,
+            patch("lfx.components.files_and_knowledge.save_file.session_scope") as session,
+            patch("langflow.services.database.models.user.crud.get_user_by_id", new_callable=AsyncMock),
+        ):
+            session.return_value.__aenter__.return_value = AsyncMock()
+            await component._upload_file(saved)
+
+        called = {"replace": replace, "upload": upload}
+        assert called[expected].await_count == 1
+        assert sum(mock.await_count for mock in called.values()) == 1
+        assert called[expected].await_args.kwargs["file"].filename == "ledger.csv"
+
     async def test_append_mode_txt_file(self, component_class):
         """Test append mode for text files."""
         from tempfile import NamedTemporaryFile
@@ -729,7 +752,7 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
             # Mock the path resolution to return our temp file
             with (
                 patch("lfx.components.files_and_knowledge.save_file.Path") as mock_path_class,
-                patch("langflow.api.v2.files.upload_user_file", new_callable=AsyncMock) as mock_upload,
+                patch("langflow.api.v2.file_replace.replace_user_file", new_callable=AsyncMock) as mock_upload,
                 patch("lfx.services.deps.session_scope") as mock_session,
                 patch(
                     "langflow.services.database.models.user.crud.get_user_by_id", new_callable=AsyncMock
