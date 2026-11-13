@@ -1,5 +1,6 @@
 import json
 import math
+import re
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Annotated
 from uuid import UUID, uuid4
@@ -8,6 +9,7 @@ import numpy as np
 import pandas as pd
 from fastapi.encoders import jsonable_encoder
 from lfx.schema.legacy_render import render_v1_content_blocks
+from lfx.utils.file_path_security import FLOW_STORAGE_SCOPE_PREFIX
 from pydantic import ConfigDict, field_serializer, field_validator
 from sqlalchemy import Index, Text, text
 from sqlmodel import JSON, Column, Field, SQLModel
@@ -15,6 +17,24 @@ from sqlmodel import JSON, Column, Field, SQLModel
 from langflow.schema.content_block import ContentType
 from langflow.schema.properties import Properties
 from langflow.schema.validators import TF_WITH_TZ_AND_MICROSECONDS, str_to_timestamp, str_to_timestamp_validator
+
+# The storage-relative tail of an uploaded file: ``flow-<flow id>/<name>``.
+_FLOW_STORAGE_TAIL = re.compile(
+    rf"(?:^|/)({re.escape(FLOW_STORAGE_SCOPE_PREFIX)}"
+    r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[^/]+)$"
+)
+
+
+def _flow_storage_tail(file_path: str) -> str | None:
+    """``flow-<id>/<name>`` for a file in a flow's storage, whatever session sent it.
+
+    A shareable playground runs under a per-visitor session id, so its uploads
+    (stored under the source flow) never contain the session id. Without this,
+    the server's absolute path reaches the client and the image cannot be shown.
+    """
+    match = _FLOW_STORAGE_TAIL.search(file_path)
+    return match.group(1) if match else None
+
 
 if TYPE_CHECKING:
     from langflow.schema.message import Message
@@ -102,7 +122,7 @@ class MessageBase(SQLModel):
                         else:
                             image_paths.append(file.path)
                     else:
-                        image_paths.append(file.path)
+                        image_paths.append(_flow_storage_tail(file.path.replace("\\", "/")) or file.path)
                 elif isinstance(file, str):
                     image_paths.append(file)
 
