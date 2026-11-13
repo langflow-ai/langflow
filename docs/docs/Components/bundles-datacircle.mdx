@@ -1,0 +1,92 @@
+---
+title: Datacircle
+slug: /bundles-datacircle
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Datacircle** bundle.
+
+[Datacircle](https://datacircle.dev) benchmarks the GTM APIs, such as email finders, enrichment, and scraping APIs, and ranks every plan of each by its score out of 100.
+
+The components call the [Datacircle API](https://datacircle.dev/api) at `https://api.datacircle.dev/v1`.
+It is open, so the components need no API key and no account.
+It allows at most 60 calls a minute from one address.
+
+Each component returns a [`Table`](/data-types#table), with one row per API, plan, or provider rank.
+When a component is used as a [tool](/agents-tools), the agent can set its search fields, so an agent can find the API it needs, then compare that API's plans.
+
+For the calls and every field they return, see the [Datacircle API specification](https://api.datacircle.dev/v1/openapi.json).
+
+## Datacircle List APIs
+
+This component lists every GTM API that Datacircle benchmarks.
+
+Each row has the API's name in `api`, its `slug`, how many `plans` and `providers` it has, its best plan's `best_provider`, `best_plan`, `best_score`, and `best_per_thousand`, and the links to its `sheet_page` and `best_page` on datacircle.dev.
+The other Datacircle components take the `slug`.
+
+### Datacircle List APIs parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| Search (`search`) | String | Input parameter. Only list the APIs whose name or slug contains all of these words, such as `email`. Leave empty to list every API. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for Datacircle to answer. Default: `30`. |
+
+## Datacircle Best Plans
+
+This component returns the best plans of one API, the highest score first.
+
+Each row is a plan, with its `rank`, `provider`, `plan`, `score`, `perThousand` (the price per 1,000 units), `billing`, `strengths`, and links to the provider's `website`, its `pricingPage`, and the plan's `page` on datacircle.dev.
+
+### Datacircle Best Plans parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| API (`api`) | String | Input parameter. The API's slug, such as `email-finder` or `linkedin-profile`. **Datacircle List APIs** returns every slug. |
+| Max Plans (`limit`) | Integer | Input parameter. The number of plans to return, from 1 to 50. Default: `5`. |
+| All Fields (`all_fields`) | Boolean | Input parameter. Return every field of each plan, such as its rate limits, speed, and the fields it returns, instead of the main fields. Default: `false`. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for Datacircle to answer. Default: `30`. |
+
+## Datacircle Search Plans
+
+This component searches every plan of every API by the provider's or the plan's name.
+
+It returns the same fields as **Datacircle Best Plans**, and the `api` of each plan.
+
+### Datacircle Search Plans parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Search Query (`query`) | String | Input parameter. Words that must all appear in the provider's or the plan's name, such as `hunter`. Leave empty to return every plan. |
+| API (`api`) | String | Input parameter. Only return the plans of this API, by its slug or its name, such as `email-finder`. Leave empty for every API. |
+| Sort By (`sort`) | String | Input parameter. `score` returns the best first, `price` the lowest price per 1,000 first, and `provider` sorts by provider from A to Z. Default: `score`. |
+| Max Plans (`limit`) | Integer | Input parameter. The number of plans to return, from 1 to 50. Default: `10`. |
+| Offset (`offset`) | Integer | Input parameter. The number of found plans to skip first, to page through the results. Default: `0`. |
+| All Fields (`all_fields`) | Boolean | Input parameter. Return every field of each plan instead of the main fields. Default: `false`. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for Datacircle to answer. Default: `30`. |
+
+## Datacircle Provider
+
+This component returns how one provider ranks on every API it sells.
+
+Each row is an API, with the provider's `rank` on it, how many `plans` it sells there, its best plan's `best_plan`, `best_score`, and `best_per_thousand`, the API's `best_page` on datacircle.dev, and the provider's `website`.
+
+### Datacircle Provider parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Provider (`provider`) | String | Input parameter. The provider's name or slug, such as `Hunter` or `bright-data`. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for Datacircle to answer. Default: `30`. |
+
+## See also
+
+* [Use components as tools](/agents-tools)
+* [**API Request** component](/api-request)

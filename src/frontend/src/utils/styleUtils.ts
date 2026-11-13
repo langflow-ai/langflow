@@ -463,6 +463,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Couchbase", name: "couchbase", icon: "Couchbase" },
   { display_name: "CrewAI", name: "crewai", icon: "CrewAI" },
   { display_name: "CUGA", name: "cuga", icon: "Bot" },
+  { display_name: "Datacircle", name: "datacircle", icon: "Datacircle" },
   { display_name: "DataStax", name: "datastax", icon: "AstraDB" },
   { display_name: "DeepSeek", name: "deepseek", icon: "DeepSeek" },
   { display_name: "Discord", name: "discord", icon: "discord" },

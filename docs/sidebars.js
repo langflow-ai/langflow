@@ -578,6 +578,7 @@ module.exports = {
             "Components/bundles-confluence",
             "Components/bundles-couchbase",
             "Components/bundles-cuga",
+            "Components/bundles-datacircle",
             "Components/bundles-datastax",
             "Components/bundles-deepseek",
             "Components/bundles-discord",
