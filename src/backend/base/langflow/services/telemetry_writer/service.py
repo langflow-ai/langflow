@@ -37,6 +37,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
+import psutil
 from lfx.log.logger import logger
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
@@ -215,13 +216,9 @@ def _pid_alive(pid: int) -> bool:
     """Return True if ``pid`` corresponds to a live process."""
     if pid <= 0:
         return False
-    try:
-        os.kill(pid, 0)
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True
-    return True
+    # Not ``os.kill(pid, 0)``: on Windows signal 0 is CTRL_C_EVENT, so it raises OSError
+    # for the PID of an exited process instead of probing it.
+    return psutil.pid_exists(pid)
 
 
 class TelemetryWriterService(Service):
