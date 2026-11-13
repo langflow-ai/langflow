@@ -20,7 +20,8 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import pytest
-from langflow.services.database.models.api_key.model import ApiKey, hash_api_key
+from langflow.services.database.models.api_key.crud import hash_api_key
+from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_db_service, get_queue_service, get_task_service
 from lfx.services.deps import session_scope
