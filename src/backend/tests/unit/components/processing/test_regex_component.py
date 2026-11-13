@@ -93,3 +93,33 @@ class TestRegexExtractorComponent(ComponentTestBaseWithoutClient):
         result = component.get_matches_text()
         assert isinstance(result, Message)
         assert "Invalid regex pattern" in result.text
+
+    @pytest.mark.parametrize(
+        ("pattern", "text", "json_matches", "message"),
+        [
+            (r"\w+: \d+", "John: 25, Jane: 30", ["John: 25", "Jane: 30"], "John: 25\nJane: 30"),
+            (r"(\w+): \d+", "John: 25, Jane: 30", ["John", "Jane"], "John\nJane"),
+            (r"(a)?b", "b ab", ["a"], "a"),
+            (
+                r"(\w+): (\d+)",
+                "John: 25, Jane: 30",
+                [("John", "25"), ("Jane", "30")],
+                "John: 25\nJane: 30",
+            ),
+            (r"(a)?(b)", "b ab", [("", "b"), ("a", "b")], "b\nab"),
+            (r"(john): (\d+)", "John: 25", [], "No matches found"),
+            (r"(?i)(john): (\d+)", "John: 25", [("John", "25")], "John: 25"),
+            (r"(?=(a)(b))", "ab", [("a", "b")], '["a", "b"]'),
+            (r"(?=(a)(b))|ab", "ab", [("a", "b"), ("", "")], '["a", "b"]\nab'),
+            (r"(?=(a)?(b))", "b", [("", "b")], '["", "b"]'),
+        ],
+    )
+    def test_text_output_preserves_single_captures_and_formats_multiple_captures(
+        self, component_class, pattern, text, json_matches, message
+    ):
+        component = component_class(input_text=text, pattern=pattern)
+
+        assert [item.data["match"] for item in component.extract_matches()] == json_matches
+        assert component.get_matches_text().text == message
+        # Producing a Message must not change the JSON output's capture-group values.
+        assert [item.data["match"] for item in component.extract_matches()] == json_matches
