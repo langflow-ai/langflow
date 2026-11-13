@@ -150,6 +150,7 @@ lfx-servicenow = { workspace = true }
 lfx-telegram = { workspace = true }
 lfx-github = { workspace = true }
 lfx-whatsapp = { workspace = true }
+lfx-turbo-notify = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -199,6 +200,7 @@ members = [
     "src/bundles/telegram",
     "src/bundles/github",
     "src/bundles/whatsapp",
+    "src/bundles/turbo-notify",
     # langflow-extensions:bundle-members-end
 ]
 
@@ -222,6 +224,7 @@ bundles = [
     "lfx-paddle>=0.2.1,<1.0.0",
     "lfx-serpingapi>=0.1.1,<1.0.0",
     "lfx-serply>=0.1.1,<1.0.0",
+    "lfx-turbo-notify>=1.5.13,<2.0.0",
     "lfx-valkey>=0.3.0,<1.0.0",
 ]
 
