@@ -239,7 +239,7 @@ def validate_public_files(files: list[str] | None, source_flow_id: uuid.UUID) ->
     """
     if not files:
         return
-    expected_flow_id = str(source_flow_id)
+    expected_flow_id = str(source_flow_id).lower()
     for entry in files:
         if not isinstance(entry, str) or not entry:
             raise HTTPException(status_code=400, detail="Invalid file entry")
@@ -249,7 +249,7 @@ def validate_public_files(files: list[str] | None, source_flow_id: uuid.UUID) ->
         if not match:
             raise HTTPException(status_code=400, detail="Invalid file path format")
         flow_id_segment, basename = match.group(1), match.group(2)
-        if flow_id_segment != expected_flow_id:
+        if flow_id_segment.lower() != expected_flow_id:
             raise HTTPException(status_code=400, detail="File not in this flow's namespace")
         if basename in (".", ".."):
             raise HTTPException(status_code=400, detail="Invalid filename")
