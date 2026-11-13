@@ -5,13 +5,19 @@ from __future__ import annotations
 import subprocess
 import sys
 from typing import Any
+from uuid import uuid4
 
 import pytest
 from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.database.models.trigger.schemas import TriggerSessionPolicy, TriggerState
 from langflow.services.deps import get_trigger_service, session_scope
 from langflow.services.triggers.error_codes import refusal_detail
-from langflow.services.triggers.reconciliation import NODE_REMOVED_ERROR, find_trigger_nodes, reconcile_flow_triggers
+from langflow.services.triggers.reconciliation import (
+    NODE_REMOVED_ERROR,
+    find_trigger_nodes,
+    reconcile_flow_triggers,
+    schedule_pick_error,
+)
 from sqlmodel import select
 
 pytestmark = pytest.mark.no_blockbuster
@@ -140,6 +146,22 @@ async def test_resuming_an_unusable_pick_after_pausing_says_what_to_fix(trigger_
     async with session_scope() as session:
         with pytest.raises(ValueError, match=r"^Pick at least one day of the (week|month)\.$"):
             await get_trigger_service().enable(session, row=await session.get(Trigger, row.id))
+
+
+@pytest.mark.parametrize(
+    "flow_data",
+    [
+        None,
+        {"nodes": None},
+        {"nodes": [{"id": "ScheduleTrigger-abc123", "data": {"type": "ScheduleTrigger", "node": "broken"}}]},
+        {"nodes": [{"id": "ScheduleTrigger-abc123", "data": {"type": "ScheduleTrigger", "node": {"template": []}}}]},
+        {"nodes": [{"id": "ScheduleTrigger-abc123", "data": None}]},
+        _flow_data(_picked_schedule_node("0 8 * * 1-5", schedule_type="Daily", times_of_day=["09:00"])),
+    ],
+)
+def test_a_saved_node_without_an_unusable_pick_gives_no_pick_message(flow_data) -> None:
+    row = Trigger(flow_id=uuid4(), user_id=uuid4(), kind="schedule", node_id="ScheduleTrigger-abc123", config={})
+    assert schedule_pick_error(row, flow_data) is None
 
 
 def test_loading_langflow_before_lfx_components_keeps_component_importable() -> None:

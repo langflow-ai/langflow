@@ -283,10 +283,19 @@ def find_trigger_nodes(flow_data: dict[str, Any] | None) -> list[tuple[str, str,
 
 def schedule_pick_error(row: Trigger, flow_data: dict[str, Any] | None) -> str | None:
     """The picker's message for ``row``'s node on ``flow_data``, or None when its pick is usable."""
-    for node_id, kind, config in find_trigger_nodes(flow_data):
-        if node_id == row.node_id and kind == "schedule":
-            return config.get(SCHEDULE_PICK_ERROR)
-    return None
+    nodes = (flow_data or {}).get("nodes") or []
+    node = next((n for n in nodes if isinstance(n, dict) and n.get("id") == row.node_id), None)
+    node_data = node.get("data") if node is not None else None
+    if (
+        not isinstance(node_data, dict)
+        or not isinstance(node_data.get("node"), dict)
+        or not isinstance(node_data["node"].get("template", {}), dict)
+        or _node_kind(node_data.get("type")) != "schedule"
+    ):
+        return None
+    config: dict[str, Any] = {"cron": _template_value(node_data, "cron_expression", "")}
+    _apply_schedule_pick(node_data, config)
+    return config.get(SCHEDULE_PICK_ERROR)
 
 
 def _apply_schedule_pick(node_data: dict[str, Any], config: dict[str, Any]) -> None:
