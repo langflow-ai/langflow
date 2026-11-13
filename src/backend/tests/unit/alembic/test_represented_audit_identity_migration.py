@@ -10,7 +10,6 @@ from uuid import uuid4
 import pytest
 import sqlalchemy as sa
 from alembic import command
-from alembic.config import Config
 from alembic.migration import MigrationContext
 from alembic.operations import Operations
 from alembic.script import ScriptDirectory
@@ -25,6 +24,7 @@ from .test_migration_execution import (  # noqa: F401
     _create_pg_test_database,
     _drop_pg_test_database,
     _engine_url,
+    _make_alembic_cfg,
     _pg_url,
     db_url,
 )
@@ -38,8 +38,11 @@ def _upgrade(module, connection):
     """Run one revision against the supplied real database connection."""
     previous = module.op
     try:
-        module.op = Operations(MigrationContext.configure(connection))
-        module.upgrade()
+        context = MigrationContext.configure(connection)
+        module.op = Operations(context)
+        with context.begin_transaction():
+            module.upgrade()
+        connection.commit()
     finally:
         module.op = previous
 
@@ -61,26 +64,10 @@ def _event(table, **identity):
     )
 
 
-def _alembic_config(tmp_path, connection):
-    """Run the real revision graph against a deliberately small predecessor schema."""
-    (tmp_path / "env.py").write_text(
-        "from alembic import context\n"
-        "context.configure(connection=context.config.attributes['connection'])\n"
-        "with context.begin_transaction():\n"
-        "    context.run_migrations()\n"
-    )
-    config = Config()
-    config.set_main_option("script_location", str(tmp_path))
-    config.set_main_option("path_separator", "os")
-    config.set_main_option("version_locations", str(Path(NEW.__file__).resolve().parent))
-    config.attributes["connection"] = connection
-    return config
-
-
-def test_alembic_upgrade_preserves_audits_and_replacement_receipts(db_url, tmp_path):  # noqa: F811
+def test_alembic_upgrade_preserves_audits_and_replacement_receipts(db_url):  # noqa: F811
     engine = sa.create_engine(_engine_url(db_url))
     try:
-        with engine.begin() as conn:
+        with engine.connect() as conn:
             _upgrade(OLD, conn)
             _upgrade(RECEIPT, conn)
             audit = sa.Table("audit_events", sa.MetaData(), autoload_with=conn)
@@ -102,10 +89,13 @@ def test_alembic_upgrade_preserves_audits_and_replacement_receipts(db_url, tmp_p
                     created_at=sa.func.now(),
                 )
             )
-            config = _alembic_config(tmp_path, conn)
-            command.stamp(config, NEW.down_revision)
-            command.upgrade(config, "head")
-            command.upgrade(config, "head")
+            conn.commit()
+
+        config = _make_alembic_cfg(db_url)
+        command.stamp(config, NEW.down_revision)
+        command.upgrade(config, "head")
+        command.upgrade(config, "head")
+        with engine.connect() as conn:
             assert (
                 conn.scalar(sa.text("SELECT version_num FROM alembic_version"))
                 == ScriptDirectory.from_config(config).get_current_head()
@@ -127,11 +117,12 @@ def test_migration_preserves_acting_history_without_inventing_represented_identi
     """Keep old acting history and reject incomplete identity pairs after repeated upgrades."""
     engine = sa.create_engine(_engine_url(db_url))
     try:
-        with engine.begin() as conn:
+        with engine.connect() as conn:
             _upgrade(OLD, conn)
             table = sa.Table("audit_events", sa.MetaData(), autoload_with=conn)
             conn.execute(_event(table, acting_issuer="issuer", acting_subject="用户"))
             conn.execute(_event(table))
+            conn.commit()
             _upgrade(NEW, conn)
             _upgrade(NEW, conn)
             table = sa.Table("audit_events", sa.MetaData(), autoload_with=conn)
@@ -146,6 +137,7 @@ def test_migration_preserves_acting_history_without_inventing_represented_identi
             conn.execute(_event(table, represented_issuer="new-writer", represented_subject="later"))
             indexes = {item["name"] for item in sa.inspect(conn).get_indexes("audit_events")}
             assert {"ix_audit_events_acting_timeline", "ix_audit_events_represented_timeline"} <= indexes
+            conn.commit()
         for identity in ({"represented_issuer": "partial"}, {"acting_subject": "partial"}):
             with pytest.raises(sa.exc.IntegrityError), engine.begin() as conn:
                 conn.execute(_event(table, **identity))
@@ -169,7 +161,7 @@ def test_maximum_unicode_identity_commits_with_mutation(db_url, schema, prefix):
         encoded = "v1." + base64.urlsafe_b64encode(value.encode()).decode().rstrip("=")
         assert decode_identity_value(encoded, limit) == value
     try:
-        with engine.begin() as conn:
+        with engine.connect() as conn:
             if schema == "migration":
                 _upgrade(OLD, conn)
                 _upgrade(NEW, conn)
@@ -178,6 +170,7 @@ def test_maximum_unicode_identity_commits_with_mutation(db_url, schema, prefix):
             table = sa.Table("audit_events", sa.MetaData(), autoload_with=conn)
             mutation = sa.Table("deployment_write", sa.MetaData(), sa.Column("id", sa.Integer, primary_key=True))
             mutation.create(conn)
+            conn.commit()
         with engine.begin() as conn:
             conn.execute(sa.insert(mutation).values(id=1))
             conn.execute(_event(table, **{f"{prefix}_issuer": issuer, f"{prefix}_subject": subject}))
@@ -204,7 +197,7 @@ def test_bounded_indexes_repair_draft_shapes_without_changing_history(db_url):  
     """Repair old index shapes without changing either identity pair."""
     engine = sa.create_engine(_engine_url(db_url))
     try:
-        with engine.begin() as conn:
+        with engine.connect() as conn:
             _upgrade(OLD, conn)
             _upgrade(NEW, conn)
             table = sa.Table("audit_events", sa.MetaData(), autoload_with=conn)
@@ -223,6 +216,7 @@ def test_bounded_indexes_repair_draft_shapes_without_changing_history(db_url):  
                     with pytest.raises(sa.exc.DBAPIError) as rejected, conn.begin_nested():
                         conn.execute(_event(table, **{f"{prefix}_issuer": issuer, f"{prefix}_subject": prefix}))
                     assert rejected.value.orig.sqlstate == "54000"
+            conn.commit()
             _upgrade(NEW, conn)
             _upgrade(NEW, conn)
             indexes = {item["name"]: item["column_names"] for item in sa.inspect(conn).get_indexes("audit_events")}
@@ -240,13 +234,14 @@ def test_upgrade_completes_partial_draft_schema(db_url, column):  # noqa: F811
     """Complete nullable draft columns and the pair constraint without rewriting old history."""
     engine = sa.create_engine(_engine_url(db_url))
     try:
-        with engine.begin() as conn:
+        with engine.connect() as conn:
             _upgrade(OLD, conn)
             table = sa.Table("audit_events", sa.MetaData(), autoload_with=conn)
             conn.execute(_event(table, acting_issuer="existing", acting_subject="history"))
             Operations(MigrationContext.configure(conn)).add_column(
                 "audit_events", sa.Column(column, sa.String(2048), nullable=True)
             )
+            conn.commit()
             _upgrade(NEW, conn)
             table = sa.Table("audit_events", sa.MetaData(), autoload_with=conn)
             row = conn.execute(sa.select(table)).one()
@@ -255,6 +250,53 @@ def test_upgrade_completes_partial_draft_schema(db_url, column):  # noqa: F811
             assert row.represented_subject is None
         with pytest.raises(sa.exc.IntegrityError), engine.begin() as conn:
             conn.execute(_event(table, represented_subject="partial"))
+    finally:
+        engine.dispose()
+
+
+def test_postgres_upgrade_recovers_partial_constraint_and_index_builds(db_url):  # noqa: F811
+    """Resume an upgrade after PostgreSQL commits only part of its DDL."""
+    if not db_url.startswith("postgresql"):
+        pytest.skip("Only PostgreSQL supports NOT VALID and concurrent index builds")
+    engine = sa.create_engine(_engine_url(db_url))
+    constraint_valid = sa.text(
+        "SELECT convalidated FROM pg_constraint "
+        "WHERE conrelid = 'audit_events'::regclass AND conname = 'ck_audit_events_represented_pair'"
+    )
+    index_valid = sa.text(
+        "SELECT indisvalid FROM pg_index WHERE indexrelid = 'ix_audit_events_represented_timeline'::regclass"
+    )
+    try:
+        with engine.connect() as conn:
+            _upgrade(OLD, conn)
+            conn.execute(sa.text("ALTER TABLE audit_events ADD COLUMN represented_issuer VARCHAR(2048)"))
+            conn.execute(sa.text("ALTER TABLE audit_events ADD COLUMN represented_subject VARCHAR(512)"))
+            conn.execute(
+                sa.text(
+                    "ALTER TABLE audit_events ADD CONSTRAINT ck_audit_events_represented_pair "
+                    "CHECK ((represented_issuer IS NULL) = (represented_subject IS NULL)) NOT VALID"
+                )
+            )
+            table = sa.Table("audit_events", sa.MetaData(), autoload_with=conn)
+            for _ in range(2):
+                conn.execute(
+                    _event(table, represented_issuer="issuer", represented_subject="duplicate", timestamp=sa.func.now())
+                )
+            conn.commit()
+            with pytest.raises(sa.exc.IntegrityError):
+                conn.execution_options(isolation_level="AUTOCOMMIT").execute(
+                    sa.text(
+                        "CREATE UNIQUE INDEX CONCURRENTLY ix_audit_events_represented_timeline "
+                        "ON audit_events (represented_subject, timestamp)"
+                    )
+                )
+            assert conn.scalar(constraint_valid) is False
+            assert conn.scalar(index_valid) is False
+        with engine.connect() as conn:
+            _upgrade(NEW, conn)
+            assert conn.scalar(constraint_valid) is True
+            assert conn.scalar(index_valid) is True
+            assert conn.scalar(sa.select(sa.func.count()).select_from(table)) == 2
     finally:
         engine.dispose()
 
