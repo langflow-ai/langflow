@@ -202,10 +202,6 @@ describe("canvas connection creation with the real component palette", () => {
     const { onChange } = await openDialog(user);
     await user.type(screen.getByTestId("connection-name"), "new");
     await user.type(
-      screen.getByTestId("connection-display-name"),
-      "New Telegram",
-    );
-    await user.type(
       screen.getByTestId("connection-token"),
       "example-provider-token",
     );

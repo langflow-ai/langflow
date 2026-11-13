@@ -74,6 +74,7 @@ async def test_expired_receipt_retry_retains_name_in_audit_export(
     async with session_scope() as session:
         receipt = await session.get(ProjectReplacementOperation, (project_id, operation_id))
         receipt.result = None
+        receipt.project_name = None
         session.add(receipt)
     if deleted:
         removed = await client.delete(f"api/v1/projects/{project_id}", headers=logged_in_headers_super_user)
@@ -151,6 +152,36 @@ async def test_pruned_receipt_keeps_original_project_name(
     assert [(row["id"], row["resource_name"]) for row in csv.DictReader(io.StringIO(exported.text))] == [
         (str(failure.id), name)
     ]
+
+
+async def test_expired_receipt_warns_when_project_and_audit_history_are_gone(
+    client, active_user, logged_in_headers, monkeypatch
+):
+    """Retain the failed event by ID without trusting a retry's attempted name."""
+    project_id, operation_id = uuid4(), uuid4()
+    await _seed_project(active_user, project_id)
+    url = _url(project_id, operation_id)
+    body = {"description": "committed", "flows": []}
+    response = await client.put(url, json=body, headers=logged_in_headers)
+    assert response.status_code == 200, response.text
+    removed = await client.delete(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+    assert removed.status_code == 204, removed.text
+    async with session_scope() as session:
+        receipt = await session.get(ProjectReplacementOperation, (project_id, operation_id))
+        receipt.result = None
+        receipt.project_name = None
+        session.add(receipt)
+        await session.exec(delete(AuditEvent).where(AuditEvent.resource_id == project_id))
+    warning_log = AsyncMock()
+    monkeypatch.setattr(projects_module.logger, "awarning", warning_log)
+
+    retry = await client.put(url, json={**body, "project_name": "untrusted retry name"}, headers=logged_in_headers)
+    assert retry.status_code == 410, retry.text
+    [failure] = await events_for(project_id)
+    assert (failure.resource_name, failure.result, failure.error_code) == (None, "failed", "CONSTRAINT_VIOLATION")
+    warnings = [call for call in warning_log.call_args_list if "no project name remains" in call.args[0]]
+    assert len(warnings) == 1
+    assert warnings[0].args[1:] == (project_id, operation_id)
 
 
 @pytest.mark.parametrize("create", [True, False])
