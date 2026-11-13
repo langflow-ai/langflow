@@ -9,6 +9,7 @@ from langflow.services.schema import ServiceType
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
+    from lfx.services.flow_operations.service import BaseFlowOperationService
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.cache.service import AsyncBaseCacheService, CacheService
@@ -345,6 +346,13 @@ def get_flow_events_service():
     from langflow.services.flow_events.factory import FlowEventsServiceFactory
 
     return get_service(ServiceType.FLOW_EVENTS_SERVICE, FlowEventsServiceFactory())
+
+
+def get_flow_operation_service() -> BaseFlowOperationService:
+    """Retrieves the flow operation service that validates and applies flow edits."""
+    from lfx.services.flow_operations.factory import FlowOperationServiceFactory
+
+    return get_service(ServiceType.FLOW_OPERATIONS_SERVICE, FlowOperationServiceFactory())
 
 
 def get_memory_base_service():
