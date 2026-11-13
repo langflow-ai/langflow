@@ -92,16 +92,18 @@ class LCModelComponent(Component):
 
     def supports_tool_calling(self, model: LanguageModel) -> bool:
         try:
-            # Check if the bind_tools method is the same as the base class's method
-            if model.bind_tools is BaseChatModel.bind_tools:
+            # Compared on the class: a bound method is never the base function itself.
+            if type(model).bind_tools is BaseChatModel.bind_tools:
                 return False
 
             def test_tool(x: int) -> int:
                 return x
 
             model_with_tool = model.bind_tools([test_tool])
-            return hasattr(model_with_tool, "tools") and len(model_with_tool.tools) > 0
-        except (AttributeError, TypeError, ValueError):
+            # Most providers return a RunnableBinding, which keeps the tools in its kwargs.
+            tools = getattr(model_with_tool, "tools", None) or getattr(model_with_tool, "kwargs", {}).get("tools")
+            return bool(tools)
+        except (AttributeError, TypeError, ValueError, NotImplementedError):
             return False
 
     def _validate_outputs(self) -> None:
