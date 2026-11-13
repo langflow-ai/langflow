@@ -6,8 +6,8 @@
 //! JSON text. The binding holds no rules: each function calls `lfx::ops::api`.
 
 use js_sys::{Error, Reflect};
-use lfx::ops::ApplyOptions;
 use lfx::ops::api::{self, ApiError, ApiResult};
+use lfx::ops::{ApplyOptions, Mode};
 use wasm_bindgen::prelude::*;
 
 fn thrown(error: &ApiError) -> JsValue {
@@ -31,18 +31,25 @@ fn run<T>(result: ApiResult<T>) -> Result<T, JsValue> {
     result.map_err(|error| thrown(&error))
 }
 
-/// Read the apply switches from an options object: `{forward, inverse, restoring}`.
-fn apply_options(options: &JsValue, forward_by_default: bool) -> ApplyOptions {
-    let flag = |name: &str| {
-        Reflect::get(options, &JsValue::from_str(name))
-            .ok()
-            .and_then(|value| value.as_bool())
+/// Read the apply options from an options object: `{forward, backward, mode}`.
+/// `mode` is `"strict"` or `"preview"`, and `"strict"` when absent.
+fn apply_options(options: &JsValue, forward_by_default: bool) -> Result<ApplyOptions, JsValue> {
+    let get = |name: &str| Reflect::get(options, &JsValue::from_str(name)).ok();
+    let flag = |name: &str| get(name).and_then(|value| value.as_bool());
+    let mode = match get("mode").filter(|value| !value.is_undefined()) {
+        None => Mode::Strict,
+        Some(value) => {
+            let name = value
+                .as_string()
+                .ok_or_else(|| lfx::ops::Error::invalid("apply mode must be a string"));
+            run(name.and_then(|name| name.parse()).map_err(ApiError::from))?
+        }
     };
-    ApplyOptions {
+    Ok(ApplyOptions {
         forward: flag("forward").unwrap_or(forward_by_default),
-        inverse: flag("inverse").unwrap_or(false),
-        restoring: flag("restoring").unwrap_or(false),
-    }
+        backward: flag("backward").unwrap_or(false),
+        mode,
+    })
 }
 
 /// A flow graph that the engine keeps loaded, to apply many batches to it.
@@ -70,7 +77,7 @@ impl GraphState {
     }
 
     /// Apply a batch; returns what it did as JSON. `options` is
-    /// `{forward, inverse, restoring}`, each false by default.
+    /// `{forward, backward, mode}`: the flags false and `mode` `"strict"` by default.
     ///
     /// # Errors
     ///
@@ -79,7 +86,7 @@ impl GraphState {
         run(api::apply_to(
             &mut self.state,
             operations,
-            apply_options(options, false),
+            apply_options(options, false)?,
         ))
     }
 
@@ -92,14 +99,14 @@ impl GraphState {
 }
 
 /// Apply operations to a graph; returns `{"flow_data", ...}` as JSON.
-/// `options` is `{forward, inverse, restoring}`; `forward` is true by default.
+/// `options` is `{forward, backward, mode}`; `forward` is true by default.
 ///
 /// # Errors
 ///
 /// The graph or the operations do not parse, or the engine refuses the batch.
 #[wasm_bindgen]
 pub fn apply(flow: &str, operations: &str, options: &JsValue) -> Result<String, JsValue> {
-    run(api::apply(flow, operations, apply_options(options, true)))
+    run(api::apply(flow, operations, apply_options(options, true)?))
 }
 
 /// Parse operations and print them as the engine records them.

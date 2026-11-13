@@ -43,7 +43,9 @@ use crate::ops::apply::{ApplyOptions, apply_flow_operations};
 use crate::ops::canonical::{graphs_equal, is_row_position, values_equal};
 use crate::ops::edges::edge_changed;
 use crate::ops::error::{Error, Result};
-use crate::ops::ops::{AsKey, FieldUpdate, Operation, Path, PathExt, Segment};
+use crate::ops::ops::{
+    AsKey, Edge, FieldUpdate, Node, NodePath, Operation, Path, PathExt, Segment,
+};
 use crate::ops::schema::{KeyedList, ListKind, NODE_SCHEMA, OUTPUTS_PATH, TEMPLATE_PATH};
 use crate::ops::validate::{Numbers, validate_flow_data};
 
@@ -88,21 +90,29 @@ pub fn diff_flow_data(base: &Value, target: &Value) -> Result<Vec<Operation>> {
         .filter(|id| !target_edges.contains_key(*id) || changed_edges.contains(*id))
         .map(|id| (*id).to_owned())
         .collect();
-    let added_edges: Vec<Map<String, Value>> = target_edges
+    let added_edges: Vec<Edge> = target_edges
         .iter()
         .filter(|(id, _)| !base_edges.contains_key(*id) || changed_edges.contains(*id))
-        .map(|(_, edge)| without(edge, |key| NODE_SCHEMA.edge_view_state.contains(key)))
-        .collect();
+        .map(|(_, edge)| {
+            Edge::try_from(without(edge, |key| {
+                NODE_SCHEMA.edge_view_state.contains(key)
+            }))
+        })
+        .collect::<Result<_>>()?;
     let deleted_nodes: Vec<String> = base_nodes
         .keys()
         .filter(|id| !target_nodes.contains_key(*id))
         .map(|id| (*id).to_owned())
         .collect();
-    let added_nodes: Vec<Map<String, Value>> = target_nodes
+    let added_nodes: Vec<Node> = target_nodes
         .iter()
         .filter(|(id, _)| !base_nodes.contains_key(*id))
-        .map(|(_, node)| without(node, |key| NODE_SCHEMA.node_view_state.contains(key)))
-        .collect();
+        .map(|(_, node)| {
+            Node::try_from(without(node, |key| {
+                NODE_SCHEMA.node_view_state.contains(key)
+            }))
+        })
+        .collect::<Result<_>>()?;
 
     let mut node_updates = Vec::new();
     for (id, node) in &target_nodes {
@@ -136,8 +146,7 @@ pub fn diff_flow_data(base: &Value, target: &Value) -> Result<Vec<Operation>> {
 
 /// Diff two graphs and prove the result replays exactly.
 ///
-/// Returns the operations, as the engine records them, together with the
-/// replayed graph.
+/// Returns the forward operations, together with the replayed graph.
 ///
 /// # Errors
 ///
@@ -192,14 +201,18 @@ struct NodeDiff<'a> {
 impl NodeDiff<'_> {
     /// Record a `set_field`. The walk shares one path, so a caller passes
     /// its own copy: the one copy the write needs.
-    fn set(&mut self, path: Path, value: &Value) {
+    fn set(&mut self, path: Path, value: &Value) -> Result<()> {
+        let path = NodePath::try_from(path)?;
         self.updates
             .push(FieldUpdate::set(self.id, path, value.clone()));
+        Ok(())
     }
 
     /// Record a `delete_field`, with its own copy of the path like [`Self::set`].
-    fn delete(&mut self, path: Path) {
+    fn delete(&mut self, path: Path) -> Result<()> {
+        let path = NodePath::try_from(path)?;
         self.updates.push(FieldUpdate::delete(self.id, path));
+        Ok(())
     }
 
     /// The keys never written at a path the diff splits, besides a node's identity.
@@ -231,10 +244,10 @@ impl NodeDiff<'_> {
             }
             path.push(Segment::Key(key.clone()));
             match base.get(key) {
-                None => self.set(path.clone(), value),
+                None => self.set(path.clone(), value)?,
                 Some(previous) => {
                     if !self.split(previous, value, path)? && !values_equal(previous, value)? {
-                        self.set(path.clone(), value);
+                        self.set(path.clone(), value)?;
                     }
                 }
             }
@@ -243,7 +256,7 @@ impl NodeDiff<'_> {
         for key in base.keys() {
             if !target.contains_key(key) && !Self::skipped(path, key) {
                 path.push(Segment::Key(key.clone()));
-                self.delete(path.clone());
+                self.delete(path.clone())?;
                 path.pop();
             }
         }
@@ -273,20 +286,21 @@ impl NodeDiff<'_> {
                 .ok_or_else(|| Error::invalid("node_schema.json declares no outputs list"))?;
             let mut items = Vec::new();
             if keyed_list(keyed, base, target, path, &mut items)? {
-                self.write_all(items);
+                self.write_all(items)?;
                 return Ok(true);
             }
         }
         Ok(false)
     }
 
-    fn write_all(&mut self, writes: Vec<Write<'_>>) {
+    fn write_all(&mut self, writes: Vec<Write<'_>>) -> Result<()> {
         for write in writes {
             match write {
-                Write::Set { path, value } => self.set(path, value),
-                Write::Delete { path } => self.delete(path),
+                Write::Set { path, value } => self.set(path, value)?,
+                Write::Delete { path } => self.delete(path)?,
             }
         }
+        Ok(())
     }
 
     /// Diff a template field unit by unit. Returns false for a key that is not a field.
@@ -348,18 +362,18 @@ impl NodeDiff<'_> {
         for (key, value) in &target {
             if *key == "value" && per_item {
                 if let Some(writes) = item_writes.take() {
-                    self.write_all(writes);
+                    self.write_all(writes)?;
                 }
             } else if written.contains(key) {
                 path.push(Segment::Key((*key).to_owned()));
-                self.set(path.clone(), value);
+                self.set(path.clone(), value)?;
                 path.pop();
             }
         }
         for key in base.keys() {
             if !target.contains_key(key) && written.contains(key) {
                 path.push(Segment::Key((*key).to_owned()));
-                self.delete(path.clone());
+                self.delete(path.clone())?;
                 path.pop();
             }
         }

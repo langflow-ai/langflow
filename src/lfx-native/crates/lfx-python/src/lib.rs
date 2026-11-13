@@ -55,6 +55,23 @@ fn optional_text<'a>(value: Option<&'a Bound<'_, PyAny>>) -> PyResult<Option<&'a
     value.filter(|value| !value.is_none()).map(text).transpose()
 }
 
+/// The apply options; `mode` is `strict` or `preview`.
+fn apply_options(
+    py: Python<'_>,
+    forward: bool,
+    backward: bool,
+    mode: &str,
+) -> PyResult<ApplyOptions> {
+    let mode = mode
+        .parse()
+        .map_err(|error: lfx::ops::Error| engine_error(py, &error.into()))?;
+    Ok(ApplyOptions {
+        forward,
+        backward,
+        mode,
+    })
+}
+
 /// Run engine work without the GIL.
 fn run<T: Send>(py: Python<'_>, work: impl FnOnce() -> ApiResult<T> + Send) -> PyResult<T> {
     py.detach(work).map_err(|error| engine_error(py, &error))
@@ -81,21 +98,17 @@ impl GraphState {
     }
 
     /// Apply a batch; returns what it did as JSON.
-    #[pyo3(signature = (operations, *, forward = false, inverse = false, restoring = false))]
+    #[pyo3(signature = (operations, *, forward = false, backward = false, mode = "strict"))]
     fn apply(
         &mut self,
         py: Python<'_>,
         operations: &Bound<'_, PyAny>,
         forward: bool,
-        inverse: bool,
-        restoring: bool,
+        backward: bool,
+        mode: &str,
     ) -> PyResult<String> {
         let operations = text(operations)?;
-        let options = ApplyOptions {
-            forward,
-            inverse,
-            restoring,
-        };
+        let options = apply_options(py, forward, backward, mode)?;
         let state = &mut self.state;
         run(py, || api::apply_to(state, operations, options))
     }
@@ -109,21 +122,17 @@ impl GraphState {
 
 /// Apply operations to a graph; returns `{"flow_data", ...}` as JSON.
 #[pyfunction]
-#[pyo3(signature = (flow, operations, *, forward = true, inverse = false, restoring = false))]
+#[pyo3(signature = (flow, operations, *, forward = true, backward = false, mode = "strict"))]
 fn apply(
     py: Python<'_>,
     flow: &Bound<'_, PyAny>,
     operations: &Bound<'_, PyAny>,
     forward: bool,
-    inverse: bool,
-    restoring: bool,
+    backward: bool,
+    mode: &str,
 ) -> PyResult<String> {
     let (flow, operations) = (text(flow)?, text(operations)?);
-    let options = ApplyOptions {
-        forward,
-        inverse,
-        restoring,
-    };
+    let options = apply_options(py, forward, backward, mode)?;
     run(py, || api::apply(flow, operations, options))
 }
 
