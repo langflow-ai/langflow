@@ -53,6 +53,7 @@ from lfx.workflow.end_user_identity import (
 from pydantic import ValidationError
 
 from langflow.api.utils import (
+    EMPTY_FILE_DETAIL,
     CurrentActiveUser,
     DbSession,
     extract_global_variables_from_headers,
@@ -1153,6 +1154,18 @@ async def _run_flow_internal(
         http_error = HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
         raise error_for_client(http_error, expose_details=expose_error_details) from exc
     except HTTPException as exc:
+        # Job failures arrive as APIException, or a redacted HTTPException for shared flows.
+        if exc.status_code >= status.HTTP_500_INTERNAL_SERVER_ERROR:
+            await _record_run_telemetry(
+                telemetry_service,
+                RunPayload(
+                    run_is_webhook=False,
+                    run_seconds=int(time.perf_counter() - start_time),
+                    run_success=False,
+                    run_error_message=str(exc),
+                    run_id=run_id,
+                ),
+            )
         if expose_error_details:
             raise
         raise error_for_client(exc, expose_details=expose_error_details) from exc
@@ -1848,6 +1861,9 @@ async def create_upload_file(
         max_file_size_upload = settings_service.settings.max_file_size_upload
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    if file.size == 0:
+        raise HTTPException(status_code=400, detail=EMPTY_FILE_DETAIL)
 
     if file.size is not None and file.size > max_file_size_upload * 1024 * 1024:
         raise HTTPException(

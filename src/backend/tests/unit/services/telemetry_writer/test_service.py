@@ -18,6 +18,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
+from langflow.api.utils import migration_pause
 from langflow.services.database.models.transactions.model import TransactionBase, TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildBase, VertexBuildTable
 from langflow.services.telemetry_writer.service import (
@@ -106,14 +107,13 @@ async def writer_with_engine(monkeypatch):
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
 
+    # Admission must read this writer's database, not a prior test app's maintenance flag.
     @asynccontextmanager
-    async def maintenance_session():
-        # Admission must read this test's database, not a previous API fixture's
-        # application database or its maintenance state.
+    async def readonly_session():
         async with SQLModelAsyncSession(engine) as session:
             yield session
 
-    monkeypatch.setattr("langflow.api.utils.migration_pause.session_scope_readonly", maintenance_session)
+    monkeypatch.setattr(migration_pause, "session_scope_readonly", readonly_session)
     writer = _build_writer()
     writer._engine = engine
     writer._session_maker = async_sessionmaker(engine, expire_on_commit=False)

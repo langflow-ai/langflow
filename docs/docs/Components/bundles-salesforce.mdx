@@ -145,9 +145,10 @@ Provider rate limits, backlog, and listener retries can delay delivery.
 The initial poll establishes a baseline without emitting the records it finds.
 Later polls request replication history through the current minute and fetch the latest visible state of each changed record.
 Salesforce can return a replication watermark before the requested start while a long transaction is open.
-The next poll starts from that watermark and still ends at the current minute, so current changes remain visible while earlier transactions finish.
+The saved cursor never moves backward or before the baseline minute. Later polls keep that start while a provider watermark lags and still end at the current minute, so current changes remain visible while earlier transactions finish.
+The baseline also retains its precise timestamp. Records with a `SystemModstamp` at or before that timestamp are excluded from later events, including records returned by overlapping minute boundaries.
 The source accepts at most 5000 changed IDs per round and fetches records in batches of 200.
-It saves Salesforce's `latestDateCovered` only after the whole round succeeds.
+It advances the cursor only after the whole round succeeds and Salesforce's `latestDateCovered` moves beyond the saved cursor.
 See [Salesforce Get Updated](https://developer.salesforce.com/docs/platform/api-rest/guide/resources-getupdated.html).
 
 Within each trigger, the provider, object, record ID, and `SystemModstamp` identify an event.
@@ -170,6 +171,7 @@ The adapter rejects a cursor older than 29 days because replication history cann
 | A field or record is unavailable | Check the object's permissions, field access, sharing rules, and the component's supported fields. |
 
 Pausing and resuming starts a fresh baseline and skips the paused interval.
+After upgrading an existing trigger that has no precise baseline timestamp, pause and resume it once to establish that boundary. Listener restarts preserve existing cursors and pending changes.
 Resuming after reconnecting also starts a fresh baseline.
 The event list can replay an event already recorded by Langflow, but cannot recover an unobserved intermediate state.
 Create and update are not retried after ambiguous network failures. Check Salesforce before repeating the write.

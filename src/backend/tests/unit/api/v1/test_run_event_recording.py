@@ -6,10 +6,12 @@ from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
 import pytest
-from fastapi import BackgroundTasks, FastAPI, Request
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from httpx import ASGITransport, AsyncClient
 from langflow.api.v1 import endpoints, openai_responses
+from langflow.api.v1.endpoints import simple_run_flow
+from langflow.exceptions.api import APIException
 from langflow.schema import OpenAIResponsesRequest
 from langflow.services.telemetry import run_event_store
 from langflow.services.telemetry import service as telemetry_module
@@ -73,7 +75,7 @@ def v1_run_app(monkeypatch, telemetry_service):
     return app, flow, run
 
 
-@pytest.mark.parametrize("failure_type", [None, ValueError, RuntimeError])
+@pytest.mark.parametrize("failure_type", [None, ValueError, RuntimeError, APIException])
 async def test_served_v1_run_records_success_and_failure(monkeypatch, telemetry_service, v1_run_app, failure_type):
     """Record completions even when FastAPI returns an exception response."""
     completed_at = datetime(2026, 10, 28, 23, 59, 59, tzinfo=timezone.utc)
@@ -86,7 +88,8 @@ async def test_served_v1_run_records_success_and_failure(monkeypatch, telemetry_
 
     app, flow, run = v1_run_app
     if failure_type:
-        run.side_effect = failure_type("flow run failed")
+        error = ValueError("flow run failed")
+        run.side_effect = failure_type(error if failure_type is APIException else str(error))
     monkeypatch.setattr(run_event_store, "datetime", CompletionClock)
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
@@ -101,11 +104,64 @@ async def test_served_v1_run_records_success_and_failure(monkeypatch, telemetry_
     _assert_recorded_run(telemetry_service, success=failure_type is None, completed_at=completed_at)
 
 
+@pytest.mark.parametrize("owner", [True, False])
+async def test_served_v1_run_records_wrapped_job_failure(monkeypatch, telemetry_service, v1_run_app, owner):
+    """Exercise the wrapper that converts component failures into HTTP exceptions."""
+    app, flow, run = v1_run_app
+    flow.name = "failing flow"
+    flow.data = {"nodes": [], "edges": []}
+    if not owner:
+        flow.user_id = uuid4()
+    graph = SimpleNamespace(vertices=[], set_run_id=Mock())
+    job_service = SimpleNamespace(
+        create_job=AsyncMock(),
+        execute_with_status=AsyncMock(side_effect=ValueError("forced component failure")),
+    )
+    run.side_effect = simple_run_flow
+    monkeypatch.setattr(endpoints, "prepare_flow_build_for_user", AsyncMock(return_value=None))
+    monkeypatch.setattr(endpoints, "try_warm_run_graph", AsyncMock(return_value=graph))
+    monkeypatch.setattr(endpoints, "get_job_service", lambda: job_service)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post(f"/api/v1/run/{flow.id}", json={})
+
+    assert response.status_code == 500
+    assert ("forced component failure" in response.text) is owner
+    job_service.execute_with_status.assert_awaited_once()
+    events = run_event_store.peek_all()
+    assert len(events) == 1
+    assert events[0].run_id == run.await_args.kwargs["run_id"]
+    assert events[0].run_seconds >= 0
+    _assert_recorded_run(telemetry_service, success=False, completed_at=events[0].run_completed_at)
+
+
+@pytest.mark.parametrize("telemetry_service", ["enabled"], indirect=True)
+@pytest.mark.parametrize("status_code", [400, 401, 403, 404, 422])
+async def test_rejected_v1_request_does_not_record_run(telemetry_service, v1_run_app, status_code):
+    """Keep existing request-rejection behavior outside execution-failure telemetry."""
+    app, flow, run = v1_run_app
+    run.side_effect = HTTPException(status_code=status_code, detail="request rejected", headers={"X-Rejected": "true"})
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post(f"/api/v1/run/{flow.id}", json={})
+
+    assert response.status_code == status_code
+    assert response.json()["detail"] == "request rejected"
+    assert response.headers["X-Rejected"] == "true"
+    assert run_event_store.peek_all() == []
+    assert telemetry_service.telemetry_queue.empty()
+
+
 @pytest.mark.parametrize("telemetry_service", ["enabled"], indirect=True)
 @pytest.mark.parametrize("failure_stage", ["append", "queue"])
 @pytest.mark.parametrize(
     ("run_error", "status_code"),
-    [(None, 200), (ValueError("flow not found"), 404), (RuntimeError("flow run failed"), 500)],
+    [
+        (None, 200),
+        (ValueError("flow not found"), 404),
+        (RuntimeError("flow run failed"), 500),
+        (APIException(ValueError("flow run failed")), 500),
+    ],
 )
 async def test_telemetry_failure_preserves_http_result(
     monkeypatch, telemetry_service, v1_run_app, failure_stage, run_error, status_code
@@ -133,7 +189,9 @@ async def test_telemetry_failure_preserves_http_result(
         response = await client.post(f"/api/v1/run/{flow.id}", json={})
 
     assert response.status_code == status_code
-    if run_error:
+    if isinstance(run_error, HTTPException):
+        assert response.json()["detail"] == run_error.detail
+    elif run_error:
         assert str(run_error) in response.text
     else:
         assert response.json() == {"status": "ok"}
