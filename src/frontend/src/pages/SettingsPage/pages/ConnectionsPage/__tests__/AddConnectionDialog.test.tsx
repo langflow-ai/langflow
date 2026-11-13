@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AxiosError } from "axios";
 import { I18nextProvider } from "react-i18next";
@@ -29,6 +29,8 @@ const mockRegistrations = {
     },
   ],
   isSuccess: true,
+  isError: false,
+  error: null as unknown,
 };
 const mockTypesState = { data: {} };
 const mockPoll: { data: ConnectionRead | undefined } = { data: undefined };
@@ -78,7 +80,9 @@ jest.mock("@/customization/components/custom-connection-authorization", () => ({
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
-  default: () => null,
+  default: ({ name, ariaHidden }: { name: string; ariaHidden?: boolean }) => (
+    <span data-testid={`icon-${name}`} aria-hidden={ariaHidden} />
+  ),
 }));
 
 const google: IntegrationProviderRead = {
@@ -111,17 +115,20 @@ const createdRow = (ownership: "user" | "instance"): ConnectionRead => ({
 
 const fillDetails = async (user: ReturnType<typeof userEvent.setup>) => {
   await user.type(screen.getByTestId("connection-name"), "team_calendar");
-  await user.type(
-    screen.getByTestId("connection-display-name"),
-    "Team calendar",
-  );
 };
 
 describe("AddConnectionDialog ownership", () => {
+  beforeAll(() => {
+    Element.prototype.hasPointerCapture ??= jest.fn(() => false);
+    Element.prototype.releasePointerCapture ??= jest.fn();
+    Element.prototype.scrollIntoView ??= jest.fn();
+  });
   beforeEach(() => {
     mockCreate.mockReset();
     mockPoll.data = undefined;
     mockRegistrations.isSuccess = true;
+    mockRegistrations.isError = false;
+    mockRegistrations.error = null;
     mockResolveRegistrationId.mockReturnValue("google-demo");
     // Consent opens in a popup the dialog creates on the click itself.
     jest.spyOn(window, "open").mockReturnValue({
@@ -154,6 +161,45 @@ describe("AddConnectionDialog ownership", () => {
     expect(
       screen.queryByText(/No OAuth registration is configured/i),
     ).not.toBeInTheDocument();
+  });
+
+  it("shows catalog icons beside provider names in the picker and selected value", async () => {
+    const user = userEvent.setup();
+    render(
+      <AddConnectionDialog
+        open
+        onOpenChange={jest.fn()}
+        providers={[
+          { ...google, icon: "Google" },
+          {
+            ...google,
+            provider_id: "confluence",
+            display_name: "Confluence Cloud",
+            icon: "Confluence",
+          },
+        ]}
+        canCreateInstance={false}
+      />,
+    );
+    const picker = screen.getByRole("combobox", { name: "Provider" });
+    expect(within(picker).getByTestId("icon-Google")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+    await user.click(picker);
+    const confluence = screen.getByRole("option", { name: "Confluence Cloud" });
+    expect(within(confluence).getByTestId("icon-Confluence")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+    expect(
+      within(screen.getByRole("option", { name: "Google" })).getByTestId(
+        "icon-Google",
+      ),
+    ).toBeInTheDocument();
+    await user.click(confluence);
+    expect(picker).toHaveTextContent("Confluence Cloud");
+    expect(within(picker).getByTestId("icon-Confluence")).toBeInTheDocument();
   });
 
   it("reports a missing registration up front when re-authorizing a provider policy removed", () => {
@@ -213,6 +259,68 @@ describe("AddConnectionDialog ownership", () => {
     expect(screen.getByTestId("connection-continue")).toBeDisabled();
   });
 
+  it.each([false, true])(
+    "shows the site configuration error when reauthorizing is %s",
+    async (reauthorizing) => {
+      mockRegistrations.isSuccess = false;
+      mockRegistrations.isError = true;
+      mockRegistrations.error = {
+        isAxiosError: true,
+        response: {
+          data: {
+            detail: "The deployment Confluence Cloud site is not configured.",
+          },
+        },
+      };
+      const user = userEvent.setup();
+      render(
+        <AddConnectionDialog
+          open
+          onOpenChange={jest.fn()}
+          providers={[
+            {
+              ...google,
+              provider_id: "confluence",
+              display_name: "Confluence Cloud",
+              docs_url: "https://docs.langflow.org/bundles-confluence",
+            },
+          ]}
+          canCreateInstance={false}
+          reauthorize={
+            reauthorizing
+              ? {
+                  ...createdRow("user"),
+                  provider_key: "confluence",
+                  granted_scopes: ["read:page:confluence"],
+                }
+              : undefined
+          }
+        />,
+      );
+      if (!reauthorizing) {
+        await user.type(
+          screen.getByTestId("connection-name"),
+          "confluence_work",
+        );
+      }
+
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "The deployment Confluence Cloud site is not configured.",
+      );
+      expect(
+        screen.queryByText(/No OAuth registration is configured/i),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS/),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByTestId(
+          reauthorizing ? "connection-authorize" : "connection-continue",
+        ),
+      ).toBeDisabled();
+    },
+  );
+
   it("does not call a registration missing before discovery succeeds", () => {
     mockResolveRegistrationId.mockReturnValue(null);
     mockRegistrations.isSuccess = false;
@@ -254,9 +362,6 @@ describe("AddConnectionDialog ownership", () => {
     fireEvent.change(screen.getByTestId("connection-name"), {
       target: { value: name },
     });
-    fireEvent.change(screen.getByTestId("connection-display-name"), {
-      target: { value: "Gmail" },
-    });
     expect(screen.getByTestId("connection-name")).toHaveAttribute(
       "aria-invalid",
       "true",
@@ -271,8 +376,9 @@ describe("AddConnectionDialog ownership", () => {
   });
 
   it.each(["gmail_qa", "g1", "a".repeat(64)])(
-    "accepts valid handle %s",
-    (name) => {
+    "uses valid handle %s as the display name for OAuth creation",
+    async (name) => {
+      mockCreate.mockResolvedValueOnce(createdRow("user"));
       render(
         <AddConnectionDialog
           open
@@ -281,13 +387,17 @@ describe("AddConnectionDialog ownership", () => {
           canCreateInstance={false}
         />,
       );
+      expect(screen.queryByLabelText("Display name")).not.toBeInTheDocument();
+      expect(screen.getByTestId("connection-continue")).toBeDisabled();
       fireEvent.change(screen.getByTestId("connection-name"), {
         target: { value: name },
       });
-      fireEvent.change(screen.getByTestId("connection-display-name"), {
-        target: { value: "Gmail" },
-      });
+
       expect(screen.getByTestId("connection-continue")).toBeEnabled();
+      await userEvent.click(screen.getByTestId("connection-continue"));
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ name, display_name: name }),
+      );
     },
   );
 
@@ -405,40 +515,48 @@ describe("AddConnectionDialog ownership", () => {
     );
   });
 
-  it("does not offer instance sharing for ServiceNow or retain it from another provider", async () => {
-    mockCreate.mockResolvedValue({
-      ...createdRow("user"),
-      provider_key: "servicenow",
-    });
-    const user = userEvent.setup();
-    render(
-      <AddConnectionDialog
-        open
-        onOpenChange={jest.fn()}
-        providers={[
-          google,
-          { ...google, provider_id: "servicenow", display_name: "ServiceNow" },
-        ]}
-        canCreateInstance
-      />,
-    );
-    await user.click(screen.getByTestId("connection-instance-owned"));
-    await selectProvider(user, "ServiceNow");
-    expect(
-      screen.queryByTestId("connection-instance-owned"),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByText(/cannot be shared with the instance/),
-    ).toBeVisible();
-    await fillDetails(user);
-    await user.click(screen.getByTestId("connection-continue"));
-    expect(mockCreate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        provider_key: "servicenow",
-        ownership_mode: "user",
-      }),
-    );
-  });
+  it.each([
+    ["servicenow", "ServiceNow"],
+    ["salesforce", "Salesforce"],
+  ])(
+    "does not offer instance sharing for %s or retain it from another provider",
+    async (providerId, displayName) => {
+      mockCreate.mockResolvedValue({
+        ...createdRow("user"),
+        provider_key: providerId,
+      });
+      const user = userEvent.setup();
+      render(
+        <AddConnectionDialog
+          open
+          onOpenChange={jest.fn()}
+          providers={[
+            google,
+            { ...google, provider_id: providerId, display_name: displayName },
+          ]}
+          canCreateInstance
+        />,
+      );
+      await user.click(screen.getByTestId("connection-instance-owned"));
+      await selectProvider(user, displayName);
+      expect(
+        screen.queryByTestId("connection-instance-owned"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByText(
+          `${displayName} connections belong to an individual user and cannot be shared with the instance.`,
+        ),
+      ).toBeVisible();
+      await fillDetails(user);
+      await user.click(screen.getByTestId("connection-continue"));
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          provider_key: providerId,
+          ownership_mode: "user",
+        }),
+      );
+    },
+  );
 
   it("reports the authorized row when Done closes the dialog", async () => {
     const pending = createdRow("instance");

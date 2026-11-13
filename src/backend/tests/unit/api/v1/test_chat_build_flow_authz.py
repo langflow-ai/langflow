@@ -603,7 +603,8 @@ async def test_build_flow_admin_only_keeps_superuser_stored_custom_code(patch_bu
 
 
 @pytest.mark.asyncio
-async def test_legacy_vertices_route_passes_only_sanitized_inline_data(monkeypatch):
+@pytest.mark.parametrize("use_stored_data", [False, True])
+async def test_legacy_vertices_route_passes_sanitized_data_and_caller(monkeypatch, use_stored_data):
     """The still-routed legacy graph cache cannot bypass the inline-data policy."""
     from langflow.api.v1 import chat as chat_module
     from langflow.api.v1.schemas import FlowDataRequest
@@ -629,8 +630,9 @@ async def test_legacy_vertices_route_passes_only_sanitized_inline_data(monkeypat
     graph.run_id = None
     graph.set_run_id.side_effect = lambda value: setattr(graph, "run_id", value)
 
-    async def build_from_data(*, graph_data, **_kwargs):
+    async def build_from_data(*, graph_data, user_id, **_kwargs):
         seen["graph_data"] = graph_data
+        seen["user_id"] = user_id
         return graph
 
     chat_service = SimpleNamespace(set_cache=AsyncMock())
@@ -644,12 +646,13 @@ async def test_legacy_vertices_route_passes_only_sanitized_inline_data(monkeypat
     await chat_module.retrieve_vertices_order(
         flow_id=flow.id,
         background_tasks=SimpleNamespace(add_task=lambda *_args, **_kwargs: None),
-        data=original,
+        data=None if use_stored_data else original,
         session=_FakeSession([[flow]]),
         current_user=owner,
     )
 
     assert seen["graph_data"] == sanitized
+    assert seen["user_id"] == str(owner.id)
     assert original.nodes[0]["data"]["source"] == "request"
 
 

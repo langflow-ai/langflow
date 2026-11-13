@@ -294,6 +294,7 @@ async def test_only_a_superuser_can_open_the_migration(client, logged_in_headers
 async def test_the_page_describes_this_instance_and_its_steps(client, logged_in_headers_super_user, config_dir):
     migration = await _migration(client, logged_in_headers_super_user)
 
+    assert migration["destination_secrets_available"] is True
     instance = migration["instance"]
     assert instance["version"] == VERSION
     assert instance["database"] == {"type": "sqlite", "path": str(get_db_service().database_url).split("///")[1]}
@@ -328,6 +329,65 @@ def _checked(config_dir: Path, checks: list[dict], status: str = "done", **later
             **later,
         },
     )
+
+
+async def test_the_page_reports_lost_destination_secrets_before_a_copy_and_recovers_after_reentry(
+    client, logged_in_headers_super_user, config_dir, monkeypatch
+):
+    headers = logged_in_headers_super_user
+    _checked(config_dir, [PASSING], **PREPARED)
+    address = f"postgresql://migrator:{DB_PASSWORD}@db.internal:5432/langflow"
+    database = PREPARED["destinations"]["database"]
+    monkeypatch.setattr(migration_module, "_secrets", {"database_url": address, "for": {"database": database}})
+    before = await _migration(client, headers)
+    assert before["destination_secrets_available"] is True
+
+    # A source restart loses only worker memory. The record and completed steps still count.
+    monkeypatch.setattr(migration_module, "_secrets", {"for": {}})
+    restarted = await _migration(client, headers)
+
+    assert restarted["destination_secrets_available"] is False
+    assert restarted["record"] == before["record"]
+    assert restarted["steps"] == before["steps"]
+    assert DB_PASSWORD not in json.dumps(before)
+    assert "destination_secrets_available" not in (config_dir / "migrations" / "migration.json").read_text()
+
+    # The connectivity probe is separate from whether this worker holds what the admin re-enters.
+    monkeypatch.setattr(migration_module, "probe_database", lambda *_: {"ok": True})
+    reentered = await _connect(client, headers, database_url=address)
+
+    assert reentered["destination_secrets_available"] is True
+    assert (await _migration(client, headers))["destination_secrets_available"] is True
+    assert DB_PASSWORD not in json.dumps(reentered)
+
+
+@pytest.mark.parametrize(
+    ("destination", "secrets", "available"),
+    [
+        ({}, {"for": {}}, True),
+        ({"vectors": {"kind": "pgvector"}}, {"for": {}}, True),
+        ({"database": {"location": "db/a"}}, {"for": {}}, False),
+        ({"database": {"location": "db/a"}}, {"for": {"database": {"location": "db/a"}}}, False),
+        (
+            {"database": {"location": "db/a"}},
+            {"database_url": "postgresql://db/b", "for": {"database": {"location": "db/b"}}},
+            False,
+        ),
+        (
+            {"database": {"location": "db/a"}},
+            {"database_url": "postgresql://db/a", "for": {"database": {"location": "db/a"}}},
+            True,
+        ),
+        ({"files": {"bucket": "saved"}}, {"files": {}, "for": {"files": {"bucket": "earlier"}}}, False),
+        ({"files": {"bucket": "saved"}}, {"files": {}, "for": {"files": {"bucket": "saved"}}}, True),
+    ],
+)
+def test_destination_secret_availability_requires_the_saved_destination_and_held_secret(
+    destination, secrets, available, monkeypatch
+):
+    monkeypatch.setattr(migration_module, "_secrets", secrets)
+
+    assert migration_module._destination_secrets_available(destination) is available
 
 
 async def test_after_the_check_the_next_needed_step_is_current_and_the_rest_wait(
@@ -1294,12 +1354,15 @@ async def test_a_run_that_a_webhook_left_running_stops_the_pause(
     _checked(config_dir, [PASSING], **PREPARED)
     monkeypatch.setattr(migration_module, "_DRAIN_SECONDS", 0.2)
     await _add(Flow(id=flow_id, name="on a webhook", data={"nodes": [], "edges": []}, user_id=active_super_user.id))
-    # A webhook that asks for no key runs as the owner of its flow.
     monkeypatch.setattr(get_settings_service().auth_settings, "WEBHOOK_AUTH_ENABLE", False)
+    key = await client.post("api/v1/api_key/", json={"name": "migration-webhook"}, headers=headers)
+    assert key.status_code == 200, key.text
     arrived, release = await _held_before_it_is_a_job(monkeypatch, endpoints, "apply_global_variable_defaults")
 
     # The webhook answers at once and leaves its run going in a task of its own.
-    answered = await client.post(f"api/v1/webhook/{flow_id}", json={"any": "payload"})
+    answered = await client.post(
+        f"api/v1/webhook/{flow_id}", headers={"x-api-key": key.json()["api_key"]}, json={"any": "payload"}
+    )
     assert answered.status_code == 202, answered.text
 
     detail = await _refused_over_work_left_running(client, headers, arrived, release)

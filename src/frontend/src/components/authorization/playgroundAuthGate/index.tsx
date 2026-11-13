@@ -1,5 +1,6 @@
 import { useContext, useEffect, useState } from "react";
 import { ChangesPausedNotice } from "@/components/common/changesPausedNotice";
+import { ExternalAuthMaintenanceNotice } from "@/components/common/changesPausedNotice/external-auth-maintenance-notice";
 import { AuthContext } from "@/contexts/authContext";
 import {
   useGetAuthSession,
@@ -26,12 +27,15 @@ export function PlaygroundAuthGate({
 
   const [sessionProcessed, setSessionProcessed] = useState(false);
 
-  const { data: sessionData, isFetched: isSessionFetched } =
-    useGetAuthSession();
+  const {
+    data: sessionData,
+    isFetched: isSessionFetched,
+    isExternalAuthenticationPaused,
+  } = useGetAuthSession();
   const { isFetched: isAutoLoginFetched } = useGetAutoLogin();
 
   useEffect(() => {
-    if (!isSessionFetched) return;
+    if (!isSessionFetched || isExternalAuthenticationPaused) return;
 
     if (sessionData?.authenticated && sessionData.user) {
       // Set in both AuthContext (for components using useContext) and Zustand
@@ -53,13 +57,17 @@ export function PlaygroundAuthGate({
       setIsAuthenticated(false);
     }
     setSessionProcessed(true);
-  }, [sessionData, isSessionFetched]);
+  }, [sessionData, isSessionFetched, isExternalAuthenticationPaused]);
 
   const authState = computePlaygroundAuthState({
     isAuthenticated,
     isAutoLoginFetched,
     isSessionProcessed: sessionProcessed,
   });
+
+  if (isExternalAuthenticationPaused) {
+    return <ExternalAuthMaintenanceNotice />;
+  }
 
   if (authState === "loading") {
     return <LoadingPage />;

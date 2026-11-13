@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getAxiosErrorDetail } from "@/controllers/API/helpers/get-axios-error-message";
+import type { ProviderScopeParams } from "@/controllers/API/helpers/provider-scope";
 import {
   CONNECTION_NAME_MAX_LENGTH,
   CONNECTION_NAME_PATTERN,
@@ -73,6 +74,8 @@ export interface AddConnectionDialogProps {
   providers: IntegrationProviderRead[];
   /** Superusers may create connections the whole instance shares. */
   canCreateInstance: boolean;
+  /** Reuse the canvas's provider palette when opened from a component. */
+  providerScope?: ProviderScopeParams;
   /** Re-authorizing an existing connection instead of creating one. */
   reauthorize?: ConnectionRead;
   /** Which deployment this is (`GET /integrations`); hosted offers no pasted tokens. */
@@ -87,6 +90,7 @@ export function AddConnectionDialog({
   onOpenChange,
   providers,
   canCreateInstance,
+  providerScope,
   reauthorize,
   deploymentContext,
   onConnected,
@@ -94,13 +98,12 @@ export function AddConnectionDialog({
   const { t } = useTranslation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const typesData = useTypesStore((state) => state.data);
-  useGetTypes({ enabled: open });
+  useGetTypes({ ...providerScope, enabled: open });
 
   const [providerId, setProviderId] = useState(
     reauthorize?.provider_key ?? providers[0]?.provider_id ?? "",
   );
   const [name, setName] = useState("");
-  const [displayName, setDisplayName] = useState("");
   const [identity, setIdentity] = useState<IntegrationIdentity>(
     reauthorize?.executing_identity?.identity ?? "user_delegated",
   );
@@ -127,9 +130,10 @@ export function AddConnectionDialog({
   const requestedScopes = useRef<string[]>([]);
 
   const provider = providers.find((item) => item.provider_id === providerId);
-  // Every ServiceNow component requires a flow-owner connection. Instance
+  // Salesforce and ServiceNow require a flow-owner connection. Instance
   // sharing would create a connection none of those components can select.
-  const requiresUserOwnership = providerId === "servicenow";
+  const requiresUserOwnership =
+    providerId === "servicenow" || providerId === "salesforce";
   const manualTokenProfiles = provider?.manual_token_profiles ?? [];
   const tokenProfile =
     manualTokenProfiles.find((profile) => profile.identity === identity) ??
@@ -174,6 +178,9 @@ export function AddConnectionDialog({
   const { usesToken } = slackToken;
 
   const registrations = useOAuthRegistrationsQuery(providerId, open);
+  const registrationError = registrations.isError
+    ? getAxiosErrorDetail(registrations.error, t("connections.add.failed"))
+    : null;
   const candidates = useMemo(
     () =>
       (registrations.data ?? []).filter(
@@ -491,6 +498,7 @@ export function AddConnectionDialog({
   const canAuthorize =
     reauthorizeSelection.length > 0 &&
     !noRegistration &&
+    !registrations.isError &&
     !registrations.isLoading &&
     requiredUnavailable.length === 0;
   const notRequestable = uniqueNormalizedScopes(providerId, [
@@ -538,20 +546,22 @@ export function AddConnectionDialog({
     name.length <= CONNECTION_NAME_MAX_LENGTH;
   const canContinue =
     !!provider &&
-    (!!reauthorize || (handleValid && displayName.trim().length > 0)) &&
+    (!!reauthorize || handleValid) &&
     (usesToken
       ? slackToken.expiresAtValid &&
         (providerId === "slack"
           ? slackToken.tokenKind !== null
           : slackToken.token.trim().length > 0)
-      : !noRegistration && requiredUnavailable.length === 0);
+      : !noRegistration &&
+        !registrations.isError &&
+        requiredUnavailable.length === 0);
 
   /** The server validates pasted tokens before returning the connection. */
   const onCreateWithToken = async () => {
     try {
       const row = await slackToken.createWithToken({
         name,
-        displayName: displayName.trim(),
+        displayName: name,
       });
       setStep("authorize");
       setAuthorize({ kind: "connected", connection: row });
@@ -566,7 +576,7 @@ export function AddConnectionDialog({
       const row = await create.mutateAsync({
         provider_key: provider.provider_id,
         name,
-        display_name: displayName.trim(),
+        display_name: name,
         ownership_mode: requiresUserOwnership ? "user" : ownership,
         executing_identity: { identity },
       });
@@ -622,7 +632,6 @@ export function AddConnectionDialog({
     cleanupGeneration.current += 1;
     setIsCleaningUp(false);
     setName("");
-    setDisplayName("");
     setFieldError(null);
     slackToken.reset();
     onOpenChange(false);
@@ -703,11 +712,12 @@ export function AddConnectionDialog({
                     key={`${providerId}:${usesToken}`}
                     providerId={providerId}
                     noRegistration={noRegistration}
+                    registrationError={registrationError}
                     usesToken={usesToken}
                     docsUrl={provider?.docs_url}
                   />
 
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-4">
                     <div className="flex flex-col gap-1.5">
                       <div className="flex items-center gap-1.5">
                         <Label htmlFor="connection-name">
@@ -761,39 +771,6 @@ export function AddConnectionDialog({
                         })}
                       </p>
                     </div>
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex items-center gap-1.5">
-                        <Label htmlFor="connection-display-name">
-                          {t("connections.add.displayName")}
-                        </Label>
-                        <ShadTooltip
-                          content={t("connections.add.displayNameTooltip")}
-                          side="top"
-                          avoidCollisions
-                        >
-                          <button
-                            type="button"
-                            aria-label={t(
-                              "connections.add.displayNameHelpLabel",
-                            )}
-                            className="cursor-help rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                            data-testid="connection-display-name-help"
-                          >
-                            <ForwardedIconComponent
-                              name="Info"
-                              className="h-3.5 w-3.5 text-muted-foreground"
-                              ariaHidden
-                            />
-                          </button>
-                        </ShadTooltip>
-                      </div>
-                      <Input
-                        id="connection-display-name"
-                        value={displayName}
-                        onChange={(event) => setDisplayName(event.target.value)}
-                        data-testid="connection-display-name"
-                      />
-                    </div>
                   </div>
                 </>
               )}
@@ -803,6 +780,7 @@ export function AddConnectionDialog({
                   key={`${providerId}:${usesToken}`}
                   providerId={providerId}
                   noRegistration={noRegistration}
+                  registrationError={registrationError}
                   usesToken={usesToken}
                   docsUrl={provider?.docs_url}
                 />
@@ -871,7 +849,11 @@ export function AddConnectionDialog({
               )}
               {!usesToken && requiresUserOwnership && (
                 <p className="text-xs text-muted-foreground">
-                  {t("connections.add.servicenowUserOwned")}
+                  {t(
+                    providerId === "salesforce"
+                      ? "connections.add.salesforceUserOwned"
+                      : "connections.add.servicenowUserOwned",
+                  )}
                 </p>
               )}
 
@@ -940,6 +922,7 @@ export function AddConnectionDialog({
                 key={providerId}
                 providerId={providerId}
                 noRegistration={noRegistration}
+                registrationError={registrationError}
                 docsUrl={provider?.docs_url}
               />
               {registrationSelect}

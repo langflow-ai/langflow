@@ -13,6 +13,8 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
     display_name: str = "Chroma DB"
     description: str = "Retired in 1.13. Migrate this store to a Knowledge Base before running this flow."
     legacy = True
+    retired_in = "1.13.0"
+    replacement = ["files_and_knowledge.Knowledge"]
     name = "Chroma"
     icon = "Chroma"
 

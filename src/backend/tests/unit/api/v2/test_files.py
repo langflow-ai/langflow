@@ -160,6 +160,152 @@ async def test_upload_file(files_client, files_created_api_key):
     assert stored == b"test content"
 
 
+async def test_should_reject_with_400_when_uploaded_file_is_empty(files_client, files_created_api_key, save_file_spy):
+    headers = {"x-api-key": files_created_api_key.api_key}
+
+    response = await files_client.post(
+        "api/v2/files",
+        files={"file": ("empty.txt", b"")},
+        headers=headers,
+    )
+
+    assert response.status_code == 400, f"Expected 400, got {response.status_code}: {response.json()}"
+    assert response.json()["detail"] == "Empty file not allowed"
+    assert save_file_spy == [], f"An empty upload must not reach storage, but these were saved: {save_file_spy}"
+
+    list_response = await files_client.get("api/v2/files", headers=headers)
+    assert list_response.status_code == 200
+    assert list_response.json() == [], f"A rejected upload must not create a DB row, got: {list_response.json()}"
+
+
+async def test_should_accept_when_uploaded_file_is_one_byte(files_client, files_created_api_key, save_file_spy):
+    """One byte is the smallest accepted upload: the guard rejects size 0, not falsy content."""
+    headers = {"x-api-key": files_created_api_key.api_key}
+
+    response = await files_client.post(
+        "api/v2/files",
+        files={"file": ("one_byte.txt", b"0")},
+        headers=headers,
+    )
+
+    assert response.status_code == 201, f"Expected 201, got {response.status_code}: {response.json()}"
+    assert len(save_file_spy) == 1, f"Expected exactly one stored file, got: {save_file_spy}"
+
+
+async def test_should_report_no_file_provided_when_filename_is_missing(
+    files_client, files_created_api_key, save_file_spy
+):
+    """The filename guard runs before the empty-size guard, so its message must not change.
+
+    The body is hand-rolled because httpx omits ``filename`` entirely for an empty
+    string, which makes the part a plain form field and gets it rejected as a 422 by
+    FastAPI before the route runs. Only an explicit ``filename=""`` reaches the guard.
+    """
+    boundary = "testboundary"
+    body = (
+        f"--{boundary}\r\n"
+        'Content-Disposition: form-data; name="file"; filename=""\r\n'
+        "Content-Type: application/octet-stream\r\n\r\n"
+        "test content\r\n"
+        f"--{boundary}--\r\n"
+    ).encode()
+    headers = {
+        "x-api-key": files_created_api_key.api_key,
+        "Content-Type": f"multipart/form-data; boundary={boundary}",
+    }
+
+    response = await files_client.post("api/v2/files", content=body, headers=headers)
+
+    assert response.status_code == 400, f"Expected 400, got {response.status_code}: {response.json()}"
+    assert response.json()["detail"] == "No file provided"
+    assert save_file_spy == [], f"A nameless upload must not reach storage, but these were saved: {save_file_spy}"
+
+
+async def test_should_reject_with_400_when_mcp_servers_config_is_empty(
+    files_client, files_created_api_key, files_active_user, save_file_spy
+):
+    """An empty MCP config is rejected for being empty, not mis-reported as invalid JSON.
+
+    Before the size guard, the empty body reached _validate_uploaded_mcp_config and
+    surfaced as 422 "not valid JSON", which hid the actual problem from the caller.
+    """
+    headers = {"x-api-key": files_created_api_key.api_key}
+    mcp_file_ext = await get_mcp_file(files_active_user, extension=True)
+
+    response = await files_client.post(
+        "api/v2/files",
+        files={"file": (mcp_file_ext, b"")},
+        headers=headers,
+    )
+
+    assert response.status_code == 400, f"Expected 400, got {response.status_code}: {response.json()}"
+    assert response.json()["detail"] == "Empty file not allowed"
+    assert save_file_spy == [], f"An empty MCP config must not reach storage, but these were saved: {save_file_spy}"
+
+
+@pytest.mark.usefixtures("max_file_size_upload_fixture")
+async def test_should_reject_with_413_when_uploaded_file_is_oversize(
+    files_client, files_created_api_key, save_file_spy
+):
+    """Rejecting empty uploads must not disturb the upper bound, which still answers 413.
+
+    The 413 is raised by ContentSizeLimitMiddleware, which counts body bytes before the
+    route runs, so the route's own 413 branch stays shadowed for this request shape.
+    """
+    headers = {"x-api-key": files_created_api_key.api_key}
+    oversize_content = b"x" * (1024 * 1024 + 1024)
+
+    response = await files_client.post(
+        "api/v2/files",
+        files={"file": ("oversize.txt", io.BytesIO(oversize_content), "application/octet-stream")},
+        headers=headers,
+    )
+
+    assert response.status_code == 413, f"Expected 413, got {response.status_code}: {response.json()}"
+    # The reported size is chunk-dependent: the middleware raises on the first chunk that
+    # crosses the limit, so only the fixed part of the message is stable enough to assert on.
+    assert "Content size limit exceeded. Maximum allowed is 1MB" in response.json()["detail"]
+    assert save_file_spy == [], f"An oversize upload must not reach storage, but these were saved: {save_file_spy}"
+
+
+async def test_an_upload_that_loses_its_name_gets_409_and_leaves_the_winners_file(files_client, files_created_api_key):
+    """Before: both picked the name before either row existed, and the loser's cleanup deleted the file.
+
+    That left the winner's row pointing at nothing: a retry after a 504 on local disk lost the upload.
+    """
+    from langflow.services.database.models.file.model import File as UserFile
+    from langflow.services.deps import get_session_service, get_settings_service
+    from langflow.services.storage.local import LocalStorageService
+    from lfx.services.manager import get_service_manager
+    from lfx.services.schema import ServiceType
+
+    user_id = files_created_api_key.user_id
+
+    class OtherUploadFinishesFirst(LocalStorageService):
+        async def save_upload_stream(self, flow_id, file_name, chunks):
+            written = await super().save_upload_stream(flow_id, file_name, chunks)
+            async with session_scope() as session:
+                session.add(UserFile(user_id=user_id, name="race", path=f"{flow_id}/{file_name}", size=written))
+            return written
+
+    storage = OtherUploadFinishesFirst(get_session_service(), get_settings_service())
+    services = get_service_manager().services
+    usual = services[ServiceType.STORAGE_SERVICE]
+    services[ServiceType.STORAGE_SERVICE] = storage
+    try:
+        response = await files_client.post(
+            "api/v2/files",
+            files={"file": ("race.txt", b"same bytes")},
+            headers={"x-api-key": files_created_api_key.api_key},
+        )
+    finally:
+        services[ServiceType.STORAGE_SERVICE] = usual
+
+    assert response.status_code == 409, response.text
+    assert "Another upload named race.txt finished first" in response.json()["detail"]
+    assert await storage.get_file(flow_id=f"user-{user_id}", file_name="race.txt") == b"same bytes"
+
+
 async def test_should_not_persist_in_my_files_when_upload_is_ephemeral(files_client, files_created_api_key):
     """Ephemeral uploads save the file to storage but do NOT create a UserFile DB record.
 
@@ -726,6 +872,11 @@ async def test_upload_files_with_different_extensions_same_name(files_client, fi
 
 async def test_mcp_servers_file_replacement(files_client, files_created_api_key, files_active_user):
     """Test that _mcp_servers file gets replaced instead of creating unique names."""
+    async with session_scope() as session:
+        user = await session.get(User, files_active_user.id)
+        user.is_superuser = True
+        session.add(user)
+    files_active_user.is_superuser = True
     headers = {"x-api-key": files_created_api_key.api_key}
 
     mcp_file_ext = await get_mcp_file(files_active_user, extension=True)
@@ -1668,3 +1819,128 @@ class TestStorageFailureHandling:
             result["message"]
             == "2 files deleted successfully, 1 files kept in database due to transient storage errors (can retry)"
         )
+
+
+class _Upload:
+    """An upload that records how much each read asks for, as a large file cares about."""
+
+    def __init__(self, data: bytes):
+        self.filename, self._data, self.asked = "upload.bin", data, []
+
+    async def read(self, size: int = -1) -> bytes:
+        self.asked.append(size)
+        size = len(self._data) if size < 0 else size
+        piece, self._data = self._data[:size], self._data[size:]
+        return piece
+
+    async def close(self) -> None:
+        pass
+
+
+def _local_storage(tmp_path):
+    from unittest.mock import MagicMock
+
+    from langflow.services.storage.local import LocalStorageService
+
+    settings_service = MagicMock()
+    settings_service.settings.config_dir = str(tmp_path)
+    return LocalStorageService(MagicMock(), settings_service)
+
+
+async def _saved(tmp_path, data: bytes, *, append: bool = False, already: bytes | None = None):
+    from types import SimpleNamespace
+
+    from langflow.api.v2.files import save_file_routine
+
+    storage = _local_storage(tmp_path)
+    if already is not None:
+        await storage.save_file("ns", "upload.bin", already)
+    upload = _Upload(data)
+    await save_file_routine(
+        upload, storage, SimpleNamespace(id="u1"), file_name="upload.bin", namespace="ns", append=append
+    )
+    return upload, await storage.get_file("ns", "upload.bin")
+
+
+async def test_a_large_upload_is_never_read_whole(tmp_path):
+    """Before: one read of the whole body, which is what ran a 4 GiB Editor out of memory."""
+    from langflow.api.v2.files import UPLOAD_READ_CHUNK
+
+    data = b"x" * (UPLOAD_READ_CHUNK * 2 + 5)
+
+    upload, stored = await _saved(tmp_path, data)
+
+    assert stored == data
+    assert all(0 < size <= UPLOAD_READ_CHUNK for size in upload.asked), upload.asked
+
+
+async def test_an_empty_upload_still_stores_a_file(tmp_path):
+    _, stored = await _saved(tmp_path, b"")
+    assert stored == b""
+
+
+async def test_an_upload_replaces_what_was_there(tmp_path):
+    _, stored = await _saved(tmp_path, b"new", already=b"older and longer")
+    assert stored == b"new"
+
+
+async def test_appending_still_adds_to_the_end(tmp_path):
+    _, stored = await _saved(tmp_path, b"new", append=True, already=b"old")
+    assert stored == b"oldnew"
+
+
+async def test_an_s3_upload_passes_its_md5_so_no_label_copy_is_needed():
+    """Before: S3 learned the MD5 only at the end and copied the whole object to label it."""
+    import hashlib
+    from types import SimpleNamespace
+
+    from langflow.api.v2.files import UPLOAD_READ_CHUNK, save_file_routine
+    from langflow.services.storage.s3 import S3StorageService
+    from starlette.datastructures import UploadFile as StarletteUpload
+
+    data = b"y" * (UPLOAD_READ_CHUNK * 2 + 7)
+    spooled = tempfile.SpooledTemporaryFile(max_size=1024)  # noqa: SIM115 - the UploadFile owns it
+    spooled.write(data)
+    spooled.seek(0)
+    upload = StarletteUpload(file=spooled, filename="big.bin")
+    seen: dict = {}
+
+    async def save_upload_stream(_flow_id, _file_name, chunks, *, md5=None):
+        seen["md5"] = md5
+        seen["body"] = b"".join([chunk async for chunk in chunks])
+        return len(seen["body"])
+
+    storage = MagicMock(spec=S3StorageService)
+    storage.save_upload_stream = save_upload_stream
+
+    await save_file_routine(upload, storage, SimpleNamespace(id="u1"), file_name="big.bin", namespace="ns")
+
+    assert seen["md5"] == hashlib.md5(data, usedforsecurity=False).hexdigest()
+    assert seen["body"] == data  # rewound after hashing, so the save still sends every byte
+
+
+async def test_a_storage_failure_on_upload_names_no_address():
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock, MagicMock
+
+    from fastapi import HTTPException
+    from langflow.api.v2.files import upload_user_file
+
+    url = "https://bucket.s3.amazonaws.com/files/user-1/upload.bin"
+    storage = MagicMock()
+    storage.save_upload_stream = AsyncMock(side_effect=RuntimeError(f"Could not connect to the endpoint URL: {url}"))
+    session = MagicMock()
+    session.exec = AsyncMock(return_value=MagicMock(all=list, first=lambda: None))
+    upload = SimpleNamespace(filename="upload.bin", size=1, read=AsyncMock(return_value=b""), close=AsyncMock())
+
+    with pytest.raises(HTTPException) as raised:
+        await upload_user_file(
+            file=upload,
+            session=session,
+            current_user=SimpleNamespace(id="u1", is_superuser=False),
+            storage_service=storage,
+            settings_service=SimpleNamespace(settings=SimpleNamespace(max_file_size_upload=100)),
+        )
+
+    assert raised.value.status_code == 500
+    assert "amazonaws" not in str(raised.value.detail)

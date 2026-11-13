@@ -16,6 +16,7 @@ from uuid import UUID
 import nanoid
 import pandas as pd
 import yaml
+from langchain_core.messages import BaseMessage
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, ValidationError
 
@@ -668,6 +669,10 @@ class Component(CustomComponent):
             raise ValueError(msg)
         graph = getattr(self, "graph", None)
         principal = getattr(graph, "execution_principal", ExecutionPrincipal.unknown())
+        if self.get_vertex() is None:
+            from lfx.integrations.configuration import current_connection_configuration_principal
+
+            principal = current_connection_configuration_principal() or principal
         # Refuse before a lease exists: no credential is minted, decrypted, or
         # refreshed for a provider or action the deployment policy denies.
         capability_ids = self._require_integration_policy_for_input(input_model)
@@ -1420,48 +1425,16 @@ class Component(CustomComponent):
         if not isinstance(effective_parameters, Mapping):
             return ()
 
-        provider_ids: list[str] = []
-        for input_ in getattr(self, "_inputs", {}).values():
-            if not isinstance(input_, ModelInput) or not isinstance(input_.name, str):
-                continue
-            model_selection = effective_parameters.get(input_.name)
-            if isinstance(model_selection, Mapping):
-                model_selection = [model_selection]
-            if (
-                not isinstance(model_selection, list)
-                or not model_selection
-                or not isinstance(model_selection[0], Mapping)
-            ):
-                continue
+        from lfx.base.models.provider_selection import raw_model_provider_names
 
-            provider = ""
-            if input_.name == "model":
-                # This mirrors apply_model_overrides: a non-empty raw provider
-                # override applies to the canonical ``model`` selector only.
-                # StrInput overrides are never load_from_db, so this identity is
-                # safe to inspect before secrets.
-                provider_override = effective_parameters.get("provider")
-                provider = provider_override.strip() if isinstance(provider_override, str) else ""
-            if not provider:
-                selected_provider = model_selection[0].get("provider")
-                provider = selected_provider.strip() if isinstance(selected_provider, str) else ""
-            if provider:
-                provider_id = resolve_provider_id(provider)
-                if provider_id not in provider_ids:
-                    provider_ids.append(provider_id)
-
-        # Historical Agent/ALTK nodes used a plain DropdownInput named
-        # ``agent_llm`` instead of ModelInput. Saved flows execute their
-        # embedded component source, so they do not inherit a newer Agent
-        # override; recognize the stable legacy selector in the shared base.
-        legacy_provider = effective_parameters.get("agent_llm")
-        if isinstance(legacy_provider, str):
-            legacy_provider = legacy_provider.strip()
-            if legacy_provider and legacy_provider != "Custom":
-                provider_id = resolve_provider_id(legacy_provider)
-                if provider_id not in provider_ids:
-                    provider_ids.append(provider_id)
-        return tuple(provider_ids)
+        names = (
+            input_.name
+            for input_ in getattr(self, "_inputs", {}).values()
+            if isinstance(input_, ModelInput) and isinstance(input_.name, str)
+        )
+        return tuple(
+            dict.fromkeys(resolve_provider_id(name) for name in raw_model_provider_names(names, effective_parameters))
+        )
 
     def _selected_model_provider_policy_id(self, parameters: Mapping[str, Any] | None = None) -> str | None:
         """Return the first selected ModelInput provider for compatibility."""
@@ -2025,7 +1998,8 @@ class Component(CustomComponent):
             return self._update_tools_with_metadata(tools=tools, metadata=self.tools_metadata)
 
         # If no metadata exists yet, filter based on enabled_tools
-        return self._filter_tools_by_status(tools=tools, metadata=None)
+        component_toolkit: type[ComponentToolkit] = get_component_toolkit()
+        return component_toolkit(component=self).protect_tools(self._filter_tools_by_status(tools=tools, metadata=None))
 
     async def _get_tools(self) -> list[Tool]:
         """Get the list of tools for this component.
@@ -2529,7 +2503,11 @@ class Component(CustomComponent):
             usage_data: Usage | None = None
             for chunk in iterator:
                 complete_message = await self._process_chunk(
-                    chunk.content, complete_message, message_id, message, first_chunk=first_chunk
+                    chunk.text if isinstance(chunk, BaseMessage) else chunk.content,
+                    complete_message,
+                    message_id,
+                    message,
+                    first_chunk=first_chunk,
                 )
                 first_chunk = False
                 chunk_usage = extract_usage_from_chunk(chunk)
@@ -2547,7 +2525,11 @@ class Component(CustomComponent):
         usage_data: Usage | None = None
         async for chunk in iterator:
             complete_message = await self._process_chunk(
-                chunk.content, complete_message, message_id, message, first_chunk=first_chunk
+                chunk.text if isinstance(chunk, BaseMessage) else chunk.content,
+                complete_message,
+                message_id,
+                message,
+                first_chunk=first_chunk,
             )
             first_chunk = False
             chunk_usage = extract_usage_from_chunk(chunk)
@@ -2593,7 +2575,11 @@ class Component(CustomComponent):
 
         vertex_data = getattr(self._vertex, "data", None)
         context_note = (
-            explain_restricted_component_mismatch(vertex_data.get("type"), vertex_data.get("node"))
+            explain_restricted_component_mismatch(
+                vertex_data.get("type"),
+                vertex_data.get("node"),
+                vertex=self._vertex,
+            )
             if isinstance(vertex_data, Mapping)
             else None
         )

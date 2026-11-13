@@ -123,18 +123,21 @@ async def build_and_cache_graph_from_data(
     chat_service: ChatService,
     graph_data: dict,
     *,
+    user_id: str | None = None,
     execution_principal: ExecutionPrincipal | None = None,
 ):  # -> Graph | Any:
     """Build and cache the graph.
 
     This is the Playground's primary build seam, so it carries the same
     ``execution_principal`` contract as ``build_graph_from_data``.
+    ``user_id`` records the caller on the graph for component initialization.
     """
     # Convert flow_id to str if it's UUID
     str_flow_id = str(flow_id) if isinstance(flow_id, uuid.UUID) else flow_id
     graph = Graph.from_payload(
         graph_data,
         str_flow_id,
+        user_id=user_id,
         authorized_legacy_flow_ids=await get_authorized_legacy_flow_ids(flow_id),
     )
     if execution_principal is not None:
@@ -161,6 +164,7 @@ async def cascade_delete_flow(
         raise HTTPException(status_code=400, detail="UUID5 flow IDs are reserved for public execution histories.")
     # Imported lazily so this module (loaded early, via ``api.utils``) stays free
     # of the memory-base service import chain.
+    from langflow.services.evaluations.cleanup import detach_flow as detach_flow_from_evaluations
     from langflow.services.knowledge_base_storage.runtime import StorageUnavailableError
     from langflow.services.memory_base.flow_cleanup import purge_flow_memory_bases
 
@@ -182,6 +186,7 @@ async def cascade_delete_flow(
         await session.exec(delete(MessageTable).where(MessageTable.flow_id == flow_id))
         await session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow_id))
         await session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow_id))
+        await detach_flow_from_evaluations(session, flow_id)
         # Explicit delete despite FK CASCADE -- SQLite doesn't enforce FK cascades
         # by default (requires PRAGMA foreign_keys = ON), and this function follows
         # the existing pattern of explicitly deleting all child records.

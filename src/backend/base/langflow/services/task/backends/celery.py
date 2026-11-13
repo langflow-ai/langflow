@@ -1,7 +1,9 @@
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
+from uuid import uuid4
 
 from langflow.services.task.backends.base import TaskBackend
+from langflow.services.task.maintenance import maintenance_task_headers
 
 if TYPE_CHECKING:
     from celery import Task
@@ -21,11 +23,17 @@ class CeleryBackend(TaskBackend):
         from langflow.exceptions.api import WorkflowResourceError, WorkflowServiceUnavailableError
 
         # I need to type the delay method to make it easier
-        if not hasattr(task_func, "delay"):
-            msg = f"Task function {task_func} does not have a delay method"
+        if not hasattr(task_func, "apply_async"):
+            msg = f"Task function {task_func} does not have an apply_async method"
             raise ValueError(msg)
         try:
-            task: Task = task_func.delay(*args, **kwargs)
+            task_id = str(uuid4())
+            task: Task = task_func.apply_async(
+                args=args,
+                kwargs=kwargs,
+                task_id=task_id,
+                headers=maintenance_task_headers(task_id, task_func.name),
+            )
         except Exception as e:
             # Handle common celery/broker errors
             # OperationalError usually means the broker is down or unreachable
