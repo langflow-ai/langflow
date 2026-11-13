@@ -71,9 +71,10 @@ class DataFrameKeywordSearch(Component):
             msg = f"Column '{column}' not found. Available columns: {available}"
             raise ValueError(msg)
 
-        keywords = [str(k).strip() for k in keywords if k]
+        keywords = [str(k).strip() for k in keywords if k is not None]
+        keywords = [k for k in keywords if k]
         if not keywords:
-            return DataFrame(df)
+            return DataFrame(df.reset_index(drop=True)).head(self.number_candidates)
 
         text_series = df[column].fillna("").astype(str)
 
@@ -91,11 +92,14 @@ class DataFrameKeywordSearch(Component):
             for keyword in keywords:
                 mask = mask & text_series.str.contains(keyword, regex=False)
             result = df[mask]
-        else:
+        elif self.match_type == "coverage":
             total_keywords = len(keywords)
             scores = [sum(1 for keyword in keywords if keyword in text) / total_keywords for text in text_series]
             result = df.copy()
             result["_score"] = scores
             result = result[result["_score"] > 0].sort_values("_score", ascending=False)
+        else:
+            msg = f"Match Type must be one of any, all or coverage, not '{self.match_type}'."
+            raise ValueError(msg)
 
         return DataFrame(result.reset_index(drop=True)).head(self.number_candidates)
