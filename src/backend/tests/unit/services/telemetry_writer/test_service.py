@@ -18,6 +18,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
+from langflow.api.utils import migration_pause
 from langflow.services.database.models.transactions.model import TransactionBase, TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildBase, VertexBuildTable
 from langflow.services.telemetry_writer.service import (
@@ -106,14 +107,13 @@ async def writer_with_engine(monkeypatch):
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
 
+    # Admission must read this writer's database, not a prior test app's maintenance flag.
     @asynccontextmanager
-    async def maintenance_session():
-        # Admission must read this test's database, not a previous API fixture's
-        # application database or its maintenance state.
+    async def readonly_session():
         async with SQLModelAsyncSession(engine) as session:
             yield session
 
-    monkeypatch.setattr("langflow.api.utils.migration_pause.session_scope_readonly", maintenance_session)
+    monkeypatch.setattr(migration_pause, "session_scope_readonly", readonly_session)
     writer = _build_writer()
     writer._engine = engine
     writer._session_maker = async_sessionmaker(engine, expire_on_commit=False)
@@ -759,7 +759,6 @@ async def test_in_flight_batch_returned_on_cancel(writer_with_engine) -> None:
     # Replace the session_maker with one that hangs forever inside execute,
     # so the writer is guaranteed to be blocked mid-flush when we cancel.
     hang = asyncio.Event()  # never set
-    flushing = asyncio.Event()
 
     class _HangingSessionMaker:
         def __call__(self):
@@ -772,7 +771,6 @@ async def test_in_flight_batch_returned_on_cancel(writer_with_engine) -> None:
             return False
 
         async def execute(self, *_, **__):
-            flushing.set()
             await hang.wait()
 
         async def commit(self):
@@ -780,21 +778,19 @@ async def test_in_flight_batch_returned_on_cancel(writer_with_engine) -> None:
 
     writer._session_maker = _HangingSessionMaker()
     task = asyncio.create_task(writer._run_writer())
-    try:
-        # Maintenance admission may need to open a database connection first.
-        # Cancel only once execute is blocked, rather than after a fixed tick budget.
-        await asyncio.wait_for(flushing.wait(), timeout=30)
-        assert len(writer._tx_buffer) == 0  # the batch is in-flight
+    # Give the writer a tick to drain into a batch and start the flush.
+    for _ in range(20):
+        await asyncio.sleep(0.02)
+        if len(writer._tx_buffer) == 0:
+            break
+    assert len(writer._tx_buffer) == 0  # the batch is in-flight
 
-        task.cancel()
-        with pytest.raises(asyncio.CancelledError):
-            await task
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
 
-        # Cancelled mid-flush — the 20 rows should be back in the buffer.
-        assert len(writer._tx_buffer) == 20
-    finally:
-        task.cancel()
-        await asyncio.gather(task, return_exceptions=True)
+    # Cancelled mid-flush — the 20 rows should be back in the buffer.
+    assert len(writer._tx_buffer) == 20
 
 
 async def test_lifecycle_idempotent_when_disabled() -> None:
