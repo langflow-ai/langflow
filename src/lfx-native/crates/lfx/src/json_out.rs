@@ -1,8 +1,8 @@
 //! Writing JSON text fast, into a byte buffer.
 //!
-//! A flow graph is mostly string text: of a 14.5 MB graph, 11.2 MB is the
-//! text of 77,000 strings, much of it component code. `serde_json` escapes a
-//! string one byte at a time, which took most of the time to write a graph.
+//! A flow graph is mostly string text, much of it component code.
+//! `serde_json` escapes a string one byte at a time, which would make
+//! string text most of the work of writing a graph.
 //! Here a string is scanned eight bytes at a time, and a byte is looked at
 //! on its own only where an escape starts. The text is the same text
 //! `serde_json` writes: `"` and `\` escaped, the control characters with

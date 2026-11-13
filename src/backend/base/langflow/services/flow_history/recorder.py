@@ -413,7 +413,7 @@ async def write_flow_graph(
     if from_cache:
         # Modes cache and wal: the multiplayer checkpoint task checkpoints and compacts after the
         # commit, as for a multiplayer write, with the lock held only for its deletes. Legacy
-        # maintenance would read and hash the 14 MB graphs under the lock.
+        # maintenance would read and hash whole large graphs under the lock.
         from langflow.services.flow_multiplayer.checkpoint import request_after_commit
 
         request_after_commit(session, flow.id, recorded[-1].revision)

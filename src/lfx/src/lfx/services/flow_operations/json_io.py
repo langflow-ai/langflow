@@ -273,11 +273,11 @@ def copy_json(value: Any) -> Any:
 # but writes other characters as UTF-8. So orjson writes each node, edge and other top-level value,
 # and the text of one that is not ASCII is encoded again as ASCII with ``backslashreplace``, which
 # writes ``\uXXXX`` for a character from U+0100 to U+FFFF. Every edge holds such characters (each
-# handle holds ``œ``), and about half of the nodes do. A character below U+0100 or above U+FFFF,
-# which ``backslashreplace`` writes in another form, is escaped first. On the 14.4 MB benchmark
-# flow this takes 18 ms. ``json.dumps`` takes 32 ms and writes some floats in another form
-# (``1e-07`` for ``1e-7``); escaping each string that is not ASCII before orjson writes it takes
-# 55 ms, and escaping with a regular expression 146 ms.
+# handle holds ``œ``), and many nodes do. A character below U+0100 or above U+FFFF, which
+# ``backslashreplace`` writes in another form, is escaped first. This is faster than
+# ``json.dumps``, which also writes some floats in another form (``1e-07`` for ``1e-7``), and
+# faster than escaping each string that is not ASCII before orjson writes it, or escaping with a
+# regular expression.
 
 _U64_END = 2**64
 _I64_START = -(2**63)
