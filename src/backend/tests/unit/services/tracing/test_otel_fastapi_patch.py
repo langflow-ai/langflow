@@ -200,3 +200,91 @@ def test_preflight_on_a_parameterised_route_is_also_templated():
 
     assert FLOW_ID not in (route or "")
     assert route in {"/api/v1/flows/{flow_id}", "/api/v1"}
+
+
+def _build_app_with_many_routes() -> FastAPI:
+    """Several routers, overlapping prefixes, a parameter in the first segments and a mount."""
+    from starlette.responses import PlainTextResponse
+    from starlette.routing import Mount
+
+    flows = APIRouter(prefix="/flows")
+
+    @flows.get("/{flow_id}")
+    def get_flow(flow_id: str):
+        return {"id": flow_id}
+
+    @flows.post("/{flow_id}/ops")
+    def post_ops(flow_id: str):
+        return {"id": flow_id}
+
+    @flows.get("/")
+    def list_flows():
+        return []
+
+    v1 = APIRouter(prefix="/v1")
+    v1.include_router(flows)
+
+    @v1.get("/{anything}/x")
+    def anything(anything: str):
+        return {"anything": anything}
+
+    v2 = APIRouter(prefix="/v2")
+    v2.include_router(flows)
+    api = APIRouter(prefix="/api")
+    api.include_router(v1)
+    api.include_router(v2)
+    app = FastAPI()
+    app.include_router(api)
+
+    @app.get("/health")
+    def health():
+        return {}
+
+    app.router.routes.append(Mount("/static", app=PlainTextResponse("static")))
+    return app
+
+
+def _scan_only(scope):
+    from lfx import observability_fastapi as patch
+
+    original = patch._indexed_route_details
+    patch._indexed_route_details = lambda _scope: None
+    try:
+        return _safe_get_route_details(scope)
+    finally:
+        patch._indexed_route_details = original
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        f"/api/v1/flows/{FLOW_ID}",
+        f"/api/v2/flows/{FLOW_ID}/ops",
+        "/api/v1/flows/",
+        "/api/v1/whatever/x",
+        "/api/v2/whatever/x",
+        "/health",
+        "/static/app.js",
+        "/nope",
+        f"/api/v2/flows/{FLOW_ID}/nope",
+    ],
+)
+@pytest.mark.parametrize("method", ["GET", "POST", "OPTIONS"])
+def test_route_index_names_routes_like_the_full_scan(method, path):
+    """The fast index must pick the same span name as the full route scan."""
+    app = _build_app_with_many_routes()
+    scope = {"type": "http", "method": method, "path": path, "headers": [], "app": app}
+
+    assert _safe_get_route_details(dict(scope)) == _scan_only(dict(scope))
+
+
+def test_route_index_sees_routes_added_after_first_use():
+    app = _build_app_with_many_routes()
+    scope = {"type": "http", "method": "GET", "path": "/late/7", "headers": [], "app": app}
+    assert _safe_get_route_details(dict(scope)) is None
+
+    @app.get("/late/{item_id}")
+    def late(item_id: str):
+        return {"id": item_id}
+
+    assert _safe_get_route_details(dict(scope)) == "/late/{item_id}"
