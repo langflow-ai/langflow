@@ -318,7 +318,7 @@ async def _record_api_key_authentication(
 
     Increment against the database value so overlapping reads cannot lose uses.
     The timestamp is monotonic even when requests reach the update out of order.
-    Legacy hash backfill shares the same UPDATE, including when tracking is disabled.
+    Legacy hash backfill shares the same UPDATE when tracking is enabled.
     """
     values: dict[str, Any] = {}
     if backfill_hash is not None:
@@ -421,11 +421,13 @@ async def _check_key_from_db_with_context(
                 logger.info("API key rejected for externally managed user while external access ceiling is enabled")
                 return None
             # Authentication stays available without changing the frozen database.
-            if not await maintenance_enabled(session):
+            if settings_service.settings.disable_track_apikey_usage is not True and not await maintenance_enabled(
+                session
+            ):
                 await _record_api_key_authentication(
                     session,
                     api_key_obj,
-                    track_usage=settings_service.settings.disable_track_apikey_usage is not True,
+                    track_usage=True,
                     backfill_hash=incoming_hash,
                 )
             return _api_key_auth_result(user, api_key_obj)

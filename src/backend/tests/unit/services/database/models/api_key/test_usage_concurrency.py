@@ -12,7 +12,7 @@ from langflow.services.database.models.api_key.crud import _authenticate_api_key
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.maintenance import MaintenanceState
 from langflow.services.database.models.user.model import User
-from sqlalchemy import delete
+from sqlalchemy import delete, event
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -44,6 +44,12 @@ async def test_overlapping_authentication_preserves_every_use(tmp_path, monkeypa
     readers = 0
     requests = 4
     rows_created = False
+    updates = []
+
+    @event.listens_for(engine.sync_engine, "before_cursor_execute")
+    def observe_updates(_connection, _cursor, statement, _parameters, _context, _executemany):
+        if statement.lstrip().upper().startswith("UPDATE APIKEY "):
+            updates.append(statement)
 
     class ReadBarrierSession(AsyncSession):
         async def get(self, entity, ident, **kwargs):
@@ -86,8 +92,9 @@ async def test_overlapping_authentication_preserves_every_use(tmp_path, monkeypa
             persisted = await session.get(ApiKey, key_id)
             assert persisted is not None
             assert persisted.total_uses == 7 + (0 if disable_tracking else requests)
-            assert persisted.api_key_hash == hash_api_key(plaintext)
+            assert persisted.api_key_hash == (hash_api_key(plaintext) if hashed or not disable_tracking else None)
             assert (persisted.last_used_at is None) is disable_tracking
+        assert len(updates) == (0 if disable_tracking else requests)
     finally:
         try:
             if rows_created:
