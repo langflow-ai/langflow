@@ -237,7 +237,8 @@ class TestDatacircleSearchPlans:
 @pytest.mark.unit
 class TestDatacircleProvider:
     @pytest.mark.parametrize(
-        ("name", "slug"), [("Hunter", "hunter"), ("Bright Data", "bright-data"), (" People Data Labs! ", "people-data-labs")]
+        ("name", "slug"),
+        [("Hunter", "hunter"), ("Bright Data", "bright-data"), (" People Data Labs! ", "people-data-labs")],
     )
     def test_provider_slug(self, name: str, slug: str) -> None:
         assert provider_slug(name) == slug

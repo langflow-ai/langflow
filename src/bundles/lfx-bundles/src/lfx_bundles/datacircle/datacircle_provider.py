@@ -21,7 +21,7 @@ from lfx_bundles.datacircle.datacircle_common import (
 
 
 def provider_slug(value: Any) -> str:
-    """Datacircle's slug of a provider name: lowercase letters and digits, the rest one hyphen (Bright Data: bright-data)."""
+    """Datacircle's slug of a provider name: lowercase letters and digits, the rest a hyphen (bright-data)."""
     return re.sub(r"[^a-z0-9]+", "-", str(value or "").strip().lower()).strip("-")
 
 

@@ -52,6 +52,7 @@ class DatacircleSearchPlansComponent(Component):
             info="score: the best first. price: the lowest price per 1,000 first. provider: A to Z.",
             options=SORT_OPTIONS,
             value="score",
+            tool_mode=True,
         ),
         IntInput(
             name="limit",

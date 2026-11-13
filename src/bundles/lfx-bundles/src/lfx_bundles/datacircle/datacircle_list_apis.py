@@ -50,7 +50,8 @@ class DatacircleListAPIsComponent(Component):
         MessageTextInput(
             name="search",
             display_name="Search",
-            info="Only list the APIs whose name or slug has all these words, such as 'email'. Leave empty for every API.",
+            info="Only list the APIs whose name or slug has all these words, such as 'email'. "
+            "Leave empty for every API.",
             tool_mode=True,
         ),
         FloatInput(
