@@ -3,14 +3,14 @@
 set -eu
 
 NPM_VERSION="12.0.2"
-IP_ADDRESS_VERSION="10.7.4"
+IP_ADDRESS_VERSION="10.7.6"
 BRACE_EXPANSION_VERSION="5.0.12"
 TAR_VERSION="7.5.22"
 # Keep node-gyp on its supported undici 6.x maintenance line.
 UNDICI_VERSION="6.29.1"
 POSTCSS_SELECTOR_PARSER_VERSION="7.1.6"
-GLOB_VERSION="14.0.2"
-MINIMATCH_VERSION="11.0.1"
+GLOB_VERSION="14.0.3"
+MINIMATCH_VERSION="11.0.4"
 PATH_SCURRY_VERSION="3.0.0"
 NONRECURSIVE_GLOB_MATCH_VERSION="1.0.1"
 npm_cache="$(npm config get cache)"
@@ -60,13 +60,13 @@ node <<'NODE'
 const fs = require("node:fs");
 const path = "/usr/local/lib/node_modules/npm/node_modules";
 const expected = {
-  "ip-address": "10.7.4",
+  "ip-address": "10.7.6",
   "brace-expansion": "5.0.12",
   tar: "7.5.22",
   undici: "6.29.1",
   "postcss-selector-parser": "7.1.6",
-  glob: "14.0.2",
-  minimatch: "11.0.1",
+  glob: "14.0.3",
+  minimatch: "11.0.4",
   "path-scurry": "3.0.0",
   "@isaacs/nonrecursive-glob-match": "1.0.1",
   sigstore: "5.0.0",

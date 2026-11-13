@@ -1,5 +1,5 @@
 FROM ghcr.io/astral-sh/uv:latest AS uv_installer
-FROM registry.access.redhat.com/ubi10/python-314-minimal
+FROM registry.access.redhat.com/ubi10/python-314-minimal:10.3-1793860470
 USER root
 COPY --from=uv_installer /uv /usr/local/bin/uv
 COPY --from=uv_installer /uvx /usr/local/bin/uvx

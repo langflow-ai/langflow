@@ -333,13 +333,13 @@ def test_published_images_pin_hardened_package_managers() -> None:
     assert 'if [ "$actual_npm_version" != "$NPM_VERSION" ]; then' in install_script
 
     for variable, version, package, validation_entry in (
-        ("IP_ADDRESS_VERSION", "10.7.4", "ip-address", '"ip-address": "10.7.4"'),
+        ("IP_ADDRESS_VERSION", "10.7.6", "ip-address", '"ip-address": "10.7.6"'),
         ("BRACE_EXPANSION_VERSION", "5.0.12", "brace-expansion", '"brace-expansion": "5.0.12"'),
         ("TAR_VERSION", "7.5.22", "tar", 'tar: "7.5.22"'),
         ("UNDICI_VERSION", "6.29.1", "undici", 'undici: "6.29.1"'),
         ("POSTCSS_SELECTOR_PARSER_VERSION", "7.1.6", "postcss-selector-parser", '"postcss-selector-parser": "7.1.6"'),
-        ("GLOB_VERSION", "14.0.2", "glob", 'glob: "14.0.2"'),
-        ("MINIMATCH_VERSION", "11.0.1", "minimatch", 'minimatch: "11.0.1"'),
+        ("GLOB_VERSION", "14.0.3", "glob", 'glob: "14.0.3"'),
+        ("MINIMATCH_VERSION", "11.0.4", "minimatch", 'minimatch: "11.0.4"'),
         ("PATH_SCURRY_VERSION", "3.0.0", "path-scurry", '"path-scurry": "3.0.0"'),
         (
             "NONRECURSIVE_GLOB_MATCH_VERSION",
