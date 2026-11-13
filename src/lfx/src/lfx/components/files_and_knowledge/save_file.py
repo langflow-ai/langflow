@@ -465,31 +465,35 @@ class SaveToFileComponent(Component):
 
     def _write_csv(self, frame: pd.DataFrame, path: Path, *, append: bool) -> None:
         """Write CSV rows; an append to a non-empty file follows the file's own header."""
-        if append and path.stat().st_size > 0:
+        if not append or path.stat().st_size == 0:
+            frame.to_csv(path, index=False)
+        elif not frame.columns.empty:
             frame = self._align_to_csv_header(frame, path)
             frame.to_csv(path, index=False, mode="a", header=False)
-        else:
-            frame.to_csv(path, index=False)
 
     @staticmethod
     def _align_to_csv_header(frame: pd.DataFrame, path: Path) -> pd.DataFrame:
         """Reorder columns to the existing header, or refuse before the file is touched."""
         new_header = list(csv.reader(StringIO(frame.iloc[:0].to_csv(index=False))))
-        with path.open(encoding="utf-8-sig", newline="") as stream:
-            existing_header = list(islice(csv.reader(stream), len(new_header)))
+        # A header that cannot be decoded or parsed only has to fail the comparison.
+        with path.open(encoding="utf-8-sig", errors="replace", newline="") as stream:
+            try:
+                existing_header = list(islice(csv.reader(stream), len(new_header)))
+            except csv.Error:
+                existing_header = []
         if existing_header == new_header:
             return frame
+        new_columns = new_header[0]
+        existing_columns = existing_header[0] if existing_header else []
         # Only a single header row of distinct names can be matched up by name.
-        new_columns = new_header[0] if len(new_header) == 1 else []
-        existing_columns = existing_header[0] if len(existing_header) == 1 else []
         if (
             len(new_header) != 1
             or len(set(new_columns)) != len(new_columns)
             or sorted(new_columns) != sorted(existing_columns)
         ):
             msg = (
-                f"Cannot append to '{path.name}': the columns {new_columns or new_header} do not match "
-                f"the columns of the existing CSV file {existing_columns or existing_header}. "
+                f"Cannot append to '{path.name}': the columns {new_columns} do not match "
+                f"the columns of the existing CSV file {existing_columns}. "
                 "Send the same columns, or write to a new file."
             )
             raise ValueError(msg)

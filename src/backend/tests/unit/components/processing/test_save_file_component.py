@@ -641,6 +641,46 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
 
         assert self._csv_rows(path) == [["a", "b"], ["1", "2"]]
 
+    @pytest.mark.parametrize("input_kind", ["data", "dataframe"])
+    def test_csv_append_of_an_empty_input_leaves_the_file_unchanged(self, component_class, tmp_path, input_kind):
+        component = component_class()
+        component.set_attributes({"append_mode": True})
+        path = tmp_path / "rows.csv"
+        save = self._csv_saver(component, input_kind)
+        save({"a": [1], "b": [2]}, path)
+        original = path.read_bytes()
+
+        save({}, path)
+
+        assert path.read_bytes() == original
+
+    def test_csv_append_to_a_file_that_is_not_utf8_compares_its_header(self, component_class, tmp_path):
+        component = component_class()
+        component.set_attributes({"append_mode": True})
+        path = tmp_path / "rows.csv"
+        path.write_bytes("a,b\ncaf\u00e9,1\n".encode("cp1252"))
+        save = self._csv_saver(component, "dataframe")
+
+        save({"b": [2], "a": [3]}, path)
+
+        assert path.read_bytes().splitlines()[-1] == b"3,2"
+
+    @pytest.mark.parametrize(
+        "existing",
+        ["nome,caf\u00e9\n".encode("cp1252"), b'"a,b\n' + b"x" * 200_000 + b"\n"],
+        ids=["not_utf8", "unclosed_quote"],
+    )
+    def test_csv_append_refuses_a_header_it_cannot_read(self, component_class, tmp_path, existing):
+        component = component_class()
+        component.set_attributes({"append_mode": True})
+        path = tmp_path / "rows.csv"
+        path.write_bytes(existing)
+
+        with pytest.raises(ValueError, match="columns of the existing CSV file"):
+            self._csv_saver(component, "dataframe")({"nome": [1], "caf\u00e9": [2]}, path)
+
+        assert path.read_bytes() == existing
+
     @pytest.mark.parametrize("columns", [["same", "same"], pd.MultiIndex.from_tuples([("a", "x"), ("b", "y")])])
     def test_csv_append_keeps_identical_duplicate_or_multilevel_headers(self, component_class, tmp_path, columns):
         component = component_class()
