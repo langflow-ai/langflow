@@ -11,8 +11,14 @@ from lfx.services.flow_operations import (
     FlowDataValidationError,
     FlowOperationValidationError,
     apply_flow_operations,
+    canonical_graph_json,
+    derive_flow_operations,
+    diff_flow_data,
+    find_graph_violations,
+    graph_hash,
     parse_flow_operation,
     parse_flow_operations,
+    repair_flow_data,
 )
 from lfx.services.flow_operations.canonical import canonical_json
 
@@ -99,3 +105,50 @@ def test_a_handle_string_that_breaks_a_limit_encodes_no_handle(source_handle):
     with pytest.raises(FlowOperationValidationError, match="must be an escaped JSON object") as exc_info:
         apply_flow_operations(flow_data, parse_flow_operations([{"type": "add_edges", "edges": [edge]}]))
     assert exc_info.value.code == "EDGE_HANDLE_INVALID"
+
+
+def _flow(value, **view_state) -> dict:
+    node = {"id": "a", "data": {"node": {"template": {"x": {"value": value}}}}}
+    return {"nodes": [node], "edges": [], **view_state}
+
+
+# The flow is level 1, its nodes 2, the node 3, data 4, data.node 5, the
+# template 6 and the field 7, so a value's arrays start at level 8.
+DEEPEST = _flow(_nested(120))
+BROKEN_GRAPHS = {
+    "a lone surrogate": _flow("\udfff"),
+    "a lone surrogate in a key": _flow({"\ud800": 1}),
+    "nesting 128 levels deep": _flow(_nested(121)),
+    "a lone surrogate in view state": _flow("ok", viewport={"label": "\ud800"}),
+}
+GRAPH_READERS = {
+    "validation": find_graph_violations,
+    "validation against a base": lambda graph: find_graph_violations(graph, base=DEEPEST),
+    "repair": repair_flow_data,
+    "the diff target": lambda graph: diff_flow_data(DEEPEST, graph),
+    "derive": lambda graph: derive_flow_operations(DEEPEST, graph),
+    "the canonical graph": canonical_graph_json,
+    "the graph hash": graph_hash,
+}
+
+
+def test_a_graph_nested_127_levels_deep_is_read():
+    assert find_graph_violations(DEEPEST) == []
+    assert repair_flow_data(DEEPEST).fixes == []
+    assert derive_flow_operations(DEEPEST, DEEPEST).operations == []
+    graph_hash(DEEPEST)
+
+
+@pytest.mark.parametrize("read", GRAPH_READERS.values(), ids=GRAPH_READERS.keys())
+@pytest.mark.parametrize("graph", BROKEN_GRAPHS.values(), ids=BROKEN_GRAPHS.keys())
+def test_a_graph_that_breaks_a_limit_is_refused_with_no_violations(read, graph):
+    with pytest.raises(FlowDataValidationError, match="flow data is not valid JSON") as exc_info:
+        read(copy.deepcopy(graph))
+    assert exc_info.value.code == "FLOW_GRAPH_INVALID"
+    assert exc_info.value.violations == []
+
+
+def test_a_value_that_breaks_a_limit_is_refused_before_it_is_read_as_a_graph():
+    for read in (find_graph_violations, repair_flow_data):
+        with pytest.raises(FlowDataValidationError, match="lone surrogate"):
+            read(["\ud800"])

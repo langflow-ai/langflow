@@ -226,6 +226,37 @@ async def test_create_or_update_starter_projects():
         assert db_project_names == expected_project_names
 
 
+@pytest.mark.usefixtures("client")
+async def test_create_or_update_starter_projects_does_not_write_source_tree(monkeypatch, starter_project_writes_dir):
+    from langflow.initial_setup import setup
+
+    projects = await load_starter_projects()
+    source = {path: await path.read_bytes() for path, _ in projects}
+    all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
+    updated_names = {path.name for path, _ in filter_starter_projects_by_available_components(projects, all_types_dict)}
+    assert get_settings_service().settings.update_starter_projects
+    assert updated_names
+
+    # Make every project differ from its file, so startup writes every file.
+    def mark_updated(project_data, all_types_dict):  # noqa: ARG001
+        return {**project_data, "starter_write_marker": True}
+
+    monkeypatch.setattr(setup, "update_projects_components_with_latest_component_versions", mark_updated)
+    try:
+        await setup.create_or_update_starter_projects(all_types_dict)
+        changed = [str(path) for path, content in source.items() if await path.read_bytes() != content]
+    finally:
+        # Put back any source file that the update changed, then report it.
+        for path, content in source.items():
+            if await path.read_bytes() != content:
+                await path.write_bytes(content)
+
+    assert changed == [], "a test run wrote into the starter_projects source directory"
+    for name in updated_names:
+        written = orjson.loads(await (Path(starter_project_writes_dir) / name).read_bytes())
+        assert written["data"]["starter_write_marker"] is True
+
+
 # Some starter projects require integration
 # async def test_starter_projects_can_run_successfully(client):
 #     with session_scope() as session:

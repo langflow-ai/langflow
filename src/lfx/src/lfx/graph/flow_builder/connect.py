@@ -5,7 +5,7 @@ ReactFlow's edge format. Each edge needs:
 - source/target: Component IDs
 - sourceHandle/targetHandle: JSON-like strings with œ (U+0153) replacing quotes
 - data.sourceHandle/data.targetHandle: Dicts with type info
-- id: reactflow__edge-{source}{sourceHandle}-{target}{targetHandle}
+- id: an opaque ``e-<21 alphanumerics>``, like the editor's; never derived from the handles
 
 All functions are pure — they operate on flow dicts, no I/O.
 """
@@ -16,6 +16,7 @@ from typing import Any
 
 from lfx.graph.edge.base import types_compatible
 from lfx.graph.flow_builder.component import sync_dropdown_selected_outputs
+from lfx.services.flow_operations.ids import new_edge_id
 
 # Langflow uses oe (U+0153) as a quote replacement in ReactFlow handle strings
 _Q = "\u0153"
@@ -381,10 +382,8 @@ def add_connection(
     source_handle_s = _scaped_json_stringify(source_handle_dict)
     target_handle_s = _scaped_json_stringify(target_handle_dict)
 
-    edge_id = f"reactflow__edge-{source_id}{source_handle_s}-{target_id}{target_handle_s}"
-
-    # Idempotency is structural (ids + port names), not by edge id: UI-saved
-    # edges use a different id prefix (`xy-edge__` vs `reactflow__edge-`).
+    # Idempotency is structural (ids + port names), not by edge id: edge ids
+    # are opaque and say nothing about what an edge connects.
     for existing in flow["data"]["edges"]:
         existing_target = (existing.get("data") or {}).get("targetHandle", {})
         existing_port = existing_target.get("fieldName") or existing_target.get("name")
@@ -403,7 +402,7 @@ def add_connection(
             "sourceHandle": source_handle_dict,
             "targetHandle": target_handle_dict,
         },
-        "id": edge_id,
+        "id": new_edge_id(),
         "selected": False,
         "source": source_id,
         "sourceHandle": source_handle_s,

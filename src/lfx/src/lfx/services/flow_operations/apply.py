@@ -6,11 +6,10 @@ import copy
 import json
 from collections import Counter, defaultdict
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from lfx.services.flow_operations.edge_rules import OUTPUTS_PATH, check_edge, node_outputs
+from lfx.services.flow_operations.edge_rules import OUTPUTS_PATH, check_edge, node_outputs, outputs_by_name
 from lfx.services.flow_operations.exceptions import FlowOperationValidationError
-from lfx.services.flow_operations.keyed_lists import ListIndex
 from lfx.services.flow_operations.ops import (
     AddEdgesOp,
     AddNodesOp,
@@ -27,13 +26,18 @@ from lfx.services.flow_operations.ops import (
 from lfx.services.flow_operations.schema import load_node_schema
 from lfx.services.flow_operations.state import (
     GraphState,
-    build_graph_state,
     copy_mutable_graph_value,
     finalize_graph,
+    index_graph,
     require_edge_endpoints,
     require_node_id,
+    require_node_objects,
     writable_node,
 )
+from lfx.services.flow_operations.validation import validate_flow_data
+
+if TYPE_CHECKING:
+    from lfx.services.flow_operations.keyed_lists import ListIndex
 
 
 @dataclass(frozen=True)
@@ -43,6 +47,17 @@ class FlowOperationsApplyResult:
     flow_data: dict[str, Any]
     forward_ops: list[FlowOperation]
     deleted_edges: tuple[str, ...] = ()
+
+
+def build_graph_state(base_flow: dict[str, Any]) -> GraphState:
+    """Validate flow.data, shallow-copy it, and index graph payloads by reference.
+
+    Values are not walked for NaN here: that check belongs to whoever accepts
+    a graph from outside, and skipping it keeps each apply proportional to the
+    number of nodes and edges rather than to the size of the flow.
+    """
+    validate_flow_data(base_flow, check_values=False)
+    return index_graph(base_flow)
 
 
 def apply_flow_operations(
@@ -92,6 +107,7 @@ def _apply_add_nodes(state: GraphState, nodes: list[dict[str, Any]]) -> list[Flo
 
     for index, node in enumerate(nodes):
         node_id = require_node_id(node, context=f"add_nodes[{index}]")
+        require_node_objects(node, context=f"add_nodes[{index}]")
         if node_id in seen_in_request:
             msg = f"add_nodes: duplicate node id in request: {node_id!r}"
             raise FlowOperationValidationError(msg)
@@ -176,7 +192,7 @@ def _detached_edges(state: GraphState, node_id: str, update: UpdateNodeEntry, be
     elif len(path) == len(OUTPUTS_PATH):
         # The whole list was replaced or deleted: the outputs it no longer has are gone.
         outputs_after = node_outputs(state, node_id)
-        removed_outputs = set(_outputs_by_name(before, node_id=node_id)) - set(
+        removed_outputs = set(outputs_by_name(before, node_id=node_id)) - set(
             outputs_after.by_key if outputs_after is not None else ()
         )
     else:
@@ -189,15 +205,6 @@ def _detached_edges(state: GraphState, node_id: str, update: UpdateNodeEntry, be
         detached |= connections.outputs.get(name, set())
         detached |= connections.inputs.get(("output", name), set())
     return detached
-
-
-def _outputs_by_name(outputs: Any, *, node_id: str) -> dict[str, dict[str, Any]]:
-    """Index an outputs list a write replaced, which follows the same rules as the one that replaces it."""
-    if not isinstance(outputs, list):
-        msg = f"node {node_id!r}: data.node.outputs must be a list"
-        raise FlowOperationValidationError(msg)
-    keyed = load_node_schema().keyed_list_at({}, OUTPUTS_PATH)
-    return ListIndex(keyed, outputs, context=f"node {node_id!r}: data.node.outputs").by_key
 
 
 def _changed(update: UpdateNodeEntry, before: Any) -> bool:

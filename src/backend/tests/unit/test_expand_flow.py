@@ -1,5 +1,7 @@
 """Tests for expand_compact_flow functionality."""
 
+import re
+
 import pytest
 from fastapi import status
 from httpx import AsyncClient
@@ -211,7 +213,8 @@ class TestExpandEdge:
         assert "sourceHandle" in expanded
         assert "targetHandle" in expanded
         assert "id" in expanded
-        assert expanded["id"].startswith("reactflow__edge-")
+        # Opaque, like the editor's newEdgeId(): nothing derives it from the handles.
+        assert re.fullmatch(r"e-[0-9A-Za-z]{21}", expanded["id"])
 
     def test_expand_edge_source_handle_format(self):
         """Test that sourceHandle is a JSON-encoded dict with œ as quotes."""
