@@ -312,10 +312,11 @@ def find_retry(retry_rows: list[dict[str, Any]] | None, request_id: str) -> Retr
 
 
 def pack_rows(
-    forward: list[Any], *, first_revision: int, ops_limit: int, bytes_limit: int
+    forward: list[bytes], *, first_revision: int, ops_limit: int, bytes_limit: int
 ) -> list[tuple[int, int, list[bytes]]]:
     """Group consecutive operations into rows within both limits: ``(start, end, [operation JSON])``.
 
+    ``forward`` holds each operation's JSON text, as the engine writes it (``forward_json``).
     An operation is never split, so one larger than the byte limit gets a row of its own.
     """
     rows: list[tuple[int, int, list[bytes]]] = []
@@ -323,8 +324,7 @@ def pack_rows(
     size = 0
     start = first_revision
     revision = first_revision
-    for operation in forward:
-        encoded = orjson.dumps(operation)
+    for encoded in forward:
         added = len(encoded) + 32  # the revision wrapper
         if current and (len(current) >= ops_limit or size + added > bytes_limit):
             rows.append((start, revision - 1, current))

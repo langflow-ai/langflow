@@ -290,7 +290,7 @@ async def _start_history(session: AsyncSession, flow_id: UUID, read: oplog.HeadR
     return revision
 
 
-def _rows(forward: list[Any], head: int) -> list[tuple[int, int, list[bytes]]]:
+def _rows(forward: list[bytes], head: int) -> list[tuple[int, int, list[bytes]]]:
     settings = get_settings_service().settings
     return oplog.pack_rows(
         forward,
@@ -303,7 +303,7 @@ def _rows(forward: list[Any], head: int) -> list[tuple[int, int, list[bytes]]]:
 async def _append(
     session: AsyncSession,
     flow_id: UUID,
-    forward: list[Any],
+    forward: list[bytes],
     head: int,
     *,
     request: OpsRequest,
@@ -356,10 +356,10 @@ async def _write_nocache(
     try:
         with bench.timed("stage"):
             # A new graph: the first batch checks the whole graph, so it is a large call.
-            result = await call(state.apply, request.operations_json, forward=True, large=True, name="stage")
+            result = await call(state.apply, request.operations_json, forward_json=True, large=True, name="stage")
     except engine.EngineError as error:
         raise _refusal(error, head) from None
-    forward = result.get("forward_operations") or []
+    forward = result.get("forward_operations_json") or []
     if not forward:
         await _commit(session)
         return _answer("applied", head, head + 1, head), None
@@ -404,11 +404,8 @@ async def _write_cached(
             with bench.timed("stage"):
                 # Inline, except the first batch on a newly built graph: the engine checks the whole graph then.
                 async with entry.use:
-                    result = await call(
-                        entry.state.stage, request.operations_json, forward=True, large=entry.new, name="stage"
-                    )
+                    forward = await call(entry.state.stage_json, request.operations_json, large=entry.new, name="stage")
             entry.new = False
-            forward = result.get("forward_operations") or []
             if forward:
                 if mode == "cache":
                     with bench.timed("ser"):

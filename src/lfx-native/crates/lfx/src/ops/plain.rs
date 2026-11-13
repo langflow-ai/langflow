@@ -2,8 +2,8 @@
 //!
 //! A save validates the graph it receives, may repair it, compares it with
 //! the stored graph, diffs the two, and hashes the result. Each of those calls
-//! on its own reads its graphs again: a Python dict of a 320-node flow takes
-//! about 10 ms to read. A plain graph is read once and kept as it is, with no
+//! on its own reads its graphs again, and reading a large Python dict is
+//! not cheap. A plain graph is read once and kept as it is, with no
 //! index and no check, so each call costs only its own work.
 //!
 //! A plain graph remembers which checks it has passed, and a later call that

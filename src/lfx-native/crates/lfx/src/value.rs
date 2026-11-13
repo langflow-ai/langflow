@@ -1489,12 +1489,16 @@ impl<'de, const FINITE: bool> Visitor<'de> for AnyValueVisitor<'_, FINITE> {
             let value = access.next_value_seed(AnyValueVisitor(&mut *builder))?;
             builder.entries.push((key, value));
         }
-        // A repeated key keeps its first position and its last value.
-        let mut map = AnyMap::with_capacity(builder.entries.len() - start);
+        // A repeated key keeps its first position and its last value. The
+        // entries are built before they are shared, so no insert checks the
+        // reference count.
+        let mut entries = Entries::with_capacity(builder.entries.len() - start);
         for (key, value) in builder.entries.drain(start..) {
-            map.insert_shared(key, value);
+            entries.insert(key, value);
         }
-        Ok(AnyValue::Object(map))
+        Ok(AnyValue::Object(AnyMap {
+            entries: Arc::new(entries),
+        }))
     }
 }
 

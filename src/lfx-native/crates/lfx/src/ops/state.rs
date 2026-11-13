@@ -48,6 +48,132 @@ use crate::ops::validate::{Numbers, PathPart, validate_flow_data};
 
 // --- Layers --------------------------------------------------------------------------------
 
+/// Entries by key in insertion order, as a Python `dict` keeps them.
+///
+/// A removal leaves a hole in its slot, which iteration skips, so it moves no
+/// other entry. A replaced entry keeps its slot, and a new one, or one added
+/// again after a removal, goes last. Once holes outnumber the entries,
+/// [`Self::pack_if_sparse`] packs them, which moves each entry at most once
+/// for every removal since the last packing.
+#[derive(Debug)]
+pub(crate) struct Slots<V> {
+    entries: Vec<Option<(String, V)>>,
+    /// The slot of each entry.
+    index: HashMap<String, usize>,
+}
+
+impl<V> Slots<V> {
+    fn new() -> Self {
+        Self {
+            entries: Vec::new(),
+            index: HashMap::new(),
+        }
+    }
+
+    /// The number of entries.
+    pub fn len(&self) -> usize {
+        self.index.len()
+    }
+
+    /// The number of slots, holes included.
+    #[cfg(test)]
+    fn slots(&self) -> usize {
+        self.entries.len()
+    }
+
+    pub fn get(&self, key: &str) -> Option<&V> {
+        let slot = *self.index.get(key)?;
+        self.entries[slot].as_ref().map(|(_, value)| value)
+    }
+
+    pub fn get_mut(&mut self, key: &str) -> Option<&mut V> {
+        let slot = *self.index.get(key)?;
+        self.entries[slot].as_mut().map(|(_, value)| value)
+    }
+
+    pub fn contains_key(&self, key: &str) -> bool {
+        self.index.contains_key(key)
+    }
+
+    /// The slot of the entry with `key`.
+    pub fn get_index_of(&self, key: &str) -> Option<usize> {
+        self.index.get(key).copied()
+    }
+
+    /// Replace the entry with `key` in its slot, or add it last.
+    pub fn insert(&mut self, key: String, value: V) {
+        if let Some(&slot) = self.index.get(&key) {
+            if let Some((_, stored)) = &mut self.entries[slot] {
+                *stored = value;
+            }
+            return;
+        }
+        self.index.insert(key.clone(), self.entries.len());
+        self.entries.push(Some((key, value)));
+    }
+
+    /// Remove the entry with `key`, leaving a hole in its slot.
+    pub fn remove(&mut self, key: &str) -> Option<V> {
+        let slot = self.index.remove(key)?;
+        self.entries[slot].take().map(|(_, value)| value)
+    }
+
+    /// Pack the entries when holes outnumber them. Returns whether it did,
+    /// which moves their slots.
+    fn pack_if_sparse(&mut self) -> bool {
+        if self.entries.len() - self.index.len() <= self.index.len() {
+            return false;
+        }
+        self.entries.retain(Option::is_some);
+        if self.entries.capacity() > 4 * self.entries.len().max(4) {
+            self.entries.shrink_to_fit();
+        }
+        for (slot, (key, _)) in self.entries.iter().flatten().enumerate() {
+            *self.index.get_mut(key).expect("an entry is indexed") = slot;
+        }
+        true
+    }
+
+    /// The entries, in order.
+    pub fn iter(&self) -> impl Iterator<Item = (&String, &V)> {
+        self.entries
+            .iter()
+            .flatten()
+            .map(|(key, value)| (key, value))
+    }
+
+    #[cfg(test)]
+    pub fn keys(&self) -> impl Iterator<Item = &String> {
+        self.iter().map(|(key, _)| key)
+    }
+
+    pub fn values(&self) -> impl Iterator<Item = &V> {
+        self.iter().map(|(_, value)| value)
+    }
+
+    fn into_values(self) -> impl Iterator<Item = V> {
+        self.entries.into_iter().flatten().map(|(_, value)| value)
+    }
+}
+
+impl<V> FromIterator<(String, V)> for Slots<V> {
+    fn from_iter<I: IntoIterator<Item = (String, V)>>(entries: I) -> Self {
+        let mut slots = Self::new();
+        for (key, value) in entries {
+            slots.insert(key, value);
+        }
+        slots
+    }
+}
+
+impl<V> std::ops::Index<&str> for Slots<V> {
+    type Output = V;
+
+    fn index(&self, key: &str) -> &V {
+        self.get(key).expect("an entry with this key")
+    }
+}
+
 /// A map that a batch changes through a layer of its own.
 ///
 /// Reads look in the layer first, then in the stored map. The first write to
@@ -56,10 +182,11 @@ use crate::ops::validate::{Numbers, PathPart, validate_flow_data};
 ///
 /// Entries keep their order, as the nodes and edges of a flow keep theirs in
 /// the Python engine and in the editor: a removal keeps the order of the
-/// others, a replaced entry keeps its place, and a new one goes last.
+/// others, a replaced entry keeps its place, and a new one goes last
+/// ([`Slots`]).
 #[derive(Debug)]
 pub(crate) struct Layered<V> {
-    stored: IndexMap<String, V>,
+    stored: Slots<V>,
     /// What the batch wrote, by key: the new value, or `None` for a stored
     /// entry that the batch removed.
     layer: IndexMap<String, Option<V>>,
@@ -73,7 +200,7 @@ impl<V: Clone> Layered<V> {
 
     fn with_stored(stored: IndexMap<String, V>) -> Self {
         Self {
-            stored,
+            stored: stored.into_iter().collect(),
             layer: IndexMap::new(),
         }
     }
@@ -144,50 +271,23 @@ impl<V: Clone> Layered<V> {
     }
 
     /// Make the batch's changes part of the stored map, in time proportional
-    /// to them, and for removals to the entries after the removed ones.
-    pub fn fold(&mut self) {
-        let mut removed = Vec::new();
+    /// to them. Returns whether the stored map packed its slots, which moves
+    /// them ([`Slots::pack_if_sparse`]).
+    pub fn fold(&mut self) -> bool {
         for (key, written) in self.layer.drain(..) {
             match written {
-                Some(value) => {
-                    self.stored.insert(key, value);
-                }
-                None => removed.extend(self.stored.get_index_of(&key)),
+                Some(value) => self.stored.insert(key, value),
+                None => drop(self.stored.remove(&key)),
             }
         }
         self.shrink_large_layer();
-        self.remove_slots(removed);
+        self.stored.pack_if_sparse()
     }
 
     fn shrink_large_layer(&mut self) {
         if self.layer.capacity() > fields::MAX_RETAINED_BATCH_ENTRIES {
             self.layer.shrink_to_fit();
         }
-    }
-
-    /// Remove the stored entries at `slots`, keeping the order of the others.
-    ///
-    /// Removing one entry moves every entry after it up one place. When that
-    /// moves fewer entries in all than the map holds, as for entries near
-    /// the end, each is removed in turn, from the last; else one pass keeps
-    /// the entries not removed.
-    fn remove_slots(&mut self, mut slots: Vec<usize>) {
-        let len = self.stored.len();
-        slots.sort_unstable();
-        let moved: usize = slots.iter().map(|slot| len - slot).sum();
-        if moved <= len {
-            for slot in slots.into_iter().rev() {
-                self.stored.shift_remove_index(slot);
-            }
-            return;
-        }
-        let mut slots = slots.into_iter().peekable();
-        let mut slot = 0;
-        self.stored.retain(|_, _| {
-            let keep = slots.next_if_eq(&slot).is_none();
-            slot += 1;
-            keep
-        });
     }
 
     /// Drop the batch's changes.
@@ -216,7 +316,7 @@ impl<V: Clone> Layered<V> {
         let added = self
             .layer
             .iter()
-            .filter(|(key, _)| !self.stored.contains_key(*key))
+            .filter(|(key, _)| !self.stored.contains_key(key))
             .filter_map(|(key, written)| written.as_ref().map(|value| (key, value)));
         kept.chain(added)
     }
@@ -228,31 +328,34 @@ impl<V: Clone> Layered<V> {
     }
 }
 
-/// A dense ordered mirror. None exists only transiently inside commit.
+/// The committed entries slot for slot ([`Slots`]): `None` in a hole.
 type SnapshotRows = snapshot_rows::Rows<Option<AnyMap>>;
+
+/// Mirror the batch's layer into `mirror`, before [`Layered::fold`] folds it:
+/// a hole for each removal, and each new entry last, in the order fold adds
+/// them.
 fn mirror_layer<V>(
     mirror: &mut SnapshotRows,
     entries: &Layered<V>,
     object: impl Fn(&V) -> &AnyMap,
 ) {
-    let mut removed = Vec::new();
     for (id, written) in &entries.layer {
-        match written {
-            Some(value) => {
-                let value = Some(object(value).clone());
-                if let Some(slot) = entries.stored.get_index_of(id) {
-                    mirror.set(slot, value);
-                } else {
-                    mirror.push_back(value);
-                }
-            }
-            None => removed.extend(entries.stored.get_index_of(id)),
+        match (written, entries.stored.get_index_of(id)) {
+            (Some(value), Some(slot)) => mirror.set(slot, Some(object(value).clone())),
+            (Some(value), None) => mirror.push_back(Some(object(value).clone())),
+            (None, Some(slot)) => mirror.set(slot, None),
+            (None, None) => {}
         }
     }
-    removed.sort_unstable();
-    for slot in removed.into_iter().rev() {
-        mirror.remove(slot);
-    }
+}
+
+/// A mirror of `entries` after they packed their slots.
+fn packed_mirror<V>(entries: &Layered<V>, object: impl Fn(&V) -> &AnyMap) -> SnapshotRows {
+    entries
+        .stored
+        .values()
+        .map(|value| Some(object(value).clone()))
+        .collect()
 }
 
 // --- The graph -----------------------------------------------------------------------------
@@ -820,8 +923,12 @@ impl GraphState {
         let graph = &mut self.graph;
         mirror_layer(&mut self.snapshot_nodes, &graph.nodes, Node::as_map);
         mirror_layer(&mut self.snapshot_edges, &graph.edges, Edge::as_map);
-        graph.nodes.fold();
-        graph.edges.fold();
+        if graph.nodes.fold() {
+            self.snapshot_nodes = packed_mirror(&graph.nodes, Node::as_map);
+        }
+        if graph.edges.fold() {
+            self.snapshot_edges = packed_mirror(&graph.edges, Edge::as_map);
+        }
         graph.edges_at.0.fold();
         for (id, writes) in graph.fields.drain() {
             let slot = graph
@@ -1041,14 +1148,8 @@ impl GraphSnapshot {
         let last = self.data.text_len.load(Ordering::Relaxed);
         let out = graph_text(
             &self.data.root,
-            self.data
-                .nodes
-                .iter()
-                .map(|row| row.as_ref().expect("a snapshot row exists")),
-            self.data
-                .edges
-                .iter()
-                .map(|row| row.as_ref().expect("a snapshot row exists")),
+            self.data.nodes.iter().flatten(),
+            self.data.edges.iter().flatten(),
             Vec::with_capacity(last + last / 16),
         );
         self.data.text_len.store(out.len(), Ordering::Relaxed);
@@ -1071,17 +1172,10 @@ impl GraphSnapshot {
             self.data
                 .nodes
                 .iter()
-                .map(|node| {
-                    Cow::Owned(AnyValue::Object(
-                        node.as_ref().expect("a snapshot row exists").clone(),
-                    ))
-                })
+                .flatten()
+                .map(|node| Cow::Owned(AnyValue::Object(node.clone())))
                 .collect(),
-            self.data
-                .edges
-                .iter()
-                .map(|row| row.as_ref().expect("a snapshot row exists"))
-                .collect(),
+            self.data.edges.iter().flatten().collect(),
         )
     }
 }
@@ -1542,6 +1636,42 @@ mod tests {
         assert!(state.try_snapshot().is_some());
     }
 
+    #[test]
+    fn slots_keep_order_as_a_python_dict_does() {
+        // A plain list with shifting removal is the order a Python dict keeps.
+        let mut slots = Slots::new();
+        let mut reference: Vec<(String, usize)> = Vec::new();
+        let mut seed = 0x9e37_79b9_7f4a_7c15_u64;
+        for step in 0..20_000 {
+            seed ^= seed << 13;
+            seed ^= seed >> 7;
+            seed ^= seed << 17;
+            let key = format!("k{}", seed % 97);
+            if seed.is_multiple_of(3) {
+                let removed = slots.remove(&key);
+                let position = reference.iter().position(|(k, _)| *k == key);
+                assert_eq!(removed, position.map(|at| reference.remove(at).1));
+            } else {
+                slots.insert(key.clone(), step);
+                match reference.iter_mut().find(|(k, _)| *k == key) {
+                    Some(entry) => entry.1 = step,
+                    None => reference.push((key, step)),
+                }
+            }
+            if seed.is_multiple_of(5) {
+                slots.pack_if_sparse();
+            }
+            assert_eq!(slots.len(), reference.len());
+            assert!(slots.slots() - slots.len() <= slots.len() + reference.len().max(64));
+        }
+        let order: Vec<(String, usize)> = slots.iter().map(|(k, v)| (k.clone(), *v)).collect();
+        assert_eq!(order, reference);
+        for (key, value) in &reference {
+            assert_eq!(slots.get(key), Some(value));
+            assert_eq!(slots[key.as_str()], *value);
+        }
+    }
+
     fn mirror_node(id: &str) -> Node {
         let value =
             crate::json!({"id":id,"data":{"node":{"template":{"t":{"type":"str","value":"x"}}}}});
@@ -1549,10 +1679,20 @@ mod tests {
     }
 
     fn assert_mirrors(state: &GraphState) {
-        assert_eq!(state.snapshot_nodes.len(), state.graph.nodes.stored.len());
-        assert_eq!(state.snapshot_edges.len(), state.graph.edges.stored.len());
-        assert!(state.snapshot_nodes.iter().all(Option::is_some));
-        assert!(state.snapshot_edges.iter().all(Option::is_some));
+        // One mirror row per slot, a hole where the map has one, and never
+        // more holes than entries.
+        for (mirror, stored) in [
+            (&state.snapshot_nodes, state.graph.nodes.stored.slots()),
+            (&state.snapshot_edges, state.graph.edges.stored.slots()),
+        ] {
+            assert_eq!(mirror.len(), stored);
+        }
+        let live = state.snapshot_nodes.iter().flatten().count();
+        assert_eq!(live, state.graph.nodes.stored.len());
+        assert!(state.snapshot_nodes.len() - live <= live);
+        let live = state.snapshot_edges.iter().flatten().count();
+        assert_eq!(live, state.graph.edges.stored.len());
+        assert!(state.snapshot_edges.len() - live <= live);
         assert_eq!(
             crate::ops::api::snapshot_json(&state.snapshot()),
             crate::ops::api::graph_json(state)
@@ -1560,7 +1700,7 @@ mod tests {
     }
 
     #[test]
-    fn persistent_mirrors_keep_dense_order_through_churn_and_discard() {
+    fn persistent_mirrors_keep_order_through_churn_and_discard() {
         let nodes = (0..128)
             .map(|i| mirror_node(&format!("n{i}")).into_value())
             .collect::<Vec<_>>();
@@ -1581,7 +1721,7 @@ mod tests {
             state.discard();
             assert_mirrors(&state);
         }
-        assert_eq!(state.snapshot_nodes.len(), 128);
+        assert_eq!(state.graph.nodes.stored.len(), 128);
         assert_eq!(crate::ops::api::snapshot_json(&before), text);
     }
 
