@@ -340,7 +340,7 @@ describe("inverse operations", () => {
     let result = graph;
     for (const inverse of [...inverses].reverse()) {
       result = applyFlowOperations(result, inverse, {
-        restoring: true,
+        mode: "preview",
       }).flowData;
     }
     return result;

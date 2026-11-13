@@ -306,7 +306,7 @@ describe("applyFlowOperations reads only the protocol's shapes", () => {
   });
 });
 
-describe("applyFlowOperations while restoring", () => {
+describe("applyFlowOperations in preview mode", () => {
   const graph = () => ({
     nodes: [
       { id: "s", data: { node: { template: {}, outputs: [{ name: "out" }] } } },
@@ -336,7 +336,7 @@ describe("applyFlowOperations while restoring", () => {
       "EDGE_HANDLE_NOT_FOUND",
     );
     expect(
-      applyFlowOperations(graph(), [stale], { restoring: true }).flowData.edges,
+      applyFlowOperations(graph(), [stale], { mode: "preview" }).flowData.edges,
     ).toHaveLength(1);
   });
 });

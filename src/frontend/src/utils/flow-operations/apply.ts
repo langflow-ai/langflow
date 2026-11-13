@@ -55,7 +55,7 @@ export type ApplyResult = {
   /**
    * With `inverse`: for each operation applied, the operations that undo it.
    * Undo the last operation first, each list in a call of its own, with
-   * `restoring` set.
+   * `mode: "preview"`.
    */
   inverseOperations?: FlowOperation[][];
 };
@@ -611,8 +611,8 @@ function applyUpdateNodes(state: GraphState, updates: FieldUpdate[]): Applied {
     const node = state.writableNode(update.id);
     const before = applyFieldUpdate(state, node, update, context, inverses);
     if (changed(update, before)) applied.push(update);
-    // Inverses add back every edge they take away, so restoring never cascades.
-    if (!state.options.restoring)
+    // Inverses add back every edge they take away, so preview mode never cascades.
+    if (state.options.mode !== "preview")
       for (const id of detachedEdges(state, update.id, update, before))
         detached.add(id);
   });
@@ -694,7 +694,7 @@ function applyAddEdges(state: GraphState, edges: JsonObject[]): Applied {
       );
     seen.add(id);
     const payload = clone(edge);
-    if (!state.options.restoring) checkEdge(state, payload);
+    if (state.options.mode !== "preview") checkEdge(state, payload);
     state.insertEdge(payload);
     payloads.push(payload);
   });

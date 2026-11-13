@@ -10,7 +10,7 @@ import { collectHistoryNames, type HistoryNames } from "./names";
 // Operations from the history API have literal secrets set to null. They
 // replay as they are: no rule depends on a value's JSON type.
 const FORWARD: ApplyOptions = {};
-const BACKWARD: ApplyOptions = { restoring: true };
+const BACKWARD: ApplyOptions = { mode: "preview" };
 
 /**
  * A flow's retained history, replayed so any revision can be shown.

@@ -27,16 +27,24 @@ export type FlowGraph = JsonObject & {
   edges: JsonObject[];
 };
 
+/**
+ * Which rules a batch must pass.
+ *
+ * - `strict`, the default: every rule. Operations that will be stored are
+ *   always applied in strict mode.
+ * - `preview`: apply inverses to show an earlier revision, as the history
+ *   preview does. Inverses put back a state the history already held,
+ *   whatever rules it broke (a stored flow may hold an edge into a field that
+ *   no longer exists), and they add and delete every edge they touch
+ *   explicitly. So the edge rules and the edges a removed field or output
+ *   would take with it are both skipped. Never use this for operations that
+ *   will be stored.
+ */
+export type ApplyMode = "strict" | "preview";
+
 export type ApplyOptions = {
-  /**
-   * Apply inverses. Inverses put back a state the history already held,
-   * whatever rules it broke (a stored flow may hold an edge into a field that
-   * no longer exists), and they add and delete every edge they touch
-   * explicitly. So the edge rules and the edges a removed field or output
-   * would take with it are both skipped. Never set this when applying
-   * operations that will be stored.
-   */
-  restoring?: boolean;
+  /** Which rules the batch must pass; `strict` by default. */
+  mode?: ApplyMode;
   /** Also compute each operation's inverse; see `ApplyResult`. */
   inverse?: boolean;
 };
