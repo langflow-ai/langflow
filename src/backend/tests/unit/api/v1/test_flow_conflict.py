@@ -322,8 +322,24 @@ async def test_overwrite_keeps_the_replaced_version_in_history(client: AsyncClie
     assert replaced["nodes"][0]["id"] == "n-theirs"
 
 
+@pytest.fixture
+def history_off(client):  # noqa: ARG001 - the app (and its settings) must exist first
+    """Flow history off for one test: an overwrite then archives the replaced graph as a version."""
+    from langflow.services.deps import get_settings_service
+
+    settings = get_settings_service().settings
+    original = settings.flow_history_enabled
+    settings.flow_history_enabled = False
+    yield
+    settings.flow_history_enabled = original
+
+
 async def _overwrite_a_version_written_by(client: AsyncClient, headers, author_id: uuid.UUID) -> dict:
-    """Overwrite a flow whose last save is attributed to another user, as a shared editor's is."""
+    """Overwrite a flow whose last save is attributed to another user, as a shared editor's is.
+
+    With flow history on, the history keeps the replaced graph and no version is archived.
+    These tests cover the archived version, so they use the ``history_off`` fixture.
+    """
     from langflow.services.database.models.flow.model import Flow
     from langflow.services.deps import session_scope
 
@@ -344,6 +360,7 @@ async def _overwrite_a_version_written_by(client: AsyncClient, headers, author_i
     return flow
 
 
+@pytest.mark.usefixtures("history_off")
 async def test_owner_can_recover_a_version_another_user_wrote_after_overwriting(
     client: AsyncClient, logged_in_headers, user_two
 ):
@@ -365,6 +382,7 @@ async def test_owner_can_recover_a_version_another_user_wrote_after_overwriting(
     assert archived.json()["data"]["nodes"][0]["id"] == "n-theirs"
 
 
+@pytest.mark.usefixtures("history_off")
 async def test_owner_can_delete_a_version_another_user_wrote(client: AsyncClient, logged_in_headers, user_two):
     """An entry the owner can see must also be one the owner can remove."""
     flow = await _overwrite_a_version_written_by(client, logged_in_headers, user_two.id)
@@ -378,6 +396,7 @@ async def test_owner_can_delete_a_version_another_user_wrote(client: AsyncClient
     assert remaining.json()["entries"] == []
 
 
+@pytest.mark.usefixtures("history_off")
 async def test_owner_can_pick_a_version_another_user_wrote_for_deployment(
     client: AsyncClient, logged_in_headers, user_two
 ):
