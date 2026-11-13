@@ -6,6 +6,11 @@ import type {
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
+import {
+  type MaintenancePauseQueryOptions,
+  migrationKeys,
+  useMigrationPauseQuery,
+} from "../migration";
 import type {
   RepairOutcome,
   RepairPreview,
@@ -85,17 +90,12 @@ export const useExportUpgradeReport: useMutationFunctionType<
     { ...options, retry: false },
   );
 };
-export const useUpgradeMaintenance: useQueryFunctionType<
-  undefined,
-  { maintenance: boolean; migration: boolean }
-> = (options) => {
-  const { query } = UseRequestProcessor();
-  return query(
-    ["useUpgradeMaintenance"],
-    async () => (await api.get(getURL("MAINTENANCE", { path: "status" }))).data,
-    { refetchInterval: 5000, retry: false, ...options },
-  );
-};
+export const useUpgradeMaintenance = (options?: MaintenancePauseQueryOptions) =>
+  useMigrationPauseQuery(true, {
+    refetchInterval: 5000,
+    retry: false,
+    ...options,
+  });
 export const usePreviewUpgradeRepair: useMutationFunctionType<
   undefined,
   { flow_ids: string[]; report_id: string },
@@ -137,6 +137,7 @@ export const useApplyUpgradeRepair: useMutationFunctionType<
         queryClient.invalidateQueries({
           queryKey: ["useGetUpgradeRepairOutcomes"],
         });
+        queryClient.invalidateQueries({ queryKey: migrationKeys.pause });
         options?.onSettled?.(...args);
       },
     },

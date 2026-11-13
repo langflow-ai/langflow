@@ -32,6 +32,7 @@ import {
   formatTime,
   hasStarted,
   ITEM_CODES,
+  needsDestinationSecrets,
   STEP_SLUGS,
 } from "./catalog";
 
@@ -74,7 +75,8 @@ export function CopyStep({
     .every((earlier) => ["done", "skipped"].includes(earlier.state));
   // Once the new instance runs on this data, a copy would write over what it has written since.
   const started = hasStarted(migration);
-  const offered = reached && !started;
+  const credentialsMissing = needsDestinationSecrets(migration);
+  const offered = reached && !started && !credentialsMissing;
   // The state can close the gate under a focused start button: a refused start reads it again, and so does the
   // poll. The button is then gone and the browser drops focus on <body>, so focus goes to the line in its place.
   const gate = useRef<HTMLParagraphElement>(null);
@@ -409,7 +411,9 @@ export function CopyStep({
               {t(
                 started
                   ? "settings.migration.copy.afterStart"
-                  : "settings.migration.notStarted",
+                  : credentialsMissing
+                    ? "settings.migration.dest.credentialsMissing"
+                    : "settings.migration.notStarted",
               )}
             </p>
           )}
