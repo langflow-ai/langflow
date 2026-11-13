@@ -69,9 +69,10 @@ class PopNowComponent(LCModelComponent):
         if models:
             build_config["model_name"]["options"] = [m["id"] for m in models]
             build_config["model_name"]["tooltips"] = {m["id"]: f"{m['context']:,} tokens" for m in models}
-        elif not build_config["model_name"].get("value"):
-            # Keep an existing selection when a refresh fails; only show the failure if nothing is selected.
-            build_config["model_name"]["options"] = [MODELS_LOAD_FAILED]
+            build_config["model_name"]["info"] = ""
+        elif self.api_key:
+            # Keep the selected model and existing options; report the failure on the field instead.
+            build_config["model_name"]["info"] = f"{MODELS_LOAD_FAILED}. Check your API key and refresh."
         return build_config
 
     def build_model(self) -> LanguageModel:
