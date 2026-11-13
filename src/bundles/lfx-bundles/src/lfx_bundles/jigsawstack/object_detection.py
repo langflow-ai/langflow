@@ -36,7 +36,7 @@ class JigsawStackObjectDetectionComponent(Component):
         MessageTextInput(
             name="file_store_key",
             display_name="File Store Key",
-            info="The key used to store the image on Jigsawstack File Storage. Not required if url is specified.",
+            info="The key used to store the image on JigsawStack File Storage. Not required if url is specified.",
             required=False,
             tool_mode=True,
         ),
