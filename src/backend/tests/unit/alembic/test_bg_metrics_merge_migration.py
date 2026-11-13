@@ -37,6 +37,12 @@ def test_job_metrics_and_release_have_single_head():
         "8d4c7a2e9b61",  # pragma: allowlist secret
         "9e6b2c4a7d80",  # pragma: allowlist secret
         "a8e4c2f6b901",  # pragma: allowlist secret
+        "f6a2c8e4b901",  # pragma: allowlist secret
+        "f6b9d2e4a731",  # pragma: allowlist secret
+        "c6e8a2f4b901",  # pragma: allowlist secret
+        "f5a7b9c2d4e6",  # pragma: allowlist secret
+        "e7b3d9a5c102",  # pragma: allowlist secret
+        "d7e9a1c3f5b8",  # pragma: allowlist secret
     ],
 )
 def test_job_metrics_and_release_upgrade_to_single_head(db_url, prior_revision):  # noqa: F811
@@ -66,6 +72,11 @@ def test_job_metrics_and_release_upgrade_to_single_head(db_url, prior_revision):
             assert "retired_at" in {column["name"] for column in inspector.get_columns("user")}
             assert inspector.has_table("project_replacement_operation")
             assert inspector.has_table("worker_registry")
+            assert inspector.has_table("refresh_token_session")
+            assert inspector.has_table("trigger_renewal_observation")
+            assert "approved_trigger_kinds" in {
+                column["name"] for column in inspector.get_columns("policy_bundle_revision")
+            }
             trigger_state_check = next(
                 check
                 for check in inspector.get_check_constraints("trigger_event")

@@ -5,6 +5,7 @@ from uuid import UUID
 
 from lfx.base.knowledge_bases.backends.opensearch import opensearch_env_configured
 from lfx.base.knowledge_bases.backends.postgres import postgres_env_configured, resolve_default_kb_backend
+from lfx.custom.schema import ComponentUpdateWarning
 from lfx.graph.schema import RunOutputs
 from lfx.services.settings.base import Settings
 from lfx.services.settings.feature_flags import FEATURE_FLAGS, FeatureFlags
@@ -206,6 +207,7 @@ class CustomComponentRequest(BaseModel):
 class CustomComponentResponse(BaseModel):
     data: dict
     type: str
+    warnings: list[ComponentUpdateWarning] = Field(default_factory=list)
 
 
 class UpdateCustomComponentRequest(CustomComponentRequest):

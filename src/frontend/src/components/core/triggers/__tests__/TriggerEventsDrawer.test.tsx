@@ -78,6 +78,83 @@ describe("TriggerEventsDrawer", () => {
       <TriggerEventsDrawer trigger={makeTrigger()} onOpenChange={jest.fn()} />,
     );
 
+  it.each(["job_failed", "job_cancelled", "job_timed_out"])(
+    "keeps receipt successful when flow execution ends with %s",
+    async (error) => {
+      mockEvents = [makeEvent({ id: "discord-event", state: "failed", error })];
+      open();
+
+      const row = screen.getByTestId("trigger-event-discord-event");
+      const detail = screen.getByTestId("trigger-event-detail");
+      const lineage = screen.getByTestId("trigger-event-lineage");
+      for (const surface of [row, detail, lineage]) {
+        expect(
+          within(surface).getAllByTestId("trigger-event-receipt")[0],
+        ).toHaveTextContent(/^Received$/);
+        expect(
+          within(surface).getAllByTestId("trigger-event-state")[0],
+        ).toHaveTextContent("Flow: Failed");
+      }
+      expect(detail).toHaveTextContent(
+        "The event was received successfully. Flow execution is tracked separately.",
+      );
+      expect(
+        screen.getByTestId("trigger-events-filter-failed"),
+      ).toHaveTextContent("Needs attention");
+      expect(await axe(document.body)).toHaveNoViolations();
+    },
+  );
+
+  it.each([
+    ["failed", "connection_not_authorized", "Processing: Failed"],
+    ["pending", "submit_failed:TimeoutError", "Processing: Queued"],
+    ["dead", "submit_failed:TimeoutError", "Processing: Dead-lettered"],
+    ["completed", null, "Processing: Completed"],
+    ["skipped", "sender_not_allowed", "Processing: Skipped"],
+  ] as const)(
+    "shows receipt separately when processing is %s without a flow job",
+    (state, error, status) => {
+      mockEvents = [makeEvent({ state, error, job_id: null })];
+      open();
+
+      const detail = screen.getByTestId("trigger-event-detail");
+      expect(
+        within(detail).getAllByTestId("trigger-event-receipt")[0],
+      ).toHaveTextContent(/^Received$/);
+      expect(
+        within(detail).getAllByTestId("trigger-event-state")[0],
+      ).toHaveTextContent(status);
+      expect(detail).not.toHaveTextContent("Flow: Completed");
+      expect(detail).not.toHaveTextContent("Flow: Failed");
+    },
+  );
+
+  it("shows a dispatched job as submitted without claiming execution has started", () => {
+    mockEvents = [makeEvent({ state: "dispatched" })];
+    open();
+
+    expect(
+      within(screen.getByTestId("trigger-event-detail")).getAllByTestId(
+        "trigger-event-state",
+      )[0],
+    ).toHaveTextContent("Flow: Submitted");
+  });
+
+  it("keeps an unknown processing error separate from successful receipt", () => {
+    mockEvents = [
+      makeEvent({ state: "failed", error: "unexpected_error", job_id: null }),
+    ];
+    open();
+
+    const detail = screen.getByTestId("trigger-event-detail");
+    expect(detail).toHaveTextContent("Event processing did not complete.");
+    expect(detail).toHaveTextContent("unexpected_error");
+    expect(detail).not.toHaveTextContent("The event failed.");
+    expect(
+      within(detail).getAllByTestId("trigger-event-receipt")[0],
+    ).toHaveTextContent(/^Received$/);
+  });
+
   it("shows the newest event's normalized payload and mapped error", () => {
     open();
     const detail = screen.getByTestId("trigger-event-detail");

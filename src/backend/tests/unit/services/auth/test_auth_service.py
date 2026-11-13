@@ -5,7 +5,7 @@ import hashlib
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import jwt
@@ -808,6 +808,8 @@ def test_create_user_api_key(auth_service: AuthService):
 def _login_session_db():
     """Async execution returns a synchronous SQLAlchemy result."""
     db = AsyncMock()
+    db.exec.return_value = MagicMock()
+    db.exec.return_value.first.return_value = False
     db.execute.return_value = SimpleNamespace(scalar_one_or_none=lambda: "registered-session")
     return db
 
@@ -840,6 +842,8 @@ async def test_create_user_tokens_updates_last_login(auth_service: AuthService):
     """Test that create_user_tokens updates last login when requested."""
     user_id = uuid4()
     db = _login_session_db()
+    db.exec.return_value = MagicMock()
+    db.exec.return_value.first.return_value = False
 
     with patch("langflow.services.auth.service.update_user_last_login_at", new=AsyncMock()) as mock_update:
         await auth_service.create_user_tokens(user_id, db, update_last_login=True)
@@ -3254,3 +3258,39 @@ async def test_trusted_proxy_credential_isolated_from_native_channels(
         native_auth.assert_awaited_once_with(forged_token, db)
     if external_source == "missing":
         materialize.assert_not_awaited()
+
+
+@pytest.mark.parametrize("token", [None, "token-that-errors"], ids=["api-key-only", "after-a-failed-token"])
+async def test_api_key_authentication_on_a_busy_database_is_retryable_not_a_rejection(
+    auth_service: AuthService, token: str | None
+):
+    import sqlite3
+
+    from langflow.services.auth.exceptions import AuthBackendUnavailableError
+    from sqlalchemy.exc import OperationalError
+
+    locked = OperationalError("UPDATE apikey ...", {}, sqlite3.OperationalError("database is locked"))
+    with (
+        patch.object(auth_service, "_authenticate_with_token", new=AsyncMock(side_effect=RuntimeError("token"))),
+        patch("langflow.services.auth.service.authenticate_api_key", new=AsyncMock(side_effect=locked)),
+        pytest.raises(AuthBackendUnavailableError),
+    ):
+        await auth_service.authenticate_with_credentials(
+            token=token,
+            api_key="sk-test-key",  # pragma: allowlist secret
+            db=AsyncMock(),
+        )
+
+
+async def test_api_key_authentication_still_rejects_on_an_unexpected_error(auth_service: AuthService):
+    from langflow.services.auth.exceptions import InvalidCredentialsError
+
+    with (
+        patch("langflow.services.auth.service.authenticate_api_key", new=AsyncMock(side_effect=ValueError("boom"))),
+        pytest.raises(InvalidCredentialsError),
+    ):
+        await auth_service.authenticate_with_credentials(
+            token=None,
+            api_key="sk-test-key",  # pragma: allowlist secret
+            db=AsyncMock(),
+        )

@@ -173,11 +173,27 @@
           ]
         },
         {
+          "distribution": "lfx-discord",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-discord"
+          ]
+        },
+        {
           "distribution": "lfx-jira",
           "extras": [],
           "version": ">=0.1.1,<1.0.0",
           "providers": [
             "lfx-jira"
+          ]
+        },
+        {
+          "distribution": "lfx-salesforce",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-salesforce"
           ]
         },
         {
