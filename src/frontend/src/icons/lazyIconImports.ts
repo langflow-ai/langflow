@@ -504,6 +504,10 @@ export const lazyIconsMapping = {
     import("@/icons/Streamlit").then((mod) => ({ default: mod.Streamlit })),
   Supabase: () =>
     import("@/icons/supabase").then((mod) => ({ default: mod.SupabaseIcon })),
+  Supermemory: () =>
+    import("@/icons/Supermemory").then((mod) => ({
+      default: mod.SupermemoryIcon,
+    })),
   Tavily: () =>
     import("@/icons/Tavily").then((mod) => ({ default: mod.TavilyIcon })),
   Teams: () =>

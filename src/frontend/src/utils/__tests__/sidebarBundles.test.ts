@@ -114,6 +114,18 @@ describe("SIDEBAR_BUNDLES", () => {
       ]),
     );
   });
+
+  it("classifies Supermemory as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "Supermemory",
+          icon: "Supermemory",
+          name: "supermemory",
+        }),
+      ]),
+    );
+  });
 });
 
 it("uses the Salesforce logo for its integration palette group", () => {
