@@ -8,8 +8,8 @@
 //! error as JSON text. The binding holds no rules: each function calls
 //! `lfx::ops::api`.
 
-use lfx::ops::ApplyOptions;
 use lfx::ops::api::{self, ApiError, ApiResult};
+use lfx::ops::{ApplyOptions, ReplayOptions};
 use pyo3::create_exception;
 use pyo3::exceptions::{PyException, PyTypeError, PyValueError};
 use pyo3::prelude::*;
@@ -55,32 +55,16 @@ fn optional_text<'a>(value: Option<&'a Bound<'_, PyAny>>) -> PyResult<Option<&'a
     value.filter(|value| !value.is_none()).map(text).transpose()
 }
 
-/// The apply options; `mode` is `strict` or `preview`.
-fn apply_options(
-    py: Python<'_>,
-    forward: bool,
-    backward: bool,
-    mode: &str,
-) -> PyResult<ApplyOptions> {
-    let mode = mode
-        .parse()
-        .map_err(|error: lfx::ops::Error| engine_error(py, &error.into()))?;
-    Ok(ApplyOptions {
-        forward,
-        backward,
-        mode,
-    })
-}
-
 /// Run engine work without the GIL.
 fn run<T: Send>(py: Python<'_>, work: impl FnOnce() -> ApiResult<T> + Send) -> PyResult<T> {
     py.detach(work).map_err(|error| engine_error(py, &error))
 }
 
-/// A flow graph that the engine keeps loaded, to apply many batches to it.
+/// A flow graph that the engine keeps loaded, to apply or replay many
+/// batches on it.
 ///
-/// Replay, history playback and rebase apply many batches to one graph and
-/// read it once. A refused batch changes nothing.
+/// Replay, history playback and rebase carry out many batches on one graph
+/// and read it once. A refused batch changes nothing.
 #[pyclass(module = "lfx_native")]
 #[derive(Debug)]
 struct GraphState {
@@ -97,20 +81,33 @@ impl GraphState {
         })
     }
 
-    /// Apply a batch; returns what it did as JSON.
-    #[pyo3(signature = (operations, *, forward = false, backward = false, mode = "strict"))]
+    /// Apply a batch, with every rule; returns what it did as JSON.
+    #[pyo3(signature = (operations, *, forward = false, backward = false))]
     fn apply(
         &mut self,
         py: Python<'_>,
         operations: &Bound<'_, PyAny>,
         forward: bool,
         backward: bool,
-        mode: &str,
     ) -> PyResult<String> {
         let operations = text(operations)?;
-        let options = apply_options(py, forward, backward, mode)?;
+        let options = ApplyOptions { forward, backward };
         let state = &mut self.state;
         run(py, || api::apply_to(state, operations, options))
+    }
+
+    /// Replay stored operations, with no rule; returns what it did as JSON.
+    #[pyo3(signature = (operations, *, backward = false))]
+    fn replay(
+        &mut self,
+        py: Python<'_>,
+        operations: &Bound<'_, PyAny>,
+        backward: bool,
+    ) -> PyResult<String> {
+        let operations = text(operations)?;
+        let options = ReplayOptions { backward };
+        let state = &mut self.state;
+        run(py, || api::replay_to(state, operations, options))
     }
 
     /// The graph as JSON text.
@@ -120,20 +117,33 @@ impl GraphState {
     }
 }
 
-/// Apply operations to a graph; returns `{"flow_data", ...}` as JSON.
+/// Apply operations to a graph, with every rule; returns `{"flow_data", ...}` as JSON.
 #[pyfunction]
-#[pyo3(signature = (flow, operations, *, forward = true, backward = false, mode = "strict"))]
+#[pyo3(signature = (flow, operations, *, forward = true, backward = false))]
 fn apply(
     py: Python<'_>,
     flow: &Bound<'_, PyAny>,
     operations: &Bound<'_, PyAny>,
     forward: bool,
     backward: bool,
-    mode: &str,
 ) -> PyResult<String> {
     let (flow, operations) = (text(flow)?, text(operations)?);
-    let options = apply_options(py, forward, backward, mode)?;
+    let options = ApplyOptions { forward, backward };
     run(py, || api::apply(flow, operations, options))
+}
+
+/// Replay stored operations on a graph, with no rule; returns `{"flow_data", ...}` as JSON.
+#[pyfunction]
+#[pyo3(signature = (flow, operations, *, backward = false))]
+fn replay(
+    py: Python<'_>,
+    flow: &Bound<'_, PyAny>,
+    operations: &Bound<'_, PyAny>,
+    backward: bool,
+) -> PyResult<String> {
+    let (flow, operations) = (text(flow)?, text(operations)?);
+    let options = ReplayOptions { backward };
+    run(py, || api::replay(flow, operations, options))
 }
 
 /// Parse operations and print them as the engine records them.
@@ -381,7 +391,7 @@ mod _native {
         assign_changed_node_table_row_ids, assign_changed_table_row_ids, assign_row_ids,
         assign_table_row_ids, canonical_json, derive, diff, edge_fixes, fixes_for_edges,
         graph_hash, graphs_equal, new_edge_id, new_table_row_id, node_schema, normalize_operations,
-        ordered_rows, prepare_write, repair, strip_flow_table_row_keys, strip_row_keys,
+        ordered_rows, prepare_write, repair, replay, strip_flow_table_row_keys, strip_row_keys,
         table_fields, validate, values_equal,
     };
 }

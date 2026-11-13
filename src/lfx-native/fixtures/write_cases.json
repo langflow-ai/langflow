@@ -6,7 +6,7 @@
       "rule": "save-path",
       "stored": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -23,7 +23,7 @@
       },
       "target": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str", "value": "hello"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -42,7 +42,7 @@
       "expected": {
         "base": {
           "nodes": [
-            {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+            {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
             {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
             {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
           ],
@@ -60,7 +60,7 @@
         "stored_repaired": false,
         "target": {
           "nodes": [
-            {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+            {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
             {"id": "b", "data": {"node": {"template": {"f": {"type": "str", "value": "hello"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
             {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
           ],
@@ -86,7 +86,7 @@
       "rule": "no-update-metadata",
       "stored": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -103,7 +103,7 @@
       },
       "target": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -124,7 +124,7 @@
       "expected": {
         "base": {
           "nodes": [
-            {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+            {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
             {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
             {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
           ],
@@ -142,7 +142,7 @@
         "stored_repaired": false,
         "target": {
           "nodes": [
-            {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+            {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
             {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
             {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
           ],
@@ -169,7 +169,7 @@
       "stored": null,
       "target": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -190,7 +190,7 @@
         "stored_repaired": false,
         "target": {
           "nodes": [
-            {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+            {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
             {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
             {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
           ],
@@ -210,7 +210,7 @@
           {
             "type": "add_nodes",
             "nodes": [
-              {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+              {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
               {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
               {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
             ]
@@ -237,7 +237,7 @@
       "stored": {"nodes": [{"id": "a", "data": {"node": {"template": {}}}}, {"id": "a", "data": {"node": {"template": {}}}}], "edges": null},
       "target": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -264,7 +264,7 @@
       "stored": {"nodes": [{"id": "a", "data": {"node": {"template": {}}}}, {"id": "a", "data": {"node": {"template": {}}}}], "edges": null},
       "target": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -288,7 +288,7 @@
         "stored_repaired": true,
         "target": {
           "nodes": [
-            {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+            {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
             {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
             {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
           ],
@@ -322,7 +322,7 @@
           },
           {
             "type": "update_nodes",
-            "updates": [{"id": "a", "path": ["data", "node", "outputs"], "op": "set_field", "value": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}]
+            "updates": [{"id": "a", "path": ["data", "node", "outputs"], "op": "set_field", "value": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}]
           },
           {
             "type": "add_edges",
@@ -496,7 +496,7 @@
       "rule": "repair-direct-only",
       "stored": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -504,7 +504,7 @@
       },
       "target": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],

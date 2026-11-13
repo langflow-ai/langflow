@@ -26,9 +26,9 @@
 //!   When any key of a unit changes, the whole unit is written. A new field
 //!   is one write, a removed field one delete;
 //! - keyed lists (outputs, tool actions, table rows) are written per item, at
-//!   the item's key, and per key inside an item. A natural-key list whose order
-//!   changed, and a table that is not keyed by row ids on both sides, is
-//!   written whole;
+//!   the item's key, and per key inside an item. Their order is their items'
+//!   `__pos__`, so a move is a write to `__pos__`. A list whose items do not
+//!   all carry a unique key and a position on both sides is written whole;
 //! - an edge that changed in any way is deleted and added again;
 //! - view state is never recorded, and two spellings of one handle are not a
 //!   change. Every top-level key other than `nodes` and `edges` is view
@@ -46,7 +46,7 @@ use crate::ops::error::{Error, Result};
 use crate::ops::ops::{
     AsKey, Edge, FieldUpdate, Node, NodePath, Operation, Path, PathExt, Segment,
 };
-use crate::ops::schema::{KeyedList, ListKind, NODE_SCHEMA, OUTPUTS_PATH, TEMPLATE_PATH};
+use crate::ops::schema::{KeyedList, NODE_SCHEMA, OUTPUTS_PATH, TEMPLATE_PATH};
 use crate::ops::validate::{Numbers, validate_flow_data};
 
 /// Operations that turn one graph into another, verified by replay.
@@ -440,18 +440,6 @@ fn keyed_list<'v>(
     else {
         return Ok(false);
     };
-    if keyed.kind == ListKind::Natural {
-        // A natural list's order is state; a table's order is its rows' positions.
-        let kept = base_items
-            .keys()
-            .filter(|key| target_items.contains_key(*key));
-        let added = target_items
-            .keys()
-            .filter(|key| !base_items.contains_key(*key));
-        if !target_items.keys().eq(kept.chain(added)) {
-            return Ok(false);
-        }
-    }
     for (key, item) in &target_items {
         path.push(Segment::Item((*key).to_owned()));
         match base_items.get(key) {
@@ -512,9 +500,9 @@ fn item_writes<'v>(
 
 /// A list by item key, or `None` when it cannot be written item by item.
 ///
-/// That is a list whose items do not all carry a unique key, or a table whose
-/// rows do not all carry a numeric position: such a list (a legacy table) is
-/// written whole, which brings it within the rules.
+/// That is a list whose items do not all carry a unique key and a numeric
+/// position: such a list (a legacy list) is written whole, which brings it
+/// within the rules.
 fn items_by_key<'v>(keyed: &KeyedList, items: &'v Value) -> Option<IndexMap<&'v str, &'v Value>> {
     let Value::Array(items) = items else {
         return None;
@@ -526,9 +514,7 @@ fn items_by_key<'v>(keyed: &KeyedList, items: &'v Value) -> Option<IndexMap<&'v 
         if by_key.contains_key(key) {
             return None;
         }
-        if let Some(position) = keyed.position.as_deref()
-            && !map.get(position).is_some_and(is_row_position)
-        {
+        if !map.get(&keyed.position).is_some_and(is_row_position) {
             return None;
         }
         by_key.insert(key, item);

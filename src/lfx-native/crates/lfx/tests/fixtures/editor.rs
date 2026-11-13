@@ -3,7 +3,7 @@
 use lfx::ops::canonical::graphs_equal;
 use lfx::ops::keyed::{Renumber, append_table_rows, assign_changed_table_row_ids, assign_row_ids};
 use lfx::ops::restore::{edge_fixes, fixes_for_edges};
-use lfx::ops::{ApplyOptions, GraphState, Mode, Operation};
+use lfx::ops::{ApplyOptions, GraphState, Operation, ReplayOptions};
 use libtest_mimic::{Failed, Trial};
 use serde_json::{Value, json};
 
@@ -11,7 +11,7 @@ use crate::support::{assert_json_matches, cases, compact, load, section_cases};
 
 /// Compare backward operations without the order of what they list: the ids a
 /// delete names, and the entries an add lists, are sets keyed by id.
-fn unordered(operations: &Value) -> Value {
+pub fn unordered(operations: &Value) -> Value {
     let mut operations = operations.clone();
     for operation in operations
         .as_array_mut()
@@ -58,13 +58,9 @@ fn backward_case(case: &Value) -> Result<(), Failed> {
         &unordered(&backward),
         &unordered(&case["backward"]),
     )?;
-    let restore = ApplyOptions {
-        mode: Mode::Preview,
-        ..ApplyOptions::default()
-    };
     for list in applied.backward.into_iter().rev() {
         state
-            .apply(list, restore)
+            .replay(list, ReplayOptions::default())
             .map_err(|error| format!("a backward operation is refused: {error}"))?;
     }
     let restored = state.to_value();
@@ -79,7 +75,7 @@ fn backward_case(case: &Value) -> Result<(), Failed> {
 }
 
 /// A user's undo: the backward operation lists, last first, in one batch that is
-/// applied in strict mode, under every rule.
+/// applied under every rule.
 fn undo_case(case: &Value) -> Result<(), Failed> {
     let base = &case["base"];
     let mut state = GraphState::new(base.clone()).map_err(|error| error.to_string())?;

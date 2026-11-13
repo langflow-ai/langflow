@@ -36,8 +36,8 @@ use crate::ops::keyed::{Renumber, fill_missing_positions, match_row_ids};
 use crate::ops::schema::{NODE_OBJECT_PATHS, NODE_SCHEMA};
 use crate::ops::state::resolve_mut;
 use crate::ops::validate::{
-    GraphPath, Numbers, PathPart, Resolution, ViolationCode, changed_tables, find_edge_violations,
-    validate_flow_data,
+    GraphPath, Numbers, PathPart, Resolution, ViolationCode, changed_keyed_lists, changed_tables,
+    find_edge_violations, validate_flow_data,
 };
 
 const GENERATED_ID_LENGTH: usize = 5;
@@ -143,6 +143,7 @@ pub fn repair_flow_data(flow: &Value, base: Option<&Value>) -> Result<Repaired> 
 
     if let Some(base) = base {
         repair_tables(&mut repaired, base, &mut fixes)?;
+        repair_list_positions(&mut repaired, base, &mut fixes)?;
         repair_added_edges(&mut repaired, base, &mut fixes)?;
     }
 
@@ -376,6 +377,29 @@ fn repair_tables(graph: &mut Value, base: &Value, fixes: &mut Fixes) -> Result<(
         let previous = stored.get(&(node_id.as_str(), field.as_str())).copied();
         if let Some(Value::Array(rows)) = resolve_mut(graph, &table_path) {
             repair_table(rows, &table_path, previous, fixes)?;
+        }
+    }
+    Ok(())
+}
+
+/// Give a position to every item without one in the outputs and tool action
+/// lists that `graph` adds or changes relative to `base`: the midpoint of
+/// its array neighbours' positions, as for an insert.
+fn repair_list_positions(graph: &mut Value, base: &Value, fixes: &mut Fixes) -> Result<()> {
+    let lists: Vec<GraphPath> = changed_keyed_lists(base, graph)?
+        .into_iter()
+        .map(|changed| changed.path)
+        .collect();
+    for list_path in lists {
+        let Some(Value::Array(items)) = resolve_mut(graph, &list_path) else {
+            continue;
+        };
+        for index in fill_missing_positions(items, Renumber::Never) {
+            let item_path = list_path.iter().cloned().chain([
+                index.into(),
+                NODE_SCHEMA.table_keys.position.as_str().into(),
+            ]);
+            fixes.add(ViolationCode::ListItemMissingPos, path(item_path));
         }
     }
     Ok(())
