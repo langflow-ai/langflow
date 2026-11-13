@@ -404,11 +404,15 @@ class RustGraphState:
             raise _error_from_native(error) from None
 
     def stage_json(self, operations: Any) -> list[bytes]:
-        """``stage(operations, forward_json=True)["forward_operations_json"]``, without the rest of the result."""
+        """``stage(operations, forward_json=True)["forward_operations_json"]``, without the rest of the result.
+
+        The native ``stage`` with only ``forward_json`` returns just that list, so no other part is built.
+        """
         try:
-            return self._state.stage_json(operations)
+            result = self._state.stage(operations, forward_json=True)
         except _native().EngineError as error:
             raise _error_from_native(error) from None
+        return result.get("forward_operations_json") or []
 
     def keep(self) -> None:
         self._state.keep()

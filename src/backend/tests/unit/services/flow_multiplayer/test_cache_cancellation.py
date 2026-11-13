@@ -37,7 +37,7 @@ def _value(state: Any) -> str:
 
 
 class SlowState:
-    """A GraphState whose replay and stage take SLOW seconds first, to cancel the caller meanwhile."""
+    """A GraphState whose replay and stages take SLOW seconds first, to cancel the caller meanwhile."""
 
     def __init__(self, state: Any) -> None:
         self._state = state
@@ -49,6 +49,10 @@ class SlowState:
     def stage(self, *args: Any, **kwargs: Any) -> Any:
         time.sleep(SLOW)
         return self._state.stage(*args, **kwargs)
+
+    def stage_json(self, *args: Any, **kwargs: Any) -> Any:
+        time.sleep(SLOW)
+        return self._state.stage_json(*args, **kwargs)
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._state, name)
