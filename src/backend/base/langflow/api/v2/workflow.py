@@ -108,6 +108,7 @@ from langflow.services.deps import (
 )
 from langflow.services.jobs.exceptions import DuplicateJobError
 from langflow.services.warm_registry.resolver import resolve_warm_flow_for_execution
+from langflow.utils.constants import LANGFLOW_GLOBAL_VAR_HEADER_PREFIX
 
 # Finished states a late /stop must not rewrite (CANCELLED is handled separately
 # with its own idempotent early return).
@@ -202,6 +203,33 @@ async def resolve_flow_for_execution(flow_id: str, current_user: UserRead):
                 "flow_id": str(flow_id),
             },
         ) from err
+
+
+def reject_legacy_global_var_headers(http_request: Request) -> None:
+    """Router guard (langflow backend only): 400 on legacy ``X-LANGFLOW-GLOBAL-VAR-*`` headers.
+
+    v2 froze body ``globals`` as the only request-level variable transport for GA.
+    Dropping the old header merge on its own would be silent: nothing on the v2
+    path reads the prefix any more, so resolution falls through to the stored DB
+    variable and a caller who believes they are overriding a credential per
+    request would run against the flow owner's stored key with no signal. Reject
+    instead, and point at the replacement. Injected on the shared run endpoint so
+    sync, stream and background all reject (the old merge only fired on sync).
+    """
+    for header_name in http_request.headers:
+        if header_name.lower().startswith(LANGFLOW_GLOBAL_VAR_HEADER_PREFIX):
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "Legacy header transport not supported",
+                    "code": "LEGACY_GLOBAL_VAR_HEADER",
+                    "message": (
+                        "The X-LANGFLOW-GLOBAL-VAR-* header transport is no longer supported on the v2 "
+                        'workflow API. Pass request-level variables in the JSON body under "globals" '
+                        "(applied in sync mode only) instead."
+                    ),
+                },
+            )
 
 
 async def authorize_flow_action(

@@ -1,5 +1,5 @@
 ---
-title: Workflow API (Beta)
+title: Workflow API
 slug: /workflow-api
 ---
 import CodeBlock from '@theme/CodeBlock';
@@ -27,9 +27,14 @@ import TabItem from '@theme/TabItem';
 import Icon from "@site/src/components/icon";
 import PartialAPISetup from '@site/docs/_partial-api-setup.mdx';
 
-:::warning Beta Feature
-The Workflow API is currently in **Beta**.
-The API endpoints and response formats may change in future releases.
+:::info Stability
+The Workflow API is generally available as of Langflow 1.14. The following contract is frozen:
+
+- A `sync` response, and a completed `background` result, carry `outputs` and `session_id`. `stream` mode delivers events; a `background` submit returns a `job_id`.
+- `stream_protocol` is validated against the registered stream adapters; an unknown value returns `422`.
+- The background job routes are `GET` status, `POST /stop`, and `GET /{job_id}/events`.
+
+Request-level variables are passed in the body `globals` field only. Changes after GA are additive.
 :::
 
 The Workflow API provides programmatic access to execute Langflow workflows in `sync`, `stream`, or `background` modes.
@@ -489,8 +494,7 @@ Use `globals` when values are large, shared across runs, or would exceed HTTP he
 [Tweaks](#component-tweaks) are better suited for one-off component overrides.
 `globals` is keyed by variable name and not component ID, so it stays stable when the UI regenerates node IDs when importing flows.
 
-`globals` is honored in **sync mode only**; stream and background runs ignore it.
-The Workflow API is in **Beta**, and this transport may continue to evolve.
+`globals` is honored in **sync mode only**; `stream` and `background` requests that include it are rejected with **422** (`MODE_UNSUPPORTED_FIELDS`) rather than silently dropping it.
 
 ### Use a stable name in the UI and then pass it in `globals`
 
@@ -517,16 +521,7 @@ curl -X POST "http://localhost:7860/api/v2/workflows" \
   }'
 ```
 
-<details>
-<summary>Legacy: `X-LANGFLOW-GLOBAL-VAR-*` headers (Workflow API, sync mode only)</summary>
-
-If you integrated against an earlier Workflow API preview, `X-LANGFLOW-GLOBAL-VAR-*` headers still work for **sync** runs on `POST /api/v2/workflows`. The server merges them with body `globals`; when the same key is sent both ways, the body value wins.
-
-Prefer the `globals` body field for new integrations. Header-based globals may be removed in a future release.
-
-This note applies to the **Workflow API only**. The v1 [`/run`](/api-flows-run) and [`/responses`](/api-openai-responses) endpoints still document `X-LANGFLOW-GLOBAL-VAR-*` headers as their normal transport for request-level variables.
-
-</details>
+The v2 Workflow API accepts request-level variables only in the body `globals` field. A request that sends the legacy `X-LANGFLOW-GLOBAL-VAR-*` headers is rejected with `400`. The v1 [`/run`](/api-flows-run) and [`/responses`](/api-openai-responses) endpoints still accept `X-LANGFLOW-GLOBAL-VAR-*` headers as their normal transport for request-level variables.
 
 ## Component tweaks {#component-tweaks}
 

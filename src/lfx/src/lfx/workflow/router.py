@@ -446,6 +446,7 @@ def create_workflow_router(
     developer_api_guard: bool = True,
     auto_register_job_routes: bool = True,
     responses: dict | None = None,
+    extra_dependencies: list | None = None,
 ) -> APIRouter:
     """Build the v2 workflow router bound to ``host``.
 
@@ -475,8 +476,15 @@ def create_workflow_router(
     ``/workflows`` surface never carried a developer-API gate (byte-identical to
     today's behavior). Bare ``lfx serve`` also has no settings service to read,
     so the guard could not run there anyway.
+
+    ``extra_dependencies`` are appended to the router's dependency list, so each
+    runs on every route the factory registers. Host-independent on purpose: the
+    langflow backend injects its legacy-header reject guard here (so sync, stream
+    and background all reject through the one shared run endpoint) while bare
+    ``lfx serve`` passes nothing and its surface stays byte-identical.
     """
     dependencies = [Depends(check_developer_api_enabled)] if developer_api_guard else []
+    dependencies += list(extra_dependencies or [])
     router = APIRouter(prefix=prefix, tags=list(tags), dependencies=dependencies)
 
     @router.post(

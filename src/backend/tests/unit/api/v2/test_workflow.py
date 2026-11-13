@@ -47,6 +47,31 @@ class TestWorkflowDeveloperAPIProtection:
         assert "550e8400-e29b-41d4-a716-446655440001" in result["detail"]["job_id"]
         assert "This endpoint is not available" not in response.text
 
+    async def test_run_rejects_legacy_global_var_header(
+        self,
+        client: AsyncClient,
+        created_api_key,
+    ):
+        """GA: a v2 run carrying a legacy X-LANGFLOW-GLOBAL-VAR-* header is rejected at the router.
+
+        Hits the mounted route so the injected guard dependency is exercised, not
+        just the guard function in isolation. The guard runs before the flow is
+        fetched, so a non-existent flow_id still 400s on the header.
+        """
+        headers = {
+            "x-api-key": created_api_key.api_key,
+            "X-LANGFLOW-GLOBAL-VAR-OPENAI_API_KEY": "sk-should-not-be-accepted",  # pragma: allowlist secret
+        }
+        response = await client.post(
+            "api/v2/workflows",
+            json={"flow_id": str(uuid4()), "mode": "sync", "input_value": "hi"},
+            headers=headers,
+        )
+
+        assert response.status_code == 400
+        assert "globals" in response.text
+        assert "sk-should-not-be-accepted" not in response.text
+
     async def test_stop_workflow_allowed_when_dev_api_enabled_job_not_found(
         self,
         client: AsyncClient,
