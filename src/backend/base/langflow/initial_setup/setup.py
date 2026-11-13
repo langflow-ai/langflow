@@ -1495,7 +1495,7 @@ async def initialize_auto_login_default_superuser() -> None:
     # provided one; otherwise generate an unknown password for the default user.
     from lfx.services.settings.constants import DEFAULT_SUPERUSER
 
-    from langflow.services.database.models.user.crud import get_user_by_username
+    from langflow.services.database.models.user.crud import get_user_by_username_case_insensitive
     from langflow.services.utils import get_auto_login_superuser_password, get_or_create_super_user
 
     username = settings_service.auth_settings.SUPERUSER or DEFAULT_SUPERUSER
@@ -1510,10 +1510,11 @@ async def initialize_auto_login_default_superuser() -> None:
             rotate_legacy_default_password=True,
         )
         if super_user is None:
-            super_user = await get_user_by_username(async_session, username)
+            super_user = await get_user_by_username_case_insensitive(async_session, username)
         if super_user is None or not super_user.is_superuser:
             msg = "Auto-login superuser was not initialized."
             raise RuntimeError(msg)
+        settings_service.auth_settings.SUPERUSER = super_user.username
         await get_variable_service().initialize_user_variables(super_user.id, async_session)
         # Initialize agentic variables if agentic experience is enabled
         from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_user_variables
