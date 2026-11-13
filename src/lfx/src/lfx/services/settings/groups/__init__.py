@@ -12,6 +12,7 @@ from lfx.services.settings.groups.cache import CacheSettings
 from lfx.services.settings.groups.components import ComponentsSettings
 from lfx.services.settings.groups.database import DatabaseSettings
 from lfx.services.settings.groups.evals import EvalsSettings
+from lfx.services.settings.groups.flow_history import FlowHistorySettings
 from lfx.services.settings.groups.mcp import McpSettings
 from lfx.services.settings.groups.observability import ObservabilitySettings
 from lfx.services.settings.groups.paths import PathSettings
@@ -28,6 +29,7 @@ __all__ = [
     "ComponentsSettings",
     "DatabaseSettings",
     "EvalsSettings",
+    "FlowHistorySettings",
     "McpSettings",
     "ObservabilitySettings",
     "PathSettings",

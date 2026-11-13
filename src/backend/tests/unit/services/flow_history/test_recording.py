@@ -1,0 +1,789 @@
+"""Graph writes record ordered, attributed, gap-free operation history."""
+
+from __future__ import annotations
+
+import asyncio
+import copy
+import json
+from pathlib import Path
+from typing import TYPE_CHECKING
+from uuid import UUID, uuid4
+
+import langflow.initial_setup
+import pytest
+from fastapi import status
+from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow_operation import FlowOperation
+from langflow.services.database.models.flow_version.model import FlowVersion
+from langflow.services.deps import get_settings_service, session_scope
+from langflow.services.flow_history.envelope import decode_row
+from langflow.services.flow_history.replay import reconstruct_graph
+from lfx.services.flow_operations import graphs_equal
+from lfx.services.flow_operations.edge_rules import escape_handle
+from sqlalchemy import Uuid, bindparam, text
+from sqlmodel import col, select
+
+if TYPE_CHECKING:
+    from httpx import AsyncClient
+
+
+def _node(node_id: str, value: str = "hi", **extra) -> dict:
+    return {
+        "id": node_id,
+        "type": "genericNode",
+        "position": {"x": 0, "y": 0},
+        "data": {
+            "id": node_id,
+            "type": "Prompt",
+            "node": {
+                "display_name": f"Prompt {node_id}",
+                "template": {"text": {"name": "text", "type": "str", "value": value}},
+                "outputs": [{"name": "out"}],
+            },
+        },
+        **extra,
+    }
+
+
+def _edge(edge_id: str, source: str, target: str) -> dict:
+    """An edge from ``source``'s output to ``target``'s text field, with both forms of its handles."""
+    source_handle = {"id": source, "name": "out"}
+    target_handle = {"fieldName": "text", "id": target}
+    return {
+        "id": edge_id,
+        "source": source,
+        "target": target,
+        "sourceHandle": escape_handle(source_handle),
+        "targetHandle": escape_handle(target_handle),
+        "data": {"sourceHandle": source_handle, "targetHandle": target_handle},
+    }
+
+
+def _graph(*nodes: dict, edges: list[dict] | None = None) -> dict:
+    return {"nodes": list(nodes), "edges": edges or [], "viewport": {"x": 0, "y": 0, "zoom": 1}}
+
+
+async def _create_flow(client: AsyncClient, headers: dict, data: dict | None = None) -> dict:
+    payload = {"name": f"history-{uuid4().hex[:8]}", "data": data if data is not None else _graph()}
+    response = await client.post("api/v1/flows/", json=payload, headers=headers)
+    assert response.status_code == status.HTTP_201_CREATED, response.text
+    return response.json()
+
+
+async def _patch(client: AsyncClient, headers: dict, flow_id: str, **body):
+    return await client.patch(f"api/v1/flows/{flow_id}", json=body, headers=headers)
+
+
+async def _rows(flow_id: str) -> list[FlowOperation]:
+    async with session_scope() as session:
+        statement = (
+            select(FlowOperation)
+            .where(FlowOperation.flow_id == UUID(flow_id))
+            .order_by(col(FlowOperation.start_revision))
+        )
+        return list((await session.exec(statement)).all())
+
+
+async def _checkpoints(flow_id: str) -> list[FlowVersion]:
+    async with session_scope() as session:
+        statement = select(FlowVersion).where(
+            FlowVersion.flow_id == UUID(flow_id), col(FlowVersion.version_number).is_(None)
+        )
+        return list((await session.exec(statement)).all())
+
+
+async def _flow(flow_id: str) -> Flow:
+    async with session_scope() as session:
+        return await session.get(Flow, UUID(flow_id))
+
+
+async def _reconstruct(flow_id: str, revision: int) -> dict:
+    async with session_scope() as session:
+        flow = await session.get(Flow, UUID(flow_id))
+        return copy.deepcopy(
+            await reconstruct_graph(
+                session, flow.id, revision, latest_revision=flow.latest_revision, verify_anchor=True
+            )
+        )
+
+
+def _assert_contiguous(rows: list[FlowOperation]) -> None:
+    expected = 1
+    for row in rows:
+        assert row.start_revision == expected
+        operations = decode_row(row)
+        assert [operation.revision for operation in operations] == list(range(row.start_revision, row.end_revision + 1))
+        expected = row.end_revision + 1
+
+
+@pytest.fixture
+def row_limits():
+    settings = get_settings_service().settings
+    original = (settings.flow_op_log_row_ops_limit, settings.flow_op_log_row_bytes_limit)
+    yield settings
+    settings.flow_op_log_row_ops_limit, settings.flow_op_log_row_bytes_limit = original
+
+
+async def test_first_graph_edit_starts_history_and_records_attributed_operations(
+    client: AsyncClient, logged_in_headers, active_user
+):
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+    target = _graph(_node("a", "hello"), _node("b"), edges=[_edge("e", "a", "b")])
+
+    response = await _patch(client, logged_in_headers, flow["id"], data=target)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    history = response.json()["history"]
+    assert history["start_revision"] == 1
+    assert history["end_revision"] == 3  # add_nodes, update_nodes, add_edges
+    assert history["latest_revision"] == history["current_revision"] == 3
+    assert response.json()["latest_revision"] == 3
+
+    (checkpoint,) = await _checkpoints(flow["id"])
+    assert checkpoint.operation_revision == 0
+    assert graphs_equal(checkpoint.data, _graph(_node("a")))
+
+    (row,) = await _rows(flow["id"])
+    operations = decode_row(row)
+    assert [operation.operation.type for operation in operations] == ["add_nodes", "update_nodes", "add_edges"]
+    assert {operation.actor_user_id for operation in operations} == {active_user.id}
+    assert len({operation.request_id for operation in operations}) == 1
+    assert row.actor_user_ids == [str(active_user.id)]
+    assert row.request_ids == [str(operations[0].request_id)]
+
+
+async def test_a_changed_edge_records_a_delete_and_an_add(client: AsyncClient, logged_in_headers):
+    edge = _edge("e", "a", "b")
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a"), _node("b"), edges=[edge]))
+    changed = {**edge, "data": {**edge["data"], "note": "rewired"}}
+
+    response = await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a"), _node("b"), edges=[changed]))
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    (row,) = await _rows(flow["id"])
+    operations = decode_row(row)
+    assert [operation.operation.type for operation in operations] == ["delete_edges", "add_edges"]
+
+
+async def test_every_revision_reconstructs_its_graph(client: AsyncClient, logged_in_headers):
+    states = [
+        _graph(_node("a")),
+        _graph(_node("a"), _node("b")),
+        _graph(_node("a"), _node("b"), edges=[_edge("e", "a", "b")]),
+        _graph(_node("b", "changed")),
+    ]
+    flow = await _create_flow(client, logged_in_headers, states[0])
+    revisions = [0]
+    for state in states[1:]:
+        response = await _patch(client, logged_in_headers, flow["id"], data=state)
+        assert response.status_code == status.HTTP_200_OK, response.text
+        revisions.append(response.json()["history"]["end_revision"])
+
+    for revision, state in zip(revisions, states, strict=True):
+        assert graphs_equal(await _reconstruct(flow["id"], revision), state)
+    _assert_contiguous(await _rows(flow["id"]))
+
+
+async def test_writes_that_change_no_graph_record_nothing(client: AsyncClient, logged_in_headers):
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+    reordered_with_view_state = _graph(_node("a", selected=True))
+    reordered_with_view_state["viewport"] = {"x": 9, "y": 9, "zoom": 2}
+
+    renamed = await _patch(client, logged_in_headers, flow["id"], name="renamed")
+    unchanged = await _patch(client, logged_in_headers, flow["id"], data=reordered_with_view_state)
+
+    assert renamed.json()["history"] is None
+    assert unchanged.json()["history"] is None
+    assert await _rows(flow["id"]) == []
+    # No revision was recorded, so history has not started either.
+    assert await _checkpoints(flow["id"]) == []
+    assert (await _flow(flow["id"])).latest_revision == 0
+
+
+async def test_a_starter_project_saved_back_records_nothing_and_an_edit_records_only_itself(
+    client: AsyncClient, logged_in_headers
+):
+    """What the editor sends for an opened flow: the canvas as shown, then one edit.
+
+    View state, display-only template keys the editor refreshes, and handle
+    spelling are not changes, so saving an opened flow back records nothing,
+    and a first edit records only the edited field's value unit.
+    """
+    path = Path(langflow.initial_setup.__file__).parent / "starter_projects" / "Basic Prompting.json"
+    starter = json.loads(path.read_text())["data"]
+    flow = await _create_flow(client, logged_in_headers, starter)
+
+    unedited = copy.deepcopy(starter)
+    unedited["viewport"] = {"x": 7, "y": 8, "zoom": 0.5}
+    for node in unedited["nodes"]:
+        node["selected"] = True
+        node["data"]["node"]["last_updated"] = "2026-10-03T00:00:00Z"
+        for field in node["data"]["node"]["template"].values():
+            if isinstance(field, dict):
+                field["info"] = "refreshed help text"
+    for edge in unedited["edges"]:
+        edge.update(selected=True, animated=True)
+        # Respelled the way the editor writes handles: compact keys, sorted.
+        for key in ("sourceHandle", "targetHandle"):
+            value = json.loads(edge[key].replace("\u0153", '"'))
+            edge[key] = json.dumps(value, separators=(",", ":"), sort_keys=True).replace('"', "\u0153")
+    response = await _patch(client, logged_in_headers, flow["id"], data=unedited)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.json()["history"] is None
+    assert await _rows(flow["id"]) == []
+
+    edited = copy.deepcopy(unedited)
+    chat_input = next(node for node in edited["nodes"] if node["data"]["type"] == "ChatInput")
+    chat_input["data"]["node"]["template"]["input_value"]["value"] = "Hello there"
+    response = await _patch(client, logged_in_headers, flow["id"], data=edited)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    (row,) = await _rows(flow["id"])
+    (recorded,) = decode_row(row)
+    assert recorded.operation.type == "update_nodes"
+    unit = sorted(
+        key
+        for key in ("value", "load_from_db", "file_path", "_connection_mode")
+        if key in chat_input["data"]["node"]["template"]["input_value"]
+    )
+    assert sorted(list(update.path) for update in recorded.operation.updates) == [
+        ["data", "node", "template", "input_value", key] for key in unit
+    ]
+    assert {update.id for update in recorded.operation.updates} == {chat_input["id"]}
+
+
+async def test_a_retried_save_records_once_without_a_request_id(client: AsyncClient, logged_in_headers):
+    """The retry of a save whose response was lost carries the graph already stored."""
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+    body = {"data": _graph(_node("a", "hello"))}
+    headers = {**logged_in_headers, "If-Match": flow["version_token"]}
+
+    first = await client.patch(f"api/v1/flows/{flow['id']}", json=body, headers=headers)
+    retry = await client.patch(f"api/v1/flows/{flow['id']}", json=body, headers=headers)
+
+    assert first.status_code == status.HTTP_200_OK, first.text
+    assert retry.status_code == status.HTTP_200_OK, retry.text
+    assert retry.json()["history"] is None
+    assert retry.json()["version_token"] == first.json()["version_token"]
+    assert len(await _rows(flow["id"])) == 1
+
+
+async def test_each_write_names_its_own_batch(client: AsyncClient, logged_in_headers):
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+
+    await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a", "x")))
+    await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a", "y")))
+
+    first, second = await _rows(flow["id"])
+    assert len(first.request_ids) == len(second.request_ids) == 1
+    assert UUID(first.request_ids[0]) != UUID(second.request_ids[0])
+
+
+async def test_a_write_cause_is_recorded_on_every_operation_of_that_write(client: AsyncClient, logged_in_headers):
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+    target = _graph(_node("a", "hello"), _node("b"), edges=[_edge("e", "a", "b")])
+
+    caused = await _patch(client, logged_in_headers, flow["id"], data=target, cause="upgrade_component")
+    plain = await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a", "bye"), _node("b")))
+
+    assert caused.status_code == plain.status_code == status.HTTP_200_OK
+    operations = [operation for row in await _rows(flow["id"]) for operation in decode_row(row)]
+    first = caused.json()["history"]
+    by_write = {
+        "caused": [op for op in operations if first["start_revision"] <= op.revision <= first["end_revision"]],
+        "plain": [op for op in operations if op.revision > first["end_revision"]],
+    }
+    assert len(by_write["caused"]) == 3
+    assert {op.cause for op in by_write["caused"]} == {"upgrade_component"}
+    assert by_write["plain"]
+    assert {op.cause for op in by_write["plain"]} == {None}
+    stored = [
+        element for row in await _rows(flow["id"]) for batch in row.ops["batches"] for element in batch["operations"]
+    ]
+    assert all("cause" not in element for element in stored if element["revision"] > first["end_revision"])
+
+
+async def test_an_overlong_cause_is_rejected(client: AsyncClient, logged_in_headers):
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+
+    response = await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a", "x")), cause="x" * 65)
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert await _rows(flow["id"]) == []
+    accepted = await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a", "x")), cause="x" * 64)
+    assert accepted.status_code == status.HTTP_200_OK, accepted.text
+
+
+def _table_node(node_id: str, rows: list[dict]) -> dict:
+    node = _node(node_id)
+    node["data"]["node"]["template"]["headers"] = {
+        "name": "headers",
+        "type": "table",
+        "_input_type": "TableInput",
+        "value": rows,
+    }
+    return node
+
+
+async def test_a_table_the_write_adds_needs_row_ids_or_a_repair(client: AsyncClient, logged_in_headers):
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+    without_ids = _graph(_node("a"), _table_node("t", [{"key": "Accept", "value": "json"}]))
+
+    refused = await _patch(client, logged_in_headers, flow["id"], data=without_ids)
+
+    assert refused.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    detail = refused.json()["detail"]
+    assert detail["graph"] == "submitted"
+    assert {violation["code"] for violation in detail["violations"]} == {
+        "TABLE_ROW_ID_MISSING",
+        "TABLE_ROW_POS_INVALID",
+    }
+
+    repaired = await _patch(client, logged_in_headers, flow["id"], data=without_ids, repair_invalid_graph=True)
+
+    assert repaired.status_code == status.HTTP_200_OK, repaired.text
+    (row,) = (await _flow(flow["id"])).data["nodes"][1]["data"]["node"]["template"]["headers"]["value"]
+    assert row["key"] == "Accept"
+    assert row["__id__"]
+    assert row["__pos__"]
+
+
+async def test_a_table_column_named_after_a_row_key_is_refused_even_with_a_repair(
+    client: AsyncClient, logged_in_headers
+):
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+    table = _table_node("t", [{"__id__": "r1", "__pos__": 1, "key": "Accept"}])
+    table["data"]["node"]["template"]["headers"]["table_schema"] = [{"name": "key"}, {"name": "__id__"}]
+
+    for repair in (False, True):
+        refused = await _patch(client, logged_in_headers, flow["id"], data=_graph(table), repair_invalid_graph=repair)
+
+        assert refused.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        (violation,) = refused.json()["detail"]["violations"]
+        assert violation["code"] == "TABLE_COLUMN_RESERVED"
+        assert violation["resolution"] == "manual"
+    assert await _rows(flow["id"]) == []
+
+
+async def test_an_unchanged_legacy_table_is_accepted(client: AsyncClient, logged_in_headers):
+    legacy = _table_node("t", [{"key": "Accept", "value": "json"}])
+    flow = await _create_flow(client, logged_in_headers, _graph(legacy))
+    edited = copy.deepcopy(legacy)
+    edited["data"]["node"]["template"]["text"]["value"] = "changed"
+
+    response = await _patch(client, logged_in_headers, flow["id"], data=_graph(edited))
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+
+
+async def test_rows_respect_the_operation_count_limit(client: AsyncClient, logged_in_headers, row_limits):
+    row_limits.flow_op_log_row_ops_limit = 2
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a"), _node("gone")))
+    target = _graph(_node("a", "changed"), _node("b"), edges=[_edge("e", "a", "b")])
+
+    await _patch(client, logged_in_headers, flow["id"], data=target)
+
+    rows = await _rows(flow["id"])
+    assert [(row.start_revision, row.end_revision) for row in rows] == [(1, 2), (3, 4)]
+    _assert_contiguous(rows)
+    assert all(row.request_ids == rows[0].request_ids for row in rows)
+    assert len(rows[0].request_ids) == 1
+    assert graphs_equal(await _reconstruct(flow["id"], 4), target)
+
+
+async def test_a_large_paste_is_split_across_rows_by_size(client: AsyncClient, logged_in_headers, row_limits):
+    row_limits.flow_op_log_row_bytes_limit = 2048
+    flow = await _create_flow(client, logged_in_headers, _graph())
+    pasted = [_node(f"n{index}", "x" * 300) for index in range(6)]
+
+    response = await _patch(client, logged_in_headers, flow["id"], data=_graph(*pasted))
+
+    history = response.json()["history"]
+    rows = await _rows(flow["id"])
+    assert len(rows) > 1
+    _assert_contiguous(rows)
+    operations = [operation for row in rows for operation in decode_row(row)]
+    assert {operation.operation.type for operation in operations} == {"add_nodes"}
+    assert sum(len(operation.operation.nodes) for operation in operations) == len(pasted)
+    assert history["end_revision"] - history["start_revision"] + 1 == len(operations)
+    assert graphs_equal(await _reconstruct(flow["id"], history["end_revision"]), _graph(*pasted))
+
+
+async def test_an_out_of_band_edit_is_refused_until_repair_is_requested(client: AsyncClient, logged_in_headers):
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+    await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a", "recorded")))
+    async with session_scope() as session:
+        stored = await session.get(Flow, UUID(flow["id"]))
+        stored.data = _graph(_node("a", "edited behind the API's back"))
+        session.add(stored)
+
+    refused = await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a", "next")))
+
+    assert refused.status_code == status.HTTP_409_CONFLICT
+    assert refused.json()["detail"]["code"] == "FLOW_REVISION_MISMATCH"
+    assert refused.json()["detail"]["current_revision"] == 1
+    assert len(await _rows(flow["id"])) == 1
+
+    repaired = await _patch(
+        client, logged_in_headers, flow["id"], data=_graph(_node("a", "next")), repair_revision_mismatch=True
+    )
+
+    assert repaired.status_code == status.HTTP_200_OK, repaired.text
+    assert repaired.json()["history"]["flow_repaired"] is True
+    assert repaired.json()["history"]["start_revision"] == 2
+    # The write was applied to the recorded graph, not to the out-of-band edit.
+    (_, second) = await _rows(flow["id"])
+    (update,) = decode_row(second)
+    assert update.operation.updates[0].value == "next"
+    assert graphs_equal(await _reconstruct(flow["id"], 2), _graph(_node("a", "next")))
+
+
+async def test_a_submitted_graph_that_breaks_the_rules_is_refused_or_repaired(client: AsyncClient, logged_in_headers):
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+    broken = _graph(_node("a"), _node("a"), edges=[_edge("e", "a", "missing")])
+
+    refused = await _patch(client, logged_in_headers, flow["id"], data=broken)
+
+    assert refused.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    detail = refused.json()["detail"]
+    assert detail["code"] == "FLOW_GRAPH_INVALID"
+    assert detail["graph"] == "submitted"
+    assert {violation["code"] for violation in detail["violations"]} == {"NODE_ID_DUPLICATE", "EDGE_ENDPOINT_INVALID"}
+    assert await _rows(flow["id"]) == []
+
+    repaired = await _patch(client, logged_in_headers, flow["id"], data=broken, repair_invalid_graph=True)
+
+    assert repaired.status_code == status.HTTP_200_OK, repaired.text
+    fixes = repaired.json()["history"]["graph_repairs"]
+    assert {(fix["graph"], fix["code"]) for fix in fixes} == {
+        ("submitted", "NODE_ID_DUPLICATE"),
+        ("submitted", "EDGE_ENDPOINT_INVALID"),
+    }
+    stored = await _flow(flow["id"])
+    assert len(stored.data["nodes"]) == 2
+    assert stored.data["edges"] == []
+
+
+# JSON text for a node value that the engine refuses as it reads it, as the
+# Rust engine's parser does: the node's value is level 8 of the graph's nesting.
+JSON_LIMIT_VALUES = {
+    "a lone surrogate": '"\\ud800"',
+    "nesting 128 levels deep": "[" * 121 + "]" * 121,
+}
+
+
+def _body_with_value(value_json: str, **fields) -> str:
+    """A request body whose graph holds one node with ``value_json`` as its value, as raw JSON text."""
+    body = json.dumps({**fields, "data": _graph(_node("a", "VALUE"))})
+    return body.replace('"VALUE"', value_json)
+
+
+@pytest.mark.parametrize("value_json", JSON_LIMIT_VALUES.values(), ids=JSON_LIMIT_VALUES.keys())
+async def test_a_graph_that_breaks_a_json_limit_is_refused_even_with_a_repair(
+    client: AsyncClient, logged_in_headers, value_json
+):
+    headers = {**logged_in_headers, "Content-Type": "application/json"}
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+
+    for repair in (False, True):
+        body = _body_with_value(value_json, repair_invalid_graph=repair)
+        refused = await client.patch(f"api/v1/flows/{flow['id']}", content=body, headers=headers)
+
+        assert refused.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, refused.text
+        detail = refused.json()["detail"]
+        assert detail["code"] == "FLOW_GRAPH_INVALID"
+        assert detail["graph"] == "submitted"
+        assert detail["violations"] == []
+        assert detail["message"].startswith("The submitted flow data is not valid JSON: ")
+    assert await _rows(flow["id"]) == []
+    assert (await _flow(flow["id"])).data["nodes"][0]["data"]["node"]["template"]["text"]["value"] == "hi"
+
+
+async def test_a_stored_graph_that_breaks_a_json_limit_refuses_the_first_edit(client: AsyncClient, logged_in_headers):
+    # Creating a flow refuses such a graph, so only a flow stored before that, or
+    # edited in the database, holds one; its history starts at the first edit.
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+    async with session_scope() as session:
+        stored = await session.get(Flow, UUID(flow["id"]))
+        stored.data = json.loads(_body_with_value(JSON_LIMIT_VALUES["nesting 128 levels deep"]))["data"]
+        session.add(stored)
+
+    refused = await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a", "next")))
+
+    assert refused.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, refused.text
+    detail = refused.json()["detail"]
+    assert (detail["code"], detail["graph"], detail["violations"]) == ("FLOW_GRAPH_INVALID", "stored", [])
+
+
+async def test_a_stored_graph_that_breaks_the_rules_is_repaired_keeping_the_original(
+    client: AsyncClient, logged_in_headers
+):
+    legacy = _graph(_node("a"), edges=[_edge("dangling", "a", "gone")])
+    flow = await _create_flow(client, logged_in_headers, legacy)
+
+    refused = await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a", "edited")))
+
+    assert refused.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert refused.json()["detail"]["graph"] == "stored"
+
+    repaired = await _patch(
+        client, logged_in_headers, flow["id"], data=_graph(_node("a", "edited")), repair_invalid_graph=True
+    )
+
+    assert repaired.status_code == status.HTTP_200_OK, repaired.text
+    assert [fix["graph"] for fix in repaired.json()["history"]["graph_repairs"]] == ["stored"]
+    (checkpoint,) = await _checkpoints(flow["id"])
+    assert checkpoint.data["edges"] == []
+
+    versions = (await client.get(f"api/v1/flows/{flow['id']}/versions/", headers=logged_in_headers)).json()["entries"]
+    (original,) = versions
+    assert original["view_only"] is True
+    detail = (
+        await client.get(f"api/v1/flows/{flow['id']}/versions/{original['id']}", headers=logged_in_headers)
+    ).json()
+    assert graphs_equal(detail["data"], legacy)
+
+    restore = await client.post(
+        f"api/v1/flows/{flow['id']}/versions/{original['id']}/activate", headers=logged_in_headers
+    )
+    assert restore.status_code == status.HTTP_409_CONFLICT
+
+
+async def test_a_flow_without_data_starts_history_from_an_empty_graph(client: AsyncClient, logged_in_headers):
+    response = await client.post("api/v1/flows/", json={"name": f"empty-{uuid4().hex[:6]}"}, headers=logged_in_headers)
+    flow = response.json()
+
+    written = await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a")))
+
+    assert written.status_code == status.HTTP_200_OK, written.text
+    assert graphs_equal(await _reconstruct(flow["id"], 0), {"nodes": [], "edges": []})
+
+
+async def test_put_upsert_records_history(client: AsyncClient, logged_in_headers):
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+
+    response = await client.put(
+        f"api/v1/flows/{flow['id']}",
+        json={"name": flow["name"], "data": _graph(_node("a", "via put"))},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.json()["history"]["end_revision"] == 1
+    assert graphs_equal(await _reconstruct(flow["id"], 1), _graph(_node("a", "via put")))
+
+
+async def test_restoring_a_version_records_the_change_as_new_revisions(client: AsyncClient, logged_in_headers):
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+    await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a", "v1")))
+    snapshot = await client.post(f"api/v1/flows/{flow['id']}/versions/", json={}, headers=logged_in_headers)
+    assert snapshot.json()["operation_revision"] == 1
+    await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a", "v2"), _node("b")))
+
+    restored = await client.post(
+        f"api/v1/flows/{flow['id']}/versions/{snapshot.json()['id']}/activate",
+        params={"save_draft": "false"},
+        headers=logged_in_headers,
+    )
+
+    assert restored.status_code == status.HTTP_200_OK, restored.text
+    history = restored.json()["history"]
+    assert history["start_revision"] == 4
+    assert graphs_equal(await _reconstruct(flow["id"], history["end_revision"]), _graph(_node("a", "v1")))
+    _assert_contiguous(await _rows(flow["id"]))
+
+
+async def test_system_checkpoints_stay_out_of_the_version_list(client: AsyncClient, logged_in_headers):
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+    await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a", "x")))
+
+    versions = (await client.get(f"api/v1/flows/{flow['id']}/versions/", headers=logged_in_headers)).json()
+
+    assert versions["entries"] == []
+    (checkpoint,) = await _checkpoints(flow["id"])
+    missing = await client.get(f"api/v1/flows/{flow['id']}/versions/{checkpoint.id}", headers=logged_in_headers)
+    assert missing.status_code == status.HTTP_404_NOT_FOUND
+
+
+async def test_concurrent_writes_form_one_gap_free_history(client: AsyncClient, logged_in_headers):
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+
+    responses = await asyncio.gather(
+        *(
+            _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a", f"writer {index}")))
+            for index in range(4)
+        )
+    )
+
+    assert all(response.status_code == status.HTTP_200_OK for response in responses), [r.text for r in responses]
+    rows = await _rows(flow["id"])
+    _assert_contiguous(rows)
+    final = await _flow(flow["id"])
+    assert final.latest_revision == final.current_revision == rows[-1].end_revision
+    assert graphs_equal(await _reconstruct(flow["id"], final.latest_revision), final.data)
+
+
+async def test_history_rows_are_append_only(client: AsyncClient, logged_in_headers):
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+    await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a", "x")))
+    (row,) = await _rows(flow["id"])
+
+    for statement in (
+        "UPDATE flow_operation SET end_revision = end_revision WHERE id = :id",
+        "DELETE FROM flow_operation WHERE id = :id",
+    ):
+        with pytest.raises(Exception, match="flow_operation rows"):
+            async with session_scope() as session:
+                await session.exec(text(statement).bindparams(bindparam("id", value=row.id, type_=Uuid())))
+    assert len(await _rows(flow["id"])) == 1
+
+
+async def test_deleting_a_flow_deletes_its_history(client: AsyncClient, logged_in_headers):
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+    await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a", "x")))
+
+    response = await client.delete(f"api/v1/flows/{flow['id']}", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert await _rows(flow["id"]) == []
+    assert await _checkpoints(flow["id"]) == []
+
+
+async def test_an_overwrite_records_the_merge_without_copying_the_replaced_graph(
+    client: AsyncClient, logged_in_headers
+):
+    """The conflict dialog's overwrite is a graph write like any other.
+
+    What it replaced is the revision before its operations, so no version copy is kept.
+    """
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+    saved = await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a", "theirs")))
+    assert saved.status_code == status.HTTP_200_OK, saved.text
+    replaced_revision = saved.json()["history"]["end_revision"]
+
+    response = await client.post(
+        f"api/v1/flows/{flow['id']}/overwrite",
+        json={"data": _graph(_node("a", "merged"))},
+        headers={**logged_in_headers, "If-Match": saved.json()["version_token"]},
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.json()["history"]["start_revision"] == replaced_revision + 1
+    assert graphs_equal(await _reconstruct(flow["id"], replaced_revision), _graph(_node("a", "theirs")))
+    versions = await client.get(f"api/v1/flows/{flow['id']}/versions/", headers=logged_in_headers)
+    assert versions.json()["entries"] == []
+
+
+async def test_a_stale_token_whose_graph_equals_the_stored_one_loses_nothing(client: AsyncClient, logged_in_headers):
+    """A save whose response was lost must not open the conflict dialog against its own change."""
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+    saved = await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a", "x")))
+    current_token = saved.json()["version_token"]
+
+    resent = await client.patch(
+        f"api/v1/flows/{flow['id']}",
+        json={"data": _graph(_node("a", "x"))},
+        headers={**logged_in_headers, "If-Match": flow["version_token"]},
+    )
+
+    assert resent.status_code == status.HTTP_200_OK, resent.text
+    assert resent.json()["version_token"] == current_token
+    assert resent.json()["history"] is None
+    assert len(await _rows(flow["id"])) == 1
+
+
+async def test_a_stale_token_with_a_different_graph_is_a_conflict_and_records_nothing(
+    client: AsyncClient, logged_in_headers
+):
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+    await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a", "theirs")))
+
+    response = await client.patch(
+        f"api/v1/flows/{flow['id']}",
+        json={"data": _graph(_node("a", "mine"))},
+        headers={**logged_in_headers, "If-Match": flow["version_token"]},
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.json()["detail"]["code"] == "flow_version_conflict"
+    assert len(await _rows(flow["id"])) == 1
+
+
+async def test_saving_only_view_state_keeps_the_token(client: AsyncClient, logged_in_headers):
+    """History ignores view state, so the token does too: panning must not make other editors stale."""
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+    moved_view = {**_graph(_node("a", selected=True)), "viewport": {"x": 40, "y": 10, "zoom": 2}}
+
+    response = await client.patch(
+        f"api/v1/flows/{flow['id']}",
+        json={"data": moved_view},
+        headers={**logged_in_headers, "If-Match": flow["version_token"]},
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.json()["version_token"] == flow["version_token"]
+    assert response.json()["data"]["viewport"] == {"x": 40, "y": 10, "zoom": 2}
+    assert await _rows(flow["id"]) == []
+
+
+async def test_a_graph_write_takes_the_writers_turn(client: AsyncClient, logged_in_headers, active_user):
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a")))
+
+    response = await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a", "x")))
+
+    assert response.json()["version_token"] != flow["version_token"]
+    assert (await _flow(flow["id"])).last_modified_by == active_user.id
+
+
+async def test_a_repaired_save_that_needs_the_clients_fix_writes_nothing(client: AsyncClient, logged_in_headers):
+    flow = await _create_flow(client, logged_in_headers, _graph(_node("a"), _node("b")))
+    stored = await _patch(client, logged_in_headers, flow["id"], data=_graph(_node("a"), _node("b")))
+    assert stored.status_code == status.HTTP_200_OK, stored.text
+    rows_before = await _rows(flow["id"])
+    unknown_field = _edge("e", "a", "b")
+    unknown_field["data"]["targetHandle"]["fieldName"] = "missing"
+    unknown_field["targetHandle"] = escape_handle(unknown_field["data"]["targetHandle"])
+    # Missing one form is fixable by repair; naming a field that does not exist is not.
+    del unknown_field["sourceHandle"]
+
+    response = await _patch(
+        client,
+        logged_in_headers,
+        flow["id"],
+        data=_graph(_node("a"), _node("b"), edges=[unknown_field]),
+        repair_invalid_graph=True,
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
+    violations = response.json()["detail"]["violations"]
+    assert [(violation["code"], violation["resolution"]) for violation in violations] == [
+        ("EDGE_HANDLE_NOT_FOUND", "manual")
+    ]
+    assert await _rows(flow["id"]) == rows_before
+
+
+async def test_a_save_that_removes_a_connected_field_must_remove_its_edge(client: AsyncClient, logged_in_headers):
+    connected = _graph(_node("a"), _node("b"), edges=[_edge("e", "a", "b")])
+    flow = await _create_flow(client, logged_in_headers, connected)
+    stored = await _patch(client, logged_in_headers, flow["id"], data=connected)
+    assert stored.status_code == status.HTTP_200_OK, stored.text
+    rows_before = await _rows(flow["id"])
+    without_field = copy.deepcopy(connected)
+    del without_field["nodes"][1]["data"]["node"]["template"]["text"]
+
+    # Removing the field deletes its edges, so a graph that keeps the edge cannot be recorded.
+    response = await _patch(client, logged_in_headers, flow["id"], data=without_field)
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
+    violations = response.json()["detail"]["violations"]
+    assert [(v["code"], v["resolution"], v["edge_id"]) for v in violations] == [
+        ("EDGE_HANDLE_NOT_FOUND", "manual", "e")
+    ]
+    assert await _rows(flow["id"]) == rows_before
+
+    without_field["edges"] = []
+    response = await _patch(client, logged_in_headers, flow["id"], data=without_field)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert graphs_equal(await _reconstruct(flow["id"], (await _flow(flow["id"])).latest_revision), without_field)

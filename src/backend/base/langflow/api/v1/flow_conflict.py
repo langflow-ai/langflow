@@ -25,11 +25,11 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from fastapi import HTTPException
 from pydantic import BaseModel
-from sqlmodel import select, update
+from sqlmodel import select
 
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.user.model import User
@@ -101,7 +101,8 @@ def build_conflict_detail(
     }
 
 
-async def _require_repaired_flow_token(session: AsyncSession, db_flow: Flow, expected: UUID | None) -> None:
+async def require_repaired_flow_token(session: AsyncSession, db_flow: Flow, expected: UUID | None) -> None:
+    """Refuse a graph write without a token to a flow that was repaired, until it is reloaded."""
     if (expected is None or db_flow.version_token is None) and await requires_reviewed_graph_save(session, db_flow.id):
         raise HTTPException(
             status_code=428,
@@ -127,7 +128,7 @@ async def ensure_version_precondition(
     legacy row must not become unsaveable just because the client learned to
     send a precondition.
     """
-    await _require_repaired_flow_token(session, db_flow, expected)
+    await require_repaired_flow_token(session, db_flow, expected)
     if expected is None or db_flow.version_token is None:
         return
     if db_flow.version_token == expected:
@@ -168,49 +169,3 @@ async def build_version_state(session: AsyncSession, db_flow: Flow) -> FlowVersi
         last_modified_by_username=await resolve_author_name(session, db_flow.last_modified_by),
         updated_at=db_flow.updated_at,
     )
-
-
-async def claim_version_token(
-    session: AsyncSession,
-    db_flow: Flow,
-    expected: UUID | None,
-) -> UUID | None:
-    """Take the right to write, atomically, and return the token that was claimed.
-
-    Comparing in Python after a ``SELECT ... FOR UPDATE`` is not enough: SQLite
-    ignores ``FOR UPDATE`` entirely, so concurrent writers all read the same token,
-    all pass the comparison, and all write — six simultaneous saves were accepted
-    where one should have been, which is precisely the lost update this exists to
-    stop. A single conditional UPDATE is indivisible on every backend: only the
-    writer that moves the row off *expected* proceeds.
-
-    Returns the newly claimed token, or None when there was nothing to claim
-    (no precondition sent, or a legacy row that has no token to compare).
-    """
-    await _require_repaired_flow_token(session, db_flow, expected)
-    if expected is None or db_flow.version_token is None:
-        return None
-
-    claimed = uuid4()
-    result = await session.exec(
-        update(Flow).where(Flow.id == db_flow.id, Flow.version_token == expected).values(version_token=claimed)
-    )
-    if result.rowcount == 0:
-        # No rollback here: rowcount 0 means nothing was written, and rolling back
-        # expires the caller's ORM objects — a later attribute access then raised
-        # MissingGreenlet and a loser got an opaque 500 instead of its conflict.
-        refreshed = (await session.exec(select(Flow).where(Flow.id == db_flow.id))).first()
-        current = refreshed.version_token if refreshed else None
-        author_id = refreshed.last_modified_by if refreshed else None
-        raise HTTPException(
-            status_code=409,
-            detail=build_conflict_detail(
-                flow_id=db_flow.id,
-                expected=expected,
-                current=current,
-                author_id=author_id,
-                author_name=await resolve_author_name(session, author_id),
-                modified_at=refreshed.updated_at if refreshed else None,
-            ),
-        )
-    return claimed

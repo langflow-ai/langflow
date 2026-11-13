@@ -172,6 +172,9 @@ EXPECTED_FIELDS = {
     "evals_csv_max_rows",
     "evals_csv_max_bytes",
     "evals_abort_after_identical_failures",
+    # FlowHistorySettings
+    "flow_op_log_row_ops_limit",
+    "flow_op_log_row_bytes_limit",
     # SecuritySettings
     "cors_origins",
     "cors_allow_credentials",
