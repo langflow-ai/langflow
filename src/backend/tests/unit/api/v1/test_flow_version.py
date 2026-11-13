@@ -1613,3 +1613,47 @@ async def test_activating_a_version_whose_edges_break_the_rules_is_left_to_the_c
     violations = activate_resp.json()["detail"]["violations"]
     assert violations
     assert {violation["resolution"] for violation in violations} == {"manual"}
+
+
+async def _legacy_version(client: AsyncClient, headers: dict) -> tuple[str, str, list[dict]]:
+    """A flow whose saved version holds old-format edges, the version's id, and the violations activating it hits."""
+    legacy_json = json.loads(pytest.COMPLEX_EXAMPLE_PATH.read_text(encoding="utf-8"))
+    payload = {"name": "legacy-fixes-test", "data": legacy_json.get("data", legacy_json), "is_component": False}
+    resp = await client.post("api/v1/flows/", json=payload, headers=headers)
+    assert resp.status_code == status.HTTP_201_CREATED
+    flow_id = resp.json()["id"]
+    snap = await _create_snapshot(client, headers, flow_id, description="legacy edges")
+    await _patch_flow_data(client, headers, flow_id, {"nodes": [_node("single-node")], "edges": []})
+    refused = await client.post(f"api/v1/flows/{flow_id}/versions/{snap['id']}/activate", headers=headers)
+    assert refused.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, refused.text
+    return flow_id, snap["id"], refused.json()["detail"]["violations"]
+
+
+async def test_activating_a_version_with_the_clients_fixes_restores_it_without_the_broken_edges(
+    client: AsyncClient, logged_in_headers
+):
+    flow_id, version_id, violations = await _legacy_version(client, logged_in_headers)
+    broken = sorted({violation["edge_id"] for violation in violations})
+
+    response = await client.post(
+        f"api/v1/flows/{flow_id}/versions/{version_id}/activate",
+        json={"fixes": [{"type": "delete_edges", "ids": broken}]},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    edge_ids = {edge["id"] for edge in response.json()["data"]["edges"]}
+    assert edge_ids.isdisjoint(broken)
+
+
+async def test_activating_with_a_fix_that_addresses_no_violation_is_refused(client: AsyncClient, logged_in_headers):
+    flow_id, version_id, _ = await _legacy_version(client, logged_in_headers)
+
+    response = await client.post(
+        f"api/v1/flows/{flow_id}/versions/{version_id}/activate",
+        json={"fixes": [{"type": "delete_edges", "ids": ["no-such-edge"]}]},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
+    assert response.json()["detail"]["code"] == "RESTORE_FIX_NOT_ALLOWED"

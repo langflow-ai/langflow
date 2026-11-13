@@ -80,6 +80,7 @@ async def create_restore_point(flow_id: str | None, user_id: str | None) -> str 
                 user_uuid,
                 data=data,
                 description=_restore_point_description(),
+                saved_by_user_id=user_uuid,
                 **await checkpoint_fields(session, flow),
             )
             return str(entry.id)

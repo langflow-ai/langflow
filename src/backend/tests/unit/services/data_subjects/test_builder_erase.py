@@ -15,6 +15,7 @@ from langflow.services.database.models.data_subject_request import (
 )
 from langflow.services.database.models.file.model import File
 from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.jobs.model import Job, JobEvent
 from langflow.services.database.models.message.model import MessageTable
@@ -210,6 +211,32 @@ async def test_should_clear_erased_maintenance_setter_and_preserve_active_mainte
         assert after.set_by == (None if erase_setter else setter_id)
         assert after.reason == before.reason
         assert after.set_at == before.set_at
+
+
+@pytest.mark.usefixtures("client")
+async def test_should_clear_the_builder_as_author_of_a_colleagues_flow_version():
+    seeded = await seed_builder()
+    admin_id = await create_user("dsr-admin", superuser=True)
+    async with session_scope() as session:
+        version = FlowVersion(
+            flow_id=seeded.colleague_flow_id,
+            user_id=seeded.colleague_id,
+            saved_by_user_id=seeded.user_id,
+            data={},
+            version_number=1,
+        )
+        session.add(version)
+        await session.commit()
+        version_id = version.id
+
+    status = await run_request(await _request_and_approve(seeded.user_id, admin_id))
+
+    assert status == DataSubjectRequestStatus.DONE.value
+    async with session_scope() as session:
+        kept = await session.get(FlowVersion, version_id)
+        assert kept is not None
+        assert kept.user_id == seeded.colleague_id
+        assert kept.saved_by_user_id is None
 
 
 @pytest.mark.usefixtures("client")

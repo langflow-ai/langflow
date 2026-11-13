@@ -23,7 +23,9 @@ the revision head safe to extend across workers.
    keeping the stored original as a view-only version.
 4. The change is derived as operations, verified by exact replay, numbered
    from the flow's latest revision, and stored in rows that respect the
-   configured size limits.
+   configured size limits. Each write is stored with the parts of its value
+   that the secret scrubbing of a flow read changes in the graph the write
+   stores, so a history read can strip them.
 5. The version token rotates, naming the writer, whenever the write changed
    the graph the history holds: operations were recorded, or a repair
    rewrote the stored graph. A save that only changes view state does not
@@ -61,13 +63,14 @@ from langflow.services.database.models.flow_operation import FlowOperation as Fl
 from langflow.services.database.models.flow_version.crud import create_flow_version_entry
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_flow_operation_service, get_settings_service
+from langflow.services.deps import get_flow_operation_service, get_settings_service, get_variable_service
 from langflow.services.flow_history.envelope import (
     RecordedOperation,
     batch_header,
     distinct_actor_ids,
     encode_envelope,
     request_ids_in_order,
+    stored_operation,
 )
 from langflow.services.flow_history.errors import (
     FlowGraphInvalidError,
@@ -77,6 +80,7 @@ from langflow.services.flow_history.errors import (
     FlowVersionConflictError,
 )
 from langflow.services.flow_history.replay import reconstruct_graph, replay_from
+from langflow.services.flow_history.secrets import SecretFinder
 from langflow.services.flow_history.store import has_anchor, latest_anchor_at_or_before
 
 if TYPE_CHECKING:
@@ -84,6 +88,7 @@ if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.database.models.flow.model import Flow, FlowGraphWriteOptions
+    from langflow.services.flow_history.secrets import OperationSecrets, WriteSecrets
 
 REPAIRED_ORIGINAL_DESCRIPTION = "Original before automatic repair"
 
@@ -185,7 +190,7 @@ async def write_flow_graph(
         if violations:
             if not repair_invalid:
                 raise FlowGraphInvalidError(violations, graph="stored")
-            await _keep_repaired_original(session, flow)
+            await _keep_repaired_original(session, flow, actor_id)
             repaired = repair_flow_data(base)
             base = repaired.flow_data
             stored_repaired = True
@@ -227,6 +232,7 @@ async def write_flow_graph(
     recorded = _sequence(
         derived.operations,
         flow=flow,
+        secret_finder=SecretFinder(target, await _owner_variable_names(session, flow, derived.operations)),
         actor_id=actor_id,
         request_id=request_id,
         cause=options.cause if options else None,
@@ -328,7 +334,7 @@ def _checkpoint(flow: Flow, flow_data: dict[str, Any], *, revision: int) -> Flow
     )
 
 
-async def _keep_repaired_original(session: AsyncSession, flow: Flow) -> None:
+async def _keep_repaired_original(session: AsyncSession, flow: Flow, actor_id: UUID) -> None:
     await create_flow_version_entry(
         session,
         flow_id=flow.id,
@@ -336,6 +342,7 @@ async def _keep_repaired_original(session: AsyncSession, flow: Flow) -> None:
         data=copy.deepcopy(flow.data),
         description=REPAIRED_ORIGINAL_DESCRIPTION,
         view_only=True,
+        saved_by_user_id=actor_id,
     )
 
 
@@ -359,17 +366,24 @@ def _sequence(
     operations: list[FlowOperation],
     *,
     flow: Flow,
+    secret_finder: SecretFinder,
     actor_id: UUID,
     request_id: UUID,
     cause: str | None = None,
 ) -> list[RecordedOperation]:
-    """Split operations to fit the row size limit and number them from the flow's head."""
+    """Find secret parts, split to fit the row size limit, and number operations from the flow's head."""
     bytes_limit = get_settings_service().settings.flow_op_log_row_bytes_limit
 
     recorded: list[RecordedOperation] = []
     revision = flow.latest_revision
     for operation in operations:
-        for part in _split_to_fit(operation, bytes_limit - _ENVELOPE_OVERHEAD - _BATCH_OVERHEAD):
+        try:
+            secrets = secret_finder.secrets_of(operation)
+        except ValueError as exc:
+            # Only a defect gets here. As for a failed diff, the write is refused.
+            msg = f"Could not find the secret parts of the change to flow {flow.id}"
+            raise FlowHistoryError(msg) from exc
+        for part, part_secrets in _split_to_fit(operation, secrets, bytes_limit - _ENVELOPE_OVERHEAD - _BATCH_OVERHEAD):
             revision += 1
             recorded.append(
                 RecordedOperation(
@@ -378,6 +392,7 @@ def _sequence(
                     request_id=request_id,
                     operation=part,
                     cause=cause,
+                    secrets=part_secrets,
                 )
             )
     return recorded
@@ -412,29 +427,39 @@ def _pack_rows(operations: list[RecordedOperation]) -> list[list[RecordedOperati
     return rows
 
 
-def _split_to_fit(operation: FlowOperation, budget: int) -> list[FlowOperation]:
-    """Split a list-valued operation into same-type operations that each fit ``budget``.
+def _split_to_fit(
+    operation: FlowOperation, secrets: OperationSecrets, budget: int
+) -> list[tuple[FlowOperation, OperationSecrets]]:
+    """Split a list-valued operation into same-type operations that each fit ``budget`` as stored.
 
-    Items are never split, so an item larger than the budget becomes an
-    operation of its own that exceeds it.
+    Each part keeps the secret parts of its own writes. Items are never
+    split, so an item larger than the budget becomes an operation of its own
+    that exceeds it.
     """
-    if _json_size(dump_flow_operation(operation)) <= budget:
-        return [operation]
+    if _json_size(stored_operation(operation, secrets)) <= budget:
+        return [(operation, secrets)]
     items, rebuild = _items(operation)
     if len(items) <= 1:
-        return [operation]
+        return [(operation, secrets)]
+    # Only an update_nodes has secret parts, one entry per write.
+    item_secrets: OperationSecrets = secrets or ((),) * len(items)
+
+    def part(entries: list[tuple[Any, WriteSecrets]]) -> tuple[FlowOperation, OperationSecrets]:
+        part_secrets = tuple(write_secrets for _, write_secrets in entries) if secrets else ()
+        return rebuild([item for item, _ in entries]), part_secrets
 
     empty_size = _json_size(dump_flow_operation(rebuild([])))
-    parts: list[FlowOperation] = []
-    chunk: list[Any] = []
+    parts: list[tuple[FlowOperation, OperationSecrets]] = []
+    chunk: list[tuple[Any, WriteSecrets]] = []
     size = empty_size
-    for item, item_size in ((item, _json_size(_dump_item(item)) + 1) for item in items):
+    for item, write_secrets in zip(items, item_secrets, strict=True):
+        item_size = _json_size(_stored_item(item, write_secrets)) + 1
         if chunk and size + item_size > budget:
-            parts.append(rebuild(chunk))
+            parts.append(part(chunk))
             chunk, size = [], empty_size
-        chunk.append(item)
+        chunk.append((item, write_secrets))
         size += item_size
-    parts.append(rebuild(chunk))
+    parts.append(part(chunk))
     return parts
 
 
@@ -452,5 +477,26 @@ def _items(operation: FlowOperation):
     return [], lambda _chunk: operation
 
 
-def _dump_item(item: Any) -> Any:
-    return item.model_dump(mode="json", exclude_defaults=True) if hasattr(item, "model_dump") else item
+def _stored_item(item: Any, write_secrets: WriteSecrets) -> Any:
+    """Return one item of a list-valued operation as the row stores it."""
+    if not hasattr(item, "model_dump"):
+        return item
+    stored = item.model_dump(mode="json")
+    if write_secrets:
+        stored["secrets"] = [part.to_json() for part in write_secrets]
+    return stored
+
+
+async def _owner_variable_names(session: AsyncSession, flow: Flow, operations: list[FlowOperation]) -> frozenset[str]:
+    """Return the names of the flow owner's global variables, which a scrubbed write may keep.
+
+    Only a ``set_field`` can have secret parts, so the names are loaded only
+    when the batch has one.
+    """
+    if not any(
+        isinstance(operation, UpdateNodesOp) and any(update.op == "set_field" for update in operation.updates)
+        for operation in operations
+    ):
+        return frozenset()
+    names = await get_variable_service().list_variables(user_id=flow.user_id, session=session)
+    return frozenset(name for name in names if name)

@@ -10,7 +10,10 @@
           "actor_user_id": "<uuid>",
           "operations": [
             {"revision": 42, "cause": "upgrade_component", "operation": {...}},
-            {"revision": 43, "operation": {...}}
+            {"revision": 43, "operation": {"type": "update_nodes", "updates": [
+              {"id": "...", "op": "set_field", "path": [...], "value": ...,
+               "secrets": [{"path": ["value"], "kind": "literal"}]}
+            ]}}
           ]
         }
       ]
@@ -28,6 +31,11 @@ optional: what made the write (an upgrade, a code edit, a restore, a file sync,
 the assistant), a display hint the history uses to group a write's operations.
 Nothing checks it.
 
+A ``set_field`` can carry ``secrets``: the parts of its value that a read
+strips (see ``secrets``). The history computes them when it records the
+batch. They are never client input, and the engine refuses them, so decoding
+takes them out of the operation and keeps them beside it.
+
 Decoding validates all of it; a row that does not match is corruption.
 """
 
@@ -40,9 +48,11 @@ from uuid import UUID
 from lfx.services.flow_operations import FlowOperation, FlowOperationError, dump_flow_operation, parse_flow_operation
 
 from langflow.services.flow_history.errors import FlowHistoryCorruptionError
+from langflow.services.flow_history.secrets import SecretPart, check_secret_parts
 
 if TYPE_CHECKING:
     from langflow.services.database.models.flow_operation import FlowOperation as FlowOperationRow
+    from langflow.services.flow_history.secrets import OperationSecrets, WriteSecrets
 
 ENVELOPE_VERSION = 1
 
@@ -50,6 +60,7 @@ ENVELOPE_VERSION = 1
 # (``upgrade_component``, ``edit_code``) with the write options.
 FILE_SYNC_CAUSE = "file_sync"
 ASSISTANT_CAUSE = "assistant"
+RESTORE_CAUSE = "restore"
 
 # Kinds of damage a stored row can show.
 UNSUPPORTED_ENVELOPE = "unsupported operation envelope"
@@ -69,14 +80,64 @@ class RecordedOperation:
     request_id: UUID
     operation: FlowOperation
     cause: str | None = None
+    # For an ``update_nodes``, the secret parts of each write, in order; empty otherwise.
+    secrets: OperationSecrets = ()
+
+    def stored_operation(self) -> dict[str, Any]:
+        """Return the operation as the row stores it, each write with its ``secrets``."""
+        return stored_operation(self.operation, self.secrets)
 
     def to_json(self) -> dict[str, Any]:
         """Return the operation's element inside its request's batch."""
         element: dict[str, Any] = {"revision": self.revision}
         if self.cause is not None:
             element["cause"] = self.cause
-        element["operation"] = dump_flow_operation(self.operation)
+        element["operation"] = self.stored_operation()
         return element
+
+
+def stored_operation(operation: FlowOperation, secrets: OperationSecrets) -> dict[str, Any]:
+    """Return an operation as a row stores it, each write that has secret parts with its ``secrets``."""
+    stored = dump_flow_operation(operation)
+    if secrets:
+        for update, parts in zip(stored["updates"], secrets, strict=True):
+            if parts:
+                update["secrets"] = [part.to_json() for part in parts]
+    return stored
+
+
+def _take_secrets(operation: Any) -> tuple[Any, OperationSecrets]:
+    """Split a stored operation into the operation the engine reads and the secret parts of its writes.
+
+    The row's own JSON is never changed: the operation and its writes are
+    copied. Raise ``ValueError`` when the parts are malformed.
+    """
+    if not isinstance(operation, dict) or operation.get("type") != "update_nodes":
+        return operation, ()
+    updates = operation.get("updates")
+    if not isinstance(updates, list):
+        return operation, ()
+    copies = [dict(update) if isinstance(update, dict) else update for update in updates]
+    secrets: list[WriteSecrets] = []
+    for update in copies:
+        if not isinstance(update, dict) or "secrets" not in update:
+            secrets.append(())
+            continue
+        raw = update.pop("secrets")
+        if update.get("op") != "set_field" or not isinstance(raw, list) or not raw:
+            msg = f"invalid secret parts {raw!r}"
+            raise ValueError(msg)
+        secrets.append(tuple(SecretPart.from_json(part) for part in raw))
+    return {**operation, "updates": copies}, tuple(secrets)
+
+
+def _check_secrets(operation: FlowOperation, secrets: OperationSecrets) -> None:
+    """Check that each write's secret parts address parts of its value. Raise ``ValueError`` otherwise."""
+    if not secrets:
+        return
+    for update, parts in zip(operation.updates, secrets, strict=True):
+        if parts:
+            check_secret_parts(update.value, parts)
 
 
 def batch_header(request_id: UUID, actor_user_id: UUID) -> dict[str, Any]:
@@ -146,8 +207,10 @@ def decode_row(row: FlowOperationRow) -> list[RecordedOperation]:
             if not isinstance(element, dict) or element.get("revision") != expected_revision:
                 raise corrupt(REVISION_OUT_OF_ORDER, expected_revision)
             try:
-                operation = parse_flow_operation(element["operation"])
-            except (KeyError, FlowOperationError) as exc:
+                stored, secrets = _take_secrets(element["operation"])
+                operation = parse_flow_operation(stored)
+                _check_secrets(operation, secrets)
+            except (KeyError, ValueError, FlowOperationError) as exc:
                 raise corrupt(MALFORMED_OPERATION, expected_revision) from exc
             cause = element.get("cause")
             if cause is not None and not isinstance(cause, str):
@@ -159,6 +222,7 @@ def decode_row(row: FlowOperationRow) -> list[RecordedOperation]:
                     request_id=request_id,
                     operation=operation,
                     cause=cause,
+                    secrets=secrets,
                 )
             )
 
