@@ -11,10 +11,11 @@ file. Run it from the repository root of a checkout of the stack's top branch
 
     uv run python src/lfx-native/fixtures/tools/check.py
 
-It exits with 1 when a case differs. It does not check what the Python engine
-does not have: inverses and the editor's table rules and edge fixes
-(``inverse_cases.json`` and ``editor_cases.json``, which ``check_editor.mjs``
-checks).
+It exits with 1 when a case differs. Replay with no rule (``replay_cases.json``)
+and backward operations (``backward_cases.json``) run through the Python
+engine's ``GraphState`` (``lfx.services.flow_operations.engine``). It does not
+check what only the editor has: its table rules and edge fixes
+(``editor_cases.json``, which ``check_editor.mjs`` checks).
 """
 
 from __future__ import annotations
@@ -28,7 +29,6 @@ from pathlib import Path
 from typing import Any
 
 from langflow.services.flow_history.errors import RestoreFixNotAllowedError
-from langflow.services.flow_history.recorder import normalize_absent_graph
 from langflow.services.flow_history.restore_fixes import apply_restore_fixes
 from lfx.services.flow_operations import (
     FlowDataValidationError,
@@ -53,6 +53,7 @@ from lfx.services.flow_operations import (
     strip_row_keys,
     values_equal,
 )
+from lfx.services.flow_operations.engine import PythonEngine
 from lfx.services.flow_operations.table_rows import fill_missing_positions
 
 FIXTURES = Path(__file__).resolve().parent.parent
@@ -293,7 +294,7 @@ def fill_positions(case: dict[str, Any], _document: dict[str, Any]) -> None:
     check(matches, "positions", {"expected": rows, "filled": filled}, expected)
 
 
-# --- restore_cases.json, write_cases.json -----------------------------------------------------------
+# --- restore_cases.json ----------------------------------------------------------------------------
 
 
 def restore_case(case: dict[str, Any], _document: dict[str, Any]) -> None:
@@ -307,49 +308,77 @@ def restore_case(case: dict[str, Any], _document: dict[str, Any]) -> None:
     check(strict, "restored revision", actual, expected)
 
 
-def _prepare_write(stored: Any, target: Any, options: dict[str, Any]) -> dict[str, Any]:
-    """The engine's part of the recorder's write path, composed from the Python engine as write_flow_graph runs it."""
-    repairs: list[dict[str, Any]] = []
-    stored_repaired = False
-    if options["started"]:
-        base = stored
-    else:
-        base = normalize_absent_graph(stored)
-        violations = find_graph_violations(base)
-        if violations:
-            if not options["repair_invalid_graph"]:
-                return {"error": {"graph": "stored", "violations": [v.to_dict() for v in violations]}}
-            repaired = repair_flow_data(base)
-            base = repaired.flow_data
-            stored_repaired = True
-            repairs += [{"graph": "stored", **fix.to_dict()} for fix in repaired.fixes]
-    target = normalize_absent_graph(target)
-    violations = find_graph_violations(target, base=base)
-    if violations:
-        if not options["repair_invalid_graph"]:
-            return {"error": {"graph": "submitted", "violations": [v.to_dict() for v in violations]}}
-        try:
-            repaired = repair_flow_data(target, base=base)
-        except FlowDataValidationError as exc:
-            return {"error": {"graph": "submitted", "violations": [v.to_dict() for v in exc.violations]}}
-        target = repaired.flow_data
-        repairs += [{"graph": "submitted", **fix.to_dict()} for fix in repaired.fixes]
-    derived = derive_flow_operations(base, target)
-    return {
-        "expected": {
-            "base": base,
-            "stored_repaired": stored_repaired,
-            "target": target,
-            "repairs": repairs,
-            "operations": [dump_flow_operation(operation) for operation in derived.operations],
-        }
-    }
+# --- replay_cases.json, backward_cases.json --------------------------------------------------------
 
 
-def write_case(case: dict[str, Any], _document: dict[str, Any]) -> None:
-    actual = _prepare_write(_fresh(case["stored"]), _fresh(case["target"]), case["options"])
-    expected = {"error": case["error"]} if "error" in case else {"expected": case["expected"]}
-    check(matches, "prepared write", actual, expected)
+def _unordered(lists: list[Any]) -> list[Any]:
+    """Backward operations with the ids and entries of each operation in id order: their order is not state."""
+    keys = {"delete_nodes": "ids", "delete_edges": "ids", "add_nodes": "nodes", "add_edges": "edges"}
+    out = []
+    for operations in lists:
+        normalized = []
+        for operation in operations:
+            key = keys.get(operation["type"])
+            if key:
+                items = sorted(operation[key], key=lambda item: item if isinstance(item, str) else item["id"])
+                normalized.append({**operation, key: items})
+            else:
+                normalized.append(operation)
+        out.append(normalized)
+    return out
+
+
+def replay_case(case: dict[str, Any], _document: dict[str, Any]) -> None:
+    try:
+        state = PythonEngine.GraphState(_fresh(case["base"]))
+    except FlowOperationError as exc:
+        check(strict, "error", _error(exc), {"error": case.get("error"), "code": case.get("code")})
+        return
+    try:
+        replayed = state.replay(_fresh(case["operations"]), backward="backward" in case)
+    except FlowOperationError as exc:
+        check(strict, "error", _error(exc), {"error": case.get("error"), "code": case.get("code")})
+        check(strict, "state after the failed replay", state.to_dict(), case["base"])
+        return
+    holds("the replay fails", "error" not in case)
+    check(
+        strict,
+        "flow data",
+        _ignoring_row_order(_ignoring_entry_order(state.to_dict())),
+        _ignoring_row_order(_ignoring_entry_order(case["expected"])),
+    )
+    if "backward" not in case:
+        return
+    check(matches, "backward operations", _unordered(replayed["backward_operations"]), _unordered(case["backward"]))
+    for backward in reversed(replayed["backward_operations"]):
+        state.replay(backward)
+    holds("replaying the backward operations gives back the base", graphs_equal(state.to_dict(), case["base"]))
+
+
+def _ignoring_entry_order(flow_data: Any) -> Any:
+    flow_data = _fresh(flow_data)
+    for key in ("nodes", "edges"):
+        if isinstance(flow_data.get(key), list):
+            flow_data[key] = sorted(flow_data[key], key=lambda entry: entry["id"])
+    return flow_data
+
+
+def backward_case(case: dict[str, Any], _document: dict[str, Any]) -> None:
+    state = PythonEngine.GraphState(_fresh(case["base"]))
+    applied = state.apply(_fresh(case["operations"]), backward=True)
+    check(matches, "backward operations", _unordered(applied["backward_operations"]), _unordered(case["backward"]))
+    for backward in reversed(applied["backward_operations"]):
+        state.replay(backward)
+    holds("replaying the backward operations gives back the base", graphs_equal(state.to_dict(), case["base"]))
+
+
+def undo_case(case: dict[str, Any], _document: dict[str, Any]) -> None:
+    state = PythonEngine.GraphState(_fresh(case["base"]))
+    applied = state.apply(_fresh(case["operations"]), backward=True)
+    undo = [operation for backward in reversed(applied["backward_operations"]) for operation in backward]
+    check(matches, "undo", _unordered([undo]), _unordered([case["undo"]]))
+    state.apply(undo)
+    holds("applying the undo gives back the base", graphs_equal(state.to_dict(), case["base"]))
 
 
 # --- Running every case ------------------------------------------------------------------------------
@@ -373,7 +402,9 @@ CHECKS: list[tuple[str, str, Run]] = [
     *[("table_cases.json", section, table_case(section)) for section in TABLE_RUNS],
     ("table_cases.json", "fill_positions", fill_positions),
     ("restore_cases.json", "cases", restore_case),
-    ("write_cases.json", "cases", write_case),
+    ("replay_cases.json", "cases", replay_case),
+    ("backward_cases.json", "cases", backward_case),
+    ("backward_cases.json", "undo", undo_case),
 ]
 
 

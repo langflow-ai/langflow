@@ -192,7 +192,7 @@ def test_tool_actions_are_a_keyed_list_not_a_table():
     graph["nodes"][0]["data"]["node"]["template"]["tools_metadata"] = {
         "type": "table",
         "_input_type": "ToolsInput",
-        "value": [{"name": "fetch", "tags": ["fetch"]}],
+        "value": [{"name": "fetch", "tags": ["fetch"], "__pos__": 1}],
     }
 
     assert find_graph_violations(graph, base=EMPTY) == []

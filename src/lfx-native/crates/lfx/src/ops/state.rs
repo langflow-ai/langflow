@@ -1,4 +1,4 @@
-//! [`GraphState`]: the indexed graph that apply works on, kept between batches.
+//! [`GraphState`]: the indexed graph that apply and replay work on, kept between batches.
 //!
 //! Nodes and edges are indexed by id, and edges by the nodes they touch.
 //! Indexes that only some writes need are built the first time a write asks
@@ -6,113 +6,245 @@
 //! edge's handles, and each node's connections by the input or output they
 //! use.
 //!
-//! A batch is all or nothing. Every change records how to undo it, so a batch
-//! that fails puts the graph back as it was, in time proportional to what it
-//! changed rather than to the size of the graph.
+//! A batch is all or nothing, and it never writes to the graph it starts
+//! from. A node or an edge that a batch adds or removes, and an index entry
+//! it changes, goes into the batch's layer (`Layered`). A field write goes
+//! into the batch's field layer (`FieldLayer`), a tree of the paths the batch
+//! writes, which keeps only what it wrote. Reads in the batch look in the layers
+//! first. A batch that succeeds folds its layers into the graph; a batch
+//! that fails drops them. So nothing is ever undone, and a failed batch
+//! keeps the indexes that earlier batches built.
+//!
+//! A batch can also stay staged after it succeeds ([`GraphState::stage`]):
+//! its layers wait until the caller keeps them ([`GraphState::keep`]) or
+//! drops them ([`GraphState::drop_staged`]), for example after a database
+//! commit. While a batch is staged, the graph as read
+//! ([`GraphState::to_value`], [`GraphState::to_json`],
+//! [`GraphState::entries`]) is the committed graph, without the batch.
 
-use std::collections::{HashMap, HashSet};
+use std::borrow::Cow;
+use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
 
+use crate::value::{FiniteValue, Map, Value};
 use indexmap::{IndexMap, IndexSet};
-use serde_json::{Map, Value};
+use serde::ser::{Serialize, SerializeMap, Serializer};
 
-use crate::ops::edges::{EdgeIndex, GraphRead, endpoint};
+use crate::ops::edges::{EdgeIndex, GraphRead};
 use crate::ops::entry::EntryExt;
 use crate::ops::error::{Error, Result};
-use crate::ops::keyed::{ListIndex, Removal};
-use crate::ops::ops::PathExt;
-use crate::ops::schema::KeyedList;
-use crate::ops::validate::{Numbers, PathPart, validate_flow_data};
+use crate::ops::fields::{self, FieldLayer};
+use crate::ops::keyed::ListIndex;
+use crate::ops::ops::{Edge, Node, PathExt, Segment};
+use crate::ops::schema::{KeyedList, NODE_SCHEMA};
+use crate::ops::validate::{
+    Numbers, PathPart, find_load_violations, validate_flow_data, violations_error,
+};
 
-/// Whether a removal returns copies of what it removed, which inverses need.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Copies {
-    Keep,
-    Discard,
-}
+// --- Layers --------------------------------------------------------------------------------
 
-/// How to undo one change inside a node.
+/// A map that a batch changes through a layer of its own.
+///
+/// Reads look in the layer first, then in the stored map. The first write to
+/// a stored entry copies it into the layer. [`Layered::fold`] makes the layer
+/// part of the stored map, and [`Layered::discard`] drops it.
+///
+/// Entries keep their order, as the nodes and edges of a flow keep theirs in
+/// the Python engine and in the editor: a removal keeps the order of the
+/// others, a replaced entry keeps its place, and a new one goes last.
 #[derive(Debug)]
-pub(crate) enum FieldUndo {
-    /// A key was set; put back the value it held, or remove it if it was new.
-    KeySet { key: String, old: Option<Value> },
-    /// A key was deleted from `index`.
-    KeyDeleted {
-        key: String,
-        index: usize,
-        old: Value,
-    },
-    /// An item was appended.
-    ItemAdded,
-    /// The item at `slot` was replaced.
-    ItemReplaced { slot: usize, old: Value },
-    /// An item was removed.
-    ItemRemoved { removal: Removal, old: Value },
+pub(crate) struct Layered<V> {
+    stored: IndexMap<String, V>,
+    /// What the batch wrote, by key: the new value, or `None` for a stored
+    /// entry that the batch removed.
+    layer: IndexMap<String, Option<V>>,
 }
 
-/// How to undo one change.
+impl<V: Clone> Layered<V> {
+    /// An empty map.
+    pub fn new() -> Self {
+        Self::with_stored(IndexMap::new())
+    }
+
+    fn with_stored(stored: IndexMap<String, V>) -> Self {
+        Self {
+            stored,
+            layer: IndexMap::new(),
+        }
+    }
+
+    /// The entry with `key`.
+    pub fn get(&self, key: &str) -> Option<&V> {
+        match self.layer.get(key) {
+            Some(written) => written.as_ref(),
+            None => self.stored.get(key),
+        }
+    }
+
+    /// Whether there is an entry with `key`.
+    pub fn contains(&self, key: &str) -> bool {
+        self.get(key).is_some()
+    }
+
+    /// Whether the entry existed when the batch started.
+    pub fn in_base(&self, key: &str) -> bool {
+        self.stored.contains_key(key)
+    }
+
+    /// Whether the batch added, replaced or removed the entry.
+    pub fn in_layer(&self, key: &str) -> bool {
+        self.layer.contains_key(key)
+    }
+
+    /// The stored entry with `key`, to change it in place. Only between
+    /// batches, when the layer is empty.
+    pub fn stored_mut(&mut self, key: &str) -> Option<&mut V> {
+        debug_assert!(self.layer.is_empty(), "write between batches only");
+        self.stored.get_mut(key)
+    }
+
+    /// The entry with `key`, to change it. The first call in a batch copies a stored entry.
+    pub fn get_mut(&mut self, key: &str) -> Option<&mut V> {
+        if !self.layer.contains_key(key) {
+            // No entry anywhere: return `None`, and leave the layer as it is.
+            let copy = self.stored.get(key)?.clone();
+            self.layer.insert(key.to_owned(), Some(copy));
+        }
+        self.layer.get_mut(key)?.as_mut()
+    }
+
+    /// The entry with `key`, to change it, added by `new` when there is none.
+    pub fn get_or_insert_with(&mut self, key: &str, new: impl FnOnce() -> V) -> &mut V {
+        if !self.contains(key) {
+            self.insert(key.to_owned(), new());
+        }
+        self.get_mut(key)
+            .expect("the entry exists or was just added")
+    }
+
+    /// Add an entry, or replace the one with the same key.
+    pub fn insert(&mut self, key: String, value: V) {
+        self.layer.insert(key, Some(value));
+    }
+
+    /// Remove the entry with `key`. Returns whether there was one.
+    pub fn remove(&mut self, key: &str) -> bool {
+        let existed = self.contains(key);
+        if self.stored.contains_key(key) {
+            self.layer.insert(key.to_owned(), None);
+        } else {
+            self.layer.shift_remove(key);
+        }
+        existed
+    }
+
+    /// Make the batch's changes part of the stored map, in time proportional
+    /// to them, and for removals to the entries after the removed ones.
+    pub fn fold(&mut self) {
+        let mut removed = Vec::new();
+        for (key, written) in std::mem::take(&mut self.layer) {
+            match written {
+                Some(value) => {
+                    self.stored.insert(key, value);
+                }
+                None => removed.extend(self.stored.get_index_of(&key)),
+            }
+        }
+        self.remove_slots(removed);
+    }
+
+    /// Remove the stored entries at `slots`, keeping the order of the others.
+    ///
+    /// Removing one entry moves every entry after it up one place. When that
+    /// moves fewer entries in all than the map holds, as for entries near
+    /// the end, each is removed in turn, from the last; else one pass keeps
+    /// the entries not removed.
+    fn remove_slots(&mut self, mut slots: Vec<usize>) {
+        let len = self.stored.len();
+        slots.sort_unstable();
+        let moved: usize = slots.iter().map(|slot| len - slot).sum();
+        if moved <= len {
+            for slot in slots.into_iter().rev() {
+                self.stored.shift_remove_index(slot);
+            }
+            return;
+        }
+        let mut slots = slots.into_iter().peekable();
+        let mut slot = 0;
+        self.stored.retain(|_, _| {
+            let keep = slots.next_if_eq(&slot).is_none();
+            slot += 1;
+            keep
+        });
+    }
+
+    /// Drop the batch's changes.
+    pub fn discard(&mut self) {
+        self.layer.clear();
+    }
+
+    /// The stored entries, without a staged batch's layer. Never in the
+    /// middle of a batch, whose reads go through [`Self::get`].
+    fn values(&self) -> impl Iterator<Item = &V> {
+        self.stored.values()
+    }
+
+    /// The entries with a staged batch's layer, in the order [`Self::fold`]
+    /// gives them: the stored entries that stay, each as the batch wrote it,
+    /// then the entries the batch added.
+    fn staged_entries(&self) -> impl Iterator<Item = (&String, &V)> {
+        let kept = self
+            .stored
+            .iter()
+            .filter_map(|(key, value)| match self.layer.get(key) {
+                Some(written) => written.as_ref().map(|written| (key, written)),
+                None => Some((key, value)),
+            });
+        let added = self
+            .layer
+            .iter()
+            .filter(|(key, _)| !self.stored.contains_key(*key))
+            .filter_map(|(key, written)| written.as_ref().map(|value| (key, value)));
+        kept.chain(added)
+    }
+
+    /// The entries, without copying them. Only between batches.
+    fn into_values(self) -> impl Iterator<Item = V> {
+        debug_assert!(self.layer.is_empty(), "read between batches only");
+        self.stored.into_values()
+    }
+}
+
+// --- The graph -----------------------------------------------------------------------------
+
+/// The ids of the edges at each node.
 #[derive(Debug)]
-enum Undo {
-    NodeAdded(String),
-    NodeRemoved {
-        index: usize,
-        id: String,
-        node: Value,
-    },
-    EdgeAdded(String),
-    EdgeRemoved {
-        index: usize,
-        id: String,
-        edge: Value,
-    },
-    Field {
-        node_id: String,
-        container: Vec<PathPart>,
-        undo: FieldUndo,
-    },
-}
+pub(crate) struct EdgesAt(Layered<IndexSet<String>>);
 
-/// Nodes and edges by id, and edges by the nodes they touch.
-#[derive(Debug, Default)]
-pub(crate) struct Graph {
-    pub nodes: IndexMap<String, Value>,
-    pub edges: IndexMap<String, Value>,
-    edges_at: HashMap<String, IndexSet<String>>,
-}
-
-impl Graph {
-    fn attach(&mut self, id: &str, edge: &Value) {
+impl EdgesAt {
+    fn attach(&mut self, id: &str, edge: &Edge) {
         for end in ends(edge) {
-            self.edges_at
-                .entry(end.to_owned())
-                .or_default()
+            self.0
+                .get_or_insert_with(end, IndexSet::new)
                 .insert(id.to_owned());
         }
     }
 
-    fn detach(&mut self, id: &str, edge: &Value) {
+    fn detach(&mut self, id: &str, edge: &Edge) {
         for end in ends(edge) {
-            if let Some(ids) = self.edges_at.get_mut(end) {
-                ids.swap_remove(id);
+            if let Some(ids) = self.0.get_mut(end) {
+                ids.shift_remove(id);
                 if ids.is_empty() {
-                    self.edges_at.remove(end);
+                    self.0.remove(end);
                 }
             }
         }
     }
-
-    /// The ids of the edges at a node.
-    pub fn edges_at(&self, node_id: &str) -> impl Iterator<Item = &String> {
-        self.edges_at.get(node_id).into_iter().flatten()
-    }
 }
 
-fn ends(edge: &Value) -> Vec<&str> {
-    let Some(edge) = edge.as_object() else {
-        return Vec::new();
-    };
-    let (source, target) = (endpoint(edge, "source"), endpoint(edge, "target"));
+fn ends(edge: &Edge) -> Vec<&str> {
+    let (source, target) = (edge.source(), edge.target());
     if source == target {
         vec![source]
     } else {
@@ -120,13 +252,86 @@ fn ends(edge: &Value) -> Vec<&str> {
     }
 }
 
-impl GraphRead for Graph {
-    fn node(&self, id: &str) -> Option<&Map<String, Value>> {
-        self.nodes.get(id).and_then(Value::as_object)
+/// Nodes and edges by id, edges by the nodes they touch, and the batch's field writes.
+///
+/// Its maps are private: code outside this module reads a node only through
+/// [`fields::walk`], by [`Graph::walk_field`], [`field_value`] and
+/// [`GraphRead::node_value`]. So no read misses the batch's field writes.
+#[derive(Debug)]
+pub(crate) struct Graph {
+    nodes: Layered<Node>,
+    edges: Layered<Edge>,
+    edges_at: EdgesAt,
+    fields: FieldLayer,
+}
+
+impl Graph {
+    /// The ids of the edges at a node.
+    pub fn edges_at(&self, node_id: &str) -> impl Iterator<Item = &String> {
+        self.edges_at.0.get(node_id).into_iter().flatten()
     }
 
-    fn edge(&self, id: &str) -> Option<&Map<String, Value>> {
-        self.edges.get(id).and_then(Value::as_object)
+    /// Whether the graph has an edge with `id`.
+    pub fn has_edge(&self, id: &str) -> bool {
+        self.edges.contains(id)
+    }
+
+    /// Whether node `id` is a stored node: the one the graph had when the
+    /// batch started, not one the batch added in its place. Only a stored
+    /// node's lists are indexed.
+    pub fn is_stored_node(&self, id: &str) -> bool {
+        self.nodes.in_base(id) && !self.nodes.in_layer(id)
+    }
+
+    /// Follow `path` in node `id` as the batch sees it ([`fields::walk`]), or
+    /// `None` when there is no such node.
+    ///
+    /// # Errors
+    ///
+    /// `step` fails.
+    pub fn walk_field<'g>(
+        &'g self,
+        id: &str,
+        path: &[Segment],
+        step: impl FnMut(&'g Value, usize, bool) -> Result<Option<&'g Value>>,
+    ) -> Result<Option<fields::Walked<'g>>> {
+        let Some(node) = self.nodes.get(id) else {
+            return Ok(None);
+        };
+        fields::walk(node.as_value(), self.fields.node(id), path, step).map(Some)
+    }
+
+    /// The batch's writes to node `id`, to add one.
+    pub fn writes_mut(&mut self, id: &str) -> &mut fields::PathWrites {
+        self.fields.node_mut(id)
+    }
+
+    fn discard(&mut self) {
+        self.nodes.discard();
+        self.edges.discard();
+        self.edges_at.0.discard();
+        self.fields.discard();
+    }
+}
+
+impl GraphRead for Graph {
+    fn has_node(&self, id: &str) -> bool {
+        self.nodes.contains(id)
+    }
+
+    fn node_value(&self, id: &str, path: &[&str]) -> Option<Cow<'_, Value>> {
+        let node = self.nodes.get(id)?;
+        let path: Vec<Segment> = path
+            .iter()
+            .map(|key| Segment::Key((*key).to_owned()))
+            .collect();
+        let step = |value, index: usize, _| Ok(fields::child(value, &path[..index], &path[index]));
+        fields::read(node.as_value(), self.fields.node(id), &path, step)
+            .expect("a read of object keys cannot fail")
+    }
+
+    fn edge(&self, id: &str) -> Option<&Map> {
+        self.edges.get(id).map(Edge::as_map)
     }
 
     fn edge_ids_at(&self, node_id: &str) -> impl Iterator<Item = &str> {
@@ -134,22 +339,63 @@ impl GraphRead for Graph {
     }
 }
 
+/// The value at `path` of node `id` as the batch sees it, with the batch's
+/// field writes. A list item of a stored node is found through the list's
+/// index, built the first time a read reaches it. `context` names the read
+/// in an error.
+///
+/// # Errors
+///
+/// A key that the read looks up names two items of its list.
+pub(crate) fn field_value<'g>(
+    graph: &'g Graph,
+    lists: &mut Lists,
+    id: &str,
+    path: &[Segment],
+    context: &dyn fmt::Display,
+) -> Result<Option<Cow<'g, Value>>> {
+    let Some(node) = graph.nodes.get(id) else {
+        return Ok(None);
+    };
+    let stored = graph.is_stored_node(id);
+    let step = |value: &'g Value, index: usize, in_entry: bool| {
+        let (parent, segment) = (&path[..index], &path[index]);
+        let (Segment::Item(key), true, Some(list_path)) =
+            (segment, stored && !in_entry, parent.to_list())
+        else {
+            return Ok(fields::child(value, parent, segment));
+        };
+        let Some(items) = value.as_array() else {
+            return Ok(None);
+        };
+        let keyed = NODE_SCHEMA.listed_at(parent);
+        let slot = lists
+            .index(id, &list_path, keyed, items)
+            .find(key, context)?;
+        Ok(slot.map(|slot| &items[slot]))
+    };
+    fields::read(node.as_value(), graph.fields.node(id), path, step)
+}
+
 /// The keyed lists indexed so far, by node and by the path of the list.
+///
+/// They index stored nodes, never the batch's field writes, so
+/// a batch that fails leaves them right. A field write forgets the indexes
+/// it makes stale, and the fold keeps the others up to date.
 #[derive(Debug, Default)]
 pub(crate) struct Lists {
     by_node: HashMap<String, Vec<(Vec<String>, ListIndex)>>,
 }
 
 impl Lists {
-    /// The index of the list `items` at `path` of a node, built the first time a write reaches it.
+    /// The index of the list `items` at `path` of a node, built the first time a read reaches it.
     pub fn index(
         &mut self,
         node_id: &str,
         path: &[&str],
         keyed: &'static KeyedList,
         items: &[Value],
-        context: &str,
-    ) -> Result<&mut ListIndex> {
+    ) -> &mut ListIndex {
         let lists = self.by_node.entry(node_id.to_owned()).or_default();
         let position = if let Some(position) = lists
             .iter()
@@ -158,13 +404,23 @@ impl Lists {
             position
         } else {
             let owned = path.iter().map(|key| (*key).to_owned()).collect();
-            lists.push((owned, ListIndex::build(keyed, items, context)?));
+            lists.push((owned, ListIndex::build(keyed, items)));
             lists.len() - 1
         };
-        Ok(&mut lists[position].1)
+        &mut lists[position].1
     }
 
-    /// Forget the indexes of the lists at or under `path`, which a write replaced or removed.
+    /// The index of the list at `path` of a node, if one is built.
+    pub fn built(&mut self, node_id: &str, path: &[&str]) -> Option<&mut ListIndex> {
+        self.by_node
+            .get_mut(node_id)?
+            .iter_mut()
+            .find(|(list_path, _)| list_path.equals(path))
+            .map(|(_, index)| index)
+    }
+
+    /// Forget the indexes of the lists at `path` or at a descendant (desc.)
+    /// path of it, which a write replaced or removed.
     pub fn forget_under(&mut self, node_id: &str, path: &[&str]) {
         if let Some(lists) = self.by_node.get_mut(node_id) {
             lists.retain(|(list_path, _)| !list_path.has_start(path));
@@ -176,16 +432,6 @@ impl Lists {
     }
 }
 
-/// What one batch did, so it can be undone and reported.
-#[derive(Debug, Default)]
-pub(crate) struct Batch {
-    undos: Vec<Undo>,
-    added_nodes: HashSet<String>,
-    removed_base_nodes: HashSet<String>,
-    pub changed_nodes: IndexSet<String>,
-    pub changed_edges: IndexSet<String>,
-}
-
 /// A flow graph, indexed for applying operations.
 ///
 /// It keeps the graph and its indexes between batches, so the graph is
@@ -194,45 +440,122 @@ pub(crate) struct Batch {
 pub struct GraphState {
     /// The flow's top-level object; `nodes` and `edges` hold placeholders.
     /// No operation writes its other keys, which are view state.
-    root: Map<String, Value>,
+    root: Map,
     pub(crate) graph: Graph,
     pub(crate) edge_index: EdgeIndex,
     pub(crate) lists: Lists,
-    pub(crate) batch: Batch,
+    /// Whether the flow passed the structural rules since it was loaded or
+    /// last replayed. Apply checks them once, before its first batch.
+    base_checked: bool,
+    /// Whether a batch is staged: its layers wait for [`Self::keep`] or
+    /// [`Self::drop_staged`].
+    staged: bool,
 }
 
 impl GraphState {
-    /// Load a flow graph and build its indexes, after checking its structure.
+    /// Load a flow graph and build its indexes.
+    ///
+    /// Loading checks only what the indexes need: flow data is an object,
+    /// `nodes` and `edges` are lists of objects, ids are unique, and each node
+    /// and edge has its shape. Apply checks the other structural rules before
+    /// its first batch; replay does not check them.
+    ///
+    /// # Errors
+    ///
+    /// The graph breaks a rule that the indexes need.
+    pub fn new(flow: Value) -> Result<Self> {
+        violations_error(find_load_violations(&flow), "flow.data")?;
+        let Value::Object(mut root) = flow else {
+            unreachable!("the load check refuses flow data that is not an object")
+        };
+        let nodes = by_id(take_list(&mut root, "nodes"), Node::try_from)?;
+        let edges = by_id(take_list(&mut root, "edges"), Edge::try_from)?;
+        let mut edges_at = EdgesAt(Layered::new());
+        for (id, edge) in &edges {
+            edges_at.attach(id, edge);
+        }
+        edges_at.0.fold();
+        Ok(Self {
+            root,
+            graph: Graph {
+                nodes: Layered::with_stored(nodes),
+                edges: Layered::with_stored(edges),
+                edges_at,
+                fields: FieldLayer::default(),
+            },
+            edge_index: EdgeIndex::default(),
+            lists: Lists::default(),
+            base_checked: false,
+            staged: false,
+        })
+    }
+
+    /// Load a flow graph that apply changes next, after checking it against
+    /// the structural rules. It does what the first batch would do, without
+    /// a copy of the flow.
     ///
     /// Values are not walked for numbers that are not finite: that check
     /// belongs to whoever accepts a graph from outside, and skipping it keeps
-    /// indexing proportional to the number of nodes and edges.
+    /// the check proportional to the number of nodes and edges.
     ///
     /// # Errors
     ///
     /// The graph breaks a structural rule.
-    pub fn new(flow: Value) -> Result<Self> {
+    pub(crate) fn checked(flow: Value) -> Result<Self> {
         validate_flow_data(&flow, Numbers::Skip, "flow.data", None)?;
-        let Value::Object(mut root) = flow else {
-            return Err(Error::graph_message("flow data must be an object"));
-        };
-        let mut graph = Graph::default();
-        for node in take_list(&mut root, "nodes") {
-            let id = node.id().to_owned();
-            graph.nodes.insert(id, node);
-        }
-        for edge in take_list(&mut root, "edges") {
-            let id = edge.id().to_owned();
-            graph.attach(&id, &edge);
-            graph.edges.insert(id, edge);
-        }
         Ok(Self {
-            root,
-            graph,
-            edge_index: EdgeIndex::default(),
-            lists: Lists::default(),
-            batch: Batch::default(),
+            base_checked: true,
+            ..Self::new(flow)?
         })
+    }
+
+    /// Check the flow against the structural rules, unless it passed them
+    /// since it was loaded or last replayed. Apply calls this before a batch.
+    ///
+    /// # Errors
+    ///
+    /// The graph breaks a structural rule.
+    pub(crate) fn check_base(&mut self) -> Result<()> {
+        if self.base_checked {
+            return Ok(());
+        }
+        // Loading checked every structural rule but one: that each edge's
+        // nodes exist. Apply and replay keep the others (they refuse a
+        // repeated id, a node or edge without its shape, and a write of a
+        // whole node object). So the graph passes when every edge's nodes
+        // exist, which is checked in place. Else the whole check runs on a
+        // copy, for the error and its violations in document order.
+        let nodes = &self.graph.nodes.stored;
+        let sound = self
+            .graph
+            .edges
+            .stored
+            .values()
+            .all(|edge| nodes.contains_key(edge.source()) && nodes.contains_key(edge.target()));
+        if !sound {
+            validate_flow_data(&self.to_value(), Numbers::Skip, "flow.data", None)?;
+        }
+        self.base_checked = true;
+        Ok(())
+    }
+
+    /// Note that a replay changed the flow, so apply checks it again.
+    pub(crate) fn uncheck_base(&mut self) {
+        self.base_checked = false;
+    }
+
+    /// Whether the next batch that apply or stage carries out checks the
+    /// whole graph against the structural rules first ([`Self::check_base`]).
+    #[must_use]
+    pub fn needs_check(&self) -> bool {
+        !self.base_checked
+    }
+
+    /// The number of nodes and edges of the committed graph: a measure of
+    /// what work on the whole graph costs, such as [`Self::to_json`].
+    #[must_use]
+    pub fn item_count(&self) -> usize {
+        self.graph.nodes.stored.len() + self.graph.edges.stored.len()
     }
 
     /// The graph as a JSON value.
@@ -241,13 +564,69 @@ impl GraphState {
         let mut out = Map::with_capacity(self.root.len());
         for (key, value) in &self.root {
             let value = match key.as_str() {
-                "nodes" => Value::Array(self.graph.nodes.values().cloned().collect()),
-                "edges" => Value::Array(self.graph.edges.values().cloned().collect()),
+                "nodes" => Value::Array(
+                    self.graph
+                        .nodes
+                        .values()
+                        .map(|node| node.as_value().clone())
+                        .collect(),
+                ),
+                "edges" => Value::Array(
+                    self.graph
+                        .edges
+                        .values()
+                        .map(|edge| Value::Object(edge.as_map().clone()))
+                        .collect(),
+                ),
                 _ => value.clone(),
             };
             out.insert(key.clone(), value);
         }
         Value::Object(out)
+    }
+
+    /// The graph as JSON text: the text of [`GraphState::to_value`], written
+    /// from the graph without copying it.
+    ///
+    /// # Panics
+    ///
+    /// A JSON value that `serde_json` cannot write, which a graph never holds:
+    /// every key is a string.
+    #[must_use]
+    pub fn to_json(&self) -> String {
+        serde_json::to_string(&self.json()).expect("a graph's keys are strings")
+    }
+
+    /// The graph, to serialize as JSON: it writes what [`GraphState::to_json`]
+    /// writes, with any `serde_json` formatter.
+    #[must_use]
+    pub fn json(&self) -> impl Serialize + '_ {
+        GraphJson(self)
+    }
+
+    /// The graph with the staged batch, to serialize as JSON: what
+    /// [`GraphState::json`] writes after [`GraphState::keep`], without
+    /// changing the committed graph. `None` when no batch is staged.
+    ///
+    /// A server writes the new graph in the transaction that records the
+    /// batch, and keeps the batch only after that transaction commits.
+    #[must_use]
+    pub fn staged_json(&self) -> Option<impl Serialize + '_> {
+        self.staged.then_some(StagedJson(self))
+    }
+
+    /// The graph's top-level keys in order, each with what [`GraphState::to_value`]
+    /// puts there, borrowed from the graph: for a binding that builds the graph
+    /// in its own language without a copy.
+    pub fn entries(&self) -> impl Iterator<Item = (&str, Entry<'_>)> {
+        self.root.iter().map(|(key, value)| {
+            let entry = match key.as_str() {
+                "nodes" => Entry::Nodes(Nodes(&self.graph.nodes)),
+                "edges" => Entry::Edges(Edges(&self.graph.edges)),
+                _ => Entry::Value(value),
+            };
+            (key.as_str(), entry)
+        })
     }
 
     /// The graph as a JSON value, without copying it.
@@ -258,172 +637,158 @@ impl GraphState {
         } = self;
         root.insert(
             "nodes".into(),
-            Value::Array(graph.nodes.into_values().collect()),
+            Value::Array(graph.nodes.into_values().map(Node::into_value).collect()),
         );
         root.insert(
             "edges".into(),
-            Value::Array(graph.edges.into_values().collect()),
+            Value::Array(
+                graph
+                    .edges
+                    .into_values()
+                    .map(|edge| Value::Object(edge.into_map()))
+                    .collect(),
+            ),
         );
         Value::Object(root)
     }
 
     // --- Batches ---------------------------------------------------------------------
 
-    /// Start a batch: forget what the previous one did.
-    pub(crate) fn begin(&mut self) {
-        self.batch = Batch::default();
+    /// End a batch that succeeded: its layers become the graph.
+    ///
+    /// Nodes fold first, so a field write lands in the node the batch saw:
+    /// a node the batch deleted and added again is written after it is
+    /// added.
+    pub(crate) fn commit(&mut self) {
+        let graph = &mut self.graph;
+        graph.nodes.fold();
+        graph.edges.fold();
+        graph.edges_at.0.fold();
+        for (id, writes) in graph.fields.take() {
+            let node = graph
+                .nodes
+                .stored_mut(&id)
+                .expect("a field write's node exists");
+            let mut lists = fields::NodeLists {
+                lists: &mut self.lists,
+                id: &id,
+            };
+            fields::make_writes(
+                node.as_value_mut(),
+                writes,
+                &mut Vec::new(),
+                Some(&mut lists),
+            );
+        }
+        self.edge_index.fold();
     }
 
-    /// Undo everything the current batch changed, and drop the indexes it touched.
-    pub(crate) fn rollback(&mut self) {
-        while let Some(undo) = self.batch.undos.pop() {
-            self.undo(undo);
-        }
-        self.edge_index.clear();
-        self.lists = Lists::default();
-        self.batch = Batch::default();
+    /// End a batch that failed: drop its layers.
+    pub(crate) fn discard(&mut self) {
+        self.graph.discard();
+        self.edge_index.discard();
     }
 
-    fn undo(&mut self, undo: Undo) {
-        match undo {
-            Undo::NodeAdded(id) => {
-                self.graph.nodes.shift_remove(&id);
-            }
-            Undo::NodeRemoved { index, id, node } => {
-                self.graph.nodes.shift_insert(index, id, node);
-            }
-            Undo::EdgeAdded(id) => {
-                if let Some(edge) = self.graph.edges.shift_remove(&id) {
-                    self.graph.detach(&id, &edge);
-                }
-            }
-            Undo::EdgeRemoved { index, id, edge } => {
-                self.graph.attach(&id, &edge);
-                self.graph.edges.shift_insert(index, id, edge);
-            }
-            Undo::Field {
-                node_id,
-                container,
-                undo,
-            } => {
-                let container = self
-                    .graph
-                    .nodes
-                    .get_mut(&node_id)
-                    .and_then(|node| resolve_mut(node, &container));
-                if let Some(container) = container {
-                    undo_field(container, undo);
-                }
-            }
+    /// Whether a batch is staged ([`Self::stage`]).
+    #[must_use]
+    pub fn is_staged(&self) -> bool {
+        self.staged
+    }
+
+    /// Note that the batch that just succeeded stays staged.
+    pub(crate) fn set_staged(&mut self) {
+        self.staged = true;
+    }
+
+    /// Keep the staged batch: its layers become the graph. Returns whether a
+    /// batch was staged; with none, nothing changes.
+    pub fn keep(&mut self) -> bool {
+        if !self.staged {
+            return false;
         }
+        self.staged = false;
+        self.commit();
+        true
+    }
+
+    /// Drop the staged batch: the graph stays as it was before it. Returns
+    /// whether a batch was staged; with none, nothing changes.
+    pub fn drop_staged(&mut self) -> bool {
+        if !self.staged {
+            return false;
+        }
+        self.staged = false;
+        self.discard();
+        true
     }
 
     /// Whether the node existed when the batch started.
     pub(crate) fn is_base_node(&self, id: &str) -> bool {
-        if self.batch.added_nodes.contains(id) {
-            self.batch.removed_base_nodes.contains(id)
-        } else {
-            self.graph.nodes.contains_key(id) || self.batch.removed_base_nodes.contains(id)
-        }
+        self.graph.nodes.in_base(id)
     }
 
-    // --- Changes that record their undo ---------------------------------------------------
+    // --- Changes -----------------------------------------------------------------------
 
-    pub(crate) fn insert_node(&mut self, id: String, node: Value) {
-        self.batch.added_nodes.insert(id.clone());
-        self.batch.changed_nodes.insert(id.clone());
-        self.batch.undos.push(Undo::NodeAdded(id.clone()));
-        self.graph.nodes.insert(id, node);
+    /// Add `node`, whose id the graph does not have.
+    pub(crate) fn insert_node(&mut self, node: Node) {
+        debug_assert!(!self.graph.nodes.contains(node.id()), "a new node id");
+        // The key is the one copy of the id that the graph needs.
+        self.graph.nodes.insert(node.id().to_owned(), node);
     }
 
-    /// Remove a node, if it exists, and with [`Copies::Keep`] return a copy of
-    /// it. Its edges stay; the caller removes them.
-    pub(crate) fn remove_node(&mut self, id: &str, copies: Copies) -> Option<Map<String, Value>> {
-        let base = self.is_base_node(id);
-        let (index, id, node) = self.graph.nodes.shift_remove_full(id)?;
-        self.edge_index.forget_node(&id);
-        self.lists.forget_node(&id);
-        if base {
-            self.batch.removed_base_nodes.insert(id.clone());
-        }
-        self.batch.changed_nodes.insert(id.clone());
-        let kept = match copies {
-            Copies::Keep => node.as_object().cloned(),
-            Copies::Discard => None,
+    /// A copy of the node `id` as the batch sees it, for the backward operations.
+    pub(crate) fn node_copy(&self, id: &str) -> Option<Node> {
+        let node = self.graph.node_value(id, &[])?.into_owned();
+        let Value::Object(node) = node else {
+            unreachable!("a node is a JSON object")
         };
-        self.batch.undos.push(Undo::NodeRemoved { index, id, node });
-        kept
+        Some(Node::try_from(node).expect("a field write keeps the shape of a node"))
     }
 
-    pub(crate) fn insert_edge(&mut self, id: String, edge: Value) {
-        self.graph.attach(&id, &edge);
-        if let Some(map) = edge.as_object() {
-            self.edge_index.insert(map);
-        }
-        self.batch.changed_edges.insert(id.clone());
-        self.batch.undos.push(Undo::EdgeAdded(id.clone()));
-        self.graph.edges.insert(id, edge);
+    /// Remove the node `id`, if it exists. Its edges stay; the caller removes them.
+    pub(crate) fn remove_node(&mut self, id: &str) {
+        self.graph.nodes.remove(id);
+        self.graph.fields.forget_node(id);
+        self.edge_index.forget_node(id);
+        self.lists.forget_node(id);
     }
 
-    /// Remove the edges that exist among `ids`, each once. Return their ids,
-    /// and with [`Copies::Keep`], copies of the edges.
-    pub(crate) fn remove_edges<'i>(
-        &mut self,
-        ids: impl IntoIterator<Item = &'i str>,
-        copies: Copies,
-    ) -> (Vec<String>, Vec<Map<String, Value>>) {
-        let mut removed = Vec::new();
-        let mut kept = Vec::new();
-        let mut seen = HashSet::new();
-        for id in ids {
-            if !seen.insert(id) {
-                continue;
-            }
-            let Some((index, id, edge)) = self.graph.edges.shift_remove_full(id) else {
-                continue;
+    /// Add `edge`, whose id the graph does not have.
+    pub(crate) fn insert_edge(&mut self, edge: Edge) {
+        debug_assert!(!self.graph.edges.contains(edge.id()), "a new edge id");
+        self.graph.edges_at.attach(edge.id(), &edge);
+        self.edge_index.insert(edge.as_map());
+        self.graph.edges.insert(edge.id().to_owned(), edge);
+    }
+
+    /// A copy of the edge `id`, for the backward operations.
+    pub(crate) fn edge_copy(&self, id: &str) -> Option<Edge> {
+        self.graph.edges.get(id).cloned()
+    }
+
+    /// Remove the edge `id`, if it exists.
+    pub(crate) fn remove_edge(&mut self, id: &str) {
+        let Some(edge) = self.graph.edges.get(id) else {
+            return;
+        };
+        self.edge_index.forget(edge.as_map());
+        self.graph.edges_at.detach(id, edge);
+        self.graph.edges.remove(id);
+    }
+}
+
+/// Nodes or edges by id, in their order, each made by `make`. The load check
+/// passed, so each one is an object with its shape and a unique id.
+fn by_id<T>(items: Vec<Value>, make: fn(Map) -> Result<T>) -> Result<IndexMap<String, T>> {
+    items
+        .into_iter()
+        .map(|item| {
+            let Value::Object(item) = item else {
+                unreachable!("the load check refuses nodes and edges that are not objects")
             };
-            if let Some(map) = edge.as_object() {
-                self.edge_index.forget(map);
-                if copies == Copies::Keep {
-                    kept.push(map.clone());
-                }
-            }
-            self.graph.detach(&id, &edge);
-            self.batch.changed_edges.insert(id.clone());
-            removed.push(id.clone());
-            self.batch.undos.push(Undo::EdgeRemoved { index, id, edge });
-        }
-        (removed, kept)
-    }
-
-    /// Record how to undo a change made inside a node.
-    pub(crate) fn record_field(
-        &mut self,
-        node_id: &str,
-        container: Vec<PathPart>,
-        undo: FieldUndo,
-    ) {
-        self.batch.changed_nodes.insert(node_id.to_owned());
-        self.batch.undos.push(Undo::Field {
-            node_id: node_id.to_owned(),
-            container,
-            undo,
-        });
-    }
-
-    /// The value the last recorded field change replaced or removed.
-    pub(crate) fn last_replaced(&self) -> Option<&Value> {
-        match self.batch.undos.last()? {
-            Undo::Field { undo, .. } => match undo {
-                FieldUndo::KeySet { old, .. } => old.as_ref(),
-                FieldUndo::KeyDeleted { old, .. }
-                | FieldUndo::ItemReplaced { old, .. }
-                | FieldUndo::ItemRemoved { old, .. } => Some(old),
-                FieldUndo::ItemAdded => None,
-            },
-            _ => None,
-        }
-    }
+            Ok((item.id().to_owned(), make(item)?))
+        })
+        .collect()
 }
 
 /// Parse a flow graph given as JSON text, and load it into a [`GraphState`].
@@ -431,31 +796,175 @@ impl FromStr for GraphState {
     type Err = Error;
 
     fn from_str(text: &str) -> Result<Self> {
-        Self::new(parse_json(text)?)
+        Self::new(parse_finite_json(text)?)
     }
 }
 
 /// The graph as JSON text.
 impl fmt::Display for GraphState {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.to_value())
+        f.write_str(&self.to_json())
     }
 }
 
-fn take_list(root: &mut Map<String, Value>, key: &str) -> Vec<Value> {
-    match root.get_mut(key) {
-        Some(value) => match std::mem::take(value) {
-            Value::Array(items) => items,
-            _ => Vec::new(),
-        },
-        None => Vec::new(),
+/// Writes a [`GraphState`] as [`GraphState::to_value`] builds it: the root's
+/// keys in order, with the nodes and edges in place of their placeholders.
+struct GraphJson<'s>(&'s GraphState);
+
+impl Serialize for GraphJson<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
+        let mut map = serializer.serialize_map(Some(self.0.root.len()))?;
+        for (key, entry) in self.0.entries() {
+            match entry {
+                Entry::Value(value) => map.serialize_entry(key, value)?,
+                Entry::Nodes(nodes) => map.serialize_entry(key, &NodesJson(nodes))?,
+                Entry::Edges(edges) => map.serialize_entry(key, &EdgesJson(edges))?,
+            }
+        }
+        map.end()
+    }
+}
+
+/// Writes a [`GraphState`] with its staged batch ([`GraphState::staged_json`]).
+struct StagedJson<'s>(&'s GraphState);
+
+impl Serialize for StagedJson<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
+        let state = self.0;
+        let mut map = serializer.serialize_map(Some(state.root.len()))?;
+        for (key, value) in &state.root {
+            match key.as_str() {
+                "nodes" => map.serialize_entry(key, &StagedNodesJson(state))?,
+                "edges" => map.serialize_entry(key, &StagedEdgesJson(state))?,
+                _ => map.serialize_entry(key, value)?,
+            }
+        }
+        map.end()
+    }
+}
+
+struct StagedNodesJson<'s>(&'s GraphState);
+
+impl Serialize for StagedNodesJson<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
+        let graph = &self.0.graph;
+        serializer.collect_seq(graph.nodes.staged_entries().map(|(id, node)| {
+            match graph.fields.node(id) {
+                // A node the batch writes: a copy with the writes, as the fold makes them.
+                Some(writes) => {
+                    let mut value = node.as_value().clone();
+                    fields::make_writes(&mut value, writes.clone(), &mut Vec::new(), None);
+                    Cow::Owned(value)
+                }
+                None => Cow::Borrowed(node.as_value()),
+            }
+        }))
+    }
+}
+
+struct StagedEdgesJson<'s>(&'s GraphState);
+
+impl Serialize for StagedEdgesJson<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
+        serializer.collect_seq(
+            self.0
+                .graph
+                .edges
+                .staged_entries()
+                .map(|(_, edge)| edge.as_map()),
+        )
+    }
+}
+
+struct NodesJson<'s>(Nodes<'s>);
+
+impl Serialize for NodesJson<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
+        serializer.collect_seq(self.0.iter())
+    }
+}
+
+struct EdgesJson<'s>(Edges<'s>);
+
+impl Serialize for EdgesJson<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
+        serializer.collect_seq(self.0.iter())
+    }
+}
+
+/// A top-level entry of a [`GraphState`], borrowed from it ([`GraphState::entries`]).
+#[derive(Debug, Clone, Copy)]
+pub enum Entry<'s> {
+    /// A key that no operation writes, as stored.
+    Value(&'s Value),
+    /// The nodes, in the graph's order.
+    Nodes(Nodes<'s>),
+    /// The edges, in the graph's order.
+    Edges(Edges<'s>),
+}
+
+/// The nodes of a [`GraphState`], borrowed from it.
+#[derive(Debug, Clone, Copy)]
+pub struct Nodes<'s>(&'s Layered<Node>);
+
+impl<'s> Nodes<'s> {
+    /// Each node's JSON object.
+    pub fn iter(self) -> impl Iterator<Item = &'s Value> {
+        self.0.values().map(Node::as_value)
+    }
+}
+
+/// The edges of a [`GraphState`], borrowed from it.
+#[derive(Debug, Clone, Copy)]
+pub struct Edges<'s>(&'s Layered<Edge>);
+
+impl<'s> Edges<'s> {
+    /// Each edge's JSON object.
+    pub fn iter(self) -> impl Iterator<Item = &'s Map> {
+        self.0.values().map(Edge::as_map)
+    }
+}
+
+/// The list at `key`, moved out. The load check passed, so it is a list.
+fn take_list(root: &mut Map, key: &str) -> Vec<Value> {
+    match root.get_mut(key).map(std::mem::take) {
+        Some(Value::Array(items)) => items,
+        _ => unreachable!("the load check refuses nodes and edges that are not lists"),
     }
 }
 
 /// Parse JSON text, reporting a parse failure as an invalid graph.
 pub(crate) fn parse_json(text: &str) -> Result<Value> {
+    serde_json::from_str(text).map_err(|error| graph_not_json(&error))
+}
+
+/// Parse JSON text as [`parse_json`] does, refusing a number that is not
+/// finite as a double ([`FiniteValue`]): for a graph that the engine holds
+/// and changes, as a Python `float` that is not finite is refused.
+pub(crate) fn parse_finite_json(text: &str) -> Result<Value> {
     serde_json::from_str(text)
-        .map_err(|error| Error::graph_message(format!("flow data is not valid JSON: {error}")))
+        .map(|FiniteValue(value)| value)
+        .map_err(|error| graph_not_json(&error))
+}
+
+fn graph_not_json(error: &serde_json::Error) -> Error {
+    Error::graph_message(format!(
+        "flow data is not valid JSON: {}",
+        parse_problem(error)
+    ))
+}
+
+/// Why JSON text does not parse. A value the parser read but refused, such
+/// as a number that is not finite, is named without its place in the text,
+/// as a Python value that breaks the same limit is.
+pub(crate) fn parse_problem(error: &serde_json::Error) -> String {
+    let text = error.to_string();
+    if error.is_data()
+        && let Some((problem, _)) = text.rsplit_once(" at line ")
+    {
+        return problem.to_owned();
+    }
+    text
 }
 
 /// The value at a path of object keys and array indexes.
@@ -474,33 +983,97 @@ pub(crate) fn resolve_mut<'v>(root: &'v mut Value, steps: &[PathPart]) -> Option
     })
 }
 
-fn undo_field(container: &mut Value, undo: FieldUndo) {
-    match (container, undo) {
-        (Value::Object(map), FieldUndo::KeySet { key, old }) => match old {
-            Some(old) => {
-                map.insert(key, old);
-            }
-            None => {
-                map.shift_remove(&key);
-            }
-        },
-        (Value::Object(map), FieldUndo::KeyDeleted { key, index, old }) => {
-            map.shift_insert(index, key, old);
-        }
-        (Value::Array(items), FieldUndo::ItemAdded) => {
-            items.pop();
-        }
-        (Value::Array(items), FieldUndo::ItemReplaced { slot, old }) => {
-            items[slot] = old;
-        }
-        (Value::Array(items), FieldUndo::ItemRemoved { removal, old }) => match removal {
-            Removal::Shifted { slot } => items.insert(slot, old),
-            Removal::Swapped { slot } => {
-                items.push(old);
-                let last = items.len() - 1;
-                items.swap(slot, last);
-            }
-        },
-        _ => {}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn stored(keys: &[&str]) -> Layered<u32> {
+        let map = keys
+            .iter()
+            .zip(1..)
+            .map(|(key, value)| ((*key).to_owned(), value))
+            .collect();
+        Layered::with_stored(map)
+    }
+
+    fn keys(map: &Layered<u32>) -> Vec<&str> {
+        map.stored.keys().map(String::as_str).collect()
+    }
+
+    #[test]
+    fn a_batch_reads_its_own_writes_and_leaves_the_stored_map_alone() {
+        let mut map = stored(&["a", "b"]);
+        *map.get_mut("a").unwrap() = 10;
+        map.remove("b");
+        map.insert("c".into(), 3);
+        assert_eq!(map.get("a"), Some(&10));
+        assert_eq!(map.get("b"), None);
+        assert_eq!(map.get("c"), Some(&3));
+        assert_eq!(map.stored.get("a"), Some(&1));
+        assert!(map.in_base("b") && !map.in_base("c"));
+    }
+
+    #[test]
+    fn a_dropped_batch_leaves_nothing_behind() {
+        let mut map = stored(&["a", "b"]);
+        *map.get_mut("a").unwrap() = 10;
+        map.remove("b");
+        map.insert("c".into(), 3);
+        map.discard();
+        assert_eq!(keys(&map), ["a", "b"]);
+        assert_eq!(map.get("a"), Some(&1));
+        assert_eq!(map.get("c"), None);
+    }
+
+    #[test]
+    fn a_folded_batch_writes_its_changes_to_the_stored_map() {
+        let mut map = stored(&["a", "b", "c"]);
+        map.insert("x".into(), 24);
+        *map.get_mut("a").unwrap() = 10;
+        map.remove("b");
+        map.insert("b".into(), 20);
+        map.remove("c");
+        map.fold();
+        let entries: Vec<_> = map
+            .stored
+            .iter()
+            .map(|(key, value)| (key.as_str(), *value))
+            .collect();
+        assert_eq!(entries, [("a", 10), ("b", 20), ("x", 24)]);
+    }
+
+    #[test]
+    fn removals_keep_the_order_of_the_other_entries() {
+        let mut map = stored(&["a", "b", "c", "d"]);
+        map.remove("b");
+        map.fold();
+        assert_eq!(keys(&map), ["a", "c", "d"]);
+
+        let mut map = stored(&["a", "b", "c", "d", "e"]);
+        map.insert("x".into(), 24);
+        map.insert("y".into(), 25);
+        map.insert("z".into(), 26);
+        map.remove("x");
+        map.remove("b");
+        map.remove("d");
+        map.fold();
+        assert_eq!(keys(&map), ["a", "c", "e", "y", "z"]);
+
+        // Entries near the end are removed one by one.
+        let mut map = stored(&["a", "b", "c", "d", "e"]);
+        map.remove("e");
+        map.remove("c");
+        map.fold();
+        assert_eq!(keys(&map), ["a", "b", "d"]);
+    }
+
+    #[test]
+    fn an_entry_added_and_removed_in_one_batch_leaves_no_trace() {
+        let mut map = stored(&["a"]);
+        map.insert("x".into(), 24);
+        assert!(map.remove("x"));
+        assert!(!map.remove("x"));
+        map.fold();
+        assert_eq!(keys(&map), ["a"]);
     }
 }

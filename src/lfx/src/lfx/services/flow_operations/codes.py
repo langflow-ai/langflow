@@ -29,6 +29,8 @@ class GraphViolationCode(str, Enum):
     TABLE_ROW_ID_MISSING = "TABLE_ROW_ID_MISSING"
     TABLE_ROW_ID_DUPLICATE = "TABLE_ROW_ID_DUPLICATE"
     TABLE_ROW_POS_INVALID = "TABLE_ROW_POS_INVALID"
+    # An item of an outputs or tool action list that a write adds or changes has no numeric __pos__.
+    LIST_ITEM_MISSING_POS = "LIST_ITEM_MISSING_POS"
     # A table's column definition names a column after a row key the engine owns.
     TABLE_COLUMN_RESERVED = "TABLE_COLUMN_RESERVED"
     # A handle has one of its two forms, and the other is valid.

@@ -1,8 +1,9 @@
 //! `canonical_cases.json`: canonical text, value equality, graph equality and handles.
 
+use lfx::json;
 use lfx::ops::canonical::{canonical_json, graph_hash, graphs_equal, parse_handle, values_equal};
+use lfx::value::Value;
 use libtest_mimic::{Failed, Trial};
-use serde_json::{Value, json};
 
 use crate::support::{assert_json_eq, error_json, load, section_cases};
 
@@ -93,7 +94,7 @@ fn limit_trials() -> Vec<Trial> {
                 format!("limit_cases::{section}::{name}"),
                 move || {
                     let actual = match lfx::ops::api::canonical_json(
-                        case["json"].as_str().unwrap_or_default(),
+                        case["json"].as_str().unwrap_or_default().into(),
                     ) {
                         Ok(text) => json!({"canonical": text}),
                         Err(error) => {

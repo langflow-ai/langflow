@@ -31,7 +31,7 @@ def _node(node_id: str, x: int) -> dict:
         "id": node_id,
         "type": "genericNode",
         "position": {"x": x, "y": 0},
-        "data": {"node": {"template": template, "outputs": [{"name": "out"}]}},
+        "data": {"node": {"template": template, "outputs": [{"name": "out", "__pos__": 1}]}},
     }
 
 
@@ -209,13 +209,13 @@ class TestApplyFlowOperations:
         stored = next(node for node in result.flow_data["nodes"] if node["id"] == "a")
         template = stored["data"]["node"]["template"]
         assert template["text"]["value"] == "hi"
-        assert stored["data"]["node"]["outputs"] == [{"name": "out", "display_name": "Out"}]
+        assert stored["data"]["node"]["outputs"] == [{"name": "out", "__pos__": 1, "display_name": "Out"}]
         # The fields and keys the writes did not pass through are the base flow's own.
         assert template["many"] is original_template["many"]
         assert stored["position"] is original["position"]
         # The base flow is unchanged.
         assert original_template["text"]["value"] == ""
-        assert original["data"]["node"]["outputs"] == [{"name": "out"}]
+        assert original["data"]["node"]["outputs"] == [{"name": "out", "__pos__": 1}]
 
     def test_add_nodes(self):
         flow_data = _base_flow_data()
@@ -313,7 +313,7 @@ class TestApplyFlowOperations:
         flow_data = _base_flow_data()
         flow_data["nodes"][0]["data"]["node"] = {
             "template": {},
-            "outputs": [{"name": "x", "selected": "a"}, {"name": "y", "selected": "b"}],
+            "outputs": [{"name": "x", "selected": "a", "__pos__": 1}, {"name": "y", "selected": "b", "__pos__": 2}],
         }
         result = apply_flow_operations(
             flow_data,
@@ -333,7 +333,7 @@ class TestApplyFlowOperations:
         )
 
         stored = next(node for node in result.flow_data["nodes"] if node["id"] == "a")
-        assert stored["data"]["node"]["outputs"][1] == {"name": "y", "selected": None}
+        assert stored["data"]["node"]["outputs"][1] == {"name": "y", "selected": None, "__pos__": 2}
 
     @pytest.mark.parametrize("segment", [0, 1, True, 1.5])
     def test_rejects_numeric_path_segments(self, segment):
@@ -429,7 +429,7 @@ class TestApplyFlowOperations:
     )
     def test_update_nodes_rejects_duplicate_field_path_updates(self, updates):
         flow_data = _base_flow_data()
-        with pytest.raises(FlowOperationValidationError, match="multiple field updates"):
+        with pytest.raises(FlowOperationValidationError, match="repeats the path"):
             apply_flow_operations(flow_data, [{"type": "update_nodes", "updates": updates}])
 
     def test_update_nodes_applies_field_level_position_update(self):
@@ -545,7 +545,7 @@ class TestApplyFlowOperations:
     def test_rejects_duplicate_node_id_within_request(self):
         flow_data = _base_flow_data()
         node = {"id": "c", "type": "generic", "position": {"x": 0, "y": 0}, "data": {"node": {"template": {}}}}
-        with pytest.raises(FlowOperationValidationError, match="duplicate node id"):
+        with pytest.raises(FlowOperationValidationError, match="repeats the id"):
             apply_flow_operations(flow_data, [{"type": "add_nodes", "nodes": [node, copy.deepcopy(node)]}])
 
     def test_rejects_missing_node_on_update(self):
@@ -588,7 +588,7 @@ class TestApplyFlowOperations:
     @pytest.mark.parametrize(
         ("path", "message"),
         [
-            (["id"], "cannot modify node identity"),
+            (["id"], "cannot change the node.s id"),
             (["data", "missing", "value"], "object path part must be an existing string key: 'missing'"),
         ],
     )
@@ -605,7 +605,7 @@ class TestApplyFlowOperations:
         flow_data = _base_flow_data()
         flow_data["nodes"][0]["data"]["node"] = {"template": {}, "outputs": []}
 
-        with pytest.raises(FlowOperationValidationError, match="cannot update entire node data objects"):
+        with pytest.raises(FlowOperationValidationError, match="cannot write the whole of"):
             apply_flow_operations(
                 flow_data,
                 [{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": path, "value": {}}]}],
@@ -655,12 +655,12 @@ class TestApplyFlowOperations:
 
     def test_rejects_malformed_node_payload(self):
         flow_data = _base_flow_data()
-        with pytest.raises(FlowOperationValidationError, match="must have a non-empty string id"):
+        with pytest.raises(FlowOperationValidationError, match="id: must be a non-empty string"):
             apply_flow_operations(flow_data, [{"type": "add_nodes", "nodes": [{"type": "generic"}]}])
 
     def test_rejects_malformed_edge_payload(self):
         flow_data = _base_flow_data()
-        with pytest.raises(FlowOperationValidationError, match="must have a non-empty string source"):
+        with pytest.raises(FlowOperationValidationError, match="source: must be a non-empty string"):
             apply_flow_operations(
                 flow_data,
                 [{"type": "add_edges", "edges": [{"id": "e-x", "target": "b"}]}],
@@ -674,7 +674,7 @@ class TestApplyFlowOperations:
         with pytest.raises(FlowOperationValidationError, match="edge id already exists"):
             apply_flow_operations(flow_data, [{"type": "add_edges", "edges": [duplicate_current_edge]}])
 
-        with pytest.raises(FlowOperationValidationError, match="duplicate edge id"):
+        with pytest.raises(FlowOperationValidationError, match="repeats the id"):
             apply_flow_operations(flow_data, [{"type": "add_edges", "edges": [new_edge, copy.deepcopy(new_edge)]}])
 
     def test_rejects_duplicate_ids_in_base_flow_data(self):

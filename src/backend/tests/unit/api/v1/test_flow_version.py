@@ -36,7 +36,7 @@ def _connected(source: str, target: str) -> dict:
     """Two nodes and an edge from ``source``'s output to ``target``'s field, as the editor writes them."""
     source_handle, target_handle = {"id": source, "name": "out"}, {"fieldName": "text", "id": target}
     nodes = [
-        {"id": source, "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+        {"id": source, "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}]}}},
         {"id": target, "data": {"node": {"template": {"text": {"type": "str"}}, "outputs": []}}},
     ]
     edge = {
@@ -588,6 +588,11 @@ async def test_snapshot_and_activate_with_complex_flow_data(client: AsyncClient,
     """Snapshot / activate round-trip with a real multi-node flow: a starter project."""
     starter = Path(langflow.initial_setup.__file__).parent / "starter_projects" / "Basic Prompting.json"
     complex_data = json.loads(starter.read_text(encoding="utf-8"))["data"]
+    # Activation writes the starter project back over another graph, so its
+    # outputs are written again and need positions (LIST_ITEM_MISSING_POS).
+    for node in complex_data["nodes"]:
+        for position, output in enumerate(node["data"]["node"].get("outputs", []), start=1):
+            output["__pos__"] = position
 
     # Create a flow with the complex data
     payload = {

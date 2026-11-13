@@ -1,11 +1,12 @@
 """Compare the Rust engine with the Python engine on real flows.
 
 For every ``starter_projects/*.json`` under the given folder, this checks that
-both engines agree on the graph hash, the violations (as stored, and as a new
-flow), the repair fixes, the diff from an empty flow and to edited copies,
-the derived operations, and the graph after replaying them one at a time.
-Run it with both ``lfx`` (at the reference commit) and ``lfx_native``
-importable:
+both engine objects (``lfx.services.flow_operations.engine``) agree on the
+graph hash, the violations (as stored, and as a new flow), the repair fixes,
+the derived operations from an empty flow and to edited copies, with the
+functions and with ``GraphPlain``, and the graph hash after applying those
+operations one at a time and replaying their forward operations. Run it with
+both ``lfx`` and ``lfx_native`` importable:
 
     python src/lfx-native/fixtures/tools/compare_engines.py src
 
@@ -22,18 +23,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from lfx.services.flow_operations import (
-    FlowOperationError,
-    apply_flow_operations,
-    derive_flow_operations,
-    diff_flow_data,
-    dump_flow_operation,
-    find_graph_violations,
-    graph_hash,
-    parse_flow_operations,
-    repair_flow_data,
-)
-from lfx_native import ops
+from lfx.services.flow_operations.engine import PythonEngine, RustEngine
+from lfx.services.flow_operations.exceptions import FlowOperationError
 
 EMPTY = {"nodes": [], "edges": []}
 # How often an edited copy changes each kind of thing.
@@ -45,17 +36,11 @@ HIDE_OUTPUT = 0.1
 DROP_NODE = 0.5
 
 
-def python_outcome(run: Any) -> Any:
+def outcome(run: Any) -> Any:
+    """What a call returns, or the kind and code of the engine error it raises."""
     try:
         return run()
     except FlowOperationError as error:
-        return {"error": type(error).__name__, "code": error.code}
-
-
-def rust_outcome(run: Any) -> Any:
-    try:
-        return run()
-    except ops.EngineError as error:
         return {"error": error.kind, "code": error.code}
 
 
@@ -87,47 +72,46 @@ def edited(graph: dict[str, Any], rng: random.Random) -> dict[str, Any]:
 
 def compare(path: Path, differences: list[str]) -> int:
     data = json.loads(path.read_text(encoding="utf-8"))["data"]
-    text = json.dumps(data)
     checks = 0
 
-    def check(what: str, python: Any, rust: Any) -> None:
+    def check(what: str, run: Any) -> None:
+        """Run ``run(engine)`` on both engine objects; both must give the same outcome."""
         nonlocal checks
         checks += 1
+        python, rust = outcome(lambda: run(PythonEngine)), outcome(lambda: run(RustEngine))
         if python != rust:
             differences.append(f"{path.name}: {what}: {str(python)[:300]} != {str(rust)[:300]}")
 
-    check("graph hash", graph_hash(data), ops.graph_hash(text))
-    check("violations", [v.to_dict() for v in find_graph_violations(data)], json.loads(ops.validate(text)))
+    check("graph hash", lambda engine: engine.graph_hash(data))
+    check("violations", lambda engine: engine.validate(data))
+    check("violations as a new flow", lambda engine: engine.validate(data, EMPTY))
+    check("repair fixes as a new flow", lambda engine: engine.repair(data, EMPTY)["fixes"])
     check(
-        "violations as a new flow",
-        python_outcome(lambda: [v.to_dict() for v in find_graph_violations(data, base=EMPTY)]),
-        rust_outcome(lambda: json.loads(ops.validate(text, json.dumps(EMPTY)))),
-    )
-    check(
-        "repair fixes as a new flow",
-        python_outcome(lambda: [fix.to_dict() for fix in repair_flow_data(data, base=EMPTY).fixes]),
-        rust_outcome(lambda: json.loads(ops.repair(text, json.dumps(EMPTY)))["fixes"]),
+        "plain graph save as a new flow",
+        lambda engine: engine.GraphPlain(data).validate(engine.GraphPlain(EMPTY)),
     )
     rng = random.Random(path.name)  # noqa: S311 - reproducible edits, not secrets
     pairs = [("from an empty flow", EMPTY, data)] + [(f"to edit {n}", data, edited(data, rng)) for n in range(4)]
     for label, base, target in pairs:
-        base_text, target_text = json.dumps(base), json.dumps(target)
-        operations = python_outcome(lambda: [dump_flow_operation(o) for o in diff_flow_data(base, target)])  # noqa: B023
-        check(f"diff {label}", operations, rust_outcome(lambda: json.loads(ops.diff(base_text, target_text))))  # noqa: B023
+        check(f"derived operations {label}", lambda engine: engine.ops_diff(base, target))  # noqa: B023
+        check(
+            f"plain graph diff {label}",
+            lambda engine: engine.GraphPlain(base).ops_diff(engine.GraphPlain(target)),  # noqa: B023
+        )
+        operations = outcome(lambda: PythonEngine.ops_diff(base, target))  # noqa: B023
         if not isinstance(operations, list):
             continue
-        derived = derive_flow_operations(base, target)
-        rust_derived = json.loads(ops.derive(base_text, target_text))
-        check(
-            f"derived operations {label}",
-            [dump_flow_operation(o) for o in derived.operations],
-            rust_derived["operations"],
-        )
-        graph, state = base, ops.GraphState(base_text)
-        for operation in operations:
-            graph = apply_flow_operations(graph, parse_flow_operations([operation])).flow_data
-            state.apply(json.dumps([operation]))
-        check(f"replayed graph hash {label}", graph_hash(graph), ops.graph_hash(state.to_json()))
+
+        def replayed(engine: Any) -> str:
+            """The graph hash after applying the operations one at a time, then replaying them, on one state."""
+            state = engine.GraphState(base)  # noqa: B023
+            forward = [state.apply([operation], forward=True)["forward_operations"] for operation in operations]  # noqa: B023
+            replay_state = engine.GraphState(base)  # noqa: B023
+            for batch in forward:
+                replay_state.replay(batch)
+            return engine.graph_hash(state.to_dict()), engine.graph_hash(replay_state.to_json().encode())
+
+        check(f"applied and replayed graph hash {label}", replayed)
     return checks
 
 

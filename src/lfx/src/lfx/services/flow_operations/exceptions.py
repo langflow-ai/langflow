@@ -2,14 +2,20 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from lfx.services.flow_operations.validation import GraphViolation
 
 
 class FlowOperationError(Exception):
-    """Base error for flow operation application."""
+    """Base error for flow operation application, and the one error type of both engines.
+
+    ``kind`` names the error's class, ``code`` is its stable code, and
+    ``details`` is the whole error as a dict: its kind, code and message, and
+    the edge id or violations it carries. The Rust engine's errors come as the
+    same classes with the same values (``lfx.services.flow_operations.engine``).
+    """
 
     code = "FLOW_OPERATION_ERROR"
 
@@ -17,6 +23,23 @@ class FlowOperationError(Exception):
         super().__init__(message)
         if code is not None:
             self.code = code
+
+    @property
+    def kind(self) -> str:
+        """The name of the error's class, as the Rust engine reports it."""
+        return type(self).__name__
+
+    @property
+    def details(self) -> dict[str, Any]:
+        """The whole error as a dict."""
+        out: dict[str, Any] = {"kind": self.kind, "code": self.code, "message": str(self)}
+        edge_id = getattr(self, "edge_id", None)
+        if edge_id is not None:
+            out["edge_id"] = edge_id
+        violations = getattr(self, "violations", None)
+        if violations:
+            out["violations"] = [violation.to_dict() for violation in violations]
+        return out
 
 
 class FlowOperationValidationError(FlowOperationError):
@@ -57,3 +80,14 @@ class FlowOperationReplayError(FlowOperationError):
     """
 
     code = "FLOW_OPERATION_REPLAY_MISMATCH"
+
+
+class RestoreFixNotAllowedError(FlowOperationError):
+    """Raised by an engine object when a restore's fix addresses no violation the restore would hit.
+
+    The history service raises its own ``RestoreFixNotAllowedError``; an
+    engine object raises this one, with the same code, so both engines raise
+    one error type.
+    """
+
+    code = "RESTORE_FIX_NOT_ALLOWED"

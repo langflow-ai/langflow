@@ -50,10 +50,10 @@
     ]
   },
   "keyed_lists": {
-    "description": "Lists whose items are addressed by key instead of by index. 'key' is the path of the item's key inside the item (an integer is a list index there). Items of both are selected with {\"key\": ...}, a table row by its 'id'. Natural-key lists are ordered by the component; tables are ordered by 'position' then 'id'. The engine owns both row keys, so no table column may take the name of either.",
+    "description": "Lists whose items are addressed by key instead of by index. 'key' is the path of the item's key inside the item (an integer is a list index there). Items of both are selected with {\"key\": ...}, a table row by its 'id'. Every keyed list is ordered by 'position', then key; the array order is not state. The engine owns both row keys, so no table column may take the name of either.",
     "natural": [
-      {"path": ["data", "node", "outputs"], "key": ["name"]},
-      {"path": ["data", "node", "template", "tools_metadata", "value"], "key": ["tags", 0]}
+      {"path": ["data", "node", "outputs"], "key": ["name"], "position": "__pos__"},
+      {"path": ["data", "node", "template", "tools_metadata", "value"], "key": ["tags", 0], "position": "__pos__"}
     ],
     "tables": {
       "path": ["data", "node", "template", "*", "value"],

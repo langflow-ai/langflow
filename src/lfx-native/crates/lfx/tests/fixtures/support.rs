@@ -3,8 +3,9 @@
 use std::collections::HashSet;
 use std::path::PathBuf;
 
+use lfx::json;
+use lfx::value::{Map, Value};
 use libtest_mimic::{Failed, Trial};
-use serde_json::{Map, Value};
 
 /// The fixture files every runtime runs.
 pub const FIXTURE_FILES: [&str; 13] = [
@@ -12,15 +13,15 @@ pub const FIXTURE_FILES: [&str; 13] = [
     "canonical_cases.json",
     "diff_cases.json",
     "editor_cases.json",
-    "inverse_cases.json",
+    "backward_cases.json",
     "limit_cases.json",
     "merge_cases.json",
     "property_cases.json",
     "repair_cases.json",
+    "replay_cases.json",
     "restore_cases.json",
     "table_cases.json",
     "validation_cases.json",
-    "write_cases.json",
 ];
 
 /// The placeholder for an edge id the engine draws at random.
@@ -125,9 +126,7 @@ fn json_matches(actual: &Value, expected: &Value) -> bool {
         (Value::String(id), Value::String(placeholder)) if placeholder == GENERATED_ROW_ID => {
             is_alphanumeric_id(id, 10)
         }
-        (Value::Number(a), Value::Number(b)) => {
-            a.as_str().parse::<f64>().ok() == b.as_str().parse::<f64>().ok()
-        }
+        (Value::Number(a), Value::Number(b)) => a.as_f64() == b.as_f64(),
         (Value::Object(a), Value::Object(b)) => {
             a.len() == b.len()
                 && a.iter()
@@ -155,7 +154,7 @@ pub fn graph_of(case: &Value, key: &str) -> Value {
 
 /// An engine error as fixtures record it.
 pub fn error_json(error: &lfx::ops::Error) -> Value {
-    serde_json::json!({"error": error.kind.class_name(), "code": error.code.as_str()})
+    json!({"error": error.kind.class_name(), "code": error.code.as_str()})
 }
 
 /// One line of JSON, for failure messages.
@@ -177,7 +176,7 @@ pub fn listed_rules() -> HashSet<String> {
 /// The rule each case of a fixture file names, by section and case.
 ///
 /// Every case names the rule it checks, and the README lists that rule.
-fn case_rules(name: &str, document: &Map<String, Value>) -> Result<Vec<String>, Failed> {
+fn case_rules(name: &str, document: &Map) -> Result<Vec<String>, Failed> {
     let listed = listed_rules();
     let mut rules = Vec::new();
     for (section, cases) in document {
@@ -206,16 +205,12 @@ fn case_rules(name: &str, document: &Map<String, Value>) -> Result<Vec<String>, 
 /// listed rule has a case, and one checks the comparison the other runners rely on.
 pub fn trials() -> Vec<Trial> {
     let comparison = Trial::test("fixtures::comparison", || {
-        let expected = serde_json::json!({"a": 1.0, "b": [1, 2]});
-        assert_json_eq(
-            "reordered keys",
-            &serde_json::json!({"b": [1, 2], "a": 1.0}),
-            &expected,
-        )?;
-        if json_eq(&serde_json::json!({"a": 1, "b": [1, 2]}), &expected) {
+        let expected = json!({"a": 1.0, "b": [1, 2]});
+        assert_json_eq("reordered keys", &json!({"b": [1, 2], "a": 1.0}), &expected)?;
+        if json_eq(&json!({"a": 1, "b": [1, 2]}), &expected) {
             return Err("1 and 1.0 must differ in text".into());
         }
-        if json_eq(&serde_json::json!({"a": 1.0, "b": [2, 1]}), &expected) {
+        if json_eq(&json!({"a": 1.0, "b": [2, 1]}), &expected) {
             return Err("array order must matter".into());
         }
         Ok(())

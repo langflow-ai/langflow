@@ -56,7 +56,7 @@ from lfx.services.flow_operations.python import PythonFlowOperationService
 from lfx.services.flow_operations.repair import REPAIRS, GraphFix, RepairResult, repair_flow_data
 from lfx.services.flow_operations.schema import KeyedList, NodeSchema, load_node_schema
 from lfx.services.flow_operations.service import BaseFlowOperationService
-from lfx.services.flow_operations.state import GraphState, finalize_graph
+from lfx.services.flow_operations.state import GraphState
 from lfx.services.flow_operations.table_rows import (
     ROW_ID_KEY,
     ROW_POSITION_KEY,
@@ -122,7 +122,6 @@ __all__ = [
     "derive_flow_operations",
     "diff_flow_data",
     "dump_flow_operation",
-    "finalize_graph",
     "find_graph_violations",
     "find_table_violations",
     "graph_hash",

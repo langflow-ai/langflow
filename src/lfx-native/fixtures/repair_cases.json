@@ -238,7 +238,7 @@
       "rule": "edge-handle-forms",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -247,7 +247,7 @@
       "base": {"nodes": [], "edges": []},
       "expected": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -269,7 +269,7 @@
       "rule": "edge-handle-forms",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -278,7 +278,7 @@
       "base": {"nodes": [], "edges": []},
       "expected": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -300,7 +300,7 @@
       "rule": "edge-touches-note",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -318,7 +318,7 @@
       "base": {"nodes": [], "edges": []},
       "expected": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -331,7 +331,7 @@
       "rule": "repair-direct-only",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -374,7 +374,7 @@
       "rule": "repair-direct-only",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -396,7 +396,7 @@
       "rule": "edge-rules-scope",
       "flow": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -412,7 +412,7 @@
       },
       "base": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -428,7 +428,7 @@
       },
       "expected": {
         "nodes": [
-          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
+          {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "loop", "allows_loop": true, "__pos__": 2}]}}},
           {"id": "b", "data": {"node": {"template": {"f": {"type": "str"}, "many": {"type": "str", "list": true}}, "outputs": []}}},
           {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
         ],
@@ -1134,6 +1134,14 @@
           "action": "assigned a position that keeps the row where it is stored"
         }
       ]
+    },
+    {
+      "name": "an output added without __pos__ gets the midpoint of its neighbours",
+      "rule": "list-item-missing-pos",
+      "flow": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "a", "__pos__": 1}, {"name": "c"}, {"name": "b", "__pos__": 2}]}}}], "edges": []},
+      "base": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "a", "__pos__": 1}, {"name": "b", "__pos__": 2}]}}}], "edges": []},
+      "expected": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "a", "__pos__": 1}, {"name": "c", "__pos__": 1.5}, {"name": "b", "__pos__": 2}]}}}], "edges": []},
+      "fixes": [{"code": "LIST_ITEM_MISSING_POS", "path": ["nodes", 0, "data", "node", "outputs", 1, "__pos__"], "action": "assigned the midpoint of its array neighbours' positions"}]
     }
   ]
 }

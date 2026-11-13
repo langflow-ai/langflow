@@ -38,7 +38,7 @@ def _node(node_id: str, value: str = "hi", **extra) -> dict:
             "node": {
                 "display_name": f"Prompt {node_id}",
                 "template": {"text": {"name": "text", "type": "str", "value": value}},
-                "outputs": [{"name": "out"}],
+                "outputs": [{"name": "out", "__pos__": 1}],
             },
         },
         **extra,
