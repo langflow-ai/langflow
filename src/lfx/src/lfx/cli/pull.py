@@ -25,6 +25,8 @@ Pull to a custom directory::
 
 from __future__ import annotations
 
+import os
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -90,7 +92,18 @@ def _write_flow(
             status = "unchanged"
         else:
             status = "created" if not out_path.exists() else "updated"
-            out_path.write_text(new_content, encoding="utf-8")
+            # Publish atomically: out_path is a file the user may already have
+            # (a previous pull or their own edits), so a crash or a full disk
+            # must not leave it truncated.  mkstemp() creates the sibling with
+            # 0600 and Path.replace() swaps it in one step.
+            fd, tmp = tempfile.mkstemp(dir=out_path.parent, prefix=f".{out_path.name}.", suffix=".tmp")
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                    handle.write(new_content)
+                Path(tmp).replace(out_path)
+            except BaseException:
+                Path(tmp).unlink(missing_ok=True)
+                raise
         return PullResult(flow_id=flow_id, flow_name=flow_name, path=out_path, status=status)
     except Exception as exc:  # noqa: BLE001
         logger.debug("Failed to write flow %s", flow_id, exc_info=True)
