@@ -99,7 +99,7 @@ def migration_enabled(monkeypatch: pytest.MonkeyPatch):
 
 
 @pytest.fixture(autouse=True)
-def config_dir(migration_enabled, client, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:  # noqa: ARG001
+async def config_dir(migration_enabled, client, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:  # noqa: ARG001
     """The migration record is written under CONFIG_DIR, so keep it out of the real one.
 
     The feature is turned on first: the app registers the pause middleware when it is built.
@@ -109,6 +109,13 @@ def config_dir(migration_enabled, client, tmp_path: Path, monkeypatch: pytest.Mo
     monkeypatch.setattr(migration_module, "_secrets", {"for": {}})
     # A profile named in the developer's shell would decide how every S3 client here is built.
     monkeypatch.delenv("AWS_PROFILE", raising=False)
+    # These endpoint tests isolate the change they hold open. The app's disk-sync loop is
+    # also a legitimate change, and a slow startup pass can outlast their short drain.
+    # Its pause behavior is covered separately in test_migration_pause.py.
+    syncing = [task for task in asyncio.all_tasks() if getattr(task.get_coro(), "__name__", "") == "sync_flows_from_fs"]
+    for task in syncing:
+        task.cancel()
+    await asyncio.gather(*syncing, return_exceptions=True)
     return tmp_path
 
 
@@ -1114,13 +1121,6 @@ async def test_the_pause_is_refused_while_a_change_let_in_before_it_is_still_goi
     if counted_by == "this worker's count alone":
         # As on Windows, which has no flock.
         monkeypatch.setattr(migration_pause, "fcntl", None)
-    # This case isolates the held upload. The app's disk-sync loop is also a
-    # legitimate change, and a slow startup pass can outlast the short drain.
-    # Its pause behavior is covered separately in test_migration_pause.py.
-    syncing = [task for task in asyncio.all_tasks() if getattr(task.get_coro(), "__name__", "") == "sync_flows_from_fs"]
-    for task in syncing:
-        task.cancel()
-    await asyncio.gather(*syncing, return_exceptions=True)
     arrived, release = asyncio.Event(), asyncio.Event()
     uploading = asyncio.create_task(_upload_held_open(client, headers, arrived, release))
     try:
