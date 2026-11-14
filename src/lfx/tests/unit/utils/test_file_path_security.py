@@ -60,6 +60,48 @@ def test_unc_and_device_paths_are_denied_before_resolve(tmp_path, restricted, pa
     resolve.assert_not_called()
 
 
+@pytest.mark.parametrize("restricted", [True, False])
+@pytest.mark.parametrize(
+    "path",
+    [
+        "NUL",
+        "nul",
+        "CON",
+        "COM1",
+        "LPT9",
+        "AUX.txt",
+        r"C:\NUL",
+        "uploads/NUL/file.txt",
+        "NUL.dat",
+        "COM¹",
+        "LPT³.log",
+        "CONOUT$",
+        "CONIN$",
+        "NUL ",
+        "NUL.",
+        "COM1 ",
+        "LPT9.log ",
+    ],
+)
+def test_windows_reserved_device_names_are_denied_before_resolve(tmp_path, restricted, path):
+    with (
+        mock_settings(restricted=restricted, config_dir=str(tmp_path)),
+        patch(
+            "lfx.utils.file_path_security.Path.resolve", side_effect=AssertionError("resolved device path")
+        ) as resolve,
+        pytest.raises(LocalFileAccessError, match="UNC and device"),
+    ):
+        enforce_local_file_access(path, scope_ids=["user-id"])
+
+    resolve.assert_not_called()
+
+
+def test_ordinary_names_that_contain_device_prefixes_are_allowed(tmp_path):
+    with mock_settings(restricted=False, config_dir=str(tmp_path)):
+        assert enforce_local_file_access("connection.txt") == Path("connection.txt")
+        assert enforce_local_file_access("nulled.log") == Path("nulled.log")
+
+
 def test_settings_unavailable_fails_closed():
     """A settings read failure must not silently disable containment.
 

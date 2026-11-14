@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import contextlib
 import contextvars
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -95,6 +96,25 @@ class StorageNamespaceError(LocalFileAccessError):
 # config_dir location, never by basename — a tenant upload happens to be named "secret_key"
 # inside a flow subdir is a different path and stays readable.
 _RESERVED_SECRET_FILENAMES = frozenset({"secret_key", "private_key.pem", "public_key.pem"})
+
+# DOS/Windows device names, including the same name with an extension (NUL.txt).
+# Compared per path segment so ``uploads/NUL/file.txt`` is denied before resolve.
+_WINDOWS_RESERVED_DEVICE = re.compile(
+    r"^(?:CON|PRN|AUX|NUL|CONIN\$|CONOUT\$|COM[1-9¹²³]|LPT[1-9¹²³])(?:\..*)?$",
+    re.IGNORECASE,
+)
+
+
+def _has_windows_device_segment(raw_path: str) -> bool:
+    """Return True if any path segment is a Windows reserved device name."""
+    for segment in raw_path.replace("\\", "/").split("/"):
+        if not segment or segment in {".", ".."}:
+            continue
+        if segment.endswith(":") and segment[0].isalpha() and segment[1:] == ":":
+            continue
+        if _WINDOWS_RESERVED_DEVICE.fullmatch(segment.rstrip(" .")):
+            return True
+    return False
 
 
 def is_local_file_access_restricted() -> bool:
@@ -345,7 +365,7 @@ def enforce_local_file_access(
     raw_path = str(resolved_path)
     # Windows accepts either slash as a separator, including mixed UNC prefixes
     # such as ``\\/server`` and ``/\\server``.
-    if raw_path.replace("\\", "/").startswith("//"):
+    if raw_path.replace("\\", "/").startswith("//") or _has_windows_device_segment(raw_path):
         msg = "Access to UNC and device file paths is not permitted."
         raise LocalFileAccessError(msg)
 
