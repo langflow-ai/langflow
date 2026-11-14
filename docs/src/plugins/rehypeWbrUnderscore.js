@@ -3,9 +3,11 @@
 /**
  * Rehype plugin that does two things to markdown tables:
  *
- * 1. Inserts U+200B (zero-width space) after every underscore inside <code>
- *    elements in <td> cells, so env-var names like LANGFLOW_CONFIG_DIR wrap
- *    at underscore boundaries without breaking the inline-code styling.
+ * 1. Inserts a <wbr> element after every underscore inside <code> elements in
+ *    <td> cells, so env-var names like LANGFLOW_CONFIG_DIR wrap at underscore
+ *    boundaries without breaking the inline-code styling. Unlike a zero-width
+ *    space, <wbr> adds no character, so copied names stay exact.
+ *    src/theme/MDXComponents/Code.js keeps this code inline.
  *
  * 2. Detects columns whose header text matches CENTER_COLUMNS and adds the
  *    CSS class "col-center" to every <th>/<td> in those columns, so Format
@@ -33,6 +35,15 @@ function addClass(node, cls) {
   const p = node.properties || (node.properties = {});
   const existing = Array.isArray(p.className) ? p.className : p.className ? [p.className] : [];
   if (!existing.includes(cls)) p.className = [...existing, cls];
+}
+
+function breakAfterUnderscores(text) {
+  return text.value.split(/(?<=_)/).flatMap((value, i) => {
+    const part = { type: "text", value };
+    return i === 0
+      ? [part]
+      : [{ type: "element", tagName: "wbr", properties: {}, children: [] }, part];
+  });
 }
 
 function processTable(table) {
@@ -72,14 +83,15 @@ function rehypeTableEnhancements() {
     walk(tree, (node) => {
       if (node.type !== "element") return;
 
-      // 1. Zero-width space after underscores in td > code
+      // 1. <wbr> after underscores in td > code
       if (node.tagName === "td") {
         walk(node, (inner) => {
           if (inner.type !== "element" || inner.tagName !== "code") return;
-          for (const child of inner.children) {
-            if (child.type !== "text" || !child.value.includes("_")) continue;
-            child.value = child.value.replace(/_/g, "_​");
-          }
+          inner.children = inner.children.flatMap((child) =>
+            child.type === "text" && child.value.includes("_")
+              ? breakAfterUnderscores(child)
+              : [child]
+          );
         });
       }
 
