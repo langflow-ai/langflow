@@ -100,6 +100,7 @@
         "lfx-paddle",
         "lfx-serpingapi",
         "lfx-serply",
+        "lfx-specstream",
         "lfx-valkey"
       ],
       "forbidden_distributions_remove": [
@@ -250,6 +251,7 @@
         "lfx-paddle",
         "lfx-serpingapi",
         "lfx-serply",
+        "lfx-specstream",
         "lfx-valkey"
       ],
       "forbidden_distributions_remove": [
@@ -264,6 +266,7 @@
         "lfx-paddle",
         "lfx-serpingapi",
         "lfx-serply",
+        "lfx-specstream",
         "lfx-valkey"
       ],
       "entry_points": {
@@ -299,6 +302,7 @@
           "lfx-serply",
           "lfx-servicenow",
           "lfx-slack",
+          "lfx-specstream",
           "lfx-telegram",
           "lfx-toolguard",
           "lfx-valkey",

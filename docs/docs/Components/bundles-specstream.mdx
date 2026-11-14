@@ -1,0 +1,55 @@
+---
+title: SpecStream
+slug: /bundles-specstream
+---
+
+import Icon from "@site/src/components/icon";
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+<GraduatedBundleInstall packageName="specstream" />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **SpecStream** bundle.
+
+## Find List
+
+This component reads a request written in plain words through the [SpecStream](https://specstream.ai) HTTP API and returns structured rows. Each row has a `source_url` and the time it was read.
+
+Create an API key under **Agents & API** in your SpecStream workspace. For details on the underlying API, see the [SpecStream API documentation](https://specstream.ai/docs/api).
+
+The component reads the request, gets a quote, and starts the run only if the quoted maximum is within **Maximum Price (USD)**. It waits for the run to finish, then returns the rows.
+If the quote is above the maximum, or SpecStream needs a clearer request, the component raises an error and nothing runs.
+
+A row costs 5 cents, 15 cents, or $1 depending on how much it needs, plus 5 cents for a person's email and 15 cents for a person's phone. A company's phone is part of the row price. When a row has a related list, its first 10 records are included and each further 10 cost 10 cents. For current prices, see [specstream.ai/pricing](https://specstream.ai/pricing).
+
+Every row includes the columns that the request asks for, plus the following fields:
+
+| Field | Description |
+|-------|-------------|
+| `source_url` | The page the row was read from. |
+| `checked_at` | When that page was read. |
+| `position` | The row's position in the results. |
+| `list_id` | The ID of the run. Reading it again costs nothing. |
+| `list_link` | A link to the results in the SpecStream workspace. |
+
+The component has two outputs that share one run: a [`Table`](/data-types#table) named **Table**, and a list of [`Data`](/data-types#json) objects named **Rows**, one per row.
+
+In [tool mode](/agents-tools), an [**Agent** component](/agents) chooses the request. The maximum price is a component setting, so the agent can't raise it.
+
+### Find List parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| SpecStream API Key (`api_key`) | SecretString | Input parameter. Your SpecStream API key. |
+| Request (`request`) | String | Input parameter. The data to find, in plain words. For example, `Roofing companies in Columbus, Ohio with their website and phone`. |
+| Number of Results (`max_results`) | Integer | Input parameter. How many rows to find, from `1` to `1000`. Default: `25`. |
+| Maximum Price (USD) (`max_price_usd`) | Float | Input parameter. The most this run may cost. Default: `5.0`. |
+| Run Key (`run_key`) | String | Input parameter. Optional. Reuse the same key to get the run you already started instead of starting a new one. If empty, the key is built from the request, the limits, and the current hour, so a retried step doesn't start the same run twice. |
+| Wait (seconds) (`wait_seconds`) | Integer | Input parameter. How long to wait for the run to finish before returning the rows found so far. Default: `420`. |
+
+## See also
+
+* [**Web Search** component](/web-search)
+* [**Serping API** bundle](./bundles-serpingapi)
+* [**Serply** bundle](./bundles-serply)

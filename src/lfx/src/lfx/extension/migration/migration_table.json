@@ -5062,6 +5062,11 @@
       "added_in": "1.13.0"
     },
     {
+      "bare_class_name": "SpecStreamFindListComponent",
+      "target": "ext:specstream:SpecStreamFindListComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
       "bare_class_name": "GmailSendComponent",
       "target": "ext:google:GmailSendComponent@official",
       "added_in": "1.13.0"

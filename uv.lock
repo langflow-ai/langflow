@@ -66,6 +66,7 @@ members = [
     "lfx-serply",
     "lfx-servicenow",
     "lfx-slack",
+    "lfx-specstream",
     "lfx-telegram",
     "lfx-toolguard",
     "lfx-valkey",
@@ -8495,6 +8496,7 @@ bundles = [
     { name = "lfx-paddle" },
     { name = "lfx-serpingapi" },
     { name = "lfx-serply" },
+    { name = "lfx-specstream" },
     { name = "lfx-valkey" },
 ]
 cassio = [
@@ -8626,6 +8628,7 @@ requires-dist = [
     { name = "lfx-serply", marker = "extra == 'bundles'", editable = "src/bundles/serply" },
     { name = "lfx-servicenow", editable = "src/bundles/servicenow" },
     { name = "lfx-slack", editable = "src/bundles/slack" },
+    { name = "lfx-specstream", marker = "extra == 'bundles'", editable = "src/bundles/specstream" },
     { name = "lfx-telegram", editable = "src/bundles/telegram" },
     { name = "lfx-toolguard", editable = "src/bundles/toolguard" },
     { name = "lfx-valkey", marker = "extra == 'bundles'", editable = "src/bundles/valkey" },
@@ -11213,6 +11216,21 @@ requires-dist = [
     { name = "aiohttp", specifier = ">=3.10.0,<4.0.0" },
     { name = "lfx", editable = "src/lfx" },
     { name = "slack-sdk", specifier = ">=3.33.0,<4.0.0" },
+]
+
+[[package]]
+name = "lfx-specstream"
+version = "0.1.0"
+source = { editable = "src/bundles/specstream" }
+dependencies = [
+    { name = "httpx" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.24.0,<1.0.0" },
+    { name = "lfx", editable = "src/lfx" },
 ]
 
 [[package]]
