@@ -102,6 +102,66 @@ describe("useGetTypes scoped store ownership", () => {
     queryClient.clear();
   });
 
+  it.each([false, true])(
+    "preserves the flow palette with a disabled global observer and cached data %s",
+    async (hasCachedGlobalData) => {
+      const flowPalette = palette("telegram", "TelegramSendMessage");
+      const globalPalette = palette("global_provider", "GlobalComponent");
+      if (hasCachedGlobalData) {
+        queryClient.setQueryData(
+          ["useGetTypes", undefined, undefined],
+          globalPalette,
+        );
+      }
+      queryClient.setQueryData(
+        ["useGetTypes", "flow-a", undefined],
+        flowPalette,
+      );
+
+      const { result } = renderHook(
+        () => {
+          useGetTypes({ flowId: "flow-a" });
+          return useGetTypes({ enabled: false });
+        },
+        { wrapper: makeWrapper(queryClient) },
+      );
+
+      expect(useTypesStore.getState().activeScopeKey).toBe("flow:flow-a");
+      expect(useTypesStore.getState().data).toEqual(flowPalette);
+      act(() => {
+        queryClient.setQueryData(
+          ["useGetTypes", undefined, undefined],
+          palette("other_global_provider", "OtherGlobalComponent"),
+        );
+      });
+      await waitFor(() =>
+        expect(result.current.data).toHaveProperty("other_global_provider"),
+      );
+      expect(useTypesStore.getState().data).toEqual(flowPalette);
+      expect(mockApiGet).not.toHaveBeenCalled();
+    },
+  );
+
+  it("installs a cached palette when its observer becomes enabled", () => {
+    const globalPalette = palette("telegram", "TelegramSendMessage");
+    queryClient.setQueryData(
+      ["useGetTypes", undefined, undefined],
+      globalPalette,
+    );
+    const { rerender } = renderHook(({ enabled }) => useGetTypes({ enabled }), {
+      initialProps: { enabled: false },
+      wrapper: makeWrapper(queryClient),
+    });
+
+    expect(useTypesStore.getState().activeScopeKey).toBeNull();
+    expectPaletteStoreToBeEmpty();
+    rerender({ enabled: true });
+
+    expect(useTypesStore.getState().activeScopeKey).toBe("global");
+    expect(useTypesStore.getState().data).toEqual(globalPalette);
+    expect(mockApiGet).not.toHaveBeenCalled();
+  });
+
   it("replaces narrower scope data and reinstalls cached A on A to B to A", async () => {
     const flowA = palette("provider_a", "AComponent");
     const flowB = palette("provider_b", "BComponent");

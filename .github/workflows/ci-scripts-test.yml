@@ -100,7 +100,7 @@ jobs:
           python-version: "3.13"
 
       - name: Install dependencies
-        run: pip install jsonschema orjson packaging pytest pytest-xdist pytest-rerunfailures pytest-timeout pyyaml requests
+        run: pip install jsonschema orjson packaging psutil pytest pytest-xdist pytest-rerunfailures pytest-timeout pyyaml requests
 
       # The required component compatibility job runs the real LFX cases.
       - name: Run CI script tests

@@ -136,6 +136,18 @@ async function publishChatFlowAndGetId(page: LangflowPage): Promise<string> {
       url.pathname === `/api/v1/flows/${flowId}`
     );
   });
+  // Publishing refetches the header flow list, then saved components. Wait for
+  // that follow-up to finish before replacing the editor document: otherwise
+  // Chromium can abandon the second request without emitting a failure event.
+  const componentsRefreshPromise = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      response.request().method() === "GET" &&
+      url.pathname === "/api/v1/flows/" &&
+      url.searchParams.get("components_only") === "true" &&
+      url.searchParams.get("get_all") === "true"
+    );
+  });
   await page.getByTestId(TID.publishSwitch).click();
   const publishResponse = await publishResponsePromise;
   expect(
@@ -145,6 +157,12 @@ async function publishChatFlowAndGetId(page: LangflowPage): Promise<string> {
   await expect(page.getByTestId(TID.publishSwitch)).toBeChecked({
     timeout: TIMEOUTS.medium,
   });
+  const componentsRefresh = await componentsRefreshPromise;
+  expect(
+    componentsRefresh.ok(),
+    `Refreshing saved components returned ${componentsRefresh.status()}`,
+  ).toBeTruthy();
+  await componentsRefresh.finished();
 
   return flowId;
 }

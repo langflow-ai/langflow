@@ -17,6 +17,7 @@ happens inside the SDK's generation path.
 """
 
 import os
+import threading
 import uuid
 from unittest.mock import patch
 
@@ -237,6 +238,50 @@ def _build_real_langfuse_client_or_skip(tracer_provider):
     # Avoid a network round-trip during tracer setup's health check.
     client.auth_check = lambda: True
     return client
+
+
+def test_reset_joins_real_client_background_threads():
+    from langflow.services.tracing.langfuse import _reset_shared_client_for_tests
+    from opentelemetry.sdk.trace import TracerProvider
+
+    previous_threads = set(threading.enumerate())
+    provider = TracerProvider()
+    client = _build_real_langfuse_client_or_skip(provider)
+    workers = set(threading.enumerate()) - previous_threads
+    assert workers, "the real SDK should start its exporter and consumer threads"
+    try:
+        _reset_shared_client_for_tests()
+        assert not [worker.name for worker in workers if worker.is_alive()]
+    finally:
+        client.shutdown()
+        provider.shutdown()
+
+
+@pytest.mark.parametrize("use_global_provider", [False, True], ids=["explicit", "global"])
+def test_reset_preserves_application_trace_export(monkeypatch, use_global_provider):
+    from langflow.services.tracing.langfuse import _reset_shared_client_for_tests
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    if use_global_provider:
+        monkeypatch.setattr("opentelemetry.trace.get_tracer_provider", lambda: provider)
+    client = _build_real_langfuse_client_or_skip(None if use_global_provider else provider)
+    assert client._resources.tracer_provider is provider
+    try:
+        tracer = provider.get_tracer("application")
+        with tracer.start_as_current_span("before reset"):
+            pass
+        _reset_shared_client_for_tests()
+        with tracer.start_as_current_span("after reset"):
+            pass
+        assert [span.name for span in exporter.get_finished_spans()] == ["before reset", "after reset"]
+    finally:
+        client.shutdown()
+        provider.shutdown()
 
 
 class TestRootGenerationNestsUnderFlowTrace:

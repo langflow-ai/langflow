@@ -386,11 +386,6 @@ module.exports = {
           id: "Deployment/security",
           label: "Security",
         },
-        {
-          type: "doc",
-          id: "administration/secret-key-rotation",
-          label: "Offline secret-key audit and rotation",
-        },
       ],
     },
     {
@@ -591,6 +586,7 @@ module.exports = {
             "Components/bundles-files-ingestion",
             "Components/bundles-firecrawl",
             "Components/bundles-glean",
+            "Components/bundles-github",
             "Components/bundles-gitlab",
             "Components/bundles-google",
             "Components/bundles-groq",
@@ -614,6 +610,7 @@ module.exports = {
             "Components/bundles-novita",
             "Components/bundles-nvidia",
             "Components/bundles-ollama",
+            "Components/bundles-olostep",
             "Components/bundles-openai",
             "Components/bundles-openai-compatible",
             "Components/bundles-openrouter",
@@ -624,6 +621,7 @@ module.exports = {
             "Components/bundles-pgvector",
             "Components/bundles-pinecone",
             "Components/bundles-plivo",
+            "Components/bundles-popnow",
             "Components/bundles-qdrant",
             "Components/bundles-redis",
             "Components/bundles-salesforce",
@@ -683,7 +681,7 @@ module.exports = {
         },
         {
           type: "category",
-          label: "Developer API (Beta)",
+          label: "Developer API",
           items: [
             "API-Reference/workflow-api-quickstart",
             "API-Reference/workflows-api",

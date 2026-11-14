@@ -1265,7 +1265,7 @@ async def test_upload_empty_file_to_flows_returns_400(client: AsyncClient, logge
         headers=logged_in_headers,
     )
     assert response.status_code == 400
-    assert response.json()["detail"] == "The uploaded file is empty"
+    assert response.json()["detail"] == "Empty file not allowed"
 
 
 @pytest.mark.usefixtures("session")
@@ -1277,7 +1277,7 @@ async def test_upload_empty_file_to_projects_returns_400(client: AsyncClient, lo
         headers=logged_in_headers,
     )
     assert response.status_code == 400
-    assert response.json()["detail"] == "The uploaded file is empty"
+    assert response.json()["detail"] == "Empty file not allowed"
 
 
 @pytest.mark.usefixtures("session")

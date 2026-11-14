@@ -26,7 +26,11 @@ import {
 } from "@/utils/reactflowUtils";
 import { CURRENT_DRAFT_ID } from "./constants";
 
-export function useFlowVersionSidebar(flowId: string) {
+export function useFlowVersionSidebar(
+  flowId: string,
+  requestedVersionId?: string,
+  onVersionLinkConsumed?: () => void,
+) {
   const { t } = useTranslation();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -42,6 +46,12 @@ export function useFlowVersionSidebar(flowId: string) {
   }, [storePreviewId]);
 
   const currentFlow = useFlowStore((s) => s.currentFlow);
+
+  useEffect(() => {
+    if (!requestedVersionId || currentFlow?.id !== flowId) return;
+    setSelectedId(requestedVersionId);
+    onVersionLinkConsumed?.();
+  }, [requestedVersionId, currentFlow?.id, flowId, onVersionLinkConsumed]);
 
   const { mutate: deleteEntry, isPending: isDeleting } =
     useDeleteVersionEntry();
@@ -72,7 +82,7 @@ export function useFlowVersionSidebar(flowId: string) {
     data: versionResponse,
     isLoading,
     isError: isListError,
-  } = useGetFlowVersions({ flowId }, { refetchInterval: 10000 });
+  } = useGetFlowVersions({ flowId, all: true }, { refetchInterval: 10000 });
 
   const versions = versionResponse?.entries;
   const maxEntries = versionResponse?.max_entries;
@@ -199,6 +209,7 @@ export function useFlowVersionSidebar(flowId: string) {
 
   // biome-ignore lint/suspicious/noExplicitAny: legacy
   const autoSaveFnRef = useRef<any>(null);
+  const registeredAutoSave = useFlowStore((s) => s.autoSaveFlow);
   const inspectionPanelWasVisible = useRef(false);
   useLayoutEffect(() => {
     // biome-ignore lint/suspicious/noExplicitAny: legacy
@@ -226,7 +237,11 @@ export function useFlowVersionSidebar(flowId: string) {
         const wasRestored = useVersionPreviewStore.getState().didRestore;
         // Same reason as the effect above: with nothing previewed there is
         // nothing to put back, and putting it back anyway looks like an edit.
-        if (!wasRestored && previewedSomething.current) {
+        if (
+          !wasRestored &&
+          previewedSomething.current &&
+          useFlowStore.getState().currentFlow?.id === flowId
+        ) {
           useFlowStore.setState({
             nodes: cloneDeep(originalDraftNodesRef.current),
             edges: cloneDeep(originalDraftEdgesRef.current),
@@ -252,10 +267,14 @@ export function useFlowVersionSidebar(flowId: string) {
       }
 
       try {
-        if (autoSaveFnRef.current) {
+        if (
+          autoSaveFnRef.current &&
+          useFlowStore.getState().currentFlow?.id === flowId &&
+          !useFlowStore.getState().autoSaveFlow
+        ) {
           useFlowStore.setState({ autoSaveFlow: autoSaveFnRef.current });
-          autoSaveFnRef.current = null;
         }
+        autoSaveFnRef.current = null;
       } catch (err) {
         console.error(
           "Version sidebar cleanup: CRITICAL — failed to restore autoSaveFlow",
@@ -275,7 +294,20 @@ export function useFlowVersionSidebar(flowId: string) {
         );
       }
     };
-  }, [clearPreview]);
+  }, [clearPreview, flowId]);
+
+  useLayoutEffect(() => {
+    // The canvas can register its autosave after the sidebar's first layout.
+    // Keep it paused for the entire preview, including a direct version link.
+    if (
+      !registeredAutoSave ||
+      useFlowStore.getState().autoSaveFlow !== registeredAutoSave
+    )
+      return;
+    registeredAutoSave.flush?.();
+    autoSaveFnRef.current = registeredAutoSave;
+    useFlowStore.setState({ autoSaveFlow: undefined });
+  }, [registeredAutoSave]);
 
   const handleSelectEntry = useCallback((entryId: string) => {
     setSelectedId(entryId);

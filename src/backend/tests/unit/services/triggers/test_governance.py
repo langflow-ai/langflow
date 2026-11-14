@@ -101,12 +101,36 @@ async def test_provider_ceiling_blocks_an_explicitly_approved_trigger_kind(polic
     )
     service = TriggerService()
     service.authorize_trigger = AsyncMock()
-    with pytest.raises(TriggerPolicyError):
+    with pytest.raises(TriggerPolicyError, match="outside the approved integration set") as raised:
         await require_trigger_allowed(
             TriggerPolicyContext(user_id=trigger_owner, kind="google.gmail", purpose=TriggerPolicyPurpose.ENABLE),
             service=service,
         )
     service.authorize_trigger.assert_not_awaited()
+    from langflow.services.triggers.error_codes import last_error_code, refusal_detail
+
+    assert refusal_detail(raised.value)["code"] == "governance_blocked"
+    assert last_error_code(str(raised.value)) is None
+
+
+async def test_provider_policy_refusal_preserves_the_provider_explanation(policy, trigger_owner, monkeypatch):
+    from langflow.services.triggers.policy import (
+        TriggerPolicyContext,
+        TriggerPolicyError,
+        TriggerPolicyPurpose,
+        require_trigger_policy,
+    )
+    from lfx.services.integration_policy import IntegrationPolicyError, IntegrationPolicyPurpose
+
+    policy.publish(PolicyBundleSnapshot(revision=2, approved_trigger_kinds=frozenset({"google.calendar"})))
+    refusal = IntegrationPolicyError("google", IntegrationPolicyPurpose.USE)
+    monkeypatch.setattr("langflow.services.triggers.policy.aresolve_integration_policy", AsyncMock(side_effect=refusal))
+    with pytest.raises(TriggerPolicyError, match="outside the approved integration set") as raised:
+        await require_trigger_policy(
+            TriggerPolicyContext(user_id=trigger_owner, kind="google.calendar", purpose=TriggerPolicyPurpose.ENABLE)
+        )
+    assert str(raised.value) == str(refusal)
+    assert raised.value.code == "governance_blocked"
 
 
 async def test_discovery_hides_unapproved_kinds_without_mutating_the_cached_palette(policy, trigger_owner):

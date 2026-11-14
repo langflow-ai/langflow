@@ -294,6 +294,7 @@ async def test_only_a_superuser_can_open_the_migration(client, logged_in_headers
 async def test_the_page_describes_this_instance_and_its_steps(client, logged_in_headers_super_user, config_dir):
     migration = await _migration(client, logged_in_headers_super_user)
 
+    assert migration["destination_secrets_available"] is True
     instance = migration["instance"]
     assert instance["version"] == VERSION
     assert instance["database"] == {"type": "sqlite", "path": str(get_db_service().database_url).split("///")[1]}
@@ -328,6 +329,65 @@ def _checked(config_dir: Path, checks: list[dict], status: str = "done", **later
             **later,
         },
     )
+
+
+async def test_the_page_reports_lost_destination_secrets_before_a_copy_and_recovers_after_reentry(
+    client, logged_in_headers_super_user, config_dir, monkeypatch
+):
+    headers = logged_in_headers_super_user
+    _checked(config_dir, [PASSING], **PREPARED)
+    address = f"postgresql://migrator:{DB_PASSWORD}@db.internal:5432/langflow"
+    database = PREPARED["destinations"]["database"]
+    monkeypatch.setattr(migration_module, "_secrets", {"database_url": address, "for": {"database": database}})
+    before = await _migration(client, headers)
+    assert before["destination_secrets_available"] is True
+
+    # A source restart loses only worker memory. The record and completed steps still count.
+    monkeypatch.setattr(migration_module, "_secrets", {"for": {}})
+    restarted = await _migration(client, headers)
+
+    assert restarted["destination_secrets_available"] is False
+    assert restarted["record"] == before["record"]
+    assert restarted["steps"] == before["steps"]
+    assert DB_PASSWORD not in json.dumps(before)
+    assert "destination_secrets_available" not in (config_dir / "migrations" / "migration.json").read_text()
+
+    # The connectivity probe is separate from whether this worker holds what the admin re-enters.
+    monkeypatch.setattr(migration_module, "probe_database", lambda *_: {"ok": True})
+    reentered = await _connect(client, headers, database_url=address)
+
+    assert reentered["destination_secrets_available"] is True
+    assert (await _migration(client, headers))["destination_secrets_available"] is True
+    assert DB_PASSWORD not in json.dumps(reentered)
+
+
+@pytest.mark.parametrize(
+    ("destination", "secrets", "available"),
+    [
+        ({}, {"for": {}}, True),
+        ({"vectors": {"kind": "pgvector"}}, {"for": {}}, True),
+        ({"database": {"location": "db/a"}}, {"for": {}}, False),
+        ({"database": {"location": "db/a"}}, {"for": {"database": {"location": "db/a"}}}, False),
+        (
+            {"database": {"location": "db/a"}},
+            {"database_url": "postgresql://db/b", "for": {"database": {"location": "db/b"}}},
+            False,
+        ),
+        (
+            {"database": {"location": "db/a"}},
+            {"database_url": "postgresql://db/a", "for": {"database": {"location": "db/a"}}},
+            True,
+        ),
+        ({"files": {"bucket": "saved"}}, {"files": {}, "for": {"files": {"bucket": "earlier"}}}, False),
+        ({"files": {"bucket": "saved"}}, {"files": {}, "for": {"files": {"bucket": "saved"}}}, True),
+    ],
+)
+def test_destination_secret_availability_requires_the_saved_destination_and_held_secret(
+    destination, secrets, available, monkeypatch
+):
+    monkeypatch.setattr(migration_module, "_secrets", secrets)
+
+    assert migration_module._destination_secrets_available(destination) is available
 
 
 async def test_after_the_check_the_next_needed_step_is_current_and_the_rest_wait(

@@ -47,6 +47,15 @@ class KnowledgeBaseAction(str, Enum):
     INGEST = "ingest"
 
 
+class DatasetAction(str, Enum):
+    """Actions authorized on an Evals dataset resource."""
+
+    READ = "read"
+    WRITE = "write"
+    CREATE = "create"
+    DELETE = "delete"
+
+
 class VariableAction(str, Enum):
     """Actions authorized on a variable resource."""
 

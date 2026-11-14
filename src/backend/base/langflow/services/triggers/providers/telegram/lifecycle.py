@@ -17,6 +17,7 @@ from langflow.services.triggers.ingress.verifiers import IngressSecrets
 from langflow.services.triggers.source_clients import source_lease
 from langflow.services.triggers.source_errors import SourceConfigurationError
 from langflow.services.triggers.source_subscription import source_ingress_url
+from langflow.services.triggers.subscriptions import audit_subscription_creation
 
 if TYPE_CHECKING:
     from lfx.integrations.models import CredentialLease
@@ -106,6 +107,7 @@ async def _claim(session: AsyncSession, trigger: Trigger, *, bot: dict, address:
     except IntegrityError:
         msg = "This Telegram bot already has a receiver. Retry with a different bot."
         raise SourceConfigurationError(msg) from None
+    await audit_subscription_creation(session, trigger_id=trigger.id)
     return row
 
 

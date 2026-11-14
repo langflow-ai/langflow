@@ -143,16 +143,25 @@ def test_acknowledged_changes_are_rendered_into_release_notes(tmp_path):
     assert changes[0].id in notes
 
 
+@pytest.mark.parametrize("format_version", [1, 2])
 @pytest.mark.parametrize("invalid", ["missing", "stale", "duplicate", "unpublished", "escape", "wrong_note"])
 @pytest.mark.component_runtime
-def test_invalid_acknowledgments_cannot_allow_a_break(invalid, tmp_path):
+def test_invalid_acknowledgments_cannot_allow_a_break(invalid, format_version, tmp_path):
     changes = breaking_change()
     document = acknowledgment(changes, tmp_path)
     entry = document["breaks"][0]
+    [change] = changes
+    comparisons = {(change.distribution, change.source_version, change.target_version)}
+    if format_version == 2:
+        document["format_version"] = 2
+        entry.update(
+            distribution=change.distribution, source_version=change.source_version, target_version=change.target_version
+        )
     if invalid == "missing":
         document["breaks"] = []
     elif invalid == "stale":
-        entry["id"] = "stale"
+        entry["id"] = "0" * 64
+        (tmp_path / entry["release_note"]).write_text(f"Example migration guidance for {entry['id']}")
     elif invalid == "duplicate":
         document["breaks"].append(entry)
     elif invalid == "unpublished":
@@ -162,7 +171,7 @@ def test_invalid_acknowledgments_cannot_allow_a_break(invalid, tmp_path):
     else:
         (tmp_path / entry["release_note"]).write_text("No migration guidance")
     with pytest.raises(CompatibilityGateError):
-        review_acknowledgments(changes, document, tmp_path)
+        review_acknowledgments(changes, document, tmp_path, comparisons=comparisons)
 
 
 @pytest.mark.component_runtime

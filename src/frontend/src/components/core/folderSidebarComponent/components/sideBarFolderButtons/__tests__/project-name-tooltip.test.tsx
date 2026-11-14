@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { useUtilityStore } from "@/stores/utilityStore";
 import SideBarFoldersButtonsComponent from "..";
 
 const mockMutateAddFolder = jest.fn();
@@ -287,6 +288,18 @@ describe("project name tooltip", () => {
     expect(screen.getByText("Custom footer")).toBeInTheDocument();
     expect(screen.queryByText("sidebar.knowledge")).not.toBeInTheDocument();
     expect(screen.queryByText("sidebar.myFiles")).not.toBeInTheDocument();
+  });
+
+  it("shows the Evaluations entry when Evals is on even with file management off", () => {
+    useUtilityStore.setState({ featureFlags: { evals: true } });
+    try {
+      render(<SideBarFoldersButtonsComponent handleChangeFolder={jest.fn()} />);
+
+      expect(screen.getByTestId("sidebar-evaluations")).toBeInTheDocument();
+      expect(screen.queryByText("sidebar.myFiles")).not.toBeInTheDocument();
+    } finally {
+      useUtilityStore.setState({ featureFlags: {} });
+    }
   });
 
   it("does not render a title on the rename input that replaces the name", () => {

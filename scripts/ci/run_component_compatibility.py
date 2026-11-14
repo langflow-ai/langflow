@@ -166,7 +166,14 @@ def main() -> int:
         if failures:
             msg = "could not verify published baselines " + ", ".join(failure["distribution"] for failure in failures)
             raise CompatibilityGateError(msg)
-        notes = review_acknowledgments(changes, json.loads(args.acknowledgments.read_text()), root)
+        selected_comparisons = {
+            (row["distribution"], row["previous_version"], row["target_version"])
+            for row in plan["comparisons"]
+            if row["previous_version"] is not None
+        }
+        notes = review_acknowledgments(
+            changes, json.loads(args.acknowledgments.read_text()), root, comparisons=selected_comparisons
+        )
         (args.output_dir / "release-notes.md").write_text(notes)
     return 0
 
