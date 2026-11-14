@@ -1,9 +1,11 @@
+import base64
 import tempfile
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiofiles
 import pytest
 from lfx.schema.image import (
+    Image,
     get_file_paths,
     get_files,
     is_image_file,
@@ -165,3 +167,17 @@ async def test_get_files_with_storage_service_multiple_files():
         assert mock_storage.get_file.call_count == 2
         # Verify results
         assert result == [b"content1", b"content2"]
+
+
+@pytest.mark.asyncio
+async def test_image_to_base64(file_image):
+    result = await Image(path=file_image).to_base64()
+
+    async with aiofiles.open(file_image, "rb") as f:
+        assert base64.b64decode(result) == await f.read()
+
+
+@pytest.mark.asyncio
+async def test_image_to_base64__no_path():
+    with pytest.raises(ValueError, match=r"Image path is not set\."):
+        await Image().to_base64()
