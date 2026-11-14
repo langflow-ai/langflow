@@ -4,42 +4,90 @@ slug: /connections
 ---
 
 import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
-A **Connection** is a reusable OAuth connection that your flows can take scoped actions within.
-Google Workspace, Microsoft 365, and Slack components can re-use **Connections**.
+A **Connection** is a reusable credential that your flows can take scoped actions with.
+To connect Google Workspace, Microsoft 365, Slack, Jira Cloud, or GitHub, follow the steps below.
+
+Only the **Authorize** step differs between different connections.
 
 ## Prerequisite
 
-* Configure a provider's OAuth registration.
-  To configure OAuth, see [Configure connection OAuth](./connection-oauth).
 * Sign in to the Langflow server. Any signed-in user can create their own connection.
+* For Google, Microsoft, Slack, or Jira, an operator must configure the provider's OAuth registration before users can connect an account.
+  See [Configure connection OAuth](./connection-oauth).
+  Jira requires the Atlassian app and site UUID on [Jira Cloud components](./bundles-jira#configure-the-atlassian-app).
+* For GitHub, create a GitHub App installation token first.
+  For more information, see [GitHub components](./bundles-github#create-an-installation-token).
 
 ## Add a connection
-
-To add a connection, do the following:
 
 1. In the Langflow header, click your profile icon, and then select **Settings**.
 2. Click **Connections**.
 3. Click <Icon name="Plus" aria-hidden="true" /> **Add connection**.
-4. Select a **Provider**, such as **Google Workspace**, **Microsoft 365**, or **Slack**.
-5. Enter a **Handle**. The handle is a stable name for the connection that is stored with a flow and can travel with exported flow JSONs without sharing keys. The handle cannot be renamed.
-6. Enter a **Display name**. This is the label in the Langflow UI. The display name can be renamed.
-7. If you're connecting Slack, select whether the connection acts as the account that authorizes it, or as a Slackbot.
-   Google Workspace and Microsoft 365 connections act as the account that authorized the connection, including when another user selects an instance-shared connection.
-8. In **Scopes to request**, select the permissions your flows require, and clear the rest.
-   Components that perform actions through connections require specific scopes. For example, the Gmail component requires the `gmail.send` scope to send emails.
-9. Click **Continue**, and complete consent in the OAuth provider window.
-   If **Continue** is unavailable and Langflow reports that no OAuth registration is configured for the provider, you have to first configure the OAuth connection, or ask your server administrator to configure it.
-   For more information, see [Configure connection OAuth](./connection-oauth).
+4. Select the **Provider**.
+5. Enter a **Handle** and a **Display name**.
+   The handle is the stable name stored with a flow, such as `work` in `google/work`.
+   It travels with an exported flow and cannot be renamed.
+   The display name is the label in Langflow, and it can be renamed.
+6. Authorize the provider.
+
+   <Tabs groupId="integration" queryString="integration">
+   <TabItem value="google" label="Google Workspace" default>
+
+   In **Scopes to request**, select the permissions the flow needs, such as `gmail.send` for [**Gmail: Send Email**](./bundles-google).
+   Click **Continue** and finish consent in Google.
+   The connection acts as the account that authorized it, including when another user selects an instance-shared connection.
+   A handle of `work` is stored as `google/work`.
+
+   </TabItem>
+   <TabItem value="microsoft" label="Microsoft 365">
+
+   In **Scopes to request**, select the short permission names the flow needs, such as `Mail.Send`.
+   Click **Continue** and finish consent in Microsoft.
+   The connection acts as the account that authorized it.
+   A handle of `work` is stored as `microsoft/work`.
+
+   </TabItem>
+   <TabItem value="slack" label="Slack">
+
+   Choose whether the connection acts as the account that authorizes it, or as a Slackbot.
+   In **Scopes to request**, select the scopes the actions need.
+   Click **Continue** and finish consent in Slack.
+   A handle of `work` is stored as `slack/work`.
+
+   </TabItem>
+   <TabItem value="jira" label="Jira Cloud">
+
+   Keep `offline_access`, `read:jira-work`, and `read:jira-user` selected.
+   Add `write:jira-work` when the flow creates, edits, or transitions issues.
+   Click **Continue** and authorize the configured Jira site.
+   Langflow requires the refresh token from that consent.
+   A handle of `work` is stored as `jira/work`.
+
+   </TabItem>
+   <TabItem value="github" label="GitHub">
+
+   Paste the installation access token and the expiration GitHub reported.
+   GitHub has no consent window on this step.
+   Select **Allow background runs** when this connection will arm triggers.
+   A handle of `work` is stored as `github/work`.
+   The token expires after one hour. **Reconnect** keeps the same handle when you paste a replacement.
+
+   </TabItem>
+   </Tabs>
+
+7. Click **Done**.
+   If **Continue** is unavailable and Langflow reports that no OAuth registration is configured, ask the server administrator to configure it before you retry.
+8. For Google, Microsoft, Slack, or Jira, open <Icon name="Ellipsis" aria-hidden="true" /> **Actions** on the saved connection and select **Allow scheduled and deployed runs** when this connection will run triggers.
 
 ## Use a connection in a flow
 
-To use a connection in a flow, do the following:
-
-1. Add a component that uses a connection, such as [**Gmail: Send Email**](./bundles-google), a [Microsoft 365 component](./bundles-microsoft), or a [Slack component](./bundles-slack).
-2. In the component's connection field, select the connection you want to use.
-   The connection field displays which Scope is required. For example, **Gmail: Send Gmail** requires `gmail.send`.
-   A connection stores the handle, such as `google/work`, and the OAuth token never appears in the flow.
+1. Add a component that uses the Connection, such as [**Gmail: Send Email**](./bundles-google), a [Microsoft 365 component](./bundles-microsoft), a [Slack component](./bundles-slack), a [Jira Cloud component](./bundles-jira), or a [GitHub component](./bundles-github).
+2. In the component's Connection field, select the Connection.
+   The field shows the scope that action requires.
+   The flow stores the handle. The token stays on the server.
 
 ## Share a connection with other users
 
@@ -61,13 +109,9 @@ To transfer a flow connection from one server to another, do the following:
 2. Import the flow on the other Langflow server.
    On the new server's **Projects** page, click <Icon name="Upload" aria-hidden="true" /> **Upload a flow**, and then select the JSON file.
 
-3. On the new server, create a connection with the same provider and handle.
-   For example, for a connection with the handle `google/work`, select **Google Workspace** and enter the handle `work`.
+3. On the new server, repeat [Add a connection](#add-a-connection) for the same provider and handle.
 
-4. Complete the OAuth consent, and request the scopes the flow's components need.
-   For more information, see [Add a connection](#add-a-connection).
-
-5. Run the flow.
+4. Run the flow.
    The flow uses the saved handle.
 
 ## Manage connections
@@ -75,7 +119,7 @@ To transfer a flow connection from one server to another, do the following:
 Open <Icon name="Ellipsis" aria-hidden="true" /> **Actions** on the row.
 
 * **Check credential** tests the stored credential. It is available after the connection has one.
-* **Authorize** or **Reconnect** starts consent again. Scopes the connection already holds stay selected. Check another scope to add it, or clear one to drop it. A pending connection offers **Authorize**. A connection that already completed consent offers **Reconnect**.
+* **Authorize** or **Reconnect** starts consent again. Scopes the connection already holds stay selected. Check another scope to add it, or clear one to drop it. A pending connection offers **Authorize**. A connection that already completed consent offers **Reconnect**. For GitHub, **Reconnect** asks for a new installation token and its expiration.
 * **Rename** changes the display name. The handle stays the same, so flows that reference it keep working.
 * **Allow scheduled and deployed runs** lets the owner opt a user-owned connection into unattended execution.
 
@@ -94,6 +138,3 @@ it says that the credential was only removed from Langflow and directs you to re
 For a Slack Socket Mode app-level token (`xapp-`), use **Basic Information > App-Level Tokens** in the Slack app's settings if Slack rejects the revocation request.
 Microsoft Entra has no per-grant revocation endpoint for this flow, so an administrator removes the app's consent in Entra when upstream revocation is required.
 For the provider differences, see [Provider revocation and token rotation](./connection-oauth#provider-revocation-and-token-rotation).
-
-
-

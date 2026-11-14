@@ -1,6 +1,6 @@
 [project]
 name = "lfx-bundles"
-version = "1.3.7"
+version = "1.3.8"
 description = "Langflow's long-tail provider bundles as a single manifest-less metapackage (the langchain-community model)."
 readme = "README.md"
 requires-python = ">=3.10,<3.16"
@@ -77,12 +77,14 @@ novita = ["langchain-openai>=1.1.6", "requests>=2.32.0"]
 nvidia = ["langchain-nvidia-ai-endpoints>=1.5.0,<2.0.0", "nv-ingest-client>=26.1.0,<26.3.0 ; python_version >= '3.12'", "gassist>=0.0.1; sys_platform == 'win32'"]
 olivya = []
 ollama = ["lfx-ollama>=0.1.0,<1.0.0"]
+olostep = []
 openrouter = ["langchain-openai>=1.1.6"]
 orcarouter = ["langchain-openai>=1.1.6"]
 perplexity = ["langchain-perplexity>=1.0.0,<2.0.0"]
 pgvector = ["pgvector>=0.4.2", "langchain-community>=0.4.1,<1.0.0"]
 pinecone = ["langchain-pinecone~=0.2.13; python_version < '3.14'"]
 plivo = []
+popnow = ["langchain-openai>=1.1.6"]
 qdrant = ["qdrant-client>=1.12.0,<2.0.0", "langchain-qdrant>=1.0.0,<2.0.0"]
 redis = ["redis>=7.4.0,<8.0.0", "langchain-community>=0.4.1,<1.0.0"]
 sambanova = ["langchain-sambanova~=1.0.0"]
@@ -150,12 +152,14 @@ all = [
     "lfx-bundles[novita]",
     "lfx-bundles[nvidia]",
     "lfx-bundles[olivya]",
+    "lfx-bundles[olostep]",
     "lfx-bundles[openrouter]",
     "lfx-bundles[orcarouter]",
     "lfx-bundles[perplexity]",
     "lfx-bundles[pgvector]",
     "lfx-bundles[pinecone]",
     "lfx-bundles[plivo]",
+    "lfx-bundles[popnow]",
     "lfx-bundles[qdrant]",
     "lfx-bundles[redis]",
     "lfx-bundles[sambanova]",
@@ -222,12 +226,14 @@ all-no-torch = [
     "lfx-bundles[novita]",
     "lfx-bundles[nvidia]",
     "lfx-bundles[olivya]",
+    "lfx-bundles[olostep]",
     "lfx-bundles[openrouter]",
     "lfx-bundles[orcarouter]",
     "lfx-bundles[perplexity]",
     "lfx-bundles[pgvector]",
     "lfx-bundles[pinecone]",
     "lfx-bundles[plivo]",
+    "lfx-bundles[popnow]",
     "lfx-bundles[qdrant]",
     "lfx-bundles[redis]",
     "lfx-bundles[sambanova]",

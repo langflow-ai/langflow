@@ -26,28 +26,28 @@
       "target_version": "1.14.0"
     },
     {
-      "id": "a4043bd241ac0383b7b1a04d700e5b51d25ea0bebfa427d2a56e826bca16041a",
+      "id": "079d0339ae1d622cd680c17a503861551fb3ff113d9a73da614763946d0bca6e",
       "reason": "Accept the documented ALTK Agent retirement with manual saved-flow migration guidance.",
-      "release_note": "docs/release_notes/compatibility/lfx-bundles-a4043bd241ac.md",
+      "release_note": "docs/release_notes/compatibility/lfx-bundles-079d0339ae1d.md",
       "distribution": "lfx-bundles",
       "source_version": "1.3.5",
-      "target_version": "1.3.6"
+      "target_version": "1.3.8"
     },
     {
-      "id": "f19ae42f277a370693941eaa2f9d0061b220bd32d15c7b7010d1c78541e62df3",
+      "id": "5128540cb3d86313123f3dff8243d6a8e726af25f5bbc2c2ff64e83dbd1d3bbf",
       "reason": "Accept the documented Chroma Vector Store retirement with manual saved-flow migration guidance.",
-      "release_note": "docs/release_notes/compatibility/lfx-bundles-f19ae42f277a.md",
+      "release_note": "docs/release_notes/compatibility/lfx-bundles-5128540cb3d8.md",
       "distribution": "lfx-bundles",
       "source_version": "1.3.5",
-      "target_version": "1.3.6"
+      "target_version": "1.3.8"
     },
     {
-      "id": "835680c60211244c04913b37455e1a685f539479bb4cf0de9325a20d0ecedc7f",
+      "id": "a655e7fa3b82c3be9415adabc0a2278f93af5dd2d2ad7d57688b91f32f76de53",
       "reason": "Accept the documented Local DB retirement with manual saved-flow migration guidance.",
-      "release_note": "docs/release_notes/compatibility/lfx-bundles-835680c60211.md",
+      "release_note": "docs/release_notes/compatibility/lfx-bundles-a655e7fa3b82.md",
       "distribution": "lfx-bundles",
       "source_version": "1.3.5",
-      "target_version": "1.3.6"
+      "target_version": "1.3.8"
     }
   ]
 }
