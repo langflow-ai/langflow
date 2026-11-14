@@ -9,6 +9,8 @@ interface UseTypingEffectProps {
   onComplete?: () => void;
 }
 
+const isHighSurrogate = (code: number) => code >= 0xd800 && code <= 0xdbff;
+
 export function useTypingEffect({
   text,
   willAnimate,
@@ -55,7 +57,11 @@ export function useTypingEffect({
 
     const timer = setInterval(() => {
       if (indexRef.current < text.length) {
-        const nextIndex = Math.min(indexRef.current + speed, text.length);
+        let nextIndex = Math.min(indexRef.current + speed, text.length);
+        // Never stop between the two halves of a surrogate pair (emoji).
+        if (isHighSurrogate(text.charCodeAt(nextIndex - 1))) {
+          nextIndex = Math.min(nextIndex + 1, text.length);
+        }
         setDisplayedText(text.slice(0, nextIndex));
         indexRef.current = nextIndex;
       } else {
