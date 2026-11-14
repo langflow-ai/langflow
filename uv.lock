@@ -1,13 +1,13 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = ">=3.11, <3.16"
 resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
     "python_full_version == '3.14.*' and sys_platform != 'darwin' and sys_platform != 'win32'",
@@ -200,8 +200,8 @@ dependencies = [
     { name = "psutil" },
     { name = "pyyaml" },
     { name = "safetensors" },
-    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.15' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (python_full_version == '3.14.*' and sys_platform == 'darwin')" },
-    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64') or (python_full_version >= '3.15' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
+    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version == '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin') or (python_full_version < '3.15' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (platform_machine == 'arm64' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin')" },
+    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64' and platform_python_implementation != 'PyPy') or (python_full_version != '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.15' and platform_machine == 'arm64' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/8d/75/94cd5d389649578aca399e5aa822637eec18319a1dadc400ffe2f9a7493f/accelerate-1.14.0.tar.gz", hash = "sha256:41b9c4377a54e0b460a959b0defa1b736e4ca0a2373252d9a539964c2afe3c8d", size = 412167, upload-time = "2026-06-11T13:45:52.326Z" }
 wheels = [
@@ -765,8 +765,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
 ]
@@ -1418,8 +1418,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
 ]
@@ -2785,8 +2785,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
 ]
@@ -3013,8 +3013,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
 ]
@@ -3392,8 +3392,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
     "python_full_version == '3.14.*' and sys_platform != 'darwin' and sys_platform != 'win32'",
@@ -3721,10 +3721,10 @@ dependencies = [
     { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.15'" },
     { name = "pillow" },
     { name = "safetensors", extra = ["torch"] },
-    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.15' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (python_full_version == '3.14.*' and sys_platform == 'darwin')" },
-    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64') or (python_full_version >= '3.15' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
-    { name = "torchvision", version = "0.29.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.15' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (python_full_version == '3.14.*' and sys_platform == 'darwin')" },
-    { name = "torchvision", version = "0.29.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64') or (python_full_version >= '3.15' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
+    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version == '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin') or (python_full_version < '3.15' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (platform_machine == 'arm64' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin')" },
+    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64' and platform_python_implementation != 'PyPy') or (python_full_version != '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.15' and platform_machine == 'arm64' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
+    { name = "torchvision", version = "0.29.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version == '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin') or (python_full_version < '3.15' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (platform_machine == 'arm64' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin')" },
+    { name = "torchvision", version = "0.29.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64' and platform_python_implementation != 'PyPy') or (python_full_version != '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.15' and platform_machine == 'arm64' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
     { name = "transformers" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/d6/12/e4bc8e9c5304187b7adfca37deabda3f1a27f3a7834dd7d4d15f5c00de97/docling_ibm_models-4.0.4.tar.gz", hash = "sha256:f10cbcd2986ab3f55ac87890bda04353c10d312074433f1c8885cc33b33c3c13", size = 77657, upload-time = "2026-10-21T11:34:14.258Z" }
@@ -3845,10 +3845,10 @@ models-local = [
     { name = "defusedxml" },
     { name = "docling-ibm-models" },
     { name = "huggingface-hub" },
-    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.15' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (python_full_version == '3.14.*' and sys_platform == 'darwin')" },
-    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64') or (python_full_version >= '3.15' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
-    { name = "torchvision", version = "0.29.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.15' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (python_full_version == '3.14.*' and sys_platform == 'darwin')" },
-    { name = "torchvision", version = "0.29.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64') or (python_full_version >= '3.15' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
+    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version == '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin') or (python_full_version < '3.15' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (platform_machine == 'arm64' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin')" },
+    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64' and platform_python_implementation != 'PyPy') or (python_full_version != '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.15' and platform_machine == 'arm64' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
+    { name = "torchvision", version = "0.29.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version == '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin') or (python_full_version < '3.15' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (platform_machine == 'arm64' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin')" },
+    { name = "torchvision", version = "0.29.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64' and platform_python_implementation != 'PyPy') or (python_full_version != '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.15' and platform_machine == 'arm64' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
 ]
 service-client = [
     { name = "httpx" },
@@ -3886,10 +3886,10 @@ standard = [
     { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "scipy", version = "1.18.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and python_full_version < '3.15'" },
     { name = "scipy", version = "1.18.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.15'" },
-    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.15' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (python_full_version == '3.14.*' and sys_platform == 'darwin')" },
-    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64') or (python_full_version >= '3.15' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
-    { name = "torchvision", version = "0.29.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.15' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (python_full_version == '3.14.*' and sys_platform == 'darwin')" },
-    { name = "torchvision", version = "0.29.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64') or (python_full_version >= '3.15' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
+    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version == '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin') or (python_full_version < '3.15' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (platform_machine == 'arm64' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin')" },
+    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64' and platform_python_implementation != 'PyPy') or (python_full_version != '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.15' and platform_machine == 'arm64' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
+    { name = "torchvision", version = "0.29.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version == '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin') or (python_full_version < '3.15' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (platform_machine == 'arm64' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin')" },
+    { name = "torchvision", version = "0.29.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64' and platform_python_implementation != 'PyPy') or (python_full_version != '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.15' and platform_machine == 'arm64' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
     { name = "typer" },
     { name = "websockets" },
 ]
@@ -3965,8 +3965,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
 ]
@@ -4038,10 +4038,10 @@ dependencies = [
     { name = "scipy", version = "1.18.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and python_full_version < '3.15'" },
     { name = "scipy", version = "1.18.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.15'" },
     { name = "shapely" },
-    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.15' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (python_full_version == '3.14.*' and sys_platform == 'darwin')" },
-    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64') or (python_full_version >= '3.15' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
-    { name = "torchvision", version = "0.29.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.15' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (python_full_version == '3.14.*' and sys_platform == 'darwin')" },
-    { name = "torchvision", version = "0.29.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64') or (python_full_version >= '3.15' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
+    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version == '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin') or (python_full_version < '3.15' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (platform_machine == 'arm64' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin')" },
+    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64' and platform_python_implementation != 'PyPy') or (python_full_version != '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.15' and platform_machine == 'arm64' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
+    { name = "torchvision", version = "0.29.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version == '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin') or (python_full_version < '3.15' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (platform_machine == 'arm64' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin')" },
+    { name = "torchvision", version = "0.29.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64' and platform_python_implementation != 'PyPy') or (python_full_version != '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.15' and platform_machine == 'arm64' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/bb/84/4a2cab0e6adde6a85e7ba543862e5fc0250c51f3ac721a078a55cdcff250/easyocr-1.7.2-py3-none-any.whl", hash = "sha256:5be12f9b0e595d443c9c3d10b0542074b50f0ec2d98b141a109cd961fd1c177c", size = 2870178, upload-time = "2024-09-24T11:34:43.554Z" },
@@ -4127,8 +4127,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
     "python_full_version == '3.14.*' and sys_platform != 'darwin' and sys_platform != 'win32'",
@@ -4329,8 +4329,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
     "python_full_version == '3.14.*' and sys_platform != 'darwin' and sys_platform != 'win32'",
@@ -4692,8 +4692,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
 ]
@@ -5616,8 +5616,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
 ]
@@ -5946,8 +5946,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
 ]
@@ -6226,8 +6226,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
 ]
@@ -6735,8 +6735,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
 ]
@@ -7260,8 +7260,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
 ]
@@ -7468,8 +7468,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/67/67/bd53dc762c2e7728b7b32bdbe59ecb74ae6bc6b7609e5063e6e44553b44f/jq-1.13.0.tar.gz", hash = "sha256:e62bdddeab3b8a0a404581a7bb6f1e8c4cc6082280870031f746074f4cac52c0", size = 1966083, upload-time = "2026-10-18T07:35:47.796Z" }
 wheels = [
@@ -8447,7 +8447,7 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1.14.0"
+version = "1.14.0.dev27"
 source = { editable = "." }
 dependencies = [
     { name = "langflow-base" },
@@ -8682,7 +8682,7 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "1.14.0"
+version = "1.14.0.dev27"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "a2a-sdk" },
@@ -9465,7 +9465,7 @@ dev = [
 
 [[package]]
 name = "langflow-sdk"
-version = "0.4.0"
+version = "0.4.0.dev122"
 source = { editable = "src/sdk" }
 dependencies = [
     { name = "h2" },
@@ -9750,7 +9750,7 @@ wheels = [
 
 [[package]]
 name = "lfx"
-version = "1.14.0"
+version = "1.14.0.dev28"
 source = { editable = "src/lfx" }
 dependencies = [
     { name = "a2wsgi", marker = "sys_platform != 'win32'" },
@@ -10790,10 +10790,10 @@ all = [
     { name = "tesserocr" },
     { name = "tiktoken", version = "0.13.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.15'" },
     { name = "tiktoken", version = "0.14.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.15'" },
-    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.15' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (python_full_version == '3.14.*' and sys_platform == 'darwin')" },
-    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64') or (python_full_version >= '3.15' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
-    { name = "torchvision", version = "0.29.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.15' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (python_full_version == '3.14.*' and sys_platform == 'darwin')" },
-    { name = "torchvision", version = "0.29.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64') or (python_full_version >= '3.15' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
+    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version == '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin') or (python_full_version < '3.15' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (platform_machine == 'arm64' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin')" },
+    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64' and platform_python_implementation != 'PyPy') or (python_full_version != '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.15' and platform_machine == 'arm64' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
+    { name = "torchvision", version = "0.29.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version == '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin') or (python_full_version < '3.15' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (platform_machine == 'arm64' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin')" },
+    { name = "torchvision", version = "0.29.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64' and platform_python_implementation != 'PyPy') or (python_full_version != '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.15' and platform_machine == 'arm64' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
     { name = "transformers" },
 ]
 chunking = [
@@ -10808,10 +10808,10 @@ image-description = [
     { name = "ocrmac", marker = "sys_platform == 'darwin'" },
     { name = "rapidocr-onnxruntime" },
     { name = "tesserocr" },
-    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.15' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (python_full_version == '3.14.*' and sys_platform == 'darwin')" },
-    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64') or (python_full_version >= '3.15' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
-    { name = "torchvision", version = "0.29.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.15' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (python_full_version == '3.14.*' and sys_platform == 'darwin')" },
-    { name = "torchvision", version = "0.29.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64') or (python_full_version >= '3.15' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
+    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version == '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin') or (python_full_version < '3.15' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (platform_machine == 'arm64' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin')" },
+    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64' and platform_python_implementation != 'PyPy') or (python_full_version != '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.15' and platform_machine == 'arm64' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
+    { name = "torchvision", version = "0.29.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version == '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin') or (python_full_version < '3.15' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (platform_machine == 'arm64' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin')" },
+    { name = "torchvision", version = "0.29.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64' and platform_python_implementation != 'PyPy') or (python_full_version != '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.15' and platform_machine == 'arm64' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
     { name = "transformers" },
 ]
 local = [
@@ -10819,10 +10819,10 @@ local = [
     { name = "ocrmac", marker = "sys_platform == 'darwin'" },
     { name = "rapidocr-onnxruntime" },
     { name = "tesserocr" },
-    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.15' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (python_full_version == '3.14.*' and sys_platform == 'darwin')" },
-    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64') or (python_full_version >= '3.15' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
-    { name = "torchvision", version = "0.29.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.15' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (python_full_version == '3.14.*' and sys_platform == 'darwin')" },
-    { name = "torchvision", version = "0.29.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64') or (python_full_version >= '3.15' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
+    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version == '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin') or (python_full_version < '3.15' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (platform_machine == 'arm64' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin')" },
+    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64' and platform_python_implementation != 'PyPy') or (python_full_version != '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.15' and platform_machine == 'arm64' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
+    { name = "torchvision", version = "0.29.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version == '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin') or (python_full_version < '3.15' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (platform_machine == 'arm64' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin')" },
+    { name = "torchvision", version = "0.29.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64' and platform_python_implementation != 'PyPy') or (python_full_version != '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.15' and platform_machine == 'arm64' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
     { name = "transformers" },
 ]
 
@@ -11388,8 +11388,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
 ]
@@ -11611,8 +11611,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
 ]
@@ -11875,8 +11875,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
 ]
@@ -12269,8 +12269,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
 ]
@@ -12742,8 +12742,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
 ]
@@ -13675,8 +13675,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
 ]
@@ -13908,8 +13908,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
     "python_full_version == '3.14.*' and sys_platform != 'darwin' and sys_platform != 'win32'",
@@ -15059,8 +15059,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
 ]
@@ -15206,8 +15206,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
 ]
@@ -15339,8 +15339,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
 ]
@@ -16114,8 +16114,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
 ]
@@ -16207,7 +16207,7 @@ source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
 ]
 wheels = [
@@ -16346,8 +16346,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
 ]
@@ -16728,8 +16728,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
 ]
@@ -16877,8 +16877,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
 ]
@@ -17554,8 +17554,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
 ]
@@ -18530,8 +18530,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
 ]
@@ -18867,8 +18867,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
 ]
@@ -19337,8 +19337,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
 ]
@@ -19577,8 +19577,8 @@ torch = [
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
     { name = "numpy", version = "2.5.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.14.*'" },
     { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.15'" },
-    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.15' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (python_full_version == '3.14.*' and sys_platform == 'darwin')" },
-    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64') or (python_full_version >= '3.15' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
+    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version == '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin') or (python_full_version < '3.15' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (platform_machine == 'arm64' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin')" },
+    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64' and platform_python_implementation != 'PyPy') or (python_full_version != '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.15' and platform_machine == 'arm64' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
 ]
 
 [[package]]
@@ -19870,8 +19870,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
 ]
@@ -19974,8 +19974,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
     "python_full_version == '3.14.*' and sys_platform != 'darwin' and sys_platform != 'win32'",
@@ -20048,8 +20048,8 @@ dependencies = [
     { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "scipy", version = "1.18.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' and python_full_version < '3.15'" },
     { name = "scipy", version = "1.18.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.15'" },
-    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.15' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (python_full_version == '3.14.*' and sys_platform == 'darwin')" },
-    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64') or (python_full_version >= '3.15' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
+    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version == '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin') or (python_full_version < '3.15' and platform_machine == 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.14' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (platform_machine == 'arm64' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin')" },
+    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64' and platform_python_implementation != 'PyPy') or (python_full_version != '3.14.*' and platform_machine != 'arm64' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.15' and platform_machine == 'arm64' and platform_python_implementation == 'PyPy') or sys_platform != 'darwin'" },
     { name = "tqdm" },
     { name = "transformers" },
     { name = "typing-extensions" },
@@ -20803,8 +20803,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
     "python_full_version == '3.14.*' and sys_platform != 'darwin' and sys_platform != 'win32'",
@@ -20909,8 +20909,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
 ]
@@ -21129,8 +21129,8 @@ source = { registry = "https://download.pytorch.org/whl/cpu" }
 resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
     "python_full_version == '3.14.*' and sys_platform != 'darwin' and sys_platform != 'win32'",
@@ -21222,8 +21222,8 @@ source = { registry = "https://download.pytorch.org/whl/cpu" }
 resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
     "python_full_version == '3.14.*' and sys_platform != 'darwin' and sys_platform != 'win32'",
@@ -21239,7 +21239,7 @@ resolution-markers = [
     "python_full_version < '3.12' and platform_machine != 'arm64' and sys_platform == 'darwin'",
 ]
 dependencies = [
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64') or (python_full_version == '3.14.*' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.15' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
     { name = "numpy", version = "2.5.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.14.*' and sys_platform != 'darwin'" },
     { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.15' and platform_python_implementation == 'PyPy') or (python_full_version >= '3.15' and sys_platform != 'darwin')" },
     { name = "pillow" },
@@ -21798,8 +21798,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
 ]
@@ -22039,8 +22039,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
 ]
@@ -22898,8 +22898,8 @@ resolution-markers = [
     "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
-    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
-    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
     "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
 ]
