@@ -7,6 +7,7 @@ numbers as ``json.loads`` reads their text.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import threading
@@ -514,3 +515,15 @@ def test_a_snapshot_is_read_on_another_thread_while_batches_go_on():
     for thread in threads:
         thread.join()
     assert seen == expected
+
+
+@pytest.mark.parametrize("text", ["", "abc", '{"nodes": [], "edges": []}', "caf\u00e9 \U0001f600", "x" * 1_000_000])
+def test_text_sha256_matches_hashlib_for_str_and_bytes(text: str) -> None:
+    expected = hashlib.sha256(text.encode()).hexdigest()
+    assert ops.text_sha256(text) == expected
+    assert ops.text_sha256(text.encode()) == expected
+
+
+def test_text_sha256_refuses_other_types() -> None:
+    with pytest.raises(TypeError, match="text must be str or bytes"):
+        ops.text_sha256(bytearray(b"abc"))
