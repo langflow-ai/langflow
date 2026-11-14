@@ -183,3 +183,11 @@ it("uses the Discord logo for its integration palette group", () => {
     icon: "discord",
   });
 });
+
+it("classifies SocialScrape as a sidebar bundle", () => {
+  expect(SIDEBAR_BUNDLES).toContainEqual({
+    display_name: "SocialScrape",
+    name: "socialscrape",
+    icon: "Share2",
+  });
+});

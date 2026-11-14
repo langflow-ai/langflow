@@ -1,0 +1,92 @@
+---
+title: SocialScrape
+slug: /bundles-socialscrape
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **SocialScrape** bundle.
+
+[SocialScrape](https://socialscrape.dev) is a social media data API.
+It returns transcripts, profiles, and posts from platforms such as YouTube, TikTok, Instagram, and X in one consistent shape.
+
+All components need a SocialScrape API key.
+[Sign up](https://socialscrape.dev/sign-up) to get one, then enter it in the **SocialScrape API Key** field, or store it in a [global variable](/configuration-global-variables) named `SOCIALSCRAPE_API_KEY`.
+
+SocialScrape reads each video or profile on its own servers, so Langflow only sends requests to `api.socialscrape.dev`.
+Each successful request uses SocialScrape credits.
+Failed requests are free.
+
+For more information, see the [SocialScrape documentation](https://socialscrape.dev/docs).
+
+## SocialScrape Transcript
+
+This component gets the transcript of a video from its URL.
+It works for YouTube, TikTok, Instagram, X, Facebook, LinkedIn, Reddit, Twitch clips, Kick clips, and Rumble.
+
+It outputs a [`Data`](/data-types#json) object.
+The `text` is the full transcript.
+The data also has the `platform`, `video_id`, `language`, `source`, `duration_seconds`, `segments` with start and end times, and `available_languages`.
+
+Some videos have no captions, so SocialScrape transcribes the audio itself, which can take about 15 seconds.
+The component's **Timeout** default of 60 seconds allows for this.
+
+### SocialScrape Transcript parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| SocialScrape API Key (`api_key`) | SecretString | Input parameter. Your SocialScrape API key. |
+| Video URL (`url`) | String | Input parameter. The `http://` or `https://` URL of the video. |
+| Language (`language`) | String | Input parameter. Language code of the transcript, such as `en`. Leave empty for the video's default. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for SocialScrape to answer. Default: `60`. |
+
+## SocialScrape Profile
+
+This component gets one account's profile.
+It outputs a [`Data`](/data-types#json) object.
+The `text` is the bio, and the data has the `name`, `handle`, `url`, `verified`, `is_private`, `external_url`, and `stats` such as followers, following, and posts.
+
+### SocialScrape Profile parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| SocialScrape API Key (`api_key`) | SecretString | Input parameter. Your SocialScrape API key. |
+| Platform (`platform`) | Dropdown | Input parameter. One of `instagram`, `tiktok`, `twitter`, `threads`, `bluesky`, `snapchat`, `twitch`, or `truthsocial`. |
+| Handle (`handle`) | String | Input parameter. The account handle, with or without a leading `@`. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for SocialScrape to answer. Default: `60`. |
+
+## SocialScrape Posts
+
+This component lists one page of an account's posts.
+For TikTok, it lists the account's videos.
+
+It has two outputs:
+
+* **Posts**: a [`Table`](/data-types#table) with one row per post. The `text` is the post text, and the other columns include `id`, `url`, `type`, `published_at`, `stats`, and `author`.
+* **Page Info**: a [`Data`](/data-types#json) object with the `cursor` for the next page and `has_more`.
+
+To read the next page, enter the `cursor` in the **Cursor** field and run the component again.
+Each page uses credits.
+
+### SocialScrape Posts parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| SocialScrape API Key (`api_key`) | SecretString | Input parameter. Your SocialScrape API key. |
+| Platform (`platform`) | Dropdown | Input parameter. One of `instagram`, `tiktok`, `threads`, `bluesky`, or `truthsocial`. |
+| Handle (`handle`) | String | Input parameter. The account handle, with or without a leading `@`. |
+| Cursor (`cursor`) | String | Input parameter. The cursor from a previous run, to read the next page. Leave empty for the first page. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for SocialScrape to answer. Default: `60`. |
+
+## See also
+
+* [**Web Search** component](/web-search)
+* [**Olostep** bundle](/bundles-olostep)
