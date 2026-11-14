@@ -155,3 +155,75 @@ class TestSyncStreamParity:
         # Identical, except component_id (which sync carries as the dict key).
         assert {k: v for k, v in stream_data.items() if k != "component_id"} == sync_output.model_dump(mode="json")
         assert stream_data["component_id"] == component_id
+
+
+class TestIndexedTerminalMetadata:
+    """Standard graphs use live successor lookups; custom graph behavior stays authoritative."""
+
+    def test_standard_graph_does_not_scan_vertices_and_tracks_mutations(self):
+        from lfx.graph import Graph
+
+        graph = Graph()
+        vertex = _vertex("output")
+        graph.get_vertex = lambda _: vertex
+        graph.successor_map = {}
+
+        class NoScan:
+            def __iter__(self):
+                msg = "metadata must not scan the vertex list"
+                raise AssertionError(msg)
+
+        graph.vertices = NoScan()
+        assert _output_meta_for_vertex(graph, "output")["is_terminal"] is True
+        graph.successor_map["output"] = ["next"]
+        assert _output_meta_for_vertex(graph, "output")["is_terminal"] is False
+        graph.successor_map["output"] = []
+        assert _output_meta_for_vertex(graph, "output")["is_terminal"] is True
+
+    def test_instance_override_remains_authoritative(self):
+        from lfx.graph import Graph
+
+        graph = Graph()
+        graph.get_vertex = lambda _: _vertex("output")
+        graph.get_terminal_nodes = list
+        assert _output_meta_for_vertex(graph, "output")["is_terminal"] is False
+
+    def test_subclass_override_remains_authoritative(self):
+        from lfx.graph import Graph
+
+        class CustomGraph(Graph):
+            def get_terminal_nodes(self):
+                return []
+
+        graph = CustomGraph()
+        graph.get_vertex = lambda _: _vertex("output")
+        assert _output_meta_for_vertex(graph, "output")["is_terminal"] is False
+
+    def test_graph_like_attribute_error_fallback(self):
+        from types import SimpleNamespace
+
+        vertex = _vertex("output")
+        graph = SimpleNamespace(get_vertex=lambda _: vertex, vertices=[vertex], successor_map={})
+        assert _output_meta_for_vertex(graph, "output")["is_terminal"] is True
+
+
+def test_indexed_metadata_matches_every_field_for_mixed_topology():
+    """Output flags, missing successors, isolated vertices and cycles keep scan semantics."""
+    from lfx.graph import Graph
+
+    graph = Graph()
+    vertices = [_vertex(str(i), is_output=i % 2 == 0, display_name="" if i == 2 else "Output") for i in range(5)]
+    graph.vertices = vertices
+    graph.get_vertex = {v.id: v for v in vertices}.__getitem__
+    for successors in ({"0": ["1"], "1": ["0"], "2": []}, {}, {"4": ["2"]}):
+        graph.successor_map = successors
+        terminal_ids = set(graph.get_terminal_nodes())
+        for vertex in vertices:
+            assert _output_meta_for_vertex(graph, vertex.id) == {
+                "component_id": vertex.id,
+                "display_name": vertex.display_name or vertex.vertex_type,
+                "vertex_type": vertex.vertex_type,
+                "is_output": bool(vertex.is_output),
+                "is_terminal": vertex.id in terminal_ids,
+                "output_types": ["Message"],
+            }

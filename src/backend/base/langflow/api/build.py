@@ -128,16 +128,22 @@ def _output_meta_for_vertex(graph: Graph, vertex_id: str) -> dict:
     """
     vertex = graph.get_vertex(vertex_id)
     output_types = vertex.outputs[0].get("types", []) if (vertex.outputs and len(vertex.outputs) > 0) else []
-    try:
-        terminal_ids = set(graph.get_terminal_nodes())
-    except AttributeError:
-        terminal_ids = {v.id for v in graph.vertices if not graph.successor_map.get(v.id, [])}
+    # The standard graph already indexes outgoing edges. Avoid rebuilding all
+    # terminal IDs for each output event, but preserve custom graph semantics.
+    if type(graph) is Graph and "get_terminal_nodes" not in vars(graph):
+        is_terminal = not graph.successor_map.get(vertex_id, [])
+    else:
+        try:
+            is_terminal = vertex_id in graph.get_terminal_nodes()
+        except AttributeError:
+            terminal_ids = {v.id for v in graph.vertices if not graph.successor_map.get(v.id, [])}
+            is_terminal = vertex_id in terminal_ids
     return {
         "component_id": vertex.id,
         "display_name": vertex.display_name or vertex.vertex_type,
         "vertex_type": vertex.vertex_type,
         "is_output": bool(vertex.is_output),
-        "is_terminal": vertex_id in terminal_ids,
+        "is_terminal": is_terminal,
         "output_types": output_types,
     }
 
