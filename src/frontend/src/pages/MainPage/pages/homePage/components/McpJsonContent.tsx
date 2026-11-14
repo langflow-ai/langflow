@@ -1,6 +1,7 @@
 import { memo, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
+import jsonLanguage from "react-syntax-highlighter/dist/esm/languages/hljs/json";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
@@ -10,6 +11,10 @@ import {
   createSyntaxHighlighterStyle,
   operatingSystemTabs,
 } from "../utils/mcpServerUtils";
+
+// The Light build ships with no languages registered; without this,
+// rendering language="json" throws (Minified React error #130).
+SyntaxHighlighter.registerLanguage("json", jsonLanguage);
 
 // Types & Interfaces
 interface MemoizedApiKeyButtonProps {
