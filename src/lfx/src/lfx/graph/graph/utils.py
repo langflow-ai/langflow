@@ -97,7 +97,6 @@ def process_flow(flow_object):
             return
 
         if node.get("data") and node["data"].get("node") and node["data"]["node"].get("flow"):
-            process_flow(node["data"]["node"]["flow"]["data"])
             new_nodes = ungroup_node(node["data"], cloned_flow)
             # Add new nodes to the queue for future processing
             nodes_to_process.extend(new_nodes)
