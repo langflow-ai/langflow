@@ -135,10 +135,14 @@ def socialscrape_request(
     if not _JOB_ID.match(job_id):
         msg = "SocialScrape queued a job without a usable job id."
         raise SocialScrapeAPIError(msg)
+    # Each sleep and each poll is capped by the time left, so the wait ends at the deadline.
     deadline = time.monotonic() + JOB_WAIT_SECONDS
-    while time.monotonic() < deadline:
-        time.sleep(JOB_POLL_SECONDS)
-        data = _get_data(f"/v1/jobs/{job_id}", key=key, timeout=timeout)
+    while (remaining := deadline - time.monotonic()) > 0:
+        time.sleep(min(JOB_POLL_SECONDS, remaining))
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break
+        data = _get_data(f"/v1/jobs/{job_id}", key=key, timeout=min(timeout, remaining))
         if data.get("object") != "job":
             return data
     msg = f"SocialScrape is still working on this request (job {job_id}). Try again in a minute."

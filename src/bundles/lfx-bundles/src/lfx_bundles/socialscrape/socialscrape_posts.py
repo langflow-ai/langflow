@@ -78,11 +78,15 @@ class SocialScrapePostsComponent(Component):
         Output(display_name="Page Info", name="page_info", method="get_page_info"),
     ]
 
+    def _pre_run_setup(self) -> None:
+        """Drop the page kept from an earlier run, so every run reads the account again."""
+        self._page_key = None
+
     def _fetch_page(self) -> dict[str, Any]:
         """Fetch the page once per run; both outputs read the same answer.
 
-        The answer is kept only for the inputs it was fetched with, so a component
-        that runs again with another handle, platform or cursor fetches again.
+        The answer is kept only for the run and the inputs it was fetched with, so a
+        new run, or another handle, platform or cursor, fetches again.
         """
         platform = str(self.platform or "").strip().lower()
         if platform not in POSTS_PLATFORMS:

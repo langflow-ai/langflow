@@ -157,6 +157,20 @@ class TestTranscript:
 
         assert JOB["job_id"] in result.data["error"]
 
+    def test_polls_are_capped_by_the_time_left(self) -> None:
+        # The clock reads 85 after the first sleep (5 of 90 seconds left) and 88 after the poll (2 left).
+        with (
+            patch("httpx.Client.get", return_value=_response(202, data=JOB)),
+            patch("httpx.Client", wraps=httpx.Client) as client,
+            patch("time.sleep") as sleep,
+            patch("time.monotonic", side_effect=[0, 0, 85, 88, 91]),
+        ):
+            result = _transcript().get_transcript()
+
+        assert JOB["job_id"] in result.data["error"]
+        assert [call.kwargs["timeout"] for call in client.call_args_list] == [60, 5]
+        assert [call.args[0] for call in sleep.call_args_list] == [3, 2]
+
     def test_job_without_a_usable_id_is_refused_without_polling(self) -> None:
         bad = {"object": "job", "job_id": "../account/credits", "status": "queued"}
         with patch("httpx.Client.get", return_value=_response(202, data=bad)) as get, patch("time.sleep"):
@@ -299,6 +313,16 @@ class TestPosts:
             component.get_page_info()
 
         assert get.call_count == 1
+
+    def test_a_new_run_fetches_again(self) -> None:
+        component = _posts()
+        with patch("httpx.Client.get", return_value=_response(data=POSTS_PAGE)) as get:
+            component.get_posts()
+            component._pre_run_setup()
+            component.get_posts()
+            component.get_page_info()
+
+        assert get.call_count == 2
 
     def test_changed_inputs_fetch_again(self) -> None:
         component = _posts()
