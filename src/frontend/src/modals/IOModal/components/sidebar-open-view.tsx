@@ -33,7 +33,7 @@ export const SidebarOpenView = ({
 
   return (
     <>
-      <div className="flex flex-col pl-3">
+      <div className="flex flex-col pl-[calc(0.75rem+env(safe-area-inset-left))] pr-[env(safe-area-inset-right)]">
         <div className="flex flex-col gap-2 pb-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
