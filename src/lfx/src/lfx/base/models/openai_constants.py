@@ -89,26 +89,32 @@ OPENAI_MODELS_DETAILED = [
     create_model_metadata(provider="OpenAI", name="gpt-4o", icon="OpenAI", tool_calling=True),
     create_model_metadata(provider="OpenAI", name="gpt-4.1", icon="OpenAI", tool_calling=True),
     create_model_metadata(provider="OpenAI", name="gpt-4.1-mini", icon="OpenAI", tool_calling=True),
-    create_model_metadata(provider="OpenAI", name="gpt-4.1-nano", icon="OpenAI", tool_calling=True),
+    create_model_metadata(provider="OpenAI", name="gpt-4.1-nano", icon="OpenAI", tool_calling=True, deprecated=True),
     create_model_metadata(
         provider="OpenAI", name="gpt-4.5-preview", icon="OpenAI", tool_calling=True, preview=True, deprecated=True
     ),
-    create_model_metadata(provider="OpenAI", name="gpt-4-turbo", icon="OpenAI", tool_calling=True),
+    create_model_metadata(provider="OpenAI", name="gpt-4-turbo", icon="OpenAI", tool_calling=True, deprecated=True),
     create_model_metadata(
         provider="OpenAI", name="gpt-4-turbo-preview", icon="OpenAI", tool_calling=True, preview=True, deprecated=True
     ),
-    create_model_metadata(provider="OpenAI", name="gpt-4", icon="OpenAI", tool_calling=True),
+    create_model_metadata(provider="OpenAI", name="gpt-4", icon="OpenAI", tool_calling=True, deprecated=True),
     create_model_metadata(provider="OpenAI", name="gpt-3.5-turbo", icon="OpenAI", tool_calling=True, deprecated=True),
     # Reasoning Models
-    create_model_metadata(provider="OpenAI", name="o1", icon="OpenAI", reasoning=True),
+    create_model_metadata(provider="OpenAI", name="o1", icon="OpenAI", reasoning=True, deprecated=True),
     create_model_metadata(
         provider="OpenAI", name="o1-mini", icon="OpenAI", reasoning=True, not_supported=True, deprecated=True
     ),
-    create_model_metadata(provider="OpenAI", name="o1-pro", icon="OpenAI", reasoning=True, not_supported=True),
-    create_model_metadata(provider="OpenAI", name="o3-mini", icon="OpenAI", reasoning=True, not_supported=True),
+    create_model_metadata(
+        provider="OpenAI", name="o1-pro", icon="OpenAI", reasoning=True, not_supported=True, deprecated=True
+    ),
+    create_model_metadata(
+        provider="OpenAI", name="o3-mini", icon="OpenAI", reasoning=True, not_supported=True, deprecated=True
+    ),
     create_model_metadata(provider="OpenAI", name="o3", icon="OpenAI", reasoning=True, not_supported=True),
     create_model_metadata(provider="OpenAI", name="o3-pro", icon="OpenAI", reasoning=True, not_supported=True),
-    create_model_metadata(provider="OpenAI", name="o4-mini", icon="OpenAI", reasoning=True, not_supported=True),
+    create_model_metadata(
+        provider="OpenAI", name="o4-mini", icon="OpenAI", reasoning=True, not_supported=True, deprecated=True
+    ),
     # Search Models
     create_model_metadata(
         provider="OpenAI",
@@ -143,6 +149,8 @@ OPENAI_MODELS_DETAILED = [
         provider="OpenAI", name="gpt-4o-mini-realtime-preview", icon="OpenAI", not_supported=True, preview=True
     ),
 ]
+DEPRECATED_MODELS = [metadata["name"] for metadata in OPENAI_MODELS_DETAILED if metadata.get("deprecated", False)]
+
 OPENAI_CHAT_MODEL_NAMES = [
     metadata["name"]
     for metadata in OPENAI_MODELS_DETAILED
@@ -156,6 +164,12 @@ OPENAI_REASONING_MODEL_NAMES = [
     for metadata in OPENAI_MODELS_DETAILED
     if metadata.get("reasoning", False) and not metadata.get("not_supported", False)
 ]
+
+# Selectable models for dropdowns. The full lists above keep deprecated models so saved flows
+# still resolve them (e.g. to tell reasoning models apart).
+OPENAI_CHAT_MODEL_OPTIONS = [name for name in OPENAI_CHAT_MODEL_NAMES if name not in DEPRECATED_MODELS]
+
+OPENAI_REASONING_MODEL_OPTIONS = [name for name in OPENAI_REASONING_MODEL_NAMES if name not in DEPRECATED_MODELS]
 
 OPENAI_SEARCH_MODEL_NAMES = [
     metadata["name"]

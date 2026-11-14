@@ -1,5 +1,5 @@
 import requests
-from lfx.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES
+from lfx.base.models.openai_constants import OPENAI_CHAT_MODEL_OPTIONS
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import DropdownInput, SecretStrInput, StrInput
 from lfx.io import MessageTextInput, Output
@@ -42,8 +42,8 @@ class CombinatorialReasonerComponent(Component):
             name="model_name",
             display_name="Model Name",
             advanced=False,
-            options=OPENAI_CHAT_MODEL_NAMES,
-            value=OPENAI_CHAT_MODEL_NAMES[0],
+            options=OPENAI_CHAT_MODEL_OPTIONS,
+            value=OPENAI_CHAT_MODEL_OPTIONS[0],
         ),
     ]
 

@@ -90,7 +90,7 @@ def test_filter_by_provider():
 
 def test_filter_by_model_name():
     target = "gpt-4"
-    result = get_unified_models_detailed(model_name=target)
+    result = get_unified_models_detailed(model_name=target, include_deprecated=True)
     # Should only include OpenAI provider with the single model
     assert len(result) == 1
     provider_dict = result[0]
