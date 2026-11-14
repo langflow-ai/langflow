@@ -11,6 +11,35 @@ import typer
 from lfx.cli.run import run
 
 
+@pytest.mark.parametrize(
+    ("input_args", "expected"),
+    [
+        ([], "SAVED DEFAULT"),
+        ([""], ""),
+        (["replacement"], "replacement"),
+        (["--input-value", ""], ""),
+        (["", "--input-value", "option"], ""),
+    ],
+)
+def test_run_command_preserves_explicit_input(tmp_path, input_args, expected):
+    from lfx.__main__ import app
+    from typer.testing import CliRunner
+
+    script_path = tmp_path / "saved_input.py"
+    script_path.write_text(
+        "from lfx.components.input_output import ChatInput, ChatOutput\n"
+        "from lfx.graph import Graph\n"
+        "chat_input = ChatInput().set(input_value='SAVED DEFAULT', should_store_message=False)\n"
+        "chat_output = ChatOutput().set(input_value=chat_input.message_response, should_store_message=False)\n"
+        "graph = Graph(chat_input, chat_output)\n"
+    )
+
+    result = CliRunner().invoke(app, ["run", str(script_path), *input_args, "--no-check-variables"])
+
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.stdout)["result"] == expected
+
+
 class TestRunCommand:
     """Unit tests for run command internal functionality."""
 
