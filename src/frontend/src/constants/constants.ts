@@ -811,6 +811,7 @@ export const AUTHORIZED_DUPLICATE_REQUESTS = [
   "/refresh",
   "/login",
   "/auto_login",
+  "/variables/",
 ];
 
 export const BROKEN_EDGES_WARNING =
