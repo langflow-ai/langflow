@@ -34,7 +34,7 @@ def _catalog() -> list[dict]:
             if "decisions" not in modalities or "/api/alpha/decisions" not in endpoints:
                 continue
             # Capabilities describe the gateway's request types, not a per-model guarantee.
-            models[row["id"]] = decision_model_metadata("OpenRouter", row["id"], "OpenRouter", default=True)
+            models[row["id"]] = decision_model_metadata("OpenRouter", row["id"], "OpenRouter")
         return [models[name] for name in sorted(models)]
     except (httpx.HTTPError, SSRFProtectionError, ValueError, TypeError, AttributeError):
         msg = "Could not load OpenRouter decision models. Try refreshing the model list again."

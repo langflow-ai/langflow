@@ -46,7 +46,6 @@ from langflow.services.database.revision import (
 from langflow.services.database.session import NoopSession
 from langflow.services.database.utils import Result, TableResults
 from langflow.services.deps import get_settings_service
-from langflow.services.utils import teardown_superuser
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -318,6 +317,14 @@ class DatabaseService(Service):
             expire_on_commit=False,
         )
 
+        # Dedicated engine for the in-process keep-alive heartbeat, created lazily on first use.
+        # Its own small pool keeps a heartbeat write off the application pool, so a run whose
+        # pool is saturated by concurrent requests still records liveness and is not wrongly
+        # reaped as worker_lost though it completed (LE-3302 F-03). See session_scope_for_heartbeat.
+        self._heartbeat_engine: AsyncEngine | None = None
+        self._heartbeat_session_maker: async_sessionmaker | None = None
+        self._heartbeat_lock = asyncio.Lock()
+
         # Check if Alembic should log to stdout or a file.
         # If file, check if the provided path is absolute, cross-platform.
         alembic_log_file = self.settings_service.settings.alembic_log_file
@@ -515,6 +522,67 @@ class DatabaseService(Service):
                 yield session
         finally:
             await engine.dispose()
+
+    def _create_heartbeat_engine(self) -> AsyncEngine:
+        """A separate engine with its own small pool for keep-alive heartbeats.
+
+        Fixed, small sizing: a heartbeat is a sub-millisecond ``UPDATE`` released at once, so a
+        handful of connections serve every in-flight run's heartbeat while adding only that many
+        to the database connection budget. Postgres-only pool kwargs; SQLite serialises on its
+        own file lock and rejects pool sizing, so it gets a plain second engine (harmless for a
+        file database, and :memory: never reaches here -- see ``session_scope_for_heartbeat``).
+        Reuses the main engine's ``connect_args`` so the driver behaves identically.
+        """
+        kwargs: dict = {}
+        if not self.database_url.startswith("sqlite"):
+            kwargs = {"pool_size": 3, "max_overflow": 7, "pool_timeout": 5, "pool_pre_ping": True}
+        return create_async_engine(self.database_url, connect_args=self._get_connect_args(), **kwargs)
+
+    async def _heartbeat_maker(self) -> async_sessionmaker:
+        """Lazily build (once) the session maker bound to the dedicated heartbeat engine."""
+        if self._heartbeat_session_maker is None:
+            async with self._heartbeat_lock:
+                if self._heartbeat_session_maker is None:
+                    engine = self._create_heartbeat_engine()
+                    self._heartbeat_engine = engine
+                    self._heartbeat_session_maker = async_sessionmaker(
+                        engine, class_=SQLModelAsyncSession, expire_on_commit=False
+                    )
+        return self._heartbeat_session_maker
+
+    @asynccontextmanager
+    async def session_scope_for_heartbeat(self):
+        """A committing session on a small DEDICATED pool, isolated from the application pool.
+
+        The in-process keep-alive heartbeat (``JobService._beat``) must land even when the
+        application pool is exhausted by concurrent runs; otherwise a live run's lease goes stale
+        and ``sweep_orphans`` reaps it as ``worker_lost`` though it completed and returned 200
+        (LE-3302 F-03). A second engine with its own pool keeps a beat from queuing behind request
+        handlers. In-memory SQLite and the noop database fall back to the shared session: a second
+        engine to ``:memory:`` would be a different, empty database.
+        """
+        url = self.engine.url
+        database = url.database or ""
+        in_memory = url.get_backend_name() == "sqlite" and (
+            database in {"", ":memory:"} or database.startswith("file::memory:") or url.query.get("mode") == "memory"
+        )
+        if self.settings_service.settings.use_noop_database or in_memory:
+            async with self._with_session() as session:
+                try:
+                    yield session
+                    await session.commit()
+                except Exception:
+                    await session.rollback()
+                    raise
+            return
+        maker = await self._heartbeat_maker()
+        async with maker() as session:
+            try:
+                yield session
+                await session.commit()
+            except Exception:
+                await session.rollback()
+                raise
 
     async def ensure_postgresql_version(self) -> None:
         """If the database is PostgreSQL, ensure it is version 15 or higher.
@@ -929,13 +997,7 @@ class DatabaseService(Service):
     async def teardown(self) -> None:
         await logger.adebug("Tearing down database")
         try:
-            if getattr(self, "database_initialized", False):
-                settings_service = get_settings_service()
-                # When AUTO_LOGIN is off, remove the unused default superuser (see teardown_superuser).
-                async with session_scope() as session:
-                    await teardown_superuser(settings_service, session)
-        except Exception:
-            await logger.aexception("Error tearing down database")
-            raise
+            if self._heartbeat_engine is not None:
+                await self._heartbeat_engine.dispose()
         finally:
             await self.engine.dispose()

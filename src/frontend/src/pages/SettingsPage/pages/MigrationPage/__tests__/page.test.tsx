@@ -194,6 +194,137 @@ describe("the steps after the check", () => {
     expect(change).toBeVisible();
   });
 
+  it("warns about lost credentials before a copy and opens the destination form directly", async () => {
+    const migration = state(
+      { ...copied, copy_database: ["done"], copy_files: ["current"] },
+      {
+        destinations: {
+          database: { location: "db.internal:5432/target" },
+          files: { bucket: "acme", prefix: "uploads" },
+          saved_by: "alice",
+          saved_at: "2026-10-06T12:00:00Z",
+        },
+        steps: { copy_database: run("done") },
+      },
+    );
+    migration.destination_secrets_available = false;
+    open(migration);
+
+    expect(
+      screen.getByText(/A restart or a different Langflow worker/),
+    ).toBeVisible();
+    expect(
+      row("connect_target").getByText("Enter destination credentials again"),
+    ).toBeVisible();
+    expect(
+      row("copy_database").getByText("Tables: 1,059. Rows: 12,345."),
+    ).toBeVisible();
+    expect(
+      row("copy_files").queryByRole("button", { name: "Copy files" }),
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Enter destination credentials" }),
+    );
+
+    expect(
+      row("connect_target").getByRole("heading", { level: 4 }),
+    ).toHaveFocus();
+    expect(row("connect_target").getByLabelText("Bucket")).toBeVisible();
+    expect(row("connect_target").getByLabelText("Bucket")).toHaveValue("acme");
+    expect(
+      row("connect_target").getByLabelText("Folder in the bucket"),
+    ).toHaveValue("uploads");
+    expect(
+      row("connect_target").getByRole("button", { name: "Test and save" }),
+    ).toBeVisible();
+  });
+
+  it("removes the credential warning when credentials are entered again", async () => {
+    const migration = state(
+      { ...copied, copy_files: ["current"] },
+      { destinations: { saved_by: "alice", saved_at: "2026-10-06T12:00:00Z" } },
+    );
+    migration.destination_secrets_available = false;
+    const { client } = open(migration);
+
+    act(() =>
+      client.setQueryData(migrationKeys.all, {
+        ...migration,
+        destination_secrets_available: true,
+      }),
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.queryByText(/A restart or a different Langflow worker/),
+      ).not.toBeInTheDocument(),
+    );
+    expect(
+      row("copy_files").getByRole("button", { name: "Copy files" }),
+    ).toBeVisible();
+  });
+
+  it("waits for destination credentials before checking completed copies", () => {
+    const migration = state(
+      {
+        ...copied,
+        copy_database: ["done"],
+        copy_knowledge_bases: ["skipped"],
+        copy_files: ["done"],
+        check_target: ["current"],
+      },
+      { destinations: { saved_by: "alice", saved_at: "2026-10-06T12:00:00Z" } },
+    );
+    migration.destination_secrets_available = false;
+    open(migration);
+
+    expect(
+      row("check_target").queryByRole("button", { name: "Check the copy" }),
+    ).not.toBeInTheDocument();
+    expect(row("check_target").getByRole("status")).toHaveTextContent(
+      "Enter destination credentials again",
+    );
+  });
+
+  it("does not request destination credentials after the new instance starts", () => {
+    const migration = state(
+      { ...copied, start_target: ["done"] },
+      {
+        destinations: { saved_by: "alice", saved_at: "2026-10-06T12:00:00Z" },
+        steps: { start_target: { confirmed_at: "2026-10-06T13:00:00Z" } },
+      },
+    );
+    migration.destination_secrets_available = false;
+    open(migration);
+
+    expect(
+      screen.queryByRole("button", { name: "Enter destination credentials" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows failed destination probes without attributing them to a restart", () => {
+    const migration = state(
+      { check_source: ["done"], connect_target: ["blocked"] },
+      {
+        destinations: {
+          results: { files: { ok: false, code: "bucket_missing" } },
+          saved_by: "alice",
+          saved_at: "2026-10-06T12:00:00Z",
+        },
+      },
+    );
+    migration.destination_secrets_available = false;
+    open(migration);
+
+    expect(
+      screen.queryByRole("button", { name: "Enter destination credentials" }),
+    ).not.toBeInTheDocument();
+    expect(
+      row("connect_target").getByRole("button", { name: "Test and save" }),
+    ).toBeVisible();
+  });
+
   it("reads the record again when a request fails, since a step may have reopened meanwhile", async () => {
     jest
       .spyOn(api, "put")

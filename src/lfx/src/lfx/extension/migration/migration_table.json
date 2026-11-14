@@ -1517,6 +1517,11 @@
       "added_in": "1.12.0"
     },
     {
+      "bare_class_name": "PopNowComponent",
+      "target": "ext:popnow:PopNowComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
       "bare_class_name": "VllmComponent",
       "target": "ext:vllm:VllmComponent@official",
       "added_in": "1.11.0"
@@ -5304,6 +5309,31 @@
     {
       "bare_class_name": "CloroGoogleSearchComponent",
       "target": "ext:cloro:CloroGoogleSearchComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "OlostepAnswerComponent",
+      "target": "ext:olostep:OlostepAnswerComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "OlostepCrawlComponent",
+      "target": "ext:olostep:OlostepCrawlComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "OlostepMapComponent",
+      "target": "ext:olostep:OlostepMapComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "OlostepScrapeComponent",
+      "target": "ext:olostep:OlostepScrapeComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "OlostepSearchComponent",
+      "target": "ext:olostep:OlostepSearchComponent@official",
       "added_in": "1.14.0"
     }
   ],

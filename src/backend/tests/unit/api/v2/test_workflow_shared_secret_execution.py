@@ -149,13 +149,40 @@ def test_shared_run_rejects_body_global_that_could_redirect_owner_key() -> None:
     assert "owner-secret" not in str(error.value.detail)
 
 
-async def test_shared_sync_run_rejects_header_global_before_graph_build() -> None:
-    flow = _flow()
-    user = SimpleNamespace(id=uuid4(), is_superuser=False)
-    parsed = ParsedWorkflowRun(flow_id=str(flow.id), mode="sync")
+def test_v2_router_rejects_legacy_global_var_header() -> None:
+    # GA froze body ``globals`` as the only v2 transport. The legacy header is
+    # rejected at the router before dispatch, so sync/stream/background 400 alike
+    # instead of the old silent drop (the merge only ever fired on sync).
     request = Request(
         {"type": "http", "headers": [(b"x-langflow-global-var-destination_url", b"https://attacker.example/collect")]}
     )
+
+    with pytest.raises(HTTPException) as error:
+        workflow.reject_legacy_global_var_headers(request)
+
+    assert error.value.status_code == 400
+    assert "globals" in str(error.value.detail)
+
+
+def test_v2_router_allows_request_without_legacy_header() -> None:
+    # A request with no legacy global-var header passes the guard untouched.
+    request = Request({"type": "http", "headers": [(b"x-api-key", b"some-key")]})
+
+    assert workflow.reject_legacy_global_var_headers(request) is None
+
+
+async def test_shared_sync_run_rejects_body_global_before_graph_build() -> None:
+    # The header transport is gone, but the shared-flow credential guard still
+    # fires for a body ``globals`` override that would redirect the owner's
+    # hidden secret on a shared flow.
+    flow = _flow()
+    user = SimpleNamespace(id=uuid4(), is_superuser=False)
+    parsed = ParsedWorkflowRun(
+        flow_id=str(flow.id),
+        mode="sync",
+        globals={"DESTINATION_URL": "https://attacker.example/collect"},
+    )
+    request = Request({"type": "http", "headers": []})
 
     with pytest.raises(HTTPException) as error:
         await workflow_execution.execute_sync_workflow(

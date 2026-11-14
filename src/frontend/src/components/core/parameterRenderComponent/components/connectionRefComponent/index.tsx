@@ -18,6 +18,7 @@ import AddConnectionDialog from "@/pages/SettingsPage/pages/ConnectionsPage/comp
 import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { activeRequiredScopes } from "@/utils/connection-scopes";
 import { cn } from "@/utils/utils";
 import type { InputProps } from "../../types";
@@ -69,6 +70,7 @@ export default function ConnectionRefComponent({
     Boolean(state.userData?.is_superuser),
   );
   const flowOwnerId = useFlowStore((state) => state.currentFlow?.user_id);
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const ownerId = flowOwnerId ?? currentUserId;
   const [open, setOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -347,6 +349,7 @@ export default function ConnectionRefComponent({
           open={dialogOpen}
           providers={[availableProvider]}
           canCreateInstance={isSuperuser && ownershipMode !== "user"}
+          providerScope={currentFlowId ? { flowId: currentFlowId } : undefined}
           deploymentContext={integrations.data?.deployment_context}
           onConnected={onConnected}
           onOpenChange={(next) => {

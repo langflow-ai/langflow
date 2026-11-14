@@ -126,6 +126,18 @@ describe("SIDEBAR_BUNDLES", () => {
       ]),
     );
   });
+
+  it("classifies Olostep as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "Olostep",
+          icon: "Olostep",
+          name: "olostep",
+        }),
+      ]),
+    );
+  });
 });
 
 it("uses the Salesforce logo for its integration palette group", () => {

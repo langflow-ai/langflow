@@ -159,6 +159,16 @@ def test_root_registers_each_provider_at_official(tmp_path: Path) -> None:
                 "CloroGoogleSearchComponent",
             },
         ),
+        (
+            "olostep",
+            {
+                "OlostepAnswerComponent",
+                "OlostepCrawlComponent",
+                "OlostepMapComponent",
+                "OlostepScrapeComponent",
+                "OlostepSearchComponent",
+            },
+        ),
     ],
 )
 def test_checked_in_provider_loads_with_production_bundle_loader(

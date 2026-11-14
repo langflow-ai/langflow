@@ -482,6 +482,9 @@ class MCPToolsComponent(ComponentWithCache):
             if use_shared_cache:
                 servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
                 cached = servers_cache.get(servers_cache_key) if isinstance(servers_cache, dict) else None
+                # Older cache entries may retain clients bound to deleted variables.
+                if isinstance(cached, dict) and config_uses_global_variables(cached.get("config")):
+                    cached = None
 
             if cached is not None:
                 try:
@@ -703,7 +706,7 @@ class MCPToolsComponent(ComponentWithCache):
                 )
 
                 # Cache the result only if caching is enabled
-                if use_shared_cache:
+                if use_shared_cache and not config_uses_global_variables(server_config):
                     cache_data = {
                         "tools": tool_list,
                         "tool_names": self.tool_names,
@@ -1268,9 +1271,9 @@ class MCPToolsComponent(ComponentWithCache):
         ``_not_load_actions`` only applies to UI build_config flows (tool dropdown). Agent
         runs must always bind the current tool list (including after header/tweak changes).
 
-        A short-lived TTL cache (``TOOL_TTL_SECS``, header-hash-keyed) skips the MCP
-        round-trip when the same auth context is re-queried quickly (e.g. parallel agent
-        steps sharing the same tweaked headers). The cache is per component lineage (including
+        A short-lived TTL cache (``TOOL_TTL_SECS``) skips the MCP round-trip for configs
+        without variable-bearing headers, environment, or URLs. Other configs must reload
+        variables on every invocation. The cache is per component lineage (including
         isolated invocation copies) and bounded by ``TOOL_TTL_MAX_ENTRIES``; it is distinct from
         the "Use Cached Server" (``use_cache``) toggle which controls the shared cross-request cache.
         """
@@ -1299,11 +1302,11 @@ class MCPToolsComponent(ComponentWithCache):
                 self._ttl_tool_cache.pop(ttl_key, None)
 
         await logger.adebug("MCP _get_tools: fetching tool list server=%r", srv)
-        tools, _ = await self.update_tool_list(mcp_server)
+        tools, server_info = await self.update_tool_list(mcp_server)
         await logger.adebug("MCP _get_tools: fetched %d tools server=%r", len(tools), srv)
 
         # TTL cache store with bounded size (FIFO eviction of the oldest entry).
-        if ttl > 0 and ttl_key and tools:
+        if ttl > 0 and ttl_key and tools and not config_uses_global_variables(server_info.get("config")):
             if len(self._ttl_tool_cache) >= self.TOOL_TTL_MAX_ENTRIES:
                 # dict preserves insertion order — pop the oldest entry.
                 oldest_key = next(iter(self._ttl_tool_cache))

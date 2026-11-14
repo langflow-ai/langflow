@@ -434,28 +434,102 @@ async def test_next_round_overlap_and_complete_cursor(monkeypatch, source_trigge
     assert result.items[0]["session_key"] == f"salesforce:Account:{RECORD}"
 
 
-@pytest.mark.parametrize("baseline", [True, False])
-async def test_replication_watermark_before_start_is_retained_for_the_next_poll(monkeypatch, source_trigger, baseline):
-    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
-    covered = iso(now - timedelta(hours=11))
-    if not baseline:
-        source_trigger.provider_state = {
-            "latest_date_covered": iso(now - timedelta(minutes=1)),
-            "baseline_complete": True,
-        }
-    requests = attach_transport(monkeypatch, change_handler(ids=[], covered=covered))
+async def test_lagging_and_regressing_watermarks_cannot_move_before_the_baseline(monkeypatch, source_trigger):
+    baseline_at = datetime(2026, 11, 10, 23, 5, 46, 123000, tzinfo=timezone.utc)
+    baseline_minute = baseline_at.replace(second=0, microsecond=0)
+    clock = SimpleNamespace(now=baseline_at)
+    monkeypatch.setattr(collector, "datetime", SimpleNamespace(now=lambda _zone: clock.now))
+    provider = SimpleNamespace(covered=iso(baseline_minute - timedelta(hours=11)))
+
+    def handler(request):
+        return change_handler(ids=[], covered=provider.covered)(request)
+
+    requests = attach_transport(monkeypatch, handler)
     lease, _ = lease_for()
     result = await collector.collect(source_trigger, lease)
-    assert result.baseline is baseline
-    assert result.cursor == {"latest_date_covered": covered, "baseline_complete": True}
+    assert result.baseline
+    assert result.cursor == {
+        "latest_date_covered": iso(baseline_minute),
+        "baseline_complete": True,
+        "baseline_at": iso(baseline_at),
+    }
     assert result.previous_cursor == source_trigger.provider_state
     assert result.items == []
 
-    source_trigger.provider_state = result.cursor
-    next_round = await collector.collect(source_trigger, lease)
-    assert requests[-1].url.params["start"] == covered
-    assert requests[-1].url.params["end"] == iso(now)
-    assert not next_round.baseline
+    for minute, watermark, expected in [
+        (1, baseline_minute - timedelta(hours=15), baseline_minute),
+        (2, baseline_minute - timedelta(hours=10), baseline_minute),
+        (3, baseline_minute + timedelta(minutes=2), baseline_minute + timedelta(minutes=2)),
+        (4, baseline_minute + timedelta(minutes=1), baseline_minute + timedelta(minutes=2)),
+    ]:
+        previous = result.cursor
+        source_trigger.provider_state = previous
+        clock.now = baseline_at + timedelta(minutes=minute)
+        provider.covered = iso(watermark)
+        result = await collector.collect(source_trigger, lease)
+        assert not result.baseline
+        assert result.previous_cursor == previous
+        assert result.cursor == {
+            "latest_date_covered": iso(expected),
+            "baseline_complete": True,
+            "baseline_at": iso(baseline_at),
+        }
+        assert requests[-1].url.params["start"] == previous["latest_date_covered"]
+        assert requests[-1].url.params["end"] == iso(clock.now.replace(second=0, microsecond=0))
+        assert result.items == []
+
+
+@pytest.mark.parametrize("seconds_after_baseline", [-30, -1, 0, 1, 30])
+async def test_minute_overlap_excludes_records_at_or_before_the_precise_baseline(
+    monkeypatch, source_trigger, seconds_after_baseline
+):
+    baseline_at = datetime(2026, 11, 10, 23, 5, 30, tzinfo=timezone.utc)
+    now = baseline_at + timedelta(minutes=2)
+    monkeypatch.setattr(collector, "datetime", SimpleNamespace(now=lambda _zone: now))
+    source_trigger.provider_state = {
+        "latest_date_covered": iso(baseline_at.replace(second=0, microsecond=0)),
+        "baseline_complete": True,
+        "baseline_at": iso(baseline_at),
+    }
+    version = iso(baseline_at + timedelta(seconds=seconds_after_baseline))
+    attach_transport(
+        monkeypatch,
+        change_handler(
+            covered=iso(baseline_at - timedelta(hours=11)),
+            records=[{"Id": RECORD, "Name": "Example", "SystemModstamp": version}],
+        ),
+    )
+    lease, _ = lease_for()
+    result = await collector.collect(source_trigger, lease)
+    assert not result.baseline
+    assert result.cursor == source_trigger.provider_state
+    if seconds_after_baseline <= 0:
+        assert result.items == []
+    else:
+        assert len(result.items) == 1
+        assert result.items[0]["id"] == RECORD
+        assert result.items[0]["version"] == version
+
+
+async def test_legacy_cursor_keeps_pending_changes_without_inventing_a_baseline(monkeypatch, source_trigger):
+    now = datetime(2026, 11, 10, 23, 5, tzinfo=timezone.utc)
+    monkeypatch.setattr(collector, "datetime", SimpleNamespace(now=lambda _zone: now))
+    previous = iso(now - timedelta(hours=11))
+    covered = iso(now - timedelta(hours=10))
+    source_trigger.provider_state = {"latest_date_covered": previous, "baseline_complete": True}
+    version = iso(now - timedelta(hours=9))
+    requests = attach_transport(
+        monkeypatch,
+        change_handler(covered=covered, records=[{"Id": RECORD, "Name": "Pending", "SystemModstamp": version}]),
+    )
+    lease, _ = lease_for()
+    result = await collector.collect(source_trigger, lease)
+    assert not result.baseline
+    assert result.previous_cursor == source_trigger.provider_state
+    assert result.cursor == {"latest_date_covered": covered, "baseline_complete": True}
+    assert requests[1].url.params["start"] == previous
+    assert len(result.items) == 1
+    assert result.items[0]["version"] == version
 
 
 @pytest.mark.parametrize(

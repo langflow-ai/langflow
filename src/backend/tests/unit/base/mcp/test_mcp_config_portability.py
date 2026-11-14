@@ -11,6 +11,13 @@ from lfx.base.mcp import util
 from lfx.services.variable.exceptions import RuntimeVariableError
 
 
+@pytest.fixture(autouse=True)
+def mcp_settings_service():
+    from langflow.services.deps import get_settings_service
+
+    return get_settings_service()
+
+
 @pytest.mark.parametrize("variables", [None, {}, {"OTHER": "private-value"}])
 @pytest.mark.parametrize("location", ["url", "headers", "env"])
 @pytest.mark.parametrize("reference", ["{{MISSING}}", "MCP_MISSING_1234ABCD", "MCP_private-token-canary"])
@@ -47,6 +54,36 @@ async def test_account_bound_missing_variable_fails_before_connecting(variables,
     client.connect_to_server.assert_not_called()
 
 
+@pytest.mark.parametrize("variables", [None, {}, {"OTHER": "private-value"}])
+@pytest.mark.parametrize("location", ["url", "headers", "env"])
+async def test_unmanaged_missing_placeholder_fails_before_connecting(variables, location):
+    """An explicit reference cannot become a literal credential without an account policy."""
+    from unittest.mock import AsyncMock
+
+    client = AsyncMock()
+    config = {"url": "https://example.com/mcp"}
+    if location == "url":
+        config["url"] = "https://{{MISSING}}/mcp"
+    elif location == "headers":
+        config["headers"] = {"Authorization": "Bearer {{MISSING}}"}
+    else:
+        config = {"command": "test-mcp", "env": {"TOKEN": "{{MISSING}}"}}
+
+    with pytest.raises(RuntimeVariableError, match="MISSING") as caught:
+        await util.update_tools(
+            "test",
+            config,
+            mcp_stdio_client=client,
+            mcp_streamable_http_client=client,
+            request_variables=variables,
+            url_variables=variables,
+        )
+
+    assert caught.value.reason == "absent"
+    assert "private-value" not in str(caught.value)
+    client.connect_to_server.assert_not_called()
+
+
 def test_account_bound_substitution_preserves_opaque_values():
     """Keep placeholder-like text inside a resolved secret unchanged."""
     assert util._process_headers(
@@ -54,6 +91,35 @@ def test_account_bound_substitution_preserves_opaque_values():
         {"TOKEN": "opaque-{{MISSING}}"},
         strict_variables=True,
     ) == {"authorization": "Bearer opaque-{{MISSING}}"}
+
+
+@pytest.mark.parametrize("transport", ["http", "stdio"])
+async def test_transport_preserves_placeholder_text_in_resolved_secret(monkeypatch, transport):
+    """Transport header sanitization cannot interpret a resolved value a second time."""
+    from unittest.mock import AsyncMock
+
+    if transport == "http":
+        client = util.MCPStreamableHttpClient()
+        config = {"url": "https://example.com/mcp"}
+    else:
+        client = util.MCPStdioClient()
+        config = {"command": "uvx", "args": ["mcp-server-fetch"]}
+    config["headers"] = {"Authorization": "{{TOKEN}}"}
+    monkeypatch.setattr(client, "_list_tools", AsyncMock(return_value=[]))
+    monkeypatch.setattr(util, "validate_strict_url_for_ssrf_or_raise", lambda _url: None)
+
+    await util.update_tools(
+        "test",
+        config,
+        mcp_stdio_client=client,
+        mcp_streamable_http_client=client,
+        request_variables={"TOKEN": "opaque-{{MISSING}}"},
+    )
+
+    if transport == "http":
+        assert client._connection_params["headers"] == {"authorization": "opaque-{{MISSING}}"}
+    else:
+        assert "opaque-{{MISSING}}" in client._connection_params.args
 
 
 class TestUrlVariableResolution:
@@ -78,11 +144,9 @@ class TestUrlVariableResolution:
 
         assert resolved == "https://serving.internal/mcp"
 
-    def test_should_leave_unknown_placeholder_untouched(self):
-        """Silently blanking an unset variable would produce a URL that half works."""
-        resolved = util.resolve_global_variables_in_url("{{MISSING}}/mcp", {"HOST": "x"})
-
-        assert resolved == "{{MISSING}}/mcp"
+    def test_should_reject_unknown_placeholder(self):
+        with pytest.raises(RuntimeVariableError, match="MISSING"):
+            util.resolve_global_variables_in_url("{{MISSING}}/mcp", {"HOST": "x"})
 
     def test_should_return_url_unchanged_when_no_variables_available(self):
         assert util.resolve_global_variables_in_url("https://a.example/mcp", None) == "https://a.example/mcp"
@@ -103,10 +167,9 @@ class TestHeaderVariableResolution:
 
         assert resolved == {"authorization": "Bearer abc123"}
 
-    def test_should_leave_value_untouched_when_variable_is_unknown(self):
-        resolved = util._resolve_global_variables_in_headers({"authorization": "Bearer {{NOPE}}"}, {"TOKEN": "abc"})
-
-        assert resolved == {"authorization": "Bearer {{NOPE}}"}
+    def test_should_reject_unknown_placeholder(self):
+        with pytest.raises(RuntimeVariableError, match="NOPE"):
+            util._resolve_global_variables_in_headers({"authorization": "Bearer {{NOPE}}"}, {"TOKEN": "abc"})
 
     def test_should_return_headers_unchanged_without_variables(self):
         headers = {"authorization": "Bearer static"}
@@ -320,14 +383,14 @@ class TestUrlResolutionProvenance:
     async def test_should_not_resolve_the_url_from_caller_variables(self, monkeypatch):
         seen = self._capture_target(monkeypatch)
 
-        with pytest.raises(Exception, match="stop here"):
+        with pytest.raises(RuntimeVariableError, match="MCP_HOST"):
             await util.update_tools(
                 server_name="billing",
                 server_config={"mode": "Streamable_HTTP", "url": "{{MCP_HOST}}/mcp"},
                 request_variables={"MCP_HOST": "https://attacker.example"},
             )
 
-        assert seen["url"] == "{{MCP_HOST}}/mcp", "the caller chose the target"
+        assert seen == {}, "the unresolved target reached connection validation"
 
     async def test_should_resolve_the_url_from_database_variables(self, monkeypatch):
         seen = self._capture_target(monkeypatch)
