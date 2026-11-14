@@ -27,8 +27,9 @@ export const cleanupTableEmptyCells = (text: string): string => {
       // Keep separator rows (contain only |, -, :, spaces)
       if (/^\|[\s\-:]+\|$/.test(trimmed)) return true;
 
-      // For data rows, check if any cell has content
-      const cells = trimmed.split("|").slice(1, -1); // Remove delimiter cells
+      // Outer delimiters produce empty cells, which some() already ignores.
+      // Keep boundary content in rows without outer pipes and in ordinary text.
+      const cells = trimmed.split("|");
       return cells.some((cell) => cell.trim() !== "");
     })
     .join("\n");
