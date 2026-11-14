@@ -1744,11 +1744,11 @@ class Component(CustomComponent):
         """Determines whether a given output should be processed based on vertex edge configuration.
 
         Returns True if the component has no vertex or outgoing edges, or if the output's name is among
-        the vertex's source edge names.
+        the vertex's source edge names or explicitly required by its subgraph.
         """
         if not self._vertex or not self._vertex.outgoing_edges:
             return True
-        return output.name in self._vertex.edges_source_names
+        return output.name in (self._vertex.edges_source_names | self._vertex.required_output_names)
 
     def _get_outputs_to_process(self):
         """Returns a list of outputs to process, ordered according to self.outputs.

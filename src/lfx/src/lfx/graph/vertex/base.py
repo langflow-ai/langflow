@@ -115,6 +115,7 @@ class Vertex:
             output["name"] for output in self.outputs if isinstance(output, dict) and "name" in output
         ]
         self._incoming_edges: list[CycleEdge] | None = None
+        self.required_output_names: set[str] = set()
         self._outgoing_edges: list[CycleEdge] | None = None
 
     @property
@@ -238,6 +239,7 @@ class Vertex:
 
     def __setstate__(self, state):
         self.__dict__.update(state)
+        self.required_output_names = state.get("required_output_names", set())
         self._lock = asyncio.Lock()  # Reinitialize the lock
         self._upstream_secret_values = state.get("_upstream_secret_values", set())
         self.built_object = state.get("built_object") or UnbuiltObject()
