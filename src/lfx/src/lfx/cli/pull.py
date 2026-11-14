@@ -34,7 +34,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from lfx.cli.common import load_sdk, safe_filename
+from lfx.cli.common import load_sdk, safe_filename, validate_unique_flow_filenames
 from lfx.log.logger import logger
 
 console = Console(stderr=True)
@@ -211,6 +211,7 @@ def pull_command(
                 console.print(f"[red]Error:[/red] Could not fetch project {project!r}: {exc}")
                 raise typer.Exit(1) from exc
 
+        validate_unique_flow_filenames(flow.name for flow in proj.flows)
         console.print(f"[dim]Pulling from project[/dim] {proj.name!r} (id={proj.id})")
 
         for flow_obj in proj.flows:
@@ -236,6 +237,7 @@ def pull_command(
             console.print("[yellow]Warning:[/yellow] No flows found on the remote instance.")
             return
 
+        validate_unique_flow_filenames(flow.name for flow in flows)
         for flow_obj in flows:
             result = _write_flow(flow_obj, sdk=sdk, dest_dir=dest_dir, strip_secrets=strip_secrets, indent=indent)
             results.append(result)
