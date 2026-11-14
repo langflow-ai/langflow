@@ -14,9 +14,11 @@ import logging
 import orjson
 import pytest
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from httpx import ASGITransport, AsyncClient
 from langflow.api.v1.endpoints import parse_input_request_from_body
 from langflow.api.v1.schemas import SimplifiedAPIRequest
+from langflow.api.validation_errors import request_validation_exception_handler
 from structlog import PrintLogger, make_filtering_bound_logger, wrap_logger
 from structlog.dev import ConsoleRenderer
 
@@ -30,6 +32,7 @@ def _build_app() -> FastAPI:
     real multipart/JSON request bodies through Starlette's parsing pipeline.
     """
     app = FastAPI()
+    app.add_exception_handler(RequestValidationError, request_validation_exception_handler)
 
     @app.post("/parse")
     async def _parse(request: Request) -> dict:
@@ -232,11 +235,73 @@ async def test_invalid_field_is_logged_without_the_submitted_value(parser_client
     async with parser_client as client:
         response = await client.post("/parse", json={"input_value": {"secret": CANARY}, "session_id": "s1"})
 
-    assert response.status_code == 200
-    assert response.json() == SimplifiedAPIRequest().model_dump()
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["loc"] == ["body", "input_value"]
+    assert CANARY not in response.text
     logged = sink.getvalue()
     # The warning was captured and still says what failed and where.
     assert "Failed to parse request body" in logged
     assert "input_value" in logged
     assert "string_type" in logged
     assert CANARY not in logged
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("input_value", {"a": "b"}),
+        ("input_type", "unsupported"),
+        ("output_type", "unsupported"),
+        ("session_id", ["s1"]),
+        ("tweaks", ["invalid"]),
+    ],
+)
+async def test_invalid_json_field_returns_422(parser_client: AsyncClient, field, value):
+    async with parser_client as client:
+        response = await client.post("/parse", json={"session_id": "s1", field: value})
+
+    assert response.status_code == 422
+    error = response.json()["detail"][0]
+    assert error["loc"][:2] == ["body", field]
+    assert "input" not in error
+
+
+@pytest.mark.asyncio
+async def test_invalid_multipart_field_returns_422(parser_client: AsyncClient):
+    async with parser_client as client:
+        response = await client.post(
+            "/parse",
+            data={"input_type": "unsupported", "session_id": "s1"},
+            files={"file": ("a.bin", io.BytesIO(b"bytes"), "application/octet-stream")},
+        )
+
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["loc"] == ["body", "input_type"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("stream", [False, True])
+@pytest.mark.parametrize("embedded", [False, True])
+async def test_run_rejects_invalid_body_before_execution(
+    client: AsyncClient, simple_api_test, created_api_key, monkeypatch, stream, embedded
+):
+    from unittest.mock import AsyncMock
+
+    run = AsyncMock(side_effect=AssertionError("Invalid request reached flow execution"))
+    monkeypatch.setattr("langflow.api.v1.endpoints.simple_run_flow", run)
+    body = {"input_value": {"secret": CANARY}, "session_id": "s1"}
+    if embedded:
+        body = {"input_request": body}
+
+    response = await client.post(
+        f"/api/v1/run/{simple_api_test['id']}",
+        params={"stream": stream},
+        headers={"x-api-key": created_api_key.api_key},
+        json=body,
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["loc"][-1] == "input_value"
+    assert CANARY not in response.text
+    run.assert_not_awaited()

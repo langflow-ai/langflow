@@ -187,7 +187,7 @@ async def test_discovery_endpoint_respects_authoritative_variables(
                 "name": "bound-server",
                 "mode": None,
                 "toolsCount": None,
-                "error": "Configuration error: Deployment variables are unavailable (MCP_TOKEN)",
+                "error": "Configuration error: MCP variables are unavailable (MCP_TOKEN)",
             }
         ]
         assert processes[0] == []

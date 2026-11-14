@@ -17,8 +17,10 @@ from langflow.services.triggers.ingress.verifiers import (
 )
 
 
-def _pubsub_request() -> IngressRequest:
-    update = base64.b64encode(json.dumps({"emailAddress": "owner@example.com", "historyId": "123"}).encode()).decode()
+def _pubsub_request(history_id: object = "123") -> IngressRequest:
+    update = base64.b64encode(
+        json.dumps({"emailAddress": "owner@example.com", "historyId": history_id}).encode()
+    ).decode()
     return IngressRequest(
         provider="google",
         body=json.dumps({"message": {"messageId": "delivery-1", "data": update}}).encode(),
@@ -27,7 +29,8 @@ def _pubsub_request() -> IngressRequest:
     )
 
 
-async def test_gmail_pubsub_requires_the_expected_signed_service_account(monkeypatch) -> None:
+@pytest.mark.parametrize("history_id", ["123", 4216989, 18446744073709551615, 0])
+async def test_gmail_pubsub_requires_the_expected_signed_service_account(monkeypatch, history_id) -> None:
     def valid_token(_token, _request, audience):
         assert audience == "https://example.com/api/v1/triggers/ingress/google/public-id"
         return {"email": "push@example.iam.gserviceaccount.com", "email_verified": True}
@@ -37,8 +40,8 @@ async def test_gmail_pubsub_requires_the_expected_signed_service_account(monkeyp
         pubsub_service_account="push@example.iam.gserviceaccount.com",
         pubsub_audience="https://example.com/api/v1/triggers/ingress/google/public-id",
     )
-    verified = await verify_gmail_pubsub(_pubsub_request(), secrets)
-    assert verified.payload == {"history_id": "123"}
+    verified = await verify_gmail_pubsub(_pubsub_request(history_id), secrets)
+    assert verified.payload == {"history_id": str(history_id)}
     assert verified.dedupe_suffix == "pubsub:delivery-1"
 
     monkeypatch.setattr(
@@ -47,7 +50,24 @@ async def test_gmail_pubsub_requires_the_expected_signed_service_account(monkeyp
         lambda *_args: {"email": "other@example.iam.gserviceaccount.com", "email_verified": True},
     )
     with pytest.raises(IngressRejected, match="bad_signature"):
-        await verify_gmail_pubsub(_pubsub_request(), secrets)
+        await verify_gmail_pubsub(_pubsub_request(history_id), secrets)
+
+
+@pytest.mark.parametrize(
+    "history_id", [None, True, False, 1.5, -1, "", "-1", "1.5", "abc", "\uff11\uff12\uff13", {}, []]
+)
+async def test_gmail_pubsub_rejects_invalid_history_ids(monkeypatch, history_id) -> None:
+    monkeypatch.setattr(
+        id_token,
+        "verify_oauth2_token",
+        lambda *_args: {"email": "push@example.iam.gserviceaccount.com", "email_verified": True},
+    )
+    secrets = IngressSecrets(
+        pubsub_service_account="push@example.iam.gserviceaccount.com",
+        pubsub_audience="https://example.com/api/v1/triggers/ingress/google/public-id",
+    )
+    with pytest.raises(IngressRejected, match="bad_payload"):
+        await verify_gmail_pubsub(_pubsub_request(history_id), secrets)
 
 
 def test_google_sync_message_is_not_an_event() -> None:

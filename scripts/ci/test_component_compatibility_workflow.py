@@ -89,7 +89,8 @@ def test_runtime_cases_run_in_required_gate_without_lightweight_job_dependencies
         },
         "test_component_registry_snapshot.py": {"test_provider_projection_uses_only_production_language_model_fields"},
         "test_component_release_plan.py": {
-            "test_runner_preserves_venv_python_and_retains_other_breaks_after_failed_baseline"
+            "test_runner_preserves_venv_python_and_retains_other_breaks_after_failed_baseline",
+            "test_runner_keeps_historical_acknowledgments_after_publication",
         },
     }
     for filename, names in expected.items():

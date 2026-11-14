@@ -191,10 +191,6 @@ describe("ConnectionsPage", () => {
       await user.type(screen.getByTestId("connections-search"), "old search");
       await user.click(screen.getByTestId("add-connection"));
       await user.type(screen.getByTestId("connection-name"), "new_connection");
-      await user.type(
-        screen.getByTestId("connection-display-name"),
-        "New connection",
-      );
       if (ownership === "instance") {
         await user.click(screen.getByTestId("connection-instance-owned"));
       }

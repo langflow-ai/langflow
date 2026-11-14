@@ -68,20 +68,28 @@ def _reject_unsupported_sync_fields(parsed: ParsedWorkflowRun) -> None:
 def _reject_sync_only_fields(parsed: ParsedWorkflowRun) -> None:
     """Reject sync-only request fields in stream/background mode.
 
-    ``output_ids`` only drives answer selection on the inline sync path; other
-    modes would silently ignore it, which reads as success to the caller.
+    ``output_ids`` (answer selection) and ``globals`` (request-level variables)
+    are applied only on the inline sync path; stream and background run through
+    the v1 build loop and silently ignore both, which reads as success to the
+    caller. Reject so the caller learns they are sync-only rather than having
+    them dropped. (Backend only: bare ``lfx serve`` uses a different host and
+    applies globals on its own stream path, so it is unaffected.)
     """
-    if parsed.mode == "sync" or not parsed.output_ids:
+    if parsed.mode == "sync":
+        return
+    sync_only = [name for name, present in (("output_ids", parsed.output_ids), ("globals", parsed.globals)) if present]
+    if not sync_only:
         return
 
+    fields = ", ".join(sync_only)
     raise HTTPException(
         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         detail={
             "error": "Unsupported request fields for mode",
             "code": "MODE_UNSUPPORTED_FIELDS",
-            "message": f"mode='{parsed.mode}' does not support request fields: output_ids. "
-            "Output selection via output_ids only applies to mode='sync'.",
-            "fields": ["output_ids"],
+            "message": f"mode='{parsed.mode}' does not support request fields: {fields}. "
+            "These apply to mode='sync' only.",
+            "fields": sync_only,
         },
     )
 

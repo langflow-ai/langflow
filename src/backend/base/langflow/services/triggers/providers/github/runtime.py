@@ -23,6 +23,7 @@ from langflow.services.triggers.providers.registry import TriggerKind, TriggerPr
 from langflow.services.triggers.source_clients import source_lease
 from langflow.services.triggers.source_errors import SourceConfigurationError
 from langflow.services.triggers.source_subscription import source_ingress_url
+from langflow.services.triggers.subscriptions import audit_subscription_creation
 
 if TYPE_CHECKING:
     from lfx.integrations.models import CredentialLease
@@ -101,6 +102,7 @@ async def prepare(session: AsyncSession, trigger: Trigger) -> None:
         )
     )
     await session.flush()
+    await audit_subscription_creation(session, trigger_id=trigger.id)
 
 
 async def _matching_hooks(client: GitHubClient, path: str, address: str) -> list[int]:

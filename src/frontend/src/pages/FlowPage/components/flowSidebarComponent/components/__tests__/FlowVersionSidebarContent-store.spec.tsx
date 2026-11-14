@@ -32,6 +32,7 @@ jest.mock("@/controllers/API/helpers/constants", () => ({
 let entryQueryData: any = null;
 let entryQueryLoading = false;
 let entryQueryError = false;
+const getVersionEntryMock = jest.fn();
 
 jest.mock("@/controllers/API/queries/flow-version", () => ({
   useGetFlowVersions: () => ({
@@ -52,11 +53,14 @@ jest.mock("@/controllers/API/queries/flow-version", () => ({
     isLoading: false,
     isError: false,
   }),
-  useGetFlowVersionEntry: () => ({
-    data: entryQueryData,
-    isLoading: entryQueryLoading,
-    isError: entryQueryError,
-  }),
+  useGetFlowVersionEntry: (params: { flowId: string; versionId: string }) => {
+    getVersionEntryMock(params);
+    return {
+      data: entryQueryData,
+      isLoading: entryQueryLoading,
+      isError: entryQueryError,
+    };
+  },
   useDeleteVersionEntry: () => ({ mutate: jest.fn(), isPending: false }),
 }));
 
@@ -496,5 +500,101 @@ describe("FlowVersionSidebarContent store behavior", () => {
       "Current Draft",
       null,
     );
+  });
+  it("opens a linked recovery version as a preview without activating it", () => {
+    entryQueryData = {
+      id: "entry-1",
+      version_tag: "recovery",
+      data: { nodes: [{ id: "recovery-node" }], edges: [] },
+    };
+    const onVersionLinkConsumed = jest.fn();
+
+    render(
+      <FlowVersionSidebarContent
+        flowId="flow-1"
+        requestedVersionId="entry-1"
+        onVersionLinkConsumed={onVersionLinkConsumed}
+      />,
+    );
+
+    expect(getVersionEntryMock).toHaveBeenCalledWith({
+      flowId: "flow-1",
+      versionId: "entry-1",
+    });
+    expect(setPreviewMock).toHaveBeenCalledWith(
+      [{ id: "recovery-node" }],
+      [],
+      "recovery",
+      "entry-1",
+      null,
+    );
+    expect(onVersionLinkConsumed).toHaveBeenCalledTimes(1);
+    expect(require("@/controllers/API/api").api.post).not.toHaveBeenCalled();
+  });
+
+  it("keeps the draft when the linked version cannot be loaded", () => {
+    entryQueryData = null;
+    entryQueryError = true;
+    const onVersionLinkConsumed = jest.fn();
+
+    render(
+      <FlowVersionSidebarContent
+        flowId="flow-1"
+        requestedVersionId="missing"
+        onVersionLinkConsumed={onVersionLinkConsumed}
+      />,
+    );
+
+    expect(screen.getByText("Failed to load version data")).toBeTruthy();
+    expect(onVersionLinkConsumed).toHaveBeenCalledTimes(1);
+    expect(
+      setStateMock.mock.calls.some(([partial]) => partial.nodes?.length === 0),
+    ).toBe(false);
+  });
+
+  it("does not restore a previous flow's draft over a newly loaded flow", async () => {
+    entryQueryData = {
+      id: "entry-1",
+      version_tag: "v1",
+      data: { nodes: [{ id: "version-node" }], edges: [] },
+    };
+    const user = userEvent.setup();
+    const { unmount } = render(<FlowVersionSidebarContent flowId="flow-1" />);
+    await user.click(screen.getByText("v1"));
+    storeState.currentFlow = { id: "flow-2" };
+    storeState.nodes = [{ id: "new-flow-node" }];
+    setStateMock.mockClear();
+
+    unmount();
+
+    expect(setStateMock.mock.calls.some(([partial]) => partial.nodes)).toBe(
+      false,
+    );
+  });
+
+  it("pauses an autosave registered after the version sidebar mounted", () => {
+    const { rerender, unmount } = render(
+      <FlowVersionSidebarContent flowId="flow-1" />,
+    );
+    const lateAutoSave = jest.fn();
+    storeState.autoSaveFlow = lateAutoSave;
+
+    rerender(<FlowVersionSidebarContent flowId="flow-1" />);
+
+    expect(storeState.autoSaveFlow).toBeUndefined();
+    unmount();
+    expect(storeState.autoSaveFlow).toBe(lateAutoSave);
+  });
+  it("does not replace a newer flow's autosave during sidebar cleanup", () => {
+    const originalAutoSave = jest.fn();
+    storeState.autoSaveFlow = originalAutoSave;
+    const { unmount } = render(<FlowVersionSidebarContent flowId="flow-1" />);
+    const newerAutoSave = jest.fn();
+    storeState.currentFlow = { id: "flow-2" };
+    storeState.autoSaveFlow = newerAutoSave;
+
+    unmount();
+
+    expect(storeState.autoSaveFlow).toBe(newerAutoSave);
   });
 });

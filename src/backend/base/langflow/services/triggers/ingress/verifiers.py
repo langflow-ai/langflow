@@ -421,9 +421,12 @@ async def verify_gmail_pubsub(request: IngressRequest, secrets: IngressSecrets) 
         update = json.loads(base64.b64decode(encoded, validate=True))
     except (ValueError, TypeError, binascii.Error) as exc:
         raise IngressRejected(REASON_BAD_PAYLOAD) from exc
-    if not isinstance(update, dict) or not isinstance(update.get("historyId"), str):
+    history_id = update.get("historyId") if isinstance(update, dict) else None
+    if type(history_id) is int and history_id >= 0:
+        history_id = str(history_id)
+    if not isinstance(history_id, str) or not history_id.isascii() or not history_id.isdecimal():
         raise IngressRejected(REASON_BAD_PAYLOAD)
-    return Verified(payload={"history_id": update["historyId"]}, dedupe_suffix=f"pubsub:{message_id}")
+    return Verified(payload={"history_id": history_id}, dedupe_suffix=f"pubsub:{message_id}")
 
 
 def verify_webhook(request: IngressRequest, secrets: IngressSecrets, *, tolerance_s: int) -> Verified:

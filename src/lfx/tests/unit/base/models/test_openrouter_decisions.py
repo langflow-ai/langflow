@@ -49,6 +49,7 @@ def test_catalog_accepts_new_authors_aliases_and_free_variants_without_credentia
     rows = openrouter.get_models()
     assert {r["name"] for r in rows} == {"new-author/new-model", "~typesafe/jev-latest", "baseten/mammoth-1:free"}
     assert all(r["model_type"] == "decision" for r in rows)
+    assert all(r["default"] is False for r in rows)
     assert public_catalog.call_args.args == ("https://openrouter.ai/api/v1/models?output_modalities=decisions",)
     assert "headers" not in public_catalog.call_args.kwargs
     rows[0]["capabilities"].clear()
@@ -165,6 +166,7 @@ def test_explicit_model_runs_without_catalog_and_uses_only_openrouter_key(monkey
     monkeypatch.setattr(providers, "evaluate_provider", transport)
     request = DecisionRequest(kind="boolean", context="text", question="Relevant?")
     evaluate_decision(request, model={"provider": "OpenRouter", "name": "author/new-id:exacto"})
+    # pragma: allowlist nextline secret
     transport.assert_called_once_with("OpenRouter", "author/new-id:exacto", request, api_key="own-key", timeout=60)
     public_catalog.assert_not_called()
 
@@ -191,7 +193,10 @@ def test_key_validation_for_new_model_uses_auth_not_chat_or_decision(monkeypatch
     get = Mock(return_value=Mock(status_code=200))
     monkeypatch.setattr(requests, "get", get)
     credentials.validate_model_provider_key(
-        "OpenRouter", {"OPENROUTER_API_KEY": "own-key"}, model_name="new-id", model_type="decision"
+        "OpenRouter",
+        {"OPENROUTER_API_KEY": "own-key"},  # pragma: allowlist secret
+        model_name="new-id",
+        model_type="decision",
     )
     assert get.call_args.args[0] == "https://openrouter.ai/api/v1/auth/key"
     public_catalog.assert_not_called()

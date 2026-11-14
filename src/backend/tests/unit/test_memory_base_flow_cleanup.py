@@ -267,6 +267,10 @@ async def test_cancel_active_jobs_cancels_every_active_job():
 
     assert len(rows) == len(job_ids)
     assert {row.status for row in rows} == {JobStatus.CANCELLED}
+    # Stamped with the status: retention dates an unstamped terminal row from
+    # its creation, so an ingestion job queued long before the flow was deleted
+    # would be purged on the next sweep instead of after the window.
+    assert all(row.finished_timestamp is not None for row in rows)
 
 
 @pytest.mark.usefixtures("client")

@@ -1,0 +1,127 @@
+---
+title: Olostep
+slug: /bundles-olostep
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Olostep** bundle.
+
+[Olostep](https://www.olostep.com) is web data infrastructure for AI agents and enterprise AI workflows.
+Its APIs provide live web search, scraping, and crawling to extract, clean, and structure data from the web.
+
+All components need an Olostep API key.
+Create one in the [Olostep dashboard](https://www.olostep.com/dashboard/api-keys) and enter it in the **Olostep API Key** field, or store it in a [global variable](/configuration-global-variables) named `OLOSTEP_API_KEY`.
+
+Olostep loads every page on its own servers, including pages that render with JavaScript, so Langflow only sends requests to `api.olostep.com`.
+
+For more information, see the [Olostep documentation](https://docs.olostep.com).
+
+## Olostep Search
+
+This component searches the web with Olostep.
+
+It returns the results as a [`Table`](/data-types#table), with one row per result.
+Each row has the page's `url`, `title`, and `description`.
+With **Scrape Result Pages** enabled, each row also has the page's content as `markdown_content`, so an agent can answer without a separate scrape.
+
+When the component is used as a [tool](/agents-tools), the agent can set the search query and the domains to include or exclude.
+
+### Olostep Search parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| Olostep API Key (`api_key`) | SecretString | Input parameter. Your Olostep API key. |
+| Search Query (`query`) | String | Input parameter. The query to search the web for, in natural language. |
+| Max Results (`limit`) | Integer | Input parameter. The number of results to return, from 1 to 25. Default: `5`. |
+| Include Domains (`include_domains`) | String | Input parameter. Only return results from these domains, comma-separated. |
+| Exclude Domains (`exclude_domains`) | String | Input parameter. Never return results from these domains, comma-separated. |
+| Scrape Result Pages (`scrape_results`) | Boolean | Input parameter. Also scrape each result and return its content as markdown. Each scraped page uses extra credits. Default: `false`. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for Olostep to answer. Default: `60`. |
+
+## Olostep Scrape
+
+This component scrapes one web page and returns its main content as markdown.
+
+It outputs a [`Data`](/data-types#json) object with the page's `url`, `markdown_content`, and `page_metadata`.
+
+### Olostep Scrape parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Olostep API Key (`api_key`) | SecretString | Input parameter. Your Olostep API key. |
+| URL (`url`) | String | Input parameter. The `http://` or `https://` URL of the page to scrape. |
+| Country (`country`) | String | Input parameter. Load the page from this country, such as `US`, `GB`, or `IN`. |
+| Wait Before Scraping (ms) (`wait_before_scraping`) | Integer | Input parameter. Milliseconds to wait for the page to load before reading it. Default: `0`. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for Olostep to answer. Default: `60`. |
+
+## Olostep Answer
+
+This component answers a question from live web pages and returns the source URLs it used.
+
+It outputs a [`Data`](/data-types#json) object.
+Its text is the answer, and its data has the `answer` and the `sources`.
+To get structured fields instead of a sentence, enter a JSON object with empty values in **Output Fields**, such as `{"ceo": "", "founded": ""}`.
+
+### Olostep Answer parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Olostep API Key (`api_key`) | SecretString | Input parameter. Your Olostep API key. |
+| Question (`task`) | String | Input parameter. The question to answer from the web. |
+| Output Fields (`json_format`) | String | Input parameter. Optional. A JSON object of the fields you want, with empty values, or a plain description of the data you want. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for Olostep to answer. Default: `120`. |
+
+## Olostep Map
+
+This component lists the URLs of a website.
+
+It returns the URLs as a [`Table`](/data-types#table), with one row per URL.
+Use it to find the pages to pass to **Olostep Scrape**, or to check what **Olostep Crawl** would visit.
+
+### Olostep Map parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Olostep API Key (`api_key`) | SecretString | Input parameter. Your Olostep API key. |
+| Website URL (`url`) | String | Input parameter. The `http://` or `https://` URL of the website to map. |
+| Search Query (`search_query`) | String | Input parameter. Optional. Sort the URLs by how relevant they are to this query. |
+| Top N (`top_n`) | Integer | Input parameter. Optional. Return only this many URLs. `0` returns all of them. Default: `0`. |
+| Include Paths (`include_urls`) | String | Input parameter. Optional. Only return URLs matching these glob patterns, comma-separated, such as `/blog/**`. |
+| Exclude Paths (`exclude_urls`) | String | Input parameter. Optional. Never return URLs matching these glob patterns, comma-separated. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for each Olostep request. Default: `120`. |
+
+## Olostep Crawl
+
+This component crawls a website from a start URL and returns each page's content as markdown.
+
+It returns the pages as a [`Table`](/data-types#table), with one row per page, with the page's `url` and `markdown_content`.
+
+The component waits up to **Max Wait** for the crawl to finish.
+The crawl is told to stop in time, so the component returns the pages crawled by then instead of failing.
+**Max Wait** limits only this wait. Starting the crawl and fetching each page's content afterwards take extra time, so the component can run longer than **Max Wait**.
+
+### Olostep Crawl parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Olostep API Key (`api_key`) | SecretString | Input parameter. Your Olostep API key. |
+| Start URL (`start_url`) | String | Input parameter. The `http://` or `https://` URL to start crawling from. |
+| Max Pages (`max_pages`) | Integer | Input parameter. The most pages to crawl. Default: `10`. |
+| Include Paths (`include_urls`) | String | Input parameter. Optional. Only crawl URLs matching these glob patterns, comma-separated, such as `/blog/**`. |
+| Exclude Paths (`exclude_urls`) | String | Input parameter. Optional. Never crawl URLs matching these glob patterns, comma-separated. |
+| Max Depth (`max_depth`) | Integer | Input parameter. Optional. How many links deep to follow from the start URL. `0` means no limit. Default: `0`. |
+| Max Wait (seconds) (`wait_seconds`) | Float | Input parameter. How long to wait for the crawl to finish. Fetching the pages' content afterwards takes extra time. Default: `180`. |
+
+## See also
+
+* [**Web Search** component](/web-search)
+* [**Keenable** bundle](./bundles-keenable)

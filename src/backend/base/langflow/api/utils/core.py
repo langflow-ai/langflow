@@ -34,6 +34,7 @@ strip_flow_secrets = _flow_secrets.strip_flow_secrets
 strip_secret_field_values = _flow_secrets.strip_secret_field_values
 strip_secret_field_values_in_place = _flow_secrets.strip_secret_field_values_in_place
 
+EMPTY_FILE_DETAIL = "Empty file not allowed"
 MAX_PAGE_SIZE = 50
 MIN_PAGE_SIZE = 1
 # Mirrors the `le` ceiling fastapi_pagination.Params puts on `size`; MAX_PAGE_SIZE (50) stays the
