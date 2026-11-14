@@ -167,7 +167,7 @@ async def test_permission_patch_refusal_preserves_key_and_audits_denial(
         json={"name": "Unchanged on refusal", "permissions": original_policy},
         headers=logged_in_headers,
     )
-    assert created.status_code == 200
+    assert created.status_code == 200, created.text
     key_id = UUID(created.json()["id"])
     async with session_scope() as session:
         key = await session.get(ApiKey, key_id)
