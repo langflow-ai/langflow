@@ -49,6 +49,7 @@ class TestForwardedPrefixMiddleware:
 
     async def _captured_downstream_root_path(self, *, configured_root_path, headers=None):
         from langflow.main import create_app, get_settings_service
+        from langflow.middleware import ForwardedPrefixMiddleware
         from starlette.requests import Request
         from starlette.responses import PlainTextResponse
 
@@ -57,11 +58,46 @@ class TestForwardedPrefixMiddleware:
         try:
             settings.root_path = configured_root_path
             app = create_app()
-            middleware = next(
-                middleware.kwargs["dispatch"]
-                for middleware in app.user_middleware
-                if middleware.kwargs.get("dispatch", lambda: None).__name__ == "forwarded_prefix_middleware"
+            forwarded_middleware = next(
+                (
+                    m
+                    for m in app.user_middleware
+                    if getattr(m, "cls", None) is ForwardedPrefixMiddleware
+                    or m.kwargs.get("dispatch", lambda: None).__name__ == "forwarded_prefix_middleware"
+                ),
+                None,
             )
+            assert forwarded_middleware is not None, "ForwardedPrefixMiddleware not found in app.user_middleware"
+
+            if getattr(forwarded_middleware, "cls", None) is ForwardedPrefixMiddleware:
+                captured_root_path = ""
+
+                async def next_app(scope, receive, send):
+                    nonlocal captured_root_path
+                    captured_root_path = scope.get("root_path", "")
+                    response = PlainTextResponse(captured_root_path)
+                    await response(scope, receive, send)
+
+                mw = ForwardedPrefixMiddleware(next_app, settings=settings)
+                scope = {
+                    "type": "http",
+                    "method": "GET",
+                    "path": "/api/v1/mcp/sse",
+                    "root_path": configured_root_path,
+                    "query_string": b"",
+                    "headers": [(key.lower().encode(), value.encode()) for key, value in (headers or {}).items()],
+                }
+
+                async def dummy_receive():
+                    return {"type": "http.request"}
+
+                async def dummy_send(_message):
+                    pass
+
+                await mw(scope, dummy_receive, dummy_send)
+                return captured_root_path
+
+            middleware = forwarded_middleware.kwargs["dispatch"]
             request = Request(
                 {
                     "type": "http",
@@ -73,10 +109,10 @@ class TestForwardedPrefixMiddleware:
                 }
             )
 
-            async def next_app(request):
+            async def next_app_dispatch(request):
                 return PlainTextResponse(request.scope.get("root_path", ""))
 
-            response = await middleware(request, next_app)
+            response = await middleware(request, next_app_dispatch)
             return response.body.decode()
         finally:
             settings.root_path = original_root_path
