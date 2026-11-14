@@ -1661,6 +1661,36 @@ class TestServeAppEndpoints:
         assert any(f["id"] == "00000000-0000-0000-0000-000000000001" for f in flows)
         assert any(f["id"] == "flow-2" for f in flows)
 
+    @pytest.mark.parametrize(
+        ("filename", "content"),
+        [("notes.json", '["not a flow"]'), ("._flow.json", "{}"), ("loop.json", None)],
+        ids=["non-object-json", "hidden-file", "symlink-loop"],
+    )
+    def test_list_flows_skips_unusable_store_entries(self, tmp_path, monkeypatch, filename, content):
+        from lfx.cli.flow_store import FilesystemFlowStore
+
+        store = FilesystemFlowStore(tmp_path)
+        store.write("real-flow", {"name": "Stored Flow", "data": {"nodes": [], "edges": []}})
+        path = tmp_path / filename
+        if content is None:
+            try:
+                path.symlink_to(filename)
+            except (NotImplementedError, OSError):
+                pytest.skip("Symlinks are unavailable on this filesystem")
+        else:
+            path.write_text(content, encoding="utf-8")
+        monkeypatch.setenv("LANGFLOW_API_KEY", "test-key")  # pragma: allowlist secret
+        app = create_multi_serve_app(registry=FlowRegistry(store=store))
+
+        with TestClient(app, raise_server_exceptions=False) as client:
+            flows = client.get("/flows", headers={"x-api-key": "test-key"})
+            health = client.get("/health")
+
+        assert flows.status_code == 200
+        assert [flow["id"] for flow in flows.json()] == ["real-flow"]
+        assert health.status_code == 200
+        assert health.json()["flow_count"] == 1
+
     def test_flow_info_endpoint(self, multi_flow_client):
         """Test getting flow info in multi-flow mode."""
         headers = {"x-api-key": "test-api-key"}
