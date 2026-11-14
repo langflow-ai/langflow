@@ -1260,6 +1260,9 @@ async def check_installed_mcp_servers(
                 await logger.awarning("Error checking %s configuration: %s", client_name, str(e))
                 results.append({"name": client_name, "installed": False, "available": False})
 
+    except HTTPException:
+        # A missing project is a 404, not a 500
+        raise
     except Exception as e:
         msg = f"Error checking MCP configuration: {e!s}"
         await logger.aexception(msg)
