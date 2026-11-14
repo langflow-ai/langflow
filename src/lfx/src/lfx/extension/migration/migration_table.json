@@ -5287,6 +5287,31 @@
       "added_in": "1.14.0"
     },
     {
+      "bare_class_name": "CloroAIModeComponent",
+      "target": "ext:cloro:CloroAIModeComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "CloroBingAIModeComponent",
+      "target": "ext:cloro:CloroBingAIModeComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "CloroChatGPTComponent",
+      "target": "ext:cloro:CloroChatGPTComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "CloroGeminiComponent",
+      "target": "ext:cloro:CloroGeminiComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "CloroGoogleSearchComponent",
+      "target": "ext:cloro:CloroGoogleSearchComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
       "bare_class_name": "OlostepAnswerComponent",
       "target": "ext:olostep:OlostepAnswerComponent@official",
       "added_in": "1.14.0"

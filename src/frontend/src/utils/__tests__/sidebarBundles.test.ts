@@ -115,6 +115,18 @@ describe("SIDEBAR_BUNDLES", () => {
     );
   });
 
+  it("classifies cloro as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "cloro",
+          icon: "Cloro",
+          name: "cloro",
+        }),
+      ]),
+    );
+  });
+
   it("classifies Olostep as a sidebar bundle", () => {
     expect(SIDEBAR_BUNDLES).toEqual(
       expect.arrayContaining([

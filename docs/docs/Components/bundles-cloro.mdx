@@ -1,0 +1,79 @@
+---
+title: cloro
+slug: /bundles-cloro
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **cloro** bundle.
+
+[cloro](https://cloro.dev?utm_source=langflow&utm_medium=byok) is an API that returns Google search results with the AI Overview, and the answers that ChatGPT, Google AI Mode, Bing AI Mode and Gemini give to a prompt, with the sources they cite.
+
+All components need a cloro API key.
+Create a key on the [API keys page](https://dashboard.cloro.dev/api-keys?utm_source=langflow&utm_medium=byok) and enter it in the **cloro API Key** field, or store it in a [global variable](/configuration-global-variables), such as `CLORO_API_KEY`.
+Each request uses credits. The cost of each request is given in the [cloro documentation](https://cloro.dev/docs?utm_source=langflow&utm_medium=byok).
+
+## cloro Google Search
+
+This component searches Google with cloro.
+
+It returns the results as a [`Table`](/data-types#table), with one row per result.
+Each row has a `type`, `position`, `title`, `link`, `snippet` and `sources`.
+
+When **Include AI Overview** is on and Google shows an AI Overview for the query, the first row has the type `ai_overview`.
+Its `snippet` holds the AI Overview text and its `sources` holds the label and URL of each source that the AI Overview cites.
+The other rows have the type `organic`.
+The component skips organic results that have no destination URL.
+
+When the component is used as a [tool](/agents-tools), the agent can set the search query.
+
+### cloro Google Search parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| cloro API Key (`api_key`) | SecretString | Input parameter. Your cloro API key. |
+| Search Query (`query`) | String | Input parameter. The query to search Google for. |
+| Country (`country`) | String | Input parameter. The ISO 3166-1 alpha-2 country code of the search location, such as `US` or `DE`. Default: `US`. |
+| Include AI Overview (`include_ai_overview`) | Boolean | Input parameter. Add the Google AI Overview, with its sources, as the first row. Default: `true`. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for cloro to answer. Default: `60`. |
+
+## cloro ChatGPT, cloro Google AI Mode, cloro Bing AI Mode and cloro Gemini
+
+These components send a prompt to ChatGPT, Google AI Mode, Bing AI Mode or Gemini through cloro and return the answer that a user in the selected country sees.
+
+Each component outputs a [`Data`](/data-types#json) object with these fields:
+
+* `engine`: `chatgpt`, `aimode`, `bing_aimode` or `gemini`.
+* `answer`: the answer in markdown.
+* `sources`: the label and URL of each source that the answer cites.
+* `model`: the model that gave the answer, when cloro reports it.
+
+The text of the `Data` object is the answer. When sources are available, a numbered list of them follows the answer.
+
+An AI answer can take more than a minute.
+
+For **cloro Bing AI Mode**, the prompt can have at most 3,500 characters after URL encoding. cloro rejects a longer prompt.
+
+When a component is used as a [tool](/agents-tools), the agent can set the prompt.
+
+### cloro ChatGPT, cloro Google AI Mode, cloro Bing AI Mode and cloro Gemini parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| cloro API Key (`api_key`) | SecretString | Input parameter. Your cloro API key. |
+| Prompt (`prompt`) | String | Input parameter. The prompt to send. |
+| Country (`country`) | String | Input parameter. The ISO 3166-1 alpha-2 country code of the user location, such as `US` or `DE`. Default: `US`. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for cloro to answer. Default: `180`. |
+
+## See also
+
+* [**Web Search** component](/web-search)
+* [**SearchApi** bundle](/bundles-searchapi)

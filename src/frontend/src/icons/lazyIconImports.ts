@@ -146,6 +146,8 @@ export const lazyIconsMapping = {
     import("@/icons/Clickhouse").then((mod) => ({
       default: mod.ClickhouseIcon,
     })),
+  Cloro: () =>
+    import("@/icons/Cloro").then((mod) => ({ default: mod.CloroIcon })),
   Cloudflare: () =>
     import("@/icons/Cloudflare").then((mod) => ({
       default: mod.CloudflareIcon,
