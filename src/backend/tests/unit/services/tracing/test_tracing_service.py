@@ -208,6 +208,25 @@ async def test_start_end_tracers(tracing_service):
     assert not trace_context.running
 
 
+def test_initialize_arize_phoenix_tracer_forwards_session_id(tracing_service):
+    session_id = "test_session"
+    trace_context = TraceContext(
+        run_id=uuid.uuid4(),
+        run_name="test_run",
+        project_name="test_project",
+        user_id="test_user",
+        session_id=session_id,
+    )
+
+    with patch(
+        "langflow.services.tracing.service._get_arize_phoenix_tracer",
+        return_value=MockTracer,
+    ):
+        tracing_service._initialize_arize_phoenix_tracer(trace_context)
+
+    assert trace_context.tracers["arize_phoenix"].session_id == session_id
+
+
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("mock_tracers")
 async def test_start_tracers_continues_after_one_initializer_fails(tracing_service):
