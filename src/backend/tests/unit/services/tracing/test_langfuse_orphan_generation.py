@@ -532,6 +532,122 @@ class TestGraphRunNamesTraceAfterFlow:
         assert all(s.parent.span_id == root.context.span_id for s in children)
         assert len({s.context.trace_id for s in spans}) == 1
 
+    @pytest.mark.asyncio
+    async def test_nested_loop_reuses_parent_trace_and_cleans_worker(self) -> None:
+        """Persist spans from nested Loop iterations under one production trace.
+
+        @param self: Test case instance.
+        @returns: None.
+        """
+        pytest.importorskip("langfuse")
+        import asyncio
+        import contextlib
+        from unittest.mock import AsyncMock, MagicMock
+
+        import langflow.services.tracing.langfuse as langfuse_module
+        from langflow.services.tracing.langfuse import LangFuseTracer
+        from langflow.services.tracing.service import TracingService
+        from lfx.graph.flow_builder.builder import build_flow_from_spec
+        from lfx.graph.graph.base import Graph
+        from lfx.services.settings.base import Settings
+        from lfx.services.settings.service import SettingsService
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+        from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+
+        flow_name = "Nested Loop Trace"
+        flow_id = str(uuid.uuid4())
+        spec = """\
+name: Nested Loop Trace
+nodes:
+  CL: CreateList
+  OUTER: LoopComponent
+  INNER: LoopComponent
+  P: ParserComponent
+  INNER_TC: TypeConverterComponent
+  OUTER_TC: TypeConverterComponent
+  POST: ParserComponent
+  O: ChatOutput
+edges:
+  CL.list -> OUTER.data
+  OUTER.item -> INNER.data
+  INNER.item -> P.input_data
+  P.parsed_text -> INNER_TC.input_data
+  INNER_TC.data_output -> INNER.item
+  INNER.done -> OUTER_TC.input_data
+  OUTER_TC.data_output -> OUTER.item
+  OUTER.done -> POST.input_data
+  POST.parsed_text -> O.input_value
+config:
+  INNER_TC.output_type: JSON
+  OUTER_TC.output_type: JSON
+"""
+        built = build_flow_from_spec(spec)
+        assert "flow" in built, f"Expected flow, got: {built}"
+
+        graph = Graph.from_payload(built["flow"], flow_id=flow_id, flow_name=flow_name, user_id="test-user")
+        graph.get_vertex(built["node_id_map"]["CL"]).update_raw_params(
+            {"texts": ["first", "second", "third"]}, overwrite=True
+        )
+
+        exporter = InMemorySpanExporter()
+        provider = TracerProvider()
+        provider.add_span_processor(SimpleSpanProcessor(exporter))
+        client = _build_real_langfuse_client_or_skip(provider)
+
+        settings = Settings()
+        settings.deactivate_tracing = False
+        service = TracingService(SettingsService(settings, MagicMock()))
+        start_tracers = AsyncMock(wraps=service.start_tracers)
+        end_tracers = AsyncMock(wraps=service.end_tracers)
+        stop_worker = AsyncMock(wraps=service._stop)
+        service.start_tracers = start_tracers
+        service.end_tracers = end_tracers
+        service._stop = stop_worker
+
+        inert_tracer = MagicMock(ready=False)
+        try:
+            with contextlib.ExitStack() as stack:
+                stack.enter_context(
+                    patch.object(langfuse_module, "_get_or_create_shared_client", lambda config: client)  # noqa: ARG005
+                )
+                stack.enter_context(
+                    patch("langflow.services.tracing.service._get_langfuse_tracer", return_value=LangFuseTracer)
+                )
+                stack.enter_context(patch("lfx.services.deps.get_tracing_service", return_value=service))
+                for name in ("langsmith", "langwatch", "arize_phoenix", "opik", "traceloop", "native", "openlayer"):
+                    stack.enter_context(
+                        patch(f"langflow.services.tracing.service._get_{name}_tracer", return_value=inert_tracer)
+                    )
+
+                graph._tracing_service = service
+                graph._tracing_service_initialized = True
+                graph.session_id = "nested-loop-session"
+                graph.prepare()
+
+                [result async for result in graph.async_start(config={"output": {"cache": False}})]
+                await asyncio.gather(*graph._end_trace_tasks)
+
+            outer_loop = graph.get_vertex(built["node_id_map"]["OUTER"]).custom_component
+            assert len(outer_loop.ctx[f"{outer_loop._id}_data"]) == 3
+            assert len(outer_loop.ctx[f"{outer_loop._id}_aggregated"]) == 3
+            assert start_tracers.await_count == 1
+            assert end_tracers.await_count == 1
+            assert stop_worker.await_count == 1
+
+            trace_context = stop_worker.await_args.args[0]
+            assert trace_context.running is False
+            assert trace_context.worker_task is None
+
+            spans = exporter.get_finished_spans()
+            root_span = next(span for span in spans if span.name == flow_name)
+            assert sum(span.name == "Parser" for span in spans) == 4
+            assert sum(span.name == "Type Convert" for span in spans) >= 6
+            assert any(span.name == "Chat Output" for span in spans)
+            assert {span.context.trace_id for span in spans} == {root_span.context.trace_id}
+        finally:
+            client.shutdown()
+
 
 def test_handler_deepcopy_returns_self(monkeypatch):
     """Regression test for https://github.com/langflow-ai/langflow/issues/13965.
