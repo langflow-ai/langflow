@@ -38,6 +38,7 @@ from langflow.api.utils import CurrentActiveUser, knowledge_base_service
 from langflow.services.authorization import KnowledgeBaseAction, ensure_knowledge_base_permission
 from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.authorization.listing import visible_scope_prefilter
+from langflow.services.creation_hooks import RESOURCE_MEMORY_BASE, PostCreationContext, run_post_creation_hooks
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
 from langflow.services.database.models.memory_base.model import (
     MemoryBase,
@@ -209,6 +210,16 @@ async def create_memory_base(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    # The service committed the memory base and its backing knowledge base in their own sessions, so a hook sees
+    # durable rows. An ``HTTPException`` from a hook fails the request without undoing the create.
+    await run_post_creation_hooks(
+        PostCreationContext(
+            resource=RESOURCE_MEMORY_BASE,
+            resource_id=mb.id,
+            owner_id=current_user.id,
+            name=payload.name,
+        )
+    )
     # ``backend_type``/``backend_config`` live on the knowledge_base row, not the
     # memory_base table. Read back the effective server-resolved values so an
     # omitted type correctly reports an env-defaulted pgvector backend.
