@@ -130,9 +130,9 @@ class WorkflowExecutionRequest(BaseModel):
             "Request-level global variables made available to workflow components. "
             "Keys may use any printable string up to "
             f"{GLOBAL_KEY_MAX_LEN} chars; values are capped at "
-            f"{GLOBAL_VALUE_MAX_LEN} chars. Body globals always win over the "
-            "legacy ``X-LANGFLOW-GLOBAL-VAR-*`` headers. Honored in sync mode; "
-            "ignored for stream/background modes."
+            f"{GLOBAL_VALUE_MAX_LEN} chars. On the v2 workflow API this request "
+            "body field is the only transport for request-level variables. "
+            "Applied in sync mode."
         ),
     )
 
@@ -270,9 +270,9 @@ class WorkflowRunRequest(BaseModel):
             "Request-level global variables made available to workflow components. "
             "Keys may use any printable string up to "
             f"{GLOBAL_KEY_MAX_LEN} chars; values are capped at "
-            f"{GLOBAL_VALUE_MAX_LEN} chars. Body globals always win over the "
-            "legacy ``X-LANGFLOW-GLOBAL-VAR-*`` headers. Honored in sync mode; "
-            "ignored for stream/background modes."
+            f"{GLOBAL_VALUE_MAX_LEN} chars. On the v2 workflow API this request "
+            "body field is the only transport for request-level variables. "
+            "Applied in sync mode."
         ),
     )
     idempotency_key: str | None = Field(

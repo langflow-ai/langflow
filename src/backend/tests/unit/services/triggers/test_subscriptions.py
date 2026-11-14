@@ -730,7 +730,7 @@ async def test_subscription_creation_and_its_durable_audit_roll_back_together(ma
         raise RuntimeError(message)
 
     monkeypatch.setattr(audit, "_stage_audit_entries", fail_stage)
-    with pytest.raises(RuntimeError, match="audit unavailable"):
+    with pytest.raises(audit.AuditPersistenceError):
         async with session_scope() as session:
             await subscriptions.upsert_subscription(
                 session,

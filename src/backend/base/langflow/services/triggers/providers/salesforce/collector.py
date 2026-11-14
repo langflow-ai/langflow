@@ -53,8 +53,12 @@ async def collect(trigger: Trigger, lease: CredentialLease) -> SourceRound:
     config = normalize_config(trigger.kind, dict(trigger.config or {}))
     state = dict(trigger.provider_state or {})
     obj, fields = config["object_name"], config["fields"]
-    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    collected_at = datetime.now(timezone.utc)
+    now = collected_at.replace(second=0, microsecond=0)
     baseline = "latest_date_covered" not in state
+    baseline_at = collected_at if baseline else None
+    if not baseline and "baseline_at" in state:
+        baseline_at = timestamp(state["baseline_at"])
     previous = timestamp(state["latest_date_covered"]) if not baseline else now - timedelta(minutes=1)
     start = previous.replace(second=0, microsecond=0)
     if previous > now or previous < now - timedelta(days=29):
@@ -110,7 +114,11 @@ async def collect(trigger: Trigger, lease: CredentialLease) -> SourceRound:
                 if not isinstance(record, dict) or record.get("Id") != expected:
                     msg = "Salesforce returned an unrelated source record."
                     raise invalid(msg)
-                version = iso(timestamp(record.get("SystemModstamp")))
+                modified_at = timestamp(record.get("SystemModstamp"))
+                # Replication ignores seconds, so the minute overlap can include earlier changes.
+                if not baseline and baseline_at is not None and modified_at <= baseline_at:
+                    continue
+                version = iso(modified_at)
                 payload = {key: value for key, value in record.items() if key in fields}
                 items.append(
                     {
@@ -123,9 +131,13 @@ async def collect(trigger: Trigger, lease: CredentialLease) -> SourceRound:
                         "session_key": f"salesforce:{obj}:{expected}",
                     }
                 )
+        # A lagging watermark cannot reopen history from before this baseline.
+        cursor = {"latest_date_covered": iso(max(now if baseline else previous, covered)), "baseline_complete": True}
+        if baseline_at is not None:
+            cursor["baseline_at"] = iso(baseline_at)
         return SourceRound(
             items=items,
-            cursor={"latest_date_covered": iso(covered), "baseline_complete": True},
+            cursor=cursor,
             previous_cursor=state,
             baseline=baseline,
             snapshot_resource=None,

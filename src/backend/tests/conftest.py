@@ -48,6 +48,7 @@ from typer.testing import CliRunner
 
 from tests.api_keys import get_openai_api_key
 from tests.database_template import DatabaseTemplate
+from tests.fixture_passwords import FixturePasswords
 
 load_dotenv()
 
@@ -578,6 +579,7 @@ async def client_fixture(
     request,
     load_flows_dir,
     database_templates,
+    fixture_passwords,
 ):
     # Set the database url to a test database
     if "noclient" in request.keywords:
@@ -653,6 +655,11 @@ async def client_fixture(
                     )
                 if template:
                     startup_patch.setattr(service_utils, "initialize_database", initialize_test_database)
+                    auth = get_auth_service()
+                    if fixture_passwords.hasher(auth) == fixture_passwords.hash:
+                        # Only bootstrap uses the cached fixture credential. Restore
+                        # normal salted hashing before any test or login request runs.
+                        startup_patch.setattr(auth.settings.auth_settings.pwd_context, "hash", fixture_passwords.hash)
                 manager = await stack.enter_async_context(LifespanManager(app, startup_timeout=60, shutdown_timeout=60))
                 # Startup schedules storage discovery. Settle it before tests
                 # insert fenced records that the background migration could alter.
@@ -670,6 +677,11 @@ async def client_fixture(
         # clear the temp db
         with suppress(FileNotFoundError):
             await anyio.Path(db_path).unlink()
+
+
+@pytest.fixture(scope="session")
+def fixture_passwords():
+    return FixturePasswords()
 
 
 @pytest.fixture(scope="session")
@@ -706,11 +718,11 @@ async def test_user(client):
 
 
 @pytest.fixture
-async def active_user(client):  # noqa: ARG001
+async def active_user(client, fixture_passwords):  # noqa: ARG001
     async with session_scope() as session:
         user = User(
             username="activeuser",
-            password=get_auth_service().get_password_hash("testpassword"),
+            password=fixture_passwords.hasher(get_auth_service())("testpassword"),
             is_active=True,
             is_superuser=False,
         )
@@ -769,11 +781,11 @@ async def administrator_user(active_user):
 
 
 @pytest.fixture
-async def active_super_user(client):  # noqa: ARG001
+async def active_super_user(client, fixture_passwords):  # noqa: ARG001
     async with session_scope() as session:
         user = User(
             username="activeuser",
-            password=get_auth_service().get_password_hash("testpassword"),
+            password=fixture_passwords.hasher(get_auth_service())("testpassword"),
             is_active=True,
             is_superuser=True,
         )

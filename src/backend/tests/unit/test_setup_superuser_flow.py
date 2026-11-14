@@ -529,17 +529,26 @@ async def test_setup_superuser_auto_login_lock_timeout_raises_when_no_superuser(
 
 @pytest.mark.asyncio
 @pytest.mark.timeout(30)
-async def test_setup_superuser_auto_login_lock_timeout_ok_when_superuser_exists(initialized_services, monkeypatch):  # noqa: ARG001
-    """If the lock times out but the default superuser already exists, setup continues without error."""
+@pytest.mark.parametrize("active", [True, False])
+async def test_setup_superuser_auto_login_lock_timeout_checks_existing_superuser(
+    initialized_services,  # noqa: ARG001
+    monkeypatch,
+    active,
+):
+    """A lock timeout only permits startup with an active bootstrap account."""
     settings = get_settings_service()
     settings.auth_settings.AUTO_LOGIN = True
+    monkeypatch.setattr(settings.auth_settings, "SUPERUSER", "Langflow")
 
     async with session_scope() as session:
-        await get_auth_service().create_super_user(
+        user = await get_auth_service().create_super_user(
             DEFAULT_SUPERUSER,
             "test-superuser-password",
             db=session,
         )
+        user.is_active = active
+        user.retired_at = None if active else datetime.now(timezone.utc)
+        session.add(user)
 
     class _FailingLock:
         def __init__(self, *args, **kwargs):
@@ -555,15 +564,22 @@ async def test_setup_superuser_auto_login_lock_timeout_ok_when_superuser_exists(
     monkeypatch.setattr(filelock, "FileLock", _FailingLock)
 
     async with session_scope() as session:
-        assert (
-            await setup_superuser(settings, session) == SetupSuperuserResult.AUTO_LOGIN_LOCK_TIMEOUT_SUPERUSER_PRESENT
-        )
+        if active:
+            result = await setup_superuser(settings, session)
+            assert result == SetupSuperuserResult.AUTO_LOGIN_LOCK_TIMEOUT_SUPERUSER_PRESENT
+        else:
+            with pytest.raises(RuntimeError, match="no matching active superuser"):
+                await setup_superuser(settings, session)
+    expected_username = DEFAULT_SUPERUSER if active else "Langflow"
+    assert expected_username == settings.auth_settings.SUPERUSER
 
     async with session_scope() as session:
         stmt = select(User).where(User.username == DEFAULT_SUPERUSER)
         user = (await session.exec(stmt)).first()
         assert user is not None
         assert user.is_superuser is True
+        assert user.is_active is active
+        assert (user.retired_at is None) is active
 
 
 # ---------------------------------------------------------------------------
@@ -732,15 +748,29 @@ async def test_an_auto_login_account_with_a_generated_password_is_retired(servic
 
 @pytest.mark.asyncio
 @pytest.mark.timeout(60)
-async def test_claiming_a_retired_default_superuser_reactivates_it(services_on, monkeypatch):  # noqa: ARG001
-    """Retired by an earlier teardown, then named in LANGFLOW_SUPERUSER: the operator must be able to sign in."""
+@pytest.mark.parametrize("username", [DEFAULT_SUPERUSER, "Langflow"])
+@pytest.mark.parametrize("last_login", [False, True])
+async def test_claiming_a_retired_default_superuser_reactivates_it(
+    services_on,  # noqa: ARG001
+    monkeypatch,
+    username,
+    last_login,
+):
+    """Naming a retired account restores access even after an auto-login request."""
     user_id = await _default_superuser_owning_work(password=LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value())
     async with session_scope() as session:
         await teardown_superuser(get_settings_service(), session)
     assert (await _default_superuser()).is_active is False
 
     settings = get_settings_service()
-    monkeypatch.setattr(settings.auth_settings, "SUPERUSER", DEFAULT_SUPERUSER)
+    if last_login:
+        async with session_scope() as session:
+            user = await session.get(User, user_id)
+            # Older versions could record a login after retiring the account.
+            user.last_login_at = datetime.now(timezone.utc)
+            session.add(user)
+        assert (await _default_superuser()).last_login_at is not None
+    monkeypatch.setattr(settings.auth_settings, "SUPERUSER", username)
     monkeypatch.setattr(settings.auth_settings, "SUPERUSER_PASSWORD", SecretStr("claimed-password"))
     async with session_scope() as session:
         await setup_superuser(settings, session)
@@ -748,7 +778,99 @@ async def test_claiming_a_retired_default_superuser_reactivates_it(services_on, 
     kept = await _default_superuser()
     assert kept.id == user_id
     assert kept.is_active is True
+    assert kept.retired_at is None
     assert verify_password("claimed-password", kept.password)
+    assert settings.auth_settings.SUPERUSER == DEFAULT_SUPERUSER
+    assert await _work_owned_by(user_id) == (1, 1, 1)
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(60)
+@pytest.mark.parametrize("username", [DEFAULT_SUPERUSER, "Langflow"])
+@pytest.mark.parametrize("initializer", ["setup", "standalone"])
+async def test_auto_login_reactivates_a_retired_default_superuser(
+    services_on,  # noqa: ARG001
+    monkeypatch,
+    username,
+    initializer,
+):
+    import jwt
+    from fastapi import FastAPI
+    from httpx import ASGITransport, AsyncClient
+    from langflow.api.v1.login import router
+    from langflow.initial_setup.setup import initialize_auto_login_default_superuser
+    from langflow.services.database.models.variable.model import Variable
+
+    user_id = await _default_superuser_owning_work()
+    async with session_scope() as session:
+        await teardown_superuser(get_settings_service(), session)
+    assert (await _default_superuser()).is_active is False
+
+    settings = get_settings_service()
+    monkeypatch.setattr(settings.auth_settings, "AUTO_LOGIN", True)
+    monkeypatch.setattr(settings.auth_settings, "SUPERUSER", username)
+    monkeypatch.setattr(settings.auth_settings, "skip_auth_auto_login", True)
+    if initializer == "setup":
+        async with session_scope() as session:
+            assert await setup_superuser(settings, session) == SetupSuperuserResult.AUTO_LOGIN_ALREADY_SATISFIED
+    else:
+        await initialize_auto_login_default_superuser()
+
+    kept = await _default_superuser()
+    assert kept.id == user_id
+    assert kept.is_active is True
+    assert kept.retired_at is None
+    assert settings.auth_settings.SUPERUSER == DEFAULT_SUPERUSER
+    assert (await _work_owned_by(user_id))[:2] == (1, 1)
+    async with session_scope() as session:
+        variable = (
+            await session.exec(select(Variable).where(Variable.user_id == user_id, Variable.name == "MY_KEY"))
+        ).one()
+        assert variable.value == "encrypted"
+
+    app = FastAPI()
+    app.include_router(router, prefix="/api/v1")
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/api/v1/auto_login")
+    assert response.status_code == 200
+    claims = jwt.decode(response.json()["access_token"], options={"verify_signature": False})
+    assert claims["sub"] == str(user_id)
+    async with session_scope() as session:
+        assert (await get_auth_service().api_key_security(None, None, session)).id == user_id
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(60)
+@pytest.mark.parametrize("shutdown", ["database", "services"])
+async def test_old_pod_shutdown_preserves_a_claimed_default_superuser(services_on, monkeypatch, shutdown):  # noqa: ARG001
+    from langflow.services.database.models.flow.model import Flow
+    from langflow.services.deps import get_db_service
+    from langflow.services.utils import teardown_services
+
+    user_id = await _default_superuser_owning_work()
+    settings = get_settings_service()
+    async with session_scope() as session:
+        await teardown_superuser(settings, session)
+
+    monkeypatch.setattr(settings.auth_settings, "SUPERUSER", DEFAULT_SUPERUSER)
+    monkeypatch.setattr(settings.auth_settings, "SUPERUSER_PASSWORD", SecretStr("claimed-password"))
+    async with session_scope() as session:
+        await setup_superuser(settings, session)
+
+    monkeypatch.setattr(settings.auth_settings, "SUPERUSER", "admin")
+    database = get_db_service()
+    auth = get_auth_service()
+    if shutdown == "database":
+        await database.teardown()
+    else:
+        await teardown_services()
+
+    async with database.async_session_maker() as session:
+        kept = await session.get(User, user_id)
+        assert kept.is_active is True
+        assert kept.retired_at is None
+        assert auth.verify_password("claimed-password", kept.password)
+        assert (await session.exec(select(Flow).where(Flow.user_id == user_id))).first() is not None
 
 
 @pytest.mark.asyncio

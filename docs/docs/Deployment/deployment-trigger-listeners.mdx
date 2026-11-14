@@ -115,7 +115,7 @@ Only one API worker starts the child, even when `LANGFLOW_WORKERS` is greater th
 ## Confirm the listener is working
 
 1. Open `http://<listener>:7861/healthz`. A ready listener returns success. A `503` means it is not ready to hold connections.
-2. Enable the trigger on the flow. For Slack Socket Mode, use an app-level token connection. Setup is on [Slack triggers](../Components/bundles-slack.mdx#slack-triggers).
+2. Enable the trigger on the flow. For Slack Socket Mode, use an app-level token connection. For more information, see [Slack triggers](./bundles-slack#slack-triggers). Jira Cloud triggers poll a project and do not need a public URL. For more information, see [Jira Cloud components](./bundles-jira#enable-polling-triggers).
 3. Cause an event the trigger listens for, and confirm the flow runs.
 
 Listeners do not run the flow. The API does. The listener only records the event.

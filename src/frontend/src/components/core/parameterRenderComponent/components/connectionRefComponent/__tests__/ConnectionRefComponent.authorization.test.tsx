@@ -123,10 +123,6 @@ async function fillConnection(user: ReturnType<typeof userEvent.setup>) {
   await user.click(add);
   await user.type(screen.getByTestId("connection-name"), "new");
   await user.type(
-    screen.getByTestId("connection-display-name"),
-    "New Telegram",
-  );
-  await user.type(
     screen.getByTestId("connection-token"),
     "example-provider-token",
   );

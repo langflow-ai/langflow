@@ -207,6 +207,15 @@ export const hasStarted = (migration: MigrationState) =>
     ({ id, state }) => id === "start_target" && state === "done",
   );
 
+/** Saved destinations outlive the credentials held only by the worker that tested them. */
+export const needsDestinationSecrets = (migration: MigrationState) =>
+  Boolean(migration.record.destinations) &&
+  migration.destination_secrets_available === false &&
+  migration.steps.some(
+    ({ id, state }) => id === "connect_target" && state === "done",
+  ) &&
+  !hasStarted(migration);
+
 /**
  * Whether the last database copy wrote the database saved now, so copying again needs an empty one. A copy that
  * was refused, failed or was stopped wrote nothing. The record keeps only the last copy, though, so one of those
