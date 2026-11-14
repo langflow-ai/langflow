@@ -26,6 +26,7 @@ can emit one ``flow-migrated`` event per flow per session.
 
 from __future__ import annotations
 
+import contextlib
 import difflib
 import sys
 from collections.abc import Collection, Mapping
@@ -189,13 +190,26 @@ def _known_current_types_from_index() -> frozenset[str]:
     return frozenset(_component_type_aliases(registry))
 
 
-def _known_current_types_from_cache() -> set[str]:
+def _known_current_types_from_cache() -> frozenset[str] | set[str]:
     """Return aliases from the live component cache if it is already loaded."""
     components_module = sys.modules.get("lfx.interface.components")
     if components_module is None:
         return set()
 
     component_cache = getattr(components_module, "component_cache", None)
+    if component_cache is None:
+        return set()
+
+    get_aliases = getattr(component_cache, "get_known_type_aliases", None)
+    if callable(get_aliases):
+        aliases = get_aliases()
+        if aliases is not None:
+            return aliases
+
+    cached = getattr(component_cache, "known_type_aliases", None)
+    if cached is not None:
+        return cached
+
     all_types_dict = getattr(component_cache, "all_types_dict", None)
     if not isinstance(all_types_dict, Mapping):
         return set()
@@ -206,7 +220,10 @@ def _known_current_types_from_cache() -> set[str]:
     for category_components in categories.values():
         if isinstance(category_components, Mapping):
             known.update(_component_type_aliases(category_components))
-    return known
+    frozen_known = frozenset(known)
+    with contextlib.suppress(Exception):
+        component_cache.known_type_aliases = frozen_known
+    return frozen_known
 
 
 def _known_current_types() -> frozenset[str]:

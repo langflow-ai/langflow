@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sys
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from lfx.extension.migration.rewrite import migrate_flow_payload
@@ -406,3 +407,136 @@ def test_idempotent_when_run_twice(table: MigrationTable) -> None:
     assert first.rewritten_count == 1
     assert second.rewritten_count == 0
     assert second.records[0].outcome == "already_canonical"
+
+
+@pytest.mark.unit
+def test_loaded_component_cache_reuses_derived_aliases(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Subsequent migration passes must reuse the cached alias set on component_cache."""
+    import lfx.utils.component_aliases as ca
+    from lfx.interface.components import ComponentCache
+
+    payload = _payload(_node("CustomCurrent-1", "CustomCurrent"))
+    table = MigrationTable(schema_version=1, entries=[])
+    cache = ComponentCache()
+    cache.all_types_dict = {
+        "custom": {
+            "CustomCurrent": {
+                "display_name": "Custom Current",
+            }
+        }
+    }
+    cache.all_types_ready = True
+    fake_components_module = SimpleNamespace(component_cache=cache)
+    monkeypatch.setitem(sys.modules, "lfx.interface.components", fake_components_module)
+
+    call_count = 0
+    orig_fn = ca.get_component_type_aliases
+
+    def counting_fn(*args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        return orig_fn(*args, **kwargs)
+
+    with patch.object(ca, "get_component_type_aliases", side_effect=counting_fn):
+        report1 = migrate_flow_payload(payload, table=table)
+        assert report1.rewritten_count == 0
+        initial_calls = call_count
+        assert initial_calls > 0
+        assert cache.known_type_aliases is not None
+
+        # Second call must not re-invoke get_component_type_aliases on the live cache
+        report2 = migrate_flow_payload(payload, table=table)
+        assert report2.rewritten_count == 0
+        assert call_count == initial_calls
+
+
+@pytest.mark.unit
+def test_component_cache_invalidates_on_bundle_publication() -> None:
+    """Publishing a bundle clears known_type_aliases so the next call sees new aliases."""
+    from lfx.interface.components import _publish_bundle_cache, component_cache
+
+    cache = component_cache
+    cache.all_types_dict = {"initial": {"Comp1": {"display_name": "Component 1"}}}
+    cache.all_types_ready = True
+    cache.known_type_aliases = None
+
+    payload = _payload(_node("c1", "Comp1"))
+    table = MigrationTable(schema_version=1, entries=[])
+    migrate_flow_payload(payload, table=table)
+    assert cache.known_type_aliases is not None
+    assert "Comp1" in cache.known_type_aliases
+    assert "Comp2" not in cache.known_type_aliases
+
+    # Simulate bundle reload publication
+    _publish_bundle_cache("new_bundle", {"Comp2": {"display_name": "Component 2"}})
+    assert cache.known_type_aliases is None
+
+    # Next call rebuilds cache and includes the new bundle component
+    payload2 = _payload(_node("c2", "Comp2"))
+    report2 = migrate_flow_payload(payload2, table=table)
+    assert report2.records[0].outcome == "known_current_component"
+    assert cache.known_type_aliases is not None
+    assert "Comp2" in cache.known_type_aliases
+
+
+@pytest.mark.unit
+async def test_component_cache_invalidates_on_lazy_hydration() -> None:
+    """In-place hydration via ensure_component_loaded invalidates known_type_aliases."""
+    from lfx.interface.components import component_cache, ensure_component_loaded
+
+    cache = component_cache
+    cache.all_types_dict = {"cat_lazy": {"LazyComp": {"display_name": "Lazy Component", "lazy_loaded": True}}}
+    cache.all_types_ready = True
+    cache.known_type_aliases = None
+    cache.fully_loaded_components.clear()
+
+    payload = _payload(_node("c1", "LazyComp"))
+    table = MigrationTable(schema_version=1, entries=[])
+    migrate_flow_payload(payload, table=table)
+    assert cache.known_type_aliases is not None
+    assert "HydratedAlias" not in cache.known_type_aliases
+
+    # Simulate lazy hydration
+    with patch("lfx.interface.components.load_single_component", new_callable=AsyncMock) as mock_load:
+        mock_load.return_value = {
+            "display_name": "Lazy Component",
+            "name": "HydratedAlias",
+        }
+        settings = SimpleNamespace(settings=SimpleNamespace(components_path=[]))
+        await ensure_component_loaded("cat_lazy", "LazyComp", settings)
+
+    assert cache.known_type_aliases is None
+
+    # Next pass recomputes and sees the hydrated alias
+    payload2 = _payload(_node("c2", "HydratedAlias"))
+    report2 = migrate_flow_payload(payload2, table=table)
+    assert report2.records[0].outcome == "known_current_component"
+    assert cache.known_type_aliases is not None
+    assert "HydratedAlias" in cache.known_type_aliases
+
+
+@pytest.mark.unit
+def test_known_current_types_explicit_argument_bypasses_cache() -> None:
+    """An explicitly passed known_current_types is preserved and does not use component_cache."""
+    payload = _payload(_node("c1", "ExplicitCustom"))
+    table = MigrationTable(schema_version=1, entries=[])
+
+    report = migrate_flow_payload(payload, table=table, known_current_types=frozenset({"ExplicitCustom"}))
+    assert report.rewritten_count == 0
+    assert report.records[0].outcome == "known_current_component"
+
+
+@pytest.mark.unit
+def test_component_cache_get_known_type_aliases_empty() -> None:
+    """get_known_type_aliases returns None when all_types_dict is None or not ready."""
+    from lfx.interface.components import ComponentCache
+
+    cache = ComponentCache()
+    assert cache.get_known_type_aliases() is None
+
+    cache.all_types_dict = {}
+    cache.all_types_ready = False
+    assert cache.get_known_type_aliases() is None
+
+    cache.all_types_ready = True
+    assert cache.get_known_type_aliases() == frozenset()

@@ -8,6 +8,7 @@ import os
 import pkgutil
 import threading
 import time
+from collections.abc import Mapping
 from concurrent.futures import Future
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
@@ -84,6 +85,9 @@ class ComponentCache:
         # Collision-aware canonical registry identity lookup used by catalog
         # palette and runtime policy enforcement.
         self.component_identity_index: ComponentIdentityIndex | None = None
+        # Cached known component types and aliases derived from the live registry.
+        # Derived lazily on first read; invalidated on registry replacement or lazy hydration.
+        self.known_type_aliases: frozenset[str] | None = None
         # The upgrade lookup belongs to an exact published registry object.
         # Reloads publish a replacement, so readers rebuild lazily on identity change.
         self.upgrade_registry: tuple[dict[str, Any], dict[str, dict]] | None = None
@@ -102,6 +106,34 @@ class ComponentCache:
         # Reloads that complete while initial discovery is in flight are folded
         # into the local registry before its one atomic publication.
         self.pending_bundle_updates: dict[str, dict[str, Any]] = {}
+
+    def get_known_type_aliases(self) -> frozenset[str] | None:
+        """Return cached component type names and aliases derived from the live registry."""
+        with self.state_lock:
+            if self.known_type_aliases is not None:
+                return self.known_type_aliases
+            all_types_dict = self.all_types_dict
+            if all_types_dict is None or (not all_types_dict and not self.all_types_ready):
+                return None
+
+        from lfx.utils.component_aliases import get_component_type_aliases
+
+        known: set[str] = set()
+        components = all_types_dict.get("components")
+        categories = components if isinstance(components, Mapping) else all_types_dict
+        for category_components in categories.values():
+            if isinstance(category_components, Mapping):
+                for component_name, component_data in category_components.items():
+                    if not isinstance(component_name, str) or not component_name:
+                        continue
+                    metadata = component_data if isinstance(component_data, Mapping) else None
+                    known.update(get_component_type_aliases(component_name, metadata))
+
+        frozen = frozenset(known)
+        with self.state_lock:
+            if self.all_types_dict is all_types_dict:
+                self.known_type_aliases = frozen
+            return self.known_type_aliases or frozen
 
 
 # Singleton instance
@@ -1341,6 +1373,7 @@ def _publish_bundle_cache(bundle: str, bundle_dict: dict[str, Any]) -> bool:
         component_cache.type_to_code = None
         component_cache.component_identity_index = None
         component_cache.upgrade_registry = None
+        component_cache.known_type_aliases = None
         return True
 
 
@@ -1566,6 +1599,7 @@ async def _initialize_component_cache(
                     cache.type_to_code = type_to_code
                     cache.component_identity_index = identity_index
                     cache.upgrade_registry = None
+                    cache.known_type_aliases = None
                     cache.initialization_future = None
                     cache.initialization_task = None
                     initialization_future.set_result(merged_types)
@@ -1628,6 +1662,7 @@ async def get_and_cache_all_types_dict(
             cache.type_to_code = None
             cache.component_identity_index = None
             cache.upgrade_registry = None
+            cache.known_type_aliases = None
             initialization_task = asyncio.create_task(
                 _initialize_component_cache(cache, settings_service, telemetry_service, initialization_future),
                 name="lfx-component-cache-initialization",
@@ -1811,6 +1846,7 @@ async def ensure_component_loaded(component_type: str, component_name: str, sett
                 registry[component_type][component_name] = full_component
                 registry[component_type][component_name].pop("lazy_loaded", None)
                 component_cache.upgrade_registry = None
+                component_cache.known_type_aliases = None
                 component_cache.fully_loaded_components[component_key] = True
             await logger.adebug(f"Component {component_type}:{component_name} fully loaded")
         else:
