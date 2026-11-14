@@ -524,6 +524,10 @@ export const lazyIconsMapping = {
     import("@/icons/Timelinesai").then((mod) => ({
       default: mod.TimelinesaiIcon,
     })),
+  TrustedRouter: () =>
+    import("@/icons/TrustedRouter").then((mod) => ({
+      default: mod.TrustedRouterIcon,
+    })),
   TwelveLabs: () =>
     import("@/icons/TwelveLabs").then((mod) => ({
       default: mod.TwelveLabsIcon,
