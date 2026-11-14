@@ -116,24 +116,22 @@ class ComponentCache:
             if all_types_dict is None or (not all_types_dict and not self.all_types_ready):
                 return None
 
-        from lfx.utils.component_aliases import get_component_type_aliases
+            from lfx.utils.component_aliases import get_component_type_aliases
 
-        known: set[str] = set()
-        components = all_types_dict.get("components")
-        categories = components if isinstance(components, Mapping) else all_types_dict
-        for category_components in categories.values():
-            if isinstance(category_components, Mapping):
-                for component_name, component_data in category_components.items():
-                    if not isinstance(component_name, str) or not component_name:
-                        continue
-                    metadata = component_data if isinstance(component_data, Mapping) else None
-                    known.update(get_component_type_aliases(component_name, metadata))
+            known: set[str] = set()
+            components = all_types_dict.get("components")
+            categories = components if isinstance(components, Mapping) else all_types_dict
+            for category_components in categories.values():
+                if isinstance(category_components, Mapping):
+                    for component_name, component_data in category_components.items():
+                        if not isinstance(component_name, str) or not component_name:
+                            continue
+                        metadata = component_data if isinstance(component_data, Mapping) else None
+                        known.update(get_component_type_aliases(component_name, metadata))
 
-        frozen = frozenset(known)
-        with self.state_lock:
-            if self.all_types_dict is all_types_dict:
-                self.known_type_aliases = frozen
-            return self.known_type_aliases or frozen
+            frozen = frozenset(known)
+            self.known_type_aliases = frozen
+            return frozen
 
 
 # Singleton instance

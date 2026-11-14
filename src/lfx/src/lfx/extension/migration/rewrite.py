@@ -221,8 +221,26 @@ def _known_current_types_from_cache() -> frozenset[str] | set[str]:
         if isinstance(category_components, Mapping):
             known.update(_component_type_aliases(category_components))
     frozen_known = frozenset(known)
-    with contextlib.suppress(Exception):
-        component_cache.known_type_aliases = frozen_known
+
+    state_lock = getattr(component_cache, "state_lock", None)
+    lock_ctx = (
+        state_lock if hasattr(state_lock, "__enter__") and hasattr(state_lock, "__exit__") else contextlib.nullcontext()
+    )
+    with contextlib.suppress(Exception), lock_ctx:
+        current_registry = getattr(component_cache, "all_types_dict", None)
+        if current_registry is all_types_dict:
+            component_cache.known_type_aliases = frozen_known
+            return frozen_known
+
+        # Registry replaced concurrently; return fresh aliases if available
+        fresh_getter = getattr(component_cache, "get_known_type_aliases", None)
+        if callable(fresh_getter):
+            fresh_aliases = fresh_getter()
+            if fresh_aliases is not None:
+                return fresh_aliases
+        fresh_cached = getattr(component_cache, "known_type_aliases", None)
+        if fresh_cached is not None:
+            return fresh_cached
     return frozen_known
 
 
