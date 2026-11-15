@@ -120,6 +120,14 @@ def test_upgrade_drops_index_and_supports_deterministic_poorly_compressible_text
 
         updated_row = connection.execute(sa.select(flow).where(flow.c.id == flow_id)).one()
         assert updated_row.description == updated_description
+
+        # On PostgreSQL, recreating the index when oversized rows exist must fail
+        # without truncating or corrupting existing user data
+        if is_postgres:
+            with pytest.raises(sa.exc.DBAPIError):
+                migration.downgrade()
+            preserved_row = connection.execute(sa.select(flow).where(flow.c.id == flow_id)).one()
+            assert preserved_row.description == updated_description
     engine.dispose()
 
 
@@ -197,3 +205,17 @@ def test_flow_model_no_longer_indexes_description():
 
     desc_col = Flow.__table__.c.description
     assert not desc_col.index
+
+
+def test_flow_model_large_description_roundtrip():
+    """Verify Flow SQLModel instance accepts and preserves >4,000 char descriptions."""
+    from langflow.services.database.models.flow.model import Flow
+
+    large_description = _generate_poorly_compressible_text(min_length=4200)
+    flow = Flow(
+        id=uuid4(),
+        name="SQLModel Large Description Test",
+        description=large_description,
+    )
+    assert flow.description == large_description
+    assert len(flow.description) >= 4000
