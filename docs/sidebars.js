@@ -410,6 +410,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Lfx/lfx-dependency-ready",
+          label: "Dependency-ready Python graphs"
+        },
+        {
+          type: "doc",
           id: "Lfx/lfx-serve",
           label: "Serve flows with LFX"
         },
