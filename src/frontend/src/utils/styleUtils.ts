@@ -522,6 +522,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "pgvector", name: "pgvector", icon: "cpu" },
   { display_name: "Pinecone", name: "pinecone", icon: "Pinecone" },
   { display_name: "Plivo", name: "plivo", icon: "Plivo" },
+  { display_name: "PopNow", name: "popnow", icon: "PopNow" },
   { display_name: "Qdrant", name: "qdrant", icon: "Qdrant" },
   { display_name: "Redis", name: "redis", icon: "Redis" },
   { display_name: "Salesforce", name: "salesforce", icon: "Salesforce" },

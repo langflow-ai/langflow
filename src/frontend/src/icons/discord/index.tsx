@@ -1,21 +1,11 @@
-import React, { forwardRef } from "react";
+import type React from "react";
+import { forwardRef } from "react";
 import DiscordIconSVG from "./discord";
 
-export const DiscordIcon = forwardRef<
-  SVGSVGElement,
-  React.PropsWithChildren<{}>
->((props, ref) => {
-  return (
-    <span
-      style={{
-        display: "inline-grid",
-        width: 22,
-        height: 22,
-        placeItems: "center",
-        flexShrink: 0,
-      }}
-    >
-      <DiscordIconSVG ref={ref} {...props} />
-    </span>
-  );
-});
+type DiscordIconProps = React.SVGProps<SVGSVGElement> & { isDark?: boolean };
+
+export const DiscordIcon = forwardRef<SVGSVGElement, DiscordIconProps>(
+  ({ isDark: _isDark, ...props }, ref) => (
+    <DiscordIconSVG ref={ref} {...props} />
+  ),
+);

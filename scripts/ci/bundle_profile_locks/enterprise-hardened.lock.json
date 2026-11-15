@@ -68,9 +68,9 @@
       "providers": [
         "lfx-datastax"
       ],
-      "requested": ">=0.3.0,<1.0.0",
-      "requirement": "lfx-datastax==0.3.0",
-      "resolved_version": "0.3.0"
+      "requested": ">=0.3.1,<1.0.0",
+      "requirement": "lfx-datastax==0.3.1",
+      "resolved_version": "0.3.1"
     },
     {
       "distribution": "lfx-discord",
@@ -270,7 +270,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:899409775d2f43d3",
+  "profile_digest": "sha256:5abb5b69f0737b96",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",
