@@ -137,6 +137,18 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
     setPageIndex(1);
   }, []);
 
+  // Deleting the last flows of the last page leaves the requested page past
+  // the end: the server answers with no items and the real page count. Step
+  // back to the last page that exists instead of rendering an empty list.
+  const lastPage = folderData?.flows
+    ? Math.max(1, folderData.flows.pages)
+    : undefined;
+  useEffect(() => {
+    if (lastPage !== undefined && pageIndex > lastPage) {
+      setPageIndex(lastPage);
+    }
+  }, [lastPage, pageIndex]);
+
   useEffect(() => {
     // Wait until both the global flows store has populated and the folder
     // query has settled (success or error) before deciding whether the
