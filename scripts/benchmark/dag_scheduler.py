@@ -3,6 +3,14 @@
 Run in the locked lfx environment, from the repository root:
   python scripts/benchmark/dag_scheduler.py --pairs 7 --output /tmp/dag.json
 A new Graph is built for every observation; no cached same-Graph comparisons.
+Supported invocations: this script directly from the source checkout, or its
+--serve loopback proxy, with one active observation loop per process. Concurrent
+other-loop observations fail fast; they are not parallel measurement support.
+Proxy peaks include process-wide framework/service allocations outside the
+observation lock. Serialization prevents cross-stop, not allocation isolation.
+Use the sequential CLI for controlled paired comparisons, not concurrent proxy peaks.
+Namespace-package installations without a concrete lfx.__file__ may fail during
+Graph.arun; use the source checkout environment, not this utility as a package API.
 """
 
 from __future__ import annotations
@@ -14,14 +22,17 @@ import json
 import platform
 import shutil
 import subprocess
+import threading
 import time
 import tracemalloc
+import weakref
 from pathlib import Path
 
 from aiohttp import ClientSession, web
 from dag_inference_service import inference_service
 from lfx.custom.custom_component.component import Component
 from lfx.graph import Graph
+from lfx.graph.graph import dag_scheduler as graph_dag_scheduler
 from lfx.io import FloatInput, HandleInput, Output, StrInput
 from lfx.schema.message import Message
 
@@ -85,7 +96,30 @@ def make_graph(case: str, endpoint: str) -> Graph:
     return Graph(nodes["input"], nodes["out"])
 
 
+# Observations are supported on one event loop per process (the CLI/proxy model).
+# Locks are loop-local so separate sequential asyncio.run calls remain usable.
+_observation_locks = weakref.WeakKeyDictionary()
+_process_observation_guard = threading.Lock()
+
+
 async def observation(case, limit, service):
+    loop = asyncio.get_running_loop()
+    lock = _observation_locks.setdefault(loop, asyncio.Lock())
+    async with lock:
+        # Do not block an event-loop thread waiting on another loop's observation.
+        if not _process_observation_guard.acquire(blocking=False):
+            msg = "Another event loop already owns benchmark observation state"
+            raise RuntimeError(msg)
+        try:
+            if tracemalloc.is_tracing():
+                msg = "Cannot measure while external memory tracing is active"
+                raise RuntimeError(msg)
+            return await _observation(case, limit, service)
+        finally:
+            _process_observation_guard.release()
+
+
+async def _observation(case, limit, service):
     graph = make_graph(case, service.url)
     service.events.clear()
     service.requests = service.peak = 0
@@ -106,12 +140,33 @@ async def observation(case, limit, service):
             events.append((vertex_id, "end", time.perf_counter()))
 
     graph.build_vertex = build
-    tracemalloc.start()
-    start = time.perf_counter()
-    await graph.arun(inputs=[{}], outputs=["out"], dag_max_concurrency=limit)
-    elapsed_ms = (time.perf_counter() - start) * 1000
-    _, peak_bytes = tracemalloc.get_traced_memory()
-    tracemalloc.stop()
+    original_execute = graph_dag_scheduler.execute_dependency_ready
+    scheduler_limits = []
+
+    async def witnessed_execute(*args, **kwargs):
+        # Graph.__eq__ compares representations, so use identity, not equality.
+        if args and args[0] is graph:
+            scheduler_limits.append(kwargs.get("max_concurrency"))
+        return await original_execute(*args, **kwargs)
+
+    graph_dag_scheduler.execute_dependency_ready = witnessed_execute
+    owns_tracing = False
+    try:
+        tracemalloc.start()
+        owns_tracing = True
+        start = time.perf_counter()
+        await graph.arun(inputs=[{}], outputs=["out"], dag_max_concurrency=limit)
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        _, peak_bytes = tracemalloc.get_traced_memory()
+    finally:
+        if owns_tracing:
+            tracemalloc.stop()
+        graph_dag_scheduler.execute_dependency_ready = original_execute
+        graph.build_vertex = original
+    # Exactly one process call is expected because this utility supplies one input.
+    if scheduler_limits != ([] if limit is None else [limit]):
+        msg = "Requested scheduler did not match the scheduler that ran"
+        raise RuntimeError(msg)
     text = graph.get_vertex("out").built_object["message"].text
     if active or service.active:
         msg = "Owned HTTP/build work survived Graph.arun"
@@ -119,6 +174,8 @@ async def observation(case, limit, service):
     return {
         "case": case,
         "limit": limit,
+        "scheduler": "default" if limit is None else "dependency_ready",
+        "scheduler_limits": scheduler_limits,
         "elapsed_ms": elapsed_ms,
         "first_component_output_ms": min(t for _, event, t in events if event == "end") * 1000 - start * 1000,
         "peak_admitted": peak,
