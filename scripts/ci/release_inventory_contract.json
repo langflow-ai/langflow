@@ -336,6 +336,7 @@
         "glean",
         "groq",
         "homeassistant",
+        "hopbase",
         "huggingface",
         "icosacomputing",
         "jigsawstack",
