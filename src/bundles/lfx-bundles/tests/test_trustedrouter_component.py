@@ -92,6 +92,38 @@ def test_failed_refresh_preserves_selection(component, build_config, monkeypatch
     assert component.build_model().model_name == "vendor/chat-model"
 
 
+@pytest.mark.parametrize(
+    "body",
+    [
+        b"not json",
+        b"null",
+        b"[]",
+        b'{"data": null}',
+        b'{"data": [null]}',
+        b'{"data": [{"id": "x/y", "context_length": "unknown", "architecture": {"modality": "text->text"}}]}',
+    ],
+)
+def test_malformed_refresh_preserves_selection(component, build_config, monkeypatch, body):
+    original = deepcopy(build_config["model_name"])
+    with httpx.Client(transport=httpx.MockTransport(lambda _request: httpx.Response(200, content=body))) as client:
+        monkeypatch.setattr("lfx_bundles.trustedrouter.trustedrouter.httpx.get", client.get)
+        result = component.update_build_config(build_config, "vendor/chat-model", "model_name")
+
+    for field in ("value", "options", "tooltips"):
+        assert result["model_name"][field] == original[field]
+    assert MODELS_LOAD_FAILED in result["model_name"]["info"]
+
+
+def test_numeric_string_context_is_formatted(component, build_config, monkeypatch):
+    body = {"data": [{"id": "x/y", "context_length": "128000", "architecture": TEXT_MODEL}]}
+    with httpx.Client(transport=httpx.MockTransport(lambda _request: httpx.Response(200, json=body))) as client:
+        monkeypatch.setattr("lfx_bundles.trustedrouter.trustedrouter.httpx.get", client.get)
+        result = component.update_build_config(build_config, "x/y", "model_name")
+
+    assert result["model_name"]["tooltips"] == {"x/y": "128,000 tokens"}
+    assert result["model_name"]["info"] == ""
+
+
 def test_refresh_recovers_and_clears_error(component, build_config, monkeypatch):
     build_config["model_name"]["info"] = MODELS_LOAD_FAILED
     with httpx.Client(

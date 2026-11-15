@@ -48,13 +48,14 @@ class TrustedRouterComponent(LCModelComponent):
             models = response.json().get("data", [])
             return sorted(
                 [
-                    {"id": m["id"], "context": m.get("context_length") or 0}
+                    {"id": m["id"], "context": int(m.get("context_length") or 0)}
                     for m in models
                     if m.get("id") and str((m.get("architecture") or {}).get("modality", "")).endswith("->text")
                 ],
                 key=lambda x: x["id"],
             )
-        except (httpx.RequestError, httpx.HTTPStatusError) as e:
+        except (httpx.RequestError, httpx.HTTPStatusError, ValueError, TypeError, AttributeError) as e:
+            # Network/HTTP errors plus malformed JSON or unexpected payload shapes.
             self.log(f"Error fetching models: {e}")
             return []
 
