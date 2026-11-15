@@ -257,7 +257,7 @@ async def upsert_subscription(
     await session.flush()
     await session.refresh(row)
     if created:
-        await _audit_subscription_creation(session, trigger_id=trigger_id)
+        await audit_subscription_creation(session, trigger_id=trigger_id)
     return row
 
 
@@ -724,13 +724,19 @@ def _defer_audit(session: AsyncSession, action: str, *, trigger_id: UUID, count:
     session.info.setdefault(_DEFERRED_AUDITS_KEY, []).append((action, trigger_id, count, result))
 
 
-async def _audit_subscription_creation(session: AsyncSession, *, trigger_id: UUID) -> None:
+async def audit_subscription_creation(session: AsyncSession, *, trigger_id: UUID) -> None:
     """Keep best-effort creation evidence inside the subscription transaction."""
     settings = get_settings_service().auth_settings
     if not settings.AUTHZ_AUDIT_ENABLED:
         return
     if settings.AUTHZ_AUDIT_DURABLE:
-        await _audit_subscription(AUDIT_SUBSCRIPTION_CREATE, trigger_id=trigger_id, count=1, session=session)
+        from langflow.services.authorization.audit import AuditPersistenceError
+
+        try:
+            await _audit_subscription(AUDIT_SUBSCRIPTION_CREATE, trigger_id=trigger_id, count=1, session=session)
+            await session.flush()
+        except Exception:  # noqa: BLE001 - audit storage errors can contain credentials
+            raise AuditPersistenceError from None
         return
     try:
         # An independent writer could commit a create audit after this transaction

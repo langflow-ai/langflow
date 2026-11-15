@@ -17,6 +17,7 @@ from pydantic import ValidationError
 from sqlmodel import select
 
 from langflow.api.utils import (
+    EMPTY_FILE_DETAIL,
     CurrentActiveUser,
     DbSession,
     build_content_disposition,
@@ -138,7 +139,7 @@ async def upload_project_flows(
     contents = await file.read()
 
     if not contents:
-        raise HTTPException(status_code=400, detail="The uploaded file is empty")
+        raise HTTPException(status_code=400, detail=EMPTY_FILE_DETAIL)
 
     # Detect ZIP files and extract flow data
     if zipfile.is_zipfile(io.BytesIO(contents)):

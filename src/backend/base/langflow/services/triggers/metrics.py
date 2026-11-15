@@ -73,7 +73,7 @@ async def query_trigger_metrics(session, *, now: datetime, window_seconds: float
     # it never groups all retained job events just to find a recent first start.
     first_started = (
         select(func.min(JobEvent.created_at))
-        .where(JobEvent.job_id == TriggerEvent.job_id, JobEvent.event_type == "run_started")
+        .where(JobEvent.job_id == TriggerEvent.job_id, col(JobEvent.event_type).in_(("build_start", "RUN_STARTED")))
         .correlate(TriggerEvent)
         .scalar_subquery()
     )

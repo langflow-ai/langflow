@@ -59,14 +59,10 @@ def get_auto_login_superuser_password(auth_settings) -> str:
 
 
 async def _get_superuser_by_username(session: AsyncSession, username: str):
-    from langflow.services.database.models.user.model import User
+    from langflow.services.database.models.user.crud import get_user_by_username_case_insensitive
 
-    stmt = select(User).where(
-        User.username == username,
-        User.is_superuser == True,  # noqa: E712
-    )
-    result = await session.exec(stmt)
-    return result.first()
+    user = await get_user_by_username_case_insensitive(session, username)
+    return user if user is not None and user.is_superuser else None
 
 
 async def _rotate_legacy_default_superuser_password(session: AsyncSession, user, replacement_password: str) -> bool:
@@ -102,6 +98,11 @@ async def get_or_create_super_user(
 
     auth = get_auth_service()
     if user and user.is_superuser:
+        if is_default and user.retired_at is not None:
+            user.is_active = True
+            user.retired_at = None
+            session.add(user)
+            await session.flush()
         if rotate_legacy_default_password:
             await _rotate_legacy_default_superuser_password(session, user, password)
         if not is_default and not auth.verify_password(password, user.password):
@@ -179,6 +180,9 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
                     is_default=True,
                     rotate_legacy_default_password=True,
                 )
+                existing_superuser = super_user or await _get_superuser_by_username(session, username)
+                if existing_superuser is not None:
+                    settings_service.auth_settings.SUPERUSER = existing_superuser.username
                 if super_user:  # Only initialize if user was created
                     from langflow.initial_setup.setup import get_or_create_default_folder
                     from langflow.services.deps import get_variable_service
@@ -195,7 +199,6 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
                     _ = await get_or_create_default_folder(session, super_user.id)
                     await logger.adebug("Auto-login superuser initialized successfully")
                     return SetupSuperuserResult.AUTO_LOGIN_INITIALIZED
-                existing_superuser = await _get_superuser_by_username(session, username)
                 if existing_superuser is None:
                     msg = "AUTO_LOGIN is enabled but the configured bootstrap user is not a superuser."
                     await logger.aerror(msg)
@@ -209,15 +212,16 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
                 "(another worker may hold it, or the lock file may be stale). "
                 "Verifying whether the default superuser exists.",
             )
-            exists = (await _get_superuser_by_username(session, username)) is not None
-            if not exists:
+            existing_superuser = await _get_superuser_by_username(session, username)
+            if existing_superuser is None or not existing_superuser.is_active:
                 msg = (
                     "AUTO_LOGIN is enabled but the default superuser was not initialized: "
                     "could not acquire the initialization lock within the timeout and no matching "
-                    "superuser exists in the database. Retry startup or create a superuser manually."
+                    "active superuser exists in the database. Retry startup or create a superuser manually."
                 )
                 await logger.aerror(msg)
                 raise RuntimeError(msg) from exc
+            settings_service.auth_settings.SUPERUSER = existing_superuser.username
             return SetupSuperuserResult.AUTO_LOGIN_LOCK_TIMEOUT_SUPERUSER_PRESENT
         finally:
             settings_service.auth_settings.reset_credentials()
@@ -255,6 +259,9 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
             is_default=is_default,
             rotate_legacy_default_password=True,
         )
+        configured_superuser = user or await _get_superuser_by_username(session, username)
+        if configured_superuser is not None:
+            settings_service.auth_settings.SUPERUSER = configured_superuser.username
         if user is not None:
             await logger.adebug("Superuser created successfully.")
             outcome = SetupSuperuserResult.SUPERUSER_CREATED
@@ -417,7 +424,7 @@ async def migrate_orphaned_mcp_servers_config(
 async def _first_table_owned_by(session: AsyncSession, user_id) -> str | None:
     """The first table holding a row for this user, across every table that references ``user.id``.
 
-    Runs at every startup and shutdown, so it stops at the first hit instead of counting.
+    Runs at every startup, so it stops at the first hit instead of counting.
     """
     from sqlmodel import SQLModel
 
@@ -454,17 +461,18 @@ async def teardown_superuser(settings_service: SettingsService, session: AsyncSe
 
     A retired account is left alone on later restarts, so an admin who reactivates it or sets
     its password with ``PATCH /api/v1/users/<id>`` is not undone. An account that has signed in
-    (``last_login_at`` set) is left alone.
+    (``last_login_at`` set) is left alone unless the configured superuser reclaims a retired account.
     """
     if settings_service.auth_settings.AUTO_LOGIN:
         return
     try:
-        from langflow.services.database.models.user.model import User
-
-        user = (await session.exec(select(User).where(User.username == DEFAULT_SUPERUSER))).first()
-        if not user or user.is_superuser is not True or user.last_login_at:
+        user = await _get_superuser_by_username(session, DEFAULT_SUPERUSER)
+        if user is None:
             return
-        claimed = settings_service.auth_settings.SUPERUSER == DEFAULT_SUPERUSER
+        username = settings_service.auth_settings.SUPERUSER or DEFAULT_SUPERUSER
+        claimed = username.lower() == DEFAULT_SUPERUSER.lower()
+        if user.last_login_at and not (claimed and user.retired_at):
+            return
         if user.retired_at and not claimed:
             return
 
@@ -476,9 +484,7 @@ async def teardown_superuser(settings_service: SettingsService, session: AsyncSe
 
         auth = get_auth_service()
         if claimed:
-            # The operator asked for this account. A random password here would lock out the
-            # only superuser. The password is scrubbed from settings after startup, so at
-            # shutdown there is nothing to set and the account is left as startup made it.
+            # The configured password restores access to this account and its existing work.
             password = _secret_value(settings_service.auth_settings.SUPERUSER_PASSWORD)
             if password and password != LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value():
                 user.password = auth.get_password_hash(password)
@@ -514,10 +520,6 @@ async def teardown_services() -> None:
     from lfx.services.manager import get_service_manager
 
     service_manager = get_service_manager()
-    database_service = service_manager.services.get(ServiceType.DATABASE_SERVICE)
-    if database_service is not None and getattr(database_service, "database_initialized", False):
-        async with session_scope() as session:
-            await teardown_superuser(get_settings_service(), session)
     await service_manager.teardown()
 
 

@@ -1039,6 +1039,28 @@ def _is_valid_uuid(val):
     return str(uuid_obj) == val
 
 
+async def _get_flow_import_superuser(session: AsyncSession):
+    from langflow.services.database.models.user.crud import get_user_by_username_case_insensitive
+    from langflow.services.database.models.user.model import User
+
+    username = get_settings_service().auth_settings.SUPERUSER
+    user = await get_user_by_username_case_insensitive(session, username)
+    if user is not None and user.is_superuser and user.is_active:
+        return user
+
+    stmt = (
+        select(User)
+        .where(User.is_superuser == True, User.is_active == True)  # noqa: E712
+        .order_by(col(User.username), col(User.id))
+        .limit(1)
+    )
+    user = (await session.exec(stmt)).first()
+    if user is None:
+        msg = "No active superuser found in the database"
+        raise NoResultFound(msg)
+    return user
+
+
 async def load_flows_from_directory() -> None:
     """On langflow startup, this loads all flows from the directory specified in the settings.
 
@@ -1050,15 +1072,7 @@ async def load_flows_from_directory() -> None:
         return
 
     async with session_scope() as session:
-        # Find superuser by role instead of username to avoid issues with credential reset
-        from langflow.services.database.models.user.model import User
-
-        stmt = select(User).where(User.is_superuser == True)  # noqa: E712
-        result = await session.exec(stmt)
-        user = result.first()
-        if user is None:
-            msg = "No superuser found in the database"
-            raise NoResultFound(msg)
+        user = await _get_flow_import_superuser(session)
 
         # Ensure that the default folder exists for this user
         _ = await get_or_create_default_folder(session, user.id)
@@ -1112,15 +1126,7 @@ async def load_bundles_from_urls() -> tuple[list[TemporaryDirectory], list[str]]
         return [], []
 
     async with session_scope() as session:
-        # Find superuser by role instead of username to avoid issues with credential reset
-        from langflow.services.database.models.user.model import User
-
-        stmt = select(User).where(User.is_superuser == True)  # noqa: E712
-        result = await session.exec(stmt)
-        user = result.first()
-        if user is None:
-            msg = "No superuser found in the database"
-            raise NoResultFound(msg)
+        user = await _get_flow_import_superuser(session)
         user_id = user.id
 
         for url in bundle_urls:
@@ -1489,7 +1495,7 @@ async def initialize_auto_login_default_superuser() -> None:
     # provided one; otherwise generate an unknown password for the default user.
     from lfx.services.settings.constants import DEFAULT_SUPERUSER
 
-    from langflow.services.database.models.user.crud import get_user_by_username
+    from langflow.services.database.models.user.crud import get_user_by_username_case_insensitive
     from langflow.services.utils import get_auto_login_superuser_password, get_or_create_super_user
 
     username = settings_service.auth_settings.SUPERUSER or DEFAULT_SUPERUSER
@@ -1504,10 +1510,11 @@ async def initialize_auto_login_default_superuser() -> None:
             rotate_legacy_default_password=True,
         )
         if super_user is None:
-            super_user = await get_user_by_username(async_session, username)
+            super_user = await get_user_by_username_case_insensitive(async_session, username)
         if super_user is None or not super_user.is_superuser:
             msg = "Auto-login superuser was not initialized."
             raise RuntimeError(msg)
+        settings_service.auth_settings.SUPERUSER = super_user.username
         await get_variable_service().initialize_user_variables(super_user.id, async_session)
         # Initialize agentic variables if agentic experience is enabled
         from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_user_variables

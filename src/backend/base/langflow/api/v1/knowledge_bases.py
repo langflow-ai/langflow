@@ -32,7 +32,7 @@ from lfx.services.model_provider_policy import (
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
 
-from langflow.api.utils import CurrentActiveUser, ingestion_run_service, knowledge_base_service
+from langflow.api.utils import EMPTY_FILE_DETAIL, CurrentActiveUser, ingestion_run_service, knowledge_base_service
 from langflow.api.utils.execution_errors import integration_http_error
 from langflow.api.utils.kb_helpers import (
     KBIngestionHelper,
@@ -1059,8 +1059,11 @@ async def ingest_files_to_knowledge_base(
 
         files_data = []
 
+        # The loop only reads bytes: every file is checked before the KB, job or task is touched.
         for uploaded_file in files:
             file_size = uploaded_file.size
+            if file_size == 0:
+                raise HTTPException(status_code=400, detail=EMPTY_FILE_DETAIL)
             if file_size > max_file_size_upload * 1024 * 1024:
                 raise HTTPException(
                     status_code=413,
@@ -2120,8 +2123,11 @@ async def cancel_ingestion(
             raise HTTPException(status_code=400, detail=f"Cannot cancel job with status '{job_status}'")
 
         revoked = await task_service.revoke_task(job.job_id)
-        # Update status immediately so background task can see it
-        await job_service.update_job_status(job.job_id, JobStatus.CANCELLED)
+        # Update status immediately so background task can see it. Stamp the
+        # finish time with it: retention dates an unstamped terminal row from
+        # its creation, which deletes a long-running job the moment it is
+        # cancelled instead of after the configured window.
+        await job_service.update_job_status(job.job_id, JobStatus.CANCELLED, finished_timestamp=True)
 
         # Clean up any partially ingested chunks from this job. Forward the KB's
         # configured backend and its owner's id: remote backends name their

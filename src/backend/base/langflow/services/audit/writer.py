@@ -13,6 +13,8 @@ deletion is the retention sweep.
 from __future__ import annotations
 
 import asyncio
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -36,7 +38,7 @@ from langflow.services.database.models.audit_event.model import AuditEvent
 from langflow.services.deps import get_settings_service, session_scope
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Iterator, Mapping
     from uuid import UUID
 
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -50,6 +52,34 @@ INDEPENDENT_WRITE_QUEUE_TIMEOUT_SECONDS = 5.0
 
 _write_slots: asyncio.Semaphore | None = None
 _write_slots_loop: asyncio.AbstractEventLoop | None = None
+_event_batch: ContextVar[tuple[AsyncSession, list[AuditEvent]] | None] = ContextVar(
+    "langflow_audit_event_batch", default=None
+)
+
+
+@contextmanager
+def batch_audit_events(session: AsyncSession) -> Iterator[None]:
+    """Collect one replacement attempt's events until its mutation is ready to commit.
+
+    Buffered rows stay outside the session so intermediate queries cannot
+    autoflush one event at a time. The caller flushes before committing.
+    An aborted attempt discards its buffer when this context exits.
+    """
+    token = _event_batch.set((session, []))
+    try:
+        yield
+    finally:
+        _event_batch.reset(token)
+
+
+async def flush_audit_event_batch(session: AsyncSession) -> None:
+    """Flush the current attempt's events together in the mutation transaction."""
+    batch = _event_batch.get()
+    if batch is None or batch[0] is not session or not batch[1]:
+        return
+    session.add_all(batch[1])
+    await session.flush()
+    batch[1].clear()
 
 
 @dataclass(frozen=True)
@@ -115,6 +145,9 @@ async def stage_audit_event(session: AsyncSession, draft: AuditEventDraft) -> Au
     started. Flushing after the mutation already holds the write lock, so it never
     becomes the read-to-write upgrade SQLite refuses under concurrency.
 
+    Inside ``batch_audit_events``, buffer the event instead. The replacement
+    flushes that batch after its content and receipt writes, before committing.
+
     Returns ``None`` when auditing is off, the action is excluded, or there is no
     database, as under ``lfx serve``. An excluded action does not flush either, so the
     caller's transaction behaves exactly as it would with auditing off.
@@ -122,6 +155,10 @@ async def stage_audit_event(session: AsyncSession, draft: AuditEventDraft) -> Au
     if not is_audit_enabled() or not is_action_audited(draft.action) or isinstance(session, NoopSession):
         return None
     event = build_audit_event(draft)
+    batch = _event_batch.get()
+    if batch is not None and batch[0] is session:
+        batch[1].append(event)
+        return event
     session.add(event)
     await session.flush()
     return event

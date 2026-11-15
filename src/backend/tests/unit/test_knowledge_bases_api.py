@@ -1987,6 +1987,41 @@ class TestKnowledgeBaseAPI:
         assert response.status_code == 422, response.text
         assert "chunk size" in response.json()["detail"].lower()
 
+    @pytest.mark.parametrize(
+        "uploads",
+        [
+            pytest.param([("empty.txt", b"")], id="single_empty_file"),
+            pytest.param([("valid.txt", b"content"), ("empty.txt", b"")], id="valid_then_empty_file"),
+        ],
+    )
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    @patch("langflow.api.v1.knowledge_bases.get_task_service")
+    async def test_should_reject_with_400_when_any_ingested_file_is_empty(
+        self, mock_task, mock_root, uploads, client: AsyncClient, logged_in_headers, tmp_path, seed_kb
+    ):
+        """An empty file would ingest as zero chunks with no error, so the whole batch is refused before any work."""
+        from langflow.api.utils import EMPTY_FILE_DETAIL
+        from langflow.services.database.models.jobs.model import Job
+        from langflow.services.deps import session_scope
+        from sqlmodel import select
+
+        mock_root.return_value = tmp_path
+        record = await seed_kb("Empty-File-KB")
+        mock_task.return_value.fire_and_forget_task = AsyncMock(return_value=None)
+
+        response = await client.post(
+            "api/v1/knowledge_bases/Empty-File-KB/ingest",
+            headers=logged_in_headers,
+            files=[("files", (name, io.BytesIO(content), "text/plain")) for name, content in uploads],
+        )
+
+        assert response.status_code == 400, response.text
+        assert response.json()["detail"] == EMPTY_FILE_DETAIL
+        async with session_scope() as session:
+            jobs = (await session.exec(select(Job).where(Job.asset_id == record.id))).all()
+        assert jobs == [], "A rejected batch must not create an ingestion job"
+        mock_task.return_value.fire_and_forget_task.assert_not_awaited()
+
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     @patch("langflow.api.v1.knowledge_bases.backend_for_record")
     async def test_get_chunks_pagination_and_search(
@@ -2639,6 +2674,7 @@ class TestCancelIngestion:
     ):
         from unittest.mock import patch as mock_patch
 
+        from langflow.services.database.models.jobs.model import JobStatus
         from langflow.services.deps import get_service
         from langflow.services.schema import ServiceType
 
@@ -2683,7 +2719,12 @@ class TestCancelIngestion:
             data = response.json()
             assert "cancelled successfully" in data["message"]
             mock_task_service_inst.revoke_task.assert_called_once_with(job_id)
-            mock_job_service_inst.update_job_status.assert_called_once()
+            # The finish time is stamped with the status: retention dates an
+            # unstamped terminal row from its creation, so a long-running
+            # ingestion would be purged on the next sweep once cancelled.
+            mock_job_service_inst.update_job_status.assert_called_once_with(
+                job_id, JobStatus.CANCELLED, finished_timestamp=True
+            )
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     @patch("langflow.api.v1.knowledge_bases.get_job_service")

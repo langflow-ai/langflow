@@ -209,24 +209,73 @@ async def test_save_enable_baseline_change_replay_dispatch_and_local_cleanup(
     assert len(salesforce.requests) == calls
 
 
-async def test_lagging_baseline_recovers_and_delivers_a_change_once(salesforce, trigger_owner, owned_flow):
+@pytest.mark.parametrize("resume", [False, True])
+async def test_lagging_baseline_skips_earlier_changes_and_delivers_new_changes_once(
+    monkeypatch, salesforce, trigger_owner, owned_flow, resume
+):
+    from langflow.services.triggers.providers.salesforce import collector
+
+    now = datetime(2026, 11, 10, 23, 5, 46, tzinfo=timezone.utc)
+    clock = SimpleNamespace(now=now)
+    monkeypatch.setattr(collector, "datetime", SimpleNamespace(now=lambda _zone: clock.now))
     await connection(trigger_owner)
     trigger = await reconcile(owned_flow, trigger_owner)
     async with session_scope() as session:
         row = await session.get(Trigger, trigger.id)
         await TriggerService().enable(session, row=row)
-    salesforce.covered = iso(datetime.now(timezone.utc).replace(second=0, microsecond=0) - timedelta(minutes=3))
+    if resume:
+        assert await source_runtime.sync_source(trigger.id) == 0
+        async with session_scope() as session:
+            row = await session.get(Trigger, trigger.id)
+            await TriggerService().disable(session, row=row)
+        salesforce.changed_at = now + timedelta(minutes=1)
+        clock.now = now + timedelta(minutes=4)
+        async with session_scope() as session:
+            row = await session.get(Trigger, trigger.id)
+            await TriggerService().enable(session, row=row)
+    else:
+        salesforce.changed_at = now - timedelta(hours=7)
+    salesforce.version = iso(salesforce.changed_at)
+    baseline_at = clock.now
+    baseline_minute = baseline_at.replace(second=0, microsecond=0)
+    salesforce.covered = iso(now - timedelta(hours=11))
+    assert await source_runtime.sync_source(trigger.id) == 0
+
+    clock.now += timedelta(minutes=1)
+    assert await source_runtime.sync_source(trigger.id) == 0
+    salesforce.changed_at = baseline_at - timedelta(seconds=1)
+    salesforce.version = iso(salesforce.changed_at)
+    salesforce.covered = iso(now - timedelta(hours=14))
     assert await source_runtime.sync_source(trigger.id) == 0
     async with session_scope() as session:
         row = await session.get(Trigger, trigger.id)
-        assert row.provider_state == {"latest_date_covered": salesforce.covered, "baseline_complete": True}
-    salesforce.covered = None
-    salesforce.version = "2026-10-22T12:01:00.000Z"
-    assert await source_runtime.sync_source(trigger.id) == 1
+        assert row.provider_state == {
+            "latest_date_covered": iso(baseline_minute),
+            "baseline_complete": True,
+            "baseline_at": iso(baseline_at),
+        }
+
+    # A listener restart keeps the boundary and recovers changes made during the outage.
+    changed_at = clock.now + timedelta(minutes=1)
+    clock.now += timedelta(minutes=8)
+    for _ in range(2):
+        salesforce.changed_at = changed_at
+        salesforce.version = iso(changed_at)
+        assert await source_runtime.sync_source(trigger.id) == 1
+        assert await source_runtime.sync_source(trigger.id) == 0
+        changed_at = clock.now + timedelta(minutes=1)
+        clock.now += timedelta(minutes=2)
+    salesforce.covered = iso(clock.now - timedelta(minutes=1))
     assert await source_runtime.sync_source(trigger.id) == 0
     async with session_scope() as session:
         events = (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == trigger.id))).all()
-        assert len(events) == 1
+        assert len(events) == 2
+        assert all(timestamp(event.payload["version"]) > baseline_at for event in events)
+    replication_requests = [request for request in salesforce.requests if request.url.path.endswith("updated/")]
+    assert all(
+        timestamp(request.url.params["start"]) >= baseline_minute
+        for request in replication_requests[2 if resume else 1 :]
+    )
 
 
 async def test_old_replication_watermark_delivers_current_creates_and_updates_once(
@@ -245,6 +294,11 @@ async def test_old_replication_watermark_delivers_current_creates_and_updates_on
         row = await session.get(Trigger, trigger.id)
         await TriggerService().enable(session, row=row)
     assert await source_runtime.sync_source(trigger.id) == 0
+    baseline_cursor = {
+        "latest_date_covered": iso(now),
+        "baseline_complete": True,
+        "baseline_at": iso(now),
+    }
 
     for minute in (2, 4):
         clock.now = now + timedelta(minutes=minute)
@@ -254,12 +308,12 @@ async def test_old_replication_watermark_delivers_current_creates_and_updates_on
         assert await source_runtime.sync_source(trigger.id) == 0
         async with session_scope() as session:
             row = await session.get(Trigger, trigger.id)
-            assert row.provider_state == {"latest_date_covered": salesforce.covered, "baseline_complete": True}
+            assert row.provider_state == baseline_cursor
     async with session_scope() as session:
         events = (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == trigger.id))).all()
         assert len(events) == 2
     replication_requests = [request for request in salesforce.requests if request.url.path.endswith("updated/")]
-    assert replication_requests[-1].url.params["start"] == salesforce.covered
+    assert replication_requests[-1].url.params["start"] == iso(now)
     assert replication_requests[-1].url.params["end"] == iso(clock.now)
 
 
