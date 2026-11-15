@@ -14,7 +14,7 @@ from lfx.services.settings.constants import (
     LEGACY_DEFAULT_SUPERUSER_PASSWORD,
 )
 from lfx.services.settings.feature_flags import FEATURE_FLAGS
-from sqlalchemy import delete
+from sqlalchemy import delete, func
 from sqlalchemy import exc as sqlalchemy_exc
 from sqlmodel import col, select
 
@@ -551,20 +551,26 @@ def initialize_session_service() -> None:
 async def clean_transactions(settings_service: SettingsService, session: AsyncSession) -> None:
     """Clean up old transactions from the database.
 
-    This function deletes transactions that exceed the maximum number to keep (configured in settings).
-    It orders transactions by timestamp descending and removes the oldest ones beyond the limit.
+    Keep the configured number of newest transactions per flow, matching runtime retention.
+    Transaction IDs break timestamp ties deterministically.
 
     Args:
         settings_service: The settings service containing configuration like max_transactions_to_keep
         session: The database session to use for the deletion
     """
     try:
-        # Delete transactions using bulk delete
+        ranked = select(
+            TransactionTable.id,
+            func.row_number()
+            .over(
+                partition_by=TransactionTable.flow_id,
+                order_by=(col(TransactionTable.timestamp).desc(), col(TransactionTable.id).desc()),
+            )
+            .label("position"),
+        ).subquery()
         delete_stmt = delete(TransactionTable).where(
             col(TransactionTable.id).in_(
-                select(TransactionTable.id)
-                .order_by(col(TransactionTable.timestamp).desc())
-                .offset(settings_service.settings.max_transactions_to_keep)
+                select(ranked.c.id).where(ranked.c.position > settings_service.settings.max_transactions_to_keep)
             )
         )
 
@@ -622,7 +628,8 @@ async def clean_vertex_builds(settings_service: SettingsService, session: AsyncS
     """Clean up old vertex builds from the database.
 
     This function deletes vertex builds that exceed the maximum number to keep (configured in settings).
-    It orders vertex builds by timestamp descending and removes the oldest ones beyond the limit.
+    It orders builds by timestamp and unique build ID, preserving the newest records
+    even when the same component ID appears in many builds.
 
     Args:
         settings_service: The settings service containing configuration like max_vertex_builds_to_keep
@@ -631,9 +638,9 @@ async def clean_vertex_builds(settings_service: SettingsService, session: AsyncS
     try:
         # Delete vertex builds using bulk delete
         delete_stmt = delete(VertexBuildTable).where(
-            col(VertexBuildTable.id).in_(
-                select(VertexBuildTable.id)
-                .order_by(col(VertexBuildTable.timestamp).desc())
+            col(VertexBuildTable.build_id).in_(
+                select(VertexBuildTable.build_id)
+                .order_by(col(VertexBuildTable.timestamp).desc(), col(VertexBuildTable.build_id).desc())
                 .offset(settings_service.settings.max_vertex_builds_to_keep)
             )
         )
@@ -652,13 +659,6 @@ def register_all_service_factories() -> None:
     from lfx.services.schema import ServiceType
 
     service_manager = get_service_manager()
-    from lfx.services.executor import factory as executor_factory
-    from lfx.services.integration_policy.service import IntegrationPolicyService
-    from lfx.services.mcp_composer import factory as mcp_composer_factory
-    from lfx.services.model_provider_policy.service import ModelProviderPolicyService
-    from lfx.services.policy_bundle.service import PolicyBundleService
-    from lfx.services.settings import factory as settings_factory
-
     from langflow.services.auth import factory as auth_factory
     from langflow.services.auth.service import AuthService
     from langflow.services.authorization import factory as authorization_factory
@@ -683,6 +683,12 @@ def register_all_service_factories() -> None:
     from langflow.services.tracing import factory as tracing_factory
     from langflow.services.transaction import factory as transaction_factory
     from langflow.services.variable import factory as variable_factory
+    from lfx.services.executor import factory as executor_factory
+    from lfx.services.integration_policy.service import IntegrationPolicyService
+    from lfx.services.mcp_composer import factory as mcp_composer_factory
+    from lfx.services.model_provider_policy.service import ModelProviderPolicyService
+    from lfx.services.policy_bundle.service import PolicyBundleService
+    from lfx.services.settings import factory as settings_factory
 
     # Register all factories
     service_manager.register_factory(settings_factory.SettingsServiceFactory())
