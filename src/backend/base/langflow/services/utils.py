@@ -659,6 +659,13 @@ def register_all_service_factories() -> None:
     from lfx.services.schema import ServiceType
 
     service_manager = get_service_manager()
+    from lfx.services.executor import factory as executor_factory
+    from lfx.services.integration_policy.service import IntegrationPolicyService
+    from lfx.services.mcp_composer import factory as mcp_composer_factory
+    from lfx.services.model_provider_policy.service import ModelProviderPolicyService
+    from lfx.services.policy_bundle.service import PolicyBundleService
+    from lfx.services.settings import factory as settings_factory
+
     from langflow.services.auth import factory as auth_factory
     from langflow.services.auth.service import AuthService
     from langflow.services.authorization import factory as authorization_factory
@@ -683,12 +690,6 @@ def register_all_service_factories() -> None:
     from langflow.services.tracing import factory as tracing_factory
     from langflow.services.transaction import factory as transaction_factory
     from langflow.services.variable import factory as variable_factory
-    from lfx.services.executor import factory as executor_factory
-    from lfx.services.integration_policy.service import IntegrationPolicyService
-    from lfx.services.mcp_composer import factory as mcp_composer_factory
-    from lfx.services.model_provider_policy.service import ModelProviderPolicyService
-    from lfx.services.policy_bundle.service import PolicyBundleService
-    from lfx.services.settings import factory as settings_factory
 
     # Register all factories
     service_manager.register_factory(settings_factory.SettingsServiceFactory())
