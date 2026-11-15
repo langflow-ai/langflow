@@ -1496,26 +1496,31 @@ class TestKnowledgeBaseAPI:
                         },
                     )
                 )
-                rollback_queued = asyncio.create_task(queued.wait())
-                try:
-                    # Auth, database access, and async logging precede rollback. Wait for the
-                    # queue event rather than imposing a request-speed deadline on this test.
-                    done, _ = await asyncio.wait({rollback_queued, request}, return_when=asyncio.FIRST_COMPLETED)
+                queued_waiter = asyncio.create_task(queued.wait())
+
+                async def wait_for_queued_cleanup():
+                    done, _ = await asyncio.wait((queued_waiter, request), return_when=asyncio.FIRST_COMPLETED)
                     if request in done:
                         response = await request
-                        pytest.fail(
-                            f"Request completed before rollback was queued: {response.status_code} {response.text}"
-                        )
+                        pytest.fail(f"Request finished before queuing rollback: {response.status_code} {response.text}")
+                    await queued_waiter
+
+                try:
+                    # Authentication and database admission precede rollback. Their
+                    # latency is unrelated to the queued-cleanup cancellation contract.
+                    await asyncio.wait_for(wait_for_queued_cleanup(), timeout=30)
                     assert kb_path.exists()
+                    assert len(cleanup_futures) == 1
+                    assert not cleanup_futures[0].done()
                     request.cancel()
                     with pytest.raises(asyncio.CancelledError):
-                        await request
+                        await asyncio.wait_for(request, timeout=30)
                 finally:
                     release_worker.set()
-                    rollback_queued.cancel()
+                    queued_waiter.cancel()
                     request.cancel()
-                    await asyncio.gather(rollback_queued, request, return_exceptions=True)
-                await asyncio.wait_for(asyncio.wrap_future(cleanup_futures[0]), timeout=5)
+                    await asyncio.wait_for(asyncio.gather(queued_waiter, request, return_exceptions=True), timeout=30)
+                await asyncio.wait_for(asyncio.wrap_future(cleanup_futures[0]), timeout=30)
 
         assert not kb_path.exists()
 

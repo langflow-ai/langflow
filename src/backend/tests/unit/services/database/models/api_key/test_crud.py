@@ -769,7 +769,8 @@ async def test_api_key_bookkeeping_commits_only_its_owned_session(
 
     assert persisted_caller_user is None
     assert persisted_api_key is not None
-    assert persisted_api_key.api_key_hash == hash_api_key(plaintext)
+    expected_hash = hash_api_key(plaintext) if hashed or not disable_tracking else None
+    assert persisted_api_key.api_key_hash == expected_hash
     assert persisted_api_key.total_uses == expected_uses
     assert (persisted_api_key.last_used_at is not None) is (expected_uses == 1)
 

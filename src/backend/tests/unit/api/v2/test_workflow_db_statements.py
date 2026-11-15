@@ -20,6 +20,8 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import pytest
+from langflow.services.database.models.api_key.crud import hash_api_key
+from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_db_service, get_queue_service, get_task_service
 from lfx.services.deps import session_scope
@@ -97,7 +99,7 @@ async def _await_run_tasks(before: set[asyncio.Task]) -> None:
 
 
 @pytest.fixture
-def serving_settings(client, monkeypatch):  # noqa: ARG001
+async def serving_settings(client, monkeypatch, created_api_key):  # noqa: ARG001
     """Match the serving deployment the traces came from.
 
     Transaction and vertex-build storage and API-key usage tracking are off
@@ -111,6 +113,12 @@ def serving_settings(client, monkeypatch):  # noqa: ARG001
     monkeypatch.setattr(settings, "disable_track_apikey_usage", True)
     # Preserve the trusted deployment's original code policy and measured execution path.
     monkeypatch.setattr(settings, "custom_component_admin_only", False)
+    # Production keys are indexed at creation. Disabled tracking cannot backfill
+    # the legacy test fixture during warmup, so seed that index before measuring.
+    async with session_scope() as session:
+        api_key = await session.get(ApiKey, created_api_key.id)
+        assert api_key is not None
+        api_key.api_key_hash = hash_api_key(created_api_key.api_key)
 
 
 _SIMPLE_CHAT = Path(__file__).parents[5] / "lfx" / "tests" / "data" / "simple_chat_no_llm.json"
