@@ -698,7 +698,10 @@ async def read_project(
         # and widening the lookup would expose foreign projects without any
         # policy check.
         share_aware = await authz.supports_cross_user_fetch() and await authz.is_enabled()
-        stmt = select(Folder).options(selectinload(Folder.flows)).where(Folder.id == project_id)
+        is_paginated = page is not None and size is not None
+        stmt = select(Folder).where(Folder.id == project_id)
+        if not is_paginated:
+            stmt = stmt.options(selectinload(Folder.flows))
         if not share_aware:
             stmt = stmt.where(Folder.user_id == current_user.id)
         project = (await session.exec(stmt)).first()
@@ -746,7 +749,7 @@ async def read_project(
         )
 
         # Check if pagination is explicitly requested by the user (both page and size provided)
-        if page is not None and size is not None:
+        if is_paginated:
             stmt = select(Flow).where(Flow.folder_id == project_id)
             if not treat_as_shared:
                 stmt = stmt.where(Flow.user_id == current_user.id)
