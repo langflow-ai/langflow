@@ -134,7 +134,12 @@ def _unbuild_needed_dropped_producers(graph: Graph) -> None:
 
 
 def resume_graph_with_decision(
-    checkpoint: GraphCheckpoint, store: CheckpointStore, request_id: str | None, decision: dict
+    checkpoint: GraphCheckpoint,
+    store: CheckpointStore,
+    request_id: str | None,
+    decision: dict,
+    *,
+    snapshot_history_limit: int | None = None,
 ) -> Graph:
     """Restore a paused graph and inject a HITL decision for ``request_id``.
 
@@ -152,7 +157,9 @@ def resume_graph_with_decision(
         msg = "Cannot resume: pause request is missing request_id"
         raise RuntimeError(msg)
 
-    graph = Graph.resume_from_checkpoint(checkpoint, checkpoint_store=store)
+    graph = Graph.resume_from_checkpoint(
+        checkpoint, checkpoint_store=store, snapshot_history_limit=snapshot_history_limit
+    )
     graph.checkpointing_enabled = True
     graph.checkpoint_store = store
     graph.human_input_decisions = {
@@ -169,13 +176,19 @@ def resume_graph_with_decision(
     return graph
 
 
-def restore_graph_from_checkpoint(checkpoint: GraphCheckpoint, *, store: CheckpointStore | None = None) -> Graph:
+def restore_graph_from_checkpoint(
+    checkpoint: GraphCheckpoint,
+    *,
+    store: CheckpointStore | None = None,
+    snapshot_history_limit: int | None = None,
+) -> Graph:
     from lfx.graph.graph.base import Graph
 
     graph = Graph.from_payload(
         checkpoint.flow_payload,
         flow_id=checkpoint.flow_id,
         user_id=checkpoint.user_id,
+        snapshot_history_limit=snapshot_history_limit,
     )
     graph.source_flow_id = checkpoint.source_flow_id
     # Retain only provenance for the restored identity; the runner still checks

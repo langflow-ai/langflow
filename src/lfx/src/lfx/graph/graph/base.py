@@ -140,6 +140,7 @@ class Graph:
         context: dict[str, Any] | None = None,
         *,
         instantiate_components: bool = True,
+        snapshot_history_limit: int | None = None,
         authorized_legacy_flow_ids: set[str] | frozenset[str] | None = None,
     ) -> None:
         """Initializes a new Graph instance.
@@ -149,6 +150,7 @@ class Graph:
         otherwise a TypeError is raised. Internal data structures for vertices, edges, state management,
         run management, and tracing are set up during initialization.
         """
+        self._snapshot_history_limit = self._validate_snapshot_history_limit(snapshot_history_limit)
         if log_config:
             configure(**log_config)
 
@@ -890,10 +892,18 @@ class Graph:
         self.pause_info = {"reason": reason, "data": data or {}}
 
     @classmethod
-    def resume_from_checkpoint(cls, checkpoint: GraphCheckpoint, *, checkpoint_store: CheckpointStore | None = None):
+    def resume_from_checkpoint(
+        cls,
+        checkpoint: GraphCheckpoint,
+        *,
+        checkpoint_store: CheckpointStore | None = None,
+        snapshot_history_limit: int | None = None,
+    ):
         from lfx.graph.checkpoint.resume import restore_graph_from_checkpoint
 
-        return restore_graph_from_checkpoint(checkpoint, store=checkpoint_store)
+        return restore_graph_from_checkpoint(
+            checkpoint, store=checkpoint_store, snapshot_history_limit=snapshot_history_limit
+        )
 
     def resume_first_layer(self) -> list[str]:
         from lfx.graph.checkpoint.resume import compute_resume_layer
@@ -1677,6 +1687,7 @@ class Graph:
         # We don't need to save the state_manager because it is
         # a singleton and it is not necessary to save it
         return {
+            "_snapshot_history_limit": self._snapshot_history_limit,
             "vertices": self.vertices,
             "edges": self.edges,
             "flow_id": self.flow_id,
@@ -1730,6 +1741,7 @@ class Graph:
         if id(self) in memo:
             return memo[id(self)]
 
+        policy_kwargs = self._snapshot_history_kwargs(self.snapshot_history_limit)
         if self._start is not None and self._end is not None:
             # Deep copy start and end components
             start_copy = copy.deepcopy(self._start, memo)
@@ -1743,7 +1755,9 @@ class Graph:
                 user_id=user_id,
                 instantiate_components=instantiate_components,
                 authorized_legacy_flow_ids=self.authorized_legacy_flow_ids,
+                **policy_kwargs,
             )
+            self._verify_snapshot_history_policy(new_graph, self.snapshot_history_limit)
             if before_initialize is not None:
                 before_initialize(new_graph)
             new_graph.source_flow_id = copy.deepcopy(self.source_flow_id, memo)
@@ -1757,7 +1771,9 @@ class Graph:
                 user_id=user_id,
                 instantiate_components=instantiate_components,
                 authorized_legacy_flow_ids=self.authorized_legacy_flow_ids,
+                **policy_kwargs,
             )
+            self._verify_snapshot_history_policy(new_graph, self.snapshot_history_limit)
             # add_nodes_and_edges synchronously builds FileInput parameters, so
             # trusted public-flow provenance must exist before reconstruction.
             new_graph.source_flow_id = copy.deepcopy(self.source_flow_id, memo)
@@ -1830,6 +1846,8 @@ class Graph:
         return new_graph
 
     def __setstate__(self, state):
+        policy = self._validate_snapshot_history_limit(state.get("_snapshot_history_limit"))
+        state["_snapshot_history_limit"] = policy
         # Cache/checkpoint payloads written before lazy warm templates existed
         # must retain the historical eager-instantiation behavior.
         state.setdefault("_instantiate_components_on_initialize", True)
@@ -1850,6 +1868,8 @@ class Graph:
         else:
             state["run_manager"] = RunnableVerticesManager.from_dict(run_manager)
         self.__dict__.update(state)
+        self.__dict__.setdefault("_snapshots", [])
+        self.__dict__.setdefault("_call_order", [])
         self.vertex_map = {vertex.id: vertex for vertex in self.vertices}
         # Tracing service will be lazily initialized via property when needed
         self.set_run_id(self._run_id)
@@ -1864,6 +1884,7 @@ class Graph:
         context: dict | None = None,
         *,
         instantiate_components: bool = True,
+        snapshot_history_limit: int | None = None,
         emit_extension_events: bool = True,
         authorized_legacy_flow_ids: set[str] | frozenset[str] | None = None,
     ) -> Graph:
@@ -1878,6 +1899,8 @@ class Graph:
             instantiate_components: Whether to run component constructors while
                 parsing. Warm templates disable this and instantiate only on the
                 request-local copy with the authenticated caller identity.
+            snapshot_history_limit: None retains full automatic history; 0 disables it;
+                a positive built-in integer retains the newest N snapshots per graph.
             emit_extension_events: Whether migration reports should be published
                 to the extension event service. Background warm parsing disables
                 this because it is not scoped to an active caller.
@@ -1887,6 +1910,7 @@ class Graph:
         Returns:
             Graph: The created graph.
         """
+        Graph._validate_snapshot_history_limit(snapshot_history_limit)
         from lfx.extension.migration import migrate_flow_payload
         from lfx.services.deps import get_catalog_policy_service
         from lfx.utils.flow_validation import (
@@ -2012,7 +2036,9 @@ class Graph:
                 context=context,
                 instantiate_components=instantiate_components,
                 authorized_legacy_flow_ids=authorized_legacy_flow_ids,
+                **Graph._snapshot_history_kwargs(snapshot_history_limit),
             )
+            Graph._verify_snapshot_history_policy(graph, snapshot_history_limit)
             graph.add_nodes_and_edges(vertices, edges)
             graph.requires_extension_event_replay = bool(migration_report.any_rewritten or migration_report.errors)
         except KeyError as exc:
@@ -2336,8 +2362,42 @@ class Graph:
             }
         )
 
+    @staticmethod
+    def _validate_snapshot_history_limit(limit: int | None) -> int | None:
+        if limit is not None:
+            if type(limit) is not int:
+                msg = "snapshot_history_limit must be None or a built-in int"
+                raise TypeError(msg)
+            if limit < 0:
+                msg = "snapshot_history_limit must be nonnegative"
+                raise ValueError(msg)
+        return limit
+
+    @property
+    def snapshot_history_limit(self) -> int | None:
+        """Automatic history per Graph: None is full, 0 disables, N retains newest N."""
+        return self._snapshot_history_limit
+
+    @staticmethod
+    def _snapshot_history_kwargs(limit: int | None) -> dict[str, int]:
+        # Default construction stays compatible with subclasses' old signatures.
+        return {} if limit is None else {"snapshot_history_limit": limit}
+
+    @staticmethod
+    def _verify_snapshot_history_policy(graph: Graph, limit: int | None) -> None:
+        if limit is not None:
+            missing = object()
+            actual = getattr(graph, "_snapshot_history_limit", missing)
+            if type(actual) is not int or actual != limit or getattr(graph, "snapshot_history_limit", missing) != limit:
+                msg = "Graph subclass did not preserve snapshot_history_limit"
+                raise TypeError(msg)
+
     def _record_snapshot(self, vertex_id: str | None = None) -> None:
-        self._snapshots.append(self.get_snapshot())
+        limit = self._snapshot_history_limit
+        if limit != 0:
+            self._snapshots.append(self.get_snapshot())
+            if limit is not None and len(self._snapshots) > limit:
+                del self._snapshots[:-limit]
         if vertex_id:
             self._call_order.append(vertex_id)
 
@@ -3311,6 +3371,7 @@ class Graph:
             user_id=self.user_id,
             context=dict(self.context) if self.context else None,
             authorized_legacy_flow_ids=self.authorized_legacy_flow_ids,
+            snapshot_history_limit=self.snapshot_history_limit,
         )
 
         # Inherit parent's tracing context - subgraph is an extension of parent's execution
