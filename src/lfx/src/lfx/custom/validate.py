@@ -453,13 +453,6 @@ def _resolve_attribute(imported_module, module_name, attr_name):
     raise ImportError(msg)
 
 
-def _handle_module_attributes(imported_module, node, module_name, exec_globals):
-    """Handle importing specific attributes from a module."""
-    for alias in node.names:
-        key = alias.asname or alias.name
-        exec_globals[key] = _resolve_attribute(imported_module, module_name, alias.name)
-
-
 class _MissingModulePlaceholder:
     """Placeholder for modules unavailable on the current platform (e.g. jq on Windows).
 
@@ -639,6 +632,8 @@ def prepare_global_scope(module, *, trusted_method_returns=None, source_class_bi
     future_imports = []
     definitions = []
     early_constants = _constants_to_bind_with_guards(module)
+    binding_updates = {}
+    deleted_binding = object()
 
     for node in module.body:
         if isinstance(node, ast.ImportFrom) and node.module == "__future__":
@@ -653,6 +648,10 @@ def prepare_global_scope(module, *, trusted_method_returns=None, source_class_bi
             import_nodes.append(node)
         elif isinstance(node, ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef | ast.Assign | ast.AnnAssign):
             definitions.append(node)
+
+    def _bind_name(name, value):
+        exec_globals[name] = value
+        bindings[name] = value
 
     def _bind_import(node, *, allow_placeholder=True):
         for alias in node.names:
@@ -673,7 +672,7 @@ def prepare_global_scope(module, *, trusted_method_returns=None, source_class_bi
                     # succeeds and update_build_config can run.  Any real usage
                     # of the module at runtime will raise ModuleNotFoundError.
                     variable_name = alias.asname or module_name.split(".")[0]
-                    exec_globals[variable_name] = _MissingModulePlaceholder(module_name)
+                    _bind_name(variable_name, _MissingModulePlaceholder(module_name))
                     logger.debug("Module '%s' unavailable on Windows — inserted placeholder", module_name)
                     continue
                 # On other platforms the package should be installable, so
@@ -684,13 +683,13 @@ def prepare_global_scope(module, *, trusted_method_returns=None, source_class_bi
             if alias.asname:
                 # For aliased imports like "import yfinance as yf", use the imported module directly
                 variable_name = alias.asname
-                exec_globals[variable_name] = module_obj
+                _bind_name(variable_name, module_obj)
             else:
                 # For dotted imports like "urllib.request", set the variable to the top-level package.
                 # importlib.import_module returns the *leaf* module, but Python's import statement
                 # binds the top-level package name. Retrieve it from sys.modules instead.
                 variable_name = module_name.split(".")[0]
-                exec_globals[variable_name] = sys.modules.get(variable_name, module_obj)
+                _bind_name(variable_name, sys.modules.get(variable_name, module_obj))
 
     def _bind_import_from(node):
         module_names_to_try = _get_module_fallbacks(node.module)
@@ -701,7 +700,8 @@ def prepare_global_scope(module, *, trusted_method_returns=None, source_class_bi
         for module_name in module_names_to_try:
             try:
                 imported_module = _import_module_with_warnings(module_name)
-                _handle_module_attributes(imported_module, node, module_name, exec_globals)
+                for alias in node.names:
+                    _bind_name(alias.asname or alias.name, _resolve_attribute(imported_module, module_name, alias.name))
 
                 success = True
                 break
@@ -726,6 +726,9 @@ def prepare_global_scope(module, *, trusted_method_returns=None, source_class_bi
                 _bind_import_from(statement)
             else:
                 exec(compile(ast.Module(body=[statement], type_ignores=[]), "<string>", "exec"), exec_globals)
+                if isinstance(statement, ast.Assign):
+                    for target in statement.targets:
+                        bindings[target.id] = exec_globals[target.id]
 
     def _run_guarded_import(node):
         # Python's try/except semantics, with each import bound exactly like an ordinary
@@ -740,12 +743,13 @@ def prepare_global_scope(module, *, trusted_method_returns=None, source_class_bi
                     if not isinstance(exc, expected):
                         continue
                 if handler.name:
-                    exec_globals[handler.name] = exc
+                    _bind_name(handler.name, exc)
                 try:
                     _run_guard_statements(handler.body)
                 finally:
                     if handler.name:
                         exec_globals.pop(handler.name, None)
+                        bindings[handler.name] = deleted_binding
                 break
             else:
                 raise
@@ -753,6 +757,7 @@ def prepare_global_scope(module, *, trusted_method_returns=None, source_class_bi
             _run_guard_statements(node.orelse)
 
     for node in import_nodes:
+        bindings = {}
         if isinstance(node, ast.Import):
             _bind_import(node)
         elif isinstance(node, ast.ImportFrom):
@@ -764,27 +769,40 @@ def prepare_global_scope(module, *, trusted_method_returns=None, source_class_bi
             with contextlib.suppress(NameError):
                 _run_guarded_import(node)
         else:
-            exec(compile(ast.Module(body=[node], type_ignores=[]), "<string>", "exec"), exec_globals)
+            _run_guard_statements([node])
+        binding_updates[id(node)] = bindings
 
     if trusted_method_returns is not None:
         trusted_bases = _trusted_imported_bases(module, exec_globals)
         trusted_method_returns.update(snapshot_trusted_class_method_returns(trusted_bases))
 
     if definitions:
+        if early_constants:
+            # Earlier definitions must see the constants bound at their source position.
+            # Restore recorded writes without importing modules or running guards twice.
+            definition_ids = {id(node) for node in definitions}
+            definitions = [node for node in module.body if id(node) in definition_ids or id(node) in binding_updates]
         # Prepend __future__ imports so compiler directives (e.g. PEP 563 annotations) take effect
-        if source_class_bindings is None:
+        if source_class_bindings is None and not early_constants:
             combined_module = ast.Module(body=future_imports + definitions, type_ignores=[])
             compiled_code = compile(combined_module, "<string>", "exec")
             exec(compiled_code, exec_globals)
         else:
             for definition in definitions:
+                if id(definition) in binding_updates:
+                    for name, value in binding_updates[id(definition)].items():
+                        if value is deleted_binding:
+                            exec_globals.pop(name, None)
+                        else:
+                            exec_globals[name] = value
+                    continue
                 safe_source_class = isinstance(definition, ast.ClassDef) and _has_static_type_metaclass_bases(
                     definition, exec_globals
                 )
                 preexisting_class_ids = {id(value) for value in exec_globals.values() if issubclass(type(value), type)}
                 definition_module = ast.Module(body=[*future_imports, definition], type_ignores=[])
                 exec(compile(definition_module, "<string>", "exec"), exec_globals)
-                if safe_source_class:
+                if safe_source_class and source_class_bindings is not None:
                     runtime_class = dict.get(exec_globals, definition.name)
                     if type(runtime_class) is type and id(runtime_class) not in preexisting_class_ids:
                         source_class_bindings[id(definition)] = runtime_class

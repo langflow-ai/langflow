@@ -197,6 +197,107 @@ def test_constant_after_an_earlier_definition_keeps_source_order():
     assert cls().build_out() == "True"
 
 
+@pytest.mark.parametrize(
+    "capture",
+    [
+        "CAPTURED = VALUE\n",
+        "def helper(value=VALUE):\n    return value\nCAPTURED = helper()\n",
+        "class Helper:\n    value = VALUE\nCAPTURED = Helper.value\n",
+    ],
+    ids=["assignment", "function-default", "class-attribute"],
+)
+def test_guard_preserves_earlier_constant_read(capture: str):
+    cls = _build(
+        f'VALUE = "before"\n{capture}VALUE = "after"\ntry:\n    import math\nexcept ImportError:\n    pass\n',
+        "CAPTURED",
+    )
+    assert cls().build_out() == "before"
+
+
+def test_guard_fallback_reads_reassigned_constant_after_earlier_capture():
+    cls = _build(
+        'VALUE = "before"\nCAPTURED = VALUE\nVALUE = "after"\n'
+        "try:\n    import no_such_module_xyz_123 as optional_value\n"
+        "except ImportError:\n    optional_value = VALUE\n",
+        "(CAPTURED, optional_value)",
+    )
+    assert cls().build_out() == "('before', 'after')"
+
+
+def test_helper_and_guard_fallback_read_reassigned_constant():
+    cls = _build(
+        'VALUE = "before"\ndef helper():\n    return VALUE\nVALUE = None\n'
+        "try:\n    import no_such_module_xyz_123 as optional_value\n"
+        "except ImportError:\n    optional_value = VALUE\n",
+        "helper() is None and optional_value is None",
+    )
+    assert cls().build_out() == "True"
+
+
+def test_guard_restores_repeated_import_after_deferred_assignment():
+    cls = _build(
+        "early_constant = None\nimport fractions as repeated_module\nrepeated_module = object()\n"
+        "try:\n    import fractions as repeated_module\nexcept ImportError:\n    pass\n",
+        "repeated_module.Fraction(1, 2)",
+    )
+    assert cls().build_out() == "1/2"
+
+
+def test_guard_removes_exception_name_after_deferred_assignment():
+    cls = _build(
+        "early_constant = None\nimport_failure = object()\n"
+        "try:\n    import no_such_module_xyz_123\nexcept ImportError as import_failure:\n    pass\n",
+        '"import_failure" not in globals()',
+    )
+    assert cls().build_out() == "True"
+
+
+def test_prepare_global_scope_preserves_earlier_constant_read():
+    import ast
+
+    from lfx.custom.validate import prepare_global_scope
+
+    scope = prepare_global_scope(
+        ast.parse(
+            'VALUE = "before"\nCAPTURED = VALUE\nVALUE = "after"\n'
+            "try:\n    import math\nexcept ImportError:\n    pass\n"
+        )
+    )
+    assert scope["CAPTURED"] == "before"
+    assert scope["VALUE"] == "after"
+
+
+def test_guard_import_attribute_is_resolved_once(monkeypatch):
+    import ast
+    import sys
+    from types import ModuleType
+
+    from lfx.custom.validate import prepare_global_scope
+
+    imported_values = []
+
+    def read_attribute(name):
+        if name != "value":
+            raise AttributeError(name)
+        value = object()
+        imported_values.append(value)
+        return value
+
+    probe = ModuleType("guarded_replay_probe")
+    probe.__getattr__ = read_attribute
+    monkeypatch.setitem(sys.modules, probe.__name__, probe)
+    scope = prepare_global_scope(
+        ast.parse(
+            "early_constant = None\n"
+            "try:\n    from guarded_replay_probe import value as optional_value\n"
+            "except ImportError:\n    optional_value = None\n"
+            "captured_constant = early_constant\n"
+        )
+    )
+    assert len(imported_values) == 1
+    assert scope["optional_value"] is imported_values[0]
+
+
 def test_skipped_guard_does_not_depend_on_the_module_logger(monkeypatch):
     import lfx.custom.validate as validate_module
 
