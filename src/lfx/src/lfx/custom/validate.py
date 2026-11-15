@@ -539,6 +539,84 @@ def _has_static_type_metaclass_bases(class_node: ast.ClassDef, exec_globals: dic
     )
 
 
+def _is_trivial_fallback_statement(node: ast.stmt) -> bool:
+    """Statements allowed in an import guard: imports, ``pass`` and ``name = constant/name``."""
+    if isinstance(node, ast.Pass | ast.Import):
+        return True
+    if isinstance(node, ast.ImportFrom):
+        # Wildcard imports are not supported by the scope builder; leave such guards unapplied.
+        return node.level == 0 and node.module is not None and all(alias.name != "*" for alias in node.names)
+    return (
+        isinstance(node, ast.Assign)
+        and all(isinstance(target, ast.Name) for target in node.targets)
+        and isinstance(node.value, ast.Constant | ast.Name)
+    )
+
+
+def _is_plain_exception_reference(node: ast.expr | None) -> bool:
+    """``Name`` or a dotted ``a.b.C`` chain ending in a ``Name``; no calls or other expressions."""
+    while isinstance(node, ast.Attribute):
+        node = node.value
+    return isinstance(node, ast.Name)
+
+
+def _is_guarded_import(node: ast.stmt) -> bool:
+    """Whether ``node`` is a top-level ``try/except`` that only guards optional imports.
+
+    ``try: import x`` / ``except ImportError: x = None`` is the standard way to make a
+    dependency optional. Such a block is executed so the guarded names (and their
+    fallbacks) exist in the component scope. Any other top-level ``try`` is still skipped,
+    so this does not widen what runs while the scope is prepared: the body must hold
+    imports, and each handler may only import, ``pass`` or bind a name to a constant/name.
+    """
+    if not isinstance(node, ast.Try) or not node.handlers or node.finalbody:
+        return False
+    if not any(isinstance(stmt, ast.Import | ast.ImportFrom) for stmt in node.body):
+        return False
+    if not all(_is_trivial_fallback_statement(stmt) for stmt in [*node.body, *node.orelse]):
+        return False
+    for handler in node.handlers:
+        if handler.type is not None:
+            exc_types = handler.type.elts if isinstance(handler.type, ast.Tuple) else [handler.type]
+            if not all(_is_plain_exception_reference(exc) for exc in exc_types):
+                return False
+        if not all(_is_trivial_fallback_statement(stmt) for stmt in handler.body):
+            return False
+    return True
+
+
+def _constants_to_bind_with_guards(module: ast.Module) -> set[int]:
+    """Ids of ``name = constant`` assignments that run in source order with imports and guards.
+
+    A guard's fallback may read a top-level constant (``optional = fallback_value``), so the
+    constants that precede the last guard are bound in source order with the imports instead of
+    being deferred. Modules without a guard are unaffected. A constant whose name is already bound
+    by an earlier deferred definition stays deferred, so that definition cannot overwrite it.
+    """
+    body = module.body
+    guard_positions = [index for index, node in enumerate(body) if _is_guarded_import(node)]
+    if not guard_positions:
+        return set()
+    deferred_names: set[str] = set()
+    early: set[int] = set()
+    for node in body[: guard_positions[-1]]:
+        if (
+            isinstance(node, ast.Assign)
+            and isinstance(node.value, ast.Constant)
+            and all(isinstance(target, ast.Name) for target in node.targets)
+            and not {target.id for target in node.targets} & deferred_names
+        ):
+            early.add(id(node))
+        elif isinstance(node, ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef):
+            deferred_names.add(node.name)
+        elif isinstance(node, ast.Assign | ast.AnnAssign):
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            deferred_names.update(
+                name.id for target in targets for name in ast.walk(target) if isinstance(name, ast.Name)
+            )
+    return early
+
+
 def prepare_global_scope(module, *, trusted_method_returns=None, source_class_bindings=None):
     """Prepares the global scope with necessary imports from the provided code module.
 
@@ -554,23 +632,29 @@ def prepare_global_scope(module, *, trusted_method_returns=None, source_class_bi
         ModuleNotFoundError: If a module is not found in the code
     """
     exec_globals = globals().copy()
-    imports = []
-    import_froms = []
+    # Imports, import-only try/except guards, and the ``name = constant`` assignments a guard's
+    # fallback may read, all run once in source order, so a later binding of a name wins as it
+    # would in Python. Everything else is deferred to ``definitions`` as before.
+    import_nodes = []
     future_imports = []
     definitions = []
+    early_constants = _constants_to_bind_with_guards(module)
 
     for node in module.body:
-        if isinstance(node, ast.Import):
-            imports.append(node)
-        elif isinstance(node, ast.ImportFrom) and node.module == "__future__":
+        if isinstance(node, ast.ImportFrom) and node.module == "__future__":
             # __future__ imports are compiler directives — collect separately
             future_imports.append(node)
-        elif isinstance(node, ast.ImportFrom) and node.module is not None:
-            import_froms.append(node)
+        elif (
+            isinstance(node, ast.Import)
+            or (isinstance(node, ast.ImportFrom) and node.module is not None)
+            or _is_guarded_import(node)
+            or id(node) in early_constants
+        ):
+            import_nodes.append(node)
         elif isinstance(node, ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef | ast.Assign | ast.AnnAssign):
             definitions.append(node)
 
-    for node in imports:
+    def _bind_import(node, *, allow_placeholder=True):
         for alias in node.names:
             module_name = alias.name
 
@@ -583,7 +667,7 @@ def prepare_global_scope(module, *, trusted_method_returns=None, source_class_bi
                     continue
 
             if module_obj is None:
-                if sys.platform == "win32":
+                if allow_placeholder and sys.platform == "win32":
                     # Some C-extension packages (e.g. jq) have no Windows
                     # wheels.  Insert a lazy placeholder so that class creation
                     # succeeds and update_build_config can run.  Any real usage
@@ -608,7 +692,7 @@ def prepare_global_scope(module, *, trusted_method_returns=None, source_class_bi
                 variable_name = module_name.split(".")[0]
                 exec_globals[variable_name] = sys.modules.get(variable_name, module_obj)
 
-    for node in import_froms:
+    def _bind_import_from(node):
         module_names_to_try = _get_module_fallbacks(node.module)
 
         success = False
@@ -632,6 +716,55 @@ def prepare_global_scope(module, *, trusted_method_returns=None, source_class_bi
                 raise last_error
             msg = f"Module {node.module} not found. Please install it and try again"
             raise ModuleNotFoundError(msg)
+
+    def _run_guard_statements(statements):
+        for statement in statements:
+            if isinstance(statement, ast.Import):
+                # A guard handles a missing module itself, so no Windows placeholder here.
+                _bind_import(statement, allow_placeholder=False)
+            elif isinstance(statement, ast.ImportFrom):
+                _bind_import_from(statement)
+            else:
+                exec(compile(ast.Module(body=[statement], type_ignores=[]), "<string>", "exec"), exec_globals)
+
+    def _run_guarded_import(node):
+        # Python's try/except semantics, with each import bound exactly like an ordinary
+        # top-level import (same module fallbacks and attribute resolution).
+        try:
+            _run_guard_statements(node.body)
+        except BaseException as exc:
+            for handler in node.handlers:
+                if handler.type is not None:
+                    # Validated by _is_guarded_import: plain or dotted names only, no calls.
+                    expected = eval(compile(ast.Expression(handler.type), "<string>", "eval"), exec_globals)  # noqa: S307
+                    if not isinstance(exc, expected):
+                        continue
+                if handler.name:
+                    exec_globals[handler.name] = exc
+                try:
+                    _run_guard_statements(handler.body)
+                finally:
+                    if handler.name:
+                        exec_globals.pop(handler.name, None)
+                break
+            else:
+                raise
+        else:
+            _run_guard_statements(node.orelse)
+
+    for node in import_nodes:
+        if isinstance(node, ast.Import):
+            _bind_import(node)
+        elif isinstance(node, ast.ImportFrom):
+            _bind_import_from(node)
+        elif isinstance(node, ast.Try):
+            # Guards run before the trusted-base snapshot so the names they bind are visible to it.
+            # A fallback that reads a name bound only later in the module raises NameError; leave
+            # that guard unapplied instead of failing class creation.
+            with contextlib.suppress(NameError):
+                _run_guarded_import(node)
+        else:
+            exec(compile(ast.Module(body=[node], type_ignores=[]), "<string>", "exec"), exec_globals)
 
     if trusted_method_returns is not None:
         trusted_bases = _trusted_imported_bases(module, exec_globals)
