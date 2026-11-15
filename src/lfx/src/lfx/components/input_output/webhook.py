@@ -49,6 +49,9 @@ class WebhookComponent(Component):
         except json.JSONDecodeError:
             body = {"payload": self.data}
             message = f"Invalid JSON payload. Please check the format.\n\n{self.data}"
+        if body is not None and not isinstance(body, dict):
+            # A JSON array or scalar is valid JSON but cannot be the fields of a JSON object.
+            body = {"payload": body}
         data = Data(data=body)
         if not message:
             message = data

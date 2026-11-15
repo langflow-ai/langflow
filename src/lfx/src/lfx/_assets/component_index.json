@@ -11903,7 +11903,7 @@
           "icon": "webhook",
           "legacy": false,
           "metadata": {
-            "code_hash": "e99e2452d56e",
+            "code_hash": "fb803400ed28",
             "component_class_name": "WebhookComponent",
             "dependencies": {
               "dependencies": [
@@ -11954,7 +11954,7 @@
               "show": true,
               "title_case": false,
               "type": "code",
-              "value": "import json\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.io import MultilineInput, Output\nfrom lfx.schema.data import Data\n\n\nclass WebhookComponent(Component):\n    display_name = \"Webhook\"\n    documentation: str = \"https://docs.langflow.org/component-webhook\"\n    name = \"Webhook\"\n    icon = \"webhook\"\n\n    inputs = [\n        MultilineInput(\n            name=\"data\",\n            display_name=\"Payload\",\n            info=\"Receives a payload from external systems via HTTP POST.\",\n            advanced=True,\n        ),\n        MultilineInput(\n            name=\"curl\",\n            display_name=\"cURL\",\n            value=\"CURL_WEBHOOK\",\n            advanced=True,\n            input_types=[],\n        ),\n        MultilineInput(\n            name=\"endpoint\",\n            display_name=\"Endpoint\",\n            value=\"BACKEND_URL\",\n            advanced=False,\n            copy_field=True,\n            input_types=[],\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"JSON\", name=\"output_data\", method=\"build_data\"),\n    ]\n\n    def build_data(self) -> Data:\n        message: str | Data = \"\"\n        if not self.data:\n            self.status = \"No data provided.\"\n            return Data(data={})\n        try:\n            my_data = self.data.replace('\"\\n\"', '\"\\\\n\"')\n            body = json.loads(my_data or \"{}\")\n        except json.JSONDecodeError:\n            body = {\"payload\": self.data}\n            message = f\"Invalid JSON payload. Please check the format.\\n\\n{self.data}\"\n        data = Data(data=body)\n        if not message:\n            message = data\n        self.status = message\n        return data\n"
+              "value": "import json\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.io import MultilineInput, Output\nfrom lfx.schema.data import Data\n\n\nclass WebhookComponent(Component):\n    display_name = \"Webhook\"\n    documentation: str = \"https://docs.langflow.org/component-webhook\"\n    name = \"Webhook\"\n    icon = \"webhook\"\n\n    inputs = [\n        MultilineInput(\n            name=\"data\",\n            display_name=\"Payload\",\n            info=\"Receives a payload from external systems via HTTP POST.\",\n            advanced=True,\n        ),\n        MultilineInput(\n            name=\"curl\",\n            display_name=\"cURL\",\n            value=\"CURL_WEBHOOK\",\n            advanced=True,\n            input_types=[],\n        ),\n        MultilineInput(\n            name=\"endpoint\",\n            display_name=\"Endpoint\",\n            value=\"BACKEND_URL\",\n            advanced=False,\n            copy_field=True,\n            input_types=[],\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"JSON\", name=\"output_data\", method=\"build_data\"),\n    ]\n\n    def build_data(self) -> Data:\n        message: str | Data = \"\"\n        if not self.data:\n            self.status = \"No data provided.\"\n            return Data(data={})\n        try:\n            my_data = self.data.replace('\"\\n\"', '\"\\\\n\"')\n            body = json.loads(my_data or \"{}\")\n        except json.JSONDecodeError:\n            body = {\"payload\": self.data}\n            message = f\"Invalid JSON payload. Please check the format.\\n\\n{self.data}\"\n        if body is not None and not isinstance(body, dict):\n            # A JSON array or scalar is valid JSON but cannot be the fields of a JSON object.\n            body = {\"payload\": body}\n        data = Data(data=body)\n        if not message:\n            message = data\n        self.status = message\n        return data\n"
             },
             "curl": {
               "_input_type": "MultilineInput",
@@ -33425,6 +33425,6 @@
     "num_components": 131,
     "num_modules": 17
   },
-  "sha256": "f9cc4856e23c10a879b84935e770ed8872459aec97306e232aac941b50d6b049",
+  "sha256": "a8e1e402753f33939d3642017dbdb1cce4279d7e3c7aec29f5511742febbd596",
   "version": "1.14.0"
 }
