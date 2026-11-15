@@ -1,7 +1,7 @@
 """Remove the flow description index that rejects long PostgreSQL text values.
 
 Revision ID: 8094acf12f99
-Revises: 310c015b3c92
+Revises: 7fd2c80e5a39
 Create Date: 2026-11-15
 
 Phase: MIGRATE
@@ -20,7 +20,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "8094acf12f99"  # pragma: allowlist secret
-down_revision: str | None = "310c015b3c92"  # pragma: allowlist secret
+down_revision: str | None = "7fd2c80e5a39"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
