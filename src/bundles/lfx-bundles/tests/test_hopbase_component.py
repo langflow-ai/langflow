@@ -47,7 +47,7 @@ def test_missing_key_skips_discovery(component, build_config, monkeypatch):
     assert component.update_build_config(build_config, "", "model_name") == original
 
 
-@pytest.mark.parametrize("failure", [401, 500, "timeout", "empty", "invalid-json"])
+@pytest.mark.parametrize("failure", [401, 500, "timeout", "empty", "invalid-json", "null-data", "list-body"])
 def test_failed_refresh_preserves_selection(component, build_config, monkeypatch, failure):
     def respond(request):
         if failure == "timeout":
@@ -55,6 +55,10 @@ def test_failed_refresh_preserves_selection(component, build_config, monkeypatch
             raise httpx.ReadTimeout(message, request=request)
         if failure == "invalid-json":
             return httpx.Response(200, content=b"not json")
+        if failure == "null-data":
+            return httpx.Response(200, json={"data": None})
+        if failure == "list-body":
+            return httpx.Response(200, json=[])
         return httpx.Response(200 if failure == "empty" else failure, json={"data": []})
 
     original = deepcopy(build_config["model_name"])

@@ -52,8 +52,12 @@ class HopBaseComponent(LCModelComponent):
                 timeout=10.0,
             )
             response.raise_for_status()
-            models = response.json().get("data", [])
-            return sorted({m["id"] for m in models if isinstance(m, dict) and m.get("id")})
+            payload = response.json()
+            models = payload.get("data") if isinstance(payload, dict) else None
+            if not isinstance(models, list):
+                self.log("Error fetching models: unexpected response shape")
+                return []
+            return sorted({m["id"] for m in models if isinstance(m, dict) and isinstance(m.get("id"), str) and m["id"]})
         except (httpx.RequestError, httpx.HTTPStatusError, ValueError) as e:
             self.log(f"Error fetching models: {e}")
             return []
