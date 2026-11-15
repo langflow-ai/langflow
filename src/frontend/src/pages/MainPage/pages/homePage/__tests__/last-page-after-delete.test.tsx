@@ -11,6 +11,7 @@ const PROJECT = {
 };
 const mockFolders = [PROJECT];
 let mockTotalFlows = 13;
+let mockIsFetching = false;
 const mockRequestedPages: number[] = [];
 
 // Answers with the page the request asks for, as the server does: a page past
@@ -41,7 +42,7 @@ const mockFolderPage = ({ page, size }: { page: number; size: number }) => {
       isLoading: false,
     });
   }
-  return mockAnswers.get(key);
+  return { ...(mockAnswers.get(key) as object), isFetching: mockIsFetching };
 };
 
 jest.mock("react-router-dom", () => ({
@@ -101,6 +102,7 @@ const shownFlows = () =>
 describe("HomePage paging after the last page empties", () => {
   beforeEach(() => {
     mockTotalFlows = 13;
+    mockIsFetching = false;
     mockRequestedPages.length = 0;
   });
 
@@ -126,6 +128,25 @@ describe("HomePage paging after the last page empties", () => {
     expect(shownFlows()).toEqual(["Flow 13", "Flow 14"]);
 
     mockTotalFlows = 13;
+    rerender(<HomePage type="flows" />);
+
+    expect(shownFlows()).toEqual(["Flow 13"]);
+    expect(mockRequestedPages.at(-1)).toBe(2);
+  });
+
+  it("stays on a page whose cached page count is outdated until it is read again", () => {
+    const { rerender } = render(<HomePage type="flows" />);
+    fireEvent.click(screen.getByRole("button", { name: "Go to next page" }));
+
+    // The cache still holds an answer from when there was a single page.
+    mockTotalFlows = 12;
+    mockIsFetching = true;
+    rerender(<HomePage type="flows" />);
+    expect(mockRequestedPages.at(-1)).toBe(2);
+
+    // The fresh answer has a second page.
+    mockTotalFlows = 13;
+    mockIsFetching = false;
     rerender(<HomePage type="flows" />);
 
     expect(shownFlows()).toEqual(["Flow 13"]);
