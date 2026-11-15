@@ -4,7 +4,7 @@ Revision ID: 8094acf12f99
 Revises: 310c015b3c92
 Create Date: 2026-11-15
 
-Phase: CONTRACT
+Phase: MIGRATE
 Safe to rollback: NO (when flow descriptions exceeding PostgreSQL B-tree limits exist)
 
 Recreating the B-tree index on flow.description during downgrade will fail on
