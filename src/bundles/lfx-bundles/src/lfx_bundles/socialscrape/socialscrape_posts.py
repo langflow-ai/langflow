@@ -74,15 +74,15 @@ class SocialScrapePostsComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Posts", name="posts", method="get_posts"),
-        Output(display_name="Page Info", name="page_info", method="get_page_info"),
+        Output(display_name="Posts", name="posts", method="get_posts", group_outputs=True),
+        Output(display_name="Page Info", name="page_info", method="get_page_info", group_outputs=True),
     ]
 
     def _pre_run_setup(self) -> None:
         """Drop the page kept from an earlier run, so every run reads the account again."""
         self._page_key = None
 
-    def _fetch_page(self) -> dict[str, Any]:
+    async def _fetch_page(self) -> dict[str, Any]:
         """Fetch the page once per run; both outputs read the same answer.
 
         The answer is kept only for the run and the inputs it was fetched with, so a
@@ -99,7 +99,7 @@ class SocialScrapePostsComponent(Component):
             return self._page
         # TikTok publishes videos only, so its list lives under /profile/videos.
         listing = "videos" if platform == "tiktok" else "posts"
-        data = socialscrape_request(
+        data = await socialscrape_request(
             f"/v1/{platform}/profile/{listing}",
             api_key=self.api_key,
             timeout=float(self.timeout or DEFAULT_TIMEOUT_SECONDS),
@@ -112,22 +112,22 @@ class SocialScrapePostsComponent(Component):
         self._page_key = key
         return data
 
-    def get_posts(self) -> DataFrame:
+    async def get_posts(self) -> DataFrame:
         """Return one row per post, with the post text as ``text``."""
         try:
-            page = self._fetch_page()
+            page = await self._fetch_page()
         except SocialScrapeAPIError as exc:
-            logger.error(str(exc))
+            await logger.aerror(str(exc))
             self.status = str(exc)
             return DataFrame([Data(text=str(exc), data={"error": str(exc)})])
         posts = [Data(text=str(item.get("text") or ""), data=item) for item in page["items"] if isinstance(item, dict)]
         self.status = posts
         return DataFrame(posts)
 
-    def get_page_info(self) -> Data:
+    async def get_page_info(self) -> Data:
         """Return the ``cursor`` for the next page and whether ``has_more`` pages exist."""
         try:
-            page = self._fetch_page()
+            page = await self._fetch_page()
         except SocialScrapeAPIError as exc:
             self.status = str(exc)
             return Data(text=str(exc), data={"error": str(exc)})

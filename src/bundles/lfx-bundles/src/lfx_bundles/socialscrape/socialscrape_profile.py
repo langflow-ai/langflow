@@ -63,21 +63,21 @@ class SocialScrapeProfileComponent(Component):
         Output(display_name="Profile", name="profile", method="get_profile"),
     ]
 
-    def get_profile(self) -> Data:
+    async def get_profile(self) -> Data:
         """Return the profile as one ``Data``; the bio is the ``text``."""
         try:
             platform = str(self.platform or "").strip().lower()
             if platform not in PROFILE_PLATFORMS:
                 msg = f"Choose a platform from: {', '.join(PROFILE_PLATFORMS)}; got {platform!r}."
                 raise SocialScrapeAPIError(msg)
-            data = socialscrape_request(
+            data = await socialscrape_request(
                 f"/v1/{platform}/profile",
                 api_key=self.api_key,
                 timeout=float(self.timeout or DEFAULT_TIMEOUT_SECONDS),
                 params={"handle": bare_handle(self.handle)},
             )
         except SocialScrapeAPIError as exc:
-            logger.error(str(exc))
+            await logger.aerror(str(exc))
             self.status = str(exc)
             return Data(text=str(exc), data={"error": str(exc)})
 

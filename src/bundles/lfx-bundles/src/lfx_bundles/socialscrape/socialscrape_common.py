@@ -8,8 +8,8 @@ as ``{"ok": false, "error": {"code", "message", "retryable"}, ...}``.
 
 from __future__ import annotations
 
+import asyncio
 import re
-import time
 from typing import Any
 
 import httpx
@@ -22,7 +22,9 @@ JOB_WAIT_SECONDS = 90.0
 JOB_POLL_SECONDS = 3.0
 _JOB_ID = re.compile(r"^job_[A-Za-z0-9]+$")
 
-API_KEY_INFO = "Your SocialScrape API key. Sign up at https://socialscrape.dev/sign-up to get one."
+API_KEY_INFO = (
+    "Your SocialScrape API key. Sign up at https://socialscrape.dev/sign-up to get one."  # pragma: allowlist secret
+)
 
 # Upper bound on the response text echoed into an error message.
 _ERROR_DETAIL_LIMIT = 300
@@ -75,11 +77,11 @@ def _error_message(response: httpx.Response, api_key: str) -> str:
     return f"{label}: {detail}" if detail else label
 
 
-def _get_data(path: str, *, key: str, timeout: float, params: dict[str, Any] | None = None) -> dict[str, Any]:
+async def _get_data(path: str, *, key: str, timeout: float, params: dict[str, Any] | None = None) -> dict[str, Any]:
     """GET one SocialScrape path and return the ``data`` object of the answer."""
     try:
-        with httpx.Client(timeout=timeout) as client:
-            response = client.get(
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            response = await client.get(
                 f"{API_BASE_URL}{path}",
                 params=params or {},
                 headers={"x-api-key": key, "accept": "application/json"},
@@ -104,7 +106,16 @@ def _get_data(path: str, *, key: str, timeout: float, params: dict[str, Any] | N
     return data
 
 
-def socialscrape_request(
+async def _poll_job(job_id: str, *, key: str, timeout: float) -> dict[str, Any]:
+    """Poll until a job finishes, allowing the caller to cancel the entire wait."""
+    while True:
+        await asyncio.sleep(JOB_POLL_SECONDS)
+        data = await _get_data(f"/v1/jobs/{job_id}", key=key, timeout=timeout)
+        if data.get("object") != "job":
+            return data
+
+
+async def socialscrape_request(
     path: str,
     *,
     api_key: Any,
@@ -127,7 +138,7 @@ def socialscrape_request(
         msg = "Enter a SocialScrape API key. Sign up at https://socialscrape.dev/sign-up to get one."
         raise SocialScrapeAPIError(msg)
     query = {name: value for name, value in (params or {}).items() if value not in (None, "")}
-    data = _get_data(path, key=key, timeout=timeout, params=query)
+    data = await _get_data(path, key=key, timeout=timeout, params=query)
     if data.get("object") != "job":
         return data
 
@@ -135,15 +146,9 @@ def socialscrape_request(
     if not _JOB_ID.match(job_id):
         msg = "SocialScrape queued a job without a usable job id."
         raise SocialScrapeAPIError(msg)
-    # Each sleep and each poll is capped by the time left, so the wait ends at the deadline.
-    deadline = time.monotonic() + JOB_WAIT_SECONDS
-    while (remaining := deadline - time.monotonic()) > 0:
-        time.sleep(min(JOB_POLL_SECONDS, remaining))
-        remaining = deadline - time.monotonic()
-        if remaining <= 0:
-            break
-        data = _get_data(f"/v1/jobs/{job_id}", key=key, timeout=min(timeout, remaining))
-        if data.get("object") != "job":
-            return data
-    msg = f"SocialScrape is still working on this request (job {job_id}). Try again in a minute."
-    raise SocialScrapeAPIError(msg)
+    # HTTPX timeouts limit each network operation, so polling also needs an overall deadline.
+    try:
+        return await asyncio.wait_for(_poll_job(job_id, key=key, timeout=timeout), timeout=JOB_WAIT_SECONDS)
+    except asyncio.TimeoutError as exc:
+        msg = f"SocialScrape is still working on this request (job {job_id}). Try again in a minute."
+        raise SocialScrapeAPIError(msg) from exc

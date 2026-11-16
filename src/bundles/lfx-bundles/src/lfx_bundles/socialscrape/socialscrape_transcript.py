@@ -66,7 +66,7 @@ class SocialScrapeTranscriptComponent(Component):
         Output(display_name="Transcript", name="transcript", method="get_transcript"),
     ]
 
-    def get_transcript(self) -> Data:
+    async def get_transcript(self) -> Data:
         """Return the transcript as one ``Data`` with the full text as ``text``."""
         url = str(self.url or "").strip()
         try:
@@ -78,14 +78,14 @@ class SocialScrapeTranscriptComponent(Component):
             if not valid:
                 msg = f"Enter an absolute http(s) video URL, such as https://www.youtube.com/watch?v=...; got {url!r}."
                 raise SocialScrapeAPIError(msg)
-            data = socialscrape_request(
+            data = await socialscrape_request(
                 "/v1/transcript",
                 api_key=self.api_key,
                 timeout=float(self.timeout or DEFAULT_TIMEOUT_SECONDS),
                 params={"url": url, "language": str(self.language or "").strip()},
             )
         except SocialScrapeAPIError as exc:
-            logger.error(str(exc))
+            await logger.aerror(str(exc))
             self.status = str(exc)
             return Data(text=str(exc), data={"error": str(exc)})
 
