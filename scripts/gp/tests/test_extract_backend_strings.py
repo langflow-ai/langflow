@@ -569,3 +569,39 @@ class TestCollectStringsWithBundles:
         with pytest.raises(SystemExit) as exc_info:
             _run_main("--check")
         assert exc_info.value.code == 1
+
+
+class _FakeDropdown(_FakeInput):
+    def __init__(self, name, options, *, translate_options=None):
+        super().__init__(name, display_name="Pick")
+        self.options = options
+        self.translate_options = translate_options
+
+
+class _OptionsFixtureComponent:
+    code_class_base_inheritance = True
+    name = "OptionsFixture"
+    display_name = "Options Fixture"
+    inputs = (
+        _FakeDropdown("kind", ["Daily", "Weekly"], translate_options=True),
+        _FakeDropdown("model", ["gpt-x"]),
+    )
+
+
+def test_options_are_keyed_only_for_inputs_that_ask_for_translation():
+    helpers = _fake_i18n_key_helpers()
+    flat: dict[str, str] = {}
+
+    extract_mod.emit_component_strings(
+        _OptionsFixtureComponent,
+        flat,
+        set(),
+        component_field_key=helpers.component_field_key,
+        normalize_component_key=helpers.normalize_component_key,
+    )
+
+    options = {key: value for key, value in flat.items() if ".options." in key}
+    assert options == {
+        helpers.component_field_key("optionsfixture", "inputs.kind.options", "Daily"): "Daily",
+        helpers.component_field_key("optionsfixture", "inputs.kind.options", "Weekly"): "Weekly",
+    }

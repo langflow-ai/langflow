@@ -1,4 +1,4 @@
-"""Cron evaluation and the schedule tick producer.
+"""Schedule evaluation and the tick producer.
 
 Two ideas do the work here.
 
@@ -19,6 +19,7 @@ decided, so swapping the library later touches one file.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -29,7 +30,13 @@ from langflow.services.database.models.trigger.schemas import TriggerCatchupPoli
 from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.triggers import leases, ledger
 from langflow.services.triggers.constants import SCHEDULER_LEASE_NAME, TICK_DEDUPE_PREFIX
-from langflow.services.triggers.schedule_config import DEFAULT_TIMEZONE, InvalidScheduleError, validate_schedule_config
+from langflow.services.triggers.schedule_config import (
+    DEFAULT_TIMEZONE,
+    TIMING_KEYS,
+    InvalidScheduleError,
+    run_at_instant,
+    validate_schedule_config,
+)
 
 if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -90,25 +97,6 @@ def latest_fire_time(cron_expression: str, *, timezone_name: str, at: datetime) 
         raise InvalidScheduleError(msg) from exc
 
 
-def missed_fire_times(
-    cron_expression: str,
-    *,
-    timezone_name: str | None,
-    since: datetime,
-    until: datetime,
-    limit: int = MAX_REPORTED_MISSED_TICKS,
-) -> list[datetime]:
-    """Every fire time strictly between ``since`` and ``until`` (inclusive of ``until``)."""
-    fires: list[datetime] = []
-    cursor = since
-    while len(fires) < limit:
-        cursor = next_fire_time(cron_expression, timezone_name=timezone_name, after=cursor)
-        if cursor > until:
-            break
-        fires.append(cursor)
-    return fires
-
-
 def tick_dedupe_key(scheduled_at: datetime) -> str:
     """The ledger key for one scheduled instant.
 
@@ -118,9 +106,72 @@ def tick_dedupe_key(scheduled_at: datetime) -> str:
     return f"{TICK_DEDUPE_PREFIX}:{scheduled_at.astimezone(timezone.utc).isoformat()}"
 
 
-def _config(trigger: Trigger) -> tuple[str, str, str]:
-    config = validate_schedule_config(trigger.config or {})
-    return config["cron"], config["timezone"], config["catchup_policy"]
+def _as_utc(moment: datetime) -> datetime:
+    return moment if moment.tzinfo is not None else moment.replace(tzinfo=timezone.utc)
+
+
+@dataclass(frozen=True)
+class ScheduleClock:
+    """When a validated schedule fires, whatever its timing key.
+
+    ``next_after`` and ``latest_at`` return None when the schedule has no such
+    fire time: a run-once schedule before its moment, or after it.
+    """
+
+    config: dict[str, Any]
+
+    @property
+    def zone(self) -> str:
+        return self.config["timezone"]
+
+    @property
+    def timing(self) -> dict[str, Any]:
+        return {key: self.config[key] for key in TIMING_KEYS if key in self.config}
+
+    def _crons(self) -> list[str]:
+        return [self.config["cron"]] if "cron" in self.config else list(self.config.get("crons") or [])
+
+    def _interval(self) -> tuple[datetime, timedelta]:
+        # A fixed local origin keeps every replica on the same grid, and keeps
+        # intervals that divide a day on round local times (every 60 -> :00).
+        origin = datetime(2000, 1, 1, tzinfo=_zone(self.zone)).astimezone(timezone.utc)
+        return origin, timedelta(minutes=self.config["interval_minutes"])
+
+    def next_after(self, after: datetime) -> datetime | None:
+        after = _as_utc(after)
+        if "interval_minutes" in self.config:
+            origin, step = self._interval()
+            return origin + step * ((after - origin) // step + 1)
+        if "run_at" in self.config:
+            moment = run_at_instant(self.config)
+            return moment if moment > after else None
+        return min(next_fire_time(cron, timezone_name=self.zone, after=after) for cron in self._crons())
+
+    def latest_at(self, at: datetime) -> datetime | None:
+        at = _as_utc(at)
+        if "interval_minutes" in self.config:
+            origin, step = self._interval()
+            return origin + step * ((at - origin) // step)
+        if "run_at" in self.config:
+            moment = run_at_instant(self.config)
+            return moment if moment <= at else None
+        return max(latest_fire_time(cron, timezone_name=self.zone, at=at) for cron in self._crons())
+
+    def fires_between(self, since: datetime, until: datetime, limit: int = MAX_REPORTED_MISSED_TICKS) -> list[datetime]:
+        """Every fire time strictly after ``since`` and up to ``until``."""
+        fires: list[datetime] = []
+        cursor: datetime | None = since
+        while len(fires) < limit:
+            cursor = self.next_after(cursor)
+            if cursor is None or cursor > until:
+                break
+            fires.append(cursor)
+        return fires
+
+
+def schedule_clock(config: dict[str, Any]) -> ScheduleClock:
+    """The clock of a schedule config that :func:`validate_schedule_config` returned."""
+    return ScheduleClock(config)
 
 
 async def produce_ticks_for_trigger(
@@ -132,7 +183,8 @@ async def produce_ticks_for_trigger(
     """Append the events this schedule owes. Returns how many rows were created.
 
     First sight of a trigger arms it (``next_fire_at`` is computed and nothing
-    fires immediately), so enabling a schedule never back-fills history.
+    fires immediately), so enabling a schedule never back-fills history. A
+    run-once schedule whose moment has passed has no next fire and stays unarmed.
 
     When ticks were missed, the ``coalesce`` policy appends ONE event keyed by
     the most recent missed instant and reports the rest in ``missed_ticks``;
@@ -142,18 +194,20 @@ async def produce_ticks_for_trigger(
     week of runs.
     """
     settings = get_settings_service().settings
-    now = now or datetime.now(timezone.utc)
-    now = now if now.tzinfo is not None else now.replace(tzinfo=timezone.utc)
-    cron_expression, timezone_name, catchup = _config(trigger)
+    now = _as_utc(now or datetime.now(timezone.utc))
+    config = validate_schedule_config(trigger.config or {})
+    clock = schedule_clock(config)
+    catchup = config["catchup_policy"]
 
     previous = trigger.next_fire_at
     if previous is None:
-        trigger.next_fire_at = next_fire_time(cron_expression, timezone_name=timezone_name, after=now)
-        session.add(trigger)
-        await session.flush()
+        trigger.next_fire_at = clock.next_after(now)
+        if trigger.next_fire_at is not None:
+            session.add(trigger)
+            await session.flush()
         return 0
 
-    previous = previous if previous.tzinfo is not None else previous.replace(tzinfo=timezone.utc)
+    previous = _as_utc(previous)
     if previous > now:
         return 0
 
@@ -161,21 +215,24 @@ async def produce_ticks_for_trigger(
     # downtime on an hourly cron must not stamp an event with a fire time weeks
     # in the past, so the walk starts at the window, not at the stale cursor.
     window_start = max(previous, now - timedelta(days=settings.trigger_replay_window_days))
-    scheduled_at = latest_fire_time(cron_expression, timezone_name=timezone_name, at=now)
+    scheduled_at = clock.latest_at(now)
     created = 0
-    on_time = now - scheduled_at <= timedelta(seconds=settings.trigger_dispatcher_poll_interval_s)
-    if scheduled_at >= window_start and (catchup != TriggerCatchupPolicy.SKIP.value or on_time):
+    on_time = scheduled_at is not None and now - scheduled_at <= timedelta(
+        seconds=settings.trigger_dispatcher_poll_interval_s
+    )
+    if (
+        scheduled_at is not None
+        and scheduled_at >= window_start
+        and (catchup != TriggerCatchupPolicy.SKIP.value or on_time)
+    ):
         payload: dict[str, Any] = {
             "scheduled_at": scheduled_at.isoformat(),
-            "cron": cron_expression,
-            "timezone": timezone_name,
+            **clock.timing,
+            "timezone": clock.zone,
         }
         if catchup == TriggerCatchupPolicy.COALESCE.value:
-            missed = missed_fire_times(
-                cron_expression,
-                timezone_name=timezone_name,
-                since=window_start - timedelta(microseconds=1),
-                until=scheduled_at - timedelta(microseconds=1),
+            missed = clock.fires_between(
+                window_start - timedelta(microseconds=1), scheduled_at - timedelta(microseconds=1)
             )
             if missed:
                 payload["missed_ticks"] = [fire.isoformat() for fire in missed]
@@ -184,7 +241,7 @@ async def produce_ticks_for_trigger(
         )
         created = 1 if was_created else 0
 
-    trigger.next_fire_at = next_fire_time(cron_expression, timezone_name=timezone_name, after=now)
+    trigger.next_fire_at = clock.next_after(now)
     session.add(trigger)
     await session.flush()
     return created

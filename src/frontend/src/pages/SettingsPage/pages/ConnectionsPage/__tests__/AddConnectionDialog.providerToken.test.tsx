@@ -131,6 +131,28 @@ function renderDialog(
 beforeEach(() => jest.clearAllMocks());
 
 describe.each(providers)("$provider_id manual connections", (provider) => {
+  it("uses the handle as the display name for token creation", async () => {
+    mockCreate.mockResolvedValueOnce(existingConnection(provider, false));
+    const user = userEvent.setup();
+    renderDialog(provider);
+
+    expect(screen.queryByLabelText("Display name")).not.toBeInTheDocument();
+    await user.type(screen.getByTestId("connection-token"), "provider-token");
+    expect(screen.getByTestId("connection-continue")).toBeDisabled();
+    await user.type(screen.getByLabelText("Handle"), "work");
+    await user.click(screen.getByTestId("connection-continue"));
+
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider_key: provider.provider_id,
+        name: "work",
+        display_name: "work",
+        credentials: { access_token: "provider-token" },
+      }),
+    );
+    expect(mockStartOAuth).not.toHaveBeenCalled();
+  });
+
   it("shows setup documentation during creation", () => {
     renderDialog(provider);
     expect(screen.getByRole("link", { name: "Setup guide" })).toHaveAttribute(

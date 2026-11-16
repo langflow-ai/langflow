@@ -264,7 +264,6 @@ async def test_refused_startup_teardown_never_opens_an_application_connection(tm
     service.ensure_postgresql_version = AsyncMock()
     cleanup = AsyncMock(side_effect=AssertionError("refused startup must not change users"))
     monkeypatch.setattr(utils, "teardown_superuser", cleanup)
-    monkeypatch.setattr("langflow.services.database.service.teardown_superuser", cleanup)
     monkeypatch.setattr("langflow.services.deps.get_db_service", lambda: service)
     manager = get_service_manager()
     monkeypatch.setattr(manager, "services", {ServiceType.DATABASE_SERVICE: service})
