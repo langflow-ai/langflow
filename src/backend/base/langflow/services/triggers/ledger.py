@@ -21,7 +21,7 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, select
 
-from langflow.services.database.models.trigger.model import Trigger, TriggerEvent
+from langflow.services.database.models.trigger.model import Trigger, TriggerEvent, TriggerRenewalObservation
 from langflow.services.database.models.trigger.schemas import (
     TERMINAL_EVENT_STATES,
     TriggerEventFilter,
@@ -300,6 +300,7 @@ async def purge_events(
     not happened yet, however old it looks. Returns the number of rows removed.
     """
     cutoff = (now or _now()) - timedelta(days=retention_days)
+    await session.exec(delete(TriggerRenewalObservation).where(TriggerRenewalObservation.observed_at < cutoff))
     statement = delete(TriggerEvent).where(
         col(TriggerEvent.state).in_(sorted(TERMINAL_EVENT_STATES)),
         col(TriggerEvent.created_at) < cutoff,

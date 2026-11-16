@@ -303,6 +303,14 @@ LANGFLOW_EXTERNAL_AUTH_TRUSTED_JWT_DECODE=true
 LANGFLOW_EXTERNAL_AUTH_TOKEN_HEADER=X-Forwarded-User-Token
 ```
 
+The proxy must remove any client-supplied value for `X-Forwarded-User-Token` and replace it only after validating the user's token.
+If you configure `LANGFLOW_EXTERNAL_AUTH_TOKEN_COOKIE`, the proxy must also replace or remove that cookie.
+Restrict direct access to the Langflow backend so callers cannot bypass the proxy.
+
+Langflow sends only the configured external header or cookie to the external identity resolver.
+Native credentials in the `Authorization` header, `access_token_lf` cookie, or WebSocket `token` query parameter still require Langflow's JWT signature verification unless that header or cookie is explicitly configured as an external credential source.
+Strip those native credentials at the proxy when all requests must use the proxy's identity, so a valid Langflow session cannot take precedence over it.
+
 ## SSO provider integrations
 
 Full provider-specific SSO (OIDC, SAML, LDAP) is available as a plugin (`LANGFLOW_SSO_ENABLED`, `LANGFLOW_SSO_PROVIDER`, `LANGFLOW_SSO_CONFIG_FILE`, `LANGFLOW_SSO_REDIRECT_URL`).

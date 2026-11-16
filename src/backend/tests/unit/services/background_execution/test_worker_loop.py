@@ -62,6 +62,7 @@ async def test_worker_runs_each_claimed_job():
     assert runner.ran == ["j1", "j2"]
 
 
+@pytest.mark.usefixtures("client")
 async def test_worker_skips_a_claim_when_its_lease_was_taken_by_another_worker():
     stop_event = asyncio.Event()
     backend = _FlakyBackend(fail_times=0, ids=["lost-claim"], stop_event=stop_event)

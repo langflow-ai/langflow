@@ -19,6 +19,7 @@ from langflow.services.auth.cookies import auth_cookie_name
 from langflow.services.auth.exceptions import (
     AuthBackendUnavailableError,
     AuthenticationError,
+    ExternalAuthMaintenanceError,
     InsufficientPermissionsError,
     InvalidCredentialsError,
     MissingCredentialsError,
@@ -192,7 +193,9 @@ def _auth_error_to_http(e: AuthenticationError) -> HTTPException:
     if isinstance(e, AuthBackendUnavailableError):
         return HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=e.message,
+            detail={"code": e.error_code, "message": e.message}
+            if isinstance(e, ExternalAuthMaintenanceError)
+            else e.message,
             headers={"Retry-After": "1"},
         )
     if isinstance(
@@ -210,6 +213,7 @@ async def get_current_user(
     header_param: Annotated[str | None, Security(api_key_header)],
     db: AsyncSession = Depends(injectable_session_scope, scope="function"),
 ) -> User:
+    """Authenticate through the registered service, then bind asserted audit identity."""
     # Keep the native token (resolved by oauth2_login, which may already have
     # collapsed to the external credential) separate from a freshly-extracted
     # external credential so native verification never forwards a native token
@@ -222,6 +226,9 @@ async def get_current_user(
     except AuthenticationError as e:
         raise _auth_error_to_http(e) from e
     else:
+        from langflow.services.audit.represented import bind_represented_identity
+
+        bind_represented_identity(request)
         set_authenticated_telemetry_user(user)
         return user
 
@@ -378,8 +385,7 @@ async def get_optional_user(
 async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
     """Get the user for webhook execution.
 
-    When WEBHOOK_AUTH_ENABLE=false, allows execution as the flow owner without API key.
-    When WEBHOOK_AUTH_ENABLE=true, requires API key authentication and validates flow ownership.
+    Requires API key authentication and validates flow ownership regardless of the legacy flag.
 
     Args:
         flow_id: The ID of the flow being executed
@@ -392,12 +398,7 @@ async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
         HTTPException: If authentication fails or user doesn't have permission
     """
     user = await _auth_service().get_webhook_user(flow_id, request)
-    # Public webhooks execute as the owner without authenticating their caller.
-    authenticated = get_settings_service().auth_settings.WEBHOOK_AUTH_ENABLE
-    if authenticated:
-        set_authenticated_telemetry_user(user)
-    else:
-        clear_current_telemetry_user()
+    set_authenticated_telemetry_user(user)
     return user
 
 
@@ -564,6 +565,7 @@ async def get_current_user_mcp(
     header_param: Annotated[str | None, Security(api_key_header)],
     db: AsyncSession = Depends(injectable_session_scope, scope="function"),
 ) -> User:
+    """Authenticate the MCP caller before binding represented audit identity."""
     external_token = _get_external_token(request.headers, request.cookies)
     service = _auth_service()
     external_kwargs = {}
@@ -577,9 +579,14 @@ async def get_current_user_mcp(
         if supports_external_token:
             external_kwargs["external_token"] = external_token
     try:
-        return await service.get_current_user_mcp(token, query_param, header_param, db, **external_kwargs)
+        user = await service.get_current_user_mcp(token, query_param, header_param, db, **external_kwargs)
     except AuthenticationError as e:
         raise _auth_error_to_http(e) from e
+    else:
+        from langflow.services.audit.represented import bind_represented_identity
+
+        bind_represented_identity(request)
+        return user
 
 
 async def get_current_active_user_mcp(user: User = Depends(get_current_user_mcp)) -> User:

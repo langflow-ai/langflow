@@ -23,6 +23,7 @@ def space_input():
         display_name="Space ID",
         required=True,
         info="An operator-approved numeric Confluence space ID.",
+        tool_mode=True,
     )
 
 
@@ -34,8 +35,8 @@ class ConfluenceSearchPagesComponent(ConfluenceActionComponent):
     inputs = [
         connection_input(capability_id),
         space_input(),
-        MessageTextInput(name="title", display_name="Exact Title"),
-        MessageTextInput(name="cursor", display_name="Next Page Cursor", advanced=True),
+        MessageTextInput(name="title", display_name="Exact Title", tool_mode=True),
+        MessageTextInput(name="cursor", display_name="Next Page Cursor", advanced=True, tool_mode=True),
     ]
     outputs = [Output(display_name="Pages", name="pages", method="search_pages")]
 
@@ -62,7 +63,7 @@ class ConfluenceReadPageComponent(ConfluenceActionComponent):
     inputs = [
         connection_input(capability_id),
         space_input(),
-        MessageTextInput(name="page_id", display_name="Page ID", required=True),
+        MessageTextInput(name="page_id", display_name="Page ID", required=True, tool_mode=True),
     ]
     outputs = [Output(display_name="Page", name="page", method="read_page")]
 
@@ -82,9 +83,9 @@ class ConfluenceCreatePageComponent(ConfluenceActionComponent):
     inputs = [
         connection_input(capability_id),
         space_input(),
-        MessageTextInput(name="title", display_name="Title", required=True),
-        MultilineInput(name="body_storage", display_name="Storage Body", required=True),
-        MessageTextInput(name="parent_id", display_name="Parent Page ID", advanced=True),
+        MessageTextInput(name="title", display_name="Title", required=True, tool_mode=True),
+        MultilineInput(name="body_storage", display_name="Storage Body", required=True, tool_mode=True),
+        MessageTextInput(name="parent_id", display_name="Parent Page ID", advanced=True, tool_mode=True),
     ]
     outputs = [Output(display_name="Page", name="page", method="create_page")]
 
@@ -114,10 +115,12 @@ class ConfluenceUpdatePageComponent(ConfluenceActionComponent):
     inputs = [
         connection_input(capability_id),
         space_input(),
-        MessageTextInput(name="page_id", display_name="Page ID", required=True),
-        IntInput(name="expected_version", display_name="Expected Current Version", required=True, value=1),
-        MessageTextInput(name="title", display_name="Title", required=True),
-        MultilineInput(name="body_storage", display_name="Storage Body", required=True),
+        MessageTextInput(name="page_id", display_name="Page ID", required=True, tool_mode=True),
+        IntInput(
+            name="expected_version", display_name="Expected Current Version", required=True, value=1, tool_mode=True
+        ),
+        MessageTextInput(name="title", display_name="Title", required=True, tool_mode=True),
+        MultilineInput(name="body_storage", display_name="Storage Body", required=True, tool_mode=True),
     ]
     outputs = [Output(display_name="Page", name="page", method="update_page")]
 

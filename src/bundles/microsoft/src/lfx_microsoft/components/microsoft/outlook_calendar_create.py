@@ -31,47 +31,56 @@ class OutlookCalendarCreateComponent(MicrosoftGraphComponent):
 
     inputs = [
         connection_input(capability_id),
-        MessageTextInput(name="subject", display_name="Subject", required=True),
+        MessageTextInput(name="subject", display_name="Subject", required=True, tool_mode=True),
         MessageTextInput(
             name="start_time",
             display_name="Start",
             info="ISO 8601 local start, for example 2026-09-01T09:00:00.",
             required=True,
+            tool_mode=True,
         ),
-        MessageTextInput(name="end_time", display_name="End", info="ISO 8601 local end.", required=True),
+        MessageTextInput(
+            name="end_time", display_name="End", info="ISO 8601 local end.", required=True, tool_mode=True
+        ),
         MessageTextInput(
             name="time_zone",
             display_name="Time Zone",
             info="dateTimeTimeZone.timeZone for both ends. Defaults to UTC.",
             value=DEFAULT_TIME_ZONE,
+            tool_mode=True,
         ),
-        MultilineInput(name="body", display_name="Body", advanced=True),
-        MessageTextInput(name="location", display_name="Location", advanced=True),
+        MultilineInput(name="body", display_name="Body", advanced=True, tool_mode=True),
+        MessageTextInput(name="location", display_name="Location", advanced=True, tool_mode=True),
         MessageTextInput(
             name="attendees",
             display_name="Attendees",
             info="Required attendee addresses.",
             is_list=True,
             advanced=True,
+            tool_mode=True,
+            value=[],
         ),
-        BoolInput(name="is_online_meeting", display_name="Online Meeting", value=False, advanced=True),
+        BoolInput(name="is_online_meeting", display_name="Online Meeting", value=False, advanced=True, tool_mode=True),
         DataInput(
             name="recurrence",
             display_name="Recurrence",
             info="A Graph patternedRecurrence object.",
             advanced=True,
+            tool_mode=True,
         ),
         MessageTextInput(
             name="calendar_id",
             display_name="Calendar ID",
             info="Defaults to the user's default calendar.",
             advanced=True,
+            tool_mode=True,
         ),
         MessageTextInput(
             name="transaction_id",
             display_name="Transaction ID",
             info="Client-supplied id that makes a retried create idempotent.",
             advanced=True,
+            tool_mode=True,
         ),
     ]
 

@@ -295,13 +295,13 @@ export default function APITabsComponent() {
               return (
                 <div className="api-modal-tabs-content flex h-full flex-col gap-4 overflow-auto">
                   {steps.map((step, index) => (
+                    // Every block keeps its own height and the list scrolls. A
+                    // last block set to fill the leftover space shrank to 0 px
+                    // whenever the blocks above it filled the modal.
                     <div
                       key={index}
-                      className={
-                        index === steps.length - 1
-                          ? "flex flex-1 flex-col overflow-hidden"
-                          : ""
-                      }
+                      className="flex shrink-0 flex-col"
+                      data-testid={`api-step-${index + 1}`}
                     >
                       <h4 className="mb-2 text-sm font-medium">
                         {STEP_TITLE_KEYS[step.title]
@@ -313,11 +313,7 @@ export default function APITabsComponent() {
                           {step.description}
                         </p>
                       )}
-                      <div
-                        className={`relative flex ${
-                          index === steps.length - 1 ? "h-full" : ""
-                        } w-full`}
-                      >
+                      <div className="relative flex w-full">
                         <Button
                           variant="ghost"
                           size="icon"
@@ -344,9 +340,7 @@ export default function APITabsComponent() {
                           wrapLongLines={true}
                           language={currentTab.language}
                           style={dark ? oneDark : oneLight}
-                          className={`!mt-0 ${
-                            index === steps.length - 1 ? "h-full" : ""
-                          } ${customCodeTabsClass.step}`}
+                          className={`!mt-0 ${customCodeTabsClass.step}`}
                         >
                           {step.code}
                         </SyntaxHighlighter>

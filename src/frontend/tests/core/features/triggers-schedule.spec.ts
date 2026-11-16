@@ -67,9 +67,11 @@ test.describe("Schedule trigger lifecycle", () => {
       await expect(
         drawer.getByTestId(`trigger-event-${testEvent.id}`),
       ).toBeVisible();
-      await expect(drawer.getByTestId("trigger-event-payload")).toContainText(
-        '"test": true',
-      );
+      const payload = drawer.getByTestId("trigger-event-payload");
+      const testField = payload
+        .getByText("test", { exact: true })
+        .locator("..");
+      await expect(testField.getByText("true", { exact: true })).toBeVisible();
 
       // Replay creates a new linked event; the original is left as it was.
       await drawer.getByTestId("trigger-event-replay").click();

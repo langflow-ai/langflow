@@ -40,10 +40,15 @@ class AnyIOTaskResult:
         return self._status == "DONE"
 
     async def run(self, func: Callable[..., Any], *args: Any, **kwargs: Any) -> None:
+        from langflow.api.utils.migration_pause import admitted_maintenance_caller, write_admission
+
         try:
-            async with anyio.CancelScope() as scope:
-                self.cancel_scope = scope
-                self._result = await func(*args, **kwargs)
+            async with write_admission("task", name="anyio_task", caller_id=admitted_maintenance_caller()) as refusal:
+                if refusal is not None:
+                    raise RuntimeError(refusal)
+                with anyio.CancelScope() as scope:
+                    self.cancel_scope = scope
+                    self._result = await func(*args, **kwargs)
         except Exception as e:  # noqa: BLE001
             self._exception = e
             self._traceback = e.__traceback__

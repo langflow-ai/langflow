@@ -51,8 +51,8 @@ class TriggerConnectionNotOwnedError(ValueError):
 
     def __init__(self) -> None:
         super().__init__(
-            "A trigger can only use a connection its owner owns. Choose one of your own connections; "
-            "shared and instance connections cannot back a trigger."
+            "The trigger's connection is unavailable. It may have been deleted or may not belong to you. "
+            "Choose or create one of your own connections. Shared and instance connections cannot back a trigger."
         )
 
 

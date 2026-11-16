@@ -6,12 +6,16 @@ Validates that tool selection persists when navigating away and back to a flow:
 - UUID override must only happen on genuine server changes
 """
 
+from copy import deepcopy
 from typing import Any
+from unittest.mock import AsyncMock, patch
 from uuid import UUID, uuid4
 
 import pytest
-from lfx.base.agents.utils import safe_cache_get, safe_cache_set
+from langchain_core.tools import StructuredTool
+from lfx.base.agents.utils import safe_cache_get
 from lfx.components.models_and_agents.mcp_component import MCPToolsComponent
+from lfx.services.cache.service import ThreadingInMemoryCache
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -49,6 +53,7 @@ class TestMCPComponentFlowReload(ComponentTestBaseWithoutClient):
     def saved_flow_build_config(self):
         """Simulates build_config from a saved flow with tool already selected."""
         return {
+            "_frontend_node_id": {"value": "saved-mcp-node"},
             "mcp_server": {"value": {"name": "test_server"}},
             "tool": {
                 "show": True,
@@ -63,6 +68,7 @@ class TestMCPComponentFlowReload(ComponentTestBaseWithoutClient):
     async def component_setup(self, component_class: type[Any], default_kwargs: dict[str, Any]) -> MCPToolsComponent:
         component_instance = await super().component_setup(component_class, default_kwargs)
         component_instance._user_id = str(uuid4())
+        component_instance._flow_id = str(uuid4())
         return component_instance
 
     @pytest.mark.asyncio
@@ -76,7 +82,7 @@ class TestMCPComponentFlowReload(ComponentTestBaseWithoutClient):
         """
         # Arrange — ensure cold cache (no previous server selection)
         component = await self.component_setup(component_class, default_kwargs)
-        safe_cache_set(component._shared_component_cache, "last_selected_server", "")
+        component._remember_selected_server(component._mcp_selected_server_cache_key(saved_flow_build_config), "")
         build_config = saved_flow_build_config.copy()
         server_value = {"name": "test_server"}
 
@@ -94,7 +100,7 @@ class TestMCPComponentFlowReload(ComponentTestBaseWithoutClient):
         """Cold cache on initial flow load must not override saved tool value with UUID."""
         # Arrange — ensure cold cache
         component = await self.component_setup(component_class, default_kwargs)
-        safe_cache_set(component._shared_component_cache, "last_selected_server", "")
+        component._remember_selected_server(component._mcp_selected_server_cache_key(saved_flow_build_config), "")
         build_config = saved_flow_build_config.copy()
         server_value = {"name": "test_server"}
 
@@ -116,7 +122,9 @@ class TestMCPComponentFlowReload(ComponentTestBaseWithoutClient):
         build_config = saved_flow_build_config.copy()
 
         # Simulate previous server was set (warm cache)
-        safe_cache_set(component._shared_component_cache, "last_selected_server", "old_server")
+        component._remember_selected_server(
+            component._mcp_selected_server_cache_key(saved_flow_build_config), "old_server"
+        )
 
         new_server_value = {"name": "new_server"}
 
@@ -133,7 +141,7 @@ class TestMCPComponentFlowReload(ComponentTestBaseWithoutClient):
         """Initial load must populate the cache with the current server name."""
         # Arrange — ensure cold cache
         component = await self.component_setup(component_class, default_kwargs)
-        safe_cache_set(component._shared_component_cache, "last_selected_server", "")
+        component._remember_selected_server(component._mcp_selected_server_cache_key(saved_flow_build_config), "")
         build_config = saved_flow_build_config.copy()
         server_value = {"name": "test_server"}
 
@@ -141,7 +149,8 @@ class TestMCPComponentFlowReload(ComponentTestBaseWithoutClient):
         await component.update_build_config(build_config, server_value, "mcp_server")
 
         # Assert
-        cached_server = safe_cache_get(component._shared_component_cache, "last_selected_server", "")
+        selections = safe_cache_get(component._shared_component_cache, "mcp_selected_servers", {})
+        cached_server = selections[component._mcp_selected_server_cache_key(saved_flow_build_config)]
         assert cached_server == "test_server"
 
     @pytest.mark.asyncio
@@ -154,7 +163,9 @@ class TestMCPComponentFlowReload(ComponentTestBaseWithoutClient):
         build_config = saved_flow_build_config.copy()
 
         # Simulate previous server was set (warm cache)
-        safe_cache_set(component._shared_component_cache, "last_selected_server", "old_server")
+        component._remember_selected_server(
+            component._mcp_selected_server_cache_key(saved_flow_build_config), "old_server"
+        )
 
         new_server_value = {"name": "new_server"}
 
@@ -169,3 +180,168 @@ class TestMCPComponentFlowReload(ComponentTestBaseWithoutClient):
             "Error on MCP Server",
             "Timeout on MCP server",
         )
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("is_refresh", [False, True])
+    @pytest.mark.parametrize("last_selected_server", ["", "test_server"])
+    async def test_same_server_refresh_preserves_selected_tool_inputs(
+        self, component_class, default_kwargs, saved_flow_build_config, is_refresh, last_selected_server
+    ):
+        """Keep saved argument values and presentation when refreshing the same selected tool."""
+        component = await self.component_setup(component_class, default_kwargs)
+        component._remember_selected_server(
+            component._mcp_selected_server_cache_key(saved_flow_build_config), last_selected_server
+        )
+        config = deepcopy(saved_flow_build_config)
+        config["is_refresh"] = is_refresh
+        config["name"] = {
+            "name": "name",
+            "type": "str",
+            "value": "saved_name",
+            "show": False,
+            "advanced": True,
+            "load_from_db": True,
+        }
+        config["times"] = {
+            "name": "times",
+            "type": "int",
+            "value": 0,
+            "show": True,
+            "advanced": False,
+            "load_from_db": False,
+        }
+        saved_fields = deepcopy({name: config[name] for name in ("name", "times")})
+
+        async def saved_tool(name: str, times: int = 1) -> str:
+            return name * times
+
+        tool = StructuredTool.from_function(coroutine=saved_tool, description="Local schema fixture")
+        with patch.object(component, "update_tool_list", new=AsyncMock(return_value=([tool], {"name": "test_server"}))):
+            updated = await component.update_build_config(config, {"name": "test_server"}, "mcp_server")
+
+        assert updated["tool"]["value"] == "saved_tool"
+        for name, previous in saved_fields.items():
+            for key in ("value", "show", "advanced", "load_from_db"):
+                assert updated[name][key] == previous[key]
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("last_selected_server", ["", "test_server"])
+    async def test_server_change_drops_previous_tool_inputs(
+        self, component_class, default_kwargs, saved_flow_build_config, last_selected_server
+    ):
+        component = await self.component_setup(component_class, default_kwargs)
+        component._remember_selected_server(
+            component._mcp_selected_server_cache_key(saved_flow_build_config), last_selected_server
+        )
+        config = deepcopy(saved_flow_build_config)
+        config["name"] = {"name": "name", "type": "str", "value": "previous server"}
+
+        async def saved_tool(name: str) -> str:
+            return name
+
+        tool = StructuredTool.from_function(coroutine=saved_tool, description="Local schema fixture")
+        with patch.object(component, "update_tool_list", new=AsyncMock(return_value=([tool], {"name": "new_server"}))):
+            updated = await component.update_build_config(config, {"name": "new_server"}, "mcp_server")
+
+        assert isinstance(updated["tool"]["value"], UUID)
+        assert updated["tool"]["options"] == ["saved_tool"]
+        assert "name" not in updated
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("scope_change", ["flow", "node", "user"])
+    async def test_repeated_loads_do_not_share_selected_server_between_scopes(
+        self, component_class, default_kwargs, saved_flow_build_config, scope_change
+    ):
+        user_id = str(uuid4())
+        other_user_id = str(uuid4())
+
+        async def saved_tool(name: str) -> str:
+            return name
+
+        tool = StructuredTool.from_function(coroutine=saved_tool, description="Local schema fixture")
+        for scope in ("first", "second", "first", "second"):
+            component = await self.component_setup(component_class, default_kwargs)
+            component._user_id = other_user_id if scope_change == "user" and scope == "second" else user_id
+            component._flow_id = scope if scope_change == "flow" else "same-flow"
+            config = deepcopy(saved_flow_build_config)
+            node_id = scope if scope_change == "node" else "same-node"
+            config["_frontend_node_id"] = {"value": node_id}
+            config["mcp_server"]["value"] = {"name": scope}
+            config["name"] = {"name": "name", "type": "str", "value": f"saved-{scope}"}
+            with patch.object(component, "update_tool_list", new=AsyncMock(return_value=([tool], {"name": scope}))):
+                updated = await component.update_build_config(config, {"name": scope}, "mcp_server")
+
+            assert updated["tool"]["value"] == "saved_tool"
+            assert updated["name"]["value"] == f"saved-{scope}"
+
+    @pytest.mark.asyncio
+    async def test_same_node_server_change_resets_after_template_value_changes(
+        self, component_class, default_kwargs, saved_flow_build_config
+    ):
+        component = await self.component_setup(component_class, default_kwargs)
+        config = deepcopy(saved_flow_build_config)
+        config["mcp_server"]["value"] = {"name": "new_server"}
+        config["name"] = {"name": "name", "type": "str", "value": "previous server"}
+        key = component._mcp_selected_server_cache_key(config)
+        component._remember_selected_server(key, "test_server")
+
+        async def saved_tool(name: str) -> str:
+            return name
+
+        tool = StructuredTool.from_function(coroutine=saved_tool, description="Local schema fixture")
+        with patch.object(component, "update_tool_list", new=AsyncMock(return_value=([tool], {"name": "new_server"}))):
+            updated = await component.update_build_config(config, {"name": "new_server"}, "mcp_server")
+
+        assert isinstance(updated["tool"]["value"], UUID)
+        assert "name" not in updated
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("refresh", [False, True])
+    async def test_request_previous_server_controls_cold_and_stale_selection_history(
+        self, component_class, default_kwargs, saved_flow_build_config, refresh
+    ):
+        component = await self.component_setup(component_class, default_kwargs)
+        config = deepcopy(saved_flow_build_config)
+        config["is_refresh"] = refresh
+        config["mcp_server"]["value"] = {"name": "new_server"}
+        config["_frontend_node_previous_mcp_server"] = {"value": {"name": "new_server" if refresh else "test_server"}}
+        config["name"] = {"name": "name", "type": "str", "value": "saved name"}
+        if refresh:
+            key = component._mcp_selected_server_cache_key(config)
+            component._remember_selected_server(key, "test_server")
+
+        async def saved_tool(name: str) -> str:
+            return name
+
+        tool = StructuredTool.from_function(coroutine=saved_tool, description="Local schema fixture")
+        with patch.object(component, "update_tool_list", new=AsyncMock(return_value=([tool], {"name": "new_server"}))):
+            updated = await component.update_build_config(config, {"name": "new_server"}, "mcp_server")
+
+        if refresh:
+            assert updated["tool"]["value"] == "saved_tool"
+            assert updated["name"]["value"] == "saved name"
+        else:
+            assert isinstance(updated["tool"]["value"], UUID)
+            assert "name" not in updated
+
+    @pytest.mark.asyncio
+    async def test_selection_history_has_bounded_storage(
+        self, component_class, default_kwargs, saved_flow_build_config
+    ):
+        component = await self.component_setup(component_class, default_kwargs)
+        component._shared_component_cache = ThreadingInMemoryCache()
+        component.SHARED_SELECTIONS_CACHE_MAX_ENTRIES = 3
+        component.use_cache = True
+        keys = []
+        with patch.object(component, "update_tool_list", new=AsyncMock()) as discover:
+            for index in range(5):
+                config = deepcopy(saved_flow_build_config)
+                config["_frontend_node_id"] = {"value": f"node-{index}"}
+                keys.append(component._mcp_selected_server_cache_key(config))
+                updated = await component.update_build_config(config, {"name": "test_server"}, "mcp_server")
+                assert updated["tool"]["value"] == "saved_tool"
+
+        discover.assert_not_awaited()
+        selections = safe_cache_get(component._shared_component_cache, "mcp_selected_servers", {})
+        assert list(selections) == keys[-3:]
+        assert len(component._shared_component_cache) == 1

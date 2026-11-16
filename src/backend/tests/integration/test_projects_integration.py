@@ -135,5 +135,5 @@ async def test_create_project_blocks_moving_deployed_flow(client: AsyncClient, l
         json={"name": "integration-target-project", "flows_list": [str(flow_id)], "components_list": []},
         headers=logged_in_headers,
     )
-    assert create_resp.status_code == status.HTTP_409_CONFLICT
+    assert create_resp.status_code == status.HTTP_409_CONFLICT, create_resp.text
     assert "cannot be moved to another project" in create_resp.json()["detail"]

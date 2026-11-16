@@ -47,7 +47,13 @@ async def test_copy_preserves_ids_and_vectors_without_an_embedder(tmp_path: Path
     ]
     try:
         await backend.ensure_ready()
+        ids = [doc.id for doc in docs]
+        assert await backend.get_documents_by_ids(ids) == []
         await backend.add_embedded_documents(docs)
+        stored = await backend.get_documents_by_ids(ids)
+        assert {doc.id: (doc.page_content, doc.metadata) for doc in stored} == {
+            doc.id: (doc.content, doc.metadata) for doc in docs
+        }
         await backend.add_embedded_documents(docs)  # a re-run must upsert
         backend._os_client.indices.refresh(index=backend._os_index)
 

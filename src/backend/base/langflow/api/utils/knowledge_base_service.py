@@ -284,8 +284,11 @@ async def backfill_all_users_from_disk(
     ``dry_run``). Never raises for per-user failures.
     """
     from langflow.api.utils.kb_helpers import KBStorageHelper
+    from langflow.api.utils.migration_pause import writes_paused
     from langflow.services.database.models.user.model import User
 
+    if not dry_run and await writes_paused():
+        return 0
     effective_root = kb_root or KBStorageHelper.get_root_path()
     if not effective_root.exists():
         return 0
@@ -341,9 +344,12 @@ async def backfill_memory_base_rows() -> int:
     """
     from sqlalchemy import exists
 
+    from langflow.api.utils.migration_pause import writes_paused
     from langflow.services.database.models.memory_base.model import MemoryBase
     from langflow.services.memory_base.embedding_helpers import infer_embedding_provider
 
+    if await writes_paused():
+        return 0
     # Fetch only Memory Bases with no matching knowledge_base row (by owner + name).
     orphan_stmt = (
         select(MemoryBase)

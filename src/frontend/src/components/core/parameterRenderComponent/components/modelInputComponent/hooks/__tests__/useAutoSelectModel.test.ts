@@ -78,6 +78,49 @@ describe("useAutoSelectModel", () => {
     ).toHaveBeenCalledWith({ value: [expect.objectContaining(ANTHROPIC)] });
   });
 
+  it("clears a decision model its configured provider lists but the field no longer offers", () => {
+    // Switched off in Model Providers: cleared, never swapped for another provider's (LE-3117 F4).
+    const switchedOff = {
+      name: "jev-latest",
+      provider: "TypeSafe",
+      icon: "TypeSafe",
+      metadata: { model_type: "decision" },
+    };
+    const providers = [
+      {
+        provider: "TypeSafe",
+        is_configured: true,
+        is_enabled: true,
+        models: [
+          { model_name: "jev-latest", metadata: { model_type: "decision" } },
+        ],
+      },
+    ] as never;
+    expect(
+      renderAutoSelect({
+        value: [switchedOff],
+        modelType: "decision",
+        providers,
+      }),
+    ).toHaveBeenCalledWith({ value: [] });
+    expect(
+      renderAutoSelect({
+        value: [switchedOff],
+        modelType: "decision",
+        providers,
+        isConnectionMode: true,
+      }),
+    ).not.toHaveBeenCalled();
+    expect(
+      renderAutoSelect({
+        value: [switchedOff],
+        modelType: "decision",
+        providers,
+        flatOptions: [switchedOff],
+      }),
+    ).not.toHaveBeenCalled();
+  });
+
   it("should_keep_a_valid_selection_untouched", () => {
     expect(renderAutoSelect({ value: [OPENAI] })).not.toHaveBeenCalled();
   });

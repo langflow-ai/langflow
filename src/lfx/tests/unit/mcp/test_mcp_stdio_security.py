@@ -228,6 +228,52 @@ def test_extract_base_command_handles_paths_and_args():
     assert extract_base_command("uvx mcp-server-fetch") == "uvx"
     assert extract_base_command("node.exe") == "node"
     assert extract_base_command(r"C:\Program Files\nodejs\node.exe") == "node"
+    assert extract_base_command("tools/python3 helper") == "python3 helper"
+    assert extract_base_command("uvx mcp-proxy https://mcp.example.com") == "uvx"
+
+
+@pytest.mark.parametrize("command", ["sh", "bash", "cmd"])
+@pytest.mark.parametrize("args", [[], ["server.txt"]])
+def test_shell_wrappers_require_an_inline_command_by_default(command, args):
+    with pytest.raises(MCPStdioSecurityError, match="not allowed"):
+        validate_mcp_stdio_config(command, args, {}, interpreter_hardening=False)
+
+
+@pytest.mark.parametrize("command", ["sh", "bash"])
+@pytest.mark.parametrize("flag", ["-C", "-norc", "-rcfile", "-oc", "-kc", "-kec", "-ic", "-lc", "-vc", "-xc"])
+@pytest.mark.parametrize("hardened", [False, True])
+def test_shell_wrappers_reject_unsupported_option_forms(command, flag, hardened):
+    with pytest.raises(MCPStdioSecurityError):
+        validate_mcp_stdio_config(command, [flag, "uvx mcp-proxy"], {}, interpreter_hardening=hardened)
+
+
+@pytest.mark.parametrize("command", ["sh", "bash"])
+@pytest.mark.parametrize("flag", ["-cuvx mcp-proxy", "-oc"])
+def test_shell_wrapper_option_error_identifies_the_inline_command_form(command, flag):
+    with pytest.raises(MCPStdioSecurityError, match="Pass the command as a separate argument after -c"):
+        validate_mcp_stdio_config(command, [flag, "uvx mcp-proxy"], {})
+
+
+@pytest.mark.parametrize("command", ["sh", "bash"])
+@pytest.mark.parametrize("hardened", [False, True])
+def test_shell_wrappers_preserve_relative_interpreter_paths(command, hardened):
+    validate_mcp_stdio_config(
+        command,
+        ["-c", "venv/bin/python -m langflow.agentic.mcp"],
+        {},
+        interpreter_hardening=hardened,
+    )
+
+
+@pytest.mark.parametrize("command", ["sh", "bash"])
+def test_relative_interpreter_paths_still_apply_hardening(command):
+    with pytest.raises(MCPStdioSecurityError, match="INTERPRETER_HARDENING"):
+        validate_mcp_stdio_config(
+            command,
+            ["-c", "venv/bin/python -m example_server"],
+            {},
+            interpreter_hardening=True,
+        )
 
 
 def test_allowlist_excludes_dangerous_binaries():

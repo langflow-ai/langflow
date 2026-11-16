@@ -174,6 +174,8 @@ def _detect_encoding_with_fallbacks(raw_data: bytes) -> list[str]:
         encodings: list[str] = ["utf-8"]
         if re.search(rb"[\x81-\xfe][0-9][\x81-\xfe][0-9]", raw_data[: _CHARDET_SAMPLE_BYTES + 3]):
             encodings.append("gb18030")
+        if detected_encoding == "Windows-1254":
+            encodings.append("cp1254")
         # Otherwise cp1252 must precede gb18030, which accepts some Windows
         # punctuation as CJK characters. Both readers validate each candidate.
         encodings.append("cp1252")

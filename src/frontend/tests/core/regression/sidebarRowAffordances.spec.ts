@@ -5,19 +5,18 @@ import { openBlankFlow } from "../../utils/flow/open-blank-flow";
  * LE-2311: the sidebar row's label wrapper is a flex item with the default
  * `min-width: auto`, so it refuses to shrink below its intrinsic content
  * width. On rows whose name (plus an optional Beta/Legacy badge) is wider
- * than the row, the sibling action container holding the add (`+`) button and
- * the drag handle is pushed past the row's right edge and clipped away.
+ * than the row, the sibling action container holding the add (`+`) button is
+ * pushed past the row's right edge and clipped away.
  *
- * The row keeps working (double-click, drag, right-click), but neither
- * affordance is visible, so nothing on the row signals that it can be added
- * or dragged.
+ * The row keeps working (double-click, drag, right-click), but the `+` is not
+ * visible, so nothing on the row signals that it can be added.
  *
  * The search term is chosen so that both a short name and several long ones
  * are on screen at once: the short row proves the measurement is sound, the
  * long ones are the regression.
  */
 test(
-  "sidebar add button and drag handle stay inside the row for long component names",
+  "sidebar add button stays inside the row for long component names",
   { tag: ["@release", "@components", "@workspace"] },
   async ({ page }) => {
     await page.setViewportSize({ width: 1470, height: 704 });
@@ -36,14 +35,16 @@ test(
       return rows
         .map((row) => {
           const rowBox = row.getBoundingClientRect();
-          const grip = row.querySelector('[data-testid="icon-GripVertical"]');
-          const gripBox = grip?.getBoundingClientRect();
+          const add = row.querySelector(
+            '[data-testid^="add-component-button-"]',
+          );
+          const addBox = add?.getBoundingClientRect();
           return {
             name:
               row.querySelector('[data-testid="display-name"]')?.textContent ??
               row.getAttribute("data-testid"),
-            // Positive means the handle sticks out past the row's right edge.
-            overflow: gripBox ? Math.round(gripBox.right - rowBox.right) : null,
+            // Positive means the button sticks out past the row's right edge.
+            overflow: addBox ? Math.round(addBox.right - rowBox.right) : null,
           };
         })
         .filter((r) => r.overflow === null || r.overflow > 0);
@@ -51,7 +52,7 @@ test(
 
     expect(
       overflowing,
-      `rows whose drag handle renders outside the row: ${JSON.stringify(
+      `rows whose add button renders outside the row: ${JSON.stringify(
         overflowing,
       )}`,
     ).toEqual([]);

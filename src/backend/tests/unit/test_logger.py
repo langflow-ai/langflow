@@ -200,11 +200,13 @@ class TestConfigure:
                     if isinstance(handler, logging.handlers.RotatingFileHandler):
                         logging.root.removeHandler(handler)
 
-    def test_configure_with_invalid_log_file_path(self):
+    def test_configure_with_invalid_log_file_path(self, tmp_path):
         """Test configure() with invalid log file path falls back to cache dir."""
         invalid_path = Path("/nonexistent/directory/log.txt")
 
-        configure(log_file=invalid_path)
+        with patch.object(importlib.import_module("lfx.log.logger"), "user_cache_dir", return_value=str(tmp_path)):
+            configure(log_file=invalid_path)
+        assert (tmp_path / "langflow.log").is_file()
         config = structlog._config
         assert config is not None
 
@@ -1306,13 +1308,15 @@ class TestProductionObservability:
 class TestEdgeCasesAndErrorConditions:
     """Test suite for edge cases and error conditions."""
 
-    def test_configure_with_nonexistent_parent_directory(self):
+    def test_configure_with_nonexistent_parent_directory(self, tmp_path):
         """Test configure() handles non-existent parent directories gracefully."""
         # Create a path with non-existent parent directory
         nonexistent_path = Path("/definitely/nonexistent/directory/logfile.log")
 
         # Should not raise an exception
-        configure(log_file=nonexistent_path)
+        with patch.object(importlib.import_module("lfx.log.logger"), "user_cache_dir", return_value=str(tmp_path)):
+            configure(log_file=nonexistent_path)
+        assert (tmp_path / "langflow.log").is_file()
 
         config = structlog._config
         assert config is not None

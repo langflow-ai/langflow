@@ -32,36 +32,44 @@ class SharePointListComponent(MicrosoftGraphComponent):
             name="drive_id",
             display_name="Drive ID",
             info="Another user's or a shared drive. Requires Files.Read.All. Defaults to the user's OneDrive.",
+            tool_mode=True,
         ),
         MessageTextInput(
             name="site_id",
             display_name="Site ID",
             info="A SharePoint site's default document library. Requires Sites.Read.All.",
+            tool_mode=True,
         ),
         MessageTextInput(
             name="item_id",
             display_name="Folder Item ID",
             info="Defaults to the drive root.",
             advanced=True,
+            tool_mode=True,
         ),
         MessageTextInput(
             name="path",
             display_name="Folder Path",
             info="Folder path relative to the drive root, used when no item id is given.",
             advanced=True,
+            tool_mode=True,
         ),
         IntInput(
             name="top",
             display_name="Result Budget",
             value=DEFAULT_TOP,
             info="Stop after a complete page reaches this count; results can exceed it by part of a page.",
+            tool_mode=True,
         ),
-        MessageTextInput(name="select", display_name="Select Fields", is_list=True, advanced=True),
+        MessageTextInput(
+            name="select", display_name="Select Fields", is_list=True, advanced=True, tool_mode=True, value=[]
+        ),
         MessageTextInput(
             name="order_by",
             display_name="Order By",
             info="OData $orderby expression, for example name asc.",
             advanced=True,
+            tool_mode=True,
         ),
     ]
 

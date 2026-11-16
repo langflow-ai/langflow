@@ -72,6 +72,7 @@ class TriggerProvider:
     manual_token_requires_expiry: bool = False
     oauth: OAuthAdapter | None = None
     prepare: Callable[[AsyncSession, Trigger], Awaitable[None]] | None = None
+    validate_source: Callable[[Trigger, CredentialLease], Awaitable[None]] | None = None
     prepare_delivery: Callable[[Trigger, CredentialLease, dict[str, Any]], Awaitable[bool]] | None = None
 
     def __post_init__(self) -> None:

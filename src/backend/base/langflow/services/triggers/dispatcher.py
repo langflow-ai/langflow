@@ -37,7 +37,7 @@ from lfx.integrations.errors import (
 from lfx.log.logger import logger
 from sqlmodel import col, func, select, update
 
-from langflow.api.utils.migration_pause import is_paused, writing
+from langflow.api.utils.migration_pause import async_writing, writes_paused
 from langflow.services.database.models.trigger.model import Trigger, TriggerEvent, TriggerSubscription
 from langflow.services.database.models.trigger.schemas import (
     IN_FLIGHT_EVENT_STATES,
@@ -570,6 +570,37 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
         await _defer_unavailable_provider(session, trigger=trigger, event=event)
         return
 
+    from langflow.services.triggers.policy import (
+        TriggerPolicyContext,
+        TriggerPolicyError,
+        TriggerPolicyPurpose,
+        require_trigger_allowed,
+        require_trigger_policy,
+        stage_policy_denial,
+    )
+
+    context = TriggerPolicyContext(
+        user_id=trigger.user_id,
+        flow_id=trigger.flow_id,
+        event_id=event.id,
+        kind=trigger.kind,
+        purpose=TriggerPolicyPurpose.DISPATCH,
+    )
+
+    async def policy_denied(exc: TriggerPolicyError) -> None:
+        await _fence_event(session, event)
+        trigger.state = TriggerState.PAUSED.value
+        trigger.last_error = str(exc)
+        session.add(trigger)
+        await _terminalize(session, event=event, state=TriggerEventState.FAILED, error="policy_blocked")
+        stage_policy_denial(session, row=trigger, purpose=TriggerPolicyPurpose.DISPATCH)
+
+    try:
+        await require_trigger_policy(context)
+    except TriggerPolicyError as exc:
+        await policy_denied(exc)
+        return
+
     if (event.payload or {}).get(SOURCE_HINT_FIELD):
         # A thin Graph/Google notification is a durable wakeup. Expanding it
         # through the owner's connection produces canonical ledger rows; it
@@ -684,6 +715,14 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
         session.add(trigger)
         await session.flush()
         await logger.awarning("Trigger %s cannot run unattended. Connection failure %s", trigger.id, error)
+        return
+
+    # Only a canonical delivery that survived provider filtering may reserve a
+    # run quota. Reconciliation hints and no-run deliveries never invoke it.
+    try:
+        await require_trigger_allowed(context)
+    except TriggerPolicyError as exc:
+        await policy_denied(exc)
         return
 
     request = build_submit_request(trigger=trigger, event=event, binding_data=binding.data, family=family)
@@ -848,7 +887,7 @@ class TriggerDispatcher:
         while not self._stopping.is_set():
             try:
                 # A pass holds a place, so a pause waits for one that is under way.
-                with writing(name="trigger_dispatcher") as let_in:
+                async with async_writing(name="trigger_dispatcher") as let_in:
                     dispatched = await self.tick() if let_in else 0
                 if dispatched >= settings.trigger_max_events_per_poll:
                     # Continue draining full batches without adding a fixed
@@ -873,7 +912,7 @@ class TriggerDispatcher:
 
         # A paused instance produces and dispatches nothing. Triggers are not paused one by one, which
         # would fail their queued events: a due schedule catches up afterwards by its catchup_policy.
-        if is_paused():
+        if await writes_paused():
             return 0
         await run_scheduler_pass(owner=self.owner)
         settings = get_settings_service().settings
@@ -925,7 +964,7 @@ class TriggerDispatcher:
         from langflow.services.triggers.source_cleanup import run_cleanup_pass
         from langflow.services.triggers.subscriptions import run_renewal_pass
 
-        if is_paused():
+        if await writes_paused():
             return 0
         name = "trigger-source-maintenance"
         async with session_scope() as session:
@@ -946,7 +985,7 @@ class TriggerDispatcher:
     async def _source_loop(self) -> None:
         while not self._stopping.is_set():
             try:
-                with writing(name="trigger_sources") as let_in:
+                async with async_writing(name="trigger_sources") as let_in:
                     if let_in:
                         await self.source_tick()
             except asyncio.CancelledError:

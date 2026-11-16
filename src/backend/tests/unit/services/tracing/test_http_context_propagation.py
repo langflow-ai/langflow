@@ -152,7 +152,7 @@ class TestArizePhoenixHttpInstrumentation:
             patch("phoenix.otel.HTTPSpanExporter"),
             patch("phoenix.otel.GRPCSpanExporter"),
             patch("phoenix.otel.PROJECT_NAME", "test"),
-            patch("openinference.instrumentation.langchain.LangChainInstrumentor"),
+            patch("langflow.services.tracing.arize_phoenix.ArizePhoenixTracer._create_langchain_callback"),
         ):
             yield mock_provider
 
@@ -175,9 +175,9 @@ class TestArizePhoenixHttpInstrumentation:
                 trace_id=uuid.uuid4(),
             )
 
-            if tracer.ready:
-                mock_requests_inst.return_value.instrument.assert_called_once()
-                mock_urllib3_inst.return_value.instrument.assert_called_once()
+            assert tracer.ready
+            mock_requests_inst.return_value.instrument.assert_called_once()
+            mock_urllib3_inst.return_value.instrument.assert_called_once()
 
     def test_uninstrument_http_clients_called_on_end(self, mock_phoenix_imports):
         """Verify that HTTP client instrumentors are uninstrumented when tracer ends."""
@@ -200,10 +200,10 @@ class TestArizePhoenixHttpInstrumentation:
                 trace_id=uuid.uuid4(),
             )
 
-            if tracer.ready:
-                tracer.end(inputs={}, outputs={})
-                mock_requests_inst.return_value.uninstrument.assert_called_once()
-                mock_urllib3_inst.return_value.uninstrument.assert_called_once()
+            assert tracer.ready
+            tracer.end(inputs={}, outputs={})
+            mock_requests_inst.return_value.uninstrument.assert_called_once()
+            mock_urllib3_inst.return_value.uninstrument.assert_called_once()
 
 
 _langwatch_available = False

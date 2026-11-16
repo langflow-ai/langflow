@@ -97,8 +97,10 @@ async def _telemetry_lifespan(_server: FastMCP) -> AsyncIterator[dict]:
     svc.start()
     _telemetry = svc
     try:
+        await svc.log_package_version()
         yield {}
     finally:
+        await svc.log_package_shutdown()
         await svc.stop()
         _telemetry = None
 

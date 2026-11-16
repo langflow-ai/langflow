@@ -14,6 +14,7 @@ type Translate = (key: string) => string;
  * shown as the server wrote it.
  */
 export const TRIGGER_ERROR_CODES = [
+  "policy_blocked",
   "multiple_triggers",
   "node_removed",
   "source_settings_changed",

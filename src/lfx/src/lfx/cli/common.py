@@ -459,6 +459,7 @@ async def execute_graph_with_capture(
                 async for payload in coordinator.stream(
                     graph,
                     initial_inputs=inputs,
+                    user_id=user_id,
                     fallback_to_env_vars=fallback_to_env_vars,
                     event_manager=event_manager,
                     open_flow_span=False,

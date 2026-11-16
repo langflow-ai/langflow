@@ -116,6 +116,7 @@ Route guards live in `langflow.services.authorization.guards` (the legacy `langf
 - `ensure_deployment_permission(user, DeploymentAction.*, deployment_id=..., deployment_user_id=..., workspace_id=..., project_id=...)`
 - `ensure_project_permission(user, ProjectAction.*, project_id=..., project_user_id=..., workspace_id=...)`
 - `ensure_knowledge_base_permission(user, KnowledgeBaseAction.*, kb_name=..., kb_user_id=...)`
+- `ensure_dataset_permission(user, DatasetAction.*, dataset_id=..., dataset_user_id=...)` — Evals datasets
 - `ensure_variable_permission(user, VariableAction.*, variable_id=..., variable_user_id=...)`
 - `ensure_file_permission(user, FileAction.*, file_id=..., file_user_id=...)`
 - `ensure_share_permission(user, ShareAction.*, share_id=..., share_user_id=...)`

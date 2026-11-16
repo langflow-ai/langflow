@@ -18,6 +18,7 @@ from lfx.base.models.unified_models import get_provider_secret_variable_key
 PROVIDERS = tuple(providers.ENDPOINTS)
 # Each provider's first catalog row, the model its key is checked with by default.
 DEFAULT_MODELS = {row["provider"]: row["name"] for row in reversed(DECISION_MODELS_DETAILED)}
+DEFAULT_MODELS["OpenRouter"] = "typesafe/jev-1.14"
 
 
 def request_for(kind):
@@ -161,6 +162,7 @@ def test_transport_errors_redacted_and_never_follow_redirects(monkeypatch, statu
 
     monkeypatch.setattr(providers, "provider_safe_httpx_post", post)
     with pytest.raises(error) as caught:
+        # pragma: allowlist nextline secret
         providers.evaluate_provider("OpenAI", "gpt-6-luna", request_for("choice"), api_key="private-token")
     assert "private" not in str(caught.value)
 
@@ -172,6 +174,7 @@ def test_transport_exceptions_redacted(monkeypatch, failure):
 
     monkeypatch.setattr(providers, "provider_safe_httpx_post", post)
     with pytest.raises(DecisionEvaluationError) as caught:
+        # pragma: allowlist nextline secret
         providers.evaluate_provider("OpenAI", "gpt-6-luna", request_for("boolean"), api_key="key")
     assert "secret" not in str(caught.value)
 
@@ -182,7 +185,10 @@ def test_validator_never_uses_environment_or_custom_host(monkeypatch):
         providers.validate_decision_provider_key("OpenAI", {}, "gpt-6-luna")
     with pytest.raises(ValueError, match="official OpenAI endpoint"):
         providers.validate_decision_provider_key(
-            "OpenAI", {"OPENAI_API_KEY": "key", "OPENAI_BASE_URL": "https://other.example"}, "gpt-6-luna"
+            "OpenAI",
+            # pragma: allowlist nextline secret
+            {"OPENAI_API_KEY": "key", "OPENAI_BASE_URL": "https://other.example"},
+            "gpt-6-luna",
         )
 
 
@@ -191,7 +197,9 @@ def test_usage_only_emits_documented_token_counts():
     body["usage"] = {
         "input_tokens": 10,
         "output_tokens": 0,
+        # pragma: allowlist nextline secret
         "secret": "private-token",
+        # pragma: allowlist nextline secret
         "input_tokens_details": {"cached_tokens": 3, "secret": "private-token"},
     }
     result = providers.parse_response("OpenAI", request_for("boolean"), body)
@@ -246,6 +254,7 @@ def test_duplicate_wire_keys_rejected_before_json_collapses_them(provider, monke
 
     monkeypatch.setattr(providers, "provider_safe_httpx_post", post)
     with pytest.raises(DecisionEvaluationError, match="couldn't read"):
+        # pragma: allowlist nextline secret
         providers.evaluate_provider(provider, DEFAULT_MODELS[provider], request_for("choice"), api_key="key")
 
 
@@ -272,6 +281,7 @@ def test_choice_option_limit(provider):
 @pytest.mark.parametrize("timeout", [0, -1, 301, float("nan"), float("inf")])
 def test_invalid_timeout_fails_before_transport(timeout):
     with pytest.raises(DecisionConfigurationError, match="Timeout"):
+        # pragma: allowlist nextline secret
         providers.evaluate_provider("OpenAI", "gpt-6-luna", request_for("boolean"), api_key="key", timeout=timeout)
 
 
@@ -287,6 +297,7 @@ def test_credential_validation_uses_explicit_key_and_boolean_request(provider, m
     assert args[0] == provider
     assert args[1] == DEFAULT_MODELS[provider]
     assert args[2].kind == "boolean"
+    # pragma: allowlist nextline secret
     assert kwargs == {"api_key": "tenant-key", "timeout": 15}
 
 
@@ -309,7 +320,9 @@ def test_key_check_defaults_to_an_allowed_decision_model(monkeypatch):
     monkeypatch.setattr("lfx.services.model_provider_policy.resolve_model_provider_policy", lambda **_: policy)
     checked = []
     monkeypatch.setattr(providers, "validate_decision_provider_key", lambda *args: checked.append(args))
+    # pragma: allowlist nextline secret
     validate_model_provider_key("Perplexity", {"PERPLEXITY_API_KEY": "tenant-key"})
+    # pragma: allowlist nextline secret
     assert checked == [("Perplexity", {"PERPLEXITY_API_KEY": "tenant-key"}, "pplx-decider-flash-latest")]
 
 
@@ -349,12 +362,15 @@ def test_key_check_never_runs_a_chat_model_that_policy_blocks(monkeypatch):
     # langchain_openai may not be installed here; the check only needs its ChatOpenAI.
     monkeypatch.setitem(sys.modules, "langchain_openai", types.SimpleNamespace(ChatOpenAI=Chat))
     with pytest.raises(ModelProviderPolicyError):
+        # pragma: allowlist nextline secret
         validate_model_provider_key("OpenAI", {"OPENAI_API_KEY": "tenant-key"}, blocked, model_type="llm")
     assert ran == []
+    # pragma: allowlist nextline secret
     validate_model_provider_key("OpenAI", {"OPENAI_API_KEY": "tenant-key"})
     assert ran == [allowed]
     # Naming the blocked chat model as another kind doesn't run it as a chat call.
     ran.clear()
+    # pragma: allowlist nextline secret
     validate_model_provider_key("OpenAI", {"OPENAI_API_KEY": "tenant-key"}, blocked, model_type="embeddings")
     assert ran == [allowed]
 
@@ -362,6 +378,7 @@ def test_key_check_never_runs_a_chat_model_that_policy_blocks(monkeypatch):
 @pytest.mark.parametrize("provider", ["typesafe", "TypeSafe"])
 @pytest.mark.parametrize("model_type", [None, "decision"])
 def test_key_validation_treats_provider_ids_like_display_names(monkeypatch, provider, model_type):
+    monkeypatch.setattr("lfx.base.models.decisions.typesafe.get_models", lambda _key: [{"name": "jev-latest"}])
     from lfx.base.models.unified_models import validate_model_provider_key
     from lfx.services.model_provider_policy import (
         ModelProviderPolicyContext,
@@ -378,7 +395,9 @@ def test_key_validation_treats_provider_ids_like_display_names(monkeypatch, prov
     monkeypatch.setattr("lfx.services.model_provider_policy.resolve_model_provider_policy", lambda **_: policy)
     checked = []
     monkeypatch.setattr(providers, "validate_decision_provider_key", lambda *args: checked.append(args))
+    # pragma: allowlist nextline secret
     validate_model_provider_key(provider, {"TYPESAFE_API_KEY": "tenant-key"}, model_type=model_type)
+    # pragma: allowlist nextline secret
     assert checked == [("TypeSafe", {"TYPESAFE_API_KEY": "tenant-key"}, "jev-latest")]
 
 
@@ -397,12 +416,14 @@ def test_dns_failure_is_operational_but_ssrf_block_always_stops(monkeypatch):
 
     monkeypatch.setattr(providers, "provider_safe_httpx_post", dns_failure)
     with pytest.raises(DecisionEvaluationError) as caught:
+        # pragma: allowlist nextline secret
         providers.evaluate_provider("TypeSafe", "jev-latest", request_for("choice"), api_key="key")
     assert caught.value.category == "transport"
     assert "secret" not in str(caught.value)
 
     monkeypatch.setattr(providers, "provider_safe_httpx_post", blocked)
     with pytest.raises(DecisionConfigurationError, match="network security settings block") as caught:
+        # pragma: allowlist nextline secret
         providers.evaluate_provider("TypeSafe", "jev-latest", request_for("choice"), api_key="key")
     assert "secret" not in str(caught.value)
     assert "10.0.0.5" not in str(caught.value)
@@ -414,6 +435,7 @@ def test_unpaid_account_stops_and_reports_only_a_safe_error_code(monkeypatch, st
     body = '{"error": {"code": "insufficient_quota", "message": "private user content"}}'
     monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: httpx.Response(status, text=body))
     with pytest.raises(PermissionError, match=rf"billing or credit \(HTTP {status}, insufficient_quota\)") as caught:
+        # pragma: allowlist nextline secret
         providers.evaluate_provider("OpenAI", "gpt-6-luna", request_for("choice"), api_key="key")
     assert "private" not in str(caught.value)
 
@@ -422,6 +444,7 @@ def test_unsafe_provider_error_code_is_dropped(monkeypatch):
     body = '{"error": {"code": "has spaces and private user content"}}'
     monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: httpx.Response(500, text=body))
     with pytest.raises(DecisionEvaluationError) as caught:
+        # pragma: allowlist nextline secret
         providers.evaluate_provider("OpenAI", "gpt-6-luna", request_for("choice"), api_key="key")
     assert str(caught.value) == "OpenAI had a server problem (HTTP 500). Try again later."
 
@@ -454,6 +477,13 @@ def test_openai_refusal_keeps_provider_reason():
     assert (result.status, result.refusal) == ("refusal", "Policy reason")
 
 
+def test_openrouter_refusal_is_a_refusal_without_a_reason():
+    payload = response_for("OpenRouter", "choice")
+    payload["answers"]["decision"] = {"type": "refusal"}
+    result = providers.parse_response("OpenRouter", request_for("choice"), payload)
+    assert (result.status, result.refusal) == ("refusal", None)
+
+
 @pytest.mark.parametrize("provider", ["TypeSafe", "Perplexity"])
 def test_undocumented_refusal_type_is_invalid_not_refusal(provider):
     payload = response_for(provider, "choice")
@@ -469,6 +499,7 @@ def test_undocumented_refusal_type_is_invalid_not_refusal(provider):
 def test_oversized_input_is_operational_not_configuration(monkeypatch, status, body):
     monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: httpx.Response(status, text=body))
     with pytest.raises(DecisionEvaluationError) as caught:
+        # pragma: allowlist nextline secret
         providers.evaluate_provider("TypeSafe", "jev-latest", request_for("choice"), api_key="key")
     assert caught.value.category == "input_too_large"
     assert "private" not in str(caught.value)
@@ -501,6 +532,7 @@ def test_key_check_refuses_a_proxy_base_url_from_the_environment(monkeypatch, va
     sent = []
     monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *args, **_kwargs: sent.append(args))
     with pytest.raises(ValueError, match="official OpenAI endpoint"):
+        # pragma: allowlist nextline secret
         providers.validate_decision_provider_key("OpenAI", {"OPENAI_API_KEY": "proxy-key"}, "gpt-6-luna")
     assert not sent
 
@@ -570,6 +602,7 @@ def test_undecodable_answers_name_the_providers_request_id(monkeypatch):
     response = httpx.Response(200, content=b'{"model": "a", "model": "b"}', headers={"x-request-id": "req_5f0c9a"})
     monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: response)
     with pytest.raises(DecisionEvaluationError, match=r"couldn't read \(request ID req_5f0c9a\)\."):
+        # pragma: allowlist nextline secret
         providers.evaluate_provider("Perplexity", "pplx-decider-latest", request_for("choice"), api_key="key")
 
 
@@ -577,6 +610,7 @@ def test_failures_name_the_providers_request_id(monkeypatch):
     response = httpx.Response(503, text="private user content", headers={"x-request-id": "req_5f0c9a"})
     monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: response)
     with pytest.raises(DecisionEvaluationError) as caught:
+        # pragma: allowlist nextline secret
         providers.evaluate_provider("Perplexity", "pplx-decider-latest", request_for("choice"), api_key="key")
     assert str(caught.value) == "Perplexity had a server problem (HTTP 503, request ID req_5f0c9a). Try again later."
 
@@ -596,41 +630,43 @@ def test_failures_name_the_providers_request_id(monkeypatch):
 def test_each_failure_says_what_to_do(monkeypatch, status, error, says):
     monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: httpx.Response(status, text="{}"))
     with pytest.raises(error, match=says) as caught:
+        # pragma: allowlist nextline secret
         providers.evaluate_provider("TypeSafe", "jev-latest", request_for("choice"), api_key="key")
     assert f"(HTTP {status})" in str(caught.value)
 
 
-@pytest.mark.parametrize(
-    ("provider", "model_type"), [("OpenAI", "decision"), ("TypeSafe", None), ("Perplexity", "llm")]
-)
-def test_a_key_check_only_runs_catalogued_decision_models(monkeypatch, provider, model_type):
+@pytest.mark.parametrize(("provider", "model_type"), [("OpenAI", "decision"), ("Perplexity", "llm")])
+def test_static_providers_only_validate_catalogued_decision_models(monkeypatch, provider, model_type):
     from lfx.base.models.unified_models import validate_model_provider_key
 
     sent = []
     monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda url, **_kwargs: sent.append(url))
     with pytest.raises(ValueError, match="has no decision model by that name"):
+        # pragma: allowlist nextline secret
         validate_model_provider_key(provider, {f"{provider.upper()}_API_KEY": "key"}, "gpt-4o", model_type=model_type)
     assert sent == []
 
 
-def test_decision_models_start_on():
-    """Decision models start on by the language-model rule, each provider's first five, OpenAI's too."""
+@pytest.mark.parametrize("model_type", [None, "decision"])
+def test_decision_models_start_off(model_type):
+    """Decision models require explicit selection, including providers that also offer language models."""
     from lfx.base.models.unified_models import get_unified_models_detailed
 
     defaults = {
         (group["provider"], row["model_name"]): row["metadata"]["default"]
-        for group in get_unified_models_detailed(model_type="decision")
+        for group in get_unified_models_detailed(model_type=model_type)
         for row in group["models"]
+        if row["metadata"]["model_type"] == "decision"
     }
-    assert defaults[("TypeSafe", "jev-latest")] is True
-    assert defaults[("Perplexity", "pplx-decider-latest")] is True
-    assert defaults[("OpenAI", "gpt-6-luna")] is True
+    assert defaults
+    assert not any(defaults.values())
 
 
 def test_a_key_httpx_cant_send_is_refused_without_naming_its_characters(monkeypatch):
     sent = []
     monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *a, **_k: sent.append(a))
     with pytest.raises(DecisionConfigurationError, match="contains a character a key can't have") as caught:
+        # pragma: allowlist nextline secret
         providers.evaluate_provider("TypeSafe", "jev-latest", request_for("boolean"), api_key="sk-key\u200b")
     assert "position" not in str(caught.value)
     assert sent == []
@@ -649,6 +685,7 @@ def test_an_oversized_input_is_judged_by_its_error_code(monkeypatch, code, error
     body = json.dumps({"error": {"code": code, "message": "instructions mention max_tokens_exceeded"}})
     monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: httpx.Response(400, text=body))
     with pytest.raises(error) as caught:
+        # pragma: allowlist nextline secret
         providers.evaluate_provider("TypeSafe", "jev-latest", request_for("boolean"), api_key="key")
     assert (getattr(caught.value, "category", None) == "input_too_large") is (error is DecisionEvaluationError)
 
@@ -711,6 +748,7 @@ def test_a_key_with_a_line_break_is_refused_not_sent(monkeypatch):
     sent = []
     monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *a, **_k: sent.append(a))
     with pytest.raises(DecisionConfigurationError, match="contains a character a key can't have"):
+        # pragma: allowlist nextline secret
         providers.evaluate_provider("TypeSafe", "jev-latest", request_for("boolean"), api_key="ts-abc\nts-abc")
     assert sent == []
 
@@ -718,3 +756,115 @@ def test_a_key_with_a_line_break_is_refused_not_sent(monkeypatch):
 def test_a_boolean_timeout_is_refused():
     with pytest.raises(DecisionConfigurationError, match="Timeout"):
         providers.evaluate_provider("TypeSafe", "jev-latest", request_for("boolean"), api_key="k", timeout=True)
+
+
+# The bodies each provider actually sent for a ~300k-token input (LE-3117 QA, F1).
+OVERSIZED_INPUT_BODIES = {
+    "OpenAI": {
+        "error": {
+            "message": "Decision input exceeds the token limit.",
+            "type": "invalid_request_error",
+            "param": None,
+            "code": None,
+        }
+    },
+    "TypeSafe": {"detail": {"error_type": "max_tokens_exceeded"}},
+    "Perplexity": {
+        "error": {
+            "message": (
+                "Decision question requires 300087 tokens with context, exceeding maximum context length (262144)"
+            ),
+            "type": "invalid_request",
+            "code": "400",
+        }
+    },
+}
+
+
+# OpenRouter's answer to an oversized input has not been captured yet, so it is not listed.
+@pytest.mark.parametrize("provider", OVERSIZED_INPUT_BODIES)
+def test_each_providers_oversized_input_answer_follows_the_error_action(monkeypatch, provider):
+    response = httpx.Response(400, json=OVERSIZED_INPUT_BODIES[provider])
+    monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: response)
+    with pytest.raises(DecisionEvaluationError, match="too large") as caught:
+        # pragma: allowlist nextline secret
+        providers.evaluate_provider(provider, DEFAULT_MODELS[provider], request_for("choice"), api_key="key")
+    assert caught.value.category == "input_too_large"
+    assert "Shorten the input." in str(caught.value)
+    assert "300087" not in str(caught.value)
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        # The provider's sentence inside other text, as when a message quotes the input, is not the sentence.
+        "Invalid value: 'Decision input exceeds the token limit.'",
+        "Decision input exceeds the token limit. Also: private user content",
+        "Decision question requires many tokens with context, exceeding maximum context length (262144)",
+    ],
+)
+def test_only_the_providers_whole_oversized_input_sentence_counts(monkeypatch, message):
+    body = {"error": {"message": message, "type": "invalid_request_error", "code": None}}
+    monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: httpx.Response(400, json=body))
+    with pytest.raises(DecisionConfigurationError) as caught:
+        # pragma: allowlist nextline secret
+        providers.evaluate_provider("OpenAI", "gpt-6-luna", request_for("choice"), api_key="key")
+    assert "private" not in str(caught.value)
+
+
+def test_an_oversized_input_sentence_on_another_status_is_not_an_oversized_input(monkeypatch):
+    response = httpx.Response(422, json=OVERSIZED_INPUT_BODIES["OpenAI"])
+    monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: response)
+    with pytest.raises(DecisionConfigurationError):
+        # pragma: allowlist nextline secret
+        providers.evaluate_provider("OpenAI", "gpt-6-luna", request_for("choice"), api_key="key")
+
+
+@pytest.mark.parametrize(
+    ("body", "reference"),
+    [
+        # Perplexity's code only repeats the status; its type says more (F2).
+        ({"error": {"type": "invalid_request", "code": "400"}}, "(HTTP 400, invalid_request, request ID req_1)"),
+        ({"error": {"code": "400"}}, "(HTTP 400, request ID req_1)"),
+        (
+            {"error": {"type": "invalid_request_error", "code": None}},
+            "(HTTP 400, invalid_request_error, request ID req_1)",
+        ),
+        ({"detail": {"error_type": "invalid_schema"}}, "(HTTP 400, invalid_schema, request ID req_1)"),
+        ({"error": "a string, not an object"}, "(HTTP 400, request ID req_1)"),
+    ],
+)
+def test_the_error_reference_names_a_code_only_when_it_adds_to_the_status(monkeypatch, body, reference):
+    response = httpx.Response(400, json=body, headers={"x-request-id": "req_1"})
+    monkeypatch.setattr(providers, "provider_safe_httpx_post", lambda *_a, **_k: response)
+    with pytest.raises(DecisionConfigurationError) as caught:
+        # pragma: allowlist nextline secret
+        providers.evaluate_provider("Perplexity", "pplx-decider-flash-latest", request_for("choice"), api_key="key")
+    assert f"couldn't accept this decision request {reference}." in str(caught.value)
+
+
+@pytest.mark.parametrize(("yes", "no"), [("Matches", ""), ("", "Does not match")])
+def test_openrouter_rejects_partial_boolean_criteria(yes, no):
+    request = DecisionRequest(
+        kind="boolean", context="example", question="Match?", yes_description=yes, no_description=no
+    )
+    with pytest.raises(DecisionConfigurationError, match="requires both"):
+        providers.build_payload("OpenRouter", "typesafe/jev-1.14", request)
+
+
+def test_openrouter_preserves_boolean_criteria():
+    request = DecisionRequest(
+        kind="boolean", context="example", question="Match?", yes_description="Matches", no_description="No match"
+    )
+    payload = providers.build_payload("OpenRouter", "typesafe/jev-1.14", request)
+    assert payload["questions"]["decision"]["criteria"] == {"true": "Matches", "false": "No match"}
+
+
+@pytest.mark.parametrize(
+    ("request_id", "expected"), [("gen-dec-123", "gen-dec-123"), ("secret\nheader", None), (123, None)]
+)
+def test_openrouter_response_id_is_safe(request_id, expected):
+    payload = {**response_for("OpenRouter", "boolean"), "id": request_id}
+    result = providers.parse_response("OpenRouter", request_for("boolean"), payload)
+    assert result.request_id == expected
+    assert result.provider == "OpenRouter"

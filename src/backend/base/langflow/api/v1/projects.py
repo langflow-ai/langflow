@@ -28,7 +28,7 @@ from langflow.api.utils import (
     custom_params,
 )
 from langflow.api.utils.mcp.flow_secrets import extract_and_strip_mcp_secrets, mcp_server_names, stage_mcp_secrets
-from langflow.api.v1.auth_helpers import handle_auth_settings_update
+from langflow.api.v1.auth_helpers import get_default_project_auth_settings, handle_auth_settings_update
 from langflow.api.v1.flows import (
     _flow_read_for_caller,
     _handle_unique_constraint_error,
@@ -60,6 +60,7 @@ from langflow.api.v1.schemas.replacement_operations import (
     ProjectReplacementRequest,
     ProjectReplacementResult,
 )
+from langflow.api.v2.mcp import mcp_stdio_restricted_for_user
 from langflow.initial_setup.constants import ASSISTANT_FOLDER_NAME, STARTER_FOLDER_NAME
 from langflow.services.audit import vocabulary as audit_vocab
 from langflow.services.audit.operations import (
@@ -71,6 +72,7 @@ from langflow.services.audit.operations import (
     stage_flow_succeeded,
     stage_project_succeeded,
 )
+from langflow.services.audit.writer import batch_audit_events, flush_audit_event_batch
 from langflow.services.auth.context import current_auth_is_restricted_api_key
 from langflow.services.auth.mcp_encryption import encrypt_auth_settings
 from langflow.services.authorization import (
@@ -102,6 +104,7 @@ from langflow.services.database.lock_retry import (
     sanitize_database_error,
 )
 from langflow.services.database.models.api_key.policy import ApiKeyIssuanceDeniedError
+from langflow.services.database.models.audit_event.model import AuditEvent
 from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
     remap_flow_guard_for_project_delete,
@@ -135,6 +138,7 @@ from langflow.services.deps import (
     get_settings_service,
     get_storage_service,
 )
+from langflow.services.evaluations.cleanup import delete_project_evaluations
 from langflow.services.schema import ServiceType
 from langflow.services.storage.service import StorageService
 from langflow.services.triggers.reconciliation import reconcile_flow_triggers_safely
@@ -298,7 +302,7 @@ async def _new_project(
             new_project.name = f"{new_project.name} (1)"
 
     settings_service = get_settings_service()
-    mcp_auth: dict = {"auth_type": "none"}
+    mcp_auth = get_default_project_auth_settings(settings_service.auth_settings, current_user)
     # Whether the API key below is something the caller asked for or something
     # this endpoint chose for them. It decides what happens if the deployment
     # refuses to issue one: a request is answered, a convenience is dropped.
@@ -307,13 +311,11 @@ async def _new_project(
     if project.auth_settings:
         mcp_auth = project.auth_settings.copy()
         new_project.auth_settings = encrypt_auth_settings(mcp_auth)
-    # If AUTO_LOGIN is false, automatically enable API key authentication
-    elif not settings_service.auth_settings.AUTO_LOGIN:
-        mcp_auth = {"auth_type": "apikey"}
+    elif mcp_auth["auth_type"] == "apikey":
         auth_was_chosen_for_caller = True
         new_project.auth_settings = encrypt_auth_settings(mcp_auth)
         await logger.adebug(
-            "Auto-enabled API key authentication for project %s (%s) due to AUTO_LOGIN=false",
+            "Auto-enabled API key authentication for project %s (%s) to match MCP authentication requirements",
             new_project.name,
             new_project.id,
         )
@@ -323,7 +325,9 @@ async def _new_project(
     await session.refresh(new_project)
 
     # Auto-register MCP server for this project with configured default auth
-    if get_settings_service().settings.add_projects_to_mcp_servers:
+    if settings_service.settings.add_projects_to_mcp_servers and not mcp_stdio_restricted_for_user(
+        current_user, settings_service.settings
+    ):
         try:
             await register_mcp_servers_for_project(
                 new_project, mcp_auth, current_user, session, owns_transaction=owns_transaction
@@ -694,7 +698,10 @@ async def read_project(
         # and widening the lookup would expose foreign projects without any
         # policy check.
         share_aware = await authz.supports_cross_user_fetch() and await authz.is_enabled()
-        stmt = select(Folder).options(selectinload(Folder.flows)).where(Folder.id == project_id)
+        is_paginated = page is not None and size is not None
+        stmt = select(Folder).where(Folder.id == project_id)
+        if not is_paginated:
+            stmt = stmt.options(selectinload(Folder.flows))
         if not share_aware:
             stmt = stmt.where(Folder.user_id == current_user.id)
         project = (await session.exec(stmt)).first()
@@ -742,7 +749,7 @@ async def read_project(
         )
 
         # Check if pagination is explicitly requested by the user (both page and size provided)
-        if page is not None and size is not None:
+        if is_paginated:
             stmt = select(Flow).where(Flow.folder_id == project_id)
             if not treat_as_shared:
                 stmt = stmt.where(Flow.user_id == current_user.id)
@@ -884,9 +891,12 @@ def _deny_to_404_with_code(exc: HTTPException, *, detail: str, code: str) -> HTT
     relabelled with a 404 code here either.
     """
     mapped = deny_to_404(exc, detail=detail)
-    if mapped.status_code != status.HTTP_404_NOT_FOUND:
+    if mapped is exc:
         return mapped
-    return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail, headers={ERROR_CODE_HEADER: code})
+    # Keep the permission-denial marker when returning 404 instead of 403.
+    # The audit wrapper uses it to distinguish denied requests from failed mutations.
+    mapped.headers = {**(mapped.headers or {}), ERROR_CODE_HEADER: code}
+    return mapped
 
 
 async def _lock_replacement_operation(session: DbSession, project_id: UUID) -> str:
@@ -957,12 +967,14 @@ async def _authorize_replacement_receipt_project_only(
             headers={ERROR_CODE_HEADER: denied_error_code},
         )
     try:
-        await ensure_project_permission(
-            current_user,
-            project_action,
-            project_id=project_id,
-            project_user_id=project_user_id,
-            workspace_id=workspace_id,
+        await audited_permission(
+            ensure_project_permission(
+                current_user,
+                project_action,
+                project_id=project_id,
+                project_user_id=project_user_id,
+                workspace_id=workspace_id,
+            ),
         )
     except HTTPException as exc:
         raise _deny_to_404_with_code(exc, detail=denied_detail, code=denied_error_code) from exc
@@ -979,6 +991,8 @@ async def _authorize_replacement_result(
     denied_error_code: str,
 ) -> None:
     """Authorize the saved projection, including full graph bodies in receipts."""
+    if (audited := current_operation()) is not None:
+        audited.identify(resource_name=result.project.name)
     await _authorize_replacement_receipt_project_only(
         current_user=current_user,
         project_id=result.project.id,
@@ -1027,6 +1041,13 @@ async def _read_replacement_receipt(
     response_model=ProjectReplacementResult,
     status_code=status.HTTP_200_OK,
 )
+@audited_route(
+    audit_vocab.AuditResourceType.PROJECT,
+    audit_vocab.PROJECT_WRITE,
+    audit_vocab.AuditOperation.REPLACE,
+    resource_id_param="project_id",
+    describe=describe_project_body("request_body"),
+)
 async def replace_project_operation(
     *,
     session: DbSession,
@@ -1037,18 +1058,24 @@ async def replace_project_operation(
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     """Replace a project's full flow set and persist an immutable retry receipt."""
+    if request_body.project_name is not None and (audited := current_operation()) is not None:
+        audited.identify(
+            action=audit_vocab.PROJECT_CREATE,
+            operation=audit_vocab.AuditOperation.CREATE,
+        )
     for attempt in range(_REPLACEMENT_MAX_ATTEMPTS):
         try:
             # Save helpers mutate the body. Each aborted transaction must start
             # from the original graph and its original receipt digest.
-            return await _replace_project_operation_once(
-                session=session,
-                project_id=project_id,
-                operation_id=operation_id,
-                request_body=request_body.model_copy(deep=True),
-                current_user=current_user,
-                storage_service=storage_service,
-            )
+            with batch_audit_events(session):
+                return await _replace_project_operation_once(
+                    session=session,
+                    project_id=project_id,
+                    operation_id=operation_id,
+                    request_body=request_body.model_copy(deep=True),
+                    current_user=current_user,
+                    storage_service=storage_service,
+                )
         except DBAPIError as exc:
             # Replacement locks the project's Folder row and then its existing
             # Flow rows (see the ``with_for_update()`` loads below). A concurrent
@@ -1118,6 +1145,48 @@ async def _replace_project_operation_once(
                     denied_detail="Project not found",
                     denied_error_code=_REPLACEMENT_PROJECT_NOT_FOUND_CODE,
                 )
+                if (audited := current_operation()) is not None:
+                    name = receipt.project_name
+                    if name is None:
+                        name = (
+                            await session.exec(
+                                select(Folder.name).where(
+                                    Folder.id == project_id, Folder.user_id == receipt.project_user_id
+                                )
+                            )
+                        ).first()
+                    if name is None:
+                        # The receipt can outlive the project. Reuse a committed
+                        # audit name rather than the retry's caller-supplied name.
+                        await logger.ainfo(
+                            "Expired replacement receipt: looking up the project name in audit history "
+                            "(project_id={}, operation_id={})",
+                            project_id,
+                            operation_id,
+                        )
+                        name = (
+                            await session.exec(
+                                select(AuditEvent.resource_name)
+                                .where(
+                                    AuditEvent.resource_type == audit_vocab.AuditResourceType.PROJECT.value,
+                                    AuditEvent.resource_id == project_id,
+                                    AuditEvent.user_id == receipt.project_user_id,
+                                    AuditEvent.result == audit_vocab.AuditResult.SUCCEEDED.value,
+                                    AuditEvent.resource_name.is_not(None),
+                                )
+                                .order_by(AuditEvent.timestamp.desc(), AuditEvent.id.desc())
+                                .limit(1)
+                            )
+                        ).first()
+                        if name is None:
+                            await logger.awarning(
+                                "Expired replacement receipt: no project name remains in audit history "
+                                "(project_id={}, operation_id={})",
+                                project_id,
+                                operation_id,
+                            )
+                    # Clear the attempted name if retention removed the fallback.
+                    audited.resource_name = name
                 raise HTTPException(
                     status_code=status.HTTP_410_GONE,
                     detail=REPLACEMENT_RECEIPT_EXPIRED_DETAIL,
@@ -1187,7 +1256,9 @@ async def _replace_project_operation_once(
                     headers={ERROR_CODE_HEADER: "replacement_flows_span_multiple_workspaces"},
                 )
             workspace_id = next(iter(workspace_ids), None)
-            await ensure_project_permission(current_user, ProjectAction.CREATE, workspace_id=workspace_id)
+            await audited_permission(
+                ensure_project_permission(current_user, ProjectAction.CREATE, workspace_id=workspace_id),
+            )
             await enforce_pre_creation(
                 PreCreationContext(
                     resource=RESOURCE_PROJECT,
@@ -1212,12 +1283,9 @@ async def _replace_project_operation_once(
                     headers={ERROR_CODE_HEADER: "replacement_project_name_conflict"},
                 )
 
-            mcp_auth: dict = {"auth_type": "none"}
-            project_auth_settings = None
             settings_service = get_settings_service()
-            if not settings_service.auth_settings.AUTO_LOGIN:
-                mcp_auth = {"auth_type": "apikey"}
-                project_auth_settings = encrypt_auth_settings(mcp_auth)
+            mcp_auth = get_default_project_auth_settings(settings_service.auth_settings, current_user)
+            project_auth_settings = encrypt_auth_settings(mcp_auth) if mcp_auth["auth_type"] == "apikey" else None
             project = Folder(
                 id=project_id,
                 name=request_body.project_name,
@@ -1229,7 +1297,9 @@ async def _replace_project_operation_once(
             session.add(project)
             await session.flush()
             newly_created_project = project
-            if settings_service.settings.add_projects_to_mcp_servers:
+            if settings_service.settings.add_projects_to_mcp_servers and not mcp_stdio_restricted_for_user(
+                current_user, settings_service.settings
+            ):
                 try:
                     await register_mcp_servers_for_project(
                         project,
@@ -1240,11 +1310,7 @@ async def _replace_project_operation_once(
                         owns_transaction=False,
                     )
                 except ApiKeyIssuanceDeniedError as denial:
-                    # This branch always auto-chooses apikey auth — there is no
-                    # caller-supplied auth_settings on a replacement request —
-                    # so a denial mirrors _new_project's AUTO_LOGIN=false
-                    # default: create the project without the MCP server
-                    # rather than failing on a credential nothing asked for.
+                    # A refused default key skips MCP registration without failing project creation.
                     project.auth_settings = None
                     await logger.awarning(
                         "Skipped MCP auto-registration for project %s (%s): %s",
@@ -1254,12 +1320,15 @@ async def _replace_project_operation_once(
                     )
         else:
             try:
-                await ensure_project_permission(
-                    current_user,
-                    ProjectAction.WRITE,
-                    project_id=project_id,
-                    project_user_id=project.user_id,
-                    workspace_id=project.workspace_id,
+                await audited_permission(
+                    ensure_project_permission(
+                        current_user,
+                        ProjectAction.WRITE,
+                        project_id=project_id,
+                        project_user_id=project.user_id,
+                        workspace_id=project.workspace_id,
+                    ),
+                    resource_name=project.name,
                 )
             except HTTPException as exc:
                 raise _deny_to_404_with_code(
@@ -1342,6 +1411,7 @@ async def _replace_project_operation_once(
             )
 
         existing_by_id = {flow.id: flow for flow in existing_flows}
+        membership_before = {flow.id: flow.name for flow in existing_flows}
         requested_id_set = set(requested_ids)
         stale_flows = [flow for flow in existing_flows if flow.id not in requested_id_set]
         updated_flows = [existing_by_id[flow_id] for flow_id in requested_ids if flow_id in existing_by_id]
@@ -1593,14 +1663,9 @@ async def _replace_project_operation_once(
         session.add(receipt)
         await session.flush()
 
-        # Prune old receipts for this project in the same transaction as the
-        # new one, keeping only the newest _MAX_REPLACEMENT_RECEIPTS_PER_PROJECT
-        # readable. A pruned row is tombstoned (its result cleared) rather than
-        # deleted: the row, digest, and owner/workspace survive so a retry against
-        # it - even one whose body still matches the original digest - gets an
-        # explicit 410 instead of silently re-executing and overwriting newer
-        # content with a stale one. created_at ties (possible with low-resolution
-        # clocks) break on operation_id for a deterministic ordering.
+        # Keep the newest receipts readable. For older receipts, clear the result
+        # and keep the Project name, digest, owner and workspace. A retry returns
+        # 410 and cannot overwrite newer content. Break timestamp ties by operation ID.
         #
         # Ranking (and therefore the offset boundary) includes the just-inserted
         # receipt like every other row - excluding it from the ranking itself
@@ -1627,11 +1692,40 @@ async def _replace_project_operation_once(
                 .where(
                     ProjectReplacementOperation.project_id == project_id,
                     ProjectReplacementOperation.operation_id.in_(stale_receipt_ids),
+                    ProjectReplacementOperation.result.is_not(None),
                 )
-                .values(result=null())
+                .values(
+                    project_name=ProjectReplacementOperation.result["project"]["name"].as_string(),
+                    result=null(),
+                )
             )
 
+        for stale_flow in stale_flows:
+            await stage_flow_succeeded(
+                session,
+                action=audit_vocab.FLOW_DELETE,
+                operation=audit_vocab.AuditOperation.DELETE,
+                flow_id=stale_flow.id,
+                flow_name=membership_before[stale_flow.id],
+                project_before=project_id,
+            )
+        await stage_project_succeeded(
+            session,
+            action=audit_vocab.PROJECT_CREATE if newly_created_project is not None else audit_vocab.PROJECT_WRITE,
+            operation=(
+                audit_vocab.AuditOperation.CREATE
+                if newly_created_project is not None
+                else audit_vocab.AuditOperation.REPLACE
+            ),
+            project_id=project_id,
+            project_name=result.project.name,
+            description=result.project.description,
+            flows_before=membership_before,
+            flows_after={flow.id: flow.name for flow in result_flows},
+        )
+        await flush_audit_event_batch(session)
         await session.commit()
+        mark_committed()
     except (HTTPException, DBAPIError):
         raise
     except Exception as exc:
@@ -2311,6 +2405,7 @@ async def delete_project(
                     await cascade_delete_flow(session, flow.id, memory_base_cleanups=memory_base_cleanups)
 
             await check_project_has_deployments(session, project_id=project_id)
+            await delete_project_evaluations(session, project_id)
             await session.delete(target)
             # Flush eagerly so guard/constraint errors surface in-request rather than at teardown commit.
             await session.flush()
@@ -2350,7 +2445,9 @@ async def delete_project(
         if attempt == 0:
             target = project
         else:
-            await session.refresh(current_user)
+            # An API-key caller is a detached snapshot, which the rollback does not expire.
+            if isinstance(current_user, User) and current_user in session:
+                await session.refresh(current_user)
             target = await _load_project()
         if target is None:
             return

@@ -60,17 +60,22 @@ def is_mcp_servers_locked(settings: object) -> bool:
     return getattr(settings, "mcp_servers_locked", False) is True
 
 
-def ensure_mcp_stdio_access(server_config: dict, current_user: CurrentActiveUser, settings: object) -> None:
-    """Restrict local MCP processes when custom code execution is restricted."""
-    mode = server_config.get("mode")
-    is_stdio = bool(server_config.get("command")) or (isinstance(mode, str) and mode.lower() == "stdio")
+def mcp_stdio_restricted_for_user(current_user: CurrentActiveUser, settings: object) -> bool:
+    """Whether this caller is restricted from launching a local MCP process."""
     code_execution_restricted = (
         getattr(settings, "allow_custom_components", True) is False
         or getattr(settings, "custom_component_admin_only", False) is True
         or getattr(settings, "block_code_interpreter_components", False) is True
     )
 
-    if is_stdio and code_execution_restricted and getattr(current_user, "is_superuser", False) is not True:
+    return code_execution_restricted and getattr(current_user, "is_superuser", False) is not True
+
+
+def ensure_mcp_stdio_access(server_config: dict, current_user: CurrentActiveUser, settings: object) -> None:
+    """Restrict local MCP processes when custom code execution is restricted."""
+    mode = server_config.get("mode")
+    is_stdio = bool(server_config.get("command")) or (isinstance(mode, str) and mode.lower() == "stdio")
+    if is_stdio and mcp_stdio_restricted_for_user(current_user, settings):
         raise HTTPException(
             status_code=403,
             detail="MCP stdio servers are restricted to administrators when custom code execution is restricted.",
@@ -292,12 +297,14 @@ async def get_servers(
 
     # Load variables once: AsyncSession cannot be used concurrently by discovery workers.
     request_variables = {}
+    strict_variables = False
     try:
         from langflow.services.variable.runtime_policy import resolve_runtime_variables
 
         request_variables = await resolve_runtime_variables(
             user_id=current_user.id, session=session, settings=settings_service
         )
+        strict_variables = request_variables is not None
         if request_variables is None:
             from langflow.services.auth import utils as auth_utils
             from langflow.services.database.models.variable.model import Variable
@@ -326,6 +333,7 @@ async def get_servers(
     }
 
     async def check_server(server_name: str) -> dict:
+        """Discover one server using the current account's resolved variable map."""
         server_info: dict[str, str | int | None] = {"name": server_name, "mode": None, "toolsCount": None}
         async with discovery_clients() as (mcp_stdio_client, mcp_streamable_http_client):
             try:
@@ -339,6 +347,7 @@ async def get_servers(
                     # DB-backed set the URL is allowed to resolve from.
                     url_variables=request_variables,
                     current_user_id=current_user.id,
+                    strict_variables=strict_variables,
                 )
                 server_info["mode"] = mode.lower()
                 server_info["toolsCount"] = len(tool_list)

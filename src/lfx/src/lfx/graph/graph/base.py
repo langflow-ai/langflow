@@ -531,11 +531,15 @@ class Graph:
         config: StartConfigDict | None = None,
         event_manager: EventManager | None = None,
         *,
+        user_id: str | None = None,
         reset_output_values: bool = True,
         fallback_to_env_vars: bool = False,
         open_flow_span: bool = True,
     ):
         """Run the graph, yielding each step.
+
+        Pass the authenticated caller as ``user_id``. It is forwarded to each
+        vertex build and is never inferred from cached graph state.
 
         open_flow_span=False says the caller already opened the flow span and this run belongs
         to it. Prefer that: a span opened here cannot be made current, because this is an async
@@ -565,7 +569,10 @@ class Graph:
 
             while should_continue(yielded_counts, max_iterations):
                 result = await self.astep(
-                    event_manager=event_manager, inputs=inputs, fallback_to_env_vars=fallback_to_env_vars
+                    event_manager=event_manager,
+                    inputs=inputs,
+                    user_id=user_id,
+                    fallback_to_env_vars=fallback_to_env_vars,
                 )
                 yield result
                 if isinstance(result, Finish):
@@ -2353,35 +2360,28 @@ class Graph:
         """
         return run_until_complete(self.astep(inputs, files, user_id))
 
-    def _vertex_result_cache_key(self, vertex_id: str) -> str:
+    def _vertex_result_cache_key(self, vertex_id: str, *, user_id: str | None) -> str:
         """Namespace the vertex result cache key to the executing principal.
 
-        Frozen-vertex results were historically cached under the bare vertex UUID,
-        which let any tenant read or overwrite another tenant's cached component
-        output by reusing the vertex id in their own flow (H1-3985565). Served
-        executions always carry the authenticated user (editor/API plane) or the
-        executing flow (anonymous public runs), so the key is prefixed with that
-        principal scope; entries written under other scopes become unreachable,
-        which fails closed against stale keys written by older versions. Graphs
-        with no principal context (standalone ``lfx run``, scripted graphs) have
-        no tenant boundary and keep the bare key, matching the empty-scope
-        contract of ``enforce_storage_key_scope``.
+        Use the same user that authorizes and builds the vertex. Cached graphs
+        can have missing or stale user state. Public and unscoped runs use
+        separate namespaces and cannot restore legacy flow-scoped results.
         """
-        user_scope = str(self.user_id).strip() if self.user_id is not None else ""
-        if user_scope:
-            from lfx.services.authorization import PUBLIC_ANONYMOUS_ACTOR_ID
+        from lfx.services.authorization import PUBLIC_ANONYMOUS_ACTOR_ID
 
-            if user_scope != str(PUBLIC_ANONYMOUS_ACTOR_ID):
-                # Serving-plane runs execute as a service account on behalf of many
-                # end users, so include the end-user identity when one is present.
-                end_user_scope = str(self.end_user_id).strip() if self.end_user_id is not None else ""
-                if end_user_scope:
-                    return f"user:{user_scope}:end-user:{end_user_scope}:{vertex_id}"
-                return f"user:{user_scope}:{vertex_id}"
+        user_scope = str(user_id).strip() if user_id is not None else ""
+        if user_scope and user_scope != str(PUBLIC_ANONYMOUS_ACTOR_ID):
+            # Serving-plane runs execute as a service account on behalf of many
+            # end users, so include the end-user identity when one is present.
+            end_user_scope = str(self.end_user_id).strip() if self.end_user_id is not None else ""
+            if end_user_scope:
+                return f"user:{user_scope}:end-user:{end_user_scope}:{vertex_id}"
+            return f"user:{user_scope}:{vertex_id}"
+        scope = "public" if user_scope == str(PUBLIC_ANONYMOUS_ACTOR_ID) else "unscoped"
         flow_scope = str(self.flow_id).strip() if self.flow_id is not None else ""
         if flow_scope:
-            return f"flow:{flow_scope}:{vertex_id}"
-        return vertex_id
+            return f"{scope}:flow:{flow_scope}:{vertex_id}"
+        return f"{scope}:{vertex_id}"
 
     async def build_vertex(
         self,
@@ -2415,6 +2415,12 @@ class Graph:
             ValueError: If no result is found for the vertex.
         """
         vertex = self.get_vertex(vertex_id)
+        user_scope = str(user_id).strip() if user_id is not None else ""
+        if not user_scope and (user_id is not None or self.user_id is not None):
+            # Components can fall back to the graph's user when no caller is supplied.
+            # Missing or blank caller IDs cannot safely share that result cache.
+            get_cache = None
+            set_cache = None
         self.run_manager.add_to_vertices_being_run(vertex_id)
         try:
             params = ""
@@ -2431,7 +2437,7 @@ class Graph:
                 await vertex.arequire_model_provider_policy(user_id, event_manager=event_manager)
                 # Check the cache for the vertex under the principal-scoped key
                 if get_cache is not None:
-                    cached_result = await get_cache(key=self._vertex_result_cache_key(vertex.id))
+                    cached_result = await get_cache(key=self._vertex_result_cache_key(vertex.id, user_id=user_id))
                 else:
                     cached_result = CacheMiss()
                 if isinstance(cached_result, CacheMiss):
@@ -2477,7 +2483,7 @@ class Graph:
                         "full_data": vertex.full_data,
                     }
 
-                    await set_cache(key=self._vertex_result_cache_key(vertex.id), data=vertex_dict)
+                    await set_cache(key=self._vertex_result_cache_key(vertex.id, user_id=user_id), data=vertex_dict)
 
         except Exception as exc:
             if not isinstance(exc, ComponentBuildError):
@@ -2933,14 +2939,15 @@ class Graph:
         return self._cycle_vertices
 
     def _build_edges(self) -> list[CycleEdge]:
-        """Builds the edges of the graph."""
+        """Builds the edges of the graph, in the flow's edge order, without duplicates."""
         # Edge takes two vertices as arguments, so we need to build the vertices first
         # and then build the edges
         # if we can't find a vertex, we raise an error
-        edges: set[CycleEdge | Edge] = set()
+        # A dict, not a set: a set's order follows the hash seed, and list inputs read this order.
+        edges: dict[CycleEdge | Edge, None] = {}
         for edge in self._edges:
             new_edge = self.build_edge(edge)
-            edges.add(new_edge)
+            edges.setdefault(new_edge, None)
         if self.vertices and not edges:
             logger.warning("Graph has vertices but no edges")
         return list(cast("Iterable[CycleEdge]", edges))

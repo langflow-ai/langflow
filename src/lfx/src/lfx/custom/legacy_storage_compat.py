@@ -67,6 +67,13 @@ def resolve_shipped_storage_component(code: str):
             "ChromaVectorStoreComponent",
             "LocalDBComponent",
             "ALTKAgentComponent",
+            "MrscraperAiScraper",
+            "MrscraperBatchScrape",
+            "MrscraperCrawlWebsite",
+            "MrscraperGetResult",
+            "MrscraperGetResults",
+            "MrscraperRunAiScraper",
+            "MrscraperRunManualScraper",
         )
     ):
         return None

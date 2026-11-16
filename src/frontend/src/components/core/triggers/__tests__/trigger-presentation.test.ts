@@ -163,9 +163,9 @@ describe("sourceKeyOf", () => {
   it.each([
     ["gitlab", "Gitlab"],
     ["whatsapp", "WhatsApp"],
-    ["discord", "MessageCircle"],
+    ["discord", "discord"],
     ["telegram", "Telegram"],
-    ["salesforce", "Cloud"],
+    ["salesforce", "Salesforce"],
     ["servicenow", "ServiceNow"],
     ["jira", "Jira"],
     ["confluence", "Confluence"],
@@ -249,9 +249,9 @@ describe("eventOriginOf", () => {
 });
 
 describe("eventDisplayStateOf", () => {
-  it("shows both in-flight states as running", () => {
-    expect(eventDisplayStateOf({ state: "claimed" })).toBe("running");
-    expect(eventDisplayStateOf({ state: "dispatched" })).toBe("running");
+  it("distinguishes a queued claim from a submitted job", () => {
+    expect(eventDisplayStateOf({ state: "claimed" })).toBe("queued");
+    expect(eventDisplayStateOf({ state: "dispatched" })).toBe("submitted");
   });
 
   it("shows pending as queued", () => {

@@ -79,6 +79,8 @@ async def test_flow_ingestion_updates_sqlite_totals(
         assert response.status_code == 200, response.text
         assert response.json()["total"] == len(expected_texts)
         assert sorted(chunk["content"] for chunk in response.json()["chunks"]) == sorted(expected_texts)
+        if not allow_duplicates:
+            assert all(chunk["id"] == chunk["metadata"]["_id"] for chunk in response.json()["chunks"])
 
         response = await client.get(endpoint, headers=logged_in_headers)
         assert response.status_code == 200, response.text

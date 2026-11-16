@@ -63,6 +63,8 @@ if TYPE_CHECKING:
 
     from langflow.services.database.models.user.model import UserRead
 
+_MAX_JOB_ERROR_DEPTH = 8
+
 
 async def _may(user: User | UserRead, flow: Flow, action: FlowAction) -> bool:
     """Whether the route guard would allow ``action`` on ``flow``, without auditing the probe."""
@@ -216,25 +218,50 @@ def _whatsapp_job_error_detail(value: Any) -> str | None:
     return None
 
 
-async def present_events(session: AsyncSession, trigger: Trigger, rows: list[TriggerEvent]) -> list[TriggerEventRead]:
+def _job_error_message(value: Any, *, depth: int = 0) -> str | None:
+    """Read the primary error field without copying traceback or diagnostic metadata."""
+    if depth >= _MAX_JOB_ERROR_DEPTH:
+        return None
+    if isinstance(value, str):
+        return value.strip() or None
+    if isinstance(value, dict):
+        for key in ("message", "error", "detail", "text"):
+            if message := _job_error_message(value.get(key), depth=depth + 1):
+                return message
+    return None
+
+
+async def present_events(
+    session: AsyncSession, trigger: Trigger, rows: list[TriggerEvent], user: User | UserRead
+) -> list[TriggerEventRead]:
     """Add safe failure guidance after the route has authorized this trigger's flow."""
     jobs = {}
+    # Discord flow owners retain the same primary diagnostics as their workflow
+    # run API. Sharing flow read access does not share those private run errors.
+    owner_diagnostics = trigger.kind in {"discord.message", "discord.mention"} and trigger.user_id == user.id
     job_ids = {
         row.job_id for row in rows if row.state == "failed" and row.error == "job_failed" and row.job_id is not None
     }
-    if trigger.kind == "whatsapp.event" and job_ids:
-        jobs = dict(
-            (
-                await session.exec(
-                    select(Job.job_id, Job.error).where(
-                        col(Job.job_id).in_(job_ids), Job.flow_id == trigger.flow_id, Job.user_id == trigger.user_id
-                    )
-                )
-            ).all()
+    if (trigger.kind == "whatsapp.event" or owner_diagnostics) and job_ids:
+        statement = select(Job.job_id, Job.error).where(
+            col(Job.job_id).in_(job_ids), Job.flow_id == trigger.flow_id, Job.user_id == trigger.user_id
         )
+        if owner_diagnostics:
+            # A transfer can leave historical jobs and triggers under the old
+            # execution owner. Read sharing must not restore owner diagnostics.
+            statement = statement.join(Flow, Flow.id == Job.flow_id).where(Flow.user_id == user.id)
+        jobs = dict((await session.exec(statement)).all())
     return [
         TriggerEventRead.model_validate(row).model_copy(
-            update={"error_detail": _whatsapp_job_error_detail(jobs[row.job_id]) if row.job_id in jobs else None}
+            update={
+                "error_detail": (
+                    _job_error_message(jobs[row.job_id])
+                    if owner_diagnostics
+                    else _whatsapp_job_error_detail(jobs[row.job_id])
+                )
+                if row.job_id in jobs
+                else None
+            }
         )
         for row in rows
     ]

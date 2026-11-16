@@ -30,7 +30,6 @@ from lfx.observability import (
     start_event_loop_lag_monitor,
     stop_event_loop_lag_monitor,
 )
-from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -56,6 +55,8 @@ from langflow.initial_setup.setup import (
 from langflow.middleware import ContentSizeLimitMiddleware
 from langflow.plugin_routes import load_plugin_routes
 from langflow.services.audit.attribution import AuditRequestContextMiddleware
+from langflow.services.audit.represented import AuditIdentityError, UntrustedAuditIdentityError
+from langflow.services.creation_hooks import ERROR_CODE_HEADER
 from langflow.services.database.models.deployment.exceptions import DeploymentGuardError
 from langflow.services.database.service import UnsupportedPostgreSQLVersionError
 from langflow.services.deps import (
@@ -1033,9 +1034,9 @@ def create_app():
     app.add_middleware(
         ContentSizeLimitMiddleware,
     )
-    if FEATURE_FLAGS.instance_migration:
-        # Registered before CORS, which then wraps it: a browser on another origin can read the refusal.
-        app.add_middleware(MigrationPauseMiddleware)
+    # Database maintenance is independent of the instance migration feature.
+    # CORS wraps the refusal so a browser on another origin can read it.
+    app.add_middleware(MigrationPauseMiddleware)
 
     add_sentry_middleware(app)
 
@@ -1142,7 +1143,10 @@ def create_app():
             return await call_next(request)
 
         prefix = request.headers.get("X-Forwarded-Prefix", "").rstrip("/")
-        if prefix and prefix.startswith("/") and "://" not in prefix and "?" not in prefix and "#" not in prefix:
+        # Restrict transport URLs to path segments that cannot change their origin.
+        if re.fullmatch(r"(?:/[a-zA-Z0-9._~-]+)+", prefix) and not any(
+            part in {".", ".."} for part in prefix.split("/")
+        ):
             request.scope["root_path"] = prefix
         return await call_next(request)
 
@@ -1212,6 +1216,16 @@ def create_app():
     # Replaces FastAPI's default 422 handler, which echoes each submitted value
     # (credentials included) back in the error body.
     app.add_exception_handler(RequestValidationError, request_validation_exception_handler)
+
+    @app.exception_handler(AuditIdentityError)
+    async def audit_identity_exception_handler(_request: Request, exc: AuditIdentityError):
+        """Translate audit identity domain errors at the HTTP boundary."""
+        untrusted = isinstance(exc, UntrustedAuditIdentityError)
+        return JSONResponse(
+            status_code=HTTPStatus.FORBIDDEN if untrusted else HTTPStatus.BAD_REQUEST,
+            content={"detail": str(exc)},
+            headers={ERROR_CODE_HEADER: "REPRESENTED_IDENTITY_NOT_ALLOWED" if untrusted else "INVALID_AUDIT_CONTEXT"},
+        )
 
     @app.exception_handler(DeploymentGuardError)
     async def deployment_guard_exception_handler(_request: Request, exc: DeploymentGuardError):

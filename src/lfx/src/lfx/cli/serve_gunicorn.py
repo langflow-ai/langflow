@@ -22,9 +22,11 @@ from uvicorn.workers import UvicornWorker
 class LFXUvicornWorker(UvicornWorker):
     """Async worker class for ``lfx serve --workers N`` (the default, non-sync path).
 
-    A thin named subclass of gunicorn's ``UvicornWorker`` so the worker class is owned
-    here and can host per-worker customization if needed later.
+    Start each request task with a clean context so pipelined requests cannot inherit
+    a previous request's ended server span and become children of that request.
     """
+
+    CONFIG_KWARGS = {**UvicornWorker.CONFIG_KWARGS, "reset_contextvars": True}
 
 
 class LFXGunicornApp(BaseApplication):

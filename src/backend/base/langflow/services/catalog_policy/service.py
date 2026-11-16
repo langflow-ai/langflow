@@ -200,6 +200,7 @@ class LangflowCatalogPolicyService(BaseCatalogPolicyService):
                             # governance forward untouched.
                             approved_integration_provider_ids=current.approved_integration_provider_ids,
                             blocked_integration_action_keys=current.blocked_integration_action_keys,
+                            approved_trigger_kinds=current.approved_trigger_kinds,
                             actor_user_id=actor_user_id,
                             reason=f"Replace blocked {resource_kind.value} catalog keys",
                         )

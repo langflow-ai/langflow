@@ -63,6 +63,7 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
         assert len(messages[0].text) > 0
         return messages
 
+    @pytest.mark.usefixtures("administrator_user")
     async def test_build_flow_loop(self, client, json_loop_test, logged_in_headers):
         """Test building a flow with a loop component."""
         # Create the flow
@@ -104,6 +105,7 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
             )
             found.append(expected_text)
 
+    @pytest.mark.usefixtures("administrator_user")
     async def test_run_flow_loop(self, client: AsyncClient, created_api_key, json_loop_test, logged_in_headers):
         flow_id, _ = await self._create_flow(client, json_loop_test, logged_in_headers)
         headers = {"x-api-key": created_api_key.api_key}

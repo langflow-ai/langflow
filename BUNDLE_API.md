@@ -240,6 +240,14 @@ the deserialize half is covered by
   use `/api/v2/policy-bundle` without falling back to v1. Existing bundle provider
   identities and public symbols are unchanged; `BUNDLE_API_VERSION` remains `1`.
 
+- **Raw model provider selections (2026-11-04).** The public module
+  `lfx.base.models.provider_selection` exports `raw_model_provider_names` and
+  selector constants. Before input hydration,
+  `Component._selected_model_provider_policy_ids` uses this pure helper to read
+  provider selections. First-selection, canonical `provider` override, and legacy
+  `agent_llm` behavior remain unchanged. No existing signature or selection
+  semantics change, so `BUNDLE_API_VERSION` remains `1`.
+
 - **Headless integration context checks (2026-10-28).** `Component` checks the
   selected capability's declared deployment contexts before resolving a
   connection or running an integration action. Unsupported headless actions
@@ -253,6 +261,13 @@ the deserialize half is covered by
   (default `False`); when `True`, a blank value stays `None` instead of becoming `0.0`,
   and a Boolean is refused. Both are additive and existing defaults are unchanged, so
   `BUNDLE_API_VERSION` remains `1`.
+- **Restricted-mode build note reads connections (2026-10-26).** When a build fails
+  with custom components blocked, `Component.send_error` now passes the vertex's
+  incoming connections to the compatibility rule, so its note about a saved
+  component that no longer matches the server's agrees with `lfx upgrade` and the
+  editor. `explain_restricted_component_mismatch` gains an optional
+  `connected_fields` argument; existing calls keep working. No existing symbol is
+  removed or renamed, so `BUNDLE_API_VERSION` remains `1`.
 
 - **Google Workspace network diagnostics (2026-10-15).** `lfx.integrations` exports
   `IntegrationNetworkError` with the additive `network-error` code. Google transport

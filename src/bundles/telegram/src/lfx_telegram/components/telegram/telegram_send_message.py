@@ -14,10 +14,10 @@ class TelegramSendMessageComponent(TelegramActionComponent):
     capability_id = "telegram.bot.send"
     inputs = [
         connection_input(capabilities=[capability_id]),
-        MessageTextInput(name="chat_id", display_name="Chat ID", required=True),
-        MultilineInput(name="text", display_name="Text", required=True),
-        MessageTextInput(name="thread_id", display_name="Thread ID", advanced=True),
-        BoolInput(name="silent", display_name="Silent Notification", value=False, advanced=True),
+        MessageTextInput(name="chat_id", display_name="Chat ID", required=True, tool_mode=True),
+        MultilineInput(name="text", display_name="Text", required=True, tool_mode=True),
+        MessageTextInput(name="thread_id", display_name="Thread ID", advanced=True, tool_mode=True),
+        BoolInput(name="silent", display_name="Silent Notification", value=False, advanced=True, tool_mode=True),
     ]
     outputs = [Output(display_name="Sent Message", name="message", method="build_message")]
 

@@ -60,11 +60,12 @@ class GoogleDriveFetchComponent(Component):
 
     inputs = [
         google_connection_input(required_scopes=[DRIVE_FILE_SCOPE], capabilities=[CAPABILITY]),
-        MessageTextInput(name="file_id", display_name="File ID", required=True),
+        MessageTextInput(name="file_id", display_name="File ID", required=True, tool_mode=True),
         MessageTextInput(
             name="export_mime_type",
             display_name="Export MIME Type",
             info="Set for Docs, Sheets and Slides, for example 'text/plain' or 'application/pdf'.",
+            tool_mode=True,
         ),
         BoolInput(
             name="acknowledge_abuse",
@@ -72,12 +73,10 @@ class GoogleDriveFetchComponent(Component):
             info="Download a file Google flagged as potentially malicious.",
             value=False,
             advanced=True,
+            tool_mode=True,
         ),
         BoolInput(
-            name="supports_all_drives",
-            display_name="Supports All Drives",
-            value=False,
-            advanced=True,
+            name="supports_all_drives", display_name="Supports All Drives", value=False, advanced=True, tool_mode=True
         ),
     ]
 

@@ -1,13 +1,14 @@
 """Unit tests for ValkeyVectorStoreComponent."""
 
 import sys
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
 from lfx.base.vectorstores.model import LCVectorStoreComponent
 from lfx.io import HandleInput, IntInput, SecretStrInput, StrInput
 from lfx.utils.ssrf_protection import SSRFProtectionError
+from lfx_valkey.components.valkey import valkey as valkey_module
 from lfx_valkey.components.valkey.valkey import ValkeyVectorStoreComponent
 
 # Create a mock for langchain_aws.vectorstores
@@ -19,15 +20,32 @@ _mock_aws_module.vectorstores = _mock_vectorstores_module
 
 
 @pytest.fixture(autouse=True)
-def _mock_langchain_aws():
+def _mock_langchain_aws(monkeypatch):
     """Mock langchain_aws so tests work without it installed."""
     modules = {
         "langchain_aws": _mock_aws_module,
         "langchain_aws.vectorstores": _mock_vectorstores_module,
     }
+    monkeypatch.setattr(valkey_module, "sys", SimpleNamespace(version_info=(3, 14, 0)), raising=False)
     with patch.dict(sys.modules, modules):
         yield
     _MockValkeyVectorStore.reset_mock()
+
+
+def test_python_315_refuses_the_vector_store_before_calling_the_sdk(monkeypatch):
+    component = ValkeyVectorStoreComponent()
+    component.ingest_data = []
+    component.valkey_index_name = "existing-index"
+    component.valkey_server_url = "valkey://localhost:6379"
+    component.embedding = MagicMock()
+    component._should_cache_vector_store = False
+    monkeypatch.setattr(valkey_module, "sys", SimpleNamespace(version_info=(3, 15, 0)), raising=False)
+
+    with pytest.raises(ValueError, match=r"Python 3\.15.*Python 3\.10.*3\.14"):
+        component.build_vector_store()
+
+    _MockValkeyVectorStore.from_existing_index.assert_not_called()
+    _MockValkeyVectorStore.from_documents.assert_not_called()
 
 
 class TestValkeyVectorStoreComponentMetadata:

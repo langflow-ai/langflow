@@ -15,7 +15,7 @@ class GitLabCreateIssueCommentComponent(GitLabActionComponent):
     inputs = [
         connection_input(capability_id),
         project_input(),
-        IntInput(name="number", display_name="Issue Number", required=True, input_types=["Message"]),
-        MultilineInput(name="body", display_name="Comment", required=True),
+        IntInput(name="number", display_name="Issue Number", required=True, input_types=["Message"], tool_mode=True),
+        MultilineInput(name="body", display_name="Comment", required=True, tool_mode=True),
     ]
     outputs = [Output(display_name="Result", name="result", method="build_result")]

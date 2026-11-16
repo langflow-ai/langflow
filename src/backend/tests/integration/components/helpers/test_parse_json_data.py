@@ -39,7 +39,7 @@ async def test_from_data():
 
 
 @pytest.mark.no_leaks(tasks=False, threads=False)
-async def test_from_message():
+async def test_from_message(active_user):
     outputs = await run_single_component(
         ParseJSONDataComponent,
         inputs={
@@ -47,6 +47,7 @@ async def test_from_message():
             "query": ".key",
         },
         run_input="{'key':'value1'}",
+        user_id=str(active_user.id),
     )
     assert outputs["filtered_data"] == [Data(text="value1")]
 
@@ -57,5 +58,6 @@ async def test_from_message():
             "query": ".key.[0].field2",
         },
         run_input='{"key":[{"field1": 1, "field2": 2}]}',
+        user_id=str(active_user.id),
     )
     assert outputs["filtered_data"] == [Data(text="2")]

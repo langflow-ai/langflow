@@ -330,12 +330,22 @@ class BaseVectorStoreBackend(ABC):
             self._vector_store = self._build_vector_store()
         return self._vector_store
 
-    async def add_documents(self, docs: list[Document]) -> None:
-        """Write nonempty document batches through the initialized vector store."""
+    async def add_documents(self, docs: list[Document]) -> int | None:
+        """Write a batch, optionally returning the number of newly written chunks.
+
+        Backends without duplicate filtering may return None to count every input.
+        """
         if not docs:
             return
         await self.ensure_ready()
         await self.vector_store.aadd_documents(docs)
+
+    async def get_documents_by_ids(self, ids: list[str]) -> list[Document]:
+        """Fetch a bounded set of document IDs with their stored metadata."""
+        if not ids:
+            return []
+        await self.ensure_ready()
+        return await self.vector_store.aget_by_ids(ids)
 
     async def add_embedded_documents(self, docs: list[IngestedDocument]) -> None:
         """Write chunks whose vectors are already computed, without re-embedding.

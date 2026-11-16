@@ -6,6 +6,10 @@
       "contract": "contracts/confluence.v1.json"
     },
     {
+      "provider_id": "discord",
+      "contract": "contracts/discord.v1.json"
+    },
+    {
       "provider_id": "github",
       "contract": "contracts/github.v1.json"
     },
@@ -16,6 +20,10 @@
     {
       "provider_id": "jira",
       "contract": "contracts/jira.v1.json"
+    },
+    {
+      "provider_id": "salesforce",
+      "contract": "contracts/salesforce.v1.json"
     },
     {
       "provider_id": "servicenow",

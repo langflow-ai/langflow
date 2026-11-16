@@ -1,6 +1,6 @@
 [project]
 name = "lfx-confluence"
-version = "0.1.0"
+version = "0.1.1"
 description = "Confluence Cloud page actions and bounded latest-state polling triggers."
 readme = "README.md"
 requires-python = ">=3.10,<3.16"

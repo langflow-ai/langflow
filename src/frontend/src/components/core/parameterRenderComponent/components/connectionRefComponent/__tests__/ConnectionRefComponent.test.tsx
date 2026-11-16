@@ -11,6 +11,24 @@ Element.prototype.scrollIntoView = jest.fn();
 jest.mock("@/controllers/API/queries/connections/use-get-connections", () => ({
   useGetConnections: jest.fn(),
 }));
+jest.mock("@tanstack/react-query", () => ({
+  ...jest.requireActual("@tanstack/react-query"),
+  useQueryClient: () => ({ setQueryData: jest.fn() }),
+}));
+jest.mock("@/controllers/API/queries/connections/use-connections", () => ({
+  useIntegrationsQuery: () => ({
+    data: { providers: [] },
+    isSuccess: true,
+    refetch: jest.fn(),
+  }),
+}));
+jest.mock(
+  "@/pages/SettingsPage/pages/ConnectionsPage/components/AddConnectionDialog",
+  () => ({
+    __esModule: true,
+    default: () => null,
+  }),
+);
 
 const CALENDAR_READ =
   "https://www.googleapis.com/auth/calendar.events.readonly";

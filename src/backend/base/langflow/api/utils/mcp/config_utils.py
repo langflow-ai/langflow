@@ -10,13 +10,17 @@ from lfx.base.mcp.util import project_mcp_server_name, sanitize_mcp_name
 from lfx.base.mcp.uvx import mcp_sdk_constraint_args
 from lfx.log import logger
 from lfx.services.deps import get_settings_service
+from sqlalchemy import or_
 from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
+from langflow.api.v1.auth_helpers import get_default_project_auth_settings
 from langflow.api.v2.mcp import get_server_list, update_server
 from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
+from langflow.services.auth.utils import decrypt_api_key
 from langflow.services.database.models import Flow, Folder
-from langflow.services.database.models.api_key.crud import create_api_key
-from langflow.services.database.models.api_key.model import ApiKeyCreate
+from langflow.services.database.models.api_key.crud import _is_expired, create_api_key, hash_api_key
+from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_storage_service
@@ -35,6 +39,14 @@ def mcp_server_config_uses_current_uvx_constraint(server_config: dict, package: 
 
     expected_prefix = [*mcp_sdk_constraint_args(), package]
     return args[: len(expected_prefix)] == expected_prefix
+
+
+def mcp_server_config_has_project_api_key(args: list[str]) -> bool:
+    """Return whether the server args include the generated Langflow API key header."""
+    return any(
+        arg == "--headers" and index + 2 < len(args) and args[index + 1] == "x-api-key"
+        for index, arg in enumerate(args)
+    )
 
 
 class MCPServerValidationResult:
@@ -361,6 +373,37 @@ async def get_composer_streamable_http_url(project: Folder) -> str:
     return await get_url_by_os(composer_host, int(composer_port), composer_url)  # type: ignore[arg-type]
 
 
+async def _get_starter_project_api_key(
+    session: AsyncSession, user_id: UUID, api_key_name: str, configured_key: str | None
+) -> str | None:
+    """Reuse a valid owner credential before creating another starter-project key."""
+    configured_hash = hash_api_key(configured_key) if configured_key else None
+    keys = (
+        await session.exec(
+            select(ApiKey)
+            .where(
+                ApiKey.user_id == user_id,
+                ApiKey.is_active.is_(True),
+                or_(ApiKey.name == api_key_name, ApiKey.api_key_hash == configured_hash),
+            )
+            .order_by(ApiKey.created_at.desc(), ApiKey.id)
+        )
+    ).all()
+    valid_keys = [key for key in keys if not _is_expired(key.expires_at)]
+    for key in valid_keys:
+        if configured_key and key.api_key_hash == configured_hash:
+            return configured_key
+    for key in valid_keys:
+        if key.name != api_key_name:
+            continue
+        candidate = decrypt_api_key(key.api_key)
+        if not candidate and key.api_key.startswith("sk-"):
+            candidate = key.api_key
+        if candidate and (key.api_key_hash is None or hash_api_key(candidate) == key.api_key_hash):
+            return candidate
+    return None
+
+
 async def auto_configure_starter_projects_mcp(session):
     """Auto-configure MCP servers for starter projects for all users at startup."""
     # Check if auto-configure is enabled
@@ -440,6 +483,13 @@ async def auto_configure_starter_projects_mcp(session):
                 if flows_configured > 0:
                     await logger.adebug(f"Enabled MCP for {flows_configured} starter flows for user {user.username}")
 
+                default_auth = user_starter_folder.auth_settings or get_default_project_auth_settings(
+                    settings_service.auth_settings, user
+                )
+                if not user_starter_folder.auth_settings and default_auth["auth_type"] == "apikey":
+                    user_starter_folder.auth_settings = encrypt_auth_settings(default_auth)
+                requires_api_key = default_auth.get("auth_type") == "apikey"
+
                 # Validate MCP server for this starter projects folder
                 validation_result = await validate_mcp_server_for_project(
                     user_starter_folder.id,
@@ -451,15 +501,35 @@ async def auto_configure_starter_projects_mcp(session):
                     operation="create",
                 )
 
-                # Skip if the server already has the expected URL and uvx SDK constraint.
+                existing_config = validation_result.existing_config or {}
+                existing_args = existing_config.get("args", [])
+                configured_key = next(
+                    (
+                        existing_args[index + 2]
+                        for index, arg in enumerate(existing_args)
+                        if arg == "--headers"
+                        and existing_args[index + 1 : index + 2] == ["x-api-key"]
+                        and index + 2 < len(existing_args)
+                    ),
+                    None,
+                )
+                api_key_name = f"MCP Project {DEFAULT_FOLDER_NAME} - {user.username}"
+                reusable_key = (
+                    await _get_starter_project_api_key(session, user.id, api_key_name, configured_key)
+                    if requires_api_key
+                    else None
+                )
+
+                # Reconcile credentials before accepting an existing generated config.
                 if validation_result.should_skip:
                     expected_url = await get_project_streamable_http_url(user_starter_folder.id)
-                    existing_config = validation_result.existing_config or {}
-                    existing_args = existing_config.get("args", [])
                     existing_urls = await extract_urls_from_strings(existing_args)
 
-                    if mcp_server_config_uses_current_uvx_constraint(existing_config, "mcp-proxy") and any(
-                        expected_url == url for url in existing_urls
+                    if (
+                        mcp_server_config_uses_current_uvx_constraint(existing_config, "mcp-proxy")
+                        and any(expected_url == url for url in existing_urls)
+                        and mcp_server_config_has_project_api_key(existing_args) == requires_api_key
+                        and (not requires_api_key or (configured_key == reusable_key and reusable_key is not None))
                     ):
                         await logger.adebug(
                             f"MCP server '{validation_result.server_name}' already exists and is correctly "
@@ -476,38 +546,14 @@ async def auto_configure_starter_projects_mcp(session):
 
                 server_name = validation_result.server_name
 
-                # Set up THIS USER'S starter folder authentication (same as new projects)
-                # If AUTO_LOGIN is false, automatically enable API key authentication
-                default_auth = {"auth_type": "none"}
-                await logger.adebug("Settings service auth settings: [REDACTED]")
-                await logger.adebug("User starter folder auth settings: [REDACTED]")
-                if (
-                    not user_starter_folder.auth_settings
-                    and settings_service.auth_settings.AUTO_LOGIN
-                    and not settings_service.auth_settings.SUPERUSER
-                ):
-                    default_auth = {"auth_type": "apikey"}
-                    user_starter_folder.auth_settings = encrypt_auth_settings(default_auth)
-                    await logger.adebug(
-                        "AUTO_LOGIN enabled without SUPERUSER; forcing API key auth for starter folder %s",
-                        user.username,
-                    )
-                elif not settings_service.auth_settings.AUTO_LOGIN and not user_starter_folder.auth_settings:
-                    default_auth = {"auth_type": "apikey"}
-                    user_starter_folder.auth_settings = encrypt_auth_settings(default_auth)
-                    await logger.adebug(f"Set up auth settings for user {user.username}'s starter folder")
-                elif user_starter_folder.auth_settings:
-                    default_auth = user_starter_folder.auth_settings
-
-                # Create API key for this user to access their own starter projects
-                api_key_name = f"MCP Project {DEFAULT_FOLDER_NAME} - {user.username}"
-                unmasked_api_key = await create_api_key(session, ApiKeyCreate(name=api_key_name), user.id)
-
                 # Build connection URLs for THIS USER'S starter folder (unique ID per user)
                 streamable_http_url = await get_project_streamable_http_url(user_starter_folder.id)
 
                 # Prepare server config (similar to new project creation)
-                if default_auth.get("auth_type", "none") == "apikey":
+                if requires_api_key:
+                    if reusable_key is None:
+                        unmasked_api_key = await create_api_key(session, ApiKeyCreate(name=api_key_name), user.id)
+                        reusable_key = unmasked_api_key.api_key
                     command = "uvx"
                     args = [
                         *mcp_sdk_constraint_args(),
@@ -516,7 +562,7 @@ async def auto_configure_starter_projects_mcp(session):
                         "streamablehttp",
                         "--headers",
                         "x-api-key",
-                        unmasked_api_key.api_key,
+                        reusable_key,
                         streamable_http_url,
                     ]
                 elif default_auth.get("auth_type", "none") == "oauth":

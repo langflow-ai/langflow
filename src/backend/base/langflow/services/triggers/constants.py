@@ -108,6 +108,7 @@ AUDIT_INGRESS_REJECT = "trigger_ingress:reject"
 AUDIT_SUBSCRIPTION_CREATE = "trigger_subscription:create"
 AUDIT_SUBSCRIPTION_RENEW = "trigger_subscription:renew"
 AUDIT_SUBSCRIPTION_REVOKE = "trigger_subscription:revoke"
+POLICY_BLOCKED_ERROR = "Blocked by trigger policy. Ask an administrator to approve this trigger kind."
 #: An authenticated caller's actions on a flow they may manage or execute.
 AUDIT_PAUSE = "trigger:pause"
 AUDIT_RESUME = "trigger:resume"

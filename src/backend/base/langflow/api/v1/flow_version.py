@@ -14,7 +14,7 @@ from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.utils.author_names import attach_usernames
 from langflow.api.utils.core import strip_secret_field_values
 from langflow.api.v1.authz_route_dependencies import get_authorized_flow_for_read
-from langflow.api.v1.flow_conflict import ensure_version_precondition, parse_if_match
+from langflow.api.v1.flow_conflict import claim_version_token, ensure_version_precondition, parse_if_match
 from langflow.api.v1.flow_validation import flow_validation_error
 from langflow.api.v1.flows import _validate_catalog_policy_for_write
 from langflow.api.v1.mappers.deployments.helpers import get_owned_provider_account_or_404
@@ -282,7 +282,8 @@ async def activate_version(
     if_match: Annotated[str | None, Header(alias="If-Match")] = None,
 ) -> FlowRead:
     flow = await _get_user_flow(session, flow_id, current_user)
-    await ensure_version_precondition(session, flow, parse_if_match(if_match))
+    expected = parse_if_match(if_match)
+    await ensure_version_precondition(session, flow, expected)
     # The write below shares this transaction; a decision the audit writer commits
     # first would invalidate its SQLite snapshot, so decisions wait for the write.
     async with audit_guard_in_transaction(session):
@@ -338,6 +339,7 @@ async def activate_version(
         # If the flow update fails, the auto-snapshot is also rolled back.
         try:
             async with session.begin_nested():
+                claimed = await claim_version_token(session, flow, expected)
                 if save_draft and current_data is not None:
                     await create_flow_version_entry(
                         session,
@@ -351,7 +353,7 @@ async def activate_version(
                 flow.updated_at = datetime.now(timezone.utc)
                 # Not routed through _patch_flow, so it rotates the token itself: otherwise a
                 # restore leaves open editors holding a token that still looks current.
-                flow.version_token = uuid4()
+                flow.version_token = claimed or uuid4()
                 flow.last_modified_by = current_user.id
 
                 session.add(flow)

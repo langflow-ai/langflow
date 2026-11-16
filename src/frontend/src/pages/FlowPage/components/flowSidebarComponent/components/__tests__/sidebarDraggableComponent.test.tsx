@@ -327,12 +327,39 @@ describe("SidebarDraggableComponent", () => {
       ).toBeInTheDocument();
     });
 
-    it("should display grip vertical icon", () => {
+    it("should not show a grip icon, which neither drags nor opens anything", () => {
       render(<SidebarDraggableComponent {...defaultProps} />);
 
       expect(
-        screen.getByTestId("forwarded-icon-GripVertical"),
-      ).toBeInTheDocument();
+        screen.queryByTestId("forwarded-icon-GripVertical"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should mark a trigger with a lightning icon before its name", () => {
+      // The server stamps triggers in metadata, which APIClassType's index
+      // signature does not admit.
+      const trigger = {
+        ...mockAPIClass,
+        metadata: { trigger_kind: "slack.message" },
+      } as unknown as typeof mockAPIClass;
+      render(
+        <SidebarDraggableComponent {...defaultProps} apiClass={trigger} />,
+      );
+
+      const lightning = screen.getByTestId("forwarded-icon-Zap");
+      const name = screen.getByText("Test Component");
+      expect(
+        lightning.compareDocumentPosition(name) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it("should not mark an action with the lightning icon", () => {
+      render(<SidebarDraggableComponent {...defaultProps} />);
+
+      expect(
+        screen.queryByTestId("forwarded-icon-Zap"),
+      ).not.toBeInTheDocument();
     });
 
     it("should render add component button when not disabled", () => {
@@ -772,9 +799,6 @@ describe("SidebarDraggableComponent", () => {
       expect(screen.getByText("Test Component")).toBeInTheDocument();
       expect(
         screen.getByTestId("add-component-button-test-component"),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByTestId("forwarded-icon-GripVertical"),
       ).toBeInTheDocument();
       expect(screen.getByTestId("select-content")).toBeInTheDocument();
     });

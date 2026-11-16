@@ -8,6 +8,7 @@ import {
   parseServerTime,
 } from "../helpers/trigger-presentation";
 import { eventLabelKeyOf, eventSummaryOf } from "./event-helpers";
+import TriggerEventReceiptBadge from "./TriggerEventReceiptBadge";
 import TriggerEventStateBadge from "./TriggerEventStateBadge";
 
 export interface TriggerEventListProps {
@@ -53,7 +54,7 @@ export function TriggerEventList({
               >
                 <span className="flex items-center justify-between gap-2">
                   <span className="flex items-center gap-1.5">
-                    <TriggerEventStateBadge event={event} />
+                    <TriggerEventReceiptBadge />
                     {origin !== "event" && (
                       <Badge variant="outline" size="tag">
                         {t(`triggers.events.tag.${origin}`)}
@@ -70,6 +71,7 @@ export function TriggerEventList({
                   )}
                 </span>
                 <span className="truncate">{summary}</span>
+                <TriggerEventStateBadge event={event} />
                 {event.attempt > 0 && (
                   <span className="text-xs text-muted-foreground">
                     {t("triggers.events.attempts", {

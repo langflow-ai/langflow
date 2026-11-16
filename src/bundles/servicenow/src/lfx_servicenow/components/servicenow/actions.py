@@ -16,7 +16,7 @@ _MAX_PAGE_SIZE = 100
 
 
 def _table():
-    return DropdownInput(name="table", display_name="Table", options=list(TABLES), value="incident")
+    return DropdownInput(name="table", display_name="Table", options=list(TABLES), value="incident", tool_mode=True)
 
 
 class ServiceNowSearchRecordsComponent(ServiceNowActionComponent):
@@ -28,15 +28,20 @@ class ServiceNowSearchRecordsComponent(ServiceNowActionComponent):
         connection_input(capability_id),
         _table(),
         DropdownInput(
-            name="filter_field", display_name="Filter Field", options=["number", "state", "assigned_to"], value="number"
+            name="filter_field",
+            display_name="Filter Field",
+            options=["number", "state", "assigned_to"],
+            value="number",
+            tool_mode=True,
         ),
-        MessageTextInput(name="filter_value", display_name="Exact Value", required=True),
-        IntInput(name="limit", display_name="Page Size", value=50),
+        MessageTextInput(name="filter_value", display_name="Exact Value", required=True, tool_mode=True),
+        IntInput(name="limit", display_name="Page Size", value=50, tool_mode=True),
         MessageTextInput(
             name="after_id",
             display_name="After Record ID",
             advanced=True,
             info="Use the last returned sys_id to request the next page.",
+            tool_mode=True,
         ),
     ]
     outputs = [Output(name="records", display_name="Records", method="search_records")]
@@ -81,7 +86,7 @@ class ServiceNowReadRecordComponent(ServiceNowActionComponent):
     inputs = [
         connection_input(capability_id),
         _table(),
-        MessageTextInput(name="record_id", display_name="Record ID", required=True),
+        MessageTextInput(name="record_id", display_name="Record ID", required=True, tool_mode=True),
     ]
     outputs = [Output(name="record", display_name="Record", method="read_record")]
 
@@ -98,7 +103,11 @@ class ServiceNowCreateRecordComponent(ServiceNowActionComponent):
     description = "Create one ticket using approved fields. Automatic write retries are disabled."
     name = "ServiceNowCreateRecord"
     capability_id = "servicenow.records.create"
-    inputs = [connection_input(capability_id), _table(), DataInput(name="fields", display_name="Fields", required=True)]
+    inputs = [
+        connection_input(capability_id),
+        _table(),
+        DataInput(name="fields", display_name="Fields", required=True, tool_mode=True),
+    ]
     outputs = [Output(name="record", display_name="Record", method="create_record")]
 
     async def create_record(self) -> Data:
@@ -118,8 +127,8 @@ class ServiceNowUpdateRecordComponent(ServiceNowActionComponent):
     inputs = [
         connection_input(capability_id),
         _table(),
-        MessageTextInput(name="record_id", display_name="Record ID", required=True),
-        DataInput(name="fields", display_name="Fields", required=True),
+        MessageTextInput(name="record_id", display_name="Record ID", required=True, tool_mode=True),
+        DataInput(name="fields", display_name="Fields", required=True, tool_mode=True),
     ]
     outputs = [Output(name="record", display_name="Record", method="update_record")]
 

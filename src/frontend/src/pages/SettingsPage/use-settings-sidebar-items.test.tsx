@@ -87,7 +87,20 @@ describe("useSettingsSidebarItems", () => {
     },
   );
 
-  it("adds Migration after Messages without changing the custom-store insertion", () => {
+  it.each([false, true])(
+    "shows Upgrade Reports only to superusers when isSuperuser=%s and migration is disabled",
+    (isSuperuser) => {
+      mockIsSuperuser = isSuperuser;
+
+      const { result } = renderHook(() => useSettingsSidebarItems());
+      const hrefs = result.current.map((item) => item.href);
+
+      expect(hrefs.includes("/settings/upgrade-reports")).toBe(isSuperuser);
+      expect(hrefs).not.toContain("/settings/migration");
+    },
+  );
+
+  it("adds Upgrade Reports before Migration without changing the custom-store insertion", () => {
     mockIsSuperuser = true;
     mockMigrationEnabled = true;
 
@@ -95,7 +108,10 @@ describe("useSettingsSidebarItems", () => {
     const hrefs = result.current.map((item) => item.href);
 
     expect(hrefs[2]).toBe("/settings/custom-store");
-    expect(hrefs.at(-2)).toBe("/settings/messages");
-    expect(hrefs.at(-1)).toBe("/settings/migration");
+    expect(hrefs.slice(-3)).toEqual([
+      "/settings/messages",
+      "/settings/upgrade-reports",
+      "/settings/migration",
+    ]);
   });
 });

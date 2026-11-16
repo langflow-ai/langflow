@@ -3,11 +3,14 @@
 import json
 from functools import partial
 from pathlib import Path
+from types import SimpleNamespace
 
 import httpx
 import pytest
+from conftest import Resolver
 from lfx.integrations.capabilities import IntegrationCapabilityManifest
 from lfx.integrations.errors import InvalidRequestError
+from lfx.services.authorization.base import ExecutionPrincipal
 from lfx_gitlab.client import GitLabClient
 from lfx_gitlab.components import gitlab
 
@@ -42,6 +45,55 @@ CASES = [
         {"number": 4, "body": "reply"},
     ),
 ]
+
+
+@pytest.mark.parametrize(("cls", "method", "path", "values"), CASES)
+async def test_action_tools_use_runtime_arguments_and_configured_connection(monkeypatch, cls, method, path, values):
+    requests = []
+    resolutions = []
+
+    class RecordingResolver(Resolver):
+        async def resolve(self, request):
+            resolutions.append(request)
+            return await super().resolve(request)
+
+    resolver = RecordingResolver()
+    monkeypatch.setattr("lfx.services.deps.get_connection_resolver", lambda: resolver)
+    monkeypatch.delenv("LANGFLOW_GITLAB_ORIGIN", raising=False)
+
+    def handle(request):
+        requests.append(request)
+        return httpx.Response(200, json={"id": len(requests)})
+
+    monkeypatch.setattr("lfx_gitlab.base.GitLabClient", partial(GitLabClient, transport=httpx.MockTransport(handle)))
+    principal = ExecutionPrincipal(kind="actor", user_id="owner", interactive=True)
+    vertex = SimpleNamespace(outputs=[], graph=SimpleNamespace(execution_principal=principal, flow_id="flow-1"))
+    component = cls(connection="gitlab/work", _vertex=vertex, _tracing_service=None)
+    tool = (await component.to_toolkit())[0]
+    schema = tool.args_schema.model_json_schema()
+    assert schema["properties"]["project_id"]["type"] == "integer"
+    assert "project_id" in schema["required"]
+    assert "connection" not in schema["properties"]
+    assert tool.name != "build_result"
+
+    assert await tool.ainvoke({"project_id": 80, **values}) == {"id": 1}
+    assert await tool.ainvoke({"project_id": 90, **values}) == {"id": 2}
+
+    assert [request.method for request in requests] == [method, method]
+    assert [request.url.path for request in requests] == ["/api/v4" + path, "/api/v4" + path.replace("80", "90")]
+    if method != "GET":
+        expected_body = {
+            "description" if key == "body_content" else key: value for key, value in values.items() if key != "number"
+        }
+        assert all(json.loads(request.content) == expected_body for request in requests)
+    assert len(resolutions) == 2
+    assert all(request.ref.to_handle() == "gitlab/work" for request in resolutions)
+    assert all(request.principal == principal for request in resolutions)
+
+
+@pytest.mark.parametrize("cls", [gitlab.GitLabOnIssueTriggerComponent, gitlab.GitLabOnMergeRequestTriggerComponent])
+def test_trigger_inputs_do_not_enable_tool_mode(cls):
+    assert not any(getattr(field, "tool_mode", False) for field in cls.inputs)
 
 
 @pytest.mark.parametrize(("cls", "method", "path", "values"), CASES)

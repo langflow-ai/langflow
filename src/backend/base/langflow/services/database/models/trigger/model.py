@@ -233,6 +233,32 @@ class TriggerLease(SQLModel, table=True):  # type: ignore[call-arg]
     expires_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
 
 
+class TriggerRenewalObservation(SQLModel, table=True):  # type: ignore[call-arg]
+    """One fenced renewal result, retaining the old and new coverage boundary.
+
+    A subscription row changes its expiry on every renewal. These bounded,
+    credential-free observations preserve enough history to distinguish an
+    on-time renewal from recovery after an observed coverage gap.
+    """
+
+    __tablename__ = "trigger_renewal_observation"
+    __table_args__ = (
+        CheckConstraint("outcome IN ('renewed', 'failed')", name=conv("ck_trigger_renewal_outcome")),
+        CheckConstraint("gap_seconds >= 0", name=conv("ck_trigger_renewal_gap_nonnegative")),
+    )
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    trigger_id: UUID = Field(
+        sa_column=Column(sa.Uuid(), ForeignKey("trigger.id", ondelete="CASCADE"), nullable=False, index=True)
+    )
+    subscription_id: UUID = Field(sa_column=Column(sa.Uuid(), nullable=False))
+    observed_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False, index=True))
+    previous_expires_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
+    expires_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
+    outcome: str = Field(sa_column=Column(sa.String(16), nullable=False))
+    gap_seconds: float = Field(default=0, sa_column=Column(sa.Float(), nullable=False))
+
+
 class TriggerListenerLease(SQLModel, table=True):  # type: ignore[call-arg]
     """One live listener per connection, for the TRG-3 listener process."""
 

@@ -148,6 +148,7 @@ def _flow_with_a_failing_component(flow_data: str) -> str:
     return json.dumps(payload)
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_a_failed_build_is_not_reported_as_a_successful_run(
     client, json_memory_chatbot_no_llm, logged_in_headers, span_exporter
 ):

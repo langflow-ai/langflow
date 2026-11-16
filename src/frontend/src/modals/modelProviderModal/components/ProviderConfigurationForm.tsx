@@ -99,6 +99,7 @@ const ProviderConfigurationForm = ({
   isFetchingAfterDisconnect,
 }: ProviderConfigurationFormProps) => {
   const { t } = useTranslation();
+  const [isExpanded, setIsExpanded] = useState(true);
   const [showDisconnectWarning, setShowDisconnectWarning] = useState(false);
   const [editingSecret, setEditingSecret] = useState<Record<string, boolean>>(
     {},
@@ -128,12 +129,17 @@ const ProviderConfigurationForm = ({
   if (!selectedProvider) return null;
 
   return (
-    <div className="flex flex-col gap-1 px-4 pt-4">
-      <div className="flex flex-row gap-1 min-w-[300px]">
-        <span
-          id="provider-single-variable-label"
-          className="text-[13px] font-semibold mr-auto"
-        >
+    <details
+      className="group/configuration px-4 pt-4"
+      data-testid="provider-configuration-disclosure"
+      open={isExpanded}
+      onToggle={(event) => setIsExpanded(event.currentTarget.open)}
+    >
+      <summary
+        className="mb-1 flex cursor-pointer list-none items-center gap-2 rounded-sm text-[13px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden"
+        data-testid="provider-configuration-summary"
+      >
+        <span id="provider-single-variable-label" className="mr-auto">
           {isSingleVariableProvider ? (
             <>
               {providerVariables[0].variable_name}
@@ -145,8 +151,13 @@ const ProviderConfigurationForm = ({
             `${selectedProvider.provider || t("modelProviders.unknownProvider")} ${requiresConfiguration && ` ${t("modelProviders.configuration")}`}`
           )}
         </span>
-      </div>
-      <span className="text-[13px] text-muted-foreground pt-1 pb-2">
+        <ForwardedIconComponent
+          name="ChevronDown"
+          ariaHidden
+          className="h-4 w-4 shrink-0 transition-transform group-open/configuration:rotate-180"
+        />
+      </summary>
+      <span className="block text-[13px] text-muted-foreground pt-1 pb-2">
         {requiresConfiguration ? (
           <>
             {t("modelProviders.configurePrefix")}{" "}
@@ -448,7 +459,7 @@ const ProviderConfigurationForm = ({
         }}
         isLoading={isDeleting}
       />
-    </div>
+    </details>
   );
 };
 

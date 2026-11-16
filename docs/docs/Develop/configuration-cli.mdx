@@ -374,6 +374,72 @@ langflow run --backend-only
   </TabItem>
 </Tabs>
 
+### langflow secrets audit {#langflow-secrets-audit}
+
+Reads values encrypted with `LANGFLOW_SECRET_KEY` and leaves them unchanged.
+
+To audit the stored secrets, do the following:
+
+1. Stop Langflow.
+2. Set the current root key and the synchronous database URL in environment variables.
+   The options name those variables.
+3. Run the audit:
+
+   ```bash
+   langflow secrets audit --key-env CURRENT_ROOT --database-url-env ROTATION_DATABASE_URL
+   ```
+
+4. Read the report.
+   It lists counts and the table, column, and row ID for failures and legacy plaintext.
+   Secret values stay out of the report.
+   A nonzero exit status means a value cannot be decrypted.
+
+#### Options
+
+| Option | Default | Type | Description |
+|--------|---------|--------|-------------|
+| `--key-env` | `LANGFLOW_SECRET_KEY` | String | Name of the environment variable that contains the current root key. |
+| `--database-url-env` | `LANGFLOW_MIGRATION_TARGET_URL` | String | Name of the environment variable that contains a synchronous SQLite or PostgreSQL URL. |
+
+### langflow secrets rotate {#langflow-secrets-rotate}
+
+Rewraps values encrypted with `LANGFLOW_SECRET_KEY` under a new root key.
+A failure rolls the database back.
+
+To rotate the root key, do the following:
+
+1. Stop every web process, background worker, and trigger listener that uses the database.
+   Keep them stopped until they start with the new root.
+2. Apply the current schema migrations, including `secret_rotation`.
+3. Create a database backup and confirm that it can be restored.
+   Record its SHA-256 digest.
+   Set the old root, the new root, and the synchronous database URL in separate environment variables.
+4. Run the rotation:
+
+   ```bash
+   langflow secrets rotate \
+     --database-url-env ROTATION_DATABASE_URL \
+     --old-key-env OLD_ROOT --new-key-env NEW_ROOT \
+     --writers-stopped \
+     --backup-file /protected/backups/langflow.dump \
+     --backup-sha256 "$VERIFIED_BACKUP_SHA256"
+   ```
+
+5. Set the new root in the deployment, restart every process, and run [langflow secrets audit](#langflow-secrets-audit).
+   Local HS256 sessions must sign in again.
+   If activation fails, keep the processes stopped and restore the verified backup with the old root.
+
+#### Options
+
+| Option | Default | Type | Description |
+|--------|---------|--------|-------------|
+| `--old-key-env` | Required | String | Name of the environment variable that contains the current root key. |
+| `--new-key-env` | Required | String | Name of the environment variable that contains the replacement root key. |
+| `--backup-file` | Required | String | Path to a nonempty database backup. The live SQLite file is rejected. |
+| `--backup-sha256` | Required | String | SHA-256 digest of that backup. The file must match this digest. |
+| `--writers-stopped` | `--no-writers-stopped` (false) | Boolean | Attest that every web process, worker, and listener is stopped. Required. |
+| `--database-url-env` | `LANGFLOW_MIGRATION_TARGET_URL` | String | Name of the environment variable that contains a synchronous SQLite or PostgreSQL URL. |
+
 ### langflow superuser {#langflow-superuser}
 
 Creates a superuser account with the given username and password.

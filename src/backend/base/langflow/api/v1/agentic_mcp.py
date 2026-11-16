@@ -23,6 +23,7 @@ code-generating endpoints.
 """
 
 from contextvars import ContextVar
+from http.cookies import SimpleCookie
 from typing import Any
 
 import httpx
@@ -37,6 +38,7 @@ from mcp.server import Server
 
 from langflow.api.utils import CurrentActiveMCPUser, DbSession
 from langflow.api.v1.mcp import ResponseNoOp, StreamableHTTP
+from langflow.services.auth.cookies import auth_cookie_name
 from langflow.services.auth.utils import oauth2_login
 from langflow.services.deps import get_settings_service
 
@@ -69,10 +71,31 @@ async def _loopback_client(request: Request) -> LangflowClient:
     query API keys take precedence over header keys. Never inherit the server's
     process API key when the request has no key of its own.
     """
-    access_token = await oauth2_login(request)
-    api_key = None if access_token else request.query_params.get("x-api-key") or request.headers.get("x-api-key")
+    token = await oauth2_login(request)
+    api_key = None if token else request.query_params.get("x-api-key") or request.headers.get("x-api-key")
+    settings_service = get_settings_service()
+    # Preserve credential channels so native verification and external fallback
+    # see the same request. Forward only the configured authentication fields.
+    auth_headers = {}
+    if authorization := request.headers.get("Authorization"):
+        auth_headers["Authorization"] = authorization
+    cookie_names = {auth_cookie_name("access_token_lf", request)}
+    auth_settings = settings_service.auth_settings
+    if auth_settings.EXTERNAL_AUTH_ENABLED:
+        if (header_name := auth_settings.EXTERNAL_AUTH_TOKEN_HEADER) and (value := request.headers.get(header_name)):
+            if header_name.lower() == "authorization":
+                header_name = "Authorization"
+            auth_headers[header_name] = value
+        if cookie_name := auth_settings.EXTERNAL_AUTH_TOKEN_COOKIE:
+            cookie_names.add(cookie_name)
+    cookies = SimpleCookie()
+    for name in cookie_names:
+        if value := request.cookies.get(name):
+            cookies[name] = value
+    if cookies:
+        auth_headers["Cookie"] = cookies.output(header="", sep=";").strip()
     # The ASGI server address comes from the listener, never the request headers.
-    settings = get_settings_service().settings
+    settings = settings_service.settings
     host, port = request.scope.get("server") or (settings.host, settings.runtime_port or settings.port)
     host = {"0.0.0.0": "127.0.0.1", "::": "::1"}.get(host, host)  # noqa: S104
     scheme = "https" if settings.ssl_cert_file and settings.ssl_key_file else "http"
@@ -88,7 +111,7 @@ async def _loopback_client(request: Request) -> LangflowClient:
     return LangflowClient(
         server_url=str(server_url),
         api_key=api_key,
-        access_token=access_token,
+        auth_headers=auth_headers,
         use_env_api_key=False,
         use_env_proxies=False,
         pinned_ips={pin_host_for_url(str(server_url)): [host]},

@@ -35,6 +35,16 @@ export type CustomFieldsType = {
 export type CustomComponentRequest = {
   data: APIClassType;
   type: string;
+  warnings?: ComponentUpdateWarning[];
+};
+
+export type ComponentUpdateWarning = {
+  code: "generated_fields_not_restored";
+  fields: string[];
+  refresh_fields: string[];
+  unverified?: boolean;
+  inputs_unverified?: boolean;
+  outputs_unverified?: boolean;
 };
 
 export type APIClassType = {
@@ -53,6 +63,8 @@ export type APIClassType = {
   beta?: boolean;
   legacy?: boolean;
   replacement?: string[];
+  /** Release that retired the component. A retired component fails when the flow runs. */
+  retired_in?: string;
   documentation: string;
   error?: string;
   official?: boolean;

@@ -2,11 +2,7 @@ import Fuse from "fuse.js";
 import { type ChangeEvent, useEffect, useState } from "react";
 
 /**
- * Options / filtering state for the dropdown: the open flags, the
- * filtered options+metadata pair, the custom combobox value and the
- * four synchronization effects, moved verbatim from the component.
- * Effect order and dependency arrays are intentionally identical to
- * the original inline code.
+ * Manage dropdown options, filtering, and custom values.
  */
 export function useDropdownOptions({
   value,
@@ -57,13 +53,14 @@ export function useDropdownOptions({
   // When options is empty, it means options are still loading, so we preserve the saved value.
   useEffect(() => {
     if (
+      !combobox &&
       options.length > 0 &&
       !options.includes(value) &&
       !filteredOptions.includes(value)
     ) {
       if (value) onSelect("", undefined, true);
     }
-  }, [value, options, filteredOptions]);
+  }, [value, options, filteredOptions, combobox]);
 
   const fuse = new Fuse(validOptions, { keys: ["name", "value"] });
 
@@ -145,10 +142,9 @@ export function useDropdownOptions({
 
   useEffect(() => {
     if (open) {
-      // Check if filteredOptions contains any custom values not in validOptions
-      const customValuesInFiltered = filteredOptions.filter(
-        (option) => !validOptions.includes(option) && option === customValue,
-      );
+      const customValuesInFiltered = Array.from(
+        new Set([value, customValue]),
+      ).filter((option) => option && !validOptions.includes(option));
 
       // If there are custom values, preserve them when resetting filtered options
       if (customValuesInFiltered.length > 0 && combobox) {
@@ -182,7 +178,7 @@ export function useDropdownOptions({
     ) {
       onSelect("", undefined, true);
     }
-  }, [open, validOptions]);
+  }, [open, validOptions, value, combobox]);
 
   return {
     open,

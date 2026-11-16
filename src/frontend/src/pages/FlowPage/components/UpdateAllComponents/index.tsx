@@ -1,7 +1,7 @@
 import { useUpdateNodeInternals } from "@xyflow/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { cloneDeep } from "lodash";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { processNodeAdvancedFields } from "@/CustomNodes/helpers/process-node-advanced-fields";
 import useUpdateAllNodes, {
@@ -18,7 +18,11 @@ import useFlowStore, {
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useTypesStore } from "@/stores/typesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
-import type { NodeDataType } from "@/types/flow";
+import {
+  countFlowEdges,
+  nodeWithGroupValues,
+  walkFlowNodes,
+} from "@/utils/grouped-nodes";
 import { cn } from "@/utils/utils";
 
 const CONTAINER_VARIANTS = {
@@ -53,26 +57,33 @@ export default function UpdateAllComponents() {
     (state) => state.allowCustomComponents,
   );
 
+  // A retired component has nothing to update to; its own bar on the canvas names the
+  // replacement, so Update All, Review All and Dismiss leave it out.
+  const componentsNotRetired = useMemo(
+    () => componentsToUpdate.filter((component) => !component.retired),
+    [componentsToUpdate],
+  );
+
   const allDismissed = useMemo(
     () =>
-      componentsToUpdate.length > 0 &&
-      componentsToUpdate.every((component) =>
+      componentsNotRetired.length > 0 &&
+      componentsNotRetired.every((component) =>
         dismissedNodes.includes(component.id),
       ),
-    [dismissedNodes, componentsToUpdate],
+    [dismissedNodes, componentsNotRetired],
   );
 
   const componentsToUpdateFiltered = useMemo(
     () =>
       allowCustomComponents
-        ? componentsToUpdate.filter(
+        ? componentsNotRetired.filter(
             (component) =>
               !component.blocked &&
               !dismissedNodes.includes(component.id) &&
               !component.userEdited,
           )
-        : componentsToUpdate,
-    [componentsToUpdate, dismissedNodes, allowCustomComponents],
+        : componentsNotRetired,
+    [componentsNotRetired, dismissedNodes, allowCustomComponents],
   );
 
   const blockedComponents = useMemo(
@@ -84,30 +95,6 @@ export default function UpdateAllComponents() {
     () => componentsToUpdateFiltered.filter((component) => !component.blocked),
     [componentsToUpdateFiltered],
   );
-
-  const edgesUpdateRef = useRef({
-    numberOfEdgesBeforeUpdate: 0,
-    updateComponent: false,
-  });
-
-  useMemo(() => {
-    if (
-      edgesUpdateRef.current.numberOfEdgesBeforeUpdate > 0 &&
-      edges.length !== edgesUpdateRef.current.numberOfEdgesBeforeUpdate &&
-      edgesUpdateRef.current.updateComponent
-    ) {
-      useAlertStore.getState().setNoticeData({
-        title: t("errors.edgesLost"),
-      });
-
-      resetEdgesUpdateRef();
-    }
-  }, [edges]);
-
-  const getSuccessTitle = (updatedCount: number) => {
-    resetEdgesUpdateRef();
-    return t("updateComponents.successCount", { count: updatedCount });
-  };
 
   const breakingChanges = updatableComponents.filter(
     (component) => component.breakingChange,
@@ -124,8 +111,6 @@ export default function UpdateAllComponents() {
       setIsOpen(true);
       return;
     }
-    startEdgesUpdateRef();
-
     const nodesToUpdate = updatableComponents.filter(
       (component) => ids?.includes(component.id) ?? true,
     );
@@ -142,8 +127,15 @@ export default function UpdateAllComponents() {
         registeredNodeIds.push(nodeUpdate.id);
       }
 
+      const contexts = new Map(
+        Array.from(walkFlowNodes(nodes, edges), (context) => [
+          context.node.id,
+          context,
+        ]),
+      );
       const updatePromises = nodesToUpdate.map(async (nodeUpdate) => {
-        const node = nodes.find((n) => n.id === nodeUpdate.id);
+        const context = contexts.get(nodeUpdate.id);
+        const node = context && nodeWithGroupValues(context);
         if (!node || node.type !== "genericNode") {
           throw new Error(`Unable to find updatable node ${nodeUpdate.id}`);
         }
@@ -167,7 +159,11 @@ export default function UpdateAllComponents() {
 
         return {
           nodeId: nodeUpdate.id,
-          newNode: processNodeAdvancedFields(resData, edges, nodeUpdate.id),
+          newNode: processNodeAdvancedFields(
+            resData,
+            context!.edges ?? [],
+            nodeUpdate.id,
+          ),
           code: currentCode,
           name: "code",
           type,
@@ -181,7 +177,15 @@ export default function UpdateAllComponents() {
       const updatedNodeIds = updates.map(({ nodeId }) => nodeId);
 
       if (updatedNodeIds.length > 0) {
+        const before = useFlowStore.getState();
+        const edgesBefore = countFlowEdges(before.nodes, before.edges);
         updateAllNodes(updates);
+        const after = useFlowStore.getState();
+        if (countFlowEdges(after.nodes, after.edges) < edgesBefore) {
+          useAlertStore
+            .getState()
+            .setNoticeData({ title: t("errors.edgesLost") });
+        }
         removeDismissedNodes(updatedNodeIds);
       }
 
@@ -189,7 +193,6 @@ export default function UpdateAllComponents() {
         (result) => result.status === "rejected",
       ).length;
       if (failedCount > 0) {
-        resetEdgesUpdateRef();
         errorReported = true;
         setErrorData({
           title: t("errors.updateComponents"),
@@ -205,11 +208,12 @@ export default function UpdateAllComponents() {
 
       if (updatedNodeIds.length > 0) {
         useAlertStore.getState().setSuccessData({
-          title: getSuccessTitle(updatedNodeIds.length),
+          title: t("updateComponents.successCount", {
+            count: updatedNodeIds.length,
+          }),
         });
       }
     } catch (error) {
-      resetEdgesUpdateRef();
       if (!errorReported) {
         setErrorData({
           title: t("errors.updateComponents"),
@@ -228,35 +232,24 @@ export default function UpdateAllComponents() {
     }
   };
 
-  const resetEdgesUpdateRef = () => {
-    edgesUpdateRef.current = {
-      numberOfEdgesBeforeUpdate: 0,
-      updateComponent: false,
-    };
-  };
-
-  const startEdgesUpdateRef = () => {
-    edgesUpdateRef.current = {
-      numberOfEdgesBeforeUpdate: edges.length,
-      updateComponent: true,
-    };
-  };
-
   const handleDismissAllComponents = (
     e: React.MouseEvent<HTMLButtonElement>,
   ) => {
     const ids = componentsToUpdateFiltered.map((component) => component.id);
     addDismissedNodes(ids);
-    setNodes((oldNodes) =>
-      oldNodes.map((node) => {
-        if (ids.includes(node.id) && node.data?.node) {
-          const newNode = cloneDeep(node);
-          (newNode.data as NodeDataType).node!.edited = true;
-          return newNode;
+    setNodes((oldNodes) => {
+      const newNodes = cloneDeep(oldNodes);
+      for (const { node } of walkFlowNodes(newNodes)) {
+        if (
+          ids.includes(node.id) &&
+          node.type === "genericNode" &&
+          node.data.node
+        ) {
+          node.data.node.edited = true;
         }
-        return node;
-      }),
-    );
+      }
+      return newNodes;
+    });
     e.stopPropagation();
   };
 

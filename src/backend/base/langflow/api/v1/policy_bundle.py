@@ -17,7 +17,11 @@ from lfx.services.deps import (
 from lfx.services.integration_policy import integration_policy_key_provider, normalize_integration_policy_key
 from lfx.services.model_provider_policy import normalize_blocked_model_key
 from lfx.services.policy_bundle import PolicyBundleSnapshot
-from lfx.services.policy_bundle.base import decode_integration_provider_ids, encode_integration_provider_ids
+from lfx.services.policy_bundle.base import (
+    decode_integration_provider_ids,
+    encode_integration_provider_ids,
+    normalize_trigger_kind,
+)
 from pydantic import BaseModel, Field, StringConstraints, field_validator
 
 from langflow.api.utils import DbSession, DbSessionReadOnly
@@ -67,6 +71,9 @@ class PolicyBundleWrite(BaseModel):
         Field(max_length=1000),
     ] = None
     blocked_integration_action_keys: CatalogPolicyKeyList = Field(default_factory=list)
+    # Omitted by older clients: keep the active trigger facet. Explicit null
+    # restores unrestricted behavior, while [] denies every trigger kind.
+    approved_trigger_kinds: Annotated[list[str] | None, Field(max_length=1000)] = None
     reason: str | None = Field(default=None, max_length=POLICY_BUNDLE_REASON_MAX_LENGTH)
 
     @field_validator("approved_provider_ids", mode="before")
@@ -118,6 +125,11 @@ class PolicyBundleWrite(BaseModel):
             raise ValueError(str(exc)) from exc
         return sorted(set(normalized))
 
+    @field_validator("approved_trigger_kinds")
+    @classmethod
+    def normalize_trigger_kinds(cls, values: list[str] | None) -> list[str] | None:
+        return None if values is None else sorted({normalize_trigger_kind(value) for value in values})
+
 
 class PolicyBundleRollbackWrite(BaseModel):
     expected_revision: int = Field(ge=1)
@@ -134,6 +146,7 @@ class PolicyBundleRead(BaseModel):
     blocked_model_keys: list[str]
     approved_integration_provider_ids: list[str] | None
     blocked_integration_action_keys: list[str]
+    approved_trigger_kinds: list[str] | None
     content_hash: str
     created_at: datetime | None
     created_by: UUID | None
@@ -217,6 +230,9 @@ def _response(snapshot: PolicyBundleSnapshot, *, managed_externally: bool = Fals
             else sorted(snapshot.approved_integration_provider_ids)
         ),
         blocked_integration_action_keys=sorted(snapshot.blocked_integration_action_keys),
+        approved_trigger_kinds=None
+        if snapshot.approved_trigger_kinds is None
+        else sorted(snapshot.approved_trigger_kinds),
         content_hash=snapshot.content_hash,
         created_at=snapshot.created_at,
         created_by=snapshot.created_by,
@@ -336,6 +352,9 @@ async def replace_policy_bundle(
     _raise_if_externally_managed()
     await _reject_new_undeclared_integration_action_keys(session, payload.blocked_integration_action_keys)
     try:
+        trigger_kinds = payload.approved_trigger_kinds
+        if "approved_trigger_kinds" not in payload.model_fields_set:
+            trigger_kinds = (await get_policy_bundle_state(session)).approved_trigger_kinds
         snapshot = await replace_policy_bundle_state(
             session,
             expected_revision=payload.expected_revision,
@@ -345,6 +364,7 @@ async def replace_policy_bundle(
             blocked_model_keys=payload.blocked_model_keys,
             approved_integration_provider_ids=payload.approved_integration_provider_ids,
             blocked_integration_action_keys=payload.blocked_integration_action_keys,
+            approved_trigger_kinds=trigger_kinds,
             actor_user_id=admin.id,
             reason=payload.reason,
         )
