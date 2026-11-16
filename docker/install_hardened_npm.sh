@@ -9,8 +9,8 @@ TAR_VERSION="7.5.22"
 # Keep node-gyp on its supported undici 6.x maintenance line.
 UNDICI_VERSION="6.29.1"
 POSTCSS_SELECTOR_PARSER_VERSION="7.1.6"
-GLOB_VERSION="14.0.3"
-MINIMATCH_VERSION="11.0.4"
+GLOB_VERSION="14.0.6"
+MINIMATCH_VERSION="11.0.8"
 PATH_SCURRY_VERSION="3.0.0"
 NONRECURSIVE_GLOB_MATCH_VERSION="1.0.1"
 npm_cache="$(npm config get cache)"
@@ -65,8 +65,8 @@ const expected = {
   tar: "7.5.22",
   undici: "6.29.1",
   "postcss-selector-parser": "7.1.6",
-  glob: "14.0.3",
-  minimatch: "11.0.4",
+  glob: "14.0.6",
+  minimatch: "11.0.8",
   "path-scurry": "3.0.0",
   "@isaacs/nonrecursive-glob-match": "1.0.1",
   sigstore: "5.0.0",
