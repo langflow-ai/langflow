@@ -339,11 +339,12 @@ class TestUpdateFrontendNodeRestoresVisibility:
         saved["template"]["selected_key"]["options"] = [".items[0]"]
         saved["template"]["selected_key"]["value"] = ".items[0]"
 
-        template = (await self._update(saved))["template"]
+        node = await self._update(saved)
+        template = node["template"]
 
         assert template["selected_key"]["value"] == ".items[0]"
         assert template["selected_key"]["options"] == ['."items[0]"', ".items[0]"]
-        assert self._run(await self._update(saved), Data(data={"items": [42]})).data == {"result": 42}
+        assert self._run(node, Data(data={"items": [42]})).data == {"result": 42}
 
     async def test_path_selection_with_invalid_saved_json_hides_selected_key(self):
         saved = self._saved_node("Path Selection", mapped_json_display="{not json")

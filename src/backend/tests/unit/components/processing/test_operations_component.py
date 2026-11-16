@@ -103,6 +103,18 @@ class TestPathSelectionLiteralKeys:
         assert options[:3] == ['."document.id"', '."document.id"[0]', '."document.id"[0].value']
         assert ".document.id[0].value" in options
 
+    def test_should_keep_the_saved_path_when_the_picker_refreshes(self, component_class):
+        component, _ = _path_selection(component_class, {})
+        build_config = dotdict({"selected_key": {"options": [".items[0]"], "value": ".items[0]", "show": True}})
+
+        options = component.update_build_config(build_config, '{"items[0]": 42}', "mapped_json_display")[
+            "selected_key"
+        ]["options"]
+
+        assert options == ['."items[0]"', ".items[0]"]
+        component.set(data=Data(data={"items": [42]}), selected_key=".items[0]")
+        assert component.as_data().data == {"result": 42}
+
     def test_should_keep_the_dot_form_when_keys_are_identifiers(self, component_class):
         payload = {"user": {"tags": [{"_id2": 1}]}, "if": True}
 

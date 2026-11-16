@@ -707,7 +707,9 @@ class OperationsComponent(Component):
             try:
                 parsed_json = json.loads(field_value)
                 keys = self.extract_all_paths(parsed_json)
-                build_config["selected_key"]["options"] = keys
+                build_config["selected_key"]["options"] = self._keep_saved_path(
+                    keys, build_config["selected_key"].get("value")
+                )
                 build_config["selected_key"]["show"] = True
             except (json.JSONDecodeError, TypeError, ValueError) as e:
                 logger.error(f"Error parsing mapped JSON: {e}")
@@ -818,12 +820,9 @@ class OperationsComponent(Component):
             mapped_json = template.get("mapped_json_display", {}).get("value")
             if mapped_json:
                 try:
-                    options = self.extract_all_paths(json.loads(mapped_json))
-                    # A path saved under older path rules may still select data; keep it selectable.
-                    saved_path = template["selected_key"].get("value")
-                    if saved_path and saved_path not in options:
-                        options.append(saved_path)
-                    template["selected_key"]["options"] = options
+                    template["selected_key"]["options"] = self._keep_saved_path(
+                        self.extract_all_paths(json.loads(mapped_json)), template["selected_key"].get("value")
+                    )
                 except (json.JSONDecodeError, TypeError, ValueError, RecursionError) as e:
                     logger.warning(f"Error parsing saved mapped JSON: {e}")
                     template["selected_key"]["show"] = False
@@ -870,6 +869,13 @@ class OperationsComponent(Component):
     # ==================================================================
     # JSON operations
     # ==================================================================
+    @staticmethod
+    def _keep_saved_path(options: list[str], saved_path: object) -> list[str]:
+        """Keep the saved path selectable: one built under older path rules may still select data."""
+        if isinstance(saved_path, str) and saved_path and saved_path not in options:
+            return [*options, saved_path]
+        return options
+
     @staticmethod
     def extract_all_paths(obj, path=""):
         paths = []
