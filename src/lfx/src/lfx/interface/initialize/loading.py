@@ -57,7 +57,7 @@ def instantiate_class(
         public_execution=str(user_id) == str(PUBLIC_ANONYMOUS_ACTOR_ID),
     )
     class_object: type[CustomComponent | Component] = eval_custom_component_code(
-        code, class_name=_component_class_name(vertex)
+        code, class_name=_component_class_name(vertex), reuse_class=True
     )
     custom_component: CustomComponent | Component = class_object(
         _user_id=user_id,

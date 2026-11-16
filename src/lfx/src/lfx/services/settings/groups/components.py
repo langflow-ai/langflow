@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from lfx.constants import BASE_COMPONENTS_PATH
 from lfx.log.logger import logger
@@ -46,6 +46,15 @@ class ComponentsSettings(BaseModel):
     lazy_load_components: bool = False
     """If set to True, Langflow will only partially load components at startup and fully load them on demand.
     This significantly reduces startup time but may cause a slight delay when a component is first used."""
+
+    component_class_cache_enabled: bool = False
+    """If set to True, Python component classes built from identical source are reused across flow builds
+    instead of being re-parsed and re-executed for every vertex. Reuse applies only to source that exactly
+    matches the component registry (built-ins, extension bundles, ``LANGFLOW_COMPONENTS_PATH``); a best-effort
+    guard declines common shared-state patterns. Every build still gets a fresh component instance.
+    Disabled by default."""
+    component_class_cache_max_size: int = Field(default=256, ge=1)
+    """Maximum number of component classes kept by the component class cache (least recently used evicted)."""
 
     # Starter Projects
     create_starter_projects: bool = True
