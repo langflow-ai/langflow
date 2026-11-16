@@ -62,6 +62,13 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const folders = useFolderStore((state) => state.folders);
   const currentFolderId = folderId ?? myCollectionId;
+  // A page number belongs to the project it was chosen in. Reset it while
+  // rendering so the next project is never requested at the old page.
+  const [pagedFolderId, setPagedFolderId] = useState(currentFolderId);
+  if (pagedFolderId !== currentFolderId) {
+    setPagedFolderId(currentFolderId);
+    setPageIndex(1);
+  }
   const currentFolder =
     folders.find((folder) => folder.id === currentFolderId) ?? folders[0];
   const folderName = currentFolder?.name ?? "";

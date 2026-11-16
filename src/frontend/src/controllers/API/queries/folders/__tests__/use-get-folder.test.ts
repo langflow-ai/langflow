@@ -83,4 +83,34 @@ describe("useGetFolderQuery", () => {
     expect(requestedUrl).toContain(`/projects/${EXISTING_PROJECT_ID}?`);
     expect(requestedUrl).not.toContain("undefined");
   });
+
+  it("requests the page its query key names after the project changes", async () => {
+    const otherProjectId = "0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d";
+    useFolderStore.setState({
+      folders: [
+        { id: EXISTING_PROJECT_ID, name: "Starter Project" },
+        { id: otherProjectId, name: "Other Project" },
+      ] as never,
+    });
+    mockApiGet.mockResolvedValue({
+      data: { folder: {}, flows: { items: [] } },
+    });
+
+    const { rerender } = renderHook(
+      ({ id, page }) => useGetFolderQuery({ ...paramsFor(id), page }),
+      { initialProps: { id: EXISTING_PROJECT_ID, page: 1 } },
+    );
+    await act(async () => {
+      await capturedQueryFn?.();
+    });
+
+    rerender({ id: otherProjectId, page: 2 });
+    await act(async () => {
+      await capturedQueryFn?.();
+    });
+
+    const requestedUrl = mockApiGet.mock.lastCall?.[0] as string;
+    expect(requestedUrl).toContain(`/projects/${otherProjectId}?`);
+    expect(requestedUrl).toContain("page=2");
+  });
 });
