@@ -23,6 +23,7 @@ export default function DropdownComponent({
   toggleDisable,
   hasRefreshButton,
   showParameter = true,
+  optionLabels,
   ...baseInputProps
 }: InputProps<string, DropDownComponentType>): JSX.Element | null {
   const onChange = (
@@ -57,6 +58,7 @@ export default function DropdownComponent({
         nodeClass={nodeClass}
         handleNodeClass={handleNodeClass}
         optionsMetaData={optionsMetaData}
+        optionLabels={optionLabels}
         onSelect={onChange}
         placeholder={placeholder}
         combobox={combobox}

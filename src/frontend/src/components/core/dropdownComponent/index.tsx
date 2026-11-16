@@ -20,6 +20,7 @@ import type { BaseInputProps } from "../parameterRenderComponent/types";
 import { DropdownOptionsList } from "./components/DropdownOptionsList";
 import { DropdownSearchInput } from "./components/DropdownSearchInput";
 import { DropdownTrigger } from "./components/DropdownTrigger";
+import { optionLabel } from "./helpers/option-label";
 import { useDropdownMutations } from "./hooks/useDropdownMutations";
 import { useDropdownOptions } from "./hooks/useDropdownOptions";
 
@@ -49,6 +50,7 @@ export default function Dropdown({
   toggle,
   inspectionPanel,
   ariaLabelledBy,
+  optionLabels,
   ...baseInputProps
 }: BaseInputProps & DropDownComponent): JSX.Element {
   const { t } = useTranslation();
@@ -143,6 +145,7 @@ export default function Dropdown({
     disabled,
     hasChildren: Boolean(children),
     onSelect,
+    optionLabels,
   });
   const { visibleFilteredOptions, visibleFilteredMetadata } = useMemo(() => {
     if (!isLegacyProviderSelector) {
@@ -256,6 +259,7 @@ export default function Dropdown({
         <DropdownOptionsList
           filteredOptions={visibleFilteredOptions}
           filteredMetadata={visibleFilteredMetadata}
+          optionLabels={optionLabels}
           firstWord={firstWord}
           value={visibleValue}
           onSelect={onSelect}
@@ -338,7 +342,9 @@ export default function Dropdown({
               className="h-4 w-4 flex-shrink-0"
             />
           )}
-          <span className="truncate text-sm">{visibleValue}</span>
+          <span className="truncate text-sm">
+            {optionLabel(optionLabels, visibleValue)}
+          </span>
         </div>
       ) : (
         <div className="w-full truncate">
@@ -359,6 +365,7 @@ export default function Dropdown({
             filteredOptions={visibleFilteredOptions}
             filteredMetadata={visibleFilteredMetadata}
             ariaLabelledBy={ariaLabelledBy}
+            optionLabels={optionLabels}
           />
         </div>
       )}
