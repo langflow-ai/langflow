@@ -193,6 +193,54 @@ def _mutates(node: ast.AST, shared: set[str], attrs: set[str] = frozenset()) -> 
     return (isinstance(root, ast.Name) and root.id in shared) or first in attrs
 
 
+_READ_ONLY_CALLS = frozenset({"len", "list", "tuple", "set", "frozenset", "dict", "sorted", "any", "all", "enumerate"})
+
+
+def _escapes(node: ast.AST, parent: ast.AST) -> bool:
+    """True when a shared container is used other than for indexing, attribute reads, iteration or membership.
+
+    Such uses (``alias = SEEN``, ``return SEEN``, ``helper(SEEN)``) could let it be mutated under another name.
+    """
+    if isinstance(parent, ast.Subscript | ast.Attribute) and parent.value is node:
+        return False
+    if isinstance(parent, ast.Compare) or (isinstance(parent, ast.For | ast.comprehension) and parent.iter is node):
+        return False
+    return not (
+        isinstance(parent, ast.Call)
+        and node in parent.args
+        and isinstance(parent.func, ast.Name)
+        and parent.func.id in _READ_ONLY_CALLS
+    )
+
+
+def _alias_reason(module: ast.Module, containers: set[str], attrs: set[str], lfx: frozenset[str]) -> str | None:
+    """Decline shared containers escaping inside function bodies (class-body uses are copied per instance).
+
+    Arguments to functions imported from lfx/langflow (reviewed framework helpers) are allowed.
+    """
+    framework_args = {
+        id(arg)
+        for call in ast.walk(module)
+        if isinstance(call, ast.Call) and isinstance(root := _chain_root(call.func)[0], ast.Name) and root.id in lfx
+        for arg in [*call.args, *(k.value for k in call.keywords)]
+    }
+    for func in ast.walk(module):
+        if not isinstance(func, ast.FunctionDef | ast.AsyncFunctionDef | ast.Lambda):
+            continue
+        for parent in ast.walk(func):
+            for child in ast.iter_child_nodes(parent):
+                named = isinstance(child, ast.Name) and child.id in containers
+                attribute = isinstance(child, ast.Attribute) and child.attr in attrs
+                if (
+                    (named or attribute)
+                    and isinstance(child.ctx, ast.Load)
+                    and id(child) not in framework_args
+                    and _escapes(child, parent)
+                ):
+                    return "shared_container_alias"
+    return None
+
+
 def _analyse(source: str) -> str | None:
     module = ast.parse(source)
     classes = [n for n in module.body if isinstance(n, ast.ClassDef)]
@@ -205,6 +253,8 @@ def _analyse(source: str) -> str | None:
             _class_reason(statement, lfx, attrs, components) if isinstance(statement, ast.ClassDef) else None
         ):
             return reason
+    if reason := _alias_reason(module, containers, attrs, lfx):
+        return reason
     functions = ast.FunctionDef | ast.AsyncFunctionDef
     shared = {n.name for n in classes} | {n.name for n in module.body if isinstance(n, functions)} | containers
     classmethod_params = {

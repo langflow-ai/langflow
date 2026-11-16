@@ -261,6 +261,18 @@ GUARD_CASES = {
         ),
         "class_level_mutation",
     ),
+    "module_list_local_alias": (
+        _run("        seen = SEEN\n        seen.append(1)\n        return len(seen)\n", extra="SEEN = []\n\n"),
+        "shared_container_alias",
+    ),
+    "module_list_passed_to_helper": (
+        _run("        return grow(SEEN)\n", extra="SEEN = []\n\n\ndef grow(items):\n    items.append(1)\n\n"),
+        "shared_container_alias",
+    ),
+    "class_list_local_alias": (
+        _run("        n = self.names\n        n.append(1)\n        return len(n)\n", cls_attrs="    names = ['a']\n"),
+        "shared_container_alias",
+    ),
     "async_top_level_function_attribute": (
         _run("        return 1\n", extra="async def helper(uid):\n    helper.last = uid\n\n"),
         "class_level_mutation",
@@ -348,6 +360,39 @@ def test_classmethod_cross_user_leak_is_declined_and_matches_cache_off():
     source, _ = GUARD_CASES["classmethod_counter"]
     cached = [build(source)(_user_id=u).run() for u in ("A", "B")]
     plain = [eval_custom_component_code(source)(_user_id=u).run() for u in ("A", "B")]
+    assert cached == plain == [1, 1]
+
+
+_COUNTER_RUN = _RUN + "        return self.bump()\n"
+CROSS_BUILD_STATE_CASES = {
+    "positional_only_classmethod": _component(
+        "    @classmethod\n    def bump(cls, /):\n        cls.runs += 1\n        return cls.runs\n" + _COUNTER_RUN,
+        cls_attrs="    runs = 0\n",
+    ),
+    "qualified_classmethod": _component(
+        "    @builtins.classmethod\n    def bump(cls):\n        cls.runs += 1\n        return cls.runs\n"
+        + _COUNTER_RUN,
+        cls_attrs="    runs = 0\n",
+        extra="import builtins\n",
+    ),
+    "helper_class_inputs": _run(
+        "        return Helper().add(1)\n",
+        extra="class Helper:\n    inputs = []\n\n    def add(self, v):\n        self.inputs.append(v)\n"
+        "        return len(self.inputs)\n\n\n",
+    ),
+    "module_list_alias": _run(
+        "        seen = SEEN\n        seen.append(1)\n        return len(seen)\n", extra="SEEN = []\n\n"
+    ),
+}
+
+
+@pytest.mark.usefixtures("cache_on")
+@pytest.mark.parametrize("name", sorted(CROSS_BUILD_STATE_CASES))
+def test_cross_build_state_cases_match_cache_off(name):
+    source = CROSS_BUILD_STATE_CASES[name]
+    assert class_cache._ineligible_reason(source) is not None
+    cached = [build(source)().run() for _ in range(2)]
+    plain = [eval_custom_component_code(source)().run() for _ in range(2)]
     assert cached == plain == [1, 1]
 
 
