@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/lfx", "crates/lfx-python", "crates/lfx-wasm"]
+members = ["crates/lfx-ops", "crates/lfx-python", "crates/lfx-wasm"]
 
 [workspace.package]
 version = "0.1.0"

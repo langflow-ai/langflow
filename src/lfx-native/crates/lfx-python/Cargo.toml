@@ -1,6 +1,6 @@
 [package]
 name = "lfx-python"
-description = "The Python binding of lfx: the lfx-native package."
+description = "The Python binding of lfx-ops: the lfx-native package."
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
@@ -17,7 +17,7 @@ test = false
 doctest = false
 
 [dependencies]
-lfx = { path = "../lfx" }
+lfx-ops = { path = "../lfx-ops" }
 pyo3 = { version = "0.30", features = ["abi3-py310"] }
 
 [lints]

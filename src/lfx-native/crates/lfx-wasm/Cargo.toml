@@ -1,6 +1,6 @@
 [package]
 name = "lfx-wasm"
-description = "The browser binding of lfx: the lfx-native npm package."
+description = "The browser binding of lfx-ops: the lfx-native npm package."
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
@@ -16,7 +16,7 @@ test = false
 doctest = false
 
 [dependencies]
-lfx = { path = "../lfx" }
+lfx-ops = { path = "../lfx-ops" }
 wasm-bindgen = "0.2.129"
 js-sys = "0.3"
 # The engine draws random ids; in the browser they come from crypto.getRandomValues.

@@ -1,13 +1,13 @@
 # lfx-native
 
-The native core of lfx, written in Rust. It is one crate, `lfx`, with one module per feature. The first module is `lfx::ops`, the flow operation engine. It applies, replays, diffs, validates, repairs and hashes flow graphs. It knows flow graphs, not storage: the flow history service owns stored rows, revision numbers, requests, actors and damaged history.
+The native core of lfx, written in Rust. It is one crate, `lfx-ops`, the flow operation engine. It applies, replays, diffs, validates, repairs and hashes flow graphs. It knows flow graphs, not storage: the flow history service owns stored rows, revision numbers, requests, actors and damaged history.
 
 The server and the editor use the same engine, through two thin bindings:
 
 - `lfx-python`: the Python package `lfx-native` (`import lfx_native`).
 - `lfx-wasm`: the npm package `lfx-native`, a WebAssembly build for the editor and for Node.
 
-The bindings hold no rules. Each binding function calls one function of `lfx::ops::api`, which takes JSON text or an already read value and returns a value. The browser binding takes and returns JSON text. The Python binding takes Python values, with `bytes` as JSON text, and returns Python values.
+The bindings hold no rules. Each binding function calls one function of `lfx_ops::api`, which takes JSON text or an already read value and returns a value. The browser binding takes and returns JSON text. The Python binding takes Python values, with `bytes` as JSON text, and returns Python values.
 
 ## Layout
 
@@ -16,10 +16,10 @@ src/lfx-native/
   Cargo.toml             the Cargo workspace (not a uv workspace member)
   rust-toolchain.toml    the pinned Rust toolchain, with the wasm32 target
   crates/
-    lfx/                 the `lfx` crate
-      src/ops/           lfx::ops, the flow operation engine
-      src/value.rs       lfx::value, the JSON value the engine holds
+    lfx-ops/             the `lfx-ops` crate, the flow operation engine
+      src/               see "The crate" below
       tests/fixtures/    runs every shared fixture file, one test per case
+      tests/layers.rs    checks that each folder imports only from the folders before it
     lfx-python/          the Python binding (PyO3, maturin)
       python/lfx_native/ the Python package around the native module
       tests/             runs every shared fixture file through Python
@@ -29,28 +29,20 @@ src/lfx-native/
     tools/               the scripts that check an engine against them
 ```
 
-The modules of `lfx::ops`:
+## The crate
 
-| Module | What it holds |
+The source has four folders and `api.rs`. Each imports only from the ones before it.
+`lib.rs` re-exports the public API, such as `lfx_ops::GraphState` and `lfx_ops::apply_flow_operations`.
+
+| Folder | What it holds |
 | --- | --- |
-| `api` | the functions the bindings call: JSON text or values in, values out |
-| `ops` | operation types, the strict parser, and the dump |
-| `state` | `GraphState`, the indexed graph that apply and replay work on, kept between batches |
-| `plain` | `GraphPlain`, a graph read once and kept unindexed, to validate, repair, hash, compare and diff it without reading it again |
-| `apply` | apply, with every rule, and the steps that carry out an operation |
-| `replay` | replay of stored operations, with no rule |
-| `diff` | diff, and the check that its operations replay to the target |
-| `validate` | graph rules and violations, with codes and resolutions |
-| `repair` | the repairs of violations that have one fix |
-| `edges` | edge rules and handle reading |
-| `entry` | what the engine reads from untyped nodes, edges and rows: ids, templates |
-| `keyed` | keyed lists and table rows |
-| `maps` | the hash maps and sets of every module, with ahash instead of `SipHash` |
-| `schema` | the node schema (`node_schema.json`, embedded) |
-| `canonical` | canonical form, number printing, `graph_hash` |
-| `restore` | restore fixes, from both sides |
-| `ids` | random ids in the editor's formats |
-| `error` | errors, with a kind and a stable code |
+| `data/` | data structures that know nothing about flows: `value` (`AnyValue`, public), `maps` (ahash maps and sets), `layered` (a map with a batch layer), `snapshot_rows` (copy-on-write rows), `json_out` (the JSON writer) |
+| `models/` | what a flow and an operation are, when a flow is valid, and when two flows are equal: `operation`, `schema` (`node_schema.json`, embedded), `path`, `handle`, `keyed`, `edges`, `entry`, `ids`, `error`, `from_value`, `validate/`, `canonical/` |
+| `graph/` | the graph in memory: `GraphState` (indexed, kept between batches), `index`, `fields` (a batch's field writes), `snapshot`, and `GraphPlain` (read once, not indexed) |
+| `ops/` | the verbs: `apply`, `replay`, `place` (what apply and replay share), `diff`, `repair`, `restore`, `rows` (table rows) |
+| `api.rs` | the functions the bindings call: JSON text or values in, values out |
+
+The public modules are `api`, `value`, `canonical`, `handle`, `ids`, `keyed`, `schema`, `validate`, `repair`, `restore` and `rows`.
 
 ## Who uses what
 

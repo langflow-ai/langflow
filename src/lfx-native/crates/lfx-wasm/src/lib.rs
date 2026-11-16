@@ -8,8 +8,8 @@
 //! error as JSON text.
 
 use js_sys::{Error, Reflect};
-use lfx::ops::api::{self, ApiError, ApiResult, Input};
-use lfx::ops::{ApplyOptions, ReplayOptions};
+use lfx_ops::api::{self, ApiError, ApiResult, Input};
+use lfx_ops::{ApplyOptions, ReplayOptions};
 use wasm_bindgen::prelude::*;
 
 fn thrown(error: &ApiError) -> JsValue {
@@ -65,7 +65,7 @@ fn replay_options(options: &JsValue) -> ReplayOptions {
 #[wasm_bindgen]
 #[derive(Debug)]
 pub struct GraphState {
-    state: lfx::ops::GraphState,
+    state: lfx_ops::GraphState,
 }
 
 #[wasm_bindgen]
@@ -255,19 +255,19 @@ engine_functions! {
 #[wasm_bindgen(js_name = newEdgeId)]
 #[must_use]
 pub fn new_edge_id() -> String {
-    lfx::ops::ids::new_edge_id()
+    lfx_ops::ids::new_edge_id()
 }
 
 /// A new random table row id in the editor's format.
 #[wasm_bindgen(js_name = newTableRowId)]
 #[must_use]
 pub fn new_table_row_id() -> String {
-    lfx::ops::ids::new_table_row_id()
+    lfx_ops::ids::new_table_row_id()
 }
 
 /// The node schema the engine reads, as JSON text.
 #[wasm_bindgen(js_name = nodeSchema)]
 #[must_use]
 pub fn node_schema() -> String {
-    lfx::ops::schema::NODE_SCHEMA_JSON.to_owned()
+    lfx_ops::schema::NODE_SCHEMA_JSON.to_owned()
 }

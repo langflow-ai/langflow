@@ -295,7 +295,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "lfx"
+name = "lfx-ops"
 version = "0.1.0"
 dependencies = [
  "ahash",
@@ -312,7 +312,7 @@ dependencies = [
 name = "lfx-python"
 version = "0.1.0"
 dependencies = [
- "lfx",
+ "lfx-ops",
  "pyo3",
 ]
 
@@ -322,7 +322,7 @@ version = "0.1.0"
 dependencies = [
  "getrandom",
  "js-sys",
- "lfx",
+ "lfx-ops",
  "wasm-bindgen",
 ]
 

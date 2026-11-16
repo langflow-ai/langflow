@@ -6,18 +6,18 @@
 //! faster than `json.dumps` and a parse. Building them is about 3 times faster
 //! than writing JSON and `json.loads`.
 //!
-//! An engine error raises [`EngineError`]. Each function calls `lfx::ops::api`.
+//! An engine error raises [`EngineError`]. Each function calls `lfx_ops::api`.
 //! Only large work releases the GIL. See `HELD_VALUES`.
 
 use std::collections::HashMap;
 use std::sync::mpsc::{SyncSender, TrySendError, sync_channel};
 use std::sync::{LazyLock, PoisonError, RwLock, RwLockWriteGuard, TryLockError};
 
-use lfx::ops::api::{self, ApiError, ApiResult, Input};
-use lfx::ops::{
+use lfx_ops::api::{self, ApiError, ApiResult, Input};
+use lfx_ops::value::{AnyMap, AnyValue, Number, StringPool};
+use lfx_ops::{
     Applied, ApplyOptions, Change, Entry, Error, FieldUpdate, Operation, ReplayOptions, Segment,
 };
-use lfx::value::{AnyMap, AnyValue, Number, StringPool};
 use pyo3::IntoPyObjectExt;
 use pyo3::create_exception;
 use pyo3::exceptions::{PyException, PyRuntimeError, PyTypeError, PyValueError};
@@ -557,7 +557,7 @@ fn drop_elsewhere(py: Python<'_>, value: Dropped) {
 #[pyclass(module = "lfx_native", frozen)]
 #[derive(Debug)]
 struct GraphState {
-    state: RwLock<lfx::ops::GraphState>,
+    state: RwLock<lfx_ops::GraphState>,
 }
 
 /// A graph with no node and no edge: what a dropped graph leaves in its place.
@@ -575,7 +575,7 @@ impl Drop for GraphState {
         if !Work::of_items(state.item_count()).is_large() {
             return;
         }
-        let empty = lfx::ops::GraphState::new(empty_graph()).expect("an empty graph loads");
+        let empty = lfx_ops::GraphState::new(empty_graph()).expect("an empty graph loads");
         let state = std::mem::replace(state, empty);
         Python::attach(|py| drop_elsewhere(py, Box::new(state)));
     }
@@ -606,8 +606,8 @@ fn refused(refused: Refused) -> PyErr {
 
 /// The state, locked for a batch, unless a batch is staged.
 fn unstaged(
-    state: RwLockWriteGuard<'_, lfx::ops::GraphState>,
-) -> Result<RwLockWriteGuard<'_, lfx::ops::GraphState>, Refused> {
+    state: RwLockWriteGuard<'_, lfx_ops::GraphState>,
+) -> Result<RwLockWriteGuard<'_, lfx_ops::GraphState>, Refused> {
     if state.is_staged() {
         return Err(Refused::Staged);
     }
@@ -620,8 +620,8 @@ impl GraphState {
     fn write<T: Send>(
         &self,
         py: Python<'_>,
-        work: impl FnOnce(&lfx::ops::GraphState) -> Work,
-        job: impl FnOnce(RwLockWriteGuard<'_, lfx::ops::GraphState>) -> Result<T, Refused> + Send,
+        work: impl FnOnce(&lfx_ops::GraphState) -> Work,
+        job: impl FnOnce(RwLockWriteGuard<'_, lfx_ops::GraphState>) -> Result<T, Refused> + Send,
     ) -> Result<T, Refused> {
         match self.state.try_write() {
             Ok(state) if !work(&state).is_large() => return job(state),
@@ -636,8 +636,8 @@ impl GraphState {
     fn read<T: Send>(
         &self,
         py: Python<'_>,
-        work: impl FnOnce(&lfx::ops::GraphState) -> Work,
-        job: impl FnOnce(&lfx::ops::GraphState) -> T + Send,
+        work: impl FnOnce(&lfx_ops::GraphState) -> Work,
+        job: impl FnOnce(&lfx_ops::GraphState) -> T + Send,
     ) -> PyResult<T> {
         match self.state.try_read() {
             Ok(state) if !work(&state).is_large() => return Ok(job(&state)),
@@ -795,7 +795,7 @@ impl GraphState {
     /// Whether a batch is staged.
     #[getter]
     fn staged(&self, py: Python<'_>) -> PyResult<bool> {
-        self.read(py, |_| Work::default(), lfx::ops::GraphState::is_staged)
+        self.read(py, |_| Work::default(), lfx_ops::GraphState::is_staged)
     }
 
     /// Replay stored operations, with no rule. Returns what it did.
@@ -824,7 +824,7 @@ impl GraphState {
     /// when `staged` is true and no batch is staged.
     #[pyo3(signature = (*, staged = false))]
     fn to_json(&self, py: Python<'_>, staged: bool) -> PyResult<String> {
-        let work = |state: &lfx::ops::GraphState| Work::of_items(state.item_count());
+        let work = |state: &lfx_ops::GraphState| Work::of_items(state.item_count());
         self.read(py, work, |state| {
             if staged {
                 state.staged_to_json()
@@ -839,7 +839,7 @@ impl GraphState {
     /// its text. `staged` works as in `to_json`.
     #[pyo3(signature = (*, staged = false))]
     fn graph_hash(&self, py: Python<'_>, staged: bool) -> PyResult<String> {
-        let work = |state: &lfx::ops::GraphState| Work::of_items(state.item_count());
+        let work = |state: &lfx_ops::GraphState| Work::of_items(state.item_count());
         self.read(py, work, |state| {
             if staged {
                 state.staged_graph_hash()
@@ -855,7 +855,7 @@ impl GraphState {
     /// It shares each node and edge with the state, at the cost of one pointer.
     /// A later batch copies only the nodes it changes.
     fn snapshot(&self, py: Python<'_>) -> PyResult<GraphSnapshot> {
-        let cached = self.read(py, |_| Work::default(), lfx::ops::GraphState::try_snapshot)?;
+        let cached = self.read(py, |_| Work::default(), lfx_ops::GraphState::try_snapshot)?;
         let snapshot = if let Some(snapshot) = cached {
             snapshot
         } else {
@@ -901,13 +901,13 @@ impl GraphState {
 #[pyclass(module = "lfx_native", frozen)]
 #[derive(Debug)]
 struct GraphSnapshot {
-    snapshot: Option<lfx::ops::GraphSnapshot>,
+    snapshot: Option<lfx_ops::GraphSnapshot>,
     /// The work on the whole graph.
     work: Work,
 }
 
 impl GraphSnapshot {
-    fn wrap(snapshot: lfx::ops::GraphSnapshot) -> Self {
+    fn wrap(snapshot: lfx_ops::GraphSnapshot) -> Self {
         let work = Work::of_items(snapshot.item_count());
         Self {
             snapshot: Some(snapshot),
@@ -967,13 +967,13 @@ impl GraphSnapshot {
 #[pyclass(module = "lfx_native", frozen)]
 #[derive(Debug)]
 struct GraphPlain {
-    plain: Option<lfx::ops::GraphPlain>,
+    plain: Option<lfx_ops::GraphPlain>,
     /// The work on the whole graph, counted once.
     work: Work,
 }
 
 impl GraphPlain {
-    fn wrap(plain: lfx::ops::GraphPlain) -> Self {
+    fn wrap(plain: lfx_ops::GraphPlain) -> Self {
         let work = Work::of_value(plain.as_value());
         Self {
             plain: Some(plain),
@@ -981,7 +981,7 @@ impl GraphPlain {
         }
     }
 
-    fn core(&self) -> &lfx::ops::GraphPlain {
+    fn core(&self) -> &lfx_ops::GraphPlain {
         self.plain
             .as_ref()
             .expect("a live plain graph holds its value")
@@ -1011,9 +1011,7 @@ impl Drop for GraphPlain {
     }
 }
 
-fn plain<'a>(
-    object: Option<&'a Bound<'_, GraphPlain>>,
-) -> (Option<&'a lfx::ops::GraphPlain>, Work) {
+fn plain<'a>(object: Option<&'a Bound<'_, GraphPlain>>) -> (Option<&'a lfx_ops::GraphPlain>, Work) {
     object.map_or((None, Work::default()), |object| {
         let object = object.get();
         (Some(object.core()), object.work)
@@ -1247,19 +1245,19 @@ fn text_sha256(py: Python<'_>, text: &Bound<'_, PyAny>) -> PyResult<String> {
 /// A new random edge id in the editor's format.
 #[pyfunction]
 fn new_edge_id() -> String {
-    lfx::ops::ids::new_edge_id()
+    lfx_ops::ids::new_edge_id()
 }
 
 /// A new random table row id in the editor's format.
 #[pyfunction]
 fn new_table_row_id() -> String {
-    lfx::ops::ids::new_table_row_id()
+    lfx_ops::ids::new_table_row_id()
 }
 
 /// The node schema the engine reads, as JSON text.
 #[pyfunction]
 fn node_schema() -> &'static str {
-    lfx::ops::schema::NODE_SCHEMA_JSON
+    lfx_ops::schema::NODE_SCHEMA_JSON
 }
 
 /// The native part of `lfx_native`.
