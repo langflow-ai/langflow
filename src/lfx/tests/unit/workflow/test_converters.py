@@ -1694,24 +1694,24 @@ class TestWorkflowResponseFromOutputEvents:
 
 
 class TestGlobalsSyncOnlyDocumented:
-    """The ``globals`` field is honored on sync only; the schema must say so.
+    """The ``globals`` field is applied on sync only; the schema must say so.
 
-    Stream/background converge on ``generate_flow_events`` which never receives
-    request globals, so the field description documents the sync-only limitation
-    the same way ``output_ids`` already documents "Ignored for stream/background".
+    Stream/background run through ``generate_flow_events``, which never receives
+    request globals; the langflow backend rejects them there (422) and the field
+    description documents that globals is applied in sync mode.
     """
 
     def test_workflow_run_request_globals_documents_sync_only(self):
         from lfx.schema.workflow import WorkflowRunRequest
 
         description = WorkflowRunRequest.model_fields["globals"].description
-        assert "ignored for stream/background" in description.lower()
+        assert "applied in sync mode" in description.lower()
 
     def test_workflow_execution_request_globals_documents_sync_only(self):
         from lfx.schema.workflow import WorkflowExecutionRequest
 
         description = WorkflowExecutionRequest.model_fields["globals"].description
-        assert "ignored for stream/background" in description.lower()
+        assert "applied in sync mode" in description.lower()
 
 
 def test_parse_derives_side_channel_from_expose_graph_state():
