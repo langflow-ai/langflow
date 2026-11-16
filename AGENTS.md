@@ -8,7 +8,7 @@ Langflow is a visual workflow builder for AI-powered agents. It has a Python/Fas
 
 ## Prerequisites
 
-- **Python:** 3.10-3.14 (3.15 in preview)
+- **Python:** 3.11-3.14 (3.15 in preview)
 - **uv:** >=0.4 (Python package manager)
 - **Node.js:** >=20.19.0 (v22.12 LTS recommended)
 - **npm:** v10.9+
@@ -37,10 +37,9 @@ LFX_DEV=mistral,openai make backend       # Load only specific modules
 
 ### Code Quality
 ```bash
-make format_backend    # Format Python (ruff) - run FIRST before lint
+make format_backend    # Format Python (ruff)
 make format_frontend   # Format TypeScript (biome)
 make format            # Both
-make lint              # mypy type checking
 ```
 
 ### Testing
@@ -69,7 +68,6 @@ src/
 ├── backend/
 │   ├── base/langflow/     # Core backend package (langflow-base)
 │   │   ├── api/           # FastAPI routes (v1/, v2/)
-│   │   ├── components/    # Built-in Langflow components
 │   │   ├── services/      # Service layer (auth, database, cache, etc.)
 │   │   ├── graph/         # Flow graph execution engine
 │   │   └── custom/        # Custom component framework
@@ -79,18 +77,17 @@ src/
 │       ├── components/    # UI components
 │       ├── stores/        # Zustand state management
 │       └── icons/         # Component icons
-├── langflow-core/         # Usable provider-free Langflow distribution
 ├── bundles/               # Curated provider integrations
 └── lfx/                   # Lightweight executor and shared primitives
+    └── src/lfx/components/ # Built-in Langflow components
 ```
 
 ### Key Packages
-- **langflow**: Full end-user package; depends on `langflow-core` and curated provider bundles
-- **langflow-core**: Service-complete, provider-bundle-free distribution; owns the `langflow` CLI
-- **langflow-base**: Modular application platform (API, services, graph engine); extras add service integrations
+- **langflow**: Full end-user package; depends on `langflow-base` and curated provider bundles
+- **langflow-base**: Modular application platform (API, services, graph engine); owns the `langflow` CLI; extras add service integrations
 - **lfx**: Shared execution primitives and standalone CLI (`lfx serve`, `lfx run`)
 
-The public dependency direction is `langflow → langflow-core → langflow-base → lfx`.
+The public dependency direction is `langflow → langflow-base → lfx`.
 Provider packages under `src/bundles/` are added only by the full `langflow` distribution.
 
 ### Service Layer
@@ -138,7 +135,7 @@ The enforcement request shape is `(subject, domain, object, action)`:
 
 ## Component Development
 
-Components live in `src/backend/base/langflow/components/`. To add a new component:
+Components live in `src/lfx/src/lfx/components/`. To add a new component:
 
 1. Create component class inheriting from `Component`
 2. Define `display_name`, `description`, `icon`, `inputs`, `outputs`
