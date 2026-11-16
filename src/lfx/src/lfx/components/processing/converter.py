@@ -134,9 +134,11 @@ def _parse_csv_to_data(text: str) -> JSON:
 
     import pandas as pd
 
-    # Parse CSV to DataFrame, then convert to list of dicts
-    parsed_df = pd.read_csv(StringIO(text))
-    records = parsed_df.to_dict(orient="records")
+    # Parse CSV to DataFrame, then convert to list of dicts.
+    # Nullable dtypes keep integer columns with blank cells as integers, and blank cells become
+    # None (JSON null) instead of NaN, which is not valid JSON.
+    parsed_df = pd.read_csv(StringIO(text), dtype_backend="numpy_nullable")
+    records = parsed_df.astype(object).where(parsed_df.notna(), None).to_dict(orient="records")
 
     return Data(data={"records": records})
 
