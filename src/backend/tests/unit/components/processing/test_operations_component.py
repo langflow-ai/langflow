@@ -1126,6 +1126,27 @@ class TestUpdateFrontendNodeRestoresVisibility:
         assert template["selected_key"]["value"] == ".a.b"
         assert ".a.b" in template["selected_key"]["options"]
 
+    async def test_path_selection_keeps_a_saved_path_the_rebuilt_options_no_longer_offer(self):
+        saved, _ = build_custom_component_template(OperationsComponent(), user_id="test-user")
+        fresh = copy.deepcopy(saved)
+        saved["template"]["input_type"]["value"] = "JSON"
+        saved["template"]["operation"]["value"] = [{"name": "Path Selection"}]
+        saved["template"]["mapped_json_display"]["value"] = '{"items[0]": 42}'
+        saved["template"]["selected_key"]["options"] = [".items[0]"]
+        saved["template"]["selected_key"]["value"] = ".items[0]"
+
+        template = (await OperationsComponent().update_frontend_node(fresh, saved))["template"]
+
+        assert template["selected_key"]["value"] == ".items[0]"
+        assert template["selected_key"]["options"] == ['."items[0]"', ".items[0]"]
+        component = OperationsComponent(
+            data=Data(data={"items": [42]}),
+            input_type="JSON",
+            operation=[{"name": "Path Selection"}],
+            selected_key=template["selected_key"]["value"],
+        )
+        assert component.as_data().data == {"result": 42}
+
     async def test_path_selection_with_invalid_saved_json_hides_selected_key(self):
         saved, _ = build_custom_component_template(OperationsComponent(), user_id="test-user")
         fresh = copy.deepcopy(saved)

@@ -818,7 +818,12 @@ class OperationsComponent(Component):
             mapped_json = template.get("mapped_json_display", {}).get("value")
             if mapped_json:
                 try:
-                    template["selected_key"]["options"] = self.extract_all_paths(json.loads(mapped_json))
+                    options = self.extract_all_paths(json.loads(mapped_json))
+                    # A path saved under older path rules may still select data; keep it selectable.
+                    saved_path = template["selected_key"].get("value")
+                    if saved_path and saved_path not in options:
+                        options.append(saved_path)
+                    template["selected_key"]["options"] = options
                 except (json.JSONDecodeError, TypeError, ValueError, RecursionError) as e:
                     logger.warning(f"Error parsing saved mapped JSON: {e}")
                     template["selected_key"]["show"] = False
