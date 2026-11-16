@@ -21,6 +21,7 @@ async def test_cascade_delete_flow_keeps_large_trace_deletes_below_postgres_bind
     flow_id = uuid4()
     materialized_trace_queries = 0
     trace_delete_parameter_counts = []
+    trace_delete_sync_options = []
 
     async def record_exec(statement):
         """Record generated SQL and supply the large trace result for the regression.
@@ -44,6 +45,7 @@ async def test_cascade_delete_flow_keeps_large_trace_deletes_below_postgres_bind
                 compile_kwargs={"render_postcompile": True},
             )
             trace_delete_parameter_counts.append(len(compiled.params))
+            trace_delete_sync_options.append(statement.get_execution_options().get("synchronize_session"))
         return SimpleNamespace(rowcount=1)
 
     monkeypatch.setattr(flow_utils, "check_flow_has_deployed_versions", AsyncMock())
@@ -55,3 +57,4 @@ async def test_cascade_delete_flow_keeps_large_trace_deletes_below_postgres_bind
     assert await flow_utils.cascade_delete_flow(session, flow_id)
     assert materialized_trace_queries == 0
     assert trace_delete_parameter_counts == [1, 1]
+    assert trace_delete_sync_options == [False, False]
