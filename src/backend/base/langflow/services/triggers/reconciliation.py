@@ -350,17 +350,11 @@ def validate_single_trigger_per_flow(flow_data: dict[str, Any] | None) -> None:
             raise CodedTriggerError(TriggerErrorCode.MULTIPLE_TRIGGERS, MULTIPLE_TRIGGERS_ERROR)
 
 
-def _has_trigger_node(nodes: Any) -> bool:
-    """Whether ``nodes`` holds a trigger node, at any depth of group nesting."""
+def _node_data_of(nodes: Any) -> list[dict[str, Any]]:
+    """The ``data`` dicts of the well-formed entries in a saved node list."""
     if not isinstance(nodes, list):
-        return False
-    for node in nodes:
-        node_data = node.get("data") if isinstance(node, dict) else None
-        if not isinstance(node_data, dict):
-            continue
-        if _node_kind(node_data.get("type")) is not None or _has_trigger_node(_group_nodes(node_data)):
-            return True
-    return False
+        return []
+    return [n["data"] for n in nodes if isinstance(n, dict) and isinstance(n.get("data"), dict)]
 
 
 def _group_nodes(node_data: dict[str, Any]) -> Any:
@@ -372,14 +366,18 @@ def _group_nodes(node_data: dict[str, Any]) -> Any:
 
 
 def validate_no_grouped_trigger(flow_data: dict[str, Any] | None) -> None:
-    """Reject a trigger inside a group: reconciliation reads top-level nodes only."""
-    nodes = (flow_data or {}).get("nodes")
-    if not isinstance(nodes, list):
-        return
-    for node in nodes:
-        node_data = node.get("data") if isinstance(node, dict) else None
-        if isinstance(node_data, dict) and _has_trigger_node(_group_nodes(node_data)):
+    """Reject a trigger inside a group, at any depth: reconciliation reads top-level nodes only."""
+    # Iterative, so a deeply nested payload cannot exhaust the recursion limit.
+    pending = [
+        inner
+        for node_data in _node_data_of((flow_data or {}).get("nodes"))
+        for inner in _node_data_of(_group_nodes(node_data))
+    ]
+    while pending:
+        node_data = pending.pop()
+        if _node_kind(node_data.get("type")) is not None:
             raise ValueError(GROUPED_TRIGGER_ERROR)
+        pending.extend(_node_data_of(_group_nodes(node_data)))
 
 
 def _display_name(config: dict[str, Any], kind: str) -> str:
