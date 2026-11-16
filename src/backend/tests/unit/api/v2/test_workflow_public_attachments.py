@@ -16,7 +16,7 @@ from fastapi import HTTPException
 from httpx import AsyncClient, codes
 from langflow.api.utils.flow_utils import validate_public_files
 from langflow.services.database.models.message.model import MessageTable
-from lfx.services.deps import get_storage_service, session_scope
+from lfx.services.deps import session_scope
 from lfx.utils.file_path_security import flow_storage_scope
 from PIL import Image as PILImage
 from sqlmodel import select
@@ -67,10 +67,16 @@ async def test_a_visitor_sends_a_message_with_a_file_uploaded_for_the_flow(
     flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
     response = await client.patch(f"api/v1/flows/{flow_id}", json={"access_type": "PUBLIC"}, headers=logged_in_headers)
     assert response.status_code == codes.OK
-    # Stored where ``/api/v1/files/upload/{flow_id}`` puts a playground attachment.
-    namespace, file_name = flow_storage_scope(flow_id), "2026-11-10_11-18-51_chart.png"
-    await get_storage_service().save_file(flow_id=namespace, file_name=file_name, data=_pixel_png())
-    file_path = f"{namespace}/{file_name}"
+    image = _pixel_png()
+    # The owner attaches the image the way the playground does.
+    response = await client.post(
+        f"api/v1/files/upload/{flow_id}",
+        files={"file": ("chart.png", image, "image/png")},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.CREATED, response.text
+    file_path = response.json()["file_path"]
+    assert file_path.startswith(f"{flow_storage_scope(flow_id)}/"), file_path
 
     client.cookies.clear()
     client.cookies.set("client_id", "attachment-visitor")
@@ -87,4 +93,12 @@ async def test_a_visitor_sends_a_message_with_a_file_uploaded_for_the_flow(
         messages = (await session.exec(select(MessageTable).where(MessageTable.text == "see attached"))).all()
     stored = [str(path).replace("\\", "/") for message in messages for path in message.files or []]
     # The visitor gets the storage key back, never the server's absolute path.
-    assert file_path in stored, stored
+    assert stored == [file_path], stored
+
+    # The browser previews the image at ``/api/v1/files/images/<stored path>``.
+    client.cookies.clear()
+    preview = await client.get(f"api/v1/files/images/{stored[0]}", headers=logged_in_headers)
+    assert preview.status_code == codes.OK, preview.text
+    assert preview.content == image
+    anonymous = await client.get(f"api/v1/files/images/{stored[0]}")
+    assert anonymous.status_code == codes.FORBIDDEN, anonymous.text
