@@ -145,7 +145,7 @@ def test_workspace_constraints_enforce_patched_pymongo() -> None:
     assert min(versions) >= Version("4.18.3")
 
 
-@pytest.mark.parametrize(("python_version", "minimum"), [("3.10", "6.5.10"), ("3.11", "6.6"), ("3.14", "6.6")])
+@pytest.mark.parametrize(("python_version", "minimum"), [("3.10", "6.5.10"), ("3.11", "6.6.1"), ("3.14", "6.6.1")])
 def test_tornado_floor_and_lock_match_supported_python(python_version: str, minimum: str) -> None:
     env = {"python_version": python_version, "python_full_version": python_version + ".0"}
     constraints = _load_pyproject("pyproject.toml")["tool"]["uv"]["constraint-dependencies"]
