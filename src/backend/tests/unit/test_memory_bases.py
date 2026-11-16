@@ -534,6 +534,82 @@ class TestMemoryBaseCreateFlowOwnership:
 
         assert exc_info.value.status_code == 404
 
+    @pytest.mark.asyncio
+    async def test_create_endpoint_runs_post_creation_hooks_after_the_service_commits(self):
+        from langflow.api.v1.memories import create_memory_base
+        from langflow.services import creation_hooks
+        from langflow.services.database.models.user.model import User
+
+        fake_user = User(id=uuid.uuid4(), username="alice")
+        created = MagicMock(id=uuid.uuid4(), kb_name="mb_1234abcd")
+        mock_service = MagicMock()
+        mock_service.create = AsyncMock(return_value=created)
+        seen = []
+
+        async def hook(context):
+            # Runs after ``create`` returned, so the rows are committed by the service's own sessions.
+            seen.append((context, mock_service.create.await_count))
+
+        saved = {resource: list(hooks) for resource, hooks in creation_hooks._post_creation_hooks.items()}
+        creation_hooks.register_post_creation_hook(creation_hooks.RESOURCE_MEMORY_BASE, hook)
+        try:
+            with (
+                patch("langflow.api.v1.memories.get_memory_base_service", return_value=mock_service),
+                patch("langflow.api.v1.memories.MemoryBaseRead", MagicMock()),
+                patch(
+                    "langflow.api.v1.memories.knowledge_base_service.get_backends_for_names", AsyncMock(return_value={})
+                ),
+                patch("langflow.api.v1.memories._storage_availability", AsyncMock()),
+            ):
+                await create_memory_base(
+                    current_user=fake_user, payload=MemoryBaseCreate(name="mb", flow_id=uuid.uuid4())
+                )
+        finally:
+            for resource, hooks in saved.items():
+                creation_hooks._post_creation_hooks[resource][:] = hooks
+
+        assert len(seen) == 1
+        context, creates_before_hook = seen[0]
+        assert creates_before_hook == 1
+        assert (context.resource, context.resource_id, context.owner_id, context.name) == (
+            "memory_base",
+            created.id,
+            fake_user.id,
+            "mb",
+        )
+
+    @pytest.mark.asyncio
+    async def test_create_endpoint_fails_the_request_when_a_hook_does_and_nothing_is_undone(self):
+        from fastapi import HTTPException
+        from langflow.api.v1.memories import create_memory_base
+        from langflow.services import creation_hooks
+        from langflow.services.database.models.user.model import User
+
+        fake_user = User(id=uuid.uuid4(), username="alice")
+        mock_service = MagicMock()
+        mock_service.create = AsyncMock(return_value=MagicMock(id=uuid.uuid4(), kb_name="mb_1234abcd"))
+        mock_service.delete = AsyncMock()
+
+        async def hook(_context):
+            raise HTTPException(status_code=500, detail="follow-up failed")
+
+        saved = {resource: list(hooks) for resource, hooks in creation_hooks._post_creation_hooks.items()}
+        creation_hooks.register_post_creation_hook(creation_hooks.RESOURCE_MEMORY_BASE, hook)
+        try:
+            with (
+                patch("langflow.api.v1.memories.get_memory_base_service", return_value=mock_service),
+                pytest.raises(HTTPException) as exc_info,
+            ):
+                await create_memory_base(
+                    current_user=fake_user, payload=MemoryBaseCreate(name="mb", flow_id=uuid.uuid4())
+                )
+        finally:
+            for resource, hooks in saved.items():
+                creation_hooks._post_creation_hooks[resource][:] = hooks
+
+        assert exc_info.value.detail == "follow-up failed"
+        mock_service.delete.assert_not_awaited()
+
 
 class TestMemoryBaseProviderPolicy:
     """Provider policy must run before Memory Base filesystem or persistence work."""

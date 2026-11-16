@@ -268,6 +268,94 @@ async def test_should_reject_with_413_when_uploaded_file_is_oversize(
     assert save_file_spy == [], f"An oversize upload must not reach storage, but these were saved: {save_file_spy}"
 
 
+@pytest.fixture
+def langflow_local_storage(files_client):  # noqa: ARG001
+    """Use the Langflow local storage service, as the upload-race test does."""
+    from langflow.services.deps import get_session_service, get_settings_service
+    from langflow.services.storage.local import LocalStorageService
+    from lfx.services.manager import get_service_manager
+    from lfx.services.schema import ServiceType
+
+    services = get_service_manager().services
+    usual = services[ServiceType.STORAGE_SERVICE]
+    services[ServiceType.STORAGE_SERVICE] = LocalStorageService(get_session_service(), get_settings_service())
+    yield
+    services[ServiceType.STORAGE_SERVICE] = usual
+
+
+@pytest.fixture
+def post_creation_registry():
+    from langflow.services import creation_hooks
+
+    saved = {resource: list(hooks) for resource, hooks in creation_hooks._post_creation_hooks.items()}
+    yield creation_hooks
+    for resource, hooks in saved.items():
+        creation_hooks._post_creation_hooks[resource][:] = hooks
+
+
+async def test_upload_runs_post_creation_hooks_once_for_a_new_tracked_file(
+    files_client,
+    files_created_api_key,
+    post_creation_registry,
+    langflow_local_storage,  # noqa: ARG001
+):
+    from langflow.services.database.models.file.model import File as UserFile
+
+    seen = []
+
+    async def hook(context):
+        # The hook gets no session: the row has to be durable already.
+        async with session_scope() as session:
+            seen.append((context, await session.get(UserFile, context.resource_id)))
+
+    post_creation_registry.register_post_creation_hook(post_creation_registry.RESOURCE_FILE, hook)
+    headers = {"x-api-key": files_created_api_key.api_key}
+
+    response = await files_client.post("api/v2/files", files={"file": ("hooked.txt", b"abc")}, headers=headers)
+    # An append to the file that now exists, and an ephemeral upload, create no row to hook.
+    appended = await files_client.post(
+        "api/v2/files", params={"append": True}, files={"file": ("hooked.txt", b"def")}, headers=headers
+    )
+    ephemeral = await files_client.post(
+        "api/v2/files", params={"ephemeral": True}, files={"file": ("gone.txt", b"x")}, headers=headers
+    )
+
+    assert response.status_code == 201, response.text
+    assert appended.status_code == 201, appended.text
+    assert ephemeral.status_code == 201, ephemeral.text
+    assert len(seen) == 1
+    context, row = seen[0]
+    assert row is not None
+    assert (context.resource, str(context.resource_id), context.owner_id) == (
+        "file",
+        response.json()["id"],
+        files_created_api_key.user_id,
+    )
+    assert context.name == response.json()["name"]
+
+
+async def test_an_upload_keeps_its_file_when_a_hook_fails_the_request(
+    files_client,
+    files_created_api_key,
+    post_creation_registry,
+    langflow_local_storage,  # noqa: ARG001
+):
+    from fastapi import HTTPException
+
+    async def hook(_context):
+        raise HTTPException(status_code=500, detail="follow-up failed")
+
+    post_creation_registry.register_post_creation_hook(post_creation_registry.RESOURCE_FILE, hook)
+    headers = {"x-api-key": files_created_api_key.api_key}
+
+    failed = await files_client.post("api/v2/files", files={"file": ("kept.txt", b"abc")}, headers=headers)
+    listed = await files_client.get("api/v2/files", headers=headers)
+
+    assert failed.status_code == 500
+    assert failed.json()["detail"] == "follow-up failed"
+    assert "kept" in [item["name"] for item in listed.json()]
+
+
 async def test_an_upload_that_loses_its_name_gets_409_and_leaves_the_winners_file(files_client, files_created_api_key):
     """Before: both picked the name before either row existed, and the loser's cleanup deleted the file.
 
