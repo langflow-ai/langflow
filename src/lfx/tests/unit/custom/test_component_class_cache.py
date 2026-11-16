@@ -466,3 +466,46 @@ def test_unreviewed_source_takes_the_plain_path(monkeypatch):
     assert build(source) is not build(source)
     stats = class_cache.component_class_cache_stats()
     assert (stats["size"], stats["decline_reasons"]) == (0, {"not_reviewed": 2})
+
+
+def _run_create_list(component_class, texts):
+    return [item.text for item in component_class(texts=texts).create_list()]
+
+
+def _run_parser(component_class, rows, pattern):
+    from lfx.schema.data import Data
+
+    component = component_class(input_data=[Data(data=row) for row in rows], pattern=pattern, sep="|")
+    component.update_build_config({"pattern": {}}, "Parser", "mode")
+    return component.parse_combined_text().text
+
+
+@pytest.mark.parametrize(
+    ("path", "class_name", "run", "first_args", "second_args"),
+    [
+        ("processing/create_list.py", "CreateListComponent", _run_create_list, (["A"],), (["B", "C"],)),
+        (
+            "processing/parser.py",
+            "ParserComponent",
+            _run_parser,
+            ([{"name": "x"}], "N={name}"),
+            ([{"name": "y"}, {"name": "z"}], "<{name}>"),
+        ),
+    ],
+)
+def test_reviewed_component_outputs_match_uncached_across_runs(
+    monkeypatch, path, class_name, run, first_args, second_args
+):
+    """A run on the cached class leaves nothing behind: the next run matches a freshly built class."""
+    source = _shipped_source(path)
+    monkeypatch.setattr(class_cache, "_cache_enabled", lambda: True)
+    monkeypatch.setattr(class_cache, "_is_trusted_source", lambda code: code == source)
+
+    cached = build(source, class_name)
+    before = _class_state(cached)
+    run(cached, *first_args)
+    assert build(source, class_name) is cached
+    second = run(cached, *second_args)
+
+    assert second == run(eval_custom_component_code(source, class_name=class_name), *second_args)
+    assert _class_state(cached) == before
