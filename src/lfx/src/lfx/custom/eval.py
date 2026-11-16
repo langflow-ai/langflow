@@ -11,9 +11,9 @@ def eval_custom_component_code(
 ) -> type["CustomComponent"]:
     """Evaluate custom component code, building ``class_name`` when the source defines several components.
 
-    With ``reuse_class=True`` and ``component_class_cache_enabled`` set, an eligible source returns the class
-    built earlier instead of re-executing it. The cache is consulted only after source resolution, so it never
-    authorizes code the ordinary path rejects. Callers must create a fresh instance per use.
+    With ``reuse_class=True`` and ``component_class_cache_enabled`` set, an unchanged reviewed built-in component
+    returns the class built earlier instead of re-executing it. The cache is consulted only after source
+    resolution, so it never authorizes code the ordinary path rejects. Callers must create a fresh instance per use.
     """
     from lfx.custom.legacy_storage_compat import resolve_shipped_storage_component
 

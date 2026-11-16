@@ -1,15 +1,18 @@
 """Tests for the opt-in component class cache (``lfx.custom.class_cache``)."""
 
-import hashlib
 import inspect
+import json
 import threading
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 from lfx.custom import class_cache, validate
 from lfx.custom.eval import eval_custom_component_code
 from lfx.services.settings.base import Settings
+
+import lfx
 
 HEADER = """
 from lfx.custom.custom_component.component import Component
@@ -46,11 +49,10 @@ def _clean_cache():
 @pytest.fixture
 def cache_on(monkeypatch):
     """Enable the cache with a clean slate."""
-    state = {"max": 256}
-    monkeypatch.setattr(class_cache, "_read_policy", lambda: (True, state["max"]))
-    # Trust every source so these tests exercise the AST layer; the registry gate has its own tests.
+    monkeypatch.setattr(class_cache, "_cache_enabled", lambda: True)
+    # Treat every source as reviewed and trusted so these tests exercise the cache; both gates have own tests.
+    monkeypatch.setattr(class_cache, "_is_reviewed", lambda _digest, _name: True)
     monkeypatch.setattr(class_cache, "_is_trusted_source", lambda _code: True)
-    return state
 
 
 def build(source: str, name: str | None = None):
@@ -59,11 +61,10 @@ def build(source: str, name: str | None = None):
 
 def test_disabled_by_default(monkeypatch):
     monkeypatch.delenv("LANGFLOW_COMPONENT_CLASS_CACHE_ENABLED", raising=False)
-    monkeypatch.delenv("LANGFLOW_COMPONENT_CLASS_CACHE_MAX_SIZE", raising=False)
     settings = Settings()
     assert settings.component_class_cache_enabled is False
-    assert settings.component_class_cache_max_size == 256
     monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: SimpleNamespace(settings=settings))
+    monkeypatch.setattr(class_cache, "_is_reviewed", lambda _digest, _name: True)
     monkeypatch.setattr(class_cache, "_is_trusted_source", lambda _code: True)
     class_cache.clear_component_class_cache()
     class_cache.reset_component_class_cache_stats()
@@ -143,7 +144,7 @@ def test_same_source_different_resolved_class_name_misses():
 
 @pytest.mark.usefixtures("cache_on")
 def test_hash_collision_still_compares_full_source(monkeypatch):
-    monkeypatch.setattr(class_cache, "_digest", lambda _s: "constant")
+    monkeypatch.setattr(class_cache, "source_digest", lambda _s: "constant")
     a_src = make_source("CollideProbe", body="return 'a'")
     b_src = make_source("CollideProbe", body="return 'b'")
     a = build(a_src)
@@ -167,21 +168,11 @@ def test_non_component_class_declined():
 
 
 @pytest.mark.usefixtures("cache_on")
-def test_declined_verdict_is_remembered_without_reparsing(monkeypatch):
-    source = make_source("RememberProbe", extra="print('x')\n")
-    build(source)
-    monkeypatch.setattr(class_cache, "_ineligible_reason", lambda _s: pytest.fail("re-analysed"))
-    build(source)
-    assert class_cache.component_class_cache_stats()["declines"] == 2
-
-
-@pytest.mark.usefixtures("cache_on")
 def test_exceptions_propagate_and_are_not_cached():
     bad = make_source("BadProbe", extra="import definitely_not_a_real_module_xyz\n")
     for _ in range(2):
-        with pytest.raises((ValueError, ModuleNotFoundError)) as first:
+        with pytest.raises((ValueError, ModuleNotFoundError), match="definitely_not_a_real_module_xyz"):
             build(bad)
-        assert first.value is not None
     assert class_cache.component_class_cache_stats()["size"] == 0
     with pytest.raises(ValueError, match="Invalid Python code"):
         build(HEADER + "class SynProbe(Component):\n    x = (\n")
@@ -260,24 +251,6 @@ def test_inflight_build_during_invalidation_is_not_stored():
     assert class_cache.component_class_cache_stats()["size"] == 0
 
 
-def test_lru_eviction(cache_on):
-    cache_on["max"] = 2
-    sources = [make_source(f"LruProbe{i}") for i in range(3)]
-    classes = [build(s) for s in sources]
-    assert class_cache.component_class_cache_stats()["size"] == 2
-    assert build(sources[2]) is classes[2]  # newest kept
-    assert build(sources[0]) is not classes[0]  # oldest evicted
-
-
-def test_lru_recency_is_refreshed_on_hit(cache_on):
-    cache_on["max"] = 2
-    a, b, c = (make_source(f"RecencyProbe{i}") for i in range(3))
-    ca, _cb = build(a), build(b)
-    assert build(a) is ca  # refresh a
-    build(c)  # evicts b, not a
-    assert build(a) is ca
-
-
 @pytest.mark.usefixtures("cache_on")
 def test_concurrent_lookups_converge():
     source = make_source("ConcurrentProbe")
@@ -301,27 +274,27 @@ def test_concurrent_lookups_converge():
 def test_stats_never_contain_source():
     marker = "TOTALLY_SECRET_MARKER_12345"
     build(make_source("StatsProbe", body=f"return '{marker}'"))
-    build(make_source("StatsProbe2", extra=f"print('{marker}')\n"))
-    assert marker not in repr(class_cache.component_class_cache_stats())
-    digest = hashlib.sha256(b"x").hexdigest()
-    assert digest not in repr(class_cache.component_class_cache_stats())
-    assert class_cache.component_class_cache_stats()["declined_size"] == 1
+    declined = make_source("StatsProbe2", body=f"return '{marker}'")
+    class_cache.get_or_build_component_class(declined, "StatsProbe2", object)  # builds a non-class: declined
+    stats = repr(class_cache.component_class_cache_stats())
+    assert marker not in stats
+    assert class_cache.source_digest(declined) not in stats
+    assert class_cache.component_class_cache_stats()["decline_reasons"] == {"not_component_subclass": 1}
 
 
 def test_settings_service_toggle_enables_cache(monkeypatch):
     class _Settings:
         component_class_cache_enabled = True
-        component_class_cache_max_size = 7
 
     class _Service:
         settings = _Settings()
 
     monkeypatch.setattr("lfx.services.deps.get_settings_service", _Service)
-    assert class_cache._read_policy() == (True, 7)
-    _Settings.component_class_cache_max_size = 0
-    assert class_cache._read_policy() == (True, class_cache.DEFAULT_MAX_SIZE)
+    assert class_cache._cache_enabled() is True
+    _Settings.component_class_cache_enabled = "true"  # only a real bool enables it
+    assert class_cache._cache_enabled() is False
     monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: None)
-    assert class_cache._read_policy()[0] is False
+    assert class_cache._cache_enabled() is False
 
 
 def test_registry_gate_requires_exact_source(monkeypatch):
@@ -342,7 +315,8 @@ def test_registry_gate_requires_exact_source(monkeypatch):
 
 def test_trusted_registry_source_is_reused(monkeypatch):
     source = make_source("TrustedReuseProbe")
-    monkeypatch.setattr(class_cache, "_read_policy", lambda: (True, 256))
+    monkeypatch.setattr(class_cache, "_cache_enabled", lambda: True)
+    monkeypatch.setattr(class_cache, "_is_reviewed", lambda _digest, _name: True)
     monkeypatch.setattr("lfx.utils.flow_validation.get_trusted_code_for_validation", lambda _code: source)
     class_cache.clear_component_class_cache()
     class_cache.reset_component_class_cache_stats()
@@ -352,7 +326,8 @@ def test_trusted_registry_source_is_reused(monkeypatch):
 
 def test_disabled_policy_drops_retained_entries(monkeypatch):
     state = {"enabled": True}
-    monkeypatch.setattr(class_cache, "_read_policy", lambda: (state["enabled"], 256))
+    monkeypatch.setattr(class_cache, "_cache_enabled", lambda: state["enabled"])
+    monkeypatch.setattr(class_cache, "_is_reviewed", lambda _digest, _name: True)
     monkeypatch.setattr(class_cache, "_is_trusted_source", lambda _code: True)
     class_cache.clear_component_class_cache()
     build(make_source("RetainProbe"))
@@ -362,27 +337,12 @@ def test_disabled_policy_drops_retained_entries(monkeypatch):
     assert class_cache.component_class_cache_stats()["size"] == 0
 
 
-def test_shrinking_max_size_trims_on_lookup(monkeypatch):
-    state = {"max": 5}
-    monkeypatch.setattr(class_cache, "_read_policy", lambda: (True, state["max"]))
-    monkeypatch.setattr(class_cache, "_is_trusted_source", lambda _code: True)
-    class_cache.clear_component_class_cache()
-    sources = [make_source(f"TrimProbe{i}") for i in range(4)]
-    for source in sources:
-        build(source)
-    assert class_cache.component_class_cache_stats()["size"] == 4
-    state["max"] = 1
-    build(sources[3])  # a hit still trims
-    assert class_cache.component_class_cache_stats()["size"] == 1
-
-
 async def test_instantiate_class_end_to_end_with_real_settings(monkeypatch):
     """Real wiring: ``instantiate_class`` with the real settings flag, on a trusted shipped source."""
     from lfx.components.processing import create_list as shipped_module
     from lfx.interface.initialize.loading import instantiate_class
 
     source = inspect.getsource(shipped_module)
-    monkeypatch.delenv("LANGFLOW_COMPONENT_CLASS_CACHE_MAX_SIZE", raising=False)
     monkeypatch.setenv("LANGFLOW_COMPONENT_CLASS_CACHE_ENABLED", "true")  # Settings ignores init kwargs
     settings = Settings()
     assert settings.component_class_cache_enabled is True
@@ -394,7 +354,7 @@ async def test_instantiate_class_end_to_end_with_real_settings(monkeypatch):
     monkeypatch.setattr(component_cache, "code_by_hash", {_compute_code_hash(source): source})
     class_cache.clear_component_class_cache()
     class_cache.reset_component_class_cache_stats()
-    assert class_cache._ineligible_reason(source) is None, "shipped CreateList source should be eligible"
+    assert class_cache._is_reviewed(class_cache.source_digest(source), "CreateListComponent")
     assert class_cache._is_trusted_source(source)
 
     def vertex(vertex_id: str):
@@ -421,3 +381,88 @@ async def test_instantiate_class_end_to_end_with_real_settings(monkeypatch):
     third, _ = instantiate_class(vertex("v3"))
     assert type(third) is not type(first)
     assert [o.name for o in third.outputs] == expected_outputs
+
+
+def _shipped_source(path: str) -> str:
+    return (Path(lfx.__file__).parent / "components" / path).read_text(encoding="utf-8")
+
+
+def _class_state(component_class: type) -> dict[str, dict[str, tuple[int, str]]]:
+    """Identity and repr of every class attribute and module-level value: catches rebinding and in-place changes."""
+    namespace = next((f.__globals__ for f in vars(component_class).values() if inspect.isfunction(f)), None)
+    assert namespace is not None, f"{component_class.__name__} defines no methods"
+
+    def snapshot(values: dict) -> dict[str, tuple[int, str]]:
+        return {k: (id(v), repr(v)) for k, v in values.items() if not k.startswith("__")}
+
+    return {"class": snapshot(vars(component_class)), "module": snapshot(namespace)}
+
+
+@pytest.mark.parametrize(("path", "class_name", "digest"), class_cache.REVIEWED_COMPONENTS)
+def test_reviewed_pin_matches_shipped_file(path, class_name, digest):
+    source = _shipped_source(path)
+    assert class_cache.source_digest(source) == digest, (
+        f"lfx/components/{path} changed since it was reviewed for class reuse. Check that it still keeps no state on "
+        "the class or at module level, then update its sha256 in REVIEWED_COMPONENTS (or remove the entry)."
+    )
+    assert f"class {class_name}(" in source
+
+
+def test_every_reviewed_component_is_in_the_shipped_component_index():
+    """Otherwise the trusted-source gate would never pass and the reviewed entry would be dead."""
+    index_path = Path(lfx.__file__).parent / "_assets" / "component_index.json"
+    index = json.loads(index_path.read_text(encoding="utf-8"))
+    shipped = {
+        component["template"]["code"]["value"]
+        for _category, components in index["entries"]
+        for component in components.values()
+        if "code" in component.get("template", {})
+    }
+    for path, _class_name, _digest in class_cache.REVIEWED_COMPONENTS:
+        assert _shipped_source(path) in shipped, path
+
+
+@pytest.mark.parametrize(("path", "class_name", "digest"), class_cache.REVIEWED_COMPONENTS)
+def test_reviewed_component_reuse_behaves_like_fresh_builds(monkeypatch, path, class_name, digest):
+    source = _shipped_source(path)
+    monkeypatch.setattr(class_cache, "_cache_enabled", lambda: True)
+    monkeypatch.setattr(class_cache, "_is_trusted_source", lambda code: code == source)
+    if class_cache.source_digest(source) != digest:
+        pytest.skip("pin out of date; see test_reviewed_pin_matches_shipped_file")
+
+    first = build(source, class_name)
+    assert build(source, class_name) is first
+    assert class_cache.component_class_cache_stats()["hits"] == 1
+    before = _class_state(first)
+
+    used = first()
+    used.to_frontend_node()
+    for item in used.inputs:
+        item.display_name = "changed"  # per-instance copies: must not reach the class or later instances
+    fresh = first()
+    assert fresh.inputs is not used.inputs
+    uncached = eval_custom_component_code(source, class_name=class_name)()
+    assert fresh.to_frontend_node()["data"]["node"] == uncached.to_frontend_node()["data"]["node"]
+    assert _class_state(first) == before
+
+
+def test_reviewed_digests_are_unique():
+    assert len(class_cache._REVIEWED_CLASS_BY_DIGEST) == len(class_cache.REVIEWED_COMPONENTS)
+
+
+def test_unreviewed_sources_are_declined():
+    path, class_name, digest = class_cache.REVIEWED_COMPONENTS[0]
+    assert class_cache._is_reviewed(digest, class_name)
+    assert not class_cache._is_reviewed(digest, "SomeOtherClass")  # a different class from the same file
+    edited = class_cache.source_digest(_shipped_source(path) + "\n")
+    assert not class_cache._is_reviewed(edited, class_name)  # any edit
+    assert not class_cache._is_reviewed(class_cache.source_digest(make_source()), "CacheProbeA")
+
+
+def test_unreviewed_source_takes_the_plain_path(monkeypatch):
+    monkeypatch.setattr(class_cache, "_cache_enabled", lambda: True)
+    monkeypatch.setattr(class_cache, "_is_trusted_source", lambda _code: True)
+    source = make_source("UnreviewedProbe")
+    assert build(source) is not build(source)
+    stats = class_cache.component_class_cache_stats()
+    assert (stats["size"], stats["decline_reasons"]) == (0, {"not_reviewed": 2})

@@ -196,7 +196,6 @@ EXPECTED_FIELDS = {
     "bundle_urls",
     "lazy_load_components",
     "component_class_cache_enabled",
-    "component_class_cache_max_size",
     "create_starter_projects",
     "update_starter_projects",
     # UiSettings

@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 from lfx.constants import BASE_COMPONENTS_PATH
 from lfx.log.logger import logger
@@ -48,13 +48,10 @@ class ComponentsSettings(BaseModel):
     This significantly reduces startup time but may cause a slight delay when a component is first used."""
 
     component_class_cache_enabled: bool = False
-    """If set to True, Python component classes built from identical source are reused across flow builds
-    instead of being re-parsed and re-executed for every vertex. Reuse applies only to source that exactly
-    matches the component registry (built-ins, extension bundles, ``LANGFLOW_COMPONENTS_PATH``); a best-effort
-    guard declines common shared-state patterns. Every build still gets a fresh component instance.
-    Disabled by default."""
-    component_class_cache_max_size: int = Field(default=256, ge=1)
-    """Maximum number of component classes kept by the component class cache (least recently used evicted)."""
+    """If set to True, the Python classes of a small set of reviewed built-in components (Chat Input/Output,
+    Text Input/Output, Create List, Parser, Type Convert, Prompt Template) are reused across flow builds instead
+    of being re-parsed and re-executed for every vertex. Only their unchanged shipped source is reused; all other
+    code takes the normal path. Every build still gets a fresh component instance. Disabled by default."""
 
     # Starter Projects
     create_starter_projects: bool = True

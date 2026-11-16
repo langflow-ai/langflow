@@ -1,4 +1,4 @@
-"""Bounded reuse of validated Python component classes across flow builds (opt-in).
+"""Reuse of validated Python classes for a few reviewed built-in components across flow builds (opt-in).
 
 Building a component class re-parses and re-executes its whole source. For the same source that work
 is identical every time, so an opt-in cache can hand back the class built earlier. Instances are always
@@ -8,47 +8,79 @@ Safety model:
 
 * The cache is consulted only after source resolution and policy checks, so a hit can never authorize
   code the ordinary path rejects.
-* The security boundary is the trusted-source gate: only a source that is, byte for byte, in the current
-  component registry is reused. The registry holds built-in components, installed extension bundles, and
-  components loaded from ``LANGFLOW_COMPONENTS_PATH`` (operator-provided). Custom or edited code that lives
-  in a flow and not in the registry always takes the ordinary path. Registered code is assumed reviewed.
-* On top of that sits a small best-effort mistake guard (``lfx.custom.class_eligibility``). It is NOT a
-  sandbox; it only skips sources with patterns that would leak state between builds by accident.
-* Entries are keyed by ``sha256(source)`` + class name, and the full source is compared on every hit.
+* Only the components in ``REVIEWED_COMPONENTS`` are reused. Each entry pins the sha256 of the exact source
+  that was reviewed (and confirmed to keep no state on the class or at module level). A source qualifies only
+  if its digest is pinned and the class being built is that entry's component. Any edit changes the digest, so
+  edited or updated source takes the ordinary path until it is reviewed again (a test fails when a shipped file no
+  longer matches its pin). Custom code, extension bundles and ``LANGFLOW_COMPONENTS_PATH`` components always
+  take the ordinary path. No code is analysed at runtime.
+* The source must also be, byte for byte, in the current component registry (the trusted-source gate), so
+  an overridden or unloaded registry never serves a cached class.
+* The built class must be a ``Component`` subclass: only ``Component.__init__`` copies ``inputs``/``outputs``
+  per instance. Every reviewed entry is one; the check is kept as a safeguard.
+* Entries are keyed by digest and class name, and the full source is compared on every hit.
 * ``clear_component_class_cache`` bumps a generation counter and drops all entries; it is called when
   the component registry or an extension bundle is (re)loaded.
 * Errors raised while building are never cached.
-* Guard verdicts for declined sources are kept in a separate bounded map (not in the class LRU) so a
-  declined source is parsed once rather than on every build.
 """
 
 from __future__ import annotations
 
 import hashlib
 import threading
-from collections import OrderedDict
 from typing import TYPE_CHECKING
 
-from lfx.custom.class_eligibility import ineligible_reason as _ineligible_reason
 from lfx.log.logger import logger
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-DEFAULT_MAX_SIZE = 256
-
+# (file under ``lfx/components``, component class, sha256 of the reviewed source). Add or update an entry only
+# after reviewing that the file keeps no state on the class or at module level.
+REVIEWED_COMPONENTS = (
+    ("input_output/chat.py", "ChatInput", "45974e6b1909ddbbfec5381cf528523131c7579f3724a1a6cc05ab62cfc63827"),
+    ("input_output/chat_output.py", "ChatOutput", "0aab1c78e1dc24ff5a066dc8db75a695aa46cb3ba8fbb13c34f70672c5f2b967"),
+    ("input_output/text.py", "TextInputComponent", "2811c0e0496fb2b0fc9eb115823699e04b1629846395340cc50dd37feb5d2f89"),
+    (
+        "input_output/text_output.py",
+        "TextOutputComponent",
+        "3ececc60ddafd6328dcc7235739e05d03696602ac1afd5d1263d8ac340ba8d15",
+    ),
+    (
+        "processing/create_list.py",
+        "CreateListComponent",
+        "5657383579615ce5781924b307013d60e7662b45bca7e3f8db021813eefef73f",
+    ),
+    ("processing/parser.py", "ParserComponent", "cc797b144b5db59f071000d22ecca10d2df9dfbcd1b28020b9dc89da60aba95a"),
+    (
+        "processing/converter.py",
+        "TypeConverterComponent",
+        "60cbfe96d7eb4f462553bbe8afddf7e289a68e90651d9a6a4b0362bc76e34c4d",
+    ),
+    (
+        "models_and_agents/prompt.py",
+        "PromptComponent",
+        "e3714ffe5d15e1c8ee7410f0449c0d4641cb1c6c92bd6c63e9e2aa22a3f00098",
+    ),
+)
+_REVIEWED_CLASS_BY_DIGEST = {digest: class_name for _path, class_name, digest in REVIEWED_COMPONENTS}
 
 _lock = threading.Lock()
-_entries: OrderedDict[tuple[str, str], tuple[str, type]] = OrderedDict()  # key -> (source, class)
-_verdicts: OrderedDict[tuple[str, str], tuple[str, str]] = OrderedDict()  # key -> (source, decline reason)
+_entries: dict[tuple[str, str], tuple[str, type]] = {}  # (digest, class name) -> (source, class)
 _generation = 0
 _hits = 0
 _misses = 0
 _declines: dict[str, int] = {}
 
 
-def _digest(source: str) -> str:
+def source_digest(source: str) -> str:
+    """Return the sha256 hex digest used to pin reviewed sources."""
     return hashlib.sha256(source.encode("utf-8", "surrogatepass")).hexdigest()
+
+
+def _is_reviewed(digest: str, class_name: str) -> bool:
+    """Return True only when ``digest`` is pinned in ``REVIEWED_COMPONENTS`` for ``class_name``."""
+    return _REVIEWED_CLASS_BY_DIGEST.get(digest) == class_name
 
 
 def _is_trusted_source(code: str) -> bool:
@@ -66,104 +98,68 @@ def _is_trusted_source(code: str) -> bool:
         return False
 
 
-def _read_policy() -> tuple[bool, int]:
-    """Return ``(enabled, max_size)`` from the settings service; disabled when unavailable."""
+def _cache_enabled() -> bool:
+    """Return whether the cache is enabled in the settings service; disabled when unavailable."""
     try:
         from lfx.services.deps import get_settings_service
 
-        service = get_settings_service()
-        settings = getattr(service, "settings", None)
+        settings = getattr(get_settings_service(), "settings", None)
     except Exception:  # noqa: BLE001
-        return False, DEFAULT_MAX_SIZE
-    if getattr(settings, "component_class_cache_enabled", False) is not True:
-        return False, DEFAULT_MAX_SIZE
-    max_size = getattr(settings, "component_class_cache_max_size", DEFAULT_MAX_SIZE)
-    if not isinstance(max_size, int) or isinstance(max_size, bool) or max_size < 1:
-        max_size = DEFAULT_MAX_SIZE
-    return True, max_size
+        return False
+    return getattr(settings, "component_class_cache_enabled", False) is True
 
 
 def _record_decline(reason: str) -> None:
-    _declines[reason] = _declines.get(reason, 0) + 1
-
-
-def _remember(table: OrderedDict, key: tuple[str, str], value: tuple, generation: int, max_size: int) -> tuple:
-    """Insert ``value`` unless the generation moved; first writer wins so concurrent builders converge.
-
-    A different source under the same digest (collision) leaves the incumbent and the newcomer uncached.
-    """
     with _lock:
-        existing = table.get(key)
-        if existing is not None:
-            return existing if existing[0] == value[0] else value
-        if generation == _generation:
-            table[key] = value
-            while len(table) > max_size:
-                table.popitem(last=False)
-        return value
+        _declines[reason] = _declines.get(reason, 0) + 1
 
 
 def get_or_build_component_class(code: str, class_name: str, build: Callable[[], type]) -> type:
     """Return a cached component class for ``code``/``class_name`` or build it with ``build``.
 
     ``class_name`` must already be resolved. ``build`` is the ordinary uncached path; exceptions it raises
-    propagate unchanged and are never cached. When the cache is disabled, or ``code`` is not a trusted registry
-    source, this is just ``build()``.
+    propagate unchanged and are never cached. When the cache is disabled, or ``code`` is not a reviewed,
+    trusted registry source, this is just ``build()``.
     """
     global _hits, _misses  # noqa: PLW0603
-    enabled, max_size = _read_policy()
-    if not enabled:
-        if _entries or _verdicts:  # drop retained state once the cache is observed disabled
+    if not _cache_enabled():
+        if _entries:  # drop retained state once the cache is observed disabled
             clear_component_class_cache()
         return build()
 
+    digest = source_digest(code)
+    if not _is_reviewed(digest, class_name):
+        _record_decline("not_reviewed")
+        return build()
     if not _is_trusted_source(code):
-        with _lock:
-            _record_decline("untrusted_source")
+        _record_decline("untrusted_source")
         return build()
 
-    key = (_digest(code), class_name)
+    key = (digest, class_name)
     with _lock:
-        for table in (_entries, _verdicts):  # the limit may have been lowered since the last store
-            while len(table) > max_size:
-                table.popitem(last=False)
         entry = _entries.get(key)
         if entry is not None and entry[0] == code:
-            _entries.move_to_end(key)
             _hits += 1
             return entry[1]
-        verdict = _verdicts.get(key)
-        if verdict is not None and verdict[0] == code:
-            _verdicts.move_to_end(key)
-            _record_decline(verdict[1])
-            return_uncached = True
-        else:
-            return_uncached = False
         generation = _generation
-    if return_uncached:
-        return build()
 
-    reason = _ineligible_reason(code, class_name)
-    if reason is not None:
-        logger.debug(f"Component class cache declined {class_name}: {reason}")
     component_class = build()
-    if reason is None:
-        from lfx.custom.custom_component.component import Component
+    from lfx.custom.custom_component.component import Component
 
-        # Only Component.__init__ deep-copies inputs/outputs per instance; legacy classes are not proven.
-        if not (isinstance(component_class, type) and issubclass(component_class, Component)):
-            reason = "not_component_subclass"
-
-    if reason is not None:
-        with _lock:
-            _record_decline(reason)
-        _remember(_verdicts, key, (code, reason), generation, max_size)
+    # Only Component.__init__ deep-copies inputs/outputs per instance; legacy classes are not proven.
+    if not (isinstance(component_class, type) and issubclass(component_class, Component)):
+        logger.debug(f"Component class cache declined {class_name}: not_component_subclass")
+        _record_decline("not_component_subclass")
         return component_class
 
-    stored = _remember(_entries, key, (code, component_class), generation, max_size)
     with _lock:
         _misses += 1
-    return stored[1]
+        existing = _entries.get(key)
+        if existing is not None:  # first writer wins so concurrent builders converge; a collision stays uncached
+            return existing[1] if existing[0] == code else component_class
+        if generation == _generation:  # not stored when the registry was reloaded mid-build
+            _entries[key] = (code, component_class)
+    return component_class
 
 
 def clear_component_class_cache() -> None:
@@ -172,7 +168,6 @@ def clear_component_class_cache() -> None:
     with _lock:
         _generation += 1
         _entries.clear()
-        _verdicts.clear()
 
 
 def component_class_cache_stats() -> dict[str, object]:
@@ -184,7 +179,6 @@ def component_class_cache_stats() -> dict[str, object]:
             "declines": sum(_declines.values()),
             "decline_reasons": dict(_declines),
             "size": len(_entries),
-            "declined_size": len(_verdicts),
             "generation": _generation,
         }
 
