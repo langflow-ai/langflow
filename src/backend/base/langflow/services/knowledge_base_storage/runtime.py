@@ -506,6 +506,9 @@ class _GuardedMethods:
         value = getattr(self._target, name)
         if name == "vector_store":
             return _GuardedMethods(value, self._record)
+        if name == "staging":
+            # A deploy's staging store lives under the same knowledge base, so it takes the same fences.
+            return lambda token: _GuardedMethods(value(token), self._record)
         if inspect.isasyncgenfunction(value):
 
             async def iterate(*args, **kwargs):

@@ -352,6 +352,8 @@ class PostgresBackend(BaseVectorStoreBackend):
         if owner_id is None:
             msg = "PostgresBackend requires a valid user_id to isolate its collection."
             raise ValueError(msg)
+        if self.staging_token:
+            return self._staging_name()
         return owner_scoped_collection_name(owner_id, self.kb_name)
 
     @property
@@ -359,8 +361,21 @@ class PostgresBackend(BaseVectorStoreBackend):
         """Physical embedding table for this collection (validated for SQL use)."""
         return _validate_table_name(self.collection_name)
 
+    def staging(self, token: str) -> PostgresBackend:
+        """Staging shares this backend's connection pool: same database, same credentials.
+
+        A pool per staging copy doubled the connections each sync request opened, and four
+        Editor pods copying at once ran serving's Postgres out of connections.
+        """
+        staged = super().staging(token)
+        staged._pool_owner = self  # noqa: SLF001 — same class
+        return staged
+
     def _ensure_async_engine(self):
         """Lazily build the sidecar async engine used for count/scan/delete/ping."""
+        owner = getattr(self, "_pool_owner", None)
+        if owner is not None and getattr(owner, "_pg_engine", None) is not None:
+            return owner._pg_engine  # noqa: SLF001 — same class
         engine = getattr(self, "_pg_engine", None)
         if engine is not None:
             return engine
@@ -374,7 +389,11 @@ class PostgresBackend(BaseVectorStoreBackend):
             msg = "PostgresBackend requires SQLAlchemy async support (install the pgvector extra)."
             raise RuntimeError(msg) from exc
         engine = create_async_engine(connection_string, pool_pre_ping=True)
-        self._pg_engine = engine
+        if owner is not None:
+            # The owner had not opened its pool yet: open it for both, so the owner's teardown closes it.
+            owner._pg_engine = engine  # noqa: SLF001 — same class
+        else:
+            self._pg_engine = engine
         return engine
 
     def _require_pgvector(self) -> None:
@@ -839,6 +858,50 @@ class PostgresBackend(BaseVectorStoreBackend):
         except Exception as exc:  # noqa: BLE001 — table may not exist before first write
             await logger.awarning("Postgres storage_size_bytes failed for %s: %s", self.kb_name, exc)
             return 0
+
+    async def merge_staging(self, token: str, *, limit: int | None = None) -> int:
+        """Upsert one deploy's staged rows into the live table, and drop staging once it is empty.
+
+        Without ``limit``, every row in one transaction: flows see none of the staged chunks, then
+        all of them. With it, at most ``limit`` rows, each slice moved out of staging in the same
+        transaction it lands in, so a cut call loses nothing and the next one carries on.
+        """
+        await self.ensure_ready()
+        from sqlalchemy import text
+
+        staged = self.staging(token)
+        source = staged.table_name
+        engine = self._ensure_async_engine()
+        async with engine.connect() as conn:
+            dim = await staged._existing_embedding_dim(conn)  # noqa: SLF001 — same class
+        if dim is None:
+            return 0  # nothing staged, or an earlier run already merged it
+        # Creates the live table on a first deploy, and refuses a width the live table does not have.
+        await self._ensure_embedding_table(dim)
+        target = self.table_name
+        async with engine.begin() as conn:
+            # Two pods may merge the same deploy: the second waits here, then finds staging gone.
+            await conn.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": _ADVISORY_LOCK_KEY})
+            if await conn.scalar(text("SELECT to_regclass(:name)"), {"name": source}) is None:
+                return 0
+            upsert = (
+                f'INSERT INTO "{target}" (id, embedding, document, cmetadata) '  # noqa: S608 — names validated
+                "SELECT id, embedding, document, cmetadata FROM {rows} "
+                "ON CONFLICT (id) DO UPDATE SET embedding = EXCLUDED.embedding, "
+                "document = EXCLUDED.document, cmetadata = EXCLUDED.cmetadata"
+            )
+            if limit is None:
+                result = await conn.execute(text(upsert.format(rows=f'"{source}"')))
+            else:
+                moved = (
+                    f'WITH moved AS (DELETE FROM "{source}" WHERE id IN '  # noqa: S608 — names validated
+                    f'(SELECT id FROM "{source}" LIMIT :limit) RETURNING id, embedding, document, cmetadata) '
+                )
+                result = await conn.execute(text(moved + upsert.format(rows="moved")), {"limit": limit})
+                if await conn.scalar(text(f'SELECT EXISTS (SELECT 1 FROM "{source}")')):  # noqa: S608
+                    return int(result.rowcount or 0)
+            await conn.execute(text(_drop_table_sql(source)))
+        return int(result.rowcount or 0)
 
     async def delete_collection(self) -> None:
         """Drop the configured vector table and its indexes."""

@@ -117,6 +117,15 @@ async def _drained_worker(function, *args, **kwargs):
     return task.result()
 
 
+async def _bulk_or_raise(client: Any, actions: list[dict[str, Any]], *, refresh: bool) -> None:
+    """Send one bulk request; a per-item failure raises rather than passing as success."""
+    answer = await _drained_worker(client.bulk, body=actions, refresh=refresh)
+    if answer.get("errors"):
+        failed = next(next(iter(item.values())) for item in answer["items"] if next(iter(item.values())).get("error"))
+        msg = f"OpenSearch bulk request failed: {failed.get('error')}"
+        raise RuntimeError(msg)
+
+
 def _document_from_hit(
     hit: Any,
     *,
@@ -263,6 +272,9 @@ DEFAULT_TEXT_FIELD = "text"
 CHUNK_ID_KEY = "kb_chunk_id"
 #: Dynamic mapping gives the string a keyword copy; this is what the per-job read sorts on.
 CHUNK_ID_SORT_FIELD = f"metadata.{CHUNK_ID_KEY}.keyword"
+# Most staged chunks one sliced merge moves, whatever the caller asks. Each travels out and back as
+# JSON with its vector, and a 5,000-chunk bulk of 768-wide vectors outran the client's 10 s timeout.
+MERGE_SLICE_MAX = 1_000
 # ``faiss`` is part of the core OpenSearch k-NN plugin on every
 # released version (1.x → 3.x) and works without extra cluster setup.
 # ``jvector`` was tempting (it's faster on OpenSearch 3.2+) but it
@@ -417,7 +429,10 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         operator override (an externally-managed index, or the pre-scoping
         index a migration pinned). Otherwise the index is owner-scoped, and a
         missing owner fails closed instead of falling back to a shared name.
+        A ``staging`` copy uses its own index, whatever the override says.
         """
+        if self.staging_token:
+            return self._staging_name()
         return resolve_storage_name(
             kb_name=self.kb_name,
             owner_id=self._coerce_user_uuid(),
@@ -479,7 +494,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             msg = "OpenSearchBackend.ensure_ready() must be awaited before _build_vector_store."
             raise RuntimeError(msg)
         shared_legacy_index = self.backend_config.get(LEGACY_SHARED_INDEX_KEY)
-        if shared_legacy_index and index_name != shared_legacy_index:
+        if shared_legacy_index and index_name != shared_legacy_index and not self.staging_token:
             logger.warning(
                 "Knowledge base %s no longer uses OpenSearch index %s: another user's knowledge base used the "
                 "same index, or the name is reserved for owner-scoped indexes. Its earlier chunks were left in "
@@ -1161,6 +1176,79 @@ class OpenSearchBackend(BaseVectorStoreBackend):
                     logger.warning("OpenSearch wrapper client.close failed: %s", exc)
         self._os_client = None
         self._vector_store = None
+
+    async def merge_staging(self, token: str, *, limit: int | None = None) -> int:
+        """Move one deploy's staged chunks into the live index, and delete staging once it is empty.
+
+        Not one step like Postgres: while it runs, flows can see part of the staged chunks. A rerun
+        only upserts again, so a deploy that was cut here finishes on its retry. Without ``limit``
+        it is one reindex task; with it, at most ``limit`` chunks are copied and then removed from
+        staging, so each call stays short and the next one carries on.
+        """
+        await self.ensure_ready()
+        _ = self.vector_store
+        client = self._os_client
+        source = self.staging(token)._resolve_index_name()  # noqa: SLF001 — same class
+        target = self._os_index
+        if not await _drained_worker(client.indices.exists, index=source):
+            return 0  # nothing staged, or an earlier run already merged it
+        if not await _drained_worker(client.indices.exists, index=target):
+            await self._create_like(client, source=source, target=target)
+        if limit is not None:
+            return await self._merge_slice(client, source=source, target=target, limit=min(limit, MERGE_SLICE_MAX))
+        started = await _drained_worker(
+            client.reindex,
+            body={"source": {"index": source}, "dest": {"index": target, "op_type": "index"}},
+            refresh=True,
+            wait_for_completion=False,
+        )
+        # A task, not one long request: a large knowledge base reindexes for longer than a
+        # request may stay open, and the cluster carries on if this pod goes away.
+        while True:
+            status = await _drained_worker(client.tasks.get, task_id=started["task"])
+            if status.get("completed"):
+                break
+            await asyncio.sleep(1)
+        response = status.get("response") or {}
+        if status.get("error") or response.get("failures"):
+            reason = status.get("error") or response["failures"][:1]
+            msg = f"OpenSearch could not merge the staged chunks of {self.kb_name}: {reason}"
+            raise RuntimeError(msg)
+        await _drained_worker(client.indices.delete, index=source, ignore_unavailable=True)
+        return int(response.get("total", 0))
+
+    @staticmethod
+    async def _merge_slice(client: Any, *, source: str, target: str, limit: int) -> int:
+        """Copy up to ``limit`` staged chunks into ``target`` under their ids, then remove them from staging."""
+        await _drained_worker(client.indices.refresh, index=source)
+        found = await _drained_worker(client.search, index=source, body={"query": {"match_all": {}}, "size": limit})
+        hits = found["hits"]["hits"]
+        if hits:
+            # Index before delete: a cut between the two leaves the chunks in both, and the rerun re-upserts them.
+            actions: list[dict[str, Any]] = []
+            for hit in hits:
+                actions += [{"index": {"_index": target, "_id": hit["_id"]}}, hit["_source"]]
+            await _bulk_or_raise(client, actions, refresh=True)
+            deletes = [{"delete": {"_index": source, "_id": hit["_id"]}} for hit in hits]
+            await _bulk_or_raise(client, deletes, refresh=True)
+        if len(hits) < limit:
+            await _drained_worker(client.indices.delete, index=source, ignore_unavailable=True)
+        return len(hits)
+
+    @staticmethod
+    async def _create_like(client: Any, *, source: str, target: str) -> None:
+        """Create ``target`` with ``source``'s mapping, so a reindex keeps its vectors kNN vectors."""
+        mappings = (await _drained_worker(client.indices.get_mapping, index=source))[source]["mappings"]
+        knn = (await _drained_worker(client.indices.get_settings, index=source))[source]["settings"]["index"].get("knn")
+        body: dict[str, Any] = {"mappings": mappings}
+        if knn is not None:
+            body["settings"] = {"index": {"knn": knn}}
+        try:
+            await _drained_worker(client.indices.create, index=target, body=body)
+        except Exception:
+            # Another pod merging the same deploy created it first.
+            if not await _drained_worker(client.indices.exists, index=target):
+                raise
 
     async def delete_collection(self) -> None:
         """Drop the configured index. Used by KB deletion."""

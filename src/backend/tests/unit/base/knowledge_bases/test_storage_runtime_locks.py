@@ -298,3 +298,34 @@ async def test_reading_one_job_takes_the_shared_lock(monkeypatch):
     assert [batch async for batch in backend.iter_job_documents("job")] == [["job"]]
     assert await backend.count_job("job") == 3
     assert seen == [True, True]
+
+
+async def test_a_deploys_staging_store_is_reachable_and_takes_the_same_fences(monkeypatch):
+    """Serving's KB sync routes reach staging through this wrapper; a blocked ``staging`` fails every deploy."""
+    seen = []
+
+    @asynccontextmanager
+    async def operation(_record, *, shared=False):
+        seen.append(shared)
+        yield
+
+    monkeypatch.setattr(runtime, "operation", operation)
+
+    class Backend:
+        def __init__(self, token=None):
+            self.token = token
+
+        def staging(self, token):
+            return Backend(token)
+
+        async def count(self):
+            return len(self.token or "")
+
+        async def merge_staging(self, token):
+            return len(token)
+
+    backend = runtime._GuardedMethods(Backend(), object())
+    stage = backend.staging("deploy-1")
+    assert await stage.count() == 8
+    assert await backend.merge_staging("deploy-1") == 8
+    assert seen == [True, False]  # the staging read is shared; the merge is a write
