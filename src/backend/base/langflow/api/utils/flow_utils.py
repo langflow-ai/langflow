@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Literal
 from fastapi import HTTPException
 from lfx.graph.graph.base import Graph
 from lfx.services.deps import session_scope
+from lfx.utils.file_path_security import FLOW_STORAGE_SCOPE_PREFIX
 from sqlalchemy import delete
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -219,18 +220,19 @@ async def cascade_delete_flow(
     return result.rowcount == 1
 
 
-# Public flow file paths must be ``{source_flow_id}/{safe_basename}`` — uploads
-# under that namespace are the only legitimate inputs for an unauthenticated
-# build. Anything else (absolute paths, traversal, foreign flow_ids) is a
-# probe at the arbitrary-file-read class of bug (GHSA-rcjh-r59h-gq37).
+# Public flow file paths must be ``flow-{source_flow_id}/{basename}`` (or legacy
+# ``{source_flow_id}/{basename}``) — uploads under that namespace are the only
+# legitimate inputs for an unauthenticated build. Anything else is a probe at
+# the arbitrary-file-read class of bug (GHSA-rcjh-r59h-gq37).
 _PUBLIC_FILE_PATH_RE = re.compile(
-    r"^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/([^/\\]+)$"
+    rf"^(?:{re.escape(FLOW_STORAGE_SCOPE_PREFIX)})?"
+    r"([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/([^/\\]+)$"
 )
 _PUBLIC_FILE_REJECTED_SUBSTRINGS = ("\x00", "..", "\\")
 
 
 def validate_public_files(files: list[str] | None, source_flow_id: uuid.UUID) -> None:
-    """Reject file references that aren't ``{source_flow_id}/{basename}``.
+    """Reject file references outside ``flow-{source_flow_id}/`` or legacy ``{source_flow_id}/``.
 
     Mitigates GHSA-rcjh-r59h-gq37: an unauthenticated build must not be
     able to address files outside its own flow's storage namespace.
@@ -239,7 +241,7 @@ def validate_public_files(files: list[str] | None, source_flow_id: uuid.UUID) ->
     """
     if not files:
         return
-    expected_flow_id = str(source_flow_id).lower()
+    expected_flow_id = str(source_flow_id)
     for entry in files:
         if not isinstance(entry, str) or not entry:
             raise HTTPException(status_code=400, detail="Invalid file entry")
@@ -249,7 +251,7 @@ def validate_public_files(files: list[str] | None, source_flow_id: uuid.UUID) ->
         if not match:
             raise HTTPException(status_code=400, detail="Invalid file path format")
         flow_id_segment, basename = match.group(1), match.group(2)
-        if flow_id_segment.lower() != expected_flow_id:
+        if flow_id_segment != expected_flow_id:
             raise HTTPException(status_code=400, detail="File not in this flow's namespace")
         if basename in (".", ".."):
             raise HTTPException(status_code=400, detail="Invalid filename")

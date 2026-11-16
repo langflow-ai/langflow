@@ -1,5 +1,6 @@
 import Fuse from "fuse.js";
 import { type ChangeEvent, useEffect, useState } from "react";
+import { type OptionLabels, searchableOptions } from "../helpers/option-label";
 
 /**
  * Manage dropdown options, filtering, and custom values.
@@ -13,6 +14,7 @@ export function useDropdownOptions({
   disabled,
   hasChildren,
   onSelect,
+  optionLabels,
 }: {
   value: string;
   options: string[];
@@ -30,6 +32,7 @@ export function useDropdownOptions({
     // biome-ignore lint/suspicious/noExplicitAny: legacy
     metadata?: any,
   ) => void;
+  optionLabels?: OptionLabels;
 }) {
   // Initialize state and refs
   const [open, setOpen] = useState(hasChildren ? true : false);
@@ -62,7 +65,9 @@ export function useDropdownOptions({
     }
   }, [value, options, filteredOptions, combobox]);
 
-  const fuse = new Fuse(validOptions, { keys: ["name", "value"] });
+  const fuse = new Fuse(searchableOptions(validOptions, optionLabels), {
+    keys: ["label", "value"],
+  });
 
   const searchRoleByTerm = async (event: ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
@@ -81,7 +86,7 @@ export function useDropdownOptions({
 
     // Search existing options
     const searchValues = fuse.search(value);
-    let filtered = searchValues.map((search) => search.item);
+    let filtered = searchValues.map((search) => search.item.value);
 
     // If the search value exactly matches one of the custom options, include it
     const customOptions = filteredOptions.filter(
