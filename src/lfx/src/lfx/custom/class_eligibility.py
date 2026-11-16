@@ -145,11 +145,27 @@ def _module_reason(statement: ast.stmt, lfx: frozenset[str], containers: set[str
     return f"top_level_{type(statement).__name__.lower()}"
 
 
-def _class_reason(node: ast.ClassDef, lfx: frozenset[str], attrs: set[str], components: set[str]) -> str | None:
+def _lineage(classes: list[ast.ClassDef], name: str) -> set[str]:
+    """``name`` and the classes defined in this module that it inherits from."""
+    bases = {c.name: [r.id for b in c.bases if isinstance(r := _chain_root(b)[0], ast.Name)] for c in classes}
+    seen: set[str] = set()
+    todo = [name]
+    while todo:
+        current = todo.pop()
+        if current in bases and current not in seen:
+            seen.add(current)
+            todo.extend(bases[current])
+    return seen
+
+
+def _class_reason(
+    node: ast.ClassDef, lfx: frozenset[str], attrs: set[str], components: set[str], lineage: set[str] | None
+) -> str | None:
     """Reason to decline a class; names of allowed container class attributes go to ``attrs``.
 
-    ``inputs``/``outputs`` are exempt only on classes deriving from an lfx/langflow import (or from such a class
-    defined earlier), since only ``Component.__init__`` copies them per instance. ``components`` collects those.
+    Only ``Component.__init__`` copies ``inputs``/``outputs`` per instance, so they are exempt only on the class
+    being built and its in-module ancestors (``lineage``; the cache checks that class is a Component). Without a
+    class name, classes deriving from an lfx/langflow import (or such a class defined earlier) are used instead.
     """
     if node.decorator_list or node.keywords:
         return "decorated_class"
@@ -158,7 +174,8 @@ def _class_reason(node: ast.ClassDef, lfx: frozenset[str], attrs: set[str], comp
         for base in node.bases
     ):
         components.add(node.name)
-    per_instance = _PER_INSTANCE if node.name in components else frozenset()
+    exempt = node.name in (components if lineage is None else lineage)
+    per_instance = _PER_INSTANCE if exempt else frozenset()
     for statement in node.body:
         if isinstance(statement, ast.FunctionDef | ast.AsyncFunctionDef | ast.Pass) or (
             isinstance(statement, ast.Expr) and isinstance(statement.value, ast.Constant)
@@ -194,26 +211,121 @@ def _mutates(node: ast.AST, shared: set[str], attrs: set[str] = frozenset()) -> 
 
 
 _READ_ONLY_CALLS = frozenset({"len", "list", "tuple", "set", "frozenset", "dict", "sorted", "any", "all", "enumerate"})
+# Read-only calls that do not hand out the elements of their argument.
+_OPAQUE_CALLS = frozenset({"len", "any", "all"})
+_UNKNOWN_DEPTH = 1_000  # the contents of an object built by a call are not known
 
 
-def _escapes(node: ast.AST, parent: ast.AST) -> bool:
-    """True when a shared container is used other than for indexing, attribute reads, iteration or membership.
-
-    Such uses (``alias = SEEN``, ``return SEEN``, ``helper(SEEN)``) could let it be mutated under another name.
-    """
-    if isinstance(parent, ast.Subscript | ast.Attribute) and parent.value is node:
-        return False
-    if isinstance(parent, ast.Compare) or (isinstance(parent, ast.For | ast.comprehension) and parent.iter is node):
-        return False
-    return not (
-        isinstance(parent, ast.Call)
-        and node in parent.args
-        and isinstance(parent.func, ast.Name)
-        and parent.func.id in _READ_ONLY_CALLS
-    )
+def _depth(node: ast.AST | None) -> int:
+    """How many levels of indexing into a container literal can still reach a mutable value (0: none)."""
+    if isinstance(node, ast.BinOp):
+        return max(_depth(node.left), _depth(node.right))
+    if isinstance(node, ast.Call):
+        frozen = isinstance(node.func, ast.Name) and node.func.id in {"frozenset", "set"}
+        return 0 if frozen else _UNKNOWN_DEPTH  # set members are hashable
+    if isinstance(node, ast.List | ast.Tuple):
+        return max(map(_reach, node.elts), default=0)
+    if isinstance(node, ast.Dict):
+        return max(map(_reach, node.values), default=0)
+    return 0  # constants, names, set members
 
 
-def _alias_reason(module: ast.Module, containers: set[str], attrs: set[str], lfx: frozenset[str]) -> str | None:
+def _reach(element: ast.AST) -> int:
+    """Levels below its container at which ``element``, or something inside it, is mutable (0: never)."""
+    if isinstance(element, ast.List | ast.Dict | ast.Set):
+        return 1 + _depth(element)
+    if isinstance(element, ast.Call):
+        name = element.func.id if isinstance(element.func, ast.Name) else ""
+        return {"frozenset": 0, "set": 1}.get(name, _UNKNOWN_DEPTH)
+    inner = _depth(element)  # a tuple is immutable, but its items may not be
+    return inner + 1 if inner else 0
+
+
+def _unshadowed(module: ast.Module, names: frozenset[str]) -> frozenset[str]:
+    """``names`` that nothing in ``module`` rebinds (imports, definitions, parameters, assignments)."""
+    bound: set[str] = set()
+    for node in ast.walk(module):
+        if isinstance(node, ast.Name) and not isinstance(node.ctx, ast.Load):
+            bound.add(node.id)
+        elif isinstance(node, ast.arg):
+            bound.add(node.arg)
+        elif isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef | ast.ExceptHandler) and node.name:
+            bound.add(node.name)
+        elif isinstance(node, ast.Import | ast.ImportFrom):
+            bound.update(a.asname or a.name.split(".")[0] for a in node.names)
+    return frozenset() if "*" in bound else names - bound
+
+
+class _Uses:
+    """How shared containers are used inside one function body (see ``_escapes``)."""
+
+    def __init__(self, parents: dict[int, ast.AST], scope: ast.AST, read_only: frozenset[str]) -> None:
+        self.parents, self.scope, self.read_only = parents, scope, read_only
+
+    def escapes(self, node: ast.AST, depth: int, level: int = 0) -> bool:
+        """True when a shared container, or a mutable value taken out of it, can be reached under another name.
+
+        ``depth`` is how many levels of indexing still reach a mutable value; ``level`` is how many ``node`` is
+        already below the container. Indexing down to immutable values, membership, iteration and read-only
+        builtins over immutable elements, and method results of containers of immutable values are fine. A
+        mutable value may be bound to a local that is itself only read. A mutating method taken without
+        calling it always escapes. Stores, deletes and mutating calls are left to the mutation rule.
+        """
+        parent = self.parents.get(id(node))
+        via_call = False  # the mutation rule only sees chains rooted at a name, not ``TABLE.get(k).append(...)``
+        while isinstance(parent, ast.Subscript | ast.Attribute) and parent.value is node:
+            if not isinstance(parent.ctx, ast.Load):
+                return via_call
+            call = self.parents.get(id(parent))
+            if isinstance(parent, ast.Attribute) and isinstance(call, ast.Call) and call.func is parent:
+                if parent.attr in _MUTATORS:
+                    return via_call
+                if not depth:
+                    return False
+                node, via_call = call, True  # ``get``/``values``/... may hold the elements; same level
+            elif isinstance(parent, ast.Attribute) and parent.attr in _MUTATORS:
+                return True  # ``add = SEEN.append``
+            elif isinstance(parent, ast.Subscript) and isinstance(parent.slice, ast.Slice):
+                if not depth:
+                    return False
+                node = parent  # ``ROWS[:]`` is a copy holding the same elements; same level
+            else:
+                level += 1
+                if level > depth:
+                    return False
+                node = parent
+            parent = self.parents.get(id(node))
+        if isinstance(parent, ast.Compare):
+            return False
+        if isinstance(parent, ast.For | ast.comprehension) and parent.iter is node:
+            return level + 1 <= depth
+        if (
+            isinstance(parent, ast.Call)
+            and node in parent.args
+            and isinstance(parent.func, ast.Name)
+            and parent.func.id in self.read_only
+        ):
+            return parent.func.id not in _OPAQUE_CALLS and level + 1 <= depth
+        if level and isinstance(parent, ast.Assign) and parent.value is node:
+            return not self._read_only_local(parent, depth, level)
+        return True
+
+    def _read_only_local(self, assign: ast.Assign, depth: int, level: int) -> bool:
+        """True for ``name = <value>`` binding a local that is bound once, never mutated, and never escapes."""
+        if len(assign.targets) != 1 or not isinstance(target := assign.targets[0], ast.Name):
+            return False
+        nodes = list(ast.walk(self.scope))
+        uses = [n for n in nodes if isinstance(n, ast.Name) and n.id == target.id and n is not target]
+        if any(not isinstance(n.ctx, ast.Load) for n in uses) or any(
+            isinstance(n, ast.arg) and n.arg == target.id for n in nodes
+        ):
+            return False
+        return not any(_mutates(n, {target.id}) for n in nodes) and not any(self.escapes(n, depth, level) for n in uses)
+
+
+def _alias_reason(
+    module: ast.Module, containers: set[str], attrs: set[str], lfx: frozenset[str], depths: dict[str, int]
+) -> str | None:
     """Decline shared containers escaping inside function bodies (class-body uses are copied per instance).
 
     Arguments to functions imported from lfx/langflow (reviewed framework helpers) are allowed.
@@ -224,36 +336,47 @@ def _alias_reason(module: ast.Module, containers: set[str], attrs: set[str], lfx
         if isinstance(call, ast.Call) and isinstance(root := _chain_root(call.func)[0], ast.Name) and root.id in lfx
         for arg in [*call.args, *(k.value for k in call.keywords)]
     }
+    parents = {id(child): parent for parent in ast.walk(module) for child in ast.iter_child_nodes(parent)}
+    read_only = _unshadowed(module, _READ_ONLY_CALLS)
     for func in ast.walk(module):
         if not isinstance(func, ast.FunctionDef | ast.AsyncFunctionDef | ast.Lambda):
             continue
-        for parent in ast.walk(func):
-            for child in ast.iter_child_nodes(parent):
-                named = isinstance(child, ast.Name) and child.id in containers
-                attribute = isinstance(child, ast.Attribute) and child.attr in attrs
-                if (
-                    (named or attribute)
-                    and isinstance(child.ctx, ast.Load)
-                    and id(child) not in framework_args
-                    and _escapes(child, parent)
-                ):
-                    return "shared_container_alias"
+        uses = _Uses(parents, func, read_only)
+        for child in ast.walk(func):
+            if isinstance(child, ast.Name) and child.id in containers:
+                name = child.id
+            elif isinstance(child, ast.Attribute) and child.attr in attrs:
+                name = child.attr
+            else:
+                continue
+            if (
+                isinstance(child.ctx, ast.Load)
+                and id(child) not in framework_args
+                and uses.escapes(child, depths.get(name, 0))
+            ):
+                return "shared_container_alias"
     return None
 
 
-def _analyse(source: str) -> str | None:
+def _analyse(source: str, class_name: str | None) -> str | None:
     module = ast.parse(source)
     classes = [n for n in module.body if isinstance(n, ast.ClassDef)]
     lfx = _lfx_names(module)
+    lineage = _lineage(classes, class_name) if class_name else None
     containers: set[str] = set()
     attrs: set[str] = set()
     components: set[str] = set()
     for statement in module.body:
         if reason := _module_reason(statement, lfx, containers) or (
-            _class_reason(statement, lfx, attrs, components) if isinstance(statement, ast.ClassDef) else None
+            _class_reason(statement, lfx, attrs, components, lineage) if isinstance(statement, ast.ClassDef) else None
         ):
             return reason
-    if reason := _alias_reason(module, containers, attrs, lfx):
+    depths: dict[str, int] = {}
+    for st in [*module.body, *(s for c in classes for s in c.body)]:
+        if isinstance(st, ast.Assign | ast.AnnAssign):
+            for name in filter(None, _names(st)):
+                depths[name] = max(depths.get(name, 0), _depth(st.value))
+    if reason := _alias_reason(module, containers, attrs, lfx, depths):
         return reason
     functions = ast.FunctionDef | ast.AsyncFunctionDef
     shared = {n.name for n in classes} | {n.name for n in module.body if isinstance(n, functions)} | containers
@@ -314,10 +437,14 @@ def _analyse(source: str) -> str | None:
     return None
 
 
-def ineligible_reason(source: str) -> str | None:
-    """Return why ``source`` is declined by the guard, or ``None``. Unparseable source is declined."""
+def ineligible_reason(source: str, class_name: str | None = None) -> str | None:
+    """Return why ``source`` is declined by the guard, or ``None``. Unparseable source is declined.
+
+    ``class_name`` is the class being built; when given, only it and its in-module ancestors get the
+    ``inputs``/``outputs`` exemption.
+    """
     try:
-        return _analyse(source)
+        return _analyse(source, class_name)
     except (SyntaxError, ValueError, RecursionError, MemoryError):
         return "unparseable"
     except Exception:  # noqa: BLE001  # a guard bug must decline the source, never break the build path

@@ -325,6 +325,47 @@ GUARD_CASES = {
         _run("        return 1\n").replace("class R1(Component)", "class R1(Component, metaclass=type)"),
         "decorated_class",
     ),
+    "module_nested_list_index_alias": (
+        _run("        row = TABLE[0]\n        row.append(1)\n        return len(row)\n", extra="TABLE = [[]]\n\n"),
+        "shared_container_alias",
+    ),
+    "module_nested_list_iteration_alias": (
+        _run("        for row in TABLE:\n            row.append(1)\n        return 1\n", extra="TABLE = [[]]\n\n"),
+        "shared_container_alias",
+    ),
+    "module_nested_dict_method_result_mutation": (
+        _run("        TABLE.get('a').append(1)\n        return 1\n", extra="TABLE = {'a': []}\n\n"),
+        "shared_container_alias",
+    ),
+    "class_nested_list_copy_hands_out_rows": (
+        _run("        rows = list(self.rows)\n        return rows\n", cls_attrs="    rows = [[1]]\n"),
+        "shared_container_alias",
+    ),
+    "shadowed_read_only_builtin": (
+        _run(
+            "        return list(SEEN)\n",
+            extra="SEEN = []\n\n\ndef list(items):\n    items.append(1)\n    return len(items)\n\n\n",
+        ),
+        "shared_container_alias",
+    ),
+    "extracted_mutator_method": (
+        _run("        add = SEEN.append\n        add(1)\n        return len(SEEN)\n", extra="SEEN = []\n\n"),
+        "shared_container_alias",
+    ),
+    "class_nested_list_slice_iteration": (
+        _run(
+            "        for row in self.rows[:]:\n            row.append(1)\n        return 1\n",
+            cls_attrs="    rows = [[]]\n",
+        ),
+        "shared_container_alias",
+    ),
+    "class_nested_dict_slice_alias": (
+        _run(
+            "        out = self.rows['a'][:]\n        y = out[0]\n        y.append(1)\n        return 1\n",
+            cls_attrs="    rows = {'a': [[]]}\n",
+        ),
+        "shared_container_alias",
+    ),
 }
 
 
@@ -383,6 +424,25 @@ CROSS_BUILD_STATE_CASES = {
     "module_list_alias": _run(
         "        seen = SEEN\n        seen.append(1)\n        return len(seen)\n", extra="SEEN = []\n\n"
     ),
+    "module_nested_list_index": _run(
+        "        row = TABLE[0]\n        row.append(1)\n        return len(row)\n", extra="TABLE = [[]]\n\n"
+    ),
+    "shadowed_list_builtin": _run(
+        "        return list(SEEN)\n",
+        extra="SEEN = []\n\n\ndef list(items):\n    items.append(1)\n    return len(items)\n\n\n",
+    ),
+    "extracted_mutator_method": _run(
+        "        add = SEEN.append\n        add(1)\n        return len(SEEN)\n", extra="SEEN = []\n\n"
+    ),
+    "nested_list_slice_iteration": _run(
+        "        for row in self.rows[:]:\n            row.append(1)\n        return len(self.rows[0])\n",
+        cls_attrs="    rows = [[]]\n",
+    ),
+    "helper_inherits_lfx_class": _run(
+        "        return Helper().add(1)\n",
+        extra="from lfx.schema.dotdict import dotdict\n\n\nclass Helper(dotdict):\n    inputs = []\n\n"
+        "    def add(self, v):\n        self.inputs.append(v)\n        return len(self.inputs)\n\n\n",
+    ),
 }
 
 
@@ -390,7 +450,7 @@ CROSS_BUILD_STATE_CASES = {
 @pytest.mark.parametrize("name", sorted(CROSS_BUILD_STATE_CASES))
 def test_cross_build_state_cases_match_cache_off(name):
     source = CROSS_BUILD_STATE_CASES[name]
-    assert class_cache._ineligible_reason(source) is not None
+    assert class_cache._ineligible_reason(source, "R1") is not None
     cached = [build(source)().run() for _ in range(2)]
     plain = [eval_custom_component_code(source)().run() for _ in range(2)]
     assert cached == plain == [1, 1]
@@ -434,7 +494,11 @@ POSITIVE_CASES = {
         "        return list(self.replacement)\n", cls_attrs="    replacement = ['models_and_agents.Agent']\n"
     ),
     "module_dict_constant_read_only": _run(
-        "        return TABLE.get('a')\n", extra="TABLE = {'a': 1, 'b': [1, 2], 'c': MESSAGE_SENDER_AI}\n\n"
+        "        return TABLE.get('a')\n", extra="TABLE = {'a': 1, 'b': (1, 2), 'c': MESSAGE_SENDER_AI}\n\n"
+    ),
+    "module_nested_dict_leaf_reads": _run(
+        "        cfg = TABLE['a']\n        return cfg['x'] + TABLE['a']['x'] + len(TABLE['a'])\n",
+        extra="TABLE = {'a': {'x': 1}}\n\n",
     ),
     "class_list_read_only": _run(
         "        return list(self.names) + [n for n in R1.names]\n", cls_attrs="    names = ['a', 'b']\n"
@@ -500,9 +564,18 @@ STABLE_ELIGIBLE = (
     "input_output/ChatOutput",
     "input_output/TextInput",
     "processing/CreateList",
-    "processing/DataOperations",
     "processing/ParserComponent",
 )
+
+
+def test_inputs_exemption_is_limited_to_the_built_class_lineage():
+    source = CROSS_BUILD_STATE_CASES["helper_inherits_lfx_class"]
+    assert class_eligibility.ineligible_reason(source, "R1") == "class_level_mutation"
+    base = _run("        return 1\n").replace(
+        "class R1(Component)", "class Base(Component):\n    pass\n\n\nclass R1(Base)"
+    )
+    with_inputs = base.replace("class R1(Base):\n", "class R1(Base):\n    inputs = [StrInput(name='a')]\n")
+    assert class_eligibility.ineligible_reason(with_inputs, "R1") is None
 
 
 def _shipped_eligible_components() -> list[str]:

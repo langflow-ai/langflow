@@ -143,7 +143,7 @@ def get_or_build_component_class(code: str, class_name: str, build: Callable[[],
     if return_uncached:
         return build()
 
-    reason = _ineligible_reason(code)
+    reason = _ineligible_reason(code, class_name)
     if reason is not None:
         logger.debug(f"Component class cache declined {class_name}: {reason}")
     component_class = build()
