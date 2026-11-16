@@ -122,7 +122,7 @@ def execute_function(code, function_name, *args, **kwargs):
     add_type_ignores()
 
     module = ast.parse(code)
-    exec_globals = _new_exec_globals()
+    exec_globals = globals().copy()
 
     for node in module.body:
         if isinstance(node, ast.Import):
@@ -166,7 +166,7 @@ def create_function(code, function_name):
         ast.TypeIgnore = TypeIgnore
 
     module = ast.parse(code)
-    exec_globals = _new_exec_globals()
+    exec_globals = globals().copy()
 
     for node in module.body:
         if isinstance(node, ast.Import | ast.ImportFrom):
@@ -199,8 +199,12 @@ def create_function(code, function_name):
         exec(code_obj, exec_globals, exec_locals)
     exec_globals[function_name] = exec_locals[function_name]
 
-    # Return a function that calls the target function; it resolves names through ``exec_globals``
+    # Return a function that imports necessary modules and calls the target function
     def wrapped_function(*args, **kwargs):
+        for module_name, module in exec_globals.items():
+            if isinstance(module, type(importlib)):
+                globals()[module_name] = module
+
         return exec_globals[function_name](*args, **kwargs)
 
     return wrapped_function
@@ -620,7 +624,7 @@ def prepare_global_scope(module, *, trusted_method_returns=None, source_class_bi
     Raises:
         ModuleNotFoundError: If a module is not found in the code
     """
-    exec_globals = _new_exec_globals()
+    exec_globals = globals().copy()
     # Imports, import-only try/except guards, and the ``name = constant`` assignments a guard's
     # fallback may read, all run once in source order, so a later binding of a name wins as it
     # would in Python. Everything else is deferred to ``definitions`` as before.
@@ -851,9 +855,15 @@ def build_class_constructor(compiled_class, exec_globals, class_name):
     exec(compiled_class, exec_globals, exec_locals)
     exec_globals[class_name] = exec_locals[class_name]
 
-    # Methods resolve names through ``exec_globals`` (their ``__globals__``), so component imports
-    # must never be written back into this module's globals.
-    return exec_globals[class_name]
+    # Return a function that imports necessary modules and creates an instance of the target class
+    def build_custom_class():
+        for module_name, module in exec_globals.items():
+            if isinstance(module, type(importlib)):
+                globals()[module_name] = module
+
+        return exec_globals[class_name]
+
+    return build_custom_class()
 
 
 # TODO: Remove this function
@@ -944,19 +954,3 @@ def extract_class_name(code: str, class_name: str | None = None) -> str:
     if class_name in component_classes:
         return class_name
     return first_component
-
-
-_BASE_EXEC_GLOBALS: dict = {}
-
-
-def _new_exec_globals() -> dict:
-    """Return a fresh exec namespace seeded from a clean snapshot of this module's globals.
-
-    The snapshot is taken once, at import time, and then only ever copied, so one component's imports can
-    never leak into this module or into another component.
-    """
-    return _BASE_EXEC_GLOBALS.copy()
-
-
-# Must remain the last statement of this module: the snapshot has to include every name defined above.
-_BASE_EXEC_GLOBALS.update({k: v for k, v in globals().items() if k != "_BASE_EXEC_GLOBALS"})
