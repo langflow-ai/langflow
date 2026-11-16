@@ -17,7 +17,7 @@ fn thrown(error: &ApiError) -> JsValue {
     for (name, value) in [
         ("kind", error.kind().to_owned()),
         ("code", error.code().to_owned()),
-        ("details", api::json_text(&error.0)),
+        ("details", api::json_text(&error.details())),
     ] {
         // Setting a property on a fresh Error cannot fail.
         let _ = Reflect::set(

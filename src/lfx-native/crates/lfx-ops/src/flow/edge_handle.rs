@@ -104,7 +104,7 @@ pub fn derive_missing_handle_forms(edge: &mut FlowObj) {
 
 #[cfg(test)]
 mod tests {
-    use crate::json;
+    use crate::flow_value;
 
     use super::*;
     use crate::compare::values_equal;
@@ -162,11 +162,11 @@ mod tests {
     #[test]
     fn handles_parse_strictly() {
         assert_eq!(
-            parse_handle(&json!("{œnameœ:œoutœ}")),
-            Some(json!({"name": "out"}).as_object().unwrap().clone())
+            parse_handle(&flow_value!("{œnameœ:œoutœ}")),
+            Some(flow_value!({"name": "out"}).as_object().unwrap().clone())
         );
-        assert_eq!(parse_handle(&json!("{œaœ:NaN}")), None);
-        assert_eq!(parse_handle(&json!("[1]")), None);
-        assert_eq!(parse_handle(&json!(1)), None);
+        assert_eq!(parse_handle(&flow_value!("{œaœ:NaN}")), None);
+        assert_eq!(parse_handle(&flow_value!("[1]")), None);
+        assert_eq!(parse_handle(&flow_value!(1)), None);
     }
 }

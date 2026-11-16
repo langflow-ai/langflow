@@ -29,7 +29,7 @@ pub(crate) struct ChangedTable<'a> {
 /// An outputs or tool action list a write adds or changes, and where it is.
 #[derive(Debug)]
 pub(crate) struct ChangedList<'a> {
-    /// Where the list is, for example `nodes.<index>.data.node.outputs`.
+    /// Where the list is in the graph.
     pub path: GraphPath,
     pub items: &'a [FlowValue],
     /// The keyed list it is.

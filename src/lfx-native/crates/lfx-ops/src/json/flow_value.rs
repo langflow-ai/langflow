@@ -112,15 +112,23 @@ impl FlowValue {
 
     /// The array, when the value is one.
     #[must_use]
-    pub fn as_array(&self) -> Option<&Vec<FlowValue>> {
+    pub fn as_array(&self) -> Option<&[FlowValue]> {
         match self {
             FlowValue::Array(items) => Some(items),
             _ => None,
         }
     }
 
-    /// The array, when the value is one, to change it.
-    pub fn as_array_mut(&mut self) -> Option<&mut Vec<FlowValue>> {
+    /// The array's items, when the value is an array, to change them in place.
+    pub fn as_array_mut(&mut self) -> Option<&mut [FlowValue]> {
+        match self {
+            FlowValue::Array(items) => Some(items),
+            _ => None,
+        }
+    }
+
+    /// The array, when the value is one, to add or remove items.
+    pub fn as_vec_mut(&mut self) -> Option<&mut Vec<FlowValue>> {
         match self {
             FlowValue::Array(items) => Some(items),
             _ => None,
@@ -292,6 +300,25 @@ impl From<f64> for FlowValue {
     }
 }
 
+impl From<bool> for FlowValue {
+    fn from(flag: bool) -> Self {
+        FlowValue::Bool(flag)
+    }
+}
+
+/// A copy of the value. Copies share their objects and long strings.
+impl From<&FlowValue> for FlowValue {
+    fn from(value: &FlowValue) -> Self {
+        value.clone()
+    }
+}
+
+impl<T: Into<FlowValue>> From<Vec<T>> for FlowValue {
+    fn from(items: Vec<T>) -> Self {
+        FlowValue::Array(items.into_iter().map(Into::into).collect())
+    }
+}
+
 impl From<FlowObj> for FlowValue {
     fn from(map: FlowObj) -> Self {
         FlowValue::Object(map)
@@ -304,32 +331,113 @@ impl<T: Into<FlowValue>> FromIterator<T> for FlowValue {
     }
 }
 
-/// A value the `json!` macro builds.
-impl From<serde_json::Value> for FlowValue {
-    fn from(value: serde_json::Value) -> Self {
-        match value {
-            serde_json::Value::Null => FlowValue::Null,
-            serde_json::Value::Bool(flag) => FlowValue::Bool(flag),
-            serde_json::Value::Number(number) => number
-                .to_string()
-                .parse()
-                .map_or(FlowValue::Null, FlowValue::Number),
-            serde_json::Value::String(text) => FlowValue::String(text.into()),
-            serde_json::Value::Array(items) => items.into_iter().map(FlowValue::from).collect(),
-            serde_json::Value::Object(map) => FlowValue::Object(
-                map.into_iter()
-                    .map(|(key, value)| (key, FlowValue::from(value)))
-                    .collect(),
-            ),
-        }
-    }
+/// A [`FlowValue`] written in JSON syntax, built directly.
+/// Example: `flow_value!({"id": "a", "tags": ["x", 1, null]})`.
+/// A value can also be any expression with `Into<FlowValue>`.
+#[macro_export]
+macro_rules! flow_value {
+    ($($json:tt)+) => {
+        $crate::flow_value_tokens!($($json)+)
+    };
 }
 
-/// A value written in JSON syntax, such as `json!({"a": [1, true]})`.
+/// The token muncher behind [`flow_value!`].
+#[doc(hidden)]
 #[macro_export]
-macro_rules! json {
-    ($($json:tt)+) => {
-        $crate::json::FlowValue::from(::serde_json::json!($($json)+))
+macro_rules! flow_value_tokens {
+    // An array: read items up to each comma.
+    (@array [$($items:expr,)*]) => {
+        ::std::vec![$($items,)*]
+    };
+    (@array [$($items:expr),*]) => {
+        ::std::vec![$($items),*]
+    };
+    (@array [$($items:expr,)*] null $($rest:tt)*) => {
+        $crate::flow_value_tokens!(@array [$($items,)* $crate::flow_value_tokens!(null)] $($rest)*)
+    };
+    (@array [$($items:expr,)*] true $($rest:tt)*) => {
+        $crate::flow_value_tokens!(@array [$($items,)* $crate::flow_value_tokens!(true)] $($rest)*)
+    };
+    (@array [$($items:expr,)*] false $($rest:tt)*) => {
+        $crate::flow_value_tokens!(@array [$($items,)* $crate::flow_value_tokens!(false)] $($rest)*)
+    };
+    (@array [$($items:expr,)*] [$($array:tt)*] $($rest:tt)*) => {
+        $crate::flow_value_tokens!(@array [$($items,)* $crate::flow_value_tokens!([$($array)*])] $($rest)*)
+    };
+    (@array [$($items:expr,)*] {$($object:tt)*} $($rest:tt)*) => {
+        $crate::flow_value_tokens!(@array [$($items,)* $crate::flow_value_tokens!({$($object)*})] $($rest)*)
+    };
+    (@array [$($items:expr,)*] $next:expr, $($rest:tt)*) => {
+        $crate::flow_value_tokens!(@array [$($items,)* $crate::flow_value_tokens!($next),] $($rest)*)
+    };
+    (@array [$($items:expr,)*] $last:expr) => {
+        $crate::flow_value_tokens!(@array [$($items,)* $crate::flow_value_tokens!($last),])
+    };
+    (@array [$($items:expr),*] , $($rest:tt)*) => {
+        $crate::flow_value_tokens!(@array [$($items,)*] $($rest)*)
+    };
+
+    // An object: read a key up to its colon, then a value up to its comma.
+    (@object $object:ident () () ()) => {};
+    (@object $object:ident [$($key:tt)+] ($value:expr) , $($rest:tt)*) => {
+        let _ = $object.insert(::std::string::String::from($($key)+), $value);
+        $crate::flow_value_tokens!(@object $object () ($($rest)*) ($($rest)*));
+    };
+    (@object $object:ident [$($key:tt)+] ($value:expr)) => {
+        let _ = $object.insert(::std::string::String::from($($key)+), $value);
+    };
+    (@object $object:ident ($($key:tt)+) (: null $($rest:tt)*) $copy:tt) => {
+        $crate::flow_value_tokens!(@object $object [$($key)+] ($crate::flow_value_tokens!(null)) $($rest)*);
+    };
+    (@object $object:ident ($($key:tt)+) (: true $($rest:tt)*) $copy:tt) => {
+        $crate::flow_value_tokens!(@object $object [$($key)+] ($crate::flow_value_tokens!(true)) $($rest)*);
+    };
+    (@object $object:ident ($($key:tt)+) (: false $($rest:tt)*) $copy:tt) => {
+        $crate::flow_value_tokens!(@object $object [$($key)+] ($crate::flow_value_tokens!(false)) $($rest)*);
+    };
+    (@object $object:ident ($($key:tt)+) (: [$($array:tt)*] $($rest:tt)*) $copy:tt) => {
+        $crate::flow_value_tokens!(@object $object [$($key)+] ($crate::flow_value_tokens!([$($array)*])) $($rest)*);
+    };
+    (@object $object:ident ($($key:tt)+) (: {$($inner:tt)*} $($rest:tt)*) $copy:tt) => {
+        $crate::flow_value_tokens!(@object $object [$($key)+] ($crate::flow_value_tokens!({$($inner)*})) $($rest)*);
+    };
+    (@object $object:ident ($($key:tt)+) (: $value:expr , $($rest:tt)*) $copy:tt) => {
+        $crate::flow_value_tokens!(@object $object [$($key)+] ($crate::flow_value_tokens!($value)) , $($rest)*);
+    };
+    (@object $object:ident ($($key:tt)+) (: $value:expr) $copy:tt) => {
+        $crate::flow_value_tokens!(@object $object [$($key)+] ($crate::flow_value_tokens!($value)));
+    };
+    (@object $object:ident ($($key:tt)*) ($tt:tt $($rest:tt)*) $copy:tt) => {
+        $crate::flow_value_tokens!(@object $object ($($key)* $tt) ($($rest)*) ($($rest)*));
+    };
+
+    (null) => {
+        $crate::json::FlowValue::Null
+    };
+    (true) => {
+        $crate::json::FlowValue::Bool(true)
+    };
+    (false) => {
+        $crate::json::FlowValue::Bool(false)
+    };
+    ([]) => {
+        $crate::json::FlowValue::Array(::std::vec::Vec::new())
+    };
+    ([ $($tt:tt)+ ]) => {
+        $crate::json::FlowValue::Array($crate::flow_value_tokens!(@array [] $($tt)+))
+    };
+    ({}) => {
+        $crate::json::FlowValue::Object($crate::json::FlowObj::new())
+    };
+    ({ $($tt:tt)+ }) => {
+        $crate::json::FlowValue::Object({
+            let mut object = $crate::json::FlowObj::new();
+            $crate::flow_value_tokens!(@object object () ($($tt)+) ($($tt)+));
+            object
+        })
+    };
+    ($other:expr) => {
+        $crate::json::FlowValue::from($other)
     };
 }
 
@@ -347,9 +455,9 @@ mod tests {
     fn indexing_reads_null_when_missing_and_adds_when_written() {
         let mut value = FlowValue::Null;
         assert!(value["a"]["b"].is_null());
-        value["a"] = json!({"b": [1, 2]});
-        value["a"]["c"] = json!(true);
-        assert_eq!(value["a"]["b"][1], json!(2));
+        value["a"] = flow_value!({"b": [1, 2]});
+        value["a"]["c"] = flow_value!(true);
+        assert_eq!(value["a"]["b"][1], flow_value!(2));
         assert_eq!(value.to_string(), r#"{"a":{"b":[1,2],"c":true}}"#);
     }
 }

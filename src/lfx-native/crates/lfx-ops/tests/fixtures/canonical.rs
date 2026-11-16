@@ -2,7 +2,7 @@
 
 use lfx_ops::compare::{canonical_json, graph_hash, graphs_equal, values_equal};
 use lfx_ops::flow::edge_handle::parse_handle;
-use lfx_ops::json;
+use lfx_ops::flow_value;
 use lfx_ops::json::FlowValue;
 use libtest_mimic::{Failed, Trial};
 
@@ -23,12 +23,14 @@ pub fn trials() -> Vec<Trial> {
                 move || {
                     let value = parse(case["json"].as_str().unwrap_or_default())?;
                     let actual = match canonical_json(&value) {
-                        Ok(text) => json!({"canonical": text}),
-                        Err(error) => json!({"error": error_json(&lfx_ops::Error::from(error))}),
+                        Ok(text) => flow_value!({"canonical": text}),
+                        Err(error) => {
+                            flow_value!({"error": error_json(&lfx_ops::Error::from(error))})
+                        }
                     };
                     let expected = match case.get("error") {
-                        Some(error) => json!({"error": error}),
-                        None => json!({"canonical": case["canonical"]}),
+                        Some(error) => flow_value!({"error": error}),
+                        None => flow_value!({"canonical": &case["canonical"]}),
                     };
                     assert_json_eq("canonical form", &actual, &expected)
                 },
@@ -64,12 +66,12 @@ pub fn trials() -> Vec<Trial> {
     for (name, case) in section_cases(&document, "graphs") {
         trials.push(Trial::test(format!("canonical_cases::graphs::{name}"), move || {
             let (left, right) = (&case["left"], &case["right"]);
-            let actual = json!({
+            let actual = flow_value!({
                 "equal": graphs_equal(left, right).map_err(|error| error.to_string())?,
                 "left_hash": graph_hash(left).map_err(|error| error.to_string())?,
                 "right_hash": graph_hash(right).map_err(|error| error.to_string())?,
             });
-            let expected = json!({"equal": case["equal"], "left_hash": case["left_hash"], "right_hash": case["right_hash"]});
+            let expected = flow_value!({"equal": &case["equal"], "left_hash": &case["left_hash"], "right_hash": &case["right_hash"]});
             assert_json_eq("graph comparison", &actual, &expected)
         }));
     }
@@ -98,14 +100,14 @@ fn limit_trials() -> Vec<Trial> {
                     let actual = match lfx_ops::api::canonical_json(
                         case["json"].as_str().unwrap_or_default().into(),
                     ) {
-                        Ok(text) => json!({"canonical": text}),
+                        Ok(text) => flow_value!({"canonical": text}),
                         Err(error) => {
-                            json!({"error": {"error": error.kind(), "code": error.code()}})
+                            flow_value!({"error": {"error": error.kind(), "code": error.code()}})
                         }
                     };
                     let expected = match case.get("error") {
-                        Some(error) => json!({"error": error}),
-                        None => json!({"canonical": case["canonical"]}),
+                        Some(error) => flow_value!({"error": error}),
+                        None => flow_value!({"canonical": &case["canonical"]}),
                     };
                     assert_json_eq("reading the text", &actual, &expected)
                 },

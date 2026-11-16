@@ -454,9 +454,7 @@ pub(crate) fn make_write(
         }
         Segment::Item(key) => {
             let keyed = FLOW_MODEL.listed_at(parent_path);
-            let items = parent
-                .as_array_mut()
-                .expect("a list item's parent is a list");
+            let items = parent.as_vec_mut().expect("a list item's parent is a list");
             if let Some(index) = lists.and_then(|lists| lists.index(parent_path)) {
                 match write {
                     FieldWrite::Set(value) => {
@@ -487,7 +485,7 @@ pub(crate) fn make_write(
 
 #[cfg(test)]
 mod tests {
-    use crate::json;
+    use crate::flow_value;
 
     use super::*;
 
@@ -530,12 +528,12 @@ mod tests {
         let mut writes = PathWrites::default();
         let a = vec![Segment::Key("t".into()), Segment::Key("a".into())];
         let b = vec![Segment::Key("t".into()), Segment::Key("b".into())];
-        writes.set(&a, FieldWrite::Set(crate::json!(1)));
-        writes.set(&b, FieldWrite::Set(crate::json!(2)));
+        writes.set(&a, FieldWrite::Set(crate::flow_value!(1)));
+        writes.set(&b, FieldWrite::Set(crate::flow_value!(2)));
         writes.drop_write(&a);
-        let mut value = crate::json!({"t":{"a":0}});
+        let mut value = crate::flow_value!({"t":{"a":0}});
         make_writes(&mut value, writes, &mut Vec::new(), None);
-        assert_eq!(value, crate::json!({"t":{"a":0,"b":2}}));
+        assert_eq!(value, crate::flow_value!({"t":{"a":0,"b":2}}));
     }
 
     #[test]
@@ -561,9 +559,12 @@ mod tests {
     #[test]
     fn a_write_at_an_ancestor_path_replaces_the_writes_below_it() {
         let mut writes = PathWrites::default();
-        writes.set(&path(&["t", "a", "value"]), FieldWrite::Set(json!(1)));
-        writes.set(&path(&["t", "b"]), FieldWrite::Set(json!({})));
-        writes.set(&path(&["t", "a"]), FieldWrite::Set(json!({"value": 2})));
+        writes.set(&path(&["t", "a", "value"]), FieldWrite::Set(flow_value!(1)));
+        writes.set(&path(&["t", "b"]), FieldWrite::Set(flow_value!({})));
+        writes.set(
+            &path(&["t", "a"]),
+            FieldWrite::Set(flow_value!({"value": 2})),
+        );
         let t = writes.children.get(&Segment::Key("t".into())).unwrap();
         assert!(matches!(&t.children, Children::Many(map) if map.len() == 2));
         let a = t.children.get(&Segment::Key("a".into())).unwrap();
@@ -572,29 +573,29 @@ mod tests {
             .write_on_path_mut(&path(&["t", "a", "value"]))
             .unwrap();
         assert_eq!(len, 2);
-        assert!(matches!(write, FieldWrite::Set(value) if *value == json!({"value": 2})));
+        assert!(matches!(write, FieldWrite::Set(value) if *value == flow_value!({"value": 2})));
     }
 
     #[test]
     fn a_dropped_write_takes_the_tree_nodes_it_leaves_empty() {
         let mut writes = PathWrites::default();
-        writes.set(&path(&["t", "a", "value"]), FieldWrite::Set(json!(1)));
+        writes.set(&path(&["t", "a", "value"]), FieldWrite::Set(flow_value!(1)));
         writes.drop_write(&path(&["t", "a", "value"]));
         assert!(writes.is_empty());
     }
 
     #[test]
     fn a_read_of_a_value_with_writes_below_it_makes_them_in_a_copy() {
-        let node = json!({"t": {"a": {"value": 1, "info": "x"}, "b": 2}});
+        let node = flow_value!({"t": {"a": {"value": 1, "info": "x"}, "b": 2}});
         let mut writes = PathWrites::default();
-        writes.set(&path(&["t", "a", "value"]), FieldWrite::Set(json!(5)));
-        writes.set(&path(&["t", "c"]), FieldWrite::Set(json!(3)));
+        writes.set(&path(&["t", "a", "value"]), FieldWrite::Set(flow_value!(5)));
+        writes.set(&path(&["t", "c"]), FieldWrite::Set(flow_value!(3)));
         writes.set(&path(&["t", "b"]), FieldWrite::Remove);
         let at = path(&["t"]);
         let read = read(&node, Some(&writes), &at, scan(&at)).unwrap().unwrap();
         assert!(matches!(read, Cow::Owned(_)));
-        assert_eq!(*read, json!({"a": {"value": 5, "info": "x"}, "c": 3}));
-        assert_eq!(node["t"]["a"]["value"], json!(1));
+        assert_eq!(*read, flow_value!({"a": {"value": 5, "info": "x"}, "c": 3}));
+        assert_eq!(node["t"]["a"]["value"], flow_value!(1));
         let removed = path(&["t", "b", "x"]);
         let reached = read_through(&node, Some(&writes), &removed, scan(&removed)).unwrap();
         assert_eq!(reached.found.err(), Some(1));

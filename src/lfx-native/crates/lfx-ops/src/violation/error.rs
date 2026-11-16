@@ -23,19 +23,6 @@ pub enum ErrorKind {
     RestoreFixNotAllowed,
 }
 
-impl ErrorKind {
-    /// The name of the matching Python exception class.
-    #[must_use]
-    pub fn class_name(self) -> &'static str {
-        match self {
-            Self::InvalidOperation => "FlowOperationValidationError",
-            Self::InvalidGraph => "FlowDataValidationError",
-            Self::ReplayMismatch => "FlowOperationReplayError",
-            Self::RestoreFixNotAllowed => "RestoreFixNotAllowedError",
-        }
-    }
-}
-
 /// The stable code an error carries.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ErrorCode {
@@ -73,7 +60,8 @@ impl fmt::Display for ErrorCode {
 
 /// An engine error: its kind, its code, a message without graph values, and
 /// for an edge rule the edge that broke it.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("{code}: {message}")]
 pub struct Error {
     /// Who can fix it.
     pub kind: ErrorKind,
@@ -178,11 +166,3 @@ impl From<NonFinite> for Error {
         Self::non_finite()
     }
 }
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}: {}", self.code, self.message)
-    }
-}
-
-impl std::error::Error for Error {}

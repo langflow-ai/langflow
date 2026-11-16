@@ -10,15 +10,23 @@ repository.workspace = true
 
 [dependencies]
 serde = "1"
-serde_json = { version = "1", features = ["preserve_order", "arbitrary_precision"] }
+# Parses JSON and prints doubles. arbitrary_precision keeps a number's exact text.
+serde_json = { version = "1", features = ["arbitrary_precision"] }
 sha2 = "0.10"
 indexmap = "2"
 ahash = { version = "0.8", default-features = false, features = ["std"] }
 compact_str = "0.9"
 getrandom = "0.3"
+thiserror = "2"
+
+[features]
+# The functions the Python and browser bindings call, and the JSON they return.
+api = []
 
 [dev-dependencies]
 libtest-mimic = "0.8"
+# The tests call the api module too.
+lfx-ops = { path = ".", features = ["api"] }
 
 [[test]]
 name = "fixtures"

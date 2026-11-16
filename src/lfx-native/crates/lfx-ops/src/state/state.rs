@@ -534,23 +534,23 @@ mod tests {
 
     #[test]
     fn a_snapshot_keeps_the_graph_as_it_was() {
-        use crate::json;
+        use crate::flow_value;
         use crate::{ApplyOptions, Operation};
-        let node = |id: &str| json!({"id": id, "data": {"node": {"template": {"t": {"value": "x", "type": "str"}}}}});
-        let flow = json!({"nodes": [node("a"), node("b")], "edges": [{"id": "e", "source": "a", "target": "b"}], "name": "f"});
+        let node = |id: &str| flow_value!({"id": id, "data": {"node": {"template": {"t": {"value": "x", "type": "str"}}}}});
+        let flow = flow_value!({"nodes": [node("a"), node("b")], "edges": [{"id": "e", "source": "a", "target": "b"}], "name": "f"});
         let mut state = GraphState::new(flow).unwrap();
         let (text, hash) = (state.to_json(), state.graph_hash().unwrap());
         let snapshot = state.snapshot();
-        let write = json!([{"type": "update_nodes", "updates": [
+        let write = flow_value!([{"type": "update_nodes", "updates": [
             {"id": "a", "op": "set_field", "path": ["data", "node", "template", "t", "value"], "value": "y"}
         ]}]);
-        let delete = json!([{"type": "delete_nodes", "ids": ["b"]}]);
+        let delete = flow_value!([{"type": "delete_nodes", "ids": ["b"]}]);
         for batch in [write, delete] {
             let operations = Operation::list_from_value(batch).unwrap();
             state.apply(operations, ApplyOptions::default()).unwrap();
         }
         // A staged batch is not in a snapshot either.
-        let staged = json!([{"type": "update_nodes", "updates": [
+        let staged = flow_value!([{"type": "update_nodes", "updates": [
             {"id": "a", "op": "set_field", "path": ["data", "node", "template", "t", "value"], "value": "z"}
         ]}]);
         state
@@ -571,9 +571,9 @@ mod tests {
 
     #[test]
     fn loading_refuses_an_edge_without_its_node() {
-        let node = crate::json!({"id": "a", "data": {"node": {"template": {}}}});
-        let edge = crate::json!({"id": "e", "source": "a", "target": "gone"});
-        let flow = crate::json!({"nodes": [node], "edges": [edge]});
+        let node = crate::flow_value!({"id": "a", "data": {"node": {"template": {}}}});
+        let edge = crate::flow_value!({"id": "e", "source": "a", "target": "gone"});
+        let flow = crate::flow_value!({"nodes": [node], "edges": [edge]});
         let error = GraphState::new(flow).unwrap_err();
         assert_eq!(error.code.as_str(), "FLOW_GRAPH_INVALID", "{error}");
         let violation = &error.violations[0];
@@ -585,9 +585,10 @@ mod tests {
 
     #[test]
     fn cached_snapshots_follow_kept_batches_and_ignore_refused_or_dropped_batches() {
-        let mut state =
-            GraphState::new(crate::json!({"nodes":[snapshot_node("a").into_value()],"edges":[]}))
-                .unwrap();
+        let mut state = GraphState::new(
+            crate::flow_value!({"nodes":[snapshot_node("a").into_value()],"edges":[]}),
+        )
+        .unwrap();
         let before = state.snapshot();
         assert!(Arc::ptr_eq(&before.data, &state.snapshot().data));
         let batch = |id: &str| set_t(id, "new");
@@ -613,9 +614,10 @@ mod tests {
 
     #[test]
     fn concurrent_snapshot_last_owners_transfer_one_old_payload() {
-        let mut state =
-            GraphState::new(crate::json!({"nodes":[snapshot_node("a").into_value()],"edges":[]}))
-                .unwrap();
+        let mut state = GraphState::new(
+            crate::flow_value!({"nodes":[snapshot_node("a").into_value()],"edges":[]}),
+        )
+        .unwrap();
         let first = state.snapshot();
         let second = state.snapshot();
         let old_map = first
@@ -652,7 +654,7 @@ mod tests {
 
     #[test]
     fn nonblocking_snapshot_reports_capture_contention() {
-        let state = GraphState::new(crate::json!({"nodes":[],"edges":[]})).unwrap();
+        let state = GraphState::new(crate::flow_value!({"nodes":[],"edges":[]})).unwrap();
         let guard = state.snapshot_cache.lock().unwrap();
         assert!(state.try_snapshot().is_none());
         drop(guard);
@@ -661,15 +663,14 @@ mod tests {
 
     /// A batch that sets the field `t` of node `id` to `value`.
     fn set_t(id: &str, value: &str) -> Vec<crate::Operation> {
-        crate::Operation::list_from_value(crate::json!([{"type": "update_nodes", "updates": [
+        crate::Operation::list_from_value(crate::flow_value!([{"type": "update_nodes", "updates": [
             {"id": id, "op": "set_field", "path": ["data", "node", "template", "t", "value"], "value": value}
         ]}]))
         .unwrap()
     }
 
     fn snapshot_node(id: &str) -> Node {
-        let value =
-            crate::json!({"id":id,"data":{"node":{"template":{"t":{"type":"str","value":"x"}}}}});
+        let value = crate::flow_value!({"id":id,"data":{"node":{"template":{"t":{"type":"str","value":"x"}}}}});
         Node::try_from(value.as_object().unwrap().clone()).unwrap()
     }
 
@@ -696,7 +697,7 @@ mod tests {
         let nodes = (0..128)
             .map(|i| snapshot_node(&format!("n{i}")).into_value())
             .collect::<Vec<_>>();
-        let mut state = GraphState::new(crate::json!({"nodes":nodes,"edges":[]})).unwrap();
+        let mut state = GraphState::new(crate::flow_value!({"nodes":nodes,"edges":[]})).unwrap();
         let before = state.snapshot();
         let text = before.to_json();
         for _ in 0..64 {
@@ -722,7 +723,7 @@ mod tests {
         let nodes = (0..128)
             .map(|i| snapshot_node(&format!("n{i}")).into_value())
             .collect::<Vec<_>>();
-        let mut state = GraphState::new(crate::json!({"nodes":nodes,"edges":[]})).unwrap();
+        let mut state = GraphState::new(crate::flow_value!({"nodes":nodes,"edges":[]})).unwrap();
         drop(state.snapshot());
         let before = std::ptr::from_ref(
             state
@@ -756,7 +757,7 @@ mod tests {
 
     #[test]
     fn snapshot_lists_release_deleted_and_replaced_payloads_immediately() {
-        let mut state = GraphState::new(crate::json!({"nodes":[snapshot_node("a").into_value(),snapshot_node("b").into_value()],"edges":[]})).unwrap();
+        let mut state = GraphState::new(crate::flow_value!({"nodes":[snapshot_node("a").into_value(),snapshot_node("b").into_value()],"edges":[]})).unwrap();
         // A cached snapshot must not keep a deleted node either.
         drop(state.snapshot());
         let deleted = state.graph.nodes.stored.get("a").unwrap().as_map().clone();
@@ -775,7 +776,7 @@ mod tests {
 
     #[test]
     fn removed_items_no_caller_takes_wait_at_most_one_batch() {
-        let mut state = GraphState::new(crate::json!({"nodes":[snapshot_node("a").into_value(),snapshot_node("b").into_value()],"edges":[]})).unwrap();
+        let mut state = GraphState::new(crate::flow_value!({"nodes":[snapshot_node("a").into_value(),snapshot_node("b").into_value()],"edges":[]})).unwrap();
         state.remove_node("a");
         state.commit();
         assert_eq!(state.released.0.len(), 1);

@@ -112,16 +112,9 @@ macro_rules! number_from {
 number_from!(i32 => i64, u32 => u64, usize => u64);
 
 /// The text of a JSON number is not a number.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("not a JSON number")]
 pub struct NotANumber;
-
-impl fmt::Display for NotANumber {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("not a JSON number")
-    }
-}
-
-impl std::error::Error for NotANumber {}
 
 /// A number from its JSON text: an integer that 64 bits hold, a finite double
 /// from text with a fraction or an exponent, or else the text.
@@ -200,16 +193,9 @@ impl fmt::Display for Number {
 
 /// A number JavaScript cannot hold: NaN, Infinity, or an integer too large
 /// for a double.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
+#[error("NaN, Infinity and integers too large for a double are not valid JSON numbers")]
 pub struct NonFinite;
-
-impl fmt::Display for NonFinite {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("NaN, Infinity and integers too large for a double are not valid JSON numbers")
-    }
-}
-
-impl std::error::Error for NonFinite {}
 
 /// A number as the double JavaScript reads it. Too large a number is infinite.
 #[must_use]

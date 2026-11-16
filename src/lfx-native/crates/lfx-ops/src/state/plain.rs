@@ -165,7 +165,7 @@ impl GraphPlain {
 
 #[cfg(test)]
 mod tests {
-    use crate::json;
+    use crate::flow_value;
 
     use super::*;
     use crate::op::diff::derive_flow_operations;
@@ -173,13 +173,13 @@ mod tests {
 
     /// A graph of one node, with `value` in its one field.
     fn graph(value: &FlowValue) -> FlowValue {
-        let template = json!({"t": {"value": value, "type": "str"}});
-        json!({"nodes": [{"id": "a", "data": {"node": {"template": template}}}], "edges": []})
+        let template = flow_value!({"t": {"value": value, "type": "str"}});
+        flow_value!({"nodes": [{"id": "a", "data": {"node": {"template": template}}}], "edges": []})
     }
 
     #[test]
     fn calls_answer_as_the_functions_on_the_graph_do() {
-        let (base, target) = (graph(&json!("x")), graph(&json!("y")));
+        let (base, target) = (graph(&flow_value!("x")), graph(&flow_value!("y")));
         let (plain_base, plain_target) = (
             GraphPlain::new(base.clone()),
             GraphPlain::new(target.clone()),
@@ -198,7 +198,7 @@ mod tests {
 
     #[test]
     fn a_check_that_passed_is_not_run_again() {
-        let plain = GraphPlain::new(graph(&json!(1)));
+        let plain = GraphPlain::new(graph(&flow_value!(1)));
         assert!(!plain.passed(Numbers::Skip));
         assert_eq!(plain.violations(None, Numbers::Skip).unwrap(), []);
         assert!(plain.passed(Numbers::Skip) && !plain.passed(Numbers::Check));
@@ -208,7 +208,7 @@ mod tests {
 
     #[test]
     fn a_graph_that_breaks_a_rule_stays_unchecked() {
-        let broken = GraphPlain::new(json!({"nodes": [{"data": {}}], "edges": []}));
+        let broken = GraphPlain::new(flow_value!({"nodes": [{"data": {}}], "edges": []}));
         assert_ne!(broken.violations(None, Numbers::Skip).unwrap(), []);
         assert!(!broken.passed(Numbers::Skip));
         let (repaired, fixes) = broken.repair(None).unwrap();
@@ -218,7 +218,7 @@ mod tests {
 
     #[test]
     fn a_target_with_a_number_that_is_not_finite_is_refused() {
-        let base = GraphPlain::new(graph(&json!(1)));
+        let base = GraphPlain::new(graph(&flow_value!(1)));
         let target = GraphPlain::new(graph(&serde_json::from_str("1e400").unwrap()));
         // The structure passes, but a target is checked fully.
         assert_eq!(target.violations(None, Numbers::Skip).unwrap(), []);
@@ -231,7 +231,7 @@ mod tests {
     }
 
     fn legacy_table() -> FlowValue {
-        json!({"nodes":[{"id":"n","data":{"node":{"template":{"t":{
+        flow_value!({"nodes":[{"id":"n","data":{"node":{"template":{"t":{
             "type":"table", "_input_type":"TableInput", "value":[{"v":1}]
         }}}}}],"edges":[]})
     }
@@ -239,16 +239,16 @@ mod tests {
     fn reserved_columns() -> FlowValue {
         let mut value = legacy_table();
         value["nodes"][0]["data"]["node"]["template"]["t"]["value"] =
-            json!([{"__id__":"row", "__pos__":1, "v":1}]);
+            flow_value!([{"__id__":"row", "__pos__":1, "v":1}]);
         value["nodes"][0]["data"]["node"]["template"]["t"]["table_schema"] =
-            json!([{"name":"__pos__"}, {"name":"__id__"}]);
+            flow_value!([{"name":"__pos__"}, {"name":"__id__"}]);
         value
     }
 
     #[test]
     fn full_validation_against_the_same_base_makes_repair_a_shared_copy() {
-        let base = GraphPlain::new(graph(&json!(0)));
-        let target = GraphPlain::new(graph(&json!(1)));
+        let base = GraphPlain::new(graph(&flow_value!(0)));
+        let target = GraphPlain::new(graph(&flow_value!(1)));
         assert_eq!(target.violations(Some(&base), Numbers::Check).unwrap(), []);
         assert!(target.passed_against(Some(&base)));
         let (repaired, fixes) = target.repair(Some(&base)).unwrap();
@@ -264,7 +264,7 @@ mod tests {
     fn a_different_base_still_checks_and_repairs_new_table_rows() {
         let value = legacy_table();
         let unchanged = GraphPlain::new(value.clone());
-        let added = GraphPlain::new(json!({"nodes":[], "edges":[]}));
+        let added = GraphPlain::new(flow_value!({"nodes":[], "edges":[]}));
         let target = GraphPlain::new(value);
         assert_eq!(
             target.violations(Some(&unchanged), Numbers::Check).unwrap(),
@@ -289,7 +289,7 @@ mod tests {
 
     #[test]
     fn a_structural_check_does_not_authorize_full_repair() {
-        let base = GraphPlain::new(graph(&json!(1)));
+        let base = GraphPlain::new(graph(&flow_value!(1)));
         let value = graph(&serde_json::from_str("1e400").unwrap());
         let target = GraphPlain::new(value);
         assert_eq!(target.violations(Some(&base), Numbers::Skip).unwrap(), []);
@@ -305,7 +305,7 @@ mod tests {
     #[test]
     fn a_standalone_check_does_not_authorize_a_base_specific_repair() {
         let target = GraphPlain::new(legacy_table());
-        let added = GraphPlain::new(json!({"nodes":[], "edges":[]}));
+        let added = GraphPlain::new(flow_value!({"nodes":[], "edges":[]}));
         assert_eq!(target.violations(None, Numbers::Check).unwrap(), []);
         assert!(!target.passed_against(Some(&added)));
         assert_eq!(target.repair(Some(&added)).unwrap().1.len(), 2);
@@ -313,8 +313,8 @@ mod tests {
 
     #[test]
     fn an_invalid_graph_never_gets_a_base_success_token() {
-        let base = GraphPlain::new(json!({"nodes":[], "edges":[]}));
-        let target = GraphPlain::new(json!({"nodes":[{"data":{}}], "edges":[]}));
+        let base = GraphPlain::new(flow_value!({"nodes":[], "edges":[]}));
+        let target = GraphPlain::new(flow_value!({"nodes":[{"data":{}}], "edges":[]}));
         assert_ne!(target.violations(Some(&base), Numbers::Check).unwrap(), []);
         assert!(!target.passed_against(Some(&base)));
         assert_ne!(target.repair(Some(&base)).unwrap().1, []);
@@ -325,7 +325,7 @@ mod tests {
     fn cached_validation_keeps_manual_error_order_for_another_base() {
         let value = reserved_columns();
         let same = GraphPlain::new(value.clone());
-        let added = GraphPlain::new(json!({"nodes":[], "edges":[]}));
+        let added = GraphPlain::new(flow_value!({"nodes":[], "edges":[]}));
         let target = GraphPlain::new(value);
         assert_eq!(target.violations(Some(&same), Numbers::Check).unwrap(), []);
         let expected = repair_flow_data(target.as_value(), Some(added.as_value())).unwrap_err();
@@ -345,7 +345,7 @@ mod tests {
         assert!(weak_graph.upgrade().is_none());
         // The cached token keeps its allocation alive after its graph is gone.
         let old_token = weak_token.upgrade().unwrap();
-        let new_base = GraphPlain::new(json!({"nodes":[], "edges":[]}));
+        let new_base = GraphPlain::new(flow_value!({"nodes":[], "edges":[]}));
         assert!(!Arc::ptr_eq(&old_token, &new_base.identity));
         drop(old_token);
         assert!(!target.passed_against(Some(&new_base)));
@@ -366,9 +366,9 @@ mod tests {
         let target = GraphPlain::new(reserved_columns());
         let a = GraphPlain::new(reserved_columns());
         let mut changed_view = reserved_columns();
-        changed_view["zoom"] = json!(2);
+        changed_view["zoom"] = flow_value!(2);
         let c = GraphPlain::new(changed_view);
-        let invalid = GraphPlain::new(json!({"nodes":[], "edges":[]}));
+        let invalid = GraphPlain::new(flow_value!({"nodes":[], "edges":[]}));
         let barrier = std::sync::Barrier::new(3);
         std::thread::scope(|scope| {
             for base in [&a, &c] {
@@ -418,7 +418,7 @@ mod tests {
             repaired.as_value().get("nodes").unwrap(),
             again.as_value().get("nodes").unwrap()
         ));
-        let other = GraphPlain::new(json!({"nodes":[], "edges":[]}));
+        let other = GraphPlain::new(flow_value!({"nodes":[], "edges":[]}));
         assert!(!repaired.passed_against(Some(&other)));
         assert_eq!(
             repaired.repair(Some(&other)).unwrap_err().violations.len(),
@@ -431,7 +431,7 @@ mod tests {
     #[test]
     fn a_changed_repair_keeps_the_proof_for_its_repaired_value() {
         let target = GraphPlain::new(legacy_table());
-        let base = GraphPlain::new(json!({"nodes":[], "edges":[]}));
+        let base = GraphPlain::new(flow_value!({"nodes":[], "edges":[]}));
         assert_ne!(target.violations(Some(&base), Numbers::Check).unwrap(), []);
         let (repaired, fixes) = target.repair(Some(&base)).unwrap();
         assert_eq!(fixes.len(), 2);
@@ -448,7 +448,7 @@ mod tests {
             repaired.as_value().get("nodes").unwrap(),
             again.as_value().get("nodes").unwrap()
         ));
-        let other = GraphPlain::new(json!({"nodes":[], "edges":[]}));
+        let other = GraphPlain::new(flow_value!({"nodes":[], "edges":[]}));
         assert!(!repaired.passed_against(Some(&other)));
     }
 
@@ -473,7 +473,7 @@ mod tests {
         assert_eq!(target.repair(Some(&second_alias)).unwrap().1, []);
         drop(alias);
         drop(second_alias);
-        let different = GraphPlain::new(json!({"nodes":[], "edges":[]}));
+        let different = GraphPlain::new(flow_value!({"nodes":[], "edges":[]}));
         assert!(!target.passed_against(Some(&different)));
         assert_eq!(target.repair(Some(&different)).unwrap().1.len(), 2);
     }
@@ -487,11 +487,11 @@ mod tests {
         assert_eq!(target.violations(Some(&base), Numbers::Check).unwrap(), []);
         let (alias, _) = base.repair(None).unwrap();
         let mut value = alias.into_value();
-        value["nodes"][0]["data"]["node"]["template"]["t"]["value"][0]["v"] = json!(2);
+        value["nodes"][0]["data"]["node"]["template"]["t"]["value"][0]["v"] = flow_value!(2);
         // A live original is protected by copy-on-write.
         assert_eq!(
             base.as_value()["nodes"][0]["data"]["node"]["template"]["t"]["value"][0]["v"],
-            json!(1)
+            flow_value!(1)
         );
         let changed = GraphPlain::new(value);
         assert!(!Arc::ptr_eq(&base.identity, &changed.identity));
@@ -502,7 +502,7 @@ mod tests {
         assert!(weak_graph.upgrade().is_none());
         // A changed value gets a new identity, even from the last owner.
         let mut value = last_alias.into_value();
-        value["nodes"][0]["data"]["node"]["template"]["t"]["value"][0]["v"] = json!(3);
+        value["nodes"][0]["data"]["node"]["template"]["t"]["value"][0]["v"] = flow_value!(3);
         let replacement = GraphPlain::new(value);
         assert!(!target.passed_against(Some(&replacement)));
         assert_eq!(target.repair(Some(&replacement)).unwrap().1.len(), 2);

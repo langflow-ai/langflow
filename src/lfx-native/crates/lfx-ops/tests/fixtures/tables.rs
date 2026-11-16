@@ -2,7 +2,7 @@
 
 use lfx_ops::flow::list::{Renumber, fill_missing_positions};
 use lfx_ops::flow::model::FLOW_MODEL;
-use lfx_ops::json;
+use lfx_ops::flow_value;
 use lfx_ops::json::FlowValue;
 use lfx_ops::node_input::table_input::{
     assign_changed_table_row_ids, assign_row_ids, assign_table_row_ids, ordered_rows,
@@ -15,7 +15,7 @@ use crate::support::{assert_json_matches, load, section_cases};
 type Check = fn(&FlowValue) -> Result<(), Failed>;
 
 fn rows(case: &FlowValue, key: &str) -> Vec<FlowValue> {
-    case[key].as_array().cloned().unwrap_or_default()
+    case[key].as_array().map(<[_]>::to_vec).unwrap_or_default()
 }
 
 fn strip(case: &FlowValue) -> Result<(), Failed> {
@@ -41,8 +41,8 @@ fn fill_positions(case: &FlowValue) -> Result<(), Failed> {
     let filled = fill_missing_positions(&FLOW_MODEL.table_input, &mut rows, Renumber::Never);
     assert_json_matches(
         "filled positions",
-        &json!({"rows": rows, "filled": filled}),
-        &json!({"rows": case["expected"], "filled": case["filled"]}),
+        &flow_value!({"rows": rows, "filled": filled}),
+        &flow_value!({"rows": &case["expected"], "filled": &case["filled"]}),
     )
 }
 

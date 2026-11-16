@@ -17,7 +17,7 @@ test = false
 doctest = false
 
 [dependencies]
-lfx-ops = { path = "../lfx-ops" }
+lfx-ops = { path = "../lfx-ops", features = ["api"] }
 pyo3 = { version = "0.30", features = ["abi3-py310"] }
 
 [lints]

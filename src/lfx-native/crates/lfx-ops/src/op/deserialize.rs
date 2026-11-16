@@ -202,6 +202,7 @@ impl FieldUpdate {
 /// operation with its `type` first, and no repeated key. For any other text,
 /// or text that breaks a rule, it returns `None`, and the caller reads the
 /// text the general way, which gives the same operations or the exact error.
+#[cfg(feature = "api")]
 pub(crate) fn operations_from_text(text: &str) -> Option<Vec<Operation>> {
     let mut builder = crate::json::Builder::<true>::default();
     let mut deserializer = serde_json::Deserializer::from_str(text);
@@ -212,6 +213,7 @@ pub(crate) fn operations_from_text(text: &str) -> Option<Vec<Operation>> {
     Some(operations)
 }
 
+#[cfg(feature = "api")]
 mod text {
     use std::fmt;
 
@@ -553,7 +555,8 @@ mod text {
 
 impl KeyedList {
     /// What `change` at `inner`, a path inside an item, does to the item's key.
-    /// Example: a set of `"r9"` at `["__id__"]` gives the row the key `r9`.
+    /// Example: in a list keyed by `name`, a set of `"b"` at `["name"]` gives
+    /// the item the key `b`.
     pub(crate) fn key_after_write<'c>(
         &self,
         inner: &[Segment],
@@ -594,7 +597,7 @@ pub(crate) enum KeyWrite<'c> {
 
 #[cfg(test)]
 mod tests {
-    use crate::json;
+    use crate::flow_value;
 
     use super::*;
 
@@ -641,14 +644,14 @@ mod tests {
     #[test]
     fn operations_round_trip() {
         for operation in [
-            json!({"type": "add_nodes", "nodes": [{"id": "a", "data": {"node": {"template": {}}}}]}),
-            json!({"type": "update_nodes", "updates": [
+            flow_value!({"type": "add_nodes", "nodes": [{"id": "a", "data": {"node": {"template": {}}}}]}),
+            flow_value!({"type": "update_nodes", "updates": [
                 {"id": "a", "path": ["data", "node", "outputs", {"key": "out"}], "op": "set_field", "value": {"name": "out", "size": 1.0}},
                 {"id": "a", "path": ["data", "node", "template", "rows", "value", {"key": "r"}], "op": "delete_field"},
             ]}),
-            json!({"type": "delete_nodes", "ids": ["a"]}),
-            json!({"type": "add_edges", "edges": [{"id": "e", "source": "a", "target": "b"}]}),
-            json!({"type": "delete_edges", "ids": ["e"]}),
+            flow_value!({"type": "delete_nodes", "ids": ["a"]}),
+            flow_value!({"type": "add_edges", "edges": [{"id": "e", "source": "a", "target": "b"}]}),
+            flow_value!({"type": "delete_edges", "ids": ["e"]}),
         ] {
             let parsed = Operation::try_from(operation.clone()).unwrap();
             assert_eq!(parsed.kind().as_str(), operation["type"]);
@@ -660,93 +663,99 @@ mod tests {
     #[test]
     fn malformed_operations_are_refused() {
         for operation in [
-            json!([]),
-            json!({"type": "rename_nodes"}),
-            json!({"type": "update_edges", "updates": []}),
-            json!({"type": "add_nodes"}),
-            json!({"type": "add_nodes", "nodes": [1]}),
-            json!({"type": "add_nodes", "nodes": [], "extra": 1}),
-            json!({"type": "delete_nodes", "ids": [1]}),
-            json!({"type": "update_metadata", "fields": {"name": "x"}}),
-            json!({"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["x"]}]}),
-            json!({"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["x"], "value": 1}]}),
-            json!({"type": "update_nodes", "updates": [{"id": "", "op": "delete_field", "path": ["x"]}]}),
-            json!({"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": []}]}),
-            json!({"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["x", 0]}]}),
-            json!({"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": [{"key": ""}]}]}),
-            json!({"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": [{"id": "r"}]}]}),
-            json!({"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": [{"id": "r", "key": "k"}]}]}),
-            json!({"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["x"], "expect": {"absent": true}}]}),
-            json!({"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["x"], "value": 1, "from_type": "number"}]}),
-            json!({"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["x"], "value": 1, "template_field": {}}]}),
-            json!({"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["x"], "value": 1, "secret": "literal"}]}), // pragma: allowlist secret
-            json!({"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["x"], "value": 1, "secrets": [{"path": [], "kind": "literal"}]}]}),
-            json!({"type": "update_nodes", "updates": [{"id": "a", "op": "move_field", "path": ["x"]}]}),
+            flow_value!([]),
+            flow_value!({"type": "rename_nodes"}),
+            flow_value!({"type": "update_edges", "updates": []}),
+            flow_value!({"type": "add_nodes"}),
+            flow_value!({"type": "add_nodes", "nodes": [1]}),
+            flow_value!({"type": "add_nodes", "nodes": [], "extra": 1}),
+            flow_value!({"type": "delete_nodes", "ids": [1]}),
+            flow_value!({"type": "update_metadata", "fields": {"name": "x"}}),
+            flow_value!({"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["x"]}]}),
+            flow_value!({"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["x"], "value": 1}]}),
+            flow_value!({"type": "update_nodes", "updates": [{"id": "", "op": "delete_field", "path": ["x"]}]}),
+            flow_value!({"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": []}]}),
+            flow_value!({"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["x", 0]}]}),
+            flow_value!({"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": [{"key": ""}]}]}),
+            flow_value!({"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": [{"id": "r"}]}]}),
+            flow_value!({"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": [{"id": "r", "key": "k"}]}]}),
+            flow_value!({"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["x"], "expect": {"absent": true}}]}),
+            flow_value!({"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["x"], "value": 1, "from_type": "number"}]}),
+            flow_value!({"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["x"], "value": 1, "template_field": {}}]}),
+            flow_value!({"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["x"], "value": 1, "secret": "literal"}]}), // pragma: allowlist secret
+            flow_value!({"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["x"], "value": 1, "secrets": [{"path": [], "kind": "literal"}]}]}),
+            flow_value!({"type": "update_nodes", "updates": [{"id": "a", "op": "move_field", "path": ["x"]}]}),
         ] {
             let error = Operation::try_from(operation.clone()).unwrap_err();
             assert_eq!(error.code.as_str(), "FLOW_OPERATION_INVALID", "{operation}");
         }
-        assert!(Operation::list_from_value(json!({})).is_err());
+        assert!(Operation::list_from_value(flow_value!({})).is_err());
     }
 
     #[test]
     fn errors_say_where_the_operation_is_malformed() {
         for (operations, message) in [
-            (json!({}), "operations: must be a list"),
-            (json!([{"ids": ["a"]}]), "operations[0]: type is missing"),
-            (json!([{"type": 5}]), "operations[0].type: must be a string"),
+            (flow_value!({}), "operations: must be a list"),
             (
-                json!([{"type": "update_edges"}]),
+                flow_value!([{"ids": ["a"]}]),
+                "operations[0]: type is missing",
+            ),
+            (
+                flow_value!([{"type": 5}]),
+                "operations[0].type: must be a string",
+            ),
+            (
+                flow_value!([{"type": "update_edges"}]),
                 "operations[0].type: unsupported operation type 'update_edges'",
             ),
             (
-                json!([{"type": "delete_nodes", "ids": ["a"], "extra": 1}]),
+                flow_value!([{"type": "delete_nodes", "ids": ["a"], "extra": 1}]),
                 "operations[0]: unexpected key 'extra'",
             ),
             (
-                json!([{"type": "delete_nodes", "ids": ["a"]}, {"type": "delete_nodes", "ids": ["b", 5]}]),
+                flow_value!([{"type": "delete_nodes", "ids": ["a"]}, {"type": "delete_nodes", "ids": ["b", 5]}]),
                 "operations[1].ids[1]: must be a string",
             ),
             (
-                json!([{"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["x", 0]}]}]),
+                flow_value!([{"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["x", 0]}]}]),
                 "operations[0].updates[0].path[1]: integer list indexes are not allowed; name a list item with {\"key\": ...}",
             ),
             (
-                json!([{"type": "add_nodes", "nodes": [{"data": {}}]}]),
+                flow_value!([{"type": "add_nodes", "nodes": [{"data": {}}]}]),
                 "operations[0].nodes[0].id: must be a non-empty string",
             ),
             (
-                json!([{"type": "add_nodes", "nodes": [{"id": "a", "data": {}}]}]),
+                flow_value!([{"type": "add_nodes", "nodes": [{"id": "a", "data": {}}]}]),
                 "operations[0].nodes[0].data.node: must be an object (node 'a')",
             ),
             (
-                json!([{"type": "add_nodes", "nodes": [
+                flow_value!([{"type": "add_nodes", "nodes": [
                     {"id": "a", "data": {"node": {"template": {}}}},
                     {"id": "a", "data": {"node": {"template": {}}}},
                 ]}]),
                 "operations[0].nodes[1].id: repeats the id 'a'",
             ),
             (
-                json!([{"type": "add_edges", "edges": [{"id": "e", "source": "a"}]}]),
+                flow_value!([{"type": "add_edges", "edges": [{"id": "e", "source": "a"}]}]),
                 "operations[0].edges[0].target: must be a non-empty string",
             ),
             (
-                json!([{"type": "add_edges", "edges": [
+                flow_value!([{"type": "add_edges", "edges": [
                     {"id": "e", "source": "a", "target": "b"},
                     {"id": "e", "source": "b", "target": "a"},
                 ]}]),
                 "operations[0].edges[1].id: repeats the id 'e'",
             ),
             (
-                json!([{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["id"], "value": "b"}]}]),
+                flow_value!([{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": ["id"], "value": "b"}]}]),
                 "operations[0].updates[0].path: cannot change the node's id",
             ),
             (
-                json!([{"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["data", "node"]}]}]),
+                flow_value!([{"type": "update_nodes", "updates": [{"id": "a", "op": "delete_field", "path": ["data", "node"]}]}]),
                 "operations[0].updates[0].path: cannot write the whole of data.node; write inside it",
             ),
             (
-                json!([{"type": "update_nodes", "updates": [
+                flow_value!([{"type": "update_nodes", "updates": [
                     {"id": "a", "op": "delete_field", "path": ["position"]},
                     {"id": "a", "op": "set_field", "path": ["position"], "value": {}},
                 ]}]),

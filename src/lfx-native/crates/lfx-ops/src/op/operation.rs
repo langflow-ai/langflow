@@ -199,7 +199,7 @@ impl FromFlowValue for NodePath {
 
 #[cfg(test)]
 mod tests {
-    use crate::json;
+    use crate::flow_value;
 
     use super::*;
 
@@ -237,12 +237,12 @@ mod tests {
             message(NodePath::check::<&str>(&[]).unwrap_err()),
             "path: must not be empty"
         );
-        let FlowValue::Array(items) = json!(["data", {"key": "node"}]) else {
+        let FlowValue::Array(items) = flow_value!(["data", {"key": "node"}]) else {
             unreachable!()
         };
         assert!(NodePath::check(&items).is_ok());
         assert_eq!(
-            NodePath::from_value(json!(["data", "node", "template"]))
+            NodePath::from_value(flow_value!(["data", "node", "template"]))
                 .unwrap_err()
                 .into_error("path")
                 .message,

@@ -47,7 +47,7 @@ Each folder of `src/` imports only from the folders before it: `collection`, `js
 | `snapshot/` | `GraphSnapshot`, the committed flow that other threads read |
 | `state/` | the flow in memory: `GraphState`, its indexes, a batch's pending field writes, and `GraphPlain` |
 | `op/` | what you do to a flow: the operation types and their parser and dump, `apply`, `replay`, `field_update` (what apply and replay share), `diff`, `repair`, `restore` |
-| `api.rs` | the functions the bindings call: JSON text or values in, values out |
+| `api.rs` | the functions the bindings call: JSON text or values in, values out. It is behind the `api` feature, which both bindings turn on, so it is their one shared conversion layer. It turns an `Error` into an `ApiError`, with the Python exception class name and the error as JSON |
 
 The public modules are `api`, `json`, `flow`, `compare`, `node_input`, `validate`, `repair` and `restore`.
 

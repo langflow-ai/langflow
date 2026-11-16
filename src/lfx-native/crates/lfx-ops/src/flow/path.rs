@@ -1,6 +1,6 @@
 //! A path into a node: object keys and keyed list items, by key.
 
-use crate::json;
+use crate::flow_value;
 use crate::json::FlowValue;
 
 /// One step of a field path.
@@ -15,7 +15,7 @@ pub enum Segment {
 
 impl Segment {
     /// The string this segment holds. An object key and a list item both
-    /// name that string. For example, `Key("outputs")` and `Item("r1")` both
+    /// name that string. For example, `Key("a")` and `Item("b")` both
     /// give their text.
     #[must_use]
     fn as_str(&self) -> &str {
@@ -25,12 +25,11 @@ impl Segment {
     }
 
     /// The segment as a path writes it in JSON.
-    /// Example: `Key("outputs")` gives `"outputs"`,
-    /// and `Item("r1")` gives `{"key": "r1"}`.
+    /// Example: `Key("a")` gives `"a"`, and `Item("b")` gives `{"key": "b"}`.
     pub(crate) fn to_value(&self) -> FlowValue {
         match self {
             Self::Key(key) => FlowValue::from(key.as_str()),
-            Self::Item(key) => json!({"key": key}),
+            Self::Item(key) => flow_value!({"key": key.as_str()}),
         }
     }
 
@@ -39,7 +38,7 @@ impl Segment {
     pub(crate) fn into_value(self) -> FlowValue {
         match self {
             Self::Key(key) => FlowValue::from(key),
-            Self::Item(key) => json!({"key": key}),
+            Self::Item(key) => flow_value!({"key": key}),
         }
     }
 }

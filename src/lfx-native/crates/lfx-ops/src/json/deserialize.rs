@@ -53,8 +53,10 @@ struct FlowValueVisitor<'b, const FINITE: bool>(&'b mut Builder<FINITE>);
 
 /// Reads one JSON value as [`FiniteFlowValue`] does, with a builder shared
 /// across the values of one input, so they share its string pool.
+#[cfg(feature = "api")]
 pub(crate) struct FiniteSeed<'b>(pub(crate) &'b mut Builder<true>);
 
+#[cfg(feature = "api")]
 impl<'de> DeserializeSeed<'de> for FiniteSeed<'_> {
     type Value = FlowValue;
     fn deserialize<D: Deserializer<'de>>(self, deserializer: D) -> Result<FlowValue, D::Error> {

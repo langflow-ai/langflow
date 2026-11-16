@@ -135,23 +135,23 @@ pub fn replay_flow_operations(
 
 #[cfg(test)]
 mod tests {
-    use crate::json;
+    use crate::flow_value;
 
     use super::*;
 
     #[test]
     fn a_replay_that_deletes_a_node_but_not_its_edges_does_not_refuse() {
-        let node = |id: &str| json!({"id": id, "data": {"node": {"template": {"f": {"value": "", "type": "str"}}}}});
-        let edge = json!({"id": "e", "source": "a", "target": "b"});
-        let flow = json!({"nodes": [node("a"), node("b")], "edges": [edge]});
+        let node = |id: &str| flow_value!({"id": id, "data": {"node": {"template": {"f": {"value": "", "type": "str"}}}}});
+        let edge = flow_value!({"id": "e", "source": "a", "target": "b"});
+        let flow = flow_value!({"nodes": [node("a"), node("b")], "edges": [edge]});
         let mut state = GraphState::new(flow).unwrap();
-        let delete = json!([{"type": "delete_nodes", "ids": ["a"]}]);
+        let delete = flow_value!([{"type": "delete_nodes", "ids": ["a"]}]);
         let delete = Operation::list_from_value(delete).unwrap();
         state.replay(delete, ReplayOptions::default()).unwrap();
         assert!(!state.graph.has_node("a"));
         assert!(state.graph.has_edge("e"));
         // The next apply checks only its own batch.
-        let write = json!([{"type": "update_nodes", "updates": [
+        let write = flow_value!([{"type": "update_nodes", "updates": [
             {"id": "b", "op": "set_field", "path": ["data", "node", "template", "f", "value"], "value": "x"},
         ]}]);
         let write = Operation::list_from_value(write).unwrap();

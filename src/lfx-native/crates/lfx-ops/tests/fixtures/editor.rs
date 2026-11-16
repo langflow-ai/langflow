@@ -2,7 +2,7 @@
 
 use lfx_ops::compare::graphs_equal;
 use lfx_ops::flow::list::Renumber;
-use lfx_ops::json;
+use lfx_ops::flow_value;
 use lfx_ops::json::FlowValue;
 use lfx_ops::node_input::table_input::{
     append_table_rows, assign_changed_table_row_ids, assign_row_ids,
@@ -96,8 +96,8 @@ fn undo_case(case: &FlowValue) -> Result<(), Failed> {
     let shown = FlowValue::Array(undo.iter().map(Operation::to_value).collect());
     assert_json_matches(
         "undo",
-        &unordered(&json!([shown])),
-        &unordered(&json!([case["undo"]])),
+        &unordered(&flow_value!([shown])),
+        &unordered(&flow_value!([&case["undo"]])),
     )?;
     state
         .apply(undo, ApplyOptions::default())
@@ -110,7 +110,7 @@ fn undo_case(case: &FlowValue) -> Result<(), Failed> {
 }
 
 fn rows(case: &FlowValue, key: &str) -> Vec<FlowValue> {
-    case[key].as_array().cloned().unwrap_or_default()
+    case[key].as_array().map(<[_]>::to_vec).unwrap_or_default()
 }
 
 fn assign(case: &FlowValue) -> Result<(), Failed> {
@@ -127,9 +127,9 @@ fn append(case: &FlowValue) -> Result<(), Failed> {
 }
 
 fn assign_nodes(case: &FlowValue) -> Result<(), Failed> {
-    let mut target = json!({"nodes": case["nodes"]});
+    let mut target = flow_value!({"nodes": &case["nodes"]});
     assign_changed_table_row_ids(
-        &json!({"nodes": case["previous"]}),
+        &flow_value!({"nodes": &case["previous"]}),
         &mut target,
         Renumber::WhenNoRoom,
     )

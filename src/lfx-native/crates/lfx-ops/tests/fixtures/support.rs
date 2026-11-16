@@ -3,7 +3,7 @@
 use std::collections::HashSet;
 use std::path::PathBuf;
 
-use lfx_ops::json;
+use lfx_ops::flow_value;
 use lfx_ops::json::{FlowObj, FlowValue};
 use libtest_mimic::{Failed, Trial};
 
@@ -163,7 +163,8 @@ pub fn graph_of(case: &FlowValue, key: &str) -> FlowValue {
 
 /// An engine error as fixtures record it.
 pub fn error_json(error: &lfx_ops::Error) -> FlowValue {
-    json!({"error": error.kind.class_name(), "code": error.code.as_str()})
+    let error = lfx_ops::api::ApiError(error.clone());
+    flow_value!({"error": error.kind(), "code": error.code()})
 }
 
 /// One line of JSON, for failure messages.
@@ -214,12 +215,16 @@ fn case_rules(name: &str, document: &FlowObj) -> Result<Vec<String>, Failed> {
 /// listed rule has a case, and one checks the comparison the other runners rely on.
 pub fn trials() -> Vec<Trial> {
     let comparison = Trial::test("fixtures::comparison", || {
-        let expected = json!({"a": 1.0, "b": [1, 2]});
-        assert_json_eq("reordered keys", &json!({"b": [1, 2], "a": 1.0}), &expected)?;
-        if json_eq(&json!({"a": 1, "b": [1, 2]}), &expected) {
+        let expected = flow_value!({"a": 1.0, "b": [1, 2]});
+        assert_json_eq(
+            "reordered keys",
+            &flow_value!({"b": [1, 2], "a": 1.0}),
+            &expected,
+        )?;
+        if json_eq(&flow_value!({"a": 1, "b": [1, 2]}), &expected) {
             return Err("1 and 1.0 must differ in text".into());
         }
-        if json_eq(&json!({"a": 1.0, "b": [2, 1]}), &expected) {
+        if json_eq(&flow_value!({"a": 1.0, "b": [2, 1]}), &expected) {
             return Err("array order must matter".into());
         }
         Ok(())

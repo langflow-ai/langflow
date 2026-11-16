@@ -81,7 +81,7 @@ fn table_value_mut<'n>(node: &'n mut FlowValue, field: &str) -> Option<&'n mut V
         .get_mut("template")?
         .get_mut(field)?
         .get_mut("value")?
-        .as_array_mut()
+        .as_vec_mut()
 }
 
 /// Order the rows of every table value of a node and strip `__id__` and `__pos__`, in place.
@@ -401,7 +401,7 @@ pub fn assign_changed_table_row_ids(
 }
 
 /// Append `new_rows`, each with a new `__id__` and the next whole `__pos__`.
-/// Example: after rows at 1 and 2.5, a new row gets 3.
+/// Example: after positions 1 and 2.5, a new row gets 3.
 ///
 /// # Errors
 ///
@@ -456,52 +456,52 @@ pub(crate) fn row_order(rows: &[FlowValue]) -> Vec<usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::json;
+    use crate::flow_value;
 
     #[test]
     fn row_matching_uses_canonical_content_and_previous_order() {
-        let previous = json!([
+        let previous = flow_value!([
             {"__id__":"first", "__pos__":1, "v":{"x":1,"y":-0.0}},
             {"__id__":"second", "__pos__":2, "v":{"y":0,"x":1.0}},
             {"__id__":"large", "__pos__":3, "v":9_007_199_254_740_993_u64}
         ]);
         let mut rows = vec![
-            json!({"v":{"y":0.0,"x":1}}),
-            json!({"v":{"x":1.0,"y":0}}),
-            json!({"v":9_007_199_254_740_992_u64}),
+            flow_value!({"v":{"y":0.0,"x":1}}),
+            flow_value!({"v":{"x":1.0,"y":0}}),
+            flow_value!({"v":9_007_199_254_740_992_u64}),
         ];
         match_row_ids(&mut rows, Some(&previous)).unwrap();
         for (row, id) in rows.iter().zip(["first", "second", "large"]) {
             assert_eq!(row["__id__"].as_str(), Some(id));
         }
-        assert_eq!(rows[0]["__pos__"], json!(1));
-        assert_eq!(rows[1]["__pos__"], json!(2));
+        assert_eq!(rows[0]["__pos__"], flow_value!(1));
+        assert_eq!(rows[1]["__pos__"], flow_value!(2));
     }
 
     #[test]
     fn row_matching_reserves_existing_ids_and_keeps_nested_metadata() {
-        let previous = json!([
+        let previous = flow_value!([
             {"__id__":"reserved", "__pos__":1, "v":{"__id__":"nested-a"}},
             {"__id__":"other", "__pos__":2, "v":{"__id__":"nested-a"}},
             {"__id__":"different", "__pos__":3, "v":{"__id__":"nested-b"}}
         ]);
         let mut rows = vec![
-            json!({"__id__":"reserved", "v":0}),
-            json!({"v":{"__id__":"nested-a"}}),
-            json!({"v":{"__id__":"nested-b"},"__pos__":9}),
+            flow_value!({"__id__":"reserved", "v":0}),
+            flow_value!({"v":{"__id__":"nested-a"}}),
+            flow_value!({"v":{"__id__":"nested-b"},"__pos__":9}),
         ];
         match_row_ids(&mut rows, Some(&previous)).unwrap();
-        assert_eq!(rows[1]["__id__"], json!("other"));
-        assert_eq!(rows[2]["__id__"], json!("different"));
-        assert_eq!(rows[2]["__pos__"], json!(9));
+        assert_eq!(rows[1]["__id__"], flow_value!("other"));
+        assert_eq!(rows[2]["__id__"], flow_value!("different"));
+        assert_eq!(rows[2]["__pos__"], flow_value!(9));
     }
 
     #[test]
     fn fingerprint_collisions_still_require_equal_content() {
-        let different = json!({"__id__":"wrong", "v":1});
-        let equal = json!({"__id__":"right", "v":2});
+        let different = flow_value!({"__id__":"wrong", "v":1});
+        let equal = flow_value!({"__id__":"right", "v":2});
         let mut bucket = VecDeque::from([&different, &equal]);
-        let row = json!({"v":2.0});
+        let row = flow_value!({"v":2.0});
         assert_eq!(
             take_matching_row(&mut bucket, &row, &HashSet::default()).unwrap(),
             Some(&equal)
@@ -513,9 +513,9 @@ mod tests {
     fn an_unused_invalid_candidate_does_not_change_short_circuit_errors() {
         let previous: FlowValue =
             serde_json::from_str(r#"[{"__id__":"ok","v":1},{"__id__":"bad","v":1e400}]"#).unwrap();
-        let mut rows = vec![json!({"v":1})];
+        let mut rows = vec![flow_value!({"v":1})];
         match_row_ids(&mut rows, Some(&previous)).unwrap();
-        assert_eq!(rows[0]["__id__"], json!("ok"));
+        assert_eq!(rows[0]["__id__"], flow_value!("ok"));
         let mut rows: Vec<FlowValue> = serde_json::from_str(r#"[{"v":1e400}]"#).unwrap();
         assert!(match_row_ids(&mut rows, Some(&previous)).is_err());
     }
@@ -524,13 +524,13 @@ mod tests {
     fn equal_rows_claim_each_previous_id_only_once() {
         let previous = FlowValue::Array(
             (0..2000)
-                .map(|i| json!({"__id__":i.to_string(),"__pos__":i,"v":1}))
+                .map(|i| flow_value!({"__id__":i.to_string(),"__pos__":i,"v":1}))
                 .collect(),
         );
-        let mut rows = vec![json!({"v":1}); 2000];
+        let mut rows = vec![flow_value!({"v":1}); 2000];
         match_row_ids(&mut rows, Some(&previous)).unwrap();
         for (i, row) in rows.iter().enumerate() {
-            assert_eq!(row["__id__"], json!(i.to_string()));
+            assert_eq!(row["__id__"], flow_value!(i.to_string()));
         }
     }
 }

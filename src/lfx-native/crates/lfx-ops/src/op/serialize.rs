@@ -1,6 +1,6 @@
 //! Operations → JSON: as a value, and as text without building the value.
 
-use crate::json;
+use crate::flow_value;
 use crate::json::{FlowObj, FlowValue};
 
 use crate::flow::edge::Edge;
@@ -13,20 +13,26 @@ impl Operation {
     #[must_use]
     pub fn to_value(&self) -> FlowValue {
         match self {
-            Self::AddNodes(nodes) => json!({
+            Self::AddNodes(nodes) => flow_value!({
                 "type": "add_nodes",
-                "nodes": nodes.iter().map(Node::as_map).collect::<Vec<_>>(),
+                "nodes": nodes.iter().map(|node| node.as_map().clone()).collect::<FlowValue>(),
             }),
-            Self::UpdateNodes(updates) => json!({
+            Self::UpdateNodes(updates) => flow_value!({
                 "type": "update_nodes",
-                "updates": updates.iter().map(FieldUpdate::to_value).collect::<Vec<_>>(),
+                "updates": updates.iter().map(FieldUpdate::to_value).collect::<FlowValue>(),
             }),
-            Self::DeleteNodes(ids) => json!({"type": "delete_nodes", "ids": ids}),
-            Self::AddEdges(edges) => json!({
+            Self::DeleteNodes(ids) => flow_value!({
+                "type": "delete_nodes",
+                "ids": ids.iter().map(String::as_str).collect::<FlowValue>(),
+            }),
+            Self::AddEdges(edges) => flow_value!({
                 "type": "add_edges",
-                "edges": edges.iter().map(Edge::as_map).collect::<Vec<_>>(),
+                "edges": edges.iter().map(|edge| edge.as_map().clone()).collect::<FlowValue>(),
             }),
-            Self::DeleteEdges(ids) => json!({"type": "delete_edges", "ids": ids}),
+            Self::DeleteEdges(ids) => flow_value!({
+                "type": "delete_edges",
+                "ids": ids.iter().map(String::as_str).collect::<FlowValue>(),
+            }),
         }
     }
 
@@ -71,9 +77,12 @@ impl FieldUpdate {
         let path = FlowValue::Array(self.path.iter().map(Segment::to_value).collect());
         match &self.change {
             Change::Set(value) => {
-                json!({"id": self.id, "path": path, "op": "set_field", "value": value})
+                let value = value.clone();
+                flow_value!({"id": self.id.as_str(), "path": path, "op": "set_field", "value": value})
             }
-            Change::Delete => json!({"id": self.id, "path": path, "op": "delete_field"}),
+            Change::Delete => {
+                flow_value!({"id": self.id.as_str(), "path": path, "op": "delete_field"})
+            }
         }
     }
 
@@ -105,6 +114,7 @@ impl FieldUpdate {
     }
 }
 
+#[cfg(feature = "api")]
 impl Operation {
     /// Write the operation as JSON text, as [`crate::json::serialize::write_value`]
     /// writes [`Self::to_value`], without building that value.
@@ -134,6 +144,7 @@ impl Operation {
     }
 }
 
+#[cfg(feature = "api")]
 impl FieldUpdate {
     fn write_json(&self, out: &mut Vec<u8>, ascii: crate::json::serialize::Ascii) {
         use crate::json::serialize::{write_seq, write_str, write_value};

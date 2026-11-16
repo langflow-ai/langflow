@@ -47,7 +47,7 @@ fn describe(py: Python<'_>, raised: &PyErr, error: &ApiError) -> PyResult<()> {
     let value = raised.value(py);
     value.setattr("kind", error.kind())?;
     value.setattr("code", error.code())?;
-    value.setattr("details", to_python(py, &error.0)?)
+    value.setattr("details", to_python(py, &error.details())?)
 }
 
 // --- Arguments ------------------------------------------------------------------------------
@@ -1053,7 +1053,7 @@ impl GraphPlain {
             api::plain_repair(self.core(), base)
         })?;
         // With no fixes, the repaired graph is this graph, so its work is known.
-        let work = if fixes.as_array().is_some_and(Vec::is_empty) {
+        let work = if fixes.as_array().is_some_and(<[_]>::is_empty) {
             self.work
         } else {
             Work::of_value(repaired.as_value())

@@ -429,7 +429,7 @@ impl EntryExt for FlowValue {
 
 #[cfg(test)]
 mod tests {
-    use crate::json;
+    use crate::flow_value;
 
     use super::*;
 
@@ -441,7 +441,7 @@ mod tests {
             FlowModel::parse(&raw).unwrap_err(),
             "view_state.flow is missing"
         );
-        raw["view_state"]["flow"] = json!({"except": [1]});
+        raw["view_state"]["flow"] = flow_value!({"except": [1]});
         assert_eq!(
             FlowModel::parse(&raw).unwrap_err(),
             "view_state.flow.except must be a list of strings"
@@ -463,27 +463,27 @@ mod tests {
     #[test]
     fn named_lists_are_found_by_path() {
         let outputs = FLOW_MODEL
-            .keyed_list_at(&json!({}), &["data", "node", "outputs"])
+            .keyed_list_at(&flow_value!({}), &["data", "node", "outputs"])
             .unwrap();
         assert_eq!(outputs.kind, ListKind::Natural);
-        assert_eq!(outputs.key_of(&json!({"name": "out"})), Some("out"));
+        assert_eq!(outputs.key_of(&flow_value!({"name": "out"})), Some("out"));
 
         let tools = FLOW_MODEL
             .keyed_list_at(
-                &json!({}),
+                &flow_value!({}),
                 &["data", "node", "template", "tools_metadata", "value"],
             )
             .unwrap();
         assert_eq!(
-            tools.key_of(&json!({"tags": ["first", "second"]})),
+            tools.key_of(&flow_value!({"tags": ["first", "second"]})),
             Some("first")
         );
-        assert_eq!(tools.key_of(&json!({"tags": []})), None);
+        assert_eq!(tools.key_of(&flow_value!({"tags": []})), None);
     }
 
     #[test]
     fn tables_depend_on_the_field() {
-        let node = json!({"data": {"node": {"template": {
+        let node = flow_value!({"data": {"node": {"template": {
             "rows": {"type": "table", "value": []},
             "legacy": {"_input_type": "TableInput", "value": []},
             "text": {"type": "str", "value": []},

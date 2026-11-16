@@ -1,13 +1,10 @@
 //! Write JSON text fast into a byte buffer.
 //!
-//! A flow is mostly long strings such as component code, so a string is
+//! A flow is mostly long strings, such as code, so a string is
 //! scanned eight bytes at a time. [`Ascii::Escape`] writes as Python's
 //! `json.dumps` does by default. Example: `é` gives `\u00e9`.
 
-use std::str::FromStr;
-
-use crate::json::number::N;
-use crate::json::{FlowObj, FlowValue, Number};
+use crate::json::{FlowObj, FlowValue};
 
 /// Whether a written string escapes its characters above U+007F.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -196,43 +193,6 @@ pub(crate) fn write_entries<K: AsRef<str>, V>(
 /// Bytes the buffer holds as text. Everything written here is UTF-8.
 pub(crate) fn into_string(out: Vec<u8>) -> String {
     String::from_utf8(out).expect("JSON text is written as UTF-8")
-}
-
-// --- json! ---------------------------------------------------------------------------
-
-// These let `json!` take a value that is already an `FlowValue`.
-
-impl serde::Serialize for FlowValue {
-    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        match self {
-            FlowValue::Null => serializer.serialize_unit(),
-            FlowValue::Bool(flag) => serializer.serialize_bool(*flag),
-            FlowValue::Number(number) => number.serialize(serializer),
-            FlowValue::String(text) => serializer.serialize_str(text),
-            FlowValue::Array(items) => serializer.collect_seq(items),
-            FlowValue::Object(map) => map.serialize(serializer),
-        }
-    }
-}
-
-impl serde::Serialize for FlowObj {
-    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        serializer.collect_map(self.iter().map(|(key, value)| (key.as_str(), value)))
-    }
-}
-
-impl serde::Serialize for Number {
-    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        match &self.0 {
-            N::PosInt(int) => serializer.serialize_u64(*int),
-            N::NegInt(int) => serializer.serialize_i64(*int),
-            N::Float(float) => serializer.serialize_f64(*float),
-            // A number kept as text stays text: `json!` keeps it with arbitrary_precision.
-            N::Text(text) => serde_json::Number::from_str(text)
-                .map_err(serde::ser::Error::custom)?
-                .serialize(serializer),
-        }
-    }
 }
 
 // --- Strings as Python's `repr` prints them -------------------------------------------------

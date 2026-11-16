@@ -5,6 +5,7 @@
 //! Repair runs only when a request asks for it.
 
 use crate::collection::hash_map::{HashMap, HashSet};
+use crate::flow_value;
 use crate::json::{FlowObj, FlowValue};
 use sha2::{Digest, Sha256};
 
@@ -92,7 +93,10 @@ pub fn repair_flow_data(flow: &FlowValue, base: Option<&FlowValue>) -> Result<Re
     let mut fixes = Fixes::default();
     let FlowValue::Object(flow) = flow else {
         fixes.add(ViolationCode::FlowDataNotObject, Vec::new());
-        let empty = crate::json!({"nodes": [], "edges": []});
+        let empty = flow_value!({
+            "nodes": FlowValue::Array(Vec::new()),
+            "edges": FlowValue::Array(Vec::new()),
+        });
         return Ok(Repaired {
             flow_data: empty,
             fixes: fixes.0,
@@ -496,7 +500,7 @@ fn repair_table(
     Ok(())
 }
 
-/// A node id from the node's content and index. Example: `ChatInput-a1B2c`.
+/// A node id from the node's `data.type`, content and index. Example: `Text-a1B2c`.
 fn generate_node_id(node: &FlowObj, index: usize, used: &HashSet<String>) -> Result<String> {
     let prefix = node
         .get("data")
@@ -551,11 +555,11 @@ impl GraphPlain {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::json;
+    use crate::flow_value;
 
     #[test]
     fn repair_keeps_valid_node_objects_shared() {
-        let source = json!({"nodes":[{"id":"a","data":{"node":{"template":{"t":{"value":"unchanged"}}}}}],"edges":[]});
+        let source = flow_value!({"nodes":[{"id":"a","data":{"node":{"template":{"t":{"value":"unchanged"}}}}}],"edges":[]});
         let repaired = repair_flow_data(&source, None).unwrap();
         assert_eq!(repaired.fixes, []);
         assert!(std::ptr::eq(

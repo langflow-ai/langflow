@@ -1,14 +1,14 @@
 //! `replay_cases.json`: replaying stored operations with no rule.
 
 use lfx_ops::compare::graphs_equal;
-use lfx_ops::json;
+use lfx_ops::flow_value;
 use lfx_ops::json::FlowValue;
 use lfx_ops::{GraphState, Operation, ReplayOptions};
 use libtest_mimic::{Failed, Trial};
 
 use crate::apply::ignoring_order;
 use crate::editor::unordered;
-use crate::support::{assert_json_eq, assert_json_matches, cases, compact, load};
+use crate::support::{assert_json_eq, assert_json_matches, cases, compact, error_json, load};
 
 /// Every replay case, and the check that one call replays a batch as one
 /// call per operation does: for the replay cases, and for the forward
@@ -55,7 +55,7 @@ pub fn trials() -> Vec<Trial> {
         let base = property["base"].clone();
         let transactions = sequence["transactions"]
             .as_array()
-            .cloned()
+            .map(<[_]>::to_vec)
             .unwrap_or_default();
         trials.push(Trial::test(
             format!("property_cases::{name}::forward_replay"),
@@ -191,11 +191,11 @@ fn replay_case(case: &FlowValue) -> Result<(), Failed> {
         let Err(error) = outcome else {
             return Err("expected the replay to fail".into());
         };
-        let actual = json!({"error": error.kind.class_name(), "code": error.code.as_str()});
+        let actual = error_json(&error);
         assert_json_eq(
             &format!("error ({error})"),
             &actual,
-            &json!({"error": expected_error, "code": case["code"]}),
+            &flow_value!({"error": expected_error, "code": &case["code"]}),
         )?;
         // A failed replay leaves the state as it was.
         return match state {

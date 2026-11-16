@@ -446,7 +446,7 @@ impl GraphState {
             }
             Segment::Item(key) => {
                 let keyed = keyed_list(graph, sequenced, index, value)?;
-                let items = value.as_array().map(Vec::as_slice).unwrap_or_default();
+                let items = value.as_array().unwrap_or_default();
                 // Only a stored node's lists keep their index between reads.
                 let built;
                 let list_index = if stored && !in_entry {
@@ -638,7 +638,7 @@ pub fn apply_flow_operations(
 
 #[cfg(test)]
 mod tests {
-    use crate::json;
+    use crate::flow_value;
     use crate::json::FlowValue;
 
     use super::*;
@@ -647,13 +647,13 @@ mod tests {
     use crate::op::ReplayOptions;
 
     fn target_handle(field: &str) -> FlowValue {
-        json!({"fieldName": field, "id": "T", "inputTypes": ["Message"], "type": "str"})
+        flow_value!({"fieldName": field, "id": "T", "inputTypes": ["Message"], "type": "str"})
     }
 
     fn edge(id: &str, field: &str) -> FlowValue {
         let source =
-            json!({"dataType": "X", "id": "S", "name": "out", "output_types": ["Message"]});
-        json!({
+            flow_value!({"dataType": "X", "id": "S", "name": "out", "output_types": ["Message"]});
+        flow_value!({
             "id": id, "source": "S", "target": "T",
             "sourceHandle": escape_handle(&source),
             "targetHandle": escape_handle(&target_handle(field)),
@@ -667,11 +667,11 @@ mod tests {
 
     #[test]
     fn deletion_options_preserve_cascade_order_duplicates_and_rollback() {
-        let field = json!({"type": "str", "value": ""});
-        let graph = json!({
+        let field = flow_value!({"type": "str", "value": ""});
+        let graph = flow_value!({
             "nodes": [
                 {"id": "S", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-                {"id": "T", "data": {"node": {"template": {"A": field, "B": field}}}},
+                {"id": "T", "data": {"node": {"template": {"A": &field, "B": &field}}}},
             ],
             "edges": [edge("e1", "A"), edge("e2", "B")],
         });
@@ -682,19 +682,19 @@ mod tests {
                 let before = state.to_json();
                 let applied = state
                     .apply(
-                        operations(json!([
+                        operations(flow_value!([
                             {"type": "delete_nodes", "ids": ["T", "S", "T"]},
                             {"type": "delete_edges", "ids": ["e1", "e1", "absent"]},
                         ])),
                         options,
                     )
                     .unwrap();
-                assert_eq!(state.to_value()["nodes"], json!([]));
-                assert_eq!(state.to_value()["edges"], json!([]));
+                assert_eq!(state.to_value()["nodes"], flow_value!([]));
+                assert_eq!(state.to_value()["edges"], flow_value!([]));
                 if forward {
                     assert_eq!(
                         applied.forward,
-                        operations(json!([
+                        operations(flow_value!([
                             {"type": "delete_nodes", "ids": ["T", "S"]},
                             {"type": "delete_edges", "ids": ["e1", "e2"]},
                         ]))
@@ -719,7 +719,7 @@ mod tests {
                     assert_eq!(applied.backward, Vec::<Vec<Operation>>::new());
                 }
                 let mut state = GraphState::new(graph.clone()).unwrap();
-                let refused = operations(json!([
+                let refused = operations(flow_value!([
                     {"type": "delete_edges", "ids": ["e1", "e1"]},
                     {"type": "delete_nodes", "ids": ["T", "absent", "S"]},
                 ]));
@@ -733,12 +733,12 @@ mod tests {
 
     #[test]
     fn an_update_error_names_the_update_and_the_segment() {
-        let graph = json!({
+        let graph = flow_value!({
             "nodes": [{"id": "a", "data": {"node": {"template": {"f": {"value": 1}}}}}],
             "edges": [],
         });
         let mut state = GraphState::new(graph).unwrap();
-        let write = json!([{"type": "update_nodes", "updates": [
+        let write = flow_value!([{"type": "update_nodes", "updates": [
             {"id": "a", "op": "set_field", "path": ["position"], "value": {}},
             {"id": "a", "op": "set_field", "path": ["data", "node", "template", "f", "value", {"key": "r"}], "value": {"__id__": "r", "__pos__": 1}},
         ]}]);
@@ -754,21 +754,21 @@ mod tests {
 
     #[test]
     fn a_kept_state_swaps_two_edges_by_deleting_and_adding_them() {
-        let field = json!({"type": "str", "value": ""});
-        let graph = json!({
+        let field = flow_value!({"type": "str", "value": ""});
+        let graph = flow_value!({
             "nodes": [
                 {"id": "S", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-                {"id": "T", "data": {"node": {"template": {"A": field, "B": field, "C": field}}}},
+                {"id": "T", "data": {"node": {"template": {"A": &field, "B": &field, "C": &field}}}},
             ],
             "edges": [edge("e1", "B"), edge("e2", "A")],
         });
         let mut state = GraphState::new(graph).unwrap();
         // This batch indexes the connections of T, which the next batch reuses.
-        let add = json!([{"type": "add_edges", "edges": [edge("e3", "C")]}]);
+        let add = flow_value!([{"type": "add_edges", "edges": [edge("e3", "C")]}]);
         state
             .apply(operations(add), ApplyOptions::default())
             .unwrap();
-        let swap = json!([
+        let swap = flow_value!([
             {"type": "delete_edges", "ids": ["e1", "e2"]},
             {"type": "add_edges", "edges": [edge("e1", "A"), edge("e2", "B")]},
         ]);
@@ -779,22 +779,22 @@ mod tests {
 
     #[test]
     fn a_refused_batch_keeps_the_indexes_earlier_batches_built() {
-        let field = json!({"type": "str", "value": ""});
-        let graph = json!({
+        let field = flow_value!({"type": "str", "value": ""});
+        let graph = flow_value!({
             "nodes": [
                 {"id": "S", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-                {"id": "T", "data": {"node": {"template": {"A": field, "B": field}}}},
+                {"id": "T", "data": {"node": {"template": {"A": &field, "B": &field}}}},
             ],
             "edges": [edge("e1", "A")],
         });
         let mut state = GraphState::new(graph).unwrap();
-        let add = json!([{"type": "add_edges", "edges": [edge("e2", "B")]}]);
+        let add = flow_value!([{"type": "add_edges", "edges": [edge("e2", "B")]}]);
         state
             .apply(operations(add), ApplyOptions::default())
             .unwrap();
         assert!(state.edge_index.has_connections("T"));
         // A writes T, then the second edge into A is refused: the batch changes nothing.
-        let refused = json!([
+        let refused = flow_value!([
             {"type": "update_nodes", "updates": [
                 {"id": "T", "op": "set_field", "path": ["data", "node", "template", "A", "value"], "value": "x"},
             ]},
@@ -809,43 +809,43 @@ mod tests {
     }
 
     fn set(id: &str, path: FlowValue, value: FlowValue) -> FlowValue {
-        let mut update = json!({"id": id, "op": "set_field"});
+        let mut update = flow_value!({"id": id, "op": "set_field"});
         update["path"] = path;
         update["value"] = value;
         update
     }
 
     fn delete(id: &str, path: FlowValue) -> FlowValue {
-        let mut update = json!({"id": id, "op": "delete_field"});
+        let mut update = flow_value!({"id": id, "op": "delete_field"});
         update["path"] = path;
         update
     }
 
     fn updates(updates: Vec<FlowValue>) -> Vec<Operation> {
-        let mut operation = json!({"type": "update_nodes"});
+        let mut operation = flow_value!({"type": "update_nodes"});
         operation["updates"] = FlowValue::Array(updates);
         operations(FlowValue::Array(vec![operation]))
     }
 
     fn table_node() -> FlowValue {
-        let row = |id: &str, pos: u32| json!({"__id__": id, "__pos__": pos, "v": "x"});
-        json!({"id": "t", "data": {"node": {"template": {
+        let row = |id: &str, pos: u32| flow_value!({"__id__": id, "__pos__": pos, "v": "x"});
+        flow_value!({"id": "t", "data": {"node": {"template": {
             "rows": {"type": "table", "value": [row("r1", 1), row("r2", 2), row("r3", 3)]},
             "text": {"type": "str", "value": ""},
         }}}})
     }
 
     fn rows_path(key: Option<&str>) -> FlowValue {
-        let mut path = json!(["data", "node", "template", "rows", "value"]);
+        let mut path = flow_value!(["data", "node", "template", "rows", "value"]);
         if let Some(key) = key {
-            path.as_array_mut().unwrap().push(json!({"key": key}));
+            path.as_vec_mut().unwrap().push(flow_value!({"key": key}));
         }
         path
     }
 
     fn cell_path(key: &str) -> FlowValue {
         let mut path = rows_path(Some(key));
-        path.as_array_mut().unwrap().push(json!("v"));
+        path.as_vec_mut().unwrap().push(flow_value!("v"));
         path
     }
 
@@ -865,11 +865,12 @@ mod tests {
 
     #[test]
     fn a_kept_table_keeps_its_index_through_writes_and_refused_batches() {
-        let mut state = GraphState::new(json!({"nodes": [table_node()], "edges": []})).unwrap();
-        let row = |id: &str, pos: f64| json!({"__id__": id, "__pos__": pos, "v": "n"});
+        let mut state =
+            GraphState::new(flow_value!({"nodes": [table_node()], "edges": []})).unwrap();
+        let row = |id: &str, pos: f64| flow_value!({"__id__": id, "__pos__": pos, "v": "n"});
         same_as_fresh(
             &mut state,
-            updates(vec![set("t", cell_path("r2"), json!("y"))]),
+            updates(vec![set("t", cell_path("r2"), flow_value!("y"))]),
         )
         .unwrap();
         same_as_fresh(
@@ -881,8 +882,8 @@ mod tests {
         let before = state.to_value();
         let refused = updates(vec![
             set("t", rows_path(Some("r4")), row("r4", 4.0)),
-            set("t", cell_path("r3"), json!("z")),
-            set("t", cell_path("gone"), json!("z")),
+            set("t", cell_path("r3"), flow_value!("z")),
+            set("t", cell_path("gone"), flow_value!("z")),
         ]);
         same_as_fresh(&mut state, refused).unwrap_err();
         assert_eq!(state.to_value(), before);
@@ -890,15 +891,15 @@ mod tests {
             &mut state,
             updates(vec![
                 set("t", rows_path(Some("r5")), row("r5", 0.5)),
-                set("t", cell_path("r5"), json!("w")),
+                set("t", cell_path("r5"), flow_value!("w")),
                 delete("t", rows_path(Some("r2"))),
-                set("t", cell_path("r3"), json!("v3")),
+                set("t", cell_path("r3"), flow_value!("v3")),
             ]),
         )
         .unwrap();
         same_as_fresh(
             &mut state,
-            updates(vec![set("t", cell_path("r5"), json!("again"))]),
+            updates(vec![set("t", cell_path("r5"), flow_value!("again"))]),
         )
         .unwrap();
         let rows = &state.to_value()["nodes"][0]["data"]["node"]["template"]["rows"]["value"];
@@ -922,11 +923,11 @@ mod tests {
 
     #[test]
     fn a_field_type_written_in_the_batch_decides_whether_its_value_is_a_table() {
-        let node = json!({"id": "t", "data": {"node": {"template": {
+        let node = flow_value!({"id": "t", "data": {"node": {"template": {
             "rows": {"type": "str", "value": [{"__id__": "r1", "__pos__": 1}]},
         }}}});
-        let graph = json!({"nodes": [node], "edges": []});
-        let row = json!({"__id__": "r2", "__pos__": 2});
+        let graph = flow_value!({"nodes": [node], "edges": []});
+        let row = flow_value!({"__id__": "r2", "__pos__": 2});
         let refused = updates(vec![set("t", rows_path(Some("r2")), row.clone())]);
         let error =
             apply_flow_operations(graph.clone(), refused, ApplyOptions::default()).unwrap_err();
@@ -938,8 +939,8 @@ mod tests {
         let typed = updates(vec![
             set(
                 "t",
-                json!(["data", "node", "template", "rows", "type"]),
-                json!("table"),
+                flow_value!(["data", "node", "template", "rows", "type"]),
+                flow_value!("table"),
             ),
             set("t", rows_path(Some("r2")), row),
         ]);
@@ -955,10 +956,10 @@ mod tests {
 
     #[test]
     fn a_list_written_in_the_batch_is_checked_when_a_write_reads_its_items() {
-        let graph = json!({"nodes": [table_node()], "edges": []});
-        let update = |update: FlowValue| json!({"type": "update_nodes", "updates": [update]});
-        let batch = operations(json!([
-            update(set("t", rows_path(None), json!([1, 2]))),
+        let graph = flow_value!({"nodes": [table_node()], "edges": []});
+        let update = |update: FlowValue| flow_value!({"type": "update_nodes", "updates": [update]});
+        let batch = operations(flow_value!([
+            update(set("t", rows_path(None), flow_value!([1, 2]))),
             update(delete("t", rows_path(Some("r1")))),
         ]));
         let error = apply_flow_operations(graph, batch, ApplyOptions::default()).unwrap_err();
@@ -971,17 +972,17 @@ mod tests {
 
     #[test]
     fn an_output_deleted_and_added_again_in_one_batch_takes_its_new_position() {
-        let output = |name: &str, position: u32| json!({"name": name, "__pos__": position});
-        let node = json!({"id": "n", "data": {"node": {"template": {},
+        let output = |name: &str, position: u32| flow_value!({"name": name, "__pos__": position});
+        let node = flow_value!({"id": "n", "data": {"node": {"template": {},
             "outputs": [output("a", 1), output("b", 2), output("c", 3)]}}});
-        let outputs = |key: &str| json!(["data", "node", "outputs", {"key": key}]);
-        let update = |update: FlowValue| json!({"type": "update_nodes", "updates": [update]});
-        let batch = operations(json!([
+        let outputs = |key: &str| flow_value!(["data", "node", "outputs", {"key": key}]);
+        let update = |update: FlowValue| flow_value!({"type": "update_nodes", "updates": [update]});
+        let batch = operations(flow_value!([
             update(delete("n", outputs("a"))),
             update(set("n", outputs("d"), output("d", 4))),
             update(set("n", outputs("a"), output("a", 5))),
         ]));
-        let mut state = GraphState::new(json!({"nodes": [node], "edges": []})).unwrap();
+        let mut state = GraphState::new(flow_value!({"nodes": [node], "edges": []})).unwrap();
         state.apply(batch, ApplyOptions::default()).unwrap();
         let outputs = state.graph.node_value("n", &OUTPUTS_PATH).unwrap();
         let mut order: Vec<(u64, &str)> = outputs
@@ -1002,38 +1003,38 @@ mod tests {
 
     #[test]
     fn a_node_deleted_and_added_again_takes_the_writes_after_it() {
-        let node = json!({"id": "n", "data": {"node": {"template": {"f": {"value": 1}}}}});
-        let batch = json!([
+        let node = flow_value!({"id": "n", "data": {"node": {"template": {"f": {"value": 1}}}}});
+        let batch = flow_value!([
             {"type": "delete_nodes", "ids": ["n"]},
             {"type": "add_nodes", "nodes": [{"id": "n", "data": {"node": {"template": {"g": {"value": 2}}}}}]},
-            {"type": "update_nodes", "updates": [set("n", json!(["data", "node", "template", "g", "value"]), json!(3))]},
+            {"type": "update_nodes", "updates": [set("n", flow_value!(["data", "node", "template", "g", "value"]), flow_value!(3))]},
         ]);
         let (graph, _) = apply_flow_operations(
-            json!({"nodes": [node], "edges": []}),
+            flow_value!({"nodes": [node], "edges": []}),
             operations(batch),
             ApplyOptions::default(),
         )
         .unwrap();
         assert_eq!(
             graph["nodes"][0]["data"]["node"]["template"],
-            json!({"g": {"value": 3}})
+            flow_value!({"g": {"value": 3}})
         );
     }
 
     #[test]
     fn an_edge_rule_reads_a_field_written_in_the_batch() {
-        let field = json!({"type": "str", "value": ""});
-        let graph = json!({
+        let field = flow_value!({"type": "str", "value": ""});
+        let graph = flow_value!({
             "nodes": [
                 {"id": "S", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
                 {"id": "T", "data": {"node": {"template": {"A": field}}}},
             ],
             "edges": [edge("e1", "A")],
         });
-        let second = json!({"type": "add_edges", "edges": [edge("e2", "A")]});
+        let second = flow_value!({"type": "add_edges", "edges": [edge("e2", "A")]});
         let error = apply_flow_operations(
             graph.clone(),
-            operations(json!([second])),
+            operations(flow_value!([&second])),
             ApplyOptions::default(),
         )
         .unwrap_err();
@@ -1046,21 +1047,21 @@ mod tests {
         );
         let list = set(
             "T",
-            json!(["data", "node", "template", "A", "list"]),
-            json!(true),
+            flow_value!(["data", "node", "template", "A", "list"]),
+            flow_value!(true),
         );
-        let batch = json!([{"type": "update_nodes", "updates": [list]}, second]);
+        let batch = flow_value!([{"type": "update_nodes", "updates": [list]}, second]);
         apply_flow_operations(graph, operations(batch), ApplyOptions::default()).unwrap();
     }
 
     #[test]
     fn a_write_over_earlier_writes_undoes_to_the_graph_before_the_batch() {
-        let graph = json!({"nodes": [table_node()], "edges": []});
-        let field = json!(["data", "node", "template", "rows"]);
+        let graph = flow_value!({"nodes": [table_node()], "edges": []});
+        let field = flow_value!(["data", "node", "template", "rows"]);
         let batch = updates(vec![
-            set("t", cell_path("r1"), json!("y")),
+            set("t", cell_path("r1"), flow_value!("y")),
             delete("t", rows_path(Some("r2"))),
-            set("t", field, json!({"type": "str", "value": "flat"})),
+            set("t", field, flow_value!({"type": "str", "value": "flat"})),
         ]);
         let mut state = GraphState::new(graph.clone()).unwrap();
         let options = ApplyOptions {
@@ -1076,10 +1077,11 @@ mod tests {
 
     #[test]
     fn a_staged_batch_is_not_read_until_it_is_kept() {
-        let mut state = GraphState::new(json!({"nodes": [table_node()], "edges": []})).unwrap();
+        let mut state =
+            GraphState::new(flow_value!({"nodes": [table_node()], "edges": []})).unwrap();
         let before = state.to_value();
         let batch = updates(vec![
-            set("t", cell_path("r2"), json!("y")),
+            set("t", cell_path("r2"), flow_value!("y")),
             delete("t", rows_path(Some("r1"))),
         ]);
         let options = ApplyOptions {
@@ -1119,24 +1121,24 @@ mod tests {
 
     #[test]
     fn a_dropped_batch_leaves_the_graph_and_its_indexes() {
-        let field = json!({"type": "str", "value": ""});
-        let graph = json!({
+        let field = flow_value!({"type": "str", "value": ""});
+        let graph = flow_value!({
             "nodes": [
                 {"id": "S", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
-                {"id": "T", "data": {"node": {"template": {"A": field, "B": field}}}},
+                {"id": "T", "data": {"node": {"template": {"A": &field, "B": &field}}}},
             ],
             "edges": [edge("e1", "A")],
         });
         let mut state = GraphState::new(graph).unwrap();
-        let add = json!([{"type": "add_edges", "edges": [edge("e2", "B")]}]);
+        let add = flow_value!([{"type": "add_edges", "edges": [edge("e2", "B")]}]);
         state
             .apply(operations(add), ApplyOptions::default())
             .unwrap();
         let before = state.to_value();
-        let batch = json!([
+        let batch = flow_value!([
             {"type": "delete_edges", "ids": ["e1"]},
             {"type": "update_nodes", "updates": [
-                set("T", json!(["data", "node", "template", "A", "value"]), json!("x")),
+                set("T", flow_value!(["data", "node", "template", "A", "value"]), flow_value!("x")),
             ]},
             {"type": "add_edges", "edges": [edge("e3", "A")]},
         ]);
@@ -1148,7 +1150,7 @@ mod tests {
         assert_eq!(state.to_value(), before);
         assert!(state.edge_index.has_connections("T"));
         // The indexes still hold e1 in A: a second edge into A is refused.
-        let second = json!([{"type": "add_edges", "edges": [edge("e3", "A")]}]);
+        let second = flow_value!([{"type": "add_edges", "edges": [edge("e3", "A")]}]);
         state
             .apply(operations(second), ApplyOptions::default())
             .unwrap_err();
@@ -1161,11 +1163,12 @@ mod tests {
 
     #[test]
     fn a_refused_batch_is_not_staged() {
-        let mut state = GraphState::new(json!({"nodes": [table_node()], "edges": []})).unwrap();
+        let mut state =
+            GraphState::new(flow_value!({"nodes": [table_node()], "edges": []})).unwrap();
         let before = state.to_value();
         let refused = updates(vec![
-            set("t", cell_path("r2"), json!("y")),
-            set("t", cell_path("gone"), json!("z")),
+            set("t", cell_path("r2"), flow_value!("y")),
+            set("t", cell_path("gone"), flow_value!("z")),
         ]);
         state.stage(refused, ApplyOptions::default()).unwrap_err();
         assert!(!state.is_staged());
@@ -1175,19 +1178,20 @@ mod tests {
 
     #[test]
     fn a_group_sub_flow_node_is_not_selected_by_key() {
-        let inner = json!({"id": "lm", "data": {"node": {"template": {"api_key": {"value": ""}}}}});
-        let graph = json!({
+        let inner =
+            flow_value!({"id": "lm", "data": {"node": {"template": {"api_key": {"value": ""}}}}});
+        let graph = flow_value!({
             "nodes": [{"id": "g", "data": {"node": {
                 "template": {},
                 "flow": {"data": {"nodes": [inner], "edges": []}},
             }}}],
             "edges": [],
         });
-        let path = json!([
+        let path = flow_value!([
             "data", "node", "flow", "data", "nodes", {"key": "lm"},
             "data", "node", "template", "api_key", "value",
         ]);
-        let write = json!([{"type": "update_nodes", "updates": [
+        let write = flow_value!([{"type": "update_nodes", "updates": [
             {"id": "g", "op": "set_field", "path": path, "value": "x"},
         ]}]);
         let error =

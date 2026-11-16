@@ -11,7 +11,7 @@ use crate::compare::canonical_form::{
 };
 use crate::compare::graph_hash::{HashWriter, flow_part, write_part};
 use crate::flow::model::FLOW_MODEL;
-use crate::json;
+use crate::flow_value;
 use crate::json::NonFinite;
 
 use super::*;
@@ -25,7 +25,7 @@ fn canonical_graph_json(flow: &FlowValue) -> Result<String> {
 
 #[test]
 fn graphs_compare_their_canonical_forms() {
-    let left = json!({
+    let left = flow_value!({
         "viewport": {"x": 1},
         "description": "every top-level key but nodes and edges is view state",
         "nodes": [
@@ -36,7 +36,7 @@ fn graphs_compare_their_canonical_forms() {
         ],
         "edges": [{"id": "e", "sourceHandle": "{œnameœ: œoutœ}", "animated": true}],
     });
-    let right = json!({
+    let right = flow_value!({
         "nodes": [
             {"id": "a", "data": {"node": {"template": {
                 "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1}, {"__id__": "r2", "__pos__": 2}]}
@@ -49,7 +49,7 @@ fn graphs_compare_their_canonical_forms() {
     assert_eq!(graph_hash(&left).unwrap(), graph_hash(&right).unwrap());
 
     let mut changed = right.clone();
-    changed["nodes"][1]["data"]["node"]["template"]["x"] = json!(1);
+    changed["nodes"][1]["data"]["node"]["template"]["x"] = flow_value!(1);
     assert!(!graphs_equal(&left, &changed).unwrap());
     assert_ne!(graph_hash(&left).unwrap(), graph_hash(&changed).unwrap());
 }

@@ -82,7 +82,7 @@ impl PartialEq for FlowObj {
 impl FlowObj {
     /// The address of the shared keys and values: equal for two copies that share them.
     #[must_use]
-    pub fn entries_ptr(&self) -> usize {
+    pub(crate) fn entries_ptr(&self) -> usize {
         self.entries.ptr()
     }
 
@@ -108,6 +108,8 @@ impl FlowObj {
 
     /// Consume this object. Return its keys and values when it is their only owner,
     /// so a caller can drop them on a worker. Otherwise return `None`.
+    /// Only the Python binding's drop thread needs it.
+    #[doc(hidden)]
     #[must_use]
     pub fn into_unshared_entries(self) -> Option<impl Send + 'static> {
         let mut entries = self.entries;

@@ -1,7 +1,7 @@
 //! Validation: the invariants, which every stored flow follows, and the
 //! rules, which apply only to what a write adds or changes relative to the
-//! stored graph (`base`). Example: a stored table input without row ids stays
-//! valid until a write changes it.
+//! stored graph (`base`). Example: a stored edge that breaks an edge rule
+//! stays valid until a write changes that edge.
 
 use crate::json::FlowValue;
 

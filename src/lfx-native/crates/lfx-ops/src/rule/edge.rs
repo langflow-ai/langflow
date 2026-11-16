@@ -144,8 +144,8 @@ const HOLDERS: [Holder; 2] = [
     },
 ];
 
-/// Whether [`removed_endpoints`] needs the old value at `path`.
-/// Example: a write at `["data", "node"]` replaces the template and the outputs.
+/// Whether [`removed_endpoints`] needs the old value at `path`: a write there
+/// can remove a field or an output that an edge ends at.
 pub(crate) fn reads_before(path: &[Segment]) -> bool {
     HOLDERS
         .iter()
@@ -858,7 +858,6 @@ pub(crate) fn list<'a>(graph: &'a FlowValue, key: &str) -> &'a [FlowValue] {
     graph
         .get(key)
         .and_then(FlowValue::as_array)
-        .map(Vec::as_slice)
         .unwrap_or_default()
 }
 

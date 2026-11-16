@@ -137,7 +137,7 @@ impl FromFlowValue for Segment {
 
 #[cfg(test)]
 mod tests {
-    use crate::json;
+    use crate::flow_value;
 
     use super::*;
 
@@ -148,15 +148,18 @@ mod tests {
     #[test]
     fn errors_name_the_place_that_failed() {
         assert_eq!(
-            message::<Vec<String>>(json!(["a", 5])),
+            message::<Vec<String>>(flow_value!(["a", 5])),
             "root[1]: must be a string"
         );
-        assert_eq!(message::<Vec<String>>(json!({})), "root: must be a list");
+        assert_eq!(
+            message::<Vec<String>>(flow_value!({})),
+            "root: must be a list"
+        );
     }
 
     #[test]
     fn keys_name_themselves_in_errors() {
-        let error = read::<Vec<String>>(json!(["a", null]), "ids").unwrap_err();
+        let error = read::<Vec<String>>(flow_value!(["a", null]), "ids").unwrap_err();
         assert_eq!(
             error.into_error("root").message,
             "root.ids[1]: must be a string"

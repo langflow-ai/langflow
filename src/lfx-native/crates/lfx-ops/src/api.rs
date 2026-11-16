@@ -3,9 +3,7 @@
 //! Each function reads its [`Input`]s, calls the engine and returns a value.
 //! The bindings turn an [`ApiError`] into their language's exception.
 
-use std::fmt;
-
-use crate::json;
+use crate::flow_value;
 use crate::json::serialize::{self, Ascii};
 use crate::json::{FiniteFlowValue, FlowObj, FlowValue, NonFinite};
 
@@ -23,61 +21,65 @@ use crate::op::{Applied, ApplyOptions, ReplayOptions, Replayed};
 use crate::state::GraphState;
 use crate::state::plain::GraphPlain;
 use crate::validate::{Numbers, Violation, find_graph_violations};
-use crate::violation::error::{Error, invalid};
+use crate::violation::error::{Error, ErrorKind, invalid};
 
-/// An error as a JSON object with `kind`, `code`, `message`, and
-/// `edge_id` or `violations` when it has them.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ApiError(pub FlowValue);
+/// An engine error, as the bindings raise it. [`Self::details`] gives it as JSON.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error(transparent)]
+pub struct ApiError(pub Error);
 
 impl ApiError {
-    /// The error's kind.
+    /// The name of the matching Python exception class.
     #[must_use]
-    pub fn kind(&self) -> &str {
-        self.0["kind"].as_str().unwrap_or_default()
+    pub fn kind(&self) -> &'static str {
+        match self.0.kind {
+            ErrorKind::InvalidOperation => "FlowOperationValidationError",
+            ErrorKind::InvalidGraph => "FlowDataValidationError",
+            ErrorKind::ReplayMismatch => "FlowOperationReplayError",
+            ErrorKind::RestoreFixNotAllowed => "RestoreFixNotAllowedError",
+        }
     }
 
-    /// The error's code.
+    /// The error's stable code.
     #[must_use]
-    pub fn code(&self) -> &str {
-        self.0["code"].as_str().unwrap_or_default()
+    pub fn code(&self) -> &'static str {
+        self.0.code.as_str()
     }
 
     /// The error's message.
     #[must_use]
     pub fn message(&self) -> &str {
-        self.0["message"].as_str().unwrap_or_default()
+        &self.0.message
+    }
+
+    /// The error as a JSON object with `kind`, `code`, `message`, and
+    /// `edge_id` or `violations` when it has them.
+    #[must_use]
+    pub fn details(&self) -> FlowValue {
+        let mut out = flow_value!({
+            "kind": self.kind(),
+            "code": self.code(),
+            "message": self.message(),
+        });
+        if let Some(edge_id) = &self.0.edge_id {
+            out["edge_id"] = FlowValue::from(edge_id.as_str());
+        }
+        if !self.0.violations.is_empty() {
+            out["violations"] = violations(&self.0.violations);
+        }
+        out
     }
 }
-
-impl fmt::Display for ApiError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}: {}", self.code(), self.message())
-    }
-}
-
-impl std::error::Error for ApiError {}
 
 impl From<NonFinite> for ApiError {
     fn from(error: NonFinite) -> Self {
-        Self::from(Error::from(error))
+        Self(Error::from(error))
     }
 }
 
 impl From<Error> for ApiError {
     fn from(error: Error) -> Self {
-        let mut out = json!({
-            "kind": error.kind.class_name(),
-            "code": error.code.as_str(),
-            "message": error.message,
-        });
-        if let Some(edge_id) = &error.edge_id {
-            out["edge_id"] = json!(edge_id);
-        }
-        if !error.violations.is_empty() {
-            out["violations"] = violations(&error.violations);
-        }
-        Self(out)
+        Self(error)
     }
 }
 
@@ -607,7 +609,9 @@ pub fn assign_changed_node_table_row_ids(
 ///
 /// The node does not parse.
 pub fn table_fields(node: Input<'_>) -> ApiResult<FlowValue> {
-    Ok(json!(table_input::table_fields(&data(node)?)))
+    Ok(table_input::table_fields(&data(node)?)
+        .into_iter()
+        .collect())
 }
 
 /// Rows in order, by `(__pos__, __id__)`, or as stored for a legacy table.

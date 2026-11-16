@@ -16,8 +16,8 @@
 //!   write to `__pos__`. A list without a unique key and a position on every
 //!   item is written whole;
 //! - a changed edge is deleted and added again;
-//! - view state is never recorded. Example: two spellings of one handle are
-//!   not a change.
+//! - view state is never recorded. Example: a change to a node's `selected`
+//!   is not a change.
 
 use std::borrow::Cow;
 

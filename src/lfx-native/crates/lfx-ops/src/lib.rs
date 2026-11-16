@@ -6,8 +6,10 @@
 //!
 //! Each folder imports only from the folders before it: `collection`,
 //! `json`, `flow`, `compare`, `node_input`, `violation`, `invariant`,
-//! `rule`, `validate`, `snapshot`, `state`, `op`, then [`api`].
+//! `rule`, `validate`, `snapshot`, `state`, `op`, then `api`, which the
+//! `api` feature turns on for the bindings.
 
+#[cfg(feature = "api")]
 pub mod api;
 mod collection;
 pub mod compare;

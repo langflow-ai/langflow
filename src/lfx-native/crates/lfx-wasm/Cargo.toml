@@ -16,7 +16,7 @@ test = false
 doctest = false
 
 [dependencies]
-lfx-ops = { path = "../lfx-ops" }
+lfx-ops = { path = "../lfx-ops", features = ["api"] }
 wasm-bindgen = "0.2.129"
 js-sys = "0.3"
 # The engine draws random ids; in the browser they come from crypto.getRandomValues.

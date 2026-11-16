@@ -3,12 +3,12 @@
 use lfx_ops::api::json_text;
 use lfx_ops::compare::{graph_hash, graphs_equal};
 use lfx_ops::flow::model::FLOW_MODEL;
-use lfx_ops::json;
+use lfx_ops::flow_value;
 use lfx_ops::json::{FlowObj, FlowValue};
 use lfx_ops::{ApplyOptions, GraphState, Operation, ReplayOptions};
 use libtest_mimic::{Failed, Trial};
 
-use crate::support::{assert_json_eq, cases, compact, load};
+use crate::support::{assert_json_eq, cases, compact, error_json, load};
 
 /// Every apply case, and the backward round trip of every case that applies.
 pub fn trials() -> Vec<Trial> {
@@ -66,11 +66,11 @@ fn apply_case(case: &FlowValue) -> Result<(), Failed> {
         let Err(error) = outcome else {
             return Err("expected the operations to be refused".into());
         };
-        let actual = json!({"error": error.kind.class_name(), "code": error.code.as_str()});
+        let actual = error_json(&error);
         assert_json_eq(
             &format!("error ({error})"),
             &actual,
-            &json!({"error": expected_error, "code": case["code"]}),
+            &flow_value!({"error": expected_error, "code": &case["code"]}),
         )?;
         // A refused batch leaves the state as it was.
         return match state {
@@ -146,14 +146,14 @@ fn merge_case(base: &FlowValue, case: &FlowValue) -> Result<(), Failed> {
         let outcome = parse(&case["transactions"][name])
             .and_then(|operations| state.apply(operations, ApplyOptions::default()));
         let recorded = match outcome {
-            Ok(_) => json!("applied"),
+            Ok(_) => flow_value!("applied"),
             Err(error) => {
                 assert_json_eq(
                     &format!("state after refusing {name}"),
                     &state.to_value(),
                     &before,
                 )?;
-                json!({"error": error.kind.class_name(), "code": error.code.as_str()})
+                error_json(&error)
             }
         };
         outcomes.insert(name.to_owned(), recorded);
@@ -197,7 +197,7 @@ fn property_sequence(
             .map_err(|error| format!("transaction {index} refused: {error}"))?;
     }
     let hash = graph_hash(&state.to_value()).map_err(|error| error.to_string())?;
-    assert_json_eq("graph hash", &json!(hash), &sequence["graph_hash"])
+    assert_json_eq("graph hash", &flow_value!(hash), &sequence["graph_hash"])
 }
 
 /// Compare the ids a delete names as a set: node and edge order is not state.

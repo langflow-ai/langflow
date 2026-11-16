@@ -1,7 +1,7 @@
 //! `restore_cases.json`: restore fixes.
 
 use lfx_ops::Operation;
-use lfx_ops::json;
+use lfx_ops::flow_value;
 use lfx_ops::json::FlowValue;
 use lfx_ops::restore::apply_restore_fixes;
 use libtest_mimic::{Failed, Trial};
@@ -12,12 +12,12 @@ fn restore(case: &FlowValue) -> Result<(), Failed> {
     let fixes =
         Operation::list_from_value(case["fixes"].clone()).map_err(|error| error.to_string())?;
     let actual = match apply_restore_fixes(&case["revision"], &case["stored"], fixes) {
-        Ok(graph) => json!({"expected": graph}),
-        Err(error) => json!({"error": error_json(&error)}),
+        Ok(graph) => flow_value!({"expected": graph}),
+        Err(error) => flow_value!({"error": error_json(&error)}),
     };
     let expected = match case.get("error") {
-        Some(error) => json!({"error": error}),
-        None => json!({"expected": case["expected"]}),
+        Some(error) => flow_value!({"error": error}),
+        None => flow_value!({"expected": &case["expected"]}),
     };
     assert_json_eq("restored revision", &actual, &expected)
 }

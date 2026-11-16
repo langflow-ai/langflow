@@ -1,6 +1,7 @@
 //! Keyed lists, indexed by item key.
 //!
-//! Example keys: an output's `name`, a tool action's first tag, a row's `__id__`.
+//! Example: in a list keyed by `name`, `[{"name": "a"}, {"name": "b"}]` holds the
+//! items `a` and `b`.
 //! A keyed list sorts by `(__pos__, key)`, so the engine does not sort the array.
 
 use std::fmt;
@@ -25,7 +26,7 @@ pub struct ListIndex {
     repeated: IndexSet<String>,
     /// How many items have no non-empty string key.
     keyless: usize,
-    /// How many table rows have no finite numeric position.
+    /// How many items have no finite numeric position.
     unpositioned: usize,
 }
 
@@ -53,16 +54,9 @@ impl fmt::Display for ListProblem {
 }
 
 /// A keyed list rule that a write breaks, with where it is.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("{0}")]
 pub struct ListError(pub(crate) String);
-
-impl fmt::Display for ListError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.0)
-    }
-}
-
-impl std::error::Error for ListError {}
 
 impl ListIndex {
     /// Index `items`, and count the items that break the keyed list rules.
@@ -267,17 +261,17 @@ pub(crate) fn item_order(keyed: &KeyedList, items: &[FlowValue]) -> Vec<usize> {
 
 // --- Positions (`__pos__`) ---------------------------------------------------------------------
 
-/// Whether positions are renumbered when no number fits between two rows.
+/// Whether positions are renumbered when no number fits between two items.
 /// Only the editor renumbers.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Renumber {
-    /// Renumber the table `1..n`, in the same order, when a gap has no room left.
+    /// Renumber the list `1..n`, in the same order, when a gap has no room left.
     WhenNoRoom,
     /// Never renumber.
     Never,
 }
 
-/// A row position, keeping whether Python would hold it as an integer.
+/// An item's position, keeping whether Python would hold it as an integer.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Position {
     pub(crate) value: f64,
@@ -324,58 +318,60 @@ impl Position {
     }
 }
 
-/// Give each row without a position one that keeps its array place, in place.
+/// Give each item without a position one that keeps its array place, in place.
 ///
-/// Example: rows at 1, none, 2 get 1, 1.5, 2. A table without positions gets `1..n`.
-/// With [`Renumber::WhenNoRoom`], a gap without room renumbers the table `1..n`
-/// in [`ordered_rows`](crate::node_input::table_input::ordered_rows) order. Returns the indexes of the rows it changed.
+/// Example: items at 1, none, 2 get 1, 1.5, 2. A list without positions gets `1..n`.
+/// With [`Renumber::WhenNoRoom`], a gap without room renumbers the list `1..n`
+/// in its order. Returns the indexes of the items it changed.
 pub fn fill_missing_positions(
     keyed: &KeyedList,
-    rows: &mut [FlowValue],
+    items: &mut [FlowValue],
     renumber: Renumber,
 ) -> Vec<usize> {
     let key = keyed.position.as_str();
-    let position_at = |rows: &[FlowValue], index: usize| {
-        rows[index]
+    let position_at = |items: &[FlowValue], index: usize| {
+        items[index]
             .get(key)
             .and_then(|value| Position::try_from(value).ok())
     };
     let mut filled = Vec::new();
     let mut no_room = false;
     let mut index = 0;
-    while index < rows.len() {
-        if position_at(rows, index).is_some() {
+    while index < items.len() {
+        if position_at(items, index).is_some() {
             index += 1;
             continue;
         }
         let mut end = index;
-        while end < rows.len() && position_at(rows, end).is_none() {
+        while end < items.len() && position_at(items, end).is_none() {
             end += 1;
         }
         let count = end - index;
         let before = index
             .checked_sub(1)
-            .and_then(|before| position_at(rows, before));
-        let after = (end < rows.len()).then(|| position_at(rows, end)).flatten();
+            .and_then(|before| position_at(items, before));
+        let after = (end < items.len())
+            .then(|| position_at(items, end))
+            .flatten();
         let positions = spread(before, after, count);
         no_room |= !fits_between(&positions, before, after);
         for (offset, position) in positions.into_iter().enumerate() {
-            set_position(&mut rows[index + offset], key, position);
+            set_position(&mut items[index + offset], key, position);
             filled.push(index + offset);
         }
         index = end;
     }
     if no_room && renumber == Renumber::WhenNoRoom {
-        for (rank, item_index) in item_order(keyed, rows).into_iter().enumerate() {
+        for (rank, item_index) in item_order(keyed, items).into_iter().enumerate() {
             let number = f64::from(u32::try_from(rank + 1).unwrap_or(u32::MAX));
-            set_position(&mut rows[item_index], key, Position::integer(number));
+            set_position(&mut items[item_index], key, Position::integer(number));
         }
-        return (0..rows.len()).collect();
+        return (0..items.len()).collect();
     }
     filled
 }
 
-/// The positions of a run of `count` rows between `before` and `after`.
+/// The positions of a run of `count` items between `before` and `after`.
 fn spread(before: Option<Position>, after: Option<Position>, count: usize) -> Vec<Position> {
     let steps = (1..=count).map(|step| f64::from(u32::try_from(step).unwrap_or(u32::MAX)));
     let total = f64::from(u32::try_from(count + 1).unwrap_or(u32::MAX));
@@ -420,8 +416,8 @@ fn fits_between(positions: &[Position], before: Option<Position>, after: Option<
     previous < after.value
 }
 
-fn set_position(row: &mut FlowValue, key: &str, position: Position) {
-    if let Some(row) = row.as_object_mut() {
-        row.insert(key.to_owned(), position.to_value());
+fn set_position(item: &mut FlowValue, key: &str, position: Position) {
+    if let Some(item) = item.as_object_mut() {
+        item.insert(key.to_owned(), position.to_value());
     }
 }
