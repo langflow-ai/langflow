@@ -50,3 +50,9 @@ def test_no_usable_keyword_still_returns_at_most_the_candidate_limit() -> None:
 def test_an_unknown_match_type_is_refused() -> None:
     with pytest.raises(ValueError, match="Match Type"):
         _search(["agent"], match_type="or")
+
+
+@pytest.mark.parametrize("keywords", [[], ["class"]])
+def test_a_negative_candidate_limit_is_refused(keywords: list[str]) -> None:
+    with pytest.raises(ValueError, match="Number of Candidates"):
+        _search(keywords, number_candidates=-1)

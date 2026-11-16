@@ -63,6 +63,10 @@ class DataFrameKeywordSearch(Component):
         column = self.column
         keywords = self.keywords if isinstance(self.keywords, list) else []
 
+        if self.number_candidates < 0:
+            msg = f"Number of Candidates must be zero or greater, not {self.number_candidates}."
+            raise ValueError(msg)
+
         if df is None or len(df) == 0:
             return DataFrame(pd.DataFrame())
 
