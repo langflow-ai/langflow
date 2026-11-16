@@ -775,6 +775,7 @@
   "errors.invalidApiKey": "APIキーが無効です。 Langflow Storeをご利用いただくには、有効なAPIキーを追加してください。",
   "errors.invalidFile": "有効なファイルを選択してください。 許可されるファイル形式は以下の通りです：",
   "errors.invalidSelection": "無効な選択",
+  "errors.groupTriggerSelection": "トリガー以外のコンポーネントのみを選択してください",
   "errors.lastBuildFailed": "前回のビルドが失敗しました",
   "errors.missedFields": "申し訳ありません。 何か見落としているようですね",
   "errors.missingInfo": "申し訳ありません。 必要な情報が入力されていないようです：",

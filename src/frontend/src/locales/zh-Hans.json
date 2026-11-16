@@ -775,6 +775,7 @@
   "errors.invalidApiKey": "您的 API 密钥无效。 请添加一个有效的 API 密钥，以便使用 Langflow Store。",
   "errors.invalidFile": "请选择一个有效的文件。 仅允许以下文件类型：",
   "errors.invalidSelection": "选择无效",
+  "errors.groupTriggerSelection": "请仅选择非触发器组件",
   "errors.lastBuildFailed": "上次构建失败",
   "errors.missedFields": "糟糕！ 看来你漏掉了什么",
   "errors.missingInfo": "糟糕！ 看来您遗漏了一些必填信息：",

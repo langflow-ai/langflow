@@ -775,6 +775,7 @@
   "errors.invalidApiKey": "Votre clé API n'est pas valide. Veuillez ajouter une clé API valide pour pouvoir utiliser la boutique Langflow.",
   "errors.invalidFile": "Veuillez sélectionner un fichier valide. Seuls ces types de fichiers sont autorisés :",
   "errors.invalidSelection": "Sélection non valide",
+  "errors.groupTriggerSelection": "Sélectionnez uniquement des composants qui ne sont pas des déclencheurs",
   "errors.lastBuildFailed": "La dernière compilation a échoué",
   "errors.missedFields": "Oups ! On dirait que tu as raté quelque chose",
   "errors.missingInfo": "Oups ! Il semble que vous ayez oublié certaines informations obligatoires :",

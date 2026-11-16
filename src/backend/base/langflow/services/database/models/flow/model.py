@@ -53,10 +53,11 @@ def _validate_endpoint_name_value(v: str | None) -> str | None:
 def _normalize_flow_data_for_write(value: dict | None) -> dict | None:
     if value is None:
         return None
-    from langflow.services.triggers.reconciliation import validate_single_trigger_per_flow
+    from langflow.services.triggers.reconciliation import validate_no_grouped_trigger, validate_single_trigger_per_flow
 
     normalized = normalize_code_for_import(value)
     validate_single_trigger_per_flow(normalized)
+    validate_no_grouped_trigger(normalized)
     return normalized
 
 

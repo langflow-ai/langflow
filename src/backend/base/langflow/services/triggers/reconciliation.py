@@ -51,6 +51,7 @@ from langflow.services.triggers.constants import (
     SLACK_TRIGGER_KINDS,
 )
 from langflow.services.triggers.error_codes import (
+    GROUPED_TRIGGER_ERROR,
     MULTIPLE_TRIGGERS_ERROR,
     NODE_REMOVED_ERROR,
     SOURCE_SETTINGS_CHANGED_ERROR,
@@ -347,6 +348,38 @@ def validate_single_trigger_per_flow(flow_data: dict[str, Any] | None) -> None:
         count += 1
         if count > 1:
             raise CodedTriggerError(TriggerErrorCode.MULTIPLE_TRIGGERS, MULTIPLE_TRIGGERS_ERROR)
+
+
+def _has_trigger_node(nodes: Any) -> bool:
+    """Whether ``nodes`` holds a trigger node, at any depth of group nesting."""
+    if not isinstance(nodes, list):
+        return False
+    for node in nodes:
+        node_data = node.get("data") if isinstance(node, dict) else None
+        if not isinstance(node_data, dict):
+            continue
+        if _node_kind(node_data.get("type")) is not None or _has_trigger_node(_group_nodes(node_data)):
+            return True
+    return False
+
+
+def _group_nodes(node_data: dict[str, Any]) -> Any:
+    """The inner nodes of a group node's saved sub-flow, or None for any other node."""
+    component = node_data.get("node")
+    flow = component.get("flow") if isinstance(component, dict) else None
+    data = flow.get("data") if isinstance(flow, dict) else None
+    return data.get("nodes") if isinstance(data, dict) else None
+
+
+def validate_no_grouped_trigger(flow_data: dict[str, Any] | None) -> None:
+    """Reject a trigger inside a group: reconciliation reads top-level nodes only."""
+    nodes = (flow_data or {}).get("nodes")
+    if not isinstance(nodes, list):
+        return
+    for node in nodes:
+        node_data = node.get("data") if isinstance(node, dict) else None
+        if isinstance(node_data, dict) and _has_trigger_node(_group_nodes(node_data)):
+            raise ValueError(GROUPED_TRIGGER_ERROR)
 
 
 def _display_name(config: dict[str, Any], kind: str) -> str:
