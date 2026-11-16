@@ -8,7 +8,7 @@ Langflow is a visual workflow builder for AI-powered agents. It has a Python/Fas
 
 ## Prerequisites
 
-- **Python:** 3.11-3.14 (3.15 in preview)
+- **Python:** 3.10-3.14 (3.15 in preview)
 - **uv:** >=0.4 (Python package manager)
 - **Node.js:** >=20.19.0 (v22.12 LTS recommended)
 - **npm:** v10.9+
@@ -135,7 +135,7 @@ The enforcement request shape is `(subject, domain, object, action)`:
 
 ## Component Development
 
-Components live in `src/lfx/src/lfx/components/`. To add a new component:
+Core components live in `src/lfx/src/lfx/components/`. Provider-specific components live in their standalone package under `src/bundles/<provider>/`. To add a new component:
 
 1. Create component class inheriting from `Component`
 2. Define `display_name`, `description`, `icon`, `inputs`, `outputs`
@@ -146,8 +146,8 @@ Components live in `src/lfx/src/lfx/components/`. To add a new component:
 
 ### Component Structure
 ```python
-from langflow.custom import Component
-from langflow.io import MessageTextInput, Output
+from lfx.custom import Component
+from lfx.io import MessageTextInput, Output
 
 class MyComponent(Component):
     display_name = "My Component"
