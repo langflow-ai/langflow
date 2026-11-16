@@ -130,7 +130,8 @@ def _schedule_can_arm(row: Trigger) -> bool:
 
     try:
         _check_schedule_can_arm(row, None)
-    except InvalidScheduleError:
+    # A run_at near year 9999 can overflow on its way to UTC; the route cannot arm it either.
+    except (InvalidScheduleError, OverflowError):
         return False
     return True
 

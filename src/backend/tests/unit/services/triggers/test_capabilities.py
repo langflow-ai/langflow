@@ -28,7 +28,6 @@ A = TriggerAction
 R = TriggerReason
 
 
-#: A schedule the enable route would arm, so resume is decided by the state alone.
 VALID_SCHEDULE = {"cron": "*/5 * * * *", "timezone": "UTC"}
 
 
@@ -260,6 +259,7 @@ def test_a_schedule_with_an_invalid_cron_cannot_be_resumed() -> None:
         pytest.param({"cron": "*/5 * * * *", "timezone": "Mars/Olympus"}, id="unknown-timezone"),
         pytest.param({"cron": "", "timezone": "UTC"}, id="unusable-pick"),
         pytest.param({"run_at": "2020-01-01T08:00", "timezone": "UTC"}, id="run-at-passed"),
+        pytest.param({"run_at": "9999-12-31T23:59", "timezone": "America/New_York"}, id="run-at-out-of-range"),
     ],
 )
 def test_resume_is_blocked_whenever_enable_would_refuse_the_schedule(config) -> None:
