@@ -9,7 +9,7 @@ refusing anything outside the flow's own namespace.
 from __future__ import annotations
 
 from io import BytesIO
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import pytest
 from fastapi import HTTPException
@@ -45,7 +45,7 @@ def test_a_path_in_the_flows_own_namespace_is_accepted(path) -> None:
 @pytest.mark.parametrize(
     "path",
     [
-        f"flow-{uuid4()}/notes.txt",
+        "flow-b97b9c86-45f2-4ffd-946d-44f54c6ab121/notes.txt",
         f"flow-{FLOW_ID}/../notes.txt",
         f"flow-{FLOW_ID}/nested/notes.txt",
         f"flow-flow-{FLOW_ID}/notes.txt",
