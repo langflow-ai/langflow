@@ -6,7 +6,7 @@
 # - No Playwright
 
 ARG UV_VERSION=0.10.4
-ARG PYTHON_IMAGE=registry.access.redhat.com/ubi10/python-314-minimal
+ARG PYTHON_IMAGE=registry.access.redhat.com/ubi10/python-314-minimal:10.3-1793860470
 ARG NODE_VERSION=24.22.2
 
 ################################

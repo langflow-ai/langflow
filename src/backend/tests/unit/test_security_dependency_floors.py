@@ -108,6 +108,66 @@ def test_published_packages_enforce_patched_pypdf_floor() -> None:
     _assert_specifier(pypdf_extra, "<", "7.0.0")
 
 
+def test_marker_specific_security_floors_match_supported_python() -> None:
+    """Keep Python 3.10 compatibility while selecting patched 3.11+ dependencies."""
+    envs = {
+        "3.10": {"python_version": "3.10", "python_full_version": "3.10.20", "sys_platform": "linux"},
+        "3.11": {"python_version": "3.11", "python_full_version": "3.11.14", "sys_platform": "linux"},
+        "3.14": {"python_version": "3.14", "python_full_version": "3.14.5", "sys_platform": "linux"},
+    }
+
+    base_project = _load_pyproject("src/backend/base/pyproject.toml")["project"]
+    datasets_requirements = list(map(Requirement, base_project["optional-dependencies"]["datasets"]))
+    loguru_requirements = list(map(Requirement, _load_pyproject("src/lfx/pyproject.toml")["project"]["dependencies"]))
+    loguru_requirements += list(map(Requirement, base_project["dependencies"]))
+
+    for python_version, env in envs.items():
+        datasets = [req for req in datasets_requirements if req.marker and req.marker.evaluate(env)]
+        assert len(datasets) == 1
+        if python_version == "3.10":
+            assert any(spec.operator == ">" and spec.version == "2.14.7" for spec in datasets[0].specifier)
+            assert not any(spec.operator == ">=" and spec.version == "5.2.0" for spec in datasets[0].specifier)
+        else:
+            _assert_floor(datasets[0], "5.2.0")
+
+        loguru = [req for req in loguru_requirements if req.name.lower() == "loguru" and req.marker]
+        applicable_loguru = [req for req in loguru if req.marker.evaluate(env)]
+        assert len(applicable_loguru) == 2
+        if python_version == "3.14":
+            for req in applicable_loguru:
+                _assert_floor(req, "0.8.0")
+                _assert_specifier(req, "<", "1.0.0")
+        else:
+            legacy_floors = sorted(
+                next(spec.version for spec in req.specifier if spec.operator == ">=") for req in applicable_loguru
+            )
+            assert legacy_floors == ["0.7.1", "0.7.3"]
+            for req in applicable_loguru:
+                _assert_specifier(req, "<", "1.0.0")
+
+    with (REPO_ROOT / "uv.lock").open("rb") as lock_file:
+        packages = tomllib.load(lock_file)["package"]
+    matches = [package for package in packages if package["name"] == "datasets"]
+    for python_version, env in envs.items():
+        applicable = [
+            Version(package["version"])
+            for package in matches
+            if any(Marker(marker).evaluate(env) for marker in package.get("resolution-markers", []))
+        ]
+        expected = "5.0.1" if python_version == "3.10" else "5.2.0"
+        assert applicable == [Version(expected)]
+
+    loguru_packages = [package for package in packages if package["name"] == "loguru"]
+    for python_version, env in envs.items():
+        applicable = [
+            Version(package["version"])
+            for package in loguru_packages
+            if any(Marker(marker).evaluate(env) for marker in package.get("resolution-markers", []))
+        ]
+        expected = "0.8.0" if python_version == "3.14" else "0.7.3"
+        assert applicable == [Version(expected)]
+
+
 def test_published_packages_enforce_patched_mcp_floor() -> None:
     for relative_path in ("src/backend/base/pyproject.toml", "src/lfx/pyproject.toml"):
         dependencies = _load_pyproject(relative_path)["project"]["dependencies"]

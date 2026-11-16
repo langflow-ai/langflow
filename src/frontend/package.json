@@ -8,7 +8,7 @@
   "overrides": {
     "tar": "^7.5.21",
     "tar-fs": "^2.1.4",
-    "glob": "^14.0.3",
+    "glob": "^14.0.6",
     "test-exclude": "^7.0.0",
     "picomatch": "^4.0.4",
     "ip-address": "^10.7.6",
@@ -38,13 +38,13 @@
     "postcss": {
       "nanoid": "^3.3.18"
     },
-    "hono": "^4.13.11",
+    "hono": "^4.13.16",
     "@hono/node-server": "^2.1.8",
     "brace-expansion": "^5.0.12",
     "basic-ftp": "^6.2.6",
     "source-map-js": "^1.2.2",
     "handlebars": "^4.7.10",
-    "minimatch": "^11.0.4",
+    "minimatch": "^11.0.8",
     "serialize-javascript": "^7.0.5",
     "undici": "^8.12.2",
     "postcss-selector-parser": "^7.1.6",
@@ -62,7 +62,7 @@
       "@modelcontextprotocol/sdk": "^1.32.1"
     },
     "qs": "^6.17.1",
-    "follow-redirects": "^1.16.2",
+    "follow-redirects": "^1.16.3",
     "modern-tar": "^0.8.6",
     "open": "^11.0.4"
   },
@@ -107,7 +107,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^4.4.0",
-    "dompurify": "^3.4.17",
+    "dompurify": "^3.4.18",
     "dotenv": "^16.4.5",
     "elkjs": "^0.9.3",
     "emoji-regex": "^10.3.0",
