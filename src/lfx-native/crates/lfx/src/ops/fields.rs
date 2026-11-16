@@ -32,7 +32,7 @@ use crate::value::AnyValue;
 
 use crate::ops::error::Result;
 use crate::ops::keyed::{ListIndex, find_item, remove_item};
-use crate::ops::ops::{Path, PathExt, Segment};
+use crate::ops::ops::{Path, Segment};
 use crate::ops::schema::NODE_SCHEMA;
 use crate::ops::state::Lists;
 
@@ -425,8 +425,7 @@ pub(crate) struct NodeLists<'l> {
 impl NodeLists<'_> {
     /// The index of the list at `path`, if one is built.
     fn index(&mut self, path: &[Segment]) -> Option<&mut ListIndex> {
-        let keys = path.to_list()?;
-        self.lists.built(self.id, &keys)
+        self.lists.built(self.id, path)
     }
 }
 
@@ -481,12 +480,9 @@ pub(crate) fn make_write(
 ) {
     match segment {
         Segment::Key(key) => {
-            if let Some(lists) = lists.as_deref_mut()
-                && let Some(mut keys) = parent_path.to_list()
-            {
+            if let Some(lists) = lists.as_deref_mut() {
                 // The write replaces or removes the lists under its path.
-                keys.push(key);
-                lists.lists.forget_under(lists.id, &keys);
+                lists.lists.forget_under(lists.id, parent_path, key);
             }
             let object = parent
                 .as_object_mut()

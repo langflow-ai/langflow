@@ -33,7 +33,9 @@ use crate::ops::edges::{GraphRead, check_edge, reads_before, removed_endpoints};
 use crate::ops::error::{Error, Result, bail, invalid, quoted};
 use crate::ops::fields::{self, FieldWrite};
 use crate::ops::keyed::{ListIndex, ListProblem, check_position};
-use crate::ops::ops::{Change, Edge, FieldUpdate, Node, NodePath, Operation, PathExt, Segment};
+use crate::ops::ops::{
+    AsKey, Change, Edge, FieldUpdate, Node, NodePath, Operation, PathExt, Segment,
+};
 use crate::ops::schema::{KeyedList, NODE_SCHEMA};
 use crate::ops::state::{Graph, GraphState, field_value};
 
@@ -569,14 +571,14 @@ impl GraphState {
                 Ok(map.get(key))
             }
             Segment::Item(key) => {
-                let (keyed, list_path) = keyed_list(graph, placed, index, value)?;
+                let keyed = keyed_list(graph, placed, index, value)?;
                 let items = value.as_array().map(Vec::as_slice).unwrap_or_default();
                 // A stored node's lists keep their index between reads. A list
                 // inside an entry, or in a node the batch added, is indexed
                 // again at each read.
                 let built;
                 let list_index = if stored && !in_entry {
-                    &*lists.index(id, &list_path, keyed, items)
+                    &*lists.index(id, &path[..index], keyed, items)
                 } else {
                     built = ListIndex::build(keyed, items);
                     &built
@@ -838,30 +840,32 @@ fn missing_segment(placed: &PlacedUpdate<'_>, missing: usize) -> Error {
     }
 }
 
-/// The keyed list whose item `path[index]` names, and its path as object
-/// keys. The schema decides whether a template field's value is a table from
+/// The keyed list whose item `path[index]` names. The schema decides whether a template field's value is a table from
 /// the field's keys, read through the batch's writes. Checks that the list
 /// is keyed and that `value`, what the path holds there, is a list.
-fn keyed_list<'p>(
+fn keyed_list(
     graph: &Graph,
-    placed: &PlacedUpdate<'p>,
+    placed: &PlacedUpdate<'_>,
     index: usize,
     value: &AnyValue,
-) -> Result<(&'static KeyedList, Vec<&'p str>)> {
+) -> Result<&'static KeyedList> {
     let (id, path, context) = (
         placed.update.id.as_str(),
         &placed.update.path,
         placed.context,
     );
-    let list_path = path[..index].to_list();
-    let keyed = list_path.as_ref().and_then(|list_path| {
+    let list_path = &path[..index];
+    let keyed = list_path.all_keys().then(|| {
         NODE_SCHEMA.keyed_list_by(list_path, |field_path, key| {
-            let mut keys = field_path.to_vec();
-            keys.push(key);
+            let keys: Vec<&str> = field_path
+                .iter()
+                .filter_map(AsKey::as_key)
+                .chain([key])
+                .collect();
             graph.node_value(id, &keys)
         })
     });
-    let (Some(keyed), Some(list_path)) = (keyed, list_path) else {
+    let Some(keyed) = keyed.flatten() else {
         bail!(
             "{context}.path[{index}]: list item key on a list the node schema does not declare keyed"
         );
@@ -869,7 +873,7 @@ fn keyed_list<'p>(
     if !value.is_array() {
         bail!("{context}.path[{index}]: list item key on a value that is not a list");
     }
-    Ok((keyed, list_path))
+    Ok(keyed)
 }
 
 // --- Backward operations of field writes ---------------------------------------------------

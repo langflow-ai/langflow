@@ -1,10 +1,4 @@
 //! Operation types and their strict parser.
-//!
-//! Each type reads itself from a parsed JSON value (`FromAnyValue`), so the
-//! parser accepts exactly the shapes the operation protocol defines: no
-//! unknown keys, no missing fields, no wrong types. A path names a list item
-//! by its key, never by its index. An operation that is parsed and printed
-//! again reads as it was sent.
 
 use std::ops::Deref;
 use std::str::FromStr;
@@ -23,9 +17,8 @@ use crate::ops::schema::{KeyWrite, NODE_OBJECT_PATHS, NODE_SCHEMA};
 pub enum Segment {
     /// An object key.
     Key(String),
-    /// An item of a keyed list, named by its key: `{"key": ...}` in JSON. A
-    /// table row's key is its `__id__`. Any other item's key is the field that
-    /// the node schema names, such as an output's `name`.
+    /// An item of a list, named by its key: `{"key": ...}`.
+    /// The actual name of such key fields are defined in node_schema.json.
     Item(String),
 }
 
@@ -40,9 +33,19 @@ impl Segment {
         }
     }
 
-    /// The segment as a path writes it in JSON: an object key as a string,
-    /// a list item as `{"key": ...}`. For example, `Key("outputs")` gives
-    /// `"outputs"`, and `Item("r1")` gives `{"key": "r1"}`.
+    /// The string this segment holds. An object key and a list item both
+    /// name that string. For example, `Key("outputs")` and `Item("r1")` both
+    /// give their text.
+    #[must_use]
+    fn as_str(&self) -> &str {
+        match self {
+            Self::Key(key) | Self::Item(key) => key,
+        }
+    }
+
+    /// The segment as a path writes it in JSON.
+    /// Example: `Key("outputs")` gives `"outputs"`,
+    /// and `Item("r1")` gives `{"key": "r1"}`.
     fn to_value(&self) -> AnyValue {
         match self {
             Self::Key(key) => AnyValue::from(key.as_str()),
@@ -79,15 +82,19 @@ impl AsKey for Segment {
     }
 }
 
-impl AsKey for String {
+/// Any string-like part, such as a `String`, a `&str` or an `AnyString`, is
+/// an object key.
+impl<S: AsRef<str>> AsKey for S {
     fn as_key(&self) -> Option<&str> {
-        Some(self)
+        Some(self.as_ref())
     }
 }
 
-impl AsKey for &str {
+/// A path part as it arrives in JSON: a string is an object key, and
+/// anything else, such as `{"key": ...}`, is not.
+impl AsKey for AnyValue {
     fn as_key(&self) -> Option<&str> {
-        Some(self)
+        self.as_str()
     }
 }
 
@@ -111,8 +118,8 @@ pub(crate) trait PathExt {
     /// needs one to be a prefix of the other also compares their lengths.
     fn shares_start<S: AsRef<str>>(&self, path: &[S]) -> bool;
 
-    /// The object keys of `self`, or `None` if any segment is a list item.
-    fn to_list(&self) -> Option<Vec<&str>>;
+    /// Whether every part is an object key, so `self` names no list item.
+    fn all_keys(&self) -> bool;
 }
 
 impl<T: AsKey> PathExt for [T] {
@@ -130,17 +137,20 @@ impl<T: AsKey> PathExt for [T] {
             .all(|(seg, key)| seg.as_key() == Some(key.as_ref()))
     }
 
-    fn to_list(&self) -> Option<Vec<&str>> {
-        self.iter().map(AsKey::as_key).collect()
+    fn all_keys(&self) -> bool {
+        self.iter().all(|part| part.as_key().is_some())
     }
 }
 
-/// A path as JSON text, for error messages. For example,
-/// `[Key("outputs"), Item("text"), Key("name")]` prints as
-/// `["outputs",{"key":"text"},"name"]`.
+/// The path as text for an error message. Each segment contributes the string
+/// it holds, so `[Key("outputs"), Item("text"), Key("name")]` prints as
+/// `["outputs","text","name"]`.
 #[must_use]
 pub fn path_label(path: &[Segment]) -> String {
-    AnyValue::Array(path.iter().map(Segment::to_value).collect()).to_string()
+    if path.is_empty() {
+        return String::from("[]")
+    }
+    return format!("[\"{}\"]", path.iter().map(Segment::as_str).collect::<Vec<&str>>().join("\",\""));
 }
 
 /// What a field update does at its path.
@@ -169,19 +179,24 @@ impl NodePath {
         self.0
     }
 
+    fn match_node_object<P: PathExt + ?Sized>(path: &P) -> Option<&&[&str]> {
+        return NODE_OBJECT_PATHS.iter().find(|np| path.equals(np));
+    }
+
     /// Check that a field update may write `path`. For example, `["id"]`
-    /// fails with `cannot change the node's id`.
-    fn check(path: &[Segment]) -> Result<(), FromAnyValueError> {
+    /// fails with `cannot change the node's id`. It reads only object keys,
+    /// so it works on built segments and on the JSON list they come from.
+    fn check<T: AsKey>(path: &[T]) -> Result<(), FromAnyValueError> {
         if path.is_empty() {
             return Err(FromAnyValueError::new("must not be empty"));
         }
         if path[0].as_key() == Some("id") {
             return Err(FromAnyValueError::new("cannot change the node's id"));
         }
-        if let Some(object) = NODE_OBJECT_PATHS.iter().find(|object| path.equals(object)) {
+        if let Some(nop) = Self::match_node_object(path) {
             return Err(FromAnyValueError::new(format!(
                 "cannot write the whole of {}; write inside it",
-                object.join(".")
+                nop.join(".")
             )));
         }
         Ok(())
@@ -207,10 +222,13 @@ impl TryFrom<Path> for NodePath {
 }
 
 impl FromAnyValue for NodePath {
+    /// Check the JSON list first, so an invalid path builds no segments.
     fn from_value(value: AnyValue) -> Result<Self, FromAnyValueError> {
-        let path = Path::from_value(value)?;
-        Self::check(&path)?;
-        Ok(Self(path))
+        let items = value
+            .as_array()
+            .ok_or_else(|| FromAnyValueError::new("must be a list"))?;
+        Self::check(items)?;
+        Ok(Self(Path::from_value(value)?))
     }
 }
 
@@ -951,13 +969,43 @@ mod tests {
     }
 
     #[test]
-    fn path_labels_print_paths_as_json() {
+    fn node_path_checks_read_string_lists_and_json_lists() {
+        let message = |error: FromAnyValueError| error.into_error("path").message;
+        let strings: Vec<String> = vec!["data".into(), "node".into()];
+        assert_eq!(
+            message(NodePath::check(&strings).unwrap_err()),
+            "path: cannot write the whole of data.node; write inside it"
+        );
+        assert_eq!(
+            message(NodePath::check(&["id"]).unwrap_err()),
+            "path: cannot change the node's id"
+        );
+        assert!(NodePath::check(&["data", "node", "outputs"]).is_ok());
+        assert_eq!(
+            message(NodePath::check::<&str>(&[]).unwrap_err()),
+            "path: must not be empty"
+        );
+        let AnyValue::Array(items) = json!(["data", {"key": "node"}]) else {
+            unreachable!()
+        };
+        assert!(NodePath::check(&items).is_ok());
+        assert_eq!(
+            NodePath::from_value(json!(["data", "node", "template"]))
+                .unwrap_err()
+                .into_error("path")
+                .message,
+            "path: cannot write the whole of data.node.template; write inside it"
+        );
+    }
+
+    #[test]
+    fn path_labels_print_the_segment_strings() {
         let path = [
-            Segment::Key("outputs".into()),
+            Segment::Key("out\"puts".into()),
             Segment::Item("text".into()),
             Segment::Key("name".into()),
         ];
-        assert_eq!(path_label(&path), r#"["outputs",{"key":"text"},"name"]"#);
+        assert_eq!(path_label(&path), r#"["out"puts","text","name"]"#);
     }
 
     #[test]

@@ -41,7 +41,7 @@ use crate::ops::entry::EntryExt;
 use crate::ops::error::{Error, Result};
 use crate::ops::fields::{self, FieldLayer};
 use crate::ops::keyed::ListIndex;
-use crate::ops::ops::{Edge, Node, PathExt, Segment};
+use crate::ops::ops::{AsKey, Edge, Node, PathExt, Segment};
 use crate::ops::schema::{KeyedList, NODE_SCHEMA};
 use crate::ops::validate::{Numbers, PathPart, validate_flow_data};
 
@@ -522,17 +522,18 @@ pub(crate) fn field_value<'g>(
     let stored = graph.is_stored_node(id);
     let step = |value: &'g AnyValue, index: usize, in_entry: bool| {
         let (parent, segment) = (&path[..index], &path[index]);
-        let (Segment::Item(key), true, Some(list_path)) =
-            (segment, stored && !in_entry, parent.to_list())
-        else {
+        let Segment::Item(key) = segment else {
             return Ok(fields::child(value, parent, segment));
         };
+        if !stored || in_entry || !parent.all_keys() {
+            return Ok(fields::child(value, parent, segment));
+        }
         let Some(items) = value.as_array() else {
             return Ok(None);
         };
         let keyed = NODE_SCHEMA.listed_at(parent);
         let slot = lists
-            .index(id, &list_path, keyed, items)
+            .index(id, parent, keyed, items)
             .find(key, context)?;
         Ok(slot.map(|slot| &items[slot]))
     };
@@ -551,41 +552,52 @@ pub(crate) struct Lists {
 
 impl Lists {
     /// The index of the list `items` at `path` of a node, built the first time a read reaches it.
-    pub fn index(
+    ///
+    /// Every part of `path` is an object key.
+    pub fn index<T: AsKey>(
         &mut self,
         node_id: &str,
-        path: &[&str],
+        path: &[T],
         keyed: &'static KeyedList,
         items: &[AnyValue],
     ) -> &mut ListIndex {
         let lists = self.by_node.entry(node_id.to_owned()).or_default();
         let position = if let Some(position) = lists
             .iter()
-            .position(|(list_path, _)| list_path.equals(path))
+            .position(|(list_path, _)| path.equals(list_path))
         {
             position
         } else {
-            let owned = path.iter().map(|key| (*key).to_owned()).collect();
+            let owned = path
+                .iter()
+                .map(|part| part.as_key().expect("a list path is object keys").to_owned())
+                .collect();
             lists.push((owned, ListIndex::build(keyed, items)));
             lists.len() - 1
         };
         &mut lists[position].1
     }
 
-    /// The index of the list at `path` of a node, if one is built.
-    pub fn built(&mut self, node_id: &str, path: &[&str]) -> Option<&mut ListIndex> {
+    /// The index of the list at `path` of a node, if one is built. A path
+    /// that names a list item has none.
+    pub fn built<T: AsKey>(&mut self, node_id: &str, path: &[T]) -> Option<&mut ListIndex> {
         self.by_node
             .get_mut(node_id)?
             .iter_mut()
-            .find(|(list_path, _)| list_path.equals(path))
+            .find(|(list_path, _)| path.equals(list_path))
             .map(|(_, index)| index)
     }
 
-    /// Forget the indexes of the lists at `path` or at a descendant (desc.)
-    /// path of it, which a write replaced or removed.
-    pub fn forget_under(&mut self, node_id: &str, path: &[&str]) {
+    /// Forget the indexes of the lists at `parent` plus `key`, or at a
+    /// descendant path of it, which a write replaced or removed. A `parent`
+    /// that names a list item has none.
+    pub fn forget_under<T: AsKey>(&mut self, node_id: &str, parent: &[T], key: &str) {
         if let Some(lists) = self.by_node.get_mut(node_id) {
-            lists.retain(|(list_path, _)| !list_path.has_start(path));
+            lists.retain(|(list_path, _)| {
+                !(list_path.len() > parent.len()
+                    && parent.shares_start(list_path)
+                    && list_path[parent.len()] == key)
+            });
         }
     }
 

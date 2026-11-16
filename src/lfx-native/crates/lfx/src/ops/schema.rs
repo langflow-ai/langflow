@@ -318,15 +318,15 @@ impl NodeSchema {
     /// keys of the template field that `when_field` names through
     /// `field_key(field_path, key)`, which gives `None` for a field that is
     /// not an object or lacks the key.
-    pub(crate) fn keyed_list_by<'f, S: AsRef<str>>(
+    pub(crate) fn keyed_list_by<'f, T: AsKey>(
         &self,
-        path: &[S],
-        field_key: impl Fn(&[S], &str) -> Option<Cow<'f, AnyValue>>,
+        path: &[T],
+        field_key: impl Fn(&[T], &str) -> Option<Cow<'f, AnyValue>>,
     ) -> Option<&KeyedList> {
         if let Some((_, keyed)) = self
             .natural_lists
             .iter()
-            .find(|(list_path, _)| list_path.equals(path))
+            .find(|(list_path, _)| path.equals(list_path))
         {
             return Some(keyed);
         }
@@ -337,7 +337,7 @@ impl NodeSchema {
         for (index, (part, pattern)) in path.iter().zip(&self.table_path).enumerate() {
             if pattern == WILDCARD {
                 wildcard = Some(index);
-            } else if part.as_ref() != pattern {
+            } else if part.as_key() != Some(pattern.as_str()) {
                 return None;
             }
         }
