@@ -219,6 +219,29 @@ GUARD_CASES = {
         _run("        del TABLE['a']\n        return 1\n", extra="TABLE = {'a': 1}\n\n"),
         "class_level_mutation",
     ),
+    "module_set_difference_update": (
+        _run("        SEEN.difference_update({1})\n        return 1\n", extra="SEEN = {1, 2}\n\n"),
+        "class_level_mutation",
+    ),
+    "module_set_intersection_update": (
+        _run("        SEEN.intersection_update({1})\n        return 1\n", extra="SEEN = {1, 2}\n\n"),
+        "class_level_mutation",
+    ),
+    "class_set_symmetric_difference_update": (
+        _run("        self.seen.symmetric_difference_update({1})\n        return 1\n", cls_attrs="    seen = {1}\n"),
+        "class_level_mutation",
+    ),
+    "async_classmethod_store": (
+        _component(
+            "    @classmethod\n    async def bump(cls):\n        cls.runs += 1\n" + _RUN + "        return 1\n",
+            cls_attrs="    runs = 0\n",
+        ),
+        "class_level_mutation",
+    ),
+    "async_top_level_function_attribute": (
+        _run("        return 1\n", extra="async def helper(uid):\n    helper.last = uid\n\n"),
+        "class_level_mutation",
+    ),
     "class_list_self_append": (
         _run("        self.names.append(1)\n        return 1\n", cls_attrs="    names = ['a']\n"),
         "class_level_mutation",
@@ -303,6 +326,18 @@ def test_classmethod_cross_user_leak_is_declined_and_matches_cache_off():
     cached = [build(source)(_user_id=u).run() for u in ("A", "B")]
     plain = [eval_custom_component_code(source)(_user_id=u).run() for u in ("A", "B")]
     assert cached == plain == [1, 1]
+
+
+@pytest.mark.usefixtures("cache_on")
+def test_shared_set_update_is_declined_and_matches_cache_off():
+    source = _run(
+        "        self.seen.difference_update({self._user_id})\n        return sorted(self.seen)\n",
+        cls_attrs="    seen = {'A', 'B'}\n",
+    )
+    assert class_cache._ineligible_reason(source) == "class_level_mutation"
+    cached = [build(source)(_user_id=u).run() for u in ("A", "B")]
+    plain = [eval_custom_component_code(source)(_user_id=u).run() for u in ("A", "B")]
+    assert cached == plain == [["B"], ["A"]]
 
 
 def test_constant_argument_inputs_on_top_level_component_are_eligible():

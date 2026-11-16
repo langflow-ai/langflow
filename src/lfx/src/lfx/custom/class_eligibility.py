@@ -22,6 +22,7 @@ _ACCESSOR_SUFFIXES = frozenset({"setter", "getter", "deleter"})
 _ALLOWED_DUNDERS = frozenset({"__name__", "__doc__"})
 _MUTATORS = frozenset(
     {"append", "extend", "insert", "update", "setdefault", "pop", "popitem", "clear", "remove", "add", "discard"}
+    | {"difference_update", "intersection_update", "symmetric_difference_update"}
     | {"sort", "reverse", "__setitem__", "__delitem__"}
 )
 _DUNDER = re.compile(r"^__\w+__$")
@@ -188,12 +189,13 @@ def _analyse(source: str) -> str | None:
             _class_reason(statement, lfx, attrs) if isinstance(statement, ast.ClassDef) else None
         ):
             return reason
-    shared = {n.name for n in classes} | {n.name for n in module.body if isinstance(n, ast.FunctionDef)} | containers
+    functions = ast.FunctionDef | ast.AsyncFunctionDef
+    shared = {n.name for n in classes} | {n.name for n in module.body if isinstance(n, functions)} | containers
     classmethod_params = {
         id(f): f.args.args[0].arg
         for c in classes
         for f in c.body
-        if isinstance(f, ast.FunctionDef)
+        if isinstance(f, functions)
         and f.args.args
         and any(isinstance(d, ast.Name) and d.id == "classmethod" for d in f.decorator_list)
     }
@@ -239,7 +241,7 @@ def _analyse(source: str) -> str | None:
                 return "setattr_on_non_self"
         if _mutates(node, shared, attrs):
             return "class_level_mutation"
-        if isinstance(node, ast.FunctionDef) and id(node) in classmethod_params:
+        if isinstance(node, functions) and id(node) in classmethod_params:
             cls_name = {classmethod_params[id(node)]}
             if any(_mutates(inner, cls_name) for inner in ast.walk(node)):
                 return "class_level_mutation"
