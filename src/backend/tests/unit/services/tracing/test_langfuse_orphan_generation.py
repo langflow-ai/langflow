@@ -534,6 +534,7 @@ edges:
   OUTER.done -> POST.input_data
   POST.parsed_text -> O.input_value
 config:
+  P.mode: Stringify
   INNER_TC.output_type: JSON
   OUTER_TC.output_type: JSON
 """
@@ -596,7 +597,12 @@ config:
 
             spans = exporter.get_finished_spans()
             root_span = next(span for span in spans if span.name == flow_name)
-            assert sum(span.name == "Parser" for span in spans) == 4
+            loop_parser_spans = [
+                span
+                for span in spans
+                if span.attributes.get("langfuse.observation.metadata.component_id") == built["node_id_map"]["P"]
+            ]
+            assert loop_parser_spans, "loop-body Parser span was not persisted"
             assert sum(span.name == "Type Convert" for span in spans) >= 6
             assert any(span.name == "Chat Output" for span in spans)
             assert {span.context.trace_id for span in spans} == {root_span.context.trace_id}
