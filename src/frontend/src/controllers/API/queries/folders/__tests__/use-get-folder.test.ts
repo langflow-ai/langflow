@@ -22,17 +22,19 @@ import { useGetFolderQuery } from "../use-get-folder";
 const EXISTING_PROJECT_ID = "5f9b0f2e-0d5e-4f6a-9d3f-2b6f7f0a1c22";
 const DELETED_PROJECT_ID = "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e";
 
-const paramsFor = (id: string | null | undefined) => ({
+const SECOND_PROJECT_ID = "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d";
+
+const paramsFor = (id: string | null | undefined, page = 1) => ({
   id,
-  page: 1,
+  page,
   size: 12,
   is_component: false,
   is_flow: true,
   search: "",
 });
 
-const runQuery = async (id: string | null | undefined) => {
-  renderHook(() => useGetFolderQuery(paramsFor(id)));
+const runQuery = async (id: string | null | undefined, page = 1) => {
+  renderHook(() => useGetFolderQuery(paramsFor(id, page)));
 
   let result: unknown;
   await act(async () => {
@@ -46,7 +48,10 @@ describe("useGetFolderQuery", () => {
     jest.clearAllMocks();
     capturedQueryFn = undefined;
     useFolderStore.setState({
-      folders: [{ id: EXISTING_PROJECT_ID, name: "Starter Project" }] as never,
+      folders: [
+        { id: EXISTING_PROJECT_ID, name: "Starter Project" },
+        { id: SECOND_PROJECT_ID, name: "Second Project" },
+      ] as never,
     });
   });
 
@@ -82,5 +87,18 @@ describe("useGetFolderQuery", () => {
     const requestedUrl = mockApiGet.mock.calls[0][0] as string;
     expect(requestedUrl).toContain(`/projects/${EXISTING_PROJECT_ID}?`);
     expect(requestedUrl).not.toContain("undefined");
+  });
+
+  it("requests the page it is given after the project changes", async () => {
+    mockApiGet.mockResolvedValue({
+      data: { folder: { id: SECOND_PROJECT_ID }, flows: { items: [] } },
+    });
+
+    await runQuery(EXISTING_PROJECT_ID, 2);
+    await runQuery(SECOND_PROJECT_ID, 2);
+
+    const secondProjectUrl = mockApiGet.mock.calls[1][0] as string;
+    expect(secondProjectUrl).toContain(`/projects/${SECOND_PROJECT_ID}?`);
+    expect(secondProjectUrl).toContain("page=2");
   });
 });
