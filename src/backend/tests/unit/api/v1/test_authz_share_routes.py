@@ -835,6 +835,202 @@ async def test_create_share_preserves_non_403_permission_errors(monkeypatch, pat
     assert session.added == []
 
 
+# --------------------------------------------------------------------------- #
+# validate_share_write: the plugin's veto on a share before it is written
+# --------------------------------------------------------------------------- #
+
+
+class _VetoAuthz(_StubAuthz):
+    """Records validate_share_write calls and refuses or fails on request."""
+
+    def __init__(self, *, refuse: bool = False, fail: bool = False) -> None:
+        super().__init__()
+        self.refuse = refuse
+        self.fail = fail
+        self.calls: list[dict] = []
+
+    async def validate_share_write(self, **kwargs) -> None:
+        self.calls.append(kwargs)
+        if self.fail:
+            msg = "plugin broke"
+            raise RuntimeError(msg)
+        if self.refuse:
+            raise HTTPException(status_code=403, detail="refused by plugin")
+
+
+@pytest.fixture
+def veto_authz(patch_authz, monkeypatch):
+    def _apply(**kwargs) -> _VetoAuthz:
+        patch_authz()
+        stub = _VetoAuthz(**kwargs)
+        monkeypatch.setattr(shares_module, "get_authorization_service", lambda: stub)
+        return stub
+
+    return _apply
+
+
+@pytest.mark.asyncio
+async def test_create_share_asks_the_plugin_before_writing_even_for_the_owner(veto_authz, silence_audit):  # noqa: ARG001
+    """The owner skips enforce(); validate_share_write is the one place a plugin sees the owner's share."""
+    from langflow.services.database.models.flow.model import Flow
+
+    stub = veto_authz()
+    owner = _make_user()
+    flow = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    session = _FakeAsyncSession({(Flow, flow.id): flow})
+    payload = _payload_for(flow.id)
+
+    await shares_module.create_share(payload=payload, current_user=owner, session=session)
+
+    assert stub.enforce_calls == []
+    assert stub.calls == [
+        {
+            "actor": owner,
+            "resource_type": "flow",
+            "resource_id": flow.id,
+            "owner_id": owner.id,
+            "scope": payload.scope,
+            "target_id": payload.target_id,
+            "permission_level": payload.permission_level,
+            "operation": "create",
+        }
+    ]
+    assert len(session.added) == 1
+
+
+@pytest.mark.asyncio
+async def test_create_share_answers_404_and_writes_nothing_when_the_plugin_refuses(veto_authz, silence_audit):  # noqa: ARG001
+    from langflow.services.database.models.flow.model import Flow
+
+    veto_authz(refuse=True)
+    owner = _make_user()
+    flow = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    session = _FakeAsyncSession({(Flow, flow.id): flow})
+
+    with pytest.raises(HTTPException) as excinfo:
+        await shares_module.create_share(payload=_payload_for(flow.id), current_user=owner, session=session)
+
+    assert excinfo.value.status_code == 404
+    assert excinfo.value.detail == "Resource not found"
+    assert session.added == []
+    assert session.committed == 0
+
+
+@pytest.mark.asyncio
+async def test_create_share_fails_instead_of_allowing_when_the_plugin_breaks(veto_authz, silence_audit):  # noqa: ARG001
+    """A veto hook that crashes must never read as permission."""
+    from langflow.services.database.models.flow.model import Flow
+
+    veto_authz(fail=True)
+    owner = _make_user()
+    flow = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    session = _FakeAsyncSession({(Flow, flow.id): flow})
+
+    with pytest.raises(RuntimeError, match="plugin broke"):
+        await shares_module.create_share(payload=_payload_for(flow.id), current_user=owner, session=session)
+
+    assert session.added == []
+    assert session.committed == 0
+
+
+def _stored_share(owner_id: UUID, flow_id: UUID) -> AuthzShare:
+    return AuthzShare(
+        id=uuid4(),
+        resource_type="flow",
+        resource_id=flow_id,
+        scope=ShareScope.USER.value,
+        target_id=uuid4(),
+        permission_level=SharePermissionLevel.READ.value,
+        created_by=owner_id,
+    )
+
+
+@pytest.mark.asyncio
+async def test_update_share_asks_the_plugin_with_the_stored_share_and_the_new_level(veto_authz, silence_audit):  # noqa: ARG001
+    from langflow.services.database.models.flow.model import Flow
+
+    stub = veto_authz()
+    owner = _make_user()
+    flow = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    share = _stored_share(owner.id, flow.id)
+    stored_target = share.target_id
+    session = _FakeAsyncSession({(AuthzShare, share.id): share, (Flow, flow.id): flow})
+
+    await shares_module.update_share(
+        share_id=share.id,
+        payload=ShareUpdate(permission_level=SharePermissionLevel.WRITE.value),
+        current_user=owner,
+        session=session,
+    )
+
+    assert len(stub.calls) == 1
+    call = stub.calls[0]
+    assert call["operation"] == "update"
+    assert call["owner_id"] == owner.id
+    assert call["scope"] == ShareScope.USER.value
+    assert call["target_id"] == stored_target
+    assert call["permission_level"] == SharePermissionLevel.WRITE.value
+
+
+@pytest.mark.asyncio
+async def test_update_share_answers_404_and_keeps_the_level_when_the_plugin_refuses(veto_authz, silence_audit):  # noqa: ARG001
+    from langflow.services.database.models.flow.model import Flow
+
+    veto_authz(refuse=True)
+    owner = _make_user()
+    flow = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    share = _stored_share(owner.id, flow.id)
+    session = _FakeAsyncSession({(AuthzShare, share.id): share, (Flow, flow.id): flow})
+
+    with pytest.raises(HTTPException) as excinfo:
+        await shares_module.update_share(
+            share_id=share.id,
+            payload=ShareUpdate(permission_level=SharePermissionLevel.WRITE.value),
+            current_user=owner,
+            session=session,
+        )
+
+    assert excinfo.value.status_code == 404
+    assert excinfo.value.detail == "Share not found"
+    assert share.permission_level == SharePermissionLevel.READ.value
+    assert session.committed == 0
+
+
+@pytest.mark.asyncio
+async def test_delete_share_does_not_ask_the_plugin(veto_authz, silence_audit):  # noqa: ARG001
+    """Deleting only narrows access, so the hook is not part of delete."""
+    from langflow.services.database.models.flow.model import Flow
+
+    stub = veto_authz(refuse=True)
+    owner = _make_user()
+    flow = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    share = _stored_share(owner.id, flow.id)
+    session = _FakeAsyncSession({(AuthzShare, share.id): share, (Flow, flow.id): flow})
+
+    await shares_module.delete_share(share_id=share.id, current_user=owner, session=session)
+
+    assert stub.calls == []
+    assert session.deleted == [share]
+
+
+@pytest.mark.asyncio
+async def test_the_default_validate_share_write_allows_everything():
+    service = object.__new__(LfxAuthorizationService)
+
+    result = await service.validate_share_write(
+        actor=None,
+        resource_type="flow",
+        resource_id=uuid4(),
+        owner_id=uuid4(),
+        scope=ShareScope.PUBLIC.value,
+        target_id=None,
+        permission_level="execute",
+        operation="create",
+    )
+
+    assert result is None
+
+
 @pytest.mark.asyncio
 async def test_update_share_invokes_plugin_enforce_for_share_creator(patch_authz, silence_audit):  # noqa: ARG001
     """Regression: share *creator* who is not the resource owner must hit plugin enforce()."""
