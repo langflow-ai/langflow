@@ -80,7 +80,7 @@ def test_upgrade_drops_index_and_supports_deterministic_poorly_compressible_text
 
         # On PostgreSQL with the index present, the uncompressible text should fail the 1/3 page limit
         if is_postgres:
-            with pytest.raises(sa.exc.DBAPIError) as exc_info:
+            with pytest.raises(sa.exc.DBAPIError) as exc_info, connection.begin_nested():
                 connection.execute(
                     flow.insert().values(
                         id=str(uuid4()),
@@ -124,7 +124,7 @@ def test_upgrade_drops_index_and_supports_deterministic_poorly_compressible_text
         # On PostgreSQL, recreating the index when oversized rows exist must fail
         # without truncating or corrupting existing user data
         if is_postgres:
-            with pytest.raises(sa.exc.DBAPIError):
+            with pytest.raises(sa.exc.DBAPIError), connection.begin_nested():
                 migration.downgrade()
             preserved_row = connection.execute(sa.select(flow).where(flow.c.id == flow_id)).one()
             assert preserved_row.description == updated_description
