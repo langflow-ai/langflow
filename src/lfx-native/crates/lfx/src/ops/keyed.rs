@@ -1,17 +1,7 @@
 //! Keyed lists, indexed by item key.
 //!
-//! Outputs, tool actions and table rows are lists whose items carry a key: an
-//! output's `name`, a tool action's first tag, a row's `__id__`. A write finds
-//! its item through an index instead of scanning the list. Building the
-//! index reads the list once, and counts what breaks the keyed list rules:
-//! an item without a key, a key that repeats, a table row without a numeric
-//! `__pos__`. Apply refuses a write into such a list; replay does not.
-//!
-//! Every keyed list is ordered by its items' `(__pos__, key)`, not by their
-//! places in the array: readers sort items when they strip `__pos__`, so the
-//! engine never sorts a list. A new item is appended, and the last item moves
-//! into a deleted item's place. A list whose items carry no `__pos__` keeps
-//! its array order.
+//! Example keys: an output's `name`, a tool action's first tag, a row's `__id__`.
+//! A keyed list sorts by `(__pos__, key)`, so the engine does not sort the array.
 
 use std::collections::VecDeque;
 use std::collections::hash_map::RandomState;
@@ -22,20 +12,16 @@ use crate::ops::maps::{HashMap, HashSet, IndexSet, State};
 use crate::value::AnyValue;
 
 use crate::ops::canonical::{
-    as_double, is_finite_number, is_integer_text, is_row_position, ordered_rows, row_order,
-    values_equal,
+    as_double, is_finite_number, is_row_position, ordered_rows, row_order, values_equal,
 };
 use crate::ops::entry::EntryExt;
 use crate::ops::error::{Result, bail, invalid, quoted};
 use crate::ops::ids::{new_table_row_id, unused_id};
 use crate::ops::schema::{KeyedList, NODE_SCHEMA, field_value_path};
 
-/// The array index of every item of one keyed list, by key, and what the
-/// list breaks of the keyed list rules.
+/// The array index of each item of one keyed list, by key, and the rules the list breaks.
 ///
-/// Building the index never fails. Apply refuses a write into a list that
-/// breaks the rules ([`ListIndex::problem`]); replay writes into it, and fails
-/// only when a key it looks up names two items.
+/// Apply refuses a write into a list with a [`ListIndex::problem`]. Replay does not.
 #[derive(Debug, Clone)]
 pub struct ListIndex {
     /// The list's kind and keys.
@@ -57,7 +43,7 @@ pub enum ListProblem {
     Keyless,
     /// Two items have this key.
     RepeatedKey(String),
-    /// A table row has no finite numeric position, which this key holds.
+    /// A table row has no finite position at this key.
     Unpositioned(&'static str),
 }
 
@@ -103,8 +89,7 @@ impl ListIndex {
         index
     }
 
-    /// The first rule the list breaks, if any: an item without a key, then
-    /// a repeated key, then an item without a position.
+    /// The first rule the list breaks: a missing key, a repeated key, or a missing position.
     #[must_use]
     pub fn problem(&self) -> Option<ListProblem> {
         self.key_problem().or_else(|| {
@@ -112,8 +97,7 @@ impl ListIndex {
         })
     }
 
-    /// The first rule about keys the list breaks, if any: an item without a
-    /// key, then a repeated key.
+    /// The first key rule the list breaks: a missing key, or a repeated key.
     #[must_use]
     pub fn key_problem(&self) -> Option<ListProblem> {
         if self.keyless > 0 {
@@ -124,8 +108,7 @@ impl ListIndex {
             .map(|key| ListProblem::RepeatedKey(key.clone()))
     }
 
-    /// Check that every item has a key that no other item has. A reader that
-    /// finds items by key needs this, and not their positions.
+    /// Check that each item has a unique key. Positions are not checked.
     ///
     /// # Errors
     ///
@@ -209,7 +192,7 @@ impl ListIndex {
     }
 }
 
-/// Check that a list item carries a finite numeric position.
+/// Check that a list item has a finite position.
 ///
 /// # Errors
 ///
@@ -228,17 +211,15 @@ pub(crate) fn check_position(
     ))
 }
 
-/// The array index of the item with `key`, found by reading every item. For
-/// a list without an index, such as one a batch wrote.
+/// The array index of the item with `key`, found by a scan. For a list without an index.
 pub(crate) fn find_item(keyed: &KeyedList, items: &[AnyValue], key: &str) -> Option<usize> {
     items
         .iter()
         .position(|item| keyed.key_of(item) == Some(key))
 }
 
-/// Remove the item at `slot`. The order of a list is its items' positions,
-/// so the last item moves into the gap. An item without a position belongs
-/// to a list that keeps its array order, so the items after it move up.
+/// Remove the item at `slot`. The last item moves into the gap, unless the
+/// item has no position. Then the list keeps its array order.
 pub(crate) fn remove_item(keyed: &KeyedList, items: &mut Vec<AnyValue>, slot: usize) -> AnyValue {
     if keyed.has_position(&items[slot]) {
         items.swap_remove(slot)
@@ -249,17 +230,11 @@ pub(crate) fn remove_item(keyed: &KeyedList, items: &mut Vec<AnyValue>, slot: us
 
 // --- Table rows ----------------------------------------------------------------------------
 //
-// Every row of a table value stored in a flow carries a stable `__id__` and a
-// numeric position `__pos__`, so concurrent edits address rows instead of
-// indexes. The table's order is its rows' `(__pos__, __id__)`, not their places in
-// the stored array, which nothing keeps sorted. Both keys exist for the
-// flow's history and are not data: components never see them, so every place
-// that hands a stored table to anything outside the engine strips them first,
-// and puts the rows in order as it does.
+// Each stored table row has an `__id__` and a `__pos__`. They are not data.
+// Strip them, and sort the rows, before a table leaves the engine.
 
 /// Whether positions are renumbered when no number fits between two rows.
-///
-/// Only the editor renumbers: the server never changes a position.
+/// Only the editor renumbers.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Renumber {
     /// Renumber the table `1..n`, in the same order, when a gap has no room left.
@@ -280,7 +255,7 @@ fn is_row_key(key: &str) -> bool {
     key == row_id_key() || key == row_position_key()
 }
 
-/// A row without `__id__` and `__pos__`; a value that is not an object is returned as is.
+/// A row without `__id__` and `__pos__`. A value that is not an object stays as is.
 fn without_row_keys(row: &AnyValue) -> AnyValue {
     match row {
         AnyValue::Object(map) => AnyValue::Object(
@@ -293,7 +268,7 @@ fn without_row_keys(row: &AnyValue) -> AnyValue {
     }
 }
 
-/// Table rows in order and without `__id__` and `__pos__`; a value that is not a list is returned as is.
+/// Table rows in order, without `__id__` and `__pos__`. A value that is not a list stays as is.
 #[must_use]
 pub fn strip_row_keys(rows: &AnyValue) -> AnyValue {
     match rows {
@@ -356,8 +331,7 @@ pub fn strip_flow_table_row_keys(flow: &mut AnyValue) {
     }
 }
 
-/// Whether every row is an object with a unique `__id__` and a numeric `__pos__`:
-/// the shape the server accepts.
+/// Whether each row is an object with a unique `__id__` and a numeric `__pos__`.
 #[must_use]
 pub fn has_table_row_ids(rows: &[AnyValue]) -> bool {
     let mut seen = HashSet::default();
@@ -368,15 +342,8 @@ pub fn has_table_row_ids(rows: &[AnyValue]) -> bool {
     })
 }
 
-/// Give one table value's rows the ids and positions a write needs, in place.
-///
-/// Rows that already have a unique `__id__` keep it, and rows with a position
-/// keep it. A row without an id that equals a not yet matched row of
-/// `previous` (the stored value, apart from ids and positions) takes that
-/// row's id and position; the others get a new random id. Rows still without
-/// a position get one that keeps them where they are stored, so a legacy
-/// table keeps its order. A table with a row that is not an object is left
-/// for validation to report.
+/// Give one table's rows ids and positions, in place ([`match_row_ids`],
+/// [`fill_missing_positions`]). A table with a row that is not an object stays as is.
 ///
 /// # Errors
 ///
@@ -394,9 +361,9 @@ pub fn assign_row_ids(
     Ok(())
 }
 
-/// Hash canonical values without serializing or copying them. Object order
-/// does not matter, numbers use JavaScript doubles, and row metadata is
-/// excluded only at the row's root. Equality still decides every match.
+/// Hash a value in its canonical form, without copying it.
+/// Example: `{"x":1,"y":-0.0}` and `{"y":0,"x":1.0}` have the same hash.
+/// With `row`, the row keys at the top level do not count.
 fn content_hash(value: &AnyValue, state: &RandomState, row: bool) -> Result<u64> {
     let mut hash = state.build_hasher();
     std::mem::discriminant(value).hash(&mut hash);
@@ -460,8 +427,8 @@ fn row_contents_equal(left: &AnyValue, right: &AnyValue) -> Result<bool> {
     Ok(true)
 }
 
-/// Remove one equal row from a fingerprint bucket. A fingerprint collision
-/// cannot reuse another row's id, and every claimed candidate is removed once.
+/// Remove and return the first row of `bucket` that equals `row`.
+/// It also drops rows whose id is in `used`. A hash collision gives no match.
 fn take_matching_row<'a>(
     bucket: &mut VecDeque<&'a AnyValue>,
     row: &AnyValue,
@@ -480,13 +447,10 @@ fn take_matching_row<'a>(
     Ok(None)
 }
 
-/// Give every row without a unique `__id__` one, in place, keeping stored ids.
+/// Give each row without a unique `__id__` one, in place.
 ///
-/// A row that equals a not yet matched row of `previous` (the stored value,
-/// apart from ids and positions) takes that row's id, and its position when
-/// it has none; the others get a new random id. So a table rewritten with the
-/// rows it already held keeps them, and a new row changes nothing about the
-/// others.
+/// A row equal to an unmatched row of `previous` takes its id, and its position
+/// if the row has none. Other rows get a new random id.
 ///
 /// # Errors
 ///
@@ -503,19 +467,19 @@ pub fn match_row_ids(rows: &mut [AnyValue], previous: Option<&AnyValue>) -> Resu
             _ => need_id.push(index),
         }
     }
+    if need_id.is_empty() {
+        return Ok(());
+    }
     let candidates: Vec<&AnyValue> = previous
         .and_then(AnyValue::as_array)
         .into_iter()
         .flatten()
         .filter(|row| row.is_object() && row.non_empty_str(id_key).is_some())
         .collect();
-    if need_id.is_empty() {
-        return Ok(());
-    }
     let state = RandomState::new();
     let mut by_content: HashMap<u64, VecDeque<&AnyValue>> = HashMap::default();
-    // Preserve the old short-circuit errors for invalid numbers. Such input
-    // uses the borrowed comparison below instead of constructing an index.
+    // A candidate with a number that is not finite fails to hash. Then the
+    // rows are compared one by one, so the error comes only if that candidate is reached.
     let indexed = candidates
         .iter()
         .filter(|row| !used.contains(row.non_empty_str(id_key).unwrap_or_default()))
@@ -582,7 +546,7 @@ impl TryFrom<&AnyValue> for Position {
         match value {
             AnyValue::Number(number) if is_finite_number(number) => Ok(Self {
                 value: as_double(number),
-                integer: is_integer_text(number),
+                integer: number.is_integer(),
             }),
             _ => Err(()),
         }
@@ -614,18 +578,11 @@ impl Position {
     }
 }
 
-/// Give each row without a valid position one that keeps it where it is stored, in place.
+/// Give each row without a position one that keeps its array place, in place.
 ///
-/// Positioned rows keep their positions. A run of rows without one is spread
-/// evenly between the positioned rows stored before and after it, or placed
-/// one apart before the first or after the last; when those neighbours are
-/// out of order, the run follows the one before it. A table with no
-/// positions at all gets `1..n`.
-///
-/// With [`Renumber::WhenNoRoom`], a gap that has no room left for its run
-/// renumbers the whole table `1..n`. The new numbers follow the order that
-/// [`ordered_rows`] gives after the runs are filled, so the order does not
-/// change. Returns the indexes of the rows it gave a position.
+/// Example: rows at 1, none, 2 get 1, 1.5, 2. A table without positions gets `1..n`.
+/// With [`Renumber::WhenNoRoom`], a gap without room renumbers the table `1..n`
+/// in [`ordered_rows`] order. Returns the indexes of the rows it changed.
 pub fn fill_missing_positions(rows: &mut [AnyValue], renumber: Renumber) -> Vec<usize> {
     let key = row_position_key();
     let position_at = |rows: &[AnyValue], index: usize| {
@@ -695,8 +652,7 @@ fn spread(before: Option<Position>, after: Option<Position>, count: usize) -> Ve
     }
 }
 
-/// Whether new positions are distinct and strictly between their neighbours,
-/// when those are in order.
+/// Whether new positions increase strictly between their neighbours, when those are in order.
 fn fits_between(positions: &[Position], before: Option<Position>, after: Option<Position>) -> bool {
     let (Some(before), Some(after)) = (before, after) else {
         return true;
@@ -720,7 +676,7 @@ fn set_position(row: &mut AnyValue, key: &str, position: Position) {
     }
 }
 
-/// Give every table value of a node being added row ids and positions, in place.
+/// Give each table of a new node row ids and positions, in place.
 ///
 /// # Errors
 ///
@@ -734,13 +690,9 @@ pub fn assign_table_row_ids(node: &mut AnyValue, renumber: Renumber) -> Result<(
     Ok(())
 }
 
-/// Give row ids and positions to the table values a node adds or changes
-/// relative to `previous`, the same node as stored, in place.
+/// Give row ids and positions to the tables of `node` that differ from `previous`, in place.
 ///
-/// A table equal to the stored one is left as it is, ids or not, so opening
-/// or refreshing a flow never rewrites an untouched legacy table. A changed
-/// table keeps the ids of rows it still holds. A node without `previous` gets
-/// ids on every table.
+/// A table equal to the stored one stays as is, so opening a flow does not rewrite it.
 ///
 /// # Errors
 ///
@@ -772,12 +724,7 @@ pub fn assign_changed_node_table_row_ids(
     Ok(())
 }
 
-/// Give row ids and positions to the table values `target` adds or changes
-/// relative to `base`, in place.
-///
-/// Afterwards the write passes the table rules: tables of new nodes get ids,
-/// a changed table keeps the ids of rows it still holds, and a table equal to
-/// the stored one is left as it is, ids or not.
+/// Give row ids and positions to the tables of `target` that differ from `base`, in place.
 ///
 /// # Errors
 ///
@@ -817,9 +764,8 @@ pub fn assign_changed_table_row_ids(
     Ok(())
 }
 
-/// Rows appended after `rows`, each with a new `__id__` and a `__pos__` one past
-/// the last position. Keys the new rows carried (a duplicated row's) are
-/// replaced. `rows` first gets ids and positions where it lacks them.
+/// Append `new_rows`, each with a new `__id__` and the next whole `__pos__`.
+/// Example: after rows at 1 and 2.5, a new row gets 3.
 ///
 /// # Errors
 ///

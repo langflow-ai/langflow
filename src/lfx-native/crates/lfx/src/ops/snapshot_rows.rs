@@ -1,10 +1,9 @@
-//! Dense copy-on-write rows for committed snapshots.
+//! Copy-on-write rows for snapshots: a balanced tree of small leaves.
 //!
-//! A clone shares the root. A write copies only its search path and at most
-//! one small leaf while an earlier snapshot is alive. Empty leaves and
-//! branches disappear on removal; metadata never refers to old revisions.
+//! A clone shares the root. While a clone is alive, a write copies only the
+//! branches on its path and one leaf. Rows are only appended or overwritten,
+//! so the tree only ever needs a left rotation.
 
-use std::ops::Index;
 use std::sync::Arc;
 
 const LEAF_CAPACITY: usize = 32;
@@ -53,7 +52,7 @@ impl<T> Node<T> {
 
     fn height(&self) -> u8 {
         match self {
-            Self::Leaf(rows) => u8::from(!rows.is_empty()),
+            Self::Leaf(_) => 1,
             Self::Branch { height, .. } => *height,
         }
     }
@@ -64,19 +63,6 @@ impl<T> Node<T> {
             height: 1 + left.height().max(right.height()),
             left,
             right,
-        }
-    }
-
-    fn get(&self, index: usize) -> Option<&T> {
-        match self {
-            Self::Leaf(rows) => rows.get(index),
-            Self::Branch { left, right, .. } => {
-                if index < left.len() {
-                    left.get(index)
-                } else {
-                    right.get(index - left.len())
-                }
-            }
         }
     }
 }
@@ -147,30 +133,6 @@ impl<T: Clone> Rows<T> {
         }
     }
 
-    #[cfg(test)]
-    pub(super) fn remove(&mut self, index: usize) -> T {
-        fn remove<T: Clone>(node: &mut Arc<Node<T>>, index: usize) -> T {
-            let value = match Arc::make_mut(node) {
-                Node::Leaf(rows) => rows.remove(index),
-                Node::Branch { left, right, .. } => {
-                    if index < left.len() {
-                        remove(left, index)
-                    } else {
-                        remove(right, index - left.len())
-                    }
-                }
-            };
-            balance(node);
-            value
-        }
-        assert!(index < self.len(), "the snapshot row exists");
-        let value = remove(self.root.as_mut().expect("rows exist"), index);
-        if self.len() == 0 {
-            self.root = None;
-        }
-        value
-    }
-
     pub(super) fn iter(&self) -> Iter<'_, T> {
         let mut iter = Iter {
             branches: Vec::new(),
@@ -184,6 +146,8 @@ impl<T: Clone> Rows<T> {
     }
 }
 
+/// Update the branch's length and height, and rotate it left when its right
+/// side grew two levels taller than its left.
 fn balance<T: Clone>(root: &mut Arc<Node<T>>) {
     let Node::Branch {
         left,
@@ -196,32 +160,7 @@ fn balance<T: Clone>(root: &mut Arc<Node<T>>) {
     };
     *len = left.len() + right.len();
     *height = 1 + left.height().max(right.height());
-    if left.len() == 0 {
-        *root = Arc::clone(right);
-        return;
-    }
-    if right.len() == 0 {
-        *root = Arc::clone(left);
-        return;
-    }
-    let delta = i16::from(left.height()) - i16::from(right.height());
-    if delta > 1 {
-        if let Node::Branch {
-            left: a, right: b, ..
-        } = left.as_ref()
-            && a.height() < b.height()
-        {
-            rotate_left(left);
-        }
-        rotate_right(root);
-    } else if delta < -1 {
-        if let Node::Branch {
-            left: a, right: b, ..
-        } = right.as_ref()
-            && a.height() > b.height()
-        {
-            rotate_right(right);
-        }
+    if right.height() > left.height() + 1 {
         rotate_left(root);
     }
 }
@@ -242,22 +181,6 @@ fn rotate_left<T: Clone>(root: &mut Arc<Node<T>>) {
     *Arc::make_mut(root) = Node::branch(Arc::new(Node::branch(left, middle)), right);
 }
 
-fn rotate_right<T: Clone>(root: &mut Arc<Node<T>>) {
-    let old = std::mem::replace(Arc::make_mut(root), Node::Leaf(Vec::new()));
-    let Node::Branch { left, right, .. } = old else {
-        unreachable!("rotation has branches");
-    };
-    let Node::Branch {
-        left,
-        right: middle,
-        ..
-    } = Arc::unwrap_or_clone(left)
-    else {
-        unreachable!("rotation has branches");
-    };
-    *Arc::make_mut(root) = Node::branch(left, Arc::new(Node::branch(middle, right)));
-}
-
 impl<T: Clone> FromIterator<T> for Rows<T> {
     fn from_iter<I: IntoIterator<Item = T>>(rows: I) -> Self {
         let mut result = Self::default();
@@ -265,16 +188,6 @@ impl<T: Clone> FromIterator<T> for Rows<T> {
             result.push_back(row);
         }
         result
-    }
-}
-
-impl<T> Index<usize> for Rows<T> {
-    type Output = T;
-    fn index(&self, index: usize) -> &T {
-        self.root
-            .as_ref()
-            .and_then(|root| root.get(index))
-            .expect("the snapshot row exists")
     }
 }
 
@@ -329,7 +242,7 @@ mod tests {
                 Node::Leaf(rows) => {
                     assert!(rows.len() <= LEAF_CAPACITY);
                     assert!(rows.capacity() <= LEAF_CAPACITY);
-                    (rows.len(), u8::from(!rows.is_empty()), 1)
+                    (rows.len(), 1, 1)
                 }
                 Node::Branch {
                     left,
@@ -360,7 +273,7 @@ mod tests {
     }
 
     #[test]
-    fn sequence_matches_vec_through_churn_and_old_snapshots() {
+    fn rows_match_a_vec_through_appends_and_writes() {
         let mut rows: Rows<_> = (0..4096).collect();
         let mut expected: Vec<_> = (0..4096).collect();
         let old = rows.clone();
@@ -368,18 +281,12 @@ mod tests {
         for i in 0..10_000 {
             seed = seed.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1);
             let index = usize::try_from(seed >> 32).unwrap() % expected.len();
-            match i % 3 {
-                0 => {
-                    assert_eq!(rows.remove(index), expected.remove(index));
-                }
-                1 => {
-                    rows.set(index, i);
-                    expected[index] = i;
-                }
-                _ => {
-                    rows.push_back(i);
-                    expected.push(i);
-                }
+            if i % 2 == 0 {
+                rows.set(index, i);
+                expected[index] = i;
+            } else {
+                rows.push_back(i);
+                expected.push(i);
             }
             if i % 97 == 0 {
                 check(&rows, &expected);
@@ -387,26 +294,22 @@ mod tests {
         }
         check(&rows, &expected);
         check(&old, &(0..4096).collect::<Vec<_>>());
-        while !expected.is_empty() {
-            let index = expected.len() / 2;
-            assert_eq!(rows.remove(index), expected.remove(index));
-        }
-        check(&rows, &expected);
     }
 
     #[test]
-    fn unique_mutations_preserve_leaf_storage_and_shared_writes_are_bounded() {
+    fn a_write_copies_nothing_without_a_clone() {
         let mut rows: Rows<_> = (0..512).collect();
-        let before = std::ptr::from_ref(&rows[10]);
+        let before = std::ptr::from_ref(rows.iter().nth(10).unwrap());
         rows.set(10, 99);
-        assert_eq!(before, std::ptr::from_ref(&rows[10]));
+        assert_eq!(before, std::ptr::from_ref(rows.iter().nth(10).unwrap()));
         let old = rows.clone();
         rows.set(10, 100);
-        assert_eq!(old[10], 99);
-        assert_eq!(rows[10], 100);
+        assert_eq!(old.iter().nth(10), Some(&99));
+        assert_eq!(rows.iter().nth(10), Some(&100));
     }
+
     #[test]
-    fn snapshots_copy_at_most_one_leaf_per_point_write() {
+    fn a_write_copies_at_most_one_leaf_while_a_clone_lives() {
         use std::sync::atomic::{AtomicUsize, Ordering};
         #[derive(Debug)]
         struct Counted(usize, Arc<AtomicUsize>);
@@ -424,7 +327,7 @@ mod tests {
         let old = rows.clone();
         assert_eq!(clones.load(Ordering::Relaxed), 0);
         rows.get_mut(8000).unwrap().0 = 77;
-        assert_eq!(old[8000].0, 8000);
+        assert_eq!(old.iter().nth(8000).unwrap().0, 8000);
         assert!(clones.load(Ordering::Relaxed) <= LEAF_CAPACITY);
         clones.store(0, Ordering::Relaxed);
         rows.get_mut(8000).unwrap().0 = 78;
@@ -436,19 +339,16 @@ mod tests {
     }
 
     #[test]
-    fn removed_and_replaced_values_leave_the_current_tree_immediately() {
-        let removed = Arc::new(());
+    fn a_replaced_value_leaves_the_tree_at_once() {
         let replaced = Arc::new(());
-        let removed_weak = Arc::downgrade(&removed);
         let replaced_weak = Arc::downgrade(&replaced);
-        let mut rows: Rows<_> = [removed, replaced].into_iter().collect();
-        drop(rows.remove(0));
-        assert!(removed_weak.upgrade().is_none());
+        let mut rows: Rows<_> = [replaced].into_iter().collect();
         rows.set(0, Arc::new(()));
         assert!(replaced_weak.upgrade().is_none());
     }
+
     #[test]
-    fn partial_leaf_cow_appends_keep_fixed_capacity_and_old_rows() {
+    fn appends_to_a_shared_leaf_keep_the_old_rows() {
         let mut rows: Rows<_> = (0..21).collect();
         let original = rows.clone();
         let mut expected: Vec<_> = (0..21).collect();
@@ -461,19 +361,5 @@ mod tests {
             check(&before, &prior);
         }
         check(&original, &(0..21).collect::<Vec<_>>());
-
-        let mut rows: Rows<_> = (0..31).collect();
-        let mut expected: Vec<_> = (0..31).collect();
-        assert_eq!(rows.remove(17), expected.remove(17));
-        let before = rows.clone();
-        let prior = expected.clone();
-        rows.push_back(99);
-        expected.push(99);
-        check(&rows, &expected);
-        check(&before, &prior);
-        rows.push_back(100);
-        expected.push(100);
-        check(&rows, &expected);
-        check(&before, &prior);
     }
 }

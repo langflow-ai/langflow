@@ -1,26 +1,8 @@
-//! Bringing a graph that breaks the engine's rules back within them.
+//! Repair: fix each rule violation that has exactly one fix.
 //!
-//! Flows stored before the engine enforced its rules, imported flows, and
-//! flows edited directly in the database can break them, and such a flow
-//! cannot take any edit until it is repaired. [`repair_flow_data`] fixes every
-//! violation that has exactly one fix, and lists what it changed. It never
-//! touches a violation that has more than one correct way to fix it (an
-//! edge that names an output that does not exist, or a second edge into a
-//! single input): fixing one means choosing what the person meant, so the
-//! client does.
-//!
-//! Repair is never implicit: callers invoke it only when a request asks for
-//! it, and they keep the original first, so even a fix that discards a value
-//! loses nothing permanently. Replay and ordinary saves never repair.
-//!
-//! Given the stored graph a write replaces (`base`), repair also fixes what
-//! the write adds or changes:
-//!
-//! - the rows of every table: it assigns missing row ids, regenerates
-//!   duplicate ids, and gives rows without a position one that keeps them
-//!   where they are stored;
-//! - every edge it adds: it derives a handle's missing form from
-//!   the one present, and drops an edge that touches a note.
+//! Repair does not touch a violation with more than one fix, such as two edges
+//! into an input that accepts only one edge. The client chooses that fix.
+//! Repair runs only when a request asks for it.
 
 use crate::ops::maps::{HashMap, HashSet};
 use crate::value::{AnyMap, AnyValue};
@@ -93,19 +75,16 @@ fn path(parts: impl IntoIterator<Item = PathPart>) -> GraphPath {
     parts.into_iter().collect()
 }
 
-/// A copy of `flow` with every violation that has one fix fixed, and the fixes applied.
+/// A copy of `flow` with each violation that has one fix fixed, and the fixes.
 ///
-/// Generated node ids are derived from the node's content and position, so
-/// repairing the same graph twice gives the same nodes. Generated edge ids
-/// are random, like the editor's. With `base`, the table rows the
-/// write adds or changes are repaired too: a row without an id takes the id
-/// of an identical stored row, so a table written back without ids keeps the
-/// rows it already held, and only new rows get new random ids.
+/// A new node id comes from the node's content, so a second repair gives the
+/// same id. With `base`, repair also fixes the tables, lists and edges that
+/// `flow` adds or changes. A row without an id takes the id of an identical
+/// stored row.
 ///
 /// # Errors
 ///
-/// The graph also breaks a rule only the client can fix: the error lists
-/// what is left, so a repaired save writes nothing.
+/// The graph also breaks a rule that only the client can fix.
 pub fn repair_flow_data(flow: &AnyValue, base: Option<&AnyValue>) -> Result<Repaired> {
     let mut fixes = Fixes::default();
     let AnyValue::Object(flow) = flow else {
@@ -161,8 +140,8 @@ fn take_array(graph: &mut AnyMap, key: &str) -> Vec<AnyValue> {
     }
 }
 
-/// Read first. Only paths that hold an invalid number need mutable access.
-/// Direct members precede nested containers, last container first, as before.
+/// Replace each number that is not finite with `null`.
+/// It finds the paths first, so that it writes only where a number is invalid.
 fn replace_non_finite(value: &mut AnyValue, fixes: &mut Fixes) {
     let mut paths = Vec::new();
     non_finite_paths(value, &mut Vec::new(), &mut paths);
@@ -232,18 +211,10 @@ fn repair_nodes(nodes: Vec<AnyValue>, fixes: &mut Fixes) -> Result<Vec<AnyValue>
         .collect();
     let mut seen = HashSet::default();
     for (index, node) in &mut kept {
-        let old_id = node.get("id").cloned();
-        let valid = node.non_empty_str("id").map(str::to_owned);
-        if let Some(id) = &valid
-            && seen.insert(id.clone())
-        {
+        let Some(code) = id_fault(node, "id", &mut seen, NODE_ID_FAULTS) else {
             continue;
-        }
-        let code = if valid.is_some() {
-            ViolationCode::NodeIdDuplicate
-        } else {
-            ViolationCode::NodeIdMissing
         };
+        let old_id = node.get("id").cloned();
         fixes.add(code, path(["nodes".into(), (*index).into(), "id".into()]));
         let new_id = generate_node_id(node, *index, &used)?;
         used.insert(new_id.clone());
@@ -264,6 +235,31 @@ fn repair_nodes(nodes: Vec<AnyValue>, fixes: &mut Fixes) -> Result<Vec<AnyValue>
         .into_iter()
         .map(|(_, node)| AnyValue::Object(node))
         .collect())
+}
+
+/// The id faults of nodes, edges and table rows: missing, then duplicate.
+const NODE_ID_FAULTS: [ViolationCode; 2] =
+    [ViolationCode::NodeIdMissing, ViolationCode::NodeIdDuplicate];
+const EDGE_ID_FAULTS: [ViolationCode; 2] =
+    [ViolationCode::EdgeIdMissing, ViolationCode::EdgeIdDuplicate];
+const ROW_ID_FAULTS: [ViolationCode; 2] = [
+    ViolationCode::TableRowIdMissing,
+    ViolationCode::TableRowIdDuplicate,
+];
+
+/// What is wrong with the id at `key`: missing, or already in `seen`.
+/// A good id goes into `seen`.
+fn id_fault(
+    entry: &impl EntryExt,
+    key: &str,
+    seen: &mut HashSet<String>,
+    [missing, duplicate]: [ViolationCode; 2],
+) -> Option<ViolationCode> {
+    match entry.non_empty_str(key) {
+        Some(id) if seen.insert(id.to_owned()) => None,
+        Some(_) => Some(duplicate),
+        None => Some(missing),
+    }
 }
 
 fn repair_node_objects(node: &mut AnyMap, index: usize, fixes: &mut Fixes) {
@@ -330,19 +326,11 @@ fn repair_edges(
         .collect();
     let mut seen = HashSet::default();
     for (index, edge) in &mut kept {
-        let valid = edge.non_empty_str("id").map(str::to_owned);
-        if let Some(id) = &valid
-            && seen.insert(id.clone())
-        {
+        let Some(code) = id_fault(edge, "id", &mut seen, EDGE_ID_FAULTS) else {
             continue;
-        }
-        let code = if valid.is_some() {
-            ViolationCode::EdgeIdDuplicate
-        } else {
-            ViolationCode::EdgeIdMissing
         };
         fixes.add(code, path(["edges".into(), (*index).into(), "id".into()]));
-        // A random id like the editor's newEdgeId(), never derived from the handles.
+        // A random id, like the editor's newEdgeId().
         let new_id = unused_id(&used, new_edge_id);
         used.insert(new_id.clone());
         seen.insert(new_id.clone());
@@ -353,7 +341,7 @@ fn repair_edges(
         .collect()
 }
 
-/// Fix the edge rule violations that have one fix, in the edges `graph` adds relative to `base`.
+/// Fix the edge violations that have one fix, in the edges `graph` adds to `base`.
 fn repair_added_edges(graph: &mut AnyValue, base: &AnyValue, fixes: &mut Fixes) -> Result<()> {
     let mut dropped = HashSet::default();
     for violation in find_edge_violations(base, graph)? {
@@ -408,9 +396,8 @@ fn repair_tables(graph: &mut AnyValue, base: &AnyValue, fixes: &mut Fixes) -> Re
     Ok(())
 }
 
-/// Give a position to every item without one in the outputs and tool action
-/// lists that `graph` adds or changes relative to `base`: the midpoint of
-/// its array neighbours' positions, as for an insert.
+/// Give a position to each list item without one, in the lists that `graph`
+/// changes relative to `base`. Example: an item between positions 1 and 2 gets 1.5.
 fn repair_list_positions(graph: &mut AnyValue, base: &AnyValue, fixes: &mut Fixes) -> Result<()> {
     let lists: Vec<GraphPath> = changed_keyed_lists(base, graph)?
         .into_iter()
@@ -454,7 +441,7 @@ fn stored_tables(base: &AnyValue) -> HashMap<(&str, &str), &AnyValue> {
     stored
 }
 
-/// Fix one table value in place: rows are objects with unique ids and numeric positions.
+/// Fix one table in place, so that each row is an object with a unique id and a position.
 fn repair_table(
     rows: &mut Vec<AnyValue>,
     table_path: &[PathPart],
@@ -483,20 +470,11 @@ fn repair_table(
         .collect();
     let mut seen = HashSet::default();
     for (index, row) in rows.iter_mut().enumerate() {
-        let valid = row.non_empty_str(id_key).map(str::to_owned);
-        if let Some(id) = &valid
-            && seen.insert(id.clone())
-        {
+        let Some(code) = id_fault(row, id_key, &mut seen, ROW_ID_FAULTS) else {
             continue;
-        }
-        let code = if valid.is_some() {
-            ViolationCode::TableRowIdDuplicate
-        } else {
-            ViolationCode::TableRowIdMissing
         };
         fixes.add(code, row_path(index, Some(id_key)));
-        // A duplicate gives up its id; match_row_ids gives every row without one
-        // the id (and position) of an identical stored row, or a new random id.
+        // match_row_ids gives this row the id of an identical stored row, or a new id.
         if let Some(row) = row.as_object_mut() {
             row.shift_remove(id_key);
         }
@@ -512,8 +490,7 @@ fn repair_table(
     Ok(())
 }
 
-/// A node id in the editor's shape, `<component type>-<5 characters>`, derived
-/// from the node's content and position.
+/// A node id from the node's content and index. Example: `ChatInput-a1B2c`.
 fn generate_node_id(node: &AnyMap, index: usize, used: &HashSet<String>) -> Result<String> {
     let prefix = node
         .get("data")

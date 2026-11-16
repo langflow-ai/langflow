@@ -1,13 +1,7 @@
 //! The functions the Python and browser bindings call.
 //!
-//! Each argument is an [`Input`]: JSON text, or a value that the binding has
-//! already read, such as a Python dict. Each result is a value; the browser
-//! binding writes it as text with [`json_text`], and the Python binding builds
-//! Python objects from it. A number keeps what [`crate::value::Number`] keeps:
-//! `1` and `1.0` apart, and the digits of an integer too large for 64 bits.
-//! Each function here does no more than read its inputs, call the engine and
-//! return its result; the bindings only call these and turn an [`ApiError`]
-//! into their language's exception.
+//! Each function reads its [`Input`]s, calls the engine and returns a value.
+//! The bindings turn an [`ApiError`] into their language's exception.
 
 use std::fmt;
 
@@ -26,12 +20,11 @@ use crate::ops::plain::GraphPlain;
 use crate::ops::repair::{Fix, repair_flow_data};
 use crate::ops::replay::{ReplayOptions, Replayed, replay_flow_operations};
 use crate::ops::restore;
-use crate::ops::state::{GraphSnapshot, GraphState, parse_finite_json, parse_json, parse_problem};
+use crate::ops::state::{GraphState, parse_finite_json, parse_json, parse_problem};
 use crate::ops::validate::{Numbers, Violation, find_graph_violations};
 
-/// An error as the bindings receive it: a JSON object with the error's
-/// `kind` (the matching Python exception class), `code` and `message`, and
-/// what that kind carries (`edge_id`, `violations`, or `graph`).
+/// An error as a JSON object with `kind`, `code`, `message`, and
+/// `edge_id` or `violations` when it has them.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ApiError(pub AnyValue);
 
@@ -85,13 +78,11 @@ pub type ApiResult<T = AnyValue> = Result<T, ApiError>;
 
 // --- Output --------------------------------------------------------------------------------
 
-/// JSON text as the API returns it: ASCII only, every other character
-/// escaped as `\uXXXX`, as Python's `json.dumps` writes by default.
+/// JSON text with every non-ASCII character escaped as `\uXXXX`, as
+/// Python's `json.dumps` writes it.
 ///
-/// Every edge handle holds a `œ`. Python keeps a string with one at two bytes
-/// per character, and both Python and JavaScript decode an ASCII string
-/// fastest, so ASCII text is faster for Python to build and to read. Canonical
-/// text ([`canonical_json`]) is not escaped: RFC 8785 writes the characters.
+/// Every edge handle holds a `œ`, and Python and JavaScript decode ASCII
+/// text fastest.
 #[must_use]
 pub fn json_text(value: &AnyValue) -> String {
     let mut out = Vec::new();
@@ -99,27 +90,11 @@ pub fn json_text(value: &AnyValue) -> String {
     json_out::into_string(out)
 }
 
-/// A graph state as JSON text, as [`json_text`] writes it.
-#[must_use]
-pub fn graph_json(state: &GraphState) -> String {
-    json_out::into_string(state.json_text())
-}
-
-/// A graph state with its staged batch as JSON text, as [`json_text`] writes
-/// it, or `None` when no batch is staged. The graph is what
-/// [`GraphState::keep`] makes. A server writes it in the transaction that
-/// records the batch, and keeps the batch only after that transaction commits.
-#[must_use]
-pub fn staged_graph_json(state: &GraphState) -> Option<String> {
-    state.staged_json_text().map(json_out::into_string)
-}
-
 fn violations(violations: &[Violation]) -> AnyValue {
     AnyValue::Array(violations.iter().map(Violation::to_value).collect())
 }
 
-/// Operations as JSON. The caller owns them and drops them after, so each
-/// one moves its payload into the result.
+/// Operations as JSON. Each one moves its payload into the result.
 fn operations_json(operations: Vec<Operation>) -> AnyValue {
     AnyValue::Array(operations.into_iter().map(Operation::into_value).collect())
 }
@@ -128,10 +103,6 @@ fn operations_json(operations: Vec<Operation>) -> AnyValue {
 
 /// An argument: JSON text to parse, or a value a binding has already read,
 /// such as a Python dict.
-///
-/// Text is parsed by what the argument is. Graphs and other data that do not
-/// parse are an invalid graph, and operations that do not parse are invalid
-/// operations, as when every argument was text.
 #[derive(Debug, Clone)]
 pub enum Input<'t> {
     /// JSON text.
@@ -152,9 +123,8 @@ impl From<AnyValue> for Input<'_> {
     }
 }
 
-/// A graph, or any other value the engine reads as data. Validation and
-/// repair read a number that is not finite in text, to report it and to
-/// replace it.
+/// A graph, or any other value the engine reads as data. Text may hold a
+/// non-finite number, so validation can report it and repair can replace it.
 fn data(input: Input<'_>) -> ApiResult<AnyValue> {
     match input {
         Input::Text(text) => Ok(parse_json(text)?),
@@ -162,10 +132,8 @@ fn data(input: Input<'_>) -> ApiResult<AnyValue> {
     }
 }
 
-/// A graph that the engine holds or changes: a [`GraphState`], a
-/// [`GraphPlain`], and the graph of [`apply`] and [`replay`]. Text with a
-/// number that is not finite is refused, as a Python `float` that is not
-/// finite is.
+/// A graph that the engine holds or changes. Text with a non-finite number
+/// is refused.
 fn held(input: Input<'_>) -> ApiResult<AnyValue> {
     match input {
         Input::Text(text) => Ok(parse_finite_json(text)?),
@@ -174,7 +142,11 @@ fn held(input: Input<'_>) -> ApiResult<AnyValue> {
 }
 
 /// A list of operations. Text with a number that is not finite is refused.
-fn operations(input: Input<'_>) -> ApiResult<Vec<Operation>> {
+///
+/// # Errors
+///
+/// The operations do not parse.
+pub fn operations(input: Input<'_>) -> ApiResult<Vec<Operation>> {
     if let Input::Text(text) = input
         && let Some(operations) = crate::ops::ops::operations_from_text(text)
     {
@@ -234,10 +206,8 @@ pub fn applied_json(applied: Applied, options: ApplyOptions) -> AnyMap {
     out
 }
 
-/// An operation as [`json_text`] writes it, in place of what `out` held: the
-/// text an operation log stores, without a value that the caller would write
-/// as JSON again. A caller that writes many reuses `out`, so the text does
-/// not grow a new buffer each time.
+/// Write an operation into `out` as [`json_text`] writes it, replacing what
+/// `out` held. A caller reuses `out` for many operations.
 pub fn write_operation_json(out: &mut Vec<u8>, operation: &Operation) {
     out.clear();
     operation.write_json(out, Ascii::Escape);
@@ -269,82 +239,18 @@ pub fn graph_state(flow: Input<'_>) -> ApiResult<GraphState> {
     Ok(GraphState::new(held(flow)?)?)
 }
 
-/// The SHA-256 hex digest of a [`GraphState`]'s canonical form
-/// ([`GraphState::graph_hash`]): the committed graph, without a staged batch.
+/// Apply a batch to a [`GraphState`]. The result is what [`applied_json`] lists.
 ///
 /// # Errors
 ///
-/// The graph holds a number that is not finite.
-pub fn state_graph_hash(state: &GraphState) -> ApiResult<String> {
-    Ok(state.graph_hash()?)
-}
-
-/// [`state_graph_hash`] of the graph with its staged batch
-/// ([`GraphState::staged_graph_hash`]), or `None` when no batch is staged.
-///
-/// # Errors
-///
-/// The graph holds a number that is not finite.
-pub fn staged_state_graph_hash(state: &GraphState) -> ApiResult<Option<String>> {
-    Ok(state.staged_graph_hash().transpose()?)
-}
-
-/// A [`GraphSnapshot`] as JSON text, as [`json_text`] writes it: what
-/// [`graph_json`] gave when the snapshot was taken.
-#[must_use]
-pub fn snapshot_json(snapshot: &GraphSnapshot) -> String {
-    json_out::into_string(snapshot.json_text())
-}
-
-/// The SHA-256 hex digest of a [`GraphSnapshot`]'s canonical form: what
-/// [`state_graph_hash`] gave when the snapshot was taken.
-///
-/// # Errors
-///
-/// The graph holds a number that is not finite.
-pub fn snapshot_graph_hash(snapshot: &GraphSnapshot) -> ApiResult<String> {
-    Ok(snapshot.graph_hash()?)
-}
-
-/// Apply a batch to a [`GraphState`]; the result is what [`applied_json`] lists.
-///
-/// # Errors
-///
-/// The operations do not parse, or the engine refuses the batch, which then
-/// changes nothing.
+/// The operations do not parse, or the engine refuses the batch.
 pub fn apply_to(
     state: &mut GraphState,
     operations_in: Input<'_>,
     options: ApplyOptions,
 ) -> ApiResult<AnyValue> {
-    let applied = apply_to_typed(state, operations_in, options)?;
+    let applied = state.apply(operations(operations_in)?, options)?;
     Ok(AnyValue::Object(applied_json(applied, options)))
-}
-
-/// Apply a batch and keep its operation types for a binding's output builder.
-///
-/// # Errors
-///
-/// The inputs and rules are the same as [`apply_to`].
-pub fn apply_to_typed(
-    state: &mut GraphState,
-    operations_in: Input<'_>,
-    options: ApplyOptions,
-) -> ApiResult<Applied> {
-    Ok(state.apply(operations(operations_in)?, options)?)
-}
-
-/// Stage a batch and keep its operation types for a binding's output builder.
-///
-/// # Errors
-///
-/// The inputs and rules are the same as [`stage_to`].
-pub fn stage_to_typed(
-    state: &mut GraphState,
-    operations_in: Input<'_>,
-    options: ApplyOptions,
-) -> ApiResult<Applied> {
-    Ok(state.stage(operations(operations_in)?, options)?)
 }
 
 // --- Replay --------------------------------------------------------------------------------
@@ -381,13 +287,12 @@ pub fn replay(
     Ok(AnyValue::Object(out))
 }
 
-/// Replay stored operations on a [`GraphState`], with no rule; the result
+/// Replay stored operations on a [`GraphState`], with no rule. The result
 /// is what [`replayed_json`] lists.
 ///
 /// # Errors
 ///
-/// The operations do not parse, or an operation cannot be carried out,
-/// which then changes nothing.
+/// The operations do not parse, or an operation cannot be carried out.
 pub fn replay_to(
     state: &mut GraphState,
     operations_in: Input<'_>,
@@ -399,9 +304,8 @@ pub fn replay_to(
 
 // --- Diff, validation and repair ------------------------------------------------------------
 
-/// The operations that turn `base` into `target`, checked by replay: applied
-/// to `base`, they must give `target`, or the diff is refused. So a defect in
-/// the diff can never record history that replays to another graph.
+/// The operations that turn `base` into `target`. A replay checks that they
+/// give `target`.
 ///
 /// # Errors
 ///
@@ -451,8 +355,7 @@ pub fn repair(flow: Input<'_>, base: Option<Input<'_>>) -> ApiResult<AnyValue> {
 
 // --- Plain graphs ---------------------------------------------------------------------------
 
-/// Read a graph into a [`GraphPlain`], to run many checks on it. Nothing is
-/// checked.
+/// Read a graph into a [`GraphPlain`], to run many checks on it.
 ///
 /// # Errors
 ///
@@ -495,24 +398,6 @@ pub fn plain_repair(
     ))
 }
 
-/// [`graph_hash`] of a plain graph.
-///
-/// # Errors
-///
-/// The graph holds a number that is not finite.
-pub fn plain_graph_hash(flow: &GraphPlain) -> ApiResult<String> {
-    Ok(flow.graph_hash()?)
-}
-
-/// [`graphs_equal`] on plain graphs.
-///
-/// # Errors
-///
-/// A graph holds a number that is not finite.
-pub fn plain_equals(left: &GraphPlain, right: &GraphPlain) -> ApiResult<bool> {
-    Ok(left.equals(right)?)
-}
-
 /// [`ops_diff`] on plain graphs.
 ///
 /// # Errors
@@ -524,8 +409,7 @@ pub fn plain_ops_diff(base: &GraphPlain, target: &GraphPlain) -> ApiResult<AnyVa
 
 // --- Canonical form -------------------------------------------------------------------------
 
-/// The SHA-256 hex digest of `text`, byte for byte: the hash a checkpoint
-/// row stores for its JSON text.
+/// The SHA-256 hex digest of `text`, as a checkpoint row stores it.
 #[must_use]
 pub fn text_sha256(text: &[u8]) -> String {
     use sha2::{Digest, Sha256};
@@ -596,8 +480,7 @@ pub fn apply_restore_fixes(
 ///
 /// # Errors
 ///
-/// The inputs do not parse, an input is not a list, or a compared handle
-/// holds a number that is not finite.
+/// The inputs do not parse, an input is not a list, or a handle holds a non-finite number.
 pub fn edge_fixes(read: Input<'_>, shown: Input<'_>) -> ApiResult<AnyValue> {
     let fixes = restore::edge_fixes(&list(read, "read")?, &list(shown, "shown")?)?;
     Ok(operations_json(fixes))
@@ -642,8 +525,7 @@ pub fn strip_flow_table_row_keys(flow: Input<'_>) -> ApiResult<AnyValue> {
 ///
 /// # Errors
 ///
-/// The inputs do not parse, `rows` is not a list, or a compared row holds a
-/// number that is not finite.
+/// The inputs do not parse, `rows` is not a list, or a row holds a non-finite number.
 pub fn assign_row_ids(
     rows: Input<'_>,
     previous: Option<Input<'_>>,
@@ -666,7 +548,6 @@ pub fn assign_table_row_ids(node: Input<'_>, editor: bool) -> ApiResult<AnyValue
 }
 
 /// `target` with ids on the tables it adds or changes relative to `base`.
-/// `editor` renumbers when a gap has no room left.
 ///
 /// # Errors
 ///
@@ -685,8 +566,7 @@ pub fn assign_changed_table_row_ids(
 ///
 /// # Errors
 ///
-/// The inputs do not parse, an input is not a list, or a compared row holds
-/// a number that is not finite.
+/// The inputs do not parse, an input is not a list, or a row holds a non-finite number.
 pub fn append_table_rows(rows: Input<'_>, new_rows: Input<'_>) -> ApiResult<AnyValue> {
     let mut rows = list(rows, "rows")?;
     keyed::append_table_rows(&mut rows, &list(new_rows, "new_rows")?)?;
@@ -694,7 +574,7 @@ pub fn append_table_rows(rows: Input<'_>, new_rows: Input<'_>) -> ApiResult<AnyV
 }
 
 /// A node with ids on the tables it adds or changes relative to `previous`,
-/// the same node as stored. `editor` renumbers when a gap has no room left.
+/// the same node as stored.
 ///
 /// # Errors
 ///
@@ -720,24 +600,6 @@ pub fn assign_changed_node_table_row_ids(
 /// The node does not parse.
 pub fn table_fields(node: Input<'_>) -> ApiResult<AnyValue> {
     Ok(json!(keyed::table_fields(&data(node)?)))
-}
-
-/// A new random edge id in the editor's format.
-#[must_use]
-pub fn new_edge_id() -> String {
-    crate::ops::ids::new_edge_id()
-}
-
-/// A new random table row id in the editor's format.
-#[must_use]
-pub fn new_table_row_id() -> String {
-    crate::ops::ids::new_table_row_id()
-}
-
-/// The node schema the engine reads, as JSON text.
-#[must_use]
-pub fn node_schema() -> &'static str {
-    crate::ops::schema::NODE_SCHEMA_JSON
 }
 
 /// Rows in order, by `(__pos__, __id__)`, or as stored for a legacy table.
@@ -887,7 +749,7 @@ mod tests {
     fn graph_json_writes_the_graph_as_ascii() {
         let flow = r#"{"nodes":[{"id":"a","data":{"node":{"template":{"t":{"value":"é","type":"str"}}}}}],"edges":[]}"#;
         let state = graph_state(flow.into()).unwrap();
-        let written = graph_json(&state);
+        let written = state.to_json();
         assert!(written.is_ascii());
         assert_eq!(
             serde_json::from_str::<AnyValue>(&written).unwrap(),

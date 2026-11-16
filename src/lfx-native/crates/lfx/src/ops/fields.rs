@@ -1,29 +1,14 @@
 //! [`FieldLayer`]: the field writes of a batch, kept apart from the stored nodes.
 //!
-//! A batch never writes into a stored node. For each node it writes, the
-//! layer keeps a tree of path segments with the same shape as the node's
-//! JSON ([`PathWrites`]). A tree node holds the batch's write at its path, if
-//! any. A read or a write walks the tree and the node's JSON side by side,
-//! one segment at a time, and looks at the tree first ([`walk`]): a write on
-//! the way holds the value, and otherwise the node does. A batch that
-//! succeeds makes its writes in the stored nodes ([`make_writes`]); a batch
-//! that fails drops the layer.
+//! For each node, the layer keeps a tree of path segments ([`PathWrites`])
+//! with the shape of the node's JSON. A read walks the tree and the node
+//! together, and a write in the tree wins ([`walk`]). A batch that succeeds
+//! makes its writes in the stored nodes ([`make_writes`]). A batch that fails
+//! drops the layer.
 //!
-//! An ancestor path of a path starts it and is shorter: `template.x` is an
-//! ancestor of `template.x.value`, which is a descendant of it. A tree node
-//! that holds a write has no children:
-//!
-//! - a later write at a descendant path changes that write's value;
-//! - a later write at an ancestor path replaces the writes below it.
-//!
-//! So a write copies nothing from the node: a write to one table row keeps
-//! only what it wrote. A read of a value with writes below it copies the
-//! value and makes those writes in the copy.
-//!
-//! No keyed list has an order that is state: its order is its items'
-//! positions. Object keys have no order that is state either. The tree keeps
-//! its children in the order they were first written, so one batch always
-//! gives one result.
+//! A tree node that holds a write has no children. A later write below it
+//! changes its value. A later write above it replaces the writes below.
+//! The tree keeps children in first-write order, so a batch gives one result.
 
 use std::borrow::Cow;
 
@@ -45,11 +30,10 @@ pub(crate) enum FieldWrite {
     Remove,
 }
 
-/// Successful and refused batches retain only modest reusable map storage.
+/// The most map entries a layer keeps allocated between batches.
 pub(crate) const MAX_RETAINED_BATCH_ENTRIES: usize = 256;
 
-/// Most written path prefixes have one child. A box keeps that child compact
-/// without allocating a hash table. Branching paths promote to an ordered map.
+/// The children of a tree node. Most have one child, which needs no hash table.
 #[derive(Debug, Clone, Default)]
 enum Children {
     #[default]
@@ -59,15 +43,8 @@ enum Children {
 }
 
 impl Children {
-    fn len(&self) -> usize {
-        match self {
-            Self::Empty => 0,
-            Self::One(_) => 1,
-            Self::Many(map) => map.len(),
-        }
-    }
     fn is_empty(&self) -> bool {
-        self.len() == 0
+        matches!(self, Self::Empty)
     }
     fn get(&self, key: &Segment) -> Option<&PathWrites> {
         match self {
@@ -135,13 +112,6 @@ impl Children {
     }
 }
 
-impl std::ops::Index<&Segment> for Children {
-    type Output = PathWrites;
-    fn index(&self, key: &Segment) -> &PathWrites {
-        self.get(key).expect("the child exists")
-    }
-}
-
 /// The batch's writes at one path of a node and at its descendant paths: a
 /// tree of path segments.
 #[derive(Debug, Clone, Default)]
@@ -162,9 +132,8 @@ impl PathWrites {
         self.children.get(segment)?.write.as_ref()
     }
 
-    /// Make `write` the write at `path` under this tree node, in place of the
-    /// writes at its descendant paths. No write may be at an ancestor path of
-    /// `path`: a write there takes the new write into its own value.
+    /// Set `write` at `path`, in place of the writes below it. No write may be
+    /// at an ancestor path. The caller changes that write's value instead.
     pub fn set(&mut self, path: &[Segment], write: FieldWrite) {
         let mut node = self;
         for segment in path {
@@ -194,8 +163,7 @@ impl PathWrites {
         }
     }
 
-    /// The write on the way to `path`, at `path` or at an ancestor path of
-    /// it, with the length of its path, to change its value.
+    /// The write at `path` or at an ancestor path, and the length of its path.
     pub fn write_on_path_mut(&mut self, path: &[Segment]) -> Option<(usize, &mut FieldWrite)> {
         let mut node = self;
         for (index, segment) in path.iter().enumerate() {
@@ -254,9 +222,8 @@ impl FieldLayer {
     }
 }
 
-/// `step` itself. It gives a closure the signature [`walk`] takes, which
-/// ties the value a step returns to the value it reads, for a caller that
-/// calls the step again after the walk.
+/// `step` itself, with the signature [`walk`] takes. It ties the returned
+/// value to the value read, so a caller can call the step after the walk.
 pub(crate) fn step_fn<'v, F>(step: F) -> F
 where
     F: FnMut(&'v AnyValue, usize, bool) -> Result<Option<&'v AnyValue>>,
@@ -267,30 +234,23 @@ where
 /// What [`walk`] found along a path.
 #[derive(Debug)]
 pub(crate) struct Walked<'v> {
-    /// The length of the path of the write on the way, at the path or at an
-    /// ancestor path, whose value holds what the walk found. `None` when the
-    /// node itself holds it.
+    /// The path length of the write that holds the value found. `None` when
+    /// the node holds it.
     pub write_len: Option<usize>,
     /// The value at the path, or the index of the first segment that does not exist.
     pub found: std::result::Result<&'v AnyValue, usize>,
-    /// The tree node at the path, when the node itself holds the value: it
-    /// holds the writes at the path's descendant paths.
+    /// The tree node at the path, when the node holds the value. It holds the
+    /// writes below the path.
     pub writes: Option<&'v PathWrites>,
 }
 
-/// Follow `path` in `node` as the batch sees it, through `writes`, the
-/// batch's writes to the node. Every read of a node during a batch goes
-/// through here, so none reads the node without the batch's writes.
+/// Follow `path` in `node` through `writes`, the batch's writes to the node.
+/// Every read of a node during a batch goes through here.
 ///
-/// At each segment the walk looks at the tree first. A write there holds the
-/// value from then on: a set's value, or nothing after a removal. Otherwise
-/// `step(value, index, in_write)` reads `path[index]` under `value`, the
-/// value at `path[..index]`. `in_write` says whether `value` is inside a
-/// write's value, whose lists have no index.
-///
-/// The value found is right for every read of it, except that writes at
-/// descendant paths may change what lies under it; [`read`] makes those
-/// writes in a copy.
+/// At each segment, a write in the tree holds the value from then on.
+/// Otherwise `step(value, index, in_write)` reads `path[index]` under `value`.
+/// `in_write` is true inside a write's value, whose lists have no index.
+/// Writes below the path are not made. [`read`] makes them in a copy.
 ///
 /// # Errors
 ///
@@ -337,9 +297,8 @@ pub(crate) fn walk<'v>(
     })
 }
 
-/// The value at `path` of `node` as the batch sees it, with every write
-/// under it: [`walk`], and a copy with the writes made in it when writes are
-/// at descendant paths of `path`.
+/// The value at `path` of `node`, with every write under it. When writes are
+/// below `path`, it is a copy with those writes made.
 ///
 /// # Errors
 ///
@@ -429,10 +388,8 @@ impl NodeLists<'_> {
     }
 }
 
-/// Make the writes of `tree`, the tree node at `path`, in `value`, the value
-/// at `path`, as writes in place would. With `lists`, the value is a stored
-/// node at the fold: its list indexes find items and follow the writes, and
-/// a write forgets the indexes under its path.
+/// Make the writes of `tree` in `value`, both at `path`. With `lists`,
+/// `value` is a stored node, and its list indexes follow the writes.
 pub(crate) fn make_writes(
     value: &mut AnyValue,
     tree: PathWrites,
@@ -452,8 +409,8 @@ pub(crate) fn make_writes(
         path.push(segment);
         make_writes(next, child, path, lists.as_deref_mut());
         let segment = path.pop().expect("the segment was pushed above");
-        // A write inside an item keeps its key: the parser refuses a write
-        // that changes it. The write can change a row's position.
+        // The parser refuses a write that changes an item's key.
+        // A write can change a row's position.
         if let (Segment::Item(key), Some(index)) = (
             &segment,
             lists.as_deref_mut().and_then(|lists| lists.index(path)),
@@ -468,9 +425,9 @@ pub(crate) fn make_writes(
     }
 }
 
-/// Make `write` at `segment` of `parent`, the value at `parent_path`, as a
-/// write in place would: a set replaces the value there or adds it last, and
-/// a removal of a list item leaves the gap as the list's kind says.
+/// Make `write` at `segment` of `parent`, the value at `parent_path`. A set
+/// replaces the value or adds it last. A removal leaves the gap as the list's
+/// kind says.
 pub(crate) fn make_write(
     parent: &mut AnyValue,
     segment: &Segment,
@@ -504,8 +461,7 @@ pub(crate) fn make_write(
             if let Some(index) = lists.and_then(|lists| lists.index(parent_path)) {
                 match write {
                     FieldWrite::Set(value) => {
-                        // The parser refuses an item written at its key with
-                        // another key.
+                        // The parser refuses an item with another key.
                         debug_assert_eq!(keyed.key_of(&value), Some(key.as_str()));
                         match index.slot(key) {
                             Some(slot) => index.replace(items, slot, value),
@@ -609,9 +565,10 @@ mod tests {
         writes.set(&path(&["t", "a", "value"]), FieldWrite::Set(json!(1)));
         writes.set(&path(&["t", "b"]), FieldWrite::Set(json!({})));
         writes.set(&path(&["t", "a"]), FieldWrite::Set(json!({"value": 2})));
-        let t = &writes.children[&Segment::Key("t".into())];
-        assert_eq!(t.children.len(), 2);
-        assert!(t.children[&Segment::Key("a".into())].children.is_empty());
+        let t = writes.children.get(&Segment::Key("t".into())).unwrap();
+        assert!(matches!(&t.children, Children::Many(map) if map.len() == 2));
+        let a = t.children.get(&Segment::Key("a".into())).unwrap();
+        assert!(a.children.is_empty());
         let (len, write) = writes
             .write_on_path_mut(&path(&["t", "a", "value"]))
             .unwrap();

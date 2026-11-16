@@ -1,16 +1,8 @@
-//! [`GraphPlain`]: a parsed flow graph, to run many checks on it.
+//! [`GraphPlain`]: a flow graph read once, for many checks.
 //!
-//! A save validates the graph it receives, may repair it, compares it with
-//! the stored graph, diffs the two, and hashes the result. Each of those calls
-//! on its own reads its graphs again, and reading a large Python dict is
-//! not cheap. A plain graph is read once and kept as it is, with no
-//! index and no check, so each call costs only its own work.
-//!
-//! A plain graph remembers which checks it has passed, and a later call that
-//! needs the same check skips it. The graph cannot change, so a check that
-//! passed once stays passed. Full checks against one base keep a separate
-//! lifetime token for that base, so repair can reuse a successful check
-//! without retaining the base graph or confusing it with a later allocation.
+//! A save validates, repairs, compares, diffs and hashes a graph. A plain
+//! graph reads the Python dict once, so each call does only its own work.
+//! It remembers the checks it passed, and the graph cannot change.
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
@@ -33,8 +25,8 @@ pub struct GraphPlain {
     full: AtomicBool,
     /// A lifetime token for this immutable value and its checked copies.
     identity: Arc<()>,
-    /// The one base against which every rule passed. This retains only its
-    /// token, never its graph. Holding the token prevents address reuse.
+    /// The token of the base that every rule passed against, not its graph.
+    /// Holding the token prevents address reuse.
     clean_against: Mutex<Option<Arc<()>>>,
 }
 
@@ -51,25 +43,14 @@ impl GraphPlain {
         }
     }
 
-    /// A graph that has passed every check, including those against `base`.
-    fn checked(flow: AnyValue, base: Option<&Self>) -> Self {
+    /// A graph that passed every check, against `base` too. A copy of the
+    /// same value shares its `identity`, because base checks read only the value.
+    fn checked(flow: AnyValue, identity: Arc<()>, base: Option<&Self>) -> Self {
         Self {
             flow,
             structure: AtomicBool::new(true),
             full: AtomicBool::new(true),
-            identity: Arc::new(()),
-            clean_against: Mutex::new(base.map(|base| Arc::clone(&base.identity))),
-        }
-    }
-
-    /// A checked handle to this same immutable value. Base checks depend on
-    /// the value, so its aliases may share their identity without allocating.
-    fn checked_copy(&self, base: Option<&Self>) -> Self {
-        Self {
-            flow: self.flow.clone(),
-            structure: AtomicBool::new(true),
-            full: AtomicBool::new(true),
-            identity: Arc::clone(&self.identity),
+            identity,
             clean_against: Mutex::new(base.map(|base| Arc::clone(&base.identity))),
         }
     }
@@ -100,8 +81,8 @@ impl GraphPlain {
         }
     }
 
-    /// Only a full check against this exact immutable base permits repair
-    /// to return the graph unchanged. Other checks still run their own rules.
+    /// Whether a full check against this exact `base` passed. Only then does
+    /// repair return the graph unchanged.
     fn passed_against(&self, base: Option<&Self>) -> bool {
         let Some(base) = base else {
             return self.passed(Numbers::Check);
@@ -129,8 +110,7 @@ impl GraphPlain {
         Ok(())
     }
 
-    /// Every rule the graph breaks, against the stored graph a write replaces
-    /// when given: what [`find_graph_violations`] finds.
+    /// Every rule the graph breaks, also against `base` when given.
     ///
     /// # Errors
     ///
@@ -154,19 +134,24 @@ impl GraphPlain {
         Ok(violations)
     }
 
-    /// A copy with every violation that has one fix fixed, and the fixes:
-    /// what [`repair_flow_data`] returns.
+    /// A fixed copy and its fixes, as [`repair_flow_data`] returns them.
     ///
     /// # Errors
     ///
     /// What [`repair_flow_data`] fails with.
     pub fn repair(&self, base: Option<&Self>) -> Result<(Self, Vec<Fix>)> {
         if self.passed_against(base) {
-            return Ok((self.checked_copy(base), Vec::new()));
+            return Ok((
+                Self::checked(self.flow.clone(), Arc::clone(&self.identity), base),
+                Vec::new(),
+            ));
         }
         let repaired = repair_flow_data(&self.flow, base.map(Self::as_value))?;
         // Repair checks every rule on what it returns.
-        Ok((Self::checked(repaired.flow_data, base), repaired.fixes))
+        Ok((
+            Self::checked(repaired.flow_data, Arc::new(()), base),
+            repaired.fixes,
+        ))
     }
 
     /// The SHA-256 hex digest of the graph's canonical form.
@@ -187,8 +172,8 @@ impl GraphPlain {
         canonical::graphs_equal(&self.flow, &other.flow)
     }
 
-    /// The operations that turn this graph into `target`, checked by replay,
-    /// as [`crate::ops::derive_flow_operations`] derives them.
+    /// The operations that turn this graph into `target`, checked by replay.
+    /// See [`crate::ops::derive_flow_operations`].
     ///
     /// # Errors
     ///
@@ -536,8 +521,7 @@ mod tests {
         let (last_alias, _) = base.repair(None).unwrap();
         drop(base);
         assert!(weak_graph.upgrade().is_none());
-        // Even when the consumed alias was the last owner of its value, a
-        // new mutable value must enter through a new GraphPlain identity.
+        // A changed value gets a new identity, even from the last owner.
         let mut value = last_alias.into_value();
         value["nodes"][0]["data"]["node"]["template"]["t"]["value"][0]["v"] = json!(3);
         let replacement = GraphPlain::new(value);

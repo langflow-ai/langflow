@@ -1,7 +1,4 @@
-//! The node schema: where the units, view state and keyed lists of a flow are.
-//!
-//! `node_schema.json` is the single description of where things are in a node,
-//! so no code hard-codes those paths. It is embedded in the crate and read once.
+//! The node schema: where a flow keeps its units, view state and keyed lists.
 
 use std::borrow::Cow;
 use std::sync::LazyLock;
@@ -23,8 +20,7 @@ const WILDCARD: &str = "*";
 pub const TEMPLATE_PATH: [&str; 3] = ["data", "node", "template"];
 /// The path of a node's outputs.
 pub const OUTPUTS_PATH: [&str; 3] = ["data", "node", "outputs"];
-/// The paths of the objects every node carries for its whole lifetime:
-/// `data`, `data.node` and `data.node.template`.
+/// The objects every node always has: `data`, `data.node` and `data.node.template`.
 pub const NODE_OBJECT_PATHS: [&[&str]; 3] = [&["data"], &["data", "node"], &TEMPLATE_PATH];
 
 /// The path of a template field's value.
@@ -33,8 +29,7 @@ pub fn field_value_path(field: &str) -> [&str; 5] {
     ["data", "node", "template", field, "value"]
 }
 
-/// How the items of a keyed list are addressed. Every keyed list is ordered
-/// by its items' numeric position, then key. Its array order is not state.
+/// How a keyed list names its items. Items sort by position, then key.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ListKind {
     /// Outputs and tool actions: keyed by a field of their own.
@@ -76,9 +71,8 @@ impl KeyedList {
         item.get(&self.position).is_some_and(is_row_position)
     }
 
-    /// What `change` at `inner`, a path inside an item, does to the item's
-    /// key. For example, a set of `"r9"` at `["__id__"]` gives a row the key
-    /// `r9`, and a delete there leaves it without a key.
+    /// What `change` at `inner`, a path inside an item, does to the item's key.
+    /// Example: a set of `"r9"` at `["__id__"]` gives the row the key `r9`.
     pub(crate) fn key_after_write<'c>(
         &self,
         inner: &[Segment],
@@ -117,9 +111,7 @@ pub(crate) enum KeyWrite<'c> {
     Keyless,
 }
 
-/// A set of a few keys. Each lookup compares the key with each member,
-/// which for the few keys of a view-state set is faster than hashing it:
-/// the hash and the canonical form look up every key of a graph.
+/// A set of a few keys. For a few keys, a linear scan is faster than a hash.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct KeySet(Vec<String>);
 
@@ -127,7 +119,7 @@ impl KeySet {
     /// Whether the set has `key`.
     #[must_use]
     pub fn contains(&self, key: &str) -> bool {
-        // The length and the first byte tell most keys apart without a call to compare them.
+        // The length and the first byte tell most keys apart without a full compare.
         let key = key.as_bytes();
         self.0.iter().any(|member| {
             let member = member.as_bytes();
@@ -159,8 +151,7 @@ impl FromIterator<String> for KeySet {
 pub struct NodeSchema {
     /// The schema file's version.
     pub version: u64,
-    /// The top-level flow keys that are not view state. Every other
-    /// top-level key is.
+    /// The top-level flow keys that are not view state.
     pub flow_graph_keys: KeySet,
     /// Node keys that are view state.
     pub node_view_state: KeySet,
@@ -200,41 +191,28 @@ impl NodeSchema {
     fn parse(raw: &AnyValue) -> Result<Self, String> {
         let view_state = key(raw, "", "view_state")?;
         let view_set = |name: &str| -> Result<KeySet, String> {
-            let path = format!("view_state.{name}");
-            Ok(strings(key(view_state, "view_state", name)?, &path)?
+            Ok(at(view_state, "view_state", name, strings)?
                 .into_iter()
                 .collect())
         };
         let flow = key(view_state, "view_state", "flow")?;
-        let flow_graph_keys = strings(
-            key(flow, "view_state.flow", "except")?,
-            "view_state.flow.except",
-        )?
-        .into_iter()
-        .collect();
+        let flow_graph_keys = at(flow, "view_state.flow", "except", strings)?
+            .into_iter()
+            .collect();
         let field_units = key(raw, "", "field_units")?;
         let keyed_lists = key(raw, "", "keyed_lists")?;
         let tables = key(keyed_lists, "keyed_lists", "tables")?;
         let table_keys = TableKeys {
-            id: string(
-                key(tables, "keyed_lists.tables", "id")?,
-                "keyed_lists.tables.id",
-            )?,
-            position: string(
-                key(tables, "keyed_lists.tables", "position")?,
-                "keyed_lists.tables.position",
-            )?,
+            id: at(tables, "keyed_lists.tables", "id", string)?,
+            position: at(tables, "keyed_lists.tables", "position", string)?,
         };
-        let node_data_view_state = paths(
-            key(view_state, "view_state", "node_paths")?,
-            "view_state.node_paths",
-        )?
-        .into_iter()
-        .filter_map(|path| match path.as_slice() {
-            [data, node, key] if data == "data" && node == "node" => Some(key.clone()),
-            _ => None,
-        })
-        .collect();
+        let node_data_view_state = at(view_state, "view_state", "node_paths", paths)?
+            .into_iter()
+            .filter_map(|path| match path.as_slice() {
+                [data, node, key] if data == "data" && node == "node" => Some(key.clone()),
+                _ => None,
+            })
+            .collect();
         let natural = key(keyed_lists, "keyed_lists", "natural")?;
         let natural_lists = natural
             .as_array()
@@ -258,23 +236,16 @@ impl NodeSchema {
             template_view_state: view_set("template")?,
             field_view_state: view_set("template_field")?,
             edge_view_state: view_set("edge")?,
-            value_unit: strings(
-                key(field_units, "field_units", "value")?,
-                "field_units.value",
-            )?,
-            toggles: strings(
-                key(field_units, "field_units", "toggles")?,
-                "field_units.toggles",
-            )?,
-            recursed_paths: paths(
-                key(key(raw, "", "whole_values")?, "whole_values", "recursed")?,
-                "whole_values.recursed",
+            value_unit: at(field_units, "field_units", "value", strings)?,
+            toggles: at(field_units, "field_units", "toggles", strings)?,
+            recursed_paths: at(
+                key(raw, "", "whole_values")?,
+                "whole_values",
+                "recursed",
+                paths,
             )?,
             natural_lists,
-            table_path: strings(
-                key(tables, "keyed_lists.tables", "path")?,
-                "keyed_lists.tables.path",
-            )?,
+            table_path: at(tables, "keyed_lists.tables", "path", strings)?,
             table_when_field,
             table: KeyedList {
                 kind: ListKind::Table,
@@ -291,10 +262,8 @@ impl NodeSchema {
         !self.flow_graph_keys.contains(key)
     }
 
-    /// The keyed list a node holds at `path`, or `None` if the schema declares none there.
-    ///
-    /// A table is declared at every template field's `value` whose field
-    /// matches one of the schema's `when_field` conditions.
+    /// The keyed list a node holds at `path`, or `None` if there is none.
+    /// A field's `value` is a table when the field matches a `when_field` condition.
     #[must_use]
     pub fn keyed_list_at<S: AsRef<str>>(&self, node: &AnyValue, path: &[S]) -> Option<&KeyedList> {
         self.keyed_list_by(path, |field_path, key| {
@@ -314,10 +283,8 @@ impl NodeSchema {
         })
     }
 
-    /// The keyed list at `path`. When a table pattern matches, it reads the
-    /// keys of the template field that `when_field` names through
-    /// `field_key(field_path, key)`, which gives `None` for a field that is
-    /// not an object or lacks the key.
+    /// The keyed list at `path`. `field_key(field_path, key)` reads a key of
+    /// the template field, for the `when_field` conditions.
     pub(crate) fn keyed_list_by<'f, T: AsKey>(
         &self,
         path: &[T],
@@ -355,10 +322,8 @@ impl NodeSchema {
             .then_some(&self.table)
     }
 
-    /// The keyed list whose items a checked path names at `path`: the natural
-    /// list the schema declares there, or else a table. Only a path that a
-    /// write already checked may name list items, so the field's type is not
-    /// read again.
+    /// The keyed list at `path`: the natural list there, or else a table.
+    /// Use it only on a checked path, because it does not read the field's type.
     #[must_use]
     pub fn listed_at<T: AsKey>(&self, path: &[T]) -> &KeyedList {
         self.natural_list_at(path).unwrap_or(&self.table)
@@ -399,6 +364,16 @@ fn key<'v>(value: &'v AnyValue, parent: &str, name: &str) -> Result<&'v AnyValue
     })
 }
 
+/// Read `parent.name` with `read`, which names that path in its error.
+fn at<T>(
+    value: &AnyValue,
+    parent: &str,
+    name: &str,
+    read: fn(&AnyValue, &str) -> Result<T, String>,
+) -> Result<T, String> {
+    read(key(value, parent, name)?, &format!("{parent}.{name}"))
+}
+
 fn string(value: &AnyValue, path: &str) -> Result<String, String> {
     value
         .as_str()
@@ -430,8 +405,8 @@ fn paths(value: &AnyValue, path: &str) -> Result<Vec<Vec<String>>, String> {
 
 /// A natural list's path and its key: object keys and list indexes.
 fn natural_list(entry: &AnyValue, path: &str) -> Result<(Vec<String>, KeyedList), String> {
-    let list_path = strings(key(entry, path, "path")?, &format!("{path}.path"))?;
-    let position = string(key(entry, path, "position")?, &format!("{path}.position"))?;
+    let list_path = at(entry, path, "path", strings)?;
+    let position = at(entry, path, "position", string)?;
     let item_key = key(entry, path, "key")?
         .as_array()
         .and_then(|parts| {

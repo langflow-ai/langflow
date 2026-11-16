@@ -1,27 +1,14 @@
 //! Applying an operation batch to a flow.
 //!
-//! Apply is the write path, so it runs every rule. A batch applies in order,
-//! and all of it or none of it: on an error the flow is as it was before the
-//! batch. Stored operations go through replay instead (see
-//! [`replay`](crate::ops::replay)), which carries them out with the same
-//! steps and calls no rule.
+//! Apply runs every rule. A batch applies in order, all or nothing.
+//! [`replay`](crate::ops::replay) runs stored operations with the same steps
+//! and no rule.
 //!
-//! Each operation of the batch can give apply two results:
-//!
-//! - When the caller sets the `forward` option, its forward operations. They
-//!   can differ from the operation that was sent: a `delete_edges` or a
-//!   `delete_field` that finds nothing is dropped, and the edges that a
-//!   delete takes with it (a cascade delete) become a `delete_edges` of
-//!   their own. So one operation gives none, one or several.
-//! - When the caller sets the `backward` option, its backward operations: a
-//!   list of the operations that undo it, read from the values it replaces.
-//!
-//! For example, `delete_nodes ["b"]`, where node `b` has the edge `e1`,
-//! gives the forward operations `delete_nodes ["b"]` and
-//! `delete_edges ["e1"]`. Its backward operations are `add_nodes [b]`, then
-//! `add_edges [e1]`: the node comes back before the edge that needs it.
-//!
-//! [`Applied::backward`] says how to apply the backward operations.
+//! Forward operations drop a delete that finds nothing, and add a
+//! `delete_edges` for each cascade delete. Backward operations undo each
+//! operation. Example: `delete_nodes ["b"]`, where `b` has the edge `e1`,
+//! gives forward `delete_nodes ["b"]`, `delete_edges ["e1"]` and backward
+//! `add_nodes [b]`, `add_edges [e1]`.
 
 use std::borrow::Cow;
 use std::fmt;
@@ -53,29 +40,17 @@ pub struct ApplyOptions {
 pub struct Applied {
     /// When the caller sets the `forward` option: the forward operations.
     pub forward: Vec<Operation>,
-    /// When the caller sets the `backward` option: for each operation in the
-    /// batch, in the same order, a list of the operations that undo it. An
-    /// operation that changed nothing has an empty list.
+    /// When the caller sets the `backward` option: for each operation, the
+    /// operations that undo it. An operation that changed nothing has an
+    /// empty list.
     ///
-    /// To undo the whole batch, undo the last operation first: apply the lists
-    /// from last to first, and keep the order inside each list.
-    ///
-    /// There are two ways to apply them:
-    ///
-    /// - To show an earlier version of the flow, as the editor's history does,
-    ///   replay each list in a call of its own ([`GraphState::replay`]). The
-    ///   flow goes back to a state it already had, so no rule runs.
-    /// - To undo an edit with a new edit, put the lists into one batch, in that
-    ///   order, and apply it. The new edit is saved like any other edit, so it
-    ///   must pass the same rules.
+    /// To undo the batch, run the lists from last to first. To show an
+    /// earlier version, replay each list ([`GraphState::replay`]). To undo
+    /// with a new edit, apply the lists as one batch, which checks the rules.
     pub backward: Vec<Vec<Operation>>,
 }
 
-/// The options of a batch, and what it reports as it applies.
-///
-/// The report keeps the forward and backward operations for the caller,
-/// and only when the options ask for them. A batch that fails needs neither:
-/// its changes stay in the batch's layer in `state`, which is dropped.
+/// The options of a batch, and the forward and backward operations it keeps.
 #[derive(Debug)]
 pub(crate) struct Report {
     options: ApplyOptions,
@@ -132,10 +107,7 @@ pub(crate) type OperationStep = fn(&mut GraphState, Operation, &mut Report) -> R
 
 impl GraphState {
     /// Apply a batch of operations in order, with every rule. On an error
-    /// nothing is applied.
-    ///
-    /// Apply checks only what its batch changes. It never walks the whole
-    /// graph: loading checked it ([`GraphState::new`]).
+    /// nothing is applied. It checks only what the batch changes.
     ///
     /// # Errors
     ///
@@ -146,14 +118,8 @@ impl GraphState {
         Ok(applied)
     }
 
-    /// Apply a batch as [`Self::apply`] does, and keep it staged instead of
-    /// committing it: it returns what `apply` returns, and the graph as read
-    /// stays the graph before the batch until [`Self::keep`] commits the
-    /// batch or [`Self::drop_staged`] drops it. A refused batch is not
-    /// staged.
-    ///
-    /// A staged batch must be kept or dropped before the next batch: a new
-    /// batch drops it.
+    /// Apply a batch as [`Self::apply`] does, but stage it. [`Self::keep`]
+    /// commits it, and [`Self::drop_staged`] or the next batch drops it.
     ///
     /// # Errors
     ///
@@ -164,8 +130,7 @@ impl GraphState {
         Ok(applied)
     }
 
-    /// Apply a batch with every rule into the batch's layers, without
-    /// committing them.
+    /// Apply a batch into the batch's layers, without committing them.
     fn apply_layered(
         &mut self,
         operations: Vec<Operation>,
@@ -176,18 +141,15 @@ impl GraphState {
         Ok(report.into_applied())
     }
 
-    /// Carry out each operation with `step`, in order, into the batch's
-    /// layers. On an error, drop the layers, so the flow is as it was before
-    /// the batch. The caller commits the layers.
+    /// Carry out each operation with `step` into the batch's layers. On an
+    /// error, drop the layers. The caller commits them.
     pub(crate) fn run_batch(
         &mut self,
         operations: Vec<Operation>,
         report: &mut Report,
         step: OperationStep,
     ) -> Result<()> {
-        // A batch that panicked, which a binding turns into an exception,
-        // left its layers behind, and so does a staged batch nobody kept.
-        // The graph itself is as it was before it.
+        // A panicked batch or an unkept staged batch leaves its layers behind.
         self.drop_staged();
         self.discard();
         for operation in operations {
@@ -213,9 +175,8 @@ impl GraphState {
 
     // --- Nodes -------------------------------------------------------------------------
 
-    /// Add nodes. The parser checked each node's shape, and that no id
-    /// repeats in the operation; an id the flow already has is refused here.
-    /// Apply and replay both add nodes this way.
+    /// Add nodes. It refuses an id the flow already has. The parser checked
+    /// the rest.
     pub(crate) fn add_nodes(&mut self, nodes: Vec<Node>, report: &mut Report) -> Result<()> {
         if nodes.is_empty() {
             return Ok(());
@@ -284,9 +245,8 @@ impl GraphState {
         Ok(())
     }
 
-    /// The edges at the endpoints that `update` removed from its node, which
-    /// go with them. `before` is what the path held before the write, when
-    /// [`removed_endpoints`] reads it.
+    /// The edges at the endpoints that `update` removed from its node.
+    /// `before` is what the path held before the write.
     fn edges_at_removed(
         &mut self,
         update: &FieldUpdate,
@@ -327,10 +287,8 @@ impl GraphState {
         Ok(())
     }
 
-    /// Remove the nodes among `ids` that exist, and record them as a
-    /// `delete_nodes`. Returns the ids of the edges at them. The edges stay:
-    /// apply removes them as a cascade delete, and replay leaves them to
-    /// the stored operations.
+    /// Remove the nodes among `ids` that exist. Returns the ids of their
+    /// edges, which stay: apply removes them, and replay does not.
     pub(crate) fn remove_nodes(
         &mut self,
         ids: &IndexSet<&str>,
@@ -363,9 +321,8 @@ impl GraphState {
 
     // --- Edges -------------------------------------------------------------------------
 
-    /// Add edges. The parser checked each edge's shape, and that no id
-    /// repeats in the operation. Each edge must pass the edge rules against
-    /// the flow, with the edges before it added.
+    /// Add edges. Each edge must pass the edge rules, with the edges before
+    /// it added.
     fn add_edges(&mut self, edges: Vec<Edge>, report: &mut Report) -> Result<()> {
         let mut added = AddedEdges::default();
         for edge in edges {
@@ -377,8 +334,7 @@ impl GraphState {
         Ok(())
     }
 
-    /// Check that `edge` can be added: the flow does not have its id yet,
-    /// and has both of its nodes.
+    /// Check that the flow has both nodes of `edge`, and not its id.
     pub(crate) fn require_new_edge(&self, edge: &Edge) -> Result<()> {
         if self.graph.has_edge(edge.id()) {
             bail!("add_edges: edge id already exists: {}", quoted(edge.id()));
@@ -398,8 +354,7 @@ impl GraphState {
         Ok(())
     }
 
-    /// Add `edge`, which [`Self::require_new_edge`] checked, and keep in
-    /// `added` what the report needs.
+    /// Add `edge`, which [`Self::require_new_edge`] checked.
     pub(crate) fn insert_added_edge(
         &mut self,
         edge: Edge,
@@ -416,15 +371,13 @@ impl GraphState {
         self.insert_edge(edge);
     }
 
-    /// Delete the edges among `ids` that exist. An id that matches no edge
-    /// is skipped. Apply and replay both delete edges this way.
+    /// Delete the edges among `ids` that exist.
     pub(crate) fn delete_edges(&mut self, ids: &[String], report: &mut Report) {
         self.remove_edges(ids.iter().map(String::as_str), report);
     }
 
     /// Remove the edges among `ids` that exist, each once, and record them as
-    /// a `delete_edges`. A `delete_edges` and a cascade delete both remove
-    /// their edges here.
+    /// a `delete_edges`.
     fn remove_edges<'i>(&mut self, ids: impl IntoIterator<Item = &'i str>, report: &mut Report) {
         let mut removed = Vec::new();
         let mut copies = Vec::new();
@@ -451,11 +404,8 @@ impl GraphState {
 
     // --- Field writes ----------------------------------------------------------------------
 
-    /// Apply one `set_field` or `delete_field` to a node, through the batch's
-    /// field layer, with the rules for list items.
-    ///
-    /// Returns what the path held before the write. Without `forward`, a
-    /// set's value moves into the layer instead of being copied.
+    /// Apply one `set_field` or `delete_field` to a node, with the rules for
+    /// list items. Returns what the path held before the write.
     fn apply_field_update(
         &mut self,
         update: &mut FieldUpdate,
@@ -488,25 +438,21 @@ impl GraphState {
         })
     }
 
-    /// The first step of a field write, which apply and replay share:
-    /// follow the path.
+    /// Follow the path of a field write.
     ///
     /// # Errors
     ///
-    /// A segment does not fit the value it reads, or a key it looks up names
-    /// two items.
+    /// A segment does not fit the value it reads, or a key names two items.
     pub(crate) fn walk_update(&mut self, placed: &PlacedUpdate<'_>) -> Result<Walk> {
         self.walk(placed)
     }
 
-    /// Record what undoes a field write, before the write is made: a write
-    /// that puts back what the path held. A list item comes back with its
-    /// position, so its list's order comes back too. Apply and replay both
-    /// record this way.
+    /// Record a write that puts back what the path holds, before the write.
+    /// A list item comes back with its position.
     ///
     /// # Errors
     ///
-    /// A key that a read looks up names two items.
+    /// A key names two items.
     pub(crate) fn record_backward(
         &mut self,
         placed: &PlacedUpdate<'_>,
@@ -519,8 +465,7 @@ impl GraphState {
         Ok(())
     }
 
-    /// Check that a write inside a list item left the item a position. The
-    /// parser already refused a write that changes an item's key.
+    /// Check that a write inside a list item left the item a position.
     fn check_positions_kept(&mut self, placed: &PlacedUpdate<'_>, walk: &Walk) -> Result<()> {
         let (id, path, context) = (
             placed.update.id.as_str(),
@@ -540,14 +485,9 @@ impl GraphState {
         Ok(())
     }
 
-    /// Follow the write's path through the batch's field layer
-    /// ([`Graph::walk_field`]), and read what it holds, before anything is
-    /// written.
-    ///
-    /// The value that holds the last segment is inside an entry at an
-    /// ancestor (anc.) path of the write's path, or else in the node. A
-    /// segment that does not fit the value it reads, such as a key of a list,
-    /// is an error rather than a missing value.
+    /// Follow the write's path ([`Graph::walk_field`]) and read what it
+    /// holds. A segment that does not fit its value, such as a key of a list,
+    /// is an error, not a missing value.
     fn walk(&mut self, placed: &PlacedUpdate<'_>) -> Result<Walk> {
         let (id, path, context) = (
             placed.update.id.as_str(),
@@ -573,9 +513,7 @@ impl GraphState {
             Segment::Item(key) => {
                 let keyed = keyed_list(graph, placed, index, value)?;
                 let items = value.as_array().map(Vec::as_slice).unwrap_or_default();
-                // A stored node's lists keep their index between reads. A list
-                // inside an entry, or in a node the batch added, is indexed
-                // again at each read.
+                // Only a stored node's lists keep their index between reads.
                 let built;
                 let list_index = if stored && !in_entry {
                     &*lists.index(id, &path[..index], keyed, items)
@@ -613,7 +551,7 @@ impl GraphState {
             });
         };
         let found = step(parent, last, walked.write_len.is_some())?.is_some();
-        // The item that a write on the way sits at was checked when it was written.
+        // The item at a write on the way was checked when it was written.
         if let Some(len) = walked.write_len
             && let Segment::Item(_) = &path[len - 1]
         {
@@ -641,9 +579,8 @@ impl GraphState {
         })
     }
 
-    /// Write or delete the last segment of the path: in the value of the
-    /// write on the way, or as the write at the path itself. Apply and
-    /// replay both write this way, after [`Self::walk_update`].
+    /// Write or delete the last segment of the path, after
+    /// [`Self::walk_update`].
     pub(crate) fn write_update(&mut self, placed: &PlacedUpdate<'_>, walk: &Walk, value: AnyValue) {
         let update = placed.update;
         let (id, path) = (update.id.as_str(), &update.path);
@@ -693,8 +630,7 @@ pub(crate) fn require_path(placed: &PlacedUpdate<'_>, walk: &Walk) -> Result<()>
     }
 }
 
-/// Check that a table row written at its key carries a position. The parser
-/// already checked that it carries the key.
+/// Check that a table row written at its key carries a position.
 fn check_written_item(placed: &PlacedUpdate<'_>, walk: &Walk) -> Result<()> {
     let (update, context) = (placed.update, placed.context);
     let last = update.path.len() - 1;
@@ -706,8 +642,7 @@ fn check_written_item(placed: &PlacedUpdate<'_>, walk: &Walk) -> Result<()> {
 }
 
 /// The value an update writes, or `Null` for a delete. It moves out of the
-/// update, unless `keep_update` keeps the update whole for the forward
-/// operations.
+/// update unless `keep_update` is set.
 pub(crate) fn written_value(update: &mut FieldUpdate, keep_update: bool) -> AnyValue {
     match &mut update.change {
         Change::Set(value) if keep_update => value.clone(),
@@ -743,8 +678,7 @@ impl AddedEdges {
 enum Before {
     /// Nothing: the write added a value, or a delete found nothing.
     Nothing,
-    /// A value. It is kept only for a cascade delete that reads it
-    /// ([`reads_before`]).
+    /// A value, kept only when [`reads_before`] needs it.
     Value(Option<AnyValue>),
 }
 
@@ -756,10 +690,8 @@ pub(crate) struct PlacedUpdate<'w> {
     pub(crate) context: UpdatePlace,
 }
 
-/// Where a field update is in its `update_nodes`, for error messages:
-/// `update_nodes[1]`, or one segment of its path, `update_nodes[1].path[2]`.
-/// It is formatted only when an error is, so an update that applies builds
-/// no message.
+/// Where a field update is, for error messages.
+/// Example: `update_nodes[1]` or `update_nodes[1].path[2]`.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct UpdatePlace {
     update: usize,
@@ -796,22 +728,19 @@ impl fmt::Display for UpdatePlace {
 /// Where a field update's path leads through the batch's field layer, and what it holds.
 #[derive(Debug, Default)]
 pub(crate) struct Walk {
-    /// The length of the path of the write on the way that holds the value
-    /// with the last segment: a write at an ancestor path of the write's
-    /// path. `None` when the node itself holds that value.
+    /// The path length of the write on the way that holds the last segment.
+    /// `None` when the node itself holds it.
     write_len: Option<usize>,
     /// The keyed list items the path passes through, before its last segment.
     list_items: Vec<ListItemOnPath>,
     /// The keyed list whose item the last segment names, if it names one.
     last_list: Option<&'static KeyedList>,
-    /// The first rule that a keyed list on the path breaks, with the index
-    /// of the segment that reads the list.
+    /// The first keyed list rule broken on the path, with its segment index.
     list_problem: Option<(usize, ListProblem)>,
-    /// Whether the value that holds the last segment has it: inside the
-    /// entry, or in the node itself when no entry holds that value.
+    /// Whether the value that holds the last segment has it.
     found: bool,
-    /// Whether the path holds a value as the batch sees it: [`Self::found`],
-    /// unless an entry at the path itself says otherwise.
+    /// Whether the path holds a value as the batch sees it. It is
+    /// [`Self::found`] unless a write at the path says otherwise.
     exists: bool,
     /// The index of the first segment that does not exist.
     missing_at: Option<usize>,
@@ -840,9 +769,8 @@ fn missing_segment(placed: &PlacedUpdate<'_>, missing: usize) -> Error {
     }
 }
 
-/// The keyed list whose item `path[index]` names. The schema decides whether a template field's value is a table from
-/// the field's keys, read through the batch's writes. Checks that the list
-/// is keyed and that `value`, what the path holds there, is a list.
+/// The keyed list whose item `path[index]` names. Checks that the schema
+/// declares it keyed and that `value` is a list.
 fn keyed_list(
     graph: &Graph,
     placed: &PlacedUpdate<'_>,
@@ -878,18 +806,16 @@ fn keyed_list(
 
 // --- Backward operations of field writes ---------------------------------------------------
 
-/// The writes that undo an `update_nodes`, read from the state each write
-/// replaces. They are undone last first; a path written twice is split into
-/// separate operations, since one operation may write a path once.
+/// The writes that undo an `update_nodes`. One operation may write a path
+/// only once, so a path written twice splits into separate operations.
 #[derive(Debug, Default)]
 pub(crate) struct FieldBackward {
     entries: Vec<FieldUpdate>,
 }
 
 impl FieldBackward {
-    /// Add what undoes `update`, called before it is applied: a write that
-    /// puts back `current`, what the path holds, or deletes the path when it
-    /// holds nothing.
+    /// Add what undoes `update`, before it is applied. It puts back
+    /// `current`, or deletes the path when `current` is `None`.
     fn add(&mut self, update: &FieldUpdate, current: Option<&AnyValue>) {
         let path = update.path.clone();
         match current {
@@ -922,8 +848,7 @@ impl FieldBackward {
     }
 }
 
-/// Apply operations to a flow graph, with every rule, and return the result
-/// with what the batch did.
+/// Apply operations to a flow graph, with every rule.
 ///
 /// # Errors
 ///
@@ -944,7 +869,6 @@ mod tests {
     use crate::value::AnyValue;
 
     use super::*;
-    use crate::ops::api::{graph_json, staged_graph_json};
     use crate::ops::edges::escape_handle;
     use crate::ops::replay::ReplayOptions;
     use crate::ops::schema::OUTPUTS_PATH;
@@ -982,7 +906,7 @@ mod tests {
             for backward in [false, true] {
                 let options = ApplyOptions { forward, backward };
                 let mut state = GraphState::new(graph.clone()).unwrap();
-                let before = graph_json(&state);
+                let before = state.to_json();
                 let applied = state
                     .apply(
                         operations(json!([
@@ -1028,7 +952,7 @@ mod tests {
                 ]));
                 let error = state.apply(refused, options).unwrap_err();
                 assert!(error.to_string().contains("absent"));
-                assert_eq!(graph_json(&state), before);
+                assert_eq!(state.to_json(), before);
                 assert!(!state.is_staged());
             }
         }
@@ -1152,8 +1076,7 @@ mod tests {
         path
     }
 
-    /// Each batch applied to one graph state kept between batches gives what
-    /// it gives on a graph loaded fresh.
+    /// A batch on a kept graph state gives what it gives on a fresh one.
     fn same_as_fresh(state: &mut GraphState, batch: Vec<Operation>) -> Result<()> {
         let fresh = apply_flow_operations(state.to_value(), batch.clone(), ApplyOptions::default());
         let kept = state.apply(batch, ApplyOptions::default());
@@ -1392,17 +1315,17 @@ mod tests {
         };
         let (expected_graph, expected) =
             apply_flow_operations(before.clone(), batch.clone(), options).unwrap();
-        assert!(staged_graph_json(&state).is_none(), "nothing is staged yet");
+        assert!(state.staged_to_json().is_none(), "nothing is staged yet");
         let staged = state.stage(batch, options).unwrap();
         assert_eq!(staged, expected);
         assert!(state.is_staged());
         assert_eq!(state.to_value(), before);
         assert_eq!(
-            serde_json::from_str::<AnyValue>(&graph_json(&state)).unwrap(),
+            serde_json::from_str::<AnyValue>(&state.to_json()).unwrap(),
             before
         );
         // The staged graph is the graph that keep makes, while the committed graph stays.
-        let staged_text = staged_graph_json(&state).unwrap();
+        let staged_text = state.staged_to_json().unwrap();
         assert!(
             crate::ops::canonical::graphs_equal(
                 &serde_json::from_str(&staged_text).unwrap(),
@@ -1412,11 +1335,11 @@ mod tests {
         );
         assert!(state.keep());
         assert!(!state.is_staged());
-        assert_eq!(graph_json(&state), staged_text);
+        assert_eq!(state.to_json(), staged_text);
         assert!(crate::ops::canonical::graphs_equal(&state.to_value(), &expected_graph).unwrap());
         assert!(!state.keep(), "nothing is staged after keep");
         assert!(
-            staged_graph_json(&state).is_none(),
+            state.staged_to_json().is_none(),
             "nothing is staged after keep"
         );
     }

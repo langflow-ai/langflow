@@ -1,13 +1,8 @@
 //! The flow operation engine.
 //!
-//! Operations describe granular edits to a flow's `data`: nodes and edges
-//! added, updated field by field, or deleted. Every other top-level key is
-//! view state, which no operation writes. Apply carries out a new batch
-//! with every rule. Replay carries out stored operations with no rule.
-//! Paths name object keys, and the items of the lists that `node_schema.json`
-//! declares keyed by their key, never by their index. The engine has no transport or
-//! database dependencies, so the same rules apply wherever an operation comes
-//! from.
+//! Operations add, update or delete the nodes and edges of a flow's `data`.
+//! Apply checks every rule on a new batch. Replay runs stored operations
+//! with no rule. A path names a list item by its key, never by its index.
 
 pub mod api;
 pub mod apply;

@@ -18,7 +18,7 @@ pub enum Segment {
     /// An object key.
     Key(String),
     /// An item of a list, named by its key: `{"key": ...}`.
-    /// The actual name of such key fields are defined in node_schema.json.
+    /// `node_schema.json` names each list's key field.
     Item(String),
 }
 
@@ -138,9 +138,15 @@ impl<T: AsKey> PathExt for [T] {
 #[must_use]
 pub fn path_label(path: &[Segment]) -> String {
     if path.is_empty() {
-        return String::from("[]")
+        return String::from("[]");
     }
-    return format!("[\"{}\"]", path.iter().map(Segment::as_str).collect::<Vec<&str>>().join("\",\""));
+    format!(
+        "[\"{}\"]",
+        path.iter()
+            .map(Segment::as_str)
+            .collect::<Vec<&str>>()
+            .join("\",\"")
+    )
 }
 
 /// What a field update does at its path.
@@ -170,7 +176,7 @@ impl NodePath {
     }
 
     fn match_node_object<P: PathExt + ?Sized>(path: &P) -> Option<&&[&str]> {
-        return NODE_OBJECT_PATHS.iter().find(|np| path.equals(np));
+        NODE_OBJECT_PATHS.iter().find(|np| path.equals(np))
     }
 
     /// Check that a field update may write `path`. For example, `["id"]`

@@ -1,27 +1,8 @@
-//! The rules every stored flow graph follows.
+//! The rules of a stored flow graph, each with a stable code.
 //!
-//! A write must keep these rules. The engine checks them on the
-//! graph it starts from, and the diff checks them on the graph a save asks
-//! for. Each rule has a stable code, so a refused write can name what is
-//! wrong and where, and each violation says who fixes it: `repair`, or the
-//! client.
-//!
-//! Two groups of rules are checked only against the stored graph a write
-//! replaces (`base`), so what is stored stays acceptable until someone
-//! touches it:
-//!
-//! - table rows: every table value the write adds or changes must have rows
-//!   with a unique `__id__` and a numeric `__pos__`. Their order in the array
-//!   is not state, so it is never checked, and legacy tables without row ids
-//!   stay valid until someone edits them. The engine owns these two keys, so
-//!   the column definition (`table_schema`) of such a table must not name a
-//!   column `__id__` or `__pos__`;
-//! - edge rules: every edge the write adds must carry valid handles that
-//!   name an output and an input that exist, must not take an input that is
-//!   already taken, and must not touch a note. An edge that changed counts as
-//!   added, since a write deletes it and adds it again. They are the same
-//!   checks the engine makes when it applies `add_edges`, so validation and
-//!   apply never disagree.
+//! The table, list and edge rules apply only to what a write adds or changes
+//! relative to the stored graph (`base`). Example: a stored table without row
+//! ids stays valid until a write changes it.
 
 use std::borrow::Cow;
 use std::fmt;
@@ -58,18 +39,17 @@ pub enum ViolationCode {
     TableRowIdMissing,
     TableRowIdDuplicate,
     TableRowPosInvalid,
-    /// An item of an outputs or tool action list that a write adds or
-    /// changes has no finite numeric `__pos__`.
+    /// An output or tool action has no finite `__pos__`.
     ListItemMissingPos,
-    /// A table's column definition names a column after a row key the engine owns.
+    /// A table column is named `__id__` or `__pos__`.
     TableColumnReserved,
-    /// A handle has one of its two forms, and the other is valid.
+    /// A handle has only one of its two forms.
     EdgeHandleFormMissing,
     /// A handle is missing, is not an object, does not parse, or its forms disagree.
     EdgeHandleInvalid,
     /// A handle names an output or field its node does not have.
     EdgeHandleNotFound,
-    /// A field that takes one connection, or a loop output, already has one.
+    /// Several edges go into an input that accepts only one edge.
     EdgeTargetOccupied,
     /// An edge has a note at one end.
     EdgeTouchesNote,
@@ -105,11 +85,7 @@ impl ViolationCode {
         }
     }
 
-    /// The fix for a violation that has one fix, or `None` for one the client fixes.
-    ///
-    /// A rule that has one fix but no code for it here would leave a flow that
-    /// can neither be saved nor repaired, so every code is either fixed here or
-    /// left to the client.
+    /// What repair does for this rule, or `None` when the client fixes it.
     #[must_use]
     pub fn repair_action(self) -> Option<&'static str> {
         use ViolationCode as Code;
@@ -143,8 +119,7 @@ impl ViolationCode {
         })
     }
 
-    /// Who fixes a violation of this rule: repair when the rule has a fix,
-    /// the client otherwise.
+    /// Who fixes a violation of this rule.
     #[must_use]
     pub fn resolution(self) -> Resolution {
         if self.repair_action().is_some() {
@@ -160,8 +135,7 @@ impl ViolationCode {
 pub enum Numbers {
     /// Walk every value. A graph from outside is checked this way.
     Check,
-    /// Skip the walk. Stored values were checked when they were written, so
-    /// indexing and replay stay proportional to the number of nodes and edges.
+    /// Skip the walk. Stored values were checked when they were written.
     Skip,
 }
 
@@ -236,9 +210,6 @@ fn path_of(base: &[PathPart], more: &[&str]) -> GraphPath {
 }
 
 /// One broken rule, where it was found, and a message without graph values.
-///
-/// An edge rule violation also names its edge, so a client can fix that edge
-/// without counting its way through the edge list.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Violation {
     /// The rule.
@@ -282,20 +253,14 @@ impl Violation {
     }
 }
 
-/// Every rule `flow` breaks, in the order the graph lists them.
+/// Each rule `flow` breaks, in graph order.
 ///
-/// With [`Numbers::Check`], it also walks every value for numbers that are
-/// not finite as JavaScript reads them.
-///
-/// `base` is the stored graph a write replaces. When it is given, every table
-/// value `flow` adds or changes relative to it is checked too, and so is every
-/// edge it adds, once the graph's structure is sound. Pass an empty
-/// graph for a flow that has no stored graph yet.
+/// With `base`, it also checks the tables, lists and edges that `flow` adds or
+/// changes. For a new flow, pass an empty graph as `base`.
 ///
 /// # Errors
 ///
-/// Reading an edge's handles or a node's outputs failed in a way that is not
-/// a violation of the edge being checked.
+/// An edge check fails for a reason that is not a violation.
 pub fn find_graph_violations(
     flow: &AnyValue,
     numbers: Numbers,
@@ -374,8 +339,7 @@ fn structure_violations(graph: &AnyMap) -> Vec<Violation> {
 ///
 /// # Errors
 ///
-/// An invalid graph error listing the violations, or what
-/// [`find_graph_violations`] fails with.
+/// The graph has violations, or [`find_graph_violations`] fails.
 pub fn validate_flow_data(
     flow: &AnyValue,
     numbers: Numbers,
@@ -385,8 +349,7 @@ pub fn validate_flow_data(
     violations_error(find_graph_violations(flow, numbers, base)?, context)
 }
 
-/// Fail with `violations`, if there are any. The message names the first one
-/// and counts the others; `context` names the graph.
+/// Fail with `violations`, if there are any. The message names the first one.
 ///
 /// # Errors
 ///
@@ -516,7 +479,7 @@ pub(crate) enum Step<'a> {
     Index(usize),
 }
 
-/// A walk's path as a graph path, its keys copied: for a violation or a fix.
+/// A walk's path as an owned graph path.
 pub(crate) fn owned_path(steps: &[Step<'_>]) -> GraphPath {
     steps
         .iter()
@@ -527,8 +490,7 @@ pub(crate) fn owned_path(steps: &[Step<'_>]) -> GraphPath {
         .collect()
 }
 
-/// Every number in `value` that is not finite, in document order. The walk
-/// borrows each key; a path is copied only for a violation.
+/// Each number in `value` that is not finite, in document order.
 fn non_finite_violations<'a>(
     value: &'a AnyValue,
     path: &mut Vec<Step<'a>>,
@@ -560,7 +522,7 @@ fn non_finite_violations<'a>(
 
 // --- Edges a write adds ------------------------------------------------------------------
 
-/// A structurally valid graph, indexed for the edge rules without copying it.
+/// A structurally valid graph, indexed for the edge rules.
 #[derive(Debug)]
 pub(crate) struct GraphView<'a> {
     nodes: HashMap<&'a str, &'a AnyValue>,
@@ -573,8 +535,7 @@ impl<'a> GraphView<'a> {
     ///
     /// # Errors
     ///
-    /// A node does not have the shape of a node, which structural validation
-    /// refuses first.
+    /// A node does not have the shape of a node.
     pub fn new(graph: &'a AnyValue) -> Result<Self> {
         let mut view = Self {
             nodes: HashMap::default(),
@@ -629,19 +590,11 @@ fn list<'a>(graph: &'a AnyValue, key: &str) -> &'a [AnyValue] {
         .unwrap_or_default()
 }
 
-/// The indexes of the edges `target` adds relative to `base`, and of the edges it cuts.
+/// The indexes of the edges that `target` adds, changes or cuts relative to `base`.
 ///
-/// Added edges are new edges, and edges that changed ([`edge_changed`]),
-/// which a write deletes and adds again. A cut edge is one `target` keeps
-/// unchanged while it removes the template field or output at one of its
-/// ends. Applying that removal deletes the edge, so a target that keeps it
-/// can never be replayed. Both graphs must be structurally sound.
-///
-/// # Errors
-///
-/// A compared value holds a number that is not finite, or an outputs list
-/// that a write changes is not a valid keyed list.
-pub fn changed_edges(base: &AnyValue, target: &AnyValue) -> Result<Vec<usize>> {
+/// A cut edge goes from or into a field or output that `target` removes.
+/// Replay deletes that edge, so `target` must not keep it.
+pub(crate) fn changed_edges(base: &AnyValue, target: &AnyValue) -> Result<Vec<usize>> {
     let stored: HashMap<&str, &AnyMap> = list(base, "edges")
         .iter()
         .filter_map(AnyValue::as_object)
@@ -702,8 +655,7 @@ fn removed_fields(before: &AnyMap, after: &AnyMap) -> HashSet<String> {
         .collect()
 }
 
-/// The output names `before` has and `after` does not. Outputs that compare
-/// equal are not indexed, so a write that leaves them alone reads nothing.
+/// The output names `before` has and `after` does not.
 fn removed_outputs(before: &AnyMap, after: &AnyMap, node_id: &str) -> Result<HashSet<String>> {
     let Some(outputs_before) = before.get("outputs") else {
         return Ok(HashSet::default());
@@ -728,11 +680,8 @@ fn removed_outputs(before: &AnyMap, after: &AnyMap, node_id: &str) -> Result<Has
         .collect())
 }
 
-/// Whether a kept edge leaves from or enters a field or output the write removes.
-///
-/// Applying the removal reads the handles of every edge at that node
-/// strictly, so an edge there whose handles cannot be read counts too, and
-/// the edge rules report it.
+/// Whether a kept edge goes from or into a field or output that the write removes.
+/// An edge at such a node with handles that do not read also counts.
 fn is_cut(edge: &AnyMap, removed: &HashMap<String, RemovedEnds>) -> bool {
     let source = removed.get(endpoint(edge, "source"));
     let target = removed.get(endpoint(edge, "target"));
@@ -751,17 +700,9 @@ fn is_cut(edge: &AnyMap, removed: &HashMap<String, RemovedEnds>) -> bool {
     })
 }
 
-/// The edge rules broken by the edges `target` adds, rewires or cuts relative to `base`.
-///
-/// `target` must be structurally sound: unique ids, and edges whose endpoints
-/// exist. Checking one edge reads the other edges into its input, so it can
-/// fail on one of them: each violation is reported once, at the edge that
-/// broke the rule.
-///
-/// # Errors
-///
-/// A check failed in a way that is not an edge rule.
-pub fn find_edge_violations(base: &AnyValue, target: &AnyValue) -> Result<Vec<Violation>> {
+/// The edge rules broken by the edges `target` adds, changes or cuts relative to `base`.
+/// Each violation is reported once, at the edge that breaks the rule.
+pub(crate) fn find_edge_violations(base: &AnyValue, target: &AnyValue) -> Result<Vec<Violation>> {
     let indexes = changed_edges(base, target)?;
     if indexes.is_empty() {
         return Ok(Vec::new());
@@ -813,35 +754,28 @@ pub fn find_edge_violations(base: &AnyValue, target: &AnyValue) -> Result<Vec<Vi
 
 /// A table value a write adds or changes, where it is, and its field's column definition.
 #[derive(Debug)]
-pub struct ChangedTable<'a> {
+pub(crate) struct ChangedTable<'a> {
     /// Where the table value is: `nodes.<index>.data.node.template.<field>.value`.
     pub path: GraphPath,
     /// `None` when the node has no string id.
     pub node_id: Option<&'a str>,
     /// The name of the template field that holds the table.
     pub field: &'a str,
-    #[expect(missing_docs, reason = "the name says what it is")]
     pub rows: &'a [AnyValue],
-    /// The field's `table_schema`, which declares its columns; `None` when it has none.
+    /// The field's `table_schema`, which declares its columns.
     pub table_schema: Option<&'a AnyValue>,
 }
 
 /// An outputs or tool action list a write adds or changes, and where it is.
 #[derive(Debug)]
-pub struct ChangedList<'a> {
+pub(crate) struct ChangedList<'a> {
     /// Where the list is, for example `nodes.<index>.data.node.outputs`.
     pub path: GraphPath,
-    #[expect(missing_docs, reason = "the name says what it is")]
     pub items: &'a [AnyValue],
 }
 
-/// The outputs and tool action lists that `target` adds or changes relative
-/// to `base`, in the order the graph lists them.
-///
-/// # Errors
-///
-/// A compared list holds a number that is not finite.
-pub fn changed_keyed_lists<'a>(
+/// The outputs and tool action lists that `target` changes relative to `base`, in graph order.
+pub(crate) fn changed_keyed_lists<'a>(
     base: &AnyValue,
     target: &'a AnyValue,
 ) -> Result<Vec<ChangedList<'a>>> {
@@ -882,14 +816,9 @@ pub fn changed_keyed_lists<'a>(
     Ok(lists)
 }
 
-/// A violation for every item without a finite numeric `__pos__` in the
-/// outputs and tool action lists that `target` adds or changes relative to
-/// `base`. Table rows have rules of their own ([`find_table_violations`]).
-///
-/// # Errors
-///
-/// A compared list holds a number that is not finite.
-pub fn find_list_position_violations(base: &AnyValue, target: &AnyValue) -> Result<Vec<Violation>> {
+/// A violation for each item without a finite `__pos__` in the outputs and
+/// tool action lists that `target` changes relative to `base`.
+fn find_list_position_violations(base: &AnyValue, target: &AnyValue) -> Result<Vec<Violation>> {
     let position_key = &NODE_SCHEMA.table_keys.position;
     let mut violations = Vec::new();
     for changed in changed_keyed_lists(base, target)? {
@@ -908,12 +837,11 @@ pub fn find_list_position_violations(base: &AnyValue, target: &AnyValue) -> Resu
     Ok(violations)
 }
 
-/// The table values `target` adds or changes relative to `base`, in the order the graph lists them.
-///
-/// # Errors
-///
-/// A compared table holds a number that is not finite.
-pub fn changed_tables<'a>(base: &AnyValue, target: &'a AnyValue) -> Result<Vec<ChangedTable<'a>>> {
+/// The tables that `target` changes relative to `base`, in graph order.
+pub(crate) fn changed_tables<'a>(
+    base: &AnyValue,
+    target: &'a AnyValue,
+) -> Result<Vec<ChangedTable<'a>>> {
     let mut stored: HashMap<&str, &AnyMap> = HashMap::default();
     for node in list(base, "nodes") {
         if let (Some(template), Some(id)) =
@@ -935,7 +863,7 @@ pub fn changed_tables<'a>(base: &AnyValue, target: &'a AnyValue) -> Result<Vec<C
             else {
                 continue;
             };
-            // Only tables: a natural-key list (tool actions) is not one, even under a table-typed field.
+            // Tool actions are not a table, even under a table-typed field.
             if !NODE_SCHEMA.is_table_at(node, &field_value_path(name)) {
                 continue;
             }
@@ -968,12 +896,8 @@ pub fn changed_tables<'a>(base: &AnyValue, target: &'a AnyValue) -> Result<Vec<C
     Ok(tables)
 }
 
-/// The column and row rules broken by table values `target` adds or changes relative to `base`.
-///
-/// # Errors
-///
-/// A compared table holds a number that is not finite.
-pub fn find_table_violations(base: &AnyValue, target: &AnyValue) -> Result<Vec<Violation>> {
+/// The column and row rules broken by the tables that `target` changes relative to `base`.
+fn find_table_violations(base: &AnyValue, target: &AnyValue) -> Result<Vec<Violation>> {
     let mut violations = Vec::new();
     for table in changed_tables(base, target)? {
         if let Some(table_schema) = table.table_schema {
@@ -986,12 +910,10 @@ pub fn find_table_violations(base: &AnyValue, target: &AnyValue) -> Result<Vec<V
     Ok(violations)
 }
 
-/// A violation for every column `table_schema` names after a row key.
-///
-/// `table_schema` is a list of columns, or an object whose `columns` is that
-/// list. `path` is where `table_schema` is. Anything else declares no columns.
+/// A violation for each column named after a row key.
+/// `table_schema` is a list of columns, or an object with a `columns` list.
 #[must_use]
-pub fn table_column_violations(table_schema: &AnyValue, path: &[PathPart]) -> Vec<Violation> {
+fn table_column_violations(table_schema: &AnyValue, path: &[PathPart]) -> Vec<Violation> {
     let (columns, columns_path) = match table_schema {
         AnyValue::Object(schema) => (schema.get("columns"), path_of(path, &["columns"])),
         list => (Some(list), path.to_vec()),
@@ -1017,7 +939,7 @@ pub fn table_column_violations(table_schema: &AnyValue, path: &[PathPart]) -> Ve
     violations
 }
 
-/// Whether `name` is one of the two keys the engine owns in every table row.
+/// Whether `name` is `__id__` or `__pos__`.
 fn is_row_key(name: &str) -> bool {
     let keys = &NODE_SCHEMA.table_keys;
     name == keys.id || name == keys.position
@@ -1025,7 +947,7 @@ fn is_row_key(name: &str) -> bool {
 
 /// The row rules one table value breaks.
 #[must_use]
-pub fn table_row_violations(rows: &[AnyValue], path: &[PathPart]) -> Vec<Violation> {
+fn table_row_violations(rows: &[AnyValue], path: &[PathPart]) -> Vec<Violation> {
     let (id_key, position_key) = (&NODE_SCHEMA.table_keys.id, &NODE_SCHEMA.table_keys.position);
     let mut violations = Vec::new();
     let mut seen = HashSet::default();

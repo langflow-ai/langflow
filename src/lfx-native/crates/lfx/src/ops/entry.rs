@@ -1,7 +1,6 @@
 //! Reading nodes, edges and table rows, which stay untyped JSON.
 //!
-//! The engine keeps every key of a node or an edge, so it never turns them
-//! into typed structs. These methods name the few things it reads from them.
+//! The engine keeps every key of a node or an edge, so it has no typed structs for them.
 
 use crate::value::{AnyMap, AnyValue};
 
@@ -10,8 +9,7 @@ pub(crate) trait EntryExt {
     /// The string at `key`, when it is a string that is not empty.
     fn non_empty_str(&self, key: &str) -> Option<&str>;
 
-    /// The id of an entry that passed structural validation. It is empty
-    /// for an entry without a string id.
+    /// The id, or `""` when the entry has no string id.
     fn id(&self) -> &str;
 
     /// A node's template: `data.node.template`.

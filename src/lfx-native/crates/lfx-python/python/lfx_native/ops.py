@@ -1,18 +1,13 @@
 """The flow operation engine: apply, replay, diff, validate, repair and hash flow graphs.
 
-Every function takes Python values and returns Python values. An argument
-that is ``bytes`` is UTF-8 JSON text; any other argument is the JSON value
-itself (dict, list, tuple, str, int, float, bool or None), read with the same
-limits as text: at most 127 levels deep, no lone surrogate, finite numbers.
-A ``str`` is a JSON string, never text to parse.
-Numbers come back as ``int`` or ``float``, as ``json.loads`` would read them.
+A ``bytes`` argument is UTF-8 JSON text. Any other argument is a JSON value
+(dict, list, tuple, str, int, float, bool or None). A ``str`` is a JSON
+string, never text to parse. Values have the limits of text: at most 127
+levels deep, no lone surrogate, and finite numbers.
 
-An engine error is raised as ``EngineError``: ``kind`` names the matching
-Python exception class (``FlowOperationValidationError``,
-``FlowDataValidationError``, ``FlowOperationReplayError``,
-``RestoreFixNotAllowedError`` or ``FlowGraphInvalidError``), ``code`` is its
-stable code, and ``details`` is the whole error as a dict, with the
-violations, edge id or graph it carries.
+An engine error raises ``EngineError``. Its ``kind`` names the matching
+Python exception class, for example ``FlowOperationValidationError``. Its
+``code`` is a stable code, and ``details`` is the whole error as a dict.
 """
 
 from lfx_native._native import (

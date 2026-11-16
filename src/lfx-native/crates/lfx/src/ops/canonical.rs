@@ -1,33 +1,20 @@
 //! Canonical form of flow data, for equality and checkpoint hashes.
 //!
 //! Two graphs are equal when their canonical forms are the same JSON value.
-//! The form is the graph with its view state removed, and with everything
-//! whose order is not state keyed by id:
+//! The form drops view state, which `node_schema.json` declares display only.
 //!
-//! - JSON values compare as RFC 8785 (JSON Canonicalization Scheme) prints
-//!   them: `1` and `1.0` are the same value, `true` and `1` are not, and key
-//!   order is never a change. JavaScript cannot tell integers from floats, so
-//!   a `0.0` that comes back from the editor as `0` must not count as an edit.
-//! - `nodes` and `edges` are collections keyed by id, and the items of every
-//!   keyed list (outputs, tool actions, table rows) are collections keyed by
-//!   item key. Their array order is not state; a keyed list's order is its
-//!   items' `(__pos__, key)`.
-//! - View state is everything `node_schema.json` declares display only. It is
-//!   stored but never recorded and never compared.
-//! - An edge's `sourceHandle` and `targetHandle` strings are JSON with `œ`
-//!   standing for `"`. They compare by the object they encode.
+//! - Values compare as RFC 8785 prints them. Example: `1` equals `1.0`,
+//!   because the editor gives back `0.0` as `0`. Key order is never a change.
+//! - `nodes`, `edges` and keyed lists compare by id or item key, in any order.
+//!   A keyed list's order is `(__pos__, key)`.
+//! - An edge handle string is JSON with `œ` for `"`. It compares by the
+//!   object it encodes.
 //! - A handle's `inputTypes` and `output_types` compare as sets. The hash
-//!   keeps their order, so that no stored hash changes.
+//!   keeps their order, so no stored hash changes.
+//! - Numbers compare as JavaScript doubles. An integer above 2^53 compares as
+//!   the double it rounds to, because the editor cannot hold it either.
 //!
-//! Equality compares the form structurally and stops at the first
-//! difference; only [`graph_hash`] serializes it, with collections ordered, as
-//! RFC 8785 text. The form is defined for any JSON graph, valid or not:
-//! enforcing the rules is validation's job.
-//!
-//! Numbers compare as the doubles JavaScript holds. So an integer above 2^53
-//! compares, prints and hashes as the double it rounds to, on purpose: the
-//! editor cannot hold it either. Stored values keep what [`crate::value::Number`]
-//! keeps: an integer or a double, and the text of a number neither holds.
+//! The form is defined for any graph, valid or not.
 
 use std::borrow::Cow;
 use std::cmp::Ordering;
@@ -83,25 +70,16 @@ impl From<&AnyValue> for JsonType {
 
 // --- Numbers ---------------------------------------------------------------------------
 
-/// A number as the double JavaScript reads it: correctly rounded, and
-/// infinite when it is too large for a double.
+/// A number as the double JavaScript reads it. Too large a number is infinite.
 #[must_use]
 pub fn as_double(number: &Number) -> f64 {
     number.as_f64().unwrap_or(f64::NAN)
 }
 
-/// Whether a number is finite as the double JavaScript reads it. An integer
-/// too large for a double reads as Infinity, so it is not finite.
+/// Whether a number is finite as the double JavaScript reads it.
 #[must_use]
 pub fn is_finite_number(number: &Number) -> bool {
     as_double(number).is_finite()
-}
-
-/// Whether a number is written as an integer, with no fraction and no
-/// exponent, which is how Python tells an `int` from a `float`.
-#[must_use]
-pub fn is_integer_text(number: &Number) -> bool {
-    number.is_integer()
 }
 
 /// Whether a value is a valid table row position: a finite number.
@@ -122,7 +100,7 @@ fn finite_double(number: &Number) -> Result<f64> {
 /// Print a number as RFC 8785 does, which is JavaScript's `Number::toString`.
 fn format_number(number: &Number, out: &mut Sink) -> Result<()> {
     let double = finite_double(number)?;
-    if is_integer_text(number) {
+    if number.is_integer() {
         // An integer prints exactly while JavaScript holds it exactly.
         if let Some(integer) = number.as_i128()
             && integer.abs() <= MAX_SAFE_INTEGER
@@ -143,8 +121,7 @@ fn format_double(value: f64, out: &mut Vec<u8>) {
     if value < 0.0 {
         out.push(b'-');
     }
-    // `{:e}` prints the shortest digits that round-trip, which is also what
-    // ECMAScript's Number::toString chooses; only the layout differs.
+    // `{:e}` gives the same shortest digits as ECMAScript. Only the layout differs.
     let shortest = format!("{:e}", value.abs());
     let (mantissa, exponent) = shortest.split_once('e').unwrap_or((&shortest, "0"));
     let digits: String = mantissa.chars().filter(char::is_ascii_digit).collect();
@@ -182,11 +159,8 @@ fn format_double(value: f64, out: &mut Vec<u8>) {
 
 /// Order strings by UTF-16 code units, the order JavaScript's default sort uses.
 ///
-/// UTF-8 bytes order as code points do, and code points order as UTF-16
-/// units do, except a code point above U+FFFF, which UTF-16 writes as
-/// surrogates from 0xD800, against one from U+E000 to U+FFFF. The first
-/// byte of both in UTF-8 is 0xEE or more, so the bytes decide unless the
-/// first bytes that differ are.
+/// UTF-8 bytes give the same order when the first bytes that differ are below
+/// 0xEE. Above that, a surrogate pair can sort before U+E000 to U+FFFF.
 #[must_use]
 pub fn utf16_cmp(left: &str, right: &str) -> Ordering {
     let (left_bytes, right_bytes) = (left.as_bytes(), right.as_bytes());
@@ -250,9 +224,7 @@ impl Sink {
     }
 }
 
-/// Write a string as RFC 8785 does: `"` and `\` escaped, and the control
-/// characters, with the short forms where JSON has them, as [`json_out`]
-/// writes it.
+/// Write a string as RFC 8785 does, which is how [`json_out`] writes it.
 fn write_string(value: &str, out: &mut Sink) {
     json_out::write_str(&mut out.buf, value, Ascii::Keep);
 }
@@ -299,9 +271,6 @@ pub fn canonical_json(value: &AnyValue) -> Result<String> {
 
 /// Whether two JSON values have the same canonical form, stopping at the first difference.
 ///
-/// Objects compare key by key in any order, arrays item by item, and numbers
-/// as the doubles JavaScript would hold.
-///
 /// # Errors
 ///
 /// A compared number that is not finite as JavaScript reads it.
@@ -341,11 +310,8 @@ pub fn values_equal(left: &AnyValue, right: &AnyValue) -> Result<bool> {
 
 // --- Handles ----------------------------------------------------------------------------
 
-/// The object a handle string encodes (JSON with `œ` for `"`), or `None` when
-/// it encodes none.
-///
-/// The string is parsed as strict JSON, as JavaScript's `JSON.parse` reads
-/// it: `NaN` and `Infinity` do not parse.
+/// The object a handle string encodes, or `None`. Like `JSON.parse`, it
+/// refuses `NaN` and `Infinity`.
 #[must_use]
 pub fn parse_handle(handle: &AnyValue) -> Option<AnyMap> {
     let text = handle.as_str()?.replace(HANDLE_QUOTE, "\"");
@@ -355,17 +321,12 @@ pub fn parse_handle(handle: &AnyValue) -> Option<AnyMap> {
     }
 }
 
-/// Whether `handle` spells `object` as a handle is written: its JSON, keys in
-/// their order, with `œ` for each `"`, and with or without one space after
-/// each `:` and `,` outside strings (`json.dumps` writes one, `JSON.stringify`
-/// none).
-///
-/// Such text encodes exactly `object`, so [`parse_handle`] would read it as a
-/// value equal to `object`, and a caller can skip it. Other text can still
-/// encode `object` (other key order, spacing or number spelling): parse it.
+/// Whether `handle` is `object` written as a handle, so a caller can skip
+/// [`parse_handle`]. Example: `{œidœ: œaœ}` and `{œidœ:œaœ}` spell `{"id": "a"}`.
+/// A `false` does not mean the handle encodes another object.
 #[must_use]
 pub fn handle_spells(handle: &str, object: &AnyMap) -> bool {
-    // [`values_equal`] refuses a number that is not finite: leave those to it.
+    // Leave a number that is not finite to [`values_equal`], which refuses it.
     fn finite(value: &AnyValue) -> bool {
         match value {
             AnyValue::Number(number) => number.as_f64().is_some_and(f64::is_finite),
@@ -383,8 +344,7 @@ pub fn handle_spells(handle: &str, object: &AnyMap) -> bool {
     let quote = HANDLE_QUOTE.encode_utf8(&mut quote).as_bytes();
     let mut handle = handle.as_bytes();
     let (mut in_string, mut escaped) = (false, false);
-    // The handle reads as `parse_handle` reads it: each `œ` as `"`. A `œ` in
-    // the written text cannot match, as the handle's `œ` reads as `"`.
+    // Each `œ` of the handle reads as `"`, so a `œ` in `object` cannot match.
     for &byte in &text {
         if let Some(after) = handle.strip_prefix(quote) {
             if byte != b'"' {
@@ -418,8 +378,7 @@ pub fn handle_spells(handle: &str, object: &AnyMap) -> bool {
 
 /// A table's rows in order: by `(__pos__, __id__)`, or as stored for a legacy table without them.
 ///
-/// Positions compare as the doubles JavaScript holds, and ids by UTF-16 code
-/// units, as the editor sorts them.
+/// The order is the editor's: positions as doubles, ids by UTF-16 code units.
 #[must_use]
 pub fn ordered_rows(rows: &[AnyValue]) -> Vec<&AnyValue> {
     row_order(rows)
@@ -433,10 +392,8 @@ pub(crate) fn row_order(rows: &[AnyValue]) -> Vec<usize> {
     item_order(&NODE_SCHEMA.table, rows)
 }
 
-/// The array indexes of a keyed list's items in its order: by
-/// `(__pos__, key)`, or as stored when an item has no numeric position or no
-/// string key. Positions compare as the doubles JavaScript holds, and keys by
-/// UTF-16 code units.
+/// The array indexes of a keyed list's items, by `(__pos__, key)`. An item
+/// without a numeric position or a string key keeps the stored order.
 pub(crate) fn item_order(keyed: &KeyedList, items: &[AnyValue]) -> Vec<usize> {
     let keys: Option<Vec<(f64, &str)>> = items
         .iter()
@@ -467,15 +424,13 @@ pub(crate) fn item_order(keyed: &KeyedList, items: &[AnyValue]) -> Vec<usize> {
 enum Canon<'a> {
     /// A value taken as it is.
     Raw(&'a AnyValue),
-    /// A value the canonical form built: the object a handle string
-    /// encodes, or an edge's `data` with its type lists as sets.
+    /// A built value: a handle's object, or an edge's `data` with type sets.
     Owned(AnyValue),
     /// An object with some members changed, or a collection keyed by id.
     Object(HashMap<&'a str, Canon<'a>>),
     /// A collection ordered for serialization.
     Array(Vec<Canon<'a>>),
-    /// A node of a graph keyed for comparison, taken as it is. The comparison
-    /// makes it canonical only when it differs from the other node as it is.
+    /// A node taken as it is, made canonical only when it differs.
     Node(&'a AnyValue),
     /// An edge taken as it is, made canonical only when it differs.
     Edge(&'a AnyValue),
@@ -489,45 +444,21 @@ fn without(map: &AnyMap, hidden: impl Fn(&str) -> bool) -> HashMap<&str, Canon<'
 }
 
 /// A graph's canonical form for comparison, with its collections keyed by id.
-fn canonical_graph(flow: &AnyValue) -> Result<Canon<'_>> {
+fn canonical_graph(flow: &AnyValue) -> Canon<'_> {
     let AnyValue::Object(flow) = flow else {
-        return Ok(Canon::Raw(flow));
+        return Canon::Raw(flow);
     };
     let mut graph = without(flow, |key| NODE_SCHEMA.is_flow_view_state(key));
-    for key in ["nodes", "edges"] {
-        let Some(Canon::Raw(AnyValue::Array(entries))) = graph.get(key) else {
-            continue;
-        };
-        let entries: Vec<Canon<'_>> = entries
-            .iter()
-            .map(|entry| match key {
-                "nodes" => Ok(Canon::Node(entry)),
-                _ => Ok(Canon::Edge(entry)),
-            })
-            .collect::<Result<_>>()?;
-        graph.insert(key, by_id(entries, "id"));
-    }
-    Ok(Canon::Object(graph))
-}
-
-/// The string member `key` of a canonical entry, borrowed from the graph.
-fn entry_id<'a>(entry: &Canon<'a>, key: &str) -> Option<&'a str> {
-    match entry {
-        Canon::Raw(value) | Canon::Node(value) | Canon::Edge(value) => {
-            value.as_object()?.get(key)?.as_str()
+    for (key, wrap) in [("nodes", Canon::Node as fn(_) -> _), ("edges", Canon::Edge)] {
+        if let Some(Canon::Raw(AnyValue::Array(entries))) = graph.get(key) {
+            graph.insert(key, by_id(entries, wrap));
         }
-        Canon::Object(map) => match map.get(key)? {
-            Canon::Raw(value) => value.as_str(),
-            _ => None,
-        },
-        _ => None,
     }
+    Canon::Object(graph)
 }
 
-/// A keyed list's items, whose array order is not state. For comparison they
-/// are a collection keyed by item key; for the hash they are a list in the
-/// list's order ([`item_order`]). A list with an item that has no string key,
-/// or two items with one key, keeps its array, which is then its order.
+/// A keyed list's items, keyed by item key for comparison. A list with a
+/// missing or repeated key keeps its array.
 fn keyed_items<'a>(keyed: &KeyedList, list: &'a AnyValue) -> Canon<'a> {
     let AnyValue::Array(items) = list else {
         return Canon::Raw(list);
@@ -545,17 +476,18 @@ fn keyed_items<'a>(keyed: &KeyedList, list: &'a AnyValue) -> Canon<'a> {
 }
 
 /// Map each entry's id to it, or keep the list when an entry has no string id or two share one.
-fn by_id<'a>(entries: Vec<Canon<'a>>, id_key: &str) -> Canon<'a> {
+fn by_id<'a>(entries: &'a [AnyValue], wrap: fn(&'a AnyValue) -> Canon<'a>) -> Canon<'a> {
     let ids: Option<Vec<&'a str>> = entries
         .iter()
-        .map(|entry| entry_id(entry, id_key))
+        .map(|entry| entry.as_object()?.get("id")?.as_str())
         .collect();
+    let entries = entries.iter().map(wrap);
     let Some(ids) = ids else {
-        return Canon::Array(entries);
+        return Canon::Array(entries.collect());
     };
     let mut seen = HashSet::with_capacity_and_hasher(ids.len(), State::default());
     if !ids.iter().all(|id| seen.insert(*id)) {
-        return Canon::Array(entries);
+        return Canon::Array(entries.collect());
     }
     Canon::Object(ids.into_iter().zip(entries).collect())
 }
@@ -592,8 +524,7 @@ fn canonical_node(node: &AnyValue) -> Canon<'_> {
     Canon::Object(canon)
 }
 
-/// A template field without its display-only keys. A keyed list as its
-/// value (table rows, tool actions) is a collection keyed by item key.
+/// A template field without its display-only keys, its keyed list keyed.
 fn canonical_field<'a>(node: &'a AnyValue, key: &str, field: &'a AnyValue) -> Canon<'a> {
     let AnyValue::Object(field_map) = field else {
         return Canon::Raw(field);
@@ -607,9 +538,7 @@ fn canonical_field<'a>(node: &'a AnyValue, key: &str, field: &'a AnyValue) -> Ca
     Canon::Object(canon)
 }
 
-/// An edge without its view state, its handle strings as the objects they
-/// encode. For comparison, each handle's type lists are sets. The hash
-/// keeps their order, so that no stored hash changes.
+/// An edge without its view state, its handles as objects with type sets.
 fn canonical_edge(edge: &AnyValue) -> Result<Canon<'_>> {
     let AnyValue::Object(edge_map) = edge else {
         return Ok(Canon::Raw(edge));
@@ -627,9 +556,8 @@ fn canonical_edge(edge: &AnyValue) -> Result<Canon<'_>> {
     Ok(Canon::Object(canon))
 }
 
-/// A handle object with each type list sorted and without repeats. Two
-/// handles that differ only in the order of their types are then equal.
-/// A value that is not an object is returned as it is.
+/// A handle object with each type list sorted and without repeats. Any other
+/// value is returned as it is.
 ///
 /// # Errors
 ///
@@ -679,8 +607,7 @@ enum View<'c, 'a> {
     Array(&'c [Canon<'a>]),
     /// A value the canonical form shares with the graph, or a handle's object.
     Value(&'c AnyValue),
-    /// A node taken as it is ([`Canon::Node`]). Only [`canon_equal`] reads it,
-    /// and it makes the node canonical first when it needs to.
+    /// A node taken as it is ([`Canon::Node`]). Only [`canon_equal`] reads it.
     Node(&'a AnyValue),
     Edge(&'a AnyValue),
 }
@@ -735,8 +662,7 @@ impl<'c, 'a> View<'c, 'a> {
         }
     }
 
-    /// Whether `check` holds for every member of an object, stopping at the
-    /// first member it fails for.
+    /// Whether `check` holds for every member of an object, stopping at a failure.
     fn all_members(self, mut check: impl FnMut(&str, Self) -> Result<bool>) -> Result<bool> {
         match self {
             Self::Object(map) => {
@@ -762,10 +688,9 @@ impl<'c, 'a> View<'c, 'a> {
 
 const NODE_READ: &str = "canon_equal makes a node canonical before it reads it";
 
-/// Nodes already proven equal: by the address of a left node's entries, a
-/// copy of that node and the address of the right node's entries. The copy
-/// keeps the left node from changing in place: a write copies it first, and
-/// the copy has another address, which the proof does not hold.
+/// Nodes proven equal: the left node's entries address maps to a copy of the
+/// left node and the right node's entries address. The copy makes a write to
+/// the left node copy it first, so a changed node gets a new address.
 pub(crate) type Proven = HashMap<usize, (AnyMap, usize)>;
 
 fn canon_equal(left: View<'_, '_>, right: View<'_, '_>, proven: Option<&Proven>) -> Result<bool> {
@@ -773,9 +698,8 @@ fn canon_equal(left: View<'_, '_>, right: View<'_, '_>, proven: Option<&Proven>)
         (View::Value(left), View::Value(right)) => return values_equal(left, right),
         (View::Node(left), View::Node(right)) => return nodes_equal(left, right, proven),
         (View::Edge(left), View::Edge(right)) => {
-            // Equal edges whose handle strings spell their `data` handles have
-            // one canonical form, and `values_equal` read every number of it:
-            // a handle object that a string spells holds only finite numbers.
+            // Equal edges whose handles spell their `data` handles have one
+            // canonical form, and `values_equal` checked all its numbers.
             if matches!(values_equal(left, right), Ok(true)) && handles_spell_data(left) {
                 return Ok(true);
             }
@@ -811,9 +735,7 @@ fn canon_equal(left: View<'_, '_>, right: View<'_, '_>, proven: Option<&Proven>)
     Ok(true)
 }
 
-/// Whether each handle string of `edge` spells the handle object at the
-/// same key of its `data` ([`handle_spells`]), so that reading the string
-/// gives that object.
+/// Whether each handle string of `edge` spells the same handle in its `data`.
 fn handles_spell_data(edge: &AnyValue) -> bool {
     let Some(edge) = edge.as_object() else {
         return false;
@@ -831,11 +753,8 @@ fn handles_spell_data(edge: &AnyValue) -> bool {
 
 /// Whether two nodes have the same canonical form.
 ///
-/// Two nodes that are equal as they are have the same canonical form, and
-/// the comparison skips building it. The canonical form only leaves out
-/// display-only keys and keys table rows by id: it parses nothing, and it
-/// reads only numbers that [`values_equal`] has checked. Any other answer,
-/// including an error, comes from the canonical forms.
+/// Nodes equal as they are skip the canonical form. The form parses nothing,
+/// so it cannot make them differ or fail.
 fn nodes_equal(left: &AnyValue, right: &AnyValue, proven: Option<&Proven>) -> Result<bool> {
     if let (Some(l), Some(r)) = (left.as_object(), right.as_object())
         && proven.is_some_and(|proven| {
@@ -855,9 +774,8 @@ fn nodes_equal(left: &AnyValue, right: &AnyValue, proven: Option<&Proven>) -> Re
 
 // --- The canonical text of a graph ----------------------------------------------------
 
-/// A member of a graph's canonical form, for its text: shared with the graph
-/// wherever the form does not change it. The form of a node is made only
-/// when the node is written, and dropped after.
+/// A member of a graph's canonical form, for its text. A node's form exists
+/// only while the node is written.
 #[derive(Debug)]
 enum Part<'a> {
     /// A value taken as it is.
@@ -900,8 +818,7 @@ fn set<'a>(parts: &mut Parts<'a>, key: &'a str, part: Part<'a>) {
     }
 }
 
-/// A graph's top-level members in canonical form: every key but the view
-/// state, with `nodes` and `edges` when they are lists.
+/// A graph's top-level members in canonical form, without view state.
 fn graph_parts(flow: &AnyMap) -> Parts<'_> {
     let mut parts = visible(flow, |key| NODE_SCHEMA.is_flow_view_state(key));
     for (key, part) in &mut parts {
@@ -929,8 +846,7 @@ fn ordered_items<'a>(keyed: &KeyedList, list: &'a AnyValue) -> Part<'a> {
     )
 }
 
-/// A node's canonical form, as [`canonical_node`] makes it, with its keyed
-/// lists in their order.
+/// [`canonical_node`] for the hash, with keyed lists in their order.
 fn node_part(node: &AnyValue) -> Part<'_> {
     let AnyValue::Object(node_map) = node else {
         return Part::Raw(node);
@@ -963,8 +879,7 @@ fn node_part(node: &AnyValue) -> Part<'_> {
     Part::Object(parts)
 }
 
-/// A template field's canonical form, as [`canonical_field`] makes it, with
-/// a keyed list as its value in the list's order.
+/// [`canonical_field`] for the hash, with a keyed list in its order.
 fn field_part<'a>(node: &'a AnyValue, key: &str, field: &'a AnyValue) -> Part<'a> {
     let AnyValue::Object(field_map) = field else {
         return Part::Raw(field);
@@ -978,8 +893,7 @@ fn field_part<'a>(node: &'a AnyValue, key: &str, field: &'a AnyValue) -> Part<'a
     Part::Object(parts)
 }
 
-/// An edge's canonical form for the hash: without its view state, its
-/// handle strings as the objects they encode, their type lists in order.
+/// [`canonical_edge`] for the hash, with type lists in their stored order.
 fn edge_part(edge: EdgeIn<'_>) -> Part<'_> {
     let edge_map = match edge {
         EdgeIn::Map(map) | EdgeIn::Value(AnyValue::Object(map)) => map,
@@ -994,8 +908,7 @@ fn edge_part(edge: EdgeIn<'_>) -> Part<'_> {
     Part::Object(parts)
 }
 
-/// The id a node or an edge is ordered by: its `id` string, unless the
-/// canonical form leaves `id` out.
+/// The `id` a node or an edge is ordered by, unless view state hides `id`.
 fn entry_order_id(map: Option<&AnyMap>, hidden: bool) -> Option<&str> {
     if hidden {
         return None;
@@ -1003,8 +916,7 @@ fn entry_order_id(map: Option<&AnyMap>, hidden: bool) -> Option<&str> {
     map?.get("id")?.as_str()
 }
 
-/// The indexes of `ids` in order: by id, an entry without one first, and
-/// entries with one id in their order.
+/// The indexes of `ids` sorted by id. Entries without an id come first.
 fn id_order(ids: &[Option<&str>]) -> Vec<usize> {
     let mut order: Vec<usize> = (0..ids.len()).collect();
     order.sort_by(|&a, &b| match (ids[a], ids[b]) {
@@ -1085,21 +997,9 @@ fn flow_part(flow: &AnyValue) -> Part<'_> {
     }
 }
 
-/// Serialize flow data in canonical graph form, as RFC 8785 text.
-///
-/// # Errors
-///
-/// A number that is not finite as JavaScript reads it.
-pub fn canonical_graph_json(flow: &AnyValue) -> Result<String> {
-    let mut out = Sink::text();
-    write_part(flow_part(flow), &mut out)?;
-    Ok(out.into_text())
-}
-
 /// The SHA-256 hex digest of flow data's canonical graph form.
 ///
-/// The text goes into the hash a chunk at a time, as it is written: the
-/// whole text of a large graph is never held.
+/// The text goes into the hash in chunks, so a large graph's text is never held.
 ///
 /// # Errors
 ///
@@ -1110,8 +1010,7 @@ pub fn graph_hash(flow: &AnyValue) -> Result<String> {
     Ok(out.into_hex_digest())
 }
 
-/// [`graph_hash`] of a loaded graph, from its parts: the top-level keys, with
-/// `nodes` and `edges` in their place, as the graph as a value has them.
+/// [`graph_hash`] of a loaded graph, from its top-level keys, nodes and edges.
 pub(crate) fn loaded_graph_hash<'a>(
     root: &'a AnyMap,
     nodes: Vec<Cow<'a, AnyValue>>,
@@ -1133,25 +1032,22 @@ pub(crate) fn loaded_graph_hash<'a>(
 ///
 /// # Errors
 ///
-/// A number that is not finite as JavaScript reads it, in either graph's
-/// canonical form: the graphs that [`graph_hash`] refuses.
+/// Either graph has a number that [`graph_hash`] refuses.
 pub fn graphs_equal(left: &AnyValue, right: &AnyValue) -> Result<bool> {
     graphs_equal_given(left, right, None)
 }
 
-/// [`graphs_equal`], with the nodes in `proven` taken as equal without
-/// reading them.
+/// [`graphs_equal`], with the nodes in `proven` taken as equal.
 pub(crate) fn graphs_equal_given(
     left: &AnyValue,
     right: &AnyValue,
     proven: Option<&Proven>,
 ) -> Result<bool> {
-    let left = canonical_graph(left)?;
-    let right = canonical_graph(right)?;
+    let left = canonical_graph(left);
+    let right = canonical_graph(right);
     let equal = canon_equal(View::of(&left), View::of(&right), proven)?;
-    // Equal graphs had every number read. Graphs that differ stopped at the
-    // first difference, so they are checked to the end, or which answer a
-    // number that is not finite gets would depend on where the difference is.
+    // Check unequal graphs to the end, so an infinite number always fails,
+    // wherever the first difference is.
     if !equal {
         check_finite(View::of(&left))?;
         check_finite(View::of(&right))?;
@@ -1169,9 +1065,7 @@ fn check_finite(view: View<'_, '_>) -> Result<()> {
         View::Array(items) => items
             .iter()
             .try_for_each(|item| check_finite(View::of(item))),
-        // A node whose numbers are all finite as it is has a canonical form
-        // with finite numbers. Only another node needs its canonical form,
-        // which leaves out display-only keys and what they hold.
+        // A node that is finite as it is has a finite canonical form.
         View::Node(node) => {
             check_finite_value(node).or_else(|_| check_finite(View::of(&canonical_node(node))))
         }
@@ -1194,8 +1088,11 @@ mod tests {
 
     use super::*;
 
-    fn canonical(text: &str) -> String {
-        canonical_json(&serde_json::from_str(text).unwrap()).unwrap()
+    /// Flow data in canonical graph form, as RFC 8785 text.
+    fn canonical_graph_json(flow: &AnyValue) -> Result<String> {
+        let mut out = Sink::text();
+        write_part(flow_part(flow), &mut out)?;
+        Ok(out.into_text())
     }
 
     #[test]
@@ -1242,109 +1139,6 @@ mod tests {
         ));
         // A number that is not finite is left to `values_equal`, which refuses it.
         assert!(!handle_spells("{œnœ: 1e400}", &object(r#"{"n": 1e400}"#)));
-    }
-
-    #[test]
-    fn numbers_print_as_javascript_does() {
-        for (text, expected) in [
-            ("0", "0"),
-            ("-0", "0"),
-            ("-0.0", "0"),
-            ("1.0", "1"),
-            ("-1.5", "-1.5"),
-            ("0.1", "0.1"),
-            ("123.456", "123.456"),
-            ("1e20", "100000000000000000000"),
-            ("1e21", "1e+21"),
-            ("1.5e21", "1.5e+21"),
-            ("0.000001", "0.000001"),
-            ("1e-7", "1e-7"),
-            ("1.25e-7", "1.25e-7"),
-            ("5e-324", "5e-324"),
-            ("1.7976931348623157e308", "1.7976931348623157e+308"),
-            ("333333333.3333333", "333333333.3333333"),
-            ("9007199254740992", "9007199254740992"),
-            ("9007199254740993", "9007199254740992"),
-            ("-9007199254740993", "-9007199254740992"),
-            ("12345678901234567890123", "1.2345678901234568e+22"),
-        ] {
-            assert_eq!(canonical(text), expected, "{text}");
-        }
-    }
-
-    #[test]
-    fn non_finite_numbers_are_rejected() {
-        for text in ["1e400", "-1e400", &format!("1{}", "0".repeat(309))] {
-            let value: AnyValue = serde_json::from_str(text).unwrap();
-            assert!(canonical_json(&value).is_err(), "{text}");
-        }
-        // The largest integer below the double overflow rounds to the largest double.
-        let below = "179769313486231580793728971405303415079934132710037826936173778980444968292764750946649017977587207096330286416692887910946555547851940402630657488671505820681908902000708383676273854845817711531764475730270069855571366959622842914819860834936475292719074168444365510704342711559699508093042880177904174497791";
-        assert_eq!(canonical(below), "1.7976931348623157e+308");
-    }
-
-    #[test]
-    fn object_keys_sort_by_utf16_code_units() {
-        let value = json!({"\u{20ac}": 1, "\r": 2, "\u{fb33}": 3, "1": 4, "\u{1f600}": 5, "\u{80}": 6, "\u{f6}": 7});
-        assert_eq!(
-            canonical_json(&value).unwrap(),
-            "{\"\\r\":2,\"1\":4,\"\u{80}\":6,\"\u{f6}\":7,\"\u{20ac}\":1,\"\u{1f600}\":5,\"\u{fb33}\":3}"
-        );
-    }
-
-    #[test]
-    fn strings_escape_only_what_json_requires() {
-        assert_eq!(
-            canonical_json(&json!("a\"b\\c\n\u{1}é/")).unwrap(),
-            "\"a\\\"b\\\\c\\n\\u0001é/\""
-        );
-    }
-
-    #[test]
-    fn equality_matches_the_canonical_form() {
-        let samples = [
-            "null",
-            "true",
-            "false",
-            "0",
-            "0.0",
-            "-0.0",
-            "1",
-            "1.0",
-            "1.5",
-            "9007199254740992",
-            "9007199254740993",
-            "9007199254740992.0",
-            "1e21",
-            "\"\"",
-            "\"a\"",
-            "\"1\"",
-            "[]",
-            "[1]",
-            "[1.0]",
-            "[1,2]",
-            "[2,1]",
-            "{}",
-            "{\"a\":1}",
-            "{\"a\":1.0}",
-            "{\"b\":1}",
-            "{\"a\":1,\"b\":[true,null]}",
-            "{\"b\":[true,null],\"a\":1}",
-            "{\"a\":{\"b\":{\"c\":0}}}",
-            "{\"a\":{\"b\":{\"c\":-0.0}}}",
-            "{\"a\":{\"b\":{\"c\":1}}}",
-        ];
-        for left in samples {
-            for right in samples {
-                let a: AnyValue = serde_json::from_str(left).unwrap();
-                let b: AnyValue = serde_json::from_str(right).unwrap();
-                assert_eq!(
-                    values_equal(&a, &b).unwrap(),
-                    canonical_json(&a).unwrap() == canonical_json(&b).unwrap(),
-                    "{left} vs {right}"
-                );
-            }
-        }
     }
 
     #[test]
@@ -1448,8 +1242,7 @@ mod tests {
         assert!(loaded > 300, "only {loaded} graphs loaded");
     }
 
-    /// The comparison that makes every node canonical before it compares
-    /// anything: what `graphs_equal` did before it compared nodes as they are.
+    /// A comparison that makes every node canonical before it compares.
     fn graphs_equal_eager(left: &AnyValue, right: &AnyValue) -> Result<bool> {
         fn eager(canon: Canon<'_>) -> Canon<'_> {
             match canon {
@@ -1464,8 +1257,8 @@ mod tests {
                 other => other,
             }
         }
-        let left = eager(canonical_graph(left)?);
-        let right = eager(canonical_graph(right)?);
+        let left = eager(canonical_graph(left));
+        let right = eager(canonical_graph(right));
         canon_equal(View::of(&left), View::of(&right), None)
     }
 
@@ -1516,10 +1309,8 @@ mod tests {
             for case in cases {
                 let mut found = Vec::new();
                 graphs(case, &mut found);
-                // Equal in canonical form but not as they are: a display-only
-                // key, with a finite number and with one that is not. And a
-                // number that is not finite where the comparison reads it,
-                // which it refuses.
+                // A display-only key with a finite or an infinite number, and an
+                // infinite number where the comparison reads it.
                 let shuffled: Vec<AnyValue> = found
                     .iter()
                     .flat_map(|graph| {
@@ -1537,9 +1328,8 @@ mod tests {
                     .collect();
                 for &(left, left_refused) in &all {
                     for &(right, right_refused) in &all {
-                        // A graph whose hash is refused is refused, whatever
-                        // the other graph is. The eager comparison stops at
-                        // the first difference, so it may answer not equal.
+                        // A refused graph is refused against any graph. The
+                        // eager comparison may stop early and answer not equal.
                         let (new, old) =
                             (graphs_equal(left, right), graphs_equal_eager(left, right));
                         if left_refused || right_refused {

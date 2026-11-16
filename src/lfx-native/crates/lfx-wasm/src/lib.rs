@@ -1,11 +1,11 @@
 //! The browser binding of lfx: the `lfx-native` npm package.
 //!
-//! Every function takes JSON text and returns JSON text, written as ASCII.
-//! Text is what the browser holds, and `JSON.parse` reads it faster than the
-//! binding could build JavaScript objects. An engine error is
-//! thrown as an `Error` whose `kind` names the matching Python exception class,
-//! whose `code` is its stable code, and whose `details` is the whole error as
-//! JSON text. The binding holds no rules: each function calls `lfx::ops::api`.
+//! Every function takes JSON text and returns ASCII JSON text. `JSON.parse`
+//! reads text faster than the binding builds JavaScript objects.
+//!
+//! An engine error throws an `Error`. Its `kind` names the matching Python
+//! exception class, `code` is its stable code, and `details` is the whole
+//! error as JSON text.
 
 use js_sys::{Error, Reflect};
 use lfx::ops::api::{self, ApiError, ApiResult, Input};
@@ -38,11 +38,6 @@ fn text(result: ApiResult) -> Result<String, JsValue> {
     run(result).map(|value| api::json_text(&value))
 }
 
-/// An optional JSON text argument.
-fn optional(text: Option<&str>) -> Option<Input<'_>> {
-    text.map(Input::from)
-}
-
 /// A boolean option of an options object, or `None` when it is not a boolean.
 fn flag(options: &JsValue, name: &str) -> Option<bool> {
     Reflect::get(options, &JsValue::from_str(name))
@@ -66,10 +61,7 @@ fn replay_options(options: &JsValue) -> ReplayOptions {
 }
 
 /// A flow graph that the engine keeps loaded, to apply or replay many
-/// batches on it.
-///
-/// History playback and rebase carry out many batches on one graph and read
-/// it once. A refused batch changes nothing.
+/// batches on it. A refused batch changes nothing.
 #[wasm_bindgen]
 #[derive(Debug)]
 pub struct GraphState {
@@ -90,7 +82,7 @@ impl GraphState {
         })
     }
 
-    /// Apply a batch, with every rule; returns what it did as JSON.
+    /// Apply a batch, with every rule. Returns what it did as JSON.
     /// `options` is `{forward, backward}`, both false by default.
     ///
     /// # Errors
@@ -104,7 +96,7 @@ impl GraphState {
         ))
     }
 
-    /// Replay stored operations, with no rule; returns what it did as JSON.
+    /// Replay stored operations, with no rule. Returns what it did as JSON.
     /// `options` is `{backward}`, false by default.
     ///
     /// # Errors
@@ -122,12 +114,12 @@ impl GraphState {
     #[wasm_bindgen(js_name = toJson)]
     #[must_use]
     pub fn to_json(&self) -> String {
-        api::graph_json(&self.state)
+        self.state.to_json()
     }
 }
 
-/// Apply operations to a graph, with every rule; returns `{"flow_data", ...}`
-/// as JSON. `options` is `{forward, backward}`; `forward` is true by default.
+/// Apply operations to a graph, with every rule. Returns `{"flow_data", ...}`
+/// as JSON. `options` is `{forward, backward}`, and `forward` is true by default.
 ///
 /// # Errors
 ///
@@ -141,13 +133,12 @@ pub fn apply(flow: &str, operations: &str, options: &JsValue) -> Result<String, 
     ))
 }
 
-/// Replay stored operations on a graph, with no rule; returns
+/// Replay stored operations on a graph, with no rule. Returns
 /// `{"flow_data", ...}` as JSON. `options` is `{backward}`, false by default.
 ///
 /// # Errors
 ///
-/// The graph or the operations do not parse, the graph breaks a structural rule,
-/// or an operation cannot be carried out.
+/// The input does not parse, the graph breaks a structural rule, or an operation fails.
 #[wasm_bindgen]
 pub fn replay(flow: &str, operations: &str, options: &JsValue) -> Result<String, JsValue> {
     text(api::replay(
@@ -157,12 +148,11 @@ pub fn replay(flow: &str, operations: &str, options: &JsValue) -> Result<String,
     ))
 }
 
-/// Functions that take JSON text, run one engine call and return its result.
+/// Functions that run one engine call on JSON text.
 /// In `fn name as jsName(a, b [c]; flag = true)`, `a` and `b` are JSON text,
-/// `c` is optional JSON text, and `flag` is an optional boolean with its
-/// default. A function without a return type returns its JSON result as
-/// ASCII text ([`text`]); a function with `-> T` returns the `T`. Each throws
-/// an engine error when its text does not parse or the engine refuses the call.
+/// `c` is optional, and `flag` is an optional boolean with its default. With
+/// `-> T`, a function returns the `T`. Without it, it returns ASCII JSON text
+/// ([`text`]). Each throws when its text does not parse or the engine refuses.
 macro_rules! engine_functions {
     (@type) => { String };
     (@type $ret:ty) => { $ret };
@@ -184,7 +174,7 @@ macro_rules! engine_functions {
             $($($flag: Option<bool>,)+)?
         ) -> Result<engine_functions!(@type $($ret)?), JsValue> {
             $(let $arg = Input::from($arg);)+
-            $($(let $opt = optional($opt.as_deref());)+)?
+            $($(let $opt = $opt.as_deref().map(Input::from);)+)?
             $($(let $flag = $flag.unwrap_or($default);)+)?
             engine_functions!(@run $body $(, $ret)?)
         }
@@ -199,7 +189,7 @@ engine_functions! {
     fn validate as validate(flow [base]; check_values = true) =>
         api::validate(flow, base, check_values);
 
-    /// Repair what has one fix; returns `{"flow_data", "fixes"}`. It throws
+    /// Repair what has one fix. Returns `{"flow_data", "fixes"}`. It throws
     /// when a rule only the client can fix is broken.
     fn repair as repair(flow [base]) => api::repair(flow, base);
 
@@ -265,19 +255,19 @@ engine_functions! {
 #[wasm_bindgen(js_name = newEdgeId)]
 #[must_use]
 pub fn new_edge_id() -> String {
-    api::new_edge_id()
+    lfx::ops::ids::new_edge_id()
 }
 
 /// A new random table row id in the editor's format.
 #[wasm_bindgen(js_name = newTableRowId)]
 #[must_use]
 pub fn new_table_row_id() -> String {
-    api::new_table_row_id()
+    lfx::ops::ids::new_table_row_id()
 }
 
 /// The node schema the engine reads, as JSON text.
 #[wasm_bindgen(js_name = nodeSchema)]
 #[must_use]
 pub fn node_schema() -> String {
-    api::node_schema().to_owned()
+    lfx::ops::schema::NODE_SCHEMA_JSON.to_owned()
 }

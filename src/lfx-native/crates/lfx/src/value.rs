@@ -1,27 +1,10 @@
 //! [`AnyValue`]: a JSON value as the engine holds it.
 //!
-//! A value is `null`, a boolean, a number, a string, an array or an object.
-//!
-//! - An object ([`AnyMap`]) keeps its keys in insertion order. An object of
-//!   at most 32 keys is one allocation, a list read in order; a larger object
-//!   uses a hash map. Removing a key keeps the order of the others. Copies of
-//!   an object share it until one of them is written.
-//! - Short text, nearly every key, is held inline, with no allocation and no
-//!   reference count: at most 24 bytes on a 64-bit target, 12 on a 32-bit one.
-//!   Longer keys and string values share immutable text: each parse or Python
-//!   input keeps one shared copy of each distinct long string, then releases
-//!   its pool.
-//! - A number is an integer or a double ([`Number`]), not its text. `1` and
-//!   `1.0` stay apart, as Python's `int` and `float` do. A number that neither
-//!   holds exactly, an integer too large for 64 bits or a value that is
-//!   infinite as a double, keeps its text. The spelling of a double is not
-//!   kept: `1e2` and `100.0` are the same number, as the hash and `json.loads`
-//!   already read them.
-//!
-//! JSON text is parsed by the [`Deserialize`] implementations here and written
-//! by [`crate::json_out`]. [`FiniteAnyValue`] parses text as [`AnyValue`]
-//! does, but refuses a number that is infinite as a double, as reading a
-//! Python `float` refuses Infinity.
+//! - An object ([`AnyMap`]) keeps insertion order. Copies share it until a
+//!   write.
+//! - Text of up to 24 bytes is inline. One input shares each long string.
+//! - A number ([`Number`]) keeps `1` and `1.0` apart, as Python does. Example:
+//!   `1e2` and `100.0` are the same number.
 
 use crate::json_out::{self, Ascii};
 use crate::ops::maps::{HashSet, IndexMap, State};
@@ -33,8 +16,7 @@ use std::sync::{Arc, OnceLock};
 
 use serde::de::{self, Deserialize, DeserializeSeed, Deserializer, MapAccess, SeqAccess, Visitor};
 
-/// Immutable text. Short text is held inline, with no allocation and no
-/// reference count; longer text is shared, and copies share its allocation.
+/// Immutable text. Short text is inline. Copies of long text share it.
 #[derive(Debug, Clone)]
 pub struct AnyString(Repr);
 
@@ -76,11 +58,6 @@ impl std::hash::Hash for AnyString {
         self.as_str().hash(state);
     }
 }
-impl PartialOrd for AnyString {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.as_str().cmp(other.as_str()))
-    }
-}
 
 impl AnyString {
     /// The text, borrowed.
@@ -93,8 +70,8 @@ impl AnyString {
         }
     }
 
-    /// Reuse the JSON spelling of long repeated text. Unique text is written
-    /// directly, so unshared strings do not retain a second copy.
+    /// The cached JSON spelling of long shared text. Unshared text gets no
+    /// cache, so it keeps no second copy.
     pub(crate) fn shared_ascii_json(&self) -> Option<&[u8]> {
         let Repr::Shared(shared) = &self.0 else {
             return None;
@@ -182,12 +159,10 @@ impl PartialEq<&str> for AnyString {
     }
 }
 
-/// Text shared within one input. The pool ends when reading ends; values
-/// retain their own references. Separate inputs never retain each other.
+/// Text shared within one input. Separate inputs never share text.
 #[derive(Debug, Default)]
 pub struct StringPool {
-    // Edge handles and small operation inputs usually fit here. Avoid a
-    // separate hash-table allocation for those short-lived inputs.
+    // Small inputs fit here, with no hash table to allocate.
     small: [Option<AnyString>; 16],
     large: Option<HashSet<AnyString>>,
 }
@@ -388,31 +363,17 @@ impl fmt::Display for AnyValue {
     }
 }
 
-/// Comparisons with plain values: a value equals a string, a boolean or a
-/// number when it holds that string, boolean or number.
-macro_rules! eq_with {
-    ($($type:ty => $value:ident => $body:expr),* $(,)?) => {$(
-        impl PartialEq<$type> for AnyValue {
-            fn eq(&self, $value: &$type) -> bool {
-                $body(self)
-            }
-        }
-        impl PartialEq<AnyValue> for $type {
-            fn eq(&self, value: &AnyValue) -> bool {
-                value == self
-            }
-        }
-    )*};
+/// A value equals a string when it holds that string.
+impl PartialEq<&str> for AnyValue {
+    fn eq(&self, other: &&str) -> bool {
+        self.as_str() == Some(*other)
+    }
 }
 
-eq_with! {
-    str => other => |value: &AnyValue| value.as_str() == Some(other),
-    &str => other => |value: &AnyValue| value.as_str() == Some(*other),
-    String => other => |value: &AnyValue| value.as_str() == Some(other.as_str()),
-    bool => other => |value: &AnyValue| value.as_bool() == Some(*other),
-    i64 => other => |value: &AnyValue| value.as_i64() == Some(*other),
-    u64 => other => |value: &AnyValue| value.as_u64() == Some(*other),
-    f64 => other => |value: &AnyValue| value.as_f64() == Some(*other),
+impl PartialEq<AnyValue> for &str {
+    fn eq(&self, value: &AnyValue) -> bool {
+        value == self
+    }
 }
 
 // --- Indexing --------------------------------------------------------------------------------
@@ -518,12 +479,10 @@ impl<I: AnyValueIndex> IndexMut<I> for AnyValue {
 
 // --- Objects ---------------------------------------------------------------------------------
 
-/// The most keys an object holds in one allocation, read in order. A
-/// larger object uses a hash map.
+/// The most keys of a small object. A larger object uses a hash map.
 const SMALL_OBJECT_KEYS: usize = 32;
 type Row = (AnyString, AnyValue);
-/// The entries of an object (an entry is a key and its value), by key, in
-/// insertion order.
+/// The key-value entries of an object, in insertion order.
 #[derive(Debug, Clone)]
 enum Entries {
     /// At most [`SMALL_OBJECT_KEYS`] entries, in one allocation.
@@ -536,8 +495,7 @@ impl Default for Entries {
     }
 }
 
-/// The rows of a small object, moved out when this is its only owner and
-/// copied otherwise.
+/// The rows of a small object: moved when unshared, copied otherwise.
 fn take_rows(rows: &mut Arc<[Row]>) -> Vec<Row> {
     match Arc::get_mut(rows) {
         Some(owned) => owned.iter_mut().map(std::mem::take).collect(),
@@ -545,150 +503,42 @@ fn take_rows(rows: &mut Arc<[Row]>) -> Vec<Row> {
     }
 }
 
-/// Entries without a repeated key, as an object holds them.
-fn entries_of(mut rows: Vec<Row>) -> Entries {
-    let unique = rows.len() <= SMALL_OBJECT_KEYS
+/// Whether `rows` fit a small object: few enough, and no key repeated.
+fn small_and_unique(rows: &[Row]) -> bool {
+    rows.len() <= SMALL_OBJECT_KEYS
         && rows.iter().enumerate().all(|(i, (key, _))| {
             rows[..i]
                 .iter()
                 .all(|(other, _)| other.as_str() != key.as_str())
-        });
-    if unique {
+        })
+}
+
+/// Entries without a repeated key, as an object holds them.
+fn entries_of(mut rows: Vec<Row>) -> Entries {
+    if small_and_unique(&rows) {
         return Entries::Small(Arc::from(rows));
     }
     // A repeated key keeps its first position and its last value.
-    let mut entries = Entries::with_capacity(rows.len());
+    let mut map = AnyMap::with_capacity(rows.len());
     for (key, value) in rows.drain(..) {
-        entries.insert(key, value);
+        map.insert_shared(key, value);
     }
-    entries
+    map.entries
 }
 
 impl Entries {
-    fn with_capacity(n: usize) -> Self {
-        if n <= SMALL_OBJECT_KEYS {
-            Self::default()
-        } else {
-            Self::Indexed(Arc::new(IndexMap::with_capacity_and_hasher(
-                n,
-                State::default(),
-            )))
-        }
-    }
-    fn len(&self) -> usize {
-        match self {
-            Self::Small(v) => v.len(),
-            Self::Indexed(v) => v.len(),
-        }
-    }
-    fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-    fn get(&self, key: &str) -> Option<&AnyValue> {
-        match self {
-            Self::Small(v) => v.iter().find(|(k, _)| k.as_str() == key).map(|(_, v)| v),
-            Self::Indexed(v) => v.get(key),
-        }
-    }
-    fn get_mut(&mut self, key: &str) -> Option<&mut AnyValue> {
-        match self {
-            Self::Small(v) => {
-                let slot = v.iter().position(|(k, _)| k.as_str() == key)?;
-                Some(&mut Arc::make_mut(v)[slot].1)
-            }
-            Self::Indexed(v) => Arc::make_mut(v).get_mut(key),
-        }
-    }
-    fn contains_key(&self, key: &str) -> bool {
-        self.get(key).is_some()
-    }
-    fn get_index_of(&self, key: &str) -> Option<usize> {
-        match self {
-            Self::Small(v) => v.iter().position(|(k, _)| k.as_str() == key),
-            Self::Indexed(v) => v.get_index_of(key),
-        }
-    }
-    fn insert(&mut self, key: AnyString, value: AnyValue) -> Option<AnyValue> {
-        match self {
-            Self::Small(v) => {
-                if let Some(slot) = v.iter().position(|(k, _)| k.as_str() == key.as_str()) {
-                    return Some(std::mem::replace(&mut Arc::make_mut(v)[slot].1, value));
-                }
-                let mut rows = take_rows(v);
-                if rows.len() < SMALL_OBJECT_KEYS {
-                    rows.push((key, value));
-                    *v = Arc::from(rows);
-                    return None;
-                }
-                let mut map =
-                    IndexMap::with_capacity_and_hasher(SMALL_OBJECT_KEYS * 2, State::default());
-                map.extend(rows);
-                let old = map.insert(key, value);
-                *self = Self::Indexed(Arc::new(map));
-                old
-            }
-            Self::Indexed(v) => Arc::make_mut(v).insert(key, value),
-        }
-    }
-    fn insert_full(&mut self, key: AnyString, value: AnyValue) -> (usize, Option<AnyValue>) {
-        let slot = self.get_index_of(&key).unwrap_or(self.len());
-        (slot, self.insert(key, value))
-    }
-    fn shift_remove(&mut self, key: &str) -> Option<AnyValue> {
-        match self {
-            Self::Small(v) => {
-                let slot = v.iter().position(|(k, _)| k.as_str() == key)?;
-                let mut rows = take_rows(v);
-                let removed = rows.remove(slot).1;
-                *v = Arc::from(rows);
-                Some(removed)
-            }
-            Self::Indexed(v) => Arc::make_mut(v).shift_remove(key),
-        }
-    }
-    fn iter(&self) -> Iter<'_> {
-        Iter(match self {
-            Self::Small(v) => IterInner::Small(v.iter()),
-            Self::Indexed(v) => IterInner::Indexed(v.iter()),
-        })
-    }
-    fn iter_mut(&mut self) -> IterMut<'_> {
-        IterMut(match self {
-            Self::Small(v) => IterMutInner::Small(Arc::make_mut(v).iter_mut()),
-            Self::Indexed(v) => IterMutInner::Indexed(Arc::make_mut(v).iter_mut()),
-        })
-    }
     fn ptr(&self) -> usize {
         match self {
             Self::Small(v) => Arc::as_ptr(v).cast::<()>() as usize,
             Self::Indexed(v) => Arc::as_ptr(v).cast::<()>() as usize,
         }
     }
-    fn index_mut(&mut self, slot: usize) -> &mut AnyValue {
-        match self {
-            Self::Small(v) => &mut Arc::make_mut(v)[slot].1,
-            Self::Indexed(v) => &mut Arc::make_mut(v)[slot],
-        }
-    }
-    fn into_iter(self) -> IntoIter {
-        IntoIter(match self {
-            Self::Small(mut v) => IntoIterInner::Small(take_rows(&mut v).into_iter()),
-            Self::Indexed(v) => IntoIterInner::Indexed(Arc::unwrap_or_clone(v).into_iter()),
-        })
-    }
 }
 
 /// An object whose entries keep insertion order.
 ///
-/// A new key goes last, and a replaced key keeps its place. A removal keeps
-/// the order of the other entries ([`AnyMap::remove`], [`AnyMap::shift_remove`]),
-/// except [`AnyMap::swap_remove`], which moves the last entry into the gap.
-///
-/// A clone shares the entries. The first write to a shared object copies
-/// its keys and values, and an object nested in a copied value stays
-/// shared. So a write copies only the objects on the way to the value it
-/// writes. The object takes the room of a pointer, so an [`AnyValue`] takes
-/// the room of a string.
+/// A clone shares the entries. A write copies only the objects on its path.
+/// The object is one pointer wide, so an [`AnyValue`] fits in a string's room.
 #[derive(Debug, Clone, Default)]
 pub struct AnyMap {
     entries: Entries,
@@ -718,16 +568,19 @@ impl AnyMap {
     /// An empty object with room for `capacity` entries.
     #[must_use]
     pub fn with_capacity(capacity: usize) -> Self {
-        Self {
-            entries: Entries::with_capacity(capacity),
-        }
+        let entries = if capacity <= SMALL_OBJECT_KEYS {
+            Entries::default()
+        } else {
+            Entries::Indexed(Arc::new(IndexMap::with_capacity_and_hasher(
+                capacity,
+                State::default(),
+            )))
+        };
+        Self { entries }
     }
 
-    /// Consume this object, and return its entries when it was their only
-    /// owner, so that a caller can move their destruction to a worker. The
-    /// entries are moved, never cloned. With `None`, another owner held them
-    /// when this one let go; when that owner lets go at the same moment, the
-    /// entries are freed where it does.
+    /// Consume this object. Return its entries when it is their only owner,
+    /// so a caller can drop them on a worker. Otherwise return `None`.
     #[must_use]
     pub fn into_unshared_entries(self) -> Option<impl Send + 'static> {
         let mut entries = self.entries;
@@ -750,40 +603,69 @@ impl AnyMap {
     /// The number of entries.
     #[must_use]
     pub fn len(&self) -> usize {
-        self.entries.len()
+        match &self.entries {
+            Entries::Small(v) => v.len(),
+            Entries::Indexed(v) => v.len(),
+        }
     }
 
     /// Whether the object has no entries.
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.entries.is_empty()
+        self.len() == 0
     }
 
     /// The value at `key`.
     #[must_use]
     pub fn get(&self, key: &str) -> Option<&AnyValue> {
-        self.entries.get(key)
+        match &self.entries {
+            Entries::Small(v) => v.iter().find(|(k, _)| k.as_str() == key).map(|(_, v)| v),
+            Entries::Indexed(v) => v.get(key),
+        }
     }
 
     /// The value at `key`, to change it.
     pub fn get_mut(&mut self, key: &str) -> Option<&mut AnyValue> {
-        self.entries_mut().get_mut(key)
+        match &mut self.entries {
+            Entries::Small(v) => {
+                let slot = v.iter().position(|(k, _)| k.as_str() == key)?;
+                Some(&mut Arc::make_mut(v)[slot].1)
+            }
+            Entries::Indexed(v) => Arc::make_mut(v).get_mut(key),
+        }
     }
 
     /// Whether the object has `key`.
     #[must_use]
     pub fn contains_key(&self, key: &str) -> bool {
-        self.entries.contains_key(key)
+        self.get(key).is_some()
     }
 
-    /// Insert or replace. A replaced key keeps its position; a new key goes last.
+    /// Insert or replace. A replaced key keeps its place. A new key goes last.
     pub fn insert(&mut self, key: String, value: AnyValue) -> Option<AnyValue> {
         self.insert_shared(key.into(), value)
     }
 
     /// Insert a key whose text can be shared with other objects.
     pub fn insert_shared(&mut self, key: AnyString, value: AnyValue) -> Option<AnyValue> {
-        self.entries_mut().insert(key, value)
+        let v = match &mut self.entries {
+            Entries::Small(v) => v,
+            Entries::Indexed(v) => return Arc::make_mut(v).insert(key, value),
+        };
+        if let Some(slot) = v.iter().position(|(k, _)| k.as_str() == key.as_str()) {
+            return Some(std::mem::replace(&mut Arc::make_mut(v)[slot].1, value));
+        }
+        let mut rows = take_rows(v);
+        if rows.len() < SMALL_OBJECT_KEYS {
+            rows.push((key, value));
+            *v = Arc::from(rows);
+            return None;
+        }
+        let mut map = IndexMap::with_capacity_and_hasher(SMALL_OBJECT_KEYS * 2, State::default());
+        map.extend(rows);
+        let old = map.insert(key, value);
+        self.entries = Entries::Indexed(Arc::new(map));
+        old
     }
 
     /// Remove a key, keeping the order of the others.
@@ -793,33 +675,49 @@ impl AnyMap {
 
     /// Remove a key, keeping the order of the others.
     pub fn shift_remove(&mut self, key: &str) -> Option<AnyValue> {
-        self.entries_mut().shift_remove(key)
+        match &mut self.entries {
+            Entries::Small(v) => {
+                let slot = v.iter().position(|(k, _)| k.as_str() == key)?;
+                let mut rows = take_rows(v);
+                let removed = rows.remove(slot).1;
+                *v = Arc::from(rows);
+                Some(removed)
+            }
+            Entries::Indexed(v) => Arc::make_mut(v).shift_remove(key),
+        }
     }
 
     /// The value at `key`, added as `null` when it is missing.
     fn entry_or_null(&mut self, key: &str) -> &mut AnyValue {
-        let entries = self.entries_mut();
-        let index = match entries.get_index_of(key) {
-            Some(index) => index,
-            None => entries.insert_full(key.into(), AnyValue::Null).0,
+        let slot = match &self.entries {
+            Entries::Small(v) => v.iter().position(|(k, _)| k.as_str() == key),
+            Entries::Indexed(v) => v.get_index_of(key),
         };
-        entries.index_mut(index)
-    }
-
-    /// The entries, to change them: copied first while a clone shares them.
-    fn entries_mut(&mut self) -> &mut Entries {
-        &mut self.entries
+        let slot = slot.unwrap_or_else(|| {
+            self.insert_shared(key.into(), AnyValue::Null);
+            self.len() - 1
+        });
+        match &mut self.entries {
+            Entries::Small(v) => &mut Arc::make_mut(v)[slot].1,
+            Entries::Indexed(v) => &mut Arc::make_mut(v)[slot],
+        }
     }
 
     /// The entries, in order.
     #[must_use]
     pub fn iter(&self) -> Iter<'_> {
-        self.entries.iter()
+        Iter(match &self.entries {
+            Entries::Small(v) => EntryIter::Small(v.iter()),
+            Entries::Indexed(v) => EntryIter::Indexed(v.iter()),
+        })
     }
 
     /// The entries, in order, to change the values.
     pub fn iter_mut(&mut self) -> IterMut<'_> {
-        self.entries_mut().iter_mut()
+        IterMut(match &mut self.entries {
+            Entries::Small(v) => EntryIter::Small(Arc::make_mut(v).iter_mut()),
+            Entries::Indexed(v) => EntryIter::Indexed(Arc::make_mut(v).iter_mut()),
+        })
     }
 
     /// The keys, in order.
@@ -833,70 +731,71 @@ impl AnyMap {
     }
 }
 
-/// Borrowed entries, in insertion order.
+/// The iterator of a small object's rows, or of a large object's map.
 #[derive(Debug, Clone)]
-pub struct Iter<'m>(IterInner<'m>);
-#[derive(Debug, Clone)]
-enum IterInner<'m> {
-    Small(std::slice::Iter<'m, Row>),
-    Indexed(indexmap::map::Iter<'m, AnyString, AnyValue>),
+enum EntryIter<S, I> {
+    Small(S),
+    Indexed(I),
 }
-impl<'m> Iterator for Iter<'m> {
-    type Item = (&'m AnyString, &'m AnyValue);
-    fn next(&mut self) -> Option<Self::Item> {
-        match &mut self.0 {
-            IterInner::Small(v) => v.next().map(|(k, v)| (k, v)),
-            IterInner::Indexed(v) => v.next(),
+
+/// An iterator over an object's entries, in insertion order. `$row` turns a
+/// small object's row into the item.
+macro_rules! entries_iter {
+    ($(#[$attr:meta])* $name:ident$(<$l:lifetime>)?($small:ty, $indexed:ty) -> $item:ty, $row:expr) => {
+        $(#[$attr])*
+        #[derive(Debug)]
+        pub struct $name$(<$l>)?(EntryIter<$small, $indexed>);
+
+        impl$(<$l>)? Iterator for $name$(<$l>)? {
+            type Item = $item;
+            fn next(&mut self) -> Option<$item> {
+                match &mut self.0 {
+                    EntryIter::Small(v) => v.next().map($row),
+                    EntryIter::Indexed(v) => v.next(),
+                }
+            }
+            fn size_hint(&self) -> (usize, Option<usize>) {
+                match &self.0 {
+                    EntryIter::Small(v) => v.size_hint(),
+                    EntryIter::Indexed(v) => v.size_hint(),
+                }
+            }
         }
-    }
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        match &self.0 {
-            IterInner::Small(v) => v.size_hint(),
-            IterInner::Indexed(v) => v.size_hint(),
+
+        impl$(<$l>)? DoubleEndedIterator for $name$(<$l>)? {
+            fn next_back(&mut self) -> Option<$item> {
+                match &mut self.0 {
+                    EntryIter::Small(v) => v.next_back().map($row),
+                    EntryIter::Indexed(v) => v.next_back(),
+                }
+            }
         }
-    }
+
+        impl$(<$l>)? ExactSizeIterator for $name$(<$l>)? {}
+    };
 }
-impl DoubleEndedIterator for Iter<'_> {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        match &mut self.0 {
-            IterInner::Small(v) => v.next_back().map(|(k, v)| (k, v)),
-            IterInner::Indexed(v) => v.next_back(),
-        }
-    }
-}
-impl ExactSizeIterator for Iter<'_> {}
-/// Borrowed entries with mutable values.
-#[derive(Debug)]
-pub struct IterMut<'m>(IterMutInner<'m>);
-#[derive(Debug)]
-enum IterMutInner<'m> {
-    Small(std::slice::IterMut<'m, Row>),
-    Indexed(indexmap::map::IterMut<'m, AnyString, AnyValue>),
-}
-impl<'m> Iterator for IterMut<'m> {
-    type Item = (&'m AnyString, &'m mut AnyValue);
-    fn next(&mut self) -> Option<Self::Item> {
-        match &mut self.0 {
-            IterMutInner::Small(v) => v.next().map(|row| (&row.0, &mut row.1)),
-            IterMutInner::Indexed(v) => v.next(),
-        }
-    }
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        match &self.0 {
-            IterMutInner::Small(v) => v.size_hint(),
-            IterMutInner::Indexed(v) => v.size_hint(),
-        }
-    }
-}
-impl DoubleEndedIterator for IterMut<'_> {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        match &mut self.0 {
-            IterMutInner::Small(v) => v.next_back().map(|row| (&row.0, &mut row.1)),
-            IterMutInner::Indexed(v) => v.next_back(),
-        }
-    }
-}
-impl ExactSizeIterator for IterMut<'_> {}
+
+entries_iter!(
+    /// Borrowed entries.
+    #[derive(Clone)]
+    Iter<'m>(std::slice::Iter<'m, Row>, indexmap::map::Iter<'m, AnyString, AnyValue>)
+        -> (&'m AnyString, &'m AnyValue),
+    |(key, value)| (key, value)
+);
+
+entries_iter!(
+    /// Borrowed entries with values to change.
+    IterMut<'m>(std::slice::IterMut<'m, Row>, indexmap::map::IterMut<'m, AnyString, AnyValue>)
+        -> (&'m AnyString, &'m mut AnyValue),
+    |row| (&row.0, &mut row.1)
+);
+
+entries_iter!(
+    /// Owned entries.
+    IntoIter(std::vec::IntoIter<Row>, indexmap::map::IntoIter<AnyString, AnyValue>) -> Row,
+    std::convert::identity
+);
+
 impl<'m> IntoIterator for &'m AnyMap {
     type Item = (&'m AnyString, &'m AnyValue);
     type IntoIter = Iter<'m>;
@@ -904,6 +803,7 @@ impl<'m> IntoIterator for &'m AnyMap {
         self.iter()
     }
 }
+
 impl<'m> IntoIterator for &'m mut AnyMap {
     type Item = (&'m AnyString, &'m mut AnyValue);
     type IntoIter = IterMut<'m>;
@@ -911,43 +811,15 @@ impl<'m> IntoIterator for &'m mut AnyMap {
         self.iter_mut()
     }
 }
-/// Owned entries, in insertion order.
-#[derive(Debug)]
-pub struct IntoIter(IntoIterInner);
-#[derive(Debug)]
-enum IntoIterInner {
-    Small(std::vec::IntoIter<Row>),
-    Indexed(indexmap::map::IntoIter<AnyString, AnyValue>),
-}
-impl Iterator for IntoIter {
-    type Item = Row;
-    fn next(&mut self) -> Option<Self::Item> {
-        match &mut self.0 {
-            IntoIterInner::Small(v) => v.next(),
-            IntoIterInner::Indexed(v) => v.next(),
-        }
-    }
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        match &self.0 {
-            IntoIterInner::Small(v) => v.size_hint(),
-            IntoIterInner::Indexed(v) => v.size_hint(),
-        }
-    }
-}
-impl DoubleEndedIterator for IntoIter {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        match &mut self.0 {
-            IntoIterInner::Small(v) => v.next_back(),
-            IntoIterInner::Indexed(v) => v.next_back(),
-        }
-    }
-}
-impl ExactSizeIterator for IntoIter {}
+
 impl IntoIterator for AnyMap {
     type Item = Row;
     type IntoIter = IntoIter;
     fn into_iter(self) -> IntoIter {
-        self.entries.into_iter()
+        IntoIter(match self.entries {
+            Entries::Small(mut v) => EntryIter::Small(take_rows(&mut v).into_iter()),
+            Entries::Indexed(v) => EntryIter::Indexed(Arc::unwrap_or_clone(v).into_iter()),
+        })
     }
 }
 
@@ -1027,8 +899,7 @@ impl Number {
         }
     }
 
-    /// Whether the number was written as an integer, with no fraction and no
-    /// exponent: how Python tells an `int` from a `float`.
+    /// Whether the text had no fraction and no exponent, as a Python `int`.
     #[must_use]
     pub fn is_integer(&self) -> bool {
         match &self.0 {
@@ -1193,18 +1064,6 @@ impl From<AnyMap> for AnyValue {
     }
 }
 
-impl<T: Into<AnyValue>> From<Vec<T>> for AnyValue {
-    fn from(items: Vec<T>) -> Self {
-        AnyValue::Array(items.into_iter().map(Into::into).collect())
-    }
-}
-
-impl<T: Into<AnyValue>> From<Option<T>> for AnyValue {
-    fn from(value: Option<T>) -> Self {
-        value.map_or(AnyValue::Null, Into::into)
-    }
-}
-
 impl<T: Into<AnyValue>> FromIterator<T> for AnyValue {
     fn from_iter<I: IntoIterator<Item = T>>(items: I) -> Self {
         AnyValue::Array(items.into_iter().map(Into::into).collect())
@@ -1241,9 +1100,8 @@ macro_rules! json {
 }
 
 // --- json! ------------------------------------------------------------------------------------
-//
-// `json!` builds a `serde_json` value and converts it ([`AnyValue::from`]). These let a value
-// that is already an `AnyValue` be placed inside one. Nothing else writes through them.
+
+// These let `json!` take a value that is already an `AnyValue`.
 
 impl serde::Serialize for AnyValue {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
@@ -1280,8 +1138,7 @@ impl serde::Serialize for Number {
 
 // --- Parsing ----------------------------------------------------------------------------------
 
-/// With `arbitrary_precision`, the parser gives a number to a visitor as a
-/// one-key map that holds its text.
+/// The key of the one-key map that holds a number's text (`arbitrary_precision`).
 const NUMBER_TOKEN: &str = "$serde_json::private::Number";
 
 impl<'de> Deserialize<'de> for AnyValue {
@@ -1293,10 +1150,8 @@ impl<'de> Deserialize<'de> for AnyValue {
 /// Why [`FiniteAnyValue`] refuses a number.
 pub const NOT_FINITE: &str = "NaN and Infinity are not JSON numbers";
 
-/// A value parsed from JSON text with every number finite as a double. Text
-/// with a number too large for a double, such as `1e400`, does not parse
-/// ([`NOT_FINITE`]). An integer too large for a double still parses: it keeps
-/// its digits, as a Python `int` does.
+/// A value whose every number is finite as a double. Example: `1e400` fails
+/// ([`NOT_FINITE`]). A large integer keeps its digits, as a Python `int` does.
 #[derive(Debug, Clone, PartialEq)]
 pub struct FiniteAnyValue(pub AnyValue);
 
@@ -1308,14 +1163,8 @@ impl<'de> Deserialize<'de> for FiniteAnyValue {
     }
 }
 
-/// What a parse holds while it builds an [`AnyValue`]: the members and items of
-/// the objects and arrays it is inside, one stack for each kind.
-///
-/// JSON text does not say how many members an object has, so a map or a list
-/// that grows as they come reallocates several times, and ends with room to
-/// spare. Each member goes on the stack instead, and when the object or the
-/// array ends its members move off the stack into a map or a list made for
-/// exactly their number.
+/// The stacks of members and items that a parse holds for open objects and
+/// arrays. A closed one moves its members into a collection of exact size.
 #[derive(Debug, Default)]
 pub(crate) struct Builder<const FINITE: bool> {
     strings: StringPool,
@@ -1329,7 +1178,7 @@ impl<const FINITE: bool> Builder<FINITE> {
     }
 }
 
-/// Builds an [`AnyValue`] with a [`Builder`]; with `FINITE`, refuses a number that is not finite.
+/// Builds an [`AnyValue`] with a [`Builder`]. With `FINITE`, it refuses Infinity.
 struct AnyValueVisitor<'b, const FINITE: bool>(&'b mut Builder<FINITE>);
 
 /// Reads one JSON value as [`FiniteAnyValue`] does, with a builder shared
@@ -1420,17 +1269,9 @@ impl<'de, const FINITE: bool> Visitor<'de> for AnyValueVisitor<'_, FINITE> {
             let value = access.next_value_seed(AnyValueVisitor(&mut *builder))?;
             builder.entries.push((key, value));
         }
-        // A repeated key keeps its first position and its last value. The
-        // entries are built before they are shared, so no insert checks the
-        // reference count.
-        let rows = &builder.entries[start..];
-        let unique = rows.len() <= SMALL_OBJECT_KEYS
-            && rows.iter().enumerate().all(|(i, (key, _))| {
-                rows[..i]
-                    .iter()
-                    .all(|(other, _)| other.as_str() != key.as_str())
-            });
-        let entries = if unique {
+        // A repeated key keeps its first position and its last value. The rows
+        // are not shared yet, so no insert checks the reference count.
+        let entries = if small_and_unique(&builder.entries[start..]) {
             // One allocation of exactly these rows.
             Entries::Small(builder.entries.drain(start..).collect())
         } else {

@@ -1,21 +1,8 @@
-//! The edge fixes a restore takes, from both sides.
+//! Edge fixes for a restore: the client makes them, and the server checks them.
 //!
-//! A revision can hold edges the edge rules refuse, which only the client can
-//! fix. The editor's history preview already shows them fixed: it drops the
-//! edges whose handles no longer exist and rewrites handles stored in another
-//! spelling. A restore refused for such edges is resent with those fixes as
-//! operations ([`edge_fixes`], [`fixes_for_edges`]). An edge changes by being
-//! deleted and added again, so a rewrite is a `delete_edges` and an `add_edges`.
-//!
-//! The server checks each fix against the violations the restore would hit
-//! ([`check_restore_fixes`]): it must address one of them, in the way that
-//! violation's client action allows:
-//!
-//! - an edge whose handles are invalid or name nothing may be deleted, or
-//!   deleted and added again with other handles;
-//! - of the edges into an input that takes one, any may be deleted.
-//!
-//! Anything else is an edit, which takes the save path.
+//! A fix may delete an edge whose handles are invalid or name nothing, or add it
+//! back with other handles. It may also delete any edge into an input that
+//! accepts only one edge.
 
 use crate::ops::maps::{HashMap, HashSet};
 use crate::value::{AnyMap, AnyValue};
@@ -32,8 +19,7 @@ use crate::ops::validate::{Numbers, Resolution, ViolationCode, find_graph_violat
 ///
 /// # Errors
 ///
-/// A fix addresses no violation, or the engine cannot apply it; then the
-/// error keeps the engine's code.
+/// A fix addresses no violation, or the engine cannot apply it.
 pub fn apply_restore_fixes(
     revision: &AnyValue,
     stored: &AnyValue,
@@ -45,15 +31,11 @@ pub fn apply_restore_fixes(
         .map_err(Error::restore_fix_failed)
 }
 
-/// Fail unless every fix addresses a violation restoring `revision` would hit.
-///
-/// The violations are the ones the save makes: `revision` checked against
-/// the `stored` flow it replaces.
+/// Fail unless each fix addresses a violation of `revision` against `stored`.
 ///
 /// # Errors
 ///
-/// A fix that is not an edge delete or a handle rewrite of an edge a
-/// violation allows it for, or a failure finding the violations.
+/// A fix addresses no violation, or the violations cannot be found.
 pub fn check_restore_fixes(
     revision: &AnyValue,
     stored: &AnyValue,
@@ -90,15 +72,17 @@ pub fn check_restore_fixes(
         }
     }
 
+    let refused =
+        |id: &str, why: &str| Error::restore_not_allowed(format!("edge {}{why}", quoted(id)));
     let mut deleted: HashSet<&str> = HashSet::default();
     for fix in fixes {
         match fix {
             Operation::DeleteEdges(ids) => {
                 if let Some(id) = ids.iter().find(|id| !deletable.contains(*id)) {
-                    return Err(Error::restore_not_allowed(format!(
-                        "edge {} breaks no edge rule the client may fix by deleting it",
-                        quoted(id)
-                    )));
+                    return Err(refused(
+                        id,
+                        " breaks no edge rule the client may fix by deleting it",
+                    ));
                 }
                 deleted.extend(ids.iter().map(String::as_str));
             }
@@ -106,28 +90,16 @@ pub fn check_restore_fixes(
                 for edge in added {
                     let id = edge.id();
                     if !rewritable.contains(id) {
-                        return Err(Error::restore_not_allowed(format!(
-                            "edge {} has no handles the client may rewrite",
-                            quoted(id)
-                        )));
+                        return Err(refused(id, " has no handles the client may rewrite"));
                     }
                     if !deleted.contains(id) {
-                        return Err(Error::restore_not_allowed(format!(
-                            "edge {}: a fix adds an edge only after it deletes it",
-                            quoted(id)
-                        )));
+                        return Err(refused(id, ": a fix adds an edge only after it deletes it"));
                     }
                     let Some(before) = by_id.get(id) else {
-                        return Err(Error::restore_not_allowed(format!(
-                            "edge {} does not exist",
-                            quoted(id)
-                        )));
+                        return Err(refused(id, " does not exist"));
                     };
                     if !only_handles_differ(before, edge.as_map())? {
-                        return Err(Error::restore_not_allowed(format!(
-                            "edge {}: a fix may only change the edge's handles",
-                            quoted(id)
-                        )));
+                        return Err(refused(id, ": a fix may only change the edge's handles"));
                     }
                 }
             }
@@ -142,21 +114,20 @@ pub fn check_restore_fixes(
     Ok(())
 }
 
-/// The edges into the input `edge` takes, whose handles are valid since it is occupied.
+/// The ids of the edges into the same input as `edge`.
 fn edges_into_the_same_input(edges: &[&AnyMap], edge: &AnyMap) -> Result<HashSet<String>> {
     let taken = read_handles(edge)?.input;
     let target = endpoint(edge, "target");
     Ok(edges
         .iter()
         .filter(|other| endpoint(other, "target") == target)
-        // An edge with broken handles takes no input; its own violation says what may fix it.
+        // An edge with broken handles goes into no input. Its own violation covers it.
         .filter(|other| read_handles(other).is_ok_and(|handles| handles.input == taken))
         .map(|other| other.id().to_owned())
         .collect())
 }
 
-/// Whether two versions of an edge differ only in their handles, in either
-/// form. An edge without a `data` object may gain one that holds only handles.
+/// Whether two versions of an edge differ only in their handles.
 fn only_handles_differ(before: &AnyMap, after: &AnyMap) -> Result<bool> {
     values_equal(&without_handles(before), &without_handles(after))
 }
@@ -185,15 +156,12 @@ fn without_handles(edge: &AnyMap) -> AnyValue {
 
 // --- The editor's side -----------------------------------------------------------------
 
-/// The operations that turn a revision's edges as read (`read`) into the
-/// edges its preview shows (`shown`): a `delete_edges` for the edges the
-/// preview dropped or whose handles it rewrote, and an `add_edges` that adds
-/// the rewritten ones back. Empty when the preview changed no edge.
+/// The operations that change the `read` edges into the `shown` edges.
+/// A rewritten edge is deleted and added back.
 ///
 /// # Errors
 ///
-/// A compared handle holds a number that is not finite, or a rewritten edge
-/// has no `id`, `source` or `target`.
+/// A handle holds a number that is not finite, or a rewritten edge is invalid.
 pub fn edge_fixes(read: &[AnyValue], shown: &[AnyValue]) -> Result<Vec<Operation>> {
     let shown_by_id: HashMap<&str, &AnyMap> = shown
         .iter()
@@ -227,8 +195,7 @@ pub fn edge_fixes(read: &[AnyValue], shown: &[AnyValue]) -> Result<Vec<Operation
     Ok(fixes)
 }
 
-/// `edge` with the handles of `shown`, in both forms. An edge without a
-/// `data` object gets one that holds only the handles.
+/// `edge` with the handles of `shown`, at the top level and in `data`.
 fn with_handles_of(edge: &AnyMap, shown: &AnyMap) -> AnyMap {
     let mut edge = edge.clone();
     let shown_data = shown.get("data").and_then(AnyValue::as_object);
@@ -253,9 +220,7 @@ fn with_handles_of(edge: &AnyMap, shown: &AnyMap) -> AnyMap {
 
 /// The part of `fixes` that touches the given edges.
 ///
-/// A restore sends fixes only for the edges the server flagged, since the
-/// preview also respells handles that break no rule, which the server would
-/// refuse as fixes.
+/// The preview also respells valid handles. The server refuses those as fixes.
 #[must_use]
 pub fn fixes_for_edges(fixes: &[Operation], edge_ids: &[String]) -> Vec<Operation> {
     let edge_ids: HashSet<&str> = edge_ids.iter().map(String::as_str).collect();

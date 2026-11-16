@@ -1,15 +1,12 @@
-//! Hash maps and sets with ahash instead of the standard library's `SipHash`.
+//! Hash maps and sets with ahash instead of `SipHash`.
 //!
-//! Every map of the engine is keyed by text from a flow: object keys and
-//! ids of 20 to 300 bytes. `SipHash` made hashing a large part of reading a
-//! graph and of each write. ahash is seeded from random keys, as `SipHash`
-//! is, so a flow cannot choose keys that collide.
+//! `SipHash` made hashing a large part of each read and write. ahash also
+//! has random seeds, so a flow cannot choose keys that collide.
 
 use std::hash::BuildHasher;
 use std::sync::OnceLock;
 
-/// ahash, seeded once per process from the standard library's random
-/// keys, as the string pool seeds it.
+/// ahash, seeded once per process from the standard library's random keys.
 #[derive(Debug, Clone)]
 pub struct State(ahash::RandomState);
 

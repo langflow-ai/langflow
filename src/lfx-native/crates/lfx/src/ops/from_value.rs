@@ -1,13 +1,7 @@
 //! Reading typed values out of a parsed JSON value.
 //!
-//! A type that implements [`FromAnyValue`] reads itself from an owned [`AnyValue`]
-//! and moves the parts it keeps out of it, so parsing copies nothing. Each
-//! type checks its own JSON type: a `Vec<String>` refuses `["a", 5]`.
-//! An object type loops over its keys once, moves each value it allows into
-//! a named slot, and refuses any other key. An error records where it
-//! happened, such as
-//! `updates[0].path[1]`, only once it happens, so a value that parses
-//! allocates nothing for it.
+//! Each type moves the parts it keeps out of an owned [`AnyValue`], so
+//! parsing copies nothing. Example: `Vec<String>` refuses `["a", 5]`.
 
 use std::fmt::Write as _;
 
@@ -17,10 +11,7 @@ use crate::ops::error::{Error, quoted};
 
 /// A type that reads itself from a JSON value.
 pub(crate) trait FromAnyValue: Sized {
-    /// Read `value` as this type. It takes `value` and moves the parts it
-    /// keeps into the result, so nothing is copied; a part it does not keep
-    /// is dropped. On failure, it says why `value` does not have this type's
-    /// shape.
+    /// Read `value` as this type, or say why its shape is wrong.
     fn from_value(value: AnyValue) -> Result<Self, FromAnyValueError>;
 }
 
@@ -35,14 +26,10 @@ enum Place {
 
 /// Why a JSON value does not have the expected shape, and where.
 ///
-/// It is `pub` because the public `FromStr` for `OperationKind` returns it.
-/// Its module is private, so code outside the crate cannot name it.
+/// It is `pub` because `OperationKind::from_str` returns it.
 #[derive(Debug)]
 pub struct FromAnyValueError {
-    /// The steps from the value that was read to the one that failed,
-    /// innermost first. As in a stack trace, the error passes back up through
-    /// the readers, and each one adds its own step on the way out, after the
-    /// reader below it has failed.
+    /// The steps to the value that failed, innermost first.
     places: Vec<Place>,
     message: String,
 }
@@ -70,15 +57,9 @@ impl FromAnyValueError {
         self
     }
 
-    /// Turn this error into an engine [`Error`] whose message starts with
-    /// where the bad value is, for example
-    /// `operations[0].ids[1]: must be a string`. `root` names the value that
-    /// was read, here `operations`.
-    ///
-    /// Each reader adds its own step to `places` when the error passes back
-    /// up through it, so the innermost step is first. The message names the
-    /// outermost step first, so this reads `places` in reverse. In the
-    /// example, `places` holds `[1]`, `ids`, `[0]`.
+    /// Turn this error into an engine [`Error`]. `root` names the value read.
+    /// Example: `operations[0].ids[1]: must be a string`, from `places`
+    /// `[1]`, `ids`, `[0]`.
     pub(crate) fn into_error(self, root: &str) -> Error {
         let mut location = root.to_owned();
         for place in self.places.iter().rev() {
@@ -134,7 +115,6 @@ impl<T: FromAnyValue> FromAnyValue for Vec<T> {
 }
 
 /// Read the value of the object key `key` as `T`, naming the key in any error.
-/// It takes `value` (see [`FromAnyValue::from_value`]).
 pub(crate) fn read<T: FromAnyValue>(
     value: AnyValue,
     key: &'static str,

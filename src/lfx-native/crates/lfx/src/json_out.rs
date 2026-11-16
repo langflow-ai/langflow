@@ -1,14 +1,10 @@
-//! Writing JSON text fast, into a byte buffer.
+//! Write JSON text fast into a byte buffer.
 //!
-//! A flow graph is mostly string text, much of it component code, so a
-//! string is scanned eight bytes at a time, and a byte is looked at on its
-//! own only where an escape starts. A string is written with `"` and `\`
-//! escaped, the control characters with the short forms where JSON has them
-//! and `\u00XX` (lower-case hex) otherwise, and with [`Ascii::Escape`] every
-//! character above U+007F as `\uXXXX`, as Python's `json.dumps` writes by
-//! default. A number is written as its [`Number`] text.
+//! A flow is mostly long strings such as component code, so a string is
+//! scanned eight bytes at a time. [`Ascii::Escape`] writes as Python's
+//! `json.dumps` does by default. Example: `é` gives `\u00e9`.
 
-use crate::value::{AnyMap, AnyValue, Number};
+use crate::value::{AnyMap, AnyValue};
 
 /// Whether a written string escapes its characters above U+007F.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -29,9 +25,8 @@ fn special<const ESCAPE: bool>(byte: u8) -> bool {
 const ONES: u64 = 0x0101_0101_0101_0101;
 const HIGHS: u64 = 0x8080_8080_8080_8080;
 
-/// The high bit of each byte of `word` (little-endian) that is zero, and
-/// maybe of later bytes: the borrow from a zero byte can mark the bytes
-/// above it. The lowest mark is always a zero byte.
+/// The high bit of each zero byte of `word` (little-endian). A borrow can
+/// also mark later bytes, but the lowest mark is always a zero byte.
 #[inline]
 fn zero_bytes(word: u64) -> u64 {
     word.wrapping_sub(ONES) & !word & HIGHS
@@ -59,8 +54,7 @@ fn unit_escape(unit: u16) -> [u8; 6] {
     [b'\\', b'u', digit(12), digit(8), digit(4), digit(0)]
 }
 
-/// Write the escape of the character at `at`, which starts an escape;
-/// returns the bytes it takes in `text`.
+/// Write the escape of the character at `at`. Return its length in `text`.
 fn write_escape(out: &mut Vec<u8>, text: &str, at: usize) -> usize {
     let byte = text.as_bytes()[at];
     let short: &[u8] = match byte {
@@ -127,19 +121,16 @@ fn write_str_with<const ESCAPE: bool>(out: &mut Vec<u8>, text: &str) {
     out.push(b'"');
 }
 
-/// Write a number as its JSON text.
-pub(crate) fn write_number(out: &mut Vec<u8>, number: &Number) {
-    use std::io::Write as _;
-    write!(out, "{number}").expect("a number is written to memory");
-}
-
 /// Write a value as compact JSON text, object keys in their order.
 pub(crate) fn write_value(out: &mut Vec<u8>, value: &AnyValue, ascii: Ascii) {
     match value {
         AnyValue::Null => out.extend_from_slice(b"null"),
         AnyValue::Bool(true) => out.extend_from_slice(b"true"),
         AnyValue::Bool(false) => out.extend_from_slice(b"false"),
-        AnyValue::Number(number) => write_number(out, number),
+        AnyValue::Number(number) => {
+            use std::io::Write as _;
+            write!(out, "{number}").expect("a number is written to memory");
+        }
         AnyValue::String(text) => {
             if ascii == Ascii::Escape
                 && let Some(encoded) = text.shared_ascii_json()
@@ -210,8 +201,7 @@ mod tests {
 
     use super::*;
 
-    /// A string written one character at a time, by the rules the module
-    /// lists.
+    /// A string written one character at a time, as the reference.
     fn reference(text: &str, ascii: Ascii) -> String {
         let mut out = String::from('"');
         for character in text.chars() {

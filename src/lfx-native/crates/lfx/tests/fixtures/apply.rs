@@ -1,7 +1,7 @@
 //! `apply_cases.json`, `merge_cases.json` and `property_cases.json`: applying operations.
 
 use lfx::json;
-use lfx::ops::api::{graph_json, json_text};
+use lfx::ops::api::json_text;
 use lfx::ops::canonical::{graph_hash, graphs_equal};
 use lfx::ops::schema::NODE_SCHEMA;
 use lfx::ops::{ApplyOptions, GraphState, Operation, ReplayOptions};
@@ -86,7 +86,7 @@ fn apply_case(case: &AnyValue) -> Result<(), Failed> {
         &ignoring_order(&case["expected"]),
     )?;
     // The bindings print the graph with graph_json, which must write the text of to_value.
-    if graph_json(&state) != json_text(&state.to_value()) {
+    if state.to_json() != json_text(&state.to_value()) {
         return Err("graph_json does not write the text of to_value".into());
     }
     let forward = AnyValue::Array(applied.forward.iter().map(Operation::to_value).collect());

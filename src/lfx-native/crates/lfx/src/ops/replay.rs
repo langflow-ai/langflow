@@ -1,28 +1,18 @@
 //! Replaying stored operations on a flow.
 //!
-//! Replay carries out stored operations as they are written, in the order
-//! they are written: the forward operations of the operation log, and
-//! backward operations to show an earlier revision. It runs no rule, because
-//! the operations already passed the rules when they were applied. A rule
-//! that was added later must not stop history from replaying.
-//!
-//! So replay checks no edge rule, no table position, and no other item of a
-//! list it writes into. It deletes no edge as a cascade delete either: stored
-//! operations list every edge they delete. It fails only when an operation
-//! cannot be carried out:
+//! Replay runs no rule. The operations passed the rules when they were
+//! applied, and a newer rule must not stop history from replaying. Stored
+//! operations list every edge they delete, so replay deletes no edge itself.
+//! It fails only when an operation cannot be carried out:
 //!
 //! - `add_nodes` or `add_edges` adds an id that the flow already has;
 //! - `add_edges` names a source or target node that does not exist;
 //! - `update_nodes` or `delete_nodes` names a node that does not exist;
 //! - an update's path does not exist up to its last segment;
-//! - a list item key segment matches no item before the last segment, or
-//!   matches two items.
+//! - a list item segment before the last one matches no item, or two items.
 //!
-//! Apply makes each of these checks too, with the same code. So the forward
-//! operations of apply always replay, and give the flow that apply gave. The
-//! fixture runners check this. Replay shares with apply the steps that carry
-//! out an operation (see [`apply`](crate::ops::apply)). Only apply calls the
-//! rules.
+//! [`apply`](crate::ops::apply) makes the same checks, so its forward
+//! operations always replay to the same flow.
 
 use crate::ops::apply::{
     AddedEdges, ApplyOptions, FieldBackward, PlacedUpdate, Report, UpdatePlace, require_path,
@@ -45,18 +35,14 @@ pub struct ReplayOptions {
 /// What a replay did.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Replayed {
-    /// When the caller sets the `backward` option: for each operation, in
-    /// the same order, a list of the operations that undo it. They follow
-    /// the rules of [`Applied::backward`](crate::ops::apply::Applied::backward).
+    /// With the `backward` option: for each operation, the operations that
+    /// undo it, as in [`Applied::backward`](crate::ops::apply::Applied::backward).
     pub backward: Vec<Vec<Operation>>,
 }
 
 impl GraphState {
     /// Replay stored operations in order, with no rule. On an error nothing
-    /// is replayed.
-    ///
-    /// Replay carries out the operations as written. It refuses no graph it
-    /// leaves: a node it deletes keeps its edges unless the operations
+    /// is replayed. A deleted node keeps its edges unless the operations
     /// delete them.
     ///
     /// # Errors
@@ -121,8 +107,7 @@ impl GraphState {
         Ok(())
     }
 
-    /// Delete nodes, each of which must exist. Their edges stay: the stored
-    /// operations delete them.
+    /// Delete nodes, each of which must exist. Their edges stay.
     fn replay_delete_nodes(&mut self, ids: &[String], report: &mut Report) -> Result<()> {
         let ids: IndexSet<&str> = ids.iter().map(String::as_str).collect();
         for id in &ids {
@@ -145,16 +130,12 @@ impl GraphState {
     }
 }
 
-/// Replay stored operations on a flow graph, with no rule, and return the
-/// result with what the replay did.
-///
-/// Loading the flow checks the structural rules ([`GraphState::new`]); the
-/// replay checks none.
+/// Replay stored operations on a flow graph, with no rule. Loading the flow
+/// checks the structural rules ([`GraphState::new`]).
 ///
 /// # Errors
 ///
-/// The flow breaks a structural rule, or an operation cannot be carried out
-/// on it.
+/// The flow breaks a structural rule, or an operation cannot be carried out.
 pub fn replay_flow_operations(
     base: AnyValue,
     operations: Vec<Operation>,

@@ -1,9 +1,6 @@
-//! Random ids for things code adds to a flow, in the editor's formats.
+//! Random ids, in the editor's formats, for entries that code adds to a flow.
 //!
-//! An id names an entry and nothing else: it is never derived from what the
-//! entry connects or contains, so changing an edge's handles or a row's cells
-//! never changes its id, and no code may parse one. Existing ids are kept as
-//! they are.
+//! An id does not depend on the entry's contents. Do not parse an id.
 
 use crate::ops::maps::HashSet;
 
@@ -12,15 +9,15 @@ const ALPHANUMERIC: &[u8; 62] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJ
 const EDGE_ID_PREFIX: &str = "e-";
 const EDGE_ID_LENGTH: usize = 21;
 const TABLE_ROW_ID_LENGTH: usize = 10;
-/// The largest multiple of 62 a byte holds: bytes at or above it are drawn
-/// again, so every character is equally likely.
+/// The largest multiple of 62 below 256. A byte at or above it is drawn again,
+/// so that each character has the same chance.
 const UNBIASED_LIMIT: u8 = 248;
 
 /// `length` random alphanumeric characters.
 ///
 /// # Panics
 ///
-/// The operating system has no random source, which no supported platform lacks.
+/// The operating system has no random source.
 #[must_use]
 pub fn random_alphanumeric(length: usize) -> String {
     let mut out = String::with_capacity(length);

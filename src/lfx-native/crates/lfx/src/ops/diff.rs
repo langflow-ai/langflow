@@ -1,38 +1,25 @@
 //! Deriving operations from two whole flow graphs.
 //!
-//! A whole-flow save hands the server the graph it wants stored.
-//! [`diff_flow_data`] expresses the change from the stored graph as the
-//! operations a client would have sent for it, and
-//! [`derive_flow_operations`] proves they are right by replaying them and
-//! requiring the canonical result to equal the target exactly. The diff
-//! never falls back to replacing the whole graph: operations can express
-//! every valid change, so a mismatch is a bug and the save fails.
+//! [`diff_flow_data`] gives the operations a client would send for a
+//! whole-flow save. [`derive_flow_operations`] replays them and requires the
+//! result to equal the target. A mismatch is a bug, and the save fails.
 //!
-//! Shape of the result, so whole-flow saves and future operation submissions
-//! record the same history:
+//! The result has this shape:
 //!
 //! - at most one operation of each type, in the order `delete_edges`,
-//!   `delete_nodes`, `add_nodes`, `update_nodes`, `add_edges`, each listing
-//!   every item it applies to: deletions in the order the stored graph lists
-//!   them, everything else in the order the target lists it. Nothing is
-//!   sorted;
-//! - nodes, edges and table rows are matched by id, and array order is never
-//!   a change;
-//! - inside a node, the diff follows `node_schema.json`: it splits only the
-//!   paths the schema lists under `whole_values.recursed` into their keys.
-//!   Every other value is written whole when it changes;
-//! - a template field is written in units: its value (`value` with the keys
-//!   that qualify it), its definition (every other key), and each toggle.
-//!   When any key of a unit changes, the whole unit is written. A new field
-//!   is one write, a removed field one delete;
-//! - keyed lists (outputs, tool actions, table rows) are written per item, at
-//!   the item's key, and per key inside an item. Their order is their items'
-//!   `__pos__`, so a move is a write to `__pos__`. A list whose items do not
-//!   all carry a unique key and a position on both sides is written whole;
-//! - an edge that changed in any way is deleted and added again;
-//! - view state is never recorded, and two spellings of one handle are not a
-//!   change. Every top-level key other than `nodes` and `edges` is view
-//!   state.
+//!   `delete_nodes`, `add_nodes`, `update_nodes`, `add_edges`. Deletions keep
+//!   the base order, and the rest keep the target order;
+//! - nodes, edges and table rows match by id. Array order is never a change;
+//! - inside a node, only the paths under `whole_values.recursed` in
+//!   `node_schema.json` split into their keys. Other values are written whole;
+//! - a template field has these units: its value, its definition and each
+//!   toggle. A change to one key writes its whole unit;
+//! - a keyed list is written per item and per key inside an item. A move is a
+//!   write to `__pos__`. A list without a unique key and a position on every
+//!   item is written whole;
+//! - a changed edge is deleted and added again;
+//! - view state is never recorded. Example: two spellings of one handle are
+//!   not a change.
 
 use crate::ops::maps::{HashSet, IndexMap, State};
 use crate::value::{AnyMap, AnyValue};
@@ -41,10 +28,8 @@ use crate::ops::apply::ApplyOptions;
 use crate::ops::canonical::{Proven, graphs_equal_given, is_row_position, values_equal};
 use crate::ops::edges::edge_changed;
 use crate::ops::error::{Error, Result};
-use crate::ops::ops::{
-    AsKey, Edge, FieldUpdate, Node, NodePath, Operation, Path, PathExt, Segment,
-};
-use crate::ops::schema::{KeyedList, NODE_SCHEMA, OUTPUTS_PATH, TEMPLATE_PATH};
+use crate::ops::ops::{AsKey, FieldUpdate, NodePath, Operation, Path, PathExt, Segment};
+use crate::ops::schema::{KeySet, KeyedList, NODE_SCHEMA, OUTPUTS_PATH, TEMPLATE_PATH};
 use crate::ops::state::GraphState;
 use crate::ops::validate::{Numbers, validate_flow_data};
 
@@ -59,10 +44,8 @@ pub struct Derived {
 
 /// The ordered operations that turn `base` into `target`.
 ///
-/// Both graphs must follow the engine's rules. `base` is stored data and is
-/// checked structurally; `target` comes from outside and is checked fully, so
-/// a broken target fails with the engine's own error rather than surfacing
-/// later as a replay mismatch.
+/// It checks `base` structurally and `target` fully, so a broken target
+/// fails here and not as a replay mismatch.
 ///
 /// # Errors
 ///
@@ -70,16 +53,11 @@ pub struct Derived {
 pub fn diff_flow_data(base: &AnyValue, target: &AnyValue) -> Result<Vec<Operation>> {
     validate_flow_data(base, Numbers::Skip, "flow.data", None)?;
     validate_flow_data(target, Numbers::Check, "target flow.data", None)?;
-    diff_checked(base, target)
-}
-
-/// [`diff_flow_data`] for graphs that have passed its checks.
-fn diff_checked(base: &AnyValue, target: &AnyValue) -> Result<Vec<Operation>> {
     diff_proving(base, target, None)
 }
 
-/// [`diff_checked`], recording in `proven` each base node it finds equal
-/// to its target node.
+/// [`diff_flow_data`] for graphs that passed its checks, recording in
+/// `proven` each base node it finds equal to its target node.
 fn diff_proving(
     base: &AnyValue,
     target: &AnyValue,
@@ -98,42 +76,27 @@ fn diff_proving(
             changed_edges.insert(*id);
         }
     }
-    let deleted_edges: Vec<String> = base_edges
-        .keys()
-        .filter(|id| !target_edges.contains_key(*id) || changed_edges.contains(*id))
-        .map(|id| (*id).to_owned())
-        .collect();
-    let added_edges: Vec<Edge> = target_edges
-        .iter()
-        .filter(|(id, _)| !base_edges.contains_key(*id) || changed_edges.contains(*id))
-        .map(|(_, edge)| {
-            Edge::try_from(without(edge, |key| {
-                NODE_SCHEMA.edge_view_state.contains(key)
-            }))
-        })
-        .collect::<Result<_>>()?;
-    let deleted_nodes: Vec<String> = base_nodes
-        .keys()
-        .filter(|id| !target_nodes.contains_key(*id))
-        .map(|id| (*id).to_owned())
-        .collect();
-    let added_nodes: Vec<Node> = target_nodes
-        .iter()
-        .filter(|(id, _)| !base_nodes.contains_key(*id))
-        .map(|(_, node)| {
-            Node::try_from(without(node, |key| {
-                NODE_SCHEMA.node_view_state.contains(key)
-            }))
-        })
-        .collect::<Result<_>>()?;
+    let no_change = HashSet::default();
+    let deleted_edges = gone(&base_edges, &target_edges, &changed_edges);
+    let added_edges = added(
+        &base_edges,
+        &target_edges,
+        &changed_edges,
+        &NODE_SCHEMA.edge_view_state,
+    )?;
+    let deleted_nodes = gone(&base_nodes, &target_nodes, &no_change);
+    let added_nodes = added(
+        &base_nodes,
+        &target_nodes,
+        &no_change,
+        &NODE_SCHEMA.node_view_state,
+    )?;
 
     let mut node_updates = Vec::new();
     for (id, node) in &target_nodes {
         if let Some(before) = base_nodes.get(id) {
-            // A node equal as it stands writes nothing, so its walk is skipped:
-            // most nodes of a save are unchanged. The walk could not fail
-            // either: it fails only on a number that is not finite, which the
-            // target's validation above refuses, or on a write.
+            // Skip the walk for an equal node: most nodes of a save are
+            // unchanged. The walk cannot fail on an equal node.
             if before == node {
                 if let Some(proven) = proven.as_deref_mut() {
                     proven.insert(
@@ -151,33 +114,50 @@ fn diff_proving(
         }
     }
 
-    let mut operations = Vec::new();
-    if !deleted_edges.is_empty() {
-        operations.push(Operation::DeleteEdges(deleted_edges));
-    }
-    if !deleted_nodes.is_empty() {
-        operations.push(Operation::DeleteNodes(deleted_nodes));
-    }
-    if !added_nodes.is_empty() {
-        operations.push(Operation::AddNodes(added_nodes));
-    }
-    if !node_updates.is_empty() {
-        operations.push(Operation::UpdateNodes(node_updates));
-    }
-    if !added_edges.is_empty() {
-        operations.push(Operation::AddEdges(added_edges));
-    }
-    Ok(operations)
+    Ok([
+        (!deleted_edges.is_empty()).then(|| Operation::DeleteEdges(deleted_edges)),
+        (!deleted_nodes.is_empty()).then(|| Operation::DeleteNodes(deleted_nodes)),
+        (!added_nodes.is_empty()).then(|| Operation::AddNodes(added_nodes)),
+        (!node_updates.is_empty()).then(|| Operation::UpdateNodes(node_updates)),
+        (!added_edges.is_empty()).then(|| Operation::AddEdges(added_edges)),
+    ]
+    .into_iter()
+    .flatten()
+    .collect())
 }
 
-/// Diff two graphs and prove the result replays exactly.
-///
-/// Returns the forward operations, together with the replayed graph.
+/// The ids in `base` that `target` drops or `replaced` names.
+fn gone(
+    base: &IndexMap<&str, &AnyMap>,
+    target: &IndexMap<&str, &AnyMap>,
+    replaced: &HashSet<&str>,
+) -> Vec<String> {
+    base.keys()
+        .filter(|id| !target.contains_key(*id) || replaced.contains(*id))
+        .map(|id| (*id).to_owned())
+        .collect()
+}
+
+/// The entries of `target` that `base` lacks or `replaced` names, without
+/// their view state.
+fn added<T: TryFrom<AnyMap, Error = Error>>(
+    base: &IndexMap<&str, &AnyMap>,
+    target: &IndexMap<&str, &AnyMap>,
+    replaced: &HashSet<&str>,
+    view_state: &KeySet,
+) -> Result<Vec<T>> {
+    target
+        .iter()
+        .filter(|(id, _)| !base.contains_key(*id) || replaced.contains(*id))
+        .map(|(_, entry)| T::try_from(without(entry, |key| view_state.contains(key))))
+        .collect()
+}
+
+/// Diff two graphs, and return the forward operations with the replayed graph.
 ///
 /// # Errors
 ///
-/// A graph breaks the rules, or the operations do not replay to `target`,
-/// which is a bug in the diff or the engine.
+/// A graph breaks the rules, or the operations do not replay to `target`.
 pub fn derive_flow_operations(base: AnyValue, target: &AnyValue) -> Result<Derived> {
     validate_flow_data(&base, Numbers::Skip, "flow.data", None)?;
     validate_flow_data(target, Numbers::Check, "target flow.data", None)?;
@@ -196,8 +176,7 @@ pub(crate) fn derive_checked(base: AnyValue, target: &AnyValue) -> Result<Derive
     let mut state = GraphState::from_checked(base)?;
     let applied = state.apply(operations, options)?;
     let flow_data = state.into_value();
-    // A node the diff found equal to its target node, which the replay
-    // left shared with the base, is equal: the check reads only the rest.
+    // The check skips the nodes the diff found equal.
     if !graphs_equal_given(&flow_data, target, Some(&proven))? {
         return Err(Error::replay(
             "derived operations do not replay to the target graph",
@@ -238,8 +217,7 @@ struct NodeDiff<'a> {
 }
 
 impl NodeDiff<'_> {
-    /// Record a `set_field`. The walk shares one path, so a caller passes
-    /// its own copy: the one copy the write needs.
+    /// Record a `set_field`. The caller passes its own copy of the path.
     fn set(&mut self, path: Path, value: &AnyValue) -> Result<()> {
         let path = NodePath::try_from(path)?;
         self.updates
@@ -267,10 +245,8 @@ impl NodeDiff<'_> {
         }
     }
 
-    /// Diff an object the schema splits: split its children where the schema does, write the others whole.
-    ///
-    /// The walk shares one `path`: each step pushes its segment and pops it
-    /// when done. An error ends the whole diff, so it leaves the path as it is.
+    /// Diff an object the schema splits. Each step pushes its segment onto
+    /// `path` and pops it when done.
     fn object(&mut self, base: &AnyMap, target: &AnyMap, path: &mut Path) -> Result<()> {
         for (key, value) in target {
             if Self::skipped(path, key) {
@@ -459,9 +435,7 @@ enum Write<'v> {
 }
 
 /// Diff a keyed list item by item. Returns false when it has to be written whole.
-///
-/// `path` names the list. Like the node walk, it pushes and pops each step,
-/// and copies the path only into a write it records.
+/// `path` names the list.
 fn keyed_list<'v>(
     keyed: &KeyedList,
     base: &'v AnyValue,
@@ -532,11 +506,8 @@ fn item_writes<'v>(
     Ok(())
 }
 
-/// A list by item key, or `None` when it cannot be written item by item.
-///
-/// That is a list whose items do not all carry a unique key and a numeric
-/// position: such a list (a legacy list) is written whole, which brings it
-/// within the rules.
+/// A list by item key, or `None` when an item has no unique key or no
+/// numeric position. Writing such a legacy list whole brings it within the rules.
 fn items_by_key<'v>(
     keyed: &KeyedList,
     items: &'v AnyValue,
