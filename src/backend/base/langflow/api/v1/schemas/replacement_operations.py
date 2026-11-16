@@ -73,6 +73,9 @@ class ProjectReplacementRequest(SQLModel):
     # plane stores the manifest as opaque JSON alongside the committed receipt.
     dependencies: dict[str, Any] | None = None
     variables: ReplacementVariables | None = None
+    # Validated by registered replacement hooks (see langflow.services.replacement_hooks) and ignored otherwise.
+    # Part of the request digest, so a retry that names a different value is refused like any other changed body.
+    execution_principal_id: UUID | None = None
 
     @field_validator("project_name")
     @classmethod
