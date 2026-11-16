@@ -238,6 +238,29 @@ GUARD_CASES = {
         ),
         "class_level_mutation",
     ),
+    "helper_class_inputs_append": (
+        _run(
+            "        return Helper().add(1)\n",
+            extra="class Helper:\n    inputs = []\n\n    def add(self, v):\n        self.inputs.append(v)\n"
+            "        return len(self.inputs)\n\n\n",
+        ),
+        "class_level_mutation",
+    ),
+    "positional_only_classmethod_receiver": (
+        _component(
+            "    @classmethod\n    def bump(cls, /):\n        cls.runs += 1\n" + _RUN + "        return 1\n",
+            cls_attrs="    runs = 0\n",
+        ),
+        "class_level_mutation",
+    ),
+    "qualified_classmethod_decorator": (
+        _component(
+            "    @builtins.classmethod\n    def bump(cls):\n        cls.runs += 1\n" + _RUN + "        return 1\n",
+            cls_attrs="    runs = 0\n",
+            extra="import builtins\n",
+        ),
+        "class_level_mutation",
+    ),
     "async_top_level_function_attribute": (
         _run("        return 1\n", extra="async def helper(uid):\n    helper.last = uid\n\n"),
         "class_level_mutation",

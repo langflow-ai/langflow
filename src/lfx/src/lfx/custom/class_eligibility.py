@@ -52,9 +52,14 @@ def _chain_root(node: ast.AST) -> tuple[ast.AST, str | None]:
     return node, first
 
 
+def _decorator_name(dec: ast.expr) -> str:
+    """``classmethod`` for both ``@classmethod`` and ``@builtins.classmethod``; ``""`` for anything else."""
+    return dec.id if isinstance(dec, ast.Name) else dec.attr if isinstance(dec, ast.Attribute) else ""
+
+
 def _decorator_reason(node: ast.FunctionDef | ast.AsyncFunctionDef, rebound: set[str]) -> str | None:
     for dec in node.decorator_list:
-        name = dec.id if isinstance(dec, ast.Name) else dec.attr if isinstance(dec, ast.Attribute) else ""
+        name = _decorator_name(dec)
         accessor = isinstance(dec, ast.Attribute) and name in _ACCESSOR_SUFFIXES
         if not (name in _DECORATORS or accessor):
             return "function_decorator"
@@ -140,10 +145,20 @@ def _module_reason(statement: ast.stmt, lfx: frozenset[str], containers: set[str
     return f"top_level_{type(statement).__name__.lower()}"
 
 
-def _class_reason(node: ast.ClassDef, lfx: frozenset[str], attrs: set[str]) -> str | None:
-    """Reason to decline a class; names of allowed container class attributes go to ``attrs``."""
+def _class_reason(node: ast.ClassDef, lfx: frozenset[str], attrs: set[str], components: set[str]) -> str | None:
+    """Reason to decline a class; names of allowed container class attributes go to ``attrs``.
+
+    ``inputs``/``outputs`` are exempt only on classes deriving from an lfx/langflow import (or from such a class
+    defined earlier), since only ``Component.__init__`` copies them per instance. ``components`` collects those.
+    """
     if node.decorator_list or node.keywords:
         return "decorated_class"
+    if any(
+        (root := _chain_root(base)[0]) and isinstance(root, ast.Name) and root.id in lfx | components
+        for base in node.bases
+    ):
+        components.add(node.name)
+    per_instance = _PER_INSTANCE if node.name in components else frozenset()
     for statement in node.body:
         if isinstance(statement, ast.FunctionDef | ast.AsyncFunctionDef | ast.Pass) or (
             isinstance(statement, ast.Expr) and isinstance(statement.value, ast.Constant)
@@ -152,7 +167,7 @@ def _class_reason(node: ast.ClassDef, lfx: frozenset[str], attrs: set[str]) -> s
         if not isinstance(statement, ast.Assign | ast.AnnAssign):
             return f"class_body_{type(statement).__name__.lower()}"
         names, value = _names(statement), statement.value
-        if _is_const(value) or all(name in _PER_INSTANCE for name in names):
+        if _is_const(value) or all(name in per_instance for name in names):
             continue
         if not (all(names) and _literal_ok(value, lfx, calls=True)):
             return "mutable_class_attribute"
@@ -184,20 +199,21 @@ def _analyse(source: str) -> str | None:
     lfx = _lfx_names(module)
     containers: set[str] = set()
     attrs: set[str] = set()
+    components: set[str] = set()
     for statement in module.body:
         if reason := _module_reason(statement, lfx, containers) or (
-            _class_reason(statement, lfx, attrs) if isinstance(statement, ast.ClassDef) else None
+            _class_reason(statement, lfx, attrs, components) if isinstance(statement, ast.ClassDef) else None
         ):
             return reason
     functions = ast.FunctionDef | ast.AsyncFunctionDef
     shared = {n.name for n in classes} | {n.name for n in module.body if isinstance(n, functions)} | containers
     classmethod_params = {
-        id(f): f.args.args[0].arg
+        id(f): receivers[0].arg
         for c in classes
         for f in c.body
         if isinstance(f, functions)
-        and f.args.args
-        and any(isinstance(d, ast.Name) and d.id == "classmethod" for d in f.decorator_list)
+        and (receivers := f.args.posonlyargs + f.args.args)
+        and any(_decorator_name(d) == "classmethod" for d in f.decorator_list)
     }
     super_calls = {
         id(n.func)
