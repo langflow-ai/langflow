@@ -23,6 +23,7 @@ from lfx.upgrade.checker import (
     build_registry_lookup,
     flow_node_id,
     new_template_field_keys,
+    node_with_group_values,
     retyped_field_keys,
 )
 
@@ -57,18 +58,19 @@ def apply_safe_upgrades(
     if registry is None:
         registry = build_registry_lookup(all_types_dict)
     updated = copy.deepcopy(flow_data)
-    count = _apply_to_nodes(updated.get("nodes", []), safe_ids, registry)
+    count, _ = _apply_to_nodes(updated.get("nodes", []), safe_ids, registry)
 
     return (updated, count) if return_count else updated
 
 
-def _apply_to_nodes(nodes: list[dict], safe_ids: set[str], registry: dict[str, dict]) -> int:
-    """Walk top-level nodes and (one level of) nested flow nodes, applying safe upgrades.
+def _apply_to_nodes(nodes: list[dict], safe_ids: set[str], registry: dict[str, dict]) -> tuple[int, set[str]]:
+    """Apply safe upgrades and return the ids changed at this level.
 
     Mirrors check_flow_compatibility's recursion into ``node.data.node.flow.data.nodes``
     so safe-upgradeable nodes inside grouped components are written, not silently skipped.
     """
     count = 0
+    updated_ids: set[str] = set()
     for node in nodes:
         if flow_node_id(node) in safe_ids:
             component_type = node.get("data", {}).get("type", "")
@@ -119,10 +121,40 @@ def _apply_to_nodes(nodes: list[dict], safe_ids: set[str], registry: dict[str, d
                     if entry.get("outputs") is not None and not _node_is_in_tool_mode(saved_outputs):
                         node_info["outputs"] = _updated_outputs(entry["outputs"], saved_outputs)
                     count += 1
-        nested = node.get("data", {}).get("node", {}).get("flow", {}).get("data", {}).get("nodes")
+                    updated_ids.add(flow_node_id(node))
+        node_info = node.get("data", {}).get("node", {})
+        nested_flow = node_info.get("flow", {}).get("data", {})
+        nested = nested_flow.get("nodes")
         if nested:
-            count += _apply_to_nodes(nested, safe_ids, registry)
-    return count
+            effective_nodes = [node_with_group_values(child, node_info.get("template", {})) for child in nested]
+            nested_count, child_ids = _apply_to_nodes(effective_nodes, safe_ids, registry)
+            if nested_count:
+                nested_flow["nodes"] = effective_nodes
+                _update_group_inputs(node_info, effective_nodes, child_ids)
+                updated_ids.add(flow_node_id(node))
+                count += nested_count
+    return count, updated_ids
+
+
+def _update_group_inputs(node_info: dict, children: list[dict], updated_ids: set[str]) -> None:
+    """Keep exposed contracts in sync so ungrouping cannot restore an outdated field type."""
+    children_by_id = {flow_node_id(child): child for child in children}
+    for name, field_data in node_info.get("template", {}).items():
+        if not isinstance(field_data, dict) or not isinstance(proxy := field_data.get("proxy"), dict):
+            continue
+        child_id = proxy.get("id")
+        if child_id not in updated_ids:
+            continue
+        template = children_by_id[child_id].get("data", {}).get("node", {}).get("template", {})
+        child_field = template.get(proxy.get("field"))
+        if not isinstance(child_field, dict):
+            continue
+        replacement = copy.deepcopy(child_field)
+        # These properties belong to the group's exposed field, rather than its child.
+        for key in ("proxy", "name", "display_name", "show", "advanced"):
+            if key in field_data:
+                replacement[key] = copy.deepcopy(field_data[key])
+        node_info["template"][name] = replacement
 
 
 def _updated_outputs(registry_outputs: list[dict], saved_outputs: list[dict]) -> list[dict]:

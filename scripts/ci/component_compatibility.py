@@ -5,11 +5,15 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import re
 from dataclasses import asdict, dataclass
 from typing import TYPE_CHECKING, Any
 
+from packaging.utils import InvalidName, canonicalize_name
+from packaging.version import InvalidVersion, Version
+
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Collection, Mapping
     from pathlib import Path
 
 
@@ -129,22 +133,66 @@ def compare_registries(
     return changes
 
 
-def review_acknowledgments(changes: list[ContractChange], document: dict[str, Any], root: Path) -> str:
-    """Reject missing or stale acknowledgments and render their release notes."""
-    if document.get("format_version") != 1 or not isinstance(document.get("breaks"), list):
-        msg = "compatibility acknowledgments require format_version1 and a breaks list"
+SCOPED_ACKNOWLEDGMENT_FORMAT = 2
+ComparisonScope = tuple[str, str, str]
+
+
+def _acknowledgment_scope(entry: dict[str, Any]) -> ComparisonScope:
+    distribution = entry["distribution"]
+    source_version = entry["source_version"]
+    target_version = entry["target_version"]
+    msg = "a break acknowledgment needs a canonical distribution name and valid comparison versions"
+    try:
+        if (
+            isinstance(distribution, str)
+            and canonicalize_name(distribution, validate=True) == distribution
+            and isinstance(source_version, str)
+            and isinstance(target_version, str)
+        ):
+            Version(source_version)
+            Version(target_version)
+            return distribution, source_version, target_version
+    except (InvalidName, InvalidVersion) as exc:
+        raise CompatibilityGateError(msg) from exc
+    raise CompatibilityGateError(msg)
+
+
+def review_acknowledgments(
+    changes: list[ContractChange],
+    document: dict[str, Any],
+    root: Path,
+    *,
+    comparisons: Collection[ComparisonScope] | None = None,
+) -> str:
+    """Validate acknowledgments and render the notes for the selected comparisons."""
+    format_version = document.get("format_version")
+    if format_version not in (1, SCOPED_ACKNOWLEDGMENT_FORMAT) or not isinstance(document.get("breaks"), list):
+        msg = "compatibility acknowledgments require format_version 1 or 2 and a breaks list"
         raise CompatibilityGateError(msg)
+    scoped = format_version == SCOPED_ACKNOWLEDGMENT_FORMAT
+    required_fields = {"id", "reason", "release_note"}
+    if scoped:
+        if comparisons is None:
+            msg = "versioned acknowledgments require the selected comparisons"
+            raise CompatibilityGateError(msg)
+        required_fields.update(("distribution", "source_version", "target_version"))
     actual = {change.id: change for change in changes}
+    seen: set[str] = set()
     acknowledged: set[str] = set()
     notes = ["# Component compatibility changes", ""]
+    notes_root = (root / "docs" / "release_notes" / "compatibility").resolve()
     for entry in document["breaks"]:
-        if not isinstance(entry, dict) or set(entry) != {"id", "reason", "release_note"}:
-            msg = "each acknowledgment requires only id, reason, and release_note"
+        if not isinstance(entry, dict) or set(entry) != required_fields:
+            msg = f"each acknowledgment requires exactly these fields: {', '.join(sorted(required_fields))}"
             raise CompatibilityGateError(msg)
         identity = entry["id"]
-        if identity not in actual or identity in acknowledged:
-            msg = f"unknown, stale, or duplicate break acknowledgment {identity}"
+        if not isinstance(identity, str) or re.fullmatch(r"[a-f0-9]{64}", identity) is None:
+            msg = "a break acknowledgment needs a SHA-256 break identity"
             raise CompatibilityGateError(msg)
+        if identity in seen:
+            msg = f"duplicate break acknowledgment {identity}"
+            raise CompatibilityGateError(msg)
+        seen.add(identity)
         if not isinstance(entry["reason"], str) or not entry["reason"].strip():
             msg = "a break acknowledgment needs a reason"
             raise CompatibilityGateError(msg)
@@ -152,14 +200,25 @@ def review_acknowledgments(changes: list[ContractChange], document: dict[str, An
             msg = "a break acknowledgment needs a release-note path"
             raise CompatibilityGateError(msg)
         path = (root / entry["release_note"]).resolve()
-        notes_root = (root / "docs" / "release_notes" / "compatibility").resolve()
         if not path.is_relative_to(notes_root) or not path.is_file() or path.suffix != ".md":
             msg = "release notes must be existing Markdown files under docs/release_notes/compatibility"
             raise CompatibilityGateError(msg)
         text = path.read_text(encoding="utf-8").strip()
-        change = actual[identity]
-        if change.component not in text or identity not in text:
-            msg = "release notes must name the component and exact break identity"
+        if identity not in text:
+            msg = "release notes must name the exact break identity"
+            raise CompatibilityGateError(msg)
+        scope = _acknowledgment_scope(entry) if scoped else None
+        if scope is not None and comparisons is not None and scope not in comparisons:
+            continue
+        change = actual.get(identity)
+        if change is None:
+            msg = f"unknown or stale break acknowledgment {identity}"
+            raise CompatibilityGateError(msg)
+        if scope is not None and scope != (change.distribution, change.source_version, change.target_version):
+            msg = f"break acknowledgment {identity} belongs to a different comparison"
+            raise CompatibilityGateError(msg)
+        if change.component not in text:
+            msg = "release notes must name the component"
             raise CompatibilityGateError(msg)
         acknowledged.add(identity)
         notes.extend([text, ""])

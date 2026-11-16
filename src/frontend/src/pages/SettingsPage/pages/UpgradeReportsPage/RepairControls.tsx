@@ -10,8 +10,10 @@ import {
   usePreviewUpgradeRepair,
   useUpgradeMaintenance,
 } from "@/controllers/API/queries/upgrade-reports";
+import { CustomLink } from "@/customization/components/custom-link";
+import { DOCS_LINK } from "@/customization/config-constants";
 import { reportTime } from "./format";
-import { repairReasonKey } from "./reasons";
+import { repairReasonKey, repairRequestErrorKey } from "./reasons";
 
 export default function RepairControls({
   reportId,
@@ -47,12 +49,49 @@ export default function RepairControls({
       (item): item is RepairResult & { data_sha256: string } =>
         item.status === "ready" && typeof item.data_sha256 === "string",
     ) ?? [];
-  const canApply = Boolean(
+  const runningJobs = maintenance.data?.running_jobs;
+  const statusKnown = Boolean(
     !maintenance.isError &&
-      maintenance.data?.maintenance &&
-      !maintenance.data?.migration,
+      typeof maintenance.data?.maintenance === "boolean" &&
+      typeof maintenance.data?.migration === "boolean" &&
+      typeof runningJobs === "number" &&
+      Number.isSafeInteger(runningJobs) &&
+      runningJobs >= 0,
+  );
+  const canApply = Boolean(
+    statusKnown &&
+      maintenance.data?.maintenance === true &&
+      maintenance.data?.migration === false &&
+      runningJobs === 0,
   );
   const busy = preview.isPending || apply.isPending;
+  const flowName = (flowId: string) =>
+    (
+      flows.find((flow) => flow.kind === "flow" && flow.id === flowId) ??
+      flows.find((flow) => flow.id === flowId || flow.flow_id === flowId)
+    )?.name?.trim() || flowId;
+  const flowLink = (flowId: string) => (
+    <CustomLink
+      to={`/flow/${encodeURIComponent(flowId)}`}
+      aria-label={t("settings.upgrade.openFlow", { name: flowName(flowId) })}
+      className="text-primary underline"
+    >
+      {flowName(flowId)}
+    </CustomLink>
+  );
+  const recoveryLink = (item: RepairResult) =>
+    item.recovery_version_id && (
+      <p>
+        <CustomLink
+          to={`/flow/${encodeURIComponent(item.flow_id)}?version=${encodeURIComponent(item.recovery_version_id)}`}
+          className="text-primary underline"
+        >
+          {t("settings.upgrade.reviewRecovery", {
+            name: flowName(item.flow_id),
+          })}
+        </CustomLink>
+      </p>
+    );
   return (
     <section
       aria-labelledby="upgrade-repair-title"
@@ -62,6 +101,30 @@ export default function RepairControls({
         {t("settings.upgrade.repairTitle")}
       </h3>
       <p>{t("settings.upgrade.repairExplanation")}</p>
+      <details>
+        <summary className="cursor-pointer">
+          {t("settings.upgrade.maintenanceSetup")}
+        </summary>
+        <div className="mt-2 space-y-2 text-sm">
+          <p>{t("settings.upgrade.maintenanceHelp")}</p>
+          <pre className="whitespace-pre-wrap break-all rounded bg-muted p-3">
+            <code>
+              {
+                'langflow maintenance on --reason "Flow upgrade"\nlangflow maintenance status'
+              }
+            </code>
+          </pre>
+          <p>{t("settings.upgrade.maintenanceDrainHelp")}</p>
+          <a
+            href={`${DOCS_LINK}/maintenance-mode`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary underline"
+          >
+            {t("settings.upgrade.maintenanceGuide")}
+          </a>
+        </div>
+      </details>
       <p>{t("settings.upgrade.selected", { count: selected.size })}</p>
       <Button
         variant="outline"
@@ -70,6 +133,7 @@ export default function RepairControls({
           setConfirmed(false);
           setApplied(false);
           setResult(null);
+          apply.reset();
           preview.mutate(
             { flow_ids: [...selected], report_id: reportId },
             {
@@ -84,12 +148,24 @@ export default function RepairControls({
       >
         {t("settings.upgrade.preview")}
       </Button>
-      {!canApply && <p role="note">{t("settings.upgrade.freezeRequired")}</p>}
-      {maintenance.isError && (
+      {statusKnown &&
+        (!maintenance.data?.maintenance || maintenance.data?.migration) && (
+          <p role="note">{t("settings.upgrade.freezeRequired")}</p>
+        )}
+      {statusKnown && runningJobs !== undefined && runningJobs > 0 && (
+        <p role="status">
+          {t("settings.upgrade.runningJobs", { count: runningJobs })}
+        </p>
+      )}
+      {(maintenance.isError || (!maintenance.isPending && !statusKnown)) && (
         <p role="alert">{t("settings.upgrade.freezeUnknown")}</p>
       )}
       {(preview.isError || apply.isError) && (
-        <p role="alert">{t("settings.upgrade.repairError")}</p>
+        <p role="alert">
+          {t(
+            repairRequestErrorKey(apply.isError ? apply.error : preview.error),
+          )}
+        </p>
       )}
       {busy && <p role="status">{t("settings.upgrade.repairBusy")}</p>}
       {result && (
@@ -114,9 +190,8 @@ export default function RepairControls({
             {result.results.map((item) => (
               <li key={item.flow_id} className="break-all">
                 <p>
-                  {flows.find((flow) => flow.id === item.flow_id)?.name ??
-                    item.flow_id}{" "}
-                  · {t(`settings.upgrade.repairStatus.${item.status}`)}
+                  {flowLink(item.flow_id)} ·{" "}
+                  {t(`settings.upgrade.repairStatus.${item.status}`)}
                 </p>
                 {item.reason_codes.length > 0 && (
                   <ul>
@@ -125,13 +200,7 @@ export default function RepairControls({
                     ))}
                   </ul>
                 )}
-                {item.recovery_version_id && (
-                  <p>
-                    {t("settings.upgrade.recoveryVersion", {
-                      id: item.recovery_version_id,
-                    })}
-                  </p>
-                )}
+                {recoveryLink(item)}
               </li>
             ))}
           </ul>
@@ -199,15 +268,9 @@ export default function RepairControls({
                     i18n.language,
                     t("settings.upgrade.unknown"),
                   )}{" "}
-                  · {item.result.flow_id} ·{" "}
+                  · {flowLink(item.result.flow_id)} ·{" "}
                   {t(`settings.upgrade.repairStatus.${item.result.status}`)}
-                  {item.result.recovery_version_id && (
-                    <p>
-                      {t("settings.upgrade.recoveryVersion", {
-                        id: item.result.recovery_version_id,
-                      })}
-                    </p>
-                  )}
+                  {recoveryLink(item.result)}
                 </li>
               ))}
             </ul>

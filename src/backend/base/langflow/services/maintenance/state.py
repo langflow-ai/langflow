@@ -52,9 +52,9 @@ async def maintenance_status(session: AsyncSession, *, include_details: bool = T
         maintenance=row.enabled if row else False,
         reason=row.reason if row else None,
         set_by=row.set_by if row and include_details else None,
-        set_at=(row.set_at if row.set_at.tzinfo else row.set_at.replace(tzinfo=timezone.utc)) if row else None,
         queued_jobs=counts.get(JobStatus.QUEUED, 0),
         running_jobs=counts.get(JobStatus.IN_PROGRESS, 0),
+        set_at=(row.set_at if row.set_at.tzinfo else row.set_at.replace(tzinfo=timezone.utc)) if row else None,
     )
 
 

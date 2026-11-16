@@ -162,7 +162,18 @@ EXPECTED_FIELDS = {
     "audit_enabled",
     "audit_retention_days",
     "audit_exclude_events",
+    "audit_trusted_api_key_ids",
+    "audit_trusted_api_key",
     "max_flow_version_entries_per_flow",
+    # EvalsSettings
+    "evals_max_items",
+    "evals_row_concurrency",
+    "evals_max_concurrency",
+    "evals_row_timeout_s",
+    "evals_actual_output_max_chars",
+    "evals_csv_max_rows",
+    "evals_csv_max_bytes",
+    "evals_abort_after_identical_failures",
     # SecuritySettings
     "cors_origins",
     "cors_allow_credentials",

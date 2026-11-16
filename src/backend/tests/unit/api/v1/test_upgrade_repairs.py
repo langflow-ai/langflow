@@ -570,7 +570,15 @@ async def test_delegated_repairs_enforce_actual_owner_policy_without_hydration(
     actor_id, headers = repair_admin
     data, target = _delegated_repair_fixture(kind, override=override)
     if nested:
-        data = {"nodes": [{"id": "model-group", "data": {"node": {"flow": {"data": data}}}}], "edges": []}
+        data = {
+            "nodes": [
+                {
+                    "id": "model-group",
+                    "data": {"id": "model-group", "node": {"template": {}, "flow": {"data": data}}},
+                }
+            ],
+            "edges": [],
+        }
     workspace_id = uuid4()
     async with session_scope() as session:
         folder = Folder(name=f"delegated-owner-{uuid4()}", user_id=active_user.id, workspace_id=workspace_id)

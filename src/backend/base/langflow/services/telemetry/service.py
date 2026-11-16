@@ -314,9 +314,11 @@ class TelemetryService(Service):
                 raise exc
 
     async def stop(self) -> None:
-        if self.do_not_track or self._stopping:
+        if not self.running or self.do_not_track or self._stopping:
             return
         try:
+            # Queue the final event before closing the queue to new events.
+            await self.log_package_shutdown()
             self._stopping = True
             # flush all the remaining events and then stop
             await self.flush()

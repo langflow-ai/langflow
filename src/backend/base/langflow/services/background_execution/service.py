@@ -895,6 +895,9 @@ class BackgroundExecutionService(Service):
             return
         if self._scaled:
             return
+        if await writes_paused():
+            self._schedule_maintenance_recovery()
+            return
         job_service = get_job_service()
         lease_ttl = self._settings.background_lease_ttl_s
         # Single-flight the IN_PROGRESS reconcile: only the worker that wins the

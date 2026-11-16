@@ -465,6 +465,8 @@ class TestDirectModuleImports:
                         "altk",
                         "langchain_ibm",
                         "ibm_watsonx_ai",
+                        # litellm (via toolguard) still imports sre_constants, removed in Python 3.15.
+                        "sre_constants",
                         # Bundle distributions that can be temporarily unpublished;
                         # the relocation shim raises with the distribution name.
                         "lfx-openai",

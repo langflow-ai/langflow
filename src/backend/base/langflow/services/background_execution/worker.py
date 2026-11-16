@@ -75,6 +75,14 @@ class WorkerJobRunner:
         return _default_frame_source_factory
 
     async def run(self, job_id: str) -> None:
+        """Recheck admission after claiming; a queued owner is not a repair caller."""
+        from langflow.api.utils.migration_pause import async_writing
+
+        async with async_writing("task", name="scaled_background_run") as admitted:
+            if admitted:
+                await self._run(job_id)
+
+    async def _run(self, job_id: str) -> None:
         """Hydrate the durable job and drive it to a terminal state."""
         from uuid import UUID
 
@@ -223,19 +231,22 @@ async def _roster_beat(
     Callers hold ``_roster_writes`` across their read-then-write, so this does
     not take it: an ``asyncio.Lock`` is not reentrant.
     """
+    from langflow.api.utils.migration_pause import async_writing
     from langflow.services.database.models.worker_registry.crud import heartbeat_worker
     from langflow.services.deps import session_scope
 
     with contextlib.suppress(Exception):
-        async with session_scope() as session:
-            await heartbeat_worker(
-                session,
-                owner=owner,
-                state=state,
-                current_job_id=current_job_id,
-                pid=os.getpid(),
-                host=socket.gethostname(),
-            )
+        async with async_writing(name="worker_roster_heartbeat") as admitted:
+            if admitted:
+                async with session_scope() as session:
+                    await heartbeat_worker(
+                        session,
+                        owner=owner,
+                        state=state,
+                        current_job_id=current_job_id,
+                        pid=os.getpid(),
+                        host=socket.gethostname(),
+                    )
 
 
 # Roster beats per online window. The collector counts a worker online for one
@@ -312,6 +323,8 @@ async def run_worker_loop(
             which is what the refresh exists to prevent. Callers derive it from
             the same setting the collector uses as the online window.
     """
+    from langflow.api.utils.migration_pause import async_writing
+
     # Startup reconcile: requeue work lost by a previously-crashed worker. A
     # database briefly unreachable at boot must not stop this worker from ever
     # starting, so the pass is best effort and the periodic watchdog retries it.
@@ -339,8 +352,10 @@ async def run_worker_loop(
         # register() writes a fresh IDLE row, so the worker is visible from the
         # moment it boots rather than from its first beat.
         with contextlib.suppress(Exception):
-            async with session_scope() as session:
-                await register_worker(session, owner=owner, pid=os.getpid(), host=socket.gethostname())
+            async with async_writing(name="worker_roster_registration") as admitted:
+                if admitted:
+                    async with session_scope() as session:
+                        await register_worker(session, owner=owner, pid=os.getpid(), host=socket.gethostname())
         roster_task = asyncio.create_task(
             _roster_loop(
                 owner=owner,
@@ -394,9 +409,12 @@ async def run_worker_loop(
             # have not yet flipped to IN_PROGRESS. Best-effort.
             if job_service is not None and owner is not None:
                 with contextlib.suppress(Exception):
-                    if await job_service.heartbeat(_coerce_uuid(job_id), owner) is False:
-                        await logger.awarning(f"Worker: job {job_id} lost its claim before starting; skipping")
-                        continue
+                    async with async_writing(name="worker_claim_heartbeat") as admitted:
+                        if not admitted:
+                            continue
+                        if await job_service.heartbeat(_coerce_uuid(job_id), owner) is False:
+                            await logger.awarning(f"Worker: job {job_id} lost its claim before starting; skipping")
+                            continue
             current_job_id = _coerce_uuid(job_id)
             if roster:
                 # A transition, so beat now instead of waiting out the interval:
@@ -458,8 +476,10 @@ async def run_worker_loop(
             from langflow.services.deps import session_scope
 
             with contextlib.suppress(Exception):
-                async with session_scope() as session:
-                    await deregister_worker(session, owner=owner)
+                async with async_writing(name="worker_roster_shutdown") as admitted:
+                    if admitted:
+                        async with session_scope() as session:
+                            await deregister_worker(session, owner=owner)
 
 
 async def build_worker(*, owner: str | None = None):

@@ -14,6 +14,8 @@ import { useFlowVersionSidebar } from "./use-flow-version-sidebar";
 
 export default function FlowVersionSidebarContent({
   flowId,
+  requestedVersionId,
+  onVersionLinkConsumed,
 }: FlowVersionSidebarContentProps) {
   const { t } = useTranslation();
   const {
@@ -32,7 +34,7 @@ export default function FlowVersionSidebarContent({
     handleSelectEntry,
     handleExport,
     handleDelete,
-  } = useFlowVersionSidebar(flowId);
+  } = useFlowVersionSidebar(flowId, requestedVersionId, onVersionLinkConsumed);
 
   return (
     <>

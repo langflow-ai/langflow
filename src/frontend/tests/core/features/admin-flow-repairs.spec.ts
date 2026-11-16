@@ -174,8 +174,10 @@ test(
       expect(outcome.recovery_version_id).toBeTruthy();
       const recoveryId = outcome.recovery_version_id!;
       await expect(
-        page.getByRole("list", { name: "Update results" }),
-      ).toContainText(`Protected recovery version ${recoveryId}`);
+        page.getByRole("list", { name: "Update results" }).getByRole("link", {
+          name: `Review protected recovery version for ${name}`,
+        }),
+      ).toHaveAttribute("href", `/flow/${selected.id}?version=${recoveryId}`);
       await page.getByText("Saved update outcomes", { exact: true }).click();
       await expect(
         page.getByText("Showing 1 of 1 saved outcomes"),

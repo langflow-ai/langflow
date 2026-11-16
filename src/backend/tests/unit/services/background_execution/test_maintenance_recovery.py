@@ -85,6 +85,8 @@ async def test_maintenance_reenabled_during_recovery_does_not_drop_startup_work(
         await asyncio.wait_for(toggled.wait(), timeout=4)
         # Its re-entered sweep must observe the new pause before it is cleared.
         await asyncio.wait_for(recovery, timeout=4)
+        assert service._maintenance_recovery_task is not recovery
+        assert not service._maintenance_recovery_task.done()
         assert (await jobs.get_job_by_job_id(job_id)).status == JobStatus.QUEUED
         await _set_paused(enabled=False)
         await _finished(job_id)

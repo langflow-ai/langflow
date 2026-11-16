@@ -454,14 +454,16 @@ def test_dry_run_time_limit(monkeypatch, target):
     flow = {"nodes": [{"id": "CallsOut-1", "data": {"type": "CallsOut", "node": saved}}], "edges": []}
     entry, _ = build_custom_component_template(Component(_code=code))
 
-    [node], _ = check_nodes(flow, _with(target, {"CallsOut": entry}), user_id=OWNER)
+    try:
+        [node], _ = check_nodes(flow, _with(target, {"CallsOut": entry}), user_id=OWNER)
 
-    assert [reason["code"] for reason in node.reasons] == ["could_not_verify"]
-    assert "did not finish in 0.2 seconds" in node.reasons[0]["message"]
-    # The network stays refused until the abandoned update ends; let it end before other tests.
-    for thread in threading.enumerate():
-        if thread.name == "upgrade-check-dry-run":
-            thread.join()
+        assert [reason["code"] for reason in node.reasons] == ["could_not_verify"]
+        assert "did not finish in 0.2 seconds" in node.reasons[0]["message"]
+    finally:
+        # The guard remains active until the abandoned update ends, even if an assertion fails.
+        for thread in threading.enumerate():
+            if thread.name == "upgrade-check-dry-run":
+                thread.join()
 
 
 def test_missing_custom_type(target):

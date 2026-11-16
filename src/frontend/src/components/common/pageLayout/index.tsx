@@ -49,7 +49,7 @@ export default function PageLayout({
                   >
                     <ForwardedIconComponent
                       name="ChevronLeft"
-                      className="flex cursor-pointer"
+                      className="flex size-6 cursor-pointer"
                     />
                   </Button>
                 )}

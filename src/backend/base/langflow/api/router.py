@@ -65,6 +65,7 @@ from langflow.api.v2 import policy_bundle_router as policy_bundle_router_v2
 from langflow.api.v2 import registration_router as registration_router_v2
 from langflow.api.v2 import workflow_background_router as workflow_background_router_v2
 from langflow.api.v2 import workflow_public_router as workflow_public_router_v2
+from langflow.api.v2.workflow import reject_legacy_global_var_headers
 from langflow.api.v2.workflow_host import LangflowWorkflowHost
 
 router_v1 = APIRouter(
@@ -92,6 +93,16 @@ def include_migration_router(target_router: APIRouter) -> None:
     """Mount the instance migration routes only when the feature is enabled."""
     if FEATURE_FLAGS.instance_migration:
         target_router.include_router(migration_router)
+
+
+def include_evals_routers(target_router: APIRouter) -> None:
+    """Mount the Evals routes (datasets, evaluations, runs) only when the feature is enabled."""
+    if FEATURE_FLAGS.evals:
+        from langflow.api.v1.datasets import router as datasets_router
+        from langflow.api.v1.evaluations import router as evaluations_router
+
+        target_router.include_router(datasets_router)
+        target_router.include_router(evaluations_router)
 
 
 router_v1.include_router(flow_conflict_router)
@@ -154,6 +165,7 @@ router_v1.include_router(trigger_ingress_router)
 router_v1.include_router(extensions_router)
 include_deployment_router(router_v1)
 include_migration_router(router_v1)
+include_evals_routers(router_v1)
 
 
 # Agentic flow execution - lazy import to avoid circular dependency
@@ -201,6 +213,7 @@ router_v2.include_router(
         developer_api_guard=False,
         auto_register_job_routes=False,
         responses=WORKFLOW_EXECUTION_RESPONSES,
+        extra_dependencies=[Depends(reject_legacy_global_var_headers)],
     )
 )
 # The langflow-owned durable routes: GET status, POST /stop, GET /{job_id}/events.

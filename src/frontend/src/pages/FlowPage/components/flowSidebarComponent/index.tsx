@@ -52,6 +52,7 @@ import {
   type SidebarSearchItem,
   useSidebarSearch,
 } from "./hooks/useSidebarSearch";
+import { useVersionHistoryLink } from "./hooks/useVersionHistoryLink";
 
 const CATEGORIES = SIDEBAR_CATEGORIES;
 const BUNDLES = SIDEBAR_BUNDLES;
@@ -374,6 +375,10 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     ENABLE_NEW_SIDEBAR && activeSection === "versions" && sidebarOpen;
 
   const currentFlowForVersions = useFlowStore((state) => state.currentFlow);
+  const { requestedVersionId, consumeVersionLink } = useVersionHistoryLink(
+    currentFlowForVersions?.id,
+    ENABLE_NEW_SIDEBAR,
+  );
 
   const showTraces = ENABLE_NEW_SIDEBAR && activeSection === "traces";
   const showMemories = ENABLE_NEW_SIDEBAR && activeSection === "memories";
@@ -453,7 +458,12 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
           )}
         >
           {showVersions && currentFlowForVersions?.id ? (
-            <FlowVersionSidebarContent flowId={currentFlowForVersions.id} />
+            <FlowVersionSidebarContent
+              key={currentFlowForVersions.id}
+              flowId={currentFlowForVersions.id}
+              requestedVersionId={requestedVersionId}
+              onVersionLinkConsumed={consumeVersionLink}
+            />
           ) : (
             <>
               {isFullSidebarPanelMounted && (

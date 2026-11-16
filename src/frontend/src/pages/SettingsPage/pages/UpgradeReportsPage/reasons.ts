@@ -1,3 +1,38 @@
+import { isAxiosError } from "axios";
+
+const requestErrors: Record<string, { status: number; key: string }> = {
+  "Wait for running jobs to finish before applying repairs": {
+    status: 409,
+    key: "settings.upgrade.runningJobsRefusal",
+  },
+  "Enable database maintenance before applying repairs": {
+    status: 409,
+    key: "settings.upgrade.freezeRequired",
+  },
+  "The instance migration pause does not permit repairs": {
+    status: 503,
+    key: "settings.upgrade.freezeRequired",
+  },
+  "The target registry changed. Preview the selected flows again": {
+    status: 409,
+    key: "settings.upgrade.targetChanged",
+  },
+  "The flow changed during repair": {
+    status: 409,
+    key: "settings.upgrade.flowChanged",
+  },
+};
+
+export function repairRequestErrorKey(error: unknown): string {
+  if (isAxiosError<{ detail?: unknown }>(error)) {
+    const detail = error.response?.data?.detail;
+    const known =
+      typeof detail === "string" ? requestErrors[detail] : undefined;
+    if (known && known.status === error.response?.status) return known.key;
+  }
+  return "settings.upgrade.repairError";
+}
+
 const categories: Record<string, string> = {
   malformed_graph: "invalid",
   malformed_node: "invalid",

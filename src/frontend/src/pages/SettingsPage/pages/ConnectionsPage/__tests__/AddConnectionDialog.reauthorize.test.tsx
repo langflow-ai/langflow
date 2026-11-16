@@ -298,10 +298,6 @@ describe("AddConnectionDialog re-authorize", () => {
 
       if (mode === "create") {
         await userEvent.type(screen.getByTestId("connection-name"), "work");
-        await userEvent.type(
-          screen.getByTestId("connection-display-name"),
-          "Work Google",
-        );
         await userEvent.click(screen.getByTestId("connection-continue"));
       } else {
         await userEvent.click(screen.getByTestId("connection-authorize"));
@@ -347,7 +343,6 @@ describe("AddConnectionDialog re-authorize", () => {
 
       if (mode === "create") {
         await user.type(screen.getByTestId("connection-name"), "work");
-        await user.type(screen.getByTestId("connection-display-name"), "Work");
         await user.click(screen.getByTestId("connection-continue"));
       } else {
         await user.click(screen.getByTestId("connection-authorize"));
@@ -1012,10 +1007,6 @@ describe("AddConnectionDialog create flow", () => {
       }
 
       await userEvent.type(screen.getByTestId("connection-name"), "outlook");
-      await userEvent.type(
-        screen.getByTestId("connection-display-name"),
-        "Outlook",
-      );
       await userEvent.click(screen.getByTestId("connection-continue"));
       await waitFor(() =>
         expect(mockStartOAuth).toHaveBeenCalledWith({
@@ -1076,10 +1067,6 @@ describe("Jira required connection scopes", () => {
 
   const startCreate = async () => {
     await userEvent.type(screen.getByTestId("connection-name"), "qa831_noofl");
-    await userEvent.type(
-      screen.getByTestId("connection-display-name"),
-      "Jira QA",
-    );
     await userEvent.click(screen.getByTestId("connection-continue"));
     await waitFor(() => expect(mockStartOAuth).toHaveBeenCalledTimes(1));
   };
@@ -1131,10 +1118,6 @@ describe("Jira required connection scopes", () => {
         await userEvent.type(
           screen.getByTestId("connection-name"),
           "qa831_noofl",
-        );
-        await userEvent.type(
-          screen.getByTestId("connection-display-name"),
-          "Jira QA",
         );
       }
       expect(

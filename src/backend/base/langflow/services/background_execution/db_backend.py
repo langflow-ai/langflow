@@ -122,11 +122,16 @@ class DBBackgroundQueue:
         worker that crashes before starting leaves the job re-claimable once its
         lease goes stale.
         """
-        job_id = await self._job_service.claim_next_queued_lease(
-            owner=self._owner or "worker:unknown",
-            lease_ttl_s=self._lease_ttl_s,
-            candidates=self._claim_candidates,
-        )
+        from langflow.api.utils.migration_pause import async_writing
+
+        job_id = None
+        async with async_writing(name="scaled_background_claim") as admitted:
+            if admitted:
+                job_id = await self._job_service.claim_next_queued_lease(
+                    owner=self._owner or "worker:unknown",
+                    lease_ttl_s=self._lease_ttl_s,
+                    candidates=self._claim_candidates,
+                )
         if job_id is not None:
             return str(job_id)
         await asyncio.sleep(max(block_ms, 0) / 1000.0)
@@ -164,15 +169,20 @@ class DBBackgroundQueue:
 
         Returns the ids flipped back to QUEUED.
         """
+        from langflow.api.utils.migration_pause import async_writing, writes_paused
+
         requeued: list[str] = []
-        for job_id in await self._job_service.in_progress_workflow_job_ids():
-            try:
-                await self._reconcile_one(job_id, lease_ttl_s=lease_ttl_s, requeued=requeued)
-            except Exception:  # noqa: BLE001 -- one bad row must not abandon the rest of the pass
-                # in_progress_workflow_job_ids has no ordering, so without this a row
-                # that always raises strands whichever rows the database happens to
-                # return after it, every pass, for as long as it exists.
-                await logger.aexception(f"Worker: lease reconcile failed for job {job_id}; continuing")
+        async with async_writing(name="scaled_background_recovery") as admitted:
+            if not admitted:
+                return requeued
+            for job_id in await self._job_service.in_progress_workflow_job_ids():
+                if await writes_paused():
+                    break
+                try:
+                    await self._reconcile_one(job_id, lease_ttl_s=lease_ttl_s, requeued=requeued)
+                except Exception:  # noqa: BLE001 -- one bad row must not abandon the rest of the pass
+                    # One bad row must not strand the other orphans on every pass.
+                    await logger.aexception(f"Worker: lease reconcile failed for job {job_id}; continuing")
         return requeued
 
     async def _reconcile_one(self, job_id, *, lease_ttl_s: float, requeued: list[str]) -> None:

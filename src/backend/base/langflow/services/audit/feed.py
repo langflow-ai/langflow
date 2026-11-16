@@ -89,6 +89,8 @@ class AuditFeedFilters:
     user_id: UUID | None = None
     actor_id: UUID | None = None
     request_id: UUID | None = None
+    represented_issuer: str | None = None
+    represented_subject: str | None = None
     since: datetime | None = None
     until: datetime | None = None
     search: str | None = None
@@ -112,6 +114,8 @@ class AuditFeedFilters:
             "until": to_utc(self.until).isoformat() if self.until else None,
             "search": self.search,
         }
+        if self.represented_subject is not None or self.represented_issuer is not None:
+            canonical.update(represented_issuer=self.represented_issuer, represented_subject=self.represented_subject)
         encoded = json.dumps(canonical, sort_keys=True, separators=(",", ":")).encode("utf-8")
         return hashlib.sha256(encoded).hexdigest()
 
@@ -189,6 +193,10 @@ def resource_clauses(filters: AuditFeedFilters) -> list[ColumnElement[bool]] | N
         clauses.append(col(AuditEvent.actor_type).in_(_sorted(filters.actor_types)))
     if filters.request_id is not None:
         clauses.append(col(AuditEvent.request_id) == filters.request_id)
+    if filters.represented_subject is not None:
+        clauses.append(col(AuditEvent.represented_subject) == filters.represented_subject)
+    if filters.represented_issuer is not None:
+        clauses.append(col(AuditEvent.represented_issuer) == filters.represented_issuer)
     return clauses
 
 
@@ -215,7 +223,12 @@ def _authz_actor_clause(actor_types: frozenset[str]) -> ColumnElement[bool]:
 
 def authz_clauses(filters: AuditFeedFilters) -> list[ColumnElement[bool]] | None:
     """Clauses over ``authz_audit_log``, or None when no row there can match."""
-    if not filters.includes(AuditSource.AUTHZ) or filters.operations:
+    if (
+        not filters.includes(AuditSource.AUTHZ)
+        or filters.operations
+        or filters.represented_subject is not None
+        or filters.represented_issuer is not None
+    ):
         return None
     results = filters.results & AUTHZ_RESULTS if filters.results else AUTHZ_RESULTS
     if not results:

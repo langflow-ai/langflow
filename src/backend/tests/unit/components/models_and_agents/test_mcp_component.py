@@ -1073,6 +1073,73 @@ class TestMCPComponentGlobalVariableResolution:
     }
     DB_VARIABLES = {"AUTH-VAR1": "var1-placeholder", "AUTH-VAR2": "my-api-key"}
 
+    @pytest.fixture(autouse=True)
+    def mcp_settings_service(self):
+        return get_settings_service()
+
+    @pytest.mark.parametrize(
+        ("method", "use_cache", "legacy_cache"),
+        [
+            ("update_tool_list", True, False),
+            ("_get_tools", False, False),
+            ("_get_tools", True, False),
+            ("update_tool_list", True, True),
+        ],
+    )
+    @pytest.mark.asyncio
+    async def test_deleted_header_variable_cannot_reuse_cached_tools(self, method, use_cache, legacy_cache):
+        """Recheck stored credentials after deletion through both component cache paths."""
+        from uuid import uuid4
+
+        from lfx.base.agents.utils import safe_cache_set
+        from lfx.services.variable.exceptions import RuntimeVariableError
+        from mcp.types import Tool
+
+        variables = {"QA2873_C_SEC": "opaque-{{NOT_A_REFERENCE}}"}
+
+        class UnmanagedService:
+            async def get_account_bound_variables(self, **_kwargs):
+                return None
+
+            async def get_all_decrypted_variables(self, **_kwargs):
+                return dict(variables)
+
+        component = MCPToolsComponent()
+        component.mcp_server = "test_server"
+        component._user_id = str(uuid4())
+        component.use_cache = use_cache
+        component.streamable_http_client._connected = True
+        config = {"url": "https://echo.invalid/mcp", "headers": {"Authorization": "{{QA2873_C_SEC}}"}}
+        if legacy_cache:
+            safe_cache_set(
+                component._shared_component_cache,
+                "servers",
+                {
+                    component._mcp_servers_cache_key("test_server"): {
+                        "tools": [MagicMock(name="stale-tool")],
+                        "config": config,
+                        "tool_cache": {},
+                    }
+                },
+            )
+        connect = AsyncMock(return_value=[Tool(name="echo", inputSchema={"type": "object", "properties": {}})])
+        with (
+            patch("langflow.api.v2.mcp.get_server", new=AsyncMock(return_value=config)),
+            patch(
+                "langflow.services.database.models.user.crud.get_user_by_id", new=AsyncMock(return_value=MagicMock())
+            ),
+            patch("lfx.components.models_and_agents.mcp_component.session_scope"),
+            patch("lfx.services.deps.get_variable_service", return_value=UnmanagedService()),
+            patch("lfx.base.mcp.util.validate_strict_url_for_ssrf_or_raise"),
+            patch.object(component.streamable_http_client, "connect_to_server", new=connect),
+        ):
+            assert await getattr(component, method)()
+            assert connect.call_args.kwargs["headers"] == {"authorization": "opaque-{{NOT_A_REFERENCE}}"}
+            variables.clear()
+            with pytest.raises(RuntimeVariableError, match="QA2873_C_SEC"):
+                await getattr(component, method)()
+            assert connect.await_count == 1
+
     async def _run(
         self,
         context_variables,
