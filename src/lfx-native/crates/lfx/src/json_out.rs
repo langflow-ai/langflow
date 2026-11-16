@@ -1,17 +1,12 @@
 //! Writing JSON text fast, into a byte buffer.
 //!
-//! A flow graph is mostly string text, much of it component code.
-//! `serde_json` escapes a string one byte at a time, which would make
-//! string text most of the work of writing a graph.
-//! Here a string is scanned eight bytes at a time, and a byte is looked at
-//! on its own only where an escape starts. The text is the same text
-//! `serde_json` writes: `"` and `\` escaped, the control characters with
-//! the short forms where JSON has them and `\u00XX` (lower-case hex)
-//! otherwise, and with [`Ascii::Escape`] every character above U+007F as
-//! `\uXXXX`, as Python's `json.dumps` writes by default.
-//!
-//! Numbers are rare in a graph, and `serde_json` writes them, so their text
-//! cannot change.
+//! A flow graph is mostly string text, much of it component code, so a
+//! string is scanned eight bytes at a time, and a byte is looked at on its
+//! own only where an escape starts. A string is written with `"` and `\`
+//! escaped, the control characters with the short forms where JSON has them
+//! and `\u00XX` (lower-case hex) otherwise, and with [`Ascii::Escape`] every
+//! character above U+007F as `\uXXXX`, as Python's `json.dumps` writes by
+//! default. A number is written as its [`Number`] text.
 
 use crate::value::{AnyMap, AnyValue, Number};
 
@@ -57,7 +52,7 @@ fn special_bytes<const ESCAPE: bool>(word: u64) -> u64 {
     }
 }
 
-/// `\uXXXX` for a UTF-16 unit, in lower-case hex, as `serde_json` writes it.
+/// `\uXXXX` for a UTF-16 unit, in lower-case hex.
 fn unit_escape(unit: u16) -> [u8; 6] {
     const HEX: &[u8; 16] = b"0123456789abcdef";
     let digit = |shift: u16| HEX[usize::from((unit >> shift) & 0xf)];
@@ -132,9 +127,10 @@ fn write_str_with<const ESCAPE: bool>(out: &mut Vec<u8>, text: &str) {
     out.push(b'"');
 }
 
-/// Write a number as `serde_json` writes it.
+/// Write a number as its JSON text.
 pub(crate) fn write_number(out: &mut Vec<u8>, number: &Number) {
-    serde_json::to_writer(out, number).expect("a number is written to memory");
+    use std::io::Write as _;
+    write!(out, "{number}").expect("a number is written to memory");
 }
 
 /// Write a value as compact JSON text, object keys in their order.
@@ -214,28 +210,34 @@ mod tests {
 
     use super::*;
 
-    /// What `serde_json` writes, with every character above U+007F escaped
-    /// after, as the API wrote it before.
+    /// A string written one character at a time, by the rules the module
+    /// lists.
     fn reference(text: &str, ascii: Ascii) -> String {
-        let written = serde_json::to_string(text).unwrap();
-        if ascii == Ascii::Keep {
-            return written;
-        }
-        let mut out = String::new();
-        for character in written.chars() {
-            if character.is_ascii() {
-                out.push(character);
-            } else {
-                for unit in character.encode_utf16(&mut [0; 2]) {
-                    write!(out, "\\u{unit:04x}").unwrap();
+        let mut out = String::from('"');
+        for character in text.chars() {
+            match character {
+                '"' => out.push_str("\\\""),
+                '\\' => out.push_str("\\\\"),
+                '\n' => out.push_str("\\n"),
+                '\r' => out.push_str("\\r"),
+                '\t' => out.push_str("\\t"),
+                '\u{8}' => out.push_str("\\b"),
+                '\u{c}' => out.push_str("\\f"),
+                '\0'..='\u{1f}' => write!(out, "\\u{:04x}", u32::from(character)).unwrap(),
+                _ if ascii == Ascii::Escape && !character.is_ascii() => {
+                    for unit in character.encode_utf16(&mut [0; 2]) {
+                        write!(out, "\\u{unit:04x}").unwrap();
+                    }
                 }
+                _ => out.push(character),
             }
         }
+        out.push('"');
         out
     }
 
     #[test]
-    fn strings_are_written_as_serde_json_writes_them() {
+    fn strings_are_written_by_the_escape_rules() {
         let pieces = [
             "a", "\"", "\\", "\n", "\r", "\t", "\u{8}", "\u{c}", "\u{0}", "\u{1f}", "\u{7f}", "é",
             "œ", "😀", "\u{2028}", "\u{fffd}", "/",
@@ -260,12 +262,12 @@ mod tests {
     }
 
     #[test]
-    fn values_are_written_as_serde_json_writes_them() {
+    fn values_are_written_compact_in_their_order() {
         let text =
             r#"{"b":[1,-2,1.0,1e300,12345678901234567890123,null,true,false,{}],"a":"é\n","":[]}"#;
         let value: AnyValue = serde_json::from_str(text).unwrap();
         let mut out = Vec::new();
         write_value(&mut out, &value, Ascii::Keep);
-        assert_eq!(into_string(out), serde_json::to_string(&value).unwrap());
+        assert_eq!(into_string(out), text.replace("1e300", "1e+300"));
     }
 }

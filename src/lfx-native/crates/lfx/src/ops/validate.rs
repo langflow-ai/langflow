@@ -155,12 +155,6 @@ impl ViolationCode {
     }
 }
 
-impl fmt::Display for ViolationCode {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
-}
-
 /// Whether validation walks every value for numbers that are not finite.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Numbers {

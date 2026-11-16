@@ -23,16 +23,6 @@ pub enum Segment {
 }
 
 impl Segment {
-    /// The key of the list item this segment names, or `None` when it is an
-    /// object key. For example, `Item("r1")` gives `Some("r1")`.
-    #[must_use]
-    pub fn as_item(&self) -> Option<&str> {
-        match self {
-            Self::Key(_) => None,
-            Self::Item(key) => Some(key),
-        }
-    }
-
     /// The string this segment holds. An object key and a list item both
     /// name that string. For example, `Key("outputs")` and `Item("r1")` both
     /// give their text.

@@ -944,6 +944,7 @@ mod tests {
     use crate::value::AnyValue;
 
     use super::*;
+    use crate::ops::api::{graph_json, staged_graph_json};
     use crate::ops::edges::escape_handle;
     use crate::ops::replay::ReplayOptions;
     use crate::ops::schema::OUTPUTS_PATH;
@@ -981,7 +982,7 @@ mod tests {
             for backward in [false, true] {
                 let options = ApplyOptions { forward, backward };
                 let mut state = GraphState::new(graph.clone()).unwrap();
-                let before = state.to_json();
+                let before = graph_json(&state);
                 let applied = state
                     .apply(
                         operations(json!([
@@ -1027,7 +1028,7 @@ mod tests {
                 ]));
                 let error = state.apply(refused, options).unwrap_err();
                 assert!(error.to_string().contains("absent"));
-                assert_eq!(state.to_json(), before);
+                assert_eq!(graph_json(&state), before);
                 assert!(!state.is_staged());
             }
         }
@@ -1391,17 +1392,17 @@ mod tests {
         };
         let (expected_graph, expected) =
             apply_flow_operations(before.clone(), batch.clone(), options).unwrap();
-        assert!(state.staged_json().is_none(), "nothing is staged yet");
+        assert!(staged_graph_json(&state).is_none(), "nothing is staged yet");
         let staged = state.stage(batch, options).unwrap();
         assert_eq!(staged, expected);
         assert!(state.is_staged());
         assert_eq!(state.to_value(), before);
         assert_eq!(
-            serde_json::from_str::<AnyValue>(&state.to_json()).unwrap(),
+            serde_json::from_str::<AnyValue>(&graph_json(&state)).unwrap(),
             before
         );
         // The staged graph is the graph that keep makes, while the committed graph stays.
-        let staged_text = serde_json::to_string(&state.staged_json().unwrap()).unwrap();
+        let staged_text = staged_graph_json(&state).unwrap();
         assert!(
             crate::ops::canonical::graphs_equal(
                 &serde_json::from_str(&staged_text).unwrap(),
@@ -1411,11 +1412,11 @@ mod tests {
         );
         assert!(state.keep());
         assert!(!state.is_staged());
-        assert_eq!(state.to_json(), staged_text);
+        assert_eq!(graph_json(&state), staged_text);
         assert!(crate::ops::canonical::graphs_equal(&state.to_value(), &expected_graph).unwrap());
         assert!(!state.keep(), "nothing is staged after keep");
         assert!(
-            state.staged_json().is_none(),
+            staged_graph_json(&state).is_none(),
             "nothing is staged after keep"
         );
     }

@@ -18,11 +18,12 @@
 //!   kept: `1e2` and `100.0` are the same number, as the hash and `json.loads`
 //!   already read them.
 //!
-//! JSON text goes through `serde_json`'s parser and writer, by the
-//! [`serde::Deserialize`] and [`serde::Serialize`] implementations here.
-//! [`FiniteAnyValue`] parses text as [`AnyValue`] does, but refuses a number that
-//! is infinite as a double, as reading a Python `float` refuses Infinity.
+//! JSON text is parsed by the [`Deserialize`] implementations here and written
+//! by [`crate::json_out`]. [`FiniteAnyValue`] parses text as [`AnyValue`]
+//! does, but refuses a number that is infinite as a double, as reading a
+//! Python `float` refuses Infinity.
 
+use crate::json_out::{self, Ascii};
 use crate::ops::maps::{HashSet, IndexMap, State};
 use std::borrow::Borrow;
 use std::fmt;
@@ -31,7 +32,6 @@ use std::str::FromStr;
 use std::sync::{Arc, OnceLock};
 
 use serde::de::{self, Deserialize, DeserializeSeed, Deserializer, MapAccess, SeqAccess, Visitor};
-use serde::ser::{Serialize, SerializeMap, Serializer};
 
 /// Immutable text. Short text is held inline, with no allocation and no
 /// reference count; longer text is shared, and copies share its allocation.
@@ -78,12 +78,7 @@ impl std::hash::Hash for AnyString {
 }
 impl PartialOrd for AnyString {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-impl Ord for AnyString {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.as_str().cmp(other.as_str())
+        Some(self.as_str().cmp(other.as_str()))
     }
 }
 
@@ -186,11 +181,6 @@ impl PartialEq<&str> for AnyString {
         self.as_str() == *other
     }
 }
-impl Serialize for AnyString {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        serializer.serialize_str(self)
-    }
-}
 
 /// Text shared within one input. The pool ends when reading ends; values
 /// retain their own references. Separate inputs never retain each other.
@@ -274,27 +264,6 @@ pub enum AnyValue {
     Object(AnyMap),
 }
 
-/// The reference tokens of a JSON Pointer, unescaped: `~1` is `/` and `~0` is `~`.
-fn pointer_steps(pointer: &str) -> Option<Vec<String>> {
-    if pointer.is_empty() {
-        return Some(Vec::new());
-    }
-    let rest = pointer.strip_prefix('/')?;
-    Some(
-        rest.split('/')
-            .map(|step| step.replace("~1", "/").replace("~0", "~"))
-            .collect(),
-    )
-}
-
-/// An array index token: digits, with no leading zero.
-fn array_index(step: &str) -> Option<usize> {
-    if step.starts_with('+') || (step.len() > 1 && step.starts_with('0')) {
-        return None;
-    }
-    step.parse().ok()
-}
-
 /// Equality is reflexive: a number is never NaN.
 impl Eq for AnyValue {}
 
@@ -312,57 +281,10 @@ impl AnyValue {
         index.index_into_mut(self)
     }
 
-    /// The value at a JSON Pointer (RFC 6901), such as `/data/node/template`.
-    #[must_use]
-    pub fn pointer(&self, pointer: &str) -> Option<&AnyValue> {
-        pointer_steps(pointer)?
-            .into_iter()
-            .try_fold(self, |value, step| match value {
-                AnyValue::Object(map) => map.get(&step),
-                AnyValue::Array(items) => items.get(array_index(&step)?),
-                _ => None,
-            })
-    }
-
-    /// The value at a JSON Pointer (RFC 6901), to change it.
-    pub fn pointer_mut(&mut self, pointer: &str) -> Option<&mut AnyValue> {
-        pointer_steps(pointer)?
-            .into_iter()
-            .try_fold(self, |value, step| match value {
-                AnyValue::Object(map) => map.get_mut(&step),
-                AnyValue::Array(items) => items.get_mut(array_index(&step)?),
-                _ => None,
-            })
-    }
-
-    /// The value, leaving `null` in its place.
-    #[must_use = "the value is moved out"]
-    pub fn take(&mut self) -> AnyValue {
-        std::mem::take(self)
-    }
-
     /// Whether the value is `null`.
     #[must_use]
     pub fn is_null(&self) -> bool {
         matches!(self, AnyValue::Null)
-    }
-
-    /// Whether the value is `true` or `false`.
-    #[must_use]
-    pub fn is_boolean(&self) -> bool {
-        matches!(self, AnyValue::Bool(_))
-    }
-
-    /// Whether the value is a number.
-    #[must_use]
-    pub fn is_number(&self) -> bool {
-        matches!(self, AnyValue::Number(_))
-    }
-
-    /// Whether the value is a string.
-    #[must_use]
-    pub fn is_string(&self) -> bool {
-        matches!(self, AnyValue::String(_))
     }
 
     /// Whether the value is an array.
@@ -457,10 +379,12 @@ impl AnyValue {
     }
 }
 
-/// The JSON text of a value, compact.
+/// The JSON text of a value, compact, with its characters above U+007F as they are.
 impl fmt::Display for AnyValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&serde_json::to_string(self).map_err(|_| fmt::Error)?)
+        let mut out = Vec::new();
+        json_out::write_value(&mut out, self, Ascii::Keep);
+        f.write_str(&json_out::into_string(out))
     }
 }
 
@@ -722,28 +646,6 @@ impl Entries {
             Self::Indexed(v) => Arc::make_mut(v).shift_remove(key),
         }
     }
-    fn swap_remove(&mut self, key: &str) -> Option<AnyValue> {
-        match self {
-            Self::Small(v) => {
-                let slot = v.iter().position(|(k, _)| k.as_str() == key)?;
-                let mut rows = take_rows(v);
-                let removed = rows.swap_remove(slot).1;
-                *v = Arc::from(rows);
-                Some(removed)
-            }
-            Self::Indexed(v) => Arc::make_mut(v).swap_remove(key),
-        }
-    }
-    fn retain(&mut self, mut keep: impl FnMut(&AnyString, &mut AnyValue) -> bool) {
-        match self {
-            Self::Small(v) => {
-                let mut rows = take_rows(v);
-                rows.retain_mut(|(k, v)| keep(k, v));
-                *v = Arc::from(rows);
-            }
-            Self::Indexed(v) => Arc::make_mut(v).retain(keep),
-        }
-    }
     fn iter(&self) -> Iter<'_> {
         Iter(match self {
             Self::Small(v) => IterInner::Small(v.iter()),
@@ -799,8 +701,6 @@ impl PartialEq for AnyMap {
             || (self.len() == other.len() && self.iter().eq(other.iter()))
     }
 }
-
-impl Eq for AnyMap {}
 
 impl AnyMap {
     /// The address of the shared entries: equal for two copies that share them.
@@ -891,11 +791,6 @@ impl AnyMap {
         self.shift_remove(key)
     }
 
-    /// Remove a key, moving the last entry into its place.
-    pub fn swap_remove(&mut self, key: &str) -> Option<AnyValue> {
-        self.entries_mut().swap_remove(key)
-    }
-
     /// Remove a key, keeping the order of the others.
     pub fn shift_remove(&mut self, key: &str) -> Option<AnyValue> {
         self.entries_mut().shift_remove(key)
@@ -909,11 +804,6 @@ impl AnyMap {
             None => entries.insert_full(key.into(), AnyValue::Null).0,
         };
         entries.index_mut(index)
-    }
-
-    /// Keep the entries `keep` holds for, in order.
-    pub fn retain(&mut self, keep: impl FnMut(&AnyString, &mut AnyValue) -> bool) {
-        self.entries_mut().retain(keep);
     }
 
     /// The entries, to change them: copied first while a clone shares them.
@@ -940,13 +830,6 @@ impl AnyMap {
     /// The values, in order.
     pub fn values(&self) -> impl DoubleEndedIterator<Item = &AnyValue> + ExactSizeIterator {
         self.iter().map(|(_, value)| value)
-    }
-
-    /// The values, in order, to change them.
-    pub fn values_mut(
-        &mut self,
-    ) -> impl DoubleEndedIterator<Item = &mut AnyValue> + ExactSizeIterator {
-        self.iter_mut().map(|(_, value)| value)
     }
 }
 
@@ -1068,15 +951,6 @@ impl IntoIterator for AnyMap {
     }
 }
 
-/// Insert each entry: a repeated key keeps its first position and its last value.
-impl<K: Into<AnyString>> Extend<(K, AnyValue)> for AnyMap {
-    fn extend<T: IntoIterator<Item = (K, AnyValue)>>(&mut self, entries: T) {
-        for (key, value) in entries {
-            self.insert_shared(key.into(), value);
-        }
-    }
-}
-
 impl<K: Into<AnyString>> FromIterator<(K, AnyValue)> for AnyMap {
     fn from_iter<T: IntoIterator<Item = (K, AnyValue)>>(entries: T) -> Self {
         Self::from_entries(
@@ -1101,9 +975,6 @@ impl Index<&str> for AnyMap {
 /// A JSON number: an integer or a double, or the text of one that neither holds exactly.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Number(N);
-
-/// Equality is reflexive: a double here is always finite, never NaN.
-impl Eq for Number {}
 
 #[derive(Debug, Clone, PartialEq)]
 enum N {
@@ -1194,23 +1065,18 @@ impl From<u64> for Number {
     }
 }
 
-impl From<i32> for Number {
-    fn from(int: i32) -> Self {
-        Number::from(i64::from(int))
-    }
+/// `From` each narrower integer type for [`Number`], through the 64-bit type that holds it.
+macro_rules! number_from {
+    ($($int:ty => $wide:ty),*) => {$(
+        impl From<$int> for Number {
+            #[allow(clippy::cast_lossless, reason = "`From<usize>` for `u64` does not exist")]
+            fn from(int: $int) -> Self {
+                Number::from(int as $wide)
+            }
+        }
+    )*};
 }
-
-impl From<u32> for Number {
-    fn from(int: u32) -> Self {
-        Number::from(u64::from(int))
-    }
-}
-
-impl From<usize> for Number {
-    fn from(int: usize) -> Self {
-        Number(N::PosInt(int as u64))
-    }
-}
+number_from!(i32 => i64, u32 => u64, usize => u64);
 
 /// The text of a JSON number is not a number.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1284,7 +1150,8 @@ fn is_json_number(text: &str) -> bool {
     at == bytes.len()
 }
 
-/// The number's JSON text: integers in full, doubles as `serde_json` writes them, text as it is.
+/// The number's JSON text: integers in full, doubles in the shortest form that
+/// reads back as the same double (`1.0`, `1e+300`), and text as it is.
 impl fmt::Display for Number {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.0 {
@@ -1298,70 +1165,19 @@ impl fmt::Display for Number {
 
 // --- Conversions -----------------------------------------------------------------------------
 
-impl From<bool> for AnyValue {
-    fn from(flag: bool) -> Self {
-        AnyValue::Bool(flag)
-    }
+/// `From` each listed type for [`AnyValue`], converted into the variant that holds it.
+macro_rules! value_from {
+    ($($variant:ident: $($from:ty),+;)*) => {$($(
+        impl From<$from> for AnyValue {
+            fn from(value: $from) -> Self {
+                AnyValue::$variant(value.into())
+            }
+        }
+    )+)*};
 }
-
-impl From<&str> for AnyValue {
-    fn from(text: &str) -> Self {
-        AnyValue::String(text.into())
-    }
-}
-
-impl From<String> for AnyValue {
-    fn from(text: String) -> Self {
-        AnyValue::String(text.into())
-    }
-}
-
-impl From<&String> for AnyValue {
-    fn from(text: &String) -> Self {
-        AnyValue::String(text.as_str().into())
-    }
-}
-
-impl From<AnyString> for AnyValue {
-    fn from(text: AnyString) -> Self {
-        AnyValue::String(text)
-    }
-}
-
-impl From<Number> for AnyValue {
-    fn from(number: Number) -> Self {
-        AnyValue::Number(number)
-    }
-}
-
-impl From<i64> for AnyValue {
-    fn from(int: i64) -> Self {
-        AnyValue::Number(int.into())
-    }
-}
-
-impl From<u64> for AnyValue {
-    fn from(int: u64) -> Self {
-        AnyValue::Number(int.into())
-    }
-}
-
-impl From<i32> for AnyValue {
-    fn from(int: i32) -> Self {
-        AnyValue::Number(int.into())
-    }
-}
-
-impl From<u32> for AnyValue {
-    fn from(int: u32) -> Self {
-        AnyValue::Number(int.into())
-    }
-}
-
-impl From<usize> for AnyValue {
-    fn from(int: usize) -> Self {
-        AnyValue::Number(int.into())
-    }
+value_from! {
+    String: &str, String;
+    Number: i64, u64, i32, u32, usize;
 }
 
 /// A finite double, or `null` for a double that is not finite.
@@ -1395,7 +1211,7 @@ impl<T: Into<AnyValue>> FromIterator<T> for AnyValue {
     }
 }
 
-/// A `serde_json` value, for the `json!` macro and for callers that hold one.
+/// A value the `json!` macro builds.
 impl From<serde_json::Value> for AnyValue {
     fn from(value: serde_json::Value) -> Self {
         match value {
@@ -1424,10 +1240,13 @@ macro_rules! json {
     };
 }
 
-// --- serde ------------------------------------------------------------------------------------
+// --- json! ------------------------------------------------------------------------------------
+//
+// `json!` builds a `serde_json` value and converts it ([`AnyValue::from`]). These let a value
+// that is already an `AnyValue` be placed inside one. Nothing else writes through them.
 
-impl Serialize for AnyValue {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+impl serde::Serialize for AnyValue {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         match self {
             AnyValue::Null => serializer.serialize_unit(),
             AnyValue::Bool(flag) => serializer.serialize_bool(*flag),
@@ -1439,23 +1258,19 @@ impl Serialize for AnyValue {
     }
 }
 
-impl Serialize for AnyMap {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut out = serializer.serialize_map(Some(self.len()))?;
-        for (key, value) in self {
-            out.serialize_entry(key, value)?;
-        }
-        out.end()
+impl serde::Serialize for AnyMap {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.collect_map(self.iter().map(|(key, value)| (key.as_str(), value)))
     }
 }
 
-impl Serialize for Number {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+impl serde::Serialize for Number {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         match &self.0 {
             N::PosInt(int) => serializer.serialize_u64(*int),
             N::NegInt(int) => serializer.serialize_i64(*int),
             N::Float(float) => serializer.serialize_f64(*float),
-            // serde_json writes a number's text as it is with arbitrary_precision.
+            // A number kept as text stays text: `json!` keeps it with arbitrary_precision.
             N::Text(text) => serde_json::Number::from_str(text)
                 .map_err(serde::ser::Error::custom)?
                 .serialize(serializer),
@@ -1463,7 +1278,9 @@ impl Serialize for Number {
     }
 }
 
-/// With `arbitrary_precision`, `serde_json` gives a number to a visitor as a
+// --- Parsing ----------------------------------------------------------------------------------
+
+/// With `arbitrary_precision`, the parser gives a number to a visitor as a
 /// one-key map that holds its text.
 const NUMBER_TOKEN: &str = "$serde_json::private::Number";
 
@@ -1831,19 +1648,17 @@ mod tests {
     }
 
     #[test]
-    fn remove_keeps_the_order_and_swap_remove_moves_the_last_entry() {
+    fn remove_keeps_the_order() {
         let mut map: AnyMap = parse(r#"{"a": 1, "b": 2, "c": 3}"#)
             .as_object()
             .unwrap()
             .clone();
         let mut shifted = map.clone();
-        let mut swapped = map.clone();
         map.remove("a");
         shifted.shift_remove("a");
-        swapped.swap_remove("a");
+
         assert_eq!(AnyValue::Object(map).to_string(), r#"{"b":2,"c":3}"#);
         assert_eq!(AnyValue::Object(shifted).to_string(), r#"{"b":2,"c":3}"#);
-        assert_eq!(AnyValue::Object(swapped).to_string(), r#"{"c":3,"b":2}"#);
     }
 
     #[test]
@@ -1889,7 +1704,7 @@ mod tests {
             assert_eq!(map.keys().next().unwrap().as_str(), "k0");
             assert_eq!(original.get("k0"), Some(&AnyValue::from(0)));
             let mut value = AnyValue::Object(map);
-            *value.pointer_mut("/k0").unwrap() = AnyValue::from(100);
+            value["k0"] = AnyValue::from(100);
             value["added"] = AnyValue::Bool(true);
             assert_eq!(
                 serde_json::from_str::<AnyValue>(&value.to_string()).unwrap(),
@@ -1904,11 +1719,10 @@ mod tests {
                 .chain(["added".to_owned()])
                 .collect();
             assert_eq!(keys, expected);
-            map.swap_remove("added");
-            map.retain(|_, value| {
+            map.shift_remove("added");
+            for (_, value) in &mut map {
                 *value = AnyValue::Null;
-                true
-            });
+            }
             assert!(map.values().all(AnyValue::is_null));
             assert_eq!(map.into_iter().count(), size - 1);
         }
@@ -1939,7 +1753,7 @@ mod tests {
                 format!("k{}", size - 1)
             );
             assert_eq!(entries.len(), size - 2);
-            for value in map.values_mut().rev() {
+            for (_, value) in map.iter_mut().rev() {
                 *value = AnyValue::Null;
             }
             let mut entries = map.into_iter();

@@ -106,7 +106,9 @@ pub fn graph_json(state: &GraphState) -> String {
 }
 
 /// A graph state with its staged batch as JSON text, as [`json_text`] writes
-/// it ([`GraphState::staged_json`]), or `None` when no batch is staged.
+/// it, or `None` when no batch is staged. The graph is what
+/// [`GraphState::keep`] makes. A server writes it in the transaction that
+/// records the batch, and keeps the batch only after that transaction commits.
 #[must_use]
 pub fn staged_graph_json(state: &GraphState) -> Option<String> {
     state.staged_json_text().map(json_out::into_string)
@@ -316,22 +318,6 @@ pub fn apply_to(
     options: ApplyOptions,
 ) -> ApiResult<AnyValue> {
     let applied = apply_to_typed(state, operations_in, options)?;
-    Ok(AnyValue::Object(applied_json(applied, options)))
-}
-
-/// Stage a batch on a [`GraphState`] ([`GraphState::stage`]); the result is
-/// what [`applied_json`] lists, as for [`apply_to`].
-///
-/// # Errors
-///
-/// The operations do not parse, or the engine refuses the batch, which then
-/// is not staged.
-pub fn stage_to(
-    state: &mut GraphState,
-    operations_in: Input<'_>,
-    options: ApplyOptions,
-) -> ApiResult<AnyValue> {
-    let applied = stage_to_typed(state, operations_in, options)?;
     Ok(AnyValue::Object(applied_json(applied, options)))
 }
 
@@ -905,7 +891,7 @@ mod tests {
         assert!(written.is_ascii());
         assert_eq!(
             serde_json::from_str::<AnyValue>(&written).unwrap(),
-            serde_json::from_str::<AnyValue>(&state.to_json()).unwrap()
+            state.to_value()
         );
     }
 }

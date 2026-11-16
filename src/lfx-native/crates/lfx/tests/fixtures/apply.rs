@@ -1,6 +1,7 @@
 //! `apply_cases.json`, `merge_cases.json` and `property_cases.json`: applying operations.
 
 use lfx::json;
+use lfx::ops::api::{graph_json, json_text};
 use lfx::ops::canonical::{graph_hash, graphs_equal};
 use lfx::ops::schema::NODE_SCHEMA;
 use lfx::ops::{ApplyOptions, GraphState, Operation, ReplayOptions};
@@ -84,10 +85,9 @@ fn apply_case(case: &AnyValue) -> Result<(), Failed> {
         &ignoring_order(&state.to_value()),
         &ignoring_order(&case["expected"]),
     )?;
-    // The bindings print the graph with to_json, which must write the text of to_value.
-    let printed = state.to_value().to_string();
-    if state.to_json() != printed {
-        return Err("to_json does not write the text of to_value".into());
+    // The bindings print the graph with graph_json, which must write the text of to_value.
+    if graph_json(&state) != json_text(&state.to_value()) {
+        return Err("graph_json does not write the text of to_value".into());
     }
     let forward = AnyValue::Array(applied.forward.iter().map(Operation::to_value).collect());
     let expected_forward = case
@@ -228,7 +228,9 @@ pub fn ignoring_order(flow: &AnyValue) -> AnyValue {
     {
         let snapshot = node.clone();
         let Some(template) = node
-            .pointer_mut("/data/node/template")
+            .get_mut("data")
+            .and_then(|data| data.get_mut("node"))
+            .and_then(|inner| inner.get_mut("template"))
             .and_then(AnyValue::as_object_mut)
         else {
             continue;

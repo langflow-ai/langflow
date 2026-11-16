@@ -30,6 +30,7 @@ use lfx::ops::{
     Applied, ApplyOptions, Change, Entry, Error, FieldUpdate, Operation, ReplayOptions, Segment,
 };
 use lfx::value::{AnyMap, AnyValue, Number, StringPool};
+use pyo3::IntoPyObjectExt;
 use pyo3::create_exception;
 use pyo3::exceptions::{PyException, PyRuntimeError, PyTypeError, PyValueError};
 use pyo3::prelude::*;
@@ -421,12 +422,6 @@ impl Work {
             Input::Text(text) => Self(text.len() / TEXT_BYTES_PER_VALUE),
             Input::Value(value) => Self::of_value(value),
         }
-    }
-
-    fn of_inputs<'a, 't: 'a>(inputs: impl IntoIterator<Item = &'a Input<'t>>) -> Self {
-        inputs
-            .into_iter()
-            .fold(Self::default(), |work, input| work + Self::of_input(input))
     }
 
     /// The work on every node and edge of a graph.
@@ -1204,74 +1199,117 @@ impl GraphPlain {
     }
 }
 
-/// Apply operations to a graph, with every rule; returns `{"flow_data", ...}`.
-#[pyfunction]
-#[pyo3(signature = (flow, operations, *, forward = true, backward = false))]
-fn apply<'py>(
-    py: Python<'py>,
-    flow: &Bound<'_, PyAny>,
-    operations: &Bound<'_, PyAny>,
-    forward: bool,
-    backward: bool,
-) -> PyResult<Bound<'py, PyAny>> {
-    let (flow, operations) = (input(flow)?, input(operations)?);
-    let options = ApplyOptions { forward, backward };
-    let work = Work::of_inputs([&flow, &operations]);
-    call(py, work, || api::apply(flow, operations, options))
+/// Module functions that read their JSON arguments, run one engine call and
+/// return its result. In `fn name(a, b [c]; flag: bool)`, `a` and `b` are
+/// JSON arguments, `c` is an optional JSON argument, and `flag` is passed as
+/// it is. A function without a return type returns its JSON result as Python
+/// objects ([`call`]); a function with `-> T` returns the `T` as its Python
+/// object, such as a `str` for a `String`.
+macro_rules! engine_functions {
+    (@run $py:ident, $work:ident, $job:expr) => { call($py, $work, $job) };
+    (@run $py:ident, $work:ident, $job:expr, $ret:ty) => {
+        run::<$ret>($py, $work, $job)?.into_bound_py_any($py)
+    };
+    ($(
+        $(#[$attr:meta])*
+        fn $name:ident($($arg:ident),+ $([$($opt:ident),+])? $(; $($flag:ident: $flag_ty:ty),+)?)
+            $(-> $ret:ty)? => $body:expr;
+    )*) => {$(
+        #[pyfunction]
+        $(#[$attr])*
+        fn $name<'py>(
+            py: Python<'py>,
+            $($arg: &Bound<'_, PyAny>,)+
+            $($($opt: Option<&Bound<'_, PyAny>>,)+)?
+            $($($flag: $flag_ty,)+)?
+        ) -> PyResult<Bound<'py, PyAny>> {
+            $(let $arg = input($arg)?;)+
+            $($(let $opt = optional_input($opt)?;)+)?
+            let work = Work::default()
+                $(+ Work::of_input(&$arg))+
+                $($(+ $opt.as_ref().map_or(Work::default(), Work::of_input))+)?;
+            engine_functions!(@run py, work, || $body $(, $ret)?)
+        }
+    )*};
 }
 
-/// Replay stored operations on a graph, with no rule; returns `{"flow_data", ...}`.
-#[pyfunction]
-#[pyo3(signature = (flow, operations, *, backward = false))]
-fn replay<'py>(
-    py: Python<'py>,
-    flow: &Bound<'_, PyAny>,
-    operations: &Bound<'_, PyAny>,
-    backward: bool,
-) -> PyResult<Bound<'py, PyAny>> {
-    let (flow, operations) = (input(flow)?, input(operations)?);
-    let options = ReplayOptions { backward };
-    let work = Work::of_inputs([&flow, &operations]);
-    call(py, work, || api::replay(flow, operations, options))
-}
+engine_functions! {
+    /// Apply operations to a graph, with every rule; returns `{"flow_data", ...}`.
+    #[pyo3(signature = (flow, operations, *, forward = true, backward = false))]
+    fn apply(flow, operations; forward: bool, backward: bool) =>
+        api::apply(flow, operations, ApplyOptions { forward, backward });
 
-/// The operations that turn `base` into `target`, checked by replay.
-#[pyfunction]
-fn ops_diff<'py>(
-    py: Python<'py>,
-    base: &Bound<'_, PyAny>,
-    target: &Bound<'_, PyAny>,
-) -> PyResult<Bound<'py, PyAny>> {
-    let (base, target) = (input(base)?, input(target)?);
-    let work = Work::of_inputs([&base, &target]);
-    call(py, work, || api::ops_diff(base, target))
-}
+    /// Replay stored operations on a graph, with no rule; returns `{"flow_data", ...}`.
+    #[pyo3(signature = (flow, operations, *, backward = false))]
+    fn replay(flow, operations; backward: bool) =>
+        api::replay(flow, operations, ReplayOptions { backward });
 
-/// Every rule a graph breaks, as a list of violations.
-#[pyfunction]
-#[pyo3(signature = (flow, base = None, *, check_values = true))]
-fn validate<'py>(
-    py: Python<'py>,
-    flow: &Bound<'_, PyAny>,
-    base: Option<&Bound<'_, PyAny>>,
-    check_values: bool,
-) -> PyResult<Bound<'py, PyAny>> {
-    let (flow, base) = (input(flow)?, optional_input(base)?);
-    let work = Work::of_inputs([&flow].into_iter().chain(base.as_ref()));
-    call(py, work, || api::validate(flow, base, check_values))
-}
+    /// The operations that turn `base` into `target`, checked by replay.
+    fn ops_diff(base, target) => api::ops_diff(base, target);
 
-/// Repair what has one fix; returns `{"flow_data", "fixes"}`.
-#[pyfunction]
-#[pyo3(signature = (flow, base = None))]
-fn repair<'py>(
-    py: Python<'py>,
-    flow: &Bound<'_, PyAny>,
-    base: Option<&Bound<'_, PyAny>>,
-) -> PyResult<Bound<'py, PyAny>> {
-    let (flow, base) = (input(flow)?, optional_input(base)?);
-    let work = Work::of_inputs([&flow].into_iter().chain(base.as_ref()));
-    call(py, work, || api::repair(flow, base))
+    /// Every rule a graph breaks, as a list of violations.
+    #[pyo3(signature = (flow, base = None, *, check_values = true))]
+    fn validate(flow [base]; check_values: bool) => api::validate(flow, base, check_values);
+
+    /// Repair what has one fix; returns `{"flow_data", "fixes"}`.
+    #[pyo3(signature = (flow, base = None))]
+    fn repair(flow [base]) => api::repair(flow, base);
+
+    /// The SHA-256 hex digest of a graph's canonical form.
+    fn graph_hash(flow) -> String => api::graph_hash(flow);
+
+    /// Whether two graphs are the same graph.
+    fn graphs_equal(left, right) -> bool => api::graphs_equal(left, right);
+
+    /// Whether two JSON values are the same value.
+    fn values_equal(left, right) -> bool => api::values_equal(left, right);
+
+    /// A JSON value in RFC 8785 canonical form, as text.
+    fn canonical_json(value) -> String => api::canonical_json(value);
+
+    /// A revision with a restore's fixes applied, after checking each one.
+    fn apply_restore_fixes(revision, stored, fixes) =>
+        api::apply_restore_fixes(revision, stored, fixes);
+
+    /// The fixes that turn a revision's edges as read into the edges its preview shows.
+    fn edge_fixes(read, shown) => api::edge_fixes(read, shown);
+
+    /// The part of the fixes that touches the given edges.
+    fn fixes_for_edges(fixes, edge_ids) => api::fixes_for_edges(fixes, edge_ids);
+
+    /// Rows in order and without `__id__` and `__pos__`.
+    fn strip_row_keys(rows) => api::strip_row_keys(rows);
+
+    /// Rows in order, by `(__pos__, __id__)`, or as stored for a legacy table.
+    fn ordered_rows(rows) => api::ordered_rows(rows);
+
+    /// A flow whose top-level tables have their rows in order and without `__id__` and `__pos__`.
+    fn strip_flow_table_row_keys(flow) => api::strip_flow_table_row_keys(flow);
+
+    /// Rows with the ids and positions a write needs.
+    #[pyo3(signature = (rows, previous = None, *, editor = false))]
+    fn assign_row_ids(rows [previous]; editor: bool) =>
+        api::assign_row_ids(rows, previous, editor);
+
+    /// A node being added, with ids on every table.
+    #[pyo3(signature = (node, *, editor = false))]
+    fn assign_table_row_ids(node; editor: bool) => api::assign_table_row_ids(node, editor);
+
+    /// `target` with ids on the tables it adds or changes relative to `base`.
+    #[pyo3(signature = (base, target, *, editor = false))]
+    fn assign_changed_table_row_ids(base, target; editor: bool) =>
+        api::assign_changed_table_row_ids(base, target, editor);
+
+    /// A node with ids on the tables it adds or changes relative to `previous`.
+    #[pyo3(signature = (node, previous = None, *, editor = false))]
+    fn assign_changed_node_table_row_ids(node [previous]; editor: bool) =>
+        api::assign_changed_node_table_row_ids(node, previous, editor);
+
+    /// Rows with `new_rows` appended, each with a new id one position past the last.
+    fn append_table_rows(rows, new_rows) => api::append_table_rows(rows, new_rows);
+
+    /// The names of a node's template fields whose value is a table.
+    fn table_fields(node) => api::table_fields(node);
 }
 
 /// The SHA-256 hex digest of `text`, a `str` (as UTF-8) or `bytes`: what
@@ -1293,191 +1331,6 @@ fn text_sha256(py: Python<'_>, text: &Bound<'_, PyAny>) -> PyResult<String> {
     } else {
         hash()
     })
-}
-
-/// The SHA-256 hex digest of a graph's canonical form.
-#[pyfunction]
-fn graph_hash(py: Python<'_>, flow: &Bound<'_, PyAny>) -> PyResult<String> {
-    let flow = input(flow)?;
-    let work = Work::of_inputs([&flow]);
-    run(py, work, || api::graph_hash(flow))
-}
-
-/// Whether two graphs are the same graph.
-#[pyfunction]
-fn graphs_equal(
-    py: Python<'_>,
-    left: &Bound<'_, PyAny>,
-    right: &Bound<'_, PyAny>,
-) -> PyResult<bool> {
-    let (left, right) = (input(left)?, input(right)?);
-    let work = Work::of_inputs([&left, &right]);
-    run(py, work, || api::graphs_equal(left, right))
-}
-
-/// Whether two JSON values are the same value.
-#[pyfunction]
-fn values_equal(
-    py: Python<'_>,
-    left: &Bound<'_, PyAny>,
-    right: &Bound<'_, PyAny>,
-) -> PyResult<bool> {
-    let (left, right) = (input(left)?, input(right)?);
-    let work = Work::of_inputs([&left, &right]);
-    run(py, work, || api::values_equal(left, right))
-}
-
-/// A JSON value in RFC 8785 canonical form, as text.
-#[pyfunction]
-fn canonical_json(py: Python<'_>, value: &Bound<'_, PyAny>) -> PyResult<String> {
-    let value = input(value)?;
-    let work = Work::of_inputs([&value]);
-    run(py, work, || api::canonical_json(value))
-}
-
-/// A revision with a restore's fixes applied, after checking each one.
-#[pyfunction]
-fn apply_restore_fixes<'py>(
-    py: Python<'py>,
-    revision: &Bound<'_, PyAny>,
-    stored: &Bound<'_, PyAny>,
-    fixes: &Bound<'_, PyAny>,
-) -> PyResult<Bound<'py, PyAny>> {
-    let (revision, stored, fixes) = (input(revision)?, input(stored)?, input(fixes)?);
-    let work = Work::of_inputs([&revision, &stored, &fixes]);
-    call(py, work, || {
-        api::apply_restore_fixes(revision, stored, fixes)
-    })
-}
-
-/// The fixes that turn a revision's edges as read into the edges its preview shows.
-#[pyfunction]
-fn edge_fixes<'py>(
-    py: Python<'py>,
-    read: &Bound<'_, PyAny>,
-    shown: &Bound<'_, PyAny>,
-) -> PyResult<Bound<'py, PyAny>> {
-    let (read, shown) = (input(read)?, input(shown)?);
-    let work = Work::of_inputs([&read, &shown]);
-    call(py, work, || api::edge_fixes(read, shown))
-}
-
-/// The part of the fixes that touches the given edges.
-#[pyfunction]
-fn fixes_for_edges<'py>(
-    py: Python<'py>,
-    fixes: &Bound<'_, PyAny>,
-    edge_ids: &Bound<'_, PyAny>,
-) -> PyResult<Bound<'py, PyAny>> {
-    let (fixes, edge_ids) = (input(fixes)?, input(edge_ids)?);
-    let work = Work::of_inputs([&fixes, &edge_ids]);
-    call(py, work, || api::fixes_for_edges(fixes, edge_ids))
-}
-
-/// Rows in order and without `__id__` and `__pos__`.
-#[pyfunction]
-fn strip_row_keys<'py>(py: Python<'py>, rows: &Bound<'_, PyAny>) -> PyResult<Bound<'py, PyAny>> {
-    let rows = input(rows)?;
-    let work = Work::of_inputs([&rows]);
-    call(py, work, || api::strip_row_keys(rows))
-}
-
-/// Rows in order, by `(__pos__, __id__)`, or as stored for a legacy table.
-#[pyfunction]
-fn ordered_rows<'py>(py: Python<'py>, rows: &Bound<'_, PyAny>) -> PyResult<Bound<'py, PyAny>> {
-    let rows = input(rows)?;
-    let work = Work::of_inputs([&rows]);
-    call(py, work, || api::ordered_rows(rows))
-}
-
-/// A flow whose top-level tables have their rows in order and without `__id__` and `__pos__`.
-#[pyfunction]
-fn strip_flow_table_row_keys<'py>(
-    py: Python<'py>,
-    flow: &Bound<'_, PyAny>,
-) -> PyResult<Bound<'py, PyAny>> {
-    let flow = input(flow)?;
-    let work = Work::of_inputs([&flow]);
-    call(py, work, || api::strip_flow_table_row_keys(flow))
-}
-
-/// Rows with the ids and positions a write needs.
-#[pyfunction]
-#[pyo3(signature = (rows, previous = None, *, editor = false))]
-fn assign_row_ids<'py>(
-    py: Python<'py>,
-    rows: &Bound<'_, PyAny>,
-    previous: Option<&Bound<'_, PyAny>>,
-    editor: bool,
-) -> PyResult<Bound<'py, PyAny>> {
-    let (rows, previous) = (input(rows)?, optional_input(previous)?);
-    let work = Work::of_inputs([&rows].into_iter().chain(previous.as_ref()));
-    call(py, work, || api::assign_row_ids(rows, previous, editor))
-}
-
-/// A node being added, with ids on every table.
-#[pyfunction]
-#[pyo3(signature = (node, *, editor = false))]
-fn assign_table_row_ids<'py>(
-    py: Python<'py>,
-    node: &Bound<'_, PyAny>,
-    editor: bool,
-) -> PyResult<Bound<'py, PyAny>> {
-    let node = input(node)?;
-    let work = Work::of_inputs([&node]);
-    call(py, work, || api::assign_table_row_ids(node, editor))
-}
-
-/// `target` with ids on the tables it adds or changes relative to `base`.
-#[pyfunction]
-#[pyo3(signature = (base, target, *, editor = false))]
-fn assign_changed_table_row_ids<'py>(
-    py: Python<'py>,
-    base: &Bound<'_, PyAny>,
-    target: &Bound<'_, PyAny>,
-    editor: bool,
-) -> PyResult<Bound<'py, PyAny>> {
-    let (base, target) = (input(base)?, input(target)?);
-    let work = Work::of_inputs([&base, &target]);
-    call(py, work, || {
-        api::assign_changed_table_row_ids(base, target, editor)
-    })
-}
-
-/// A node with ids on the tables it adds or changes relative to `previous`.
-#[pyfunction]
-#[pyo3(signature = (node, previous = None, *, editor = false))]
-fn assign_changed_node_table_row_ids<'py>(
-    py: Python<'py>,
-    node: &Bound<'_, PyAny>,
-    previous: Option<&Bound<'_, PyAny>>,
-    editor: bool,
-) -> PyResult<Bound<'py, PyAny>> {
-    let (node, previous) = (input(node)?, optional_input(previous)?);
-    let work = Work::of_inputs([&node].into_iter().chain(previous.as_ref()));
-    call(py, work, || {
-        api::assign_changed_node_table_row_ids(node, previous, editor)
-    })
-}
-
-/// Rows with `new_rows` appended, each with a new id one position past the last.
-#[pyfunction]
-fn append_table_rows<'py>(
-    py: Python<'py>,
-    rows: &Bound<'_, PyAny>,
-    new_rows: &Bound<'_, PyAny>,
-) -> PyResult<Bound<'py, PyAny>> {
-    let (rows, new_rows) = (input(rows)?, input(new_rows)?);
-    let work = Work::of_inputs([&rows, &new_rows]);
-    call(py, work, || api::append_table_rows(rows, new_rows))
-}
-
-/// The names of a node's template fields whose value is a table.
-#[pyfunction]
-fn table_fields<'py>(py: Python<'py>, node: &Bound<'_, PyAny>) -> PyResult<Bound<'py, PyAny>> {
-    let node = input(node)?;
-    let work = Work::of_inputs([&node]);
-    call(py, work, || api::table_fields(node))
 }
 
 /// A new random edge id in the editor's format.

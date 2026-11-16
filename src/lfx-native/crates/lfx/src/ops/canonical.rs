@@ -251,8 +251,8 @@ impl Sink {
 }
 
 /// Write a string as RFC 8785 does: `"` and `\` escaped, and the control
-/// characters, with the short forms where JSON has them. That is exactly
-/// what `serde_json` writes, and [`json_out`] writes the same text.
+/// characters, with the short forms where JSON has them, as [`json_out`]
+/// writes it.
 fn write_string(value: &str, out: &mut Sink) {
     json_out::write_str(&mut out.buf, value, Ascii::Keep);
 }

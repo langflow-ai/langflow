@@ -24,7 +24,6 @@
 
 use std::borrow::Cow;
 use std::fmt;
-use std::str::FromStr;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, PoisonError, TryLockError};
 
@@ -33,7 +32,6 @@ use crate::ops::maps::{HashMap, IndexMap, IndexSet};
 use crate::value::{AnyMap, AnyString, AnyValue, FiniteAnyValue};
 #[path = "snapshot_rows.rs"]
 mod snapshot_rows;
-use serde::ser::{Serialize, SerializeMap, Serializer};
 
 use crate::ops::canonical;
 use crate::ops::edges::{EdgeIndex, GraphRead};
@@ -726,45 +724,15 @@ impl GraphState {
         AnyValue::Object(out)
     }
 
-    /// The graph as JSON text: the text of [`GraphState::to_value`], written
-    /// from the graph without copying it.
-    ///
-    /// # Panics
-    ///
-    /// A JSON value that `serde_json` cannot write, which a graph never holds:
-    /// every key is a string.
-    #[must_use]
-    pub fn to_json(&self) -> String {
-        serde_json::to_string(&self.json()).expect("a graph's keys are strings")
-    }
-
-    /// The graph, to serialize as JSON: it writes what [`GraphState::to_json`]
-    /// writes, with any `serde_json` formatter.
-    #[must_use]
-    pub fn json(&self) -> impl Serialize + '_ {
-        GraphJson(self)
-    }
-
-    /// The graph with the staged batch, to serialize as JSON: what
-    /// [`GraphState::json`] writes after [`GraphState::keep`], without
-    /// changing the committed graph. `None` when no batch is staged.
-    ///
-    /// A server writes the new graph in the transaction that records the
-    /// batch, and keeps the batch only after that transaction commits.
-    #[must_use]
-    pub fn staged_json(&self) -> Option<impl Serialize + '_> {
-        self.staged.then_some(StagedJson(self))
-    }
-
     /// An empty buffer with room for the graph's last JSON text and a little more.
     fn text_buffer(&self) -> Vec<u8> {
         let last = self.text_len.load(Ordering::Relaxed);
         Vec::with_capacity(last + last / 16)
     }
 
-    /// The graph as ASCII JSON text ([`crate::ops::api::json_text`]): what
-    /// [`GraphState::json`] writes, with every character above U+007F
-    /// escaped.
+    /// The graph as ASCII JSON text ([`crate::ops::api::json_text`]): the
+    /// text of [`GraphState::to_value`], written from the graph without
+    /// copying it, with every character above U+007F escaped.
     pub(crate) fn json_text(&self) -> Vec<u8> {
         let out = graph_text(
             &self.root,
@@ -816,8 +784,8 @@ impl GraphState {
     }
 
     /// The graph with its staged batch as ASCII JSON text: what
-    /// [`GraphState::staged_json`] writes, with every character above U+007F
-    /// escaped. `None` when no batch is staged.
+    /// [`GraphState::json_text`] writes after [`GraphState::keep`], without
+    /// changing the committed graph. `None` when no batch is staged.
     pub(crate) fn staged_json_text(&self) -> Option<Vec<u8>> {
         if !self.staged {
             return None;
@@ -1122,40 +1090,6 @@ fn by_id<T>(items: Vec<AnyValue>, make: fn(AnyMap) -> Result<T>) -> Result<Index
         .collect()
 }
 
-/// Parse a flow graph given as JSON text, and load it into a [`GraphState`].
-impl FromStr for GraphState {
-    type Err = Error;
-
-    fn from_str(text: &str) -> Result<Self> {
-        Self::new(parse_finite_json(text)?)
-    }
-}
-
-/// The graph as JSON text.
-impl fmt::Display for GraphState {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.to_json())
-    }
-}
-
-/// Writes a [`GraphState`] as [`GraphState::to_value`] builds it: the root's
-/// keys in order, with the nodes and edges in place of their placeholders.
-struct GraphJson<'s>(&'s GraphState);
-
-impl Serialize for GraphJson<'_> {
-    fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
-        let mut map = serializer.serialize_map(Some(self.0.root.len()))?;
-        for (key, entry) in self.0.entries() {
-            match entry {
-                Entry::Value(value) => map.serialize_entry(key, value)?,
-                Entry::Nodes(nodes) => map.serialize_entry(key, &NodesJson(nodes))?,
-                Entry::Edges(edges) => map.serialize_entry(key, &EdgesJson(edges))?,
-            }
-        }
-        map.end()
-    }
-}
-
 /// A graph as a [`GraphState`] held it when [`GraphState::snapshot`] took
 /// it: read only, and unchanged by the state's later batches. A server takes
 /// one while it holds the state, and writes and hashes it after, on another
@@ -1252,62 +1186,6 @@ fn graph_text<'g>(
         Ascii::Escape,
     );
     out
-}
-
-/// Writes a [`GraphState`] with its staged batch ([`GraphState::staged_json`]).
-struct StagedJson<'s>(&'s GraphState);
-
-impl Serialize for StagedJson<'_> {
-    fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
-        let state = self.0;
-        let mut map = serializer.serialize_map(Some(state.root.len()))?;
-        for (key, value) in &state.root {
-            match key.as_str() {
-                "nodes" => map.serialize_entry(key, &StagedNodesJson(state))?,
-                "edges" => map.serialize_entry(key, &StagedEdgesJson(state))?,
-                _ => map.serialize_entry(key, value)?,
-            }
-        }
-        map.end()
-    }
-}
-
-struct StagedNodesJson<'s>(&'s GraphState);
-
-impl Serialize for StagedNodesJson<'_> {
-    fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
-        serializer.collect_seq(self.0.staged_nodes())
-    }
-}
-
-struct StagedEdgesJson<'s>(&'s GraphState);
-
-impl Serialize for StagedEdgesJson<'_> {
-    fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
-        serializer.collect_seq(
-            self.0
-                .graph
-                .edges
-                .staged_entries()
-                .map(|(_, edge)| edge.as_map()),
-        )
-    }
-}
-
-struct NodesJson<'s>(Nodes<'s>);
-
-impl Serialize for NodesJson<'_> {
-    fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
-        serializer.collect_seq(self.0.iter())
-    }
-}
-
-struct EdgesJson<'s>(Edges<'s>);
-
-impl Serialize for EdgesJson<'_> {
-    fn serialize<S: Serializer>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> {
-        serializer.collect_seq(self.0.iter())
-    }
 }
 
 /// A top-level entry of a [`GraphState`], borrowed from it ([`GraphState::entries`]).

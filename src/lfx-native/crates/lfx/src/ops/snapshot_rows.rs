@@ -318,7 +318,6 @@ impl<'a, T> Iterator for Iter<'a, T> {
         (self.remaining, Some(self.remaining))
     }
 }
-impl<T> ExactSizeIterator for Iter<'_, T> {}
 
 #[cfg(test)]
 mod tests {

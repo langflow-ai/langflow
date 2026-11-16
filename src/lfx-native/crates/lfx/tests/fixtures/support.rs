@@ -168,7 +168,7 @@ pub fn error_json(error: &lfx::ops::Error) -> AnyValue {
 
 /// One line of JSON, for failure messages.
 pub fn compact(value: &AnyValue) -> String {
-    serde_json::to_string(value).unwrap_or_else(|error| format!("<{error}>"))
+    value.to_string()
 }
 
 /// The rules the fixtures README lists: the first column of its rules table.

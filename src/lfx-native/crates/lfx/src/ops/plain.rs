@@ -312,7 +312,8 @@ mod tests {
         assert_eq!(fixes.len(), 2);
         assert!(
             repaired.as_value()["nodes"][0]["data"]["node"]["template"]["t"]["value"][0]["__id__"]
-                .is_string()
+                .as_str()
+                .is_some()
         );
         // Repair neither changes the original nor invalidates its proof for the other base.
         assert!(
