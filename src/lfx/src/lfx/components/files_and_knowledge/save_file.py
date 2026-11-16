@@ -482,7 +482,7 @@ class SaveToFileComponent(Component):
         """Write CSV rows; an append to a non-empty file follows the file's own header."""
         if not append or path.stat().st_size == 0:
             frame.to_csv(path, index=False)
-        elif not frame.columns.empty:
+        elif not frame.empty:
             frame = self._align_to_csv_header(frame, path)
             frame.to_csv(path, index=False, mode="a", header=False)
 
@@ -491,11 +491,14 @@ class SaveToFileComponent(Component):
         """Reorder columns to the existing header, or refuse before the file is touched."""
         new_header = list(csv.reader(StringIO(frame.iloc[:0].to_csv(index=False))))
         # A header that cannot be decoded or parsed only has to fail the comparison.
-        with path.open(encoding="utf-8-sig", errors="replace", newline="") as stream:
+        # Later rows may hold any bytes; only undecodable header bytes are refused.
+        with path.open(encoding="utf-8-sig", errors="surrogateescape", newline="") as stream:
             try:
-                existing_header = list(islice(csv.reader(stream), len(new_header)))
+                existing_header = list(islice(csv.reader(stream, strict=True), len(new_header)))
             except csv.Error:
                 existing_header = []
+        if any("\udc80" <= char <= "\udcff" for row in existing_header for field in row for char in field):
+            existing_header = []
         if existing_header == new_header:
             return frame
         new_columns = new_header[0]

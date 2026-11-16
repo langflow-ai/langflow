@@ -642,7 +642,10 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         assert self._csv_rows(path) == [["a", "b"], ["1", "2"]]
 
     @pytest.mark.parametrize("input_kind", ["data", "dataframe"])
-    def test_csv_append_of_an_empty_input_leaves_the_file_unchanged(self, component_class, tmp_path, input_kind):
+    @pytest.mark.parametrize("payload", [{}, {"x": [], "y": []}], ids=["no_columns", "zero_rows_with_columns"])
+    def test_csv_append_of_an_empty_input_leaves_the_file_unchanged(
+        self, component_class, tmp_path, input_kind, payload
+    ):
         component = component_class()
         component.set_attributes({"append_mode": True})
         path = tmp_path / "rows.csv"
@@ -650,7 +653,7 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         save({"a": [1], "b": [2]}, path)
         original = path.read_bytes()
 
-        save({}, path)
+        save(payload, path)
 
         assert path.read_bytes() == original
 
@@ -666,18 +669,23 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         assert path.read_bytes().splitlines()[-1] == b"3,2"
 
     @pytest.mark.parametrize(
-        "existing",
-        ["nome,caf\u00e9\n".encode("cp1252"), b'"a,b\n' + b"x" * 200_000 + b"\n"],
-        ids=["not_utf8", "unclosed_quote"],
+        ("existing", "columns"),
+        [
+            ("name,caf\u00e9\n".encode("cp1252"), ["name", "caf\u00e9"]),
+            (b"a,\xff\n", ["a", "\ufffd"]),
+            (b'"a,b', ["a,b"]),
+            (b'"a,b\n' + b"x" * 200_000 + b"\n", ["a", "b"]),
+        ],
+        ids=["not_utf8", "invalid_bytes_match_replacement_character", "unclosed_quote", "oversized_field"],
     )
-    def test_csv_append_refuses_a_header_it_cannot_read(self, component_class, tmp_path, existing):
+    def test_csv_append_refuses_a_header_it_cannot_read(self, component_class, tmp_path, existing, columns):
         component = component_class()
         component.set_attributes({"append_mode": True})
         path = tmp_path / "rows.csv"
         path.write_bytes(existing)
 
         with pytest.raises(ValueError, match="columns of the existing CSV file"):
-            self._csv_saver(component, "dataframe")({"nome": [1], "caf\u00e9": [2]}, path)
+            self._csv_saver(component, "dataframe")({column: [index] for index, column in enumerate(columns)}, path)
 
         assert path.read_bytes() == existing
 
