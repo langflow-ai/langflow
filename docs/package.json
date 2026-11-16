@@ -67,7 +67,7 @@
     "undici": "^7.30.1",
     "serialize-javascript": "^7.0.5",
     "nanoid": "^3.3.17",
-    "dompurify": "^3.4.17",
+    "dompurify": "^3.4.18",
     "picomatch": "^4.0.4",
     "lodash": "4.18.1",
     "fast-uri": "^3.1.9",
@@ -95,8 +95,8 @@
     "fflate": "^0.4.9",
     "http-proxy-middleware": "^2.0.10",
     "launch-editor": "^2.14.1",
-    "minimatch@^8": "^11.0.4",
-    "minimatch@^9": "^11.0.4",
+    "minimatch@^8": "^11.0.8",
+    "minimatch@^9": "^11.0.8",
     "qs": "^6.17.1",
     "webpack": "^5.104.1",
     "webpack-dev-server": "^5.2.6",
@@ -118,6 +118,6 @@
     },
     "follow-redirects": "^1.16.3",
     "open@^10": "^11.0.4",
-    "glob": "^14.0.3"
+    "glob": "^14.0.6"
   }
 }
