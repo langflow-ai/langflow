@@ -21,6 +21,7 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from langflow.api.utils.kb_helpers import DocumentWriteResult
 from langflow.services.database.models.memory_base.model import (
     MemoryBase,
     MemoryBaseCreate,
@@ -2173,7 +2174,7 @@ class TestIngestMemoryTask:
             ),
             patch(
                 "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_backend",
-                AsyncMock(return_value=1),
+                AsyncMock(return_value=DocumentWriteResult(processed=1, created=1)),
             ),
             patch("langflow.services.memory_base.task.sync_kb_stats_to_record", side_effect=fake_sync_kb_stats),
             patch("langflow.services.memory_base.task._mark_messages_ingested", AsyncMock()),
@@ -2252,7 +2253,7 @@ class TestIngestMemoryTask:
             # write_documents_to_backend returns fewer docs than sent → cancelled
             patch(
                 "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_backend",
-                AsyncMock(return_value=0),
+                AsyncMock(return_value=DocumentWriteResult(processed=0, created=0)),
             ),
             patch("langflow.services.memory_base.task.sync_kb_stats_to_record", side_effect=fake_sync),
             patch("langflow.services.memory_base.task._advance_cursor", AsyncMock()),
@@ -2328,7 +2329,7 @@ class TestIngestMemoryTask:
             ),
             patch(
                 "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_backend",
-                AsyncMock(return_value=1),
+                AsyncMock(return_value=DocumentWriteResult(processed=1, created=1)),
             ),
             patch("langflow.services.memory_base.task.sync_kb_stats_to_record", AsyncMock()),
             patch("langflow.services.memory_base.task._mark_messages_ingested", AsyncMock()),

@@ -736,6 +736,12 @@ jobs:
 
   create-manifest:
     name: Create Multi-Arch Manifest
+    # Recheck registry history under a shared lock so concurrent releases cannot
+    # promote an older version after a newer release has published its manifests.
+    concurrency:
+      group: docker-release-manifest-${{ inputs.release_type }}
+      cancel-in-progress: false
+      queue: max
     needs:
       [
         build-base,
@@ -755,6 +761,48 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
 
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v10.0.0
+        with:
+          version: latest-known
+          python-version: "3.13"
+
+      - name: Determine latest promotion
+        id: latest
+        env:
+          BASE_VERSION: ${{ needs.determine-base-version.outputs.version }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          MAIN_VERSION: ${{ needs.determine-main-version.outputs.version }}
+          PRE_RELEASE: ${{ inputs.pre_release }}
+          RELEASE_TYPE: ${{ inputs.release_type }}
+        run: |
+          set -euo pipefail
+          if [[ "$PRE_RELEASE" == "true" ]]; then
+            echo "promote_latest=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          repository="langflowai/langflow"
+          prefix=""
+          version="$MAIN_VERSION"
+          case "$RELEASE_TYPE" in
+            base) prefix="base-"; version="$BASE_VERSION" ;;
+            main) ;;
+            main-backend | main-frontend | main-ep | main-all)
+              repository="langflowai/langflow-${RELEASE_TYPE#main-}"
+              ;;
+            *) echo "Invalid release type: $RELEASE_TYPE" >&2; exit 1 ;;
+          esac
+
+          # Fetch every page before comparing. A failed lookup stops publication
+          # rather than treating a partial tag list as permission to move latest.
+          docker_tags="$(bash ./scripts/ci/fetch_docker_hub_tags.sh "$repository" --all-pages)"
+          promote_latest="$(printf '%s\n' "$docker_tags" | uv run --no-project --with packaging python \
+            ./scripts/ci/docker_latest_tags.py "$version" --prefix "$prefix")"
+          echo "Promote ${repository}:${prefix}latest for ${version}: ${promote_latest}"
+          echo "promote_latest=$promote_latest" >> "$GITHUB_OUTPUT"
+
       - name: Get version
         id: version
         env:
@@ -773,14 +821,14 @@ jobs:
         env:
           BASE_VERSION: ${{ needs.determine-base-version.outputs.version }}
           MAIN_VERSION: ${{ needs.determine-main-version.outputs.version }}
-          PRE_RELEASE: ${{ inputs.pre_release }}
+          PROMOTE_LATEST: ${{ steps.latest.outputs.promote_latest }}
           RELEASE_TYPE: ${{ inputs.release_type }}
         run: |
           version="$MAIN_VERSION"
           case "$RELEASE_TYPE" in
             "base")
               version="$BASE_VERSION"
-              if [[ "$PRE_RELEASE" == "true" ]]; then
+              if [[ "$PROMOTE_LATEST" != "true" ]]; then
                 echo "final_tags=langflowai/langflow:base-${version},ghcr.io/langflow-ai/langflow:base-${version}" >> $GITHUB_OUTPUT
               else
                 echo "final_tags=langflowai/langflow:base-${version},langflowai/langflow:base-latest,ghcr.io/langflow-ai/langflow:base-${version},ghcr.io/langflow-ai/langflow:base-latest" >> $GITHUB_OUTPUT
@@ -789,7 +837,7 @@ jobs:
               echo "ghcr_arch_base=ghcr.io/langflow-ai/langflow:base-${version}" >> $GITHUB_OUTPUT
               ;;
             "main")
-              if [[ "$PRE_RELEASE" == "true" ]]; then
+              if [[ "$PROMOTE_LATEST" != "true" ]]; then
                 echo "final_tags=langflowai/langflow:${version},ghcr.io/langflow-ai/langflow:${version}" >> $GITHUB_OUTPUT
               else
                 echo "final_tags=langflowai/langflow:${version},langflowai/langflow:latest,ghcr.io/langflow-ai/langflow:${version},ghcr.io/langflow-ai/langflow:latest" >> $GITHUB_OUTPUT
@@ -798,7 +846,7 @@ jobs:
               echo "ghcr_arch_base=ghcr.io/langflow-ai/langflow:${version}" >> $GITHUB_OUTPUT
               ;;
             "main-backend")
-              if [[ "$PRE_RELEASE" == "true" ]]; then
+              if [[ "$PROMOTE_LATEST" != "true" ]]; then
                 echo "final_tags=langflowai/langflow-backend:${version},ghcr.io/langflow-ai/langflow-backend:${version}" >> $GITHUB_OUTPUT
               else
                 echo "final_tags=langflowai/langflow-backend:${version},langflowai/langflow-backend:latest,ghcr.io/langflow-ai/langflow-backend:${version},ghcr.io/langflow-ai/langflow-backend:latest" >> $GITHUB_OUTPUT
@@ -807,7 +855,7 @@ jobs:
               echo "ghcr_arch_base=ghcr.io/langflow-ai/langflow-backend:${version}" >> $GITHUB_OUTPUT
               ;;
             "main-frontend")
-              if [[ "$PRE_RELEASE" == "true" ]]; then
+              if [[ "$PROMOTE_LATEST" != "true" ]]; then
                 echo "final_tags=langflowai/langflow-frontend:${version},ghcr.io/langflow-ai/langflow-frontend:${version}" >> $GITHUB_OUTPUT
               else
                 echo "final_tags=langflowai/langflow-frontend:${version},langflowai/langflow-frontend:latest,ghcr.io/langflow-ai/langflow-frontend:${version},ghcr.io/langflow-ai/langflow-frontend:latest" >> $GITHUB_OUTPUT
@@ -816,7 +864,7 @@ jobs:
               echo "ghcr_arch_base=ghcr.io/langflow-ai/langflow-frontend:${version}" >> $GITHUB_OUTPUT
               ;;
             "main-ep")
-              if [[ "$PRE_RELEASE" == "true" ]]; then
+              if [[ "$PROMOTE_LATEST" != "true" ]]; then
                 echo "final_tags=langflowai/langflow-ep:${version},ghcr.io/langflow-ai/langflow-ep:${version}" >> $GITHUB_OUTPUT
               else
                 echo "final_tags=langflowai/langflow-ep:${version},langflowai/langflow-ep:latest,ghcr.io/langflow-ai/langflow-ep:${version},ghcr.io/langflow-ai/langflow-ep:latest" >> $GITHUB_OUTPUT
@@ -825,7 +873,7 @@ jobs:
               echo "ghcr_arch_base=ghcr.io/langflow-ai/langflow-ep:${version}" >> $GITHUB_OUTPUT
               ;;
             "main-all")
-              if [[ "$PRE_RELEASE" == "true" ]]; then
+              if [[ "$PROMOTE_LATEST" != "true" ]]; then
                 echo "final_tags=langflowai/langflow-all:${version},ghcr.io/langflow-ai/langflow-all:${version}" >> $GITHUB_OUTPUT
               else
                 echo "final_tags=langflowai/langflow-all:${version},langflowai/langflow-all:latest,ghcr.io/langflow-ai/langflow-all:${version},ghcr.io/langflow-ai/langflow-all:latest" >> $GITHUB_OUTPUT

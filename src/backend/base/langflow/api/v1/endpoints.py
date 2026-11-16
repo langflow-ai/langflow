@@ -742,9 +742,7 @@ async def simple_run_flow_task(
                 run_id=run_id,
                 expose_error_details=api_key_user is not None and _caller_owns_flow(flow, api_key_user),
                 http_request=http_request,
-                # Both webhook auth modes (owner row when WEBHOOK_AUTH_ENABLE is off,
-                # API-key user with ownership enforced when it is on) execute the
-                # published flow unattended on its owner's behalf.
+                # The API key belongs to the owner whose published flow runs unattended.
                 execution_family=execution_family,
             )
 

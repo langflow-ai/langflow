@@ -9,6 +9,7 @@ from uuid import uuid4
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 from lfx.log.logger import logger
+from lfx.schema.data import Data
 from lfx.schema.message import Message
 from lfx.services.deps import get_settings_service
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
@@ -538,3 +539,42 @@ def test_local_file_with_image_extension_but_non_image_content_is_not_sent_as_im
     content = Message(text="what is it?", files=["fake.png" if relative else str(fake_png)]).get_file_content_dicts()
 
     assert content == []
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [(42, "42"), (0, "0"), (3.5, "3.5"), (False, "False"), ({"a": 1}, "{'a': 1}"), (["a"], "['a']")],
+    ids=["int", "zero", "float", "bool", "dict", "list"],
+)
+def test_non_string_text_is_kept_as_text(value, expected):
+    message = Data(data={"text": value}).to_message()
+    message.sender = MESSAGE_SENDER_USER
+
+    assert message.text == expected
+    assert message.text_stream is None
+    assert message.data["text"] == expected
+    assert message.to_lc_message().content == expected
+    assert Message(**message.model_dump()).text == expected
+
+
+def test_iterator_text_stays_a_stream():
+    stream = iter(["a", "b"])
+
+    message = Message(text=stream)
+
+    assert message.text is stream
+    assert message.text_stream is stream
+    assert message.data["text"] == ""
+
+
+def test_async_iterator_text_stays_a_stream():
+    async def chunks():
+        yield "a"
+
+    stream = chunks()
+
+    message = Message(text=stream)
+
+    assert message.text is stream
+    assert message.text_stream is stream
+    assert message.data["text"] == ""

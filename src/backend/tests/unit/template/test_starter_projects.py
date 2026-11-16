@@ -198,7 +198,7 @@ class TestStarterProjects:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("template_file", get_template_files(), ids=lambda x: x.name)
-    async def test_template_validate_endpoint(self, template_file, client, logged_in_headers):
+    async def test_template_validate_endpoint(self, template_file, client, logged_in_headers_super_user):
         """Test template using the validate endpoint."""
         with template_file.open(encoding="utf-8") as f:
             template_data = json.load(f)
@@ -207,14 +207,14 @@ class TestStarterProjects:
         if unavailable:
             pytest.skip(f"{template_file.name} needs the optional {unavailable} bundle")
 
-        errors = await validate_flow_execution(client, template_data, template_file.name, logged_in_headers)
+        errors = await validate_flow_execution(client, template_data, template_file.name, logged_in_headers_super_user)
         if errors:
             error_msg = "\n".join(errors)
             pytest.fail(f"Endpoint validation errors in {template_file.name}:\n{error_msg}")
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("template_file", get_template_files(), ids=lambda x: x.name)
-    async def test_template_flow_execution(self, template_file, client, logged_in_headers):
+    async def test_template_flow_execution(self, template_file, client, logged_in_headers_super_user):
         """Test template can execute successfully."""
         try:
             with template_file.open(encoding="utf-8") as f:
@@ -224,7 +224,9 @@ class TestStarterProjects:
             if unavailable:
                 pytest.skip(f"{template_file.name} needs the optional {unavailable} bundle")
 
-            errors = await validate_flow_execution(client, template_data, template_file.name, logged_in_headers)
+            errors = await validate_flow_execution(
+                client, template_data, template_file.name, logged_in_headers_super_user
+            )
             if errors:
                 error_msg = "\n".join(errors)
                 pytest.fail(f"Template execution errors in {template_file.name}:\n{error_msg}")

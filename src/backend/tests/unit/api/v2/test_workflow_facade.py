@@ -228,6 +228,7 @@ class TestStatusDurableResultError:
         self,
         client: AsyncClient,
         created_api_key,
+        monkeypatch,
     ):
         """A failed run surfaces the durable error JSON additively in the detail.
 
@@ -236,6 +237,9 @@ class TestStatusDurableResultError:
         additive-only.
         """
         headers = {"x-api-key": created_api_key.api_key}
+        from langflow.services.deps import get_settings_service
+
+        monkeypatch.setattr(get_settings_service().settings, "custom_component_admin_only", False)
         # A flow whose data is corrupt fails during the background run; the runner
         # persists the durable error which status echoes additively.
         bad_flow = uuid4()

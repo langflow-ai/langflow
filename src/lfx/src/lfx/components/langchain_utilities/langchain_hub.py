@@ -95,13 +95,14 @@ class LangChainHubPromptComponent(Component):
     async def build_prompt(
         self,
     ) -> Message:
+        """Format the Hub template with configured inputs and workflow callbacks."""
         # Fetch the template
         template = self._fetch_langchain_hub_template()
 
         # Get the parameters from the attributes
         params_dict = {param: getattr(self, "param_" + param, f"{{{param}}}") for param in template.input_variables}
         original_params = {k: v.text if hasattr(v, "text") else v for k, v in params_dict.items() if v is not None}
-        prompt_value = template.invoke(original_params)
+        prompt_value = template.invoke(original_params, config={"callbacks": self.get_langchain_callbacks()})
 
         # Update the template with the new value
         original_params["template"] = prompt_value.to_string()

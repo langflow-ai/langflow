@@ -11,6 +11,10 @@ from uuid import uuid4
 import pytest
 from lfx.custom.custom_component.component import Component
 from lfx.schema.dotdict import dotdict
+from lfx.services.model_provider_policy import (
+    reset_current_model_provider_policy_context,
+    set_current_model_provider_policy_context,
+)
 from typing_extensions import TypedDict
 
 from tests.constants import SUPPORTED_VERSIONS
@@ -63,6 +67,17 @@ def _refuse_outbound_connections(current_output: Callable[[], str]) -> Iterator[
 
 
 class ComponentTestBase:
+    @pytest.fixture(autouse=True)
+    def _trusted_version_check_context(self, request):
+        if request.node.name != "test_latest_version":
+            yield
+            return
+        token = set_current_model_provider_policy_context(user_id=uuid4(), attributes={"is_superuser": True})
+        try:
+            yield
+        finally:
+            reset_current_model_provider_policy_context(token)
+
     @pytest.fixture(autouse=True)
     def _validate_required_fixtures(
         self,

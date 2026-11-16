@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel
+
+if TYPE_CHECKING:
+    from langchain_core.runnables import RunnableConfig
 
 
 async def invoke_with_native_structured_output(
@@ -14,6 +17,7 @@ async def invoke_with_native_structured_output(
     model_cls: type[BaseModel],
     system_prompt: str,
     input_value: str,
+    config: RunnableConfig | None = None,
 ) -> dict[str, Any] | list[Any]:
     """Run llm.with_structured_output(model_cls) and return a JSON-serializable result."""
     runnable = llm.with_structured_output(model_cls)
@@ -22,7 +26,7 @@ async def invoke_with_native_structured_output(
         messages.append(SystemMessage(content=system_prompt))
     messages.append(HumanMessage(content=input_value))
 
-    raw = await runnable.ainvoke(messages)
+    raw = await runnable.ainvoke(messages, config=config)
     return _to_jsonable(raw)
 
 

@@ -48,7 +48,8 @@ class AmazonBedrockConverseComponent(LCModelComponent):
             display_name="Model ID",
             options=AWS_MODEL_IDs,
             value="anthropic.claude-3-5-sonnet-20241022-v2:0",
-            info="List of available model IDs to choose from.",
+            combobox=True,
+            info="Choose a model ID or enter a custom model or inference profile ID.",
         ),
         SecretStrInput(
             name="aws_access_key_id",
@@ -190,9 +191,12 @@ class AmazonBedrockConverseComponent(LCModelComponent):
         # additional_model_fields lets users override or extend provider-specific fields,
         # including using a different key for providers that don't accept "top_k".
         if hasattr(self, "additional_model_fields") and self.additional_model_fields:
-            for field in self.additional_model_fields:
-                if isinstance(field, dict):
-                    additional_model_request_fields.update(field)
+            if isinstance(self.additional_model_fields, dict):
+                additional_model_request_fields.update(self.additional_model_fields)
+            else:
+                for field in self.additional_model_fields:
+                    if isinstance(field, dict):
+                        additional_model_request_fields.update(field)
 
         # Only add if we have actual additional fields
         if additional_model_request_fields:

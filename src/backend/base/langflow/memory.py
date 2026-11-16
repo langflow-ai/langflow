@@ -86,6 +86,21 @@ def _bound_message_scope() -> tuple[UUID, UUID] | None:
     return flow_id, user_id
 
 
+async def _validate_message_executor(session: AsyncSession) -> None:
+    from lfx.memory.flow_context import (
+        get_current_message_execution_principal,
+        get_current_message_executor_id,
+        has_current_flow_scope,
+    )
+
+    if has_current_flow_scope():
+        from langflow.services.deps import get_auth_service
+
+        await get_auth_service().validate_execution_user(
+            get_current_message_executor_id(), principal=get_current_message_execution_principal(), db=session
+        )
+
+
 def _get_variable_query(
     sender: str | None = None,
     sender_name: str | None = None,
@@ -269,6 +284,7 @@ async def aupdate_messages(messages: Message | list[Message]) -> list[Message]:
     graph_scope = _bound_message_scope()
 
     async with session_scope() as session:
+        await _validate_message_executor(session)
         updated_messages: list[MessageTable] = []
         for message in messages:
             if graph_scope is None:
@@ -318,6 +334,7 @@ async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession
         session: Database session
     """
     try:
+        await _validate_message_executor(session)
         for message in messages:
             result = session.add(message)
             if asyncio.iscoroutine(result):

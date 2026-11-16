@@ -82,6 +82,49 @@ result = math.sqrt(16)
         assert result.is_safe is True
 
 
+class TestMatchClassAttributes:
+    @pytest.mark.parametrize(
+        "attribute", ["__class__", "gi_frame", "f_globals", "format", "attrgetter", "subprocess_exec", "eval", "query"]
+    )
+    def test_rejects_blocked_keyword_attributes(self, attribute):
+        result = scan_code_security(f"match value:\n    case Record({attribute}=_):\n        pass")
+        assert result.is_safe is False
+        assert f"Access to '{attribute}' is forbidden in components (sandbox escape)" in result.violations
+
+    @pytest.mark.parametrize(
+        "pattern",
+        [
+            "Record(name=name)",
+            "Record()",
+            "1",
+            "name",
+            "_",
+            "Record(item=Record(name=name))",
+            "[Record(name=name)]",
+            "Record(__name__=name, __qualname__=qualname, __module__=module, __doc__=doc)",
+        ],
+    )
+    def test_preserves_benign_class_patterns(self, pattern):
+        result = scan_code_security(f"match value:\n    case {pattern}:\n        pass")
+        assert result.is_safe is True
+        assert result.violations == ()
+
+    @pytest.mark.parametrize("pattern", ["Record(item=Record(__class__=_))", "Record.__class__()"])
+    def test_checks_nested_pattern_nodes(self, pattern):
+        result = scan_code_security(f"match value:\n    case {pattern}:\n        pass")
+        assert result.is_safe is False
+        assert "Access to '__class__' is forbidden in components (sandbox escape)" in result.violations
+
+    @pytest.mark.parametrize("pattern", ["Record(name, count)", "Record(_)", "Record(item=Record(_))", "int(1)"])
+    def test_rejects_positional_class_patterns(self, pattern):
+        result = scan_code_security(f"match value:\n    case {pattern}:\n        pass")
+        assert result.is_safe is False
+        assert (
+            "Positional class patterns are not allowed in saved Python Interpreter, Python REPL, "
+            "or Lambda Filter code. Use keyword patterns with named attributes instead." in result.violations
+        )
+
+
 class TestScanCodeSecurityModuleReexports:
     """Modules must not expose blocked capabilities through safe package imports."""
 
@@ -2248,14 +2291,16 @@ class TestScanCodeSecurityStdlibReexportBypass:
             pytest.param(
                 "from platform import sys as runtime\nruntime.modules['os'].fork()", id="from-platform-import-sys"
             ),
-            pytest.param("import zipfile\nzipfile.os.system('id')", id="zipfile-os-call"),
+            pytest.param("import configparser\nconfigparser.os.system('id')", id="configparser-os-call"),
             pytest.param("import tarfile\ntarfile.sys.modules['os'].posix_spawn()", id="tarfile-sys-modules"),
-            pytest.param("import zipfile\nzipfile.__dict__['os'].spawnv()", id="zipfile-dict-os"),
+            pytest.param("import configparser\nconfigparser.__dict__['os'].spawnv()", id="configparser-dict-os"),
             pytest.param("import tarfile\nvars(tarfile).get('os').fork()", id="tarfile-vars-get-os"),
         ],
     )
     def test_should_detect_stdlib_module_reexports(self, code):
-        assert scan_code_security(code).is_safe is False
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert not any(violation.startswith("Import ") for violation in result.violations)
 
     @pytest.mark.parametrize(
         "code",
@@ -2271,7 +2316,10 @@ class TestScanCodeSecurityStdlibReexportBypass:
                 "import platform\ngetattr(platform, '__dict__')['__builtins__']['eval']('1')",
                 id="getattr-dict-builtins",
             ),
-            pytest.param("import zipfile\nzipfile.__dict__['__builtins__']['eval']('1')", id="zipfile-dict-builtins"),
+            pytest.param(
+                "import configparser\nconfigparser.__dict__['__builtins__']['eval']('1')",
+                id="configparser-dict-builtins",
+            ),
             pytest.param(
                 "import requests\nrequests.__dict__['__builtins__']['eval']('1')", id="third-party-dict-builtins"
             ),
@@ -2295,25 +2343,27 @@ class TestScanCodeSecurityStdlibReexportBypass:
                 "import platform\nplatform.__dict__.get('__builtins__')['eval']('1')", id="platform-dict-get-builtins"
             ),
             pytest.param(
-                "import zipfile\nzipfile.__dict__.__getitem__('__builtins__')['eval']('1')",
-                id="zipfile-dict-getitem-builtins",
+                "import configparser\nconfigparser.__dict__.__getitem__('__builtins__')['eval']('1')",
+                id="configparser-dict-getitem-builtins",
             ),
             pytest.param(
-                "import zipfile\ndict.get(zipfile.__dict__, '__builtins__')['eval']('1')",
-                id="zipfile-dict-get-unbound-builtins",
+                "import configparser\ndict.get(configparser.__dict__, '__builtins__')['eval']('1')",
+                id="configparser-dict-get-unbound-builtins",
             ),
             pytest.param(
                 "import requests\nrequests.__dict__.get('__builtins__', {})['eval']('1')",
                 id="third-party-dict-get-default-builtins",
             ),
             pytest.param(
-                "import zipfile\nzipfile.__dict__['__loader__'].load_module('os').system('id')",
-                id="zipfile-dict-loader",
+                "import configparser\nconfigparser.__dict__['__loader__'].load_module('os').system('id')",
+                id="configparser-dict-loader",
             ),
         ],
     )
     def test_should_detect_builtins_reflection_through_module_dict(self, code):
-        assert scan_code_security(code).is_safe is False
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert not any(violation.startswith("Import ") for violation in result.violations)
 
     @pytest.mark.parametrize(
         "code",
@@ -2963,7 +3013,7 @@ class TestStdlibReexportHostBoundary:
     ``_reexported_restricted_module`` canonicalizes ``<stdlib>.os`` to the
     real ``os`` for every stdlib host, which is what closes
     ``platform.os.system(...)``. That only runs while the host is a named value,
-    so the boundary rule has to cover the same set: passing ``zipfile`` into a
+    so the boundary rule has to cover the same set: passing ``configparser`` into a
     helper and reading ``m.os`` inside it otherwise reaches ``os`` with the
     scanner unable to relate ``m`` back to a module.
     """
@@ -2971,13 +3021,14 @@ class TestStdlibReexportHostBoundary:
     @pytest.mark.parametrize(
         "code",
         [
-            "import zipfile\n\n\ndef helper(m):\n    return m.os.getenv('HOME')\n\n\nvalue = helper(zipfile)",
-            "import zipfile\n\n\ndef helper(m):\n    return m.os.system('id')\n\n\nhelper(zipfile)",
-            "import zipfile\n\n\ndef give():\n    return zipfile\n\n\nvalue = give().os.getenv('HOME')",
-            "import zipfile\n\nmodules = [zipfile]\nvalue = modules[0].os.getenv('HOME')",
-            "import zipfile\n\n\nclass C:\n    m = zipfile\n\n\nvalue = C.m.os.getenv('HOME')",
-            "import zipfile\n\n\ndef helper(m=zipfile):\n    return m.os.getenv('HOME')\n\n\nvalue = helper()",
-            "import zipfile\n\nmapping = {'z': zipfile}\nvalue = mapping['z'].os.getenv('HOME')",
+            "import configparser\n\n\ndef helper(m):\n    return m.os.getenv('HOME')\n\n\nvalue = helper(configparser)",
+            "import configparser\n\n\ndef helper(m):\n    return m.os.system('id')\n\n\nhelper(configparser)",
+            "import configparser\n\n\ndef give():\n    return configparser\n\n\nvalue = give().os.getenv('HOME')",
+            "import configparser\n\nmodules = [configparser]\nvalue = modules[0].os.getenv('HOME')",
+            "import configparser\n\n\nclass C:\n    m = configparser\n\n\nvalue = C.m.os.getenv('HOME')",
+            "import configparser\n\n\ndef helper(m=configparser):\n    return m.os.getenv('HOME')"
+            "\n\n\nvalue = helper()",
+            "import configparser\n\nmapping = {'z': configparser}\nvalue = mapping['z'].os.getenv('HOME')",
             "import tempfile\n\n\ndef helper(m):\n    return m.os.getenv('HOME')\n\n\nvalue = helper(tempfile)",
         ],
         ids=[
@@ -2992,7 +3043,13 @@ class TestStdlibReexportHostBoundary:
         ],
     )
     def test_stdlib_module_cannot_cross_an_opaque_boundary(self, code):
-        assert scan_code_security(code).is_safe is False
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any(violation.startswith("Indirect reference to restricted module '") for violation in result.violations)
+        assert not any(violation.startswith("Import ") for violation in result.violations)
+
+    def test_boundary_fixture_import_stays_allowed(self):
+        assert scan_code_security("import configparser").is_safe is True
 
     @pytest.mark.parametrize(
         "code",
@@ -3000,7 +3057,6 @@ class TestStdlibReexportHostBoundary:
             # Ordinary stdlib use is unaffected: only a bare *module value*
             # crossing a boundary is a carrier.
             "import json\nvalue = json.dumps({'a': 1})",
-            "import zipfile\narchive = zipfile.ZipFile('x.zip')\nnames = archive.namelist()",
             "import re\nmatch = re.match('a', 'abc')",
             "import math\nvalue = math.sqrt(4)",
             "import datetime\nvalue = datetime.datetime.now()",
@@ -3012,7 +3068,6 @@ class TestStdlibReexportHostBoundary:
         ],
         ids=[
             "json-dumps",
-            "zipfile-normal-use",
             "re-match",
             "math-sqrt",
             "datetime-now",

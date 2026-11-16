@@ -23,13 +23,15 @@ This guide will help you get Langflow up and running using Docker and Docker Com
 
 3. Create a `.env` file with the Langflow admin and PostgreSQL passwords set:
 
-   ```sh
-   LANGFLOW_SUPERUSER_PASSWORD=SUPERUSER_PASSWORD
-   POSTGRES_PASSWORD=POSTGRES_PASSWORD
+   ```text
+   LANGFLOW_SUPERUSER_PASSWORD='SUPERUSER_PASSWORD'
+   POSTGRES_PASSWORD='POSTGRES_PASSWORD'
    ```
 
    Replace `SUPERUSER_PASSWORD` with a strong password for the Langflow superuser and `POSTGRES_PASSWORD` with a separate strong password for PostgreSQL.
    The default admin username is `langflow`.
+
+   Keep the single quotes so Compose preserves literal characters such as `$`. Escape an embedded single quote with `\'`. For example, `POSTGRES_PASSWORD='Example$pass\'word'` stores the raw password `Example$pass'word`. The surrounding quotes are not part of the password.
 
 4. Run the Docker Compose file:
 
@@ -95,7 +97,9 @@ Fresh installs are unaffected.
 
 `POSTGRES_PASSWORD` initializes the role password only when PostgreSQL first initializes an empty data directory. Changing it in `.env` does not update the password stored in an existing `langflow-postgres` volume.
 
-If you are changing the password or adopting the required-password Compose configuration, rotate the existing role password before updating `.env`. During planned downtime, stop Langflow and open psql for the Compose variant you use:
+Before running Compose commands, create or update `.env` with both required password values shown above. Set `POSTGRES_PASSWORD` to the existing database password and use the literal quoting described above. Compose requires these values even for `stop` and `exec`.
+
+During planned downtime, stop Langflow and open psql for the Compose variant you use:
 
 For `docker-compose.yml`:
 
@@ -118,7 +122,7 @@ langflow=# \password langflow
 langflow=# \q
 ```
 
-Enter the new password twice at the secure prompts. psql does not echo the password or include it in a SQL command. Update `POSTGRES_PASSWORD` in `.env` to the same raw value before restarting with `docker compose up -d` or `docker compose -f pre.docker-compose.yml up -d`. The startup command continues to percent-encode it when constructing `LANGFLOW_DATABASE_URL`.
+Enter the new password twice at the secure prompts. psql does not echo the password or include it in a SQL command. Then update `POSTGRES_PASSWORD` in `.env` to the same raw value, keeping the literal quoting described above. Restart with `docker compose up -d` or `docker compose -f pre.docker-compose.yml up -d`. The startup command continues to percent-encode the password when constructing `LANGFLOW_DATABASE_URL`.
 
 ## Switching to a specific Langflow version
 

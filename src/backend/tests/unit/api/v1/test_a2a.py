@@ -569,9 +569,11 @@ _ECHO_FLOW = Path(__file__).parents[3] / "data" / "chat_echo_no_llm.json"
 
 
 @pytest.fixture
-def echo_flow_data():
+def echo_flow_data(client):  # noqa: ARG001
     """ChatInput -> ChatOutput echo flow (no LLM); a sync run returns input_value verbatim."""
-    return orjson.loads(_ECHO_FLOW.read_bytes())["data"]
+    data = orjson.loads(_ECHO_FLOW.read_bytes())["data"]
+    _refresh_template_sources(data)
+    return data
 
 
 def _refresh_template_sources(flow_data):

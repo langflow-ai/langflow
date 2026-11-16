@@ -5,7 +5,7 @@
 # so the base and full targets cannot silently resolve different build tools.
 ARG UV_VERSION=0.10.4
 ARG PYTHON_IMAGE=registry.access.redhat.com/ubi10/python-314-minimal
-ARG NODE_VERSION=24.21.0
+ARG NODE_VERSION=24.22.2
 
 FROM ghcr.io/astral-sh/uv:${UV_VERSION} AS uv-installer
 
@@ -193,7 +193,12 @@ FROM ${PYTHON_IMAGE} AS runtime
 USER root
 
 RUN microdnf update -y \
-    && microdnf install -y curl git gnupg libpq libxml2 libxslt shadow-utils tar xz \
+    && microdnf install -y curl git libpq libxml2 libxslt shadow-utils tar xz \
+    && useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data \
+    && mkdir -p /app/data /app/langflow \
+    && chown -R 1000:0 /app/data /app/langflow \
+    && chmod -R g+rwX /app/data /app/langflow \
+    && microdnf remove -y shadow-utils \
     && microdnf clean all
 
 RUN python3.14 -m pip install --no-cache-dir --upgrade "pip==26.2.1"
@@ -211,11 +216,6 @@ RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
     && ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
     && sh /tmp/install_hardened_npm.sh \
     && rm -f /tmp/install_hardened_npm.sh
-
-RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data \
-    && mkdir -p /app/data /app/langflow \
-    && chown -R 1000:0 /app/data /app/langflow \
-    && chmod -R g+rwX /app/data /app/langflow
 
 # Give uid 1000 a writable npm cache. The image ships Node so users can spawn
 # stdio MCP servers via npx, while the UBI HOME is not owned by that uid.

@@ -510,6 +510,7 @@ async def test_flow_for_update(active_user, user_test_project):
             await session.delete(flow)
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_update_project_mcp_settings_success(
     client: AsyncClient, user_test_project, test_flow_for_update, logged_in_headers
 ):
@@ -598,6 +599,7 @@ async def test_update_project_mcp_settings_other_user_project_with_composer(
     assert "API key required" in response.json()["detail"]
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_update_project_mcp_settings_empty_settings(client: AsyncClient, user_test_project, logged_in_headers):
     """Test updating MCP settings with empty settings list."""
     # Use real database objects instead of mocks to avoid the coroutine issue
@@ -721,6 +723,7 @@ async def user_test_flow(active_user, user_test_project):
             await session.delete(flow)
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_user_can_update_own_flow_mcp_settings(
     client: AsyncClient, logged_in_headers, user_test_project, user_test_flow
 ):
@@ -1245,8 +1248,13 @@ async def test_should_replace_base_name_entry_without_project_url_on_reinstall(
     assert installed_servers["lf-user_test_project"]["args"][-1].endswith(f"/{user_test_project.id}/streamable")
 
 
-async def test_init_mcp_servers(user_test_project, other_test_project):
+@pytest.mark.usefixtures("administrator_user")
+async def test_init_mcp_servers(user_test_project, other_test_project, other_test_user):
     """Test the initialization of MCP servers for all projects."""
+    async with session_scope() as session:
+        owner = await session.get(User, other_test_user.id)
+        owner.is_superuser = True
+        session.add(owner)
     # Clear existing caches
     project_sse_transports.clear()
     project_mcp_servers.clear()
@@ -1319,6 +1327,7 @@ async def test_init_mcp_servers_error_handling_streamable():
         await init_mcp_servers()
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_init_mcp_servers_reconciles_project_server_auth_when_oauth_falls_back(
     user_test_project,
 ):
@@ -1355,6 +1364,7 @@ async def test_init_mcp_servers_reconciles_project_server_auth_when_oauth_falls_
         assert project.auth_settings["auth_type"] == "apikey"
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_init_mcp_servers_reconciles_existing_apikey_project_server_config(
     client: AsyncClient,
     user_test_project,
@@ -1410,6 +1420,7 @@ async def test_init_mcp_servers_reconciles_existing_apikey_project_server_config
         await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=headers)
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_init_mcp_servers_reconciles_stale_config_without_transaction_error(
     client: AsyncClient,
     user_test_project,
@@ -1479,6 +1490,7 @@ async def test_init_mcp_servers_reconciles_stale_config_without_transaction_erro
         await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=headers)
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_init_mcp_servers_does_not_leak_api_key_when_reconciliation_fails(
     user_test_project,
     monkeypatch,
@@ -1531,6 +1543,7 @@ async def test_init_mcp_servers_does_not_leak_api_key_when_reconciliation_fails(
     assert await count_api_keys() == keys_before, "failed reconciliation leaked an API key"
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_patch_project_mcp_settings_syncs_server_config_for_apikey(
     client: AsyncClient,
     user_test_project,
@@ -1597,6 +1610,7 @@ async def test_patch_project_mcp_settings_syncs_server_config_for_apikey(
         await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=api_headers)
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_init_mcp_servers_rolls_back_auth_update_when_reconciliation_fails(
     user_test_project,
     monkeypatch,
@@ -2138,6 +2152,7 @@ async def test_v2_mcp_servers_unlocked_allows_non_superuser_add_patch_delete(
 ):
     """When is_mcp_servers_locked returns False the gate must not block normal users."""
     monkeypatch.setattr("langflow.api.v2.mcp.is_mcp_servers_locked", lambda _settings: False)
+    monkeypatch.setattr(get_settings_service().settings, "custom_component_admin_only", False)
 
     server_name = f"lf-unlock-test-{uuid4().hex[:8]}"
     server_config = {

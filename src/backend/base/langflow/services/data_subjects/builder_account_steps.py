@@ -20,6 +20,7 @@ from langflow.services.database.models.auth.authz import (
     AuthzShare,
     AuthzTeamMember,
 )
+from langflow.services.database.models.auth.refresh_token import RefreshTokenSession
 from langflow.services.database.models.auth.sso import SSOConfig, SSOUserProfile
 from langflow.services.database.models.catalog_policy.model import CatalogPolicyRule
 from langflow.services.database.models.connection.model import Connection
@@ -69,6 +70,15 @@ async def erase_transactions_elsewhere(session: AsyncSession, ctx: EraseContext)
 
 async def erase_ingestion_runs(session: AsyncSession, ctx: EraseContext) -> int:
     return await delete_batch(session, IngestionRun, IngestionRun.user_id == ctx.subject_user_id)
+
+
+async def erase_refresh_sessions(session: AsyncSession, ctx: EraseContext) -> int:
+    return await delete_batch(
+        session,
+        RefreshTokenSession,
+        RefreshTokenSession.user_id == ctx.subject_user_id,
+        pk=RefreshTokenSession.session_digest,
+    )
 
 
 async def erase_shares(session: AsyncSession, ctx: EraseContext) -> int:
@@ -166,6 +176,7 @@ BUILDER_ACCOUNT_STEPS: tuple[tuple[str, Step], ...] = (
     ("files", _delete_by_user(File, File.user_id)),
     ("variables", _delete_by_user(Variable, Variable.user_id)),
     ("api_keys", _delete_by_user(ApiKey, ApiKey.user_id)),
+    ("refresh_sessions", erase_refresh_sessions),
     ("connections", erase_connections),
     ("provider_accounts", _delete_by_user(DeploymentProviderAccount, DeploymentProviderAccount.user_id)),
     ("sso_profiles", _delete_by_user(SSOUserProfile, SSOUserProfile.user_id)),

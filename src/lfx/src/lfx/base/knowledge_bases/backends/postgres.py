@@ -662,6 +662,25 @@ class PostgresBackend(BaseVectorStoreBackend):
 
     # ---- native metrics / lifecycle (override the base defaults) --------
 
+    async def get_documents_by_ids(self, ids: list[str]) -> list[Document]:
+        """Read document identities through the table's primary key."""
+        if not ids:
+            return []
+        await self.ensure_ready()
+        from sqlalchemy import select
+
+        table = self._embedding_table()
+        async with self._ensure_async_engine().connect() as conn:
+            if not await self._table_exists(conn):
+                return []
+            rows = await conn.execute(
+                select(table.c.id, table.c.document, table.c.cmetadata).where(table.c.id.in_(ids))
+            )
+            return [
+                Document(id=str(row.id), page_content=row.document or "", metadata=dict(row.cmetadata or {}))
+                for row in rows.all()
+            ]
+
     async def count(self) -> int:
         """Count rows in the vector table, treating an unprovisioned table as empty."""
         await self.ensure_ready()

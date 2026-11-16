@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from langflow.api.utils.kb_helpers import DocumentWriteResult
 from langflow.services.database.models.message.model import MessageTable
 from lfx.services.model_provider_policy import (
     ModelProviderPolicyError,
@@ -758,7 +759,7 @@ class TestIngestMemoryTaskEdgeCases:
 
         async def write_partial(**_kwargs):
             await service.cancel_in_flight_jobs_by_asset(asset_id, "memory_base", user_id=user_id)
-            return 0
+            return DocumentWriteResult()
 
         backend = AsyncMock()
         with (
@@ -959,7 +960,7 @@ class TestIngestMemoryTaskEdgeCases:
             ),
             patch(
                 "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_backend",
-                AsyncMock(return_value=1),
+                AsyncMock(return_value=DocumentWriteResult(processed=1, created=1)),
             ),
             patch("langflow.services.memory_base.task.sync_kb_stats_to_record", AsyncMock()),
             patch("langflow.services.memory_base.task._mark_messages_ingested", mark_ingested_mock),
@@ -1032,7 +1033,7 @@ class TestIngestMemoryTaskEdgeCases:
             # Partial write simulates mid-run cancellation
             patch(
                 "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_backend",
-                AsyncMock(return_value=0),
+                AsyncMock(return_value=DocumentWriteResult(processed=0, created=0)),
             ),
             patch("langflow.services.memory_base.task.sync_kb_stats_to_record", AsyncMock()),
             patch("langflow.services.memory_base.task._mark_messages_ingested", mark_ingested_mock),
@@ -2055,7 +2056,7 @@ class TestIngestMemoryTaskPreprocessing:
             ),
             patch(
                 "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_backend",
-                AsyncMock(return_value=1),
+                AsyncMock(return_value=DocumentWriteResult(processed=1, created=1)),
             ),
             patch("langflow.services.memory_base.task.sync_kb_stats_to_record", AsyncMock()),
             patch("langflow.services.memory_base.task._update_preproc_row_status", AsyncMock()),
@@ -2105,7 +2106,7 @@ class TestIngestMemoryTaskPreprocessing:
             ),
             patch(
                 "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_backend",
-                AsyncMock(return_value=1),
+                AsyncMock(return_value=DocumentWriteResult(processed=1, created=1)),
             ),
             patch("langflow.services.memory_base.task.sync_kb_stats_to_record", AsyncMock()),
             patch("langflow.services.memory_base.task._update_preproc_row_status", AsyncMock()),
@@ -2156,7 +2157,7 @@ class TestIngestMemoryTaskPreprocessing:
             ),
             patch(
                 "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_backend",
-                AsyncMock(return_value=1),
+                AsyncMock(return_value=DocumentWriteResult(processed=1, created=1)),
             ),
             patch("langflow.services.memory_base.task.sync_kb_stats_to_record", AsyncMock()),
             patch("langflow.services.memory_base.task._update_preproc_row_status", update_mock),
@@ -2207,7 +2208,7 @@ class TestIngestMemoryTaskPreprocessing:
             ),
             patch(
                 "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_backend",
-                AsyncMock(return_value=1),
+                AsyncMock(return_value=DocumentWriteResult(processed=1, created=1)),
             ),
             patch("langflow.services.memory_base.task.sync_kb_stats_to_record", AsyncMock()),
             patch("langflow.services.memory_base.task._update_preproc_row_status", AsyncMock()),
@@ -2277,7 +2278,7 @@ class TestIngestMemoryTaskPreprocessing:
             ),
             patch(
                 "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_backend",
-                AsyncMock(return_value=1),
+                AsyncMock(return_value=DocumentWriteResult(processed=1, created=1)),
             ),
             patch("langflow.services.memory_base.task.sync_kb_stats_to_record", AsyncMock()),
             patch("langflow.services.memory_base.task._update_preproc_row_status", AsyncMock()),
@@ -2324,7 +2325,7 @@ class TestIngestMemoryTaskPreprocessing:
             ),
             patch(
                 "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_backend",
-                AsyncMock(return_value=1),
+                AsyncMock(return_value=DocumentWriteResult(processed=1, created=1)),
             ),
             patch("langflow.services.memory_base.task.sync_kb_stats_to_record", AsyncMock()),
             patch("langflow.services.memory_base.task._update_preproc_row_status", AsyncMock()),
@@ -2371,7 +2372,7 @@ class TestIngestMemoryTaskPreprocessing:
             ),
             patch(
                 "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_backend",
-                AsyncMock(return_value=1),
+                AsyncMock(return_value=DocumentWriteResult(processed=1, created=1)),
             ),
             patch("langflow.services.memory_base.task.sync_kb_stats_to_record", AsyncMock()),
             patch("langflow.services.memory_base.task._update_preproc_row_status", AsyncMock()),

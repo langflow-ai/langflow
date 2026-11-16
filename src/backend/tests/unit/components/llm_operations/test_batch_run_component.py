@@ -69,6 +69,141 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
         assert all(row["metadata"]["has_system_message"] for row in result_dicts)
         assert all(row["metadata"]["processing_status"] == "success" for row in result_dicts)
 
+    async def test_metadata_reports_input_length(self):
+        test_df = DataFrame({"text": ["Hi", "Hello there"]})
+
+        component = BatchRunComponent(
+            model=_MockLLM(),
+            df=test_df,
+            column_name="text",
+            enable_metadata=True,
+        )
+
+        result = await component.run_batch()
+
+        assert [row["metadata"]["input_length"] for row in result.to_dict("records")] == [2, 11]
+
+    async def test_metadata_reports_column_input_format(self):
+        component = BatchRunComponent(
+            model=_MockLLM(),
+            df=DataFrame({"text": ["Hi", "Hello there"]}),
+            column_name="text",
+            enable_metadata=True,
+        )
+
+        result = await component.run_batch()
+
+        assert [row["metadata"]["input_format"] for row in result.to_dict("records")] == ["column", "column"]
+
+    async def test_metadata_reports_toml_length_and_format_when_column_name_empty(self):
+        component = BatchRunComponent(
+            model=_MockLLM(),
+            df=DataFrame({"name": ["Ada"], "city": ["Lagos"]}),
+            column_name="",
+            enable_metadata=True,
+        )
+
+        result = await component.run_batch()
+
+        metadata = result.to_dict("records")[0]["metadata"]
+        sent_text = '[name]\nvalue = "Ada"\n\n[city]\nvalue = "Lagos"\n'
+        assert result.to_dict("records")[0]["model_response"] == f"Response to: {sent_text}"
+        assert metadata["input_length"] == len(sent_text) == 45
+        assert metadata["input_format"] == "toml"
+
+    async def test_metadata_ignores_text_input_column(self):
+        component = BatchRunComponent(
+            model=_MockLLM(),
+            df=DataFrame({"text": ["Hi"], "text_input": ["xxxxxxxxxx"]}),
+            column_name="text",
+            enable_metadata=True,
+        )
+
+        result = await component.run_batch()
+
+        metadata = result.to_dict("records")[0]["metadata"]
+        assert metadata["input_length"] == 2
+        assert metadata["input_format"] == "column"
+
+    def test_failure_metadata_omits_input_fields(self):
+        component = BatchRunComponent(enable_metadata=True)
+        row = component._create_base_row(original_row={}, model_response="", batch_index=-1)
+
+        component._add_metadata(row, success=False, input_text="abc", input_format="column", error="boom")
+
+        assert row["metadata"] == {"error": "boom", "processing_status": "failed"}
+
+    def test_metadata_disabled_ignores_input_fields(self):
+        component = BatchRunComponent(enable_metadata=False)
+        row = component._create_base_row(original_row={"text": "x"}, model_response="r", batch_index=0)
+
+        component._add_metadata(row, success=True, input_text="x", input_format="toml")
+
+        assert "metadata" not in row
+
+    async def test_failed_batch_metadata_has_only_error_and_status(self):
+        class _FailingLLM(_MockLLM):
+            async def abatch(self, *_):
+                msg = "boom"
+                raise KeyError(msg)
+
+        component = BatchRunComponent(
+            model=_FailingLLM(),
+            df=DataFrame({"text": ["Hi"]}),
+            column_name="text",
+            enable_metadata=True,
+        )
+
+        result = await component.run_batch()
+
+        rows = result.to_dict("records")
+        assert len(rows) == 1
+        assert rows[0]["batch_index"] == -1
+        assert rows[0]["metadata"] == {"error": "'boom'", "processing_status": "failed"}
+
+    async def test_metadata_input_length_excludes_system_message(self):
+        component = BatchRunComponent(
+            model=_MockLLM(),
+            df=DataFrame({"text": ["Hi"]}),
+            column_name="text",
+            system_message="Answer in one word.",
+            enable_metadata=True,
+        )
+
+        result = await component.run_batch()
+
+        metadata = result.to_dict("records")[0]["metadata"]
+        assert metadata["has_system_message"] is True
+        assert metadata["input_length"] == 2
+
+    async def test_metadata_counts_stringified_non_string_cells(self):
+        component = BatchRunComponent(
+            model=_MockLLM(),
+            df=DataFrame({"number": [7, 12345]}),
+            column_name="number",
+            enable_metadata=True,
+        )
+
+        result = await component.run_batch()
+
+        assert [row["metadata"]["input_length"] for row in result.to_dict("records")] == [1, 5]
+
+    async def test_metadata_counts_none_cell_as_sent_in_toml(self):
+        component = BatchRunComponent(
+            model=_MockLLM(),
+            df=DataFrame({"name": ["Ada"], "city": [None]}),
+            column_name="",
+            enable_metadata=True,
+        )
+
+        result = await component.run_batch()
+
+        row = result.to_dict("records")[0]
+        sent_text = '[name]\nvalue = "Ada"\n\n[city]\nvalue = "None"\n'
+        assert row["model_response"] == f"Response to: {sent_text}"
+        assert row["metadata"]["input_length"] == len(sent_text) == 44
+        assert row["metadata"]["input_format"] == "toml"
+
     async def test_batch_run_without_metadata(self):
         test_df = DataFrame({"text": ["Hello", "World"]})
 
@@ -179,15 +314,14 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
     def test_add_metadata_success(self):
         component = BatchRunComponent(enable_metadata=True)
 
-        # Passa text_input dentro do dicionário original_row
-        original_row = {"text_input": "test_input"}
+        original_row = {"text": "test_input"}
         row = component._create_base_row(
             original_row=original_row,
             model_response="test_response",
             batch_index=1,
         )
 
-        component._add_metadata(row, success=True, system_msg="Instructions here")
+        component._add_metadata(row, success=True, system_msg="Instructions here", input_text="test_input")
 
         assert "metadata" in row
         assert row["metadata"]["has_system_message"] is True

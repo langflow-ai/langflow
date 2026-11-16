@@ -78,8 +78,8 @@ async def processes(monkeypatch):
             await process.wait()
 
 
-async def _register(session, script, count):
-    user = SimpleNamespace(id=uuid4(), is_superuser=False)
+async def _register(session, script, count, *, is_superuser=False):
+    user = SimpleNamespace(id=uuid4(), is_superuser=is_superuser)
     for index in range(count):
         session.add(
             MCPServer(
@@ -107,7 +107,7 @@ async def test_plain_listing_does_not_start_processes(discovery_db, server_scrip
 
 
 async def test_successful_counts_reap_processes_and_manager_tasks(discovery_db, server_scripts, processes):
-    user = await _register(discovery_db, server_scripts[0], 6)
+    user = await _register(discovery_db, server_scripts[0], 6, is_superuser=True)
     before = _manager_tasks()
     results = await get_servers(user, discovery_db, None, get_settings_service(), action_count=True)
 
@@ -120,7 +120,7 @@ async def test_successful_counts_reap_processes_and_manager_tasks(discovery_db, 
 async def test_timeout_limits_real_processes_and_reaps_uninitialized_sessions(
     discovery_db, server_scripts, processes, monkeypatch
 ):
-    user = await _register(discovery_db, server_scripts[1], 12)
+    user = await _register(discovery_db, server_scripts[1], 12, is_superuser=True)
     settings = get_settings_service()
     monkeypatch.setattr(settings.settings, "mcp_server_timeout", 2)
     before = _manager_tasks()
@@ -135,7 +135,7 @@ async def test_timeout_limits_real_processes_and_reaps_uninitialized_sessions(
 
 
 async def test_cancellation_reaps_real_processes_before_readmitting_requests(discovery_db, server_scripts, processes):
-    user = await _register(discovery_db, server_scripts[1], 12)
+    user = await _register(discovery_db, server_scripts[1], 12, is_superuser=True)
     before = _manager_tasks()
     settings = get_settings_service()
     request = asyncio.create_task(get_servers(user, discovery_db, None, settings, action_count=True))
@@ -154,7 +154,7 @@ async def test_cancellation_reaps_real_processes_before_readmitting_requests(dis
     assert all(process.returncode is not None for process in processes[0])
     assert _manager_tasks() <= before
 
-    healthy_user = await _register(discovery_db, server_scripts[0], 1)
+    healthy_user = await _register(discovery_db, server_scripts[0], 1, is_superuser=True)
     [result] = await get_servers(healthy_user, discovery_db, None, settings, action_count=True)
     assert result["toolsCount"] == 1
 

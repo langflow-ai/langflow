@@ -817,6 +817,23 @@ class TestSimilaritySearch:
 # --------------------------------------------------------------------------
 
 
+class TestGetDocumentsByIds:
+    async def test_uses_a_bounded_primary_key_query(self, make_backend):
+        conn = _FakeConn(select_rows=(SimpleNamespace(id="one", document="stored", cmetadata={"job_id": "prior"}),))
+        documents = await make_backend(conn).get_documents_by_ids(["one", "missing"])
+        assert [(doc.id, doc.page_content, doc.metadata) for doc in documents] == [
+            ("one", "stored", {"job_id": "prior"})
+        ]
+        assert any(".id IN (__[POSTCOMPILE_id_1])" in sql for sql in conn.statements)
+
+    async def test_missing_table_is_empty(self, make_backend):
+        assert await make_backend(_FakeConn(table_exists=False)).get_documents_by_ids(["one"]) == []
+
+    async def test_query_errors_propagate(self, make_backend):
+        with pytest.raises(_DatabaseError):
+            await make_backend(_FakeConn(raise_on=".id IN")).get_documents_by_ids(["one"])
+
+
 class TestCount:
     async def test_counts_rows(self, make_backend) -> None:
         assert await make_backend(_FakeConn(row_count=7)).count() == 7

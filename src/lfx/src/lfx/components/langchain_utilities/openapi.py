@@ -5,9 +5,9 @@ from langchain_classic.agents import AgentExecutor
 from langchain_community.agent_toolkits import create_openapi_agent
 from langchain_community.agent_toolkits.openapi.toolkit import OpenAPIToolkit
 from langchain_community.tools.json.tool import JsonSpec
-from langchain_community.utilities.requests import TextRequestsWrapper
 
 from lfx.base.agents.agent import LCAgentComponent
+from lfx.base.langchain_utilities.requests import SSRFSafeTextRequestsWrapper
 from lfx.base.models.unified_models import get_language_model_options, get_llm, handle_model_input_update
 from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
 from lfx.inputs.inputs import BoolInput, DropdownInput, FileInput, ModelInput, SecretStrInput, StrInput
@@ -77,6 +77,7 @@ class OpenAPIAgentComponent(LCAgentComponent):
         )
 
     def build_agent(self) -> AgentExecutor:
+        """Build tools from the confined API specification with outbound request protection."""
         llm = self._get_llm()
         # self.path is tenant-controlled: confine reads to the storage dir when
         # LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS is enabled (multi-tenant), blocking /etc/passwd etc.
@@ -87,7 +88,7 @@ class OpenAPIAgentComponent(LCAgentComponent):
             spec = JsonSpec(dict_=yaml_dict)
         else:
             spec = JsonSpec.from_file(path)
-        requests_wrapper = TextRequestsWrapper()
+        requests_wrapper = SSRFSafeTextRequestsWrapper()
         toolkit = OpenAPIToolkit.from_llm(
             llm=llm,
             json_spec=spec,

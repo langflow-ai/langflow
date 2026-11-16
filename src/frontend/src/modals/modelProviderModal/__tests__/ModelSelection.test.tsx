@@ -166,6 +166,70 @@ describe("ModelSelection", () => {
     });
   });
 
+  describe("Collapsible model sections", () => {
+    it("should expand both model sections by default", () => {
+      render(<ModelSelection {...defaultProps} />);
+
+      expect(screen.getByTestId("llm-models-section")).toHaveAttribute("open");
+      expect(screen.getByTestId("embeddings-models-section")).toHaveAttribute(
+        "open",
+      );
+      expect(screen.getByText("gpt-4")).toBeVisible();
+      expect(screen.getByText("embed-large")).toBeVisible();
+    });
+
+    it("should collapse language models independently of embedding models", async () => {
+      const user = userEvent.setup();
+      render(<ModelSelection {...defaultProps} />);
+
+      await user.click(screen.getByTestId("llm-models-summary"));
+
+      expect(screen.getByTestId("llm-models-section")).not.toHaveAttribute(
+        "open",
+      );
+      expect(screen.getByText("gpt-4")).not.toBeVisible();
+      expect(screen.getByTestId("embeddings-models-section")).toHaveAttribute(
+        "open",
+      );
+      expect(screen.getByText("embed-large")).toBeVisible();
+    });
+
+    it("should preserve the search and enabled model when a section reopens", async () => {
+      const user = userEvent.setup();
+      const onModelToggle = jest.fn();
+      render(
+        <ModelSelection {...defaultProps} onModelToggle={onModelToggle} />,
+      );
+      await user.type(screen.getByTestId("model-search-input"), "gpt-4");
+      await user.click(screen.getByTestId("llm-models-summary"));
+
+      await user.click(screen.getByTestId("llm-models-summary"));
+
+      expect(screen.getByTestId("model-search-input")).toHaveValue("gpt-4");
+      expect(screen.getByTestId("llm-toggle-gpt-4")).toBeVisible();
+      expect(screen.getByTestId("llm-toggle-gpt-4")).toBeChecked();
+      expect(onModelToggle).not.toHaveBeenCalled();
+      await user.click(screen.getByTestId("llm-toggle-gpt-4"));
+      expect(onModelToggle).toHaveBeenCalledWith("gpt-4", false, "llm");
+    });
+
+    it("should reopen model sections when the provider changes", async () => {
+      const user = userEvent.setup();
+      const { rerender } = render(<ModelSelection {...defaultProps} />);
+      await user.click(screen.getByTestId("llm-models-summary"));
+      await user.click(screen.getByTestId("embeddings-models-summary"));
+
+      rerender(<ModelSelection {...defaultProps} providerName="Anthropic" />);
+
+      expect(screen.getByTestId("llm-models-section")).toHaveAttribute("open");
+      expect(screen.getByTestId("embeddings-models-section")).toHaveAttribute(
+        "open",
+      );
+      expect(screen.getByText("gpt-4")).toBeVisible();
+      expect(screen.getByText("embed-large")).toBeVisible();
+    });
+  });
+
   describe("Model Display", () => {
     it("should render model names", () => {
       render(<ModelSelection {...defaultProps} />);
@@ -681,6 +745,28 @@ describe("ModelSelection", () => {
         metadata: { model_type: "llm", icon: "Bot", deprecated: true },
       },
     ];
+
+    it("should keep the model section expanded when deprecated models are toggled", async () => {
+      const user = userEvent.setup();
+      render(
+        <ModelSelection
+          {...defaultProps}
+          availableModels={withDeprecated}
+          modelType="llm"
+        />,
+      );
+
+      await user.click(screen.getByTestId("llm-deprecated-summary"));
+
+      expect(screen.getByTestId("llm-models-section")).toHaveAttribute("open");
+      expect(screen.getByTestId("llm-deprecated-disclosure")).toHaveAttribute(
+        "open",
+      );
+      expect(screen.getByText("gpt-old")).toBeVisible();
+      await user.click(screen.getByTestId("llm-deprecated-summary"));
+      expect(screen.getByTestId("llm-models-section")).toHaveAttribute("open");
+      expect(screen.getByText("gpt-old")).not.toBeVisible();
+    });
 
     it("should not render deprecated rows by default", () => {
       render(

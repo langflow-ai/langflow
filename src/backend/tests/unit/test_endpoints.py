@@ -15,6 +15,7 @@ from lfx.services.settings.base import BASE_COMPONENTS_PATH
 @pytest.fixture(autouse=True)
 def allow_custom_components_by_default(monkeypatch):
     monkeypatch.setenv("LANGFLOW_ALLOW_CUSTOM_COMPONENTS", "true")
+    monkeypatch.setenv("LANGFLOW_CUSTOM_COMPONENT_ADMIN_ONLY", "false")
 
 
 async def run_post(client, flow_id, headers, post_data):

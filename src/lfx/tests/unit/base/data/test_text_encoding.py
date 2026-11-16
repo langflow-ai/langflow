@@ -56,6 +56,30 @@ async def test_automatic_legacy_encoding_is_reported(tmp_path, caplog, reader, c
     assert "specify an encoding" in caplog.text
 
 
+@pytest.mark.parametrize("reader", [read_text_file, read_text_file_async])
+async def test_automatic_windows_1254_preserves_turkish_text(tmp_path, reader):
+    content = "Pijamal\u0131 hasta ya\u011f\u0131z \u015fof\u00f6re \u00e7abucak g\u00fcvendi.\n"
+    file_path = tmp_path / "turkish.txt"
+    file_path.write_bytes(content.encode("cp1254"))
+
+    result = reader(str(file_path))
+    if reader is read_text_file_async:
+        result = await result
+
+    assert result == content
+
+
+async def test_windows_1254_metadata_records_selected_encoding(tmp_path):
+    content = "Pijamal\u0131 hasta ya\u011f\u0131z \u015fof\u00f6re \u00e7abucak g\u00fcvendi.\n"
+    file_path = tmp_path / "turkish.txt"
+    file_path.write_bytes(content.encode("cp1254"))
+
+    result = await aparse_text_file_to_data(str(file_path), silent_errors=False)
+
+    assert result.text == content
+    assert result.data["encoding"] == "cp1254"
+
+
 async def test_metadata_records_successful_fallback_not_detector_guess(tmp_path):
     file_path = tmp_path / "short.txt"
     # The trailing accented byte is invalid in ASCII, UTF-8, and GB18030.

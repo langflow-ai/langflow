@@ -123,18 +123,21 @@ async def build_and_cache_graph_from_data(
     chat_service: ChatService,
     graph_data: dict,
     *,
+    user_id: str | None = None,
     execution_principal: ExecutionPrincipal | None = None,
 ):  # -> Graph | Any:
     """Build and cache the graph.
 
     This is the Playground's primary build seam, so it carries the same
     ``execution_principal`` contract as ``build_graph_from_data``.
+    ``user_id`` records the caller on the graph for component initialization.
     """
     # Convert flow_id to str if it's UUID
     str_flow_id = str(flow_id) if isinstance(flow_id, uuid.UUID) else flow_id
     graph = Graph.from_payload(
         graph_data,
         str_flow_id,
+        user_id=user_id,
         authorized_legacy_flow_ids=await get_authorized_legacy_flow_ids(flow_id),
     )
     if execution_principal is not None:

@@ -1294,12 +1294,15 @@ async def test_a_run_that_a_webhook_left_running_stops_the_pause(
     _checked(config_dir, [PASSING], **PREPARED)
     monkeypatch.setattr(migration_module, "_DRAIN_SECONDS", 0.2)
     await _add(Flow(id=flow_id, name="on a webhook", data={"nodes": [], "edges": []}, user_id=active_super_user.id))
-    # A webhook that asks for no key runs as the owner of its flow.
     monkeypatch.setattr(get_settings_service().auth_settings, "WEBHOOK_AUTH_ENABLE", False)
+    key = await client.post("api/v1/api_key/", json={"name": "migration-webhook"}, headers=headers)
+    assert key.status_code == 200, key.text
     arrived, release = await _held_before_it_is_a_job(monkeypatch, endpoints, "apply_global_variable_defaults")
 
     # The webhook answers at once and leaves its run going in a task of its own.
-    answered = await client.post(f"api/v1/webhook/{flow_id}", json={"any": "payload"})
+    answered = await client.post(
+        f"api/v1/webhook/{flow_id}", headers={"x-api-key": key.json()["api_key"]}, json={"any": "payload"}
+    )
     assert answered.status_code == 202, answered.text
 
     detail = await _refused_over_work_left_running(client, headers, arrived, release)

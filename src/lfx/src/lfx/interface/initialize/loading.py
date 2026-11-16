@@ -110,11 +110,13 @@ async def get_instance_results(
     from lfx.memory.flow_context import (
         coerce_flow_id,
         reset_current_flow_id,
+        reset_current_message_execution_principal,
         reset_current_message_executor_id,
         reset_current_message_owner_id,
         reset_messages_persist,
         resolve_message_owner_id,
         set_current_flow_id,
+        set_current_message_execution_principal,
         set_current_message_executor_id,
         set_current_message_owner_id,
         set_messages_persist,
@@ -130,6 +132,7 @@ async def get_instance_results(
     owner_id = resolve_message_owner_id(graph)
     owner_scope_token = set_current_message_owner_id(owner_id)
     executor_scope_token = set_current_message_executor_id(coerce_flow_id(getattr(graph, "user_id", None)))
+    principal_scope_token = set_current_message_execution_principal(getattr(graph, "execution_principal", None))
     # Bind the run's message-persistence flag here too (defaults True) so
     # astore_message can skip the DB write for an anonymous serving run. Reading it
     # off the graph and binding in the component's own task sidesteps any
@@ -157,6 +160,7 @@ async def get_instance_results(
         reset_current_flow_id(flow_scope_token)
         reset_current_message_owner_id(owner_scope_token)
         reset_current_message_executor_id(executor_scope_token)
+        reset_current_message_execution_principal(principal_scope_token)
         reset_messages_persist(persist_token)
 
 

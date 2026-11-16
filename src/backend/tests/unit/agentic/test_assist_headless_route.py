@@ -35,7 +35,7 @@ def _sse_events(body: str) -> list[dict]:
     return [json.loads(line[5:].strip()) for line in body.splitlines() if line.startswith("data:")]
 
 
-@pytest.mark.usefixtures("agentic_enabled")
+@pytest.mark.usefixtures("agentic_enabled", "administrator_user")
 class TestAssistHeadlessRoute:
     async def test_should_persist_and_stream_progress_then_complete(self, client: AsyncClient, logged_in_headers):
         flow_id = str(uuid4())

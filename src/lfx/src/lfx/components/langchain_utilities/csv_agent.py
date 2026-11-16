@@ -176,7 +176,7 @@ class CSVAgentComponent(LCAgentComponent):
                 **agent_kwargs,
             )
 
-            result = agent_csv.invoke({"input": self.input_value})
+            result = agent_csv.invoke({"input": self.input_value}, config={"callbacks": self.get_langchain_callbacks()})
             return Message(text=str(result["output"]))
 
         finally:

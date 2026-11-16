@@ -147,8 +147,13 @@ def mark_unique_conflict(exc: HTTPException, column: str) -> HTTPException:
     return exc
 
 
+def unique_conflict_column(exc: BaseException) -> str | None:
+    """The unique column :func:`mark_unique_conflict` named on *exc*, if any."""
+    return getattr(exc, _UNIQUE_COLUMN, None)
+
+
 def _unique_conflict_code(exc: BaseException, *, is_flow: bool) -> AuditErrorCode | None:
-    column = getattr(exc, _UNIQUE_COLUMN, None)
+    column = unique_conflict_column(exc)
     if column is None:
         return None
     if column == "id":

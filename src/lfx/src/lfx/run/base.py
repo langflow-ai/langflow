@@ -565,6 +565,7 @@ async def run_flow(
                 async for result in coordinator.stream(
                     graph,
                     initial_inputs=inputs,
+                    user_id=user_id,
                     event_manager=event_manager,
                     fallback_to_env_vars=fallback_to_env_vars,
                     open_flow_span=False,

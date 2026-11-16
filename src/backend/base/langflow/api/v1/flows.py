@@ -4,7 +4,7 @@ import asyncio
 import io
 import threading
 import zipfile
-from collections.abc import Collection
+from collections.abc import Awaitable, Callable, Collection
 from typing import Annotated
 from uuid import UUID
 
@@ -26,6 +26,7 @@ from pydantic import ValidationError
 from sqlalchemy import case
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import and_, col, select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import (
     CurrentActiveUser,
@@ -80,6 +81,7 @@ from langflow.services.audit.operations import (
     mark_committed,
     mark_unique_conflict,
     stage_flow_succeeded,
+    unique_conflict_column,
 )
 from langflow.services.auth.utils import get_current_active_user, get_optional_user
 from langflow.services.authorization import (
@@ -309,6 +311,46 @@ FLOW_CREATE_BUSY = "The database is busy. Please retry the request."
 FLOW_DELETE_FAILED = "Could not delete the flow."
 FLOW_DELETE_BUSY = "The database is busy. Please retry the request."
 
+# A create loses the race for a name at most once per competing create, so this is how
+# many simultaneous creates of one name are all renamed before the last one is refused.
+FLOW_CREATE_NAME_RACE_ATTEMPTS = 8
+# The columns _new_flow de-duplicates by reading first and inserting afterwards.
+_DEDUPLICATED_FLOW_COLUMNS = frozenset({"name", "endpoint_name"})
+
+
+def _lost_deduplication_race(exc: IntegrityError) -> bool:
+    """Whether *exc* is a name or endpoint name that was free when read and taken by the insert.
+
+    A colliding ``id`` is not: the caller chose it, and no retry can make it free.
+    """
+    return unique_conflict_column(_handle_unique_constraint_error(exc)) in _DEDUPLICATED_FLOW_COLUMNS
+
+
+async def _create_past_lost_name_races(create: Callable[[], Awaitable[FlowRead]], *, session: AsyncSession) -> FlowRead:
+    """Run *create*, starting it over when a concurrent create took the name it had picked.
+
+    ``_new_flow`` picks a free name with a read and only then inserts, so two creates of the
+    same name that start together both read "free" and the loser learns otherwise from the
+    unique constraint. That is a collision on a name the caller never insisted on, so it gets
+    what a sequential create gets: the next free suffix.
+
+    The failed insert dooms the transaction on PostgreSQL, and a savepoint around it is not an
+    option on SQLite, where one that opens the transaction commits on release. So the whole
+    attempt is rolled back and *create* must rebuild everything it staged, as it already has
+    to for ``run_with_lock_retry``. The fresh transaction is also what lets the read see the
+    winner's row.
+    """
+    for races_left in range(FLOW_CREATE_NAME_RACE_ATTEMPTS - 1, -1, -1):
+        try:
+            return await create()
+        except IntegrityError as exc:
+            if not races_left or not _lost_deduplication_race(exc):
+                raise
+            await session.rollback()
+            await logger.adebug("Flow name taken by a concurrent create, retrying with the next free name")
+    msg = "unreachable: the retry loop either returns or raises"
+    raise AssertionError(msg)
+
 
 def _flow_read_for_caller(flow: Flow | FlowRead, caller_id: UUID) -> FlowRead:
     """Keep persisted credentials visible only to the flow owner."""
@@ -337,33 +379,44 @@ async def create_flow(
     try:
         catalog_policy_snapshot = get_catalog_policy_service().snapshot
         _validate_catalog_policy_for_write(flow.data, snapshot=catalog_policy_snapshot)
-        await persist_and_strip_mcp_secrets(flow.data, current_user.id, session, flow_id=flow.id)
+        # Extract once, outside the retries. The in-place rewrite of flow.data survives a
+        # rollback while the staged rows do not, so re-extracting on a later attempt would
+        # find only the reference it wrote itself and stage nothing.
+        masked_targets: list[MCPSecretTarget] = []
+        carried_secrets, secret_variables = extract_and_strip_mcp_secrets(
+            flow.data, masked_targets=masked_targets, flow_id=flow.id
+        )
         # FastAPI builds the dependency's body model independently from the
         # handler's body model. Carry the exact destination that was authorized
         # into the row we persist so stale caller scope fields cannot retarget
         # the write after the guard has run.
         flow.workspace_id, flow.folder_id = _create
-        stable_flow = flow.model_copy(deep=True)
+        # Read before any rollback: one expires the ORM User.
         user_id = current_user.id
 
         async def create_attempt(_attempt: int) -> FlowRead:
+            await stage_mcp_secrets(carried_secrets, secret_variables, user_id, session, masked_targets=masked_targets)
             # _new_flow mutates its input while normalizing ownership, name,
             # endpoint and destination. Rebuild it for every transaction so a
             # rollback never leaves the retry with partially normalized state.
+            # Copied after staging, which resolves masked credentials in flow.data.
             return await _new_flow(
                 session=session,
-                flow=stable_flow.model_copy(deep=True),
+                flow=flow.model_copy(deep=True),
                 user_id=user_id,
                 storage_service=storage_service,
                 widen_for_authz=True,
                 propagate_unhandled_errors=True,
             )
 
-        return await run_with_lock_retry(
-            create_attempt,
-            session=session,
-            description="flow creation",
-        )
+        async def create_with_lock_retry() -> FlowRead:
+            return await run_with_lock_retry(
+                create_attempt,
+                session=session,
+                description="flow creation",
+            )
+
+        return await _create_past_lost_name_races(create_with_lock_retry, session=session)
     except HTTPException as exc:
         if exc.status_code != status.HTTP_500_INTERNAL_SERVER_ERROR:
             raise

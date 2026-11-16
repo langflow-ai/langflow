@@ -7,7 +7,7 @@
 
 ARG UV_VERSION=0.10.4
 ARG PYTHON_IMAGE=registry.access.redhat.com/ubi10/python-314-minimal
-ARG NODE_VERSION=24.21.0
+ARG NODE_VERSION=24.22.2
 
 ################################
 # BUILDER
@@ -65,13 +65,9 @@ FROM ${PYTHON_IMAGE} AS runtime
 USER root
 # Install minimal runtime dependencies
 RUN microdnf update -y \
-    && microdnf install -y tar xz \
-        curl \
-        git \
-        libpq \
-        libxml2 libxslt \
-        gnupg \
-        xz tar \
+    && microdnf install -y curl git libpq libxml2 libxslt shadow-utils tar xz \
+    && useradd --uid 1000 --gid 0 --no-create-home --home-dir /app/data user \
+    && microdnf remove -y shadow-utils \
     && microdnf clean all
 RUN python3.14 -m pip install --no-cache-dir --upgrade "pip==26.2.1"
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
@@ -91,9 +87,6 @@ RUN ARCH=$(uname -m) \
     | tar -xJ -C /usr/local --strip-components=1 \
     && sh /tmp/install_hardened_npm.sh \
     && rm -f /tmp/install_hardened_npm.sh
-
-# Create non-root user
-RUN useradd --uid 1000 --gid 0 --no-create-home --home-dir /app/data user
 
 # Copy only the virtual environment
 COPY --from=builder --chown=1000:0 /app/.venv /app/.venv

@@ -497,8 +497,8 @@ def json_flow_with_prompt_and_history():
 
 
 @pytest.fixture
-def json_simple_api_test():
-    return pytest.SIMPLE_API_TEST.read_text(encoding="utf-8")
+async def json_simple_api_test(client):  # noqa: ARG001
+    return await _current_builtin_flow_fixture(pytest.SIMPLE_API_TEST)
 
 
 @pytest.fixture
@@ -512,8 +512,32 @@ def json_webhook_test():
 
 
 @pytest.fixture
-def json_memory_chatbot_no_llm():
-    return pytest.MEMORY_CHATBOT_NO_LLM.read_text(encoding="utf-8")
+async def json_memory_chatbot_no_llm(client):  # noqa: ARG001
+    return await _current_builtin_flow_fixture(pytest.MEMORY_CHATBOT_NO_LLM)
+
+
+async def _current_builtin_flow_fixture(path):
+    """Refresh trusted test snapshots before exercising runtime behavior under strict code policy."""
+    from lfx.utils.flow_validation import prepare_public_flow_build
+
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["data"] = await prepare_public_flow_build(payload["data"])
+    return json.dumps(payload)
+
+
+@pytest.fixture
+def administrator_execution_context():
+    """Give interpreter sandbox tests an explicit administrator without disabling their policies."""
+    from lfx.services.model_provider_policy import (
+        reset_current_model_provider_policy_context,
+        set_current_model_provider_policy_context,
+    )
+
+    token = set_current_model_provider_policy_context(user_id=uuid4(), attributes={"is_superuser": True})
+    try:
+        yield
+    finally:
+        reset_current_model_provider_policy_context(token)
 
 
 @pytest.fixture
@@ -724,6 +748,24 @@ async def logged_in_headers(client, active_user):
     tokens = response.json()
     a_token = tokens["access_token"]
     return {"Authorization": f"Bearer {a_token}"}
+
+
+@pytest.fixture
+async def administrator_user(active_user):
+    """Promote this test's native actor for contracts that intentionally execute custom code."""
+    async with session_scope() as session:
+        user = await session.get(User, active_user.id)
+        original_is_superuser = user.is_superuser
+        user.is_superuser = True
+        session.add(user)
+    try:
+        yield active_user.model_copy(update={"is_superuser": True})
+    finally:
+        async with session_scope() as session:
+            user = await session.get(User, active_user.id)
+            if user is not None:
+                user.is_superuser = original_is_superuser
+                session.add(user)
 
 
 @pytest.fixture
