@@ -301,6 +301,8 @@ export const lazyIconsMapping = {
     import("@/icons/HomeAssistant").then((mod) => ({
       default: mod.HomeAssistantIcon,
     })),
+  HopBase: () =>
+    import("@/icons/HopBase").then((mod) => ({ default: mod.HopBaseIcon })),
   HuggingFace: () =>
     import("@/icons/HuggingFace").then((mod) => ({
       default: mod.HuggingFaceIcon,

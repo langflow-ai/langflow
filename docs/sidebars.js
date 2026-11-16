@@ -590,6 +590,7 @@ module.exports = {
             "Components/bundles-gitlab",
             "Components/bundles-google",
             "Components/bundles-groq",
+            "Components/bundles-hopbase",
             "Components/bundles-huggingface",
             "Components/bundles-ibm",
             "Components/bundles-icosacomputing",

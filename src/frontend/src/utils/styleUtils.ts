@@ -485,6 +485,7 @@ export const SIDEBAR_BUNDLES = [
     name: "homeassistant",
     icon: "HomeAssistant",
   },
+  { display_name: "HopBase", name: "hopbase", icon: "HopBase" },
   { display_name: "Hugging Face", name: "huggingface", icon: "HuggingFace" },
   { display_name: "IBM", name: "ibm", icon: "WatsonxAI" },
   { display_name: "IBM Confluent", name: "confluent", icon: "Confluent" },
