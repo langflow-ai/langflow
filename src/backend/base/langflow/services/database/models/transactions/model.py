@@ -4,6 +4,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic import field_serializer, field_validator
+from sqlalchemy import Index
 from sqlmodel import JSON, Column, Field, SQLModel
 
 from langflow.serialization.serialization import get_max_items_length, get_max_text_length, serialize
@@ -158,6 +159,7 @@ class TransactionBase(SQLModel):
 
 class TransactionTable(TransactionBase, table=True):  # type: ignore[call-arg]
     __tablename__ = "transaction"
+    __table_args__ = (Index("ix_transaction_flow_id_timestamp", "flow_id", "timestamp"),)
     id: UUID | None = Field(default_factory=uuid4, primary_key=True)
 
 

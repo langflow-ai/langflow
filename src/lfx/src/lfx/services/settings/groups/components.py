@@ -47,6 +47,12 @@ class ComponentsSettings(BaseModel):
     """If set to True, Langflow will only partially load components at startup and fully load them on demand.
     This significantly reduces startup time but may cause a slight delay when a component is first used."""
 
+    component_class_cache_enabled: bool = False
+    """If set to True, the Python classes of a small set of reviewed built-in components (Chat Input/Output,
+    Text Input/Output, Create List, Parser, Type Convert, Prompt Template) are reused across flow builds instead
+    of being re-parsed and re-executed for every vertex. Only their unchanged shipped source is reused; all other
+    code takes the normal path. Every build still gets a fresh component instance. Disabled by default."""
+
     # Starter Projects
     create_starter_projects: bool = True
     """If set to True, Langflow will create starter projects. If False, skips all starter project setup.
