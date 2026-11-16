@@ -1,18 +1,21 @@
 //! `backward_cases.json` and `editor_cases.json`: what only the editor's engine had.
 
-use lfx_ops::canonical::graphs_equal;
+use lfx_ops::compare::graphs_equal;
+use lfx_ops::flow::list::Renumber;
 use lfx_ops::json;
+use lfx_ops::json::FlowValue;
+use lfx_ops::node_input::table_input::{
+    append_table_rows, assign_changed_table_row_ids, assign_row_ids,
+};
 use lfx_ops::restore::{edge_fixes, fixes_for_edges};
-use lfx_ops::rows::{Renumber, append_table_rows, assign_changed_table_row_ids, assign_row_ids};
-use lfx_ops::value::AnyValue;
 use lfx_ops::{ApplyOptions, GraphState, Operation, ReplayOptions};
 use libtest_mimic::{Failed, Trial};
 
 use crate::support::{assert_json_matches, cases, compact, load, section_cases};
 
 /// Compare backward operations without the order of what they list: the ids a
-/// delete names, and the entries an add lists, are sets keyed by id.
-pub fn unordered(operations: &AnyValue) -> AnyValue {
+/// delete names, and the nodes or edges an add lists, are sets keyed by id.
+pub fn unordered(operations: &FlowValue) -> FlowValue {
     let mut operations = operations.clone();
     for operation in operations
         .as_array_mut()
@@ -26,7 +29,7 @@ pub fn unordered(operations: &AnyValue) -> AnyValue {
             Some("add_edges") => "edges",
             _ => continue,
         };
-        if let Some(items) = operation.get_mut(key).and_then(AnyValue::as_array_mut) {
+        if let Some(items) = operation.get_mut(key).and_then(FlowValue::as_array_mut) {
             items.sort_by_key(|item| {
                 item.as_str()
                     .or_else(|| item["id"].as_str())
@@ -37,7 +40,7 @@ pub fn unordered(operations: &AnyValue) -> AnyValue {
     operations
 }
 
-fn backward_case(case: &AnyValue) -> Result<(), Failed> {
+fn backward_case(case: &FlowValue) -> Result<(), Failed> {
     let base = &case["base"];
     let mut state = GraphState::new(base.clone()).map_err(|error| error.to_string())?;
     let operations = Operation::list_from_value(case["operations"].clone())
@@ -49,10 +52,10 @@ fn backward_case(case: &AnyValue) -> Result<(), Failed> {
     let applied = state
         .apply(operations, options)
         .map_err(|error| format!("refused: {error}"))?;
-    let backward: AnyValue = applied
+    let backward: FlowValue = applied
         .backward
         .iter()
-        .map(|list| AnyValue::Array(list.iter().map(Operation::to_value).collect()))
+        .map(|list| FlowValue::Array(list.iter().map(Operation::to_value).collect()))
         .collect();
     assert_json_matches(
         "backward operations",
@@ -77,7 +80,7 @@ fn backward_case(case: &AnyValue) -> Result<(), Failed> {
 
 /// A user's undo: the backward operation lists, last first, in one batch that is
 /// applied under every rule.
-fn undo_case(case: &AnyValue) -> Result<(), Failed> {
+fn undo_case(case: &FlowValue) -> Result<(), Failed> {
     let base = &case["base"];
     let mut state = GraphState::new(base.clone()).map_err(|error| error.to_string())?;
     let operations = Operation::list_from_value(case["operations"].clone())
@@ -90,7 +93,7 @@ fn undo_case(case: &AnyValue) -> Result<(), Failed> {
         .apply(operations, options)
         .map_err(|error| format!("refused: {error}"))?;
     let undo: Vec<Operation> = applied.backward.into_iter().rev().flatten().collect();
-    let shown = AnyValue::Array(undo.iter().map(Operation::to_value).collect());
+    let shown = FlowValue::Array(undo.iter().map(Operation::to_value).collect());
     assert_json_matches(
         "undo",
         &unordered(&json!([shown])),
@@ -106,24 +109,24 @@ fn undo_case(case: &AnyValue) -> Result<(), Failed> {
     Err(format!("the undo does not restore the base: {}", compact(&restored)).into())
 }
 
-fn rows(case: &AnyValue, key: &str) -> Vec<AnyValue> {
+fn rows(case: &FlowValue, key: &str) -> Vec<FlowValue> {
     case[key].as_array().cloned().unwrap_or_default()
 }
 
-fn assign(case: &AnyValue) -> Result<(), Failed> {
+fn assign(case: &FlowValue) -> Result<(), Failed> {
     let mut assigned = rows(case, "rows");
     assign_row_ids(&mut assigned, case.get("previous"), Renumber::WhenNoRoom)
         .map_err(|error| error.to_string())?;
-    assert_json_matches("rows", &AnyValue::Array(assigned), &case["expected"])
+    assert_json_matches("rows", &FlowValue::Array(assigned), &case["expected"])
 }
 
-fn append(case: &AnyValue) -> Result<(), Failed> {
+fn append(case: &FlowValue) -> Result<(), Failed> {
     let mut appended = rows(case, "rows");
     append_table_rows(&mut appended, &rows(case, "new_rows")).map_err(|error| error.to_string())?;
-    assert_json_matches("rows", &AnyValue::Array(appended), &case["expected"])
+    assert_json_matches("rows", &FlowValue::Array(appended), &case["expected"])
 }
 
-fn assign_nodes(case: &AnyValue) -> Result<(), Failed> {
+fn assign_nodes(case: &FlowValue) -> Result<(), Failed> {
     let mut target = json!({"nodes": case["nodes"]});
     assign_changed_table_row_ids(
         &json!({"nodes": case["previous"]}),
@@ -134,21 +137,21 @@ fn assign_nodes(case: &AnyValue) -> Result<(), Failed> {
     assert_json_matches("nodes", &target["nodes"], &case["expected"])
 }
 
-fn fixes(case: &AnyValue) -> Result<(), Failed> {
+fn fixes(case: &FlowValue) -> Result<(), Failed> {
     let fixes =
         edge_fixes(&rows(case, "read"), &rows(case, "shown")).map_err(|error| error.to_string())?;
-    let fixes = AnyValue::Array(fixes.iter().map(Operation::to_value).collect());
+    let fixes = FlowValue::Array(fixes.iter().map(Operation::to_value).collect());
     assert_json_matches("fixes", &fixes, &case["fixes"])
 }
 
-fn for_edges(case: &AnyValue) -> Result<(), Failed> {
+fn for_edges(case: &FlowValue) -> Result<(), Failed> {
     let all =
         Operation::list_from_value(case["fixes"].clone()).map_err(|error| error.to_string())?;
     let ids: Vec<String> = rows(case, "edge_ids")
         .iter()
         .filter_map(|id| id.as_str().map(str::to_owned))
         .collect();
-    let kept = AnyValue::Array(
+    let kept = FlowValue::Array(
         fixes_for_edges(&all, &ids)
             .iter()
             .map(Operation::to_value)
@@ -157,7 +160,7 @@ fn for_edges(case: &AnyValue) -> Result<(), Failed> {
     assert_json_matches("fixes", &kept, &case["expected"])
 }
 
-type Check = fn(&AnyValue) -> Result<(), Failed>;
+type Check = fn(&FlowValue) -> Result<(), Failed>;
 
 /// Every backward case, undo case and editor case.
 pub fn trials() -> Vec<Trial> {

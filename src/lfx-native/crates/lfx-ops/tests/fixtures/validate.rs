@@ -1,8 +1,8 @@
 //! `validation_cases.json`: every rule a graph breaks.
 
 use lfx_ops::json;
+use lfx_ops::json::FlowValue;
 use lfx_ops::validate::{Numbers, Violation, find_graph_violations};
-use lfx_ops::value::AnyValue;
 use libtest_mimic::Trial;
 
 use crate::support::{assert_json_eq, cases, error_json, graph_of, load};
@@ -14,7 +14,7 @@ pub fn trials() -> Vec<Trial> {
         .map(|(name, case)| {
             Trial::test(format!("validation_cases::{name}"), move || {
                 let flow = graph_of(&case, "flow");
-                let numbers = if case.get("check_values").and_then(AnyValue::as_bool).unwrap_or(true) {
+                let numbers = if case.get("check_values").and_then(FlowValue::as_bool).unwrap_or(true) {
                     Numbers::Check
                 } else {
                     Numbers::Skip

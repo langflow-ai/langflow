@@ -255,19 +255,19 @@ engine_functions! {
 #[wasm_bindgen(js_name = newEdgeId)]
 #[must_use]
 pub fn new_edge_id() -> String {
-    lfx_ops::ids::new_edge_id()
+    lfx_ops::flow::id::new_edge_id()
 }
 
 /// A new random table row id in the editor's format.
 #[wasm_bindgen(js_name = newTableRowId)]
 #[must_use]
 pub fn new_table_row_id() -> String {
-    lfx_ops::ids::new_table_row_id()
+    lfx_ops::flow::id::new_table_row_id()
 }
 
 /// The node schema the engine reads, as JSON text.
 #[wasm_bindgen(js_name = nodeSchema)]
 #[must_use]
 pub fn node_schema() -> String {
-    lfx_ops::schema::NODE_SCHEMA_JSON.to_owned()
+    lfx_ops::flow::model::FLOW_MODEL_JSON.to_owned()
 }

@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 
 use lfx_ops::json;
-use lfx_ops::value::{AnyMap, AnyValue};
+use lfx_ops::json::{FlowObj, FlowValue};
 use libtest_mimic::{Failed, Trial};
 
 /// The fixture files every runtime runs.
@@ -35,7 +35,7 @@ pub fn fixtures_dir() -> PathBuf {
 }
 
 /// Read and parse one fixture file.
-pub fn load(name: &str) -> AnyValue {
+pub fn load(name: &str) -> FlowValue {
     let path = fixtures_dir().join(name);
     let text = std::fs::read_to_string(&path)
         .unwrap_or_else(|error| panic!("cannot read {}: {error}", path.display()));
@@ -44,7 +44,7 @@ pub fn load(name: &str) -> AnyValue {
 }
 
 /// The cases of a fixture file, each with its name.
-pub fn cases(document: &AnyValue) -> Vec<(String, AnyValue)> {
+pub fn cases(document: &FlowValue) -> Vec<(String, FlowValue)> {
     let section = if document.get("sequences").is_some() {
         "sequences"
     } else {
@@ -54,10 +54,10 @@ pub fn cases(document: &AnyValue) -> Vec<(String, AnyValue)> {
 }
 
 /// The cases of one section of a fixture file, each with its name.
-pub fn section_cases(document: &AnyValue, section: &str) -> Vec<(String, AnyValue)> {
+pub fn section_cases(document: &FlowValue, section: &str) -> Vec<(String, FlowValue)> {
     let cases = document
         .get(section)
-        .and_then(AnyValue::as_array)
+        .and_then(FlowValue::as_array)
         .unwrap_or_else(|| panic!("the fixture file has no section {section:?}"));
     cases
         .iter()
@@ -75,7 +75,7 @@ pub fn section_cases(document: &AnyValue, section: &str) -> Vec<(String, AnyValu
 ///
 /// Objects compare without regard to key order; arrays, strings and the text
 /// of numbers compare exactly, so a number keeps the spelling it came in with.
-pub fn assert_json_eq(what: &str, actual: &AnyValue, expected: &AnyValue) -> Result<(), Failed> {
+pub fn assert_json_eq(what: &str, actual: &FlowValue, expected: &FlowValue) -> Result<(), Failed> {
     if json_eq(actual, expected) {
         return Ok(());
     }
@@ -88,15 +88,15 @@ pub fn assert_json_eq(what: &str, actual: &AnyValue, expected: &AnyValue) -> Res
 }
 
 /// Whether two JSON values are equal: objects in any key order, numbers by their text.
-pub fn json_eq(left: &AnyValue, right: &AnyValue) -> bool {
+pub fn json_eq(left: &FlowValue, right: &FlowValue) -> bool {
     match (left, right) {
-        (AnyValue::Object(left), AnyValue::Object(right)) => {
+        (FlowValue::Object(left), FlowValue::Object(right)) => {
             left.len() == right.len()
                 && left
                     .iter()
                     .all(|(key, value)| right.get(key).is_some_and(|other| json_eq(value, other)))
         }
-        (AnyValue::Array(left), AnyValue::Array(right)) => {
+        (FlowValue::Array(left), FlowValue::Array(right)) => {
             left.len() == right.len() && left.iter().zip(right).all(|(a, b)| json_eq(a, b))
         }
         _ => left == right,
@@ -108,8 +108,8 @@ pub fn json_eq(left: &AnyValue, right: &AnyValue) -> bool {
 /// matches any id of its shape.
 pub fn assert_json_matches(
     what: &str,
-    actual: &AnyValue,
-    expected: &AnyValue,
+    actual: &FlowValue,
+    expected: &FlowValue,
 ) -> Result<(), Failed> {
     if json_matches(actual, expected) {
         return Ok(());
@@ -122,26 +122,26 @@ pub fn assert_json_matches(
     .into())
 }
 
-fn json_matches(actual: &AnyValue, expected: &AnyValue) -> bool {
+fn json_matches(actual: &FlowValue, expected: &FlowValue) -> bool {
     match (actual, expected) {
-        (AnyValue::String(id), AnyValue::String(placeholder))
+        (FlowValue::String(id), FlowValue::String(placeholder))
             if placeholder == GENERATED_EDGE_ID =>
         {
             id.strip_prefix("e-")
                 .is_some_and(|rest| is_alphanumeric_id(rest, 21))
         }
-        (AnyValue::String(id), AnyValue::String(placeholder))
+        (FlowValue::String(id), FlowValue::String(placeholder))
             if placeholder == GENERATED_ROW_ID =>
         {
             is_alphanumeric_id(id, 10)
         }
-        (AnyValue::Number(a), AnyValue::Number(b)) => a.as_f64() == b.as_f64(),
-        (AnyValue::Object(a), AnyValue::Object(b)) => {
+        (FlowValue::Number(a), FlowValue::Number(b)) => a.as_f64() == b.as_f64(),
+        (FlowValue::Object(a), FlowValue::Object(b)) => {
             a.len() == b.len()
                 && a.iter()
                     .all(|(key, value)| b.get(key).is_some_and(|other| json_matches(value, other)))
         }
-        (AnyValue::Array(a), AnyValue::Array(b)) => {
+        (FlowValue::Array(a), FlowValue::Array(b)) => {
             a.len() == b.len() && a.iter().zip(b).all(|(a, b)| json_matches(a, b))
         }
         _ => actual == expected,
@@ -153,21 +153,21 @@ fn is_alphanumeric_id(id: &str, length: usize) -> bool {
 }
 
 /// A case's graph: its `<key>_json` text when it has one, so number text is exact, or its `<key>`.
-pub fn graph_of(case: &AnyValue, key: &str) -> AnyValue {
-    match case.get(format!("{key}_json")).and_then(AnyValue::as_str) {
+pub fn graph_of(case: &FlowValue, key: &str) -> FlowValue {
+    match case.get(format!("{key}_json")).and_then(FlowValue::as_str) {
         Some(text) => serde_json::from_str(text)
             .unwrap_or_else(|error| panic!("{key}_json is not JSON: {error}")),
-        None => case.get(key).cloned().unwrap_or(AnyValue::Null),
+        None => case.get(key).cloned().unwrap_or(FlowValue::Null),
     }
 }
 
 /// An engine error as fixtures record it.
-pub fn error_json(error: &lfx_ops::Error) -> AnyValue {
+pub fn error_json(error: &lfx_ops::Error) -> FlowValue {
     json!({"error": error.kind.class_name(), "code": error.code.as_str()})
 }
 
 /// One line of JSON, for failure messages.
-pub fn compact(value: &AnyValue) -> String {
+pub fn compact(value: &FlowValue) -> String {
     value.to_string()
 }
 
@@ -185,16 +185,16 @@ pub fn listed_rules() -> HashSet<String> {
 /// The rule each case of a fixture file names, by section and case.
 ///
 /// Every case names the rule it checks, and the README lists that rule.
-fn case_rules(name: &str, document: &AnyMap) -> Result<Vec<String>, Failed> {
+fn case_rules(name: &str, document: &FlowObj) -> Result<Vec<String>, Failed> {
     let listed = listed_rules();
     let mut rules = Vec::new();
     for (section, cases) in document {
         for (index, case) in cases.as_array().into_iter().flatten().enumerate() {
             let label = case
                 .get("name")
-                .and_then(AnyValue::as_str)
+                .and_then(FlowValue::as_str)
                 .map_or_else(|| format!("#{index}"), |case| format!("{case:?}"));
-            let Some(rule) = case.get("rule").and_then(AnyValue::as_str) else {
+            let Some(rule) = case.get("rule").and_then(FlowValue::as_str) else {
                 return Err(format!("{name}: case {label} in {section} names no rule").into());
             };
             if !listed.contains(rule) {
@@ -233,7 +233,7 @@ pub fn trials() -> Vec<Trial> {
             for (section, cases) in document {
                 let mut names = HashSet::new();
                 for case in cases.as_array().into_iter().flatten() {
-                    if let Some(case) = case.get("name").and_then(AnyValue::as_str)
+                    if let Some(case) = case.get("name").and_then(FlowValue::as_str)
                         && !names.insert(case)
                     {
                         return Err(

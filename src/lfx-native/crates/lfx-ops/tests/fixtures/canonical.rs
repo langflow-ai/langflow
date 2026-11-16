@@ -1,14 +1,14 @@
 //! `canonical_cases.json`: canonical text, value equality, graph equality and handles.
 
-use lfx_ops::canonical::{canonical_json, graph_hash, graphs_equal, values_equal};
-use lfx_ops::handle::parse_handle;
+use lfx_ops::compare::{canonical_json, graph_hash, graphs_equal, values_equal};
+use lfx_ops::flow::edge_handle::parse_handle;
 use lfx_ops::json;
-use lfx_ops::value::AnyValue;
+use lfx_ops::json::FlowValue;
 use libtest_mimic::{Failed, Trial};
 
 use crate::support::{assert_json_eq, error_json, load, section_cases};
 
-fn parse(text: &str) -> Result<AnyValue, Failed> {
+fn parse(text: &str) -> Result<FlowValue, Failed> {
     serde_json::from_str(text).map_err(|error| format!("not JSON: {error}").into())
 }
 
@@ -24,7 +24,7 @@ pub fn trials() -> Vec<Trial> {
                     let value = parse(case["json"].as_str().unwrap_or_default())?;
                     let actual = match canonical_json(&value) {
                         Ok(text) => json!({"canonical": text}),
-                        Err(error) => json!({"error": error_json(&error)}),
+                        Err(error) => json!({"error": error_json(&lfx_ops::Error::from(error))}),
                     };
                     let expected = match case.get("error") {
                         Some(error) => json!({"error": error}),
@@ -39,7 +39,7 @@ pub fn trials() -> Vec<Trial> {
     trials.push(Trial::test(
         "canonical_cases::equality_samples",
         move || {
-            let samples: Vec<(AnyValue, &str)> = samples
+            let samples: Vec<(FlowValue, &str)> = samples
                 .as_array()
                 .into_iter()
                 .flatten()
@@ -77,7 +77,8 @@ pub fn trials() -> Vec<Trial> {
         trials.push(Trial::test(
             format!("canonical_cases::handles::{name}"),
             move || {
-                let parsed = parse_handle(&case["handle"]).map_or(AnyValue::Null, AnyValue::Object);
+                let parsed =
+                    parse_handle(&case["handle"]).map_or(FlowValue::Null, FlowValue::Object);
                 assert_json_eq("parsed handle", &parsed, &case["parsed"])
             },
         ));

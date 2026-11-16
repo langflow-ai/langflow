@@ -1278,7 +1278,7 @@
     },
     {
       "name": "tables are not checked without a base",
-      "rule": "table-row-keys",
+      "rule": "table-input-row-keys",
       "flow": {
         "nodes": [
           {
@@ -1299,7 +1299,7 @@
     },
     {
       "name": "an unchanged legacy table is accepted",
-      "rule": "legacy-tables",
+      "rule": "legacy-table-inputs",
       "flow": {
         "nodes": [
           {
@@ -1336,7 +1336,7 @@
     },
     {
       "name": "an added legacy table is refused",
-      "rule": "table-row-keys",
+      "rule": "table-input-row-keys",
       "flow": {
         "nodes": [
           {
@@ -1383,7 +1383,7 @@
     },
     {
       "name": "a keyed table is accepted when added",
-      "rule": "table-row-keys",
+      "rule": "table-input-row-keys",
       "flow": {
         "nodes": [
           {
@@ -1409,7 +1409,7 @@
     },
     {
       "name": "a keyed table is accepted when changed",
-      "rule": "table-row-keys",
+      "rule": "table-input-row-keys",
       "flow": {
         "nodes": [
           {
@@ -1454,7 +1454,7 @@
     },
     {
       "name": "replacing a keyed table with rows without ids is refused",
-      "rule": "table-row-keys",
+      "rule": "table-input-row-keys",
       "flow": {
         "nodes": [
           {
@@ -1520,7 +1520,7 @@
     },
     {
       "name": "duplicate row ids are refused",
-      "rule": "table-row-keys",
+      "rule": "table-input-row-keys",
       "flow": {
         "nodes": [
           {
@@ -1553,7 +1553,7 @@
     },
     {
       "name": "the stored order of rows is not checked",
-      "rule": "table-row-order",
+      "rule": "table-input-row-order",
       "flow": {
         "nodes": [
           {
@@ -1579,7 +1579,7 @@
     },
     {
       "name": "a position must be a number",
-      "rule": "table-row-keys",
+      "rule": "table-input-row-keys",
       "flow": {
         "nodes": [
           {
@@ -1628,7 +1628,7 @@
     },
     {
       "name": "a position must be finite",
-      "rule": "table-row-keys",
+      "rule": "table-input-row-keys",
       "flow_json": "{\"nodes\": [{\"id\": \"api\", \"data\": {\"node\": {\"template\": {\"headers\": {\"type\": \"table\", \"_input_type\": \"TableInput\", \"value\": [{\"__id__\": \"r1\", \"__pos__\": 1e400, \"key\": \"Accept\", \"value\": \"json\"}]}, \"url\": {\"type\": \"str\", \"value\": \"http://x\"}}}}}], \"edges\": []}",
       "base": {"nodes": [], "edges": []},
       "violations": [
@@ -1648,7 +1648,7 @@
     },
     {
       "name": "a row must be an object",
-      "rule": "table-row-keys",
+      "rule": "table-input-row-keys",
       "flow": {
         "nodes": [
           {
@@ -1687,7 +1687,7 @@
     },
     {
       "name": "a row id must be a non-empty string",
-      "rule": "table-row-keys",
+      "rule": "table-input-row-keys",
       "flow": {
         "nodes": [
           {
@@ -1726,7 +1726,7 @@
     },
     {
       "name": "only table fields are checked",
-      "rule": "table-row-keys",
+      "rule": "table-input-row-keys",
       "flow": {
         "nodes": [
           {
@@ -1753,7 +1753,7 @@
     },
     {
       "name": "tool actions are a keyed list, not a table",
-      "rule": "table-row-keys",
+      "rule": "table-input-row-keys",
       "flow": {
         "nodes": [
           {
@@ -1780,7 +1780,7 @@
     },
     {
       "name": "a field typed table is a table",
-      "rule": "table-row-keys",
+      "rule": "table-input-row-keys",
       "flow": {
         "nodes": [
           {
@@ -1827,7 +1827,7 @@
     },
     {
       "name": "a field whose input type is TableInput is a table",
-      "rule": "table-row-keys",
+      "rule": "table-input-row-keys",
       "flow": {
         "nodes": [
           {
@@ -1874,7 +1874,7 @@
     },
     {
       "name": "a table with its own columns is accepted",
-      "rule": "table-column-reserved",
+      "rule": "table-input-column-reserved",
       "flow": {
         "nodes": [
           {
@@ -1901,7 +1901,7 @@
     },
     {
       "name": "a column named __id__ is refused",
-      "rule": "table-column-reserved",
+      "rule": "table-input-column-reserved",
       "flow": {
         "nodes": [
           {
@@ -1935,7 +1935,7 @@
     },
     {
       "name": "columns named __id__ and __pos__ under columns are refused",
-      "rule": "table-column-reserved",
+      "rule": "table-input-column-reserved",
       "flow": {
         "nodes": [
           {
@@ -1982,7 +1982,7 @@
     },
     {
       "name": "a reserved column is reported with the row rules",
-      "rule": "table-column-reserved",
+      "rule": "table-input-column-reserved",
       "flow": {
         "nodes": [
           {
@@ -2040,7 +2040,7 @@
     },
     {
       "name": "a column named _id is an ordinary column",
-      "rule": "table-column-reserved",
+      "rule": "table-input-column-reserved",
       "flow": {
         "nodes": [
           {
@@ -2070,7 +2070,7 @@
     },
     {
       "name": "an unchanged table with a reserved column is accepted",
-      "rule": "table-column-reserved",
+      "rule": "table-input-column-reserved",
       "flow": {
         "nodes": [
           {
@@ -2117,7 +2117,7 @@
     },
     {
       "name": "columns are not checked without a base",
-      "rule": "table-column-reserved",
+      "rule": "table-input-column-reserved",
       "flow": {
         "nodes": [
           {
@@ -2143,7 +2143,7 @@
     },
     {
       "name": "a column definition without a list of columns declares no columns",
-      "rule": "table-column-reserved",
+      "rule": "table-input-column-reserved",
       "flow": {
         "nodes": [
           {
@@ -2170,7 +2170,7 @@
     },
     {
       "name": "only a column's name is checked",
-      "rule": "table-column-reserved",
+      "rule": "table-input-column-reserved",
       "flow": {
         "nodes": [
           {
@@ -2197,7 +2197,7 @@
     },
     {
       "name": "an added output without __pos__ is refused",
-      "rule": "list-item-missing-pos",
+      "rule": "keyed-list-positions",
       "flow": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}}], "edges": []},
       "base": {"nodes": [], "edges": []},
       "violations": [{"code": "LIST_ITEM_MISSING_POS", "path": ["nodes", 0, "data", "node", "outputs", 0, "__pos__"], "message": "list item must have a finite numeric __pos__", "resolution": "auto"}]

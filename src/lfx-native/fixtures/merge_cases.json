@@ -447,7 +447,7 @@
     },
     {
       "name": "two inserts at one place both survive, ordered by id",
-      "rule": "table-row-order",
+      "rule": "table-input-row-order",
       "transactions": {
         "A": [
           {
@@ -522,8 +522,8 @@
       }
     },
     {
-      "name": "value units never mix: the later unit is stored whole",
-      "rule": "schema-units",
+      "name": "two writes of value and load_from_db: the later wins whole",
+      "rule": "last-writer-wins",
       "transactions": {
         "A": [
           {

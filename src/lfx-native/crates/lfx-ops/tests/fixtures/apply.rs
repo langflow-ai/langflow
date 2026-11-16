@@ -1,10 +1,10 @@
 //! `apply_cases.json`, `merge_cases.json` and `property_cases.json`: applying operations.
 
 use lfx_ops::api::json_text;
-use lfx_ops::canonical::{graph_hash, graphs_equal};
+use lfx_ops::compare::{graph_hash, graphs_equal};
+use lfx_ops::flow::model::FLOW_MODEL;
 use lfx_ops::json;
-use lfx_ops::schema::NODE_SCHEMA;
-use lfx_ops::value::{AnyMap, AnyValue};
+use lfx_ops::json::{FlowObj, FlowValue};
 use lfx_ops::{ApplyOptions, GraphState, Operation, ReplayOptions};
 use libtest_mimic::{Failed, Trial};
 
@@ -47,11 +47,11 @@ pub fn trials() -> Vec<Trial> {
     trials
 }
 
-fn parse(operations: &AnyValue) -> Result<Vec<Operation>, lfx_ops::Error> {
+fn parse(operations: &FlowValue) -> Result<Vec<Operation>, lfx_ops::Error> {
     Operation::list_from_value(operations.clone())
 }
 
-fn apply_case(case: &AnyValue) -> Result<(), Failed> {
+fn apply_case(case: &FlowValue) -> Result<(), Failed> {
     let base = &case["base"];
     let options = ApplyOptions {
         forward: true,
@@ -89,7 +89,7 @@ fn apply_case(case: &AnyValue) -> Result<(), Failed> {
     if state.to_json() != json_text(&state.to_value()) {
         return Err("graph_json does not write the text of to_value".into());
     }
-    let forward = AnyValue::Array(applied.forward.iter().map(Operation::to_value).collect());
+    let forward = FlowValue::Array(applied.forward.iter().map(Operation::to_value).collect());
     let expected_forward = case
         .get("forward_operations")
         .unwrap_or(&case["operations"]);
@@ -101,7 +101,7 @@ fn apply_case(case: &AnyValue) -> Result<(), Failed> {
 }
 
 /// Replaying a case's backward operations, last first, each list in a call of its own, gives back its base.
-fn backward_round_trip(case: &AnyValue) -> Result<(), Failed> {
+fn backward_round_trip(case: &FlowValue) -> Result<(), Failed> {
     let base = &case["base"];
     let mut state =
         GraphState::new(base.clone()).map_err(|error| format!("base does not index: {error}"))?;
@@ -116,7 +116,7 @@ fn backward_round_trip(case: &AnyValue) -> Result<(), Failed> {
         )
         .map_err(|error| format!("refused: {error}"))?;
     for backward in applied.backward.into_iter().rev() {
-        let shown = compact(&AnyValue::Array(
+        let shown = compact(&FlowValue::Array(
             backward.iter().map(Operation::to_value).collect(),
         ));
         state
@@ -136,10 +136,10 @@ fn backward_round_trip(case: &AnyValue) -> Result<(), Failed> {
     }
 }
 
-fn merge_case(base: &AnyValue, case: &AnyValue) -> Result<(), Failed> {
+fn merge_case(base: &FlowValue, case: &FlowValue) -> Result<(), Failed> {
     let mut state =
         GraphState::new(base.clone()).map_err(|error| format!("base does not index: {error}"))?;
-    let mut outcomes = AnyMap::new();
+    let mut outcomes = FlowObj::new();
     for name in case["order"].as_array().into_iter().flatten() {
         let name = name.as_str().unwrap_or_default();
         let before = state.to_value();
@@ -158,7 +158,7 @@ fn merge_case(base: &AnyValue, case: &AnyValue) -> Result<(), Failed> {
         };
         outcomes.insert(name.to_owned(), recorded);
     }
-    assert_json_eq("outcomes", &AnyValue::Object(outcomes), &case["outcomes"])?;
+    assert_json_eq("outcomes", &FlowValue::Object(outcomes), &case["outcomes"])?;
     let graph = state.to_value();
     if graphs_equal(&graph, &case["expected"]).map_err(|error| error.to_string())? {
         Ok(())
@@ -173,7 +173,11 @@ fn merge_case(base: &AnyValue, case: &AnyValue) -> Result<(), Failed> {
 }
 
 /// Replay a sequence's transactions: on one state, as a handle does, or on a new state each time.
-fn property_sequence(base: &AnyValue, sequence: &AnyValue, one_state: bool) -> Result<(), Failed> {
+fn property_sequence(
+    base: &FlowValue,
+    sequence: &FlowValue,
+    one_state: bool,
+) -> Result<(), Failed> {
     let mut state =
         GraphState::new(base.clone()).map_err(|error| format!("base does not index: {error}"))?;
     for (index, transaction) in sequence["transactions"]
@@ -197,14 +201,14 @@ fn property_sequence(base: &AnyValue, sequence: &AnyValue, one_state: bool) -> R
 }
 
 /// Compare the ids a delete names as a set: node and edge order is not state.
-fn ignoring_id_order(operations: &AnyValue) -> AnyValue {
+fn ignoring_id_order(operations: &FlowValue) -> FlowValue {
     let mut operations = operations.clone();
     for operation in operations.as_array_mut().into_iter().flatten() {
         let deletes = matches!(
             operation["type"].as_str(),
             Some("delete_nodes" | "delete_edges")
         );
-        if deletes && let Some(ids) = operation.get_mut("ids").and_then(AnyValue::as_array_mut) {
+        if deletes && let Some(ids) = operation.get_mut("ids").and_then(FlowValue::as_array_mut) {
             ids.sort_by(|a, b| a.as_str().cmp(&b.as_str()));
         }
     }
@@ -213,16 +217,16 @@ fn ignoring_id_order(operations: &AnyValue) -> AnyValue {
 
 /// Compare nodes, edges and table rows as collections keyed by id: their array
 /// order is not state, and a table's order is its rows' positions.
-pub fn ignoring_order(flow: &AnyValue) -> AnyValue {
+pub fn ignoring_order(flow: &FlowValue) -> FlowValue {
     let mut flow = flow.clone();
     for key in ["nodes", "edges"] {
-        if let Some(items) = flow.get_mut(key).and_then(AnyValue::as_array_mut) {
+        if let Some(items) = flow.get_mut(key).and_then(FlowValue::as_array_mut) {
             items.sort_by(|a, b| a["id"].as_str().cmp(&b["id"].as_str()));
         }
     }
     for node in flow
         .get_mut("nodes")
-        .and_then(AnyValue::as_array_mut)
+        .and_then(FlowValue::as_array_mut)
         .into_iter()
         .flatten()
     {
@@ -231,16 +235,16 @@ pub fn ignoring_order(flow: &AnyValue) -> AnyValue {
             .get_mut("data")
             .and_then(|data| data.get_mut("node"))
             .and_then(|inner| inner.get_mut("template"))
-            .and_then(AnyValue::as_object_mut)
+            .and_then(FlowValue::as_object_mut)
         else {
             continue;
         };
         for (name, field) in template.iter_mut() {
-            let is_table =
-                NODE_SCHEMA.is_table_at(&snapshot, &["data", "node", "template", name, "value"]);
+            let is_table = FLOW_MODEL
+                .is_table_input_at(&snapshot, &["data", "node", "template", name, "value"]);
             if let (true, Some(rows)) = (
                 is_table,
-                field.get_mut("value").and_then(AnyValue::as_array_mut),
+                field.get_mut("value").and_then(FlowValue::as_array_mut),
             ) {
                 rows.sort_by(|a, b| a["__id__"].as_str().cmp(&b["__id__"].as_str()));
             }

@@ -31,18 +31,41 @@ src/lfx-native/
 
 ## The crate
 
-The source has four folders and `api.rs`. Each imports only from the ones before it.
-`lib.rs` re-exports the public API, such as `lfx_ops::GraphState` and `lfx_ops::apply_flow_operations`.
+Each folder of `src/` imports only from the folders before it: `collection`, `json`, `flow`, `compare`, `node_input`, `violation`, `invariant`, `rule`, `validate.rs`, `snapshot`, `state`, `op`, then `api.rs`. `tests/layers.rs` checks this. `lib.rs` re-exports the public API, such as `lfx_ops::GraphState` and `lfx_ops::apply_flow_operations`.
 
 | Folder | What it holds |
 | --- | --- |
-| `data/` | data structures that know nothing about flows: `value` (`AnyValue`, public), `maps` (ahash maps and sets), `layered` (a map with a batch layer), `snapshot_rows` (copy-on-write rows), `json_out` (the JSON writer) |
-| `models/` | what a flow and an operation are, when a flow is valid, and when two flows are equal: `operation`, `schema` (`node_schema.json`, embedded), `path`, `handle`, `keyed`, `edges`, `entry`, `ids`, `error`, `from_value`, `validate/`, `canonical/` |
-| `graph/` | the graph in memory: `GraphState` (indexed, kept between batches), `index`, `fields` (a batch's field writes), `snapshot`, and `GraphPlain` (read once, not indexed) |
-| `ops/` | the verbs: `apply`, `replay`, `place` (what apply and replay share), `diff`, `repair`, `restore`, `rows` (table rows) |
+| `collection/` | general-purpose containers: `hash_map` (ahash maps and sets), `pending_map` (`PendingMap`, a map whose batch changes stay pending until the batch commits, and `OrderedMap`) |
+| `json/` | the JSON value and its text: `flow_value` (`FlowValue`), `flow_str` (`FlowStr`), `flow_obj` (`FlowObj`), `number` (`Number`, and numbers as JavaScript reads them), `serialize`, `deserialize`, `pointer` (a place in a value) |
+| `flow/` | what a flow looks like: `model` (`model.json`: view state and keyed lists), `node`, `edge`, `path`, `deserialize`, `list` (every keyed list: lookup by key and `__pos__` order), `edge_handle`, `id` |
+| `compare/` | when two flows are equal: `canonical_form`, `graph_hash` |
+| `node_input/` | what only some node inputs do: `table_input` (row ids, table input fields, stripping row keys for export) |
+| `violation/` | what a broken rule looks like (`Violation`, `ViolationCode`), and the engine's `Error` |
+| `invariant/` | what is true of every stored flow, checked on every load: `graph`, `number` |
+| `rule/` | the rules a write must follow, checked only on what it adds or changes: `edge`, `list` |
+| `validate.rs` | runs the invariants and the rules |
+| `snapshot/` | `GraphSnapshot`, the committed flow that other threads read |
+| `state/` | the flow in memory: `GraphState`, its indexes, a batch's pending field writes, and `GraphPlain` |
+| `op/` | what you do to a flow: the operation types and their parser and dump, `apply`, `replay`, `field_update` (what apply and replay share), `diff`, `repair`, `restore` |
 | `api.rs` | the functions the bindings call: JSON text or values in, values out |
 
-The public modules are `api`, `value`, `canonical`, `handle`, `ids`, `keyed`, `schema`, `validate`, `repair`, `restore` and `rows`.
+The public modules are `api`, `json`, `flow`, `compare`, `node_input`, `validate`, `repair` and `restore`.
+
+Each folder raises its own errors: `json` a `NonFinite` number, `flow` a `DeserializeError` or a `ListError`, and `compare` and `node_input` only `NonFinite`. `violation` turns each of them into the one `Error` the bindings see.
+
+### Terms
+
+The engine uses the words of Langflow: flow, node, edge, field, output, operation, table input row. It adds only these:
+
+| Term | Meaning |
+| --- | --- |
+| batch | operations applied together, all or none |
+| staged batch | a batch that is applied but not yet kept or dropped |
+| backward operations | the operations that undo a batch |
+| keyed list | a list whose items are found by a key: outputs by `name`, tool actions by `tags[0]`, table input rows by `__id__` |
+| view state | keys the engine keeps but never records or compares, such as `selected` or `viewport` |
+| canonical form | a flow without its view state, which equality and the hash use |
+| snapshot | a copy of the committed flow that other threads can read |
 
 ## Who uses what
 
@@ -57,7 +80,7 @@ This table maps each part of the engine to its callers today, in the Python engi
 | Assign row ids to a table | `assign_row_ids`, `assign_changed_table_row_ids` | `assignRowIds`, `assignChangedTableRowIds`, `assignChangedNodeTableRowIds` | the assistant (`agentic/utils/assistant_runner.py`, `flow_component.py`), the MCP patch (`lfx/mcp/server.py`) | `flowStore.ts`, `use-add-flow.ts`, template hooks, `mutate-template.ts`, `TableNodeComponent` |
 | Strip row ids and order rows | `strip_row_keys`, `strip_flow_table_row_keys`, `ordered_rows` | `stripRowKeys`, `stripFlowTableRowKeys`, `orderedRows` | flow export (`api/utils/core.py`), MCP export, the component run (`lfx/graph/vertex/param_handler.py`), the refresh endpoint (`api/v1/endpoints.py`) | download and export (`reactflowUtils.ts`), `TableNodeComponent` |
 | Canonical equality | `graphs_equal`, `values_equal` | `graphsEqual`, `valuesEqual` | the save's no-op check and the check that the stored graph matches its latest revision (`flow_history/recorder.py`) | inside the editor's engine only |
-| Node schema | `table_fields`, `node_schema` | `tableFields`, `nodeSchema` | the refresh endpoint finds table fields (`api/v1/endpoints.py`) | inside the editor's engine only |
+| Flow model | `table_fields`, `node_schema` | `tableFields`, `nodeSchema` | the refresh endpoint finds table fields (`api/v1/endpoints.py`) | inside the editor's engine only |
 
 ### Used only by the backend
 

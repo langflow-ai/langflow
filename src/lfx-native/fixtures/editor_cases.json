@@ -3,13 +3,13 @@
   "assign": [
     {
       "name": "rows that have ids and positions are left as they are",
-      "rule": "table-row-ids-assigned",
+      "rule": "table-input-row-ids-assigned",
       "rows": [{"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"}, {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"}],
       "expected": [{"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"}, {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"}]
     },
     {
       "name": "new rows get random ids and positions in order",
-      "rule": "table-row-ids-assigned",
+      "rule": "table-input-row-ids-assigned",
       "rows": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}],
       "expected": [
         {"key": "Accept", "value": "json", "__id__": "<generated row id>", "__pos__": 1},
@@ -18,14 +18,14 @@
     },
     {
       "name": "a row equal to a previous row takes its id and position",
-      "rule": "table-row-ids-assigned",
+      "rule": "table-input-row-ids-assigned",
       "rows": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}],
       "previous": [{"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"}, {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"}],
       "expected": [{"key": "Accept", "value": "json", "__pos__": 1, "__id__": "r1"}, {"key": "Auth", "value": "token", "__pos__": 2, "__id__": "r2"}]
     },
     {
       "name": "a run between two positions is spread evenly",
-      "rule": "table-row-positions",
+      "rule": "table-input-row-positions",
       "rows": [{"__id__": "a", "__pos__": 1}, {"k": 1}, {"k": 2}, {"__id__": "b", "__pos__": 2}],
       "expected": [
         {"__id__": "a", "__pos__": 1},
@@ -36,7 +36,7 @@
     },
     {
       "name": "a gap with no room left renumbers the table in position order",
-      "rule": "table-row-positions",
+      "rule": "table-input-row-positions",
       "rows": [
         {"__id__": "z", "__pos__": 0.5},
         {"__id__": "a", "__pos__": 1},
@@ -54,7 +54,7 @@
     },
     {
       "name": "a run before the first position counts down",
-      "rule": "table-row-positions",
+      "rule": "table-input-row-positions",
       "rows": [{"k": 1}, {"k": 2}, {"__id__": "a", "__pos__": 10}],
       "expected": [
         {"k": 1, "__id__": "<generated row id>", "__pos__": 8},
@@ -64,19 +64,19 @@
     },
     {
       "name": "a run between out-of-order neighbours follows the one before",
-      "rule": "table-row-positions",
+      "rule": "table-input-row-positions",
       "rows": [{"__id__": "a", "__pos__": 3}, {"k": 1}, {"__id__": "b", "__pos__": 1}],
       "expected": [{"__id__": "a", "__pos__": 3}, {"k": 1, "__id__": "<generated row id>", "__pos__": 4}, {"__id__": "b", "__pos__": 1}]
     },
     {
       "name": "a duplicate id is replaced",
-      "rule": "table-row-ids-assigned",
+      "rule": "table-input-row-ids-assigned",
       "rows": [{"__id__": "a", "__pos__": 1}, {"__id__": "a", "__pos__": 2}],
       "expected": [{"__id__": "a", "__pos__": 1}, {"__id__": "<generated row id>", "__pos__": 2}]
     },
     {
       "name": "a table with a row that is not an object is left alone",
-      "rule": "table-row-ids-assigned",
+      "rule": "table-input-row-ids-assigned",
       "rows": [{"key": "Accept", "value": "json"}, "x"],
       "expected": [{"key": "Accept", "value": "json"}, "x"]
     }
@@ -84,7 +84,7 @@
   "append": [
     {
       "name": "rows are appended one past the last position",
-      "rule": "table-row-positions",
+      "rule": "table-input-row-positions",
       "rows": [{"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"}, {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"}],
       "new_rows": [{"key": "New", "value": "x"}],
       "expected": [
@@ -95,7 +95,7 @@
     },
     {
       "name": "a duplicated row gets a new id and position",
-      "rule": "table-row-ids-assigned",
+      "rule": "table-input-row-ids-assigned",
       "rows": [{"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"}, {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"}],
       "new_rows": [{"__id__": "r1", "__pos__": 1, "key": "Accept", "value": "json"}, {"__id__": "r2", "__pos__": 2, "key": "Auth", "value": "token"}],
       "expected": [
@@ -107,7 +107,7 @@
     },
     {
       "name": "the next position follows a fractional last position",
-      "rule": "table-row-positions",
+      "rule": "table-input-row-positions",
       "rows": [{"__id__": "a", "__pos__": 2.5}],
       "new_rows": [{"k": 1}, {"k": 2}],
       "expected": [
@@ -118,7 +118,7 @@
     },
     {
       "name": "a table without ids gets them first",
-      "rule": "table-row-ids-assigned",
+      "rule": "table-input-row-ids-assigned",
       "rows": [{"key": "Accept", "value": "json"}, {"key": "Auth", "value": "token"}],
       "new_rows": [{"key": "New"}],
       "expected": [
@@ -129,7 +129,7 @@
     },
     {
       "name": "the first row of an empty table is 1",
-      "rule": "table-row-positions",
+      "rule": "table-input-row-positions",
       "rows": [],
       "new_rows": [{"key": "New"}],
       "expected": [{"key": "New", "__id__": "<generated row id>", "__pos__": 1}]
@@ -138,7 +138,7 @@
   "assign_nodes": [
     {
       "name": "a new node gets ids on every table",
-      "rule": "table-row-ids-assigned",
+      "rule": "table-input-row-ids-assigned",
       "nodes": [
         {
           "id": "api",
@@ -176,7 +176,7 @@
     },
     {
       "name": "an unchanged legacy table is left alone",
-      "rule": "legacy-tables",
+      "rule": "legacy-table-inputs",
       "nodes": [
         {
           "id": "api",
@@ -219,7 +219,7 @@
     },
     {
       "name": "a changed table keeps the ids of rows it still holds",
-      "rule": "table-row-ids-assigned",
+      "rule": "table-input-row-ids-assigned",
       "nodes": [
         {
           "id": "api",

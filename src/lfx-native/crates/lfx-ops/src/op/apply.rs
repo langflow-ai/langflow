@@ -1,0 +1,1200 @@
+//! Applying an operation batch to a flow.
+//!
+//! Apply runs every rule. A batch applies in order, all or nothing.
+//! [`replay`](crate::op::replay) runs stored operations with the same steps
+//! and no rule.
+//!
+//! Forward operations drop a delete that finds nothing, and add a
+//! `delete_edges` for each cascade delete. Backward operations undo each
+//! operation. Example: `delete_nodes ["b"]`, where `b` has the edge `e1`,
+//! gives forward `delete_nodes ["b"]`, `delete_edges ["e1"]` and backward
+//! `add_nodes [b]`, `add_edges [e1]`.
+
+use std::borrow::Cow;
+
+use crate::collection::hash_map::IndexSet;
+use crate::json::{FlowStr, FlowValue};
+
+use crate::flow::edge::Edge;
+use crate::flow::list::{ListIndex, ListProblem, check_position};
+use crate::flow::model::{FLOW_MODEL, KeyedList};
+use crate::flow::node::Node;
+use crate::flow::path::{AsKey, PathExt, Segment};
+use crate::json::serialize::quoted;
+use crate::op::field_update::{
+    AddedEdges, FieldBackward, ListItemOnPath, SeqNum, SequencedUpdate, UpdateTarget, require_path,
+    written_value,
+};
+use crate::op::operation::{Change, FieldUpdate, Operation};
+use crate::op::{Applied, ApplyOptions, OperationStep, Report};
+use crate::rule::edge::{GraphRead, check_edge, reads_before, removed_endpoints};
+use crate::state::field_write::{self, FieldWrite};
+use crate::state::{Graph, GraphState, field_value};
+use crate::violation::error::{Result, bail};
+
+impl GraphState {
+    /// Apply a batch of operations in order, with every rule. On an error
+    /// nothing is applied. It checks only what the batch changes.
+    ///
+    /// # Errors
+    ///
+    /// An operation is invalid for the flow.
+    pub fn apply(&mut self, operations: Vec<Operation>, options: ApplyOptions) -> Result<Applied> {
+        let applied = self.apply_pending(operations, options)?;
+        self.commit();
+        Ok(applied)
+    }
+
+    /// Apply a batch as [`Self::apply`] does, but stage it. [`Self::keep`]
+    /// commits it, and [`Self::drop_staged`] or the next batch drops it.
+    ///
+    /// # Errors
+    ///
+    /// An operation is invalid for the flow.
+    pub fn stage(&mut self, operations: Vec<Operation>, options: ApplyOptions) -> Result<Applied> {
+        let applied = self.apply_pending(operations, options)?;
+        self.set_staged();
+        Ok(applied)
+    }
+
+    /// Apply a batch as pending changes, without committing them.
+    fn apply_pending(
+        &mut self,
+        operations: Vec<Operation>,
+        options: ApplyOptions,
+    ) -> Result<Applied> {
+        let mut report = Report::new(options);
+        self.run_batch(operations, &mut report, Self::apply_operation)?;
+        Ok(report.into_applied())
+    }
+
+    /// Carry out each operation with `step` as pending changes. On an
+    /// error, drop the pending changes. The caller commits them.
+    pub(crate) fn run_batch(
+        &mut self,
+        operations: Vec<Operation>,
+        report: &mut Report,
+        step: OperationStep,
+    ) -> Result<()> {
+        // A panicked batch or an unkept staged batch leaves its pending changes behind.
+        self.drop_staged();
+        self.drop_pending();
+        for operation in operations {
+            report.begin_operation();
+            if let Err(error) = step(self, operation, report) {
+                self.drop_pending();
+                return Err(error);
+            }
+        }
+        Ok(())
+    }
+
+    fn apply_operation(&mut self, operation: Operation, report: &mut Report) -> Result<()> {
+        match operation {
+            Operation::AddNodes(nodes) => self.add_nodes(nodes, report)?,
+            Operation::UpdateNodes(updates) => self.update_nodes(updates, report)?,
+            Operation::DeleteNodes(ids) => self.delete_nodes(&ids, report)?,
+            Operation::AddEdges(edges) => self.add_edges(edges, report)?,
+            Operation::DeleteEdges(ids) => self.delete_edges(&ids, report),
+        }
+        Ok(())
+    }
+
+    // --- Nodes -------------------------------------------------------------------------
+
+    /// Add nodes. It refuses an id the flow already has. The parser checked
+    /// the rest.
+    pub(crate) fn add_nodes(&mut self, nodes: Vec<Node>, report: &mut Report) -> Result<()> {
+        if nodes.is_empty() {
+            return Ok(());
+        }
+        let mut added = Vec::new();
+        let mut payloads = Vec::new();
+        for node in nodes {
+            if self.graph.has_node(node.id()) {
+                bail!("add_nodes: node id already exists: {}", quoted(node.id()));
+            }
+            if report.options.forward {
+                payloads.push(node.clone());
+            }
+            if report.options.backward {
+                added.push(node.id().to_owned());
+            }
+            self.insert_node(node);
+        }
+        report.record(Operation::AddNodes(payloads));
+        report.record_backward(Operation::DeleteNodes(added));
+        Ok(())
+    }
+
+    fn update_nodes(&mut self, updates: Vec<FieldUpdate>, report: &mut Report) -> Result<()> {
+        if updates.is_empty() {
+            return Ok(());
+        }
+        let mut backward = report.options.backward.then(FieldBackward::default);
+        let mut applied = Vec::new();
+        let mut cascaded = IndexSet::default();
+        for (index, mut update) in updates.into_iter().enumerate() {
+            let context = SeqNum::new(index);
+            self.require_node(&update.id)?;
+            if !self.is_base_node(&update.id) {
+                bail!(
+                    "update_nodes: cannot update node that does not exist in the original flow: {}",
+                    quoted(&update.id)
+                );
+            }
+            let before =
+                self.apply_field_update(&mut update, context, report.options, backward.as_mut())?;
+            if let Before::Value(value) = &before {
+                cascaded.extend(self.edges_at_removed(&update, value.as_ref())?);
+            }
+            // A delete that found nothing is not recorded.
+            let found = matches!(before, Before::Value(_));
+            if report.options.forward && (found || !update.is_delete()) {
+                applied.push(update);
+            }
+        }
+        if !applied.is_empty() {
+            report.record(Operation::UpdateNodes(applied));
+        }
+        if let Some(backward) = backward {
+            backward.record(report);
+        }
+        self.remove_edges(cascaded.iter().map(String::as_str), report);
+        Ok(())
+    }
+
+    /// Check that the node an update writes exists.
+    pub(crate) fn require_node(&self, id: &str) -> Result<()> {
+        if !self.graph.has_node(id) {
+            bail!("update_nodes: node does not exist: {}", quoted(id));
+        }
+        Ok(())
+    }
+
+    /// The edges at the endpoints that `update` removed from its node.
+    /// `before` is what the path held before the write.
+    fn edges_at_removed(
+        &mut self,
+        update: &FieldUpdate,
+        before: Option<&FlowValue>,
+    ) -> Result<IndexSet<String>> {
+        let node_id = update.id.as_str();
+        let graph = &self.graph;
+        let removed = removed_endpoints(
+            &update.path,
+            update.is_delete(),
+            before,
+            |keys| graph.node_value(node_id, keys),
+            node_id,
+        )?;
+        if removed.is_empty() {
+            return Ok(IndexSet::default());
+        }
+        let connections = self.edge_index.connections(&self.graph, node_id)?;
+        Ok(removed
+            .iter()
+            .flat_map(|endpoint| connections.at(endpoint))
+            .cloned()
+            .collect())
+    }
+
+    fn delete_nodes(&mut self, ids: &[String], report: &mut Report) -> Result<()> {
+        let ids: IndexSet<&str> = ids.iter().map(String::as_str).collect();
+        for id in &ids {
+            if !self.is_base_node(id) {
+                bail!(
+                    "delete_nodes: cannot delete node that does not exist in the original flow: {}",
+                    quoted(id)
+                );
+            }
+        }
+        let incident = self.remove_nodes(&ids, report);
+        self.remove_edges(incident.iter().map(FlowStr::as_str), report);
+        Ok(())
+    }
+
+    /// Remove the nodes among `ids` that exist. Returns the ids of their
+    /// edges, which stay: apply removes them, and replay does not.
+    pub(crate) fn remove_nodes(
+        &mut self,
+        ids: &IndexSet<&str>,
+        report: &mut Report,
+    ) -> IndexSet<FlowStr> {
+        let mut removed = Vec::new();
+        let mut changed = false;
+        let mut removed_nodes = Vec::new();
+        let mut incident = IndexSet::default();
+        for &id in ids {
+            if !self.graph.has_node(id) {
+                continue;
+            }
+            incident.extend(self.graph.edge_keys_at(id).cloned());
+            if report.options.backward {
+                removed_nodes.extend(self.node_copy(id));
+            }
+            self.remove_node(id);
+            changed = true;
+            if report.options.forward {
+                removed.push(id.to_owned());
+            }
+        }
+        if changed {
+            report.record(Operation::DeleteNodes(removed));
+            report.record_backward(Operation::AddNodes(removed_nodes));
+        }
+        incident
+    }
+
+    // --- Edges -------------------------------------------------------------------------
+
+    /// Add edges. Each edge must pass the edge rules, with the edges before
+    /// it added.
+    fn add_edges(&mut self, edges: Vec<Edge>, report: &mut Report) -> Result<()> {
+        let mut added = AddedEdges::default();
+        for edge in edges {
+            self.require_new_edge(&edge)?;
+            check_edge(&self.graph, &mut self.edge_index, edge.as_map())?;
+            self.insert_added_edge(edge, report, &mut added);
+        }
+        added.record(report);
+        Ok(())
+    }
+
+    /// Check that the flow has both nodes of `edge`, and not its id.
+    pub(crate) fn require_new_edge(&self, edge: &Edge) -> Result<()> {
+        if self.graph.has_edge(edge.id()) {
+            bail!("add_edges: edge id already exists: {}", quoted(edge.id()));
+        }
+        if !self.graph.has_node(edge.source()) {
+            bail!(
+                "add_edges: source node does not exist: {}",
+                quoted(edge.source())
+            );
+        }
+        if !self.graph.has_node(edge.target()) {
+            bail!(
+                "add_edges: target node does not exist: {}",
+                quoted(edge.target())
+            );
+        }
+        Ok(())
+    }
+
+    /// Add `edge`, which [`Self::require_new_edge`] checked.
+    pub(crate) fn insert_added_edge(
+        &mut self,
+        edge: Edge,
+        report: &Report,
+        added: &mut AddedEdges,
+    ) {
+        if report.options.forward {
+            added.edges.push(edge.clone());
+        }
+        if report.options.backward {
+            added.ids.push(edge.id().to_owned());
+        }
+        added.count += 1;
+        self.insert_edge(edge);
+    }
+
+    /// Delete the edges among `ids` that exist.
+    pub(crate) fn delete_edges(&mut self, ids: &[String], report: &mut Report) {
+        self.remove_edges(ids.iter().map(String::as_str), report);
+    }
+
+    /// Remove the edges among `ids` that exist, each once, and record them as
+    /// a `delete_edges`.
+    fn remove_edges<'i>(&mut self, ids: impl IntoIterator<Item = &'i str>, report: &mut Report) {
+        let mut removed = Vec::new();
+        let mut copies = Vec::new();
+        let mut changed = false;
+        for id in ids {
+            if !self.graph.has_edge(id) {
+                continue;
+            }
+            if report.options.backward {
+                copies.extend(self.edge_copy(id));
+            }
+            self.remove_edge(id);
+            changed = true;
+            if report.options.forward {
+                removed.push(id.to_owned());
+            }
+        }
+        if !changed {
+            return;
+        }
+        report.record(Operation::DeleteEdges(removed));
+        report.record_backward(Operation::AddEdges(copies));
+    }
+
+    // --- Field writes ----------------------------------------------------------------------
+
+    /// Apply one `set_field` or `delete_field` to a node, with the rules for
+    /// list items. Returns what the path held before the write.
+    fn apply_field_update(
+        &mut self,
+        update: &mut FieldUpdate,
+        context: SeqNum,
+        options: ApplyOptions,
+        backward: Option<&mut FieldBackward>,
+    ) -> Result<Before> {
+        let sequenced = SequencedUpdate { update, context };
+        let update_target = self.find_update_target(&sequenced)?;
+        check_lists_on_path(&sequenced, &update_target)?;
+        require_path(&sequenced, &update_target)?;
+        if let Some(backward) = backward {
+            self.record_backward(&sequenced, backward)?;
+        }
+        let (id, path) = (sequenced.update.id.as_str(), &sequenced.update.path);
+        let before = if update_target.exists && reads_before(path) {
+            field_value(&self.graph, &mut self.lists, id, path, &context)?.map(Cow::into_owned)
+        } else {
+            None
+        };
+        check_written_item(&sequenced, &update_target)?;
+        let value = written_value(update, options.forward);
+        let sequenced = SequencedUpdate { update, context };
+        self.write_update(&sequenced, &update_target, value);
+        self.check_positions_kept(&sequenced, &update_target)?;
+        Ok(if update_target.exists {
+            Before::Value(before)
+        } else {
+            Before::Nothing
+        })
+    }
+
+    /// Follow the path of a field write.
+    ///
+    /// # Errors
+    ///
+    /// A segment does not fit the value it reads, or a key names two items.
+    pub(crate) fn find_update_target(
+        &mut self,
+        sequenced: &SequencedUpdate<'_>,
+    ) -> Result<UpdateTarget> {
+        self.find_target(sequenced)
+    }
+
+    /// Record a write that puts back what the path holds, before the write.
+    /// A list item comes back with its position.
+    ///
+    /// # Errors
+    ///
+    /// A key names two items.
+    pub(crate) fn record_backward(
+        &mut self,
+        sequenced: &SequencedUpdate<'_>,
+        backward: &mut FieldBackward,
+    ) -> Result<()> {
+        let (update, context) = (sequenced.update, sequenced.context);
+        let (id, path) = (update.id.as_str(), &update.path);
+        let current = field_value(&self.graph, &mut self.lists, id, path, &context)?;
+        backward.add(update, current.as_deref());
+        Ok(())
+    }
+
+    /// Check that a write inside a list item left the item a position.
+    fn check_positions_kept(
+        &mut self,
+        sequenced: &SequencedUpdate<'_>,
+        update_target: &UpdateTarget,
+    ) -> Result<()> {
+        let (id, path, context) = (
+            sequenced.update.id.as_str(),
+            &sequenced.update.path,
+            sequenced.context,
+        );
+        for item in update_target.list_items.iter().rev() {
+            let item_path = &path[..=item.segment];
+            let value = field_value(&self.graph, &mut self.lists, id, item_path, &context)?;
+            if !value.is_some_and(|value| item.keyed.has_position(&value)) {
+                bail!(
+                    "{context}: {}",
+                    ListProblem::Unpositioned(&item.keyed.position)
+                );
+            }
+        }
+        Ok(())
+    }
+
+    /// Follow the write's path ([`Graph::read_field`]) and read what it
+    /// holds. A segment that does not fit its value, such as a key of a list,
+    /// is an error, not a missing value.
+    fn find_target(&mut self, sequenced: &SequencedUpdate<'_>) -> Result<UpdateTarget> {
+        let (id, path, context) = (
+            sequenced.update.id.as_str(),
+            &sequenced.update.path,
+            sequenced.context,
+        );
+        let last = path.len() - 1;
+        let (graph, lists) = (&self.graph, &mut self.lists);
+        let stored = graph.is_stored_node(id);
+        let mut list_items = Vec::new();
+        let mut last_list = None;
+        let mut list_problem = None;
+        let mut step = field_write::step_fn(|value, index, in_entry| match &path[index] {
+            Segment::Key(key) => {
+                let FlowValue::Object(map) = value else {
+                    bail!(
+                        "{context}.path[{index}]: {} reads a key of a value that is not an object",
+                        quoted(key)
+                    );
+                };
+                Ok(map.get(key))
+            }
+            Segment::Item(key) => {
+                let keyed = keyed_list(graph, sequenced, index, value)?;
+                let items = value.as_array().map(Vec::as_slice).unwrap_or_default();
+                // Only a stored node's lists keep their index between reads.
+                let built;
+                let list_index = if stored && !in_entry {
+                    &*lists.index(id, &path[..index], keyed, items)
+                } else {
+                    built = ListIndex::build(keyed, items);
+                    &built
+                };
+                if list_problem.is_none() {
+                    list_problem = list_index.problem().map(|problem| (index, problem));
+                }
+                let item_index = list_index.find(key, &context.segment(index))?;
+                if index == last {
+                    last_list = Some(keyed);
+                } else {
+                    list_items.push(ListItemOnPath {
+                        keyed,
+                        segment: index,
+                    });
+                }
+                Ok(item_index.map(|item_index| &items[item_index]))
+            }
+        });
+        let reached = graph
+            .read_field(id, &path[..last], &mut step)?
+            .expect("update_nodes checks that the node exists");
+        let Ok(parent) = reached.found else {
+            return Ok(UpdateTarget {
+                write_len: reached.write_len,
+                list_items,
+                last_list,
+                list_problem,
+                found: false,
+                exists: false,
+                missing_at: reached.found.err(),
+            });
+        };
+        let found = step(parent, last, reached.write_len.is_some())?.is_some();
+        // The item at a write on the way was checked when it was written.
+        if let Some(len) = reached.write_len
+            && let Segment::Item(_) = &path[len - 1]
+        {
+            list_items.push(ListItemOnPath {
+                keyed: FLOW_MODEL.listed_at(&path[..len - 1]),
+                segment: len - 1,
+            });
+            list_items.sort_by_key(|item| item.segment);
+        }
+        let write_at_path = reached
+            .writes
+            .and_then(|writes| writes.child_write(&path[last]));
+        let exists = match (reached.write_len, write_at_path) {
+            (None, Some(write)) => matches!(write, FieldWrite::Set(_)),
+            _ => found,
+        };
+        Ok(UpdateTarget {
+            write_len: reached.write_len,
+            list_items,
+            last_list,
+            list_problem,
+            found,
+            exists,
+            missing_at: None,
+        })
+    }
+
+    /// Write or delete the last segment of the path, after
+    /// [`Self::find_update_target`].
+    pub(crate) fn write_update(
+        &mut self,
+        sequenced: &SequencedUpdate<'_>,
+        update_target: &UpdateTarget,
+        value: FlowValue,
+    ) {
+        let update = sequenced.update;
+        let (id, path) = (update.id.as_str(), &update.path);
+        let last = path.len() - 1;
+        if update.is_delete() && !update_target.exists {
+            // A delete that finds nothing writes nothing.
+            return;
+        }
+        let write = if update.is_delete() {
+            FieldWrite::Remove
+        } else {
+            FieldWrite::Set(value)
+        };
+        let writes = self.graph.writes_mut(id);
+        if let Some(len) = update_target.write_len {
+            let (_, on_path) = writes
+                .write_on_path_mut(&path[..last])
+                .expect("the update_target found the write on the way");
+            let FieldWrite::Set(set) = on_path else {
+                unreachable!("the update_target found the parent in a set's value")
+            };
+            let parent = field_write::descend_mut(set, &path[..last], len)
+                .expect("the update_target found the parent in the write");
+            field_write::make_write(parent, &path[last], &path[..last], write, None);
+        } else if matches!(write, FieldWrite::Remove) && !update_target.found {
+            // The value is only the batch's own write at the path.
+            writes.drop_write(path);
+        } else {
+            writes.set(path, write);
+        }
+    }
+}
+
+/// Check that each keyed list the path reads follows the keyed list rules.
+fn check_lists_on_path(
+    sequenced: &SequencedUpdate<'_>,
+    update_target: &UpdateTarget,
+) -> Result<()> {
+    match &update_target.list_problem {
+        Some((segment, problem)) => bail!("{}: {problem}", sequenced.context.segment(*segment)),
+        None => Ok(()),
+    }
+}
+
+/// Check that a table row written at its key carries a position.
+fn check_written_item(sequenced: &SequencedUpdate<'_>, update_target: &UpdateTarget) -> Result<()> {
+    let (update, context) = (sequenced.update, sequenced.context);
+    let last = update.path.len() - 1;
+    let (Segment::Item(_), Change::Set(value)) = (&update.path[last], &update.change) else {
+        return Ok(());
+    };
+    let keyed = update_target
+        .last_list
+        .expect("the update_target read the last item's list");
+    Ok(check_position(keyed, value, &context.segment(last))?)
+}
+
+/// What a field write's path held before the write.
+#[derive(Debug)]
+enum Before {
+    /// Nothing: the write added a value, or a delete found nothing.
+    Nothing,
+    /// A value, kept only when [`reads_before`] needs it.
+    Value(Option<FlowValue>),
+}
+
+/// The keyed list whose item `path[index]` names. Checks that `model.json`
+/// declares it keyed and that `value` is a list.
+fn keyed_list(
+    graph: &Graph,
+    sequenced: &SequencedUpdate<'_>,
+    index: usize,
+    value: &FlowValue,
+) -> Result<&'static KeyedList> {
+    let (id, path, context) = (
+        sequenced.update.id.as_str(),
+        &sequenced.update.path,
+        sequenced.context,
+    );
+    let list_path = &path[..index];
+    let keyed = list_path.all_keys().then(|| {
+        FLOW_MODEL.keyed_list_by(list_path, |field_path, key| {
+            let keys: Vec<&str> = field_path
+                .iter()
+                .filter_map(AsKey::as_key)
+                .chain([key])
+                .collect();
+            graph.node_value(id, &keys)
+        })
+    });
+    let Some(keyed) = keyed.flatten() else {
+        bail!(
+            "{context}.path[{index}]: list item key on a list the node schema does not declare keyed"
+        );
+    };
+    if !value.is_array() {
+        bail!("{context}.path[{index}]: list item key on a value that is not a list");
+    }
+    Ok(keyed)
+}
+
+/// Apply operations to a flow graph, with every rule.
+///
+/// # Errors
+///
+/// The graph breaks a structural rule, or an operation is invalid for it.
+pub fn apply_flow_operations(
+    base: FlowValue,
+    operations: Vec<Operation>,
+    options: ApplyOptions,
+) -> Result<(FlowValue, Applied)> {
+    let mut state = GraphState::new(base)?;
+    let applied = state.apply(operations, options)?;
+    Ok((state.into_value(), applied))
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::json;
+    use crate::json::FlowValue;
+
+    use super::*;
+    use crate::flow::edge_handle::escape_handle;
+    use crate::flow::model::OUTPUTS_PATH;
+    use crate::op::ReplayOptions;
+
+    fn target_handle(field: &str) -> FlowValue {
+        json!({"fieldName": field, "id": "T", "inputTypes": ["Message"], "type": "str"})
+    }
+
+    fn edge(id: &str, field: &str) -> FlowValue {
+        let source =
+            json!({"dataType": "X", "id": "S", "name": "out", "output_types": ["Message"]});
+        json!({
+            "id": id, "source": "S", "target": "T",
+            "sourceHandle": escape_handle(&source),
+            "targetHandle": escape_handle(&target_handle(field)),
+            "data": {"sourceHandle": source, "targetHandle": target_handle(field)},
+        })
+    }
+
+    fn operations(value: FlowValue) -> Vec<Operation> {
+        Operation::list_from_value(value).unwrap()
+    }
+
+    #[test]
+    fn deletion_options_preserve_cascade_order_duplicates_and_rollback() {
+        let field = json!({"type": "str", "value": ""});
+        let graph = json!({
+            "nodes": [
+                {"id": "S", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+                {"id": "T", "data": {"node": {"template": {"A": field, "B": field}}}},
+            ],
+            "edges": [edge("e1", "A"), edge("e2", "B")],
+        });
+        for forward in [false, true] {
+            for backward in [false, true] {
+                let options = ApplyOptions { forward, backward };
+                let mut state = GraphState::new(graph.clone()).unwrap();
+                let before = state.to_json();
+                let applied = state
+                    .apply(
+                        operations(json!([
+                            {"type": "delete_nodes", "ids": ["T", "S", "T"]},
+                            {"type": "delete_edges", "ids": ["e1", "e1", "absent"]},
+                        ])),
+                        options,
+                    )
+                    .unwrap();
+                assert_eq!(state.to_value()["nodes"], json!([]));
+                assert_eq!(state.to_value()["edges"], json!([]));
+                if forward {
+                    assert_eq!(
+                        applied.forward,
+                        operations(json!([
+                            {"type": "delete_nodes", "ids": ["T", "S"]},
+                            {"type": "delete_edges", "ids": ["e1", "e2"]},
+                        ]))
+                    );
+                } else {
+                    assert_eq!(applied.forward, Vec::<Operation>::new());
+                }
+                if backward {
+                    assert_eq!(applied.backward.len(), 2);
+                    assert_eq!(applied.backward[1], Vec::<Operation>::new());
+                    for batch in applied.backward.into_iter().rev() {
+                        state.replay(batch, ReplayOptions::default()).unwrap();
+                    }
+                    assert_eq!(
+                        state.graph_hash().unwrap(),
+                        GraphState::new(graph.clone())
+                            .unwrap()
+                            .graph_hash()
+                            .unwrap()
+                    );
+                } else {
+                    assert_eq!(applied.backward, Vec::<Vec<Operation>>::new());
+                }
+                let mut state = GraphState::new(graph.clone()).unwrap();
+                let refused = operations(json!([
+                    {"type": "delete_edges", "ids": ["e1", "e1"]},
+                    {"type": "delete_nodes", "ids": ["T", "absent", "S"]},
+                ]));
+                let error = state.apply(refused, options).unwrap_err();
+                assert!(error.to_string().contains("absent"));
+                assert_eq!(state.to_json(), before);
+                assert!(!state.is_staged());
+            }
+        }
+    }
+
+    #[test]
+    fn an_update_error_names_the_update_and_the_segment() {
+        let graph = json!({
+            "nodes": [{"id": "a", "data": {"node": {"template": {"f": {"value": 1}}}}}],
+            "edges": [],
+        });
+        let mut state = GraphState::new(graph).unwrap();
+        let write = json!([{"type": "update_nodes", "updates": [
+            {"id": "a", "op": "set_field", "path": ["position"], "value": {}},
+            {"id": "a", "op": "set_field", "path": ["data", "node", "template", "f", "value", {"key": "r"}], "value": {"__id__": "r", "__pos__": 1}},
+        ]}]);
+        let error = state
+            .apply(operations(write), ApplyOptions::default())
+            .unwrap_err();
+        assert!(
+            error.message.starts_with("update_nodes[1].path[5]: "),
+            "{}",
+            error.message
+        );
+    }
+
+    #[test]
+    fn a_kept_state_swaps_two_edges_by_deleting_and_adding_them() {
+        let field = json!({"type": "str", "value": ""});
+        let graph = json!({
+            "nodes": [
+                {"id": "S", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+                {"id": "T", "data": {"node": {"template": {"A": field, "B": field, "C": field}}}},
+            ],
+            "edges": [edge("e1", "B"), edge("e2", "A")],
+        });
+        let mut state = GraphState::new(graph).unwrap();
+        // This batch indexes the connections of T, which the next batch reuses.
+        let add = json!([{"type": "add_edges", "edges": [edge("e3", "C")]}]);
+        state
+            .apply(operations(add), ApplyOptions::default())
+            .unwrap();
+        let swap = json!([
+            {"type": "delete_edges", "ids": ["e1", "e2"]},
+            {"type": "add_edges", "edges": [edge("e1", "A"), edge("e2", "B")]},
+        ]);
+        state
+            .apply(operations(swap), ApplyOptions::default())
+            .unwrap();
+    }
+
+    #[test]
+    fn a_refused_batch_keeps_the_indexes_earlier_batches_built() {
+        let field = json!({"type": "str", "value": ""});
+        let graph = json!({
+            "nodes": [
+                {"id": "S", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+                {"id": "T", "data": {"node": {"template": {"A": field, "B": field}}}},
+            ],
+            "edges": [edge("e1", "A")],
+        });
+        let mut state = GraphState::new(graph).unwrap();
+        let add = json!([{"type": "add_edges", "edges": [edge("e2", "B")]}]);
+        state
+            .apply(operations(add), ApplyOptions::default())
+            .unwrap();
+        assert!(state.edge_index.has_connections("T"));
+        // A writes T, then the second edge into A is refused: the batch changes nothing.
+        let refused = json!([
+            {"type": "update_nodes", "updates": [
+                {"id": "T", "op": "set_field", "path": ["data", "node", "template", "A", "value"], "value": "x"},
+            ]},
+            {"type": "add_edges", "edges": [edge("e3", "A")]},
+        ]);
+        let before = state.to_value();
+        state
+            .apply(operations(refused), ApplyOptions::default())
+            .unwrap_err();
+        assert_eq!(state.to_value(), before);
+        assert!(state.edge_index.has_connections("T"));
+    }
+
+    fn set(id: &str, path: FlowValue, value: FlowValue) -> FlowValue {
+        let mut update = json!({"id": id, "op": "set_field"});
+        update["path"] = path;
+        update["value"] = value;
+        update
+    }
+
+    fn delete(id: &str, path: FlowValue) -> FlowValue {
+        let mut update = json!({"id": id, "op": "delete_field"});
+        update["path"] = path;
+        update
+    }
+
+    fn updates(updates: Vec<FlowValue>) -> Vec<Operation> {
+        let mut operation = json!({"type": "update_nodes"});
+        operation["updates"] = FlowValue::Array(updates);
+        operations(FlowValue::Array(vec![operation]))
+    }
+
+    fn table_node() -> FlowValue {
+        let row = |id: &str, pos: u32| json!({"__id__": id, "__pos__": pos, "v": "x"});
+        json!({"id": "t", "data": {"node": {"template": {
+            "rows": {"type": "table", "value": [row("r1", 1), row("r2", 2), row("r3", 3)]},
+            "text": {"type": "str", "value": ""},
+        }}}})
+    }
+
+    fn rows_path(key: Option<&str>) -> FlowValue {
+        let mut path = json!(["data", "node", "template", "rows", "value"]);
+        if let Some(key) = key {
+            path.as_array_mut().unwrap().push(json!({"key": key}));
+        }
+        path
+    }
+
+    fn cell_path(key: &str) -> FlowValue {
+        let mut path = rows_path(Some(key));
+        path.as_array_mut().unwrap().push(json!("v"));
+        path
+    }
+
+    /// A batch on a kept graph state gives what it gives on a fresh one.
+    fn same_as_fresh(state: &mut GraphState, batch: Vec<Operation>) -> Result<()> {
+        let fresh = apply_flow_operations(state.to_value(), batch.clone(), ApplyOptions::default());
+        let kept = state.apply(batch, ApplyOptions::default());
+        match (fresh, kept) {
+            (Ok((graph, _)), Ok(_)) => {
+                assert!(crate::compare::graphs_equal(&state.to_value(), &graph).unwrap());
+                Ok(())
+            }
+            (Err(_), Err(error)) => Err(error),
+            (fresh, kept) => panic!("fresh {fresh:?}, kept {kept:?}"),
+        }
+    }
+
+    #[test]
+    fn a_kept_table_keeps_its_index_through_writes_and_refused_batches() {
+        let mut state = GraphState::new(json!({"nodes": [table_node()], "edges": []})).unwrap();
+        let row = |id: &str, pos: f64| json!({"__id__": id, "__pos__": pos, "v": "n"});
+        same_as_fresh(
+            &mut state,
+            updates(vec![set("t", cell_path("r2"), json!("y"))]),
+        )
+        .unwrap();
+        same_as_fresh(
+            &mut state,
+            updates(vec![delete("t", rows_path(Some("r1")))]),
+        )
+        .unwrap();
+        // Refused after a row is added and a cell written: nothing changes.
+        let before = state.to_value();
+        let refused = updates(vec![
+            set("t", rows_path(Some("r4")), row("r4", 4.0)),
+            set("t", cell_path("r3"), json!("z")),
+            set("t", cell_path("gone"), json!("z")),
+        ]);
+        same_as_fresh(&mut state, refused).unwrap_err();
+        assert_eq!(state.to_value(), before);
+        same_as_fresh(
+            &mut state,
+            updates(vec![
+                set("t", rows_path(Some("r5")), row("r5", 0.5)),
+                set("t", cell_path("r5"), json!("w")),
+                delete("t", rows_path(Some("r2"))),
+                set("t", cell_path("r3"), json!("v3")),
+            ]),
+        )
+        .unwrap();
+        same_as_fresh(
+            &mut state,
+            updates(vec![set("t", cell_path("r5"), json!("again"))]),
+        )
+        .unwrap();
+        let rows = &state.to_value()["nodes"][0]["data"]["node"]["template"]["rows"]["value"];
+        let mut cells: Vec<(String, String)> = rows
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|row| {
+                (
+                    row["__id__"].as_str().unwrap().into(),
+                    row["v"].as_str().unwrap().into(),
+                )
+            })
+            .collect();
+        cells.sort();
+        assert_eq!(
+            cells,
+            [("r3".into(), "v3".into()), ("r5".into(), "again".into())]
+        );
+    }
+
+    #[test]
+    fn a_field_type_written_in_the_batch_decides_whether_its_value_is_a_table() {
+        let node = json!({"id": "t", "data": {"node": {"template": {
+            "rows": {"type": "str", "value": [{"__id__": "r1", "__pos__": 1}]},
+        }}}});
+        let graph = json!({"nodes": [node], "edges": []});
+        let row = json!({"__id__": "r2", "__pos__": 2});
+        let refused = updates(vec![set("t", rows_path(Some("r2")), row.clone())]);
+        let error =
+            apply_flow_operations(graph.clone(), refused, ApplyOptions::default()).unwrap_err();
+        assert!(
+            error.message.contains("does not declare keyed"),
+            "{}",
+            error.message
+        );
+        let typed = updates(vec![
+            set(
+                "t",
+                json!(["data", "node", "template", "rows", "type"]),
+                json!("table"),
+            ),
+            set("t", rows_path(Some("r2")), row),
+        ]);
+        let (graph, _) = apply_flow_operations(graph, typed, ApplyOptions::default()).unwrap();
+        assert_eq!(
+            graph["nodes"][0]["data"]["node"]["template"]["rows"]["value"]
+                .as_array()
+                .unwrap()
+                .len(),
+            2
+        );
+    }
+
+    #[test]
+    fn a_list_written_in_the_batch_is_checked_when_a_write_reads_its_items() {
+        let graph = json!({"nodes": [table_node()], "edges": []});
+        let update = |update: FlowValue| json!({"type": "update_nodes", "updates": [update]});
+        let batch = operations(json!([
+            update(set("t", rows_path(None), json!([1, 2]))),
+            update(delete("t", rows_path(Some("r1")))),
+        ]));
+        let error = apply_flow_operations(graph, batch, ApplyOptions::default()).unwrap_err();
+        assert!(
+            error.message.contains("non-empty string key"),
+            "{}",
+            error.message
+        );
+    }
+
+    #[test]
+    fn an_output_deleted_and_added_again_in_one_batch_takes_its_new_position() {
+        let output = |name: &str, position: u32| json!({"name": name, "__pos__": position});
+        let node = json!({"id": "n", "data": {"node": {"template": {},
+            "outputs": [output("a", 1), output("b", 2), output("c", 3)]}}});
+        let outputs = |key: &str| json!(["data", "node", "outputs", {"key": key}]);
+        let update = |update: FlowValue| json!({"type": "update_nodes", "updates": [update]});
+        let batch = operations(json!([
+            update(delete("n", outputs("a"))),
+            update(set("n", outputs("d"), output("d", 4))),
+            update(set("n", outputs("a"), output("a", 5))),
+        ]));
+        let mut state = GraphState::new(json!({"nodes": [node], "edges": []})).unwrap();
+        state.apply(batch, ApplyOptions::default()).unwrap();
+        let outputs = state.graph.node_value("n", &OUTPUTS_PATH).unwrap();
+        let mut order: Vec<(u64, &str)> = outputs
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|output| {
+                (
+                    output["__pos__"].as_u64().unwrap(),
+                    output["name"].as_str().unwrap(),
+                )
+            })
+            .collect();
+        order.sort_unstable();
+        let names: Vec<&str> = order.into_iter().map(|(_, name)| name).collect();
+        assert_eq!(names, ["b", "c", "d", "a"]);
+    }
+
+    #[test]
+    fn a_node_deleted_and_added_again_takes_the_writes_after_it() {
+        let node = json!({"id": "n", "data": {"node": {"template": {"f": {"value": 1}}}}});
+        let batch = json!([
+            {"type": "delete_nodes", "ids": ["n"]},
+            {"type": "add_nodes", "nodes": [{"id": "n", "data": {"node": {"template": {"g": {"value": 2}}}}}]},
+            {"type": "update_nodes", "updates": [set("n", json!(["data", "node", "template", "g", "value"]), json!(3))]},
+        ]);
+        let (graph, _) = apply_flow_operations(
+            json!({"nodes": [node], "edges": []}),
+            operations(batch),
+            ApplyOptions::default(),
+        )
+        .unwrap();
+        assert_eq!(
+            graph["nodes"][0]["data"]["node"]["template"],
+            json!({"g": {"value": 3}})
+        );
+    }
+
+    #[test]
+    fn an_edge_rule_reads_a_field_written_in_the_batch() {
+        let field = json!({"type": "str", "value": ""});
+        let graph = json!({
+            "nodes": [
+                {"id": "S", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+                {"id": "T", "data": {"node": {"template": {"A": field}}}},
+            ],
+            "edges": [edge("e1", "A")],
+        });
+        let second = json!({"type": "add_edges", "edges": [edge("e2", "A")]});
+        let error = apply_flow_operations(
+            graph.clone(),
+            operations(json!([second])),
+            ApplyOptions::default(),
+        )
+        .unwrap_err();
+        assert_eq!(
+            error.code,
+            crate::violation::error::ErrorCode::Violation(
+                crate::validate::ViolationCode::EdgeTargetOccupied
+            ),
+            "{error}"
+        );
+        let list = set(
+            "T",
+            json!(["data", "node", "template", "A", "list"]),
+            json!(true),
+        );
+        let batch = json!([{"type": "update_nodes", "updates": [list]}, second]);
+        apply_flow_operations(graph, operations(batch), ApplyOptions::default()).unwrap();
+    }
+
+    #[test]
+    fn a_write_over_earlier_writes_undoes_to_the_graph_before_the_batch() {
+        let graph = json!({"nodes": [table_node()], "edges": []});
+        let field = json!(["data", "node", "template", "rows"]);
+        let batch = updates(vec![
+            set("t", cell_path("r1"), json!("y")),
+            delete("t", rows_path(Some("r2"))),
+            set("t", field, json!({"type": "str", "value": "flat"})),
+        ]);
+        let mut state = GraphState::new(graph.clone()).unwrap();
+        let options = ApplyOptions {
+            backward: true,
+            ..ApplyOptions::default()
+        };
+        let applied = state.apply(batch, options).unwrap();
+        for list in applied.backward.into_iter().rev() {
+            state.replay(list, ReplayOptions::default()).unwrap();
+        }
+        assert!(crate::compare::graphs_equal(&state.to_value(), &graph).unwrap());
+    }
+
+    #[test]
+    fn a_staged_batch_is_not_read_until_it_is_kept() {
+        let mut state = GraphState::new(json!({"nodes": [table_node()], "edges": []})).unwrap();
+        let before = state.to_value();
+        let batch = updates(vec![
+            set("t", cell_path("r2"), json!("y")),
+            delete("t", rows_path(Some("r1"))),
+        ]);
+        let options = ApplyOptions {
+            forward: true,
+            backward: true,
+        };
+        let (expected_graph, expected) =
+            apply_flow_operations(before.clone(), batch.clone(), options).unwrap();
+        assert!(state.staged_to_json().is_none(), "nothing is staged yet");
+        let staged = state.stage(batch, options).unwrap();
+        assert_eq!(staged, expected);
+        assert!(state.is_staged());
+        assert_eq!(state.to_value(), before);
+        assert_eq!(
+            serde_json::from_str::<FlowValue>(&state.to_json()).unwrap(),
+            before
+        );
+        // The staged graph is the graph that keep makes, while the committed graph stays.
+        let staged_text = state.staged_to_json().unwrap();
+        assert!(
+            crate::compare::graphs_equal(
+                &serde_json::from_str(&staged_text).unwrap(),
+                &expected_graph
+            )
+            .unwrap()
+        );
+        assert!(state.keep());
+        assert!(!state.is_staged());
+        assert_eq!(state.to_json(), staged_text);
+        assert!(crate::compare::graphs_equal(&state.to_value(), &expected_graph).unwrap());
+        assert!(!state.keep(), "nothing is staged after keep");
+        assert!(
+            state.staged_to_json().is_none(),
+            "nothing is staged after keep"
+        );
+    }
+
+    #[test]
+    fn a_dropped_batch_leaves_the_graph_and_its_indexes() {
+        let field = json!({"type": "str", "value": ""});
+        let graph = json!({
+            "nodes": [
+                {"id": "S", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
+                {"id": "T", "data": {"node": {"template": {"A": field, "B": field}}}},
+            ],
+            "edges": [edge("e1", "A")],
+        });
+        let mut state = GraphState::new(graph).unwrap();
+        let add = json!([{"type": "add_edges", "edges": [edge("e2", "B")]}]);
+        state
+            .apply(operations(add), ApplyOptions::default())
+            .unwrap();
+        let before = state.to_value();
+        let batch = json!([
+            {"type": "delete_edges", "ids": ["e1"]},
+            {"type": "update_nodes", "updates": [
+                set("T", json!(["data", "node", "template", "A", "value"]), json!("x")),
+            ]},
+            {"type": "add_edges", "edges": [edge("e3", "A")]},
+        ]);
+        state
+            .stage(operations(batch.clone()), ApplyOptions::default())
+            .unwrap();
+        assert!(state.drop_staged());
+        assert!(!state.is_staged());
+        assert_eq!(state.to_value(), before);
+        assert!(state.edge_index.has_connections("T"));
+        // The indexes still hold e1 in A: a second edge into A is refused.
+        let second = json!([{"type": "add_edges", "edges": [edge("e3", "A")]}]);
+        state
+            .apply(operations(second), ApplyOptions::default())
+            .unwrap_err();
+        // The dropped batch applies as it would have.
+        state
+            .apply(operations(batch), ApplyOptions::default())
+            .unwrap();
+        assert!(!state.drop_staged(), "nothing is staged after apply");
+    }
+
+    #[test]
+    fn a_refused_batch_is_not_staged() {
+        let mut state = GraphState::new(json!({"nodes": [table_node()], "edges": []})).unwrap();
+        let before = state.to_value();
+        let refused = updates(vec![
+            set("t", cell_path("r2"), json!("y")),
+            set("t", cell_path("gone"), json!("z")),
+        ]);
+        state.stage(refused, ApplyOptions::default()).unwrap_err();
+        assert!(!state.is_staged());
+        assert!(!state.keep());
+        assert_eq!(state.to_value(), before);
+    }
+
+    #[test]
+    fn a_group_sub_flow_node_is_not_selected_by_key() {
+        let inner = json!({"id": "lm", "data": {"node": {"template": {"api_key": {"value": ""}}}}});
+        let graph = json!({
+            "nodes": [{"id": "g", "data": {"node": {
+                "template": {},
+                "flow": {"data": {"nodes": [inner], "edges": []}},
+            }}}],
+            "edges": [],
+        });
+        let path = json!([
+            "data", "node", "flow", "data", "nodes", {"key": "lm"},
+            "data", "node", "template", "api_key", "value",
+        ]);
+        let write = json!([{"type": "update_nodes", "updates": [
+            {"id": "g", "op": "set_field", "path": path, "value": "x"},
+        ]}]);
+        let error =
+            apply_flow_operations(graph, operations(write), ApplyOptions::default()).unwrap_err();
+        assert!(
+            error.to_string().contains("does not declare keyed"),
+            "{error}"
+        );
+    }
+}

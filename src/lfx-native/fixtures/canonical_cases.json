@@ -209,7 +209,7 @@
     },
     {
       "name": "top-level keys other than nodes and edges are view state",
-      "rule": "no-update-metadata",
+      "rule": "view-state-top-level",
       "left": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
@@ -252,7 +252,7 @@
     },
     {
       "name": "two spellings of one handle are one handle",
-      "rule": "handle-respelling",
+      "rule": "edge-handle-respelling",
       "left": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}, {"name": "loop", "allows_loop": true}]}}},
@@ -416,7 +416,7 @@
     },
     {
       "name": "table row order is not state",
-      "rule": "table-row-order",
+      "rule": "table-input-row-order",
       "left": {
         "nodes": [
           {
@@ -463,7 +463,7 @@
     },
     {
       "name": "a legacy table's array order is its order",
-      "rule": "legacy-tables",
+      "rule": "legacy-table-inputs",
       "left": {
         "nodes": [
           {
@@ -511,13 +511,13 @@
     }
   ],
   "handles": [
-    {"name": "a compact handle", "rule": "handle-parsing", "handle": "{œnameœ:œoutœ}", "parsed": {"name": "out"}},
-    {"name": "a spaced handle", "rule": "handle-parsing", "handle": "{œnameœ: œoutœ, œtypesœ: [œMessageœ]}", "parsed": {"name": "out", "types": ["Message"]}},
-    {"name": "an escaped quote inside a handle", "rule": "handle-parsing", "handle": "{œnameœ:œa\\œbœ}", "parsed": {"name": "a\"b"}},
-    {"name": "NaN does not parse", "rule": "handle-parsing", "handle": "{œxœ:NaN}", "parsed": null},
-    {"name": "Infinity does not parse", "rule": "handle-parsing", "handle": "{œxœ:Infinity}", "parsed": null},
-    {"name": "a list is not a handle", "rule": "handle-parsing", "handle": "[1]", "parsed": null},
-    {"name": "plain text is not a handle", "rule": "handle-parsing", "handle": "x|y", "parsed": null},
-    {"name": "an empty string is not a handle", "rule": "handle-parsing", "handle": "", "parsed": null}
+    {"name": "a compact handle", "rule": "edge-handle-parsing", "handle": "{œnameœ:œoutœ}", "parsed": {"name": "out"}},
+    {"name": "a spaced handle", "rule": "edge-handle-parsing", "handle": "{œnameœ: œoutœ, œtypesœ: [œMessageœ]}", "parsed": {"name": "out", "types": ["Message"]}},
+    {"name": "an escaped quote inside a handle", "rule": "edge-handle-parsing", "handle": "{œnameœ:œa\\œbœ}", "parsed": {"name": "a\"b"}},
+    {"name": "NaN does not parse", "rule": "edge-handle-parsing", "handle": "{œxœ:NaN}", "parsed": null},
+    {"name": "Infinity does not parse", "rule": "edge-handle-parsing", "handle": "{œxœ:Infinity}", "parsed": null},
+    {"name": "a list is not a handle", "rule": "edge-handle-parsing", "handle": "[1]", "parsed": null},
+    {"name": "plain text is not a handle", "rule": "edge-handle-parsing", "handle": "x|y", "parsed": null},
+    {"name": "an empty string is not a handle", "rule": "edge-handle-parsing", "handle": "", "parsed": null}
   ]
 }

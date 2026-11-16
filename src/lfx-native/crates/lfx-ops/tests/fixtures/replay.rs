@@ -1,8 +1,8 @@
 //! `replay_cases.json`: replaying stored operations with no rule.
 
-use lfx_ops::canonical::graphs_equal;
+use lfx_ops::compare::graphs_equal;
 use lfx_ops::json;
-use lfx_ops::value::AnyValue;
+use lfx_ops::json::FlowValue;
 use lfx_ops::{GraphState, Operation, ReplayOptions};
 use libtest_mimic::{Failed, Trial};
 
@@ -39,7 +39,7 @@ pub fn trials() -> Vec<Trial> {
     let merge = load("merge_cases.json");
     for (name, case) in cases(&merge) {
         let base = merge["base"].clone();
-        let transactions: Vec<AnyValue> = case["order"]
+        let transactions: Vec<FlowValue> = case["order"]
             .as_array()
             .into_iter()
             .flatten()
@@ -75,7 +75,7 @@ pub fn trials() -> Vec<Trial> {
 /// operations of each batch that applies, as the operation log does. Replay
 /// the log on the base, one call per batch: every batch replays, and the
 /// result is the graph apply gave. A refused batch is not in the log.
-fn log_replay(base: &AnyValue, batches: &[AnyValue]) -> Result<(), Failed> {
+fn log_replay(base: &FlowValue, batches: &[FlowValue]) -> Result<(), Failed> {
     let mut applied = GraphState::new(base.clone()).map_err(|error| error.to_string())?;
     let mut replayed = GraphState::new(base.clone()).map_err(|error| error.to_string())?;
     let options = lfx_ops::ApplyOptions {
@@ -106,10 +106,10 @@ fn log_replay(base: &AnyValue, batches: &[AnyValue]) -> Result<(), Failed> {
 
 /// Derive the operations of a save, as the server does, and replay them on
 /// the base: they give the target.
-fn derived_replay(case: &AnyValue) -> Result<(), Failed> {
+fn derived_replay(case: &FlowValue) -> Result<(), Failed> {
     let derived = lfx_ops::derive_flow_operations(case["base"].clone(), &case["target"])
         .map_err(|error| format!("derive fails: {error}"))?;
-    let operations = AnyValue::Array(derived.operations.iter().map(Operation::to_value).collect());
+    let operations = FlowValue::Array(derived.operations.iter().map(Operation::to_value).collect());
     let replayed = one_call_per_operation(&case["base"], &operations)?;
     if graphs_equal(&replayed, &case["target"]).map_err(|error| error.to_string())? {
         return Ok(());
@@ -125,7 +125,7 @@ fn derived_replay(case: &AnyValue) -> Result<(), Failed> {
 /// operation, and require the same graph. A call makes its writes in the
 /// stored flow when it ends, so the second way holds nothing between
 /// operations. Returns the graph.
-fn one_call_per_operation(base: &AnyValue, operations: &AnyValue) -> Result<AnyValue, Failed> {
+fn one_call_per_operation(base: &FlowValue, operations: &FlowValue) -> Result<FlowValue, Failed> {
     let operations =
         Operation::list_from_value(operations.clone()).map_err(|error| error.to_string())?;
     let mut batch = GraphState::new(base.clone()).map_err(|error| error.to_string())?;
@@ -152,7 +152,7 @@ fn one_call_per_operation(base: &AnyValue, operations: &AnyValue) -> Result<AnyV
 
 /// Apply a case, then replay its forward operations on the base: in one
 /// call and one call per operation, both give the graph apply gave.
-fn forward_replay(case: &AnyValue) -> Result<(), Failed> {
+fn forward_replay(case: &FlowValue) -> Result<(), Failed> {
     let base = &case["base"];
     let mut state = GraphState::new(base.clone()).map_err(|error| error.to_string())?;
     let options = lfx_ops::ApplyOptions {
@@ -164,7 +164,7 @@ fn forward_replay(case: &AnyValue) -> Result<(), Failed> {
     let applied = state
         .apply(operations, options)
         .map_err(|error| format!("refused: {error}"))?;
-    let forward = AnyValue::Array(applied.forward.iter().map(Operation::to_value).collect());
+    let forward = FlowValue::Array(applied.forward.iter().map(Operation::to_value).collect());
     let replayed = one_call_per_operation(base, &forward)?;
     if graphs_equal(&replayed, &state.to_value()).map_err(|error| error.to_string())? {
         return Ok(());
@@ -176,7 +176,7 @@ fn forward_replay(case: &AnyValue) -> Result<(), Failed> {
     .into())
 }
 
-fn replay_case(case: &AnyValue) -> Result<(), Failed> {
+fn replay_case(case: &FlowValue) -> Result<(), Failed> {
     let base = &case["base"];
     let options = ReplayOptions {
         backward: case.get("backward").is_some(),
@@ -213,10 +213,10 @@ fn replay_case(case: &AnyValue) -> Result<(), Failed> {
     let Some(expected_backward) = case.get("backward") else {
         return Ok(());
     };
-    let backward: AnyValue = replayed
+    let backward: FlowValue = replayed
         .backward
         .iter()
-        .map(|list| AnyValue::Array(list.iter().map(Operation::to_value).collect()))
+        .map(|list| FlowValue::Array(list.iter().map(Operation::to_value).collect()))
         .collect();
     assert_json_matches(
         "backward operations",

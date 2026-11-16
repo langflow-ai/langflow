@@ -36,3 +36,13 @@ node ../lfx-native/fixtures/tools/check_editor.mjs ts_engine.cjs
 ```bash
 uv run python ../lfx-native/fixtures/tools/compare_engines.py ..
 ```
+
+## Changes the other engines must follow
+
+The Python and TypeScript engines are drafts. When a fixture changes, the checkers report the cases they do not meet yet.
+
+Nov 16, 2026:
+
+- The schema file is `model.json`, version 2. It has no `field_units` and no `whole_values`. Its keyed lists are `named` (was `natural`) and `table_input` (was `tables`).
+- The diff writes only what changed. It diffs an object key by key, writes a keyed list item by item, and writes any other changed value whole. A client that changes keys together, such as `value` and `load_from_db`, sends them together. The rule `schema-units` is gone, and its cases follow `records-only-changes`.
+- Renamed rules: `handle-*` to `edge-handle-*`, `list-item-missing-pos` to `keyed-list-positions`, `no-update-metadata` to `view-state-top-level`, `row-keys-stripped` to `table-input-row-keys-stripped`, `legacy-tables` to `legacy-table-inputs`, and `table-row-*` and `table-column-reserved` to `table-input-row-*` and `table-input-column-reserved`.

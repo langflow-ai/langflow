@@ -446,7 +446,7 @@
     },
     {
       "name": "a legacy table gets ids and evenly spaced positions in row order",
-      "rule": "table-row-positions",
+      "rule": "table-input-row-positions",
       "flow": {
         "nodes": [
           {
@@ -512,7 +512,7 @@
     },
     {
       "name": "an unchanged legacy table is left alone",
-      "rule": "legacy-tables",
+      "rule": "legacy-table-inputs",
       "flow": {
         "nodes": [
           {
@@ -565,7 +565,7 @@
     },
     {
       "name": "a legacy table without a base is left alone",
-      "rule": "table-row-keys",
+      "rule": "table-input-row-keys",
       "flow": {
         "nodes": [
           {
@@ -602,7 +602,7 @@
     },
     {
       "name": "a missing position is filled between its neighbours",
-      "rule": "table-row-positions",
+      "rule": "table-input-row-positions",
       "flow": {
         "nodes": [
           {
@@ -662,7 +662,7 @@
     },
     {
       "name": "duplicate row ids are regenerated and the stored order is kept",
-      "rule": "table-row-ids-assigned",
+      "rule": "table-input-row-ids-assigned",
       "flow": {
         "nodes": [
           {
@@ -722,7 +722,7 @@
     },
     {
       "name": "rows a table already held keep their ids",
-      "rule": "table-row-ids-assigned",
+      "rule": "table-input-row-ids-assigned",
       "flow": {
         "nodes": [
           {
@@ -804,7 +804,7 @@
     },
     {
       "name": "only a new row gets a new id",
-      "rule": "table-row-ids-assigned",
+      "rule": "table-input-row-ids-assigned",
       "flow": {
         "nodes": [
           {
@@ -904,7 +904,7 @@
     },
     {
       "name": "rows before the first position count down from it",
-      "rule": "table-row-positions",
+      "rule": "table-input-row-positions",
       "flow": {
         "nodes": [
           {
@@ -971,7 +971,7 @@
     },
     {
       "name": "rows after the last position count up from it",
-      "rule": "table-row-positions",
+      "rule": "table-input-row-positions",
       "flow": {
         "nodes": [
           {
@@ -1076,7 +1076,7 @@
     },
     {
       "name": "rows between out-of-order neighbours follow the one before",
-      "rule": "table-row-positions",
+      "rule": "table-input-row-positions",
       "flow": {
         "nodes": [
           {
@@ -1137,7 +1137,7 @@
     },
     {
       "name": "an output added without __pos__ gets the midpoint of its neighbours",
-      "rule": "list-item-missing-pos",
+      "rule": "keyed-list-positions",
       "flow": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "a", "__pos__": 1}, {"name": "c"}, {"name": "b", "__pos__": 2}]}}}], "edges": []},
       "base": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "a", "__pos__": 1}, {"name": "b", "__pos__": 2}]}}}], "edges": []},
       "expected": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "a", "__pos__": 1}, {"name": "c", "__pos__": 1.5}, {"name": "b", "__pos__": 2}]}}}], "edges": []},

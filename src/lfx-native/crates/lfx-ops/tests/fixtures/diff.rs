@@ -1,7 +1,7 @@
 //! `diff_cases.json`: the exact operations a whole-flow save records.
 
-use lfx_ops::canonical::graphs_equal;
-use lfx_ops::value::AnyValue;
+use lfx_ops::compare::graphs_equal;
+use lfx_ops::json::FlowValue;
 use lfx_ops::{ApplyOptions, GraphState, Operation, derive_flow_operations, diff_flow_data};
 use libtest_mimic::{Failed, Trial};
 
@@ -23,7 +23,7 @@ pub fn trials() -> Vec<Trial> {
     trials
 }
 
-fn same_graph(what: &str, actual: &AnyValue, expected: &AnyValue) -> Result<(), Failed> {
+fn same_graph(what: &str, actual: &FlowValue, expected: &FlowValue) -> Result<(), Failed> {
     if graphs_equal(actual, expected).map_err(|error| error.to_string())? {
         return Ok(());
     }
@@ -35,11 +35,11 @@ fn same_graph(what: &str, actual: &AnyValue, expected: &AnyValue) -> Result<(), 
     .into())
 }
 
-fn diff_case(case: &AnyValue) -> Result<(), Failed> {
+fn diff_case(case: &FlowValue) -> Result<(), Failed> {
     let (base, target) = (&case["base"], &case["target"]);
     let operations =
         diff_flow_data(base, target).map_err(|error| format!("diff failed: {error}"))?;
-    let dumped = AnyValue::Array(operations.iter().map(Operation::to_value).collect());
+    let dumped = FlowValue::Array(operations.iter().map(Operation::to_value).collect());
     assert_json_eq("operations", &dumped, &case["operations"])?;
     let derived = derive_flow_operations(base.clone(), target)
         .map_err(|error| format!("derive failed: {error}"))?;
@@ -47,7 +47,7 @@ fn diff_case(case: &AnyValue) -> Result<(), Failed> {
 }
 
 /// Applying the recorded operations one at a time from the base gives the target.
-fn replay_recorded(case: &AnyValue) -> Result<(), Failed> {
+fn replay_recorded(case: &FlowValue) -> Result<(), Failed> {
     let operations = Operation::list_from_value(case["operations"].clone())
         .map_err(|error| error.to_string())?;
     let mut state = GraphState::new(case["base"].clone()).map_err(|error| error.to_string())?;

@@ -5,30 +5,30 @@
 
 use std::fmt;
 
-use crate::data::json_out::{self, Ascii};
-use crate::data::value::{AnyMap, AnyValue, FiniteAnyValue};
 use crate::json;
+use crate::json::serialize::{self, Ascii};
+use crate::json::{FiniteFlowValue, FlowObj, FlowValue, NonFinite};
 
-use crate::graph::GraphState;
-use crate::graph::plain::GraphPlain;
-use crate::models::canonical;
-use crate::models::error::{Error, invalid};
-use crate::models::from_value::{FromAnyValue, parse_finite_json, parse_json, parse_problem};
-use crate::models::keyed;
-use crate::models::operation::Operation;
-use crate::models::validate::{Numbers, Violation, find_graph_violations};
-use crate::ops::apply::apply_flow_operations;
-use crate::ops::diff::derive_flow_operations;
-use crate::ops::repair::{Fix, repair_flow_data};
-use crate::ops::replay::replay_flow_operations;
-use crate::ops::restore;
-use crate::ops::rows::{self, Renumber};
-use crate::ops::{Applied, ApplyOptions, ReplayOptions, Replayed};
+use crate::compare;
+use crate::flow::deserialize::FromFlowValue;
+use crate::flow::list::Renumber;
+use crate::node_input::table_input;
+use crate::op::apply::apply_flow_operations;
+use crate::op::diff::derive_flow_operations;
+use crate::op::operation::Operation;
+use crate::op::repair::{Fix, repair_flow_data};
+use crate::op::replay::replay_flow_operations;
+use crate::op::restore;
+use crate::op::{Applied, ApplyOptions, ReplayOptions, Replayed};
+use crate::state::GraphState;
+use crate::state::plain::GraphPlain;
+use crate::validate::{Numbers, Violation, find_graph_violations};
+use crate::violation::error::{Error, invalid};
 
 /// An error as a JSON object with `kind`, `code`, `message`, and
 /// `edge_id` or `violations` when it has them.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ApiError(pub AnyValue);
+pub struct ApiError(pub FlowValue);
 
 impl ApiError {
     /// The error's kind.
@@ -58,6 +58,12 @@ impl fmt::Display for ApiError {
 
 impl std::error::Error for ApiError {}
 
+impl From<NonFinite> for ApiError {
+    fn from(error: NonFinite) -> Self {
+        Self::from(Error::from(error))
+    }
+}
+
 impl From<Error> for ApiError {
     fn from(error: Error) -> Self {
         let mut out = json!({
@@ -76,7 +82,7 @@ impl From<Error> for ApiError {
 }
 
 /// The result of a call, or the error.
-pub type ApiResult<T = AnyValue> = Result<T, ApiError>;
+pub type ApiResult<T = FlowValue> = Result<T, ApiError>;
 
 // --- Output --------------------------------------------------------------------------------
 
@@ -86,19 +92,19 @@ pub type ApiResult<T = AnyValue> = Result<T, ApiError>;
 /// Every edge handle holds a `œ`, and Python and JavaScript decode ASCII
 /// text fastest.
 #[must_use]
-pub fn json_text(value: &AnyValue) -> String {
+pub fn json_text(value: &FlowValue) -> String {
     let mut out = Vec::new();
-    json_out::write_value(&mut out, value, Ascii::Escape);
-    json_out::into_string(out)
+    serialize::write_value(&mut out, value, Ascii::Escape);
+    serialize::into_string(out)
 }
 
-fn violations(violations: &[Violation]) -> AnyValue {
-    AnyValue::Array(violations.iter().map(Violation::to_value).collect())
+fn violations(violations: &[Violation]) -> FlowValue {
+    FlowValue::Array(violations.iter().map(Violation::to_value).collect())
 }
 
 /// Operations as JSON. Each one moves its payload into the result.
-fn operations_json(operations: Vec<Operation>) -> AnyValue {
-    AnyValue::Array(operations.into_iter().map(Operation::into_value).collect())
+fn operations_json(operations: Vec<Operation>) -> FlowValue {
+    FlowValue::Array(operations.into_iter().map(Operation::into_value).collect())
 }
 
 // --- Input ---------------------------------------------------------------------------------
@@ -110,7 +116,7 @@ pub enum Input<'t> {
     /// JSON text.
     Text(&'t str),
     /// A value, already read.
-    Value(AnyValue),
+    Value(FlowValue),
 }
 
 impl<'t> From<&'t str> for Input<'t> {
@@ -119,24 +125,24 @@ impl<'t> From<&'t str> for Input<'t> {
     }
 }
 
-impl From<AnyValue> for Input<'_> {
-    fn from(value: AnyValue) -> Self {
+impl From<FlowValue> for Input<'_> {
+    fn from(value: FlowValue) -> Self {
         Self::Value(value)
     }
 }
 
 /// A graph, or any other value the engine reads as data. Text may hold a
 /// non-finite number, so validation can report it and repair can replace it.
-fn data(input: Input<'_>) -> ApiResult<AnyValue> {
+fn data(input: Input<'_>) -> ApiResult<FlowValue> {
     match input {
         Input::Text(text) => Ok(parse_json(text)?),
         Input::Value(value) => Ok(value),
     }
 }
 
-/// A graph that the engine holds or changes. Text with a non-finite number
+/// A graph that the engine keeps or changes. Text with a non-finite number
 /// is refused.
-fn held(input: Input<'_>) -> ApiResult<AnyValue> {
+fn value(input: Input<'_>) -> ApiResult<FlowValue> {
     match input {
         Input::Text(text) => Ok(parse_finite_json(text)?),
         Input::Value(value) => Ok(value),
@@ -150,13 +156,13 @@ fn held(input: Input<'_>) -> ApiResult<AnyValue> {
 /// The operations do not parse.
 pub fn operations(input: Input<'_>) -> ApiResult<Vec<Operation>> {
     if let Input::Text(text) = input
-        && let Some(operations) = crate::models::operation::operations_from_text(text)
+        && let Some(operations) = crate::op::deserialize::operations_from_text(text)
     {
         return Ok(operations);
     }
     let value = match input {
         Input::Text(text) => serde_json::from_str(text)
-            .map(|FiniteAnyValue(value)| value)
+            .map(|FiniteFlowValue(value)| value)
             .map_err(|error| {
                 ApiError::from(invalid!(
                     "operations are not valid JSON: {}",
@@ -168,13 +174,13 @@ pub fn operations(input: Input<'_>) -> ApiResult<Vec<Operation>> {
     Ok(Operation::list_from_value(value)?)
 }
 
-fn optional(input: Option<Input<'_>>) -> ApiResult<Option<AnyValue>> {
+fn optional(input: Option<Input<'_>>) -> ApiResult<Option<FlowValue>> {
     input.map(data).transpose()
 }
 
 /// A list argument, named in the error when it is not a list or an item
 /// has the wrong type: `rows: must be a list`.
-fn list<T: FromAnyValue>(input: Input<'_>, name: &str) -> ApiResult<Vec<T>> {
+fn list<T: FromFlowValue>(input: Input<'_>, name: &str) -> ApiResult<Vec<T>> {
     Ok(Vec::from_value(data(input)?).map_err(|error| error.into_error(name))?)
 }
 
@@ -191,8 +197,8 @@ fn renumber(editor: bool) -> Renumber {
 /// What a batch did, as JSON: the forward operations with `forward`, and the
 /// backward operations with `backward`.
 #[must_use]
-pub fn applied_json(applied: Applied, options: ApplyOptions) -> AnyMap {
-    let mut out = AnyMap::new();
+pub fn applied_json(applied: Applied, options: ApplyOptions) -> FlowObj {
+    let mut out = FlowObj::new();
     if options.forward {
         out.insert(
             "forward_operations".into(),
@@ -202,14 +208,14 @@ pub fn applied_json(applied: Applied, options: ApplyOptions) -> AnyMap {
     if options.backward {
         out.insert(
             "backward_operations".into(),
-            AnyValue::Array(applied.backward.into_iter().map(operations_json).collect()),
+            FlowValue::Array(applied.backward.into_iter().map(operations_json).collect()),
         );
     }
     out
 }
 
 /// Write an operation into `out` as [`json_text`] writes it, replacing what
-/// `out` held. A caller reuses `out` for many operations.
+/// `out` holds. A caller reuses `out` for many operations.
 pub fn write_operation_json(out: &mut Vec<u8>, operation: &Operation) {
     out.clear();
     operation.write_json(out, Ascii::Escape);
@@ -224,12 +230,12 @@ pub fn apply(
     flow: Input<'_>,
     operations_in: Input<'_>,
     options: ApplyOptions,
-) -> ApiResult<AnyValue> {
+) -> ApiResult<FlowValue> {
     let (flow_data, applied) =
-        apply_flow_operations(held(flow)?, operations(operations_in)?, options)?;
+        apply_flow_operations(value(flow)?, operations(operations_in)?, options)?;
     let mut out = applied_json(applied, options);
     out.insert("flow_data".into(), flow_data);
-    Ok(AnyValue::Object(out))
+    Ok(FlowValue::Object(out))
 }
 
 /// Load a graph into a [`GraphState`], to apply or replay many batches on it.
@@ -238,7 +244,7 @@ pub fn apply(
 ///
 /// The graph does not parse, or breaks a structural rule.
 pub fn graph_state(flow: Input<'_>) -> ApiResult<GraphState> {
-    Ok(GraphState::new(held(flow)?)?)
+    Ok(GraphState::new(value(flow)?)?)
 }
 
 /// Apply a batch to a [`GraphState`]. The result is what [`applied_json`] lists.
@@ -250,21 +256,21 @@ pub fn apply_to(
     state: &mut GraphState,
     operations_in: Input<'_>,
     options: ApplyOptions,
-) -> ApiResult<AnyValue> {
+) -> ApiResult<FlowValue> {
     let applied = state.apply(operations(operations_in)?, options)?;
-    Ok(AnyValue::Object(applied_json(applied, options)))
+    Ok(FlowValue::Object(applied_json(applied, options)))
 }
 
 // --- Replay --------------------------------------------------------------------------------
 
 /// What a replay did, as JSON: the backward operations with `backward`.
 #[must_use]
-pub fn replayed_json(replayed: Replayed, options: ReplayOptions) -> AnyMap {
-    let mut out = AnyMap::new();
+pub fn replayed_json(replayed: Replayed, options: ReplayOptions) -> FlowObj {
+    let mut out = FlowObj::new();
     if options.backward {
         out.insert(
             "backward_operations".into(),
-            AnyValue::Array(replayed.backward.into_iter().map(operations_json).collect()),
+            FlowValue::Array(replayed.backward.into_iter().map(operations_json).collect()),
         );
     }
     out
@@ -281,12 +287,12 @@ pub fn replay(
     flow: Input<'_>,
     operations_in: Input<'_>,
     options: ReplayOptions,
-) -> ApiResult<AnyValue> {
+) -> ApiResult<FlowValue> {
     let (flow_data, replayed) =
-        replay_flow_operations(held(flow)?, operations(operations_in)?, options)?;
+        replay_flow_operations(value(flow)?, operations(operations_in)?, options)?;
     let mut out = replayed_json(replayed, options);
     out.insert("flow_data".into(), flow_data);
-    Ok(AnyValue::Object(out))
+    Ok(FlowValue::Object(out))
 }
 
 /// Replay stored operations on a [`GraphState`], with no rule. The result
@@ -299,9 +305,9 @@ pub fn replay_to(
     state: &mut GraphState,
     operations_in: Input<'_>,
     options: ReplayOptions,
-) -> ApiResult<AnyValue> {
+) -> ApiResult<FlowValue> {
     let replayed = state.replay(operations(operations_in)?, options)?;
-    Ok(AnyValue::Object(replayed_json(replayed, options)))
+    Ok(FlowValue::Object(replayed_json(replayed, options)))
 }
 
 // --- Diff, validation and repair ------------------------------------------------------------
@@ -312,7 +318,7 @@ pub fn replay_to(
 /// # Errors
 ///
 /// A graph does not parse or breaks the rules, or the operations do not replay.
-pub fn ops_diff(base: Input<'_>, target: Input<'_>) -> ApiResult<AnyValue> {
+pub fn ops_diff(base: Input<'_>, target: Input<'_>) -> ApiResult<FlowValue> {
     let derived = derive_flow_operations(data(base)?, &data(target)?)?;
     Ok(operations_json(derived.operations))
 }
@@ -326,7 +332,7 @@ pub fn validate(
     flow: Input<'_>,
     base: Option<Input<'_>>,
     check_values: bool,
-) -> ApiResult<AnyValue> {
+) -> ApiResult<FlowValue> {
     let base = optional(base)?;
     let numbers = if check_values {
         Numbers::Check
@@ -345,14 +351,14 @@ pub fn validate(
 /// # Errors
 ///
 /// A graph does not parse, or a rule only the client can fix is broken.
-pub fn repair(flow: Input<'_>, base: Option<Input<'_>>) -> ApiResult<AnyValue> {
+pub fn repair(flow: Input<'_>, base: Option<Input<'_>>) -> ApiResult<FlowValue> {
     let base = optional(base)?;
     let repaired = repair_flow_data(&data(flow)?, base.as_ref())?;
-    let fixes: Vec<AnyValue> = repaired.fixes.iter().map(Fix::to_value).collect();
-    let mut out = AnyMap::new();
+    let fixes: Vec<FlowValue> = repaired.fixes.iter().map(Fix::to_value).collect();
+    let mut out = FlowObj::new();
     out.insert("flow_data".into(), repaired.flow_data);
-    out.insert("fixes".into(), AnyValue::Array(fixes));
-    Ok(AnyValue::Object(out))
+    out.insert("fixes".into(), FlowValue::Array(fixes));
+    Ok(FlowValue::Object(out))
 }
 
 // --- Plain graphs ---------------------------------------------------------------------------
@@ -363,7 +369,7 @@ pub fn repair(flow: Input<'_>, base: Option<Input<'_>>) -> ApiResult<AnyValue> {
 ///
 /// JSON text that does not parse, or holds a number that is not finite.
 pub fn graph_plain(flow: Input<'_>) -> ApiResult<GraphPlain> {
-    Ok(GraphPlain::new(held(flow)?))
+    Ok(GraphPlain::new(value(flow)?))
 }
 
 /// [`validate`] on plain graphs.
@@ -375,7 +381,7 @@ pub fn plain_validate(
     flow: &GraphPlain,
     base: Option<&GraphPlain>,
     check_values: bool,
-) -> ApiResult<AnyValue> {
+) -> ApiResult<FlowValue> {
     let numbers = if check_values {
         Numbers::Check
     } else {
@@ -392,11 +398,11 @@ pub fn plain_validate(
 pub fn plain_repair(
     flow: &GraphPlain,
     base: Option<&GraphPlain>,
-) -> ApiResult<(GraphPlain, AnyValue)> {
+) -> ApiResult<(GraphPlain, FlowValue)> {
     let (repaired, fixes) = flow.repair(base)?;
     Ok((
         repaired,
-        AnyValue::Array(fixes.iter().map(Fix::to_value).collect()),
+        FlowValue::Array(fixes.iter().map(Fix::to_value).collect()),
     ))
 }
 
@@ -405,7 +411,7 @@ pub fn plain_repair(
 /// # Errors
 ///
 /// A graph breaks the rules, or the operations do not replay.
-pub fn plain_ops_diff(base: &GraphPlain, target: &GraphPlain) -> ApiResult<AnyValue> {
+pub fn plain_ops_diff(base: &GraphPlain, target: &GraphPlain) -> ApiResult<FlowValue> {
     Ok(operations_json(base.ops_diff(target)?.operations))
 }
 
@@ -429,7 +435,7 @@ pub fn text_sha256(text: &[u8]) -> String {
 ///
 /// The graph does not parse, or holds a number that is not finite.
 pub fn graph_hash(flow: Input<'_>) -> ApiResult<String> {
-    Ok(canonical::graph_hash(&data(flow)?)?)
+    Ok(compare::graph_hash(&data(flow)?)?)
 }
 
 /// Whether two graphs are the same graph.
@@ -438,7 +444,7 @@ pub fn graph_hash(flow: Input<'_>) -> ApiResult<String> {
 ///
 /// A graph does not parse, or a compared number is not finite.
 pub fn graphs_equal(left: Input<'_>, right: Input<'_>) -> ApiResult<bool> {
-    Ok(canonical::graphs_equal(&data(left)?, &data(right)?)?)
+    Ok(compare::graphs_equal(&data(left)?, &data(right)?)?)
 }
 
 /// Whether two JSON values are the same value.
@@ -447,7 +453,7 @@ pub fn graphs_equal(left: Input<'_>, right: Input<'_>) -> ApiResult<bool> {
 ///
 /// A value does not parse, or a compared number is not finite.
 pub fn values_equal(left: Input<'_>, right: Input<'_>) -> ApiResult<bool> {
-    Ok(canonical::values_equal(&data(left)?, &data(right)?)?)
+    Ok(compare::values_equal(&data(left)?, &data(right)?)?)
 }
 
 /// A JSON value in RFC 8785 canonical form, as text.
@@ -456,7 +462,7 @@ pub fn values_equal(left: Input<'_>, right: Input<'_>) -> ApiResult<bool> {
 ///
 /// The value does not parse, or holds a number that is not finite.
 pub fn canonical_json(value: Input<'_>) -> ApiResult<String> {
-    Ok(canonical::canonical_json(&data(value)?)?)
+    Ok(compare::canonical_json(&data(value)?)?)
 }
 
 // --- Restore fixes --------------------------------------------------------------------------
@@ -470,7 +476,7 @@ pub fn apply_restore_fixes(
     revision: Input<'_>,
     stored: Input<'_>,
     fixes: Input<'_>,
-) -> ApiResult<AnyValue> {
+) -> ApiResult<FlowValue> {
     Ok(restore::apply_restore_fixes(
         &data(revision)?,
         &data(stored)?,
@@ -483,7 +489,7 @@ pub fn apply_restore_fixes(
 /// # Errors
 ///
 /// The inputs do not parse, an input is not a list, or a handle holds a non-finite number.
-pub fn edge_fixes(read: Input<'_>, shown: Input<'_>) -> ApiResult<AnyValue> {
+pub fn edge_fixes(read: Input<'_>, shown: Input<'_>) -> ApiResult<FlowValue> {
     let fixes = restore::edge_fixes(&list(read, "read")?, &list(shown, "shown")?)?;
     Ok(operations_json(fixes))
 }
@@ -493,7 +499,7 @@ pub fn edge_fixes(read: Input<'_>, shown: Input<'_>) -> ApiResult<AnyValue> {
 /// # Errors
 ///
 /// The inputs do not parse, or `edge_ids` is not a list of strings.
-pub fn fixes_for_edges(fixes: Input<'_>, edge_ids: Input<'_>) -> ApiResult<AnyValue> {
+pub fn fixes_for_edges(fixes: Input<'_>, edge_ids: Input<'_>) -> ApiResult<FlowValue> {
     let ids: Vec<String> = list(edge_ids, "edge_ids")?;
     Ok(operations_json(restore::fixes_for_edges(
         &operations(fixes)?,
@@ -508,8 +514,8 @@ pub fn fixes_for_edges(fixes: Input<'_>, edge_ids: Input<'_>) -> ApiResult<AnyVa
 /// # Errors
 ///
 /// The rows do not parse.
-pub fn strip_row_keys(rows: Input<'_>) -> ApiResult<AnyValue> {
-    Ok(rows::strip_row_keys(&data(rows)?))
+pub fn strip_row_keys(rows: Input<'_>) -> ApiResult<FlowValue> {
+    Ok(table_input::strip_row_keys(&data(rows)?))
 }
 
 /// A flow whose top-level tables have their rows in order and without `__id__` and `__pos__`.
@@ -517,9 +523,9 @@ pub fn strip_row_keys(rows: Input<'_>) -> ApiResult<AnyValue> {
 /// # Errors
 ///
 /// The flow does not parse.
-pub fn strip_flow_table_row_keys(flow: Input<'_>) -> ApiResult<AnyValue> {
+pub fn strip_flow_table_row_keys(flow: Input<'_>) -> ApiResult<FlowValue> {
     let mut flow = data(flow)?;
-    rows::strip_flow_table_row_keys(&mut flow);
+    table_input::strip_flow_table_row_keys(&mut flow);
     Ok(flow)
 }
 
@@ -532,10 +538,10 @@ pub fn assign_row_ids(
     rows: Input<'_>,
     previous: Option<Input<'_>>,
     editor: bool,
-) -> ApiResult<AnyValue> {
+) -> ApiResult<FlowValue> {
     let mut rows = list(rows, "rows")?;
-    rows::assign_row_ids(&mut rows, optional(previous)?.as_ref(), renumber(editor))?;
-    Ok(AnyValue::Array(rows))
+    table_input::assign_row_ids(&mut rows, optional(previous)?.as_ref(), renumber(editor))?;
+    Ok(FlowValue::Array(rows))
 }
 
 /// A node being added, with ids on every table. `editor` renumbers when a gap has no room left.
@@ -543,9 +549,9 @@ pub fn assign_row_ids(
 /// # Errors
 ///
 /// The node does not parse, or a compared row holds a number that is not finite.
-pub fn assign_table_row_ids(node: Input<'_>, editor: bool) -> ApiResult<AnyValue> {
+pub fn assign_table_row_ids(node: Input<'_>, editor: bool) -> ApiResult<FlowValue> {
     let mut node = data(node)?;
-    rows::assign_table_row_ids(&mut node, renumber(editor))?;
+    table_input::assign_table_row_ids(&mut node, renumber(editor))?;
     Ok(node)
 }
 
@@ -558,9 +564,9 @@ pub fn assign_changed_table_row_ids(
     base: Input<'_>,
     target: Input<'_>,
     editor: bool,
-) -> ApiResult<AnyValue> {
+) -> ApiResult<FlowValue> {
     let mut target = data(target)?;
-    rows::assign_changed_table_row_ids(&data(base)?, &mut target, renumber(editor))?;
+    table_input::assign_changed_table_row_ids(&data(base)?, &mut target, renumber(editor))?;
     Ok(target)
 }
 
@@ -569,10 +575,10 @@ pub fn assign_changed_table_row_ids(
 /// # Errors
 ///
 /// The inputs do not parse, an input is not a list, or a row holds a non-finite number.
-pub fn append_table_rows(rows: Input<'_>, new_rows: Input<'_>) -> ApiResult<AnyValue> {
+pub fn append_table_rows(rows: Input<'_>, new_rows: Input<'_>) -> ApiResult<FlowValue> {
     let mut rows = list(rows, "rows")?;
-    rows::append_table_rows(&mut rows, &list(new_rows, "new_rows")?)?;
-    Ok(AnyValue::Array(rows))
+    table_input::append_table_rows(&mut rows, &list(new_rows, "new_rows")?)?;
+    Ok(FlowValue::Array(rows))
 }
 
 /// A node with ids on the tables it adds or changes relative to `previous`,
@@ -585,9 +591,9 @@ pub fn assign_changed_node_table_row_ids(
     node: Input<'_>,
     previous: Option<Input<'_>>,
     editor: bool,
-) -> ApiResult<AnyValue> {
+) -> ApiResult<FlowValue> {
     let mut node = data(node)?;
-    rows::assign_changed_node_table_row_ids(
+    table_input::assign_changed_node_table_row_ids(
         &mut node,
         optional(previous)?.as_ref(),
         renumber(editor),
@@ -600,8 +606,8 @@ pub fn assign_changed_node_table_row_ids(
 /// # Errors
 ///
 /// The node does not parse.
-pub fn table_fields(node: Input<'_>) -> ApiResult<AnyValue> {
-    Ok(json!(rows::table_fields(&data(node)?)))
+pub fn table_fields(node: Input<'_>) -> ApiResult<FlowValue> {
+    Ok(json!(table_input::table_fields(&data(node)?)))
 }
 
 /// Rows in order, by `(__pos__, __id__)`, or as stored for a legacy table.
@@ -609,11 +615,46 @@ pub fn table_fields(node: Input<'_>) -> ApiResult<AnyValue> {
 /// # Errors
 ///
 /// The rows do not parse, or are not a list.
-pub fn ordered_rows(rows: Input<'_>) -> ApiResult<AnyValue> {
-    let rows: Vec<AnyValue> = list(rows, "rows")?;
-    Ok(AnyValue::Array(
-        keyed::ordered_rows(&rows).into_iter().cloned().collect(),
+pub fn ordered_rows(rows: Input<'_>) -> ApiResult<FlowValue> {
+    let rows: Vec<FlowValue> = list(rows, "rows")?;
+    Ok(FlowValue::Array(
+        table_input::ordered_rows(&rows)
+            .into_iter()
+            .cloned()
+            .collect(),
     ))
+}
+
+/// Parse JSON text, reporting a parse failure as an invalid graph.
+fn parse_json(text: &str) -> Result<FlowValue, Error> {
+    serde_json::from_str(text).map_err(|error| graph_not_json(&error))
+}
+
+/// [`parse_json`], but it refuses a number that is not finite as a double
+/// ([`FiniteFlowValue`]).
+fn parse_finite_json(text: &str) -> Result<FlowValue, Error> {
+    serde_json::from_str(text)
+        .map(|FiniteFlowValue(value)| value)
+        .map_err(|error| graph_not_json(&error))
+}
+
+fn graph_not_json(error: &serde_json::Error) -> Error {
+    Error::graph_message(format!(
+        "flow data is not valid JSON: {}",
+        parse_problem(error)
+    ))
+}
+
+/// Why JSON text does not parse. A refused value, such as `1e400`, is named
+/// without its place in the text, as Python names it.
+fn parse_problem(error: &serde_json::Error) -> String {
+    let text = error.to_string();
+    if error.is_data()
+        && let Some((problem, _)) = text.rsplit_once(" at line ")
+    {
+        return problem.to_owned();
+    }
+    text
 }
 
 #[cfg(test)]
@@ -625,7 +666,7 @@ mod tests {
     }
 
     #[test]
-    fn held_graphs_and_operations_refuse_a_number_that_is_not_finite() {
+    fn kept_graphs_and_operations_refuse_a_number_that_is_not_finite() {
         let flow = r#"{"nodes": [], "edges": [], "zoom": 1e400}"#;
         let not_json = "flow data is not valid JSON: NaN and Infinity are not JSON numbers";
         let errors = [
@@ -654,7 +695,7 @@ mod tests {
         assert_eq!(violations[0]["code"], "NON_FINITE_NUMBER");
         assert_eq!(
             repair(flow.into(), None).unwrap()["flow_data"]["zoom"],
-            AnyValue::Null
+            FlowValue::Null
         );
     }
 
@@ -699,7 +740,7 @@ mod tests {
 
     #[test]
     fn list_arguments_accept_lists() {
-        let empty = AnyValue::Array(Vec::new());
+        let empty = FlowValue::Array(Vec::new());
         assert_eq!(assign_row_ids("[]".into(), None, false).unwrap(), empty);
         assert_eq!(ordered_rows("[]".into()).unwrap(), empty);
         assert_eq!(append_table_rows("[]".into(), "[]".into()).unwrap(), empty);
@@ -713,7 +754,7 @@ mod tests {
     #[test]
     fn a_value_reads_as_its_text_does() {
         let text = r#"{"nodes": [], "edges": [], "n": 1.0}"#;
-        let value: AnyValue = serde_json::from_str(text).unwrap();
+        let value: FlowValue = serde_json::from_str(text).unwrap();
         assert_eq!(
             graph_hash(text.into()).unwrap(),
             graph_hash(value.into()).unwrap()
@@ -728,19 +769,19 @@ mod tests {
     #[test]
     fn json_text_is_ascii_and_reads_back_as_written() {
         let text = r#"{"handle":"{œnameœ:œoutœ}","emoji":"😀","quote":"a \"b\"\n","int":12345678901234567890123,"float":1.0}"#;
-        let value: AnyValue = serde_json::from_str(text).unwrap();
+        let value: FlowValue = serde_json::from_str(text).unwrap();
         let written = json_text(&value);
         assert_eq!(
             written,
             r#"{"handle":"{\u0153name\u0153:\u0153out\u0153}","emoji":"\ud83d\ude00","quote":"a \"b\"\n","int":12345678901234567890123,"float":1.0}"#
         );
-        assert_eq!(serde_json::from_str::<AnyValue>(&written).unwrap(), value);
+        assert_eq!(serde_json::from_str::<FlowValue>(&written).unwrap(), value);
         // A character before, across and after each 16-byte step of the scan.
         for offset in 0..40 {
-            let value = AnyValue::from(format!("{}é{}😀", "a".repeat(offset), "b".repeat(offset)));
+            let value = FlowValue::from(format!("{}é{}😀", "a".repeat(offset), "b".repeat(offset)));
             let written = json_text(&value);
             assert!(written.is_ascii(), "{written}");
-            assert_eq!(serde_json::from_str::<AnyValue>(&written).unwrap(), value);
+            assert_eq!(serde_json::from_str::<FlowValue>(&written).unwrap(), value);
         }
     }
 
@@ -751,7 +792,7 @@ mod tests {
         let written = state.to_json();
         assert!(written.is_ascii());
         assert_eq!(
-            serde_json::from_str::<AnyValue>(&written).unwrap(),
+            serde_json::from_str::<FlowValue>(&written).unwrap(),
             state.to_value()
         );
     }

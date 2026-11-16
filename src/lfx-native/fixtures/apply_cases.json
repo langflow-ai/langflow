@@ -1109,7 +1109,7 @@
     },
     {
       "name": "list item: setting a row's __pos__ changes only its position",
-      "rule": "table-row-order",
+      "rule": "table-input-row-order",
       "base": {
         "nodes": [
           {
@@ -1151,7 +1151,7 @@
     },
     {
       "name": "list item: two rows may share a position",
-      "rule": "table-row-order",
+      "rule": "table-input-row-order",
       "base": {
         "nodes": [
           {
@@ -1232,7 +1232,7 @@
     },
     {
       "name": "list item: deleting a row lets the last row take its slot",
-      "rule": "table-row-order",
+      "rule": "table-input-row-order",
       "base": {
         "nodes": [
           {
@@ -1584,7 +1584,7 @@
     },
     {
       "name": "list item: a table stored out of position order is accepted",
-      "rule": "table-row-order",
+      "rule": "table-input-row-order",
       "base": {
         "nodes": [
           {
@@ -1616,7 +1616,7 @@
     },
     {
       "name": "list item: a table with two rows of one id is rejected",
-      "rule": "table-row-keys",
+      "rule": "table-input-row-keys",
       "base": {
         "nodes": [
           {
@@ -1639,7 +1639,7 @@
     },
     {
       "name": "list item: a write into a table where another row has no numeric __pos__ is rejected",
-      "rule": "table-row-keys",
+      "rule": "table-input-row-keys",
       "base": {
         "nodes": [
           {
@@ -1662,7 +1662,7 @@
     },
     {
       "name": "list item: a write into a table where two other rows share an id is rejected",
-      "rule": "table-row-keys",
+      "rule": "table-input-row-keys",
       "base": {
         "nodes": [
           {
@@ -1685,7 +1685,7 @@
     },
     {
       "name": "list item: a row written without a numeric __pos__ is rejected",
-      "rule": "table-row-keys",
+      "rule": "table-input-row-keys",
       "base": {
         "nodes": [
           {
@@ -1715,7 +1715,7 @@
     },
     {
       "name": "list item: a row written with a __pos__ too large for a double is rejected",
-      "rule": "table-row-keys",
+      "rule": "table-input-row-keys",
       "base": {
         "nodes": [
           {
@@ -1749,7 +1749,7 @@
     },
     {
       "name": "list item: a row's __pos__ cannot be deleted",
-      "rule": "table-row-keys",
+      "rule": "table-input-row-keys",
       "base": {
         "nodes": [
           {

@@ -1,5 +1,5 @@
 {
-  "description": "Shared diff cases. diff_flow_data(base, target) must return exactly `operations`, and applying them to `base` must give `target` under canonical equality. Units, keyed lists and view state follow node_schema.json: every top-level key other than `nodes` and `edges` is view state. Each case names the rule it checks in `rule`; README.md lists the rules. The expected outputs are reviewed data that every engine must meet.",
+  "description": "Shared diff cases. diff_flow_data(base, target) must return exactly `operations`, and applying them to `base` must give `target` under canonical equality. Keyed lists and view state follow model.json: every top-level key other than `nodes` and `edges` is view state. Each case names the rule it checks in `rule`; README.md lists the rules. The expected outputs are reviewed data that every engine must meet.",
   "cases": [
     {
       "name": "no change",
@@ -55,7 +55,7 @@
     },
     {
       "name": "two spellings of one handle are the same edge",
-      "rule": "handle-respelling",
+      "rule": "edge-handle-respelling",
       "base": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -78,7 +78,7 @@
     },
     {
       "name": "a handle's type lists in another order are the same edge",
-      "rule": "handle-type-sets",
+      "rule": "edge-handle-type-sets",
       "base": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},
@@ -100,23 +100,22 @@
       "operations": []
     },
     {
-      "name": "a value edit writes the whole value unit",
-      "rule": "schema-units",
+      "name": "a value edit writes only the value",
+      "rule": "records-only-changes",
       "base": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "value": "a", "load_from_db": false}}}}}], "edges": []},
       "target": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "value": "b", "load_from_db": false}}}}}], "edges": []},
       "operations": [
         {
           "type": "update_nodes",
           "updates": [
-            {"id": "n", "path": ["data", "node", "template", "f", "value"], "op": "set_field", "value": "b"},
-            {"id": "n", "path": ["data", "node", "template", "f", "load_from_db"], "op": "set_field", "value": false}
+            {"id": "n", "path": ["data", "node", "template", "f", "value"], "op": "set_field", "value": "b"}
           ]
         }
       ]
     },
     {
-      "name": "a value unit key that disappears is deleted with the unit",
-      "rule": "schema-units",
+      "name": "a changed value and a removed key are two writes",
+      "rule": "records-only-changes",
       "base": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "value": "a", "load_from_db": true}}}}}], "edges": []},
       "target": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "value": "b"}}}}}], "edges": []},
       "operations": [
@@ -130,12 +129,12 @@
       ]
     },
     {
-      "name": "a value is never split, whatever its JSON type",
-      "rule": "schema-units",
+      "name": "an object value is diffed key by key",
+      "rule": "records-only-changes",
       "base": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "value": {"a": 1, "b": 2}}}}}}], "edges": []},
       "target": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "value": {"a": 1, "b": 3}}}}}}], "edges": []},
       "operations": [
-        {"type": "update_nodes", "updates": [{"id": "n", "path": ["data", "node", "template", "f", "value"], "op": "set_field", "value": {"a": 1, "b": 3}}]}
+        {"type": "update_nodes", "updates": [{"id": "n", "path": ["data", "node", "template", "f", "value", "b"], "op": "set_field", "value": 3}]}
       ]
     },
     {
@@ -146,38 +145,36 @@
       "operations": [{"type": "update_nodes", "updates": [{"id": "n", "path": ["data", "node", "template", "f", "value"], "op": "set_field", "value": 5}]}]
     },
     {
-      "name": "a definition change writes the whole definition unit",
-      "rule": "schema-units",
+      "name": "a changed field key is written on its own",
+      "rule": "records-only-changes",
       "base": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "input_types": ["A"], "value": "a"}}}}}], "edges": []},
       "target": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "input_types": ["A", "B"], "value": "a"}}}}}], "edges": []},
       "operations": [
         {
           "type": "update_nodes",
           "updates": [
-            {"id": "n", "path": ["data", "node", "template", "f", "type"], "op": "set_field", "value": "str"},
             {"id": "n", "path": ["data", "node", "template", "f", "input_types"], "op": "set_field", "value": ["A", "B"]}
           ]
         }
       ]
     },
     {
-      "name": "a removed definition key is deleted with the unit",
-      "rule": "schema-units",
+      "name": "a removed field key is deleted on its own",
+      "rule": "records-only-changes",
       "base": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "input_types": ["A"], "value": "a"}}}}}], "edges": []},
       "target": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "value": "a"}}}}}], "edges": []},
       "operations": [
         {
           "type": "update_nodes",
           "updates": [
-            {"id": "n", "path": ["data", "node", "template", "f", "type"], "op": "set_field", "value": "str"},
             {"id": "n", "path": ["data", "node", "template", "f", "input_types"], "op": "delete_field"}
           ]
         }
       ]
     },
     {
-      "name": "a toggle is its own value",
-      "rule": "schema-units",
+      "name": "a changed advanced flag is written on its own",
+      "rule": "records-only-changes",
       "base": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "value": "a", "advanced": false}}}}}], "edges": []},
       "target": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "value": "a", "advanced": true}}}}}], "edges": []},
       "operations": [
@@ -186,7 +183,7 @@
     },
     {
       "name": "a new field is one write of the whole field",
-      "rule": "schema-units",
+      "rule": "records-only-changes",
       "base": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "value": "a"}}}}}], "edges": []},
       "target": {
         "nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "value": "a"}, "g2": {"type": "str", "display_name": "G", "value": "b"}}}}}],
@@ -201,21 +198,21 @@
     },
     {
       "name": "a removed field is one delete",
-      "rule": "schema-units",
+      "rule": "records-only-changes",
       "base": {"nodes": [{"id": "n", "data": {"node": {"template": {"f": {"type": "str", "value": "a"}}}}}], "edges": []},
       "target": {"nodes": [{"id": "n", "data": {"node": {"template": {}}}}], "edges": []},
       "operations": [{"type": "update_nodes", "updates": [{"id": "n", "path": ["data", "node", "template", "f"], "op": "delete_field"}]}]
     },
     {
       "name": "a non-field template key is a value",
-      "rule": "schema-units",
+      "rule": "records-only-changes",
       "base": {"nodes": [{"id": "n", "data": {"node": {"template": {"_type": "Component"}}}}], "edges": []},
       "target": {"nodes": [{"id": "n", "data": {"node": {"template": {"_type": "Custom"}}}}], "edges": []},
       "operations": [{"type": "update_nodes", "updates": [{"id": "n", "path": ["data", "node", "template", "_type"], "op": "set_field", "value": "Custom"}]}]
     },
     {
-      "name": "keys outside the template are written whole",
-      "rule": "schema-units",
+      "name": "keys outside the template are diffed key by key",
+      "rule": "records-only-changes",
       "base": {"nodes": [{"id": "n", "data": {"node": {"template": {}}}, "position": {"x": 0, "y": 0}}], "edges": []},
       "target": {
         "nodes": [
@@ -230,13 +227,13 @@
             {"id": "n", "path": ["data", "node", "metadata"], "op": "set_field", "value": {"hash": "b"}},
             {"id": "n", "path": ["data", "node", "field_order"], "op": "set_field", "value": ["f"]},
             {"id": "n", "path": ["data", "selected_output"], "op": "set_field", "value": "o"},
-            {"id": "n", "path": ["position"], "op": "set_field", "value": {"x": 5, "y": 0}}
+            {"id": "n", "path": ["position", "x"], "op": "set_field", "value": 5}
           ]
         }
       ]
     },
     {
-      "name": "an output toggle is a write inside that output",
+      "name": "an output change is a write inside that output",
       "rule": "keyed-list-items-by-key",
       "base": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "a", "__pos__": 1}, {"name": "b", "__pos__": 2}]}}}], "edges": []},
       "target": {"nodes": [{"id": "n", "data": {"node": {"template": {}, "outputs": [{"name": "a", "__pos__": 1}, {"name": "b", "__pos__": 2, "hidden": true}]}}}], "edges": []},
@@ -446,7 +443,7 @@
     },
     {
       "name": "the first edit of a legacy table writes it whole with ids",
-      "rule": "legacy-tables",
+      "rule": "legacy-table-inputs",
       "base": {"nodes": [{"id": "n", "data": {"node": {"template": {"t": {"type": "table", "value": [{"v": "x"}]}}}}}], "edges": []},
       "target": {
         "nodes": [{"id": "n", "data": {"node": {"template": {"t": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "z"}]}}}}}],
@@ -682,7 +679,7 @@
     },
     {
       "name": "top-level keys other than nodes and edges are never recorded",
-      "rule": "no-update-metadata",
+      "rule": "view-state-top-level",
       "base": {
         "nodes": [
           {"id": "a", "data": {"node": {"template": {}, "outputs": [{"name": "out"}]}}},

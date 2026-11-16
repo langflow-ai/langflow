@@ -1,5 +1,6 @@
 //! Each folder of `src` imports only from the folders before it:
-//! `data`, `models`, `graph`, `ops`, then `api.rs`.
+//! `collection`, `json`, `flow`, `compare`, `node_input`, `violation`,
+//! `invariant`, `rule`, `validate.rs`, `snapshot`, `state`, `op`, then `api.rs`.
 //!
 //! Tests may import from any folder, so the check stops at `#[cfg(test)]`
 //! and skips `tests.rs` files.
@@ -7,7 +8,21 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-const LAYERS: [&str; 5] = ["data", "models", "graph", "ops", "api"];
+const LAYERS: [&str; 13] = [
+    "collection",
+    "json",
+    "flow",
+    "compare",
+    "node_input",
+    "violation",
+    "invariant",
+    "rule",
+    "validate",
+    "snapshot",
+    "state",
+    "op",
+    "api",
+];
 
 fn layer(name: &str) -> Option<usize> {
     LAYERS.iter().position(|layer| *layer == name)
