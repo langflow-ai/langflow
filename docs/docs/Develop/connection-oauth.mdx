@@ -15,7 +15,7 @@ This page is the operator setup those connections depend on.
 `LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS` is a JSON object keyed by registration name.
 Registration names, such as `google-work`, are selected when starting consent. They are
 separate from the portable connection handle, such as `google/work`, stored in a flow.
-The supported provider keys are `google`, `microsoft`, and `slack`.
+Provider keys include `google`, `microsoft`, `slack`, and `jira`.
 
 ```json
 {
@@ -546,3 +546,9 @@ blocks the provider or action, it fails with `policy-blocked`. See
 Rebinding is explicit: either create a connection with the same provider and name in the
 target deployment, or edit the component's connection field to the handle you
 provisioned. Nothing rebinds a flow on its own.
+
+## Jira Cloud registration
+
+Jira Cloud uses `provider: "jira"` in `LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS`.
+For more information, see [Jira Cloud components](./bundles-jira).
+GitHub stores an installation token on the Connection. For more information, see [GitHub components](./bundles-github).
