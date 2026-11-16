@@ -1355,8 +1355,18 @@ class Graph:
 
         coordinator = await aget_default_coordinator()
         dag_options = {}
-        if dag_max_concurrency is not None and type(self) is Graph and type(coordinator) is Coordinator:
-            dag_options["_dag_max_concurrency"] = dag_max_concurrency
+        if dag_max_concurrency is not None:
+            if type(self) is Graph and type(coordinator) is Coordinator:
+                dag_options["_dag_max_concurrency"] = dag_max_concurrency
+            else:
+                logger.warning(
+                    "dag_max_concurrency=%s is ignored; falling back to the configured executor. "
+                    "Dependency-ready scheduling requires exact Graph and Coordinator types. "
+                    "Graph type: %s; coordinator type: %s.",
+                    dag_max_concurrency,
+                    type(self).__name__,
+                    type(coordinator).__name__,
+                )
         return await coordinator.run_to_completion(
             self,
             inputs=inputs,

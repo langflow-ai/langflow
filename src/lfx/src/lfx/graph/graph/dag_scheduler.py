@@ -192,7 +192,7 @@ async def finalize_dag_run(graph: Graph, context: DagRunContext) -> None:
         if context.primary is None:
             context.latch(exc)
         else:
-            logger.debug("Secondary DAG finalization failure: {}", type(exc).__name__)
+            logger.debug("Secondary DAG finalization failure: %s", type(exc).__name__)
 
 
 async def execute_dependency_ready(

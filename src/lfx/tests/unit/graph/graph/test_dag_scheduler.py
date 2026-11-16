@@ -107,8 +107,11 @@ async def test_arun_invalid_option_rejected_before_dispatch(value, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_explicit_option_uses_reserved_executor_flag():
-    from lfx.execution import Coordinator, ExecutorRegistry, set_default_coordinator
+@pytest.mark.parametrize("execution_fails", [False, True])
+async def test_explicit_option_uses_reserved_executor_flag(monkeypatch, execution_fails):
+    from unittest.mock import AsyncMock
+
+    from lfx.execution import Coordinator, ExecutorRegistry, get_default_coordinator, set_default_coordinator
     from lfx.execution.executor import Executor
     from lfx.execution.types import RunComplete
 
@@ -119,14 +122,30 @@ async def test_explicit_option_uses_reserved_executor_flag():
 
         async def execute(self, unit):
             seen.append(unit.runtime_options)
+            if execution_fails:
+                msg = "controlled executor failure"
+                raise RuntimeError(msg)
             yield RunComplete(outputs=[])
 
     registry = ExecutorRegistry()
     registry.register(Recording())
+    prior = get_default_coordinator()
     set_default_coordinator(Coordinator(registry=registry))
-    await connected().arun(inputs=[{}], dag_max_concurrency=2)
-    assert seen[0]["_dag_max_concurrency"] == 2
-    assert "dag_max_concurrency" not in seen[0]
+    try:
+        if execution_fails:
+            with pytest.raises(RuntimeError, match="controlled executor failure"):
+                await connected().arun(inputs=[{}], dag_max_concurrency=2)
+        else:
+            await connected().arun(inputs=[{}], dag_max_concurrency=2)
+        assert seen[0]["_dag_max_concurrency"] == 2
+        assert "dag_max_concurrency" not in seen[0]
+    finally:
+        set_default_coordinator(prior)
+    assert get_default_coordinator() is prior
+    restored_run = AsyncMock(return_value=["restored-coordinator"])
+    monkeypatch.setattr(prior, "run_to_completion", restored_run)
+    assert await Graph().arun(inputs=[{}]) == ["restored-coordinator"]
+    restored_run.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -548,3 +567,213 @@ def test_unknown_component_and_stale_vertex_map_fall_back():
     graph = connected()
     graph.vertex_map.pop("source")
     assert isinstance(inspect_dag_candidate(graph), str)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("graph_subclass", [False, True])
+@pytest.mark.parametrize("coordinator_kind", ["standard", "subclass", "strict"])
+@pytest.mark.parametrize("limit", [None, 2])
+async def test_arun_warns_only_when_explicit_bound_is_dropped(graph_subclass, coordinator_kind, limit, monkeypatch):
+    from unittest.mock import Mock
+
+    from lfx.execution import Coordinator, ExecutorRegistry
+
+    class CustomGraph(Graph):
+        pass
+
+    class CustomCoordinator(Coordinator):
+        pass
+
+    class StrictCoordinator:
+        async def run_to_completion(
+            self,
+            graph,
+            *,
+            inputs,
+            inputs_components,
+            types,
+            outputs,
+            session_id,
+            stream,
+            fallback_to_env_vars,
+            event_manager,
+            _use_arun_legacy,
+        ):
+            seen.append({"inputs": inputs, "_use_arun_legacy": _use_arun_legacy})
+            return ["fallback-result"]
+
+    graph = CustomGraph() if graph_subclass else Graph()
+    coordinator_class = {"standard": Coordinator, "subclass": CustomCoordinator, "strict": StrictCoordinator}[
+        coordinator_kind
+    ]
+    coordinator = (
+        coordinator_class() if coordinator_kind == "strict" else coordinator_class(registry=ExecutorRegistry())
+    )
+    seen = []
+    supported = not graph_subclass and coordinator_kind == "standard"
+    if supported:
+
+        async def record(graph, **kwargs):
+            seen.append(kwargs)
+            return ["standard-result"]
+
+        monkeypatch.setattr(coordinator, "run_to_completion", record)
+    elif coordinator_kind != "strict":
+        monkeypatch.setattr(coordinator, "run_to_completion", StrictCoordinator().run_to_completion)
+
+    async def get_coordinator():
+        return coordinator
+
+    warning = Mock()
+    monkeypatch.setattr("lfx.execution.aget_default_coordinator", get_coordinator)
+    monkeypatch.setattr("lfx.graph.graph.base.logger.warning", warning)
+    result = await graph.arun(inputs=[{"secret": "never-log-this"}], dag_max_concurrency=limit)
+    assert result == (["standard-result"] if supported else ["fallback-result"])
+    assert len(seen) == 1
+    assert seen[0]["inputs"] == [{"secret": "never-log-this"}]
+    assert seen[0]["_use_arun_legacy"] is True
+    if supported and limit is not None:
+        assert seen[0]["_dag_max_concurrency"] == limit
+    else:
+        assert "_dag_max_concurrency" not in seen[0]
+    if limit is None or supported:
+        warning.assert_not_called()
+    else:
+        warning.assert_called_once()
+        template, *args = warning.call_args.args
+        text = template % tuple(args)
+        assert "dag_max_concurrency=2" in text
+        assert "ignored" in text
+        assert "falling back" in text
+        assert f"Graph type: {type(graph).__name__}" in text
+        assert f"coordinator type: {type(coordinator).__name__}" in text
+        assert "never-log-this" not in text
+        assert "secret" not in text
+
+
+@pytest.mark.asyncio
+async def test_invalid_arun_bound_does_not_log_fallback(monkeypatch):
+    from unittest.mock import Mock
+
+    warning = Mock()
+    monkeypatch.setattr("lfx.graph.graph.base.logger.warning", warning)
+    with pytest.raises(ValueError, match="positive integer or None"):
+        await Graph().arun(inputs=[{}], dag_max_concurrency=0)
+    warning.assert_not_called()
+
+
+@pytest.mark.parametrize("log_env", ["development", "container_json"])
+def test_arun_fallback_warning_uses_real_production_logger(log_env):
+    import subprocess
+    import sys
+    import textwrap
+
+    script = textwrap.dedent(
+        """
+        import asyncio
+        import io
+        import json
+        import sys
+        from lfx.execution import Coordinator, ExecutorRegistry
+        from lfx.graph import Graph
+        from lfx.log.logger import configure
+        import lfx.execution
+
+        class SubGraph(Graph):
+            pass
+
+        class SubCoordinator(Coordinator):
+            pass
+
+        class StrictCoordinator:
+            async def run_to_completion(self, graph, *, inputs, inputs_components,
+                types, outputs, session_id, stream, fallback_to_env_vars,
+                event_manager, _use_arun_legacy):
+                return ["completed"]
+
+        async def complete(graph, **kwargs):
+            assert "_dag_max_concurrency" not in kwargs
+            return ["completed"]
+
+        output = io.StringIO()
+        configure(log_level="WARNING", log_env=sys.argv[1], output_file=output)
+
+        async def run():
+            for kind in ("graph", "coordinator-subclass", "strict"):
+                graph = SubGraph() if kind == "graph" else Graph()
+                if kind == "strict":
+                    coordinator = StrictCoordinator()
+                else:
+                    cls = Coordinator if kind == "graph" else SubCoordinator
+                    coordinator = cls(registry=ExecutorRegistry())
+                    coordinator.run_to_completion = complete
+                async def get_coordinator():
+                    return coordinator
+                lfx.execution.aget_default_coordinator = get_coordinator
+                assert await graph.arun(inputs=[{"private": "never-log-this"}],
+                    dag_max_concurrency=3) == ["completed"]
+        asyncio.run(run())
+        text = output.getvalue()
+        assert text.count("dag_max_concurrency=3") == 3, text
+        assert "falling back" in text, text
+        assert "never-log-this" not in text and "private" not in text, text
+        if sys.argv[1] == "container_json":
+            events = [json.loads(line) for line in text.splitlines()]
+            assert len(events) == 3, events
+            assert all(event["level"] == "warning" for event in events), events
+        print("REAL_LOGGER_OK")
+        """
+    )
+    result = subprocess.run(  # noqa: S603 - fixed local script and parametrized log modes, no shell
+        [sys.executable, "-c", script, log_env], capture_output=True, text=True, timeout=30, check=False
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "REAL_LOGGER_OK" in result.stdout
+
+
+@pytest.mark.parametrize("log_env", ["development", "container_json"])
+def test_secondary_finalization_logging_preserves_primary_with_real_logger(log_env):
+    import subprocess
+    import sys
+    import textwrap
+
+    script = textwrap.dedent(
+        """
+        import asyncio
+        import io
+        import json
+        import sys
+        from lfx.graph import Graph
+        from lfx.graph.graph.dag_scheduler import DagRunContext, finalize_dag_run
+        from lfx.log.logger import configure
+
+        output = io.StringIO()
+        configure(log_level="DEBUG", log_env=sys.argv[1], output_file=output)
+        async def run():
+            graph = Graph()
+            primary = LookupError("private-primary-message")
+            async def end(error=None):
+                assert error is primary
+                raise RuntimeError("private-secondary-message")
+            graph.end_all_traces = end
+            context = DagRunContext(eligible=True, initialization_attempted=True, primary=primary)
+            await finalize_dag_run(graph, context)
+            assert context.primary is primary
+            assert context.finalized
+        asyncio.run(run())
+        text = output.getvalue()
+        assert "Secondary DAG finalization failure: RuntimeError" in text, text
+        assert "private-primary-message" not in text, text
+        assert "private-secondary-message" not in text, text
+        if sys.argv[1] == "container_json":
+            events = [json.loads(line) for line in text.splitlines()]
+            assert any(event["level"] == "debug" and
+                event["event"] == "Secondary DAG finalization failure: RuntimeError" for event in events), events
+        print("PRIMARY_PRESERVED")
+        """
+    )
+    result = subprocess.run(  # noqa: S603 - fixed local script and parametrized log modes, no shell
+        [sys.executable, "-c", script, log_env], capture_output=True, text=True, timeout=30, check=False
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "PRIMARY_PRESERVED" in result.stdout
