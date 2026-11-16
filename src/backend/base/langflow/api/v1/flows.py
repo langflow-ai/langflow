@@ -23,8 +23,9 @@ from lfx.utils.flow_validation import (
     validate_catalog_policy_for_flow,
 )
 from pydantic import ValidationError
-from sqlalchemy import case
+from sqlalchemy import case, null
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import with_expression
 from sqlmodel import and_, col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -525,6 +526,13 @@ async def read_flows(
             stmt = stmt.where(Flow.flow_type == flow_type)
 
         if get_all:
+            if header_flows:
+                # These instances are header-only: the projected data stays masked in
+                # this session, including on refresh. Do not reuse them for full reads.
+                # Components and legacy NULL flags still need JSON for header/inference.
+                stmt = stmt.options(
+                    with_expression(Flow.data, case((Flow.is_component.is_(False), null()), else_=Flow.data))
+                )
             flows = (await session.exec(stmt)).all()
             flows = validate_is_component(flows)
             if components_only:
