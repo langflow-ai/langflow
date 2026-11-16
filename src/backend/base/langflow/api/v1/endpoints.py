@@ -13,6 +13,7 @@ import orjson
 import sqlalchemy as sa
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, UploadFile, status
 from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, StreamingResponse
 from lfx.custom.custom_component.component import Component
 from lfx.custom.utils import (
@@ -254,7 +255,10 @@ async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIR
         http_request: The FastAPI Request object
 
     Returns:
-        SimplifiedAPIRequest: Parsed request or default instance if parsing fails
+        SimplifiedAPIRequest: Parsed request or default instance if the body cannot be decoded.
+
+    Raises:
+        RequestValidationError: If a decoded body does not match the run schema.
     """
     content_type = (http_request.headers.get("content-type") or "").lower()
 
@@ -269,8 +273,9 @@ async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIR
         return SimplifiedAPIRequest()
     except ValidationError as exc:
         # Pydantic's own text quotes the submitted values. Log which field failed and why.
-        logger.warning(f"Failed to parse request body: {redact_validation_errors(exc.errors())}")
-        return SimplifiedAPIRequest()
+        errors = redact_validation_errors(exc.errors())
+        logger.warning(f"Failed to parse request body: {errors}")
+        raise RequestValidationError([{**error, "loc": ("body", *error["loc"])} for error in errors]) from exc
     except Exception as exc:  # noqa: BLE001
         logger.warning(f"Failed to parse request body: {exc}")
         return SimplifiedAPIRequest()

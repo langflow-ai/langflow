@@ -65,6 +65,7 @@ from langflow.api.v2 import policy_bundle_router as policy_bundle_router_v2
 from langflow.api.v2 import registration_router as registration_router_v2
 from langflow.api.v2 import workflow_background_router as workflow_background_router_v2
 from langflow.api.v2 import workflow_public_router as workflow_public_router_v2
+from langflow.api.v2.workflow import reject_legacy_global_var_headers
 from langflow.api.v2.workflow_host import LangflowWorkflowHost
 
 router_v1 = APIRouter(
@@ -212,6 +213,7 @@ router_v2.include_router(
         developer_api_guard=False,
         auto_register_job_routes=False,
         responses=WORKFLOW_EXECUTION_RESPONSES,
+        extra_dependencies=[Depends(reject_legacy_global_var_headers)],
     )
 )
 # The langflow-owned durable routes: GET status, POST /stop, GET /{job_id}/events.

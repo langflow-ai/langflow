@@ -632,6 +632,7 @@ module.exports = {
             "Components/bundles-serply",
             "Components/bundles-servicenow",
             "Components/bundles-slack",
+            "Components/bundles-socialscrape",
             "Components/bundles-supabase",
             "Components/bundles-telegram",
             "Components/bundles-upstash",
@@ -681,7 +682,7 @@ module.exports = {
         },
         {
           type: "category",
-          label: "Developer API (Beta)",
+          label: "Developer API",
           items: [
             "API-Reference/workflow-api-quickstart",
             "API-Reference/workflows-api",
