@@ -29,6 +29,19 @@ async def test_a_shipped_flow_passes_the_custom_component_policy_when_custom_cod
 
 
 @pytest.mark.parametrize("flow_path", _SHIPPED_FLOWS, ids=lambda path: path.name)
+async def test_every_shipped_flow_node_matches_the_component_index_without_substitution(flow_path: Path) -> None:
+    await ensure_component_hash_lookups_loaded(force=True)
+    strict = SimpleNamespace(
+        allow_custom_components=False,
+        substitute_outdated_component_code=False,
+        block_code_interpreter_components=False,
+    )
+    flow_data = json.loads(flow_path.read_text(encoding="utf-8"))["data"]
+
+    validate_flow_for_current_settings(flow_data, settings=strict)
+
+
+@pytest.mark.parametrize("flow_path", _SHIPPED_FLOWS, ids=lambda path: path.name)
 def test_a_shipped_flow_has_no_edited_nodes(flow_path: Path) -> None:
     flow_data = json.loads(flow_path.read_text(encoding="utf-8"))["data"]
     edited = [node["id"] for node in flow_data["nodes"] if node.get("data", {}).get("node", {}).get("edited")]
