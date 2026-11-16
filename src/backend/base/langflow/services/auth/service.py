@@ -572,6 +572,10 @@ class AuthService(BaseAuthService):
             msg = "User not found"
             raise InvalidCredentialsError(msg)
 
+        if payload.get("session_version") != user.session_version:
+            msg = "Invalid token"
+            raise AuthInvalidTokenError(msg)
+
         if not user.is_active:
             logger.info("User is inactive")
             msg = "User account is inactive"
@@ -1573,30 +1577,40 @@ class AuthService(BaseAuthService):
             return UUID(int=0)
 
     async def create_user_tokens(self, user_id: UUID, db: AsyncSession, *, update_last_login: bool = False) -> dict:
+        user = await get_user_by_id(db, user_id)
+        if user is None or not user.is_active:
+            raise HTTPException(status_code=401, detail="User account is inactive or no longer exists")
+        session_version = user.session_version
         session_id = secrets.token_urlsafe(32)
-        tokens = self._create_session_tokens(user_id, session_id)
+        tokens = self._create_session_tokens(user_id, session_id, session_version)
         expires_at = datetime.now(timezone.utc) + timedelta(
             seconds=self.settings.auth_settings.REFRESH_TOKEN_EXPIRE_SECONDS
         )
-        if not await create_refresh_session(session_id, str(user_id), expires_at, db):
+        if not await create_refresh_session(session_id, str(user_id), expires_at, db, session_version):
             raise HTTPException(status_code=401, detail="User account is inactive or no longer exists")
         if update_last_login:
             await update_user_last_login_at(user_id, db)
         return tokens
 
-    def _create_session_tokens(self, user_id: UUID, session_id: str) -> dict:
+    def _create_session_tokens(self, user_id: UUID, session_id: str, session_version: str | None) -> dict:
         """Issue a token pair belonging to one native login session."""
         settings_service = self.settings
 
         access_token_expires = timedelta(seconds=settings_service.auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS)
         access_token = self.create_token(
-            data={"sub": str(user_id), "type": "access"},
+            data={"sub": str(user_id), "type": "access", "session_version": session_version},
             expires_delta=access_token_expires,
         )
 
         refresh_token_expires = timedelta(seconds=settings_service.auth_settings.REFRESH_TOKEN_EXPIRE_SECONDS)
         refresh_token = self.create_token(
-            data={"sub": str(user_id), "type": "refresh", "jti": secrets.token_urlsafe(32), "sid": session_id},
+            data={
+                "sub": str(user_id),
+                "type": "refresh",
+                "jti": secrets.token_urlsafe(32),
+                "sid": session_id,
+                "session_version": session_version,
+            },
             expires_delta=refresh_token_expires,
         )
 
@@ -1644,7 +1658,10 @@ class AuthService(BaseAuthService):
             if not user_exists.is_active:
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User account is inactive")
 
-            tokens = self._create_session_tokens(user_id, session_id)
+            if payload.get("session_version") != user_exists.session_version:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+
+            tokens = self._create_session_tokens(user_id, session_id, user_exists.session_version)
             # Compute this upper bound after minting to cover the replacement's
             # full lifetime, including when the configured TTL changes.
             expires_at = max(
