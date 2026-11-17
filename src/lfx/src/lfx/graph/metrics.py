@@ -8,6 +8,7 @@ import threading
 import time
 
 _clock = time.perf_counter
+_attachment_lock = threading.RLock()
 
 
 class ExecutionMetrics:
@@ -140,13 +141,27 @@ class _ExecutionMetricsScope:
         self._graph = graph
         self._recorder = None
 
-    def __enter__(self):
+    def _check_available(self):
         if self._recorder is not None or getattr(self._graph, "_execution_metrics", None) is not None:
             msg = "A metrics scope is already active on this graph"
             raise RuntimeError(msg)
+
+    def __enter__(self):
+        with _attachment_lock:
+            self._check_available()
+        # Capture metadata outside the process-wide attachment lock: clocks and
+        # display names may invoke user code, and unrelated graphs must not wait.
         recorder = ExecutionMetrics(self._graph)
-        self._graph._execution_metrics = recorder  # noqa: SLF001
-        self._recorder = recorder
+        with _attachment_lock:
+            self._check_available()
+            self._recorder = recorder
+            try:
+                self._graph._execution_metrics = recorder  # noqa: SLF001
+            except BaseException:
+                self._recorder = None
+                if getattr(self._graph, "_execution_metrics", None) is recorder:
+                    self._graph._execution_metrics = None  # noqa: SLF001
+                raise
         return recorder
 
     def __exit__(self, exc_type, _exc, _traceback):
@@ -163,7 +178,9 @@ class _ExecutionMetricsScope:
         try:
             recorder._close(primary=exc_type is not None)  # noqa: SLF001
         finally:
-            self._graph._execution_metrics = None  # noqa: SLF001
+            with _attachment_lock:
+                if getattr(self._graph, "_execution_metrics", None) is recorder:
+                    self._graph._execution_metrics = None  # noqa: SLF001
         return False
 
 
