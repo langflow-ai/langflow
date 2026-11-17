@@ -29,6 +29,7 @@ def _pixel_png() -> bytes:
 
 
 FLOW_ID = UUID("d3a93ec1-c6a7-4c68-84d5-52b3453c280e")
+OTHER_FLOW_ID = UUID("5f0c2b7e-8a1d-4c3e-9b6f-2d4e8a7c1f30")
 
 
 @pytest.mark.parametrize(
@@ -45,7 +46,8 @@ def test_a_path_in_the_flows_own_namespace_is_accepted(path) -> None:
 @pytest.mark.parametrize(
     "path",
     [
-        "flow-b97b9c86-45f2-4ffd-946d-44f54c6ab121/notes.txt",
+        # A fixed id: xdist workers must collect the same test names.
+        f"flow-{OTHER_FLOW_ID}/notes.txt",
         f"flow-{FLOW_ID}/../notes.txt",
         f"flow-{FLOW_ID}/nested/notes.txt",
         f"flow-flow-{FLOW_ID}/notes.txt",
