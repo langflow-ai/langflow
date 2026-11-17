@@ -54,6 +54,7 @@ from langflow.api.v1.auth_helpers import get_default_project_auth_settings, hand
 from langflow.api.v1.mcp import ResponseNoOp
 from langflow.api.v1.mcp_utils import (
     authenticated_caller_ctx,
+    composer_authenticated_project_ctx,
     current_request_headers_ctx,
     current_request_variables_ctx,
     current_user_ctx,
@@ -121,6 +122,7 @@ async def verify_project_auth(
     # later branch (e.g. the composer-token fast path) never inherits stale context from a prior call.
     clear_current_auth_context()
     authenticated_caller_ctx.set(None)
+    composer_authenticated_project_ctx.set(None)
     # Defensive invariant: drop any stale external access ceiling so it can't carry into MCP project auth.
     clear_current_external_access_context()
 
@@ -145,6 +147,8 @@ async def verify_project_auth(
                 async with session_scope() as db:
                     project_user = await db.get(User, project_user_id)
                     if project_user:
+                        # Composer authenticates the OAuth hop without establishing the owner's identity.
+                        composer_authenticated_project_ctx.set(project_id)
                         return project_user
             raise HTTPException(status_code=404, detail="Project owner not found")
 

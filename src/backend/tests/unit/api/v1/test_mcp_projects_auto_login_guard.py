@@ -14,7 +14,8 @@ from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException, status
-from langflow.api.v1.mcp_projects import authenticated_caller_ctx, verify_project_auth
+from langflow.api.v1.mcp_projects import verify_project_auth
+from langflow.api.v1.mcp_utils import authenticated_caller_ctx, composer_authenticated_project_ctx
 from langflow.services.auth.constants import AUTO_LOGIN_ERROR
 
 MODULE = "langflow.api.v1.mcp_projects"
@@ -132,6 +133,7 @@ async def test_verify_project_auth_public_project_keeps_caller_anonymous():
     owner = SimpleNamespace(id=uuid4(), username="owner")
     project = SimpleNamespace(id=uuid4(), user_id=owner.id, auth_settings={"auth_type": "none"})
     token = authenticated_caller_ctx.set(uuid4())
+    composer_token = composer_authenticated_project_ctx.set(project.id)
     try:
         with (
             patch(f"{MODULE}.get_settings_service", return_value=_settings(auto_login=True, skip_auth=False)),
@@ -140,10 +142,40 @@ async def test_verify_project_auth_public_project_keeps_caller_anonymous():
             result = await verify_project_auth(project.id, query_param=None, header_param=None)
 
         assert authenticated_caller_ctx.get() is None
+        assert composer_authenticated_project_ctx.get() is None
     finally:
+        composer_authenticated_project_ctx.reset(composer_token)
         authenticated_caller_ctx.reset(token)
 
     assert result is owner
+
+
+@pytest.mark.anyio
+async def test_verify_project_auth_binds_oauth_composer_credential_to_project():
+    owner = SimpleNamespace(id=uuid4(), username="owner", is_active=True)
+    project = SimpleNamespace(id=uuid4(), user_id=owner.id, auth_settings={"auth_type": "oauth"})
+    credential = str(uuid4())
+    composer_service = MagicMock()
+    composer_service.validate_backend_auth_token.return_value = True
+    caller_token = authenticated_caller_ctx.set(None)
+    composer_token = composer_authenticated_project_ctx.set(None)
+    try:
+        with (
+            patch(f"{MODULE}.get_settings_service", return_value=_settings(auto_login=True, skip_auth=False)),
+            patch(f"{MODULE}.session_scope", _session_scope_yielding(project, user=owner)),
+            patch(f"{MODULE}.get_service", return_value=composer_service),
+        ):
+            result = await verify_project_auth(
+                project.id, query_param=None, header_param=None, composer_backend_token=credential
+            )
+
+        assert result is owner
+        assert authenticated_caller_ctx.get() is None
+        assert composer_authenticated_project_ctx.get() == project.id
+        composer_service.validate_backend_auth_token.assert_called_once_with(str(project.id), credential)
+    finally:
+        composer_authenticated_project_ctx.reset(composer_token)
+        authenticated_caller_ctx.reset(caller_token)
 
 
 @pytest.mark.anyio
