@@ -6,6 +6,7 @@ gated behind ``serving_trace_end_user`` and OFF by default (I4). When the operat
 identified serving run's ``end_user_id`` fills ``tracing_user_id``; otherwise the label is untouched.
 """
 
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import lfx.graph.graph.base as base_module
@@ -97,3 +98,23 @@ async def test_explicit_tracing_user_id_is_not_overridden(monkeypatch) -> None:
     await graph.initialize_run()
 
     assert graph.tracing_user_id == "caller-label"
+
+
+@pytest.mark.asyncio
+async def test_subgraphs_do_not_start_additional_traces(monkeypatch) -> None:
+    """Verify subgraphs inherit the parent trace without restarting tracers.
+
+    @param monkeypatch Pytest fixture used to observe tracer startup calls.
+    @returns None.
+    """
+    graph = _graph()
+    tracer = _with_tracer(graph)
+    start_tracers = AsyncMock(wraps=tracer.start_tracers)
+    monkeypatch.setattr(tracer, "start_tracers", start_tracers)
+
+    await graph.initialize_run()
+    for _ in range(2):
+        async with graph.create_subgraph({"chat_input", "chat_output"}) as subgraph:
+            await subgraph.initialize_run()
+
+    assert start_tracers.await_count == 1
