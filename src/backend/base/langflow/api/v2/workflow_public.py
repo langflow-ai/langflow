@@ -193,10 +193,6 @@ async def execute_public_workflow(
             if flow.data is None:
                 msg = "Public flow has no executable data"
                 raise ValueError(msg)
-            # Stream-only and not resumable by a visitor, so a Human Input would run
-            # every branch before anyone decides.
-            if flow_requires_hitl(flow.data):
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=PUBLIC_HITL_UNSUPPORTED_DETAIL)
 
             # The default public path sanitizes code directly and must not apply the global
             # stored-code hash gate first: that would reject drifted built-ins before their code
@@ -209,6 +205,10 @@ async def execute_public_workflow(
             # Smart Transform lambda). Without this, any public flow containing
             # such a component is an unauthenticated code-execution primitive.
             validate_public_flow_no_code_execution(flow.data)
+            # Stream-only and not resumable by a visitor, so a Human Input would run
+            # every branch before anyone decides.
+            if flow_requires_hitl(flow.data):
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=PUBLIC_HITL_UNSUPPORTED_DETAIL)
             # Mirror v1's public build: substitute trusted server component
             # source and reject unknown custom components before the graph is
             # built. The explicit custom-code opt-in may preserve approved code,
