@@ -35,7 +35,7 @@ def test_real_read_and_retention_parity(db_url, monkeypatch, limit, ties):  # no
     settings = SimpleNamespace(settings=SimpleNamespace(max_transactions_to_keep=limit))
     monkeypatch.setattr(crud, "get_settings_service", lambda: settings)
 
-    async def not_paused(*args, **kwargs):
+    async def not_paused(*_args, **_kwargs):
         return False
 
     # The writer gates retention on two checks, and both must report "not paused"
