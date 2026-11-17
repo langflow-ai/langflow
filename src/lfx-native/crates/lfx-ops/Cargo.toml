@@ -14,7 +14,7 @@ serde = "1"
 serde_json = { version = "1", features = ["arbitrary_precision"] }
 sha2 = "0.10"
 indexmap = "2"
-ahash = { version = "0.8", default-features = false, features = ["std"] }
+ahash = "0.8.12"
 compact_str = "0.9"
 getrandom = "0.3"
 thiserror = "2"
