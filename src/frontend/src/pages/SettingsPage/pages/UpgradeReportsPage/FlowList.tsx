@@ -230,8 +230,17 @@ export default function FlowList({
             <p>
               {t("settings.upgrade.deployments", {
                 deployments: flow.used_by
-                  ? Object.entries(flow.used_by)
-                      .map(([kind, ids]) => `${kind} ${ids.join(", ")}`)
+                  ? ["deployments", "triggers"]
+                      .flatMap((kind) => {
+                        const ids = flow.used_by?.[kind];
+                        return ids?.length
+                          ? [
+                              t(`settings.upgrade.usedBy.${kind}`, {
+                                ids: ids.join(", "),
+                              }),
+                            ]
+                          : [];
+                      })
                       .join(" · ") || t("settings.upgrade.none")
                   : unknown,
               })}

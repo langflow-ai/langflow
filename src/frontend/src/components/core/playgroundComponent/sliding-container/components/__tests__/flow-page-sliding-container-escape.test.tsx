@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { FlowPageSlidingContainerContent } from "../flow-page-sliding-container";
 
 jest.mock("use-stick-to-bottom", () => {
@@ -41,10 +42,12 @@ jest.mock(
   }),
 );
 
+let mockFlowId = "flow-1";
+let mockSessionId = "session-1";
 jest.mock(
   "@/components/core/playgroundComponent/hooks/use-get-flow-id",
   () => ({
-    useGetFlowId: () => "flow-1",
+    useGetFlowId: () => mockFlowId,
   }),
 );
 
@@ -79,19 +82,26 @@ jest.mock("@/components/ui/simple-sidebar", () => ({
   }),
 }));
 
+let mockChatInputValue: string | null = null;
+let mockIsBuilding = false;
 jest.mock("@/stores/flowStore", () => ({
   __esModule: true,
   default: (selector: (state: Record<string, unknown>) => unknown) =>
     selector({
-      inputs: [],
-      nodes: [],
-      isBuilding: false,
+      inputs:
+        mockChatInputValue === null
+          ? []
+          : [{ id: "input-1", type: "ChatInput" }],
+      nodes: [
+        {
+          id: "input-1",
+          data: {
+            node: { template: { input_value: { value: mockChatInputValue } } },
+          },
+        },
+      ],
+      isBuilding: mockIsBuilding,
     }),
-}));
-
-jest.mock("@/stores/utilityStore", () => ({
-  useUtilityStore: (selector: (state: Record<string, unknown>) => unknown) =>
-    selector({ setChatValueStore: jest.fn() }),
 }));
 
 jest.mock("../../../chat-view/chat-input", () => ({
@@ -117,7 +127,7 @@ jest.mock("../../../chat-view/chat-messages/hooks/use-chat-history", () => ({
 
 jest.mock("../../../hooks/use-session-manager", () => ({
   useSessionManager: () => ({
-    activeSessionId: "session-1",
+    activeSessionId: mockSessionId,
     sessions: ["session-1"],
     createSession: jest.fn(),
     deleteSession: jest.fn(),
@@ -134,6 +144,63 @@ const renderPanel = () =>
   render(
     <FlowPageSlidingContainerContent isFullscreen setIsFullscreen={noop} />,
   );
+
+beforeEach(() => {
+  mockFlowId = "flow-1";
+  mockSessionId = "session-1";
+  mockChatInputValue = null;
+  mockIsBuilding = false;
+  useUtilityStore.setState({ chatValueStore: "" });
+});
+
+describe("FlowPageSlidingContainerContent draft initialization", () => {
+  it("prefills an empty draft from the Chat Input node", () => {
+    mockChatInputValue = "Initial message";
+    renderPanel();
+    expect(useUtilityStore.getState().chatValueStore).toBe("Initial message");
+  });
+
+  it("uses the new flow default after navigation", () => {
+    mockChatInputValue = "First flow";
+    const { unmount } = renderPanel();
+    unmount();
+
+    mockFlowId = "flow-2";
+    mockChatInputValue = "Second flow";
+    renderPanel();
+    expect(useUtilityStore.getState().chatValueStore).toBe("Second flow");
+  });
+
+  it("uses the node default when switching sessions", () => {
+    mockChatInputValue = "Initial message";
+    const { rerender } = renderPanel();
+    useUtilityStore.getState().setChatValueStore("Previous session draft");
+    mockSessionId = "session-2";
+    rerender(
+      <FlowPageSlidingContainerContent isFullscreen setIsFullscreen={noop} />,
+    );
+    expect(useUtilityStore.getState().chatValueStore).toBe("Initial message");
+  });
+
+  it.each(["", "Initial message"])(
+    "preserves the restored draft after a refused send with node value %p",
+    (nodeValue) => {
+      mockChatInputValue = nodeValue;
+      mockIsBuilding = true;
+      const { rerender } = renderPanel();
+
+      useUtilityStore.getState().setChatValueStore("Retry this message");
+      mockIsBuilding = false;
+      rerender(
+        <FlowPageSlidingContainerContent isFullscreen setIsFullscreen={noop} />,
+      );
+
+      expect(useUtilityStore.getState().chatValueStore).toBe(
+        "Retry this message",
+      );
+    },
+  );
+});
 
 describe("FlowPageSlidingContainerContent — Escape handling (WCAG 2.1.2)", () => {
   afterEach(() => {
