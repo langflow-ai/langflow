@@ -69,6 +69,35 @@ async def test_cancel_unknown_job_returns_false(executor):
     assert await executor.cancel("nope") is False
 
 
+@pytest.mark.parametrize("worker_first", [True, False])
+async def test_loop_shutdown_cancels_busy_worker(worker_first):
+    executor = InProcessExecutor(max_concurrency=1)
+    await executor.start()
+    started = asyncio.Event()
+
+    async def work():
+        started.set()
+        await asyncio.Event().wait()
+
+    try:
+        await executor.submit("shutdown-job", work)
+        await asyncio.wait_for(started.wait(), timeout=2)
+        job = executor._in_flight["shutdown-job"]
+        worker = executor._workers[0]
+        tasks = [worker, job] if worker_first else [job, worker]
+        for task in tasks:
+            task.cancel()
+
+        # Runner.close cancels all pending tasks before waiting for their completion.
+        # Use a bounded wait so a swallowed worker cancellation cannot hang pytest.
+        done, pending = await asyncio.wait(tasks, timeout=1)
+        assert not pending
+        assert all(task.done() for task in done)
+        assert not executor._in_flight
+    finally:
+        await executor.stop()
+
+
 async def test_worker_survives_a_failing_job(executor):
     second_ran = asyncio.Event()
 
@@ -82,3 +111,71 @@ async def test_worker_survives_a_failing_job(executor):
     await executor.submit("job-ok", ok)
     await asyncio.wait_for(second_ran.wait(), timeout=2)
     assert second_ran.is_set()
+
+
+async def test_stop_does_not_start_a_job_that_was_still_queued():
+    # stop() snapshots _in_flight before it awaits the cancelled job, so a worker that
+    # survives that cancellation must not pick up the next queued job: it would run
+    # unwatched while the event loop is torn down.
+    ex = InProcessExecutor(max_concurrency=1)
+    await ex.start()
+    started = asyncio.Event()
+    queued_started = asyncio.Event()
+
+    async def busy():
+        started.set()
+        await asyncio.Event().wait()
+
+    async def queued():
+        queued_started.set()
+
+    try:
+        await ex.submit("busy", busy)
+        await asyncio.wait_for(started.wait(), timeout=2)
+        await ex.submit("queued", queued)
+
+        await ex.stop()
+
+        assert not queued_started.is_set()
+        assert not ex._in_flight
+    finally:
+        await ex.stop()
+
+
+async def test_stop_preserves_a_job_claimed_by_an_idle_worker():
+    ex = InProcessExecutor(max_concurrency=2)
+    started = asyncio.Event()
+    release = asyncio.Event()
+    queued_runs = 0
+
+    async def busy():
+        started.set()
+        await asyncio.Event().wait()
+
+    async def queued():
+        nonlocal queued_runs
+        queued_runs += 1
+        await release.wait()
+
+    await ex.start()
+    try:
+        await ex.submit("busy", busy)
+        await asyncio.wait_for(started.wait(), timeout=2)
+        # The other worker is already waiting in queue.get(). It can claim this
+        # job while stop() waits for the busy job's cancellation to finish.
+        await ex.submit("queued", queued)
+        await ex.stop()
+
+        assert queued_runs == 0
+        assert not ex._in_flight
+        assert ex._queue.qsize() == 1
+
+        release.set()
+        await ex.start()
+        await asyncio.wait_for(ex._queue.join(), timeout=2)
+        assert queued_runs == 1
+        assert not ex._in_flight
+    finally:
+        release.set()
+        await ex.stop()
+        await asyncio.sleep(0)

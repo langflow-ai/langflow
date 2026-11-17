@@ -806,11 +806,20 @@ def test_create_user_api_key(auth_service: AuthService):
 
 
 def _login_session_db():
-    """Async execution returns a synchronous SQLAlchemy result."""
+    """Async execution returns a synchronous SQLAlchemy result.
+
+    Both access paths are stubbed because the auth service reaches the database
+    through two of them: ``exec`` for the session lookup, and ``execute`` for the
+    maintenance flag, which stays on the plain SQLAlchemy call so a caller holding
+    its own engine can ask the same question.
+    """
     db = AsyncMock()
     db.exec.return_value = MagicMock()
     db.exec.return_value.first.return_value = False
-    db.execute.return_value = SimpleNamespace(scalar_one_or_none=lambda: "registered-session")
+    db.execute.return_value = SimpleNamespace(
+        scalar_one_or_none=lambda: "registered-session",
+        scalars=lambda: SimpleNamespace(first=lambda: None),
+    )
     return db
 
 
