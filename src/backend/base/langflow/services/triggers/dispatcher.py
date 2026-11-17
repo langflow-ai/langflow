@@ -52,6 +52,7 @@ from langflow.services.triggers.constants import (
     CONNECTION_NOT_AUTHORIZED_ERROR,
     DISPATCHER_LEASE_NAME,
     FAMILY_TRIGGER_LISTENER,
+    PINNED_TRIGGER_CANVAS,
     TRIGGER_EVENT_FIELD,
 )
 from langflow.services.triggers.correlation import derive_session_id
@@ -753,6 +754,12 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
         return
 
     request = build_submit_request(trigger=trigger, event=event, binding_data=binding.data, family=family)
+    if run_user.id != trigger.user_id:
+        request["expose_graph_state"] = False
+        if binding.is_pinned:
+            # The job owner may execute this snapshot, including after a restart.
+            # Keep its hidden values inside the authenticated overrides envelope.
+            request[PINNED_TRIGGER_CANVAS] = request.pop("data")
     session_id = request["session_id"]
     try:
         _ensure_frame_source()

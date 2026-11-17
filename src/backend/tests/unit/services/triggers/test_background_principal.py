@@ -1,6 +1,7 @@
 """Trigger identity must reach the real background factory and durable replay."""
 
 from contextlib import asynccontextmanager
+from copy import deepcopy
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from uuid import uuid4
@@ -8,6 +9,8 @@ from uuid import uuid4
 import pytest
 from langflow.api.utils.execution_principal import execution_principal_for
 from langflow.api.v2 import workflow
+from langflow.services.database.models.flow.model import FlowRead
+from langflow.services.database.models.jobs.model import Job
 from langflow.services.database.models.trigger.model import Trigger, TriggerEvent
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_background_execution_service
@@ -84,5 +87,72 @@ async def test_trigger_background_connection_principal_stays_non_interactive(mon
 def test_public_workflow_request_cannot_choose_the_internal_trigger_family():
     with pytest.raises(ValidationError):
         workflow.WorkflowRunRequest(flow_id=str(uuid4()), execution_family="trigger_listener")
+    with pytest.raises(ValidationError):
+        workflow.WorkflowRunRequest(flow_id=str(uuid4()), pinned_trigger_canvas={"nodes": [], "edges": []})
     with pytest.raises(ValueError, match="execution family"):
         workflow._parse_persisted_workflow_request({"flow_id": str(uuid4()), "execution_family": "v1_run"})
+
+
+@pytest.mark.parametrize("pinned", [False, True])
+async def test_bound_trigger_runs_the_selected_graph_with_its_event(
+    pinned, make_trigger, active_user, fake_background_service, monkeypatch
+):
+    from langflow.api.v2 import workflow_execution
+    from langflow.services.background_execution.service import BackgroundExecutionService
+    from langflow.services.database.models.flow.model import Flow
+    from langflow.services.database.models.flow_version.model import FlowVersion
+    from langflow.services.deps import get_settings_service, get_trigger_service, session_scope
+    from langflow.services.triggers import dispatcher, ledger
+    from lfx.workflow.adapters import StreamAdapterContext, get_stream_adapter
+
+    trigger_id = await make_trigger(node_id="trigger-node")
+    template = {"api_key": {"name": "api_key", "password": True, "value": "current-value"}}
+    current = {"nodes": [{"id": "model-node", "data": {"node": {"template": template}}}], "edges": []}
+    selected = deepcopy(current)
+    if pinned:
+        selected["nodes"][0]["data"]["node"]["template"]["api_key"]["value"] = "pinned-value"
+    async with session_scope() as session:
+        trigger = await session.get(Trigger, trigger_id)
+        flow = await session.get(Flow, trigger.flow_id)
+        flow.data = current
+        snapshot = FlowRead.model_validate(flow)
+        if pinned:
+            version = FlowVersion(flow_id=flow.id, user_id=trigger.user_id, data=selected, version_number=1)
+            session.add(version)
+            await session.flush()
+            trigger.flow_version_id = version.id
+        await ledger.append_event(session, trigger_id=trigger_id, dedupe_key="bound-event")
+
+    monkeypatch.setattr(get_trigger_service(), "resolve_run_user_id", AsyncMock(return_value=active_user.id))
+    assert await dispatcher.run_once(owner="test") == 1
+    request = fake_background_service.submits[0]["request"]
+    service = BackgroundExecutionService(get_settings_service())
+    job_id = uuid4()
+    metadata = service._persisted_request_metadata(job_id=job_id, flow_id=snapshot.id, request=request)
+    assert "pinned-value" not in str(metadata)
+    replay = service._reconstruct_request(Job(job_id=job_id, flow_id=snapshot.id, job_metadata=metadata))
+    assert replay["expose_graph_state"] is False
+    assert workflow._parse_persisted_workflow_request(replay).emit_v1_side_channel is False
+    monkeypatch.setattr(workflow, "resolve_flow_for_execution", AsyncMock(return_value=snapshot))
+    monkeypatch.setattr(workflow, "authorize_flow_action", AsyncMock())
+    builds = []
+
+    async def capture(**kwargs):
+        builds.append((kwargs["data"].model_dump(), kwargs["tweaks"]))
+        manager = kwargs["event_manager"]
+        manager.on_end(data={})
+        await manager.queue.put((None, None, 0.0))
+
+    monkeypatch.setattr(workflow_execution, "generate_flow_events", capture)
+    adapter = get_stream_adapter(
+        "agui", StreamAdapterContext(run_id="run", thread_id="thread", expose_graph_state=False)
+    )
+    source = workflow._default_frame_source_factory(
+        request=replay, flow_id=snapshot.id, user=active_user, adapter=adapter
+    )
+    frames = [frame async for frame, _ in source(job_id=job_id)]
+    assert len(builds) == 1
+    graph, tweaks = builds[0]
+    assert graph["nodes"] == selected["nodes"]
+    assert "bound-event" in str(tweaks["trigger-node"])
+    assert b"pinned-value" not in b"".join(frames)
