@@ -1016,3 +1016,130 @@ class TestAPIRequestRedirectSSRFProtection:
         assert APIRequestComponent._method_for_redirect("POST", 307) == "POST"
         assert APIRequestComponent._method_for_redirect("POST", 308) == "POST"
         assert APIRequestComponent._method_for_redirect("GET", 302) == "GET"
+
+
+class TestCurlBooleanNullBody:
+    """cURL imports retain booleans/null without changing the existing string table contract."""
+
+    @staticmethod
+    def _import_body(payload):
+        import json
+        import shlex
+
+        component = APIRequestComponent(mode="cURL")
+        command = "curl -X POST https://example.com/data --data " + shlex.quote(json.dumps(payload))
+        component.set(curl_input=command)
+        config = dotdict({name: {"value": None} for name in ("method", "url_input", "headers", "body")})
+        config = component.update_build_config(config, command, "curl_input")
+        return component, config
+
+    @pytest.mark.parametrize(("value", "encoded"), [(True, "true"), (False, "false"), (None, "null")])
+    def test_object_boolean_null_table_spelling_and_type(self, value, encoded):
+        component, config = self._import_body({"flag": value})
+        assert config["body"]["value"] == [{"key": "flag", "value": encoded}]
+        assert component._process_body(config["body"]["value"])["flag"] is value
+
+    @pytest.mark.parametrize("value", [True, False, None, 7, "plain", [True, None]])
+    def test_top_level_value_keeps_existing_data_wrapper(self, value):
+        import json
+
+        component, config = self._import_body(value)
+        assert config["body"]["value"] == [{"key": "data", "value": json.dumps(value)}]
+        actual = component._process_body(config["body"]["value"])["data"]
+        assert actual == value
+        assert type(actual) is type(value)
+
+    def test_existing_non_boolean_object_table_values_are_unchanged(self):
+        payload = {
+            "plain": "hello",
+            "python_true": "True",
+            "python_false": "False",
+            "python_none": "None",
+            "integer": 7,
+            "float": 1.5,
+            "nested": {"flag": False},
+            "array": [True, None],
+        }
+        component, config = self._import_body(payload)
+        assert [row["value"] for row in config["body"]["value"]] == [
+            "hello",
+            "True",
+            "False",
+            "None",
+            "7",
+            "1.5",
+            '{"flag": false}',
+            "[true, null]",
+        ]
+        assert component._process_body(config["body"]["value"]) == payload
+
+    @pytest.mark.parametrize(
+        ("suffix", "expected"),
+        [
+            ("", []),
+            (" --data plain-text", [{"key": "data", "value": "plain-text"}]),
+            (" --data '{broken}'", [{"key": "data", "value": "{broken}"}]),
+        ],
+    )
+    def test_non_json_and_absent_body_keep_existing_behavior(self, suffix, expected):
+        component = APIRequestComponent()
+        config = dotdict({name: {"value": None} for name in ("method", "url_input", "headers", "body")})
+        result = component.parse_curl("curl -X POST https://example.com/data" + suffix, config)
+        assert result["body"]["value"] == expected
+
+    @pytest.mark.parametrize("redirect_status", [None, 307, 308])
+    async def test_imported_boolean_null_reach_wire_via_full_entrypoint(self, redirect_status):
+        import json
+
+        payload = {
+            "enabled": True,
+            "disabled": False,
+            "missing": None,
+            "plain": "hello",
+            "literal": "True",
+            "number": 7,
+            "object": {"nested": False},
+            "array": [True, None],
+        }
+        component, config = self._import_body(payload)
+        component.set(
+            url_input=config["url_input"]["value"],
+            method=config["method"]["value"],
+            headers=config["headers"]["value"],
+            body=config["body"]["value"],
+            timeout=30,
+            follow_redirects=redirect_status is not None,
+            save_to_file=False,
+            include_httpx_metadata=False,
+            query_params={},
+        )
+        requests = []
+
+        async def handler(request):
+            requests.append(request)
+            actual = json.loads(request.content)
+            assert actual == payload
+            assert actual["enabled"] is True
+            assert actual["disabled"] is False
+            assert actual["missing"] is None
+            assert request.method == "POST"
+            if redirect_status and len(requests) == 1:
+                return httpx.Response(redirect_status, headers={"Location": "/next"}, request=request)
+            return httpx.Response(200, json={"ok": True}, request=request)
+
+        def build_client(*_args):
+            return httpx.AsyncClient(transport=httpx.MockTransport(handler))
+
+        with (
+            patch.object(APIRequestComponent, "_build_http_client", side_effect=build_client),
+            patch(
+                "lfx.components.data_source.api_request.validate_and_resolve_url",
+                return_value=("https://example.com/data", []),
+            ),
+            patch("lfx.components.data_source.api_request.is_ssrf_protection_enabled", return_value=True),
+        ):
+            result = await component.make_api_request()
+        assert result.data["status_code"] == 200
+        assert len(requests) == (2 if redirect_status else 1)
+        if redirect_status:
+            assert str(requests[-1].url) == "https://example.com/next"
