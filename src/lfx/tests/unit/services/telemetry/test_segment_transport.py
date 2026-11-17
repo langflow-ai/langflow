@@ -34,7 +34,7 @@ async def test_sends_segment_track_event() -> None:
     assert call.kwargs["json"]["userId"] == get_hashed_user_id("test-installation")
     assert call.kwargs["json"]["event"] == "Ended Process"
     assert call.kwargs["json"]["messageId"]
-    assert call.kwargs["json"]["properties"]["exceptionType"] == "ValueError"
+    assert call.kwargs["json"]["properties"]["objectType"] == "ValueError"
     assert call.kwargs["json"]["properties"]["UT30"] == "30AS5"
     assert call.kwargs["json"]["properties"]["productCode"] == "WW3151"
     assert call.kwargs["json"]["properties"]["productCodeType"] == "WWPC"
