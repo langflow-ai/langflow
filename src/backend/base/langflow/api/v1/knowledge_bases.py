@@ -66,6 +66,7 @@ from langflow.services.authorization import (
     ensure_knowledge_base_permission,
 )
 from langflow.services.authorization.listing import filter_visible_resources, visible_scope_prefilter
+from langflow.services.creation_hooks import RESOURCE_KNOWLEDGE_BASE, PostCreationContext, run_post_creation_hooks
 from langflow.services.database.models.jobs.model import JobStatus, JobType
 from langflow.services.database.models.knowledge_base.model import KnowledgeBaseRecord
 from langflow.services.deps import get_job_service, get_settings_service, get_task_service
@@ -845,6 +846,17 @@ async def create_knowledge_base(
                     f"Failed to persist knowledge base '{kb_name}' with backend '{backend_type_value}'. Please retry."
                 ),
             ) from exc
+
+        # The record is committed. A hook that fails with an HTTPException fails the request without undoing the
+        # create (the outer ``except HTTPException`` re-raises it and removes nothing).
+        await run_post_creation_hooks(
+            PostCreationContext(
+                resource=RESOURCE_KNOWLEDGE_BASE,
+                resource_id=kb_id,
+                owner_id=current_user.id,
+                name=kb_name,
+            )
+        )
 
         return KnowledgeBaseInfo(
             id=str(kb_id),
@@ -2123,8 +2135,11 @@ async def cancel_ingestion(
             raise HTTPException(status_code=400, detail=f"Cannot cancel job with status '{job_status}'")
 
         revoked = await task_service.revoke_task(job.job_id)
-        # Update status immediately so background task can see it
-        await job_service.update_job_status(job.job_id, JobStatus.CANCELLED)
+        # Update status immediately so background task can see it. Stamp the
+        # finish time with it: retention dates an unstamped terminal row from
+        # its creation, which deletes a long-running job the moment it is
+        # cancelled instead of after the configured window.
+        await job_service.update_job_status(job.job_id, JobStatus.CANCELLED, finished_timestamp=True)
 
         # Clean up any partially ingested chunks from this job. Forward the KB's
         # configured backend and its owner's id: remote backends name their

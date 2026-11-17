@@ -377,6 +377,34 @@ class TestAGUIModeDispatch:
         assert detail["code"] == "MODE_UNSUPPORTED_FIELDS"
         assert detail["fields"] == ["output_ids"]
 
+    @pytest.mark.parametrize("mode", ["stream", "background"])
+    async def test_non_sync_modes_reject_globals(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        empty_flow,
+        mode: str,
+    ):
+        """Body globals is sync-only; stream/background must 422 instead of silently ignoring it.
+
+        The header transport was already rejected for GA; a caller who follows that
+        advice and moves the override into body globals must not then be silently
+        dropped on these modes (they run through the v1 build loop, which ignores it).
+        """
+        body = _agui_body(empty_flow, mode=mode)
+        body["globals"] = {"MY_VAR": "v"}
+
+        response = await client.post(
+            "api/v2/workflows",
+            json=body,
+            headers={"x-api-key": created_api_key.api_key},
+        )
+
+        assert response.status_code == 422
+        detail = response.json()["detail"]
+        assert detail["code"] == "MODE_UNSUPPORTED_FIELDS"
+        assert detail["fields"] == ["globals"]
+
 
 class TestV2WorkflowAdmission:
     """Route-level admission checks before workflow execution dispatch."""
