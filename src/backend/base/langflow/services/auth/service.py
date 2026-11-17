@@ -56,7 +56,12 @@ from langflow.services.auth.external import (
 )
 from langflow.services.auth.refresh_tokens import create_refresh_session, refresh_session_id, register_refresh_session
 from langflow.services.auth.user_admission import admit_user_creation
-from langflow.services.creation_hooks import PreCreationDenied, pre_creation_denied_to_http
+from langflow.services.creation_hooks import (
+    ERROR_CODE_TIER_LIMIT_REACHED,
+    PreCreationDenied,
+    http_denial_error_code,
+    pre_creation_denied_to_http,
+)
 from langflow.services.database.models.api_key.crud import authenticate_api_key
 from langflow.services.database.models.user.crud import (
     get_user_by_id,
@@ -977,26 +982,30 @@ class AuthService(BaseAuthService):
             SSOUserProfile.sso_provider == identity.provider,
             SSOUserProfile.sso_user_id == identity.subject,
         )
-        profile = (await db.exec(profile_stmt)).first()
 
-        if profile is not None:
-            user = await get_user_by_id(db, profile.user_id)
-            if user is None:
+        async def refresh_existing_profile(existing_profile: SSOUserProfile) -> User:
+            existing_user = await get_user_by_id(db, existing_profile.user_id)
+            if existing_user is None:
                 msg = "Mapped external user was not found"
-                raise AuthInvalidTokenError(msg)
-            if not user.is_active:
+                raise AuthInvalidTokenError(msg) from None
+            if not existing_user.is_active:
                 msg = "User account is inactive"
-                raise InactiveUserError(msg)
+                raise InactiveUserError(msg) from None
             now = datetime.now(timezone.utc)
             # Only overwrite the stored email when the token carries one; a later
             # token that omits the email claim must not erase a previously stored
             # address.
             if identity.email is not None:
-                profile.email = identity.email
-            profile.sso_last_login_at = now
-            profile.updated_at = now
-            await update_user_last_login_at(user.id, db)
-            return user
+                existing_profile.email = identity.email
+            existing_profile.sso_last_login_at = now
+            existing_profile.updated_at = now
+            await update_user_last_login_at(existing_user.id, db)
+            return existing_user
+
+        profile = (await db.exec(profile_stmt)).first()
+
+        if profile is not None:
+            return await refresh_existing_profile(profile)
 
         username = await self._unique_external_username(db, identity)
         random_password = secrets.token_urlsafe(48)
@@ -1038,30 +1047,22 @@ class AuthService(BaseAuthService):
             await db.flush()
             await db.refresh(user)
             await self._initialize_jit_user_defaults(user, db)
-        except HTTPException:
+        except HTTPException as denied:
             # Enterprise tier hooks deliberately raise the canonical structured
             # denial here rather than at a FastAPI route boundary. Roll back the
             # request transaction before letting the response reach auth.
             await db.rollback()
+            if http_denial_error_code(denied) != ERROR_CODE_TIER_LIMIT_REACHED:
+                raise
+            profile = (await db.exec(profile_stmt)).first()
+            if profile is not None:
+                return await refresh_existing_profile(profile)
             raise
         except PreCreationDenied as denied:
             await db.rollback()
             profile = (await db.exec(profile_stmt)).first()
             if profile is not None:
-                user = await get_user_by_id(db, profile.user_id)
-                if user is None:
-                    msg = "Mapped external user was not found"
-                    raise AuthInvalidTokenError(msg) from None
-                if not user.is_active:
-                    msg = "User account is inactive"
-                    raise InactiveUserError(msg) from None
-                now = datetime.now(timezone.utc)
-                if identity.email is not None:
-                    profile.email = identity.email
-                profile.sso_last_login_at = now
-                profile.updated_at = now
-                await update_user_last_login_at(user.id, db)
-                return user
+                return await refresh_existing_profile(profile)
             raise pre_creation_denied_to_http(denied) from denied
         except IntegrityError:
             await db.rollback()

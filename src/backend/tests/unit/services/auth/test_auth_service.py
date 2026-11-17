@@ -1367,6 +1367,285 @@ async def test_materialize_external_user_rechecks_profile_after_concurrent_admis
 
 
 @pytest.mark.anyio
+async def test_materialize_external_user_rechecks_profile_after_http_admission_denial(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    """A canonical tier HTTP denial also converges on a concurrently committed profile."""
+    from langflow.services.auth.external import identity_from_claims
+    from langflow.services.creation_hooks import ERROR_CODE_HEADER, RESOURCE_USER, _pre_creation_hooks
+    from langflow.services.database.models.auth import SSOUserProfile
+
+    class NestedTransaction:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return False
+
+    auth_settings.EXTERNAL_AUTH_ENABLED = True
+    auth_settings.EXTERNAL_AUTH_PROVIDER = "external"
+    identity = identity_from_claims(
+        {"sub": "http-racing-subject", "email": "http-racing@example.com", "preferred_username": "http-racing"},
+        auth_settings,
+    )
+    existing_user = _dummy_user(uuid4())
+    profile = SSOUserProfile(
+        user_id=existing_user.id,
+        sso_provider="external",
+        sso_user_id="http-racing-subject",
+        email="old@example.com",
+    )
+    denial = HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail={
+            "error_code": "tier_limit_reached",
+            "message": "Your plan includes 1 builder. Upgrade your tier to add more.",
+            "resource": "builders",
+            "limit": 1,
+            "current": 1,
+            "tier": "essentials",
+        },
+        headers={ERROR_CODE_HEADER: "tier_limit_reached"},
+    )
+
+    async def deny(_context):
+        raise denial
+
+    db = MagicMock()
+    db.exec = AsyncMock(
+        side_effect=[
+            SimpleNamespace(first=lambda: None),
+            SimpleNamespace(first=lambda: profile),
+        ]
+    )
+    db.begin_nested.return_value = NestedTransaction()
+    db.rollback = AsyncMock()
+    authorization_service = MagicMock()
+    authorization_service.acquire_identity_mutation_lock = AsyncMock()
+    update_last_login = AsyncMock()
+    _pre_creation_hooks[RESOURCE_USER].append(deny)
+    try:
+        with (
+            patch("langflow.services.maintenance.state.maintenance_enabled", new=AsyncMock(return_value=False)),
+            patch("langflow.services.deps.get_authorization_service", return_value=authorization_service),
+            patch(
+                "langflow.services.auth.service.get_user_by_id", new=AsyncMock(return_value=existing_user)
+            ) as get_user,
+            patch("langflow.services.auth.service.update_user_last_login_at", new=update_last_login),
+            patch.object(auth_service, "_unique_external_username", new=AsyncMock(return_value="http-racing")),
+        ):
+            result = await auth_service._materialize_external_user(identity, db)
+    finally:
+        _pre_creation_hooks[RESOURCE_USER].remove(deny)
+
+    assert result is existing_user
+    authorization_service.acquire_identity_mutation_lock.assert_awaited_once()
+    db.rollback.assert_awaited_once()
+    get_user.assert_awaited_once_with(db, existing_user.id)
+    update_last_login.assert_awaited_once_with(existing_user.id, db)
+    db.add.assert_not_called()
+    assert profile.email == "http-racing@example.com"
+
+
+@pytest.mark.anyio
+async def test_materialize_external_user_preserves_http_admission_denial_without_profile(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    """A tier denial with no committed profile remains byte-for-byte the original refusal."""
+    from langflow.services.auth.external import identity_from_claims
+    from langflow.services.creation_hooks import ERROR_CODE_HEADER
+
+    auth_settings.EXTERNAL_AUTH_ENABLED = True
+    auth_settings.EXTERNAL_AUTH_PROVIDER = "external"
+    identity = identity_from_claims(
+        {"sub": "http-denied-subject", "email": "http-denied@example.com", "preferred_username": "http-denied"},
+        auth_settings,
+    )
+    denial = HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail={
+            "error_code": "tier_limit_reached",
+            "message": "Your plan includes 1 builder. Upgrade your tier to add more.",
+            "resource": "builders",
+            "limit": 1,
+            "current": 1,
+            "tier": "essentials",
+        },
+        headers={ERROR_CODE_HEADER: "tier_limit_reached"},
+    )
+    db = AsyncMock()
+    db.exec = AsyncMock(
+        side_effect=[
+            SimpleNamespace(first=lambda: None),
+            SimpleNamespace(first=lambda: None),
+        ]
+    )
+    with (
+        patch("langflow.services.maintenance.state.maintenance_enabled", new=AsyncMock(return_value=False)),
+        patch("langflow.services.auth.service.admit_user_creation", new=AsyncMock(side_effect=denial)),
+        patch.object(auth_service, "_unique_external_username", new=AsyncMock(return_value="http-denied")),
+        pytest.raises(HTTPException) as exc_info,
+    ):
+        await auth_service._materialize_external_user(identity, db)
+
+    assert exc_info.value is denial
+    assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
+    assert exc_info.value.detail == denial.detail
+    assert exc_info.value.headers == denial.headers
+    db.rollback.assert_awaited_once()
+    db.add.assert_not_called()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("denial_type", ["pre_creation", "http"])
+async def test_materialize_external_user_rejects_missing_mapped_user_after_denial(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+    denial_type: str,
+):
+    """A re-queried profile whose mapped user disappeared is an invalid external token."""
+    from langflow.services.auth.exceptions import InvalidTokenError as AuthInvalidTokenError
+    from langflow.services.auth.external import identity_from_claims
+    from langflow.services.creation_hooks import ERROR_CODE_HEADER, PreCreationDenied
+    from langflow.services.database.models.auth import SSOUserProfile
+
+    auth_settings.EXTERNAL_AUTH_ENABLED = True
+    auth_settings.EXTERNAL_AUTH_PROVIDER = "external"
+    identity = identity_from_claims(
+        {"sub": "missing-mapped-user", "email": "missing@example.com", "preferred_username": "missing"},
+        auth_settings,
+    )
+    profile = SSOUserProfile(
+        user_id=uuid4(),
+        sso_provider="external",
+        sso_user_id="missing-mapped-user",
+    )
+    denial = (
+        PreCreationDenied("capacity reached", details={"resource": "builders"})
+        if denial_type == "pre_creation"
+        else HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"error_code": "tier_limit_reached", "message": "capacity reached"},
+            headers={ERROR_CODE_HEADER: "tier_limit_reached"},
+        )
+    )
+    db = AsyncMock()
+    db.exec = AsyncMock(
+        side_effect=[
+            SimpleNamespace(first=lambda: None),
+            SimpleNamespace(first=lambda: profile),
+        ]
+    )
+    with (
+        patch("langflow.services.maintenance.state.maintenance_enabled", new=AsyncMock(return_value=False)),
+        patch("langflow.services.auth.service.admit_user_creation", new=AsyncMock(side_effect=denial)),
+        patch("langflow.services.auth.service.get_user_by_id", new=AsyncMock(return_value=None)) as get_user,
+        patch("langflow.services.auth.service.update_user_last_login_at", new=AsyncMock()) as update_last_login,
+        patch.object(auth_service, "_unique_external_username", new=AsyncMock(return_value="missing")),
+        pytest.raises(AuthInvalidTokenError),
+    ):
+        await auth_service._materialize_external_user(identity, db)
+
+    db.rollback.assert_awaited_once()
+    get_user.assert_awaited_once_with(db, profile.user_id)
+    update_last_login.assert_not_awaited()
+    db.add.assert_not_called()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("denial_type", ["pre_creation", "http"])
+async def test_materialize_external_user_rejects_inactive_mapped_user_after_denial(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+    denial_type: str,
+):
+    """A re-queried inactive mapped user remains refused for either denial type."""
+    from langflow.services.auth.exceptions import InactiveUserError
+    from langflow.services.auth.external import identity_from_claims
+    from langflow.services.creation_hooks import ERROR_CODE_HEADER, PreCreationDenied
+    from langflow.services.database.models.auth import SSOUserProfile
+
+    auth_settings.EXTERNAL_AUTH_ENABLED = True
+    auth_settings.EXTERNAL_AUTH_PROVIDER = "external"
+    identity = identity_from_claims(
+        {"sub": "inactive-mapped-user", "email": "inactive@example.com", "preferred_username": "inactive"},
+        auth_settings,
+    )
+    profile = SSOUserProfile(
+        user_id=uuid4(),
+        sso_provider="external",
+        sso_user_id="inactive-mapped-user",
+    )
+    denial = (
+        PreCreationDenied("capacity reached", details={"resource": "builders"})
+        if denial_type == "pre_creation"
+        else HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"error_code": "tier_limit_reached", "message": "capacity reached"},
+            headers={ERROR_CODE_HEADER: "tier_limit_reached"},
+        )
+    )
+    inactive_user = _dummy_user(profile.user_id, active=False)
+    db = AsyncMock()
+    db.exec = AsyncMock(
+        side_effect=[
+            SimpleNamespace(first=lambda: None),
+            SimpleNamespace(first=lambda: profile),
+        ]
+    )
+    with (
+        patch("langflow.services.maintenance.state.maintenance_enabled", new=AsyncMock(return_value=False)),
+        patch("langflow.services.auth.service.admit_user_creation", new=AsyncMock(side_effect=denial)),
+        patch("langflow.services.auth.service.get_user_by_id", new=AsyncMock(return_value=inactive_user)) as get_user,
+        patch("langflow.services.auth.service.update_user_last_login_at", new=AsyncMock()) as update_last_login,
+        patch.object(auth_service, "_unique_external_username", new=AsyncMock(return_value="inactive")),
+        pytest.raises(InactiveUserError),
+    ):
+        await auth_service._materialize_external_user(identity, db)
+
+    db.rollback.assert_awaited_once()
+    get_user.assert_awaited_once_with(db, profile.user_id)
+    update_last_login.assert_not_awaited()
+    db.add.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_materialize_external_user_preserves_arbitrary_http_admission_denial(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    """A non-tier HTTP denial is not converted into a successful existing-user login."""
+    from langflow.services.auth.external import identity_from_claims
+
+    auth_settings.EXTERNAL_AUTH_ENABLED = True
+    auth_settings.EXTERNAL_AUTH_PROVIDER = "external"
+    identity = identity_from_claims(
+        {"sub": "permission-denied-subject", "preferred_username": "permission-denied"},
+        auth_settings,
+    )
+    denial = HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="permission denied")
+    db = AsyncMock()
+    db.exec = AsyncMock(side_effect=[SimpleNamespace(first=lambda: None)])
+    get_user = AsyncMock()
+    with (
+        patch("langflow.services.maintenance.state.maintenance_enabled", new=AsyncMock(return_value=False)),
+        patch("langflow.services.auth.service.admit_user_creation", new=AsyncMock(side_effect=denial)),
+        patch("langflow.services.auth.service.get_user_by_id", new=get_user),
+        patch.object(auth_service, "_unique_external_username", new=AsyncMock(return_value="permission-denied")),
+        pytest.raises(HTTPException) as exc_info,
+    ):
+        await auth_service._materialize_external_user(identity, db)
+
+    assert exc_info.value is denial
+    db.rollback.assert_awaited_once()
+    assert db.exec.await_count == 1
+    get_user.assert_not_awaited()
+    db.add.assert_not_called()
+
+
+@pytest.mark.anyio
 async def test_create_super_user_uses_active_user_admission(auth_service: AuthService):
     """Additional CLI superuser creation must use the shared active-user seam."""
     admission = AsyncMock()
