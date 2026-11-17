@@ -98,6 +98,7 @@ export type RepairResult = {
   updated_nodes: number;
   recovery_version_id: string | null;
   reason_codes: string[];
+  reason_detail?: string | null;
 };
 export type RepairPreview = {
   target_sha256: string;
