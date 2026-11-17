@@ -68,6 +68,12 @@ async def test_user_create_stages_default_folder_and_identity_in_one_transaction
         return True
 
     auth_settings = SimpleNamespace(AUTO_LOGIN=False, ENABLE_SIGNUP=True, NEW_USER_IS_ACTIVE=True)
+    seen_contexts = []
+
+    async def capture_user_admission(_session, **kwargs):
+        events.append("lock")
+        seen_contexts.append(SimpleNamespace(extra={"is_active": kwargs["candidate"].is_active}))
+
     monkeypatch.setattr(users, "get_settings_service", lambda: SimpleNamespace(auth_settings=auth_settings))
     monkeypatch.setattr(
         users,
@@ -77,6 +83,7 @@ async def test_user_create_stages_default_folder_and_identity_in_one_transaction
     monkeypatch.setattr(users, "get_or_create_default_folder", create_default_folder)
     monkeypatch.setattr(users, "get_authorization_service", lambda: service)
     monkeypatch.setattr(users, "stage_audit_decision", stage_audit)
+    monkeypatch.setattr(users, "admit_user_creation", capture_user_admission)
 
     created = await users.add_user(
         user=UserCreate(username="new-user", password="not-a-real-password"),  # noqa: S106
@@ -94,6 +101,7 @@ async def test_user_create_stages_default_folder_and_identity_in_one_transaction
     assert mutation.user_before is None
     assert mutation.user_after.is_active is True
     assert mutation.user_after.is_superuser is False
+    assert seen_contexts[0].extra == {"is_active": True}
 
 
 @pytest.mark.asyncio
@@ -233,6 +241,61 @@ async def test_user_disable_validates_and_stages_in_transaction_order(monkeypatc
             },
         }
     ]
+
+
+@pytest.mark.asyncio
+async def test_user_activation_validates_and_stages_in_transaction_order(monkeypatch):
+    from langflow.api.v1 import users
+    from langflow.services.database.models.user.model import UserUpdate
+
+    events: list[str] = []
+    service = _LifecycleService(events)
+    actor = SimpleNamespace(id=uuid4(), is_superuser=True)
+    target = SimpleNamespace(
+        id=uuid4(),
+        is_active=False,
+        is_superuser=False,
+        password="hashed",  # noqa: S106  # pragma: allowlist secret
+    )
+    session = AsyncMock()
+
+    async def update_user(_target, _update, _session):
+        events.append("mutate")
+        target.is_active = True
+        return target
+
+    async def get_user_by_id(_session, _user_id):
+        events.append("read")
+        return target
+
+    audit_calls = []
+
+    def stage_audit(**kwargs):
+        events.append("audit")
+        audit_calls.append(kwargs)
+        return True
+
+    session.commit.side_effect = lambda: events.append("commit")
+    monkeypatch.setattr(users, "get_user_by_id", get_user_by_id)
+    monkeypatch.setattr(users, "update_user", update_user)
+    monkeypatch.setattr(users, "get_authorization_service", lambda: service)
+    monkeypatch.setattr(users, "stage_audit_decision", stage_audit)
+
+    result = await users.patch_user(
+        user_id=target.id,
+        user_update=UserUpdate(is_active=True),
+        user=actor,
+        session=session,
+    )
+
+    assert result is target
+    assert events == ["lock", "read", "validate", "mutate", "stage", "audit", "commit", "committed"]
+    assert service.lock_requests[0]["kind"] is AuthorizationMutationKind.USER_ACTIVATED
+    mutation = service.staged[0]
+    assert mutation.kind is AuthorizationMutationKind.USER_ACTIVATED
+    assert mutation.user_before.is_active is False
+    assert mutation.user_after.is_active is True
+    assert audit_calls[0]["details"]["lifecycle_kind"] == AuthorizationMutationKind.USER_ACTIVATED.value
 
 
 @pytest.mark.asyncio

@@ -55,6 +55,8 @@ from langflow.services.auth.external import (
     set_current_external_access_context,
 )
 from langflow.services.auth.refresh_tokens import create_refresh_session, refresh_session_id, register_refresh_session
+from langflow.services.auth.user_admission import admit_user_creation
+from langflow.services.creation_hooks import PreCreationDenied, pre_creation_denied_to_http
 from langflow.services.database.models.api_key.crud import authenticate_api_key
 from langflow.services.database.models.user.crud import (
     get_user_by_id,
@@ -1006,8 +1008,15 @@ class AuthService(BaseAuthService):
             is_superuser=False,
             last_login_at=now,
         )
-        db.add(user)
         try:
+            from langflow.services.deps import get_authorization_service
+
+            await admit_user_creation(
+                db,
+                authorization_service=get_authorization_service(),
+                candidate=user,
+            )
+            db.add(user)
             # Flush `user` on its own before constructing `new_profile`.
             # SSOUserProfile.user_id is a bare FK column - no SQLModel
             # Relationship() ties User and SSOUserProfile together - so
@@ -1029,6 +1038,15 @@ class AuthService(BaseAuthService):
             await db.flush()
             await db.refresh(user)
             await self._initialize_jit_user_defaults(user, db)
+        except HTTPException:
+            # Enterprise tier hooks deliberately raise the canonical structured
+            # denial here rather than at a FastAPI route boundary. Roll back the
+            # request transaction before letting the response reach auth.
+            await db.rollback()
+            raise
+        except PreCreationDenied as denied:
+            await db.rollback()
+            raise pre_creation_denied_to_http(denied) from denied
         except IntegrityError:
             await db.rollback()
             profile = (await db.exec(profile_stmt)).first()
@@ -1505,11 +1523,24 @@ class AuthService(BaseAuthService):
                 is_active=True,
                 last_login_at=None,
             )
-
-            db.add(super_user)
             try:
+                from langflow.services.creation_hooks import PreCreationDenied, pre_creation_denied_to_http
+                from langflow.services.deps import get_authorization_service
+
+                await admit_user_creation(
+                    db,
+                    authorization_service=get_authorization_service(),
+                    candidate=super_user,
+                )
+                db.add(super_user)
                 await db.commit()
                 await db.refresh(super_user)
+            except PreCreationDenied as denied:
+                await db.rollback()
+                raise pre_creation_denied_to_http(denied) from denied
+            except HTTPException:
+                await db.rollback()
+                raise
             except IntegrityError:
                 await db.rollback()
                 super_user = await get_user_by_username(db, username)

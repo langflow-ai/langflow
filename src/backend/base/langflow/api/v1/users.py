@@ -18,6 +18,7 @@ from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import PasswordResetRequest, UsersResponse
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.auth.context import current_auth_is_api_key, current_auth_is_restricted_api_key
+from langflow.services.auth.user_admission import admit_user_creation
 from langflow.services.auth.utils import get_current_user, get_current_user_optional
 from langflow.services.authorization.admin import (
     ADMINISTRATION_REQUIRED_REASON,
@@ -39,12 +40,9 @@ from langflow.services.authorization.lifecycle import (
 )
 from langflow.services.creation_hooks import (
     DENIED_STATUS_CODE,
-    RESOURCE_USER,
-    PreCreationContext,
     PreCreationDenied,
     http_denial_error_code,
     pre_creation_denied_to_http,
-    run_pre_creation_hooks,
 )
 from langflow.services.data_subjects import requests as request_service
 from langflow.services.data_subjects.errors import DataSubjectError
@@ -221,26 +219,17 @@ async def add_user(
     try:
         new_user.password = get_auth_service().get_password_hash(user.password)
         new_user.is_active = settings_service.auth_settings.NEW_USER_IS_ACTIVE
-        await acquire_identity_mutation_lock(
-            authorization_service,
-            session,
-            kind=AuthorizationMutationKind.USER_CREATED,
-            entity_id=new_user.id,
-            affected_user_ids=(new_user.id,),
-        )
         # Pre-creation hooks run inside the lock the authorization plugin just took (a no-op
         # on non-PostgreSQL backends), so a plugin that counts users sees a serialized
         # count-then-insert. Public signup and the admin "add user" flow share this route;
         # ``is_public_signup`` lets a plugin word its refusal differently.
         try:
-            await run_pre_creation_hooks(
-                PreCreationContext(
-                    resource=RESOURCE_USER,
-                    session=session,
-                    actor_user_id=actor_user_id,
-                    requested_name=new_user.username,
-                    is_public_signup=not is_admin_caller,
-                )
+            await admit_user_creation(
+                session,
+                authorization_service=authorization_service,
+                candidate=new_user,
+                actor_user_id=actor_user_id,
+                is_public_signup=not is_admin_caller,
             )
         except PreCreationDenied as denied:
             await session.rollback()
@@ -514,6 +503,8 @@ async def patch_user(
     possible_lifecycle_kind: AuthorizationMutationKind | None = None
     if user_update.is_active is False:
         possible_lifecycle_kind = AuthorizationMutationKind.USER_DISABLED
+    elif user_update.is_active is True:
+        possible_lifecycle_kind = AuthorizationMutationKind.USER_ACTIVATED
     elif user_update.is_superuser is False:
         possible_lifecycle_kind = AuthorizationMutationKind.USER_SUPERUSER_DEMOTED
     if possible_lifecycle_kind is not None:
@@ -551,7 +542,9 @@ async def patch_user(
         )
         next_is_active = user_db.is_active if user_update.is_active is None else user_update.is_active
         next_is_superuser = user_db.is_superuser if user_update.is_superuser is None else user_update.is_superuser
-        if user_db.is_active and not next_is_active:
+        if not user_db.is_active and next_is_active:
+            lifecycle_kind = AuthorizationMutationKind.USER_ACTIVATED
+        elif user_db.is_active and not next_is_active:
             lifecycle_kind = AuthorizationMutationKind.USER_DISABLED
         elif user_db.is_superuser and not next_is_superuser:
             lifecycle_kind = AuthorizationMutationKind.USER_SUPERUSER_DEMOTED

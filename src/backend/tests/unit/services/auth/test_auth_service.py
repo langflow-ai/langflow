@@ -1247,6 +1247,91 @@ async def test_materialize_external_user_preserves_email_when_token_omits_it(
 
 
 @pytest.mark.anyio
+async def test_materialize_external_user_uses_active_user_admission(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+    async_session,
+):
+    """External JIT provisioning must use the shared active-user admission seam."""
+    from langflow.services.auth.external import identity_from_claims
+    from lfx.services.authorization import AuthorizationMutationKind
+
+    auth_settings.EXTERNAL_AUTH_ENABLED = True
+    auth_settings.EXTERNAL_AUTH_PROVIDER = "external"
+    identity = identity_from_claims(
+        {"sub": "admission-subject", "email": "admission@example.com", "preferred_username": "admission"},
+        auth_settings,
+    )
+    admission = AsyncMock()
+
+    with (
+        patch("langflow.services.auth.service.admit_user_creation", new=admission),
+        patch.object(auth_service, "_initialize_jit_user_defaults", new=AsyncMock()),
+    ):
+        user = await auth_service._materialize_external_user(identity, async_session)
+
+    admission.assert_awaited_once()
+    assert (
+        admission.await_args.kwargs.get("kind", AuthorizationMutationKind.USER_CREATED)
+        is AuthorizationMutationKind.USER_CREATED
+    )
+    assert admission.await_args.kwargs["candidate"] is user
+    assert admission.await_args.kwargs.get("actor_user_id") is None
+    assert user.is_active is True
+
+
+@pytest.mark.anyio
+async def test_materialize_external_user_maps_admission_denial_and_rolls_back(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+    async_session,
+):
+    """A real admission denial must be a structured 403, not an auth-service 500."""
+    from langflow.services.auth.external import identity_from_claims
+    from langflow.services.creation_hooks import PreCreationDenied
+
+    auth_settings.EXTERNAL_AUTH_ENABLED = True
+    auth_settings.EXTERNAL_AUTH_PROVIDER = "external"
+    identity = identity_from_claims(
+        {"sub": "denied-subject", "email": "denied@example.com", "preferred_username": "denied"},
+        auth_settings,
+    )
+    denial = PreCreationDenied(
+        "Your plan includes 10 builders. Upgrade your tier to add more.",
+        details={"resource": "builders", "limit": 10, "current": 10, "tier": "essentials"},
+    )
+
+    with (
+        patch("langflow.services.auth.service.admit_user_creation", new=AsyncMock(side_effect=denial)),
+        pytest.raises(HTTPException) as exc_info,
+    ):
+        await auth_service._materialize_external_user(identity, async_session)
+
+    assert exc_info.value.status_code == 403
+    assert exc_info.value.detail["error_code"] == "tier_limit_reached"
+    assert exc_info.value.detail["resource"] == "builders"
+    assert exc_info.value.headers["X-Langflow-Error-Code"] == "tier_limit_reached"
+
+
+@pytest.mark.anyio
+async def test_create_super_user_uses_active_user_admission(auth_service: AuthService):
+    """Additional CLI superuser creation must use the shared active-user seam."""
+    admission = AsyncMock()
+    session = AsyncMock()
+
+    with (
+        patch("langflow.services.auth.service.get_user_by_username", new=AsyncMock(return_value=None)),
+        patch("langflow.services.auth.service.admit_user_creation", new=admission),
+    ):
+        user = await auth_service.create_super_user("new-admin", "not-a-real-password", session)
+
+    admission.assert_awaited_once()
+    assert admission.await_args.kwargs["candidate"] is user
+    assert user.is_active is True
+    assert user.is_superuser is True
+
+
+@pytest.mark.anyio
 async def test_materialize_external_user_falls_back_when_username_differs_only_in_case(
     auth_service: AuthService,
     auth_settings: AuthSettings,
@@ -1300,6 +1385,9 @@ class _DirectoryAuthorizationStub:
         self.ingest_directory_membership_snapshot = AsyncMock(return_value=result)
         self.directory_membership_committed = AsyncMock()
         self.supports_incomplete_directory_membership_snapshots = AsyncMock(return_value=supports_incomplete)
+
+    async def acquire_identity_mutation_lock(self, *, session, **request):  # noqa: ARG002
+        return None
 
 
 def _external_identity(claims: dict):
