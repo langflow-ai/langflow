@@ -186,7 +186,11 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    asyncio.run(_run_async_migrations())
+    connection = config.attributes.get("connection")
+    if connection is not None:
+        _do_run_migrations(connection)
+    else:
+        asyncio.run(_run_async_migrations())
 
 
 if context.is_offline_mode():

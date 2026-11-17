@@ -1878,6 +1878,11 @@ def upgrade_check(
         [],
         help="A folder of custom components the upgraded server loads (its components_path). Repeat for each folder.",
     ),
+    discovery_timeout: int = typer.Option(
+        300,
+        min=1,
+        help="Seconds to allow for loading all installed and custom components. Increase on busy machines.",
+    ),
     allow_custom_components: bool = typer.Option(  # noqa: FBT001
         default=True, help=_SERVER_SETTING_HELP.format("allow_custom_components")
     ),
@@ -1920,6 +1925,7 @@ def upgrade_check(
     options = {
         "database_url": database_url,
         "serving_database_url": serving_database_url,
+        "discovery_timeout": discovery_timeout,
         "settings": {
             "allow_custom_components": allow_custom_components,
             "substitute_outdated_component_code": substitute_outdated_component_code,

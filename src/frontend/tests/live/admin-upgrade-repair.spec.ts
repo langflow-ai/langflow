@@ -4,6 +4,7 @@ import type {
   RepairPreview,
   ReportDetail,
 } from "../../src/controllers/API/queries/upgrade-reports";
+import { report as reportFixture } from "../../src/pages/SettingsPage/pages/UpgradeReportsPage/__tests__/fixture";
 import type { APIClassType } from "../../src/types/api";
 import { expect, test } from "../fixtures";
 import { awaitBootstrapTest } from "../utils/await-bootstrap-test";
@@ -11,6 +12,176 @@ import { TIMEOUTS } from "../utils/constants/timeouts";
 
 // Run only against an isolated backend. This journey enables shared maintenance.
 const routePath = "/settings/upgrade-reports";
+
+test(
+  "distinguishes report imports and explains running-version history",
+  { tag: ["@release", "@database"] },
+  async ({ page }) => {
+    const report = structuredClone(reportFixture);
+    const generated = new Date(
+      Date.now() - 14 * 24 * 60 * 60 * 1000,
+    ).toISOString();
+    report.generated_at = generated;
+    report.document.generated_at = generated;
+    report.created_at = new Date().toISOString();
+    const flow = report.document.flows[0];
+    flow.kind = "flow_version";
+    flow.version_number = 2;
+    flow.used_by = { deployments: [], triggers: [] };
+    flow.usage!.editor.limitations = [
+      "usage_is_flow_level_not_version_specific",
+    ];
+    flow.usage!.serving = structuredClone(flow.usage!.editor);
+    const another = { ...report, id: "ba9a4c6e-c2d1-4810-a792-48c86f591dd9" };
+    await page.route("**/api/v1/upgrade-reports**", async (route) => {
+      const pathname = new URL(route.request().url()).pathname;
+      await route.fulfill({
+        json: pathname.endsWith("/repairs")
+          ? { items: [], total: 0 }
+          : pathname.endsWith(report.id)
+            ? report
+            : pathname.endsWith(another.id)
+              ? another
+              : { items: [report, another], total: 2, offset: 0, limit: 20 },
+      });
+    });
+    await awaitBootstrapTest(page, { skipModal: true, seedFlowIfEmpty: false });
+    await page.goto(routePath);
+    const history = page.getByLabel("Choose a report");
+    await expect(history.locator("option:not([disabled])")).toHaveCount(2);
+    const imports = await history
+      .locator("option:not([disabled])")
+      .allTextContents();
+    expect(imports[0]).not.toBe(imports[1]);
+    expect(imports[0]).toContain(report.id);
+    expect(imports[1]).toContain(another.id);
+    await expect(page.getByText(/2 weeks ago/)).toBeVisible({
+      timeout: TIMEOUTS.standard,
+    });
+    await page
+      .getByText("Usage, deployments, and findings", { exact: true })
+      .click();
+    await expect(
+      page.getByText("Counts cover the flow, not this specific version."),
+    ).toHaveCount(2);
+    await expect(page.getByText(/Retained runs 0/)).toHaveCount(2);
+    await expect(
+      page.getByText(/Execution history is unavailable/),
+    ).toHaveCount(0);
+    await expect(
+      page.getByText("Deployments and triggers None", { exact: true }),
+    ).toBeVisible({ timeout: TIMEOUTS.standard });
+    await page.screenshot({
+      path: test.info().outputPath("upgrade-report-qa-details.png"),
+      fullPage: true,
+    });
+  },
+);
+
+test(
+  "restores a playground draft when maintenance refuses the send",
+  { tag: ["@release", "@workspace", "@api"] },
+  async ({ page }) => {
+    const login = await page.request.get("/api/v1/auto_login");
+    expect(login.ok()).toBeTruthy();
+    const headers = {
+      Authorization: `Bearer ${(await login.json()).access_token}`,
+    };
+    const index: { entries: [string, Record<string, APIClassType>][] } =
+      JSON.parse(
+        await readFile(
+          path.resolve(
+            __dirname,
+            "../../../lfx/src/lfx/_assets/component_index.json",
+          ),
+          "utf8",
+        ),
+      );
+    const chatInput = index.entries.find(
+      ([name]) => name === "input_output",
+    )?.[1].ChatInput;
+    if (!chatInput)
+      throw new Error("Chat Input is missing from the component index");
+    const created = await page.request.post("/api/v1/flows/", {
+      headers,
+      data: {
+        name: `Maintenance chat QA ${Date.now()}`,
+        data: {
+          nodes: [
+            {
+              id: "ChatInput-maintenance-qa",
+              type: "genericNode",
+              position: { x: 0, y: 0 },
+              data: {
+                id: "ChatInput-maintenance-qa",
+                type: "ChatInput",
+                node: chatInput,
+              },
+            },
+          ],
+          edges: [],
+        },
+      },
+    });
+    expect(created.ok()).toBeTruthy();
+    const flow = await created.json();
+    try {
+      await awaitBootstrapTest(page, {
+        skipModal: true,
+        seedFlowIfEmpty: false,
+      });
+      await page.goto(`/flow/${flow.id}`);
+      await page
+        .getByRole("button", { name: "Playground", exact: true })
+        .click();
+      const input = page.getByTestId("input-chat-playground").last();
+      await expect(input).toBeVisible({ timeout: TIMEOUTS.standard });
+      page.expectServerError({
+        method: "POST",
+        path: "/api/v2/workflows",
+        status: 503,
+        count: 1,
+      });
+      await page.route("**/api/v2/workflows", (route) =>
+        route.fulfill({
+          status: 503,
+          json: { detail: "This instance is in maintenance mode." },
+        }),
+      );
+      const message = "Keep my unsent maintenance draft";
+      await input.fill(message);
+      const refused = page.waitForResponse(
+        (response) =>
+          response.url().endsWith("/api/v2/workflows") &&
+          response.status() === 503,
+      );
+      await input.press("Enter");
+      await refused;
+      await expect(input).toHaveValue(message);
+      await expect(
+        page.getByTestId(`chat-message-User-${message}`),
+      ).toHaveCount(0);
+      await expect(
+        page.getByText("Workflow run failed", { exact: true }),
+      ).toBeVisible({ timeout: TIMEOUTS.standard });
+      await expect(
+        page.getByText(/This instance is in maintenance mode/).first(),
+      ).toBeVisible({ timeout: TIMEOUTS.standard });
+      await page.screenshot({
+        path: test.info().outputPath("playground-maintenance-refusal.png"),
+        fullPage: true,
+        animations: "disabled",
+      });
+    } finally {
+      await page.goto(routePath);
+      expect(
+        (
+          await page.request.delete(`/api/v1/flows/${flow.id}`, { headers })
+        ).ok(),
+      ).toBeTruthy();
+    }
+  },
+);
 
 test(
   "repairs a stored flow through the real report workflow",

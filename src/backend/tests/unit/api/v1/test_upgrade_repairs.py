@@ -16,7 +16,7 @@ from langflow.services.flow_repair.retention import REPAIR_RETENTION_REASON
 from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from sqlmodel import select
 
-from tests.unit.services.flow_repair.test_planning import graph, registry
+from tests.unit.services.flow_repair.test_planning import graph, node, registry
 
 PREVIEW = "/api/v1/upgrade-repairs/preview"
 APPLY = "/api/v1/upgrade-repairs/apply"
@@ -97,6 +97,119 @@ async def test_repair_endpoints_require_verified_admin(client, logged_in_headers
     client.cookies.clear()
     assert (await client.post(PREVIEW, json={"flow_ids": [str(uuid4())]})).status_code in {401, 403}
     assert (await client.post(PREVIEW, json={"flow_ids": [str(uuid4())]}, headers=logged_in_headers)).status_code == 403
+
+
+@pytest.mark.parametrize("path", [PREVIEW, APPLY])
+@pytest.mark.parametrize("authenticated", [False, True])
+async def test_repair_authentication_precedes_maintenance(
+    client, active_user, logged_in_headers, repair_admin, path, authenticated
+):
+    _actor, headers = repair_admin
+    flow_id = await _flow(active_user.id)
+    payload = await _preview(client, headers, flow_id)
+    if path == PREVIEW:
+        payload = {"flow_ids": [str(flow_id)]}
+    before = await _read(flow_id)
+    await _freeze(client, headers)
+    client.cookies.clear()
+
+    response = await client.post(path, json=payload, headers=logged_in_headers if authenticated else {})
+
+    assert response.status_code in ({403} if authenticated else {401, 403}), response.text
+    assert await _read(flow_id) == before
+
+
+async def test_edited_node_policy_denial_names_the_node_and_preserves_the_whole_flow(
+    client, active_user, repair_admin, monkeypatch
+):
+    from lfx.interface.components import ComponentCache
+    from lfx.utils.flow_validation import _compute_code_hash
+
+    _actor, headers = repair_admin
+    edited = node("edited-node", edited=True)
+    edited["data"]["node"]["display_name"] = "Edited prompt"
+    data = graph(node("safe-node"), edited)
+    target = registry()
+    target["helpers"]["Example"]["metadata"] = {"code_hash": _compute_code_hash("target source")}
+    cache = ComponentCache()
+    cache.all_types_dict, cache.all_types_ready = target, True
+    monkeypatch.setattr("lfx.interface.components.component_cache", cache)
+    monkeypatch.setattr(get_settings_service().settings, "custom_component_admin_only", True)
+    flow_id = await _flow(active_user.id, data=data)
+    before = await _read(flow_id)
+
+    preview = await client.post(PREVIEW, json={"flow_ids": [str(flow_id)]}, headers=headers)
+
+    assert preview.status_code == 200, preview.text
+    [result] = preview.json()["results"]
+    assert result["status"] == "manual"
+    assert result["reason_codes"] == ["owner_policy_denied"]
+    assert "Edited prompt (edited-node)" in result["reason_detail"]
+    assert "outdated components must be updated" in result["reason_detail"]
+    assert "safe-node" not in result["reason_detail"]
+    assert "saved source" not in result["reason_detail"]
+    await _freeze(client, headers)
+    applied = await client.post(
+        APPLY,
+        json={
+            "target_sha256": preview.json()["target_sha256"],
+            "flows": [
+                {
+                    "flow_id": str(flow_id),
+                    "version_token": str(before[0]["version_token"]),
+                    "data_sha256": data_digest(data),
+                }
+            ],
+        },
+        headers=headers,
+    )
+
+    assert applied.status_code == 200, applied.text
+    [applied_result] = applied.json()["results"]
+    assert applied_result["reason_detail"] == result["reason_detail"]
+    assert applied_result["updated_nodes"] == 0
+    assert await _read(flow_id) == before
+
+
+@pytest.mark.parametrize("path", [PREVIEW, APPLY])
+async def test_authorized_repairs_keep_the_pause_drain_slot(
+    client, active_user, repair_admin, monkeypatch, tmp_path, path
+):
+    from langflow.api.utils import migration_pause
+
+    actor_id, headers = repair_admin
+    flow_id = await _flow(active_user.id)
+    payload = await _preview(client, headers, flow_id)
+    if path == PREVIEW:
+        payload = {"flow_ids": [str(flow_id)]}
+    await _freeze(client, headers)
+    monkeypatch.setattr(FEATURE_FLAGS, "instance_migration", True)
+    monkeypatch.setattr(get_settings_service().settings, "config_dir", str(tmp_path))
+    original = service._plan_selected
+    observed = []
+
+    async def plan(*args, **kwargs):
+        observed.append(
+            {
+                "changes": migration_pause.under_way()["changes"],
+                "caller": migration_pause.admitted_maintenance_caller(),
+                "drained": await migration_pause.drained(0),
+            }
+        )
+        return await original(*args, **kwargs)
+
+    monkeypatch.setattr(service, "_plan_selected", plan)
+
+    response = await client.post(path, json=payload, headers=headers)
+
+    assert response.status_code == 200, response.text
+    [result] = response.json()["results"]
+    assert result["status"] == ("ready" if path == PREVIEW else "updated"), result
+    [observation] = observed
+    assert [(item["method"], item["path"]) for item in observation["changes"]] == [("POST", path)]
+    assert observation["caller"] == actor_id
+    assert observation["drained"] is False
+    assert migration_pause.under_way()["changes"] == []
 
 
 @pytest.mark.parametrize("legacy_token", [False, True])
@@ -378,6 +491,7 @@ async def test_file_migration_pause_still_blocks_admin_repair(client, active_use
     response = await client.post(APPLY, json=payload, headers=headers)
 
     assert response.status_code == 503
+    assert response.json()["detail"] == "The instance migration pause does not permit repairs"
     assert await _read(flow_id) == before
 
 
