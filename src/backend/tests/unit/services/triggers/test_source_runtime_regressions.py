@@ -256,7 +256,8 @@ async def test_gmail_cleanup_preserves_sibling_watch_even_after_opt_out(
 @pytest.mark.usefixtures("client")
 async def test_heartbeat_keeps_long_work_owned(monkeypatch):
     # A fake lease clock makes the result depend on the order of events, not on wall time.
-    ttl_s = 0.3
+    # run_guarded gives each renewal ttl_s / 3 of real time, so the TTL stays large enough for a slow runner.
+    ttl_s = 3
     start = datetime.now(timezone.utc)
     clock = [start]
     monkeypatch.setattr(leases, "_now", lambda: clock[0])
