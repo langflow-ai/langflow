@@ -565,6 +565,7 @@ module.exports = {
             "Components/bundles-cleanlab",
             "Components/bundles-codeagents",
             "Components/bundles-clickhouse",
+            "Components/bundles-cloro",
             "Components/bundles-cloudflare",
             "Components/bundles-cohere",
             "Components/bundles-cometapi",
