@@ -871,8 +871,8 @@ class TestOpenSearchSimilaritySearchFilterHandling:
                     {
                         "bool": {
                             "should": [
-                                {"match": {"session_id": "s1"}},
-                                {"match": {"metadata.session_id": "s1"}},
+                                {"match_phrase": {"session_id": "s1"}},
+                                {"match_phrase": {"metadata.session_id": "s1"}},
                             ],
                             "minimum_should_match": 1,
                         }

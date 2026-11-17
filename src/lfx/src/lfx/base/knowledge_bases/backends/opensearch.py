@@ -164,19 +164,25 @@ def _without_chunk_id(metadata: dict[str, Any] | None) -> dict[str, Any]:
     return {key: value for key, value in (metadata or {}).items() if key != CHUNK_ID_KEY}
 
 
-def _job_query(job_id: str) -> dict[str, Any]:
-    """Match exactly one job, whichever layout the index stores metadata in."""
-    # Not ``match``: an analyzed UUID splits at its hyphens and ``match`` accepts
-    # any one piece, so a job could pick up another job's chunks.
+def _exact(key: str, value: Any) -> dict[str, Any]:
+    """Match one metadata value as a whole, whichever layout the index stores metadata in."""
+    # Not ``match``: an analyzed value splits into words and ``match`` accepts any
+    # one of them, so job ids sharing a UUID piece, or end users sharing an email
+    # domain, would match each other, and delete_by would remove both.
     return {
         "bool": {
             "should": [
-                {"match_phrase": {METADATA_KEY_JOB_ID: job_id}},
-                {"match_phrase": {f"metadata.{METADATA_KEY_JOB_ID}": job_id}},
+                {"match_phrase": {key: value}},
+                {"match_phrase": {f"metadata.{key}": value}},
             ],
             "minimum_should_match": 1,
         }
     }
+
+
+def _job_query(job_id: str) -> dict[str, Any]:
+    """Match exactly one job."""
+    return _exact(METADATA_KEY_JOB_ID, job_id)
 
 
 def _is_missing_index(exc: Exception) -> bool:
@@ -1076,21 +1082,10 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         populated indexes expose metadata fields at top level, so each key
         matches either shape via a ``should``. Used by both the retrieval filter
         (``similarity_search``) and the rollback path (``delete_by``) so the two
-        can never drift on this translation.
+        can never drift on this translation. Each value matches as a whole
+        (``_exact``), as ``$eq`` does.
         """
-        must = [
-            {
-                "bool": {
-                    "should": [
-                        {"match": {key: value}},
-                        {"match": {f"metadata.{key}": value}},
-                    ],
-                    "minimum_should_match": 1,
-                }
-            }
-            for key, value in where.items()
-        ]
-        return {"bool": {"must": must}}
+        return {"bool": {"must": [_exact(key, value) for key, value in where.items()]}}
 
     async def delete_by(self, where: dict[str, Any]) -> None:
         """Delete documents via ``delete_by_query``.
