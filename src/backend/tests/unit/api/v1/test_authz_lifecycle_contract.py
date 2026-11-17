@@ -70,9 +70,13 @@ async def test_user_create_stages_default_folder_and_identity_in_one_transaction
     auth_settings = SimpleNamespace(AUTO_LOGIN=False, ENABLE_SIGNUP=True, NEW_USER_IS_ACTIVE=True)
     seen_contexts = []
 
-    async def capture_user_admission(_session, **kwargs):
+    async def capture_lock(_authorization_service, _session, **kwargs):
         events.append("lock")
-        seen_contexts.append(SimpleNamespace(extra={"is_active": kwargs["candidate"].is_active}))
+        service.lock_requests.append(kwargs)
+
+    async def capture_hooks(context):
+        events.append("hook")
+        seen_contexts.append(context)
 
     monkeypatch.setattr(users, "get_settings_service", lambda: SimpleNamespace(auth_settings=auth_settings))
     monkeypatch.setattr(
@@ -83,7 +87,8 @@ async def test_user_create_stages_default_folder_and_identity_in_one_transaction
     monkeypatch.setattr(users, "get_or_create_default_folder", create_default_folder)
     monkeypatch.setattr(users, "get_authorization_service", lambda: service)
     monkeypatch.setattr(users, "stage_audit_decision", stage_audit)
-    monkeypatch.setattr(users, "admit_user_creation", capture_user_admission)
+    monkeypatch.setattr("langflow.services.auth.user_admission.acquire_identity_mutation_lock", capture_lock)
+    monkeypatch.setattr("langflow.services.auth.user_admission.run_pre_creation_hooks", capture_hooks)
 
     created = await users.add_user(
         user=UserCreate(username="new-user", password="not-a-real-password"),  # noqa: S106
@@ -92,8 +97,10 @@ async def test_user_create_stages_default_folder_and_identity_in_one_transaction
         response=Response(),
     )
 
-    assert events == ["lock", "mutate", "flush", "folder", "stage", "audit", "commit", "committed"]
+    assert events == ["lock", "hook", "mutate", "flush", "folder", "stage", "audit", "commit", "committed"]
     assert service.staged == service.committed
+    assert service.lock_requests[0]["kind"] is AuthorizationMutationKind.USER_CREATED
+    assert service.lock_requests[0]["entity_id"] == created.id
     mutation = service.staged[0]
     assert mutation.kind is AuthorizationMutationKind.USER_CREATED
     assert mutation.entity_id == created.id

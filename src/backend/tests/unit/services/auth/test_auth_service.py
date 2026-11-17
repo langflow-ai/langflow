@@ -1332,6 +1332,25 @@ async def test_create_super_user_uses_active_user_admission(auth_service: AuthSe
 
 
 @pytest.mark.anyio
+async def test_create_super_user_reraises_unexpected_admission_failure(auth_service: AuthService):
+    """An unexpected admission failure must not return an unpersisted superuser."""
+    admission_failure = RuntimeError("identity lock unavailable")
+    admission = AsyncMock(side_effect=admission_failure)
+    session = AsyncMock()
+
+    with (
+        patch("langflow.services.auth.service.get_user_by_username", new=AsyncMock(return_value=None)),
+        patch("langflow.services.auth.service.admit_user_creation", new=admission),
+        pytest.raises(RuntimeError, match="identity lock unavailable"),
+    ):
+        await auth_service.create_super_user("new-admin", "not-a-real-password", session)
+
+    session.rollback.assert_awaited_once()
+    session.add.assert_not_called()
+    session.commit.assert_not_awaited()
+
+
+@pytest.mark.anyio
 async def test_materialize_external_user_falls_back_when_username_differs_only_in_case(
     auth_service: AuthService,
     auth_settings: AuthSettings,

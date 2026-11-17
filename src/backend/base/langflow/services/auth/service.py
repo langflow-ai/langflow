@@ -1546,8 +1546,10 @@ class AuthService(BaseAuthService):
                 super_user = await get_user_by_username(db, username)
                 if not super_user:
                     raise
-            except Exception:  # noqa: BLE001
+            except Exception:
+                await db.rollback()
                 logger.debug("Error creating superuser.", exc_info=True)
+                raise
 
         return super_user
 
