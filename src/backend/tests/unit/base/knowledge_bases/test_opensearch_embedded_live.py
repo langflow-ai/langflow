@@ -217,7 +217,11 @@ async def test_rolling_back_one_job_leaves_a_job_sharing_uuid_pieces(tmp_path: P
 
 
 async def test_erasing_one_end_user_leaves_another_at_the_same_domain(tmp_path: Path) -> None:
-    """Erasing alice@acme.com deleted bob@acme.com's chunks too: both carry the word acme.com."""
+    """Erasing alice@acme.com must leave every other end user's chunks.
+
+    ``match`` also took bob@acme.com (the same domain word), and ``match_phrase`` still took
+    tag+alice@acme.com (the same words in order).
+    """
     _require_live_opensearch()
     backend = create_backend(
         "opensearch",
@@ -226,7 +230,7 @@ async def test_erasing_one_end_user_leaves_another_at_the_same_domain(tmp_path: 
         backend_config={"url_variable": "OPENSEARCH_URL"},
         user_id=uuid.uuid4(),
     )
-    users = ["alice@acme.com", "bob@acme.com"]
+    users = ["alice@acme.com", "bob@acme.com", "tag+alice@acme.com", "x alice@acme.com", "Alice@acme.com"]
     try:
         await backend.ensure_ready()
         await backend.add_embedded_documents(
@@ -244,7 +248,7 @@ async def test_erasing_one_end_user_leaves_another_at_the_same_domain(tmp_path: 
         backend._os_client.indices.refresh(index=backend._os_index)
 
         left = [doc.id async for batch in backend.iter_documents(batch_size=50) for doc in batch]
-        assert sorted(left) == ["bob@acme.com-0", "bob@acme.com-1"]
+        assert sorted(left) == sorted(f"{user}-{i}" for user in users[1:] for i in range(2))
     finally:
         await backend.delete_collection()
         await backend.teardown()

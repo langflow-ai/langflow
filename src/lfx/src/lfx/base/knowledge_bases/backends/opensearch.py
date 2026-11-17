@@ -164,20 +164,25 @@ def _without_chunk_id(metadata: dict[str, Any] | None) -> dict[str, Any]:
     return {key: value for key, value in (metadata or {}).items() if key != CHUNK_ID_KEY}
 
 
+#: Dynamic mapping keeps a string's keyword copy only up to this many characters.
+KEYWORD_IGNORE_ABOVE = 256
+
+
 def _exact(key: str, value: Any) -> dict[str, Any]:
     """Match one metadata value as a whole, whichever layout the index stores metadata in."""
-    # Not ``match``: an analyzed value splits into words and ``match`` accepts any
-    # one of them, so job ids sharing a UUID piece, or end users sharing an email
-    # domain, would match each other, and delete_by would remove both.
-    return {
-        "bool": {
-            "should": [
-                {"match_phrase": {key: value}},
-                {"match_phrase": {f"metadata.{key}": value}},
-            ],
-            "minimum_should_match": 1,
-        }
-    }
+    # Not ``match`` or ``match_phrase``: both read the analyzed text, so erasing end user
+    # ``alice@acme.com`` also hit ``bob@acme.com`` (match) or ``tag+alice@acme.com``
+    # (match_phrase). A ``term`` on the keyword copy compares the whole stored string.
+    if isinstance(value, str):
+        if len(value) > KEYWORD_IGNORE_ABOVE:
+            # shortcut: the keyword copy skips longer strings, so a term would match nothing
+            # and delete_by would silently keep them; refuse until such a value is real.
+            msg = f"OpenSearch cannot match a '{key}' value longer than {KEYWORD_IGNORE_ABOVE} characters exactly"
+            raise ValueError(msg)
+        fields = (f"{key}.keyword", f"metadata.{key}.keyword")
+    else:
+        fields = (key, f"metadata.{key}")  # numbers and booleans are mapped as exact values already
+    return {"bool": {"should": [{"term": {field: value}} for field in fields], "minimum_should_match": 1}}
 
 
 def _job_query(job_id: str) -> dict[str, Any]:

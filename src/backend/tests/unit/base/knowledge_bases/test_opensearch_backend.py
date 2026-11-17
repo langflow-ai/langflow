@@ -871,8 +871,8 @@ class TestOpenSearchSimilaritySearchFilterHandling:
                     {
                         "bool": {
                             "should": [
-                                {"match_phrase": {"session_id": "s1"}},
-                                {"match_phrase": {"metadata.session_id": "s1"}},
+                                {"term": {"session_id.keyword": "s1"}},
+                                {"term": {"metadata.session_id.keyword": "s1"}},
                             ],
                             "minimum_should_match": 1,
                         }
@@ -883,6 +883,16 @@ class TestOpenSearchSimilaritySearchFilterHandling:
         # The retrieval filter and the delete rollback path must produce the
         # exact same translation so they can never drift.
         assert forwarded == backend._translate_where({"session_id": "s1"})
+
+    def test_a_filter_matches_numbers_exactly_and_refuses_strings_the_keyword_copy_skips(self) -> None:
+        from lfx.base.knowledge_bases.backends.opensearch import KEYWORD_IGNORE_ABOVE, OpenSearchBackend
+
+        assert OpenSearchBackend._translate_where({"page": 3})["bool"]["must"][0]["bool"]["should"] == [
+            {"term": {"page": 3}},
+            {"term": {"metadata.page": 3}},
+        ]
+        with pytest.raises(ValueError, match="longer than"):
+            OpenSearchBackend._translate_where({"end_user_id": "u" * (KEYWORD_IGNORE_ABOVE + 1)})
 
     @pytest.mark.asyncio
     async def test_with_scores_routes_to_score_method_and_drops_none_filter(self, tmp_path: Path) -> None:
