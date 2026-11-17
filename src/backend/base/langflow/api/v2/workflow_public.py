@@ -61,6 +61,7 @@ from langflow.api.utils.flow_utils import (
     validate_public_files,
     verify_public_flow_and_get_user,
 )
+from langflow.api.v1.run_validation import flow_requires_hitl
 from langflow.services.auth.utils import get_current_user_optional
 from langflow.services.authorization.public_access import (
     PUBLIC_FLOW_NOT_FOUND_DETAIL,
@@ -70,6 +71,11 @@ from langflow.services.authorization.public_access import (
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, session_scope
+
+PUBLIC_HITL_UNSUPPORTED_DETAIL = (
+    "This flow uses Human-in-the-Loop (a Human Input node or a tool that requires approval), which "
+    "the public workflow endpoint cannot execute because it cannot pause and resume."
+)
 
 router = APIRouter(prefix="/workflows/public", tags=["Workflow (public)"], include_in_schema=False)
 
@@ -187,6 +193,10 @@ async def execute_public_workflow(
             if flow.data is None:
                 msg = "Public flow has no executable data"
                 raise ValueError(msg)
+            # Stream-only and not resumable by a visitor, so a Human Input would run
+            # every branch before anyone decides.
+            if flow_requires_hitl(flow.data):
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=PUBLIC_HITL_UNSUPPORTED_DETAIL)
 
             # The default public path sanitizes code directly and must not apply the global
             # stored-code hash gate first: that would reject drifted built-ins before their code
