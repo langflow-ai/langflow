@@ -115,6 +115,18 @@ describe("SIDEBAR_BUNDLES", () => {
     );
   });
 
+  it("classifies Mnemoverse as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "Mnemoverse",
+          icon: "Mnemoverse",
+          name: "mnemoverse",
+        }),
+      ]),
+    );
+  });
+
   it("classifies Olostep as a sidebar bundle", () => {
     expect(SIDEBAR_BUNDLES).toEqual(
       expect.arrayContaining([

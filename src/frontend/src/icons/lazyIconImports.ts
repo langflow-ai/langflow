@@ -379,6 +379,10 @@ export const lazyIconsMapping = {
     import("@/icons/Missive").then((mod) => ({ default: mod.MissiveIcon })),
   Mistral: () =>
     import("@/icons/mistral").then((mod) => ({ default: mod.MistralIcon })),
+  Mnemoverse: () =>
+    import("@/icons/Mnemoverse").then((mod) => ({
+      default: mod.MnemoverseIcon,
+    })),
   MongoDB: () =>
     import("@/icons/MongoDB").then((mod) => ({ default: mod.MongoDBIcon })),
   Mrscraper: () =>
