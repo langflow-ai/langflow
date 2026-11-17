@@ -137,7 +137,7 @@ async def run_replacement_hooks(context: ReplacementContext) -> None:
 
 
 async def run_replacement_committed_hooks(context: ReplacementCommittedContext) -> None:
-    """Await every committed hook in registration order; see the module docstring for failure handling."""
+    """Run committed hooks in order until one fails. A receipt replay starts again with the first hook."""
     for hook in registered_replacement_committed_hooks():
         try:
             await hook(context)

@@ -684,9 +684,19 @@ class KnowledgeComponent(Component):
                     backend_config=backend_config,
                 )
 
-            build_config["knowledge_base"]["options"] = await get_knowledge_bases(user_id=self.user_id)
-            if build_config["knowledge_base"]["value"] not in build_config["knowledge_base"]["options"]:
-                build_config["knowledge_base"]["value"] = None
+            picker = build_config["knowledge_base"]
+            options = await get_knowledge_bases(user_id=self.user_id)
+            selected = picker["value"]
+            if selected and selected not in options:
+                from langflow.api.utils.knowledge_base_service import get_shared_for_run
+
+                mode = build_config.get("mode", {}).get("value")
+                action = "read" if _is_retrieve_mode(mode) else "ingest"
+                if await get_shared_for_run(current_user.id, selected, action) is not None:
+                    options = [*options, selected]
+                else:
+                    picker["value"] = None
+            picker["options"] = options
 
         # Honor the current mode regardless of which field triggered the refresh.
         return self._apply_mode_visibility(build_config, field_name, field_value)

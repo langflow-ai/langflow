@@ -112,6 +112,29 @@ class TestKnowledgeComponentShape:
         assert not KnowledgeComponent().is_valid_collection_name(name)
 
 
+@pytest.mark.parametrize(("mode", "action"), [(MODE_RETRIEVE, "read"), (MODE_INGEST, "ingest")])
+async def test_picker_refresh_preserves_only_an_authorized_shared_selection(active_user, mode, action):
+    from langflow.api.utils import knowledge_base_service
+    from lfx.components.files_and_knowledge import knowledge
+
+    component = KnowledgeComponent()
+    component._user_id = str(active_user.id)
+    config = _build_config_from_inputs(component)
+    config["mode"]["value"] = mode
+    config["knowledge_base"]["value"] = "shared"
+    with (
+        patch.object(knowledge, "get_knowledge_bases", AsyncMock(return_value=["owned"])),
+        patch.object(knowledge_base_service, "get_shared_for_run", AsyncMock(side_effect=[object(), None])) as shared,
+    ):
+        refreshed = await component.update_build_config(config, "shared", "knowledge_base")
+        assert refreshed["knowledge_base"]["value"] == "shared"
+        assert refreshed["knowledge_base"]["options"] == ["owned", "shared"]
+        shared.assert_awaited_once_with(active_user.id, "shared", action)
+        refreshed = await component.update_build_config(refreshed, "shared", "knowledge_base")
+        assert refreshed["knowledge_base"]["value"] is None
+        assert refreshed["knowledge_base"]["options"] == ["owned"]
+
+
 # ---------------------------------------------------------------------------
 # update_build_config — input visibility toggling
 # ---------------------------------------------------------------------------

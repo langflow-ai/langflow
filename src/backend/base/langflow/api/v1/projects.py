@@ -1227,6 +1227,7 @@ async def _replace_project_operation_once(
                 # Nothing was written, but the project lock is still held. Release it before the hooks, which open
                 # their own sessions (SQLite would otherwise refuse their writes). Without hooks nothing changes.
                 await session.commit()
+                mark_committed()
                 await run_replacement_committed_hooks(
                     ReplacementCommittedContext(
                         current_user=current_user,
