@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi import HTTPException, status
 from langflow.services.auth.service import AuthService
-from langflow.services.creation_hooks import ERROR_CODE_HEADER, PreCreationDenied
+from langflow.services.creation_hooks import ERROR_CODE_FEATURE_NOT_IN_TIER, ERROR_CODE_HEADER, PreCreationDenied
 from langflow.services.database.models.user.model import User
 from langflow.services.utils import teardown_superuser
 from lfx.services.settings.constants import (
@@ -363,6 +363,73 @@ async def test_create_super_user_recovers_committed_superuser_after_pre_creation
     assert result.is_active is True
     exact_lookup.assert_awaited_once_with(session, "ADMIN")
     case_insensitive_lookup.assert_awaited_once_with(session, "ADMIN")
+    session.rollback.assert_awaited_once()
+    session.add.assert_not_called()
+    session.commit.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_create_super_user_real_db_recovers_case_variant_after_capacity_denial(
+    auth_service: AuthService,
+    async_session,
+):
+    """The configured-superuser recovery uses the real case-insensitive user query."""
+    existing_user = User(
+        username="admin",
+        password="existing-hash",  # noqa: S106 - test fixture data  # pragma: allowlist secret
+        is_superuser=True,
+        is_active=True,
+    )
+    async_session.add(existing_user)
+    await async_session.commit()
+    denial = PreCreationDenied(
+        "Your plan includes 1 builder.",
+        details={"resource": "builders", "limit": 1, "current": 1, "tier": "essentials"},
+    )
+
+    with patch("langflow.services.auth.service.admit_user_creation", new=AsyncMock(side_effect=denial)):
+        result = await auth_service.create_super_user("ADMIN", "new-password", async_session)
+
+    assert result.id == existing_user.id
+    assert result.username == "admin"
+    assert result.password == "existing-hash"  # noqa: S105 - test fixture data  # pragma: allowlist secret
+    assert result.is_superuser is True
+    assert result.is_active is True
+
+
+@pytest.mark.asyncio
+async def test_create_super_user_preserves_non_capacity_denial_with_committed_superuser(
+    auth_service: AuthService,
+):
+    """A capability denial must not become success just because a winner exists."""
+    existing_user = User(
+        username="admin",
+        password="existing-hash",  # noqa: S106 - test fixture data  # pragma: allowlist secret
+        is_superuser=True,
+        is_active=True,
+    )
+    denial = PreCreationDenied(
+        "Configured superusers are not available on this tier.",
+        error_code=ERROR_CODE_FEATURE_NOT_IN_TIER,
+        details={"feature": "configured_superuser", "tier": "essentials"},
+    )
+    session = AsyncMock()
+    exact_lookup = AsyncMock(return_value=None)
+    case_insensitive_lookup = AsyncMock(return_value=existing_user)
+
+    with (
+        patch("langflow.services.auth.service.get_user_by_username", new=exact_lookup),
+        patch("langflow.services.auth.service.get_user_by_username_case_insensitive", new=case_insensitive_lookup),
+        patch("langflow.services.auth.service.admit_user_creation", new=AsyncMock(side_effect=denial)),
+        pytest.raises(HTTPException) as exc_info,
+    ):
+        await auth_service.create_super_user("ADMIN", "password", session)
+
+    assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
+    assert exc_info.value.detail == denial.to_detail()
+    assert exc_info.value.headers == {ERROR_CODE_HEADER: ERROR_CODE_FEATURE_NOT_IN_TIER}
+    exact_lookup.assert_awaited_once_with(session, "ADMIN")
+    case_insensitive_lookup.assert_not_awaited()
     session.rollback.assert_awaited_once()
     session.add.assert_not_called()
     session.commit.assert_not_awaited()

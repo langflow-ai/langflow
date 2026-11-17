@@ -1064,6 +1064,8 @@ class AuthService(BaseAuthService):
             raise
         except PreCreationDenied as denied:
             await db.rollback()
+            if denied.error_code != ERROR_CODE_TIER_LIMIT_REACHED:
+                raise pre_creation_denied_to_http(denied) from denied
             profile = (await db.exec(profile_stmt)).first()
             if profile is not None:
                 return await refresh_existing_profile(profile)
@@ -1563,6 +1565,8 @@ class AuthService(BaseAuthService):
                 await db.refresh(super_user)
             except PreCreationDenied as denied:
                 await db.rollback()
+                if denied.error_code != ERROR_CODE_TIER_LIMIT_REACHED:
+                    raise pre_creation_denied_to_http(denied) from denied
                 if committed_user := await recover_committed_superuser():
                     return committed_user
                 raise pre_creation_denied_to_http(denied) from denied

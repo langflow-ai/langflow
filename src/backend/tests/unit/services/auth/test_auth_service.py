@@ -1368,6 +1368,65 @@ async def test_materialize_external_user_rechecks_profile_after_concurrent_admis
 
 
 @pytest.mark.anyio
+async def test_materialize_external_user_preserves_non_capacity_denial_with_committed_profile(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+    tmp_path,
+):
+    """A capability denial must not become a successful login when a profile races in."""
+    from langflow.services.auth.external import identity_from_claims
+    from langflow.services.creation_hooks import ERROR_CODE_FEATURE_NOT_IN_TIER, ERROR_CODE_HEADER, PreCreationDenied
+    from langflow.services.database.models.auth import SSOUserProfile
+
+    auth_settings.EXTERNAL_AUTH_ENABLED = True
+    auth_settings.EXTERNAL_AUTH_PROVIDER = "external"
+    identity = identity_from_claims(
+        {"sub": "feature-racing-subject", "email": "feature@example.com", "preferred_username": "feature-racing"},
+        auth_settings,
+    )
+    denial = PreCreationDenied(
+        "External login is not available on this tier.",
+        error_code=ERROR_CODE_FEATURE_NOT_IN_TIER,
+        details={"feature": "external_auth", "required_tiers": ["enterprise"], "tier": "essentials"},
+    )
+    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'jit-denial-recovery.db'}")
+    try:
+        async with engine.begin() as connection:
+            await connection.run_sync(SQLModel.metadata.create_all)
+
+        async def deny_and_commit_winner(_db, **_kwargs):
+            winner = User(
+                username="feature-racing",
+                password="winner-hash",  # noqa: S106 - test fixture data  # pragma: allowlist secret
+                is_active=True,
+            )
+            async with AsyncSession(engine, expire_on_commit=False) as winner_session:
+                winner_session.add(winner)
+                await winner_session.flush()
+                winner_session.add(
+                    SSOUserProfile(
+                        user_id=winner.id,
+                        sso_provider="external",
+                        sso_user_id=identity.subject,
+                        email="winner@example.com",
+                    )
+                )
+                await winner_session.commit()
+            raise denial
+
+        with patch("langflow.services.auth.service.admit_user_creation", new=deny_and_commit_winner):
+            async with AsyncSession(engine, expire_on_commit=False) as db:
+                with pytest.raises(HTTPException) as exc_info:
+                    await auth_service._materialize_external_user(identity, db)
+
+        assert exc_info.value.status_code == 403
+        assert exc_info.value.detail == denial.to_detail()
+        assert exc_info.value.headers == {ERROR_CODE_HEADER: ERROR_CODE_FEATURE_NOT_IN_TIER}
+    finally:
+        await engine.dispose()
+
+
+@pytest.mark.anyio
 async def test_materialize_external_user_rechecks_profile_after_http_admission_denial(
     auth_service: AuthService,
     auth_settings: AuthSettings,
