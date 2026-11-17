@@ -15,6 +15,8 @@ from lfx.log.logger import logger
 from lfx.serialization.serialization import serialize
 
 if TYPE_CHECKING:
+    from lfx.schema.log import OnTokenFunctionType
+
     # Lightweight type stub for log types
     LoggableType = dict | str | int | float | bool | list | None
 
@@ -69,7 +71,8 @@ class EventManager:
             callback_ = partial(callback, manager=self, event_type=event_type)
         self.events[name] = callback_
 
-    def send_event(self, *, event_type: str, data: LoggableType):
+    @staticmethod
+    def _queue_item(event_type: str, data: LoggableType) -> tuple[str, bytes, float]:
         try:
             jsonable_data = jsonable_encoder(data)
         except (ValueError, TypeError) as exc:
@@ -85,9 +88,12 @@ class EventManager:
         json_data = {"event": event_type, "data": jsonable_data}
         event_id = f"{event_type}-{uuid.uuid4()}"
         str_data = json.dumps(json_data) + "\n\n"
+        return event_id, str_data.encode("utf-8"), time.time()
+
+    def send_event(self, *, event_type: str, data: LoggableType):
+        item = self._queue_item(event_type, data)
         if self.queue:
             try:
-                item = (event_id, str_data.encode("utf-8"), time.time())
                 try:
                     asyncio.get_running_loop()
                     in_event_loop = True
@@ -117,13 +123,44 @@ class EventManager:
     def noop(self, *, data: LoggableType) -> None:
         pass
 
+    async def put_token(self, data: dict) -> None:
+        """Wait for space on the queue's owning loop."""
+        if self.queue is None:
+            return
+        pending = self.queue.put(self._queue_item("token", data))
+        if self._loop is None or self._loop is asyncio.get_running_loop():
+            await pending
+        else:
+            await asyncio.wrap_future(asyncio.run_coroutine_threadsafe(pending, self._loop))
+
     def __getattr__(self, name: str) -> PartialEventCallback:
         return self.events.get(name, self.noop)
 
 
-def create_default_event_manager(queue=None):
+class _QueuedTokenCallback:
+    """Offer async producers backpressure while retaining the synchronous callback API."""
+
+    def __init__(self, manager: EventManager) -> None:
+        self.manager = manager
+
+    def __call__(self, data: LoggableType) -> None:
+        self.manager.send_event(event_type="token", data=data)
+
+
+async def emit_token(callback: OnTokenFunctionType | PartialEventCallback, *, data: dict) -> None:
+    """Wait for background queue space or run the component's synchronous callback off-loop."""
+    if isinstance(callback, _QueuedTokenCallback):
+        await callback.manager.put_token(data)
+    else:
+        await asyncio.to_thread(callback, data=data)
+
+
+def create_default_event_manager(queue=None, *, await_token_capacity: bool = False):
     manager = EventManager(queue)
-    manager.register_event("on_token", "token")
+    if await_token_capacity:
+        manager.events["on_token"] = _QueuedTokenCallback(manager)
+    else:
+        manager.register_event("on_token", "token")
     manager.register_event("on_vertices_sorted", "vertices_sorted")
     manager.register_event("on_error", "error")
     manager.register_event("on_end", "end")

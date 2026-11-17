@@ -36,6 +36,7 @@ _AGUI_DURABLE_EVENTS: frozenset[str] = frozenset(
         "TOOL_CALL_START",
         "TOOL_CALL_ARGS",
         "TOOL_CALL_END",
+        "TOOL_CALL_RESULT",
         "STATE_SNAPSHOT",
         "STATE_DELTA",
         "CUSTOM",
