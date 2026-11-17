@@ -298,7 +298,10 @@ class APIRequestComponent(Component):
                     json_data = json.loads(parsed.data)
                     if isinstance(json_data, dict):
                         body_list = [
-                            {"key": k, "value": json.dumps(v) if isinstance(v, dict | list) else str(v)}
+                            {
+                                "key": k,
+                                "value": json.dumps(v) if v is None or isinstance(v, dict | list | bool) else str(v),
+                            }
                             for k, v in json_data.items()
                         ]
                         build_config["body"]["value"] = body_list
