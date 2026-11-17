@@ -31,6 +31,7 @@ from lfx.custom.annotation_validation import (
 )
 from lfx.custom.custom_component.input_names import ensure_inputs_not_shadowed_by_methods
 from lfx.custom.tree_visitor import RequiredInputsVisitor
+from lfx.events.event_manager import emit_token
 from lfx.exceptions.component import StreamingError
 from lfx.field_typing import Tool  # noqa: TC001
 
@@ -2551,7 +2552,7 @@ class Component(CustomComponent):
                 msg_copy.text = complete_message
                 msg_copy.properties.state = "partial"
                 await self._send_message_event(msg_copy, id_=message_id)
-            await asyncio.to_thread(
+            await emit_token(
                 self._event_manager.on_token,
                 data={
                     "chunk": chunk,
