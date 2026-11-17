@@ -63,6 +63,30 @@ def test_rejects_embedded_sql_execution_modules(module, source):
 @pytest.mark.parametrize(
     "source",
     [
+        "import logging.config",
+        "import logging.config as config",
+        "from logging.config import dictConfig",
+        "from logging import config as log_config",
+        "import logging as log\nconfig = log.config",
+        "import logging\nconfig = getattr(logging, 'config')",
+    ],
+)
+def test_rejects_logging_configuration_access(source: str) -> None:
+    result = scan_code_security(source)
+
+    assert not result.is_safe
+    assert any("logging.config" in violation for violation in result.violations)
+
+
+def test_preserves_component_logging() -> None:
+    source = "import logging\nlogger = logging.getLogger(__name__)\nlogger.info('Component finished')"
+
+    assert scan_code_security(source).is_safe
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
         "from sympy import Symbol\nx = Symbol('x')\nresult = x + 1",
         "import sympy as sp\nresult = sp.Symbol('x') + sp.Integer(2)",
         "from jinja2 import select_autoescape\nresult = select_autoescape()",
@@ -104,6 +128,7 @@ def test_rejects_mutable_sandbox_before_rendering_external_template(constructor,
         "from jinja2.sandbox import ImmutableSandboxedEnvironment\nenv = ImmutableSandboxedEnvironment()",
         "import sympy\nresult = sympy.sympify(source)",
         "import duckdb\nresult = duckdb.sql(source)",
+        "import logging.config",
     ],
 )
 async def test_runtime_validation_blocks_sinks_before_component_construction(source, monkeypatch):

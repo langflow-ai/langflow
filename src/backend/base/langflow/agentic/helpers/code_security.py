@@ -164,6 +164,7 @@ DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
     ("os", "environ", "os.environ is forbidden — use Langflow's variable/secret service"),
     ("os", "environb", "os.environb is forbidden. Use Langflow's variable/secret service"),
     ("gc", "garbage", "gc.garbage is forbidden in components (server object recovery)"),
+    ("logging", "config", "logging.config is forbidden in components — use logging.getLogger() for logging"),
     ("os.path", "os", "os.path.os is forbidden in components"),
     ("sys", "modules", "sys.modules is forbidden in components"),
     ("torch.package", "PackageImporter", "torch.package.PackageImporter is forbidden — external code loading"),
@@ -457,6 +458,8 @@ DANGEROUS_SUBMODULES: tuple[str, ...] = (
     "urllib.error",
     "http.client",
     "http.server",
+    # Components can log messages without configuring process-wide logging.
+    "logging.config",
     # NumPy's native-library helpers expose the otherwise blocked ctypes module.
     "numpy.ctypeslib",
     # All useful members of this module are pickle entry points or re-exports
