@@ -26,7 +26,7 @@ def _indexes(connection):
     return {index["name"]: index for index in inspect(connection).get_indexes("transaction")}
 
 
-def test_transaction_index_runner_roundtrip(db_url):  # noqa: F811
+def test_transaction_index_runner_roundtrip(db_url, migration):  # noqa: F811
     cfg = _make_alembic_cfg(db_url)
     command.upgrade(cfg, _PREVIOUS)
     engine = create_engine(_engine_url(db_url))
@@ -45,12 +45,12 @@ def test_transaction_index_runner_roundtrip(db_url):  # noqa: F811
                 },
             )
         for _ in range(2):
-            command.upgrade(cfg, "head")
+            command.upgrade(cfg, migration.revision)
             with engine.connect() as connection:
                 assert _indexes(connection)[_INDEX]["column_names"] == ["flow_id", "timestamp"]
                 assert connection.scalar(text("SELECT count(*) FROM \"transaction\" WHERE vertex_id='witness'")) == 1
             command.stamp(cfg, _PREVIOUS)
-        command.upgrade(cfg, "head")
+        command.upgrade(cfg, migration.revision)
         command.downgrade(cfg, _PREVIOUS)
         with engine.connect() as connection:
             assert _INDEX not in _indexes(connection)
@@ -219,7 +219,7 @@ def test_postgres_real_interruption_and_active_refusal(db_url, migration):  # no
 
     def build():
         try:
-            command.upgrade(worker_cfg, "head")
+            command.upgrade(worker_cfg, migration.revision)
         except Exception as exc:
             errors.append(exc)
 
