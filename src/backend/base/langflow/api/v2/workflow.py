@@ -109,8 +109,10 @@ from langflow.services.deps import (
     session_scope,
 )
 from langflow.services.jobs.exceptions import DuplicateJobError
+from langflow.services.triggers.constants import PINNED_TRIGGER_CANVAS, TRIGGER_FAMILIES
 from langflow.services.warm_registry.resolver import resolve_warm_flow_for_execution
 from langflow.utils.constants import LANGFLOW_GLOBAL_VAR_HEADER_PREFIX
+from langflow.utils.flow_secrets import strip_secret_field_values
 
 # Finished states a late /stop must not rewrite (CANCELLED is handled separately
 # with its own idempotent early return).
@@ -616,8 +618,6 @@ def _parse_persisted_workflow_request(request: dict) -> ParsedWorkflowRun:
     user). Legacy rows that predate the fields fall back to persist=True /
     end_user_id=None, matching prior behavior.
     """
-    from langflow.services.triggers.constants import TRIGGER_FAMILIES
-
     # Only trusted server callers can add this internal field: the public
     # WorkflowRunRequest still forbids it. Persist it so workers and resumes
     # retain a trigger's non-interactive connection policy.
@@ -628,6 +628,8 @@ def _parse_persisted_workflow_request(request: dict) -> ParsedWorkflowRun:
     persist_messages = request.get("persist_messages", True)
     end_user_id = request.get("end_user_id")
     request_fields = {k: v for k, v in request.items() if k not in internal}
+    if request.get("execution_family") in TRIGGER_FAMILIES and PINNED_TRIGGER_CANVAS in request_fields:
+        request_fields["data"] = request_fields.pop(PINNED_TRIGGER_CANVAS)
     return replace(
         parse_workflow_run_request(WorkflowRunRequest(**request_fields)),
         persist_messages=persist_messages,
@@ -660,9 +662,21 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive.")
             current_user = UserRead.model_validate(owner, from_attributes=True)
         flow = await resolve_flow_for_execution(str(flow_id), current_user)
+        validation_input = parsed
+        bound_trigger = request.get("execution_family") in TRIGGER_FAMILIES and current_user.id != flow.user_id
+        if bound_trigger:
+            # The dispatcher submits directly, outside the authenticated run route.
+            await authorize_flow_action(current_user, flow, WorkflowAction.EXECUTE)
+            # The dispatcher selected the snapshot and supplied the event. Check
+            # component policy against that snapshot using the job owner's privileges.
+            if parsed.data is not None:
+                flow = flow.model_copy(update={"data": parsed.data})
+            validation_input = replace(parsed, data=strip_secret_field_values(flow.data), tweaks={})
         execution_parsed = _validate_flow_data_for_execution(
-            parsed, flow, current_user, expose_error_details=caller_owns_flow(flow, current_user)
+            validation_input, flow, current_user, expose_error_details=caller_owns_flow(flow, current_user)
         )
+        if bound_trigger:
+            execution_parsed = replace(execution_parsed, tweaks=parsed.tweaks)
         if parsed.component_substitution_warning and not execution_parsed.component_substitution_warning:
             execution_parsed = replace(
                 execution_parsed, component_substitution_warning=parsed.component_substitution_warning

@@ -794,11 +794,7 @@ async def test_an_event_on_one_socket_reaches_every_connection_of_the_same_app(
     await supervisor.reconcile()
     first, second = await slack.wait_for_sockets(2)
 
-    async def _both_recorded() -> bool:
-        states = [(await _trigger(trigger_id)).provider_state for trigger_id in (mine, theirs)]
-        return all(state.get(PROVIDER_STATE_APP_ID) == fx.APP_ID for state in states)
-
-    await _eventually(_both_recorded)
+    await fx.wait_for_socket_app_ids(mine, theirs)
 
     await first.deliver(fx.load("message_channel"), envelope_id="env-a")
     await second.deliver(fx.load("message_im"), envelope_id="env-b")
@@ -869,11 +865,7 @@ async def test_a_trigger_deleted_since_it_was_targeted_is_skipped_not_fatal(
     await supervisor.reconcile()
     first, _second = await slack.wait_for_sockets(2)
 
-    async def _both_recorded() -> bool:
-        states = [(await _trigger(trigger_id)).provider_state for trigger_id in (mine, theirs)]
-        return all(state.get(PROVIDER_STATE_APP_ID) == fx.APP_ID for state in states)
-
-    await _eventually(_both_recorded)
+    await fx.wait_for_socket_app_ids(mine, theirs)
     await first.deliver(fx.load("message_channel"), envelope_id="env-1")
     assert await first.wait_for_ack("env-1")
     async with session_scope() as session:
