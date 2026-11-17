@@ -199,6 +199,10 @@ class PlaceholderGraph(NamedTuple):
 
 
 class Component(CustomComponent):
+    # An explicit promise by each concrete component author, not inherited approval.
+    # Supported components have static dependencies and materialized outputs, do not
+    # mutate graph scheduling/shared branch state, and own/await all their work.
+    supports_dependency_ready_scheduling: ClassVar[bool] = False
     inputs: list[InputTypes] = []
     outputs: list[Output] = []
     selected_output: str | None = None

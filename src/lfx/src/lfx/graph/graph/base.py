@@ -1236,6 +1236,7 @@ class Graph:
         session_id: str,
         fallback_to_env_vars: bool,
         event_manager: EventManager | None = None,
+        dag_max_concurrency: int | None = None,
     ) -> list[ResultData | None]:
         """Runs the graph with the given inputs.
 
@@ -1248,6 +1249,7 @@ class Graph:
             session_id (str): The session ID for the graph.
             fallback_to_env_vars (bool): Whether to fallback to environment variables.
             event_manager (EventManager | None): The event manager for the graph.
+            dag_max_concurrency: Optional positive static-DAG concurrency bound.
 
         Returns:
             List[Optional["ResultData"]]: The outputs of the graph.
@@ -1278,47 +1280,69 @@ class Graph:
         except Exception:  # noqa: BLE001
             logger.exception("Error setting cache")
 
+        from lfx.graph.graph.dag_scheduler import DagRunContext, finalize_dag_run
+
+        context = DagRunContext() if dag_max_concurrency is not None else None
+        run_error = None
         try:
-            # Prioritize the webhook component if it exists
-            start_component_id = find_start_component_id(self._is_input_vertices)
-            await self.process(
-                start_component_id=start_component_id,
-                fallback_to_env_vars=fallback_to_env_vars,
-                event_manager=event_manager,
-            )
-            self.increment_run_count()
-        except (GraphPausedException, asyncio.CancelledError):
-            # Why: a HITL pause/cancel must propagate UNWRAPPED so the job/runner layer suspends the
-            # run instead of finalizing it; wrapping it as ValueError terminalizes the job (LE-1440).
+            try:
+                # Prioritize the webhook component if it exists
+                start_component_id = find_start_component_id(self._is_input_vertices)
+                await self.process(
+                    start_component_id=start_component_id,
+                    fallback_to_env_vars=fallback_to_env_vars,
+                    event_manager=event_manager,
+                    **(
+                        {"dag_max_concurrency": dag_max_concurrency, "_dag_context": context}
+                        if context is not None
+                        else {}
+                    ),
+                )
+                self.increment_run_count()
+            except (GraphPausedException, asyncio.CancelledError):
+                # Why: a HITL pause/cancel must propagate UNWRAPPED so the job/runner layer suspends the
+                # run instead of finalizing it; wrapping it as ValueError terminalizes the job (LE-1440).
+                raise
+            except Exception as exc:
+                if context is None or not context.eligible:
+                    self._end_all_traces_async(error=exc)
+                msg = f"Error running graph: {exc}"
+                raise ValueError(msg) from exc
+
+            if context is None or not context.eligible:
+                self._end_all_traces_async()
+            # Get the outputs
+            vertex_outputs = []
+            for vertex in self.vertices:
+                if not vertex.built:
+                    continue
+                if vertex is None:
+                    msg = f"Vertex {vertex_id} not found"
+                    raise ValueError(msg)
+
+                if (
+                    not vertex.result
+                    and not stream
+                    and vertex.id not in self.checkpoint_restored_built_ids
+                    and hasattr(vertex, "consume_async_generator")
+                ):
+                    # A vertex restored from a checkpoint already consumed its generator in the original
+                    # run; re-consuming here would re-iterate an exhausted/absent iterator and raise.
+                    await vertex.consume_async_generator()
+                if (not outputs and vertex.is_output) or (vertex.display_name in outputs or vertex.id in outputs):
+                    vertex_outputs.append(vertex.result)
+
+            return vertex_outputs  # noqa: TRY300 - finalizer must cover output collection
+        except BaseException as exc:
+            run_error = exc
+            if context is not None and context.eligible:
+                context.latch(exc)
             raise
-        except Exception as exc:
-            self._end_all_traces_async(error=exc)
-            msg = f"Error running graph: {exc}"
-            raise ValueError(msg) from exc
-
-        self._end_all_traces_async()
-        # Get the outputs
-        vertex_outputs = []
-        for vertex in self.vertices:
-            if not vertex.built:
-                continue
-            if vertex is None:
-                msg = f"Vertex {vertex_id} not found"
-                raise ValueError(msg)
-
-            if (
-                not vertex.result
-                and not stream
-                and vertex.id not in self.checkpoint_restored_built_ids
-                and hasattr(vertex, "consume_async_generator")
-            ):
-                # A vertex restored from a checkpoint already consumed its generator in the original
-                # run; re-consuming here would re-iterate an exhausted/absent iterator and raise.
-                await vertex.consume_async_generator()
-            if (not outputs and vertex.is_output) or (vertex.display_name in outputs or vertex.id in outputs):
-                vertex_outputs.append(vertex.result)
-
-        return vertex_outputs
+        finally:
+            if context is not None and context.eligible:
+                await finalize_dag_run(self, context)
+                if run_error is None and context.primary is not None:
+                    raise context.primary
 
     async def arun(
         self,
@@ -1331,11 +1355,28 @@ class Graph:
         stream: bool = False,
         fallback_to_env_vars: bool = False,
         event_manager: EventManager | None = None,
+        dag_max_concurrency: int | None = None,
     ) -> list[RunOutputs]:
         """Runs the graph with the given inputs via the configured executor."""
-        from lfx.execution import aget_default_coordinator
+        from lfx.execution import Coordinator, aget_default_coordinator
+        from lfx.graph.graph.dag_scheduler import validate_dag_max_concurrency
+
+        validate_dag_max_concurrency(dag_max_concurrency)
 
         coordinator = await aget_default_coordinator()
+        dag_options = {}
+        if dag_max_concurrency is not None:
+            if type(self) is Graph and type(coordinator) is Coordinator:
+                dag_options["_dag_max_concurrency"] = dag_max_concurrency
+            else:
+                logger.warning(
+                    "dag_max_concurrency=%s is ignored; falling back to the configured executor. "
+                    "Dependency-ready scheduling requires exact Graph and Coordinator types. "
+                    "Graph type: %s; coordinator type: %s.",
+                    dag_max_concurrency,
+                    type(self).__name__,
+                    type(coordinator).__name__,
+                )
         return await coordinator.run_to_completion(
             self,
             inputs=inputs,
@@ -1347,6 +1388,7 @@ class Graph:
             fallback_to_env_vars=fallback_to_env_vars,
             event_manager=event_manager,
             _use_arun_legacy=True,
+            **dag_options,
         )
 
     async def _arun_legacy(
@@ -1360,6 +1402,7 @@ class Graph:
         stream: bool = False,
         fallback_to_env_vars: bool = False,
         event_manager: EventManager | None = None,
+        dag_max_concurrency: int | None = None,
     ) -> list[RunOutputs]:
         vertex_outputs = []
         if not isinstance(inputs, list):
@@ -1389,6 +1432,7 @@ class Graph:
                     session_id=session_id or "",
                     fallback_to_env_vars=fallback_to_env_vars,
                     event_manager=event_manager,
+                    **({"dag_max_concurrency": dag_max_concurrency} if dag_max_concurrency is not None else {}),
                 )
                 run_output_object = RunOutputs(inputs=run_inputs, outputs=run_outputs)
                 await logger.adebug(f"Run outputs: {run_output_object}")
@@ -2597,8 +2641,21 @@ class Graph:
         fallback_to_env_vars: bool,
         start_component_id: str | None = None,
         event_manager: EventManager | None = None,
+        dag_max_concurrency: int | None = None,
+        _dag_context=None,
     ) -> Graph:
         """Processes the graph with vertices in each layer run in parallel."""
+        from lfx.graph.graph.dag_scheduler import (
+            DagRunContext,
+            execute_dependency_ready,
+            finalize_dag_run,
+            inspect_dag_candidate,
+            select_dag_candidate,
+            validate_dag_max_concurrency,
+        )
+
+        validate_dag_max_concurrency(dag_max_concurrency)
+        candidate = inspect_dag_candidate(self) if dag_max_concurrency is not None else "default path"
         has_webhook_component = "webhook" in start_component_id.lower() if start_component_id else False
         if self.resumed_from_checkpoint:
             # A full re-sort would reset the restored run state and re-queue built vertices.
@@ -2621,6 +2678,37 @@ class Graph:
 
             async def set_cache_func(*args, **kwargs) -> bool:  # noqa: ARG001
                 return True
+
+        selection = select_dag_candidate(self, candidate, first_layer) if not isinstance(candidate, str) else candidate
+        if not isinstance(selection, str):
+            context = _dag_context if _dag_context is not None else DagRunContext()
+            context.eligible = True
+            try:
+                context.initialization_attempted = True
+                await self.initialize_run()
+                await execute_dependency_ready(
+                    self,
+                    selection,
+                    max_concurrency=dag_max_concurrency,
+                    build_kwargs={
+                        "user_id": self.user_id,
+                        "inputs_dict": {},
+                        "fallback_to_env_vars": fallback_to_env_vars,
+                        "get_cache": get_cache_func,
+                        "set_cache": set_cache_func,
+                        "event_manager": event_manager,
+                        "has_webhook_component": has_webhook_component,
+                    },
+                    context=context,
+                )
+            except BaseException as exc:  # noqa: BLE001 - drain/finalize every terminal outcome
+                context.latch(exc)
+            finally:
+                if _dag_context is None:
+                    await finalize_dag_run(self, context)
+            if context.primary is not None:
+                raise context.primary
+            return self
 
         await self.initialize_run()
         lock = asyncio.Lock()
@@ -2755,6 +2843,34 @@ class Graph:
             job_id=self._run_id if self._run_id else None,
         )
 
+    async def _record_vertex_build_result(self, result: VertexBuildResult) -> None:
+        if self.flow_id is not None and self.persist_messages:
+            await log_vertex_build(
+                flow_id=self.flow_id,
+                vertex_id=result.vertex.id,
+                valid=result.valid,
+                params=result.params,
+                data=result.result_dict,
+                artifacts=result.artifacts,
+                job_id=self._run_id if self._run_id else None,
+            )
+
+    async def _emit_vertex_build_result(self, result: VertexBuildResult, next_vertices_ids: list[str]) -> None:
+        from lfx.graph.utils import emit_vertex_build_event
+
+        if self.flow_id is not None:
+            await emit_vertex_build_event(
+                flow_id=self.flow_id,
+                vertex_id=result.vertex.id,
+                valid=result.valid,
+                params=result.params,
+                data_dict=result.result_dict,
+                artifacts_dict=result.artifacts,
+                next_vertices_ids=next_vertices_ids,
+                top_level_vertices=self.get_top_level_vertices(next_vertices_ids),
+                inactivated_vertices=list(self.inactivated_vertices.union(self.conditionally_excluded_vertices)),
+            )
+
     async def _execute_tasks(
         self, tasks: list[asyncio.Task], lock: asyncio.Lock, *, has_webhook_component: bool = False
     ) -> list[str]:
@@ -2765,8 +2881,6 @@ class Graph:
             lock: Async lock for synchronization
             has_webhook_component: Whether the graph has a webhook component
         """
-        from lfx.graph.utils import emit_vertex_build_event
-
         results = []
         completed_tasks = await asyncio.gather(*tasks, return_exceptions=True)
         vertices: list[Vertex] = []
@@ -2787,21 +2901,8 @@ class Graph:
                     t.cancel()
                 raise result
             if isinstance(result, VertexBuildResult):
+                await self._record_vertex_build_result(result)
                 if self.flow_id is not None:
-                    # Ephemeral (anonymous serving) runs skip the persisted build
-                    # record — vertex-build rows retain params/outputs — but still
-                    # register the result so live SSE emission is unaffected.
-                    if self.persist_messages:
-                        await log_vertex_build(
-                            flow_id=self.flow_id,
-                            vertex_id=result.vertex.id,
-                            valid=result.valid,
-                            params=result.params,
-                            data=result.result_dict,
-                            artifacts=result.artifacts,
-                            job_id=self._run_id if self._run_id else None,
-                        )
-                    # Store for SSE emission later
                     build_results[result.vertex.id] = result
 
                 vertices.append(result.vertex)
@@ -2823,23 +2924,7 @@ class Graph:
 
             # Emit SSE event with complete data including next_vertices_ids
             if self.flow_id is not None and v.id in build_results:
-                build_result = build_results[v.id]
-                # Get top level vertices for these next runnable vertices
-                top_level = self.get_top_level_vertices(next_runnable_vertices)
-                # Get inactivated vertices
-                inactivated = list(self.inactivated_vertices.union(self.conditionally_excluded_vertices))
-
-                await emit_vertex_build_event(
-                    flow_id=self.flow_id,
-                    vertex_id=v.id,
-                    valid=build_result.valid,
-                    params=build_result.params,
-                    data_dict=build_result.result_dict,
-                    artifacts_dict=build_result.artifacts,
-                    next_vertices_ids=next_runnable_vertices,
-                    top_level_vertices=top_level,
-                    inactivated_vertices=inactivated,
-                )
+                await self._emit_vertex_build_result(build_results[v.id], next_runnable_vertices)
 
         return list(set(results))
 
