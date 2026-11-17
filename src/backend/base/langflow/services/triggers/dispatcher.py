@@ -35,7 +35,7 @@ from lfx.integrations.errors import (
     ProviderUnavailableError,
 )
 from lfx.log.logger import logger
-from sqlmodel import col, func, select, update
+from sqlmodel import and_, col, func, or_, select, update
 
 from langflow.api.utils.migration_pause import async_writing, writes_paused
 from langflow.services.database.models.trigger.model import Trigger, TriggerEvent, TriggerSubscription
@@ -435,8 +435,7 @@ def build_submit_request(
 
     ``data`` carries a pinned version's canvas. It is the same override the v2
     route accepts from a flow writer; here it is server-generated from a version
-    of the trigger's own flow, and the run executes as that flow's owner. It is
-    sent only for a pinned trigger — an unpinned run builds from the saved flow,
+    of the trigger's own flow. Only pinned triggers send it. An unpinned run builds from the saved flow,
     so copying the canvas onto every event would bloat each job row for nothing.
     """
     tweaks: dict[str, Any] = {}
@@ -482,10 +481,13 @@ async def _recover_submitted_job(session: AsyncSession, *, trigger: Trigger, eve
             select(Job)
             .where(
                 Job.flow_id == trigger.flow_id,
-                Job.user_id == trigger.user_id,
                 Job.type == JobType.WORKFLOW,
-                # Also recover claims made by the pre-fix dispatcher.
-                col(Job.dedupe_key).in_([f"trg:{event.id}", f"trg:{event.id}:{event.attempt}"]),
+                or_(
+                    # The server-assigned job id survives a change to the deployment binding.
+                    and_(Job.job_id == _event_job_id(event), Job.dedupe_key == f"trg:{event.id}"),
+                    # Older dispatchers used random job ids and owner-scoped attempt keys.
+                    and_(Job.user_id == trigger.user_id, Job.dedupe_key == f"trg:{event.id}:{event.attempt}"),
+                ),
             )
             .order_by(col(Job.created_timestamp))
             .limit(1)
@@ -502,6 +504,10 @@ async def _recover_submitted_job(session: AsyncSession, *, trigger: Trigger, eve
         session_id=request.get("session_id") or derive_session_id(trigger, event),
     )
     return True
+
+
+def _event_job_id(event: TriggerEvent) -> UUID:
+    return uuid5(NAMESPACE_URL, f"langflow:trigger-event:{event.id}")
 
 
 async def _fence_event(session: AsyncSession, event: TriggerEvent) -> None:
@@ -533,7 +539,7 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
     ``trigger_listener``.
     """
     from langflow.services.database.models.user.model import User, UserRead
-    from langflow.services.deps import get_background_execution_service
+    from langflow.services.deps import get_background_execution_service, get_trigger_service
 
     trigger = await session.get(Trigger, event.trigger_id)
     if trigger is None:  # pragma: no cover - FK cascade makes this unreachable
@@ -717,6 +723,27 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
         await logger.awarning("Trigger %s cannot run unattended. Connection failure %s", trigger.id, error)
         return
 
+    try:
+        # A failed database lookup must leave the outer transaction able to schedule a retry.
+        async with session.begin_nested():
+            run_user_id = await get_trigger_service().resolve_run_user_id(
+                session, flow_id=trigger.flow_id, trigger_owner_id=trigger.user_id
+            )
+            run_user = await session.get(User, run_user_id) if run_user_id is not None else None
+    except Exception as exc:  # noqa: BLE001 - a failed binding lookup can be retried
+        await _fence_event(session, event)
+        await _schedule_retry(
+            session,
+            event=event,
+            max_attempts=trigger.max_attempts,
+            error=f"run_user_lookup_failed:{type(exc).__name__}",
+        )
+        return
+    if run_user is None or not run_user.is_active:
+        await _fence_event(session, event)
+        await _terminalize(session, event=event, state=TriggerEventState.FAILED, error="run_user_unavailable")
+        return
+
     # Only a canonical delivery that survived provider filtering may reserve a
     # run quota. Reconciliation hints and no-run deliveries never invoke it.
     try:
@@ -732,10 +759,10 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
         job_id = await get_background_execution_service().submit(
             flow_id=trigger.flow_id,
             request=request,
-            user=UserRead.model_construct(id=trigger.user_id),
+            user=UserRead.model_construct(id=run_user.id),
             # A primary-key constraint prevents two expired-lease holders from
             # inserting separate jobs even when their dedupe lookups race.
-            job_id=uuid5(NAMESPACE_URL, f"langflow:trigger-event:{event.id}"),
+            job_id=_event_job_id(event),
         )
     except Exception as exc:  # noqa: BLE001 — every submit failure is retryable work, not a crash
         await _fence_event(session, event)

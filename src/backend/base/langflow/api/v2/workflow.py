@@ -109,6 +109,7 @@ from langflow.services.deps import (
     session_scope,
 )
 from langflow.services.jobs.exceptions import DuplicateJobError
+from langflow.services.triggers.constants import TRIGGER_FAMILIES
 from langflow.services.warm_registry.resolver import resolve_warm_flow_for_execution
 from langflow.utils.constants import LANGFLOW_GLOBAL_VAR_HEADER_PREFIX
 
@@ -616,8 +617,6 @@ def _parse_persisted_workflow_request(request: dict) -> ParsedWorkflowRun:
     user). Legacy rows that predate the fields fall back to persist=True /
     end_user_id=None, matching prior behavior.
     """
-    from langflow.services.triggers.constants import TRIGGER_FAMILIES
-
     # Only trusted server callers can add this internal field: the public
     # WorkflowRunRequest still forbids it. Persist it so workers and resumes
     # retain a trigger's non-interactive connection policy.
@@ -660,6 +659,9 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive.")
             current_user = UserRead.model_validate(owner, from_attributes=True)
         flow = await resolve_flow_for_execution(str(flow_id), current_user)
+        if request.get("execution_family") in TRIGGER_FAMILIES and current_user.id != flow.user_id:
+            # The dispatcher submits directly, outside the authenticated run route.
+            await authorize_flow_action(current_user, flow, WorkflowAction.EXECUTE)
         execution_parsed = _validate_flow_data_for_execution(
             parsed, flow, current_user, expose_error_details=caller_owns_flow(flow, current_user)
         )

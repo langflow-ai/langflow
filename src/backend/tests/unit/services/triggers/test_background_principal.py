@@ -19,15 +19,17 @@ pytestmark = pytest.mark.no_blockbuster
 
 @pytest.mark.parametrize("family", ["trigger_push", "trigger_listener"])
 @pytest.mark.parametrize("resume", [None, {"checkpoint_id": "resume"}])
-async def test_trigger_background_connection_principal_stays_non_interactive(monkeypatch, family, resume):
+@pytest.mark.parametrize("account", ["owner", "bound", "denied"])
+async def test_trigger_background_connection_principal_stays_non_interactive(monkeypatch, family, resume, account):
     owner_id, flow_id = uuid4(), uuid4()
+    run_user_id = owner_id if account == "owner" else uuid4()
     trigger = Trigger(flow_id=flow_id, user_id=owner_id, name="Trigger", kind="schedule")
     event = TriggerEvent(trigger_id=trigger.id, dedupe_key="tick")
     request = build_submit_request(trigger=trigger, event=event, binding_data=None, family=family)
-    user = SimpleNamespace(id=owner_id)
+    user = SimpleNamespace(id=run_user_id)
     flow = SimpleNamespace(id=flow_id, user_id=owner_id, name="Flow", data={"nodes": [], "edges": []})
     hydrated_user = User(
-        id=owner_id,
+        id=run_user_id,
         username="trigger-test-owner",
         password="not-a-login",  # noqa: S106  # pragma: allowlist secret
         is_active=True,
@@ -41,6 +43,8 @@ async def test_trigger_background_connection_principal_stays_non_interactive(mon
     monkeypatch.setattr(workflow, "session_scope", fake_session)
     monkeypatch.setattr(workflow, "get_user_by_id", AsyncMock(return_value=hydrated_user))
     monkeypatch.setattr(workflow, "resolve_flow_for_execution", AsyncMock(return_value=flow))
+    authorize = AsyncMock()
+    monkeypatch.setattr(workflow, "authorize_flow_action", authorize)
     seen = []
 
     async def stream(**kwargs):
@@ -56,11 +60,23 @@ async def test_trigger_background_connection_principal_stays_non_interactive(mon
     source = workflow._default_frame_source_factory(
         request=request, flow_id=flow_id, user=user, adapter=SimpleNamespace(terminal_error_type="error")
     )
+    if account == "denied":
+        authorize.side_effect = workflow.HTTPException(status_code=403)
+        with pytest.raises(workflow.HTTPException) as refusal:
+            await anext(source(job_id=uuid4(), resume=resume))
+        assert refusal.value.status_code == 403
+        assert seen == []
+        return
     assert [frame async for frame in source(job_id=uuid4(), resume=resume)] == [(b"error", "error")]
     assert len(seen) == 1
     assert seen[0].family == family
-    assert seen[0].kind == "flow_owner"
-    assert seen[0].user_id == str(owner_id)
+    if account == "bound":
+        checked_user, checked_flow, action = authorize.await_args.args
+        assert (checked_user.id, checked_flow.id, action) == (run_user_id, flow_id, workflow.WorkflowAction.EXECUTE)
+    else:
+        authorize.assert_not_awaited()
+    assert seen[0].kind == "job_owner"
+    assert seen[0].user_id == str(run_user_id)
     assert seen[0].interactive is False
     assert seen[0].allow_explicit_shares is False
 
