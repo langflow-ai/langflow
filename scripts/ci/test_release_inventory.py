@@ -20,6 +20,7 @@ OPT_IN_STANDALONE_EXTENSIONS = {
     "lfx-arxiv",
     "lfx-confluent",
     "lfx-duckduckgo",
+    "lfx-atlascloud",
     "lfx-empiriolabs",
     "lfx-exa",
     "lfx-firecrawl",
