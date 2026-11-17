@@ -152,6 +152,7 @@ class Graph:
         if log_config:
             configure(**log_config)
 
+        self._execution_metrics = None
         self._start = start
         self._state_model = None
         self._end = end
@@ -1853,6 +1854,7 @@ class Graph:
         self.vertex_map = {vertex.id: vertex for vertex in self.vertices}
         # Tracing service will be lazily initialized via property when needed
         self.set_run_id(self._run_id)
+        self._execution_metrics = None
 
     @classmethod
     def from_payload(
@@ -2414,94 +2416,111 @@ class Graph:
         Raises:
             ValueError: If no result is found for the vertex.
         """
-        vertex = self.get_vertex(vertex_id)
-        user_scope = str(user_id).strip() if user_id is not None else ""
-        if not user_scope and (user_id is not None or self.user_id is not None):
-            # Components can fall back to the graph's user when no caller is supplied.
-            # Missing or blank caller IDs cannot safely share that result cache.
-            get_cache = None
-            set_cache = None
-        self.run_manager.add_to_vertices_being_run(vertex_id)
+        recorder = self._execution_metrics
+        start = recorder._begin(vertex_id) if recorder is not None else None  # noqa: SLF001
         try:
-            params = ""
-            should_build = False
-            # Loop components must always build, even when frozen,
-            # because they need to iterate through their data
-            is_loop_component = vertex.display_name == "Loop" or vertex.is_loop
-            if not vertex.frozen or is_loop_component:
-                should_build = True
-            else:
-                # Frozen results can outlive a role or provider-policy change.
-                # Reauthorize before even consulting the result cache so a
-                # revoked provider cannot reuse output from an earlier run.
-                await vertex.arequire_model_provider_policy(user_id, event_manager=event_manager)
-                # Check the cache for the vertex under the principal-scoped key
-                if get_cache is not None:
-                    cached_result = await get_cache(key=self._vertex_result_cache_key(vertex.id, user_id=user_id))
-                else:
-                    cached_result = CacheMiss()
-                if isinstance(cached_result, CacheMiss):
+            vertex = self.get_vertex(vertex_id)
+            user_scope = str(user_id).strip() if user_id is not None else ""
+            if not user_scope and (user_id is not None or self.user_id is not None):
+                # Components can fall back to the graph's user when no caller is supplied.
+                # Missing or blank caller IDs cannot safely share that result cache.
+                get_cache = None
+                set_cache = None
+            self.run_manager.add_to_vertices_being_run(vertex_id)
+            try:
+                params = ""
+                should_build = False
+                # Loop components must always build, even when frozen,
+                # because they need to iterate through their data
+                is_loop_component = vertex.display_name == "Loop" or vertex.is_loop
+                if not vertex.frozen or is_loop_component:
                     should_build = True
                 else:
-                    try:
-                        cached_vertex_dict = cached_result["result"]
-                        # Now set update the vertex with the cached vertex
-                        vertex.built = cached_vertex_dict["built"]
-                        vertex.artifacts = cached_vertex_dict["artifacts"]
-                        vertex.built_object = cached_vertex_dict["built_object"]
-                        vertex.built_result = cached_vertex_dict["built_result"]
-                        vertex.full_data = cached_vertex_dict["full_data"]
-                        vertex.results = cached_vertex_dict["results"]
+                    # Frozen results can outlive a role or provider-policy change.
+                    # Reauthorize before even consulting the result cache so a
+                    # revoked provider cannot reuse output from an earlier run.
+                    await vertex.arequire_model_provider_policy(user_id, event_manager=event_manager)
+                    # Check the cache for the vertex under the principal-scoped key
+                    if get_cache is not None:
+                        cached_result = await get_cache(key=self._vertex_result_cache_key(vertex.id, user_id=user_id))
+                    else:
+                        cached_result = CacheMiss()
+                    if isinstance(cached_result, CacheMiss):
+                        should_build = True
+                    else:
                         try:
-                            vertex.finalize_build()
+                            cached_vertex_dict = cached_result["result"]
+                            # Now set update the vertex with the cached vertex
+                            vertex.built = cached_vertex_dict["built"]
+                            vertex.artifacts = cached_vertex_dict["artifacts"]
+                            vertex.built_object = cached_vertex_dict["built_object"]
+                            vertex.built_result = cached_vertex_dict["built_result"]
+                            vertex.full_data = cached_vertex_dict["full_data"]
+                            vertex.results = cached_vertex_dict["results"]
+                            try:
+                                vertex.finalize_build()
 
-                            if vertex.result is not None:
-                                vertex.result.used_frozen_result = True
-                        except Exception:  # noqa: BLE001
-                            logger.debug("Error finalizing build", exc_info=True)
+                                if vertex.result is not None:
+                                    vertex.result.used_frozen_result = True
+                            except Exception:  # noqa: BLE001
+                                logger.debug("Error finalizing build", exc_info=True)
+                                vertex.built = False
+                                should_build = True
+                        except KeyError:
                             vertex.built = False
                             should_build = True
-                    except KeyError:
-                        vertex.built = False
-                        should_build = True
 
-            if should_build:
-                await vertex.build(
-                    user_id=user_id,
-                    inputs=inputs_dict,
-                    fallback_to_env_vars=fallback_to_env_vars,
-                    files=files,
-                    event_manager=event_manager,
-                )
-                if set_cache is not None:
-                    vertex_dict = {
-                        "built": vertex.built,
-                        "results": vertex.results,
-                        "artifacts": vertex.artifacts,
-                        "built_object": vertex.built_object,
-                        "built_result": vertex.built_result,
-                        "full_data": vertex.full_data,
-                    }
+                if should_build:
+                    await vertex.build(
+                        user_id=user_id,
+                        inputs=inputs_dict,
+                        fallback_to_env_vars=fallback_to_env_vars,
+                        files=files,
+                        event_manager=event_manager,
+                    )
+                    if set_cache is not None:
+                        vertex_dict = {
+                            "built": vertex.built,
+                            "results": vertex.results,
+                            "artifacts": vertex.artifacts,
+                            "built_object": vertex.built_object,
+                            "built_result": vertex.built_result,
+                            "full_data": vertex.full_data,
+                        }
 
-                    await set_cache(key=self._vertex_result_cache_key(vertex.id, user_id=user_id), data=vertex_dict)
+                        await set_cache(key=self._vertex_result_cache_key(vertex.id, user_id=user_id), data=vertex_dict)
 
-        except Exception as exc:
-            if not isinstance(exc, ComponentBuildError):
-                await logger.aexception("Error building Component")
+            except Exception as exc:
+                if not isinstance(exc, ComponentBuildError):
+                    await logger.aexception("Error building Component")
+                raise
+
+            if vertex.result is not None:
+                params = f"{vertex.built_object_repr()}{params}"
+                valid = True
+                result_dict = vertex.result
+                artifacts = vertex.artifacts
+            else:
+                msg = f"Error building Component: no result found for vertex {vertex_id}"
+                raise ValueError(msg)
+
+            build_result = VertexBuildResult(
+                result_dict=result_dict, params=params, valid=valid, artifacts=artifacts, vertex=vertex
+            )
+        except BaseException as exc:
+            if recorder is not None:
+                outcome = "cancelled" if isinstance(exc, asyncio.CancelledError) else "raised"
+                recorder._finish(vertex_id, start, outcome, primary=True)  # noqa: SLF001
             raise
+        if recorder is not None:
+            recorder._finish(vertex_id, start, "returned")  # noqa: SLF001
+        return build_result
 
-        if vertex.result is not None:
-            params = f"{vertex.built_object_repr()}{params}"
-            valid = True
-            result_dict = vertex.result
-            artifacts = vertex.artifacts
-        else:
-            msg = f"Error building Component: no result found for vertex {vertex_id}"
-            raise ValueError(msg)
+    def collect_execution_metrics(self):
+        """Collect bounded local call statistics on this executable graph only."""
+        from lfx.graph.metrics import collect_execution_metrics
 
-        return VertexBuildResult(
-            result_dict=result_dict, params=params, valid=valid, artifacts=artifacts, vertex=vertex
-        )
+        return collect_execution_metrics(self)
 
     def get_vertex_edges(
         self,

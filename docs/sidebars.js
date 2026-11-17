@@ -410,6 +410,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Lfx/lfx-execution-metrics",
+          label: "Collect local execution metrics"
+        },
+        {
+          type: "doc",
           id: "Lfx/lfx-serve",
           label: "Serve flows with LFX"
         },
