@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict, model_serializer, model_validator
 
 from lfx.log.logger import logger
 from lfx.schema.cross_module import CrossModuleModel
+from lfx.schema.validators import ensure_utc
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 from lfx.utils.image import create_image_content_dict
 
@@ -44,8 +45,25 @@ def custom_serializer(obj):
     raise TypeError(msg)
 
 
+def _json_default(obj):
+    """Preserve datetime instants in JSON text without changing persisted ID bytes.
+
+    The public custom_serializer also supplies stable Qdrant document IDs, so its
+    legacy output is kept unchanged. JSON text normally uses second-resolution
+    UTC; when UTC overflows datetime bounds, retain the original ISO offset and
+    precision instead of relabeling or clamping the instant.
+    """
+    if isinstance(obj, datetime):
+        try:
+            utc_date = ensure_utc(obj)
+        except OverflowError:
+            return obj.isoformat()
+        return utc_date.strftime("%Y-%m-%d %H:%M:%S %Z")
+    return custom_serializer(obj)
+
+
 def serialize_data(data):
-    return json.dumps(data, indent=4, default=custom_serializer)
+    return json.dumps(data, indent=4, default=_json_default)
 
 
 class JSON(CrossModuleModel):

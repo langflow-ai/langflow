@@ -226,3 +226,29 @@ def test_a_check_that_cannot_finish_exits_2(as_json, tmp_path):
     else:
         assert result.stdout == ""
         assert f"The upgrade check could not finish: {message}" in result.stderr
+
+
+@pytest.mark.parametrize("as_json", [False, True], ids=["text", "json"])
+def test_unreadable_sqlite_file_reports_permissions_without_postgres_advice(as_json, tmp_path):
+    database = _load("1.13.0", tmp_path)
+    before = database.read_bytes()
+    database.chmod(0o000)
+    try:
+        if os.access(database, os.R_OK):
+            pytest.skip("The current user can read files without read permission")
+        result = _upgrade_check("--database-url", _url(database), *(["--json"] if as_json else []))
+    finally:
+        database.chmod(0o600)
+
+    assert result.returncode == 2
+    if as_json:
+        [event] = _events(result)
+        assert (event["event"], event["code"]) == ("error", "source_unreadable")
+        message = event["message"]
+    else:
+        assert result.stdout == ""
+        message = result.stderr
+    assert "SQLite" in message
+    assert "permissions" in message
+    assert "PostgreSQL" not in message
+    assert database.read_bytes() == before

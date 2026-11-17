@@ -1710,13 +1710,14 @@ jobs:
       inputs.build_docker_main &&
       !inputs.dry_run &&
       needs.call_docker_build_main.result == 'success'
-    needs: [reserve-final-release, call_docker_build_main, determine-main-version]
+    needs: [reserve-final-release, call_docker_build_main, determine-main-version, build-base]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_commit }}
       release_type: main-backend
       pre_release: ${{ inputs.pre_release }}
       version_override: ${{ needs.determine-main-version.outputs.version }}
+      release_artifacts: ${{ needs.build-base.result == 'success' }}
       push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
 

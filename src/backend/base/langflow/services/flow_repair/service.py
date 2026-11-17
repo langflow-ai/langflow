@@ -14,7 +14,7 @@ from lfx.utils.flow_validation import CustomComponentValidationError
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import col, select, update
 
-from langflow.api.utils.migration_pause import is_paused
+from langflow.api.utils.migration_pause import REPAIR_REFUSAL, is_paused
 from langflow.services.audit import vocabulary as audit_vocab
 from langflow.services.audit.attribution import resolve_audit_actor
 from langflow.services.audit.writer import AuditEventDraft, stage_audit_event
@@ -47,7 +47,7 @@ async def target_registry() -> dict[str, Any]:
 
 async def require_repair_window(session: AsyncSession) -> None:
     if is_paused():
-        raise HTTPException(status_code=503, detail="The instance migration pause does not permit repairs")
+        raise HTTPException(status_code=503, detail=REPAIR_REFUSAL)
     state = await maintenance_status(session)
     if not state.maintenance:
         raise HTTPException(status_code=409, detail="Enable database maintenance before applying repairs")
@@ -127,7 +127,12 @@ def _failed_result(flow_id: UUID, exc: Exception) -> RepairResult:
     if isinstance(exc, ProviderSelectionUnverifiableError):
         return RepairResult(flow_id=flow_id, status="manual", reason_codes=["provider_selection_unverifiable"])
     if isinstance(exc, PermissionError | CustomComponentValidationError):
-        return RepairResult(flow_id=flow_id, status="manual", reason_codes=["owner_policy_denied"])
+        return RepairResult(
+            flow_id=flow_id,
+            status="manual",
+            reason_codes=["owner_policy_denied"],
+            reason_detail=str(exc) if isinstance(exc, CustomComponentValidationError) else None,
+        )
     if isinstance(exc, ValueError | TypeError):
         return RepairResult(flow_id=flow_id, status="manual", reason_codes=["malformed_flow"])
     if isinstance(exc, SQLAlchemyError) and is_database_lock_error(exc):
