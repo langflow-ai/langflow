@@ -129,7 +129,7 @@ async def test_verify_project_auth_rejects_presented_key_from_another_owner():
 @pytest.mark.anyio
 async def test_verify_project_auth_public_project_keeps_caller_anonymous():
     """A public project executes as its owner without authenticating the anonymous caller as that owner."""
-    owner = SimpleNamespace(id=uuid4(), username="owner")
+    owner = SimpleNamespace(id=uuid4(), username="owner", is_active=True)
     project = SimpleNamespace(id=uuid4(), user_id=owner.id, auth_settings={"auth_type": "none"})
     token = authenticated_caller_ctx.set(uuid4())
     try:
@@ -313,3 +313,27 @@ async def test_verify_project_auth_conditional_falls_back_to_api_key_after_exter
     assert result.id == owner.id
     resolver.assert_awaited_once_with(credential, settings)
     authenticate_key.assert_awaited_once_with("valid-project-key")
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("auth_type", ["none", "oauth"])
+async def test_verify_project_auth_rejects_inactive_owner(auth_type):
+    owner = SimpleNamespace(id=uuid4(), is_active=False)
+    project = SimpleNamespace(id=uuid4(), user_id=owner.id, auth_settings={"auth_type": auth_type})
+    composer_service = SimpleNamespace(validate_backend_auth_token=MagicMock(return_value=True))
+
+    with (
+        patch(f"{MODULE}.get_settings_service", return_value=_settings(auto_login=True, skip_auth=False)),
+        patch(f"{MODULE}.session_scope", _session_scope_yielding(project, user=owner)),
+        patch(f"{MODULE}.get_service", return_value=composer_service),
+        pytest.raises(HTTPException) as exc,
+    ):
+        await verify_project_auth(
+            project.id,
+            query_param=None,
+            header_param=None,
+            composer_backend_token="composer-test-token" if auth_type == "oauth" else None,
+        )
+
+    assert exc.value.status_code == status.HTTP_404_NOT_FOUND
+    assert exc.value.detail == "Project owner not found"

@@ -57,6 +57,7 @@ from langflow.api.v1.mcp_utils import (
     current_request_headers_ctx,
     current_request_variables_ctx,
     current_user_ctx,
+    get_active_project_owner,
     handle_call_tool,
     handle_list_resources,
     handle_list_tools_result,
@@ -143,7 +144,7 @@ async def verify_project_auth(
         if mcp_composer_service.validate_backend_auth_token(str(project_id), composer_backend_token):
             if project_user_id:
                 async with session_scope() as db:
-                    project_user = await db.get(User, project_user_id)
+                    project_user = await get_active_project_owner(db, project_user_id)
                     if project_user:
                         return project_user
             raise HTTPException(status_code=404, detail="Project owner not found")
@@ -153,7 +154,7 @@ async def verify_project_auth(
     if project_auth_type == "none":
         if project_user_id:
             async with session_scope() as db:
-                project_user = await db.get(User, project_user_id)
+                project_user = await get_active_project_owner(db, project_user_id)
                 if project_user:
                     return project_user
         raise HTTPException(status_code=404, detail="Project owner not found")

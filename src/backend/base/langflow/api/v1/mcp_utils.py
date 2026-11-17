@@ -10,7 +10,7 @@ from contextvars import ContextVar
 from functools import wraps
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, ParamSpec, TypeVar
+from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar
 from urllib.parse import quote, unquote, urlparse
 from uuid import UUID, uuid4
 
@@ -50,6 +50,9 @@ from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, get_storage_service, session_scope
 from langflow.utils.flow_secrets import restore_request_variable_references
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 T = TypeVar("T")
 P = ParamSpec("P")
@@ -133,6 +136,12 @@ async def with_db_session(operation: Callable[[Any], Awaitable[T]]) -> T:
     """Execute an operation within a database session context."""
     async with session_scope() as session:
         return await operation(session)
+
+
+async def get_active_project_owner(session: "AsyncSession", owner_id: UUID) -> User | None:
+    """Resolve the owning principal against current account state."""
+    owner = await session.get(User, owner_id)
+    return owner if owner is not None and owner.is_active else None
 
 
 class MCPConfig:
@@ -388,6 +397,11 @@ async def handle_call_tool(
     exec_context = {"request_variables": request_variables} if request_variables else None
 
     async def execute_tool(session):
+        # The transport's user can outlive the account state read during admission.
+        if project_id is not None and await get_active_project_owner(session, current_user.id) is None:
+            msg = "Project owner not found"
+            raise ValueError(msg)
+
         # Scoping in the query, not after it: post-filtering let an unexposed flow run by
         # name and let one project win a name shared with another, silencing the second.
         flow = await get_flow_snake_case(

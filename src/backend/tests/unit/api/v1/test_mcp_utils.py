@@ -639,7 +639,8 @@ async def _invoke_handle_call_tool(
 
     monkeypatch.setattr(mcp_utils, "get_flow_snake_case", fake_get_flow_snake_case)
     monkeypatch.setattr(mcp_utils, "simple_run_flow", simple_run_flow_mock)
-    monkeypatch.setattr(mcp_utils, "with_db_session", lambda operation: operation(SimpleNamespace()))
+    session = SimpleNamespace(get=AsyncMock(return_value=SimpleNamespace(is_active=True)))
+    monkeypatch.setattr(mcp_utils, "with_db_session", lambda operation: operation(session))
     # Force progress notifications off so the test does not exercise that path.
     mcp_utils.get_mcp_config().enable_progress_notifications = False
 
@@ -668,6 +669,29 @@ async def _invoke_handle_call_tool(
         mcp_utils.current_user_ctx.reset(token)
 
     return simple_run_flow_mock
+
+
+@pytest.mark.parametrize("project_user", [None, SimpleNamespace(is_active=False)], ids=["missing", "inactive"])
+async def test_handle_call_tool_rechecks_project_owner_before_flow_lookup(monkeypatch, project_user):
+    owner_id = uuid4()
+    session = SimpleNamespace(get=AsyncMock(return_value=project_user))
+    flow_lookup = AsyncMock()
+    run_flow = AsyncMock()
+    monkeypatch.setattr(mcp_utils, "with_db_session", lambda operation: operation(session))
+    monkeypatch.setattr(mcp_utils, "get_flow_snake_case", flow_lookup)
+    monkeypatch.setattr(mcp_utils, "simple_run_flow", run_flow)
+    monkeypatch.setattr(mcp_utils.get_mcp_config(), "enable_progress_notifications", False)
+
+    token = mcp_utils.current_user_ctx.set(SimpleNamespace(id=owner_id, is_active=True))
+    try:
+        with pytest.raises(ValueError, match="Project owner not found"):
+            await mcp_utils.handle_call_tool("my_flow", {}, _build_fake_server(), project_id=uuid4())
+    finally:
+        mcp_utils.current_user_ctx.reset(token)
+
+    session.get.assert_awaited_once_with(mcp_utils.User, owner_id)
+    flow_lookup.assert_not_awaited()
+    run_flow.assert_not_awaited()
 
 
 async def test_handle_call_tool_applies_public_policy_and_scopes_session(monkeypatch):
