@@ -169,11 +169,12 @@ function UpgradeReports() {
                     {t("settings.upgrade.historyEntry", {
                       target: item.target_version,
                       time: reportTime(
-                        item.generated_at,
+                        item.created_at,
                         i18n.language,
                         t("settings.upgrade.unknown"),
                       ),
                       count: item.flow_count,
+                      id: item.id,
                     })}
                   </option>
                 ))}

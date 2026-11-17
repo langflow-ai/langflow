@@ -62,6 +62,7 @@ export const repairReasonKey = (code: string): string =>
   `settings.upgrade.reason.${categories[code] ?? "failed"}`;
 
 const usageCategories: Record<string, string> = {
+  usage_is_flow_level_not_version_specific: "flowLevelUsage",
   retention_policy_unknown: "retentionUnknown",
   executions_without_job_records_untracked: "untrackedUsage",
   run_time_is_job_created_at: "jobTime",

@@ -138,7 +138,7 @@ def emit_component_strings(
     if isinstance(description, str) and description:
         flat[component_field_key(norm_key, "description", description)] = description
 
-    # Tier 2 — input field display_names, info, and placeholder
+    # Tier 2 — input field display_names, info, placeholder, and translated options
     for inp in getattr(cls, "inputs", []) or []:
         field_display = getattr(inp, "display_name", None)
         field_name = getattr(inp, "name", None)
@@ -153,6 +153,11 @@ def emit_component_strings(
                 flat[component_field_key(norm_key, f"inputs.{field_name}.placeholder", field_placeholder)] = (
                     field_placeholder
                 )
+            # Only inputs that ask for it: most options are model or resource names.
+            if getattr(inp, "translate_options", None) is True:
+                for option in getattr(inp, "options", None) or []:
+                    if isinstance(option, str) and option:
+                        flat[component_field_key(norm_key, f"inputs.{field_name}.options", option)] = option
 
     for field_path, english in iter_dynamic_input_strings(cls):
         flat[component_field_key(norm_key, field_path, english)] = english

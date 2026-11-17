@@ -14,10 +14,12 @@ from alembic.script import ScriptDirectory
 from alembic.script.revision import RevisionError
 from alembic.util.exc import CommandError
 from sqlalchemy import inspect, text
+from sqlalchemy.engine import make_url
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Mapping
 
+    from sqlalchemy.engine import URL
     from sqlalchemy.ext.asyncio import AsyncEngine
 
 LEGACY_REVISIONS = frozenset({"826cfcc8c8a0", "90c977dcf0f1", "d49cbced8696"})
@@ -98,22 +100,40 @@ def _sqlite_revisions(path: Path) -> set[str]:
         connection.close()
 
 
-async def read_revisions_before_startup(engine: AsyncEngine) -> set[str]:
+@dataclass(frozen=True)
+class SQLiteDatabaseTarget:
+    database: str
+    in_memory: bool
+
+
+def sqlite_database_target(
+    database_url: str | URL, connect_args: Mapping[str, object] | None = None
+) -> SQLiteDatabaseTarget | None:
+    """Resolve SQLite's filename using the effective DBAPI connection options."""
+    url = make_url(database_url)
+    if url.get_backend_name() != "sqlite":
+        return None
+    arguments, options = url.get_dialect()().create_connect_args(url)
+    options.update(connect_args or {})
+    database = arguments[0]
+    # Only file: names with effective URI mode enabled interpret query options.
+    uri = urlsplit(database) if options.get("uri", False) and database.startswith("file:") else None
+    if uri is not None:
+        database = unquote(uri.path)
+    in_memory = database == ":memory:" or (uri is not None and parse_qs(uri.query).get("mode") == ["memory"])
+    return SQLiteDatabaseTarget(database=database, in_memory=in_memory)
+
+
+async def read_revisions_before_startup(
+    engine: AsyncEngine, connect_args: Mapping[str, object] | None = None
+) -> set[str]:
     """Read existing state without creating tables or changing SQLite pragmas."""
-    if engine.dialect.name == "sqlite":
-        arguments, options = engine.dialect.create_connect_args(engine.url)
-        database = arguments[0]
-        # The driver's complete filename can include a literal query suffix.
-        # Only file: names with URI mode enabled interpret that suffix as options.
-        uri = urlsplit(database) if options.get("uri", False) and database.startswith("file:") else None
-        if uri is not None:
-            database = unquote(uri.path)
-        memory_database = database == ":memory:" or (uri is not None and parse_qs(uri.query).get("mode") == ["memory"])
-        if database and not memory_database:
-            path = Path(database)
-            if not path.exists():
-                return set()
-            return await asyncio.to_thread(_sqlite_revisions, path)
+    target = sqlite_database_target(engine.url, connect_args)
+    if target is not None and target.database and not target.in_memory:
+        path = Path(target.database)
+        if not path.exists():
+            return set()
+        return await asyncio.to_thread(_sqlite_revisions, path)
     async with engine.connect() as connection:
         if not await connection.run_sync(lambda sync: inspect(sync).has_table("alembic_version")):
             return set()

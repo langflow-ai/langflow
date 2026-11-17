@@ -13,6 +13,30 @@ export function reportTime(
       }).format(date);
 }
 
+export function reportAge(
+  value: string | null | undefined,
+  locale: string,
+  unknown: string,
+  now = Date.now(),
+): string {
+  if (!value) return unknown;
+  const elapsed = Date.parse(value) - now;
+  if (!Number.isFinite(elapsed)) return unknown;
+  const units: [Intl.RelativeTimeFormatUnit, number][] = [
+    ["week", 7 * 24 * 60 * 60 * 1000],
+    ["day", 24 * 60 * 60 * 1000],
+    ["hour", 60 * 60 * 1000],
+    ["minute", 60 * 1000],
+    ["second", 1000],
+  ];
+  const [unit, duration] =
+    units.find(([, duration]) => Math.abs(elapsed) >= duration) ?? units[4];
+  return new Intl.RelativeTimeFormat(locale, { numeric: "auto" }).format(
+    Math.trunc(elapsed / duration),
+    unit,
+  );
+}
+
 export function downloadReport(id: string, blob: Blob): void {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
