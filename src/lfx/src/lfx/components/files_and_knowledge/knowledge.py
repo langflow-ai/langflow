@@ -965,7 +965,7 @@ class KnowledgeComponent(Component):
         """Create the vector store and return the input row positions actually stored."""
         from langflow.api.utils.kb_helpers import backend_for_name
 
-        owner_id = self._user_uuid
+        owner_id = await self._kb_owner_id()
         if owner_id is None:
             msg = "User ID is required for knowledge base storage."
             raise ValueError(msg)
@@ -989,7 +989,7 @@ class KnowledgeComponent(Component):
 
         from langflow.services.knowledge_base_storage.runtime import operation, resolve_record
 
-        record = await resolve_record(self._user_uuid, self.knowledge_base)
+        record = await resolve_record(await self._kb_owner_id(), self.knowledge_base)
         async with operation(record, shared=True):
             existing_ids = set()
             if not self.allow_duplicates:
@@ -1204,13 +1204,15 @@ class KnowledgeComponent(Component):
         # user/DB models are not always available at module load time.
         from langflow.services.database.models.user.crud import get_user_by_id
 
+        if not self.user_id:
+            msg = "User ID is required for fetching knowledge base path."
+            raise ValueError(msg)
+        # The owner's namespace roots the path; for a shared KB that is not the running user.
+        owner_id = await self._kb_owner_id()
         async with session_scope() as db:
-            if not self.user_id:
-                msg = "User ID is required for fetching knowledge base path."
-                raise ValueError(msg)
-            current_user = await get_user_by_id(db, self.user_id)
+            current_user = await get_user_by_id(db, owner_id)
             if not current_user:
-                msg = f"User with ID {self.user_id} not found."
+                msg = f"User with ID {owner_id} not found."
                 raise ValueError(msg)
             self._cached_kb_username = current_user.username
 
@@ -1462,7 +1464,7 @@ class KnowledgeComponent(Component):
             return None, None, None, None
 
         try:
-            from langflow.api.utils import ingestion_run_service, knowledge_base_service
+            from langflow.api.utils import ingestion_run_service
             from langflow.services.database.models.jobs.model import JobStatus, JobType
             from langflow.services.deps import get_job_service
         except ImportError as exc:
@@ -1474,7 +1476,7 @@ class KnowledgeComponent(Component):
         summary: IngestionSummary | None = None
         kb_record_id: uuid.UUID | None = None
         try:
-            kb_record = await knowledge_base_service.get_by_user_and_name(user_uuid, self.knowledge_base)
+            kb_record = await self._find_record()
             kb_record_id = kb_record.id if kb_record is not None else None
 
             user_metadata = self._parse_user_metadata_dict()
@@ -1630,6 +1632,32 @@ class KnowledgeComponent(Component):
             return None
         return self.user_id if isinstance(self.user_id, uuid.UUID) else uuid.UUID(self.user_id)
 
+    async def _find_record(self, knowledge_base: str | None = None):
+        """The KB row this run uses: the running user's own, else one a registered plane shares to it.
+
+        Without a plane registering shared-KB lookup (OSS), the second step finds nothing and this is the owner lookup
+        alone. The needed action follows the mode: ``read`` to retrieve, ``ingest`` to write.
+        """
+        from langflow.api.utils import knowledge_base_service
+
+        user_uuid = self._user_uuid
+        name = knowledge_base or self.knowledge_base
+        if user_uuid is None:
+            return None
+        record = await knowledge_base_service.get_by_user_and_name(user_uuid, name)
+        if record is not None:
+            return record
+        action = "read" if _is_retrieve_mode(getattr(self, "mode", MODE_INGEST)) else "ingest"
+        cache = self.__dict__.setdefault("_shared_kb_cache", {})
+        if (name, action) not in cache:
+            cache[name, action] = await knowledge_base_service.get_shared_for_run(user_uuid, name, action)
+        return cache[name, action]
+
+    async def _kb_owner_id(self) -> uuid.UUID | None:
+        """Whose namespace holds this KB: the record's owner, or the running user when there is no record."""
+        record = await self._find_record()
+        return record.user_id if record is not None else self._user_uuid
+
     async def _get_kb_metadata(self, knowledge_base: str | None = None) -> dict:
         """Load this knowledge base's embedding config from its database row.
 
@@ -1643,13 +1671,9 @@ class KnowledgeComponent(Component):
         except ImportError:
             return {}
 
-        user_uuid = self._user_uuid
-        if user_uuid is None:
+        if self._user_uuid is None:
             return {}
-        record = await knowledge_base_service.get_by_user_and_name(
-            user_uuid,
-            knowledge_base or self.knowledge_base,
-        )
+        record = await self._find_record(knowledge_base)
         if record is None:
             return {}
         return knowledge_base_service.record_to_metadata_dict(record)
@@ -1663,14 +1687,13 @@ class KnowledgeComponent(Component):
         database error is how vectors end up in a store nothing queries.
         """
         try:
-            from langflow.api.utils import knowledge_base_service
+            import langflow.api.utils.knowledge_base_service  # noqa: F401 - no langflow means no row to read
         except ImportError:
             return None
 
-        user_uuid = self._user_uuid
-        if user_uuid is None:
+        if self._user_uuid is None:
             return None
-        record = await knowledge_base_service.get_by_user_and_name(user_uuid, self.knowledge_base)
+        record = await self._find_record()
         if record is None:
             return None
         return record.backend_type or BackendType.CHROMA.value, record.backend_config or {}
@@ -1808,7 +1831,7 @@ class KnowledgeComponent(Component):
 
         from langflow.api.utils.kb_helpers import backend_for_name
 
-        owner_id = self._user_uuid
+        owner_id = await self._kb_owner_id()
         if owner_id is None:
             msg = "User ID is required for knowledge base storage."
             raise ValueError(msg)
