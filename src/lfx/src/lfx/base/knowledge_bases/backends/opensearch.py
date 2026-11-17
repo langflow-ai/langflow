@@ -369,6 +369,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
     """OpenSearch k-NN as a Langflow KB backend."""
 
     backend_type = BackendType.OPENSEARCH
+    supports_staging = True
 
     def normalize_score(self, score: float) -> float:
         """Keep OpenSearch relevance scores, which are already higher-is-better."""

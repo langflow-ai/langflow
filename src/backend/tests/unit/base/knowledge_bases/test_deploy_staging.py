@@ -66,6 +66,17 @@ def test_staging_store_is_never_the_live_store(kind: str) -> None:
         live.staging("")
 
 
+def test_a_backend_without_its_own_staging_store_refuses_before_any_write(tmp_path) -> None:
+    from lfx.base.knowledge_bases.backends.sqlite import SQLiteStorageContext
+
+    live = create_backend(
+        "sqlite", kb_name="policies", storage_context=SQLiteStorageContext(tmp_path, uuid.uuid4(), uuid.uuid4())
+    )
+    # It names its store without the token, so a "staged" copy would write into live.
+    with pytest.raises(NotImplementedError, match="cannot stage"):
+        live.staging("op-1")
+
+
 @pytest.mark.api_key_required
 @pytest.mark.parametrize("kind", ["postgres", "opensearch"])
 async def test_staged_chunks_stay_hidden_until_the_merge(kind: str) -> None:
@@ -111,7 +122,7 @@ async def test_a_sliced_merge_moves_at_most_limit_per_call_until_staging_is_gone
         moved, left = [], []
         while (step := await live.merge_staging(staged.staging_token, limit=2)) > 0:
             moved.append(step)
-            left.append(await live.staging(staged.staging_token).count())
+            left.append(await staged.count())
 
         assert moved == [2, 2, 1], moved
         assert left == [3, 1, 0], left  # each call takes its slice out of staging, so a resend carries on
@@ -165,7 +176,7 @@ async def test_an_opensearch_slice_never_exceeds_its_own_cap_whatever_the_caller
         await staged.add_embedded_documents(_docs(range(5)))
 
         assert await live.merge_staging(staged.staging_token, limit=5_000) == 2
-        assert await live.staging(staged.staging_token).count() == 3  # the rest waits for the next call
+        assert await staged.count() == 3  # the rest waits for the next call
     finally:
         await staged.delete_collection()
         await live.delete_collection()

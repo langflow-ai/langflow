@@ -149,6 +149,9 @@ class BaseVectorStoreBackend(ABC):
     """
 
     backend_type: BackendType
+    #: Whether ``staging`` gives a store of its own. Only a backend that resolves its storage
+    #: name from ``staging_token`` may say so; any other would write staged chunks into live.
+    supports_staging: bool = False
 
     @property
     def distance_metric(self) -> str | None:
@@ -184,6 +187,9 @@ class BaseVectorStoreBackend(ABC):
         A deploy copies a knowledge base's new chunks here and ``merge_staging`` moves them
         into the live store when the deploy commits, so a cancelled deploy shows nothing.
         """
+        if not self.supports_staging:
+            msg = f"{type(self).__name__} cannot stage a deploy's chunks"
+            raise NotImplementedError(msg)
         if not token:
             msg = "A staging store needs a token"
             raise ValueError(msg)

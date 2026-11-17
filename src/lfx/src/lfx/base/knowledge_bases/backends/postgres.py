@@ -321,6 +321,7 @@ class PostgresBackend(BaseVectorStoreBackend):
     distance_metric = "cosine"  # the HNSW index is built with vector_cosine_ops
 
     backend_type = BackendType.POSTGRES
+    supports_staging = True
 
     # ---- config / secret resolution -------------------------------------
 
