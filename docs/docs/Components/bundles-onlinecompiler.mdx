@@ -1,0 +1,89 @@
+---
+title: OnlineCompiler.io
+slug: /bundles-onlinecompiler
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **OnlineCompiler.io** bundle.
+
+[OnlineCompiler.io](https://onlinecompiler.io) is a code execution API.
+It runs code in 46 languages, such as Python, JavaScript, Java, C++, Go, Rust and SQL, and judges a program against test cases.
+Each run starts in a fresh sandbox with no network, a 30 second time limit and 512 MB of memory, so it is safe for code that an agent or a user wrote.
+
+Both components need an OnlineCompiler.io REST API key.
+[Sign up](https://onlinecompiler.io) and create a key on the API Keys page of your dashboard, then enter it in the **OnlineCompiler.io API Key** field, or store it in a [global variable](/configuration-global-variables) named `ONLINECOMPILER_API_KEY`.
+The free plan includes 100,000 runs a month.
+
+Langflow sends the code, the language and the input to `api.onlinecompiler.io`.
+Each run counts toward your plan, and each test in **OnlineCompiler.io Run Tests** counts as one run.
+
+For more information, see the [OnlineCompiler.io API documentation](https://onlinecompiler.io/docs).
+
+## Use the components as agent tools
+
+Both components support **Tool Mode**.
+Connect one to an [**Agent**](/components-agents) component's **Tools** port, and the agent fills in the language, the code and the input itself.
+This lets an agent run the code it writes and check the result before it answers.
+
+## OnlineCompiler.io Run Code
+
+This component runs one program with optional standard input.
+
+It outputs a [`Data`](/data-types#json) object.
+The `text` is the program's output; when the program fails, it also has the standard error and the exit code.
+The data has the `output`, `error` (standard error), `status`, `exit_code`, `time` in seconds, and `memory` in KB.
+
+### OnlineCompiler.io Run Code parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| OnlineCompiler.io API Key (`api_key`) | SecretString | Input parameter. Your OnlineCompiler.io REST API key. |
+| Language (`compiler`) | String | Input parameter. The compiler ID of the language, such as `python-3.14`, `g++-15`, `openjdk-25` or `nodejs-24`. Every ID is listed at [onlinecompiler.io/languages](https://onlinecompiler.io/languages). Default: `python-3.14`. |
+| Code (`source_code`) | String | Input parameter. The whole program to run. |
+| Input (`stdin`) | String | Input parameter. Text the program reads as standard input. |
+| Time Limit (seconds) (`time_limit`) | Float | Input parameter. Seconds the program may run, up to 30. `0` uses the default. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for OnlineCompiler.io to answer. Default: `60`. |
+
+## OnlineCompiler.io Run Tests
+
+This component runs a program once for each test case and compares its output with the expected output.
+
+It outputs a [`Data`](/data-types#json) object.
+The `text` is a short summary, such as `wrong_answer: 1 of 2 tests passed, score 50`, followed by one line per test.
+The data has the overall `verdict`, a `score` from 0 to 100, `passed`, `total`, and `tests` with a verdict for each test.
+
+Enter the tests as a JSON array:
+
+```json
+[
+  {"input": "2 3", "expected_output": "5"},
+  {"input": "10 -4", "expected_output": "6"}
+]
+```
+
+### OnlineCompiler.io Run Tests parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| OnlineCompiler.io API Key (`api_key`) | SecretString | Input parameter. Your OnlineCompiler.io REST API key. |
+| Language (`compiler`) | String | Input parameter. The compiler ID of the language. Default: `python-3.14`. |
+| Code (`source_code`) | String | Input parameter. The whole program to judge. It reads each test's input as standard input. |
+| Tests (`tests`) | String | Input parameter. A JSON array of tests, each with `input` and `expected_output`. |
+| Compare (`checker`) | Dropdown | Input parameter. How output is compared: `trim` (default), `exact`, `tokens`, `float`, `rows`, `table` or `table_ordered`. |
+| Scoring (`scoring`) | Dropdown | Input parameter. `percent` (default) scores the share of tests passed; `all_or_nothing` scores 100 only when every test passes. |
+| Time Limit (seconds) (`time_limit`) | Float | Input parameter. Seconds each test may run, up to 30. `0` uses the default. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for OnlineCompiler.io to answer. Default: `120`. |
+
+## See also
+
+* [**Agent** component](/components-agents)
+* [**Python Interpreter** component](/python-interpreter)
