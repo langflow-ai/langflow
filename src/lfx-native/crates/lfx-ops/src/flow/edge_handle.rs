@@ -42,7 +42,8 @@ pub fn handle_spells(handle: &str, object: &FlowObj) -> bool {
     let mut quote = [0; 4];
     let quote = HANDLE_QUOTE.encode_utf8(&mut quote).as_bytes();
     let mut handle = handle.as_bytes();
-    let (mut in_string, mut escaped) = (false, false);
+    let mut in_string = false;
+    let mut escaped = false;
     // Each `œ` of the handle reads as `"`, so a `œ` in `object` cannot match.
     for &byte in &text {
         if let Some(after) = handle.strip_prefix(quote) {

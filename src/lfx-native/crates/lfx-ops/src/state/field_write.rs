@@ -3,7 +3,8 @@
 //! For each node, the pending writes are a tree of path segments ([`PathWrites`])
 //! with the shape of the node's JSON. A read follows the tree and the node
 //! together, and a write in the tree wins ([`read_through`]). A batch that succeeds
-//! makes its writes in the stored nodes ([`make_writes`]). A batch that fails
+//! makes its writes in the stored nodes ([`make_writes`], or
+//! [`IndexedNode::make_writes`] for a node with list indexes). A batch that fails
 //! drops the pending writes.
 //!
 //! A tree node that holds a write has no children. A later write below it
@@ -36,8 +37,15 @@ pub(crate) enum FieldWrite {
 enum Children {
     #[default]
     Empty,
-    One(Box<(Segment, PathWrites)>),
+    One(Box<Child>),
     Many(Box<IndexMap<Segment, PathWrites>>),
+}
+
+/// The one child of a tree node.
+#[derive(Debug, Clone)]
+struct Child {
+    segment: Segment,
+    writes: PathWrites,
 }
 
 impl Children {
@@ -47,32 +55,34 @@ impl Children {
     fn get(&self, key: &Segment) -> Option<&PathWrites> {
         match self {
             Self::Empty => None,
-            Self::One(pair) => (pair.0 == *key).then_some(&pair.1),
+            Self::One(child) => (child.segment == *key).then_some(&child.writes),
             Self::Many(map) => map.get(key),
         }
     }
     fn get_mut(&mut self, key: &Segment) -> Option<&mut PathWrites> {
         match self {
             Self::Empty => None,
-            Self::One(pair) => (pair.0 == *key).then_some(&mut pair.1),
+            Self::One(child) => (child.segment == *key).then_some(&mut child.writes),
             Self::Many(map) => map.get_mut(key),
         }
     }
     fn get_or_insert(&mut self, key: &Segment) -> &mut PathWrites {
         if matches!(self, Self::Empty) {
-            *self = Self::One(Box::new((key.clone(), PathWrites::default())));
-        } else if matches!(self, Self::One(pair) if pair.0 != *key) {
-            let Self::One(pair) = std::mem::take(self) else {
+            *self = Self::One(Box::new(Child {
+                segment: key.clone(),
+                writes: PathWrites::default(),
+            }));
+        } else if matches!(self, Self::One(child) if child.segment != *key) {
+            let Self::One(first) = std::mem::take(self) else {
                 unreachable!("one child");
             };
-            let (first, value) = *pair;
             let mut map = IndexMap::with_capacity_and_hasher(2, State::default());
-            map.insert(first, value);
+            map.insert(first.segment, first.writes);
             map.insert(key.clone(), PathWrites::default());
             *self = Self::Many(Box::new(map));
         }
         match self {
-            Self::One(pair) => &mut pair.1,
+            Self::One(child) => &mut child.writes,
             Self::Many(map) => {
                 let item_index = match map.get_index_of(key) {
                     Some(item_index) => item_index,
@@ -85,13 +95,13 @@ impl Children {
     }
     fn shift_remove(&mut self, key: &Segment) {
         match self {
-            Self::One(pair) if pair.0 == *key => *self = Self::Empty,
+            Self::One(child) if child.segment == *key => *self = Self::Empty,
             Self::Many(map) => {
                 map.shift_remove(key);
                 if map.len() <= 1 {
-                    *self = map
-                        .pop()
-                        .map_or(Self::Empty, |pair| Self::One(Box::new(pair)));
+                    *self = map.pop().map_or(Self::Empty, |(segment, writes)| {
+                        Self::One(Box::new(Child { segment, writes }))
+                    });
                 }
             }
             _ => {}
@@ -103,7 +113,7 @@ impl Children {
     fn into_entries(self) -> impl Iterator<Item = (Segment, PathWrites)> {
         let (one, many) = match self {
             Self::Empty => (None, None),
-            Self::One(pair) => (Some(*pair), None),
+            Self::One(child) => (Some((child.segment, child.writes)), None),
             Self::Many(map) => (None, Some(*map)),
         };
         one.into_iter().chain(many.into_iter().flatten())
@@ -220,26 +230,40 @@ impl PendingFieldWrites {
     }
 }
 
-/// `step` itself, with the signature [`read_through`] takes. It ties the returned
-/// value to the value read, so a caller can call the step after the `read_through`.
-pub(crate) fn step_fn<'v, F>(step: F) -> F
-where
-    F: FnMut(&'v FlowValue, usize, bool) -> Result<Option<&'v FlowValue>>,
-{
-    step
-}
-
 /// What [`read_through`] found along a path.
 #[derive(Debug)]
 pub(crate) struct ReadThrough<'v> {
-    /// The path length of the write that holds the value found. `None` when
-    /// the node holds it.
-    pub write_len: Option<usize>,
-    /// The value at the path, or the index of the first segment that does not exist.
-    pub found: std::result::Result<&'v FlowValue, usize>,
-    /// The tree node at the path, when the node holds the value. It holds the
-    /// writes below the path.
-    pub writes: Option<&'v PathWrites>,
+    /// The value at the path, or where and why the path ends early.
+    pub found: std::result::Result<&'v FlowValue, Missing>,
+    /// What holds the value read last.
+    pub holder: Holder<'v>,
+}
+
+/// The first segment of a path that has no value.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Missing {
+    /// The index of the segment.
+    pub at: usize,
+    pub kind: MissingKind,
+}
+
+/// Why a segment has no value.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum MissingKind {
+    /// The value never had it. Example: key `b` of `{"a": 1}`.
+    Absent,
+    /// The batch removed it with a [`FieldWrite::Remove`].
+    Removed,
+}
+
+/// What holds the value that [`read_through`] read last.
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum Holder<'v> {
+    /// The node. `writes` holds the batch's writes below the path, if any.
+    Node { writes: Option<&'v PathWrites> },
+    /// The batch's write at the first `path_len` segments of the path.
+    /// Example: a write at `["t", "a"]` holds `["t", "a", "value"]` with `path_len` 2.
+    Write { path_len: usize },
 }
 
 /// Follow `path` in `node` through `writes`, the batch's writes to the node.
@@ -260,38 +284,43 @@ pub(crate) fn read_through<'v>(
     mut step: impl FnMut(&'v FlowValue, usize, bool) -> Result<Option<&'v FlowValue>>,
 ) -> Result<ReadThrough<'v>> {
     let mut value = node;
-    let mut tree = writes;
-    let mut write_len = None;
+    let mut holder = Holder::Node { writes };
     for (index, segment) in path.iter().enumerate() {
-        if write_len.is_none() {
-            tree = tree.and_then(|tree| tree.children.get(segment));
+        if let Holder::Node { writes } = holder {
+            let tree = writes.and_then(|tree| tree.children.get(segment));
+            holder = Holder::Node { writes: tree };
             if let Some(write) = tree.and_then(|tree| tree.write.as_ref()) {
-                write_len = Some(index + 1);
-                tree = None;
+                holder = Holder::Write {
+                    path_len: index + 1,
+                };
                 let FieldWrite::Set(set) = write else {
                     return Ok(ReadThrough {
-                        write_len,
-                        found: Err(index),
-                        writes: None,
+                        found: Err(Missing {
+                            at: index,
+                            kind: MissingKind::Removed,
+                        }),
+                        holder,
                     });
                 };
                 value = set;
                 continue;
             }
         }
-        let Some(next) = step(value, index, write_len.is_some())? else {
+        let in_write = matches!(holder, Holder::Write { .. });
+        let Some(next) = step(value, index, in_write)? else {
             return Ok(ReadThrough {
-                write_len,
-                found: Err(index),
-                writes: None,
+                found: Err(Missing {
+                    at: index,
+                    kind: MissingKind::Absent,
+                }),
+                holder,
             });
         };
         value = next;
     }
     Ok(ReadThrough {
-        write_len,
         found: Ok(value),
-        writes: tree,
+        holder,
     })
 }
 
@@ -311,10 +340,10 @@ pub(crate) fn read<'v>(
     let Ok(value) = reached.found else {
         return Ok(None);
     };
-    match reached.writes {
-        Some(tree) if !tree.children.is_empty() => {
+    match reached.holder {
+        Holder::Node { writes: Some(tree) } if !tree.children.is_empty() => {
             let mut copy = value.clone();
-            make_writes(&mut copy, tree.clone(), &mut path.to_vec(), None);
+            make_writes(&mut copy, tree.clone(), &mut path.to_vec());
             Ok(Some(Cow::Owned(copy)))
         }
         _ => Ok(Some(Cow::Borrowed(value))),
@@ -372,55 +401,19 @@ fn child_mut<'v>(
     }
 }
 
-/// The list indexes of the stored node that the commit writes.
-pub(crate) struct NodeLists<'l> {
-    /// The indexes of every stored node.
-    pub lists: &'l mut Lists,
-    /// The node the commit writes.
-    pub id: &'l str,
-}
-
-impl NodeLists<'_> {
-    /// The index of the list at `path`, if one is built.
-    fn index(&mut self, path: &[Segment]) -> Option<&mut ListIndex> {
-        self.lists.built(self.id, path)
-    }
-}
-
-/// Make the writes of `tree` in `value`, both at `path`. With `lists`,
-/// `value` is a stored node, and its list indexes follow the writes.
-pub(crate) fn make_writes(
-    value: &mut FlowValue,
-    tree: PathWrites,
-    path: &mut Path,
-    mut lists: Option<&mut NodeLists<'_>>,
-) {
+/// Make the writes of `tree` in `value`, both at `path`. `value` is a copy
+/// or a node with no list index, so an item is found by reading every item.
+pub(crate) fn make_writes(value: &mut FlowValue, tree: PathWrites, path: &mut Path) {
     for (segment, child) in tree.children.into_entries() {
         if let Some(write) = child.write {
-            make_write(value, &segment, path, write, lists.as_deref_mut());
+            make_write(value, &segment, path, write);
             continue;
         }
-        let index = lists.as_deref_mut().and_then(|lists| lists.index(path));
         let next =
-            child_mut(value, path, &segment, index).expect("the value under a written path exists");
-        let keyed = FLOW_MODEL.listed_at(path);
-        let had_position = keyed.has_position(next);
+            child_mut(value, path, &segment, None).expect("the value under a written path exists");
         path.push(segment);
-        make_writes(next, child, path, lists.as_deref_mut());
-        let segment = path.pop().expect("the segment was pushed above");
-        // The parser refuses a write that changes an item's key.
-        // A write can change a row's position.
-        if let (Segment::Item(key), Some(index)) = (
-            &segment,
-            lists.as_deref_mut().and_then(|lists| lists.index(path)),
-        ) {
-            debug_assert_eq!(
-                keyed.key_of(next),
-                Some(key.as_str()),
-                "the item keeps its key"
-            );
-            index.position_changed(had_position, keyed.has_position(next));
-        }
+        make_writes(next, child, path);
+        path.pop();
     }
 }
 
@@ -432,14 +425,9 @@ pub(crate) fn make_write(
     segment: &Segment,
     parent_path: &[Segment],
     write: FieldWrite,
-    mut lists: Option<&mut NodeLists<'_>>,
 ) {
     match segment {
         Segment::Key(key) => {
-            if let Some(lists) = lists.as_deref_mut() {
-                // The write replaces or removes the lists under its path.
-                lists.lists.forget_under(lists.id, parent_path, key);
-            }
             let object = parent
                 .as_object_mut()
                 .expect("an object key's parent is an object");
@@ -455,11 +443,91 @@ pub(crate) fn make_write(
         Segment::Item(key) => {
             let keyed = FLOW_MODEL.listed_at(parent_path);
             let items = parent.as_vec_mut().expect("a list item's parent is a list");
-            if let Some(index) = lists.and_then(|lists| lists.index(parent_path)) {
+            match (write, find_item(keyed, items, key)) {
+                (FieldWrite::Set(value), Some(item_index)) => items[item_index] = value,
+                (FieldWrite::Set(value), None) => items.push(value),
+                (FieldWrite::Remove, Some(item_index)) => {
+                    remove_item(keyed, items, item_index);
+                }
+                (FieldWrite::Remove, None) => {}
+            }
+        }
+    }
+}
+
+/// A stored node that the commit writes, with its list indexes. The indexes
+/// follow the writes.
+pub(crate) struct IndexedNode<'l> {
+    /// The indexes of every stored node.
+    pub lists: &'l mut Lists,
+    /// The node the commit writes.
+    pub id: &'l str,
+}
+
+impl IndexedNode<'_> {
+    /// The index of the list at `path`, if one is built.
+    fn index(&mut self, path: &[Segment]) -> Option<&mut ListIndex> {
+        self.lists.built(self.id, path)
+    }
+
+    /// [`make_writes`] in the node. A list with a built index finds its items
+    /// through the index, and the index follows the writes.
+    pub(crate) fn make_writes(&mut self, value: &mut FlowValue, tree: PathWrites, path: &mut Path) {
+        for (segment, child) in tree.children.into_entries() {
+            if let Some(write) = child.write {
+                self.make_write(value, &segment, path, write);
+                continue;
+            }
+            let index = self.index(path);
+            let next = child_mut(value, path, &segment, index)
+                .expect("the value under a written path exists");
+            let keyed = FLOW_MODEL.listed_at(path);
+            let had_position = keyed.has_position(next);
+            path.push(segment);
+            self.make_writes(next, child, path);
+            let segment = path.pop().expect("the segment was pushed above");
+            // The parser refuses a write that changes an item's key.
+            // A write can change a row's position.
+            if let Segment::Item(key) = &segment
+                && let Some(index) = self.index(path)
+            {
+                debug_assert_eq!(
+                    keyed.key_of(next),
+                    Some(key.as_str()),
+                    "the item keeps its key"
+                );
+                index.position_changed(had_position, keyed.has_position(next));
+            }
+        }
+    }
+
+    /// [`make_write`] in the node. The indexes follow the write.
+    fn make_write(
+        &mut self,
+        parent: &mut FlowValue,
+        segment: &Segment,
+        parent_path: &[Segment],
+        write: FieldWrite,
+    ) {
+        match segment {
+            Segment::Key(key) => {
+                // The write replaces or removes the lists under its path.
+                self.lists.forget_under(self.id, parent_path, key);
+                make_write(parent, segment, parent_path, write);
+            }
+            Segment::Item(key) => {
+                let Some(index) = self.index(parent_path) else {
+                    make_write(parent, segment, parent_path, write);
+                    return;
+                };
+                let items = parent.as_vec_mut().expect("a list item's parent is a list");
                 match write {
                     FieldWrite::Set(value) => {
                         // The parser refuses an item with another key.
-                        debug_assert_eq!(keyed.key_of(&value), Some(key.as_str()));
+                        debug_assert_eq!(
+                            FLOW_MODEL.listed_at(parent_path).key_of(&value),
+                            Some(key.as_str())
+                        );
                         match index.item_index(key) {
                             Some(item_index) => index.replace(items, item_index, value),
                             None => index.add(items, key, value),
@@ -469,15 +537,6 @@ pub(crate) fn make_write(
                         index.remove(items, key);
                     }
                 }
-                return;
-            }
-            match (write, find_item(keyed, items, key)) {
-                (FieldWrite::Set(value), Some(item_index)) => items[item_index] = value,
-                (FieldWrite::Set(value), None) => items.push(value),
-                (FieldWrite::Remove, Some(item_index)) => {
-                    remove_item(keyed, items, item_index);
-                }
-                (FieldWrite::Remove, None) => {}
             }
         }
     }
@@ -532,7 +591,7 @@ mod tests {
         writes.set(&b, FieldWrite::Set(crate::flow_value!(2)));
         writes.drop_write(&a);
         let mut value = crate::flow_value!({"t":{"a":0}});
-        make_writes(&mut value, writes, &mut Vec::new(), None);
+        make_writes(&mut value, writes, &mut Vec::new());
         assert_eq!(value, crate::flow_value!({"t":{"a":0,"b":2}}));
     }
 
@@ -598,6 +657,12 @@ mod tests {
         assert_eq!(node["t"]["a"]["value"], flow_value!(1));
         let removed = path(&["t", "b", "x"]);
         let reached = read_through(&node, Some(&writes), &removed, scan(&removed)).unwrap();
-        assert_eq!(reached.found.err(), Some(1));
+        assert_eq!(
+            reached.found.err(),
+            Some(Missing {
+                at: 1,
+                kind: MissingKind::Removed
+            })
+        );
     }
 }

@@ -19,16 +19,28 @@ use crate::violation::error::Result;
 
 /// The ids of the edges at each node.
 #[derive(Debug)]
-pub(crate) struct EdgesAt(pub(super) PendingMap<IndexSet<FlowStr>>);
+pub(crate) struct EdgesAt {
+    by_node: PendingMap<IndexSet<FlowStr>>,
+}
 
 impl EdgesAt {
+    pub(super) fn new() -> Self {
+        Self {
+            by_node: PendingMap::new(),
+        }
+    }
+
+    pub(super) fn commit(&mut self) {
+        self.by_node.commit();
+    }
+
     pub(super) fn attach(&mut self, id: &str, edge: &Edge) {
         let Some(FlowValue::String(key)) = edge.as_map().get("id") else {
             unreachable!("an edge has a string id");
         };
         debug_assert_eq!(id, key.as_str());
         for end in ends(edge) {
-            self.0
+            self.by_node
                 .get_or_insert_with(end, IndexSet::default)
                 .insert(key.clone());
         }
@@ -36,10 +48,10 @@ impl EdgesAt {
 
     pub(super) fn detach(&mut self, id: &str, edge: &Edge) {
         for end in ends(edge) {
-            if let Some(ids) = self.0.get_mut(end) {
+            if let Some(ids) = self.by_node.get_mut(end) {
                 ids.shift_remove(id);
                 if ids.is_empty() {
-                    self.0.remove(end);
+                    self.by_node.remove(end);
                 }
             }
         }
@@ -47,7 +59,8 @@ impl EdgesAt {
 }
 
 fn ends(edge: &Edge) -> impl Iterator<Item = &str> {
-    let (source, target) = (edge.source(), edge.target());
+    let source = edge.source();
+    let target = edge.target();
     [source, target]
         .into_iter()
         .take(if source == target { 1 } else { 2 })
@@ -73,7 +86,7 @@ impl Graph {
 
     /// The shared ids of the edges at a node, in the same order as `edges_at`.
     pub(crate) fn edge_keys_at(&self, node_id: &str) -> impl Iterator<Item = &FlowStr> {
-        self.edges_at.0.get(node_id).into_iter().flatten()
+        self.edges_at.by_node.get(node_id).into_iter().flatten()
     }
 
     /// Whether the graph has an edge with `id`.
@@ -113,7 +126,7 @@ impl Graph {
     pub(super) fn drop_pending(&mut self) {
         self.nodes.drop_pending();
         self.edges.drop_pending();
-        self.edges_at.0.drop_pending();
+        self.edges_at.by_node.drop_pending();
         self.fields.drop_pending();
     }
 }
@@ -171,7 +184,8 @@ pub(crate) fn field_value<'g>(
     };
     let stored = graph.is_stored_node(id);
     let step = |value: &'g FlowValue, index: usize, in_entry: bool| {
-        let (parent, segment) = (&path[..index], &path[index]);
+        let parent = &path[..index];
+        let segment = &path[index];
         let Segment::Item(key) = segment else {
             return Ok(field_write::child(value, parent, segment));
         };
@@ -193,7 +207,15 @@ pub(crate) fn field_value<'g>(
 /// They index stored nodes only, so a batch that fails leaves them right.
 #[derive(Debug, Default)]
 pub(crate) struct Lists {
-    pub(super) by_node: HashMap<String, Vec<(Vec<String>, ListIndex)>>,
+    pub(super) by_node: HashMap<String, Vec<IndexedList>>,
+}
+
+/// The index of one list of a node.
+#[derive(Debug)]
+pub(crate) struct IndexedList {
+    /// The object keys that lead to the list.
+    path: Vec<String>,
+    index: ListIndex,
 }
 
 impl Lists {
@@ -207,9 +229,7 @@ impl Lists {
         items: &[FlowValue],
     ) -> &mut ListIndex {
         let lists = self.by_node.entry(node_id.to_owned()).or_default();
-        let position = if let Some(position) = lists
-            .iter()
-            .position(|(list_path, _)| path.equals(list_path))
+        let position = if let Some(position) = lists.iter().position(|list| path.equals(&list.path))
         {
             position
         } else {
@@ -221,10 +241,13 @@ impl Lists {
                         .to_owned()
                 })
                 .collect();
-            lists.push((owned, ListIndex::build(keyed, items)));
+            lists.push(IndexedList {
+                path: owned,
+                index: ListIndex::build(keyed, items),
+            });
             lists.len() - 1
         };
-        &mut lists[position].1
+        &mut lists[position].index
     }
 
     /// The index of the list at `path` of a node, if one is built. A path
@@ -233,18 +256,18 @@ impl Lists {
         self.by_node
             .get_mut(node_id)?
             .iter_mut()
-            .find(|(list_path, _)| path.equals(list_path))
-            .map(|(_, index)| index)
+            .find(|list| path.equals(&list.path))
+            .map(|list| &mut list.index)
     }
 
     /// Forget the indexes of the lists at or below `parent` plus `key`.
     /// A `parent` that names a list item has none.
     pub fn forget_under<T: AsKey>(&mut self, node_id: &str, parent: &[T], key: &str) {
         if let Some(lists) = self.by_node.get_mut(node_id) {
-            lists.retain(|(list_path, _)| {
-                !(list_path.len() > parent.len()
-                    && parent.shares_start(list_path)
-                    && list_path[parent.len()] == key)
+            lists.retain(|list| {
+                !(list.path.len() > parent.len()
+                    && parent.shares_start(&list.path)
+                    && list.path[parent.len()] == key)
             });
         }
     }

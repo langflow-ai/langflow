@@ -216,10 +216,8 @@ fn is_row_key(name: &str) -> bool {
 /// The row rules one table value breaks.
 #[must_use]
 fn table_row_violations(rows: &[FlowValue], path: &[PathPart]) -> Vec<Violation> {
-    let (id_key, position_key) = (
-        &FLOW_MODEL.table_input_keys.id,
-        &FLOW_MODEL.table_input_keys.position,
-    );
+    let id_key = &FLOW_MODEL.table_input_keys.id;
+    let position_key = &FLOW_MODEL.table_input_keys.position;
     let mut violations = Vec::new();
     let mut seen = HashSet::default();
     for (index, row) in rows.iter().enumerate() {

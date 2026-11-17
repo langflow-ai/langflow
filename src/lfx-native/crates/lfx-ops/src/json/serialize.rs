@@ -93,8 +93,10 @@ fn write_str_with<const ESCAPE: bool>(out: &mut Vec<u8>, text: &str) {
     let bytes = text.as_bytes();
     out.reserve(bytes.len() + 2);
     out.push(b'"');
-    // `start` is the first byte not yet written; `at` is where the scan is.
-    let (mut start, mut at) = (0, 0);
+    // The first byte not yet written.
+    let mut start = 0;
+    // Where the scan is.
+    let mut at = 0;
     while at < bytes.len() {
         // Skip eight bytes at a time while none starts an escape.
         while let Some(word) = bytes.get(at..at + 8) {

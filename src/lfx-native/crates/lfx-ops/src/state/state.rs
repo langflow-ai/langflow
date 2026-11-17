@@ -51,7 +51,20 @@ pub struct GraphState {
     snapshot_edges: SnapshotObjects,
     snapshot_cache: Mutex<Option<Arc<SnapshotData>>>,
     /// The nodes and edges that batches removed since [`Self::take_released`].
-    released: (Vec<Node>, Vec<Edge>),
+    released: Released,
+}
+
+/// The nodes and edges that kept batches removed, for the caller to free.
+#[derive(Debug, Default)]
+struct Released {
+    nodes: Vec<Node>,
+    edges: Vec<Edge>,
+}
+
+impl Released {
+    fn is_empty(&self) -> bool {
+        self.nodes.is_empty() && self.edges.is_empty()
+    }
 }
 
 impl GraphState {
@@ -76,15 +89,13 @@ impl GraphState {
         };
         let nodes = by_id(take_list(&mut root, "nodes"), "node", Node::try_from)?;
         let edges = by_id(take_list(&mut root, "edges"), "edge", Edge::try_from)?;
-        let mut edges_at = EdgesAt(PendingMap::new());
+        let mut edges_at = EdgesAt::new();
         for (id, edge) in &edges {
             edges_at.attach(id, edge);
         }
-        edges_at.0.commit();
-        let (nodes, edges) = (
-            PendingMap::with_stored(nodes),
-            PendingMap::with_stored(edges),
-        );
+        edges_at.commit();
+        let nodes = PendingMap::with_stored(nodes);
+        let edges = PendingMap::with_stored(edges);
         Ok(Self {
             root,
             snapshot_nodes: snapshot_objects_of(&nodes, Node::as_map),
@@ -100,7 +111,7 @@ impl GraphState {
             lists: Lists::default(),
             staged: false,
             text_len: Arc::default(),
-            released: Default::default(),
+            released: Released::default(),
         })
     }
 
@@ -183,7 +194,7 @@ impl GraphState {
             .map(|(id, node)| match graph.fields.node(id) {
                 Some(writes) => {
                     let mut value = node.as_value().clone();
-                    field_write::make_writes(&mut value, writes.clone(), &mut Vec::new(), None);
+                    field_write::make_writes(&mut value, writes.clone(), &mut Vec::new());
                     Cow::Owned(value)
                 }
                 None => Cow::Borrowed(node.as_value()),
@@ -270,27 +281,26 @@ impl GraphState {
     /// first, so a field write lands in the node the batch saw.
     pub(crate) fn commit(&mut self) {
         // Free what no caller took, so it waits at most one batch.
-        self.released.0.clear();
-        self.released.1.clear();
+        self.released.nodes.clear();
+        self.released.edges.clear();
         self.snapshot_cache
             .get_mut()
             .unwrap_or_else(PoisonError::into_inner)
             .take();
         let graph = &mut self.graph;
-        let (nodes, edges) = (&mut self.released.0, &mut self.released.1);
         commit_with_snapshot(
             &mut graph.nodes,
             &mut self.snapshot_nodes,
-            nodes,
+            &mut self.released.nodes,
             Node::as_map,
         );
         commit_with_snapshot(
             &mut graph.edges,
             &mut self.snapshot_edges,
-            edges,
+            &mut self.released.edges,
             Edge::as_map,
         );
-        graph.edges_at.0.commit();
+        graph.edges_at.commit();
         for (id, writes) in graph.fields.drain() {
             let position = graph
                 .nodes
@@ -308,18 +318,16 @@ impl GraphState {
                 .nodes
                 .stored_mut(&id)
                 .expect("a field write's node exists");
-            // A node with no built index needs no path keys.
-            let indexed = self.lists.by_node.contains_key(&id);
-            let mut lists = field_write::NodeLists {
-                lists: &mut self.lists,
-                id: &id,
-            };
-            field_write::make_writes(
-                node.as_value_mut(),
-                writes,
-                &mut Vec::new(),
-                indexed.then_some(&mut lists),
-            );
+            // A node with no built index is written as a copy is.
+            if self.lists.by_node.contains_key(&id) {
+                let mut indexed = field_write::IndexedNode {
+                    lists: &mut self.lists,
+                    id: &id,
+                };
+                indexed.make_writes(node.as_value_mut(), writes, &mut Vec::new());
+            } else {
+                field_write::make_writes(node.as_value_mut(), writes, &mut Vec::new());
+            }
             *snapshot_position = Some(node.as_map().clone());
         }
         graph.fields.finish();
@@ -346,7 +354,7 @@ impl GraphState {
     /// The nodes and edges that kept batches removed, for the caller to free
     /// off the request path. `None` when there are none.
     pub fn take_released(&mut self) -> Option<impl Send + 'static + use<>> {
-        if self.released.0.is_empty() && self.released.1.is_empty() {
+        if self.released.is_empty() {
             return None;
         }
         Some(std::mem::take(&mut self.released))
@@ -779,10 +787,10 @@ mod tests {
         let mut state = GraphState::new(crate::flow_value!({"nodes":[snapshot_node("a").into_value(),snapshot_node("b").into_value()],"edges":[]})).unwrap();
         state.remove_node("a");
         state.commit();
-        assert_eq!(state.released.0.len(), 1);
+        assert_eq!(state.released.nodes.len(), 1);
         state.remove_node("b");
         state.commit();
-        assert_eq!(state.released.0.len(), 1);
+        assert_eq!(state.released.nodes.len(), 1);
         assert!(state.take_released().is_some());
         assert!(state.take_released().is_none());
     }

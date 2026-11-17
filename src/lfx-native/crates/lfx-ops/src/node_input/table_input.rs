@@ -204,6 +204,80 @@ fn row_contents_equal(left: &FlowValue, right: &FlowValue) -> Result<bool> {
     Ok(true)
 }
 
+/// The rows of a table's previous version that a row may take its id from.
+struct PreviousRows<'p> {
+    /// Every previous row that is an object with an id, in order.
+    rows: Vec<&'p FlowValue>,
+    /// The rows not used at the start, by content hash. `None` when a row
+    /// fails to hash: then rows are compared one by one, so the error comes
+    /// only if that row is reached.
+    by_content: Option<HashMap<u64, VecDeque<&'p FlowValue>>>,
+    state: RandomState,
+}
+
+impl<'p> PreviousRows<'p> {
+    fn new(previous: Option<&'p FlowValue>, used: &HashSet<String>) -> Self {
+        let id_key = row_id_key();
+        let rows: Vec<&FlowValue> = previous
+            .and_then(FlowValue::as_array)
+            .into_iter()
+            .flatten()
+            .filter(|row| row.is_object() && row.non_empty_str(id_key).is_some())
+            .collect();
+        let state = RandomState::new();
+        let mut by_content: HashMap<u64, VecDeque<&FlowValue>> = HashMap::default();
+        let hashed = rows
+            .iter()
+            .filter(|row| !used.contains(row.non_empty_str(id_key).unwrap_or_default()))
+            .try_for_each(|row| -> Result<()> {
+                by_content
+                    .entry(content_hash(row, &state, true)?)
+                    .or_default()
+                    .push_back(*row);
+                Ok(())
+            });
+        Self {
+            rows,
+            by_content: hashed.is_ok().then_some(by_content),
+            state,
+        }
+    }
+
+    /// Take the first previous row equal to `row` whose id is not in `used`.
+    fn take_match(
+        &mut self,
+        row: &FlowValue,
+        used: &HashSet<String>,
+    ) -> Result<Option<&'p FlowValue>> {
+        if self.rows.is_empty() {
+            return Ok(None);
+        }
+        let Some(by_content) = &mut self.by_content else {
+            return self.scan(row, used);
+        };
+        match content_hash(row, &self.state, true) {
+            Ok(hash) => match by_content.get_mut(&hash) {
+                Some(bucket) => take_matching_row(bucket, row, used),
+                None => Ok(None),
+            },
+            // A row with a number that is not finite has no hash.
+            Err(NonFinite) => self.scan(row, used),
+        }
+    }
+
+    /// The first previous row equal to `row` whose id is not in `used`,
+    /// found by comparing every row.
+    fn scan(&self, row: &FlowValue, used: &HashSet<String>) -> Result<Option<&'p FlowValue>> {
+        for candidate in &self.rows {
+            let id = candidate.non_empty_str(row_id_key()).unwrap_or_default();
+            if !used.contains(id) && row_contents_equal(candidate, row)? {
+                return Ok(Some(*candidate));
+            }
+        }
+        Ok(None)
+    }
+}
+
 /// Remove and return the first row of `bucket` that equals `row`.
 /// It also drops rows whose id is in `used`. A hash collision gives no match.
 fn take_matching_row<'a>(
@@ -228,6 +302,24 @@ fn take_matching_row<'a>(
     Ok(None)
 }
 
+/// Give `row` the id of `previous`, the row it equals, and its position if
+/// `row` has none. Returns the id.
+fn take_previous_id(row: &mut FlowValue, previous: &FlowValue) -> String {
+    let position_key = row_position_key();
+    if !row.get(position_key).is_some_and(is_row_position)
+        && let Some(position) = previous
+            .get(position_key)
+            .filter(|position| is_row_position(position))
+        && let Some(row) = row.as_object_mut()
+    {
+        row.insert(position_key.to_owned(), position.clone());
+    }
+    previous
+        .non_empty_str(row_id_key())
+        .unwrap_or_default()
+        .to_owned()
+}
+
 /// Give each row without a unique `__id__` one, in place.
 ///
 /// A row equal to an unmatched row of `previous` takes its id, and its position
@@ -237,7 +329,7 @@ fn take_matching_row<'a>(
 ///
 /// A compared row holds a number that is not finite.
 pub fn match_row_ids(rows: &mut [FlowValue], previous: Option<&FlowValue>) -> Result<()> {
-    let (id_key, position_key) = (row_id_key(), row_position_key());
+    let id_key = row_id_key();
     let mut used: HashSet<String> = HashSet::default();
     let mut need_id = Vec::new();
     for (index, row) in rows.iter().enumerate() {
@@ -251,62 +343,16 @@ pub fn match_row_ids(rows: &mut [FlowValue], previous: Option<&FlowValue>) -> Re
     if need_id.is_empty() {
         return Ok(());
     }
-    let candidates: Vec<&FlowValue> = previous
-        .and_then(FlowValue::as_array)
-        .into_iter()
-        .flatten()
-        .filter(|row| row.is_object() && row.non_empty_str(id_key).is_some())
-        .collect();
-    let state = RandomState::new();
-    let mut by_content: HashMap<u64, VecDeque<&FlowValue>> = HashMap::default();
-    // A candidate with a number that is not finite fails to hash. Then the
-    // rows are compared one by one, so the error comes only if that candidate is reached.
-    let indexed = candidates
-        .iter()
-        .filter(|row| !used.contains(row.non_empty_str(id_key).unwrap_or_default()))
-        .try_for_each(|row| -> Result<()> {
-            by_content
-                .entry(content_hash(row, &state, true)?)
-                .or_default()
-                .push_back(*row);
-            Ok(())
-        })
-        .is_ok();
+    let mut previous_rows = PreviousRows::new(previous, &used);
     for index in need_id {
-        let mut matched = None;
-        let hash = if indexed && !candidates.is_empty() {
-            content_hash(&rows[index], &state, true).ok()
-        } else {
-            None
-        };
-        if let Some(bucket) = hash.and_then(|hash| by_content.get_mut(&hash)) {
-            matched = take_matching_row(bucket, &rows[index], &used)?;
-        } else if !indexed || (hash.is_none() && !candidates.is_empty()) {
-            for candidate in &candidates {
-                let id = candidate.non_empty_str(id_key).unwrap_or_default();
-                if !used.contains(id) && row_contents_equal(candidate, &rows[index])? {
-                    matched = Some(*candidate);
-                    break;
-                }
-            }
-        }
         let row = &mut rows[index];
-        let new_id = if let Some(matched) = matched {
-            if !row.get(position_key).is_some_and(is_row_position)
-                && let Some(position) = matched
-                    .get(position_key)
-                    .filter(|position| is_row_position(position))
-                && let Some(row) = row.as_object_mut()
-            {
-                row.insert(position_key.to_owned(), position.clone());
-            }
-            matched.non_empty_str(id_key).unwrap_or_default().to_owned()
-        } else {
-            unused_id(&used, new_table_row_id)
+        let id = match previous_rows.take_match(row, &used)? {
+            Some(previous) => take_previous_id(row, previous),
+            None => unused_id(&used, new_table_row_id),
         };
-        used.insert(new_id.clone());
+        used.insert(id.clone());
         if let Some(row) = row.as_object_mut() {
-            row.insert(id_key.to_owned(), FlowValue::from(new_id));
+            row.insert(id_key.to_owned(), FlowValue::from(id));
         }
     }
     Ok(())
@@ -410,7 +456,8 @@ pub fn append_table_rows(rows: &mut Vec<FlowValue>, new_rows: &[FlowValue]) -> R
     if !has_table_row_ids(rows) {
         assign_row_ids(rows, None, Renumber::WhenNoRoom)?;
     }
-    let (id_key, position_key) = (row_id_key(), row_position_key());
+    let id_key = row_id_key();
+    let position_key = row_position_key();
     let mut used: HashSet<String> = rows
         .iter()
         .filter_map(|row| row.non_empty_str(id_key).map(str::to_owned))

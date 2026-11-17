@@ -230,7 +230,8 @@ pub(crate) fn finite_double(number: &Number) -> Result<f64, NonFinite> {
 /// 0xEE. Above that, a surrogate pair can sort before U+E000 to U+FFFF.
 #[must_use]
 pub fn utf16_cmp(left: &str, right: &str) -> Ordering {
-    let (left_bytes, right_bytes) = (left.as_bytes(), right.as_bytes());
+    let left_bytes = left.as_bytes();
+    let right_bytes = right.as_bytes();
     match left_bytes.iter().zip(right_bytes).find(|(a, b)| a != b) {
         None => left_bytes.len().cmp(&right_bytes.len()),
         Some((a, b)) if *a < 0xEE && *b < 0xEE => a.cmp(b),

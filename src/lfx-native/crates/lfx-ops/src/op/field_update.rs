@@ -13,6 +13,7 @@ use crate::flow::path::Segment;
 use crate::json::serialize::quoted;
 use crate::op::Report;
 use crate::op::operation::{Change, FieldUpdate, NodePath, Operation};
+use crate::state::field_write::{FieldWrite, Missing};
 use crate::violation::error::{Error, Result, invalid};
 
 /// Check that the path exists up to its last segment.
@@ -20,9 +21,9 @@ pub(crate) fn require_path(
     sequenced: &SequencedUpdate<'_>,
     update_target: &UpdateTarget,
 ) -> Result<()> {
-    match update_target.missing_at {
-        Some(missing) => Err(missing_segment(sequenced, missing)),
-        None => Ok(()),
+    match update_target.end {
+        PathEnd::Missing(missing) => Err(missing_segment(sequenced, missing.at)),
+        PathEnd::InWrite { .. } | PathEnd::InNode(_) => Ok(()),
     }
 }
 
@@ -101,25 +102,75 @@ impl fmt::Display for SeqNum {
     }
 }
 
-/// Where a field update's path leads through the batch's pending field writes, and what it holds.
-#[derive(Debug, Default)]
+/// Where a field update's path leads through the batch's pending field
+/// writes, and the keyed lists on the way.
+#[derive(Debug)]
 pub(crate) struct UpdateTarget {
-    /// The path length of the write on the way that holds the last segment.
-    /// `None` when the node itself holds it.
-    pub(crate) write_len: Option<usize>,
+    /// What the path holds, or where it ends early.
+    pub(crate) end: PathEnd,
     /// The keyed list items the path passes through, before its last segment.
     pub(crate) list_items: Vec<ListItemOnPath>,
     /// The keyed list whose item the last segment names, if it names one.
     pub(crate) last_list: Option<&'static KeyedList>,
-    /// The first keyed list rule broken on the path, with its segment index.
-    pub(crate) list_problem: Option<(usize, ListProblem)>,
-    /// Whether the value that holds the last segment has it.
-    pub(crate) found: bool,
-    /// Whether the path holds a value as the batch sees it. It is
-    /// [`Self::found`] unless a write at the path says otherwise.
-    pub(crate) exists: bool,
-    /// The index of the first segment that does not exist.
-    pub(crate) missing_at: Option<usize>,
+    /// The first keyed list rule broken on the path.
+    pub(crate) list_problem: Option<ListProblemAt>,
+}
+
+impl UpdateTarget {
+    /// Whether the path holds a value as the batch sees it.
+    pub(crate) fn exists(&self) -> bool {
+        match self.end {
+            PathEnd::Missing(_) => false,
+            PathEnd::InWrite { exists, .. } => exists,
+            PathEnd::InNode(value) => matches!(value, NodeValue::Added | NodeValue::Present),
+        }
+    }
+}
+
+/// What a field update's path holds, as the batch sees it.
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum PathEnd {
+    /// A segment before the last one has no value.
+    Missing(Missing),
+    /// The batch's write at the first `path_len` segments holds the parent
+    /// of the last segment. `exists` says whether that write's value has the
+    /// last segment.
+    InWrite { path_len: usize, exists: bool },
+    /// The node holds the parent of the last segment.
+    InNode(NodeValue),
+}
+
+/// The value at a path of a node, with the batch's write at the path.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum NodeValue {
+    /// Neither the node nor the batch has a value.
+    Absent,
+    /// Only the batch has a value: it added one.
+    Added,
+    /// The node has a value, and the batch kept it or set another.
+    Present,
+    /// The node has a value, and the batch removed it.
+    Removed,
+}
+
+impl NodeValue {
+    /// `in_node`: the node has a value at the path. `write`: the batch's write at the path.
+    pub(crate) fn new(in_node: bool, write: Option<&FieldWrite>) -> Self {
+        match (in_node, write) {
+            (true, Some(FieldWrite::Remove)) => Self::Removed,
+            (true, _) => Self::Present,
+            (false, Some(FieldWrite::Set(_))) => Self::Added,
+            (false, _) => Self::Absent,
+        }
+    }
+}
+
+/// A keyed list rule that a list on the path breaks.
+#[derive(Debug)]
+pub(crate) struct ListProblemAt {
+    /// The index of the path segment that names an item of the list.
+    pub(crate) segment: usize,
+    pub(crate) problem: ListProblem,
 }
 
 /// A keyed list item a path passes through.

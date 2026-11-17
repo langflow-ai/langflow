@@ -45,44 +45,70 @@ pub fn check_restore_fixes(
     stored: &FlowValue,
     fixes: &[Operation],
 ) -> Result<()> {
-    let edges: Vec<&FlowObj> = revision
-        .get("edges")
-        .and_then(FlowValue::as_array)
-        .into_iter()
-        .flatten()
-        .filter_map(FlowValue::as_object)
-        .collect();
-    let by_id: HashMap<&str, &FlowObj> = edges.iter().map(|edge| (edge.id(), *edge)).collect();
-    let mut deletable: HashSet<String> = HashSet::default();
-    let mut rewritable: HashSet<String> = HashSet::default();
-    for violation in find_graph_violations(revision, Numbers::Check, Some(stored))? {
-        let Some(id) = violation.edge_id.as_deref() else {
-            continue;
-        };
-        if violation.code.resolution() != Resolution::Manual {
-            continue;
-        }
-        deletable.insert(id.to_owned());
-        match violation.code {
-            ViolationCode::EdgeHandleInvalid | ViolationCode::EdgeHandleNotFound => {
-                rewritable.insert(id.to_owned());
-            }
-            ViolationCode::EdgeTargetOccupied => {
-                if let Some(edge) = by_id.get(id) {
-                    deletable.extend(edges_into_the_same_input(&edges, edge)?);
-                }
-            }
-            _ => {}
-        }
-    }
-
-    let refused =
-        |id: &str, why: &str| Error::restore_not_allowed(format!("edge {}{why}", quoted(id)));
+    let allowed = AllowedFixes::find(revision, stored)?;
     let mut deleted: HashSet<&str> = HashSet::default();
     for fix in fixes {
+        allowed.check(fix, &mut deleted)?;
+    }
+    Ok(())
+}
+
+/// The edge fixes that the violations of a revision allow.
+struct AllowedFixes<'r> {
+    /// The revision's edges, by id.
+    by_id: HashMap<&'r str, &'r FlowObj>,
+    /// The edges a fix may delete.
+    deletable: HashSet<String>,
+    /// The edges a fix may add back with other handles, after it deletes them.
+    rewritable: HashSet<String>,
+}
+
+impl<'r> AllowedFixes<'r> {
+    /// The fixes allowed for the violations of `revision` against `stored`.
+    fn find(revision: &'r FlowValue, stored: &FlowValue) -> Result<Self> {
+        let edges: Vec<&FlowObj> = revision
+            .get("edges")
+            .and_then(FlowValue::as_array)
+            .into_iter()
+            .flatten()
+            .filter_map(FlowValue::as_object)
+            .collect();
+        let by_id: HashMap<&str, &FlowObj> = edges.iter().map(|edge| (edge.id(), *edge)).collect();
+        let mut deletable: HashSet<String> = HashSet::default();
+        let mut rewritable: HashSet<String> = HashSet::default();
+        for violation in find_graph_violations(revision, Numbers::Check, Some(stored))? {
+            let Some(id) = violation.edge_id.as_deref() else {
+                continue;
+            };
+            if violation.code.resolution() != Resolution::Manual {
+                continue;
+            }
+            deletable.insert(id.to_owned());
+            match violation.code {
+                ViolationCode::EdgeHandleInvalid | ViolationCode::EdgeHandleNotFound => {
+                    rewritable.insert(id.to_owned());
+                }
+                ViolationCode::EdgeTargetOccupied => {
+                    if let Some(edge) = by_id.get(id) {
+                        deletable.extend(edges_into_the_same_input(&edges, edge)?);
+                    }
+                }
+                _ => {}
+            }
+        }
+        Ok(Self {
+            by_id,
+            deletable,
+            rewritable,
+        })
+    }
+
+    /// Fail unless `fix` is allowed. `deleted` holds the edges that earlier
+    /// fixes deleted, and this fix adds to it.
+    fn check<'f>(&self, fix: &'f Operation, deleted: &mut HashSet<&'f str>) -> Result<()> {
         match fix {
             Operation::DeleteEdges(ids) => {
-                if let Some(id) = ids.iter().find(|id| !deletable.contains(*id)) {
+                if let Some(id) = ids.iter().find(|id| !self.deletable.contains(*id)) {
                     return Err(refused(
                         id,
                         " breaks no edge rule the client may fix by deleting it",
@@ -93,13 +119,13 @@ pub fn check_restore_fixes(
             Operation::AddEdges(added) => {
                 for edge in added {
                     let id = edge.id();
-                    if !rewritable.contains(id) {
+                    if !self.rewritable.contains(id) {
                         return Err(refused(id, " has no handles the client may rewrite"));
                     }
                     if !deleted.contains(id) {
                         return Err(refused(id, ": a fix adds an edge only after it deletes it"));
                     }
-                    let Some(before) = by_id.get(id) else {
+                    let Some(before) = self.by_id.get(id) else {
                         return Err(refused(id, " does not exist"));
                     };
                     if !only_handles_differ(before, edge.as_map())? {
@@ -114,8 +140,13 @@ pub fn check_restore_fixes(
                 )));
             }
         }
+        Ok(())
     }
-    Ok(())
+}
+
+/// The error for a fix that changes edge `id` in a way no violation allows.
+fn refused(id: &str, why: &str) -> Error {
+    Error::restore_not_allowed(format!("edge {}{why}", quoted(id)))
 }
 
 /// The ids of the edges into the same input as `edge`.

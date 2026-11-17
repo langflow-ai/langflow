@@ -312,7 +312,8 @@ pub(super) fn canonical_equal(
             if matches!(values_equal(left, right), Ok(true)) && handles_spell_data(left) {
                 return Ok(true);
             }
-            let (left, right) = (canonical_edge(left)?, canonical_edge(right)?);
+            let left = canonical_edge(left)?;
+            let right = canonical_edge(right)?;
             return canonical_equal(
                 CanonicalRef::of(&left),
                 CanonicalRef::of(&right),
@@ -385,7 +386,8 @@ fn nodes_equal(
     if matches!(values_equal(left, right), Ok(true)) {
         return Ok(true);
     }
-    let (left, right) = (canonical_node(left), canonical_node(right));
+    let left = canonical_node(left);
+    let right = canonical_node(right);
     canonical_equal(
         CanonicalRef::of(&left),
         CanonicalRef::of(&right),

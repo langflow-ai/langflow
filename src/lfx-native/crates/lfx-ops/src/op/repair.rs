@@ -455,10 +455,8 @@ fn repair_table(
     previous: Option<&FlowValue>,
     fixes: &mut Fixes,
 ) -> Result<()> {
-    let (id_key, position_key) = (
-        &FLOW_MODEL.table_input_keys.id,
-        &FLOW_MODEL.table_input_keys.position,
-    );
+    let id_key = &FLOW_MODEL.table_input_keys.id;
+    let position_key = &FLOW_MODEL.table_input_keys.position;
     let row_path = |index: usize, key: Option<&str>| {
         path(
             table_input_path

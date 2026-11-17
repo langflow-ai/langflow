@@ -525,7 +525,10 @@ mod text {
             f.write_str("a field update")
         }
         fn visit_map<M: MapAccess<'de>>(self, mut map: M) -> Result<FieldUpdate, M::Error> {
-            let (mut op, mut id, mut path, mut value) = (None, None, None, None);
+            let mut op = None;
+            let mut id = None;
+            let mut path = None;
+            let mut value = None;
             while let Some(key) = map.next_key_seed(KeySeed)? {
                 match key {
                     Key::Op if op.is_none() => op = Some(map.next_value_seed(Text)?),

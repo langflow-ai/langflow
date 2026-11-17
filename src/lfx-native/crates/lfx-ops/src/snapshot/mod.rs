@@ -135,7 +135,8 @@ pub(crate) fn write_graph<'g, N>(
     edges: impl IntoIterator<Item = &'g FlowObj>,
     write_node: impl FnMut(&mut Vec<u8>, N),
 ) {
-    let (mut nodes, mut edges) = (Some((nodes, write_node)), Some(edges));
+    let mut nodes = Some((nodes, write_node));
+    let mut edges = Some(edges);
     serialize::write_entries(
         out,
         root.iter().map(|(key, value)| (key, (key.as_str(), value))),
