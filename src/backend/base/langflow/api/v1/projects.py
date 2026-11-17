@@ -139,6 +139,13 @@ from langflow.services.deps import (
     get_storage_service,
 )
 from langflow.services.evaluations.cleanup import delete_project_evaluations
+from langflow.services.replacement_hooks import (
+    ReplacementCommittedContext,
+    ReplacementContext,
+    registered_replacement_committed_hooks,
+    run_replacement_committed_hooks,
+    run_replacement_hooks,
+)
 from langflow.services.schema import ServiceType
 from langflow.services.storage.service import StorageService
 from langflow.services.triggers.reconciliation import reconcile_flow_triggers_safely
@@ -863,6 +870,9 @@ def _replacement_request_digest(request_body: ProjectReplacementRequest) -> str:
         normalized.pop("dependencies", None)
     if request_body.variables is None:
         normalized.pop("variables", None)
+    # Same for the optional hook carrier: absent and explicit null mean the same thing, so old digests stay unchanged.
+    if request_body.execution_principal_id is None:
+        normalized.pop("execution_principal_id", None)
     if not request_body.prepare_memory_bases:
         normalized.pop("prepare_memory_bases", None)
     try:
@@ -1212,6 +1222,23 @@ async def _replace_project_operation_once(
                     status_code=status.HTTP_409_CONFLICT,
                     detail="Operation ID already used with a different request",
                     headers={ERROR_CODE_HEADER: "replacement_operation_id_conflict"},
+                )
+            if registered_replacement_committed_hooks():
+                # Nothing was written, but the project lock is still held. Release it before the hooks, which open
+                # their own sessions (SQLite would otherwise refuse their writes). Without hooks nothing changes.
+                await session.commit()
+                mark_committed()
+                await run_replacement_committed_hooks(
+                    ReplacementCommittedContext(
+                        current_user=current_user,
+                        project_id=project_id,
+                        project_user_id=receipt.project_user_id,
+                        operation_id=operation_id,
+                        request=activation_request,
+                        flows_before=None,
+                        flows_after={flow.id: flow.name for flow in saved_result.flows},
+                        replayed=True,
+                    )
                 )
             return saved_result
 
@@ -1640,6 +1667,29 @@ async def _replace_project_operation_once(
             request=activation_request,
         )
 
+        flows_after = {flow.id: flow.name for flow in result_flows}
+        await run_replacement_hooks(
+            ReplacementContext(
+                session=session,
+                current_user=current_user,
+                project=project,
+                created=newly_created_project is not None,
+                request=activation_request,
+                flows_before=membership_before,
+                flows_after=flows_after,
+            )
+        )
+        committed_context = ReplacementCommittedContext(
+            current_user=current_user,
+            project_id=project_id,
+            project_user_id=project.user_id,
+            operation_id=operation_id,
+            request=activation_request,
+            flows_before=membership_before,
+            flows_after=flows_after,
+            replayed=False,
+        )
+
         result = ProjectReplacementResult(
             project=FolderRead.model_validate(project, from_attributes=True, update={"auth_settings": None}),
             flows=result_flows,
@@ -1729,7 +1779,7 @@ async def _replace_project_operation_once(
             project_name=result.project.name,
             description=result.project.description,
             flows_before=membership_before,
-            flows_after={flow.id: flow.name for flow in result_flows},
+            flows_after=flows_after,
         )
         await flush_audit_event_batch(session)
         await session.commit()
@@ -1772,6 +1822,9 @@ async def _replace_project_operation_once(
             await logger.awarning(
                 "Failed to clear MCP server cache for %s after replacement commit", server_name, exc_info=True
             )
+    # Last, so a failing hook cannot skip the best-effort cleanup above. The replacement is durable; a failure here
+    # answers an error and the caller's retry replays the receipt and runs the hooks again.
+    await run_replacement_committed_hooks(committed_context)
     return result
 
 

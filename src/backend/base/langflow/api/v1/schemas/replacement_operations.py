@@ -73,6 +73,9 @@ class ProjectReplacementRequest(SQLModel):
     # the activation extension may also prepare declared empty Memory Bases.
     dependencies: dict[str, Any] | None = None
     variables: ReplacementVariables | None = None
+    # Validated by registered replacement hooks (see langflow.services.replacement_hooks) and ignored otherwise.
+    # Part of the request digest, so a retry that names a different value is refused like any other changed body.
+    execution_principal_id: UUID | None = None
     # Explicit capability requirement: older serving versions reject this field.
     # The activation extension creates missing empty Memory Bases in this transaction.
     prepare_memory_bases: bool = False
