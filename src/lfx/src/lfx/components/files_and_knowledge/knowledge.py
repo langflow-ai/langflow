@@ -100,6 +100,8 @@ def _inputs_for_mode(default_mode: str) -> list:
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
+
 # Mode constants. Plain-text labels (no emoji) for consistency with the rest of
 # Langflow's TabInput palette — see ``MemoryComponent`` for the same convention.
 MODE_INGEST = "Ingest"
@@ -216,7 +218,6 @@ class KnowledgeComponent(Component):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self._cached_kb_path: Path | None = None
         self._knowledge_output_result: Data | DataFrame | None = None
 
     def _pre_run_setup(self) -> None:
@@ -266,7 +267,8 @@ class KnowledgeComponent(Component):
                 return ()
             provider = self._embedding_provider_from_selection(knowledge_value.get("02_embedding_model"))
         elif isinstance(knowledge_value, str) and knowledge_value.strip():
-            metadata = await self._get_kb_metadata(knowledge_value.strip())
+            mode = effective_parameters.get("mode", getattr(self, "mode", MODE_INGEST))
+            metadata = await self._get_kb_metadata(knowledge_value.strip(), mode=mode)
             provider = self._embedding_provider_from_selection(metadata.get("model_selection"))
             if provider is None:
                 legacy_provider = metadata.get("embedding_provider")
@@ -975,18 +977,19 @@ class KnowledgeComponent(Component):
         config_list: list[dict[str, Any]],
         embedding_function,
         *,
+        record: KnowledgeBaseRecord,
         job_id: uuid.UUID | None = None,
     ) -> tuple[BaseVectorStoreBackend, set[int]]:
         """Create the vector store and return the input row positions actually stored."""
         from langflow.api.utils.kb_helpers import backend_for_name
 
-        owner_id = await self._kb_owner_id()
-        if owner_id is None:
-            msg = "User ID is required for knowledge base storage."
-            raise ValueError(msg)
-        backend = await backend_for_name(owner_id, self.knowledge_base, embedding_function=embedding_function)
+        backend = await backend_for_name(
+            record.user_id, self.knowledge_base, expected_record=record, embedding_function=embedding_function
+        )
         try:
-            return await self._ingest_into_backend(backend, df_source, config_list, embedding_function, job_id=job_id)
+            return await self._ingest_into_backend(
+                backend, df_source, config_list, embedding_function, record=record, job_id=job_id
+            )
         except BaseException:
             await _finish_despite_cancellation(backend.teardown())
             raise
@@ -998,13 +1001,13 @@ class KnowledgeComponent(Component):
         config_list: list[dict[str, Any]],
         embedding_function,
         *,
+        record: KnowledgeBaseRecord,
         job_id: uuid.UUID | None = None,
     ) -> tuple[BaseVectorStoreBackend, set[int]]:
         await backend.ensure_ready()
 
-        from langflow.services.knowledge_base_storage.runtime import operation, resolve_record
+        from langflow.services.knowledge_base_storage.runtime import operation
 
-        record = await resolve_record(await self._kb_owner_id(), self.knowledge_base)
         async with operation(record, shared=True):
             existing_ids = set()
             if not self.allow_duplicates:
@@ -1215,40 +1218,17 @@ class KnowledgeComponent(Component):
             backend_config=backend_config,
         )
 
-    async def _kb_username(self) -> str:
-        """Resolve the owning user's username (used to root a local-Chroma path)."""
-        cached = getattr(self, "_cached_kb_username", None)
-        if cached is not None:
-            return cached
-
-        # Lazy import to keep ``lfx`` importable standalone — langflow's
-        # user/DB models are not always available at module load time.
+    async def _kb_path(self, record: KnowledgeBaseRecord) -> Path | None:
+        """Resolve the local directory in the authorized owner's namespace."""
         from langflow.services.database.models.user.crud import get_user_by_id
 
-        if not self.user_id:
-            msg = "User ID is required for fetching knowledge base path."
-            raise ValueError(msg)
-        # The owner's namespace roots the path; for a shared KB that is not the running user.
-        owner_id = await self._kb_owner_id()
         async with session_scope() as db:
-            current_user = await get_user_by_id(db, owner_id)
-            if not current_user:
-                msg = f"User with ID {owner_id} not found."
+            owner = await get_user_by_id(db, record.user_id)
+            if owner is None:
+                msg = f"User with ID {record.user_id} not found."
                 raise ValueError(msg)
-            self._cached_kb_username = current_user.username
-
-        return self._cached_kb_username
-
-    async def _kb_path(self) -> Path | None:
-        """Resolve the KB's local directory from its configured backend."""
-        cached_path = getattr(self, "_cached_kb_path", None)
-        if cached_path is not None:
-            return cached_path
-
-        backend_type, backend_config = await self._resolve_backend_config()
-        kb_user = await self._kb_username()
-        self._cached_kb_path = self._resolve_store_path(kb_user, backend_type, backend_config)
-        return self._cached_kb_path
+            backend_type, backend_config = await self._resolve_backend_config(record)
+            return self._resolve_store_path(owner.username, backend_type, backend_config)
 
     def _resolve_user_metadata_tag(self) -> str:
         """Return the JSON-encoded user metadata tag for chunk writes."""
@@ -1302,7 +1282,13 @@ class KnowledgeComponent(Component):
             # Embedding config comes from the ``knowledge_base`` row — the sole
             # authority. No sidecar is read, so ingestion resolves the same model
             # on any replica.
-            stored_metadata = await self._get_kb_metadata()
+            from langflow.api.utils.knowledge_base_service import record_to_metadata_dict
+
+            record = await self._find_record()
+            if record is None:
+                msg = "No embedding model configuration found. Please create the knowledge base first."
+                raise ValueError(msg)
+            stored_metadata = record_to_metadata_dict(record)
             # A cancelled run restores this status. Only an earlier failure is
             # kept; "empty" is an API projection of a ready KB with no chunks.
             if stored_metadata.get("status") == "failed":
@@ -1365,14 +1351,14 @@ class KnowledgeComponent(Component):
                 chunk_size=self.chunk_size,
             )
 
-            kb_path = await self._kb_path()
+            kb_path = await self._kb_path(record)
 
-            run_id, run_job_id, run_summary, kb_record_id = await self._begin_ingestion_run(kb_path)
+            run_id, run_job_id, run_summary, kb_record_id = await self._begin_ingestion_run(kb_path, record.id)
             if kb_record_id is not None:
                 await self._record_kb_status(kb_record_id, "ingesting")
 
             backend, stored_rows = await self._create_vector_store(
-                df_source, config_list, embedding_function=embedding_function, job_id=run_job_id
+                df_source, config_list, embedding_function=embedding_function, record=record, job_id=run_job_id
             )
 
             try:
@@ -1471,7 +1457,8 @@ class KnowledgeComponent(Component):
 
     async def _begin_ingestion_run(
         self,
-        kb_path: Path,
+        kb_path: Path | None,
+        kb_record_id: uuid.UUID,
     ) -> tuple[uuid.UUID | None, uuid.UUID | None, IngestionSummary | None, uuid.UUID | None]:
         """Create a parent ``Job`` and seed an ingestion-run row."""
         if not self.user_id:
@@ -1495,11 +1482,7 @@ class KnowledgeComponent(Component):
         job_id: uuid.UUID | None = None
         run_id: uuid.UUID | None = None
         summary: IngestionSummary | None = None
-        kb_record_id: uuid.UUID | None = None
         try:
-            kb_record = await self._find_record()
-            kb_record_id = kb_record.id if kb_record is not None else None
-
             user_metadata = self._parse_user_metadata_dict()
 
             job_id = uuid.uuid4()
@@ -1653,7 +1636,9 @@ class KnowledgeComponent(Component):
             return None
         return self.user_id if isinstance(self.user_id, uuid.UUID) else uuid.UUID(self.user_id)
 
-    async def _find_record(self, knowledge_base: str | None = None):
+    async def _find_record(
+        self, knowledge_base: str | None = None, *, mode: str | None = None
+    ) -> KnowledgeBaseRecord | None:
         """The KB row this run uses: the running user's own, else one a registered plane shares to it.
 
         Without a plane registering shared-KB lookup (OSS), the second step finds nothing and this is the owner lookup
@@ -1668,18 +1653,11 @@ class KnowledgeComponent(Component):
         record = await knowledge_base_service.get_by_user_and_name(user_uuid, name)
         if record is not None:
             return record
-        action = "read" if _is_retrieve_mode(getattr(self, "mode", MODE_INGEST)) else "ingest"
-        cache = self.__dict__.setdefault("_shared_kb_cache", {})
-        if (name, action) not in cache:
-            cache[name, action] = await knowledge_base_service.get_shared_for_run(user_uuid, name, action)
-        return cache[name, action]
+        effective_mode = mode if mode is not None else getattr(self, "mode", MODE_INGEST)
+        action = "read" if _is_retrieve_mode(effective_mode) else "ingest"
+        return await knowledge_base_service.get_shared_for_run(user_uuid, name, action)
 
-    async def _kb_owner_id(self) -> uuid.UUID | None:
-        """Whose namespace holds this KB: the record's owner, or the running user when there is no record."""
-        record = await self._find_record()
-        return record.user_id if record is not None else self._user_uuid
-
-    async def _get_kb_metadata(self, knowledge_base: str | None = None) -> dict:
+    async def _get_kb_metadata(self, knowledge_base: str | None = None, *, mode: str | None = None) -> dict:
         """Load this knowledge base's embedding config from its database row.
 
         The row is the sole authority. There is no on-disk sidecar to fall back
@@ -1694,42 +1672,16 @@ class KnowledgeComponent(Component):
 
         if self._user_uuid is None:
             return {}
-        record = await self._find_record(knowledge_base)
+        record = await self._find_record(knowledge_base, mode=mode)
         if record is None:
             return {}
         return knowledge_base_service.record_to_metadata_dict(record)
 
-    async def _backend_from_record(self) -> tuple[str, dict[str, Any]] | None:
-        """Read ``(backend_type, backend_config)`` off the KB's database row.
-
-        Returns ``None`` when there is no row to read — a legacy KB predating the
-        record, or bare lfx with no langflow installed. A lookup that *fails* is a
-        different situation and is allowed to propagate: guessing a backend after a
-        database error is how vectors end up in a store nothing queries.
-        """
-        try:
-            import langflow.api.utils.knowledge_base_service  # noqa: F401 - no langflow means no row to read
-        except ImportError:
-            return None
-
-        if self._user_uuid is None:
-            return None
-        record = await self._find_record()
+    async def _resolve_backend_config(self, record: KnowledgeBaseRecord | None = None) -> tuple[str, dict[str, Any]]:
+        """Read the routing configuration from the authorized KB row."""
         if record is None:
-            return None
-        return record.backend_type or BackendType.CHROMA.value, record.backend_config or {}
-
-    async def _resolve_backend_config(self) -> tuple[str, dict[str, Any]]:
-        """Resolve this KB's backend from its database row.
-
-        Ingestion and retrieval both land here, so they cannot disagree about
-        where this KB's vectors live. A backend that cannot be resolved raises
-        rather than defaulting to local storage: guessing is how a pod ends up
-        writing vectors to a local directory while queries follow the real config
-        to a remote store and silently find nothing.
-        """
-        resolved = await self._backend_from_record()
-        if resolved is None:
+            record = await self._find_record()
+        if record is None:
             msg = (
                 f"Cannot determine the vector-store backend for knowledge base "
                 f"'{self.knowledge_base}': it has no database record. Refusing to fall "
@@ -1738,7 +1690,7 @@ class KnowledgeComponent(Component):
                 f"metadata, adopt it with 'langflow reconcile-kb-from-disk'."
             )
             raise ValueError(msg)
-        return resolved
+        return record.backend_type or BackendType.CHROMA.value, record.backend_config or {}
 
     def _resolve_model_selection(self, metadata: dict[str, Any]) -> list[dict[str, Any]]:
         """Resolve the ``get_embeddings``-compatible model selection from metadata."""
@@ -1826,18 +1778,18 @@ class KnowledgeComponent(Component):
                 msg = f"User with ID {self.user_id} not found."
                 raise ValueError(msg)
 
-        metadata = await self._get_kb_metadata()
-        if not metadata:
+        from langflow.api.utils.knowledge_base_service import record_to_metadata_dict
+
+        record = await self._find_record()
+        if record is None:
             msg = f"Metadata not found for knowledge base: {self.knowledge_base}. Ensure it has been indexed."
             raise ValueError(msg)
 
+        metadata = record_to_metadata_dict(record)
         model_selection = self._resolve_model_selection(metadata)
         chunk_size = metadata.get("chunk_size")
 
-        # Resolve where this KB lives before instantiating embeddings: path
-        # containment is a cheap local check, and a request that will be refused
-        # shouldn't first pay for a credential lookup and a provider client.
-        backend_type, _backend_config = await self._resolve_backend_config()
+        backend_type, _ = await self._resolve_backend_config(record)
 
         # ``api_key=None`` is not "no credential": ``get_embeddings`` resolves the
         # provider's key from the user's variables table and then the environment,
@@ -1852,11 +1804,9 @@ class KnowledgeComponent(Component):
 
         from langflow.api.utils.kb_helpers import backend_for_name
 
-        owner_id = await self._kb_owner_id()
-        if owner_id is None:
-            msg = "User ID is required for knowledge base storage."
-            raise ValueError(msg)
-        backend = await backend_for_name(owner_id, self.knowledge_base, embedding_function=embedding_function)
+        backend = await backend_for_name(
+            record.user_id, self.knowledge_base, expected_record=record, embedding_function=embedding_function
+        )
         try:
             user_metadata_filter = _parse_metadata_filter(getattr(self, "metadata_filter", None))
             use_scores = bool(self.search_query)

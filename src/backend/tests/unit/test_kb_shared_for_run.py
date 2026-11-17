@@ -107,7 +107,7 @@ async def test_component_uses_its_own_row_and_skips_the_shared_lookup() -> None:
         patch.object(service, "get_by_user_and_name", AsyncMock(return_value=own)),
         patch.object(service, "get_shared_for_run", AsyncMock(side_effect=AssertionError("asked"))),
     ):
-        assert await _component(MODE_RETRIEVE)._kb_owner_id() == RUNNER
+        assert await _component(MODE_RETRIEVE)._find_record() is own
 
 
 @pytest.mark.parametrize(("mode", "action"), [(MODE_RETRIEVE, "read"), (MODE_INGEST, "ingest")])
@@ -118,14 +118,53 @@ async def test_component_falls_back_to_the_shared_row_for_its_mode(mode: str, ac
         patch.object(service, "get_shared_for_run", shared),
     ):
         component = _component(mode)
-        assert await component._kb_owner_id() == OWNER
-        assert await component._kb_owner_id() == OWNER  # cached for the rest of the run
+        assert await component._find_record() is SHARED
     shared.assert_awaited_once_with(RUNNER, "docs", action)
 
 
-async def test_component_without_any_row_stays_in_the_running_users_namespace() -> None:
+async def test_component_without_any_row_has_no_storage_record() -> None:
     with (
         patch.object(service, "get_by_user_and_name", AsyncMock(return_value=None)),
         patch.object(service, "get_shared_for_run", AsyncMock(return_value=None)),
     ):
-        assert await _component(MODE_RETRIEVE)._kb_owner_id() == RUNNER
+        assert await _component(MODE_RETRIEVE)._find_record() is None
+
+
+async def test_reused_component_checks_current_permission_each_build() -> None:
+    component = _component(MODE_RETRIEVE)
+    shared = AsyncMock(side_effect=[SHARED, None])
+    with (
+        patch.object(service, "get_by_user_and_name", AsyncMock(return_value=None)),
+        patch.object(service, "get_shared_for_run", shared),
+    ):
+        component._pre_run_setup()
+        assert await component._find_record() is SHARED
+        component._pre_run_setup()
+        assert await component._find_record() is None
+    assert shared.await_count == 2
+
+
+@pytest.mark.parametrize("purpose", ["configure", "use"])
+async def test_saved_retrieve_preflight_uses_raw_mode_for_read_only_share(purpose) -> None:
+    from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+
+    component = _component(MODE_INGEST)
+    authz = _Authz({SHARED.id: {"read"}})
+    deps, listing = _plane(authz)
+    with (
+        deps,
+        listing,
+        patch.object(service, "get_by_user_and_name", AsyncMock(return_value=None)),
+        patch.object(service, "record_to_metadata_dict", return_value={"embedding_provider": "OpenAI"}),
+        patch("lfx.services.model_provider_policy.aresolve_model_provider_policy", new_callable=AsyncMock) as policy,
+    ):
+        policy.return_value.require = lambda _provider: None
+        await component.arequire_model_provider_policy(
+            ModelProviderPolicyPurpose(purpose),
+            user_id=str(RUNNER),
+            parameters={"knowledge_base": "docs", "mode": "🔍 Retrieve"},
+        )
+    assert authz.asked == [(RUNNER, f"knowledge_base:{SHARED.id}", "read")]
+    policy.assert_awaited_once_with(
+        user_id=str(RUNNER), providers=["openai"], purpose=ModelProviderPolicyPurpose(purpose)
+    )

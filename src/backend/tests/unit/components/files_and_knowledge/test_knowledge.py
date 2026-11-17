@@ -580,7 +580,7 @@ class TestKnowledgeProviderPolicyPreflight:
             parameters={"knowledge_base": "support_docs", "mode": mode},
         )
 
-        metadata_lookup.assert_awaited_once_with("support_docs")
+        metadata_lookup.assert_awaited_once_with("support_docs", mode=mode)
         resolve_policy.assert_awaited_once_with(
             user_id="policy-actor",
             providers=["openai"],
@@ -625,7 +625,7 @@ class TestKnowledgeProviderPolicyPreflight:
                 parameters={"knowledge_base": "missing_docs"},
             )
 
-        metadata_lookup.assert_awaited_once_with("missing_docs")
+        metadata_lookup.assert_awaited_once_with("missing_docs", mode=MODE_INGEST)
         resolve_policy.assert_not_awaited()
 
 
