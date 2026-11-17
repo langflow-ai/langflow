@@ -6,8 +6,8 @@ Replace this saved node manually with a supported [Knowledge Base or remote vect
 
 Supported local Knowledge Base and Memory Base storage upgrades are separate from replacing standalone Chroma nodes. [Chroma Cloud requires administrator-led data migration](https://docs.langflow.org/troubleshoot#remote-source-requires-migration). Neither path automatically replaces this node. Installing the Chroma SDK does not re-enable the retired integration.
 
-Release comparison `lfx-bundles` 1.3.5 to 1.3.9.
+Release comparison `lfx-bundles` 1.3.5 to 1.3.10.
 
-- Break identity `0ea978f2cfe992452b870bb07452ca2a3d37cf6033462a6e1dcdf8acbdae2575`
+- Break identity `cc28775e240da5c932b13f818ff70c3035b75ddc7b0e7e665a7de26c17e7cf04`
 - Previous contract `71d4f962ecb49bd505c192cded435c737169a21692da37d8301acf9af3a333b7`
 - Target contract `70bb4f4a726b4527d9ffa9b176cacf81d557f9f6412c49b594bc9cad3e911fb1`
