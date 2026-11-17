@@ -312,7 +312,7 @@ def test_public_docker_targets_apply_release_version_overrides() -> None:
     assert 'm.version("langflow-base")' in source
 
     assert workflow.count("MAIN_VERSION=${{ needs.determine-main-version.outputs.version }}") == 6
-    assert workflow.count("BASE_VERSION=${{ needs.determine-main-version.outputs.version }}") == 6
+    assert workflow.count("BASE_VERSION=${{ needs.determine-main-version.outputs.version }}") == 8
     assert workflow.count("BASE_VERSION=${{ needs.determine-base-version.outputs.version }}") == 2
 
 
