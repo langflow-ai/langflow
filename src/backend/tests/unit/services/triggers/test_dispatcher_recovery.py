@@ -2,13 +2,14 @@
 
 import asyncio
 from datetime import datetime, timedelta, timezone
+from unittest.mock import AsyncMock
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
 import pytest
 from langflow.services.background_execution.service import BackgroundExecutionService
 from langflow.services.database.models.jobs.model import Job, JobStatus, JobType
 from langflow.services.database.models.trigger.model import Trigger, TriggerEvent
-from langflow.services.deps import get_settings_service, session_scope
+from langflow.services.deps import get_settings_service, get_trigger_service, session_scope
 from langflow.services.triggers import dispatcher, ledger
 from sqlmodel import select
 
@@ -16,8 +17,14 @@ pytestmark = pytest.mark.no_blockbuster
 
 
 @pytest.mark.parametrize("failure", [RuntimeError, asyncio.CancelledError])
-async def test_trigger_recovers_the_committed_job_after_interrupted_submit(make_trigger, monkeypatch, failure):
+@pytest.mark.parametrize("bound_account", [False, True])
+async def test_trigger_recovers_the_committed_job_after_interrupted_submit(
+    make_trigger, monkeypatch, failure, bound_account, active_user, trigger_owner, owned_flow
+):
     trigger_id = await make_trigger(max_attempts=1)
+    if bound_account:
+        resolver = AsyncMock(return_value=active_user.id)
+        monkeypatch.setattr(get_trigger_service(), "resolve_run_user_id", resolver)
     async with session_scope() as session:
         event, _ = await ledger.append_event(session, trigger_id=trigger_id, dedupe_key="crash-window")
         event_id = event.id
@@ -54,6 +61,10 @@ async def test_trigger_recovers_the_committed_job_after_interrupted_submit(make_
             await session.exec(select(Job).where(Job.flow_id == (await session.get(Trigger, trigger_id)).flow_id))
         ).all()
         assert len(jobs) == 1
+        assert jobs[0].user_id == (active_user.id if bound_account else trigger_owner)
+        if bound_account:
+            resolver.assert_awaited_once()
+            assert resolver.await_args.kwargs == {"flow_id": owned_flow, "trigger_owner_id": trigger_owner}
         assert event.job_id == jobs[0].job_id == uuid5(NAMESPACE_URL, f"langflow:trigger-event:{event_id}")
         assert event.state == "dispatched"
         assert event.attempt == 0

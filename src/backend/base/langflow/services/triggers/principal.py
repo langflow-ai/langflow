@@ -1,6 +1,6 @@
-"""The identity a trigger-dispatched run executes as, and its fail-closed gate.
+"""The trigger owner's principal for the source connection and its preflight.
 
-A trigger run has no caller. It executes as the trigger owner, non-interactively
+The dispatcher accesses the source connection as its owner, non-interactively
 — ``ExecutionPrincipal(kind="flow_owner", interactive=False)`` — carrying the
 family (``trigger_push`` or ``trigger_listener``) that the execution-principal
 matrix classifies.
@@ -47,9 +47,8 @@ def family_for(trigger: Trigger) -> str:
     """The execution-principal family a run of ``trigger`` belongs to (trigger contract section 5).
 
     ``trigger_push`` for anything a provider (or a third-party caller) pushes to
-    the ingress route; ``trigger_listener`` for everything else. The two share
-    their rules today - both execute as the flow owner, non-interactively - so
-    this is about an audit row saying where a run truly came from.
+    the ingress route and ``trigger_listener`` for everything else. Both run
+    non-interactively. The family records where the event came from.
     """
     mechanism = (trigger.config or {}).get("mechanism_id")
     if trigger.kind == KIND_INBOUND_WEBHOOK or mechanism in push_mechanisms():
@@ -58,7 +57,7 @@ def family_for(trigger: Trigger) -> str:
 
 
 def trigger_execution_principal(trigger: Trigger, *, family: str = FAMILY_TRIGGER_LISTENER) -> ExecutionPrincipal:
-    """Build the principal a dispatched run executes under.
+    """Build the principal used to access the trigger's source connection.
 
     Never ``anonymous_public`` and never ``unknown``: a trigger with no
     resolvable owner is a trigger that does not run, which the ``user_id`` NOT
@@ -83,9 +82,8 @@ async def connection_preflight(
 ) -> IntegrationError | None:
     """Return the denial an unattended run would hit, or None when it may proceed.
 
-    Only triggers that name a connection are checked; a trigger whose flow
-    resolves connections by handle is authorized inside the run, by the same
-    resolver, with the same principal.
+    This checks the trigger owner's source connection. Connections used by
+    components are resolved inside the flow as the job owner.
     """
     if unavailable := provider_availability_denial(trigger):
         return unavailable
