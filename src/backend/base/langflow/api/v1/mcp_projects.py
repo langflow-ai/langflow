@@ -54,6 +54,7 @@ from langflow.api.v1.auth_helpers import get_default_project_auth_settings, hand
 from langflow.api.v1.mcp import ResponseNoOp
 from langflow.api.v1.mcp_utils import (
     authenticated_caller_ctx,
+    composer_authenticated_project_ctx,
     current_request_headers_ctx,
     current_request_variables_ctx,
     current_user_ctx,
@@ -121,6 +122,7 @@ async def verify_project_auth(
     # later branch (e.g. the composer-token fast path) never inherits stale context from a prior call.
     clear_current_auth_context()
     authenticated_caller_ctx.set(None)
+    composer_authenticated_project_ctx.set(None)
     # Defensive invariant: drop any stale external access ceiling so it can't carry into MCP project auth.
     clear_current_external_access_context()
 
@@ -145,12 +147,14 @@ async def verify_project_auth(
                 async with session_scope() as db:
                     project_user = await db.get(User, project_user_id)
                     if project_user:
+                        # Composer authenticates the OAuth hop without establishing the owner's identity.
+                        composer_authenticated_project_ctx.set(project_id)
                         return project_user
             raise HTTPException(status_code=404, detail="Project owner not found")
 
-    # Public MCP projects execute as their owning principal, never as the
-    # instance-wide superuser used by the legacy single-user fallback.
-    if project_auth_type == "none":
+    api_key = query_param or header_param
+    # A public project uses its owner as the execution principal for a keyless request.
+    if project_auth_type == "none" and not api_key:
         if project_user_id:
             async with session_scope() as db:
                 project_user = await db.get(User, project_user_id)
@@ -172,7 +176,6 @@ async def verify_project_auth(
     # False; without this, a key minted by ``/install`` would be ignored and the caller would
     # fall through to the (now-rejecting) superuser fallback. Callers presenting NO credential
     # still reach ``_superuser_fallback`` and get 403 AUTO_LOGIN_ERROR.
-    api_key = query_param or header_param
     if requires_api_key or api_key:
         if not api_key:
             if project_auth_type == "oauth":
@@ -193,13 +196,13 @@ async def verify_project_auth(
         api_key_result = await authenticate_api_key(api_key)
         if not api_key_result:
             raise HTTPException(status_code=401, detail="Invalid API key")
-        set_current_auth_context(AuthCredentialContext.from_api_key_result(api_key_result))
         user = api_key_result.user
 
         # Verify user has access to the project
         if project_user_id != user.id:
             raise HTTPException(status_code=404, detail="Project not found")
 
+        set_current_auth_context(AuthCredentialContext.from_api_key_result(api_key_result))
         set_authenticated_telemetry_user(user)
         authenticated_caller_ctx.set(user.id)
         return user
