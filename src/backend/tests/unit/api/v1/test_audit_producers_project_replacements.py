@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import csv
+import io
 import json
 from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
@@ -72,6 +74,7 @@ async def test_expired_receipt_retry_retains_name_in_audit_export(
     async with session_scope() as session:
         receipt = await session.get(ProjectReplacementOperation, (project_id, operation_id))
         receipt.result = None
+        receipt.project_name = None
         session.add(receipt)
     if deleted:
         removed = await client.delete(f"api/v1/projects/{project_id}", headers=logged_in_headers_super_user)
@@ -106,6 +109,51 @@ async def test_expired_receipt_retry_retains_name_in_audit_export(
         assert (await session.get(ProjectReplacementOperation, (project_id, operation_id))).result is None
 
 
+async def test_pruned_receipt_keeps_original_project_name(
+    client, active_super_user, logged_in_headers_super_user, monkeypatch
+):
+    project_id, operation_id = uuid4(), uuid4()
+    name = await _seed_project(active_super_user, project_id)
+    url = _url(project_id, operation_id)
+    body = {"description": "committed", "flows": []}
+    headers = logged_in_headers_super_user
+    response = await client.put(url, json=body, headers=headers)
+    assert response.status_code == 200, response.text
+
+    async with session_scope() as session:
+        project = await session.get(Folder, project_id)
+        project.name = f"renamed-{project_id.hex}"
+        session.add(project)
+
+    monkeypatch.setattr(projects_module, "_MAX_REPLACEMENT_RECEIPTS_PER_PROJECT", 1)
+    for _ in range(2):
+        replacement = await client.put(_url(project_id), json=body, headers=headers)
+        assert replacement.status_code == 200, replacement.text
+
+    removed = await client.delete(f"api/v1/projects/{project_id}", headers=headers)
+    assert removed.status_code == 204, removed.text
+    async with session_scope() as session:
+        receipt = await session.get(ProjectReplacementOperation, (project_id, operation_id))
+        assert receipt.result is None
+        assert receipt.project_name == name
+        await session.exec(delete(AuditEvent).where(AuditEvent.resource_id == project_id))
+
+    retry = await client.put(url, json={**body, "project_name": "untrusted retry name"}, headers=headers)
+    assert retry.status_code == 410, retry.text
+    [failure] = await events_for(project_id)
+    assert (failure.resource_name, failure.result, failure.error_code) == (name, "failed", "CONSTRAINT_VIOLATION")
+
+    exported = await client.get(
+        "api/v1/audits/export",
+        params={"q": name, "source": "resource", "resource_type": "project", "format": "csv"},
+        headers=headers,
+    )
+    assert exported.status_code == 200, exported.text
+    assert [(row["id"], row["resource_name"]) for row in csv.DictReader(io.StringIO(exported.text))] == [
+        (str(failure.id), name)
+    ]
+
+
 async def test_expired_receipt_warns_when_project_and_audit_history_are_gone(
     client, active_user, logged_in_headers, monkeypatch
 ):
@@ -121,6 +169,7 @@ async def test_expired_receipt_warns_when_project_and_audit_history_are_gone(
     async with session_scope() as session:
         receipt = await session.get(ProjectReplacementOperation, (project_id, operation_id))
         receipt.result = None
+        receipt.project_name = None
         session.add(receipt)
         await session.exec(delete(AuditEvent).where(AuditEvent.resource_id == project_id))
     warning_log = AsyncMock()

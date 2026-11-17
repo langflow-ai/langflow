@@ -49,7 +49,9 @@ MIGRATION_RELEASE = "1.11.0"
 # that introduced them (one ``bare_class_name`` row per component).  They stay in
 # ``PROVIDER_DEPS`` so re-running the script keeps their extras managed, but the
 # move + migration-discovery steps are skipped for them.
-PRE_CONSOLIDATED_PROVIDERS: frozenset[str] = frozenset({"figranium", "keenable", "mrscraper", "olostep"})
+PRE_CONSOLIDATED_PROVIDERS: frozenset[str] = frozenset(
+    {"figranium", "keenable", "mrscraper", "olostep", "socialscrape"}
+)
 
 # Shared spec for providers whose components go through langchain_community
 # wrappers (the wrapper itself; whatever SDK the wrapper lazy-imports at
@@ -145,6 +147,7 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "figranium": [],  # httpx REST only (lfx core); new in 1.13.0, never lived under lfx.components
     "keenable": [],  # httpx REST only (lfx core); new in 1.14.0, never lived under lfx.components
     "olostep": [],  # httpx REST only (lfx core); new in 1.14.0, never lived under lfx.components
+    "socialscrape": [],  # httpx REST only (lfx core); new in 1.14.0, never lived under lfx.components
     # --- tranche 7: google family + agent SDKs (markers preserved from base) ---
     # "google" graduated to the standalone lfx-google bundle so Gemini is
     # available in every default Langflow install.

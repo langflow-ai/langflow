@@ -74,6 +74,14 @@ jobs:
             src/backend/tests/unit/alembic/test_migration_execution.py \
             src/backend/tests/unit/alembic/test_message_history_index_migration.py -x -v
 
+      - name: Check transaction flow indexes and retention on PostgreSQL
+        env:
+          LANGFLOW_TEST_DATABASE_URI: "postgresql://langflow:langflow@localhost:5432/langflow"  # pragma: allowlist secret
+        run: |
+          uv run pytest \
+            src/backend/tests/unit/alembic/test_transaction_flow_index_migration.py \
+            src/backend/tests/unit/alembic/test_transaction_flow_index_parity.py -x -v
+
       - name: Check flow version deletion and attachment concurrency
         env:
           LANGFLOW_TEST_DATABASE_URI: "postgresql://langflow:langflow@localhost:5432/langflow"  # pragma: allowlist secret
