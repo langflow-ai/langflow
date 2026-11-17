@@ -1179,12 +1179,13 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         self._vector_store = None
 
     async def merge_staging(self, token: str, *, limit: int | None = None) -> int:
-        """Move one deploy's staged chunks into the live index, and delete staging once it is empty.
+        """Move up to one slice of a deploy's staged chunks into the live index, deleting staging once empty.
 
         Not one step like Postgres: while it runs, flows can see part of the staged chunks. A rerun
-        only upserts again, so a deploy that was cut here finishes on its retry. Without ``limit``
-        it is one reindex task; with it, at most ``limit`` chunks are copied and then removed from
-        staging, so each call stays short and the next one carries on.
+        only upserts again, so a deploy that was cut here finishes on its retry. Always a slice of
+        at most ``MERGE_SLICE_MAX`` (fewer with ``limit``), copied and then removed from staging:
+        this runs under the knowledge base's exclusive lease, and one unbounded reindex held it
+        past the 30 s that serving's reads wait for it. The caller repeats until it returns 0.
         """
         await self.ensure_ready()
         _ = self.vector_store
@@ -1195,28 +1196,8 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             return 0  # nothing staged, or an earlier run already merged it
         if not await _drained_worker(client.indices.exists, index=target):
             await self._create_like(client, source=source, target=target)
-        if limit is not None:
-            return await self._merge_slice(client, source=source, target=target, limit=min(limit, MERGE_SLICE_MAX))
-        started = await _drained_worker(
-            client.reindex,
-            body={"source": {"index": source}, "dest": {"index": target, "op_type": "index"}},
-            refresh=True,
-            wait_for_completion=False,
-        )
-        # A task, not one long request: a large knowledge base reindexes for longer than a
-        # request may stay open, and the cluster carries on if this pod goes away.
-        while True:
-            status = await _drained_worker(client.tasks.get, task_id=started["task"])
-            if status.get("completed"):
-                break
-            await asyncio.sleep(1)
-        response = status.get("response") or {}
-        if status.get("error") or response.get("failures"):
-            reason = status.get("error") or response["failures"][:1]
-            msg = f"OpenSearch could not merge the staged chunks of {self.kb_name}: {reason}"
-            raise RuntimeError(msg)
-        await _drained_worker(client.indices.delete, index=source, ignore_unavailable=True)
-        return int(response.get("total", 0))
+        cap = MERGE_SLICE_MAX if limit is None else min(limit, MERGE_SLICE_MAX)
+        return await self._merge_slice(client, source=source, target=target, limit=cap)
 
     @staticmethod
     async def _merge_slice(client: Any, *, source: str, target: str, limit: int) -> int:

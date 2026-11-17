@@ -161,7 +161,7 @@ async def test_a_postgres_staging_store_opens_no_connection_pool_of_its_own() ->
 
 
 @pytest.mark.api_key_required
-async def test_an_opensearch_slice_never_exceeds_its_own_cap_whatever_the_caller_asks(monkeypatch) -> None:
+async def test_an_opensearch_merge_never_exceeds_its_slice_cap_even_without_a_limit(monkeypatch) -> None:
     from lfx.base.knowledge_bases.backends import opensearch
 
     monkeypatch.setattr(opensearch, "MERGE_SLICE_MAX", 2)
@@ -177,6 +177,9 @@ async def test_an_opensearch_slice_never_exceeds_its_own_cap_whatever_the_caller
 
         assert await live.merge_staging(staged.staging_token, limit=5_000) == 2
         assert await staged.count() == 3  # the rest waits for the next call
+        # No limit is no longer one reindex holding the knowledge base's lease until it ends.
+        assert await live.merge_staging(staged.staging_token) == 2
+        assert await staged.count() == 1
     finally:
         await staged.delete_collection()
         await live.delete_collection()
