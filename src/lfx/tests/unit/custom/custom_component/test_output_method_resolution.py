@@ -81,3 +81,32 @@ async def test_should_run_output_method_named_run_when_component_defines_it():
     results, _artifacts = await component._build_results()
 
     assert results["result"] == "executed"
+
+
+class _NestedOutputComponent(Component):
+    display_name = "Nested Outputs"
+    name = "NestedOutputs"
+    outputs = [
+        Output(name="outer", display_name="Outer", method="build_outer"),
+        Output(name="inner", display_name="Inner", method="build_inner"),
+    ]
+
+    async def build_outer(self) -> str:
+        await self._get_output_result(self._outputs_map["inner"])
+        return await self.run()
+
+    def build_inner(self) -> str:
+        return "inner"
+
+
+@pytest.mark.asyncio
+async def test_should_keep_reentry_guard_after_a_nested_output_resolves():
+    component = _NestedOutputComponent()
+    errors = _record_send_error(component)
+
+    with pytest.raises(RuntimeError) as exc_info:
+        await component.run()
+
+    assert not isinstance(exc_info.value, RecursionError)
+    assert '"outer"' in str(exc_info.value)
+    assert len(errors) == 1

@@ -1808,6 +1808,8 @@ class Component(CustomComponent):
         try:
             method = getattr(self, output.method)
         except AttributeError as e:
+            if hasattr(type(self), output.method):
+                raise
             msg = (
                 f'Output "{output.name}" of "{self.display_name}" uses method "{output.method}", '
                 "which the component does not define."
@@ -1816,6 +1818,7 @@ class Component(CustomComponent):
         # A sync output method that merely wraps a coroutine (``delegates_to``) is awaited
         # directly instead of running in a thread that would spin up its own event loop.
         async_method = async_delegate_target(self, output.method)
+        previous_running_output = self.__dict__.get("_running_output")
         self._running_output = output
         try:
             if async_method is not None:
@@ -1828,7 +1831,7 @@ class Component(CustomComponent):
             msg = f'Error running method "{output.method}": {e}'
             raise TypeError(msg) from e
         finally:
-            self._running_output = None
+            self._running_output = previous_running_output
 
         if (
             self._vertex is not None

@@ -1260,7 +1260,10 @@ class SubstitutableComponentTypes(Container[str]):
     type_to_code: Mapping[str, str]
 
     def __contains__(self, component_type: object) -> bool:
-        if not isinstance(component_type, str):
+        from lfx.upgrade.checker import COMPONENTS_TO_IGNORE_UPDATE
+
+        # User-authored components share the template's type, so a hash mismatch is custom code.
+        if not isinstance(component_type, str) or component_type in COMPONENTS_TO_IGNORE_UPDATE:
             return False
         current_hashes = self.type_to_current_hash.get(component_type)
         if current_hashes is None or len(current_hashes) != 1:
