@@ -51,7 +51,7 @@ REVIEWED_COMPONENTS = (
         "CreateListComponent",
         "5657383579615ce5781924b307013d60e7662b45bca7e3f8db021813eefef73f",
     ),
-    ("processing/parser.py", "ParserComponent", "cc797b144b5db59f071000d22ecca10d2df9dfbcd1b28020b9dc89da60aba95a"),
+    ("processing/parser.py", "ParserComponent", "80e6d2593b501bf07e4df7c4d375bf7ea302833d13f6cc1d062264a536196d97"),
     (
         "processing/converter.py",
         "TypeConverterComponent",
