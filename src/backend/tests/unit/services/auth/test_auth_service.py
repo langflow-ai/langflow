@@ -1314,6 +1314,59 @@ async def test_materialize_external_user_maps_admission_denial_and_rolls_back(
 
 
 @pytest.mark.anyio
+async def test_materialize_external_user_rechecks_profile_after_concurrent_admission_denial(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    """A concurrent JIT winner is returned when the loser is denied at capacity."""
+    from langflow.services.auth.external import identity_from_claims
+    from langflow.services.creation_hooks import PreCreationDenied
+    from langflow.services.database.models.auth import SSOUserProfile
+
+    auth_settings.EXTERNAL_AUTH_ENABLED = True
+    auth_settings.EXTERNAL_AUTH_PROVIDER = "external"
+    identity = identity_from_claims(
+        {"sub": "racing-subject", "email": "racing@example.com", "preferred_username": "racing"},
+        auth_settings,
+    )
+    existing_user = _dummy_user(uuid4())
+    profile = SSOUserProfile(
+        user_id=existing_user.id,
+        sso_provider="external",
+        sso_user_id="racing-subject",
+        email="old@example.com",
+    )
+    denial = PreCreationDenied(
+        "Your plan includes 1 builder. Upgrade your tier to add more.",
+        details={"resource": "builders", "limit": 1, "current": 1, "tier": "essentials"},
+    )
+    db = AsyncMock()
+    db.exec = AsyncMock(
+        side_effect=[
+            SimpleNamespace(first=lambda: False),
+            SimpleNamespace(first=lambda: None),
+            SimpleNamespace(first=lambda: profile),
+        ]
+    )
+    update_last_login = AsyncMock()
+
+    with (
+        patch("langflow.services.auth.service.admit_user_creation", new=AsyncMock(side_effect=denial)),
+        patch("langflow.services.auth.service.get_user_by_id", new=AsyncMock(return_value=existing_user)) as get_user,
+        patch("langflow.services.auth.service.update_user_last_login_at", new=update_last_login),
+        patch.object(auth_service, "_unique_external_username", new=AsyncMock(return_value="racing")),
+        patch.object(auth_service, "_initialize_jit_user_defaults", new=AsyncMock()),
+    ):
+        result = await auth_service._materialize_external_user(identity, db)
+
+    assert result is existing_user
+    db.rollback.assert_awaited_once()
+    get_user.assert_awaited_once_with(db, existing_user.id)
+    update_last_login.assert_awaited_once_with(existing_user.id, db)
+    assert profile.email == "racing@example.com"
+
+
+@pytest.mark.anyio
 async def test_create_super_user_uses_active_user_admission(auth_service: AuthService):
     """Additional CLI superuser creation must use the shared active-user seam."""
     admission = AsyncMock()

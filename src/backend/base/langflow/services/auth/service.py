@@ -1046,6 +1046,22 @@ class AuthService(BaseAuthService):
             raise
         except PreCreationDenied as denied:
             await db.rollback()
+            profile = (await db.exec(profile_stmt)).first()
+            if profile is not None:
+                user = await get_user_by_id(db, profile.user_id)
+                if user is None:
+                    msg = "Mapped external user was not found"
+                    raise AuthInvalidTokenError(msg) from None
+                if not user.is_active:
+                    msg = "User account is inactive"
+                    raise InactiveUserError(msg) from None
+                now = datetime.now(timezone.utc)
+                if identity.email is not None:
+                    profile.email = identity.email
+                profile.sso_last_login_at = now
+                profile.updated_at = now
+                await update_user_last_login_at(user.id, db)
+                return user
             raise pre_creation_denied_to_http(denied) from denied
         except IntegrityError:
             await db.rollback()
