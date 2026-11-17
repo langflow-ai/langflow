@@ -238,3 +238,12 @@ async def test_cancel_drops_staging_and_leaves_live_as_it_was(kind: str) -> None
         await live.delete_collection()
         await staged.teardown()
         await live.teardown()
+
+
+@pytest.mark.parametrize("kind", ["postgres", "opensearch"])
+@pytest.mark.parametrize("limit", [0, -1])
+async def test_a_merge_slice_below_one_is_refused(kind: str, limit: int) -> None:
+    """A zero slice merged nothing yet reported done, so a caller looping until 0 left staging full."""
+    live = create_backend(kind, kb_name="policies", kb_path=None, backend_config={}, user_id=uuid.uuid4())
+    with pytest.raises(ValueError, match="at least 1"):
+        await live.merge_staging("op-1", limit=limit)

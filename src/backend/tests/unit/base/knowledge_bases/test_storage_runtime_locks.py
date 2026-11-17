@@ -329,3 +329,29 @@ async def test_a_deploys_staging_store_is_reachable_and_takes_the_same_fences(mo
     assert await stage.count() == 8
     assert await backend.merge_staging("deploy-1") == 8
     assert seen == [True, False]  # the staging read is shared; the merge is a write
+
+
+async def test_writes_through_a_staging_store_pass_the_same_write_fence(monkeypatch):
+    """Review finding: the staging wrapper dropped ``before_write``, so a fenced-out writer kept staging chunks."""
+
+    @asynccontextmanager
+    async def operation(_record, *, shared=False):  # noqa: ARG001 - the guard passes it
+        yield
+
+    monkeypatch.setattr(runtime, "operation", operation)
+    fenced = []
+
+    async def before_write():
+        fenced.append(True)
+
+    class Backend:
+        def staging(self, _token):
+            return Backend()
+
+        async def add_embedded_documents(self, documents):
+            return [doc.id for doc in documents]
+
+    backend = runtime._GuardedMethods(Backend(), object(), before_write=before_write)
+    await backend.staging("deploy-1").add_embedded_documents([SimpleNamespace(id="c1")])
+
+    assert fenced == [True]

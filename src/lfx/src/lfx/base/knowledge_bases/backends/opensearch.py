@@ -92,7 +92,7 @@ from lfx.log.logger import logger
 from lfx.utils.ssrf_protection import SSRFProtectionError, validate_connector_url_for_ssrf
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Iterator
+    from collections.abc import AsyncIterator, Iterator, Sequence
     from uuid import UUID
 
     from langchain_core.documents import Document
@@ -168,20 +168,32 @@ def _without_chunk_id(metadata: dict[str, Any] | None) -> dict[str, Any]:
 KEYWORD_IGNORE_ABOVE = 256
 
 
-def _exact(key: str, value: Any) -> dict[str, Any]:
-    """Match one metadata value as a whole, whichever layout the index stores metadata in."""
+#: Field types that already hold a value whole, so a ``term`` on the field itself is exact.
+_EXACT_TYPES = frozenset(
+    {
+        "keyword", "constant_keyword", "wildcard", "date", "date_nanos", "boolean", "ip",
+        "long", "integer", "short", "byte", "double", "float", "half_float", "scaled_float", "unsigned_long",
+    }
+)  # fmt: skip
+
+
+def _exact(key: str, value: Any, fields: Sequence[str] | None = None) -> dict[str, Any]:
+    """Match one metadata value as a whole, whichever layout the index stores metadata in.
+
+    ``fields`` are the ones ``OpenSearchBackend._exact_fields`` found in the index's mapping.
+    Without them, a string is matched on dynamic mapping's keyword copy and anything else on
+    the field itself, which is what an index the backend created holds.
+    """
     # Not ``match`` or ``match_phrase``: both read the analyzed text, so erasing end user
     # ``alice@acme.com`` also hit ``bob@acme.com`` (match) or ``tag+alice@acme.com``
-    # (match_phrase). A ``term`` on the keyword copy compares the whole stored string.
-    if isinstance(value, str):
-        if len(value) > KEYWORD_IGNORE_ABOVE:
-            # shortcut: the keyword copy skips longer strings, so a term would match nothing
-            # and delete_by would silently keep them; refuse until such a value is real.
-            msg = f"OpenSearch cannot match a '{key}' value longer than {KEYWORD_IGNORE_ABOVE} characters exactly"
-            raise ValueError(msg)
-        fields = (f"{key}.keyword", f"metadata.{key}.keyword")
-    else:
-        fields = (key, f"metadata.{key}")  # numbers and booleans are mapped as exact values already
+    # (match_phrase). A ``term`` on an exact field compares the whole stored value.
+    if fields is None:
+        fields = (f"{key}.keyword", f"metadata.{key}.keyword") if isinstance(value, str) else (key, f"metadata.{key}")
+    if isinstance(value, str) and len(value) > KEYWORD_IGNORE_ABOVE and any(f.endswith(".keyword") for f in fields):
+        # shortcut: the keyword copy skips longer strings, so a term would match nothing
+        # and delete_by would silently keep them; refuse until such a value is real.
+        msg = f"OpenSearch cannot match a '{key}' value longer than {KEYWORD_IGNORE_ABOVE} characters exactly"
+        raise ValueError(msg)
     return {"bool": {"should": [{"term": {field: value}} for field in fields], "minimum_should_match": 1}}
 
 
@@ -649,7 +661,8 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         await self.ensure_ready()
         kwargs: dict[str, Any] = {"query": query, "k": k}
         if filter:
-            kwargs["filter"] = self._translate_where(filter)
+            _ = self.vector_store
+            kwargs["filter"] = await self._exact_where(self._os_client, filter)
         if with_scores:
             scored = await self.vector_store.asimilarity_search_with_score(**kwargs)
             return [(doc.model_copy(update={"metadata": _without_chunk_id(doc.metadata)}), s) for doc, s in scored]
@@ -1093,6 +1106,52 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         """
         return {"bool": {"must": [_exact(key, value) for key, value in where.items()]}}
 
+    async def _exact_fields(self, client: Any, key: str) -> tuple[str, ...] | None:
+        """The fields that hold ``key`` whole in this index, from its mapping; None when it maps none yet.
+
+        Dynamic mapping does not always give a string a keyword copy: an end user id like
+        ``2024-05-01`` is mapped as a ``date`` with none, and a term on the copy then matched
+        nothing, so erasing that user deleted nothing and still reported success.
+        """
+        cache: dict[str, tuple[str, ...]] = self.__dict__.setdefault("_exact_field_cache", {})
+        cached = cache.get(key)
+        if cached is not None:
+            return cached
+        names = (key, f"metadata.{key}")
+        try:
+            response = await _drained_worker(
+                client.indices.get_field_mapping,
+                index=self._os_index,
+                fields=[*names, *(f"{n}.keyword" for n in names)],
+            )
+        except Exception as exc:
+            if _is_missing_index(exc):
+                return None
+            raise
+        types: dict[str, str | None] = {}
+        for body in (response or {}).values():
+            for name, entry in (body.get("mappings") or {}).items():
+                leaf = (entry.get("mapping") or {}).get(name.rsplit(".", 1)[-1]) or {}
+                types[name] = leaf.get("type")
+        if not types:
+            return None  # no chunk carries this key yet, so nothing can match it
+        fields = tuple(
+            f"{n}.keyword" if f"{n}.keyword" in types else n
+            for n in names
+            if f"{n}.keyword" in types or types.get(n) in _EXACT_TYPES
+        )
+        if not fields:
+            # Only analyzed text holds it: a term would match nothing and a phrase could match others.
+            msg = f"OpenSearch index maps '{key}' only as analyzed text, so it cannot be matched exactly"
+            raise ValueError(msg)
+        cache[key] = fields  # a mapped field never changes type
+        return fields
+
+    async def _exact_where(self, client: Any, where: dict[str, Any]) -> dict[str, Any]:
+        """``_translate_where``, on the fields this index really holds each key whole in."""
+        clauses = [_exact(key, value, await self._exact_fields(client, key)) for key, value in where.items()]
+        return {"bool": {"must": clauses}}
+
     async def delete_by(self, where: dict[str, Any]) -> None:
         """Delete documents via ``delete_by_query``.
 
@@ -1107,7 +1166,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             client = self._os_client
         if not where:
             return
-        body = {"query": self._translate_where(where)}
+        body = {"query": await self._exact_where(client, where)}
         try:
             result = await _drained_worker(
                 client.delete_by_query,
@@ -1187,6 +1246,10 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         this runs under the knowledge base's exclusive lease, and one unbounded reindex held it
         past the 30 s that serving's reads wait for it. The caller repeats until it returns 0.
         """
+        if limit is not None and limit < 1:
+            # A slice of nothing would never empty staging, and a caller looping until 0 would stop early.
+            msg = f"limit must be at least 1, got {limit}"
+            raise ValueError(msg)
         await self.ensure_ready()
         _ = self.vector_store
         client = self._os_client

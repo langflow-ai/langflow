@@ -861,6 +861,17 @@ class TestOpenSearchSimilaritySearchFilterHandling:
         fake_vs = MagicMock()
         fake_vs.asimilarity_search = AsyncMock(return_value=[])
         backend._vector_store = fake_vs
+        # What dynamic mapping gives a string: analyzed text plus a keyword copy.
+        backend._os_index = "idx"
+        backend._os_client = MagicMock()
+        backend._os_client.indices.get_field_mapping.return_value = {
+            "idx": {
+                "mappings": {
+                    "metadata.session_id": {"mapping": {"session_id": {"type": "text"}}},
+                    "metadata.session_id.keyword": {"mapping": {"keyword": {"type": "keyword"}}},
+                }
+            }
+        }
 
         await backend.similarity_search(query="hi", k=3, filter={"session_id": "s1"})
 
@@ -870,10 +881,8 @@ class TestOpenSearchSimilaritySearchFilterHandling:
                 "must": [
                     {
                         "bool": {
-                            "should": [
-                                {"term": {"session_id.keyword": "s1"}},
-                                {"term": {"metadata.session_id.keyword": "s1"}},
-                            ],
+                            # Only the layout the index maps: LangChain nests metadata.
+                            "should": [{"term": {"metadata.session_id.keyword": "s1"}}],
                             "minimum_should_match": 1,
                         }
                     }
@@ -882,7 +891,7 @@ class TestOpenSearchSimilaritySearchFilterHandling:
         }
         # The retrieval filter and the delete rollback path must produce the
         # exact same translation so they can never drift.
-        assert forwarded == backend._translate_where({"session_id": "s1"})
+        assert forwarded == await backend._exact_where(backend._os_client, {"session_id": "s1"})
 
     def test_a_filter_matches_numbers_exactly_and_refuses_strings_the_keyword_copy_skips(self) -> None:
         from lfx.base.knowledge_bases.backends.opensearch import KEYWORD_IGNORE_ABOVE, OpenSearchBackend
@@ -1158,3 +1167,29 @@ async def test_reads_by_id_do_not_hand_back_the_chunk_id_field(tmp_path):
     [doc] = await backend.get_documents_by_ids(["a"])
 
     assert doc.metadata == {"job_id": "j"}
+
+
+async def test_a_key_mapped_only_as_analyzed_text_is_refused_rather_than_matched_loosely(tmp_path) -> None:
+    """A term on analyzed text matches nothing and a phrase matches others; neither is an exact delete."""
+    backend = _make_backend(tmp_path)
+    backend._os_index = "idx"
+    client = MagicMock()
+    client.indices.get_field_mapping.return_value = {
+        "idx": {"mappings": {"metadata.end_user_id": {"mapping": {"end_user_id": {"type": "text"}}}}}
+    }
+
+    with pytest.raises(ValueError, match="only as analyzed text"):
+        await backend._exact_where(client, {"end_user_id": "alice@acme.com"})
+
+
+async def test_a_date_mapped_key_is_matched_on_the_field_itself(tmp_path) -> None:
+    backend = _make_backend(tmp_path)
+    backend._os_index = "idx"
+    client = MagicMock()
+    client.indices.get_field_mapping.return_value = {
+        "idx": {"mappings": {"metadata.end_user_id": {"mapping": {"end_user_id": {"type": "date"}}}}}
+    }
+
+    where = await backend._exact_where(client, {"end_user_id": "2024-05-01"})
+
+    assert where["bool"]["must"][0]["bool"]["should"] == [{"term": {"metadata.end_user_id": "2024-05-01"}}]

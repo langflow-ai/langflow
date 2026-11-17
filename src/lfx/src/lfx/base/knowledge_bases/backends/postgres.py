@@ -867,6 +867,10 @@ class PostgresBackend(BaseVectorStoreBackend):
         all of them. With it, at most ``limit`` rows, each slice moved out of staging in the same
         transaction it lands in, so a cut call loses nothing and the next one carries on.
         """
+        if limit is not None and limit < 1:
+            # A slice of nothing would never empty staging, and a caller looping until 0 would stop early.
+            msg = f"limit must be at least 1, got {limit}"
+            raise ValueError(msg)
         await self.ensure_ready()
         from sqlalchemy import text
 

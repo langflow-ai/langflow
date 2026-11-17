@@ -378,3 +378,37 @@ async def test_a_cluster_that_refuses_id_sorting_still_reads_new_chunks(tmp_path
         client.cluster.put_settings(body={"transient": {"indices.id_field_data.enabled": None}})
         await backend.delete_collection()
         await backend.teardown()
+
+
+async def test_erasing_an_end_user_whose_id_looks_like_a_date(tmp_path: Path) -> None:
+    """Dynamic mapping types an id like 2024-05-01 as a date with no keyword copy; erasure must still delete it."""
+    _require_live_opensearch()
+    backend = create_backend(
+        "opensearch",
+        kb_name=f"kb_date_{uuid.uuid4().hex[:8]}",
+        kb_path=tmp_path,
+        backend_config={"url_variable": "OPENSEARCH_URL"},
+        user_id=uuid.uuid4(),
+    )
+    users = ["2024-05-01", "2024-06-02"]
+    try:
+        await backend.ensure_ready()
+        await backend.add_embedded_documents(
+            [
+                IngestedDocument(
+                    id=f"{user}-{i}", content=f"note {i}", metadata={"end_user_id": user}, embedding=[i / 10 + 0.1] * 8
+                )
+                for user in users
+                for i in range(2)
+            ]
+        )
+        backend._os_client.indices.refresh(index=backend._os_index)
+
+        await backend.delete_by({"end_user_id": "2024-05-01"})
+        backend._os_client.indices.refresh(index=backend._os_index)
+
+        left = [doc.id async for batch in backend.iter_documents(batch_size=50) for doc in batch]
+        assert sorted(left) == ["2024-06-02-0", "2024-06-02-1"]
+    finally:
+        await backend.delete_collection()
+        await backend.teardown()
