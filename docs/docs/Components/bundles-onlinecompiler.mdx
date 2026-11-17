@@ -77,7 +77,7 @@ Enter the tests as a JSON array:
 | OnlineCompiler.io API Key (`api_key`) | SecretString | Input parameter. Your OnlineCompiler.io REST API key. |
 | Language (`compiler`) | String | Input parameter. The compiler ID of the language. Default: `python-3.14`. |
 | Code (`source_code`) | String | Input parameter. The whole program to judge. It reads each test's input as standard input. |
-| Tests (`tests`) | String | Input parameter. A JSON array of tests, each with `input` and `expected_output`. |
+| Tests (`tests`) | String | Input parameter. A JSON array of tests, each with `input` and `expected_output`. Add `"hidden": true` to a test to get back only its verdict, never its output. |
 | Compare (`checker`) | Dropdown | Input parameter. How output is compared: `trim` (default), `exact`, `tokens`, `float`, `rows`, `table` or `table_ordered`. |
 | Scoring (`scoring`) | Dropdown | Input parameter. `percent` (default) scores the share of tests passed; `all_or_nothing` scores 100 only when every test passes. |
 | Time Limit (seconds) (`time_limit`) | Float | Input parameter. Seconds each test may run, up to 30. `0` uses the default. |

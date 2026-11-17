@@ -74,7 +74,10 @@ class OnlineCompilerRunTestsComponent(Component):
         MultilineInput(
             name="tests",
             display_name="Tests",
-            info='A JSON array of tests, such as [{"input": "2 3", "expected_output": "5"}].',
+            info=(
+                'A JSON array of tests, such as [{"input": "2 3", "expected_output": "5"}]. '
+                'Add "hidden": true to a test to get back only its verdict.'
+            ),
             required=True,
             tool_mode=True,
         ),

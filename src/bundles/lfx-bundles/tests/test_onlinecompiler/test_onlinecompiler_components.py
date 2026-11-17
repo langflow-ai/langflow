@@ -154,6 +154,18 @@ class TestParseTests:
         tests = parse_tests([{"input": 2, "expectedOutput": 4}, {"output": True}])
         assert tests == [{"input": "2", "expected_output": "4"}, {"input": "", "expected_output": "true"}]
 
+    def test_hidden_is_kept_and_must_be_a_boolean(self) -> None:
+        tests = parse_tests('[{"input": "1", "expected_output": "1", "hidden": true}, {"expected_output": "2"}]')
+        assert tests == [{"input": "1", "expected_output": "1", "hidden": True}, {"input": "", "expected_output": "2"}]
+        with pytest.raises(OnlineCompilerAPIError, match="Test 1 hidden must be true or false"):
+            parse_tests('[{"expected_output": "1", "hidden": "yes"}]')
+
+    async def test_hidden_reaches_the_request(self) -> None:
+        tests = '[{"input": "2 3", "expected_output": "5", "hidden": true}]'
+        with patch("httpx.AsyncClient.post", return_value=_response(json_body=TESTS_RESULT)) as post:
+            await _run_tests(tests=tests).run_tests()
+        assert post.call_args.kwargs["json"]["tests"] == [{"input": "2 3", "expected_output": "5", "hidden": True}]
+
     def test_a_test_without_expected_output_is_refused(self) -> None:
         with pytest.raises(OnlineCompilerAPIError, match="Test 1 has no expected_output"):
             parse_tests('[{"input": "1"}]')

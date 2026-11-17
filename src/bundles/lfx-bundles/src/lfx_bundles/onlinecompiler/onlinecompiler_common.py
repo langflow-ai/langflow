@@ -73,11 +73,12 @@ def _error_message(response: httpx.Response, api_key: str) -> str:
     return f"{label}: {detail}" if detail else label
 
 
-def parse_tests(value: Any) -> list[dict[str, str]]:
+def parse_tests(value: Any) -> list[dict[str, Any]]:
     """Turn the Tests input (a JSON array, or a list) into the API's ``tests`` list.
 
     Each test needs ``input`` and ``expected_output``; ``expectedOutput`` and ``output``
-    are accepted for the expected output as well.
+    are accepted for the expected output as well. ``"hidden": true`` is passed on, so the
+    API returns only that test's verdict, never its output.
 
     Raises:
         OnlineCompilerAPIError: When the value is not a non-empty array of objects.
@@ -106,7 +107,14 @@ def parse_tests(value: Any) -> list[dict[str, str]]:
         if expected is None:
             msg = f"Test {number} has no expected_output."
             raise OnlineCompilerAPIError(msg)
-        parsed.append({"input": _as_text(test.get("input")), "expected_output": _as_text(expected)})
+        hidden = test.get("hidden", False)
+        if not isinstance(hidden, bool):
+            msg = f"Test {number} hidden must be true or false."
+            raise OnlineCompilerAPIError(msg)
+        entry: dict[str, Any] = {"input": _as_text(test.get("input")), "expected_output": _as_text(expected)}
+        if hidden:
+            entry["hidden"] = True
+        parsed.append(entry)
     return parsed
 
 
