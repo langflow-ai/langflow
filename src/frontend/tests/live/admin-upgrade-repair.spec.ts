@@ -55,7 +55,9 @@ test(
     expect(imports[0]).not.toBe(imports[1]);
     expect(imports[0]).toContain(report.id);
     expect(imports[1]).toContain(another.id);
-    await expect(page.getByText(/2 weeks ago/)).toBeVisible();
+    await expect(page.getByText(/2 weeks ago/)).toBeVisible({
+      timeout: TIMEOUTS.standard,
+    });
     await page
       .getByText("Usage, deployments, and findings", { exact: true })
       .click();
@@ -68,7 +70,7 @@ test(
     ).toHaveCount(0);
     await expect(
       page.getByText("Deployments and triggers None", { exact: true }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: TIMEOUTS.standard });
     await page.screenshot({
       path: test.info().outputPath("upgrade-report-qa-details.png"),
       fullPage: true,
@@ -133,7 +135,7 @@ test(
         .getByRole("button", { name: "Playground", exact: true })
         .click();
       const input = page.getByTestId("input-chat-playground").last();
-      await expect(input).toBeVisible();
+      await expect(input).toBeVisible({ timeout: TIMEOUTS.standard });
       page.expectServerError({
         method: "POST",
         path: "/api/v2/workflows",
@@ -161,10 +163,10 @@ test(
       ).toHaveCount(0);
       await expect(
         page.getByText("Workflow run failed", { exact: true }),
-      ).toBeVisible();
+      ).toBeVisible({ timeout: TIMEOUTS.standard });
       await expect(
         page.getByText(/This instance is in maintenance mode/).first(),
-      ).toBeVisible();
+      ).toBeVisible({ timeout: TIMEOUTS.standard });
       await page.screenshot({
         path: test.info().outputPath("playground-maintenance-refusal.png"),
         fullPage: true,

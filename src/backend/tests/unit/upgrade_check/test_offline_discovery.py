@@ -181,6 +181,7 @@ def test_cli_passes_discovery_timeout_to_isolated_child(monkeypatch, arguments, 
 
 @pytest.mark.parametrize("timeout", ["0", "-1"])
 def test_cli_rejects_nonpositive_discovery_timeout(timeout):
+    from click import unstyle
     from langflow.__main__ import app
     from typer.testing import CliRunner
 
@@ -189,7 +190,7 @@ def test_cli_rejects_nonpositive_discovery_timeout(timeout):
     )
 
     assert result.exit_code == 2
-    assert "Invalid value for '--discovery-timeout'" in result.output
+    assert "Invalid value for '--discovery-timeout'" in unstyle(result.output)
 
 
 def test_child_environment_excludes_provider_credentials_and_original_home(monkeypatch, tmp_path):

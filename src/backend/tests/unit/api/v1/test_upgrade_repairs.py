@@ -189,9 +189,13 @@ async def test_authorized_repairs_keep_the_pause_drain_slot(
     observed = []
 
     async def plan(*args, **kwargs):
-        observed.extend(migration_pause.under_way()["changes"])
-        assert migration_pause.admitted_maintenance_caller() == actor_id
-        assert not await migration_pause.drained(0)
+        observed.append(
+            {
+                "changes": migration_pause.under_way()["changes"],
+                "caller": migration_pause.admitted_maintenance_caller(),
+                "drained": await migration_pause.drained(0),
+            }
+        )
         return await original(*args, **kwargs)
 
     monkeypatch.setattr(service, "_plan_selected", plan)
@@ -199,7 +203,12 @@ async def test_authorized_repairs_keep_the_pause_drain_slot(
     response = await client.post(path, json=payload, headers=headers)
 
     assert response.status_code == 200, response.text
-    assert [(item["method"], item["path"]) for item in observed] == [("POST", path)]
+    [result] = response.json()["results"]
+    assert result["status"] == ("ready" if path == PREVIEW else "updated"), result
+    [observation] = observed
+    assert [(item["method"], item["path"]) for item in observation["changes"]] == [("POST", path)]
+    assert observation["caller"] == actor_id
+    assert observation["drained"] is False
     assert migration_pause.under_way()["changes"] == []
 
 
