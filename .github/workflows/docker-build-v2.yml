@@ -424,6 +424,14 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
 
+      - name: Download release wheel artifacts
+        if: ${{ inputs.release_artifacts }}
+        uses: actions/download-artifact@v8
+        with:
+          pattern: dist-*
+          path: .release-artifacts
+          merge-multiple: true
+
       - name: Set tags
         id: tags
         run: |
@@ -452,7 +460,7 @@ jobs:
           context: .
           push: ${{ inputs.push_to_registry }}
           build-args: |
-            LANGFLOW_IMAGE=langflowai/langflow:${{ needs.determine-main-version.outputs.version }}-${{ matrix.arch }}
+            BASE_VERSION=${{ needs.determine-main-version.outputs.version }}
           file: ./docker/build_and_push_backend.Dockerfile
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
@@ -474,7 +482,7 @@ jobs:
           context: .
           push: ${{ inputs.push_to_registry }}
           build-args: |
-            LANGFLOW_IMAGE=ghcr.io/langflow-ai/langflow:${{ needs.determine-main-version.outputs.version }}-${{ matrix.arch }}
+            BASE_VERSION=${{ needs.determine-main-version.outputs.version }}
           file: ./docker/build_and_push_backend.Dockerfile
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}

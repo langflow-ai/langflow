@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
 from langflow.agentic.services.flow_preparation import (
     LFX_COMPONENTS_PATH_SENTINEL,
     available_model_providers,
@@ -479,16 +480,20 @@ class TestInjectLfxComponentsPath:
         expected = str(Path(lfx.__file__).parent / "components")
         assert rewritten == expected
 
-    def test_shipped_assistant_directory_node_loads_components_from_any_working_dir(self, tmp_path, monkeypatch):
+    @pytest.mark.parametrize("storage_type", ["local", "s3"])
+    def test_shipped_assistant_directory_node_loads_components_from_any_working_dir(
+        self, tmp_path, monkeypatch, storage_type
+    ):
         """The shipped flow's Directory node must load when the process does not run from the repo.
 
         Langflow Desktop runs from its data dir, where the rewritten absolute path lies outside
         the working root the Directory component trusts by default. Local file access stays
-        restricted, as it is by default.
+        restricted, as it is by default, and the read must not depend on the storage backend.
         """
         monkeypatch.chdir(tmp_path)
         monkeypatch.setattr(get_settings_service().settings, "directory_component_allowed_roots", [])
         monkeypatch.setattr(get_settings_service().settings, "restrict_local_file_access", True)
+        monkeypatch.setattr(get_settings_service().settings, "storage_type", storage_type)
 
         prepared = json.loads(load_and_prepare_flow(FLOWS_BASE_PATH / LANGFLOW_ASSISTANT_FLOW, None, None, None))
         directory_nodes = [node for node in prepared["data"]["nodes"] if node["data"].get("type") == "Directory"]
