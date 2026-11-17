@@ -110,9 +110,10 @@ async def test_verify_project_auth_honours_presented_api_key_under_auto_login():
 
 
 @pytest.mark.anyio
-async def test_verify_project_auth_rejects_presented_key_from_another_owner():
+@pytest.mark.parametrize("auth_settings", [None, {"auth_type": "none"}])
+async def test_verify_project_auth_rejects_presented_key_from_another_owner(auth_settings):
     """A valid key belonging to a different user must not unlock this project."""
-    project = SimpleNamespace(id=uuid4(), user_id=uuid4(), auth_settings=None)
+    project = SimpleNamespace(id=uuid4(), user_id=uuid4(), auth_settings=auth_settings)
     other_user = SimpleNamespace(id=uuid4(), username="someone-else")
 
     with (
@@ -179,9 +180,9 @@ async def test_verify_project_auth_binds_oauth_composer_credential_to_project():
 
 
 @pytest.mark.anyio
-@pytest.mark.parametrize("auth_type", ["apikey", "oauth"])
+@pytest.mark.parametrize("auth_type", ["none", "apikey", "oauth"])
 async def test_verify_project_auth_records_presented_api_key_caller(auth_type):
-    """API-key and OAuth project entrypoints record the credential's principal."""
+    """A valid owner key identifies the caller for every project authentication type."""
     owner = SimpleNamespace(id=uuid4(), username="owner")
     project = SimpleNamespace(id=uuid4(), user_id=owner.id, auth_settings={"auth_type": auth_type})
     api_key_result = SimpleNamespace(user=owner)
