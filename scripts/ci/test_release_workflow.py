@@ -248,6 +248,59 @@ def test_release_docker_builds_consume_built_wheels() -> None:
     assert "path: .release-artifacts" in docker_workflow
 
 
+def test_backend_release_docker_build_consumes_the_base_release_artifacts() -> None:
+    jobs = yaml.safe_load(WORKFLOW_PATH.read_text(encoding="utf-8"))["jobs"]
+    backend = jobs["call_docker_build_main_backend"]
+
+    assert "build-base" in backend["needs"]
+    assert backend["with"]["release_artifacts"] == "${{ needs.build-base.result == 'success' }}"
+
+
+def test_backend_docker_job_downloads_release_wheels_only_when_requested() -> None:
+    workflow = yaml.safe_load((WORKFLOWS_DIR / "docker-build-v2.yml").read_text(encoding="utf-8"))
+    steps = workflow["jobs"]["build-main-backend"]["steps"]
+    downloads = [step for step in steps if step.get("uses", "").startswith("actions/download-artifact@")]
+
+    assert len(downloads) == 1
+    download = downloads[0]
+    assert download["if"] == "${{ inputs.release_artifacts }}"
+    assert download["with"] == {"pattern": "dist-*", "path": ".release-artifacts", "merge-multiple": True}
+    first_build = next(step for step in steps if step.get("uses", "").startswith("docker/build-push-action@"))
+    assert steps.index(download) < steps.index(first_build)
+
+
+def test_backend_docker_builds_pass_the_resolved_version_to_both_registries() -> None:
+    workflow = yaml.safe_load((WORKFLOWS_DIR / "docker-build-v2.yml").read_text(encoding="utf-8"))
+    steps = workflow["jobs"]["build-main-backend"]["steps"]
+    builds = [step["with"] for step in steps if step.get("uses", "").startswith("docker/build-push-action@")]
+
+    assert len(builds) == 2
+    for build in builds:
+        assert build["file"] == "./docker/build_and_push_backend.Dockerfile"
+        assert "BASE_VERSION=${{ needs.determine-main-version.outputs.version }}" in build["build-args"].splitlines()
+        assert "LANGFLOW_IMAGE=" not in build["build-args"]
+
+
+def test_backend_docker_build_applies_release_version_and_wheels_after_source_install() -> None:
+    dockerfile = (WORKFLOWS_DIR.parents[1] / "docker" / "build_and_push_backend.Dockerfile").read_text(encoding="utf-8")
+
+    assert 'ARG BASE_VERSION=""' in dockerfile
+    restamp = dockerfile.index('if [ -n "$BASE_VERSION" ]; then')
+    source_install = dockerfile.index("uv pip install")
+    release_install = dockerfile.index("python3.14 /tmp/install_release_wheels.py")
+    frontend_cleanup = dockerfile.index('shutil.rmtree(Path(find_spec("langflow").origin).parent / "frontend"')
+    runtime_copy = dockerfile.index("COPY --from=builder --chown=1000:0 /app/.venv /app/.venv")
+
+    assert restamp < source_install < release_install < frontend_cleanup < runtime_copy
+    assert 'sed -i "s/^version = .*/version = \\"${BASE_VERSION}\\"/"' in dockerfile[restamp:source_install]
+    assert "/app/src/backend/base/pyproject.toml" in dockerfile[restamp:source_install]
+    assert "COPY ./.release-artifacts /tmp/release-artifacts" in dockerfile
+    assert "--mode base" in dockerfile[release_install:runtime_copy]
+    assert "--frontend-source" not in dockerfile
+    assert 'metadata.version("langflow-base")' in dockerfile[release_install:runtime_copy]
+    assert 'os.environ["BASE_VERSION"]' in dockerfile[release_install:runtime_copy]
+
+
 def test_release_docker_jobs_are_not_skipped_by_skipped_ancestors() -> None:
     # Without a status function GitHub adds an implicit success(). It is false when any transitive
     # ancestor was skipped, and build-sdk is skipped whenever the SDK version is unchanged.

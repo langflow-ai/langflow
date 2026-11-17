@@ -811,6 +811,7 @@ def _login_session_db():
     db.exec.return_value = MagicMock()
     db.exec.return_value.first.return_value = False
     db.execute.return_value = SimpleNamespace(scalar_one_or_none=lambda: "registered-session")
+    db.exec.return_value = SimpleNamespace(first=lambda: _dummy_user(uuid4()))
     return db
 
 

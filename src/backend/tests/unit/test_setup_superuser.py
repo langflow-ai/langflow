@@ -162,13 +162,18 @@ async def test_create_super_user_race_condition(auth_service: AuthService):
     # Set up the race condition scenario:
     # 1. First call to get_user_by_username returns None (user doesn't exist)
     # 2. commit() raises IntegrityError (simulating race condition)
-    # 3. After rollback, second call to get_user_by_username returns the existing user
+    # 3. After rollback, the case-insensitive lookup returns the existing user
     mock_get_user_by_username = AsyncMock()
-    mock_get_user_by_username.side_effect = [None, mock_user]  # None first, then existing user
+    mock_get_user_by_username.return_value = None
+    mock_get_user_by_username_case_insensitive = AsyncMock(return_value=mock_user)
 
     mock_session.commit.side_effect = IntegrityError("statement", "params", Exception("orig"))
     with (
         patch("langflow.services.auth.service.get_user_by_username", mock_get_user_by_username),
+        patch(
+            "langflow.services.auth.service.get_user_by_username_case_insensitive",
+            mock_get_user_by_username_case_insensitive,
+        ),
         patch.object(auth_service, "get_password_hash", mock_get_password_hash),
         patch("langflow.services.auth.service.User") as mock_user_class,
     ):
@@ -182,7 +187,65 @@ async def test_create_super_user_race_condition(auth_service: AuthService):
     assert mock_session.add.call_count == 1  # User was added to session
     assert mock_session.commit.call_count == 1  # Commit was attempted once (and failed)
     assert mock_session.rollback.call_count == 1  # Session was rolled back after IntegrityError
-    assert mock_get_user_by_username.call_count == 2  # Called twice: initial check + after rollback
+    assert mock_get_user_by_username.call_count == 1  # Initial exact lookup
+    assert mock_get_user_by_username_case_insensitive.call_count == 1  # Case-insensitive recovery lookup
+
+
+@pytest.mark.asyncio
+async def test_create_super_user_integrity_error_recovers_case_variant_superuser(auth_service: AuthService):
+    """A case-insensitive unique-index race returns the committed superuser."""
+    mock_session = AsyncMock()
+    mock_session.add = MagicMock()
+    winner_digest = "winner-hash"
+    mock_user = User(username="admin", password=winner_digest, is_active=True, is_superuser=True)
+    integrity_error = IntegrityError("statement", "params", Exception("orig"))
+    mock_session.commit.side_effect = integrity_error
+    exact_lookup = AsyncMock(return_value=None)
+    case_insensitive_lookup = AsyncMock(return_value=mock_user)
+
+    with (
+        patch("langflow.services.auth.service.get_user_by_username", new=exact_lookup),
+        patch("langflow.services.auth.service.get_user_by_username_case_insensitive", new=case_insensitive_lookup),
+        patch.object(auth_service, "get_password_hash", return_value="loser-hash"),
+        patch("langflow.services.auth.service.admit_user_creation", new=AsyncMock()),
+    ):
+        result = await auth_service.create_super_user("ADMIN", "new-password", mock_session)
+
+    assert result is mock_user
+    assert result.password == winner_digest
+    assert result.is_superuser is True
+    assert result.is_active is True
+    exact_lookup.assert_awaited_once_with(mock_session, "ADMIN")
+    case_insensitive_lookup.assert_awaited_once_with(mock_session, "ADMIN")
+    mock_session.rollback.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_create_super_user_integrity_error_preserves_regular_account_denial(auth_service: AuthService):
+    """A case-insensitive unique-index race never returns a regular account as a superuser."""
+    mock_session = AsyncMock()
+    mock_session.add = MagicMock()
+    regular_digest = "regular-hash"
+    regular_user = User(username="admin", password=regular_digest, is_active=True, is_superuser=False)
+    integrity_error = IntegrityError("statement", "params", Exception("orig"))
+    mock_session.commit.side_effect = integrity_error
+    exact_lookup = AsyncMock(return_value=None)
+    case_insensitive_lookup = AsyncMock(return_value=regular_user)
+
+    with (
+        patch("langflow.services.auth.service.get_user_by_username", new=exact_lookup),
+        patch("langflow.services.auth.service.get_user_by_username_case_insensitive", new=case_insensitive_lookup),
+        patch.object(auth_service, "get_password_hash", return_value="loser-hash"),
+        patch("langflow.services.auth.service.admit_user_creation", new=AsyncMock()),
+        pytest.raises(IntegrityError),
+    ):
+        await auth_service.create_super_user("ADMIN", "new-password", mock_session)
+
+    assert regular_user.is_superuser is False
+    assert regular_user.password == regular_digest
+    exact_lookup.assert_awaited_once_with(mock_session, "ADMIN")
+    case_insensitive_lookup.assert_awaited_once_with(mock_session, "ADMIN")
+    mock_session.rollback.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -192,9 +255,10 @@ async def test_create_super_user_race_condition_no_user_found(auth_service: Auth
     mock_session = AsyncMock()
     mock_session.add = MagicMock()
 
-    # Mock get_user_by_username to always return None (even after rollback)
+    # Mock both lookups to return None (even after rollback)
     mock_get_user_by_username = AsyncMock()
-    mock_get_user_by_username.side_effect = [None, None]  # None for initial check and after rollback
+    mock_get_user_by_username.return_value = None
+    mock_get_user_by_username_case_insensitive = AsyncMock(return_value=None)
 
     # Mock other dependencies
     mock_get_password_hash = MagicMock(return_value="hashed_password")
@@ -206,6 +270,10 @@ async def test_create_super_user_race_condition_no_user_found(auth_service: Auth
 
     with (
         patch("langflow.services.auth.service.get_user_by_username", mock_get_user_by_username),
+        patch(
+            "langflow.services.auth.service.get_user_by_username_case_insensitive",
+            mock_get_user_by_username_case_insensitive,
+        ),
         patch.object(auth_service, "get_password_hash", mock_get_password_hash),
         patch("langflow.services.auth.service.User", return_value=mock_user),
         pytest.raises(IntegrityError),
@@ -214,7 +282,8 @@ async def test_create_super_user_race_condition_no_user_found(auth_service: Auth
 
     # Verify rollback was called but exception was re-raised
     assert mock_session.rollback.call_count == 1
-    assert mock_get_user_by_username.call_count == 2  # Initial + after rollback
+    assert mock_get_user_by_username.call_count == 1
+    assert mock_get_user_by_username_case_insensitive.call_count == 1
 
 
 @pytest.mark.asyncio
@@ -233,17 +302,19 @@ async def test_create_super_user_concurrent_workers(auth_service: AuthService):
     mock_user.username = "admin"
     mock_user.is_superuser = True
 
-    mock_get_user_by_username = AsyncMock()
+    mock_get_user_by_username = AsyncMock(side_effect=[None, None])
+    mock_get_user_by_username_case_insensitive = AsyncMock(return_value=mock_user)
 
     # Worker 1 succeeds, Worker 2 gets IntegrityError then finds existing user
     mock_session1.commit.return_value = None  # Success
     mock_session2.commit.side_effect = IntegrityError("statement", "params", Exception("orig"))  # Race condition
 
-    # get_user_by_username returns None initially, then the created user for worker 2
-    mock_get_user_by_username.side_effect = [None, None, mock_user]
-
     with (
         patch("langflow.services.auth.service.get_user_by_username", mock_get_user_by_username),
+        patch(
+            "langflow.services.auth.service.get_user_by_username_case_insensitive",
+            mock_get_user_by_username_case_insensitive,
+        ),
         patch.object(auth_service, "get_password_hash", return_value="hashed_password"),
     ):
         # Simulate concurrent execution using asyncio.gather
@@ -258,6 +329,7 @@ async def test_create_super_user_concurrent_workers(auth_service: AuthService):
 
     # Worker 2 should have rolled back and fetched existing user
     assert mock_session2.rollback.call_count == 1
+    assert mock_get_user_by_username_case_insensitive.await_count == 1
 
 
 @pytest.mark.asyncio
@@ -275,19 +347,22 @@ async def test_create_super_user_recovers_committed_superuser_after_pre_creation
         details={"resource": "builders", "limit": 1, "current": 1, "tier": "essentials"},
     )
     session = AsyncMock()
-    lookup = AsyncMock(side_effect=[None, existing_user])
+    exact_lookup = AsyncMock(return_value=None)
+    case_insensitive_lookup = AsyncMock(return_value=existing_user)
 
     with (
-        patch("langflow.services.auth.service.get_user_by_username", new=lookup),
+        patch("langflow.services.auth.service.get_user_by_username", new=exact_lookup),
+        patch("langflow.services.auth.service.get_user_by_username_case_insensitive", new=case_insensitive_lookup),
         patch("langflow.services.auth.service.admit_user_creation", new=AsyncMock(side_effect=denial)),
     ):
-        result = await auth_service.create_super_user("admin", "new-password", session)
+        result = await auth_service.create_super_user("ADMIN", "new-password", session)
 
     assert result is existing_user
     assert result.password == original_digest
     assert result.is_superuser is True
     assert result.is_active is True
-    assert lookup.await_count == 2
+    exact_lookup.assert_awaited_once_with(session, "ADMIN")
+    case_insensitive_lookup.assert_awaited_once_with(session, "ADMIN")
     session.rollback.assert_awaited_once()
     session.add.assert_not_called()
     session.commit.assert_not_awaited()
@@ -309,10 +384,12 @@ async def test_create_super_user_recovers_committed_superuser_after_canonical_ht
         headers={ERROR_CODE_HEADER: "tier_limit_reached"},
     )
     session = AsyncMock()
-    lookup = AsyncMock(side_effect=[None, existing_user])
+    exact_lookup = AsyncMock(return_value=None)
+    case_insensitive_lookup = AsyncMock(return_value=existing_user)
 
     with (
-        patch("langflow.services.auth.service.get_user_by_username", new=lookup),
+        patch("langflow.services.auth.service.get_user_by_username", new=exact_lookup),
+        patch("langflow.services.auth.service.get_user_by_username_case_insensitive", new=case_insensitive_lookup),
         patch("langflow.services.auth.service.admit_user_creation", new=AsyncMock(side_effect=denial)),
     ):
         result = await auth_service.create_super_user("admin", "new-password", session)
@@ -321,7 +398,8 @@ async def test_create_super_user_recovers_committed_superuser_after_canonical_ht
     assert result.password == original_digest
     assert result.is_superuser is True
     assert result.is_active is True
-    assert lookup.await_count == 2
+    exact_lookup.assert_awaited_once_with(session, "admin")
+    case_insensitive_lookup.assert_awaited_once_with(session, "admin")
     session.rollback.assert_awaited_once()
     session.add.assert_not_called()
     session.commit.assert_not_awaited()
@@ -335,10 +413,12 @@ async def test_create_super_user_preserves_denial_when_no_user_committed(auth_se
         details={"resource": "builders", "limit": 1, "current": 1, "tier": "essentials"},
     )
     session = AsyncMock()
-    lookup = AsyncMock(side_effect=[None, None])
+    exact_lookup = AsyncMock(return_value=None)
+    case_insensitive_lookup = AsyncMock(return_value=None)
 
     with (
-        patch("langflow.services.auth.service.get_user_by_username", new=lookup),
+        patch("langflow.services.auth.service.get_user_by_username", new=exact_lookup),
+        patch("langflow.services.auth.service.get_user_by_username_case_insensitive", new=case_insensitive_lookup),
         patch("langflow.services.auth.service.admit_user_creation", new=AsyncMock(side_effect=denial)),
         pytest.raises(HTTPException) as exc_info,
     ):
@@ -347,7 +427,8 @@ async def test_create_super_user_preserves_denial_when_no_user_committed(auth_se
     assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
     assert exc_info.value.detail == denial.to_detail()
     assert exc_info.value.headers == {ERROR_CODE_HEADER: "tier_limit_reached"}
-    assert lookup.await_count == 2
+    exact_lookup.assert_awaited_once_with(session, "admin")
+    case_insensitive_lookup.assert_awaited_once_with(session, "admin")
     session.rollback.assert_awaited_once()
     session.add.assert_not_called()
     session.commit.assert_not_awaited()
@@ -386,10 +467,12 @@ async def test_create_super_user_preserves_denial_for_committed_non_superuser(au
     )
     denial = PreCreationDenied("capacity reached", details={"resource": "builders"})
     session = AsyncMock()
-    lookup = AsyncMock(side_effect=[None, existing_user])
+    exact_lookup = AsyncMock(return_value=None)
+    case_insensitive_lookup = AsyncMock(return_value=existing_user)
 
     with (
-        patch("langflow.services.auth.service.get_user_by_username", new=lookup),
+        patch("langflow.services.auth.service.get_user_by_username", new=exact_lookup),
+        patch("langflow.services.auth.service.get_user_by_username_case_insensitive", new=case_insensitive_lookup),
         patch("langflow.services.auth.service.admit_user_creation", new=AsyncMock(side_effect=denial)),
         pytest.raises(HTTPException) as exc_info,
     ):
@@ -398,7 +481,8 @@ async def test_create_super_user_preserves_denial_for_committed_non_superuser(au
     assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
     assert existing_user.is_superuser is False
     assert existing_user.password == original_digest
-    assert lookup.await_count == 2
+    exact_lookup.assert_awaited_once_with(session, "admin")
+    case_insensitive_lookup.assert_awaited_once_with(session, "admin")
     session.rollback.assert_awaited_once()
     session.add.assert_not_called()
     session.commit.assert_not_awaited()
