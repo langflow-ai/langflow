@@ -183,10 +183,10 @@ class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
         return response
 
 
-async def load_bundles_with_error_handling():
+async def load_bundles_with_error_handling(*, components_only: bool = False):
     """Load configured bundles and fall back to an empty result on network errors."""
     try:
-        return await load_bundles_from_urls()
+        return await load_bundles_from_urls(components_only=components_only)
     except (httpx.TimeoutException, httpx.HTTPError, httpx.RequestError) as exc:
         await logger.aerror(f"Error loading bundles from URLs: {exc}")
         return [], []
