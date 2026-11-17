@@ -201,6 +201,55 @@ async def test_jobs_sharing_uuid_pieces_read_back_apart(tmp_path: Path) -> None:
         await backend.teardown()
 
 
+async def test_rolling_back_one_job_leaves_a_job_sharing_uuid_pieces(tmp_path: Path) -> None:
+    """A failed ingestion's rollback deleted every job sharing a UUID piece with it."""
+    _require_live_opensearch()
+    backend = await _seed_two_jobs(tmp_path)
+    try:
+        await backend.delete_by({"job_id": _JOB_B})
+        backend._os_client.indices.refresh(index=backend._os_index)
+
+        assert await backend.count_job(_JOB_B) == 0
+        assert await backend.count_job(_JOB_A) == 5
+    finally:
+        await backend.delete_collection()
+        await backend.teardown()
+
+
+async def test_erasing_one_end_user_leaves_another_at_the_same_domain(tmp_path: Path) -> None:
+    """Erasing alice@acme.com deleted bob@acme.com's chunks too: both carry the word acme.com."""
+    _require_live_opensearch()
+    backend = create_backend(
+        "opensearch",
+        kb_name=f"kb_user_{uuid.uuid4().hex[:8]}",
+        kb_path=tmp_path,
+        backend_config={"url_variable": "OPENSEARCH_URL"},
+        user_id=uuid.uuid4(),
+    )
+    users = ["alice@acme.com", "bob@acme.com"]
+    try:
+        await backend.ensure_ready()
+        await backend.add_embedded_documents(
+            [
+                IngestedDocument(
+                    id=f"{user}-{i}", content=f"note {i}", metadata={"end_user_id": user}, embedding=[i / 10] * 8
+                )
+                for user in users
+                for i in range(2)
+            ]
+        )
+        backend._os_client.indices.refresh(index=backend._os_index)
+
+        await backend.delete_by({"end_user_id": "alice@acme.com"})
+        backend._os_client.indices.refresh(index=backend._os_index)
+
+        left = [doc.id async for batch in backend.iter_documents(batch_size=50) for doc in batch]
+        assert sorted(left) == ["bob@acme.com-0", "bob@acme.com-1"]
+    finally:
+        await backend.delete_collection()
+        await backend.teardown()
+
+
 async def test_resuming_a_job_returns_only_what_is_left(tmp_path: Path) -> None:
     _require_live_opensearch()
     backend = await _seed_two_jobs(tmp_path)
