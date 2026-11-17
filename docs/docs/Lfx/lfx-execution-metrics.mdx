@@ -1,0 +1,82 @@
+---
+title: Local execution metrics
+slug: /lfx-execution-metrics
+---
+
+Collect bounded per-node build-call statistics on a Graph you own, without an
+exporter or backend API. This is opt-in and leaves existing backend UI durations,
+`vertex.build_times`, Graph wall-clock metadata and CLI timing unchanged.
+
+```python
+import asyncio
+from lfx.load import aload_flow_from_json
+from lfx.schema.schema import InputValueRequest
+
+async def main():
+    graph = await aload_flow_from_json("flow.json")
+    graph.flow_name = "My flow"  # optional if the export has no name
+    with graph.collect_execution_metrics() as metrics:
+        results = [r async for r in graph.async_start(inputs=InputValueRequest(input_value="hello"))]
+    report = metrics.snapshot()
+    rows = [
+        {"id": key, "name": node["display_name"],
+         "milliseconds": node["total_duration_seconds"] * 1000}
+        for key, node in report["nodes"].items()
+    ]
+    return results, report, rows
+
+asyncio.run(main())
+```
+
+Node IDs are the primary keys. Display names can repeat; using a name-keyed dict
+would silently lose nodes. Flow ID/name remain `None` if absent. Names and IDs are
+included; component inputs, outputs and exception messages are not retained.
+
+## What is measured
+
+Each record contains `display_name`, `call_count`, `returned_count`, `raised_count`,
+`cancelled_count`, and `total_duration_seconds`, `min_duration_seconds`,
+`max_duration_seconds`, `last_duration_seconds`. Durations are unrounded float
+seconds over all recorded terminal outcomes, including failures/cancellation.
+The boundary is the complete `Graph.build_vertex` call, including policy/cache
+work and component awaits, not queue time, CPU time or output serialization.
+Frozen-cache retrieval is a timed call, not a separately inferred cache hit.
+Repeated loop calls aggregate without retaining an event list.
+
+`returned` means the method returned; `raised` means any non-cancellation
+`BaseException` escaped, including a custom pause exception or `SystemExit`. These names do not judge
+the entire flow. Built-in pause boundaries outside a build call add no node.
+Parallel durations overlap, so their sum is not flow latency.
+
+Top-level report fields are `flow_id`, `flow_name`, `elapsed_seconds`, `incomplete`
+and `nodes`. Node keys sort by ID. Elapsed time is monotonic scope time, not the
+Graph constructor/end-trace UTC timestamps. Snapshots are detached copies.
+
+## Scope and lifecycle
+
+Use one active asyncio loop/thread. Active snapshots and scope exit require that
+owner. A foreign exit attempt is rejected without consuming the scope; an existing
+body exception still propagates unchanged. The owner must then close the scope
+before starting another one on that Graph. Nested
+or simultaneous scopes on the same Graph are rejected. `Graph.start()` executes
+in another thread, so use the async recipe instead. Foreign-loop builds and nodes
+not present at scope entry are outside coverage and skipped without affecting
+execution. Do not change graph topology while collecting.
+
+Only finalized calls appear in an active snapshot. Drain tasks, or cancel and
+await them, before leaving the scope for a complete report. Exiting with known
+in-flight calls sets `incomplete`; their later completion is dropped and cannot
+change a closed report or a newer scope. Closed reports can be read elsewhere.
+Ordinary diagnostic clock/record failures drop the observation and mark an active
+owned report incomplete; they do not replace the build result/error. Invalid
+negative/nonfinite durations are dropped, while valid zero durations are kept.
+Diagnostic control-flow interruptions such as `KeyboardInterrupt` propagate when
+no build exception is already propagating; they never replace a primary build
+exception. Foreign and unmapped calls are outside coverage and do not set
+`incomplete`.
+
+Metrics do not follow deepcopy, `copy_for_run`, subgraphs or checkpoint restore.
+Opt in on the executable copy after warm-template acquisition. A resumed graph
+requires a new scope and reports only newly executed nodes, not restored results.
+Convenience APIs that hide Graph and custom/remote executors are not automatically
+covered. No CLI or whole-HITL aggregation is added.
