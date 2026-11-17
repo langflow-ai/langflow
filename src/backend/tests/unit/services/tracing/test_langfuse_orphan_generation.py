@@ -16,9 +16,11 @@ OpenTelemetry exporter — a pure mock cannot catch this bug because the orphani
 happens inside the SDK's generation path.
 """
 
+import contextlib
+import json
 import os
 import uuid
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -237,6 +239,121 @@ def _build_real_langfuse_client_or_skip(tracer_provider):
     # Avoid a network round-trip during tracer setup's health check.
     client.auth_check = lambda: True
     return client
+
+
+@contextlib.contextmanager
+def _real_tracing_service():
+    """Install a production tracing service backed by an in-memory Langfuse exporter.
+
+    @param: No parameters.
+    @returns: A context manager yielding the service, exporter, and lifecycle spies.
+    """
+    pytest.importorskip("langfuse")
+    import langflow.services.tracing.langfuse as langfuse_module
+    from langflow.services.tracing.langfuse import LangFuseTracer
+    from langflow.services.tracing.service import TracingService
+    from lfx.services.settings.base import Settings
+    from lfx.services.settings.service import SettingsService
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    client = _build_real_langfuse_client_or_skip(provider)
+
+    settings = Settings()
+    settings.deactivate_tracing = False
+    service = TracingService(SettingsService(settings, MagicMock()))
+    start_tracers = AsyncMock(wraps=service.start_tracers)
+    end_tracers = AsyncMock(wraps=service.end_tracers)
+    stop_worker = AsyncMock(wraps=service._stop)
+    service.start_tracers = start_tracers
+    service.end_tracers = end_tracers
+    service._stop = stop_worker
+    inert_tracer = MagicMock(ready=False)
+
+    try:
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(
+                patch.object(langfuse_module, "_get_or_create_shared_client", lambda config: client)  # noqa: ARG005
+            )
+            stack.enter_context(
+                patch("langflow.services.tracing.service._get_langfuse_tracer", return_value=LangFuseTracer)
+            )
+            stack.enter_context(patch("lfx.services.deps.get_tracing_service", return_value=service))
+            stack.enter_context(patch("lfx.graph.graph.base.get_tracing_service", return_value=service))
+            for name in ("langsmith", "langwatch", "arize_phoenix", "opik", "traceloop", "native", "openlayer"):
+                stack.enter_context(
+                    patch(f"langflow.services.tracing.service._get_{name}_tracer", return_value=inert_tracer)
+                )
+            yield service, exporter, start_tracers, end_tracers, stop_worker
+    finally:
+        client.shutdown()
+
+
+NESTED_LOOP_FLOW_SPEC = """\
+name: Nested Loop Trace
+nodes:
+  CL: CreateList
+  OUTER: LoopComponent
+  INNER: LoopComponent
+  P: ParserComponent
+  INNER_TC: TypeConverterComponent
+  OUTER_TC: TypeConverterComponent
+  POST: ParserComponent
+  O: ChatOutput
+edges:
+  CL.list -> OUTER.data
+  OUTER.item -> INNER.data
+  INNER.item -> P.input_data
+  P.parsed_text -> INNER_TC.input_data
+  INNER_TC.data_output -> INNER.item
+  INNER.done -> OUTER_TC.input_data
+  OUTER_TC.data_output -> OUTER.item
+  OUTER.done -> POST.input_data
+  POST.parsed_text -> O.input_value
+config:
+  P.mode: Stringify
+  INNER_TC.output_type: JSON
+  OUTER_TC.output_type: JSON
+"""
+
+
+def _build_nested_loop_flow() -> dict:
+    """Build the nested Loop fixture with stable node IDs.
+
+    @returns: The flow-builder result containing serialized flow data and node IDs.
+    """
+    from lfx.graph.flow_builder.builder import build_flow_from_spec
+
+    built = build_flow_from_spec(NESTED_LOOP_FLOW_SPEC)
+    assert "flow" in built, f"Expected flow, got: {built}"
+    return built
+
+
+def _nested_loop_flow_json() -> str:
+    """Serialize the nested Loop flow for authenticated API test fixtures.
+
+    @returns: JSON flow payload with three Create List items.
+    """
+    from langflow.services.database.models.flow.model import FlowCreate
+    from lfx.graph.graph.base import Graph
+
+    built = _build_nested_loop_flow()
+    flow_name = "Nested Loop Trace"
+    graph = Graph.from_payload(
+        built["flow"],
+        flow_id=str(uuid.uuid4()),
+        flow_name=flow_name,
+        user_id="test-user",
+    )
+    graph.get_vertex(built["node_id_map"]["CL"]).update_raw_params(
+        {"texts": ["first", "second", "third"]}, overwrite=True
+    )
+    flow_payload = FlowCreate(**graph.dump(name=flow_name)).model_dump(mode="json")
+    return json.dumps(flow_payload)
 
 
 class TestRootGenerationNestsUnderFlowTrace:
@@ -494,96 +611,26 @@ class TestGraphRunNamesTraceAfterFlow:
         @param self: Test case instance.
         @returns: None.
         """
-        pytest.importorskip("langfuse")
         import asyncio
-        import contextlib
-        from unittest.mock import AsyncMock, MagicMock
 
-        import langflow.services.tracing.langfuse as langfuse_module
-        from langflow.services.tracing.langfuse import LangFuseTracer
-        from langflow.services.tracing.service import TracingService
-        from lfx.graph.flow_builder.builder import build_flow_from_spec
         from lfx.graph.graph.base import Graph
-        from lfx.services.settings.base import Settings
-        from lfx.services.settings.service import SettingsService
-        from opentelemetry.sdk.trace import TracerProvider
-        from opentelemetry.sdk.trace.export import SimpleSpanProcessor
-        from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
         flow_name = "Nested Loop Trace"
         flow_id = str(uuid.uuid4())
-        spec = """\
-name: Nested Loop Trace
-nodes:
-  CL: CreateList
-  OUTER: LoopComponent
-  INNER: LoopComponent
-  P: ParserComponent
-  INNER_TC: TypeConverterComponent
-  OUTER_TC: TypeConverterComponent
-  POST: ParserComponent
-  O: ChatOutput
-edges:
-  CL.list -> OUTER.data
-  OUTER.item -> INNER.data
-  INNER.item -> P.input_data
-  P.parsed_text -> INNER_TC.input_data
-  INNER_TC.data_output -> INNER.item
-  INNER.done -> OUTER_TC.input_data
-  OUTER_TC.data_output -> OUTER.item
-  OUTER.done -> POST.input_data
-  POST.parsed_text -> O.input_value
-config:
-  P.mode: Stringify
-  INNER_TC.output_type: JSON
-  OUTER_TC.output_type: JSON
-"""
-        built = build_flow_from_spec(spec)
-        assert "flow" in built, f"Expected flow, got: {built}"
+        built = _build_nested_loop_flow()
 
         graph = Graph.from_payload(built["flow"], flow_id=flow_id, flow_name=flow_name, user_id="test-user")
         graph.get_vertex(built["node_id_map"]["CL"]).update_raw_params(
             {"texts": ["first", "second", "third"]}, overwrite=True
         )
+        with _real_tracing_service() as (service, exporter, start_tracers, end_tracers, stop_worker):
+            graph._tracing_service = service
+            graph._tracing_service_initialized = True
+            graph.session_id = "nested-loop-session"
+            graph.prepare()
 
-        exporter = InMemorySpanExporter()
-        provider = TracerProvider()
-        provider.add_span_processor(SimpleSpanProcessor(exporter))
-        client = _build_real_langfuse_client_or_skip(provider)
-
-        settings = Settings()
-        settings.deactivate_tracing = False
-        service = TracingService(SettingsService(settings, MagicMock()))
-        start_tracers = AsyncMock(wraps=service.start_tracers)
-        end_tracers = AsyncMock(wraps=service.end_tracers)
-        stop_worker = AsyncMock(wraps=service._stop)
-        service.start_tracers = start_tracers
-        service.end_tracers = end_tracers
-        service._stop = stop_worker
-
-        inert_tracer = MagicMock(ready=False)
-        try:
-            with contextlib.ExitStack() as stack:
-                stack.enter_context(
-                    patch.object(langfuse_module, "_get_or_create_shared_client", lambda config: client)  # noqa: ARG005
-                )
-                stack.enter_context(
-                    patch("langflow.services.tracing.service._get_langfuse_tracer", return_value=LangFuseTracer)
-                )
-                stack.enter_context(patch("lfx.services.deps.get_tracing_service", return_value=service))
-                for name in ("langsmith", "langwatch", "arize_phoenix", "opik", "traceloop", "native", "openlayer"):
-                    stack.enter_context(
-                        patch(f"langflow.services.tracing.service._get_{name}_tracer", return_value=inert_tracer)
-                    )
-
-                graph._tracing_service = service
-                graph._tracing_service_initialized = True
-                graph.session_id = "nested-loop-session"
-                graph.prepare()
-
-                [result async for result in graph.async_start(config={"output": {"cache": False}})]
-                await asyncio.gather(*graph._end_trace_tasks)
-
+            [result async for result in graph.async_start(config={"output": {"cache": False}})]
+            await asyncio.gather(*graph._end_trace_tasks)
             outer_loop = graph.get_vertex(built["node_id_map"]["OUTER"]).custom_component
             assert len(outer_loop.ctx[f"{outer_loop._id}_data"]) == 3
             assert len(outer_loop.ctx[f"{outer_loop._id}_aggregated"]) == 3
@@ -606,8 +653,58 @@ config:
             assert sum(span.name == "Type Convert" for span in spans) >= 6
             assert any(span.name == "Chat Output" for span in spans)
             assert {span.context.trace_id for span in spans} == {root_span.context.trace_id}
-        finally:
-            client.shutdown()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("entrypoint", ["run", "build"])
+    async def test_nested_loop_trace_lifecycle_through_http(
+        self, client, logged_in_headers, created_api_key, entrypoint
+    ) -> None:
+        """Exercise nested Loop tracing through both v1 HTTP execution paths.
+
+        @param self: Test case instance.
+        @param client: Authenticated test application client.
+        @param logged_in_headers: Session headers used to create flows and build runs.
+        @param created_api_key: API key used by the run endpoint.
+        @param entrypoint: Either run or build event-stream execution.
+        @returns: None.
+        """
+        from tests.unit.build_utils import build_flow, create_flow, get_build_events
+
+        flow_id = await create_flow(client, _nested_loop_flow_json(), logged_in_headers)
+
+        with _real_tracing_service() as (_, exporter, start_tracers, end_tracers, stop_worker):
+            if entrypoint == "run":
+                response = await client.post(
+                    f"api/v1/run/{flow_id}",
+                    json={
+                        "input_value": "",
+                        "input_type": "text",
+                        "output_type": "text",
+                        "tweaks": {},
+                        "stream": False,
+                    },
+                    headers={"x-api-key": created_api_key.api_key},
+                )
+                assert response.status_code == 200, response.text
+            else:
+                build_response = await build_flow(client, flow_id, logged_in_headers)
+                events_response = await get_build_events(client, build_response["job_id"], logged_in_headers)
+                assert events_response.status_code == 200, events_response.text
+                events = [json.loads(line) for line in events_response.text.splitlines() if line.strip()]
+                assert any(event.get("event") == "end" for event in events)
+
+            assert start_tracers.await_count == 1
+            assert end_tracers.await_count == 1
+            assert stop_worker.await_count == 1
+
+            trace_context = stop_worker.await_args.args[0]
+            assert trace_context.running is False
+            assert trace_context.worker_task is None
+
+            spans = exporter.get_finished_spans()
+            assert spans
+            assert len({span.context.trace_id for span in spans}) == 1
+            assert any(span.name == "Chat Output" for span in spans)
 
 
 def test_handler_deepcopy_returns_self(monkeypatch):
