@@ -2,7 +2,9 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from fastapi import HTTPException, status
 from langflow.services.auth.service import AuthService
+from langflow.services.creation_hooks import ERROR_CODE_HEADER, PreCreationDenied
 from langflow.services.database.models.user.model import User
 from langflow.services.utils import teardown_superuser
 from lfx.services.settings.constants import (
@@ -256,6 +258,175 @@ async def test_create_super_user_concurrent_workers(auth_service: AuthService):
 
     # Worker 2 should have rolled back and fetched existing user
     assert mock_session2.rollback.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_create_super_user_recovers_committed_superuser_after_pre_creation_denial(auth_service: AuthService):
+    """A capacity denial after another worker commits returns that unchanged superuser."""
+    original_digest = "existing-hash"
+    existing_user = User(
+        username="admin",
+        password=original_digest,
+        is_superuser=True,
+        is_active=True,
+    )
+    denial = PreCreationDenied(
+        "Your plan includes 1 builder.",
+        details={"resource": "builders", "limit": 1, "current": 1, "tier": "essentials"},
+    )
+    session = AsyncMock()
+    lookup = AsyncMock(side_effect=[None, existing_user])
+
+    with (
+        patch("langflow.services.auth.service.get_user_by_username", new=lookup),
+        patch("langflow.services.auth.service.admit_user_creation", new=AsyncMock(side_effect=denial)),
+    ):
+        result = await auth_service.create_super_user("admin", "new-password", session)
+
+    assert result is existing_user
+    assert result.password == original_digest
+    assert result.is_superuser is True
+    assert result.is_active is True
+    assert lookup.await_count == 2
+    session.rollback.assert_awaited_once()
+    session.add.assert_not_called()
+    session.commit.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_create_super_user_recovers_committed_superuser_after_canonical_http_denial(auth_service: AuthService):
+    """A canonical tier HTTP denial follows the same committed-user recovery path."""
+    original_digest = "existing-hash"
+    existing_user = User(
+        username="admin",
+        password=original_digest,
+        is_superuser=True,
+        is_active=True,
+    )
+    denial = HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail={"error_code": "tier_limit_reached", "message": "capacity reached"},
+        headers={ERROR_CODE_HEADER: "tier_limit_reached"},
+    )
+    session = AsyncMock()
+    lookup = AsyncMock(side_effect=[None, existing_user])
+
+    with (
+        patch("langflow.services.auth.service.get_user_by_username", new=lookup),
+        patch("langflow.services.auth.service.admit_user_creation", new=AsyncMock(side_effect=denial)),
+    ):
+        result = await auth_service.create_super_user("admin", "new-password", session)
+
+    assert result is existing_user
+    assert result.password == original_digest
+    assert result.is_superuser is True
+    assert result.is_active is True
+    assert lookup.await_count == 2
+    session.rollback.assert_awaited_once()
+    session.add.assert_not_called()
+    session.commit.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_create_super_user_preserves_denial_when_no_user_committed(auth_service: AuthService):
+    """A denial remains a denial when the competing worker did not commit a user."""
+    denial = PreCreationDenied(
+        "Your plan includes 1 builder.",
+        details={"resource": "builders", "limit": 1, "current": 1, "tier": "essentials"},
+    )
+    session = AsyncMock()
+    lookup = AsyncMock(side_effect=[None, None])
+
+    with (
+        patch("langflow.services.auth.service.get_user_by_username", new=lookup),
+        patch("langflow.services.auth.service.admit_user_creation", new=AsyncMock(side_effect=denial)),
+        pytest.raises(HTTPException) as exc_info,
+    ):
+        await auth_service.create_super_user("admin", "password", session)
+
+    assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
+    assert exc_info.value.detail == denial.to_detail()
+    assert exc_info.value.headers == {ERROR_CODE_HEADER: "tier_limit_reached"}
+    assert lookup.await_count == 2
+    session.rollback.assert_awaited_once()
+    session.add.assert_not_called()
+    session.commit.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_create_super_user_preserves_arbitrary_http_denial(auth_service: AuthService):
+    """An unrelated HTTP denial is not converted into an existing-user success."""
+    denial = HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="permission denied")
+    session = AsyncMock()
+    lookup = AsyncMock(side_effect=[None])
+
+    with (
+        patch("langflow.services.auth.service.get_user_by_username", new=lookup),
+        patch("langflow.services.auth.service.admit_user_creation", new=AsyncMock(side_effect=denial)),
+        pytest.raises(HTTPException) as exc_info,
+    ):
+        await auth_service.create_super_user("admin", "password", session)
+
+    assert exc_info.value is denial
+    lookup.assert_awaited_once()
+    session.rollback.assert_awaited_once()
+    session.add.assert_not_called()
+    session.commit.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_create_super_user_preserves_denial_for_committed_non_superuser(auth_service: AuthService):
+    """A same-name regular user cannot be returned as a configured superuser."""
+    original_digest = "existing-hash"
+    existing_user = User(
+        username="admin",
+        password=original_digest,
+        is_superuser=False,
+        is_active=True,
+    )
+    denial = PreCreationDenied("capacity reached", details={"resource": "builders"})
+    session = AsyncMock()
+    lookup = AsyncMock(side_effect=[None, existing_user])
+
+    with (
+        patch("langflow.services.auth.service.get_user_by_username", new=lookup),
+        patch("langflow.services.auth.service.admit_user_creation", new=AsyncMock(side_effect=denial)),
+        pytest.raises(HTTPException) as exc_info,
+    ):
+        await auth_service.create_super_user("admin", "password", session)
+
+    assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
+    assert existing_user.is_superuser is False
+    assert existing_user.password == original_digest
+    assert lookup.await_count == 2
+    session.rollback.assert_awaited_once()
+    session.add.assert_not_called()
+    session.commit.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_create_super_user_restart_is_idempotent_after_recovered_race(auth_service: AuthService):
+    """A retry sees the committed superuser without rewriting its credentials."""
+    original_digest = "existing-hash"
+    existing_user = User(
+        username="admin",
+        password=original_digest,
+        is_superuser=True,
+        is_active=True,
+    )
+    session = AsyncMock()
+    lookup = AsyncMock(return_value=existing_user)
+
+    with patch("langflow.services.auth.service.get_user_by_username", new=lookup):
+        result = await auth_service.create_super_user("admin", "new-password", session)
+
+    assert result is existing_user
+    assert result.password == original_digest
+    assert result.is_superuser is True
+    assert result.is_active is True
+    lookup.assert_awaited_once()
+    session.add.assert_not_called()
+    session.commit.assert_not_awaited()
 
 
 @pytest.mark.asyncio

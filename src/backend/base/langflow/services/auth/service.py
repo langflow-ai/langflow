@@ -1540,6 +1540,11 @@ class AuthService(BaseAuthService):
                 is_active=True,
                 last_login_at=None,
             )
+
+            async def recover_committed_superuser() -> User | None:
+                committed_user = await get_user_by_username(db, username)
+                return committed_user if committed_user is not None and committed_user.is_superuser else None
+
             try:
                 from langflow.services.creation_hooks import PreCreationDenied, pre_creation_denied_to_http
                 from langflow.services.deps import get_authorization_service
@@ -1554,9 +1559,15 @@ class AuthService(BaseAuthService):
                 await db.refresh(super_user)
             except PreCreationDenied as denied:
                 await db.rollback()
+                if committed_user := await recover_committed_superuser():
+                    return committed_user
                 raise pre_creation_denied_to_http(denied) from denied
-            except HTTPException:
+            except HTTPException as denied:
                 await db.rollback()
+                if http_denial_error_code(denied) != ERROR_CODE_TIER_LIMIT_REACHED:
+                    raise
+                if committed_user := await recover_committed_superuser():
+                    return committed_user
                 raise
             except IntegrityError:
                 await db.rollback()
