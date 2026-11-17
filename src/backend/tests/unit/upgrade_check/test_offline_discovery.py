@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 import threading
@@ -106,6 +107,7 @@ def test_registry_refuses_network_before_discovery_callbacks_even_when_loader_sw
 
 def test_registry_timeout_keeps_callbacks_offline_until_worker_finishes(monkeypatch, tmp_path):
     options = _options(tmp_path)
+    options["discovery_timeout"] = 0.02
     entered, release, refused = threading.Event(), threading.Event(), threading.Event()
 
     def discover(**_kwargs):
@@ -118,7 +120,6 @@ def test_registry_timeout_keeps_callbacks_offline_until_worker_finishes(monkeypa
         return {}
 
     monkeypatch.setattr(command, "load_upgrade_registry", discover)
-    monkeypatch.setattr(engine, "REGISTRY_SECONDS", 0.02, raising=False)
     try:
         with pytest.raises(command.CheckError, match="did not finish") as caught:
             command.run(options)
@@ -133,6 +134,62 @@ def test_registry_timeout_keeps_callbacks_offline_until_worker_finishes(monkeypa
                 worker.join(2)
     assert refused.is_set()
     sys.audit("socket.getaddrinfo", "synthetic.invalid", 443, 0, 0, 0)
+
+
+def test_discovery_timeout_override_allows_slower_complete_registry(monkeypatch):
+    release = threading.Event()
+    timer = threading.Timer(0.05, release.set)
+    monkeypatch.setattr(engine, "REGISTRY_SECONDS", 0.01)
+
+    def discover():
+        assert release.wait(1)
+        return {"custom": {"Fixture": {}}}
+
+    timer.start()
+    try:
+        assert engine.discover_offline(discover, timeout_seconds=1) == {"custom": {"Fixture": {}}}
+    finally:
+        release.set()
+        timer.join(1)
+
+
+@pytest.mark.parametrize(("arguments", "expected"), [([], 300), (["--discovery-timeout", "600"], 600)])
+def test_cli_passes_discovery_timeout_to_isolated_child(monkeypatch, arguments, expected):
+    import subprocess
+
+    from langflow.__main__ import app
+    from typer.testing import CliRunner
+
+    sent_options = []
+
+    class Child:
+        returncode = 0
+
+        def communicate(self, options):
+            sent_options.append(json.loads(options))
+
+        def poll(self):
+            return self.returncode
+
+    monkeypatch.setattr(subprocess, "Popen", lambda *_args, **_kwargs: Child())
+
+    result = CliRunner().invoke(app, ["upgrade-check", "--database-url", "sqlite:////unused.db", *arguments])
+
+    assert result.exit_code == 0, result.output
+    assert sent_options[0]["discovery_timeout"] == expected
+
+
+@pytest.mark.parametrize("timeout", ["0", "-1"])
+def test_cli_rejects_nonpositive_discovery_timeout(timeout):
+    from langflow.__main__ import app
+    from typer.testing import CliRunner
+
+    result = CliRunner().invoke(
+        app, ["upgrade-check", "--database-url", "sqlite:////unused.db", "--discovery-timeout", timeout]
+    )
+
+    assert result.exit_code == 2
+    assert "Invalid value for '--discovery-timeout'" in result.output
 
 
 def test_child_environment_excludes_provider_credentials_and_original_home(monkeypatch, tmp_path):

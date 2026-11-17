@@ -1,6 +1,9 @@
 import { useCallback } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { queryClient } from "@/contexts";
+import { extractApiErrorMessage } from "@/controllers/API/helpers/extract-api-error-message";
+import i18n from "@/i18n";
+import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
@@ -35,6 +38,7 @@ export const useSendMessage = ({ sessionId }: UseSendMessageProps = {}) => {
     }): Promise<void> => {
       // sessionId is always provided from store's activeSessionId. Fallback to flowId.
       const actualSession = sessionId ?? flowId;
+      const previousError = useAlertStore.getState().errorData;
       // Add placeholder user message immediately
       addUserMessage({
         id: null,
@@ -59,6 +63,18 @@ export const useSendMessage = ({ sessionId }: UseSendMessageProps = {}) => {
         eventDelivery: eventDeliveryConfig,
       })
         .then(() => {
+          const { buildInfo } = useFlowStore.getState();
+          // The streaming bridge resolves failed requests. Reject an unsent message so
+          // ChatInput restores its draft, while keeping messages the server accepted.
+          if (
+            buildInfo?.success === false &&
+            buildInfo.error?.length &&
+            removePlaceholderUserMessage(actualSession, currentFlowId)
+          ) {
+            throw new Error(
+              buildInfo.error?.join("\n") || i18n.t("humanInput.runFailed"),
+            );
+          }
           queryClient.invalidateQueries({
             queryKey: ["useGetSessionsFromFlowQuery"],
           });
@@ -66,6 +82,17 @@ export const useSendMessage = ({ sessionId }: UseSendMessageProps = {}) => {
         .catch((err) => {
           console.error("[useSendMessage] buildFlow error", err);
           removePlaceholderUserMessage(actualSession, currentFlowId);
+          useFlowStore.getState().setIsBuilding(false);
+          useUtilityStore.getState().setAwaitingBotResponse(false);
+          const title = i18n.t("humanInput.runFailed");
+          const message = extractApiErrorMessage(
+            err && typeof err === "object" ? err : {},
+            title,
+          );
+          const alerts = useAlertStore.getState();
+          if (alerts.errorData === previousError) {
+            alerts.setErrorData({ title, list: [message] });
+          }
           throw err;
         });
     },

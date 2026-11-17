@@ -161,16 +161,19 @@ export const updateMessage = (updatedMessage: Message) => {
 export const removePlaceholderUserMessage = (
   sessionId: string,
   flowId: string,
-) => {
+): boolean => {
   const cacheKey = [MESSAGES_QUERY_KEY, { id: flowId, session_id: sessionId }];
+  let removed = false;
 
   queryClient.setQueryData(cacheKey, (old: Message[] = []) => {
     const placeholderIndex = old.findIndex(
       (msg) => msg.id === null && msg.sender === "User",
     );
     if (placeholderIndex === -1) return old;
+    removed = true;
     return old.filter((_, idx) => idx !== placeholderIndex);
   });
+  return removed;
 };
 
 export const addUserMessage = (updatedMessage: Message) => {
@@ -179,13 +182,8 @@ export const addUserMessage = (updatedMessage: Message) => {
     { id: updatedMessage.flow_id, session_id: updatedMessage.session_id },
   ];
 
-  // Ensure query exists
-  queryClient.ensureQueryData({
-    queryKey: cacheKey,
-    queryFn: () => [],
-  });
-
-  // Add placeholder to cache
+  // setQueryData creates a missing cache entry without an async empty result
+  // that could overwrite the placeholder before the server responds.
   queryClient.setQueryData(cacheKey, (old: Message[] = []) => {
     return [...old, updatedMessage];
   });
