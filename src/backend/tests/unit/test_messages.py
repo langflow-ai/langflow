@@ -839,6 +839,32 @@ class TestMessageBaseFromMessageFilePaths:
 
         assert result.files == [f"flow-{session_id}/image.png"]
 
+    @pytest.mark.parametrize(
+        "storage_root",
+        ["/srv/langflow/data", r"C:\langflow\data"],
+        ids=["posix", "windows"],
+    )
+    def test_from_message_keeps_the_flow_namespace_when_the_session_is_another_id(self, storage_root):
+        """A shareable playground runs under a per-visitor session; its uploads live in the source flow."""
+        from langflow.services.database.models.message.model import MessageTable
+        from lfx.schema.image import Image
+
+        source_flow_id = "f23a147e-5f12-4a4e-a9db-cf9f6283718c"
+        visitor_session = "5ff65175-ab01-539f-81d9-cb5601855d08"
+        separator = "\\" if "\\" in storage_root else "/"
+        file_path = separator.join([storage_root, f"flow-{source_flow_id}", "2026-11-11_09-07-43_chart.png"])
+        message = Message(
+            text="see the chart",
+            sender="User",
+            sender_name="User",
+            session_id=visitor_session,
+            files=[Image(path=file_path)],
+        )
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        assert result.files == [f"flow-{source_flow_id}/2026-11-11_09-07-43_chart.png"]
+
     def test_from_message_with_session_id_not_in_file_path(self):
         """Test that file paths NOT containing session_id are preserved as-is."""
         from langflow.services.database.models.message.model import MessageTable

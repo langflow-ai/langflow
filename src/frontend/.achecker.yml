@@ -13,3 +13,5 @@ outputFormat:
 outputFilenameTimestamp: false
 baselineFolder: tests/a11y/baselines
 outputFolder: coverage/accessibility-reports
+# The usage-metrics upload to able.ibm.com has no timeout. When the endpoint hangs, worker teardown fails.
+perfMetrics: false
