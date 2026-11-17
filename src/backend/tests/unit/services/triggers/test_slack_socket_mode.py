@@ -423,6 +423,12 @@ async def test_editing_a_filter_applies_without_reconnecting(
     await supervisor.reconcile()
     [socket] = await slack.wait_for_sockets(1)
 
+    async def _recorded() -> bool:
+        return (await _trigger(trigger_id)).provider_state.get(PROVIDER_STATE_APP_ID) == fx.APP_ID
+
+    # The server accepting a socket does not mean its hello has finished being recorded.
+    await _eventually(_recorded)
+
     async with session_scope() as session:
         row = await session.get(Trigger, trigger_id)
         row.config = {**row.config, "channels": ["C0RELEASE1"]}

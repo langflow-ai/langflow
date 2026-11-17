@@ -92,6 +92,18 @@ export default function RepairControls({
         </CustomLink>
       </p>
     );
+  const reasons = (item: RepairResult) => (
+    <>
+      {item.reason_codes.length > 0 && (
+        <ul>
+          {item.reason_codes.map((code) => (
+            <li key={code}>{t(repairReasonKey(code))}</li>
+          ))}
+        </ul>
+      )}
+      {item.reason_detail && <p>{item.reason_detail}</p>}
+    </>
+  );
   return (
     <section
       aria-labelledby="upgrade-repair-title"
@@ -193,13 +205,7 @@ export default function RepairControls({
                   {flowLink(item.flow_id)} ·{" "}
                   {t(`settings.upgrade.repairStatus.${item.status}`)}
                 </p>
-                {item.reason_codes.length > 0 && (
-                  <ul>
-                    {item.reason_codes.map((code) => (
-                      <li key={code}>{t(repairReasonKey(code))}</li>
-                    ))}
-                  </ul>
-                )}
+                {reasons(item)}
                 {recoveryLink(item)}
               </li>
             ))}
@@ -270,6 +276,7 @@ export default function RepairControls({
                   )}{" "}
                   · {flowLink(item.result.flow_id)} ·{" "}
                   {t(`settings.upgrade.repairStatus.${item.result.status}`)}
+                  {reasons(item.result)}
                   {recoveryLink(item.result)}
                 </li>
               ))}

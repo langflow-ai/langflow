@@ -24,6 +24,7 @@ from langflow.services.database.revision import (
     script_directory,
 )
 from langflow.services.database.service import DatabaseService
+from lfx.services.settings.base import Settings
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -99,7 +100,7 @@ def _service(url: str) -> DatabaseService:
     service.database_url = url
     service.engine = create_async_engine(url)
     service.script_location = Path(__import__("langflow").__file__).parent / "alembic"
-    service.settings_service = SimpleNamespace(settings=SimpleNamespace(database_connection_retry=False))
+    service.settings_service = SimpleNamespace(settings=Settings.model_construct(database_url=url))
     service._open_alembic_log_buffer = lambda: nullcontext(StringIO())
     return service
 
