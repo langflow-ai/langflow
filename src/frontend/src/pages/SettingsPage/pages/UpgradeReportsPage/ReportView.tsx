@@ -6,7 +6,7 @@ import {
   useExportUpgradeReport,
 } from "@/controllers/API/queries/upgrade-reports";
 import FlowList from "./FlowList";
-import { downloadReport, reportTime } from "./format";
+import { downloadReport, reportAge, reportTime } from "./format";
 import RepairControls from "./RepairControls";
 
 export default function ReportView({ report }: { report: ReportDetail }) {
@@ -28,12 +28,7 @@ export default function ReportView({ report }: { report: ReportDetail }) {
         : document.summary.flows.warn > 0
           ? "review"
           : "clear";
-  const ageHours = Math.floor(
-    (Date.now() - Date.parse(document.generated_at)) / 3600000,
-  );
-  const age = new Intl.RelativeTimeFormat(i18n.language, {
-    numeric: "auto",
-  }).format(-ageHours, "hour");
+  const age = reportAge(document.generated_at, i18n.language, unknown);
   const source = document.source.identity?.locator;
   const sourceLabel = source
     ? Object.entries(source)

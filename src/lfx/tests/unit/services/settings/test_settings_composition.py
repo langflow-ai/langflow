@@ -195,6 +195,7 @@ EXPECTED_FIELDS = {
     "load_flows_path",
     "bundle_urls",
     "lazy_load_components",
+    "component_class_cache_enabled",
     "create_starter_projects",
     "update_starter_projects",
     # UiSettings

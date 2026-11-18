@@ -1,5 +1,4 @@
 # Add helper functions for each event type
-import asyncio
 from collections.abc import AsyncIterator, Awaitable, Callable
 from time import perf_counter
 from typing import Any, Protocol
@@ -7,6 +6,7 @@ from typing import Any, Protocol
 from langchain_core.agents import AgentFinish
 from langchain_core.messages import AIMessageChunk
 
+from lfx.events.event_manager import emit_token
 from lfx.schema.content_types import TextContent, ToolContent
 from lfx.schema.log import OnTokenFunctionType, SendMessageFunctionType
 from lfx.schema.message import Message
@@ -442,7 +442,7 @@ async def handle_on_chain_stream(
         # Note: we should expect the callback, but we keep it optional for backwards compatibility
         # as of v1.6.5
         if output_text is not None and output_text != "" and send_token_callback and message_id:
-            await asyncio.to_thread(
+            await emit_token(
                 send_token_callback,
                 data={
                     "chunk": output_text,

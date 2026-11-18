@@ -6,6 +6,7 @@ import { cn } from "../../../../utils/utils";
 import { default as ForwardedIconComponent } from "../../../common/genericIconComponent";
 import { Button } from "../../../ui/button";
 import { PopoverTrigger } from "../../../ui/popover";
+import { type OptionLabels, optionLabel } from "../helpers/option-label";
 
 export function DropdownTrigger({
   disabled,
@@ -24,6 +25,7 @@ export function DropdownTrigger({
   filteredOptions,
   filteredMetadata,
   ariaLabelledBy,
+  optionLabels,
 }: {
   disabled?: boolean;
   validOptions: string[];
@@ -44,6 +46,7 @@ export function DropdownTrigger({
   filteredMetadata: Record<string, any>[] | undefined;
   // Id of NodeInputField's label element for this field.
   ariaLabelledBy?: string;
+  optionLabels?: OptionLabels;
 }) {
   const { t } = useTranslation();
 
@@ -100,7 +103,7 @@ export function DropdownTrigger({
                 <>
                   {
                     (combobox && value) || options?.includes(value) ? (
-                      value
+                      optionLabel(optionLabels, value)
                     ) : // this logic is used for the agents component, if you update make sure to test the agent component
                     sourceOptions?.fields?.data?.node?.name ===
                       "connect_other_models" ? (

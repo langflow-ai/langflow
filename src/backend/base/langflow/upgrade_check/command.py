@@ -159,9 +159,12 @@ def run(
                 editor_usage = read_job_usage(source.connection, identity=identity)
                 serving_usage = read_serving_usage(options.get("serving_database_url"))
         except Exception as exc:
-            raise CheckError(_source_message(exc), code="source_unreadable") from exc
+            raise CheckError(_source_message(exc, options["database_url"]), code="source_unreadable") from exc
         try:
-            all_types = discover_offline(lambda: load_upgrade_registry(components_path=settings.loaded_components_path))
+            all_types = discover_offline(
+                lambda: load_upgrade_registry(components_path=settings.loaded_components_path),
+                timeout_seconds=options.get("discovery_timeout"),
+            )
         except (UpgradeRegistryError, ComponentDiscoveryError) as exc:
             msg = f"cannot load this release's components: {exc}"
             raise CheckError(msg, code="registry_unavailable") from exc
@@ -278,20 +281,26 @@ def _needs_action(report: Mapping[str, Any]) -> bool:
     )
 
 
-def _source_message(exc: Exception) -> str:
+def _source_message(exc: Exception, database_url: str | None = None) -> str:
     if isinstance(exc, SourceDatabaseError):
         return str(exc)
-    if isinstance(exc, ModuleNotFoundError):
+    try:
+        backend = sa.make_url(database_url).get_backend_name() if database_url else None
+    except sa.exc.ArgumentError:
+        backend = None
+    if isinstance(exc, ModuleNotFoundError) and backend in {"postgresql", "postgres"}:
         return (
             f"cannot read the source database: {exc}. Install the PostgreSQL driver next to this Langflow, "
             "for example pip install 'langflow[postgresql]'."
         )
     if isinstance(exc, FileNotFoundError):
         return f"cannot read the source database: {_first_line(exc)}"
-    return (
-        f"cannot read the source database ({type(exc).__name__}). "
-        "Check the database URL, access permissions, and installed PostgreSQL driver."
-    )
+    if backend == "sqlite":
+        return (
+            f"cannot read the source SQLite database ({type(exc).__name__}). "
+            "Check the database path and file and folder access permissions."
+        )
+    return f"cannot read the source database ({type(exc).__name__}). Check the database URL and access permissions."
 
 
 def _print_summary(out: IO[str], report: Mapping[str, Any], listed: list[FlowResult], output: str | None) -> None:

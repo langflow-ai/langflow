@@ -233,6 +233,25 @@ async def test_background_agui_populates_job_result_outputs(client, created_api_
     assert status_body["status"] == "completed"
     assert status_body["outputs"], f"agui GET status carried no outputs: {status_body}"
 
+    replay = await client.get(f"api/v2/workflows/{job_id}/events", headers=_headers(created_api_key))
+    assert replay.status_code == 200, replay.text
+    events = [json.loads(line[6:]) for line in replay.text.splitlines() if line.startswith("data: ")]
+    content = [event for event in events if event["type"] == "TEXT_MESSAGE_CONTENT"]
+    assert content, replay.text
+    assert "hi" in "".join(event["delta"] for event in content)
+    event_ids = [line[4:] for line in replay.text.splitlines() if line.startswith("id: ")]
+    assert [int(event_id) for event_id in event_ids] == list(range(1, len(events) + 1))
+
+    start_index = next(index for index, event in enumerate(events) if event["type"] == "TEXT_MESSAGE_START")
+    continuation = await client.get(
+        f"api/v2/workflows/{job_id}/events",
+        headers={**_headers(created_api_key), "Last-Event-ID": event_ids[start_index]},
+    )
+    assert continuation.status_code == 200, continuation.text
+    resumed_events = [json.loads(line[6:]) for line in continuation.text.splitlines() if line.startswith("data: ")]
+    assert resumed_events == events[start_index + 1 :]
+    assert resumed_events[0]["type"] == "TEXT_MESSAGE_CONTENT"
+
 
 async def test_stop_does_not_overwrite_completed_job(client, created_api_key, bg_flow):
     """A late ``/stop`` on an already-COMPLETED job must NOT flip it to CANCELLED.
