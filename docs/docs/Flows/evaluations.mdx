@@ -22,11 +22,10 @@ To instead run one prompt at a time, see [Test flows in the Playground](/concept
 ## Prerequisites
 
 * Evaluations enabled, as described above.
-  After you restart, <Icon name="FlaskConical" aria-hidden="true" /> **Evaluations** appears at the bottom of the sidebar.
 * Permission to run the flow.
 * A flow Langflow can evaluate.
-  The flow must have a **Chat Input** or **Text Input** and a **Chat Output** or **Text Output**, and it must run to the output component without pausing for [human approval](/human-in-the-loop).
-  If the flow has more than one output, select the **Output to score**.
+  The flow must have a **Chat Input** and a **Chat Output** component, and it must run to the output component without pausing for [human approval](/human-in-the-loop).
+  If the flow has more than one output component, select the output you want to evaluate in the **Output to score** field.
 * A Langflow server with a database.
   `lfx serve` has no database, so it does not support evaluations.
 
@@ -40,156 +39,78 @@ To evaluate a flow, do the following:
 
 2. To create a dataset, click **New dataset**.
    A dataset is a list of inputs and optional expected outputs.
-3. Click **Add item**, and then enter an **Input**.
+3. Click **Add item**, and then enter an **Input**, such as `How do I change the email address on my account?`
    **Expected output** is the answer you want the flow to return for that input, and is not required.
-   Optionally, click **Or start from an example** to fill an empty dataset with test data.
+   Optionally, click **Or start from an example** to fill the empty dataset with test data.
 
 4. To load rows from a file, click **Import CSV**.
-   You can create a dataset from a CSVfile, or open an existing dataset and import into it.
-   The file must be UTF-8 and must have a header row.
+   If you have the **Datasets** list opened, this creates a new dataset from the file.
+   If you already have a dataset opened, clicking **Import CSV** adds the file's rows to the opened dataset.
+   The file must be UTF-8 format and must have a header row.
 
-   1. Drop the file, or click **Browse files**.
-   2. Choose the **Input column**.
-      Choose an **Expected output column**, or **None**.
-   3. Click **Import**.
+   For CSV limits, see [Configuration](#configuration).
 
-   Langflow skips a row whose input is empty, and a cell longer than 100,000 characters, and lists those rows.
-   A dataset that a run is using cannot be edited, imported, or deleted until that run finishes.
-   For size limits, see [Configuration](#configuration).
+5. To run the evaluation, from the flow canvas, click <Icon name="FlaskConical" aria-hidden="true" /> **Evaluate**.
+   Langflow saves the flow, and then opens the **Evaluate flow** pane.
 
-   **Export CSV** prefixes a cell that starts with `=`, `+`, `-`, or `@` with an apostrophe, so a spreadsheet does not treat the cell as a formula.
-
-4. Start the evaluation.
-
-   * From the flow canvas, click <Icon name="FlaskConical" aria-hidden="true" /> **Evaluate**.
-     Langflow saves the flow, and then opens **Evaluate flow**.
-   * From the **Evaluations** tab, click **New evaluation** and choose the flow.
-
-   **Next** moves to the next step when the current step is valid.
-   **Back** returns to an earlier step.
-
-5. On **Setup**, choose the dataset.
-   If the flow has more than one output, choose **Output to score**.
+6. Under **Setup**, select the dataset.
+   If the flow has more than one output, select **Output to score**.
    The step lists the first rows of the dataset and reports whether the flow can be evaluated.
    If the flow cannot be evaluated, **Setup** names the requirement that blocks the run.
 
-   :::warning
-   These conditions warn, and the run can still start:
+7. Under **Scoring**, select one or more scoring methods, and then set **Pass when the average score reaches (threshold)**.
+   Each scoring method scores a row from 0 to 1. The row passes when the average of those scores reaches this threshold number. The default is `0.5`.
 
-   * Components that act outside Langflow, such as email, Slack, a webhook, or an API request, run once for every row.
-   * Components that save data, such as a knowledge base in ingest mode, store every row.
-   * External memory is read and written for real.
-   * A frozen component returns the same cached result for every row.
-   :::
+   To score with an **LLM judge**, select a **Judge model**.
+   For more information, see [Configuration](#scoring).
 
-6. On **Scoring**, choose one or more scoring methods.
-   **Exact match** starts selected.
-   Set **Pass when the average score reaches (threshold)**.
-   The default threshold is `0.5`.
-   For how each method scores a row, see [Scoring methods](#scoring-methods).
-
-   For **LLM judge**, choose a **Judge model**.
-   **Rubric** is optional.
-   Under **Safety checks**, the same judge can flag an answer as off topic, leaking personal data, obeying hidden instructions, or breaking its rules.
-   A flagged answer fails the row.
-   An answer that refuses an attack stays unflagged.
-
-   **Token limits** caps the judge at 600 output tokens per row and 8,192 output tokens per run.
-   By default, the run stops when a limit is reached.
-   A reasoning model's thinking counts toward the limit.
-   **LLM judge** spends tokens on your account.
-
-7. On **Models**, fill any model field the flow saved empty.
-   This step appears when the flow has a model field that is not connected to another component.
-   The choice applies to this run only and does not change the flow.
+8. Under **Models**, complete any model fields that the flow didn't populate.
 
    To compare models, click **Compare with other models**.
-   A comparison runs 2 to 8 versions, one after another, on the same flow version and the same dataset.
-   Versions do not run at the same time.
-   A version that fails does not stop the versions after it.
-   If the dataset or the scoring changes after one version finishes, the remaining versions stay **Not run**.
+   A comparison runs 2 to 8 flow versions successively, with the same flow version and the same dataset.
+   A flow version that fails does not stop the flows after it.
 
-8. On **Review**, confirm the flow, the dataset, the scoring, and the models each version runs.
-   Review also shows an estimate of tokens and cost.
-   When this flow content has a completed run, the estimate is based on that run.
-   Otherwise it is a rough estimate from the models and the size of the dataset.
-   A model with no known price is named, and its cost is left blank.
+9. Under **Review**, confirm your selections.
+   **Review** also displays an estimate of tokens and cost.
 
-   Under **Flow version**, **Latest (current saved draft)** runs the saved draft.
-   When that draft is not already a saved version, Langflow stores it as a version described **Evaluation run**.
-   You can also choose a version from the flow's [version history](/concepts-flows#save-and-restore-flow-versions).
-   Edits you make after the run starts do not change that run.
+   Under **Flow version**, **Latest (current saved draft)** runs the flow as it is currently saved, including auto-saved edits.
+   You can also select an earlier snapshot from the flow's [version history](/concepts-flows#save-and-restore-flow-versions).
+   Edits made after the evaluation run starts do not change that run.
 
-   Click **Create and run**.
-   For a comparison, the button is **Create & compare N**.
+10. Click **Create and run** to start one run of the flow.
+   If you added model versions with **Compare with other models**, the button is **Create & compare N** instead, where **N** is the number of flow versions, which Langflow runs one after another.
    A run that calls a model spends tokens on your account.
-   **Re-run** asks you to confirm before it starts.
 
-9. Open the evaluation to read the results.
-   Reloading the page returns you to the same run and view.
+11. To view the results, open the evaluation.
 
-   * **Runs** lists every run, with its flow version, models, pass rate, tokens, and cost.
-     Click a row to open its results.
-   * **Results** shows metric cards, a filter for **Passed**, **Failed**, and **Errored**, and one row per item.
-     Open a row for the full input, expected output, actual output, and each score's reason.
-     **Export CSV** is on this view.
-     When safety checks are on, **Safety checks** shows the share of answers that stayed safe and how many attacks were resisted.
-   * **Comparison** appears for a model comparison.
-     It names the **Most accurate**, **Cheapest**, and **Fastest (median)** versions, and then a leaderboard ordered by pass rate, then cost, then median duration.
-     Versions with the same pass rate are a **Tie**.
-     A lower pass rate that still overlaps the leader's margin of error is marked **≈ #1**.
+## Scoring {#scoring}
 
-   Progress refreshes about every 5 seconds.
-   Click **Cancel run** to stop a run that is still going.
-   Rows that already finished are kept.
+**Exact match** is selected by default. Each method scores a row from 0 to 1, and the row passes when the average reaches the threshold. The default is `0.5`. An errored row fails. A row that no method can score is neither passed nor failed. A method that requires an **Expected output** is left out of the average when the row has none.
 
-   **Re-run** can run the latest version, run the same version again, or repeat a whole comparison on the same flow version.
+| Method | Score |
+| --- | --- |
+| **Exact match** | `1` if the flow's answer is the same as the **Expected output**, ignoring case and extra spaces. Otherwise scores `0`. |
+| **Contains** | `1` if the flow's answer includes the **Expected output**. Otherwise scores `0`. |
+| **Similarity** | `0` to `1`, based on how close the flow's answer is to the **Expected output**. |
+| **LLM judge** | `0` to `1` from a model, plus a one-line reason. **Rubric** is optional, and an **Expected output** is optional. This method spends tokens. |
 
-   Each row runs in its own session.
-   The run does not read or write stored chat history.
-   A trace is still written for each row.
-   A long answer stored on the result is shortened; the full text stays in the trace.
-
-   If the server stops during a run, the next time you open that run it is **Failed**, and the error says the server stopped while the run was in progress.
-   Finished rows stay.
-   The row that was in progress is not run again.
-
-   If three rows in a row fail with the same error, the run stops and names that error.
-   To change that limit, see [Configuration](#configuration).
-
-   One evaluation has one active run.
-   Starting another run while one is active is refused until that run finishes or you cancel it.
-
-## Delete a dataset or an evaluation
-
-1. Open **Evaluations**, and then open the **Datasets** or **Evaluations** tab.
-2. For the row, click <Icon name="EllipsisVertical" aria-hidden="true" /> **More actions**, and then click **Delete**.
-
-Deleting a flow keeps the evaluation's results readable.
-**Re-run** is refused, because the flow is gone.
-Deleting a dataset keeps the copies of the input and expected output already stored on each result.
-Deleting an evaluation deletes its runs and results.
-Deleting a project deletes the evaluations of the flows in that project.
-A flow you moved to another project keeps its evaluations.
-
-Project export does not include datasets or evaluations.
-
-## Scoring methods {#scoring-methods}
-
-A row passes when the average of the scores that judged it reaches the threshold.
-A row whose flow returns an error fails, whatever its scores.
-When no method can score a row, the row is neither passed nor failed.
-
-| Method | How it scores | Expected output |
-| --- | --- | --- |
-| **Exact match** | `1` when the answer matches after case and extra spaces are ignored. | Required. A row without one is left out of the average. |
-| **Contains** | `1` when the answer includes the expected text. | Required. A row without one is left out of the average. |
-| **Similarity** | A score from `0` to `1`. | Required. A row without one is left out of the average. |
-| **LLM judge** | A model returns a score and a one-line reason. You can add a **Rubric**. | Optional. |
+**Safety checks** fail a row when the judge flags the answer as off topic, leaking personal data, obeying hidden instructions, or breaking its rules.
 
 ## Configuration {#configuration}
 
-Restart Langflow after you change a setting.
+To delete a dataset, in the **Evaluations** pane, click <Icon name="EllipsisVertical" aria-hidden="true" /> **More actions**, and then click **Delete**.
+
+Deleting a dataset keeps the copies of the input and expected output already stored on each result.
+
+Deleting a flow keeps the evaluation's results, but **Re-run** will not work, because the flow is no longer saved.
+
+Deleting an evaluation deletes its runs and results.
+Deleting a project deletes the evaluations of the flows in that project.
+A flow moved to another project keeps its evaluations.
+
+Project export does _not_ include datasets or evaluations.
+
+## Evaluation environment variables
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
@@ -201,9 +122,6 @@ Restart Langflow after you change a setting.
 | `LANGFLOW_EVALS_ABORT_AFTER_IDENTICAL_FAILURES` | `3` | Consecutive identical row failures that stop a run. `0` never stops early. |
 | `LANGFLOW_EVALS_ROW_CONCURRENCY` | `2` | Rows of one run that execute at the same time. |
 | `LANGFLOW_EVALS_MAX_CONCURRENCY` | `4` | Rows that execute at the same time across every run in this process. |
-
-A dataset holds at most 5,000 items.
-That cap is separate from `LANGFLOW_EVALS_MAX_ITEMS`.
 
 ## See also
 
