@@ -12,6 +12,11 @@ def _name_key(component: str) -> str:
     return next(key for key in BACKEND_EN if key.startswith(f"components.{component}.display_name."))
 
 
+def _field_name_keys(component: str) -> list[str]:
+    prefixes = (f"components.{component}.inputs.", f"components.{component}.outputs.")
+    return [key for key in BACKEND_EN if key.startswith(prefixes) and ".display_name." in key]
+
+
 def _check_backend(tmp_path, translations: dict[str, str]) -> int:
     path = tmp_path / "part.json"
     path.write_text(json.dumps(translations, ensure_ascii=False), encoding="utf-8")
@@ -29,8 +34,18 @@ class TestBackendNameKeys:
     def test_accepts_trigger_names_translated_in_every_locale(self, tmp_path, component):
         assert _check_backend(tmp_path, {_name_key(component): "이름"}) == 0
 
+    @pytest.mark.parametrize("component", ["inboundwebhooktrigger", "scheduletrigger"])
+    def test_accepts_trigger_field_and_output_names(self, tmp_path, component):
+        keys = _field_name_keys(component)
+
+        assert keys
+        assert _check_backend(tmp_path, dict.fromkeys(keys, "이름")) == 0
+
     def test_rejects_other_component_names(self, tmp_path):
         assert _check_backend(tmp_path, {_name_key("smartrouter"): "스마트 라우터"}) == 1
+
+    def test_rejects_field_names_of_other_components(self, tmp_path):
+        assert _check_backend(tmp_path, {_field_name_keys("smartrouter")[0]: "경로"}) == 1
 
     def test_rejects_starter_flow_names(self, tmp_path):
         key = next(key for key in BACKEND_EN if key.startswith("starter_flows.") and key.endswith(".name"))

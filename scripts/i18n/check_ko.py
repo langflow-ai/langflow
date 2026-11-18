@@ -128,7 +128,7 @@ TRANSLATIONESE = [
 
 # Backend keys that must stay out of ko.json so the English name shows through.
 BACKEND_NAME_KEY = re.compile(r"^components\..*\.display_name\.[0-9a-f]{8}$|^starter_flows\..*\.name$")
-# Components whose names the maintainers translate in every locale (#16132), so ko keeps them.
+# Triggers the maintainers translate in every locale, field and output names included (#16132), so ko keeps them.
 TRANSLATED_NAME_COMPONENTS = {"inboundwebhooktrigger", "scheduletrigger"}
 
 
