@@ -57,22 +57,6 @@ def _slack_app(monkeypatch, listener_process):  # noqa: ARG001 - both are setup
     fx.use_registrations(monkeypatch)
 
 
-async def _wait_for_app_ids(trigger_ids, *, timeout: float = 5.0) -> None:
-    """Socket fan-out reaches another connection's trigger once its hello recorded the app."""
-    from langflow.services.triggers.providers.slack.socket_mode import PROVIDER_STATE_APP_ID
-
-    deadline = asyncio.get_running_loop().time() + timeout
-    while True:
-        async with session_scope() as session:
-            states = [(await session.get(Trigger, trigger_id)).provider_state for trigger_id in trigger_ids]
-        if all(state.get(PROVIDER_STATE_APP_ID) == fx.APP_ID for state in states):
-            return
-        if asyncio.get_running_loop().time() > deadline:
-            msg = "the sockets never recorded their app"
-            raise AssertionError(msg)
-        await asyncio.sleep(0.02)
-
-
 async def _canonical(trigger_id) -> list[tuple[str, str, str]]:
     """``(dedupe key, payload JSON, session id)`` for every row, in key order."""
     rows = await fx.events_for(trigger_id)
@@ -107,7 +91,7 @@ async def test_both_transports_produce_identical_data_for_every_recorded_event(
     try:
         await supervisor.reconcile()
         sockets = await slack.wait_for_sockets(2)
-        await _wait_for_app_ids([socket_mode for _events_api, socket_mode in arms.values()])
+        await fx.wait_for_socket_app_ids(*(socket_mode for _events_api, socket_mode in arms.values()))
 
         for index, name in enumerate(EVENT_FIXTURES):
             body = fx.raw(name)

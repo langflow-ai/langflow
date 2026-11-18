@@ -31,7 +31,6 @@ from .test_migration_execution import (  # noqa: F401
 
 OLD = importlib.import_module("langflow.alembic.versions.df1410b1eefa_add_audit_events")
 NEW = importlib.import_module("langflow.alembic.versions.7fd2c80e5a39_add_audit_identity_and_receipt_name")
-RECEIPT = importlib.import_module("langflow.alembic.versions.t194_atomic_project_replacement")
 
 
 def _upgrade(module, connection):
@@ -65,11 +64,11 @@ def _event(table, **identity):
 
 
 def test_alembic_upgrade_preserves_audits_and_replacement_receipts(db_url):  # noqa: F811
+    config = _make_alembic_cfg(db_url)
+    command.upgrade(config, NEW.down_revision)
     engine = sa.create_engine(_engine_url(db_url))
     try:
         with engine.connect() as conn:
-            _upgrade(OLD, conn)
-            _upgrade(RECEIPT, conn)
             audit = sa.Table("audit_events", sa.MetaData(), autoload_with=conn)
             receipts = sa.Table(
                 "project_replacement_operation",
@@ -91,8 +90,6 @@ def test_alembic_upgrade_preserves_audits_and_replacement_receipts(db_url):  # n
             )
             conn.commit()
 
-        config = _make_alembic_cfg(db_url)
-        command.stamp(config, NEW.down_revision)
         command.upgrade(config, "head")
         command.upgrade(config, "head")
         with engine.connect() as conn:
