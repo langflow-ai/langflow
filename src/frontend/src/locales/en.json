@@ -68,6 +68,7 @@
   "errors.deleteKey": "Error on delete key",
   "errors.deleteKeys": "Error on delete keys",
   "errors.invalidSelection": "Invalid selection",
+  "errors.groupTriggerSelection": "Select non-trigger components only",
   "errors.changePassword": "Error changing password",
   "errors.passwordMismatch": "Passwords do not match",
   "errors.passwordMismatchSuggestion": "Re-enter both passwords so they match.",

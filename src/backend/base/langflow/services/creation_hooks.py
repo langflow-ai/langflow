@@ -308,13 +308,19 @@ def pre_creation_denied_to_http(exc: PreCreationDenied) -> HTTPException:
 def http_denial_error_code(exc: HTTPException) -> str:
     """Best-effort machine code for an ``HTTPException`` a hook raised itself.
 
-    Used only to fill the ``reason`` of the audit deny row the identity call
-    points write; the response itself is passed through untouched.
+    Identity call points use this for audit reasons, while creation recovery
+    paths use it to recognize the canonical capacity refusal. The response
+    itself is passed through untouched.
     """
     code = (exc.headers or {}).get(ERROR_CODE_HEADER)
     if not code and isinstance(exc.detail, Mapping):
         code = exc.detail.get("error_code")
     return str(code) if code else "pre_creation_denied"
+
+
+def is_tier_limit_http_denial(exc: HTTPException) -> bool:
+    """Return whether ``exc`` is the canonical capacity refusal."""
+    return exc.status_code == DENIED_STATUS_CODE and http_denial_error_code(exc) == ERROR_CODE_TIER_LIMIT_REACHED
 
 
 async def enforce_pre_creation(context: PreCreationContext) -> None:
@@ -353,6 +359,7 @@ __all__ = [
     "PreCreationHook",
     "enforce_pre_creation",
     "http_denial_error_code",
+    "is_tier_limit_http_denial",
     "pre_creation_denied_to_http",
     "register_post_creation_hook",
     "register_pre_creation_hook",

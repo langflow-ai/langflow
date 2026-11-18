@@ -47,6 +47,10 @@ NODE_REMOVED_ERROR = "trigger node removed from the flow"
 
 MULTIPLE_TRIGGERS_ERROR = "A flow can have only one trigger. Remove the extra triggers and try again."
 
+#: Why a flow save was refused: a grouped trigger is not reconciled, so its
+#: schedule or endpoint would silently stop.
+GROUPED_TRIGGER_ERROR = "A trigger can't be inside a group. Ungroup it and try again."
+
 #: Why an armed Microsoft or Google source was paused by a save that changed its
 #: settings: the provider subscription was retired with the old settings, so it
 #: takes an explicit enable to subscribe again with the new ones.
