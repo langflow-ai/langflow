@@ -38,6 +38,7 @@ def cross_user_grant():
     authz.supports_cross_user_fetch = AsyncMock(return_value=True)
     authz.is_enabled = AsyncMock(return_value=True)
     authz.enforce = AsyncMock(return_value=True)
+    authz.acquire_identity_mutation_lock = AsyncMock()
     with (
         patch("langflow.services.deps.get_authorization_service", return_value=authz),
         patch("langflow.api.v1.knowledge_bases.ensure_knowledge_base_permission", new=AsyncMock()),
