@@ -15,6 +15,7 @@ Covers:
 
 import asyncio
 from copy import deepcopy
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -36,6 +37,12 @@ def _make_tool(name: str) -> MagicMock:
     tool = MagicMock()
     tool.name = name
     return tool
+
+
+def _component_in_session() -> MCPToolsComponent:
+    component = MCPToolsComponent()
+    component.set_vertex(SimpleNamespace(graph=SimpleNamespace(session_id="chat")))
+    return component
 
 
 class TestHeaderNormalization:
@@ -80,54 +87,54 @@ class TestCacheKey:
     """``_mcp_servers_cache_key`` must separate auth contexts and stay deterministic."""
 
     def test_empty_server_name_returns_empty_string(self) -> None:
-        component = MCPToolsComponent()
+        component = _component_in_session()
         assert component._mcp_servers_cache_key("") == ""
 
-    def test_no_headers_returns_bare_server_name(self) -> None:
+    def test_no_session_returns_empty_key(self) -> None:
         component = MCPToolsComponent()
         component.headers = []
 
-        assert component._mcp_servers_cache_key("srv") == "srv"
+        assert component._mcp_servers_cache_key("srv") == ""
 
     def test_different_headers_produce_different_keys(self) -> None:
-        a = MCPToolsComponent()
+        a = _component_in_session()
         a.headers = [{"key": "Authorization", "value": "Bearer tenant-a"}]
-        b = MCPToolsComponent()
+        b = _component_in_session()
         b.headers = [{"key": "Authorization", "value": "Bearer tenant-b"}]
 
         assert a._mcp_servers_cache_key("srv") != b._mcp_servers_cache_key("srv")
 
     def test_different_users_produce_different_keys(self) -> None:
-        a = MCPToolsComponent()
+        a = _component_in_session()
         a._user_id = "tenant-a"
-        b = MCPToolsComponent()
+        b = _component_in_session()
         b._user_id = "tenant-b"
 
         assert a._mcp_servers_cache_key("srv") != b._mcp_servers_cache_key("srv")
 
     def test_same_user_produces_identical_keys(self) -> None:
-        a = MCPToolsComponent()
+        a = _component_in_session()
         a._user_id = "tenant-a"
-        b = MCPToolsComponent()
+        b = _component_in_session()
         b._user_id = "tenant-a"
 
         assert a._mcp_servers_cache_key("srv") == b._mcp_servers_cache_key("srv")
 
     def test_same_headers_produce_identical_keys(self) -> None:
-        a = MCPToolsComponent()
+        a = _component_in_session()
         a.headers = [{"key": "Authorization", "value": "Bearer same"}]
-        b = MCPToolsComponent()
+        b = _component_in_session()
         b.headers = [{"key": "Authorization", "value": "Bearer same"}]
 
         assert a._mcp_servers_cache_key("srv") == b._mcp_servers_cache_key("srv")
 
     def test_header_order_does_not_change_key(self) -> None:
-        a = MCPToolsComponent()
+        a = _component_in_session()
         a.headers = [
             {"key": "Authorization", "value": "Bearer x"},
             {"key": "X-Tenant", "value": "acme"},
         ]
-        b = MCPToolsComponent()
+        b = _component_in_session()
         b.headers = [
             {"key": "X-Tenant", "value": "acme"},
             {"key": "Authorization", "value": "Bearer x"},
@@ -172,20 +179,24 @@ class TestTtlToolCacheIsolation(ComponentTestBaseWithoutClient):
         assert invocation_copy._ttl_tool_cache is component._ttl_tool_cache
 
     @pytest.mark.asyncio
-    async def test_sequential_invocation_copies_reuse_cached_tools(self, component_class, default_kwargs) -> None:
+    async def test_invocation_copies_reuse_only_their_session_tools(self, component_class, default_kwargs) -> None:
         component = component_class(**default_kwargs, mcp_server={"name": "srv"}, headers=[])
+        vertex_a = SimpleNamespace(graph=SimpleNamespace(session_id="chat-a"))
+        vertex_b = SimpleNamespace(graph=SimpleNamespace(session_id="chat-b"))
+        component.set_vertex(vertex_a)
         first_invocation = deepcopy(component)
         second_invocation = deepcopy(component)
-        tools = [_make_tool("cached")]
+        component.set_vertex(vertex_b)
+        other_session_invocation = deepcopy(component)
+        tools_a = [_make_tool("tools_a")]
+        tools_b = [_make_tool("tools_b")]
 
-        update_tool_list = AsyncMock(return_value=(tools, {"name": "srv", "config": {}}))
+        update_tool_list = AsyncMock(side_effect=[(tools_a, {}), (tools_b, {})])
         with patch.object(component_class, "update_tool_list", new=update_tool_list):
-            first_result = await first_invocation._get_tools()
-            second_result = await second_invocation._get_tools()
-
-        assert first_result is tools
-        assert second_result is tools
-        update_tool_list.assert_awaited_once()
+            assert await first_invocation._get_tools() is tools_a
+            assert await other_session_invocation._get_tools() is tools_b
+            assert await second_invocation._get_tools() is tools_a
+        assert update_tool_list.await_count == 2
 
 
 class TestGetToolsTtlCache:
@@ -193,7 +204,7 @@ class TestGetToolsTtlCache:
 
     @pytest.mark.asyncio
     async def test_ttl_cache_hit_skips_update_tool_list(self) -> None:
-        component = MCPToolsComponent()
+        component = _component_in_session()
         component.mcp_server = {"name": "srv"}
         component.headers = []
 
@@ -211,7 +222,7 @@ class TestGetToolsTtlCache:
 
     @pytest.mark.asyncio
     async def test_ttl_cache_expired_entry_is_refetched(self) -> None:
-        component = MCPToolsComponent()
+        component = _component_in_session()
         component.mcp_server = {"name": "srv"}
         component.headers = []
 
@@ -234,7 +245,7 @@ class TestGetToolsTtlCache:
 
     @pytest.mark.asyncio
     async def test_ttl_cache_bounded_by_max_entries_fifo(self) -> None:
-        component = MCPToolsComponent()
+        component = _component_in_session()
         # Shrink the cap for a fast, deterministic FIFO check.
         component.TOOL_TTL_MAX_ENTRIES = 3
 
@@ -257,21 +268,21 @@ class TestGetToolsTtlCache:
             assert component._mcp_servers_cache_key(f"srv-{i}") in remaining_keys
 
     @pytest.mark.asyncio
-    async def test_ttl_cache_disabled_when_ttl_is_zero(self) -> None:
-        component = MCPToolsComponent()
-        component.TOOL_TTL_SECS = 0
+    @pytest.mark.parametrize("with_session", [True, False], ids=["disabled-ttl", "missing-session"])
+    async def test_ttl_cache_bypassed_when_disabled_or_missing_session(self, with_session) -> None:
+        component = _component_in_session() if with_session else MCPToolsComponent()
+        if with_session:
+            component.TOOL_TTL_SECS = 0
         component.mcp_server = {"name": "srv"}
         component.headers = []
 
         fresh_tools = [_make_tool("fresh")]
-        with patch.object(
-            component,
-            "update_tool_list",
-            new=AsyncMock(return_value=(fresh_tools, {"name": "srv", "config": {}})),
-        ):
+        update_tool_list = AsyncMock(return_value=(fresh_tools, {"name": "srv", "config": {}}))
+        with patch.object(component, "update_tool_list", new=update_tool_list):
+            await component._get_tools()
             await component._get_tools()
 
-        # With TTL disabled, nothing should ever be written to the cache.
+        assert update_tool_list.await_count == 2
         assert component._ttl_tool_cache == {}
 
 
