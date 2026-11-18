@@ -114,6 +114,38 @@ def test_malformed_refresh_preserves_selection(component, build_config, monkeypa
     assert MODELS_LOAD_FAILED in result["model_name"]["info"]
 
 
+@pytest.mark.parametrize("bad_id", [["x"], {"id": "x"}, 7, ""])
+def test_non_string_model_ids_are_skipped(component, build_config, monkeypatch, bad_id):
+    body = {
+        "data": [
+            {"id": bad_id, "context_length": 1000, "architecture": TEXT_MODEL},
+            {"id": "x/y", "context_length": 128000, "architecture": TEXT_MODEL},
+        ]
+    }
+    with httpx.Client(transport=httpx.MockTransport(lambda _request: httpx.Response(200, json=body))) as client:
+        monkeypatch.setattr("lfx_bundles.trustedrouter.trustedrouter.httpx.get", client.get)
+        result = component.update_build_config(build_config, "x/y", "model_name")
+
+    assert result["model_name"]["options"] == ["x/y"]
+    assert result["model_name"]["tooltips"] == {"x/y": "128,000 tokens"}
+    assert result["model_name"]["info"] == ""
+
+
+@pytest.mark.parametrize("context_length", ["1e999", "-1e999", "NaN", '"1e999"', "-5", "1" + "0" * 400, "1e300"])
+def test_unusable_context_length_is_treated_as_unset(component, build_config, monkeypatch, context_length):
+    model = f'{{"id": "x/y", "context_length": {context_length}, "architecture": {{"modality": "text->text"}}}}'
+    body = f'{{"data": [{model}]}}'
+    with httpx.Client(
+        transport=httpx.MockTransport(lambda _request: httpx.Response(200, content=body.encode()))
+    ) as client:
+        monkeypatch.setattr("lfx_bundles.trustedrouter.trustedrouter.httpx.get", client.get)
+        result = component.update_build_config(build_config, "x/y", "model_name")
+
+    assert result["model_name"]["options"] == ["x/y"]
+    assert result["model_name"]["tooltips"] == {"x/y": "0 tokens"}
+    assert result["model_name"]["info"] == ""
+
+
 def test_numeric_string_context_is_formatted(component, build_config, monkeypatch):
     body = {"data": [{"id": "x/y", "context_length": "128000", "architecture": TEXT_MODEL}]}
     with httpx.Client(transport=httpx.MockTransport(lambda _request: httpx.Response(200, json=body))) as client:

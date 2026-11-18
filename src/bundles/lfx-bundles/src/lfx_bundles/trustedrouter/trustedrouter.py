@@ -1,3 +1,5 @@
+import math
+
 import httpx
 from langchain_openai import ChatOpenAI
 from lfx.base.models.model import LCModelComponent
@@ -9,6 +11,23 @@ from pydantic.v1 import SecretStr
 TRUSTEDROUTER_API_BASE = "https://api.trustedrouter.com/v1"
 DEFAULT_MODEL = "trustedrouter/auto"
 MODELS_LOAD_FAILED = "Failed to load models"
+MAX_CONTEXT_LENGTH = 2**53
+
+
+def _context_length(value) -> int:
+    """Return a model's context length, treating absent, non-finite or out-of-range values as unset (0).
+
+    Non-numeric values still raise ValueError so a malformed payload takes the refresh-failure path.
+    """
+    if not value:
+        return 0
+    try:
+        number = float(value)
+    except OverflowError:
+        return 0
+    if not math.isfinite(number) or not 0 <= number <= MAX_CONTEXT_LENGTH:
+        return 0
+    return int(number)
 
 
 class TrustedRouterComponent(LCModelComponent):
@@ -48,9 +67,11 @@ class TrustedRouterComponent(LCModelComponent):
             models = response.json().get("data", [])
             return sorted(
                 [
-                    {"id": m["id"], "context": int(m.get("context_length") or 0)}
+                    {"id": m["id"], "context": _context_length(m.get("context_length"))}
                     for m in models
-                    if m.get("id") and str((m.get("architecture") or {}).get("modality", "")).endswith("->text")
+                    if isinstance(m.get("id"), str)
+                    and m["id"]
+                    and str((m.get("architecture") or {}).get("modality", "")).endswith("->text")
                 ],
                 key=lambda x: x["id"],
             )
