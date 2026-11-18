@@ -92,20 +92,24 @@ let mockFlowBuildStatus = {};
 let mockBuildInfo: { error?: string[]; success?: boolean } | null = null;
 let mockPastBuildFlowParams: Record<string, unknown> | null = null;
 
+// Build the store state from the current mock values.
+const mockGetState = () => ({
+  isBuilding: mockIsBuilding,
+  flowBuildStatus: mockFlowBuildStatus,
+  buildInfo: mockBuildInfo,
+  setBuildInfo: mockSetBuildInfo,
+  stopBuilding: mockStopBuilding,
+  pastBuildFlowParams: mockPastBuildFlowParams,
+  buildFlow: mockBuildFlow,
+});
+
 jest.mock("@/stores/flowStore", () => ({
   __esModule: true,
-  default: (selector: (state: Record<string, unknown>) => unknown) => {
-    const state = {
-      isBuilding: mockIsBuilding,
-      flowBuildStatus: mockFlowBuildStatus,
-      buildInfo: mockBuildInfo,
-      setBuildInfo: mockSetBuildInfo,
-      stopBuilding: mockStopBuilding,
-      pastBuildFlowParams: mockPastBuildFlowParams,
-      buildFlow: mockBuildFlow,
-    };
-    return selector(state);
-  },
+  default: Object.assign(
+    (selector: (state: Record<string, unknown>) => unknown) =>
+      selector(mockGetState()),
+    { getState: () => mockGetState() },
+  ),
 }));
 
 describe("FlowBuildingComponent - Timer Tests", () => {
@@ -437,6 +441,65 @@ describe("FlowBuildingComponent - Timer Tests", () => {
       });
 
       expect(mockSetBuildInfo).not.toHaveBeenCalled();
+    });
+
+    it("clears a dismissed result at once when the component unmounts", async () => {
+      mockBuildInfo = { error: ["Test error"] };
+      const { unmount } = render(<FlowBuildingComponent />);
+
+      await act(async () => {
+        screen.getByText("Dismiss").click();
+      });
+      expect(mockSetBuildInfo).not.toHaveBeenCalled();
+
+      unmount();
+      expect(mockSetBuildInfo).toHaveBeenCalledWith(null);
+    });
+
+    it("does not clear a newer result that the store already holds", async () => {
+      mockBuildInfo = { error: ["Test error"] };
+      render(<FlowBuildingComponent />);
+
+      await act(async () => {
+        screen.getByText("Dismiss").click();
+      });
+
+      // The store holds result B before the clear timer of result A fires.
+      mockBuildInfo = { success: true };
+      await act(async () => {
+        jest.advanceTimersByTime(600);
+      });
+
+      expect(mockSetBuildInfo).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Duration counter", () => {
+    it("starts the counter when the component mounts during a build", async () => {
+      mockIsBuilding = true;
+      render(<FlowBuildingComponent />);
+
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+
+      expect(screen.getByText(/1\.0seconds/)).toBeInTheDocument();
+    });
+
+    it("keeps the duration visible on the success result", async () => {
+      mockIsBuilding = true;
+      const { rerender } = render(<FlowBuildingComponent />);
+
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+
+      mockIsBuilding = false;
+      mockBuildInfo = { success: true };
+      rerender(<FlowBuildingComponent />);
+
+      expect(screen.getByText("Flow built successfully")).toBeInTheDocument();
+      expect(screen.getByText(/1\.0seconds/)).toBeInTheDocument();
     });
   });
 });

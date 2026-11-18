@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -16,7 +16,6 @@ import { getRunningNodeLabel } from "./helpers/get-running-node-label";
 import {
   CONTAINER_VARIANTS,
   DISMISS_BUTTON_VARIANTS,
-  getTimeVariants,
   RETRY_BUTTON_VARIANTS,
   STOP_BUTTON_VARIANTS,
 } from "./helpers/visual-variants";
@@ -25,14 +24,14 @@ type BuildInfo = FlowStoreType["buildInfo"];
 
 const AUTO_DISMISS_MS = 2000;
 const EXIT_ANIMATION_MS = 500;
+// The time label shows tenths of a second.
+const TICK_MS = 100;
 
 export default function FlowBuildingComponent() {
   const { t } = useTranslation();
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const flowBuildStatus = useFlowStore((state) => state.flowBuildStatus);
   const buildInfo = useFlowStore((state) => state.buildInfo);
-  const errorButtonsRef = useRef<HTMLDivElement>(null);
-  const stopButtonRef = useRef<HTMLDivElement>(null);
   const setBuildInfo = useFlowStore((state) => state.setBuildInfo);
   const [duration, setDuration] = useState(0);
   // The result the user (or the auto-dismiss timer) dismissed.
@@ -40,68 +39,42 @@ export default function FlowBuildingComponent() {
   const [dismissedInfo, setDismissedInfo] = useState<BuildInfo>(null);
   const dismissed = buildInfo !== null && buildInfo === dismissedInfo;
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
-  const prevIsBuilding = useRef(isBuilding);
-  const startTimeRef = useRef<number | null>(null);
   const pastBuildFlowParams = useFlowStore(
     (state) => state.pastBuildFlowParams,
   );
   const buildFlow = useFlowStore((state) => state.buildFlow);
-  const statusBuilding = useMemo(
+  // The id of the first node that is building, if any.
+  const runningNodeId = useMemo(
     () =>
-      Object.entries(flowBuildStatus)
-        .filter(([_, s]) => s.status === BuildStatus.BUILDING)
-        .map(([id, s]) => ({
-          id,
-          ...s,
-        })),
+      Object.entries(flowBuildStatus).find(
+        ([, s]) => s.status === BuildStatus.BUILDING,
+      )?.[0],
     [flowBuildStatus],
   );
 
+  // Count the build time. Start when a build runs, also when the component mounts mid-build.
+  // The last value stays in state, so the result still shows it.
   useEffect(() => {
-    let intervalId: NodeJS.Timeout;
-
-    if (isBuilding && !prevIsBuilding.current) {
-      setDuration(0);
-      startTimeRef.current = Date.now();
-    }
-
-    if (isBuilding && startTimeRef.current !== null) {
-      intervalId = setInterval(() => {
-        setDuration(Date.now() - startTimeRef.current!);
-      }, 10);
-    }
-
-    if (!isBuilding && prevIsBuilding.current) {
-      startTimeRef.current = null;
-    }
-
-    prevIsBuilding.current = isBuilding;
-
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-    };
+    if (!isBuilding) return;
+    const start = Date.now();
+    setDuration(0);
+    const timer = setInterval(() => setDuration(Date.now() - start), TICK_MS);
+    return () => clearInterval(timer);
   }, [isBuilding]);
 
-  const displayTime = duration ?? 0;
-  const secondsValue = displayTime / 1000;
+  const secondsValue = duration / 1000;
   const humanizedTime =
     normalizeTimeString(`${secondsValue.toFixed(1)}seconds`) ??
     `${secondsValue.toFixed(1)}s`;
 
-  const buildingContent = useMemo(() => {
-    if (!isBuilding) return null;
-    return (
-      <TextShimmer duration={1}>
-        {statusBuilding.length > 0
-          ? t("flowBuild.runningNode", {
-              id: getRunningNodeLabel(statusBuilding[0]?.id),
-            })
-          : t("flowBuild.runningFlow")}
-      </TextShimmer>
-    );
-  }, [isBuilding, statusBuilding]);
+  // The text shown while a build runs.
+  const buildingContent = isBuilding ? (
+    <TextShimmer duration={1}>
+      {runningNodeId
+        ? t("flowBuild.runningNode", { id: getRunningNodeLabel(runningNodeId) })
+        : t("flowBuild.runningFlow")}
+    </TextShimmer>
+  ) : null;
 
   // Dismiss a successful result after a short delay.
   // The cleanup cancels the timer when a newer result replaces this one.
@@ -114,12 +87,22 @@ export default function FlowBuildingComponent() {
     return () => clearTimeout(timer);
   }, [buildInfo]);
 
-  // Clear buildInfo after the exit animation, only while this result is still dismissed.
+  // Clear the dismissed result after the exit animation.
+  // On unmount, clear it at once so the store does not keep a hidden result.
+  // The guard skips the clear when a newer result replaced this one.
   useEffect(() => {
     if (!dismissed) return;
-    const timer = setTimeout(() => setBuildInfo(null), EXIT_ANIMATION_MS);
-    return () => clearTimeout(timer);
-  }, [dismissed, setBuildInfo]);
+    const dismissedResult = buildInfo;
+    const clearIfStillDismissed = () => {
+      if (useFlowStore.getState().buildInfo === dismissedResult)
+        setBuildInfo(null);
+    };
+    const timer = setTimeout(clearIfStillDismissed, EXIT_ANIMATION_MS);
+    return () => {
+      clearTimeout(timer);
+      clearIfStillDismissed();
+    };
+  }, [dismissed, buildInfo, setBuildInfo]);
 
   // Mark the current result as dismissed. The effect above clears it.
   const handleDismiss = () => {
@@ -160,147 +143,128 @@ export default function FlowBuildingComponent() {
                 "border-accent-emerald-foreground text-accent-emerald-foreground",
             )}
           >
-            <AnimatePresence mode="wait">
-              {(isBuilding || buildInfo?.error || buildInfo?.success) && (
-                <>
-                  {isBuilding && (
-                    <BorderTrail
-                      size={100}
-                      transition={{
-                        repeat: Infinity,
-                        duration: 10,
-                        ease: "linear",
-                      }}
+            {isBuilding && (
+              <BorderTrail
+                size={100}
+                transition={{
+                  repeat: Infinity,
+                  duration: 10,
+                  ease: "linear",
+                }}
+              />
+            )}
+            <div className="flex min-h-10 w-full items-center justify-between gap-2">
+              <div>
+                {buildingContent ? (
+                  buildingContent
+                ) : buildInfo?.success ? (
+                  t("flowBuild.builtSuccessfully")
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <ForwardedIconComponent
+                      name="CircleAlert"
+                      className="h-5 w-5"
                     />
-                  )}
-                  <div className="flex min-h-10 w-full items-center justify-between gap-2">
-                    <AnimatePresence mode="wait">
-                      <div>
-                        {buildingContent ? (
-                          buildingContent
-                        ) : buildInfo?.success ? (
-                          t("flowBuild.builtSuccessfully")
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <ForwardedIconComponent
-                              name="CircleAlert"
-                              className="h-5 w-5"
-                            />
-                            {t("flowBuild.buildFailed")}
-                          </div>
-                        )}
-                      </div>
-                    </AnimatePresence>
-                    <div className="relative flex items-center gap-4">
-                      <motion.div
-                        variants={getTimeVariants(
-                          buildInfo?.error ? errorButtonsRef : stopButtonRef,
-                        )}
-                        animate={!buildInfo?.success ? "double" : "single"}
-                        transition={{
-                          duration: 0.2,
-                          ease: "easeOut",
-                        }}
-                        className="absolute right-0 font-mono text-xs"
-                      >
-                        {humanizedTime}
-                      </motion.div>
-                      <AnimatePresence mode="sync">
-                        {!buildInfo?.success && (
-                          <div className="absolute right-0">
-                            {buildInfo?.error ? (
-                              <motion.div
-                                key="error-buttons"
-                                ref={errorButtonsRef}
-                                className="flex items-center gap-2"
-                              >
-                                <motion.div
-                                  variants={RETRY_BUTTON_VARIANTS}
-                                  initial="hidden"
-                                  animate="visible"
-                                  exit="exit"
-                                  transition={{ duration: 0.2 }}
-                                >
-                                  <Button size="sm" onClick={handleRetry}>
-                                    {t("flowBuild.retry")}
-                                  </Button>
-                                </motion.div>
-                                <motion.div
-                                  variants={DISMISS_BUTTON_VARIANTS}
-                                  initial="hidden"
-                                  animate="visible"
-                                  exit="exit"
-                                  transition={{ duration: 0.2 }}
-                                >
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="text-primary"
-                                    onClick={handleDismiss}
-                                  >
-                                    {t("flowBuild.dismiss")}
-                                  </Button>
-                                </motion.div>
-                              </motion.div>
-                            ) : (
-                              <motion.div
-                                key="stop-button"
-                                variants={STOP_BUTTON_VARIANTS}
-                                ref={stopButtonRef}
-                                initial="hidden"
-                                animate="visible"
-                                className=""
-                                exit="exit"
-                                transition={{ duration: 0.2 }}
-                              >
-                                <Button
-                                  data-testid="stop_building_button"
-                                  size="sm"
-                                  onClick={handleStop}
-                                >
-                                  {t("flowBuild.stop")}
-                                </Button>
-                              </motion.div>
-                            )}
-                          </div>
-                        )}
-                      </AnimatePresence>
-                    </div>
+                    {t("flowBuild.buildFailed")}
                   </div>
-                  <AnimatePresence>
-                    {buildInfo?.error && (
+                )}
+              </div>
+              <div className="flex items-center gap-4">
+                <motion.div
+                  layout
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="font-mono text-xs"
+                >
+                  {humanizedTime}
+                </motion.div>
+                {/* popLayout takes the exiting buttons out of the flex flow, so the time label slides instead of jumping. */}
+                <AnimatePresence mode="popLayout">
+                  {!buildInfo?.success &&
+                    (buildInfo?.error ? (
                       <motion.div
-                        role="region"
-                        aria-label={t("flowBuild.buildFailed")}
-                        tabIndex={0}
-                        className="max-h-48 overflow-y-auto"
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
+                        key="error-buttons"
+                        className="flex items-center gap-2"
+                      >
+                        <motion.div
+                          variants={RETRY_BUTTON_VARIANTS}
+                          initial="hidden"
+                          animate="visible"
+                          exit="exit"
+                          transition={{ duration: 0.2 }}
+                        >
+                          <Button size="sm" onClick={handleRetry}>
+                            {t("flowBuild.retry")}
+                          </Button>
+                        </motion.div>
+                        <motion.div
+                          variants={DISMISS_BUTTON_VARIANTS}
+                          initial="hidden"
+                          animate="visible"
+                          exit="exit"
+                          transition={{ duration: 0.2 }}
+                        >
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-primary"
+                            onClick={handleDismiss}
+                          >
+                            {t("flowBuild.dismiss")}
+                          </Button>
+                        </motion.div>
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="stop-button"
+                        variants={STOP_BUTTON_VARIANTS}
+                        initial="hidden"
+                        animate="visible"
+                        exit="exit"
                         transition={{ duration: 0.2 }}
                       >
-                        <Markdown
-                          remarkPlugins={[remarkGfm]}
-                          className="my-1.5 break-words [&>p+p]:mt-2"
-                          components={{
-                            a: ({ node, ...props }) => (
-                              <a
-                                {...props}
-                                target="_blank"
-                                className="underline"
-                                rel="noopener noreferrer"
-                              >
-                                {props.children}
-                              </a>
-                            ),
-                          }}
+                        <Button
+                          data-testid="stop_building_button"
+                          size="sm"
+                          onClick={handleStop}
                         >
-                          {buildInfo?.error?.join("\n")}
-                        </Markdown>
+                          {t("flowBuild.stop")}
+                        </Button>
                       </motion.div>
-                    )}
-                  </AnimatePresence>
-                </>
+                    ))}
+                </AnimatePresence>
+              </div>
+            </div>
+            <AnimatePresence>
+              {buildInfo?.error && (
+                <motion.div
+                  role="region"
+                  aria-label={t("flowBuild.buildFailed")}
+                  tabIndex={0}
+                  className="max-h-48 overflow-y-auto"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Markdown
+                    remarkPlugins={[remarkGfm]}
+                    className="my-1.5 break-words [&>p+p]:mt-2"
+                    components={{
+                      a: ({ node, ...props }) => (
+                        <a
+                          {...props}
+                          target="_blank"
+                          className="underline"
+                          rel="noopener noreferrer"
+                        >
+                          {props.children}
+                        </a>
+                      ),
+                    }}
+                  >
+                    {buildInfo?.error?.join("\n")}
+                  </Markdown>
+                </motion.div>
               )}
             </AnimatePresence>
           </motion.div>
