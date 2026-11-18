@@ -146,6 +146,39 @@ def _assert_routed_to_owner(result: SimpleNamespace, *, owner, actor, owners_kb)
     assert result.build_embeddings.await_args.args[2].id == actor.id
 
 
+async def test_run_history_follows_the_shared_kb_read_permission(
+    client, logged_in_headers, active_user, owners_kb, cross_user_grant
+):
+    from langflow.services.database.models.jobs.model import Job, JobStatus, JobType
+    from langflow.services.deps import session_scope
+
+    run_id = uuid.uuid4()
+    async with session_scope() as session:
+        session.add(
+            Job(
+                job_id=run_id,
+                flow_id=run_id,
+                type=JobType.INGESTION,
+                status=JobStatus.COMPLETED,
+                user_id=active_user.id,
+                asset_id=owners_kb.id,
+                asset_type="knowledge_base",
+                job_metadata={"kb_name": KB_NAME},
+            )
+        )
+        await session.commit()
+
+    url = f"/api/v1/knowledge_bases/{KB_NAME}/runs"
+    history = await client.get(url, headers=logged_in_headers)
+    assert history.status_code == 200, history.text
+    assert [row["id"] for row in history.json()["runs"]] == [str(run_id)]
+    assert (await client.get(f"{url}/{run_id}", headers=logged_in_headers)).status_code == 200
+
+    cross_user_grant.enforce.return_value = False
+    assert (await client.get(url, headers=logged_in_headers)).status_code == 404
+    assert (await client.get(f"{url}/{run_id}", headers=logged_in_headers)).status_code == 404
+
+
 @pytest.mark.usefixtures("cross_user_grant")
 async def test_file_ingest_writes_to_the_owners_storage(
     client: AsyncClient, logged_in_headers, active_user, user_two, owners_kb, task_service

@@ -505,10 +505,19 @@ async def test_registered_listener_adapter_baselines_delivers_dedupes_and_pauses
                     return
             await asyncio.sleep(0.01)
 
+    async def wait_for_round_end():
+        # The poll round ends with source_succeeded, which writes after the event commits.
+        # Stopping during that write would leave the SQLite lock held for the next write.
+        while True:
+            if supervisor.workers[connection_id].succeeded_since_failure:
+                return
+            await asyncio.sleep(0.01)
+
     try:
         await supervisor.reconcile()
         assert isinstance(supervisor.workers[connection_id].adapter, adapters.ProviderSourcePollAdapter)
         await asyncio.wait_for(wait_for_delivery(), timeout=10)
+        await asyncio.wait_for(wait_for_round_end(), timeout=10)
     finally:
         await supervisor.stop()
     assert await source_runtime.sync_source(row.id) == 0

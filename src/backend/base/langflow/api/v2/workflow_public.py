@@ -39,8 +39,10 @@ from lfx.schema.workflow import (
 )
 from lfx.utils.flow_validation import (
     PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE,
+    PUBLIC_CUSTOM_COMPONENTS_BLOCKED_MESSAGE,
     CatalogPolicyIdentityUnavailableError,
     CustomComponentValidationError,
+    PublicCustomComponentBlockedError,
     prepare_public_flow_build,
     validate_catalog_policy_for_flow,
     validate_public_flow_no_code_execution,
@@ -214,6 +216,10 @@ async def execute_public_workflow(
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE,
+        ) from exc
+    except PublicCustomComponentBlockedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=PUBLIC_CUSTOM_COMPONENTS_BLOCKED_MESSAGE
         ) from exc
     except CustomComponentValidationError as exc:
         # The raw message embeds the blocked component class names; do

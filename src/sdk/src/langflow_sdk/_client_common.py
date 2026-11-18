@@ -36,6 +36,13 @@ class _ClientCommon:
         """Validate a homogeneous SDK model list from decoded JSON data."""
         return [cls._validate_model(model_type, item) for item in payload]
 
+    @classmethod
+    def _validate_flow_list(cls, model_type: type[_ModelT], payload: Any) -> list[_ModelT]:
+        """Validate flow lists from both legacy and paginated responses."""
+        if isinstance(payload, dict) and isinstance(payload.get("items"), list):
+            payload = payload["items"]
+        return cls._validate_model_list(model_type, payload)
+
     @staticmethod
     def _build_flow_list_params(
         *,
