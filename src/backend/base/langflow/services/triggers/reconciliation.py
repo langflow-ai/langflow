@@ -51,6 +51,7 @@ from langflow.services.triggers.constants import (
     SLACK_TRIGGER_KINDS,
 )
 from langflow.services.triggers.error_codes import (
+    GROUPED_TRIGGER_ERROR,
     MULTIPLE_TRIGGERS_ERROR,
     NODE_REMOVED_ERROR,
     SOURCE_SETTINGS_CHANGED_ERROR,
@@ -347,6 +348,36 @@ def validate_single_trigger_per_flow(flow_data: dict[str, Any] | None) -> None:
         count += 1
         if count > 1:
             raise CodedTriggerError(TriggerErrorCode.MULTIPLE_TRIGGERS, MULTIPLE_TRIGGERS_ERROR)
+
+
+def _node_data_of(nodes: Any) -> list[dict[str, Any]]:
+    """The ``data`` dicts of the well-formed entries in a saved node list."""
+    if not isinstance(nodes, list):
+        return []
+    return [n["data"] for n in nodes if isinstance(n, dict) and isinstance(n.get("data"), dict)]
+
+
+def _group_nodes(node_data: dict[str, Any]) -> Any:
+    """The inner nodes of a group node's saved sub-flow, or None for any other node."""
+    component = node_data.get("node")
+    flow = component.get("flow") if isinstance(component, dict) else None
+    data = flow.get("data") if isinstance(flow, dict) else None
+    return data.get("nodes") if isinstance(data, dict) else None
+
+
+def validate_no_grouped_trigger(flow_data: dict[str, Any] | None) -> None:
+    """Reject a trigger inside a group, at any depth: reconciliation reads top-level nodes only."""
+    # Iterative, so a deeply nested payload cannot exhaust the recursion limit.
+    pending = [
+        inner
+        for node_data in _node_data_of((flow_data or {}).get("nodes"))
+        for inner in _node_data_of(_group_nodes(node_data))
+    ]
+    while pending:
+        node_data = pending.pop()
+        if _node_kind(node_data.get("type")) is not None:
+            raise ValueError(GROUPED_TRIGGER_ERROR)
+        pending.extend(_node_data_of(_group_nodes(node_data)))
 
 
 def _display_name(config: dict[str, Any], kind: str) -> str:

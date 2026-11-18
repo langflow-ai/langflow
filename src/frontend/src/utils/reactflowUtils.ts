@@ -69,6 +69,7 @@ import {
   type MCPServerValue,
 } from "./helpers/clean-mcp-config";
 import { getFallbackGridPositions, getLayoutedNodes } from "./layoutUtils";
+import { isTriggerComponent } from "./trigger-component";
 import { createRandomKey, toTitleCase } from "./utils";
 
 const uid = new ShortUniqueId();
@@ -1714,6 +1715,14 @@ export function validateSelection(
     )
   ) {
     errorsArray.push("Select non-input/output components only");
+  }
+  // A grouped trigger is not reconciled, so its schedule or endpoint would stop.
+  if (
+    clonedSelection.nodes.some((node) =>
+      isTriggerComponent((node.data as NodeDataType).node),
+    )
+  ) {
+    errorsArray.push(i18n.t("errors.groupTriggerSelection"));
   }
   //check if there are two or more nodes with free outputs
   if (

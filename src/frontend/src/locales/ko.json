@@ -68,6 +68,7 @@
   "errors.deleteKey": "API Key를 삭제하지 못했습니다",
   "errors.deleteKeys": "API Key를 삭제하지 못했습니다",
   "errors.invalidSelection": "선택이 올바르지 않습니다",
+  "errors.groupTriggerSelection": "트리거가 아닌 컴포넌트만 선택하세요",
   "errors.changePassword": "비밀번호를 변경하지 못했습니다",
   "errors.passwordMismatch": "비밀번호가 일치하지 않습니다",
   "errors.passwordMismatchSuggestion": "두 칸에 같은 비밀번호를 다시 입력하세요.",
