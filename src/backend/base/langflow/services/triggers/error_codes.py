@@ -14,10 +14,11 @@ from __future__ import annotations
 
 from enum import Enum
 
-from langflow.services.triggers.constants import CONNECTION_NOT_AUTHORIZED_ERROR
+from langflow.services.triggers.constants import CONNECTION_NOT_AUTHORIZED_ERROR, POLICY_BLOCKED_ERROR
 
 
 class TriggerErrorCode(str, Enum):
+    POLICY_BLOCKED = "policy_blocked"
     MULTIPLE_TRIGGERS = "multiple_triggers"
     NODE_REMOVED = "node_removed"
     SOURCE_SETTINGS_CHANGED = "source_settings_changed"
@@ -64,10 +65,12 @@ SLACK_CONNECTION_UNUSABLE_ERROR = (
 )
 
 _STORED_ERRORS: dict[str, TriggerErrorCode] = {
+    POLICY_BLOCKED_ERROR: TriggerErrorCode.POLICY_BLOCKED,
     MULTIPLE_TRIGGERS_ERROR: TriggerErrorCode.MULTIPLE_TRIGGERS,
     NODE_REMOVED_ERROR: TriggerErrorCode.NODE_REMOVED,
     SOURCE_SETTINGS_CHANGED_ERROR: TriggerErrorCode.SOURCE_SETTINGS_CHANGED,
     CONNECTION_NOT_AUTHORIZED_ERROR: TriggerErrorCode.CONNECTION_NOT_AUTHORIZED,
+    TriggerErrorCode.CONNECTION_UNUSABLE.value: TriggerErrorCode.CONNECTION_UNUSABLE,
     INVALID_CRON_ERROR: TriggerErrorCode.INVALID_CRON,
     CRON_NEVER_MATCHES_ERROR: TriggerErrorCode.CRON_NEVER_MATCHES,
     TIMEZONE_REQUIRED_ERROR: TriggerErrorCode.TIMEZONE_REQUIRED,

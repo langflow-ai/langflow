@@ -12,7 +12,7 @@ from lfx.interface.components import component_cache
 from lfx.services.catalog_policy.base import CatalogPolicySnapshot
 
 
-@pytest.mark.usefixtures("active_user")
+@pytest.mark.usefixtures("administrator_user")
 async def test_post_validate_code(client: AsyncClient, logged_in_headers):
     good_code = """
 from pprint import pprint

@@ -239,6 +239,26 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Deployment/upgrade-check",
+          label: "Check flows before an upgrade"
+        },
+        {
+          type: "doc",
+          id: "Deployment/upgrade-reports",
+          label: "Review upgrade reports"
+        },
+        {
+          type: "doc",
+          id: "Deployment/admin-flow-repairs",
+          label: "Repair selected flows"
+        },
+        {
+          type: "doc",
+          id: "Deployment/maintenance-mode",
+          label: "Maintenance mode"
+        },
+        {
+          type: "doc",
           id: "Deployment/deployment-public-server",
           label: "Deploy a public Langflow server"
         },
@@ -366,11 +386,6 @@ module.exports = {
           id: "Deployment/security",
           label: "Security",
         },
-        {
-          type: "doc",
-          id: "administration/secret-key-rotation",
-          label: "Offline secret-key audit and rotation",
-        },
       ],
     },
     {
@@ -392,6 +407,11 @@ module.exports = {
           type: "doc",
           id: "Lfx/lfx-run",
           label: "Run flows with LFX"
+        },
+        {
+          type: "doc",
+          id: "Lfx/lfx-dependency-ready",
+          label: "Dependency-ready Python graphs"
         },
         {
           type: "doc",
@@ -496,6 +516,7 @@ module.exports = {
               label: "LLM Operations",
               items: [
                 "Components/batch-run",
+                "Components/decision-model",
                 "Components/guardrails",
                 "Components/policies",
                 "Components/llm-selector",
@@ -554,10 +575,12 @@ module.exports = {
             "Components/bundles-cometapi",
             "Components/bundles-composio",
             "Components/bundles-confluent",
+            "Components/bundles-confluence",
             "Components/bundles-couchbase",
             "Components/bundles-cuga",
             "Components/bundles-datastax",
             "Components/bundles-deepseek",
+            "Components/bundles-discord",
             "Components/bundles-docling",
             "Components/bundles-duckduckgo",
             "Components/bundles-elastic",
@@ -568,6 +591,8 @@ module.exports = {
             "Components/bundles-files-ingestion",
             "Components/bundles-firecrawl",
             "Components/bundles-glean",
+            "Components/bundles-github",
+            "Components/bundles-gitlab",
             "Components/bundles-google",
             "Components/bundles-groq",
             "Components/bundles-huggingface",
@@ -590,6 +615,7 @@ module.exports = {
             "Components/bundles-novita",
             "Components/bundles-nvidia",
             "Components/bundles-ollama",
+            "Components/bundles-olostep",
             "Components/bundles-openai",
             "Components/bundles-openai-compatible",
             "Components/bundles-openrouter",
@@ -600,21 +626,27 @@ module.exports = {
             "Components/bundles-pgvector",
             "Components/bundles-pinecone",
             "Components/bundles-plivo",
+            "Components/bundles-popnow",
             "Components/bundles-qdrant",
             "Components/bundles-redis",
+            "Components/bundles-salesforce",
             "Components/bundles-sambanova",
             "Components/bundles-searchapi",
             "Components/bundles-serper",
             "Components/bundles-serpingapi",
             "Components/bundles-serply",
+            "Components/bundles-servicenow",
             "Components/bundles-slack",
+            "Components/bundles-socialscrape",
             "Components/bundles-supabase",
+            "Components/bundles-telegram",
             "Components/bundles-upstash",
             "Components/bundles-valkey",
             "Components/bundles-vectara",
             "Components/bundles-vertexai",
             "Components/bundles-vllm",
             "Components/bundles-weaviate",
+            "Components/bundles-whatsapp",
             "Components/bundles-wikipedia",
             "Components/bundles-xai",
           ],
@@ -655,7 +687,7 @@ module.exports = {
         },
         {
           type: "category",
-          label: "Developer API (Beta)",
+          label: "Developer API",
           items: [
             "API-Reference/workflow-api-quickstart",
             "API-Reference/workflows-api",
@@ -692,6 +724,7 @@ module.exports = {
         "Contributing/contributing-components",
         "Contributing/contributing-bundles",
         "Contributing/contributing-component-tests",
+        "Contributing/contributing-component-compatibility",
         "Contributing/contributing-templates",
       ],
     },

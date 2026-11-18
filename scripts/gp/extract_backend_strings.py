@@ -71,6 +71,27 @@ OUTPUT_PATH = Path(__file__).parent.parent.parent / "src/backend/base/langflow/l
 STARTER_PROJECTS_DIR = Path(__file__).parent.parent.parent / "src/backend/base/langflow/initial_setup/starter_projects"
 
 
+def iter_dynamic_input_strings(cls: type) -> Iterator[tuple[str, str]]:
+    """Read the mode-specific text that is absent from the class's default inputs."""
+    component_key = getattr(cls, "name", None)
+    if component_key not in {"DecisionModel", "SmartRouter"}:
+        return
+    constants = vars(sys.modules[cls.__module__])
+    if component_key == "DecisionModel":
+        for display_name, info in constants["_TABLE"].values():
+            yield "inputs.candidates.display_name", display_name
+            yield "inputs.candidates.info", info
+    else:
+        for attribute, field in (
+            ("_ELSE_INFO", "enable_else_output"),
+            ("_DECISION_QUESTION_INFO", "decision_question"),
+            ("_MINIMUM_PROBABILITY_INFO", "minimum_probability"),
+        ):
+            for info in constants[attribute].values():
+                yield f"inputs.{field}.info", info
+        yield "inputs.custom_prompt.info", constants["_CUSTOM_PROMPT_DECISION_INFO"]
+
+
 def emit_component_strings(
     cls: type,
     flat: dict[str, str],
@@ -117,7 +138,7 @@ def emit_component_strings(
     if isinstance(description, str) and description:
         flat[component_field_key(norm_key, "description", description)] = description
 
-    # Tier 2 — input field display_names, info, and placeholder
+    # Tier 2 — input field display_names, info, placeholder, and translated options
     for inp in getattr(cls, "inputs", []) or []:
         field_display = getattr(inp, "display_name", None)
         field_name = getattr(inp, "name", None)
@@ -132,6 +153,14 @@ def emit_component_strings(
                 flat[component_field_key(norm_key, f"inputs.{field_name}.placeholder", field_placeholder)] = (
                     field_placeholder
                 )
+            # Only inputs that ask for it: most options are model or resource names.
+            if getattr(inp, "translate_options", None) is True:
+                for option in getattr(inp, "options", None) or []:
+                    if isinstance(option, str) and option:
+                        flat[component_field_key(norm_key, f"inputs.{field_name}.options", option)] = option
+
+    for field_path, english in iter_dynamic_input_strings(cls):
+        flat[component_field_key(norm_key, field_path, english)] = english
 
     # Tier 2 — output display_names and info
     for out in getattr(cls, "outputs", []) or []:

@@ -6,8 +6,9 @@ durable log (via the injected ``read_durable``) from the caller's last seen seq,
 then switches to the live tail — deduplicating any seq already replayed so a
 frame straddling the replay/tail boundary is emitted exactly once.
 
-This bus is process-local; the redis backend (Phase 3) swaps it for redis
-Streams behind the same facade method (``events``). Nothing else changes.
+This bus is process-local; the scaled backend does not use it for cross-replica
+delivery — durable ``job_events`` rows polled by the DB backend's ``events``
+tail are the cross-replica transport. Nothing else changes.
 """
 
 from __future__ import annotations
@@ -28,7 +29,7 @@ _SUBSCRIBER_MAXSIZE = 1000
 # live tail that will never produce. The map is evicted eagerly when a job's last
 # subscriber drops; this LRU cap is the backstop for jobs that close and are
 # never reattached, so a long-lived API process cannot leak one key per job
-# without bound. The facade also gates terminal jobs on the persisted JobStatus,
+# without bound. The backend also gates terminal jobs on the persisted JobStatus,
 # so an evicted marker never causes a missed/blocked production reattach.
 _CLOSED_MARKER_MAXSIZE = 4096
 
@@ -100,7 +101,7 @@ class InMemoryLiveBus:
         the finished job terminates instead of blocking on a tail that will never
         produce. The OrderedDict is the LRU: re-mark moves the key to the end, and
         the oldest entry is dropped once the cap is exceeded. Eviction of a very
-        old marker is safe — the facade gates terminal jobs on the persisted
+        old marker is safe because the backend gates terminal jobs on the persisted
         JobStatus, so a production reattach never depends on this in-process flag.
         """
         self._closed[job_id] = True
@@ -172,18 +173,24 @@ class InMemoryLiveBus:
         async def _gen() -> AsyncIterator[LiveFrame]:
             highest = last_seq
 
-            async def drain_durable(after: int) -> tuple[int, list[LiveFrame]]:
-                fresh = [f for f in await read_durable(after) if f.seq > after]
+            async def drain_durable(after: int, through: int | None = None) -> tuple[int, list[LiveFrame]]:
+                fresh = [
+                    f for f in await read_durable(after) if f.seq > after and (through is None or f.seq <= through)
+                ]
                 return (fresh[-1].seq if fresh else after), fresh
 
             try:
                 for frame in await read_durable(last_seq):
                     highest = max(highest, frame.seq)
                     yield frame
-                # If the job closed before/while we replayed, drain nothing more.
-                if self._closed.get(job_id) and queue.empty():
-                    return
                 while True:
+                    # close() cannot queue its marker into a full queue, so a
+                    # closed job ends once the queue is empty, after one last read.
+                    if self._closed.get(job_id) and queue.empty():
+                        highest, fresh = await drain_durable(highest)
+                        for frame in fresh:
+                            yield frame
+                        return
                     if is_done is None:
                         item = await queue.get()
                     else:
@@ -200,7 +207,19 @@ class InMemoryLiveBus:
                                 return
                             continue
                     if item is _CLOSED:
+                        highest, fresh = await drain_durable(highest)
+                        for frame in fresh:
+                            yield frame
                         return
+                    # A full queue drops its oldest frames. Seqs are contiguous per
+                    # job, so a frame past the next seq means milestones were lost:
+                    # read them back before this frame moves the client's cursor.
+                    # An ephemeral frame carries the seq of the milestone before it.
+                    missing_through = item.seq - 1 if item.durable else item.seq
+                    if missing_through > highest:
+                        highest, fresh = await drain_durable(highest, through=missing_through)
+                        for frame in fresh:
+                            yield frame
                     if item.durable:
                         if item.seq <= highest:
                             continue

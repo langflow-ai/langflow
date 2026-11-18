@@ -58,6 +58,7 @@ export default function AlertDisplayArea() {
             <NoticeAlert
               key={alert.id}
               title={alert.title}
+              list={alert.list}
               link={alert.link}
               id={alert.id}
               removeAlert={removeAlert}

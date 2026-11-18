@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
+from fastapi import HTTPException
 from langflow.api.v1 import endpoints
 from langflow.services.auth import utils as auth_utils
 from langflow.services.auth.service import AuthService
@@ -118,7 +119,7 @@ def test_default_or_missing_user_uses_installation_fallback(username) -> None:
 
 
 @pytest.mark.asyncio
-async def test_public_webhook_does_not_attribute_the_owner(monkeypatch) -> None:
+async def test_rejected_webhook_does_not_attribute_the_owner(monkeypatch) -> None:
     owner = SimpleNamespace(id="owner-id", username="alice", is_active=True)
     settings = SimpleNamespace(auth_settings=SimpleNamespace(WEBHOOK_AUTH_ENABLE=False))
     auth_service = AuthService(settings)
@@ -128,9 +129,8 @@ async def test_public_webhook_does_not_attribute_the_owner(monkeypatch) -> None:
         "langflow.services.auth.service.get_user_by_flow_id_or_endpoint_name",
         AsyncMock(return_value=owner),
     )
-    set_current_telemetry_user(uuid4(), "test-installation")
+    with pytest.raises(HTTPException) as exc_info:
+        await auth_utils.get_webhook_user("public-flow", SimpleNamespace(headers={}, query_params={}))
 
-    result = await auth_utils.get_webhook_user("public-flow", SimpleNamespace(headers={}, query_params={}))
-
-    assert result is owner
+    assert exc_info.value.status_code == 403
     assert get_current_telemetry_user_id() is None

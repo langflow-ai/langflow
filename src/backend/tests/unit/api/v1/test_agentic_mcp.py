@@ -301,5 +301,5 @@ class TestAgenticMcpToolDelegation:
 
         client = await _loopback_client(FakeRequest())
         assert client.server_url == "http://localhost:7860"
-        assert client.access_token == "tok-123"  # noqa: S105
+        assert client._headers()["Authorization"] == "Bearer tok-123"
         assert client.api_key is None

@@ -3,7 +3,13 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from langchain_core.messages import AIMessage
 from langchain_core.outputs import ChatGeneration, LLMResult
-from lfx.components.models_and_agents.policies.llm_wrapper import LangchainModelWrapper
+
+# toolguard imports litellm, which imports the stdlib module `sre_constants`; Python 3.15 removed it.
+# Skip this module there instead of failing the whole test group at collection.
+LangchainModelWrapper = pytest.importorskip(
+    "lfx.components.models_and_agents.policies.llm_wrapper",
+    exc_type=ImportError,
+).LangchainModelWrapper
 
 
 @pytest.fixture

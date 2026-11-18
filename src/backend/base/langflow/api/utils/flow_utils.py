@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Literal
 from fastapi import HTTPException
 from lfx.graph.graph.base import Graph
 from lfx.services.deps import session_scope
+from lfx.utils.file_path_security import FLOW_STORAGE_SCOPE_PREFIX
 from sqlalchemy import delete
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -123,18 +124,21 @@ async def build_and_cache_graph_from_data(
     chat_service: ChatService,
     graph_data: dict,
     *,
+    user_id: str | None = None,
     execution_principal: ExecutionPrincipal | None = None,
 ):  # -> Graph | Any:
     """Build and cache the graph.
 
     This is the Playground's primary build seam, so it carries the same
     ``execution_principal`` contract as ``build_graph_from_data``.
+    ``user_id`` records the caller on the graph for component initialization.
     """
     # Convert flow_id to str if it's UUID
     str_flow_id = str(flow_id) if isinstance(flow_id, uuid.UUID) else flow_id
     graph = Graph.from_payload(
         graph_data,
         str_flow_id,
+        user_id=user_id,
         authorized_legacy_flow_ids=await get_authorized_legacy_flow_ids(flow_id),
     )
     if execution_principal is not None:
@@ -161,6 +165,7 @@ async def cascade_delete_flow(
         raise HTTPException(status_code=400, detail="UUID5 flow IDs are reserved for public execution histories.")
     # Imported lazily so this module (loaded early, via ``api.utils``) stays free
     # of the memory-base service import chain.
+    from langflow.services.evaluations.cleanup import detach_flow as detach_flow_from_evaluations
     from langflow.services.knowledge_base_storage.runtime import StorageUnavailableError
     from langflow.services.memory_base.flow_cleanup import purge_flow_memory_bases
 
@@ -182,6 +187,7 @@ async def cascade_delete_flow(
         await session.exec(delete(MessageTable).where(MessageTable.flow_id == flow_id))
         await session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow_id))
         await session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow_id))
+        await detach_flow_from_evaluations(session, flow_id)
         # Explicit delete despite FK CASCADE -- SQLite doesn't enforce FK cascades
         # by default (requires PRAGMA foreign_keys = ON), and this function follows
         # the existing pattern of explicitly deleting all child records.
@@ -214,18 +220,19 @@ async def cascade_delete_flow(
     return result.rowcount == 1
 
 
-# Public flow file paths must be ``{source_flow_id}/{safe_basename}`` — uploads
-# under that namespace are the only legitimate inputs for an unauthenticated
-# build. Anything else (absolute paths, traversal, foreign flow_ids) is a
-# probe at the arbitrary-file-read class of bug (GHSA-rcjh-r59h-gq37).
+# Public flow file paths must be ``flow-{source_flow_id}/{basename}`` (or legacy
+# ``{source_flow_id}/{basename}``) — uploads under that namespace are the only
+# legitimate inputs for an unauthenticated build. Anything else is a probe at
+# the arbitrary-file-read class of bug (GHSA-rcjh-r59h-gq37).
 _PUBLIC_FILE_PATH_RE = re.compile(
-    r"^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/([^/\\]+)$"
+    rf"^(?:{re.escape(FLOW_STORAGE_SCOPE_PREFIX)})?"
+    r"([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/([^/\\]+)$"
 )
 _PUBLIC_FILE_REJECTED_SUBSTRINGS = ("\x00", "..", "\\")
 
 
 def validate_public_files(files: list[str] | None, source_flow_id: uuid.UUID) -> None:
-    """Reject file references that aren't ``{source_flow_id}/{basename}``.
+    """Reject file references outside ``flow-{source_flow_id}/`` or legacy ``{source_flow_id}/``.
 
     Mitigates GHSA-rcjh-r59h-gq37: an unauthenticated build must not be
     able to address files outside its own flow's storage namespace.
@@ -234,7 +241,7 @@ def validate_public_files(files: list[str] | None, source_flow_id: uuid.UUID) ->
     """
     if not files:
         return
-    expected_flow_id = str(source_flow_id).lower()
+    expected_flow_id = str(source_flow_id)
     for entry in files:
         if not isinstance(entry, str) or not entry:
             raise HTTPException(status_code=400, detail="Invalid file entry")
@@ -244,7 +251,7 @@ def validate_public_files(files: list[str] | None, source_flow_id: uuid.UUID) ->
         if not match:
             raise HTTPException(status_code=400, detail="Invalid file path format")
         flow_id_segment, basename = match.group(1), match.group(2)
-        if flow_id_segment.lower() != expected_flow_id:
+        if flow_id_segment != expected_flow_id:
             raise HTTPException(status_code=400, detail="File not in this flow's namespace")
         if basename in (".", ".."):
             raise HTTPException(status_code=400, detail="Invalid filename")

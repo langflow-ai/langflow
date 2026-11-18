@@ -15,7 +15,12 @@ import { emptyApiKeyPermissionPolicy } from "@/types/api-key-permissions";
 
 const selectClass =
   "min-h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm";
-const ALL_SCOPES: ApiKeyScopeType[] = ["global", "workspace", "project"];
+const ALL_SCOPES: ApiKeyScopeType[] = ["global", "project"];
+const BUILTIN_ROLE_LABELS: Record<string, string> = {
+  admin: "apiKey.permissions.roleName.admin",
+  developer: "apiKey.permissions.roleName.developer",
+  viewer: "apiKey.permissions.roleName.viewer",
+};
 
 export function normalizeApiKeyPermissionPolicy(
   value: ApiKeyPermissionPolicy,
@@ -90,29 +95,38 @@ function ScopeFields({
     value.domain_type === "project" &&
     !projects.data?.some((project) => project.id === value.domain_id);
   return (
-    <div className="space-y-2">
-      <Label htmlFor={`${id}-scope`}>
-        {t("apiKey.permissions.scopeFor", { context })}
-      </Label>
-      <select
-        id={`${id}-scope`}
-        className={selectClass}
-        value={value.domain_type}
-        onChange={(event) =>
-          onChange({
-            domain_type: event.target.value as ApiKeyScopeType,
-            domain_id: null,
-          })
-        }
-      >
-        {scopes.map((scope) => (
-          <option key={scope} value={scope}>
-            {t(`apiKey.permissions.scope.${scope}`)}
-          </option>
-        ))}
-      </select>
+    <div className="grid gap-4">
+      <div className="grid gap-2">
+        <Label htmlFor={`${id}-scope`}>
+          {t("apiKey.permissions.scopeFor", { context })}
+        </Label>
+        <select
+          id={`${id}-scope`}
+          className={selectClass}
+          value={value.domain_type}
+          onChange={(event) =>
+            onChange({
+              domain_type: event.target.value as ApiKeyScopeType,
+              domain_id: null,
+            })
+          }
+        >
+          {value.domain_type === "workspace" && (
+            <option value="workspace" disabled>
+              {t("apiKey.permissions.scope.workspace")}
+            </option>
+          )}
+          {scopes
+            .filter((scope) => scope !== "workspace")
+            .map((scope) => (
+              <option key={scope} value={scope}>
+                {t(`apiKey.permissions.scope.${scope}`)}
+              </option>
+            ))}
+        </select>
+      </div>
       {value.domain_type === "project" && (
-        <>
+        <div className="grid gap-2">
           <Label htmlFor={`${id}-project`}>
             {t("apiKey.permissions.projectFor", { context })}
           </Label>
@@ -143,22 +157,19 @@ function ScopeFields({
               {t("apiKey.permissions.targetsError")}
             </p>
           )}
-        </>
+        </div>
       )}
       {value.domain_type === "workspace" && (
-        <>
+        <div className="grid gap-2">
           <Label htmlFor={`${id}-workspace`}>
             {t("apiKey.permissions.workspaceFor", { context })}
           </Label>
           <Input
             id={`${id}-workspace`}
             value={value.domain_id ?? ""}
-            onChange={(event) =>
-              onChange({ ...value, domain_id: event.target.value || null })
-            }
-            placeholder={t("apiKey.permissions.workspacePlaceholder")}
+            readOnly
           />
-        </>
+        </div>
       )}
     </div>
   );
@@ -187,7 +198,7 @@ function ResourceFields({
     ) ?? [];
   return (
     <div className="space-y-2">
-      <label className="flex items-center gap-2">
+      <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
           checked={exact}
@@ -316,11 +327,11 @@ export default function ApiKeyPermissionsEditor({
     });
 
   return (
-    <fieldset className="space-y-4">
+    <fieldset className="space-y-4 text-sm">
       <legend className="mb-2 text-sm font-medium">
         {t("apiKey.permissions.title")}
       </legend>
-      <label className="flex items-center gap-2">
+      <label className="flex items-center gap-2 text-sm">
         <input
           name={`${id}-mode`}
           type="radio"
@@ -329,7 +340,7 @@ export default function ApiKeyPermissionsEditor({
         />
         {t("apiKey.permissions.restricted")}
       </label>
-      <label className="flex items-center gap-2">
+      <label className="flex items-center gap-2 text-sm">
         <input
           name={`${id}-mode`}
           type="radio"
@@ -366,50 +377,64 @@ export default function ApiKeyPermissionsEditor({
               (option) => option.id === role.role_id,
             );
             return (
-              <fieldset key={index} className="space-y-3 rounded-md border p-3">
-                <Label htmlFor={`${id}-role-${index}`}>
-                  {t("apiKey.permissions.roleLabel", { count: index + 1 })}
-                </Label>
-                <select
-                  id={`${id}-role-${index}`}
-                  className={selectClass}
-                  value={role.role_id}
-                  onChange={(event) =>
-                    updateRole(index, { role_id: event.target.value })
-                  }
-                >
-                  <option value="">{t("apiKey.permissions.selectRole")}</option>
-                  {role.role_id && !roleAvailable && (
-                    <option value={role.role_id}>
-                      {t("apiKey.permissions.unavailableRole", {
-                        id: role.role_id,
-                      })}
+              <fieldset
+                key={index}
+                className="grid gap-4 rounded-md border p-3"
+              >
+                <div className="grid gap-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <Label htmlFor={`${id}-role-${index}`}>
+                      {t("apiKey.permissions.roleLabel", { count: index + 1 })}
+                    </Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="h-auto px-0 py-0 text-xs leading-none text-muted-foreground"
+                      onClick={() =>
+                        onChange({
+                          ...policy,
+                          roles: policy.roles.filter(
+                            (_, item) => item !== index,
+                          ),
+                        })
+                      }
+                    >
+                      {t("apiKey.permissions.removeRole", { count: index + 1 })}
+                    </Button>
+                  </div>
+                  <select
+                    id={`${id}-role-${index}`}
+                    className={selectClass}
+                    value={role.role_id}
+                    onChange={(event) =>
+                      updateRole(index, { role_id: event.target.value })
+                    }
+                  >
+                    <option value="">
+                      {t("apiKey.permissions.selectRole")}
                     </option>
-                  )}
-                  {options.roles.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.name}
-                    </option>
-                  ))}
-                </select>
+                    {role.role_id && !roleAvailable && (
+                      <option value={role.role_id}>
+                        {t("apiKey.permissions.unavailableRole", {
+                          id: role.role_id,
+                        })}
+                      </option>
+                    )}
+                    {options.roles.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {Object.hasOwn(BUILTIN_ROLE_LABELS, option.name)
+                          ? t(BUILTIN_ROLE_LABELS[option.name])
+                          : option.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <ScopeFields
                   context={context}
                   value={role}
                   onChange={(scope) => updateRole(index, scope)}
                   scopes={ALL_SCOPES}
                 />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() =>
-                    onChange({
-                      ...policy,
-                      roles: policy.roles.filter((_, item) => item !== index),
-                    })
-                  }
-                >
-                  {t("apiKey.permissions.removeRole", { count: index + 1 })}
-                </Button>
               </fieldset>
             );
           })}
@@ -426,37 +451,61 @@ export default function ApiKeyPermissionsEditor({
               options.resource_actions[restriction.resource_type] ?? [];
             const resourceTypes = Object.keys(options.resource_actions);
             return (
-              <fieldset key={index} className="space-y-3 rounded-md border p-3">
-                <Label htmlFor={`${id}-resource-${index}`}>
-                  {t("apiKey.permissions.resourceTypeFor", { context })}
-                </Label>
-                <select
-                  id={`${id}-resource-${index}`}
-                  className={selectClass}
-                  value={restriction.resource_type}
-                  onChange={(event) =>
-                    updateRestriction(index, {
-                      resource_type: event.target.value,
-                      actions: [],
-                      domain_type: "global",
-                      domain_id: null,
-                      resource_ids: null,
-                    })
-                  }
-                >
-                  {!resourceTypes.includes(restriction.resource_type) && (
-                    <option value={restriction.resource_type}>
-                      {t("apiKey.permissions.unavailableResourceType", {
-                        resource: restriction.resource_type,
+              <fieldset
+                key={index}
+                className="grid gap-4 rounded-md border p-3"
+              >
+                <div className="grid gap-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <Label htmlFor={`${id}-resource-${index}`}>
+                      {t("apiKey.permissions.resourceTypeFor", { context })}
+                    </Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="h-auto px-0 py-0 text-xs leading-none text-muted-foreground"
+                      onClick={() =>
+                        onChange({
+                          ...policy,
+                          restrictions: policy.restrictions.filter(
+                            (_, item) => item !== index,
+                          ),
+                        })
+                      }
+                    >
+                      {t("apiKey.permissions.removeRestriction", {
+                        count: index + 1,
                       })}
-                    </option>
-                  )}
-                  {resourceTypes.map((resource) => (
-                    <option key={resource} value={resource}>
-                      {t(`apiKey.permissions.resource.${resource}`)}
-                    </option>
-                  ))}
-                </select>
+                    </Button>
+                  </div>
+                  <select
+                    id={`${id}-resource-${index}`}
+                    className={selectClass}
+                    value={restriction.resource_type}
+                    onChange={(event) =>
+                      updateRestriction(index, {
+                        resource_type: event.target.value,
+                        actions: [],
+                        domain_type: "global",
+                        domain_id: null,
+                        resource_ids: null,
+                      })
+                    }
+                  >
+                    {!resourceTypes.includes(restriction.resource_type) && (
+                      <option value={restriction.resource_type}>
+                        {t("apiKey.permissions.unavailableResourceType", {
+                          resource: restriction.resource_type,
+                        })}
+                      </option>
+                    )}
+                    {resourceTypes.map((resource) => (
+                      <option key={resource} value={resource}>
+                        {t(`apiKey.permissions.resource.${resource}`)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <fieldset className="space-y-2">
                   <legend className="text-sm font-medium">
                     {t("apiKey.permissions.actionsFor", { context })}
@@ -502,22 +551,6 @@ export default function ApiKeyPermissionsEditor({
                   context={context}
                   onChange={(entry) => updateRestriction(index, entry)}
                 />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() =>
-                    onChange({
-                      ...policy,
-                      restrictions: policy.restrictions.filter(
-                        (_, item) => item !== index,
-                      ),
-                    })
-                  }
-                >
-                  {t("apiKey.permissions.removeRestriction", {
-                    count: index + 1,
-                  })}
-                </Button>
               </fieldset>
             );
           })}

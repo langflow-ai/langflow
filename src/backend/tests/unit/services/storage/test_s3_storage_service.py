@@ -307,7 +307,7 @@ def _recording_service(mock_session_service, mock_settings_service, client):
     service = S3StorageService(mock_session_service, mock_settings_service)
 
     @asynccontextmanager
-    async def _client():
+    async def _client(**_kwargs):
         yield client
 
     service._get_client = _client
@@ -397,3 +397,260 @@ class TestMd5Label:
 
         with pytest.raises(ValueError, match="md5"):
             await service.create_upload_link("ns", "a.pdf", md5=bad)
+
+
+class _NetworkError(Exception):
+    """What botocore raises when the network fails: a ``response`` attribute that is None."""
+
+    response = None
+
+
+def _failing_client_service(mock_session_service, mock_settings_service, error):
+    from contextlib import asynccontextmanager
+
+    class Client:
+        def __getattr__(self, name):
+            async def fail(**_kwargs):
+                raise error
+
+            return fail
+
+    service = S3StorageService(mock_session_service, mock_settings_service)
+
+    @asynccontextmanager
+    async def _client(**_kwargs):
+        yield Client()
+
+    service._get_client = _client
+    return service
+
+
+class TestNetworkErrorsKeepTheirType:
+    """A network error has no S3 error code to read. It must surface, not crash the handler reading it."""
+
+    @pytest.mark.parametrize(
+        "call",
+        [
+            lambda service: service.get_file("ns", "a.pdf"),
+            lambda service: service.get_file_size("ns", "a.pdf"),
+            lambda service: service.get_file_md5("ns", "a.pdf"),
+            lambda service: service.move_file("source", "target", "a.pdf"),
+        ],
+        ids=["get_file", "get_file_size", "get_file_md5", "move_file"],
+    )
+    async def test_a_call_raises_the_network_error(self, mock_session_service, mock_settings_service, call):
+        service = _failing_client_service(mock_session_service, mock_settings_service, _NetworkError("no route"))
+        with pytest.raises(_NetworkError):
+            await call(service)
+
+    async def test_a_stream_raises_the_network_error(self, mock_session_service, mock_settings_service):
+        service = _failing_client_service(mock_session_service, mock_settings_service, _NetworkError("no route"))
+        with pytest.raises(_NetworkError):
+            async for _ in service.get_file_stream("ns", "a.pdf"):
+                pass
+
+    async def test_a_missing_key_is_still_file_not_found(self, mock_session_service, mock_settings_service):
+        class MissingKeyError(Exception):
+            response = {"Error": {"Code": "NoSuchKey"}}
+
+        service = _failing_client_service(mock_session_service, mock_settings_service, MissingKeyError("gone"))
+        with pytest.raises(FileNotFoundError):
+            await service.get_file_size("ns", "a.pdf")
+
+
+class _SlowPartsClient(_RecordingS3Client):
+    """Parts take a moment each, so overlapping ones show; ``fail_part`` makes that part fail."""
+
+    def __init__(self, fail_part: int | None = None):
+        super().__init__()
+        self.in_flight = 0
+        self.most_in_flight = 0
+        self.cancelled = 0
+        self._fail_part = fail_part
+
+    async def upload_part(self, **kwargs):
+        self.in_flight += 1
+        self.most_in_flight = max(self.most_in_flight, self.in_flight)
+        try:
+            if kwargs["PartNumber"] == self._fail_part:  # at once, while the others are still going
+                msg = "part failed"
+                raise RuntimeError(msg)
+            await asyncio.sleep(0.02)
+            return await super().upload_part(**kwargs)
+        except asyncio.CancelledError:
+            self.cancelled += 1
+            raise
+        finally:
+            self.in_flight -= 1
+
+    async def abort_multipart_upload(self, **kwargs):
+        self.calls.append(("abort_multipart_upload", kwargs))
+
+
+class _ForgetfulSlowPartsClient(_RecordingS3Client):
+    """Parts take a moment each and are not kept, so what the upload itself holds can be measured."""
+
+    async def upload_part(self, **kwargs):
+        await asyncio.sleep(0.005)
+        return {"ETag": f'"{kwargs["PartNumber"]}"'}
+
+
+class TestPartsInFlight:
+    """Before: one part at a time, so a 900 MB upload to AWS took 24-45 s and the route gave 504."""
+
+    async def test_parts_overlap_up_to_the_limit_and_complete_in_order(
+        self, mock_session_service, mock_settings_service, monkeypatch
+    ):
+        from langflow.services.storage import s3
+
+        monkeypatch.setattr(s3, "STREAM_PART_SIZE", 4)
+        client = _SlowPartsClient()
+        service = _recording_service(mock_session_service, mock_settings_service, client)
+        body = b"abcd" * 10 + b"z"
+
+        written = await service.save_file_stream("ns", "big.pdf", _chunks(body))
+
+        assert written == len(body)
+        assert client.most_in_flight == s3.STREAM_PARTS_IN_FLIGHT
+        parts = client.named("complete_multipart_upload")[0]["MultipartUpload"]["Parts"]
+        assert [part["PartNumber"] for part in parts] == list(range(1, 12))
+        assert [part["ETag"] for part in parts] == [f'"{number}"' for number in range(1, 12)]
+        sent = {call["PartNumber"]: call["Body"] for call in client.named("upload_part")}
+        assert b"".join(sent[number] for number in sorted(sent)) == body
+
+    async def test_a_known_md5_labels_the_upload_as_it_starts_and_skips_the_copy(
+        self, mock_session_service, mock_settings_service, monkeypatch
+    ):
+        from langflow.services.storage import s3
+
+        monkeypatch.setattr(s3, "STREAM_PART_SIZE", 4)
+        client = _SlowPartsClient()
+        service = _recording_service(mock_session_service, mock_settings_service, client)
+
+        await service.save_file_stream("ns", "big.pdf", _chunks(b"abcdefghij"), md5=MD5)
+
+        assert client.named("create_multipart_upload")[0]["Metadata"] == {"md5": MD5}
+        assert client.named("copy_object") == []
+
+    async def test_a_failed_part_cancels_the_rest_and_aborts(
+        self, mock_session_service, mock_settings_service, monkeypatch
+    ):
+        from langflow.services.storage import s3
+
+        monkeypatch.setattr(s3, "STREAM_PART_SIZE", 4)
+        client = _SlowPartsClient(fail_part=2)
+        service = _recording_service(mock_session_service, mock_settings_service, client)
+
+        with pytest.raises(RuntimeError, match="part failed"):
+            await service.save_file_stream("ns", "big.pdf", _chunks(b"abcd" * 10))
+
+        assert client.cancelled > 0
+        assert client.in_flight == 0
+        assert len(client.named("abort_multipart_upload")) == 1
+        assert client.named("complete_multipart_upload") == []
+
+    async def test_a_part_waiting_for_a_slot_is_held_once(
+        self, mock_session_service, mock_settings_service, monkeypatch
+    ):
+        """Before: the next part was cut before the wait, so the buffer and the cut copy both held it."""
+        import tracemalloc
+
+        from langflow.services.storage import s3
+
+        part = 1024 * 1024
+        monkeypatch.setattr(s3, "STREAM_PART_SIZE", part)
+        service = _recording_service(mock_session_service, mock_settings_service, _ForgetfulSlowPartsClient())
+
+        async def body():
+            for _ in range(12 * 16):
+                yield os.urandom(part // 16)
+
+        tracemalloc.start()
+        try:
+            await service.save_file_stream("ns", "big.pdf", body())
+            _, peak = tracemalloc.get_traced_memory()
+        finally:
+            tracemalloc.stop()
+
+        # The parts in flight plus the one filling; a second copy of that one adds a whole part.
+        assert peak < (s3.STREAM_PARTS_IN_FLIGHT + 1.5) * part, f"peak {peak / part:.2f} parts"
+
+    async def test_the_parts_go_on_a_client_of_their_own(self, mock_session_service, mock_settings_service):
+        """The shared client's 10 connections serve every other call; an upload must not take them."""
+        from contextlib import asynccontextmanager
+
+        service = S3StorageService(mock_session_service, mock_settings_service)
+        asked: list[dict] = []
+
+        @asynccontextmanager
+        async def _client(**kwargs):
+            asked.append(kwargs)
+            yield _RecordingS3Client()
+
+        service._get_client = _client
+
+        await service.save_file_stream("ns", "a.pdf", _chunks(b"a"))
+
+        assert asked == [{"shared": False}]
+
+    async def test_a_known_md5_that_is_not_one_is_refused(self, mock_session_service, mock_settings_service):
+        service = _recording_service(mock_session_service, mock_settings_service, _RecordingS3Client())
+        with pytest.raises(ValueError, match="md5"):
+            await service.save_file_stream("ns", "a.pdf", _chunks(b"a"), md5="nope")
+
+
+class TestSaveUploadStream:
+    async def test_it_streams_and_labels_the_file(self, mock_session_service, mock_settings_service):
+        client = _RecordingS3Client()
+        service = _recording_service(mock_session_service, mock_settings_service, client)
+
+        written = await service.save_upload_stream("ns", "a.pdf", _chunks(b"ab", b"cd"))
+
+        assert written == 4
+        assert client.named("put_object")[0]["Body"] == b"abcd"
+
+    async def test_a_missing_bucket_reads_as_save_file_reads_it(self, mock_session_service, mock_settings_service):
+        class NoBucketError(Exception):
+            response = {"Error": {"Code": "NoSuchBucket", "Message": "no bucket"}}
+
+        service = _failing_client_service(mock_session_service, mock_settings_service, NoBucketError("no bucket"))
+        with pytest.raises(FileNotFoundError, match="does not exist"):
+            await service.save_upload_stream("ns", "a.pdf", _chunks(b"ab"))
+
+
+class TestStreamFromAnOffset:
+    """A resumed copy must not download again what it has already sent."""
+
+    @staticmethod
+    def _service(mock_session_service, mock_settings_service, asked):
+        from contextlib import asynccontextmanager
+
+        class Body:
+            async def iter_chunks(self, _chunk_size):
+                yield b"tail"
+
+        class Client:
+            async def get_object(self, **kwargs):
+                asked.append(kwargs)
+                return {"Body": Body()}
+
+        service = S3StorageService(mock_session_service, mock_settings_service)
+
+        @asynccontextmanager
+        async def _client(**_kwargs):
+            yield Client()
+
+        service._get_client = _client
+        return service
+
+    async def test_it_asks_s3_only_for_the_rest(self, mock_session_service, mock_settings_service):
+        asked = []
+        service = self._service(mock_session_service, mock_settings_service, asked)
+        assert [c async for c in service.get_file_stream("ns", "a.pdf", offset=44)] == [b"tail"]
+        assert asked[0]["Range"] == "bytes=44-"
+
+    async def test_without_an_offset_it_asks_for_the_whole_file(self, mock_session_service, mock_settings_service):
+        asked = []
+        service = self._service(mock_session_service, mock_settings_service, asked)
+        assert [c async for c in service.get_file_stream("ns", "a.pdf")] == [b"tail"]
+        assert "Range" not in asked[0]

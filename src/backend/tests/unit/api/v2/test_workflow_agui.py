@@ -377,11 +377,39 @@ class TestAGUIModeDispatch:
         assert detail["code"] == "MODE_UNSUPPORTED_FIELDS"
         assert detail["fields"] == ["output_ids"]
 
+    @pytest.mark.parametrize("mode", ["stream", "background"])
+    async def test_non_sync_modes_reject_globals(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        empty_flow,
+        mode: str,
+    ):
+        """Body globals is sync-only; stream/background must 422 instead of silently ignoring it.
+
+        The header transport was already rejected for GA; a caller who follows that
+        advice and moves the override into body globals must not then be silently
+        dropped on these modes (they run through the v1 build loop, which ignores it).
+        """
+        body = _agui_body(empty_flow, mode=mode)
+        body["globals"] = {"MY_VAR": "v"}
+
+        response = await client.post(
+            "api/v2/workflows",
+            json=body,
+            headers={"x-api-key": created_api_key.api_key},
+        )
+
+        assert response.status_code == 422
+        detail = response.json()["detail"]
+        assert detail["code"] == "MODE_UNSUPPORTED_FIELDS"
+        assert detail["fields"] == ["globals"]
+
 
 class TestV2WorkflowAdmission:
     """Route-level admission checks before workflow execution dispatch."""
 
-    def test_non_owner_data_override_is_dropped_not_denied(self):
+    def test_non_owner_data_override_is_dropped_not_denied(self, monkeypatch):
         """Execute-only callers run the stored graph; their injected data never reaches it.
 
         This asserted a 404 until LE-1905. The Playground always posts the
@@ -392,9 +420,11 @@ class TestV2WorkflowAdmission:
         does not run.
         """
         from langflow.api.v2 import workflow as workflow_module
+        from langflow.services.deps import get_settings_service
         from lfx.schema.workflow import WorkflowRunRequest
         from lfx.workflow.converters import parse_workflow_run_request
 
+        monkeypatch.setattr(get_settings_service().settings, "custom_component_admin_only", False)
         flow_id = uuid4()
         flow = SimpleNamespace(
             id=flow_id,
@@ -855,6 +885,46 @@ class TestV2WorkflowDelegatedErrorPolicy:
 
 class TestAGUIStreaming:
     """mode=stream returns an AG-UI server-sent event stream."""
+
+    async def test_background_token_producer_waits_for_space_and_wakes_on_close(self):
+        from langflow.api.v2.workflow_execution import _WorkflowEventQueue
+        from lfx.events.event_manager import create_default_event_manager, emit_token
+
+        queue = _WorkflowEventQueue(maxsize=1, background_bursts=True)
+        manager = create_default_event_manager(queue, await_token_capacity=True)
+        await emit_token(manager.on_token, data={"chunk": "first"})
+        second = asyncio.create_task(emit_token(manager.on_token, data={"chunk": "second"}))
+        try:
+            await asyncio.sleep(0)
+            assert not second.done()
+            assert json.loads((await queue.get())[1])["data"]["chunk"] == "first"
+            await asyncio.wait_for(second, timeout=1)
+            third = asyncio.create_task(emit_token(manager.on_token, data={"chunk": "third"}))
+            await asyncio.sleep(0)
+            assert not third.done()
+            queue.close()
+            await asyncio.wait_for(third, timeout=1)
+        finally:
+            queue.close()
+            await queue.aclose()
+
+    async def test_background_callback_burst_has_a_byte_limit(self, monkeypatch):
+        from langflow.api.v2 import workflow_execution as wf_exec
+
+        monkeypatch.setattr(wf_exec, "_BACKGROUND_BURST_BYTES", 512)
+        queue = wf_exec._WorkflowEventQueue(maxsize=1, background_bursts=True)
+        event = ("token", b"{}", time.time())
+        try:
+            queue.put_nowait(event)
+            queue.put_nowait(event)
+            queue.put_nowait(("large", bytes(512), time.time()))
+            assert await queue.get() == event
+            assert await queue.get() == event
+            assert json.loads((await asyncio.wait_for(queue.get(), timeout=1))[1])["event"] == "error"
+            assert (await queue.get())[1] is None
+        finally:
+            queue.close()
+            await queue.aclose()
 
     async def test_stream_event_queue_ignores_late_sentinel_after_overflow(self):
         """A normal completion sentinel must not race ahead of the overflow error."""

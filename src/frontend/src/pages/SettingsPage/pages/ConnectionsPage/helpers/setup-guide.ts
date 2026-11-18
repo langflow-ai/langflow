@@ -40,6 +40,11 @@ export function connectionSetupGuide(
 
 export function suggestedCallbackUrl(provider: string, origin: string) {
   if (!SETUP_GUIDES.has(provider)) return undefined;
+  return callbackUrl(provider, origin);
+}
+
+/** The broker's callback for any provider, when this origin can receive one. */
+export function callbackUrl(provider: string, origin: string) {
   try {
     const url = new URL(origin);
     const loopback = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);

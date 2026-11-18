@@ -55,7 +55,7 @@ To call remote A2A agents from inside a flow, see the [**A2A Agent** component](
 
     Langflow sends the message over the live A2A endpoint and displays the agent's reply, so you can confirm the agent answers before you share the card URL.
 
-    If the [project's authentication](#authentication) is set to **API key** or **OAuth**, an **API key** field is displayed. Paste a valid Langflow API key so the test request can authenticate. If project authentication is **None**, the field is hidden and no key is required.
+    If the [project's authentication](#authentication) is set to **API key** or **OAuth**, an **API key** field is displayed. Paste a valid Langflow API key belonging to the flow owner so the test request can authenticate. If project authentication is **None**, the field is hidden and no key is required.
 
 6. To share the flow's endpoint, under **Address**, select **URL**.
 
@@ -79,7 +79,9 @@ A `message/send` request runs the flow and returns a completed task carrying the
 ### Send a message
 
 To send a message, use the JSON-RPC URL from the **Address** tab, and not the agent card URL.
-Replace `FLOW_ID` with your flow ID. If the [project's authentication](#authentication) requires a key, include `x-api-key`.
+Replace `FLOW_ID` with your flow ID and use an API key belonging to the flow owner for `LANGFLOW_API_KEY`.
+New projects require this key by default, including auto-login installations that require credentials.
+Send it in the `x-api-key` header unless the [project explicitly allows public access](#authentication).
 
 <Tabs>
 <TabItem value="python" label="Python" default>
@@ -780,15 +782,29 @@ The **Input contract** is a list of the fields the agent expects from the caller
 
 ## Authentication
 
-The agent card itself is always public, so clients can always discover the agent.
-Only the JSON-RPC endpoint enforces authentication.
-Whether that endpoint requires a key depends on the [authentication settings of the flow's project](./mcp-server#authentication):
+A2A JSON-RPC requests use the [authentication settings of the flow's project](./mcp-server#authentication).
+New projects default to **API key**, including auto-login installations where `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=false`.
+On startup, Langflow applies this default to existing projects with no authentication settings.
+When `LANGFLOW_AUTO_LOGIN=false`, it also changes projects set to **None** to **API key**.
 
-* **None**: The endpoint is public. The card advertises no security scheme and callers omit `x-api-key`.
-* **API key**: The card advertises an `apiKey` security scheme. `message/send` and `message/stream` require a valid Langflow API key in the `x-api-key` header. Requests without a valid key return `401`.
-* **OAuth**: Not supported for A2A as of Langflow 1.11.x. This setting behaves the same as API key.
+The configured superuser's projects can retain the no-key default when both `LANGFLOW_AUTO_LOGIN` and `LANGFLOW_SKIP_AUTH_AUTO_LOGIN` are `true`.
+This exception does not apply to other users' projects.
+Projects explicitly set to **None** remain public when `LANGFLOW_AUTO_LOGIN=true`.
 
-Authenticated request example:
+* **API key** requires a valid Langflow API key belonging to the flow owner in the `x-api-key` header.
+  This applies to all JSON-RPC methods, including sending messages and reading tasks.
+  Missing, invalid, or other users' keys return `401`.
+* **OAuth** also requires the flow owner's API key at the A2A JSON-RPC endpoint.
+  An OAuth access token or a browser sign-in token does not replace `x-api-key`.
+* **None** permits public JSON-RPC requests and advertises no security scheme on the card.
+
+After upgrading, update existing A2A clients that previously called without a key.
+The flow owner can [create a Langflow API key](/api-keys-and-authentication#create-a-langflow-api-key) in **Settings**, under **Langflow API Keys**.
+Use that key in the **Try it** pane and each client's `x-api-key` header.
+
+Agent-card discovery remains unauthenticated.
+Reading a card does not grant access to its protected JSON-RPC endpoint.
+An authenticated request includes the header shown below.
 
 ```bash
 curl -X POST "http://localhost:7860/api/v1/a2a/FLOW_ID/jsonrpc" \

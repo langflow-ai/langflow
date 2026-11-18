@@ -283,11 +283,19 @@ class AGUITranslator:
         # one ``inactive`` so the frontend maps it to ``BuildStatus.INACTIVE``, but
         # only once: ``build.py`` re-reports the persisted excluded set on every
         # later ``end_vertex``, so dedupe to avoid sending the same delta repeatedly.
+        # A router-excluded node also carries the router and the outputs it took,
+        # so the canvas can explain the skip without inferring it from the graph.
+        branch_skips = build_data.get("branch_skips") or {}
         for inactive_id in build_data.get("inactivated_vertices") or []:
             if inactive_id in self._inactivated_nodes:
                 continue
             self._inactivated_nodes.add(inactive_id)
-            delta.append(self._set_node(inactive_id, "inactive", None))
+            op = self._set_node(inactive_id, "inactive", None)
+            skip = branch_skips.get(inactive_id)
+            if skip:
+                op["value"]["skipped_by"] = skip["skipped_by"]
+                op["value"]["taken_outputs"] = skip["taken_outputs"]
+            delta.append(op)
         return [
             StepFinishedEvent(step_name=node_id),
             StateDeltaEvent(delta=delta),

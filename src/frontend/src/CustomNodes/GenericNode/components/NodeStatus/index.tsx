@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useTranslation } from "react-i18next";
+import { useShallow } from "zustand/react/shallow";
+import { getBranchSkip } from "@/CustomNodes/helpers/get-branch-skip";
 import { getSpecificClassFromBuildStatus } from "@/CustomNodes/helpers/get-class-from-build-status";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import useIconStatus from "@/CustomNodes/hooks/use-icons-status";
@@ -107,6 +109,28 @@ export default function NodeStatus({
 
   const lastRunTime = useFlowStore(
     (state) => state.flowBuildStatus[nodeId_]?.timestamp,
+  );
+  // Selected from the store so renaming or rewiring the router updates the text.
+  const branchComponent = useFlowStore((state) =>
+    conditionInactive
+      ? getBranchSkip(nodeId_, state.flowBuildStatus, state.nodes)?.component
+      : undefined,
+  );
+  const branchOutputs = useFlowStore(
+    useShallow(
+      (state) =>
+        (conditionInactive &&
+          getBranchSkip(nodeId_, state.flowBuildStatus, state.nodes)
+            ?.outputs) ||
+        [],
+    ),
+  );
+  const branchSkip = useMemo(
+    () =>
+      branchComponent === undefined
+        ? null
+        : { component: branchComponent, outputs: branchOutputs },
+    [branchComponent, branchOutputs],
   );
   const iconStatus = useIconStatus(buildStatus);
   const buildFlow = useFlowStore((state) => state.buildFlow);
@@ -447,6 +471,7 @@ export default function NodeStatus({
                   validationStatus={validationStatus}
                   validationString={validationString}
                   lastRunTime={lastRunTime}
+                  branchSkip={branchSkip}
                 />
               }
               side="bottom"

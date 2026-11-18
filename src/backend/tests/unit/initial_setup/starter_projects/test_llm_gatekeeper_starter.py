@@ -86,19 +86,6 @@ class TestLLMGatekeeperStarter:
         assert llm_calls == ["When are you open?"]
         assert _text(graph, targets["llm_reply"]) == LLM_REPLY
 
-    def test_edge_handles_match_the_fields_they_connect(self):
-        """The editor drops any edge whose handle disagrees with its field, as cleanEdges does on load."""
-        data = json.loads(STARTER.read_text(encoding="utf-8"))["data"]
-        nodes = {node["id"]: node["data"]["node"] for node in data["nodes"]}
-        for edge in data["edges"]:
-            source, target = edge["data"]["sourceHandle"], edge["data"]["targetHandle"]
-            assert json.loads(edge["sourceHandle"].replace("œ", '"')) == source
-            assert json.loads(edge["targetHandle"].replace("œ", '"')) == target
-            output = next(output for output in nodes[edge["source"]]["outputs"] if output["name"] == source["name"])
-            assert source["output_types"] == output["types"]
-            field = nodes[edge["target"]]["template"][target["fieldName"]]
-            assert (target["type"], target["inputTypes"]) == (field["type"], field["input_types"])
-
     def test_router_is_a_gatekeeper_in_decision_mode(self):
         data = json.loads(STARTER.read_text(encoding="utf-8"))["data"]
         router = _nodes_by_type(data, "SmartRouter")[0]

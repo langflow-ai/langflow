@@ -1,6 +1,8 @@
+import type { Ref } from "react";
 import { useTranslation } from "react-i18next";
 import type { TriggerStateFilter } from "@/components/core/triggers/helpers/filter-triggers";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -20,11 +22,19 @@ const STATE_FILTERS: TriggerStateFilter[] = [
   "error",
 ];
 
-export interface TriggersToolbarProps {
+export type TriggerScope = "mine" | "all";
+
+export interface TriggersFiltersProps {
   search: string;
   onSearchChange: (search: string) => void;
   state: TriggerStateFilter;
   onStateChange: (state: TriggerStateFilter) => void;
+  scope: TriggerScope;
+  onScopeChange?: (scope: TriggerScope) => void;
+  scopeTriggerRef?: Ref<HTMLButtonElement>;
+}
+
+export interface TriggersToolbarProps extends TriggersFiltersProps {
   attentionCount: number;
   /** Operator view: filter by provider. */
   providers?: string[];
@@ -40,6 +50,9 @@ export function TriggersToolbar({
   onSearchChange,
   state,
   onStateChange,
+  scope,
+  onScopeChange,
+  scopeTriggerRef,
   attentionCount,
   providers,
   provider,
@@ -49,7 +62,7 @@ export function TriggersToolbar({
   const { t } = useTranslation();
   const attentionOn = state === "attention";
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
       <Input
         type="search"
         placeholder={t(searchPlaceholderKey)}
@@ -57,9 +70,34 @@ export function TriggersToolbar({
         value={search}
         onChange={(event) => onSearchChange(event.target.value)}
         icon="Search"
-        className="w-72 shrink-0"
+        className="w-full shrink-0 sm:w-72"
         data-testid="triggers-search"
       />
+      {onScopeChange && (
+        <div className="flex shrink-0 items-center gap-2">
+          <Label htmlFor="triggers-scope-filter">
+            {t("triggers.filters.scope")}
+          </Label>
+          <Select
+            value={scope}
+            onValueChange={(value) => onScopeChange(value as TriggerScope)}
+          >
+            <SelectTrigger
+              id="triggers-scope-filter"
+              ref={scopeTriggerRef}
+              className="w-full sm:w-44"
+              aria-label={t("triggers.filters.scope")}
+              data-testid="triggers-scope-filter"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="mine">{t("triggers.filters.mine")}</SelectItem>
+              <SelectItem value="all">{t("triggers.filters.all")}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
       {providers && onProviderChange && (
         <Select
           value={provider ?? ALL_PROVIDERS}
@@ -68,7 +106,7 @@ export function TriggersToolbar({
           }
         >
           <SelectTrigger
-            className="w-44"
+            className="w-full sm:w-44"
             aria-label={t("triggers.filters.provider")}
             data-testid="triggers-provider-filter"
           >
@@ -91,7 +129,7 @@ export function TriggersToolbar({
         onValueChange={(value) => onStateChange(value as TriggerStateFilter)}
       >
         <SelectTrigger
-          className="w-48"
+          className="w-full sm:w-48"
           aria-label={t("triggers.filters.state")}
           data-testid="triggers-state-filter"
         >

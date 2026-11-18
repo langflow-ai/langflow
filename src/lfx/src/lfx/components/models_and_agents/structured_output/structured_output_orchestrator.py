@@ -12,6 +12,7 @@ from lfx.components.models_and_agents.structured_output.native_structured_invoke
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
+    from langchain_core.runnables import RunnableConfig
     from pydantic import BaseModel
 from pydantic import Field, create_model
 
@@ -65,6 +66,7 @@ async def orchestrate_structured_output(
     input_value: str,
     run_prompt_fallback: Callable[[str], Awaitable[str]],
     prefer_native: bool = True,
+    config: RunnableConfig | None = None,
 ) -> Data:
     """Run structured output via native LLM API when available, otherwise via prompt fallback.
 
@@ -94,6 +96,7 @@ async def orchestrate_structured_output(
                 model_cls=output_model,
                 system_prompt=system_prompt,
                 input_value=input_value,
+                config=config,
             )
         except NotImplementedError as exc:
             # LangChain wrappers commonly inherit `with_structured_output` but raise

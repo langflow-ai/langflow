@@ -1,0 +1,44 @@
+---
+title: Maintenance mode
+slug: /maintenance-mode
+---
+
+```bash
+langflow maintenance on --reason "Upgrade rehearsal"
+langflow maintenance status
+langflow maintenance off
+```
+
+Set `LANGFLOW_DATABASE_URL` to the installation's database URL before running these commands.
+Use `--database-url-env` to name a different environment variable.
+The commands connect directly to the database without starting Langflow or running migrations.
+The maintenance table must already exist.
+
+Maintenance mode blocks ordinary changes and new flow runs on every editor and worker sharing the database.
+Instance superusers can still make repairs and other changes.
+Reads and login remain available.
+Use an API key or local JWT during the freeze.
+External SSO/OIDC bearer authentication returns a retryable 503 until maintenance ends.
+It cannot refresh profiles or reconcile directory access while the database is paused.
+Local login still validates credentials but skips last-login bookkeeping and default initialization.
+The shared flag works independently of the instance migration feature and config directory.
+Clearing it restores ordinary writes without restarting the servers.
+
+The status command reports queued and running jobs separately.
+Setting the flag does not cancel existing jobs.
+Wait for running jobs to finish, and resolve queued jobs before taking the final backup.
+Queued jobs remain queued until maintenance ends.
+Let requests and credential refreshes admitted before the freeze finish.
+Authorization audit logging remains active as an explicit exception, including audit events from reads.
+Durable audit calls still return only after their event commits.
+Stop traffic and scale down every writer and listener before the final backup and image replacement.
+Allow audit queues to drain during graceful shutdown before taking that backup.
+
+Authenticated users can read `/api/v1/maintenance/status`.
+Instance superusers can POST `/api/v1/maintenance/on` with an optional reason or POST `/api/v1/maintenance/off`.
+The status includes the database maintenance flag, the separate file migration pause, and their combined paused state.
+The existing migration pause still applies to superusers and must be ended through its own workflow.
+
+The database flag first ships in Langflow 1.14.
+Upgrades starting from 1.12 or 1.13 still require the manual traffic block and scale-down procedure.
+Maintenance mode does not replace database, file storage, knowledge-base storage, or secret-key backups.

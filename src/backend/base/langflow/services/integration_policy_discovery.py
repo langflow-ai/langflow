@@ -245,6 +245,9 @@ async def filter_component_palette_by_integration_policy(
     copied and component payloads are shared, never mutated. A palette with no
     integration components short-circuits without resolving any policy.
     """
+    from langflow.services.triggers.policy import filter_trigger_palette
+
+    all_types = await filter_trigger_palette(all_types, user_id=user_id)
     provider_ids = candidate_provider_ids(all_types)
     if not provider_ids:
         return all_types
@@ -311,15 +314,26 @@ def template_integration_filter(
     referencing no integration never resolve a policy at all.
     """
     entries = list(templates)
+    from langflow.services.triggers.policy import TriggerPolicyError, component_trigger_kind, require_trigger_ceiling
+
+    blocked = set()
+    for position, (_key, nodes) in enumerate(entries):
+        for component in _graph_node_components(nodes):
+            if kind := component_trigger_kind(component):
+                try:
+                    require_trigger_ceiling(kind)
+                except TriggerPolicyError:
+                    blocked.add(position)
+                    break
     provider_ids = frozenset(provider_id for _key, nodes in entries for provider_id in graph_provider_ids(nodes))
     if not provider_ids:
-        return set()
+        return blocked
     policy = resolve_integration_policy_for_current_context(
         provider_ids=provider_ids,
         purpose=IntegrationPolicyPurpose.DISCOVER,
     )
     index = build_integration_capability_index()
-    return {
+    return blocked | {
         position
         for position, (_key, nodes) in enumerate(entries)
         if not graph_nodes_are_allowed(nodes, policy=policy, index=index)
@@ -338,9 +352,28 @@ async def ablocked_template_positions(
     catalog-policy rule that hides a template whose component is blocked.
     """
     entries = [list(nodes) for nodes in templates]
+    from langflow.services.triggers.policy import (
+        TriggerPolicyContext,
+        TriggerPolicyError,
+        TriggerPolicyPurpose,
+        component_trigger_kind,
+        require_trigger_allowed,
+    )
+
+    blocked = set()
+    for position, nodes in enumerate(entries):
+        for component in _graph_node_components(nodes):
+            if kind := component_trigger_kind(component):
+                try:
+                    await require_trigger_allowed(
+                        TriggerPolicyContext(user_id=user_id, kind=kind, purpose=TriggerPolicyPurpose.DISCOVER)
+                    )
+                except TriggerPolicyError:
+                    blocked.add(position)
+                    break
     provider_ids = frozenset(provider_id for nodes in entries for provider_id in graph_provider_ids(nodes))
     if not provider_ids:
-        return set()
+        return blocked
     policy = await aresolve_integration_policy(
         user_id=user_id,
         provider_ids=provider_ids,
@@ -348,7 +381,7 @@ async def ablocked_template_positions(
         attributes=attributes,
     )
     index = build_integration_capability_index()
-    return {
+    return blocked | {
         position
         for position, nodes in enumerate(entries)
         if not graph_nodes_are_allowed(nodes, policy=policy, index=index)
@@ -367,6 +400,22 @@ async def aenforce_integration_policy_for_component(
     Used by the custom-component build/update routes so posting the source of a
     blocked integration component cannot reconstruct what discovery hides.
     """
+    from langflow.services.triggers.policy import (
+        TriggerPolicyContext,
+        TriggerPolicyError,
+        TriggerPolicyPurpose,
+        component_trigger_kind,
+        require_trigger_allowed,
+    )
+
+    kind = component_trigger_kind(component)
+    if kind is not None:
+        try:
+            await require_trigger_allowed(
+                TriggerPolicyContext(user_id=user_id, kind=kind, purpose=TriggerPolicyPurpose.DISCOVER)
+            )
+        except TriggerPolicyError as exc:
+            raise IntegrationPolicyError(kind.partition(".")[0], purpose) from exc
     requirements = integration_requirements(component)
     if not requirements:
         return

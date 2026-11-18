@@ -196,7 +196,7 @@ export default function SecretKeyModal({
           showIcon={modalConfigProps?.showIcon}
         />
       </BaseModal.Header>
-      <BaseModal.Content>
+      <BaseModal.Content className="-mr-6 pr-6">
         {renderKey ? (
           <ContentRenderKey
             inputLabel={String(modalConfigProps?.inputLabel ?? "")}

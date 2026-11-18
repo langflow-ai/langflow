@@ -32,7 +32,7 @@ from lfx.services.model_provider_policy import (
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
 
-from langflow.api.utils import CurrentActiveUser, ingestion_run_service, knowledge_base_service
+from langflow.api.utils import EMPTY_FILE_DETAIL, CurrentActiveUser, ingestion_run_service, knowledge_base_service
 from langflow.api.utils.execution_errors import integration_http_error
 from langflow.api.utils.kb_helpers import (
     KBIngestionHelper,
@@ -66,6 +66,7 @@ from langflow.services.authorization import (
     ensure_knowledge_base_permission,
 )
 from langflow.services.authorization.listing import filter_visible_resources, visible_scope_prefilter
+from langflow.services.creation_hooks import RESOURCE_KNOWLEDGE_BASE, PostCreationContext, run_post_creation_hooks
 from langflow.services.database.models.jobs.model import JobStatus, JobType
 from langflow.services.database.models.knowledge_base.model import KnowledgeBaseRecord
 from langflow.services.deps import get_job_service, get_settings_service, get_task_service
@@ -825,9 +826,10 @@ async def create_knowledge_base(
             # duplicate is a 409, not a 500.
             await logger.awarning("Concurrent KB create collided for %s: %s", kb_name, exc)
             if kb_path is not None:
-                KBStorageHelper.delete_storage(kb_path, kb_name)
+                await asyncio.shield(asyncio.to_thread(KBStorageHelper.delete_storage, kb_path, kb_name))
             raise HTTPException(status_code=409, detail=f"Knowledge base '{kb_name}' already exists") from exc
         except StorageUnavailableError:
+            # Chroma skips the storage guards that raise this error, so no local path needs cleanup.
             raise
         except Exception as exc:
             await logger.aerror(
@@ -837,13 +839,24 @@ async def create_knowledge_base(
                 exc,
             )
             if kb_path is not None:
-                KBStorageHelper.delete_storage(kb_path, kb_name)
+                await asyncio.shield(asyncio.to_thread(KBStorageHelper.delete_storage, kb_path, kb_name))
             raise HTTPException(
                 status_code=500,
                 detail=(
                     f"Failed to persist knowledge base '{kb_name}' with backend '{backend_type_value}'. Please retry."
                 ),
             ) from exc
+
+        # The record is committed. A hook that fails with an HTTPException fails the request without undoing the
+        # create (the outer ``except HTTPException`` re-raises it and removes nothing).
+        await run_post_creation_hooks(
+            PostCreationContext(
+                resource=RESOURCE_KNOWLEDGE_BASE,
+                resource_id=kb_id,
+                owner_id=current_user.id,
+                name=kb_name,
+            )
+        )
 
         return KnowledgeBaseInfo(
             id=str(kb_id),
@@ -869,7 +882,7 @@ async def create_knowledge_base(
     except Exception as e:
         # Clean up if something went wrong
         if kb_path is not None and kb_path.exists():
-            KBStorageHelper.delete_storage(kb_path, kb_name)
+            await asyncio.shield(asyncio.to_thread(KBStorageHelper.delete_storage, kb_path, kb_name))
         await logger.aerror("Error creating knowledge base: %s", e)
         raise HTTPException(status_code=500, detail="Internal error creating knowledge base") from e
 
@@ -1058,8 +1071,11 @@ async def ingest_files_to_knowledge_base(
 
         files_data = []
 
+        # The loop only reads bytes: every file is checked before the KB, job or task is touched.
         for uploaded_file in files:
             file_size = uploaded_file.size
+            if file_size == 0:
+                raise HTTPException(status_code=400, detail=EMPTY_FILE_DETAIL)
             if file_size > max_file_size_upload * 1024 * 1024:
                 raise HTTPException(
                     status_code=413,
@@ -1847,19 +1863,18 @@ async def list_ingestion_runs(
 ) -> PaginatedIngestionRunResponse:
     """Paginated list of ingestion runs for a KB (newest first).
 
-    Scoped to the requesting user so one account can't observe
-    another's run history. Returns counter-only rows; the UI fetches
-    the detail endpoint for the drill-down.
+    Readers of this KB can see its ingestion runs, including runs started by a collaborator.
     """
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.READ, kb_name=kb_name)
     # Verify the KB exists before exposing run history — otherwise a crafted
     # ``kb_name`` could be used to probe for other users' KBs by timing
     # list_runs_for_kb.
-    await _require_kb_record(kb_name, _kb_guard.owner_user, _kb_guard)
+    record = await _require_kb_record(kb_name, _kb_guard.owner_user, _kb_guard)
 
     rows, total = await ingestion_run_service.list_runs_for_kb(
         kb_name=kb_name,
         user_id=_kb_guard.owner_user.id,
+        authorized_kb_id=record.id,
         page=page,
         limit=limit,
     )
@@ -1882,9 +1897,9 @@ async def get_ingestion_run(
 ) -> IngestionRunDetail:
     """Full run detail including per-item breakdown + error messages."""
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.READ, kb_name=kb_name)
-    await _require_kb_record(kb_name, _kb_guard.owner_user, _kb_guard)
+    record = await _require_kb_record(kb_name, _kb_guard.owner_user, _kb_guard)
 
-    row = await ingestion_run_service.get_run(run_id, user_id=_kb_guard.owner_user.id)
+    row = await ingestion_run_service.get_run(run_id, user_id=_kb_guard.owner_user.id, authorized_kb_id=record.id)
     if row is None or row.kb_name != kb_name:
         raise HTTPException(status_code=404, detail="Ingestion run not found.")
 
@@ -2119,8 +2134,11 @@ async def cancel_ingestion(
             raise HTTPException(status_code=400, detail=f"Cannot cancel job with status '{job_status}'")
 
         revoked = await task_service.revoke_task(job.job_id)
-        # Update status immediately so background task can see it
-        await job_service.update_job_status(job.job_id, JobStatus.CANCELLED)
+        # Update status immediately so background task can see it. Stamp the
+        # finish time with it: retention dates an unstamped terminal row from
+        # its creation, which deletes a long-running job the moment it is
+        # cancelled instead of after the configured window.
+        await job_service.update_job_status(job.job_id, JobStatus.CANCELLED, finished_timestamp=True)
 
         # Clean up any partially ingested chunks from this job. Forward the KB's
         # configured backend and its owner's id: remote backends name their

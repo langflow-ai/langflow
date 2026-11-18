@@ -97,6 +97,29 @@ def test_replacement_digest_preserves_legacy_no_dependency_shape() -> None:
     )
 
 
+def test_memory_preparation_is_explicit_and_bound_to_receipt() -> None:
+    base = ProjectReplacementRequest(description="digest", flows=[])
+    disabled = ProjectReplacementRequest(description="digest", flows=[], prepare_memory_bases=False)
+    enabled = ProjectReplacementRequest(description="digest", flows=[], prepare_memory_bases=True)
+    assert projects_module._replacement_request_digest(base) == projects_module._replacement_request_digest(disabled)
+    assert projects_module._replacement_request_digest(base) != projects_module._replacement_request_digest(enabled)
+
+
+async def test_memory_preparation_requires_capable_extension(monkeypatch) -> None:
+    from langflow.services.deployment_artifacts import activation
+
+    older_guard = AsyncMock()
+    monkeypatch.setattr(activation, "_extensions_loaded", True)
+    monkeypatch.setattr(activation, "_activation_guard", older_guard)
+    monkeypatch.setattr(activation, "_prepares_memory_bases", False)
+    with pytest.raises(HTTPException) as refused:
+        await activation.guard_project_activation(
+            request=ProjectReplacementRequest(description=None, flows=[], prepare_memory_bases=True)
+        )
+    assert refused.value.headers["X-Langflow-Error-Code"] == "memory_base_preparation_unavailable"
+    older_guard.assert_not_awaited()
+
+
 def test_replacement_variable_metadata_is_strict_and_bound_to_receipt() -> None:
     body = {"description": None, "flows": []}
     target = {"target_id": str(uuid4()), "declarations": [{"name": "KEY", "kind": "secret"}]}
@@ -127,12 +150,14 @@ async def test_activation_guard_failure_rolls_back_flows_variables_and_receipt(
         variable_id = variable.id
 
     async def refuse_after_variable_write(*, session, **_):
+        activation.register_activation_rollback_cleanup(cleanup)
         row = await session.get(Variable, variable_id)
         row.value = "new"
         session.add(row)
         await session.flush()
         raise HTTPException(status_code=409, detail="readiness failed")
 
+    cleanup = AsyncMock()
     monkeypatch.setattr(activation, "_activation_guard", refuse_after_variable_write)
     monkeypatch.setattr(activation, "_extensions_loaded", True)
     operation_id = uuid4()
@@ -142,6 +167,7 @@ async def test_activation_guard_failure_rolls_back_flows_variables_and_receipt(
         headers=logged_in_headers,
     )
     assert response.status_code == 409, response.text
+    cleanup.assert_awaited_once()
     async with session_scope() as session:
         assert (await session.get(Variable, variable_id)).value == "old"
         assert (await session.get(Flow, UUID(flow["id"]))).name == "keep-before-activation"
@@ -628,7 +654,7 @@ async def test_restore_creates_project_and_receipt_survives_project_deletion(
         "get_settings_service",
         lambda: SimpleNamespace(
             settings=SimpleNamespace(add_projects_to_mcp_servers=False),
-            auth_settings=SimpleNamespace(AUTO_LOGIN=True),
+            auth_settings=SimpleNamespace(AUTO_LOGIN=True, skip_auth_auto_login=False),
         ),
     )
     project_id = str(uuid4())
@@ -654,15 +680,14 @@ async def test_restore_creates_project_and_receipt_survives_project_deletion(
     assert receipt.json() == created.json()
 
 
+@pytest.mark.parametrize("auto_login", [False, True])
 async def test_restore_creates_project_without_mcp_server_when_api_key_issuance_is_denied(
-    client: AsyncClient, logged_in_headers: dict[str, str], monkeypatch
+    client: AsyncClient, logged_in_headers: dict[str, str], monkeypatch, auto_login
 ):
     """Mirrors _new_project's denial handling.
 
-    AUTO_LOGIN=false always auto-chooses apikey auth here (there is no
-    caller-supplied auth_settings on a replacement request), so a denied
-    issuance must not fail the create — it drops the MCP server and clears
-    auth_settings instead.
+    A default API key refused by deployment policy should not fail project creation.
+    It drops the MCP server and clears auth_settings instead.
     """
     from langflow.api.v1 import projects as projects_module
     from langflow.services.database.models.api_key.policy import (
@@ -676,7 +701,7 @@ async def test_restore_creates_project_without_mcp_server_when_api_key_issuance_
         "get_settings_service",
         lambda: SimpleNamespace(
             settings=SimpleNamespace(add_projects_to_mcp_servers=True),
-            auth_settings=SimpleNamespace(AUTO_LOGIN=False),
+            auth_settings=SimpleNamespace(AUTO_LOGIN=auto_login, skip_auth_auto_login=False),
         ),
     )
     previous_policy = get_api_key_issuance_policy()

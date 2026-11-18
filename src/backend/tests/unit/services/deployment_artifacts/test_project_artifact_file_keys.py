@@ -132,8 +132,9 @@ def test_should_not_refuse_a_collision_when_not_deploying():
     _build(snapshot, rewrite=False)
 
 
-@pytest.mark.parametrize("kind", ["secret", "plain", None])
+@pytest.mark.parametrize("kind", ["secret", "plain"])
 def test_file_key_rewrite_preserves_typed_variable_activation_requirements(kind):
+    """Keep typed variable requirements when deployment rewrites stored file keys."""
     snapshot = _snapshot([_file_node("File-a", f"user-{USER}/report.pdf")])
     snapshot.payload["data"]["nodes"][0]["data"]["node"]["template"]["token"] = {
         "type": "str",

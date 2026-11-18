@@ -267,6 +267,7 @@ async def retrieve_vertices_order(
                         flow_id=flow_id,
                         graph_data=trusted_data,
                         chat_service=chat_service,
+                        user_id=str(current_user.id),
                         execution_principal=execution_principal,
                     )
                 else:
@@ -287,6 +288,7 @@ async def retrieve_vertices_order(
                     flow_id=flow_id,
                     graph_data=data.model_dump(),
                     chat_service=chat_service,
+                    user_id=str(current_user.id),
                     execution_principal=execution_principal,
                 )
             graph = graph.prepare(stop_component_id, start_component_id)
@@ -715,6 +717,7 @@ async def build_vertex(
                     flow_id=flow_id_str,
                     chat_service=chat_service,
                     graph_data=sanitized_data,
+                    user_id=str(current_user.id),
                     execution_principal=execution_principal,
                 )
             run_id = str(uuid.uuid4())

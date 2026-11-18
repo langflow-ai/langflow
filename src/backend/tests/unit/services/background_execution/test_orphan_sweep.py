@@ -11,6 +11,10 @@ from uuid import uuid4
 import pytest
 from filelock import FileLock
 from langflow.services.background_execution import service as service_module
+from langflow.services.background_execution.db_backend import DBBackgroundQueue
+from langflow.services.background_execution.executor import InProcessExecutor
+from langflow.services.background_execution.in_process_backend import InProcessBackend
+from langflow.services.background_execution.live_bus import InMemoryLiveBus
 from langflow.services.background_execution.service import BackgroundExecutionService
 from langflow.services.database.models.jobs.model import JobStatus
 from langflow.services.deps import get_job_service, get_settings_service
@@ -112,6 +116,68 @@ async def test_orphaned_queued_is_re_enqueued_and_runs(active_user):
         await svc.stop()
 
 
+async def test_startup_sweep_leaves_jobs_for_injected_external_workers(active_user, monkeypatch):
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "background_backend", "default")
+    job_service = get_job_service()
+    queued_id, orphan_id = uuid4(), uuid4()
+    await job_service.create_job(job_id=queued_id, flow_id=uuid4(), user_id=active_user.id)
+    await job_service.create_job(
+        job_id=orphan_id, flow_id=uuid4(), user_id=active_user.id, status=JobStatus.IN_PROGRESS
+    )
+    backend = DBBackgroundQueue(job_service=job_service, owner="external-worker")
+    svc = BackgroundExecutionService(settings_service=settings_service, backend=backend)
+    try:
+        await svc.sweep_orphans_on_startup()
+
+        queued = await job_service.get_job_by_job_id(queued_id)
+        orphan = await job_service.get_job_by_job_id(orphan_id)
+        assert queued.status == JobStatus.QUEUED
+        assert "owner" not in (queued.job_metadata or {})
+        assert "heartbeat_at" not in (queued.job_metadata or {})
+        assert orphan.status == JobStatus.IN_PROGRESS
+        assert orphan.error is None
+        assert await job_service.read_events(orphan_id) == []
+    finally:
+        await svc.stop()
+
+
+async def test_startup_sweep_recovers_jobs_with_injected_in_process_backend(active_user, monkeypatch):
+    settings_service = get_settings_service()
+    settings = settings_service.settings
+    monkeypatch.setattr(settings, "background_backend", "scaled")
+    job_service = get_job_service()
+    queued_id, orphan_id = uuid4(), uuid4()
+    await job_service.create_job(job_id=queued_id, flow_id=uuid4(), user_id=active_user.id)
+    await job_service.create_job(
+        job_id=orphan_id, flow_id=uuid4(), user_id=active_user.id, status=JobStatus.IN_PROGRESS
+    )
+    backend = InProcessBackend(
+        executor=InProcessExecutor(max_concurrency=1),
+        bus=InMemoryLiveBus(),
+        settings=settings,
+        owner=None,
+        get_frame_source_factory=lambda: (lambda **_kw: _scripted),
+    )
+    svc = BackgroundExecutionService(settings_service=settings_service, backend=backend)
+    try:
+        await svc.sweep_orphans_on_startup()
+
+        orphan = await job_service.get_job_by_job_id(orphan_id)
+        assert orphan.status == JobStatus.FAILED
+        assert orphan.error == {"type": "worker_lost"}
+        assert [event.event_type for event in await job_service.read_events(orphan_id)] == ["run_failed"]
+        queued = None
+        for _ in range(50):
+            queued = await job_service.get_job_by_job_id(queued_id)
+            if queued.status == JobStatus.COMPLETED:
+                break
+            await asyncio.sleep(0.05)
+        assert queued.status == JobStatus.COMPLETED
+    finally:
+        await svc.stop()
+
+
 async def test_queued_claimed_then_crashed_is_rerun_not_failed(active_user):
     """A QUEUED job lease-claimed by a sweep that crashed before running stays re-runnable.
 
@@ -166,11 +232,13 @@ async def test_startup_enqueue_failure_releases_queued_lease(active_user, monkey
         frame_source_factory=lambda **_kw: _scripted,
     )
 
-    async def fail_enqueue(**_kwargs):
+    async def fail_dispatch(*_args, **_kwargs):
         msg = "executor unavailable"
         raise RuntimeError(msg)
 
-    monkeypatch.setattr(svc, "_enqueue", fail_enqueue)
+    # Patch the backend seam the facade now dispatches through, not the removed
+    # private _enqueue: the recovery path is what matters, wherever it routes.
+    monkeypatch.setattr(svc._backend, "dispatch", fail_dispatch)
 
     await svc.start()
     try:

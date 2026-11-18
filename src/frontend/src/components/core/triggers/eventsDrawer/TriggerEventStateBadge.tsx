@@ -13,14 +13,15 @@ const STYLE: Record<
   { icon: string; className: string }
 > = {
   queued: { icon: "Clock", className: "bg-muted text-muted-foreground" },
-  running: {
-    icon: "LoaderCircle",
+  submitted: {
+    icon: "Send",
     className: "bg-accent-indigo text-accent-indigo-foreground",
   },
   completed: {
     icon: "CircleCheck",
     className: "bg-accent-emerald text-accent-emerald-foreground",
   },
+  skipped: { icon: "SkipForward", className: "bg-muted text-muted-foreground" },
   failed: {
     icon: "CircleX",
     className: "bg-error-background text-error-foreground",
@@ -34,7 +35,7 @@ const STYLE: Record<
 export function TriggerEventStateBadge({
   event,
 }: {
-  event: Pick<TriggerEventRead, "state">;
+  event: Pick<TriggerEventRead, "state" | "job_id">;
 }) {
   const { t } = useTranslation();
   const state = eventDisplayStateOf(event);
@@ -50,12 +51,14 @@ export function TriggerEventStateBadge({
       <ForwardedIconComponent
         name={style.icon}
         aria-hidden="true"
-        className={cn(
-          "h-3 w-3",
-          state === "running" && "motion-safe:animate-spin",
-        )}
+        className="h-3 w-3"
       />
-      {t(`triggers.events.state.${state}`)}
+      {t(
+        event.job_id
+          ? "triggers.events.flowStatus"
+          : "triggers.events.processingStatus",
+        { status: t(`triggers.events.state.${state}`) },
+      )}
     </Badge>
   );
 }

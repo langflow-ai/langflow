@@ -16,8 +16,11 @@ closed; trusted service callers outside a graph may supply both IDs explicitly.
 from __future__ import annotations
 
 import contextvars
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import NAMESPACE_DNS, UUID, uuid5
+
+if TYPE_CHECKING:
+    from lfx.services.authorization.base import ExecutionPrincipal
 
 # Fixed namespace for turning an opaque (non-UUID) serving-plane end-user id into a
 # stable UUID for the UUID-typed ``message.user_id`` column. ``uuid5`` is a pure
@@ -95,6 +98,28 @@ def reset_current_message_executor_id(token: contextvars.Token[UUID | None]) -> 
     _current_message_executor_id.reset(token)
 
 
+_current_execution_principal: contextvars.ContextVar[ExecutionPrincipal | None] = contextvars.ContextVar(
+    "lfx_current_message_execution_principal", default=None
+)
+
+
+def get_current_message_execution_principal() -> ExecutionPrincipal | None:
+    """Return the trusted graph principal bound for the current component."""
+    return _current_execution_principal.get()
+
+
+def set_current_message_execution_principal(
+    principal: ExecutionPrincipal | None,
+) -> contextvars.Token[ExecutionPrincipal | None]:
+    """Bind runtime principal provenance beside the message executor."""
+    return _current_execution_principal.set(principal)
+
+
+def reset_current_message_execution_principal(token: contextvars.Token[ExecutionPrincipal | None]) -> None:
+    """Restore the enclosing graph's principal provenance."""
+    _current_execution_principal.reset(token)
+
+
 # Ambient "may this run persist chat memory?" flag. Bound per component execution
 # (next to the flow-id scope) from ``graph.persist_messages`` so ``astore_message``
 # can skip the DB write for anonymous serving requests, which must run ephemerally.
@@ -119,6 +144,28 @@ def set_messages_persist(persist: bool) -> contextvars.Token[bool]:  # noqa: FBT
 def reset_messages_persist(token: contextvars.Token[bool]) -> None:
     """Restore the previous message-persistence flag."""
     _messages_persist.reset(token)
+
+
+# Checked at the storage read, not in components, so frozen saved component code is covered.
+_evals_memory_isolated: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "lfx_evals_memory_isolated",
+    default=False,
+)
+
+
+def is_evals_memory_isolated() -> bool:
+    """Return whether stored chat-history reads are disabled for the current Evals row."""
+    return _evals_memory_isolated.get()
+
+
+def set_evals_memory_isolated(isolated: bool) -> contextvars.Token[bool]:  # noqa: FBT001
+    """Bind the Evals memory-isolation flag for the current async task."""
+    return _evals_memory_isolated.set(isolated)
+
+
+def reset_evals_memory_isolated(token: contextvars.Token[bool]) -> None:
+    """Restore the previous Evals memory-isolation flag."""
+    _evals_memory_isolated.reset(token)
 
 
 def _clean_identity(value: Any) -> str | UUID | None:

@@ -16,6 +16,7 @@ from lfx.processing.process import process_tweaks_on_graph, validate_targeted_in
 from lfx.schema.legacy_render import project_payload_to_v1
 from lfx.schema.schema import InputValueRequest
 from lfx.utils.file_path_security import LocalFileAccessError
+from lfx.utils.flow_validation import prepare_flow_build_for_user
 from sqlmodel import select
 
 from langflow.api.disconnect import DisconnectHandlerStreamingResponse
@@ -40,6 +41,7 @@ from langflow.api.v1.schemas import (
     VertexBuildResponse,
 )
 from langflow.events.event_manager import EventManager
+from langflow.exceptions.api import WorkflowServiceUnavailableError
 from langflow.exceptions.component import ComponentBuildError
 from langflow.schema.message import ErrorMessage
 from langflow.schema.schema import OutputValue
@@ -612,7 +614,15 @@ async def _generate_flow_events(
             # Why: re-dispatching here (resume/job_id still set) recurses to RecursionError; a missing
             # or expired checkpoint is unrecoverable, so surface a clean 404 instead.
             raise HTTPException(status_code=404, detail="Checkpoint expired or not found; cannot resume this run.")
+        sanitized_payload = await prepare_flow_build_for_user(
+            checkpoint.flow_payload, is_superuser=current_user.is_superuser
+        )
+        if sanitized_payload is not None:
+            checkpoint = checkpoint.model_copy(update={"flow_payload": sanitized_payload})
         graph = LfxGraph.resume_from_checkpoint(checkpoint, checkpoint_store=store)
+        # A background checkpoint holds the untweaked flow, so re-apply the run's tweaks as the fresh path does.
+        if tweaks:
+            process_tweaks_on_graph(graph, tweaks)
         # A checkpoint stores flow payload + user_id and deliberately never persists an
         # execution principal, so a restored graph carries ``unknown()`` and would deny
         # every connection. Re-stamp from the principal admitted for THIS resume request.
@@ -909,6 +919,7 @@ async def _generate_flow_events(
             vertex.add_build_time(timedelta)
             # Capture both inactivated and conditionally excluded vertices
             inactivated_vertices = list(graph.inactivated_vertices.union(graph.conditionally_excluded_vertices))
+            branch_skips = graph.branch_skips()
             graph.reset_inactivated_vertices(vertex.id)
             graph.reset_activated_vertices()
 
@@ -927,6 +938,7 @@ async def _generate_flow_events(
 
             build_response = VertexBuildResponse(
                 inactivated_vertices=list(set(inactivated_vertices)),
+                branch_skips=branch_skips or None,
                 next_vertices_ids=list(set(next_runnable_vertices)),
                 top_level_vertices=list(set(top_level_vertices)),
                 valid=valid,
@@ -1183,7 +1195,7 @@ async def _generate_flow_events(
                 session_id=graph.session_id or str(flow_id),
                 job_id=_run_id_uuid,
             )
-        except (RuntimeError, ValueError, OSError):
+        except (RuntimeError, ValueError, OSError, WorkflowServiceUnavailableError):
             await logger.awarning("Memory base hook scheduling failed for flow %s", flow_id, exc_info=True)
 
     await event_manager.queue.put((None, None, time.time()))

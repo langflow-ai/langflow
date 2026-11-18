@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING
 from lfx.base.mcp.source_policy import (
     has_leading_cmd_exec_flag,
     is_cmd_exec_flag,
+    is_posix_shell_exec_flag,
     parse_mcp_shell_wrapper,
     validate_mcp_stdio_source_policy,
 )
@@ -358,6 +359,8 @@ def _is_shell_exec_flag(arg: str, base_command: str = "") -> bool:
     forms such as ``/q/k``). It is opt-in because a ``/``-prefixed token is an ordinary path
     operand for every other command that consults this helper.
     """
+    if base_command in {"sh", "bash"}:
+        return is_posix_shell_exec_flag(arg)
     arg_lower = arg.lower()
     if arg_lower in SHELL_EXEC_FLAGS:
         return True
@@ -422,7 +425,7 @@ def _is_file_path(command: str) -> bool:
     """Whether command looks like a filesystem path (Unix/relative/Windows) vs a bare command name."""
     drive_letter_len = 3
     return (
-        command.startswith(("/", "./", "../"))
+        "/" in command.split(" ", 1)[0]
         or "\\" in command
         or (len(command) >= drive_letter_len and command[1:3] in {":\\", ":/"})  # Windows drive letter
     )
@@ -732,34 +735,17 @@ def validate_mcp_stdio_config(
             raise MCPStdioSecurityError(msg)
 
         if base_command in SHELL_WRAPPERS:
-            # Derive the payload from the parsed wrapper rather than a fixed argv index:
-            # cmd.exe allows benign switches ahead of the execution switch ("/d /c uvx ..."),
-            # so args[1] would be "/c" there and this gate would report "cannot execute 'c'".
-            # ``_has_leading_shell_exec_flag`` still guards the position, so a script operand
-            # cannot precede the execution switch.
+            # Use the canonical executable while retaining the full argv for validation.
             wrapped_command = None
             wrapped_args: list[str] = []
             if _has_leading_shell_exec_flag(args, base_command) and len(args) > 1:
-                # cmd.exe allows benign switches ahead of the execution switch ("/d /c uvx ..."),
-                # so a fixed args[1] would be "/c" and this gate would report "cannot execute 'c'".
-                # Only cmd needs the parsed payload: sh/bash carry their whole command in one
-                # argument ("sh -c 'id > /tmp/x'"), and splitting that here would let the gate
-                # inspect only the first token instead of the full command string.
-                # ``parse_mcp_shell_wrapper`` rejects shell control characters in the cmd
-                # payload (and unparseable quoting) with a bare ValueError. This function's
-                # contract is MCPStdioSecurityError for every policy denial, so convert it
-                # here the same way the source-policy call above does -- otherwise a
-                # ``cmd /c "uvx x && calc"`` denial escapes as a different exception type
-                # than the equivalent ``sh -c`` denial raised by the metacharacter scan.
+                # Parser denials must use MCPStdioSecurityError so callers handle every policy refusal consistently.
                 try:
-                    parsed_wrapper = parse_mcp_shell_wrapper(base_command, args) if base_command == "cmd" else None
+                    parsed_wrapper = parse_mcp_shell_wrapper(base_command, args)
                 except ValueError as exc:
                     raise MCPStdioSecurityError(str(exc)) from exc
                 if parsed_wrapper is not None:
                     wrapped_command, wrapped_args = parsed_wrapper
-                else:
-                    wrapped_command = args[1]
-                    wrapped_args = args[2:]
 
             if wrapped_command:
                 wrapped_base = extract_base_command(wrapped_command)
@@ -771,19 +757,9 @@ def validate_mcp_stdio_config(
                     )
                     raise MCPStdioSecurityError(msg)
 
-                # Validate the wrapped package runner too. The command may be one string
-                # (``sh -c 'uvx package'``) or split tokens (``cmd /c uvx package``).
-                try:
-                    wrapped_tokens = shlex.split(wrapped_command)
-                except ValueError:
-                    wrapped_tokens = wrapped_command.split()
-                if wrapped_tokens:
-                    nested_command = wrapped_tokens[0]
-                    nested_args = wrapped_tokens[1:] + wrapped_args
-                    nested_base = extract_base_command(nested_command)
-                    _validate_interpreter_invocation(nested_base, nested_args, hardened=interpreter_hardening)
-                    if nested_base == "docker":
-                        _validate_docker_invocation(nested_args, hardened=docker_hardening)
+                _validate_interpreter_invocation(wrapped_base, wrapped_args, hardened=interpreter_hardening)
+                if wrapped_base == "docker":
+                    _validate_docker_invocation(wrapped_args, hardened=docker_hardening)
 
     # Argument metacharacters and dangerous keywords.
     if args:

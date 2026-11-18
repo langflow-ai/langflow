@@ -92,7 +92,11 @@ def trigger_reason(row: Trigger, *, recovery_reason: TriggerReason | None = None
     if state == TriggerState.ACTIVE.value:
         return TriggerReason.DEGRADED if row.last_error else None
     if state == TriggerState.PENDING.value:
-        return TriggerReason.CONFIG_INVALID if row.last_error else TriggerReason.PENDING
+        if row.last_error:
+            return TriggerReason.CONFIG_INVALID
+        if row.kind == "whatsapp.event" and not row.signing_secret_encrypted:
+            return TriggerReason.READY_TO_RESUME
+        return TriggerReason.PENDING
     if state == TriggerState.PAUSED.value:
         return _paused_reason(row)
     if state == TriggerState.NEEDS_RECONNECT.value:

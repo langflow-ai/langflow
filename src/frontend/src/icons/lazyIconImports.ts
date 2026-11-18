@@ -1,5 +1,18 @@
 // Export the lazy loading mapping for icons
 export const lazyIconsMapping = {
+  Salesforce: () =>
+    import("@/icons/Salesforce").then((mod) => ({
+      default: mod.SalesforceIcon,
+    })),
+
+  WhatsApp: () =>
+    import("@/icons/WhatsApp").then((mod) => ({ default: mod.WhatsAppIcon })),
+  ServiceNow: () =>
+    import("@/icons/ServiceNow").then((mod) => ({
+      default: mod.ServiceNowIcon,
+    })),
+  Telegram: () =>
+    import("@/icons/Telegram").then((mod) => ({ default: mod.TelegramIcon })),
   AIML: () => import("@/icons/AIML").then((mod) => ({ default: mod.AIMLIcon })),
   Agentics: () =>
     import("@/icons/Agentics").then((mod) => ({
@@ -393,6 +406,8 @@ export const lazyIconsMapping = {
     import("@/icons/Olivya").then((mod) => ({ default: mod.OlivyaIcon })),
   Ollama: () =>
     import("@/icons/Ollama").then((mod) => ({ default: mod.OllamaIcon })),
+  Olostep: () =>
+    import("@/icons/Olostep").then((mod) => ({ default: mod.OlostepIcon })),
   OpenAI: () =>
     import("@/icons/OpenAi").then((mod) => ({ default: mod.OpenAiIcon })),
   OpenAICopy: () =>
@@ -423,6 +438,8 @@ export const lazyIconsMapping = {
     import("@/icons/Pinecone").then((mod) => ({ default: mod.PineconeIcon })),
   Plivo: () =>
     import("@/icons/Plivo").then((mod) => ({ default: mod.PlivoIcon })),
+  PopNow: () =>
+    import("@/icons/PopNow").then((mod) => ({ default: mod.PopNowIcon })),
   Postgres: () =>
     import("@/icons/Postgres").then((mod) => ({ default: mod.PostgresIcon })),
   Python: () =>

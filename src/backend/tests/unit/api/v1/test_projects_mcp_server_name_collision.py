@@ -38,6 +38,7 @@ async def _create_project(client: AsyncClient, headers: dict[str, str], name: st
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("administrator_user")
 async def test_should_create_both_projects_when_names_share_mcp_server_name_prefix(
     client: AsyncClient, logged_in_headers
 ):
@@ -55,6 +56,7 @@ async def test_should_create_both_projects_when_names_share_mcp_server_name_pref
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("administrator_user")
 async def test_should_keep_existing_server_name_when_project_has_no_prefix_collision(
     client: AsyncClient, logged_in_headers
 ):
@@ -66,6 +68,7 @@ async def test_should_keep_existing_server_name_when_project_has_no_prefix_colli
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("administrator_user")
 async def test_should_remove_each_projects_own_server_when_prefix_owner_is_deleted_first(
     client: AsyncClient, logged_in_headers
 ):
@@ -83,6 +86,7 @@ async def test_should_remove_each_projects_own_server_when_prefix_owner_is_delet
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("administrator_user")
 async def test_should_move_disambiguated_server_when_project_is_renamed(client: AsyncClient, logged_in_headers):
     await _create_project(client, logged_in_headers, PROJECT_A)
     project_b = await _create_project(client, logged_in_headers, PROJECT_B)
@@ -99,6 +103,7 @@ async def test_should_move_disambiguated_server_when_project_is_renamed(client: 
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("administrator_user")
 async def test_should_rename_into_a_taken_prefix_without_conflict(client: AsyncClient, logged_in_headers):
     project_a = await _create_project(client, logged_in_headers, PROJECT_A)
     project_c = await _create_project(client, logged_in_headers, "Quarterly Reports")

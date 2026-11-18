@@ -1545,7 +1545,7 @@ class TestUpgradeFlowOption:
 
         with (
             patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=self._registry()),
-            pytest.raises(RunError, match="incompatible components"),
+            pytest.raises(RunError, match="components requiring attention"),
         ):
             await run_flow(flow_json=flow_json, upgrade_flow="check")
 
@@ -1559,7 +1559,7 @@ class TestUpgradeFlowOption:
 
         with (
             patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=self._registry()),
-            pytest.raises(RunError, match="incompatible components"),
+            pytest.raises(RunError, match="components requiring attention"),
         ):
             await run_flow(script_path=f, upgrade_flow="check")
 
@@ -1577,7 +1577,7 @@ class TestUpgradeFlowOption:
 
         with (
             patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=self._registry()),
-            pytest.raises(RunError, match="incompatible components"),
+            pytest.raises(RunError, match="components requiring attention"),
         ):
             await run_flow(script_path=f, upgrade_flow="check")
 
@@ -1622,7 +1622,7 @@ class TestUpgradeFlowOption:
 
         with (
             patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=self._registry()),
-            pytest.raises(RunError, match="incompatible components"),
+            pytest.raises(RunError, match="components requiring attention"),
         ):
             await run_flow(flow_json=flow_json, upgrade_flow="check")
 
@@ -1637,7 +1637,7 @@ class TestUpgradeFlowOption:
         with (
             patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=self._registry()),
             patch("sys.stdin", StringIO(_json.dumps(envelope))),
-            pytest.raises(RunError, match="incompatible components"),
+            pytest.raises(RunError, match="components requiring attention"),
         ):
             await run_flow(stdin=True, upgrade_flow="check")
 

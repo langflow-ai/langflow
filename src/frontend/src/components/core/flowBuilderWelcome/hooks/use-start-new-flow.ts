@@ -1,5 +1,5 @@
-import { useCallback } from "react";
-import { useParams } from "react-router-dom";
+import { useCallback, useEffect, useRef } from "react";
+import { useLocation, useParams } from "react-router-dom";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import useFlowBuilderWelcomeStore from "@/stores/flowBuilderWelcomeStore";
@@ -19,9 +19,26 @@ export function useStartNewFlow() {
   const navigate = useCustomNavigate();
   const { folderId } = useParams();
   const openWelcome = useFlowBuilderWelcomeStore((state) => state.open);
+  // The button shows nothing until the canvas opens, so a second click would
+  // post another flow: a spare one, or a "Name must be unique" error with the
+  // first flow never opened. Hold clicks until the route changes, since the
+  // router commits it in a transition after navigate() returns.
+  const starting = useRef(false);
+  const { key: locationKey } = useLocation();
+  useEffect(() => {
+    starting.current = false;
+  }, [locationKey]);
 
   return useCallback(async () => {
-    const id = await addFlow();
+    if (starting.current) return;
+    starting.current = true;
+    let id: string;
+    try {
+      id = await addFlow();
+    } catch (error) {
+      starting.current = false;
+      throw error;
+    }
     // Open BEFORE navigating so the canvas mounts with the welcome flag
     // already true — guarantees the overlay appears on the very first paint
     // instead of flashing the empty canvas then animating in.

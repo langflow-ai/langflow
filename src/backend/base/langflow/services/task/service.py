@@ -34,6 +34,13 @@ class TaskService(Service):
             return CeleryBackend()
         return AnyIOBackend()
 
+    @staticmethod
+    async def _admit_task() -> None:
+        from langflow.api.utils.migration_pause import admitted_maintenance_caller, write_refusal
+
+        if refusal := await write_refusal(admitted_maintenance_caller()):
+            raise WorkflowServiceUnavailableError(refusal)
+
     async def fire_and_forget_task(self, task_func: Callable[..., Any], *args: Any, **kwargs: Any) -> str:
         """Launch a task in the background and forget about it.
 
@@ -52,6 +59,7 @@ class TaskService(Service):
         Returns:
             str: A task_id that can be used to track or cancel the task via JobQueueService.
         """
+        await self._admit_task()
         if self.use_celery:
             task_id, _ = self.backend.launch_task(task_func, *args, **kwargs)
             return task_id
@@ -84,9 +92,11 @@ class TaskService(Service):
         *args: Any,
         **kwargs: Any,
     ) -> Any:
+        await self._admit_task()
         return await task_func(*args, **kwargs)
 
     async def launch_task(self, task_func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
+        await self._admit_task()
         task = self.backend.launch_task(task_func, *args, **kwargs)
         return await task if isinstance(task, Coroutine) else task
 

@@ -4,6 +4,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from langchain_core.callbacks import BaseCallbackHandler
 from lfx.components.langchain_utilities.csv_agent import CSVAgentComponent
 from lfx.schema import Message
 
@@ -245,6 +246,7 @@ class TestCSVAgentComponent:
     def test_build_agent_response_with_local_file(self, component_class, model_value, mock_langchain_experimental):
         """Test build_agent_response with local CSV file."""
         component = component_class()
+        callbacks = [BaseCallbackHandler()]
 
         # Create a real CSV file
         with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
@@ -268,6 +270,7 @@ class TestCSVAgentComponent:
             with (
                 patch("lfx.components.langchain_utilities.csv_agent.get_settings_service") as mock_get_settings,
                 patch.object(component, "_get_llm", return_value=MagicMock()),
+                patch.object(component, "get_langchain_callbacks", return_value=callbacks),
             ):
                 mock_create_agent = mock_langchain_experimental
                 mock_settings = MagicMock()
@@ -282,6 +285,7 @@ class TestCSVAgentComponent:
 
                 assert isinstance(result, Message)
                 assert result.text == "The sum is 3"
+                assert mock_agent.invoke.call_args.kwargs["config"]["callbacks"] == callbacks
                 mock_create_agent.assert_called_once()
                 # Verify real file was passed
                 call_kwargs = mock_create_agent.call_args[1]

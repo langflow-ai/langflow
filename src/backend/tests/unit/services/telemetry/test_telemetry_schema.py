@@ -78,7 +78,7 @@ class TestDeploymentPayload:
         assert data["deploymentSuccess"] is True
         assert data["deploymentErrorMessage"] == ""
         assert data["wxoTenantId"] == "tenant-xyz"
-        assert data["clientType"] == "desktop"
+        assert data["subProductTitle"] == "desktop"
 
     def test_deployment_payload_roundtrip(self):
         """Test DeploymentPayload roundtrip serialization."""
@@ -156,9 +156,9 @@ class TestRunPayload:
 
         assert data["runIsWebhook"] is True
         assert data["runSeconds"] == 180
-        assert data["runSuccess"] is True
+        assert data["successFlag"] is True
         assert data["runErrorMessage"] == ""
-        assert data["clientType"] == "desktop"
+        assert data["subProductTitle"] == "desktop"
         assert data["runId"] is None
 
     def test_run_payload_with_negative_seconds(self):
@@ -211,7 +211,7 @@ class TestShutdownPayload:
         data = payload.model_dump(by_alias=True)
 
         assert data["timeRunning"] == 7200
-        assert data["clientType"] == "desktop"
+        assert data["subProductTitle"] == "desktop"
 
     def test_shutdown_payload_with_negative_time(self):
         """Test ShutdownPayload accepts negative time (no validation in schema)."""
@@ -273,7 +273,7 @@ class TestEmailPayload:
 
         data = payload.model_dump(by_alias=True)
 
-        assert data["clientType"] == self.CLIENT_TYPE_DESKTOP
+        assert data["subProductTitle"] == self.CLIENT_TYPE_DESKTOP
         assert data["email"] == self.TEST_EMAIL_1
 
 
@@ -345,7 +345,7 @@ class TestVersionPayload:
         assert data["autoLogin"] is True
         assert data["cacheType"] == "redis"
         assert data["backendOnly"] is True
-        assert data["clientType"] == "desktop"
+        assert data["subProductTitle"] == "desktop"
 
     def test_version_payload_with_special_characters(self):
         """Test VersionPayload with special characters in strings."""
@@ -417,7 +417,7 @@ class TestPlaygroundPayload:
         assert data["playgroundComponentCount"] == 10
         assert data["playgroundSuccess"] is False
         assert data["playgroundErrorMessage"] == "Component failed"
-        assert data["clientType"] == "desktop"
+        assert data["subProductTitle"] == "desktop"
         assert data["playgroundRunId"] is None
 
     def test_playground_payload_with_negative_seconds(self):
@@ -518,7 +518,7 @@ class TestComponentPayload:
         assert data["componentSeconds"] == 3
         assert data["componentSuccess"] is True
         assert data["componentErrorMessage"] is None
-        assert data["clientType"] == "oss"
+        assert data["subProductTitle"] == "oss"
         assert data["componentRunId"] is None
 
     def test_component_payload_with_negative_seconds(self):
@@ -691,7 +691,7 @@ class TestPayloadEdgeCases:
         run_payload = RunPayload(run_seconds=60, run_success=True, client_type=None, run_error_message="", run_id=None)
 
         data = run_payload.model_dump(by_alias=True, exclude_none=True)
-        assert "clientType" not in data  # Should be excluded when None
+        assert "subProductTitle" not in data  # Should be excluded when None
 
     def test_payload_serialization_with_empty_strings(self):
         """Test payload serialization with empty strings."""

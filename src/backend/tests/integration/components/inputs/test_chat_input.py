@@ -15,23 +15,23 @@ from tests.integration.utils import pyleak_marker, run_single_component
 pytestmark = pyleak_marker(tasks=False, blocking=False)
 
 
-async def test_default():
-    outputs = await run_single_component(ChatInput, run_input="hello")
+async def test_default(active_user):
+    outputs = await run_single_component(ChatInput, run_input="hello", user_id=str(active_user.id))
     assert isinstance(outputs["message"], Message)
     assert outputs["message"].text == "hello"
     assert outputs["message"].sender == "User"
     assert outputs["message"].sender_name == "User"
 
-    outputs = await run_single_component(ChatInput, run_input="")
+    outputs = await run_single_component(ChatInput, run_input="", user_id=str(active_user.id))
     assert isinstance(outputs["message"], Message)
     assert outputs["message"].text == ""
     assert outputs["message"].sender == "User"
     assert outputs["message"].sender_name == "User"
 
 
-async def test_sender():
+async def test_sender(active_user):
     outputs = await run_single_component(
-        ChatInput, inputs={"sender": "Machine", "sender_name": "AI"}, run_input="hello"
+        ChatInput, inputs={"sender": "Machine", "sender_name": "AI"}, run_input="hello", user_id=str(active_user.id)
     )
     assert isinstance(outputs["message"], Message)
     assert outputs["message"].text == "hello"
@@ -39,9 +39,9 @@ async def test_sender():
     assert outputs["message"].sender_name == "AI"
 
 
-async def test_do_not_store_messages():
+async def test_do_not_store_messages(active_user):
     session_id = "test-session-id"
-    flow_id, user_id = str(uuid4()), str(uuid4())
+    flow_id, user_id = str(uuid4()), str(active_user.id)
     outputs = await run_single_component(
         ChatInput,
         inputs={"should_store_message": True},

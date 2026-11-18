@@ -1337,8 +1337,16 @@ async def test_cancel_build_public_tmp_job_accessible_by_any_auth_user(
 
 @pytest.mark.asyncio
 @pytest.mark.security
-async def test_job_owner_cleaned_up_after_cleanup_job():
+@pytest.mark.parametrize("admission_delay", [0, 0.4])
+async def test_job_owner_cleaned_up_after_cleanup_job(monkeypatch, admission_delay):
     """JobQueueService.cleanup_job removes the _job_owners entry for the job."""
+    from langflow.api.utils import migration_pause
+
+    async def unpaused_database():
+        await asyncio.sleep(admission_delay)
+        return False
+
+    monkeypatch.setattr(migration_pause, "_database_pause_status", unpaused_database)
     service = JobQueueService()
     service.start()
 
@@ -1352,7 +1360,9 @@ async def test_job_owner_cleaned_up_after_cleanup_job():
             await asyncio.sleep(0)
 
         service.start_job(job_id, _noop())
-        await asyncio.sleep(0.05)
+        task = service._queues[job_id][2]
+        assert task is not None
+        await asyncio.wait_for(task, timeout=2.0)
         await service.register_job_owner(job_id, user_id)
 
         assert await service.get_job_owner(job_id) == user_id

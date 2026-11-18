@@ -1,5 +1,6 @@
 """Remote MCP schemas must not replace component connection configuration."""
 
+from copy import deepcopy
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -28,13 +29,23 @@ def _args_schema_with_field(field_name):
 
 
 @pytest.mark.parametrize("field_name", RESERVED_INPUT_NAMES)
-async def test_remote_schema_cannot_replace_reserved_component_input(field_name):
-    component = _component_with_tool(_args_schema_with_field(field_name))
+@pytest.mark.parametrize("refresh_tools", [False, True])
+async def test_remote_schema_cannot_replace_reserved_component_input(field_name, refresh_tools):
+    """Reject the whole schema before replacing prior inputs or adding an earlier valid field."""
+    args_schema = _args_schema_with_field("new_argument")
+    args_schema.model_fields.update(_args_schema_with_field(field_name).model_fields)
+    component = _component_with_tool(args_schema)
+    if refresh_tools:
+        tool = component.tools[0]
+        component.tools = []
+        component.update_tool_list = AsyncMock(return_value=([tool], {"name": "refreshed-server"}))
     build_config = {name: {"value": "component-value"} for name in RESERVED_INPUT_NAMES}
+    build_config["previous_argument"] = {"value": "saved-value", "required": False}
+    previous_config = deepcopy(build_config)
 
     await component._update_tool_config(build_config, "remote_tool")
 
-    assert build_config[field_name] == {"value": "component-value"}
+    assert build_config == previous_config
 
 
 async def test_remote_schema_preserves_defaults_for_valid_tool_inputs():

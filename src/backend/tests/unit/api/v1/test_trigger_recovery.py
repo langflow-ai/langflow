@@ -75,7 +75,11 @@ async def make_rejected_trigger(owner_id, *, consent=False):
         session.add(trigger)
         await session.flush()
         identifiers = connection.id, trigger.id, flow.id
-    worker = SimpleNamespace(connection_id=connection.id, triggers=[SimpleNamespace(id=trigger.id)])
+    worker = SimpleNamespace(
+        connection_id=connection.id,
+        connection_updated_at=None,
+        triggers=[SimpleNamespace(id=trigger.id)],
+    )
     error = (
         ConnectionNotAuthorizedError(provider="google", reason="non-interactive-opt-in-required")
         if consent

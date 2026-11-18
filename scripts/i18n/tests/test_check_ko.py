@@ -6,6 +6,7 @@ import check_ko
 import pytest
 
 BACKEND_EN = check_ko.load(check_ko.BACKEND_DIR / "en.json")
+LOCALIZED_COMPONENTS = ["inboundwebhooktrigger", "scheduletrigger", "decisionmodel", "smartrouter"]
 
 
 def _name_key(component: str) -> str:
@@ -30,22 +31,22 @@ def _warnings(en_value: str, ko_value: str) -> list[str]:
 
 
 class TestBackendNameKeys:
-    @pytest.mark.parametrize("component", ["inboundwebhooktrigger", "scheduletrigger"])
-    def test_accepts_trigger_names_translated_in_every_locale(self, tmp_path, component):
+    @pytest.mark.parametrize("component", LOCALIZED_COMPONENTS)
+    def test_accepts_localized_component_names(self, tmp_path, component):
         assert _check_backend(tmp_path, {_name_key(component): "이름"}) == 0
 
-    @pytest.mark.parametrize("component", ["inboundwebhooktrigger", "scheduletrigger"])
-    def test_accepts_trigger_field_and_output_names(self, tmp_path, component):
+    @pytest.mark.parametrize("component", LOCALIZED_COMPONENTS)
+    def test_accepts_localized_field_and_output_names(self, tmp_path, component):
         keys = _field_name_keys(component)
 
         assert keys
         assert _check_backend(tmp_path, dict.fromkeys(keys, "이름")) == 0
 
     def test_rejects_other_component_names(self, tmp_path):
-        assert _check_backend(tmp_path, {_name_key("smartrouter"): "스마트 라우터"}) == 1
+        assert _check_backend(tmp_path, {_name_key("agent"): "에이전트"}) == 1
 
     def test_rejects_field_names_of_other_components(self, tmp_path):
-        assert _check_backend(tmp_path, {_field_name_keys("smartrouter")[0]: "경로"}) == 1
+        assert _check_backend(tmp_path, {_field_name_keys("agent")[0]: "입력"}) == 1
 
     def test_rejects_starter_flow_names(self, tmp_path):
         key = next(key for key in BACKEND_EN if key.startswith("starter_flows.") and key.endswith(".name"))
@@ -66,15 +67,12 @@ class TestParticleAfterVariable:
 
         assert any("no batchim-dependent particle right after a variable" in w for w in warnings)
 
-    @pytest.mark.parametrize(
-        "ko_value",
-        [
-            "최소 확률 {{threshold}} 이상입니다.",
-            "Score는 {{score}}이며, 반올림하면 {{level}} 레벨입니다.",
-        ],
-        ids=["noun-after-threshold", "copula-after-score"],
-    )
-    def test_accepts_a_copula_or_a_noun_after_the_variable(self, ko_value):
-        warnings = _warnings("{{option}} met {{threshold}}, {{score}} rounds to {{level}}.", ko_value)
+    @pytest.mark.parametrize("key", ["decision.reason.accepted", "decision.reason.scoreLevel"])
+    def test_decision_panel_translations_have_no_particle_after_variables(self, key):
+        en = check_ko.load(check_ko.FRONTEND_DIR / "en.json")
+        ko = check_ko.load(check_ko.FRONTEND_DIR / "ko.json")
+        report = check_ko.Report("decision panel")
+        check_ko.check_value(report, key, en[key], ko[key], markdown=False)
 
-        assert not any("after a variable" in w for w in warnings)
+        assert not report.errors
+        assert not any("after a variable" in warning for warning in report.warnings)

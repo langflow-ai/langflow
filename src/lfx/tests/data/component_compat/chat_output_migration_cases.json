@@ -1,0 +1,137 @@
+{
+  "defaults": {
+    "component_class_name": "ChatOutput",
+    "field_name": "input_value",
+    "current_field": {
+      "type": "other",
+      "_input_type": "HandleInput"
+    },
+    "saved_field": {
+      "type": "str",
+      "value": "Keep this message"
+    }
+  },
+  "cases": [
+    {
+      "name": "preserves a historical string",
+      "expected": true
+    },
+    {
+      "name": "preserves an empty string",
+      "saved_field": {
+        "type": "str",
+        "value": ""
+      },
+      "expected": true
+    },
+    {
+      "name": "preserves a null value",
+      "saved_field": {
+        "type": "str",
+        "value": null
+      },
+      "expected": true
+    },
+    {
+      "name": "preserves a missing value",
+      "saved_field": {
+        "type": "str"
+      },
+      "expected": true
+    },
+    {
+      "name": "rejects another component",
+      "component_class_name": "OtherOutput",
+      "expected": false
+    },
+    {
+      "name": "rejects missing component metadata",
+      "component_class_name": null,
+      "expected": false
+    },
+    {
+      "name": "rejects another field",
+      "field_name": "other_input",
+      "expected": false
+    },
+    {
+      "name": "rejects another saved type",
+      "saved_field": {
+        "type": "other",
+        "value": "text"
+      },
+      "expected": false
+    },
+    {
+      "name": "rejects a missing saved type",
+      "saved_field": {
+        "value": "text"
+      },
+      "expected": false
+    },
+    {
+      "name": "rejects another current type",
+      "current_field": {
+        "type": "str",
+        "_input_type": "HandleInput"
+      },
+      "expected": false
+    },
+    {
+      "name": "rejects a missing current type",
+      "current_field": {
+        "_input_type": "HandleInput"
+      },
+      "expected": false
+    },
+    {
+      "name": "rejects another input widget",
+      "current_field": {
+        "type": "other",
+        "_input_type": "MessageInput"
+      },
+      "expected": false
+    },
+    {
+      "name": "rejects a missing input widget",
+      "current_field": {
+        "type": "other"
+      },
+      "expected": false
+    },
+    {
+      "name": "rejects a serialized message",
+      "saved_field": {
+        "type": "str",
+        "value": {
+          "text": "message"
+        }
+      },
+      "expected": false
+    },
+    {
+      "name": "rejects a numeric value",
+      "saved_field": {
+        "type": "str",
+        "value": 0
+      },
+      "expected": false
+    },
+    {
+      "name": "rejects a boolean value",
+      "saved_field": {
+        "type": "str",
+        "value": false
+      },
+      "expected": false
+    },
+    {
+      "name": "rejects a list value",
+      "saved_field": {
+        "type": "str",
+        "value": []
+      },
+      "expected": false
+    }
+  ]
+}

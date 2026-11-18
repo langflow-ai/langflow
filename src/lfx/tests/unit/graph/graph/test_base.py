@@ -9,7 +9,7 @@ from lfx.components.processing.combine_text import CombineTextComponent
 from lfx.custom.custom_component.component import Component
 from lfx.graph import Graph
 from lfx.graph.graph.constants import Finish
-from lfx.io import MessageTextInput, Output, SecretStrInput
+from lfx.io import HandleInput, MessageTextInput, Output, SecretStrInput
 from lfx.schema.message import Message
 from lfx.schema.schema import INPUT_FIELD_NAME
 
@@ -31,6 +31,17 @@ class SecretEcho(Component):
     def echo(self) -> Message:
         self.received_value = self.value
         return Message(text=self.value)
+
+
+class ConcatMessages(Component):
+    """Joins the messages of a list input in the order the input receives them."""
+
+    display_name = "Concat Messages"
+    inputs = [HandleInput(name="messages", display_name="Messages", input_types=["Message"], is_list=True)]
+    outputs = [Output(name="message", method="concat")]
+
+    def concat(self) -> Message:
+        return Message(text="".join(message.text for message in self.messages))
 
 
 @pytest.mark.asyncio
@@ -63,6 +74,23 @@ async def test_graph_with_edge():
     assert graph.vertices[1].id == output_id
     assert graph.edges[0].source_id == input_id
     assert graph.edges[0].target_id == output_id
+
+
+@pytest.mark.asyncio
+async def test_list_input_gets_values_in_connection_order():
+    """A list input gets the values of its sources in the order they were connected.
+
+    The graph used to collect its edges in a set, whose order changes with each process's hash
+    seed. Eight sources make an accidental pass very unlikely (1 in 40,320).
+    """
+    sources = [TextInputComponent(_id=f"text-{letter}", input_value=letter) for letter in "ABCDEFGH"]
+    concat = ConcatMessages(_id="concat")
+    concat.set(messages=[source.text_response for source in sources])
+
+    graph = Graph(sources[0], concat)
+    [r async for r in graph.async_start()]
+
+    assert graph.get_vertex("concat").built_object["message"].text == "ABCDEFGH"
 
 
 @pytest.mark.asyncio

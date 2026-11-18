@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import os
 from datetime import datetime, timezone
@@ -10,11 +11,13 @@ from uuid import UUID
 import anyio
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
+from lfx.log.logger import logger
 from lfx.services.settings.service import SettingsService
 from lfx.utils.file_path_security import flow_storage_scope
 from lfx.utils.helpers import build_content_type_from_extension
 
 from langflow.api.utils import (
+    EMPTY_FILE_DETAIL,
     CurrentActiveUser,
     DbSession,
     ValidatedFileName,
@@ -30,6 +33,18 @@ from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.storage.service import StorageService
 
 router = APIRouter(tags=["Files"], prefix="/files")
+
+
+def _spooled_sha256(handle) -> str:
+    """The SHA-256 of an upload's spooled body, for a name when it came without one, rewound for the save."""
+    from langflow.api.v2.files import UPLOAD_READ_CHUNK
+
+    digest = hashlib.sha256()
+    handle.seek(0)
+    while chunk := handle.read(UPLOAD_READ_CHUNK):
+        digest.update(chunk)
+    handle.seek(0)
+    return digest.hexdigest()
 
 
 async def _get_file_with_legacy_fallback(
@@ -191,22 +206,30 @@ async def upload_file(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
+    if file.size == 0:
+        raise HTTPException(status_code=400, detail=EMPTY_FILE_DETAIL)
+
     if file.size > max_file_size_upload * 1024 * 1024:
         raise HTTPException(
             status_code=413, detail=f"File size is larger than the maximum file size {max_file_size_upload}MB."
         )
 
+    from langflow.api.v2.files import save_file_routine  # v2's router imports would loop back here
+
     # Authorization handled by get_flow dependency
     try:
-        file_content = await file.read()
         timestamp = datetime.now(tz=timezone.utc).astimezone().strftime("%Y-%m-%d_%H-%M-%S")
-        file_name = file.filename or hashlib.sha256(file_content).hexdigest()
+        file_name = file.filename or await asyncio.to_thread(_spooled_sha256, file.file)
         full_file_name = f"{timestamp}_{file_name}"
         folder = flow_storage_scope(flow.id)
-        await storage_service.save_file(flow_id=folder, file_name=full_file_name, data=file_content)
+        # Streamed as the v2 route streams: reading the body whole took an Editor's memory up by
+        # twice the file's size.
+        await save_file_routine(file, storage_service, current_user, file_name=full_file_name, namespace=folder)
         return UploadFileResponse(flow_id=str(flow.id), file_path=f"{folder}/{full_file_name}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        # The raw error can name the storage's address, bucket and key, no use to whoever uploaded.
+        await logger.aexception("Error saving an upload to a flow's storage")
+        raise HTTPException(status_code=500, detail="Error saving the file") from e
 
 
 @router.get("/download/{flow_id}/{file_name}")

@@ -83,8 +83,20 @@ export const usePostTemplateValue: useMutationFunctionType<
       return undefined;
     }
 
+    const previousMcpServer = node.template.mcp_server?.value;
     const preparedTemplate = {
       ...template,
+      _frontend_node_id: { value: nodeId },
+      ...(parameterId === "mcp_server"
+        ? {
+            _frontend_node_previous_mcp_server: {
+              value:
+                typeof previousMcpServer === "string"
+                  ? previousMcpServer
+                  : (previousMcpServer?.name ?? null),
+            },
+          }
+        : {}),
       ...(flowId ? { _frontend_node_flow_id: { value: flowId } } : {}),
       ...(folderId ? { _frontend_node_folder_id: { value: folderId } } : {}),
       is_refresh: payload.is_refresh,

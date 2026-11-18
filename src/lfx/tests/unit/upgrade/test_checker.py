@@ -5,6 +5,7 @@ from copy import deepcopy
 import pytest
 from lfx.upgrade.checker import (
     TOOL_OUTPUT_NAME,
+    breaking_reasons,
     build_registry_lookup,
     check_flow_compatibility,
 )
@@ -52,8 +53,13 @@ def _node(type_: str = "MyComp", code: str = REGISTRY_CODE_V2, outputs=None, tem
     }
 
 
-def _flow(*nodes):
-    return {"nodes": list(nodes), "edges": []}
+def _flow(*nodes, edges=()):
+    return {"nodes": list(nodes), "edges": list(edges)}
+
+
+def _edge_into(field: str, target: str = "node-1") -> dict:
+    """An edge from some other node into ``field`` of ``target``."""
+    return {"source": "src-1", "target": target, "data": {"targetHandle": {"fieldName": field, "id": target}}}
 
 
 def test_build_registry_lookup_flattens_categories():
@@ -76,13 +82,19 @@ def test_ok_when_code_matches():
 
 @pytest.mark.parametrize("code", [REGISTRY_CODE_V2, REGISTRY_CODE_V1])
 def test_exported_code_lines_match_string_code_status(code):
+    # Exported code lines are recognized by the field type, so every code field here carries
+    # ``type: code`` as real templates do; a type on one side only would read as a retyped field.
+    registry = _registry()
+    registry["TestCategory"]["MyComp"]["template"]["code"]["type"] = "code"
     node = _node(code=code)
     node["data"]["node"]["template"]["code"] = {"type": "code", "value": code.split("\n")}
     flow = _flow(node)
     original = deepcopy(flow)
+    string_node = _node(code=code)
+    string_node["data"]["node"]["template"]["code"]["type"] = "code"
 
-    report = check_flow_compatibility(flow, _registry())
-    expected = check_flow_compatibility(_flow(_node(code=code)), _registry())
+    report = check_flow_compatibility(flow, registry)
+    expected = check_flow_compatibility(_flow(string_node), registry)
 
     assert report == expected
     assert flow == original
@@ -134,20 +146,69 @@ def test_outdated_breaking_when_output_removed():
     assert report.nodes[0].status == "outdated_breaking"
 
 
-def test_outdated_safe_when_registry_dropped_template_field():
-    """A field only the flow has (the registry dropped it) holds a value nothing reads."""
+def test_outdated_breaking_when_registry_dropped_template_field():
+    """A field only the flow has (the registry dropped it) loses its value and edges on update."""
     old_template_extra = {"prompt": {"value": "hello"}}
     node = _node(code=REGISTRY_CODE_V1, template_extra=old_template_extra)
     registry = _registry(code=REGISTRY_CODE_V2)
     report = check_flow_compatibility(_flow(node), registry)
-    assert report.nodes[0].status == "outdated_safe"
+    assert report.nodes[0].status == "outdated_breaking"
 
 
 def test_outdated_breaking_when_input_types_narrowed():
     node = _node(code=REGISTRY_CODE_V1, template_extra={"inp": {"input_types": ["Message", "Data"]}})
     registry = _registry(code=REGISTRY_CODE_V2, template_extra={"inp": {"input_types": ["Message"]}})
-    report = check_flow_compatibility(_flow(node), registry)
+    report = check_flow_compatibility(_flow(node, edges=[_edge_into("inp")]), registry)
     assert report.nodes[0].status == "outdated_breaking"
+
+
+def test_flow_without_edges_counts_every_field_as_connected():
+    """Unknown connections are treated as connected, so a narrowed input stays breaking."""
+    node = _node(code=REGISTRY_CODE_V1, template_extra={"inp": {"input_types": ["Message", "Data"]}})
+    registry = _registry(code=REGISTRY_CODE_V2, template_extra={"inp": {"input_types": ["Message"]}})
+    report = check_flow_compatibility({"nodes": [node]}, registry)
+    assert report.nodes[0].status == "outdated_breaking"
+
+
+def test_edge_field_is_read_from_the_escaped_handle_string():
+    """An edge without ``data`` still names its field in the escaped ``targetHandle`` string."""
+    node = _node(code=REGISTRY_CODE_V1, template_extra={"inp": {"input_types": ["Message", "Data"]}})
+    registry = _registry(code=REGISTRY_CODE_V2, template_extra={"inp": {"input_types": ["Message"]}})
+    edge = {"source": "src-1", "target": "node-1", "targetHandle": "{\u0153fieldName\u0153:\u0153inp\u0153}"}
+    report = check_flow_compatibility(_flow(node, edges=[edge]), registry)
+    assert report.nodes[0].status == "outdated_breaking"
+
+
+def test_edge_field_is_read_from_a_legacy_pipe_handle():
+    """An edge without ``data`` may carry a ``type|field|node id`` handle, which the runtime still reads."""
+    node = _node(code=REGISTRY_CODE_V1, template_extra={"inp": {"input_types": ["Message", "Data"]}})
+    registry = _registry(code=REGISTRY_CODE_V2, template_extra={"inp": {"input_types": ["Message"]}})
+    edge = {"source": "src-1", "target": "node-1", "targetHandle": "Message|inp|node-1"}
+    report = check_flow_compatibility(_flow(node, edges=[edge]), registry)
+    assert report.nodes[0].status == "outdated_breaking"
+
+
+def test_edge_field_is_read_from_the_handle_string_when_data_handle_is_not_a_mapping():
+    """Paired with "reads the handle string when data.targetHandle is not an object" in check-code-validity.test.ts."""
+    node = _node(code=REGISTRY_CODE_V1, template_extra={"inp": {"input_types": ["Message", "Data"]}})
+    registry = _registry(code=REGISTRY_CODE_V2, template_extra={"inp": {"input_types": ["Message"]}})
+    edge = {
+        "source": "src-1",
+        "target": "node-1",
+        "data": {"targetHandle": "Message|other|node-1"},
+        "targetHandle": "Message|inp|node-1",
+    }
+    report = check_flow_compatibility(_flow(node, edges=[edge]), registry)
+    assert report.nodes[0].status == "outdated_breaking"
+
+
+def test_edges_reach_a_node_by_its_top_level_id():
+    """Edges target ``node.id``, as the runtime and the editor read them, even when ``data.id`` differs."""
+    node = _node(code=REGISTRY_CODE_V1, template_extra={"inp": {"input_types": ["Message", "Data"]}})
+    node["data"]["id"] = "MyComp-abc"
+    registry = _registry(code=REGISTRY_CODE_V2, template_extra={"inp": {"input_types": ["Message"]}})
+    report = check_flow_compatibility(_flow(node, edges=[_edge_into("inp")]), registry)
+    assert (report.nodes[0].node_id, report.nodes[0].status) == ("node-1", "outdated_breaking")
 
 
 def test_report_is_clean():
@@ -236,7 +297,7 @@ def _group(node_id: str, type_: str, child: dict) -> dict:
     }
 
 
-# --- _outputs_are_compatible must not flag cosmetic / widening changes -----------------
+# --- _output_reasons must not flag cosmetic / widening changes -------------------------
 
 
 def _output(types, display_name="Output", method="run"):
@@ -267,7 +328,7 @@ def test_outdated_breaking_when_output_types_narrowed():
     assert report.nodes[0].status == "outdated_breaking"
 
 
-# --- _input_types_contained must allow widening ----------------------------------------
+# --- _shared_field_reasons must allow widening -----------------------------------------
 
 
 def test_outdated_safe_when_input_types_widened():
@@ -335,8 +396,8 @@ def test_outdated_safe_when_registry_added_handle_input_field():
     assert report.nodes[0].status == "outdated_safe"
 
 
-def test_outdated_safe_when_optional_field_renamed():
-    """A rename is a drop plus an add; with an optional replacement neither direction breaks.
+def test_outdated_breaking_when_optional_field_renamed():
+    """A rename is a drop plus an add; the drop loses the saved value, so it is breaking.
 
     The saved value of the old field is not carried over — the new field starts at its
     registry default, the same state the frontend's update endpoint produces when it
@@ -345,10 +406,50 @@ def test_outdated_safe_when_optional_field_renamed():
     node = _node(code=REGISTRY_CODE_V1, template_extra={"legacy_input": {"value": "user set"}})
     registry = _registry(code=REGISTRY_CODE_V2, template_extra={"current_input": {"value": ""}})
     report = check_flow_compatibility(_flow(node), registry)
-    assert report.nodes[0].status == "outdated_safe"
+    assert report.nodes[0].status == "outdated_breaking"
 
 
 # --- full recursion into nested grouped components -------------------------------------
+
+
+def test_edge_into_a_group_field_reaches_the_inner_field_through_its_proxy():
+    """An edge into a group's proxy field connects the inner node's field it names."""
+    inner = _node(code=REGISTRY_CODE_V1, template_extra={"inp": {"input_types": ["Message", "Data"]}})
+    group = _group("group-1", "Group", inner)
+    group["data"]["node"]["template"] = {"inp_node-1": {"proxy": {"id": "node-1", "field": "inp"}}}
+    registry = _registry(code=REGISTRY_CODE_V2, template_extra={"inp": {"input_types": ["Message"]}})
+
+    connected = check_flow_compatibility(_flow(group, edges=[_edge_into("inp_node-1", "group-1")]), registry)
+    unconnected = check_flow_compatibility(_flow(group), registry)
+
+    assert connected.nodes[0].status == "outdated_breaking"
+    assert unconnected.nodes[0].status == "outdated_safe"
+
+
+def test_edge_into_a_group_follows_its_own_proxy():
+    """The runtime follows the edge's own ``proxy`` into the group, not the group field's."""
+    inner = _node(code=REGISTRY_CODE_V1, template_extra={"inp": {"input_types": ["Message", "Data"]}})
+    group = _group("group-1", "Group", inner)
+    group["data"]["node"]["template"] = {"inp_node-1": {}}
+    registry = _registry(code=REGISTRY_CODE_V2, template_extra={"inp": {"input_types": ["Message"]}})
+    edge = _edge_into("inp_node-1", "group-1")
+    edge["data"]["targetHandle"]["proxy"] = {"id": "node-1", "field": "inp"}
+
+    report = check_flow_compatibility(_flow(group, edges=[edge]), registry)
+
+    assert report.nodes[0].status == "outdated_breaking"
+
+
+def test_nested_flow_without_edges_counts_every_field_as_connected():
+    """A nested flow without an ``edges`` key has unknown connections, like a top-level flow."""
+    inner = _node(code=REGISTRY_CODE_V1, template_extra={"inp": {"input_types": ["Message", "Data"]}})
+    group = _group("group-1", "Group", inner)
+    del group["data"]["node"]["flow"]["data"]["edges"]
+    registry = _registry(code=REGISTRY_CODE_V2, template_extra={"inp": {"input_types": ["Message"]}})
+
+    report = check_flow_compatibility(_flow(group), registry)
+
+    assert report.nodes[0].status == "outdated_breaking"
 
 
 def test_deeply_nested_flow_nodes_are_classified():
@@ -452,5 +553,111 @@ def test_outdated_breaking_when_tool_mode_node_input_types_narrowed():
         template_extra={"query": {"tool_mode": True, "input_types": ["Message"]}, "tools_metadata": {}},
     )
     registry = _registry(code=REGISTRY_CODE_V2, template_extra={"query": {"tool_mode": True, "input_types": ["Data"]}})
-    report = check_flow_compatibility(_flow(node), registry)
+    report = check_flow_compatibility(_flow(node, edges=[_edge_into("query")]), registry)
     assert report.nodes[0].status == "outdated_breaking"
+
+
+# --- breaking_reasons names what breaks --------------------------------------------------
+
+_OUT = {"name": "out", "types": ["Message"], "method": "run", "allows_loop": False}
+_TOOL_OUT = {"name": TOOL_OUTPUT_NAME, "types": ["Tool"], "method": "to_toolkit", "allows_loop": False}
+
+
+def _entry(outputs=(_OUT,), **template):
+    return {"outputs": list(outputs), "template": {"code": {"value": REGISTRY_CODE_V2}, **template}}
+
+
+def _saved(outputs=(_OUT,), **template):
+    return {
+        "outputs": None if outputs is None else list(outputs),
+        "template": {"code": {"value": REGISTRY_CODE_V1}, **template},
+    }
+
+
+@pytest.mark.parametrize(
+    ("entry", "saved", "connected", "expected"),
+    [
+        pytest.param(
+            _entry(outputs=[{**_OUT, "name": "result"}]), _saved(), [], [("output_changed", "out")], id="output removed"
+        ),
+        pytest.param(
+            _entry(),
+            _saved(outputs=[{**_OUT, "types": ["Message", "Data"]}]),
+            [],
+            [("output_changed", "out")],
+            id="output narrowed",
+        ),
+        pytest.param(
+            _entry(outputs=[{**_OUT, "method": "build"}]), _saved(), [], [("output_changed", "out")], id="output method"
+        ),
+        pytest.param(
+            _entry(outputs=[{**_OUT, "allows_loop": True}]),
+            _saved(),
+            [],
+            [("output_changed", "out")],
+            id="output allows_loop",
+        ),
+        pytest.param(_entry(), _saved(outputs=None), [], [("output_changed", None)], id="saved node has no outputs"),
+        pytest.param(
+            _entry(query={"type": "str"}),
+            _saved(outputs=[_TOOL_OUT], query={"type": "str", "tool_mode": True}),
+            [],
+            [("output_changed", TOOL_OUTPUT_NAME)],
+            id="tool mode dropped",
+        ),
+        pytest.param(_entry(), _saved(old={"type": "str"}), [], [("field_removed", "old")], id="field removed"),
+        pytest.param(
+            _entry(api_key={"type": "str", "required": True, "value": ""}),
+            _saved(),
+            [],
+            [("required_input_missing", "api_key")],
+            id="new required field",
+        ),
+        pytest.param(
+            _entry(x={"type": "int"}),
+            _saved(x={"type": "str"}),
+            ["x"],
+            [("connection_dropped", "x")],
+            id="retyped, connected",
+        ),
+        pytest.param(
+            _entry(x={"type": "str", "input_types": ["Message"]}),
+            _saved(x={"type": "str", "input_types": ["Message", "Data"]}),
+            ["x"],
+            [("connection_dropped", "x")],
+            id="input_types narrowed, connected",
+        ),
+        pytest.param(
+            _entry(x={"type": "str", "tool_mode": True}),
+            _saved(outputs=[_TOOL_OUT], x={"type": "str"}),
+            ["x"],
+            [("connection_dropped", "x")],
+            id="now tool_mode on a tool-mode node, connected",
+        ),
+        pytest.param(
+            _entry(x={"type": "int"}),
+            _saved(x={"type": "str", "value": "hi"}),
+            [],
+            [("value_dropped", "x")],
+            id="retyped, holds a value",
+        ),
+        pytest.param(
+            _entry(x={"type": "int"}),
+            _saved(x={"type": "str", "value": "hi"}),
+            ["x"],
+            [("connection_dropped", "x")],
+            id="retyped, connected and holds a value",
+        ),
+    ],
+)
+def test_breaking_reason_codes(entry, saved, connected, expected):
+    """Each kind of break gets its reason code and names the field or output it is about."""
+    reasons = breaking_reasons(entry, saved, connected)
+    assert [(reason.code, reason.field) for reason in reasons] == expected
+    assert all(reason.message for reason in reasons)
+
+
+def test_breaking_reasons_lists_every_reason():
+    """The rule keeps checking after the first reason it finds."""
+    reasons = breaking_reasons(_entry(outputs=[]), _saved(old={"type": "str"}), [])
+    assert [(reason.code, reason.field) for reason in reasons] == [("output_changed", "out"), ("field_removed", "old")]

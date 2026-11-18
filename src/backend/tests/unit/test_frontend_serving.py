@@ -1,10 +1,12 @@
 """Verify portable frontend assets, runtime prefixes, and API error responses."""
 
 from pathlib import Path
+from unittest.mock import AsyncMock
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from langflow.api.utils import migration_pause
 from langflow.main import setup_app, setup_static_files
 from langflow.services.settings.base import Settings
 
@@ -58,7 +60,12 @@ def test_unknown_api_path_returns_json_404(frontend_client: TestClient):
     assert response.json() == {"detail": "Not Found"}
 
 
-def test_wrong_method_on_real_api_route_returns_405(frontend_client: TestClient):
+def test_wrong_method_on_real_api_route_returns_405(frontend_client: TestClient, monkeypatch: pytest.MonkeyPatch):
+    # This routing fixture skips startup. Keep write admission independent of
+    # the migration record and database service left by other tests.
+    monkeypatch.setattr(migration_pause, "is_paused", lambda: False)
+    monkeypatch.setattr(migration_pause, "_database_pause_status", AsyncMock(return_value=False))
+
     # The /api reservation only claims GET/HEAD, so a wrong method on a real
     # endpoint still gets 405, not a 404 swallowed by the catch-all.
     response = frontend_client.post("/api/v1/version")

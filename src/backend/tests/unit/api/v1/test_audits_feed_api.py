@@ -292,6 +292,36 @@ async def test_the_csv_export_streams_the_filtered_snapshot(client, logged_in_he
     assert len(list(csv.reader(io.StringIO(filtered.text)))) == 2
 
 
+async def test_the_export_filters_by_exact_represented_identity(client, logged_in_headers_super_user):
+    matching_id, *_ = await seed(
+        resource_event(1, represented_issuer="issuer", represented_subject="alice,team"),
+        resource_event(2, represented_issuer="other", represented_subject="alice,team"),
+        resource_event(3, represented_issuer="issuer", represented_subject="alice"),
+        authz_event(4),
+        resource_event(5, represented_issuer="issuer", represented_subject="\u200b=unsafe"),
+    )
+    key = await client.post("api/v1/api_key/", headers=logged_in_headers_super_user, json={"name": "audit export test"})
+    assert key.is_success
+    query = f"{WINDOW}&represented_subject=alice%2Cteam&represented_issuer=issuer"
+    response = await client.get(f"api/v1/audits/export?{query}", headers={"x-api-key": key.json()["api_key"]})
+    assert response.status_code == status.HTTP_200_OK, response.text
+    rows = list(csv.DictReader(io.StringIO(response.text)))
+    assert [row["id"] for row in rows] == [matching_id]
+    assert rows[0]["represented_subject"] == "alice,team"
+    assert rows[0]["represented_issuer"] == "issuer"
+    assert await ids(client, logged_in_headers_super_user, query.removeprefix(f"{WINDOW}&")) == [matching_id]
+
+    response = await client.get("api/v1/audits/export?represented_issuer=issuer", headers=logged_in_headers_super_user)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    response = await client.get(
+        f"api/v1/audits/export?{WINDOW}&represented_subject=%E2%80%8B%3Dunsafe",
+        headers=logged_in_headers_super_user,
+    )
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert [row["represented_subject"] for row in csv.DictReader(io.StringIO(response.text))] == ["'\u200b=unsafe"]
+
+
 async def test_the_csv_timestamp_is_to_the_second_while_ndjson_keeps_its_precision(
     client, logged_in_headers_super_user
 ):

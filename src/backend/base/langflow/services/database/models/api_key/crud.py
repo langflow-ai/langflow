@@ -5,7 +5,7 @@ import os
 import secrets
 from collections.abc import Callable
 from contextlib import AbstractAsyncContextManager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -20,6 +20,7 @@ from langflow.services.database.models.api_key.permissions import validate_permi
 from langflow.services.database.models.api_key.policy import check_api_key_issuance, ensure_api_key_management_allowed
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_authorization_service, get_settings_service, session_scope
+from langflow.services.maintenance.state import maintenance_enabled
 
 if TYPE_CHECKING:
     from sqlmodel.sql.expression import SelectOfScalar
@@ -32,6 +33,7 @@ class ApiKeyAuthResult:
     user: User
     api_key_source: str
     api_key_id: UUID | None = None
+    api_key_fingerprint: str | None = field(default=None, repr=False)
     api_key_restricted: bool = False
     api_key_permissions: dict[str, Any] | None = None
 
@@ -215,11 +217,12 @@ async def _audit_scoped_authentication_refusal(session: AsyncSession, api_key: A
         await audit_decision(**event)
 
 
-def _api_key_auth_result(user: User, api_key: ApiKey) -> ApiKeyAuthResult:
+def _api_key_auth_result(user: User, api_key: ApiKey, *, fingerprint: str) -> ApiKeyAuthResult:
     return ApiKeyAuthResult(
         user=user,
         api_key_source="db",  # pragma: allowlist secret
         api_key_id=api_key.id,
+        api_key_fingerprint=fingerprint,
         api_key_restricted=api_key.permissions is not None,
         api_key_permissions=api_key.permissions,
     )
@@ -339,12 +342,12 @@ async def _check_key_from_db_with_context(
         if await _external_access_ceiling_blocks_user(session, user, settings_service):
             logger.info("API key rejected for externally managed user while external access ceiling is enabled")
             return None
-        if settings_service.settings.disable_track_apikey_usage is not True:
+        if settings_service.settings.disable_track_apikey_usage is not True and not await maintenance_enabled(session):
             api_key_obj.total_uses += 1
             api_key_obj.last_used_at = datetime.datetime.now(datetime.timezone.utc)
             session.add(api_key_obj)
             await session.flush()
-        return _api_key_auth_result(user, api_key_obj)
+        return _api_key_auth_result(user, api_key_obj, fingerprint=incoming_hash)
 
     if len(matches) > 1:
         key_ids = [str(m.id) for m in matches]
@@ -386,14 +389,15 @@ async def _check_key_from_db_with_context(
             if await _external_access_ceiling_blocks_user(session, user, settings_service):
                 logger.info("API key rejected for externally managed user while external access ceiling is enabled")
                 return None
-            # Backfill hash for future O(1) lookups
-            api_key_obj.api_key_hash = incoming_hash
-            if settings_service.settings.disable_track_apikey_usage is not True:
-                api_key_obj.total_uses += 1
-                api_key_obj.last_used_at = datetime.datetime.now(datetime.timezone.utc)
-            session.add(api_key_obj)
-            await session.flush()
-            return _api_key_auth_result(user, api_key_obj)
+            # Authentication stays available without changing the frozen database.
+            if not await maintenance_enabled(session):
+                api_key_obj.api_key_hash = incoming_hash
+                if settings_service.settings.disable_track_apikey_usage is not True:
+                    api_key_obj.total_uses += 1
+                    api_key_obj.last_used_at = datetime.datetime.now(datetime.timezone.utc)
+                session.add(api_key_obj)
+                await session.flush()
+            return _api_key_auth_result(user, api_key_obj, fingerprint=incoming_hash)
 
     return None
 

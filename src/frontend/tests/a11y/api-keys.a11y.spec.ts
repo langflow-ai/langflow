@@ -282,6 +282,12 @@ test.describe("API keys route accessibility", () => {
     async ({ page }) => {
       await openApiKeysRoute(page);
 
+      await expect(page.getByText("A11y Primary Key")).toBeVisible();
+      // Accessibility attributes are applied on the next animation frame after
+      // rows render; a snapshot taken sooner captures the unpatched grid.
+      await expect(
+        page.locator('[role="treegrid"] [role="row"][tabindex="0"]'),
+      ).toHaveCount(1);
       const tabOrder = await getVisibleTabOrder(page);
       const realFocusOrder = await collectTabTraversal(page, 80);
       const sidebarItems = tabOrder.filter((item) =>

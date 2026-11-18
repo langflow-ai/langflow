@@ -6,7 +6,7 @@
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { SessionResponse } from "@/controllers/API/queries/auth";
 import useAuthStore from "@/stores/authStore";
@@ -14,6 +14,8 @@ import useAuthStore from "@/stores/authStore";
 type SessionQueryResult = {
   data: SessionResponse | undefined;
   isFetched: boolean;
+  error?: unknown;
+  isExternalAuthenticationPaused?: boolean;
 };
 
 const mockUseGetAuthSession = jest.fn<SessionQueryResult, []>();
@@ -93,5 +95,41 @@ describe("PlaygroundAuthGate - session probe vs auto-login", () => {
     deliverProbe(rerender, UNAUTHENTICATED_PROBE);
 
     expect(useAuthStore.getState().isAuthenticated).toBe(false);
+  });
+
+  it("shows temporary maintenance instead of an anonymous playground, then resumes", () => {
+    const { rerender } = renderGate();
+    deliverProbe(rerender, {
+      data: undefined,
+      isFetched: true,
+      isExternalAuthenticationPaused: true,
+      error: {
+        isAxiosError: true,
+        response: {
+          status: 503,
+          data: { detail: { code: "external_auth_maintenance" } },
+        },
+      },
+    });
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "External SSO sign-in is paused",
+    );
+    expect(screen.queryByTestId("playground")).not.toBeInTheDocument();
+
+    deliverProbe(rerender, {
+      data: undefined,
+      isFetched: true,
+      error: null,
+      isExternalAuthenticationPaused: true,
+    });
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "External SSO sign-in is paused",
+    );
+    expect(screen.queryByTestId("playground")).not.toBeInTheDocument();
+
+    deliverProbe(rerender, UNAUTHENTICATED_PROBE);
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.getByTestId("playground")).toBeInTheDocument();
   });
 });

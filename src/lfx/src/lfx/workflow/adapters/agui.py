@@ -21,9 +21,8 @@ if TYPE_CHECKING:
 
     from ag_ui.core import BaseEvent
 
-# Durable AG-UI milestones. ``TEXT_MESSAGE_CONTENT`` is the per-token delta and
-# is ephemeral; the START/END lifecycle frames around it are durable so a
-# reattaching client knows a message happened even without the token stream.
+# Persist text deltas with their lifecycle so replay can reconstruct messages
+# and each content event gets its own durable cursor for Last-Event-ID.
 _AGUI_DURABLE_EVENTS: frozenset[str] = frozenset(
     {
         "RUN_STARTED",
@@ -32,10 +31,12 @@ _AGUI_DURABLE_EVENTS: frozenset[str] = frozenset(
         "STEP_STARTED",
         "STEP_FINISHED",
         "TEXT_MESSAGE_START",
+        "TEXT_MESSAGE_CONTENT",
         "TEXT_MESSAGE_END",
         "TOOL_CALL_START",
         "TOOL_CALL_ARGS",
         "TOOL_CALL_END",
+        "TOOL_CALL_RESULT",
         "STATE_SNAPSHOT",
         "STATE_DELTA",
         "CUSTOM",

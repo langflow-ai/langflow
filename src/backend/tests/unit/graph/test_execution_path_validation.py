@@ -151,7 +151,7 @@ async def run_via_arun_traced(graph: Graph) -> ExecutionTrace:
 @pytest.mark.parametrize("flow_name", TEST_FLOWS)
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("client")
-async def test_flow_execution_equivalence(flow_name: str, stage_loop_csv):
+async def test_flow_execution_equivalence(flow_name: str, stage_loop_csv, active_user, user_two):
     """Test that a flow produces identical results via both execution paths."""
     from uuid import uuid4
 
@@ -169,8 +169,8 @@ async def test_flow_execution_equivalence(flow_name: str, stage_loop_csv):
     graph_data = flow_data.get("data", flow_data)
 
     # Create two independent copies with valid UUIDs for persisted identifiers.
-    user_id_async_start = str(uuid4())
-    user_id_arun = str(uuid4())
+    user_id_async_start = str(active_user.id)
+    user_id_arun = str(user_two.id)
 
     payload_async_start = deepcopy(graph_data)
     payload_arun = deepcopy(graph_data)

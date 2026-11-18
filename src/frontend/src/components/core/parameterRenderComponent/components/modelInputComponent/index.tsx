@@ -244,6 +244,7 @@ export default function ModelInputComponent({
             provider.models,
             modelType,
             provider.live_discovery,
+            provider.provider,
           ),
       )
     );

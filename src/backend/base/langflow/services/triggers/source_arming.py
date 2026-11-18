@@ -160,7 +160,12 @@ async def resolve_arming(session: AsyncSession, *, kind: str, owner_id: UUID, co
         mechanism = extension.push_mechanism if available and delivery != "poll" else None
         if mechanism is None:
             mechanism = extension.poll_mechanism or extension.listener_mechanism
-        if mechanism is None or (context == "hosted" and mechanism != extension.push_mechanism):
+        if context == "hosted" and mechanism != extension.push_mechanism:
+            msg = extension.hosted_unsupported_message or (
+                "This source has no supported delivery mechanism on this deployment."
+            )
+            raise ValueError(msg)
+        if mechanism is None:
             msg = "This source has no supported delivery mechanism on this deployment."
             raise ValueError(msg)
         return SourceArming(connection_id=row.id, mechanism_id=mechanism)

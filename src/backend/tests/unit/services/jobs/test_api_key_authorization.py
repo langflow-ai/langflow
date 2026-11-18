@@ -302,12 +302,22 @@ async def test_ingestion_rechecks_real_knowledge_base_target(active_user, monkey
     clear_current_auth_context()
     callback = AsyncMock(return_value="ingested")
     assert await service.execute_with_status(job_id, callback) == "ingested"
+    _authenticate(key_id, restricted=restricted)
+    queued_job = await service.create_job(
+        uuid4(),
+        job.flow_id,
+        job_type=JobType.INGESTION,
+        asset_id=asset_id,
+        asset_type=asset_type,
+        user_id=active_user.id,
+    )
+    clear_current_auth_context()
     async with session_scope() as session:
         key = await session.get(ApiKey, key_id)
         key.permissions = _policy()
     callback.reset_mock()
     with pytest.raises(PermissionError):
-        await service.execute_with_status(job_id, callback)
+        await service.execute_with_status(queued_job.job_id, callback)
     callback.assert_not_awaited()
 
 

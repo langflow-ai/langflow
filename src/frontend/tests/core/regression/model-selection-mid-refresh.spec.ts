@@ -1,4 +1,5 @@
 import type { Page, Route } from "@playwright/test";
+import type { APIClassType, ModelOptionType } from "../../../src/types/api";
 import { expect, test } from "../../fixtures";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
 
@@ -18,6 +19,7 @@ async function holdMountRefresh(page: Page) {
     releaseRefresh = resolve;
   });
   let heldRefreshes = 0;
+  let returnedModelName: string | undefined;
   await page.route("**/api/v1/custom_component/update**", async (route) => {
     if (!isMountRefresh(route)) {
       await route.continue();
@@ -25,12 +27,23 @@ async function holdMountRefresh(page: Page) {
     }
     heldRefreshes += 1;
     const response = await route.fetch();
+    const refreshed = (await response.json()) as APIClassType;
+    const option = (refreshed.template.model.options as ModelOptionType[]).find(
+      (model) =>
+        model.name && model.provider && !model.metadata?.is_disabled_provider,
+    );
+    expect(option).toBeDefined();
+    // Keep this race independent of the server's empty-selection policy: the
+    // held response must carry a concrete value to prove whether it is applied.
+    refreshed.template.model.value = [option!];
+    returnedModelName = option!.name;
     await refreshReleased;
-    await route.fulfill({ response });
+    await route.fulfill({ response, json: refreshed });
   });
 
   return {
     held: () => heldRefreshes,
+    returnedModelName: () => returnedModelName,
     release: async () => {
       const refreshApplied = page.waitForResponse(
         (response) =>
@@ -110,7 +123,7 @@ test(
 
     await refresh.release();
 
-    await expect(trigger).not.toContainText("Select a model");
+    await expect(trigger).toContainText(refresh.returnedModelName()!);
     // Opening a flow never writes it back: the refreshed model stays local
     // until the user edits. Longer than the 5s autosave debounce, so a write
     // the refresh triggered would have landed.

@@ -46,6 +46,7 @@ from langflow.services.triggers.constants import (
     KIND_SLACK_MESSAGE,
     KIND_SLACK_REACTION,
     MICROSOFT_SOURCE_KINDS,
+    POLICY_BLOCKED_ERROR,
     PROVIDER_SLACK,
     SLACK_TRIGGER_KINDS,
 )
@@ -60,6 +61,7 @@ from langflow.services.triggers.locking import lock_trigger
 from langflow.services.triggers.providers.registry import component_kind, get_kind, source_kinds
 from langflow.services.triggers.schedule_config import (
     InvalidScheduleError,
+    schedule_summary,
     schedule_timing_changed,
     validate_schedule_config,
 )
@@ -232,9 +234,16 @@ def apply_config_verdict(row: Trigger, error: str | None) -> bool:
         if row.state == TriggerState.ERROR.value:
             row.state = TriggerState.ACTIVE.value
             row.next_fire_at = None
-        if row.state in _VERDICT_STATES and row.last_error != NODE_REMOVED_ERROR:
+        if row.state in _VERDICT_STATES and row.last_error not in {
+            NODE_REMOVED_ERROR,
+            POLICY_BLOCKED_ERROR,
+        }:
             row.last_error = None
     return (row.state, row.last_error, row.next_fire_at) != before
+
+
+#: Config key carrying an unusable pick's message from the node scan to the verdict.
+SCHEDULE_PICK_ERROR = "schedule_error"
 
 
 def _template_value(node_data: dict[str, Any], field: str, default: Any) -> Any:
@@ -266,8 +275,46 @@ def find_trigger_nodes(flow_data: dict[str, Any] | None) -> list[tuple[str, str,
             else _CONFIG_FIELDS.get(kind, ())
         )
         config = {key: _template_value(node_data, field, default) for field, key, default in fields}
+        if kind == "schedule":
+            _apply_schedule_pick(node_data, config)
         found.append((node_id, kind, config))
     return found
+
+
+def schedule_pick_error(row: Trigger, flow_data: dict[str, Any] | None) -> str | None:
+    """The picker's message for ``row``'s node on ``flow_data``, or None when its pick is usable."""
+    nodes = (flow_data or {}).get("nodes") or []
+    node = next((n for n in nodes if isinstance(n, dict) and n.get("id") == row.node_id), None)
+    node_data = node.get("data") if node is not None else None
+    if (
+        not isinstance(node_data, dict)
+        or not isinstance(node_data.get("node"), dict)
+        or not isinstance(node_data["node"].get("template", {}), dict)
+        or _node_kind(node_data.get("type")) != "schedule"
+    ):
+        return None
+    config: dict[str, Any] = {"cron": _template_value(node_data, "cron_expression", "")}
+    _apply_schedule_pick(node_data, config)
+    return config.get(SCHEDULE_PICK_ERROR)
+
+
+def _apply_schedule_pick(node_data: dict[str, Any], config: dict[str, Any]) -> None:
+    """Compile the picked schedule into ``config``.
+
+    An unusable pick blanks the cron so the old schedule stops, and keeps the
+    picker's message: the cron field is hidden, so a cron error would not say what to fix.
+    """
+    # Imported here: ``lfx.base.triggers`` loads Component, and this module is
+    # reached while ``lfx.inputs`` is still importing (lfx.helpers -> langflow).
+    from lfx.base.triggers.schedule import PICKER_FIELDS, ScheduleTriggerError, schedule_timing
+
+    values = {name: _template_value(node_data, name, None) for name in PICKER_FIELDS}
+    stored_cron = config.pop("cron")
+    try:
+        config.update(schedule_timing(values, stored_cron))
+    except ScheduleTriggerError as exc:
+        config["cron"] = ""
+        config[SCHEDULE_PICK_ERROR] = str(exc)
 
 
 def _node_kind(node_type: Any) -> str | None:
@@ -303,8 +350,9 @@ def validate_single_trigger_per_flow(flow_data: dict[str, Any] | None) -> None:
 
 
 def _display_name(config: dict[str, Any], kind: str) -> str:
-    if kind == "schedule" and config.get("cron"):
-        return f"Schedule {config['cron']}"
+    summary = schedule_summary(config) if kind == "schedule" else None
+    if summary:
+        return f"Schedule {summary}"
     extension = get_kind(kind)
     return extension.display_name if extension else _KIND_DISPLAY_NAMES.get(kind) or kind.replace("_", " ").title()
 
@@ -456,10 +504,11 @@ async def reconcile_flow_triggers(
             except ValueError as exc:
                 error = str(exc)
         elif kind == "schedule":
+            pick_error = config.pop(SCHEDULE_PICK_ERROR, None)
             try:
                 config = validate_schedule_config(config)
             except InvalidScheduleError as exc:
-                error = str(exc)
+                error = pick_error or str(exc)
         elif kind == KIND_INBOUND_WEBHOOK:
             try:
                 config = normalize_webhook_config(config)
@@ -498,6 +547,12 @@ async def reconcile_flow_triggers(
             touched += 1
         renamed = sync_display_name(row, config if error is None else None)
         config_changed = row.config != config
+        subscription_changed = config_changed
+        if kind in {"gitlab.issue", "gitlab.merge_request"}:
+            receiver_filters = {"actions", "include_self_events", "include_bot_events"}
+            subscription_changed = {
+                key: value for key, value in (row.config or {}).items() if key not in receiver_filters
+            } != {key: value for key, value in config.items() if key not in receiver_filters}
         changed = config_changed or row.session_policy != session_policy or renamed
         if changed:
             if schedule_timing_changed(row.config or {}, config):
@@ -542,7 +597,7 @@ async def reconcile_flow_triggers(
             verdict = await _apply_slack_verdict(session, row, error=error, moved=moved, filters_changed=config_changed)
             changed = verdict or changed
         elif kind in source_kinds():
-            if row.state == TriggerState.ACTIVE.value and (error or config_changed or moved):
+            if row.state == TriggerState.ACTIVE.value and (error or subscription_changed or moved):
                 from langflow.services.triggers.subscriptions import revoke_for_trigger
 
                 await revoke_for_trigger(session, trigger_id=row.id)
@@ -550,7 +605,11 @@ async def reconcile_flow_triggers(
                 row.last_error = error or SOURCE_SETTINGS_CHANGED_ERROR
                 row.provider_state = {}
                 changed = True
-            elif row.last_error != error and row.state != TriggerState.ACTIVE.value:
+            elif (
+                row.last_error != error
+                and row.state != TriggerState.ACTIVE.value
+                and (row.state != TriggerState.ERROR.value or error is not None or config_changed or moved)
+            ):
                 row.last_error = error
                 changed = True
         if changed:

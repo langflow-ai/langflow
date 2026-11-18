@@ -88,68 +88,70 @@ export default function PermissionsCellRender({
     );
   };
   return (
-    <BaseModal
-      open={open}
-      setOpen={setModalOpen}
-      onSubmit={save}
-      size="medium-h-full"
-    >
-      <BaseModal.Trigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="max-w-full justify-start"
-          title={summary}
-          aria-label={t("apiKey.permissions.editFor", { name: data.name })}
-        >
-          <span className="min-w-0 truncate">{summary}</span>
-        </Button>
-      </BaseModal.Trigger>
-      <BaseModal.Header description={t("apiKey.permissions.editDescription")}>
-        {t("apiKey.permissions.editTitle", { name: data.name })}
-      </BaseModal.Header>
-      <BaseModal.Content>
-        {options.isError && (
-          <p role="alert" className="text-sm text-destructive">
-            {t("apiKey.permissions.optionsError")}
-          </p>
-        )}
-        {options.data?.supported && (
-          <ApiKeyPermissionsEditor
-            options={options.data}
-            value={policy}
-            onChange={(next) => {
-              setPolicy(next);
-              setError(null);
-            }}
-          />
-        )}
-        {options.data && !options.data.supported && (
-          <p role="alert" className="text-sm text-muted-foreground">
-            {t("apiKey.permissions.unavailable")}
-          </p>
-        )}
-        {error && (
-          <p role="alert" className="mt-3 text-sm text-destructive">
-            {error}
-          </p>
-        )}
-      </BaseModal.Content>
-      <BaseModal.Footer
-        submit={{
-          label: t("apiKey.permissions.save"),
-          loading: mutation.isPending,
-          disabled:
-            !options.data?.supported ||
-            options.isFetching ||
-            options.isError ||
-            mutation.isPending ||
-            Boolean(
-              options.data &&
-                !isApiKeyPermissionPolicyValid(policy, options.data),
-            ),
-        }}
-      />
-    </BaseModal>
+    <div className="flex h-full items-center">
+      <BaseModal
+        open={open}
+        setOpen={setModalOpen}
+        onSubmit={save}
+        size="medium-h-full"
+      >
+        <BaseModal.Trigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="max-w-full justify-start"
+            title={summary}
+            aria-label={t("apiKey.permissions.editFor", { name: data.name })}
+          >
+            <span className="min-w-0 truncate">{summary}</span>
+          </Button>
+        </BaseModal.Trigger>
+        <BaseModal.Header description={t("apiKey.permissions.editDescription")}>
+          {t("apiKey.permissions.editTitle", { name: data.name })}
+        </BaseModal.Header>
+        <BaseModal.Content className="-mr-6 pr-6">
+          {options.isError && (
+            <p role="alert" className="text-sm text-destructive">
+              {t("apiKey.permissions.optionsError")}
+            </p>
+          )}
+          {options.data?.supported && (
+            <ApiKeyPermissionsEditor
+              options={options.data}
+              value={policy}
+              onChange={(next) => {
+                setPolicy(next);
+                setError(null);
+              }}
+            />
+          )}
+          {options.data && !options.data.supported && (
+            <p role="alert" className="text-sm text-muted-foreground">
+              {t("apiKey.permissions.unavailable")}
+            </p>
+          )}
+          {error && (
+            <p role="alert" className="mt-3 text-sm text-destructive">
+              {error}
+            </p>
+          )}
+        </BaseModal.Content>
+        <BaseModal.Footer
+          submit={{
+            label: t("apiKey.permissions.save"),
+            loading: mutation.isPending,
+            disabled:
+              !options.data?.supported ||
+              options.isFetching ||
+              options.isError ||
+              mutation.isPending ||
+              Boolean(
+                options.data &&
+                  !isApiKeyPermissionPolicyValid(policy, options.data),
+              ),
+          }}
+        />
+      </BaseModal>
+    </div>
   );
 }

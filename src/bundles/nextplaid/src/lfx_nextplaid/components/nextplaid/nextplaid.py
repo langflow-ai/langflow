@@ -17,6 +17,8 @@ from lfx.io import (
     StrInput,
 )
 from lfx.schema.data import Data
+from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
+from lfx_nextplaid.components.nextplaid._http import secure_nextplaid_http
 
 
 class NextPlaidVectorStoreComponent(LCVectorStoreComponent):
@@ -182,6 +184,8 @@ class NextPlaidVectorStoreComponent(LCVectorStoreComponent):
             )
             raise ValueError(msg)
 
+        validate_connector_url_for_ssrf(self.url)
+        secure_nextplaid_http()
         nextplaid_store = LangchainNextPlaid(
             url=self.url,
             index_name=self.index_name,

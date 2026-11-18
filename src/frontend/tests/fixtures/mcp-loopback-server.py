@@ -14,7 +14,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--transport", choices=("stdio", "streamable-http"), default="stdio")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8790)
-    parser.add_argument("--tool-set", choices=("all", "fetch", "time"), default="all")
+    parser.add_argument("--tool-set", choices=("all", "fetch", "time", "upgrade"), default="all")
     return parser.parse_args()
 
 
@@ -39,12 +39,18 @@ def main() -> None:
         """Return a stable-shaped timestamp for tool-discovery tests."""
         return f"{dt.datetime.now(tz=dt.timezone.utc).isoformat()} ({timezone})"
 
+    def greet(name: str, times: int = 1) -> str:
+        """Return a greeting with the historical upgrade fixture's arguments."""
+        return " ".join([f"Hello {name}"] * times)
+
     if args.tool_set == "all":
         server.tool()(echo)
     if args.tool_set in {"all", "fetch"}:
         server.tool()(fetch)
     if args.tool_set in {"all", "time"}:
         server.tool()(get_current_time)
+    if args.tool_set == "upgrade":
+        server.tool()(greet)
 
     server.run(transport=args.transport)
 

@@ -7,9 +7,10 @@ import {
   useResetPassword,
   useUpdateUser,
 } from "@/controllers/API/queries/auth";
-import { useGetProfilePicturesQuery } from "@/controllers/API/queries/files";
 import { CustomRegistrationData } from "@/customization/components/custom-registration-data";
+import CustomSettingsGeneralSection from "@/customization/components/custom-settings-general-section";
 import CustomSettingsPasswordFormGate from "@/customization/components/custom-settings-password-form-gate";
+import CustomSettingsProfilePictureFormGate from "@/customization/components/custom-settings-profile-picture-form-gate";
 import { CustomTelemetryToggle } from "@/customization/components/custom-telemetry-toggle";
 import { CustomTermsLinks } from "@/customization/components/custom-terms-links";
 import { ENABLE_PROFILE_ICONS } from "@/customization/feature-flags";
@@ -93,8 +94,6 @@ export const GeneralPage = () => {
     }
   };
 
-  const handleGetProfilePictures = useGetProfilePicturesQuery();
-
   const handlePatchProfilePicture = (profile_picture) => {
     if (profile_picture !== "") {
       mutatePatchUser(
@@ -163,14 +162,17 @@ export const GeneralPage = () => {
       <div className="flex w-full flex-col gap-6 pb-8">
         <LanguageFormComponent />
 
+        <CustomSettingsGeneralSection />
+
         {ENABLE_PROFILE_ICONS && (
-          <ProfilePictureFormComponent
-            profilePicture={profilePicture}
-            handleInput={handleInput}
-            handlePatchProfilePicture={handlePatchProfilePicture}
-            handleGetProfilePictures={handleGetProfilePictures}
-            userData={userData}
-          />
+          <CustomSettingsProfilePictureFormGate>
+            <ProfilePictureFormComponent
+              profilePicture={profilePicture}
+              handleInput={handleInput}
+              handlePatchProfilePicture={handlePatchProfilePicture}
+              userData={userData}
+            />
+          </CustomSettingsProfilePictureFormGate>
         )}
 
         {!autoLogin && (

@@ -3,7 +3,7 @@
 Covers both locale files:
   - frontend: src/frontend/src/locales/ko.json   (must mirror every key in en.json)
   - backend:  src/backend/base/langflow/locales/ko.json
-              (descriptions and help text only; names stay English by design)
+              (descriptions and help text; most labels stay English)
 
 Errors (exit code 1): missing or unknown keys, mismatched {{variables}}, {placeholders}
 or <n> tags, empty values, backend name keys that should have been left out.
@@ -126,10 +126,10 @@ TRANSLATIONESE = [
     (r"\be\.g\.|\bi\.e\.|\betc\.", "use 예: / 즉 / 등"),
 ]
 
-# Backend keys that must stay out of ko.json so the English name shows through.
+# Backend name keys that normally stay out of ko.json so English shows through.
 BACKEND_NAME_KEY = re.compile(r"^components\..*\.display_name\.[0-9a-f]{8}$|^starter_flows\..*\.name$")
-# Triggers the maintainers translate in every locale, field and output names included (#16132), so ko keeps them.
-TRANSLATED_NAME_COMPONENTS = {"inboundwebhooktrigger", "scheduletrigger"}
+# Keep upstream labels localized for triggers (#16132) and Decision Model / Smart Router (#16272).
+TRANSLATED_NAME_COMPONENTS = {"decisionmodel", "inboundwebhooktrigger", "scheduletrigger", "smartrouter"}
 
 
 def load(path: Path) -> dict[str, str]:

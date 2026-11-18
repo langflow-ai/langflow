@@ -36,6 +36,7 @@ from langflow.services.database.models.memory_base.model import MemoryBase
 from langflow.services.database.models.user.model import User
 from langflow.services.database.models.variable.model import Variable
 from langflow.services.deps import get_authorization_service
+from langflow.services.variable.constants import is_oauth_registration_variable
 
 router = APIRouter(prefix="/authz/shares", tags=["Authorization"], include_in_schema=False)
 
@@ -73,6 +74,8 @@ async def _resolve_resource_owner(
         row = await session.get(MemoryBase, resource_id)
     if row is None:
         return None
+    if resource_type == "variable" and is_oauth_registration_variable(row.name):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
     return getattr(row, owner_attr, None)
 
 
@@ -308,6 +311,37 @@ def _ensure_supported_share_permission(*, resource_type: str, scope: str, permis
     )
 
 
+async def _validate_share_write(
+    *,
+    actor: User,
+    owner_id: UUID | None,
+    resource_type: str,
+    resource_id: UUID,
+    scope: str,
+    target_id: UUID | None,
+    permission_level: str,
+    operation: str,
+) -> None:
+    """Let the authorization plugin veto a share write (``BaseAuthorizationService.validate_share_write``).
+
+    A service without the hook (an older plugin, a test double) allows it. A hook that raises anything but
+    ``HTTPException`` is not swallowed: the write fails rather than going ahead unchecked.
+    """
+    hook = getattr(get_authorization_service(), "validate_share_write", None)
+    if hook is None:
+        return
+    await hook(
+        actor=actor,
+        resource_type=resource_type,
+        resource_id=resource_id,
+        owner_id=owner_id,
+        scope=scope,
+        target_id=target_id,
+        permission_level=permission_level,
+        operation=operation,
+    )
+
+
 @router.post("", response_model=ShareRead, status_code=status.HTTP_201_CREATED)
 @router.post("/", response_model=ShareRead, status_code=status.HTTP_201_CREATED)
 async def create_share(
@@ -342,6 +376,16 @@ async def create_share(
             resource_type=payload.resource_type,
             scope=payload.scope,
             permission_level=payload.permission_level,
+        )
+        await _validate_share_write(
+            actor=current_user,
+            owner_id=owner_id,
+            resource_type=payload.resource_type,
+            resource_id=payload.resource_id,
+            scope=payload.scope,
+            target_id=payload.target_id,
+            permission_level=payload.permission_level,
+            operation="create",
         )
     except HTTPException as exc:
         raise deny_to_404(exc, detail="Resource not found") from exc
@@ -579,6 +623,19 @@ async def update_share(
         scope=row.scope,
         permission_level=payload.permission_level,
     )
+    try:
+        await _validate_share_write(
+            actor=current_user,
+            owner_id=owner_id,
+            resource_type=row.resource_type,
+            resource_id=row.resource_id,
+            scope=row.scope,
+            target_id=row.target_id,
+            permission_level=payload.permission_level,
+            operation="update",
+        )
+    except HTTPException as exc:
+        raise deny_to_404(exc, detail="Share not found") from exc
 
     # Validate permission_level (422 before DB CHECK).
     try:

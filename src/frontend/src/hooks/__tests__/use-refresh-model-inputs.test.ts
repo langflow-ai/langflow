@@ -1287,6 +1287,12 @@ describe("refreshAllModelInputs — disconnected provider", () => {
       ...initialData.template.code,
       value: mockCurrentFolderId,
     };
+    // These request hints are echoed by a concurrent field-mount response.
+    Object.assign(liveData.template, {
+      _frontend_node_id: { value: "node-1" },
+      _frontend_node_previous_mcp_server: { value: "saved-server" },
+      is_refresh: false,
+    });
     liveData.template.api_key.show = false;
     liveData.template.model.options = [OPENAI_OPTION];
     mockNodes = [live];

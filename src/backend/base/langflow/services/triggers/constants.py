@@ -14,6 +14,9 @@ FAMILY_TRIGGER_PUSH = "trigger_push"
 FAMILY_TRIGGER_LISTENER = "trigger_listener"
 TRIGGER_FAMILIES = frozenset({FAMILY_TRIGGER_PUSH, FAMILY_TRIGGER_LISTENER})
 
+#: Internal request field encrypted with the trigger event for durable replay.
+PINNED_TRIGGER_CANVAS = "pinned_trigger_canvas"
+
 #: The matrix ``actor`` word for a run nobody is waiting on.
 ACTOR_TRIGGER_DISPATCHER = "trigger_dispatcher"
 
@@ -105,8 +108,14 @@ INGRESS_DEDUPE_PREFIX = "ingress"
 #: someone is probing it.
 AUDIT_INGRESS_ACCEPT = "trigger_ingress:accept"
 AUDIT_INGRESS_REJECT = "trigger_ingress:reject"
+AUDIT_SUBSCRIPTION_CREATE = "trigger_subscription:create"
 AUDIT_SUBSCRIPTION_RENEW = "trigger_subscription:renew"
 AUDIT_SUBSCRIPTION_REVOKE = "trigger_subscription:revoke"
+POLICY_BLOCKED_ERROR = "Blocked by trigger policy. Ask an administrator to approve this trigger kind."
+#: An authenticated caller's actions on a flow they may manage or execute.
+AUDIT_PAUSE = "trigger:pause"
+AUDIT_RESUME = "trigger:resume"
+AUDIT_REPLAY = "trigger:replay"
 #: An operator's bulk pause or resume, one audit row per trigger it changed.
 AUDIT_ADMIN_PAUSE = "trigger:admin_pause"
 AUDIT_ADMIN_RESUME = "trigger:admin_resume"

@@ -28,6 +28,8 @@ import type {
   VertexDataTypeAPI,
 } from "@/types/api";
 import type { ChatInputType, ChatOutputType } from "@/types/chat";
+import type { Message } from "@/types/messages";
+import type { FlowStoreType } from "@/types/zustand/flow";
 import { api } from "../api";
 import {
   injectHumanInputCard,
@@ -67,12 +69,35 @@ interface JsonPatchOp {
 interface AGUINodeState {
   status: string;
   output: VertexDataTypeAPI | null;
+  /** Set on a router-excluded node: the router and the outputs it took. */
+  skipped_by?: string;
+  taken_outputs?: string[];
 }
 
-type FlowBuildStatusEntry = {
-  status: BuildStatus;
-  timestamp?: string;
+type FlowBuildStatusEntry = FlowStoreType["flowBuildStatus"][string];
+
+type RunFlowOptions = WorkflowRunOptions & {
+  signal?: AbortSignal;
+  onUserMessage?: (message: Message) => void;
 };
+
+function handleRunMessageEvent(
+  eventType: string,
+  data: unknown,
+  opts: RunFlowOptions,
+): void {
+  const message = data as Partial<Message> | null;
+  if (
+    eventType === "add_message" &&
+    message?.sender === "User" &&
+    typeof message.id === "string" &&
+    message.id &&
+    !opts.signal?.aborted
+  ) {
+    opts.onUserMessage?.(message as Message);
+  }
+  handleMessageEvent(eventType, data);
+}
 
 /**
  * Hooks the bridge exposes to {@link handleAGUIEvent}. Injecting them keeps
@@ -182,7 +207,16 @@ export function applyStateDelta(
         currentStatus ? { ...currentStatus } : undefined,
       );
     }
-    flowStore.updateBuildStatus([nodeId], buildStatus);
+    flowStore.updateBuildStatus(
+      [nodeId],
+      buildStatus,
+      value.status === "inactive" && value.skipped_by
+        ? {
+            skippedBy: value.skipped_by,
+            takenOutputs: value.taken_outputs ?? [],
+          }
+        : undefined,
+    );
     nodeIds.add(nodeId);
 
     // Drive the canvas edge animation in step with build status so the AG-UI
@@ -241,9 +275,7 @@ export function applyStateDelta(
  * the in-flight SSE request, not just the local build state. Without it the
  * agent's internal AbortController would keep streaming after Stop.
  */
-export async function runFlowAGUI(
-  opts: WorkflowRunOptions & { signal?: AbortSignal },
-): Promise<void> {
+export async function runFlowAGUI(opts: RunFlowOptions): Promise<void> {
   // The shareable-playground popup posts on behalf of a visitor that
   // does not own the flow. Route those runs to the public endpoint so
   // the backend applies the public-access mitigations (virtual_flow_id,
@@ -412,7 +444,8 @@ export async function runFlowAGUI(
         runningNodeIds,
         originalBuildStatuses,
       ),
-    handleCustomEvent: (eventType, data) => handleMessageEvent(eventType, data),
+    handleCustomEvent: (eventType, data) =>
+      handleRunMessageEvent(eventType, data, opts),
     onHumanInput: () => {
       // Stream mode can't durably suspend; HITL runs go through the background
       // path (runFlowHITL). Mark awaiting-input so the UI reflects the pause.
@@ -552,7 +585,7 @@ export function buildBackgroundRunRequest(opts: WorkflowRunOptions) {
  */
 export async function consumeBackgroundEvents(
   jobId: string,
-  opts: WorkflowRunOptions & { signal?: AbortSignal },
+  opts: RunFlowOptions,
   lastEventId?: string,
   { skipCardInjection = false }: { skipCardInjection?: boolean } = {},
 ): Promise<void> {
@@ -568,7 +601,8 @@ export async function consumeBackgroundEvents(
       runId = r;
     },
     applyDelta: (ops) => applyStateDelta(ops, runId, touchedNodeIds),
-    handleCustomEvent: (eventType, data) => handleMessageEvent(eventType, data),
+    handleCustomEvent: (eventType, data) =>
+      handleRunMessageEvent(eventType, data, opts),
     // The background replay routes 'end' through the same message handler (as before the
     // end/log split); logs aren't surfaced separately on the reattach path.
     handleEndEvent: (data) => handleMessageEvent("end", data),
@@ -689,9 +723,7 @@ export async function consumeBackgroundEvents(
  * submit in background mode, then consume the run's event stream. The pause renders
  * an interactive card; resume reattaches via {@link consumeBackgroundEvents}.
  */
-export async function runFlowHITL(
-  opts: WorkflowRunOptions & { signal?: AbortSignal },
-): Promise<void> {
+export async function runFlowHITL(opts: RunFlowOptions): Promise<void> {
   const body = buildBackgroundRunRequest(opts);
   const { data } = await api.post(WORKFLOWS_ENDPOINT, body);
   const jobId: string | undefined = data?.job_id;

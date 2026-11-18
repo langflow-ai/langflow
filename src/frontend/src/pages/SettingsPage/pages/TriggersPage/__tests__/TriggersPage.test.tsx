@@ -13,6 +13,7 @@ const mockEnable = jest.fn();
 const mockDisable = jest.fn();
 const mockTest = jest.fn();
 const mockNavigate = jest.fn();
+const mockTriggerScopes = jest.fn();
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
@@ -22,11 +23,14 @@ jest.mock("@/controllers/API/queries/triggers", () => {
   const mutation = () => ({ mutateAsync: jest.fn(), isPending: false });
   return {
     TRIGGER_EVENTS_PAGE_SIZE: 50,
-    useTriggersQuery: (params: { scope?: string }) => ({
-      data: params.scope === "all" ? mockAll : mockMine,
-      isLoading: false,
-      isError: false,
-    }),
+    useTriggersQuery: (params: { scope?: string }) => {
+      mockTriggerScopes(params);
+      return {
+        data: params.scope === "all" ? mockAll : mockMine,
+        isLoading: false,
+        isError: false,
+      };
+    },
     useTriggerQuery: () => ({ data: undefined }),
     useTriggerEventsQuery: () => ({ data: [], isLoading: false }),
     useTriggerIngressQuery: () => ({ data: undefined }),
@@ -145,6 +149,28 @@ describe("TriggersPage", () => {
     expect(screen.getByTestId("trigger-row-b")).toBeInTheDocument();
   });
 
+  it.each(["pending", "paused", "error", "needs_reconnect"] as const)(
+    "shows configured GitLab delivery and connection while %s",
+    (state) => {
+      mockMine = [
+        makeTrigger({
+          id: "gitlab",
+          kind: "gitlab.issue",
+          provider: "gitlab",
+          connection_id: null,
+          config: { delivery_mode: "push", connection: "gitlab/work" },
+          state,
+        }),
+      ];
+      render(<TriggersPage />);
+
+      const row = screen.getByTestId("trigger-row-gitlab");
+      expect(within(row).getByText("Push")).toBeInTheDocument();
+      expect(within(row).getByText("gitlab/work")).toBeInTheDocument();
+      expect(within(row).queryByText("Not needed")).not.toBeInTheDocument();
+    },
+  );
+
   it.each(["reader", "writer"] as const)(
     "renders a shared trigger using the server's %s permissions",
     async (role) => {
@@ -227,6 +253,51 @@ describe("TriggersPage", () => {
     expect(mockEnable).not.toHaveBeenCalled();
   });
 
+  it.each([
+    [
+      "connection_unusable",
+      "needs_reconnect",
+      "The connection was revoked or expired. Reconnect, then resume.",
+      "This trigger's connection was revoked or has expired. Reconnect it, then resume the trigger.",
+      "This connection doesn't allow background runs.",
+    ],
+    [
+      "connection_not_authorized",
+      "consent_required",
+      "Allow background runs is off for this connection.",
+      "Allow background runs is off for this connection.",
+      "This trigger's connection was revoked or has expired. Reconnect it, then resume the trigger.",
+    ],
+  ] as const)(
+    "shows the GitLab connection failure %s without an unrelated cause",
+    (code, reason, guidance, message, unrelatedMessage) => {
+      mockMine = [
+        makeTrigger({
+          id: "gitlab-reconnect",
+          name: "GitLab: On Issue",
+          provider: "gitlab",
+          kind: "gitlab.issue",
+          config: { mechanism_id: "gitlab.project_webhook" },
+          state: "needs_reconnect",
+          reason,
+          last_error: code,
+          last_error_code: code,
+          allowed_actions: ["pause", "reconnect", "delete"],
+        }),
+      ];
+
+      render(<TriggersPage />);
+
+      const row = screen.getByTestId("trigger-row-gitlab-reconnect");
+      expect(within(row).getByText(guidance)).toBeInTheDocument();
+      expect(within(row).getByText(message)).toBeInTheDocument();
+      expect(within(row).queryByText(unrelatedMessage)).toBeNull();
+      expect(
+        within(row).getByRole("button", { name: "Reconnect GitLab: On Issue" }),
+      ).toBeInTheDocument();
+    },
+  );
+
   it("resumes a reconnected Jira trigger only after its inline fix is clicked", async () => {
     mockMine = [
       makeTrigger({
@@ -262,10 +333,52 @@ describe("TriggersPage", () => {
     );
   });
 
-  it("hides the operator tab from a regular user", () => {
+  it("does not offer or query the operator scope for a regular user", () => {
     render(<TriggersPage />);
 
-    expect(screen.queryByRole("tab", { name: "All triggers" })).toBeNull();
+    expect(screen.queryByRole("combobox", { name: "Scope" })).toBeNull();
+    expect(mockTriggerScopes).not.toHaveBeenCalledWith({ scope: "all" });
+    expect(screen.queryByTestId("triggers-bulk-pause")).toBeNull();
+  });
+
+  it("defaults to My triggers in one list for a superuser", () => {
+    mockUser = { id: "admin", is_superuser: true };
+    render(<TriggersPage />);
+
+    expect(screen.queryByRole("tablist")).toBeNull();
+    expect(screen.getByRole("combobox", { name: "Scope" })).toHaveTextContent(
+      "My triggers",
+    );
+    expect(screen.getByTestId("triggers-table-mine")).toBeInTheDocument();
+    expect(mockTriggerScopes).not.toHaveBeenCalledWith({ scope: "all" });
+  });
+
+  it("keeps search and state filters when switching scopes", async () => {
+    mockUser = { id: "admin", is_superuser: true };
+    mockAll = mockMine;
+    const user = userEvent.setup();
+    render(<TriggersPage />);
+    await user.type(screen.getByTestId("triggers-search"), "Inbox");
+    await user.click(screen.getByTestId("triggers-attention-toggle"));
+
+    await user.click(screen.getByRole("combobox", { name: "Scope" }));
+    await user.click(screen.getByRole("option", { name: "All triggers" }));
+
+    expect(screen.getByRole("combobox", { name: "Scope" })).toHaveFocus();
+    expect(screen.getByTestId("triggers-search")).toHaveValue("Inbox");
+    expect(screen.getByTestId("triggers-state-filter")).toHaveTextContent(
+      "Needs attention",
+    );
+    expect(screen.getByTestId("trigger-row-b")).toBeInTheDocument();
+    expect(screen.queryByTestId("trigger-row-a")).toBeNull();
+
+    await user.click(screen.getByRole("combobox", { name: "Scope" }));
+    await user.click(screen.getByRole("option", { name: "My triggers" }));
+
+    expect(screen.getByRole("combobox", { name: "Scope" })).toHaveFocus();
+    expect(screen.getByTestId("triggers-search")).toHaveValue("Inbox");
+    expect(screen.getByTestId("trigger-row-b")).toBeInTheDocument();
+    expect(screen.queryByTestId("trigger-row-a")).toBeNull();
   });
 
   it("lets a superuser pause every trigger on a provider after a dry run", async () => {
@@ -278,7 +391,8 @@ describe("TriggersPage", () => {
     const user = userEvent.setup();
     render(<TriggersPage />);
 
-    await user.click(screen.getByRole("tab", { name: "All triggers" }));
+    await user.click(screen.getByRole("combobox", { name: "Scope" }));
+    await user.click(screen.getByRole("option", { name: "All triggers" }));
     expect(screen.getByText("priya")).toBeInTheDocument();
     expect(screen.getByTestId("triggers-bulk-pause")).toBeDisabled();
 

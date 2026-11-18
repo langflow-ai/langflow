@@ -71,6 +71,7 @@ def task_service():
 def _fake_backend() -> MagicMock:
     backend = MagicMock()
     backend.add_documents = AsyncMock()
+    backend.get_documents_by_ids = AsyncMock(return_value=[])
     backend.ensure_ready = AsyncMock()
     backend.storage_size_bytes = AsyncMock(return_value=1234)
     backend.teardown = AsyncMock()
@@ -143,6 +144,39 @@ def _assert_routed_to_owner(result: SimpleNamespace, *, owner, actor, owners_kb)
     assert result.run_row.await_args.kwargs["kb_id"] == owners_kb.id
     # The collaborator's own model credentials pay for the embeddings.
     assert result.build_embeddings.await_args.args[2].id == actor.id
+
+
+async def test_run_history_follows_the_shared_kb_read_permission(
+    client, logged_in_headers, active_user, owners_kb, cross_user_grant
+):
+    from langflow.services.database.models.jobs.model import Job, JobStatus, JobType
+    from langflow.services.deps import session_scope
+
+    run_id = uuid.uuid4()
+    async with session_scope() as session:
+        session.add(
+            Job(
+                job_id=run_id,
+                flow_id=run_id,
+                type=JobType.INGESTION,
+                status=JobStatus.COMPLETED,
+                user_id=active_user.id,
+                asset_id=owners_kb.id,
+                asset_type="knowledge_base",
+                job_metadata={"kb_name": KB_NAME},
+            )
+        )
+        await session.commit()
+
+    url = f"/api/v1/knowledge_bases/{KB_NAME}/runs"
+    history = await client.get(url, headers=logged_in_headers)
+    assert history.status_code == 200, history.text
+    assert [row["id"] for row in history.json()["runs"]] == [str(run_id)]
+    assert (await client.get(f"{url}/{run_id}", headers=logged_in_headers)).status_code == 200
+
+    cross_user_grant.enforce.return_value = False
+    assert (await client.get(url, headers=logged_in_headers)).status_code == 404
+    assert (await client.get(f"{url}/{run_id}", headers=logged_in_headers)).status_code == 404
 
 
 @pytest.mark.usefixtures("cross_user_grant")

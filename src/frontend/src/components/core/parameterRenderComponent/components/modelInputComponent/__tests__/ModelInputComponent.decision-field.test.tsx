@@ -213,19 +213,40 @@ describe("ModelInputComponent on a decision field (LE-3129)", () => {
     expect(handleOnNewValue).not.toHaveBeenCalled();
   });
 
-  it("shows a saved decision model that is switched off, not another one", () => {
+  it("clears a saved decision model that is switched off, never picking another one", () => {
+    // OpenAI is set up and lists gpt-6-luna, but the user switched it off (LE-3117 F4).
     const handleOnNewValue = jest.fn();
     renderPicker({ value: [LUNA], handleOnNewValue });
-    const trigger = screen.getByRole("combobox");
-    expect(trigger).toHaveTextContent("gpt-6-luna");
-    expect(trigger).not.toHaveTextContent("jev-latest");
-    // Its provider is set up, so it says the model is switched off.
-    expect(trigger).toHaveTextContent("Switched off");
-    expect(
-      screen.getByRole("button", {
-        name: "Turn this model on in Model Providers",
-      }),
-    ).toBeInTheDocument();
+    expect(handleOnNewValue).toHaveBeenCalledTimes(1);
+    expect(handleOnNewValue).toHaveBeenCalledWith({ value: [] });
+  });
+
+  it("clears a switched-off model even when no decision model is on", () => {
+    (useGetEnabledModels as jest.Mock).mockReturnValue({
+      data: { enabled_models: {}, enabled_models_by_type: {} },
+      isLoading: false,
+      isFetching: false,
+    });
+    const handleOnNewValue = jest.fn();
+    renderPicker({ value: [JEV], handleOnNewValue });
+    expect(handleOnNewValue).toHaveBeenCalledWith({ value: [] });
+  });
+
+  it("keeps a saved decision model that is switched on", () => {
+    const handleOnNewValue = jest.fn();
+    renderPicker({ value: [JEV], handleOnNewValue });
+    expect(screen.getByRole("combobox")).toHaveTextContent("jev-latest");
+    expect(handleOnNewValue).not.toHaveBeenCalled();
+  });
+
+  it("waits for settled model status before clearing anything", () => {
+    (useGetEnabledModels as jest.Mock).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isFetching: true,
+    });
+    const handleOnNewValue = jest.fn();
+    renderPicker({ value: [LUNA], handleOnNewValue });
     expect(handleOnNewValue).not.toHaveBeenCalled();
   });
 
@@ -243,10 +264,13 @@ describe("ModelInputComponent on a decision field (LE-3129)", () => {
       isFetching: false,
     });
     const blocked = decision("pplx-decider-flash-latest", "Perplexity");
-    renderPicker({ value: [blocked] });
+    const handleOnNewValue = jest.fn();
+    renderPicker({ value: [blocked], handleOnNewValue });
     const trigger = screen.getByRole("combobox");
     expect(trigger).toHaveTextContent("pplx-decider-flash-latest");
     expect(trigger).not.toHaveTextContent("jev-latest");
+    // Policy, not the user, took it away: the field keeps naming it.
+    expect(handleOnNewValue).not.toHaveBeenCalled();
   });
 
   it("ignores the node's connection mode, which belongs to the language field", () => {
@@ -472,7 +496,10 @@ describe("ModelInputComponent when only a decision provider is set up", () => {
 
   it("names a decision field's saved model even with no provider set up", () => {
     onlyTypeSafe(false);
-    renderPicker({ value: [JEV] });
+    const handleOnNewValue = jest.fn();
+    renderPicker({ value: [JEV], handleOnNewValue });
+    // Waiting for a key is not switched off, so the field keeps it.
+    expect(handleOnNewValue).not.toHaveBeenCalled();
     expect(screen.getByRole("combobox")).toHaveTextContent("jev-latest");
     expect(screen.queryByText("Setup Provider")).not.toBeInTheDocument();
     expect(

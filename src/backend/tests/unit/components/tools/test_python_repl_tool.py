@@ -6,6 +6,8 @@ from lfx.graph import Graph
 
 from tests.base import DID_NOT_EXIST, ComponentTestBaseWithoutClient
 
+pytestmark = pytest.mark.usefixtures("administrator_execution_context")
+
 DYNAMIC_FORMAT_TRAVERSAL_CODE = """
 parts = ["__loader__", "find_spec", "__globals__"]
 field = "{0." + parts[0] + "." + parts[1] + "." + parts[2] + "[sys].modules[os].environ}"

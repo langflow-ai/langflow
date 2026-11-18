@@ -36,7 +36,7 @@ test(
     await page.getByTestId("publish-button").click();
     await page.getByTestId("api-access-item").click();
     await page.getByTestId("api_tab_curl").click();
-    await page.getByTestId("icon-Copy").click();
+    await page.getByTestId("btn-copy-step1").click();
     const handle = await page.evaluateHandle(() =>
       navigator.clipboard.readText(),
     );
@@ -54,7 +54,7 @@ test(
     await page.getByTestId("publish-button").click();
     await page.getByTestId("api-access-item").click();
     await page.getByTestId("api_tab_curl").click();
-    await page.getByTestId("icon-Copy").click();
+    await page.getByTestId("btn-copy-step1").click();
     const handle2 = await page.evaluateHandle(() =>
       navigator.clipboard.readText(),
     );

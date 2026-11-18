@@ -169,6 +169,7 @@ async def _end_vertex_events(response) -> list[dict]:
     return await asyncio.wait_for(collect(), timeout=30)
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_sibling_completion_does_not_reactivate_a_stopped_branch(client, logged_in_headers):
     flow_id = await create_flow(client, _race_flow(), logged_in_headers)
     job_id = (await build_flow(client, flow_id, logged_in_headers))["job_id"]

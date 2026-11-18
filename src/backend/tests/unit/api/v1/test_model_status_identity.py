@@ -866,7 +866,13 @@ def _decision_rows(response):
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_list_decision_models_returns_only_typed_decision_rows(client, logged_in_headers):
+async def test_list_decision_models_returns_only_typed_decision_rows(client, logged_in_headers, monkeypatch):
+    # Keys from a local .env would otherwise turn on live OpenRouter/TypeSafe discovery here.
+    monkeypatch.setattr(
+        models_api,
+        "_get_enabled_providers_result",
+        AsyncMock(return_value={"enabled_providers": [], "provider_status": {}}),
+    )
     response = await client.get("api/v1/models", params={"model_type": "decision"}, headers=logged_in_headers)
     assert response.status_code == 200
     rows = _decision_rows(response)
@@ -1117,3 +1123,318 @@ async def test_unreadable_saved_endpoint_returns_validation_error(monkeypatch):
     assert not result.valid
     assert "OPENAI_BASE_URL" in result.error
     validate.assert_not_called()
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_openrouter_discovery_and_custom_decision_enablement(client, logged_in_headers, monkeypatch):
+    from unittest.mock import Mock
+
+    import httpx
+    import requests
+    from lfx.base.models import model_utils, unified_models
+    from lfx.base.models.decisions import openrouter
+
+    monkeypatch.setattr(
+        models_api,
+        "_get_enabled_providers_result",
+        AsyncMock(
+            return_value={
+                "provider_status": {"OpenRouter": True},
+            }
+        ),
+    )
+    # Exercise the adapter's default flags without sharing its process-wide cache.
+    monkeypatch.setattr(openrouter, "_catalog", openrouter._catalog.__wrapped__)
+    monkeypatch.setattr(
+        openrouter,
+        "ssrf_safe_httpx_get",
+        lambda *_args, **_kwargs: httpx.Response(
+            200,
+            json={
+                "data": [
+                    {
+                        "id": name,
+                        "architecture": {"output_modalities": ["decisions"]},
+                        "endpoints": ["/api/alpha/decisions"],
+                    }
+                    for name in ("author/discovered", "author/other")
+                ]
+            },
+            request=httpx.Request("GET", "https://openrouter.ai/api/v1/models"),
+        ),
+    )
+    monkeypatch.setattr(model_utils, "get_provider_variable_value", lambda *_: None)
+    # pragma: allowlist nextline secret
+    monkeypatch.setattr(unified_models, "get_all_variables_for_provider", lambda *_: {"OPENROUTER_API_KEY": "test-key"})
+    monkeypatch.setattr(requests, "get", Mock(return_value=Mock(status_code=200)))
+    response = await client.get("api/v1/models", params={"model_type": "decision"}, headers=logged_in_headers)
+    assert response.status_code == 200
+    rows = _decision_rows(response)
+    assert ("OpenRouter", "author/discovered") in rows
+    provider = next(group for group in response.json() if group["provider"] == "OpenRouter")
+    assert provider["is_configured"] is True
+    assert provider["is_enabled"] is False
+    assert all(row["metadata"]["default"] is False for row in provider["models"])
+    response = await client.get("api/v1/models/enabled_models", headers=logged_in_headers)
+    assert response.status_code == 200
+    assert response.json()["enabled_models_by_type"]["OpenRouter"]["decision"] == {
+        "author/discovered": False,
+        "author/other": False,
+    }
+
+    response = await client.post(
+        "api/v1/models/enabled_models",
+        headers=logged_in_headers,
+        json=[
+            {
+                "provider": "OpenRouter",
+                "model_id": "author/discovered",
+                "model_type": "decision",
+                "enabled": True,
+            },
+            {
+                "provider": "OpenRouter",
+                "model_id": "author/new:exacto",
+                "model_type": "decision",
+                "enabled": True,
+            },
+        ],
+    )
+    assert response.status_code == 200, response.text
+    response = await client.get("api/v1/models", params={"model_type": "decision"}, headers=logged_in_headers)
+    assert response.status_code == 200
+    rows = _decision_rows(response)
+    assert ("OpenRouter", "author/new:exacto") in rows
+    assert rows[("OpenRouter", "author/new:exacto")]["capabilities"] == ["choice", "boolean", "score"]
+    response = await client.get("api/v1/models/enabled_models", headers=logged_in_headers)
+    assert response.status_code == 200
+    assert response.json()["enabled_models_by_type"]["OpenRouter"]["decision"] == {
+        "author/discovered": True,
+        "author/other": False,
+        "author/new:exacto": True,
+    }
+    response = await client.get(
+        "api/v1/models",
+        params={"model_type": "decision", "model_name": "author/discovered"},
+        headers=logged_in_headers,
+    )
+    assert set(_decision_rows(response)) == {("OpenRouter", "author/discovered")}
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_typesafe_models_are_discovered_as_decisions_only(client, logged_in_headers, monkeypatch):
+    import httpx
+    from lfx.base.models.decisions import providers, typesafe
+
+    monkeypatch.setattr(
+        models_api,
+        "_get_enabled_providers_result",
+        AsyncMock(
+            return_value={
+                "provider_status": {"TypeSafe": True},
+            }
+        ),
+    )
+    monkeypatch.setattr("lfx.base.models.model_utils.get_provider_variable_value", lambda *_: "account-key")
+
+    def discover(request):
+        assert request.headers["Authorization"] == "Bearer account-key"
+        return httpx.Response(200, json={"models": [{"name": "jev-preview"}, {"name": "jev-other"}]})
+
+    monkeypatch.setattr(typesafe, "_catalog", typesafe._catalog.__wrapped__)
+    monkeypatch.setattr(
+        typesafe, "provider_httpx_client_kwargs", lambda _url: ({"transport": httpx.MockTransport(discover)}, {})
+    )
+    monkeypatch.setattr(
+        "lfx.base.models.unified_models.get_all_variables_for_provider",
+        lambda *_: {"TYPESAFE_API_KEY": "account-key"},  # pragma: allowlist secret
+    )
+    monkeypatch.setattr(providers, "validate_decision_provider_key", lambda *_args, **_kwargs: None)
+    response = await client.get("api/v1/models", params={"model_type": "decision"}, headers=logged_in_headers)
+    assert response.status_code == 200
+    rows = _decision_rows(response)
+    assert ("TypeSafe", "jev-preview") in rows
+    assert ("TypeSafe", "jev-latest") not in rows
+    provider = next(group for group in response.json() if group["provider"] == "TypeSafe")
+    assert provider["is_configured"] is True
+    assert provider["is_enabled"] is False
+    assert all(row["metadata"]["default"] is False for row in provider["models"])
+    response = await client.get("api/v1/models/enabled_models", headers=logged_in_headers)
+    assert response.status_code == 200
+    assert response.json()["enabled_models_by_type"]["TypeSafe"]["decision"] == {
+        "jev-preview": False,
+        "jev-other": False,
+    }
+    response = await client.post(
+        "api/v1/models/enabled_models",
+        headers=logged_in_headers,
+        json=[{"provider": "TypeSafe", "model_id": "jev-preview", "model_type": "decision", "enabled": True}],
+    )
+    assert response.status_code == 200, response.text
+    response = await client.get("api/v1/models/enabled_models", headers=logged_in_headers)
+    assert response.status_code == 200
+    assert response.json()["enabled_models_by_type"]["TypeSafe"]["decision"] == {
+        "jev-preview": True,
+        "jev-other": False,
+    }
+    response = await client.get("api/v1/models", params={"model_type": "llm"}, headers=logged_in_headers)
+    assert response.status_code == 200
+    assert all(group["provider"] != "TypeSafe" for group in response.json())
+
+
+@pytest.mark.parametrize("failed_provider", ["TypeSafe", "OpenRouter"])
+@pytest.mark.parametrize("filtered", [True, False])
+async def test_decision_discovery_failure_keeps_other_providers_usable(monkeypatch, failed_provider, filtered):
+    from unittest.mock import Mock
+
+    from lfx.base.models import model_utils
+    from lfx.base.models.decisions.schema import DecisionConfigurationError
+    from lfx.services.model_provider_policy import (
+        ModelProviderPolicyContext,
+        ModelProviderPolicyPurpose,
+        ModelProviderPolicySnapshot,
+    )
+
+    provider_ids = frozenset({"openai", "typesafe", "openrouter"})
+    policy = ModelProviderPolicySnapshot(
+        context=ModelProviderPolicyContext(),
+        purpose=ModelProviderPolicyPurpose.DISCOVER,
+        candidate_provider_ids=provider_ids,
+        allowed_provider_ids=provider_ids,
+    )
+    monkeypatch.setattr(models_api, "_aresolve_read_policy", AsyncMock(return_value=policy))
+    monkeypatch.setattr(
+        models_api,
+        "_get_enabled_providers_result",
+        AsyncMock(
+            return_value={
+                "provider_status": {"OpenAI": True, failed_provider: True},
+            }
+        ),
+    )
+    monkeypatch.setattr(models_api, "_get_disabled_models", AsyncMock(return_value=set()))
+    monkeypatch.setattr(models_api, "_get_enabled_models", AsyncMock(return_value=set()))
+    monkeypatch.setattr(models_api, "get_default_model", AsyncMock(return_value={}))
+
+    def fetch(_user, provider, kind):
+        if provider == failed_provider and kind == "decision":
+            msg = "Decision discovery unavailable"
+            raise DecisionConfigurationError(msg)
+        return []
+
+    fetch_mock = Mock(side_effect=fetch)
+    monkeypatch.setattr(model_utils, "get_live_models_for_provider", fetch_mock)
+    result = await models_api.list_models(
+        provider=["OpenAI"] if filtered else None,
+        model_type="llm" if filtered else None,
+        session=object(),
+        current_user=SimpleNamespace(id=uuid4()),
+        provider_policy_attributes={},
+    )
+    openai = next(row for row in result if row["provider"] == "OpenAI")
+    assert any(row["metadata"]["model_type"] == "llm" for row in openai["models"])
+    if filtered:
+        assert {row["provider"] for row in result} == {"OpenAI"}
+        assert all(call.args[1] != failed_provider for call in fetch_mock.call_args_list)
+    else:
+        failed = next(row for row in result if row["provider"] == failed_provider)
+        assert failed["is_configured"] is True
+        assert failed["discovery_error"] == "Decision discovery unavailable"
+        assert not any(row["metadata"]["model_type"] == "decision" for row in failed["models"])
+
+
+def test_custom_decision_id_sharing_default_chat_name_survives_reload():
+    catalog = [
+        {
+            "provider": "OpenRouter",
+            "models": [
+                {"model_name": "openai/gpt-4o", "metadata": {"model_type": "llm", "default": True}},
+            ],
+        }
+    ]
+    enabled = set()
+    _update_model_sets(
+        [ModelStatusUpdate(provider="OpenRouter", model_id="openai/gpt-4o", model_type="decision", enabled=True)],
+        set(),
+        enabled,
+        _build_model_default_flags(catalog),
+    )
+    assert enabled == {"OpenRouter::decision::openai/gpt-4o"}
+    inject_custom_enabled_models(catalog, enabled)
+    assert {row["metadata"]["model_type"] for row in catalog[0]["models"]} == {"llm", "decision"}
+
+
+async def test_embedding_defaults_match_unfiltered_status(monkeypatch):
+    from lfx.services.model_provider_policy import (
+        ModelProviderPolicyContext,
+        ModelProviderPolicyPurpose,
+        ModelProviderPolicySnapshot,
+    )
+
+    policy = ModelProviderPolicySnapshot(
+        context=ModelProviderPolicyContext(),
+        purpose=ModelProviderPolicyPurpose.DISCOVER,
+        candidate_provider_ids=frozenset({"openai"}),
+        allowed_provider_ids=frozenset({"openai"}),
+    )
+    monkeypatch.setattr(models_api, "_get_disabled_models", AsyncMock(return_value=set()))
+    monkeypatch.setattr(models_api, "_get_enabled_models", AsyncMock(return_value=set()))
+    # Use the real static catalog; this regression is independent of provider HTTP discovery.
+    monkeypatch.setattr(models_api, "replace_with_live_models", lambda *_, **__: None)
+    args = {
+        "session": object(),
+        "current_user": SimpleNamespace(id=uuid4()),
+        "provider_policy": policy,
+        "provider_status": {"OpenAI": True},
+        "providers": ["OpenAI"],
+    }
+    unfiltered = await models_api._get_enabled_models_result(**args)
+    filtered = await models_api._get_enabled_models_result(**args, model_type="embeddings")
+    assert (
+        filtered["enabled_models_by_type"]["OpenAI"]["embeddings"]
+        == unfiltered["enabled_models_by_type"]["OpenAI"]["embeddings"]
+    )
+
+
+async def test_typed_listing_is_enabled_only_through_its_own_type(monkeypatch):
+    from lfx.base.models.unified_models import get_unified_models_detailed
+    from lfx.services.model_provider_policy import (
+        ModelProviderPolicyContext,
+        ModelProviderPolicyPurpose,
+        ModelProviderPolicySnapshot,
+    )
+
+    policy = ModelProviderPolicySnapshot(
+        context=ModelProviderPolicyContext(),
+        purpose=ModelProviderPolicyPurpose.DISCOVER,
+        candidate_provider_ids=frozenset({"openai"}),
+        allowed_provider_ids=frozenset({"openai"}),
+    )
+    embeddings = {
+        model_status_key("OpenAI", row["model_name"], "embeddings")
+        for group in get_unified_models_detailed(providers=["OpenAI"], model_type="embeddings")
+        for row in group["models"]
+    }
+    monkeypatch.setattr(models_api, "_aresolve_read_policy", AsyncMock(return_value=policy))
+    monkeypatch.setattr(
+        models_api, "_get_enabled_providers_result", AsyncMock(return_value={"provider_status": {"OpenAI": True}})
+    )
+    # Every embedding model is off while the default chat models stay on.
+    monkeypatch.setattr(models_api, "_get_disabled_models", AsyncMock(return_value=embeddings))
+    monkeypatch.setattr(models_api, "_get_enabled_models", AsyncMock(return_value=set()))
+    monkeypatch.setattr(models_api, "get_default_model", AsyncMock(return_value={}))
+    monkeypatch.setattr(models_api, "replace_with_live_models", lambda *_, **__: None)
+
+    async def is_enabled(model_type):
+        result = await models_api.list_models(
+            provider=["OpenAI"],
+            model_type=model_type,
+            session=object(),
+            current_user=SimpleNamespace(id=uuid4()),
+            provider_policy_attributes={},
+        )
+        return next(row for row in result if row["provider"] == "OpenAI")["is_enabled"]
+
+    assert embeddings
+    assert await is_enabled("llm") is True
+    assert await is_enabled("embeddings") is False
