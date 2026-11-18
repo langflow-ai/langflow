@@ -775,6 +775,7 @@
   "errors.invalidApiKey": "Ihr API-Schlüssel ist ungültig. Bitte fügen Sie einen gültigen API-Schlüssel hinzu, um den Langflow Store nutzen zu können.",
   "errors.invalidFile": "Bitte wählen Sie eine gültige Datei aus. Es sind nur folgende Dateiformate zulässig:",
   "errors.invalidSelection": "Ungültige Auswahl",
+  "errors.groupTriggerSelection": "Wählen Sie nur Komponenten aus, die keine Trigger sind",
   "errors.lastBuildFailed": "Der letzte Build ist fehlgeschlagen",
   "errors.missedFields": "Hoppla! Du hast wohl etwas übersehen",
   "errors.missingInfo": "Hoppla! Es sieht so aus, als hättest du einige erforderliche Angaben vergessen:",
