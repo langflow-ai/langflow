@@ -131,6 +131,57 @@ def test_collect_dependency_refs_reads_kb_mb_and_inline_kb():
     assert kb_names == {"testKb", "inlineKb"}
 
 
+def _kb_node(node_id: str, kb: str) -> dict:
+    return {"id": node_id, "data": {"node": {"template": {"knowledge_base": {"value": kb}}}}}
+
+
+def _plain(node_id: str) -> dict:
+    return {"id": node_id, "data": {"node": {"template": {}}}}
+
+
+def _edge(source: str, target: str) -> dict:
+    return {"source": source, "target": target}
+
+
+def test_a_knowledge_node_wired_to_nothing_in_a_chat_flow_is_not_a_dependency():
+    """A Knowledge node a chat run never builds is no dependency (QA LE-2778 F3b).
+
+    A v2 run of Chat Input -> Chat Output never builds a stray Knowledge node, so a deleted KB it
+    names must not block the deploy. The wired one still counts.
+    """
+    payload = {
+        "data": {
+            "nodes": [
+                _plain("ChatInput-a"),
+                _kb_node("Knowledge-wired", "policies"),
+                _plain("ChatOutput-b"),
+                _kb_node("Knowledge-stray", "ghost_gone"),
+            ],
+            "edges": [_edge("ChatInput-a", "Knowledge-wired"), _edge("Knowledge-wired", "ChatOutput-b")],
+        }
+    }
+    _mb, kb_names = _collect_dependency_refs(payload)
+    assert kb_names == {"policies"}
+
+
+@pytest.mark.parametrize(
+    ("nodes", "edges"),
+    [
+        # No Chat Input: every node without inputs is in the first layer, so the stray one runs.
+        ([_plain("TextInput-a"), _plain("TextOutput-b"), _kb_node("Knowledge-stray", "ghost_gone")],
+         [_edge("TextInput-a", "TextOutput-b")]),
+        # A lone node is the whole run.
+        ([_kb_node("Knowledge-only", "ghost_gone")], []),
+        # A Chat Input fed by another node is not moved to its own first layer, so the stray one runs.
+        ([_plain("Prompt-p"), _plain("ChatInput-a"), _plain("ChatOutput-b"), _kb_node("Knowledge-stray", "ghost_gone")],
+         [_edge("Prompt-p", "ChatInput-a"), _edge("ChatInput-a", "ChatOutput-b")]),
+    ],
+)  # fmt: skip
+def test_a_stray_knowledge_node_that_a_run_does_build_stays_a_dependency(nodes, edges):
+    _mb, kb_names = _collect_dependency_refs({"data": {"nodes": nodes, "edges": edges}})
+    assert kb_names == {"ghost_gone"}
+
+
 def test_collect_dependency_refs_tolerates_malformed_payload():
     assert _collect_dependency_refs({}) == (set(), set())
     assert _collect_dependency_refs({"data": {"nodes": [None, {}, {"data": None}]}}) == (set(), set())
