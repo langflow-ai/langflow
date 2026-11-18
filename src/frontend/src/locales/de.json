@@ -1118,6 +1118,7 @@
   "humanInput.required": "Menschliches Eingreifen erforderlich",
   "humanInput.resumeFailed": "Fortsetzen fehlgeschlagen",
   "humanInput.runFailed": "Der Workflow-Lauf ist fehlgeschlagen",
+  "humanInput.sharedPlaygroundUnsupported": "Dieser Flow benötigt eine menschliche Entscheidung und kann nicht in einem geteilten Playground ausgeführt werden. Melden Sie sich mit einem Konto an, das diesen Flow ausführen darf.",
   "humanInput.superseded": "Durch eine neue Auflage ersetzt",
   "humanInput.waitingFallback": "Der Ablauf wurde unterbrochen und wartet nun auf Ihre Entscheidung, bevor er fortgesetzt wird.",
   "humanInput.waitingForInput": "Warten auf eine Eingabe durch den Benutzer",

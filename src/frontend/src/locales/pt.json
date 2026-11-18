@@ -1118,6 +1118,7 @@
   "humanInput.required": "É necessária a intervenção humana",
   "humanInput.resumeFailed": "Falha ao retomar",
   "humanInput.runFailed": "Falha na execução do fluxo de trabalho",
+  "humanInput.sharedPlaygroundUnsupported": "Este fluxo precisa de uma decisão humana e não pode ser executado em um Playground compartilhado. Entre com uma conta que possa executar este fluxo.",
   "humanInput.superseded": "Substituído por uma nova tiragem",
   "humanInput.waitingFallback": "O fluxo foi interrompido e está aguardando sua decisão antes de continuar.",
   "humanInput.waitingForInput": "Aguardando ação do usuário",

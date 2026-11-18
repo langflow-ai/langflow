@@ -1217,7 +1217,38 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         rows.some((row) => (row?.approval_actions?.length ?? 0) > 0)
       );
     });
-    await (canSuspend ? runFlowHITL(runArgs) : runFlowAGUI(runArgs));
+    if (!canSuspend) {
+      await runFlowAGUI(runArgs);
+    } else if (!get().playgroundPage) {
+      await runFlowHITL(runArgs);
+    } else {
+      // The shareable playground has no public background run. Only the signed-in owner
+      // may use the authenticated one: a visitor's run would land in the owner's history.
+      const refuse = () => {
+        const message = i18n.t("humanInput.sharedPlaygroundUnsupported");
+        get().setBuildInfo({ error: [message], success: false });
+        get().setIsBuilding(false);
+        // Not every playground chat renders buildInfo errors, so alert here too.
+        useAlertStore.getState().setErrorData({ title: message });
+      };
+      const { isAuthenticated, userData } = useAuthStore.getState();
+      const isOwner =
+        isAuthenticated &&
+        !!userData?.id &&
+        userData.id === currentFlow?.user_id;
+      if (!isOwner) {
+        refuse();
+      } else {
+        try {
+          await runFlowHITL({ ...runArgs, messageFlowId: buildingFlowId });
+        } catch (error) {
+          const status = (error as { response?: { status?: number } })?.response
+            ?.status;
+          if (status !== 401 && status !== 403 && status !== 404) throw error;
+          refuse();
+        }
+      }
+    }
 
     // Invalidate KB caches so a KnowledgeIngestion run surfaces updated stats on the
     // next read; cheap when no subscribers are mounted (queries refetch only if read).
