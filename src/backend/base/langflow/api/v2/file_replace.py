@@ -15,13 +15,13 @@ from langflow.services.storage.local import LocalStorageService
 from langflow.services.storage.service import StorageService
 
 
-async def record_appended_user_file(
+async def _writable_stored_entry(
     file_path: Path,
     session: DbSession,
     current_user: CurrentActiveUser,
     storage_service: StorageService,
-) -> UploadFileResponse | None:
-    """Update the entry whose stored file is ``file_path``; None when no entry stores that very file.
+) -> UserFile | None:
+    """Return the entry whose stored file is ``file_path`` once WRITE is allowed on it.
 
     Only a file the entry already stores is safe to record: any other local copy
     (remote storage, another folder) never held the entry's content, so uploading
@@ -41,6 +41,29 @@ async def record_appended_user_file(
         return None
     await _release_restricted_file_reads(session, entry)
     await ensure_file_permission(current_user, FileAction.WRITE, file_id=entry.id, file_user_id=entry.user_id)
+    return entry
+
+
+async def ensure_appended_user_file_writable(
+    file_path: Path,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+    storage_service: StorageService,
+) -> None:
+    """Raise before an append changes ``file_path`` when it is an entry the user may not write."""
+    await _writable_stored_entry(file_path, session, current_user, storage_service)
+
+
+async def record_appended_user_file(
+    file_path: Path,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+    storage_service: StorageService,
+) -> UploadFileResponse | None:
+    """Update the entry whose stored file is ``file_path``; None when no entry stores that very file."""
+    entry = await _writable_stored_entry(file_path, session, current_user, storage_service)
+    if entry is None:
+        return None
     entry.size = file_path.stat().st_size
     entry.updated_at = datetime.now(timezone.utc)
     session.add(entry)

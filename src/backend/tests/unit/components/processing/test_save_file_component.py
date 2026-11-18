@@ -657,6 +657,30 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
 
         assert path.read_bytes() == original
 
+    @pytest.mark.parametrize("input_kind", ["data", "dataframe"])
+    def test_csv_append_of_zero_rows_leaves_an_empty_file_empty(self, component_class, tmp_path, input_kind):
+        component = component_class()
+        component.set_attributes({"append_mode": True})
+        path = tmp_path / "rows.csv"
+        path.touch()
+
+        self._csv_saver(component, input_kind)({"a": [], "b": []}, path)
+
+        assert path.read_bytes() == b""
+
+    @pytest.mark.parametrize("input_kind", ["data", "dataframe"])
+    @pytest.mark.parametrize("newline", [b"\n", b"\r\n"], ids=["lf", "crlf"])
+    def test_csv_append_ends_a_last_row_that_has_no_newline(self, component_class, tmp_path, input_kind, newline):
+        component = component_class()
+        component.set_attributes({"append_mode": True})
+        path = tmp_path / "rows.csv"
+        path.write_bytes(b"a,b" + newline + b"1,2")
+
+        self._csv_saver(component, input_kind)({"b": [3], "a": [4]}, path)
+
+        assert path.read_bytes() == b"a,b" + newline + b"1,2" + newline + b"4,3" + newline
+        assert self._csv_rows(path) == [["a", "b"], ["1", "2"], ["4", "3"]]
+
     def test_csv_append_to_a_file_that_is_not_utf8_compares_its_header(self, component_class, tmp_path):
         component = component_class()
         component.set_attributes({"append_mode": True})
@@ -704,16 +728,16 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
-        ("append_mode", "recorded", "expected"),
+        ("appended", "recorded", "expected"),
         [(True, "entry", "record"), (True, None, "upload"), (False, None, "upload")],
     )
     async def test_an_append_updates_the_my_files_entry_that_stores_the_file(
-        self, component_class, tmp_path, append_mode, recorded, expected
+        self, component_class, tmp_path, appended, recorded, expected
     ):
         saved = tmp_path / "ledger.csv"
         saved.write_text("a,b\n1,2\n", encoding="utf-8")
         component = component_class(_user_id=str(uuid4()))
-        component.set_attributes({"append_mode": append_mode})
+        component.set_attributes({"append_mode": True})
 
         with (
             patch("langflow.api.v2.files.upload_user_file", new_callable=AsyncMock) as upload,
@@ -723,10 +747,10 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         ):
             session.return_value.__aenter__.return_value = AsyncMock()
             record.return_value = recorded
-            result = await component._upload_file(saved)
+            result = await component._upload_file(saved, appended=appended)
 
         assert result == {"record": recorded, "upload": upload.return_value}[expected]
-        assert record.await_count == (1 if append_mode else 0)
+        assert record.await_count == (1 if appended else 0)
         assert upload.await_count == (1 if expected == "upload" else 0)
 
     async def test_append_mode_txt_file(self, component_class):
