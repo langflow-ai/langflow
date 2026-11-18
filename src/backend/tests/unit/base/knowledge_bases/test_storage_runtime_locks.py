@@ -275,3 +275,45 @@ async def test_remote_lock_contention_has_bounded_wait(remote_engine, monkeypatc
             await asyncio.create_task(contender())
         assert remote_engine.active == 1
     assert remote_engine.active == 0
+
+
+async def test_reading_one_job_takes_the_shared_lock(monkeypatch):
+    seen = []
+
+    @asynccontextmanager
+    async def operation(_record, *, shared=False):
+        seen.append(shared)
+        yield
+
+    monkeypatch.setattr(runtime, "operation", operation)
+
+    class Backend:
+        async def iter_job_documents(self, job_id):
+            yield [job_id]
+
+        async def count_job(self, job_id):
+            return len(job_id)
+
+    backend = runtime._GuardedMethods(Backend(), object())
+    assert [batch async for batch in backend.iter_job_documents("job")] == [["job"]]
+    assert await backend.count_job("job") == 3
+    assert seen == [True, True]
+
+
+async def test_remote_lock_pool_checks_connections_before_use(monkeypatch):
+    """A Postgres failover ends the pooled backends; the lock pool must not hand one out."""
+    created = {}
+
+    def create_async_engine(_url, **kwargs):
+        created.update(kwargs)
+        return FakeAdvisoryEngine()
+
+    service = SimpleNamespace(database_url="postgresql+psycopg://test/coordination", _get_connect_args=dict)
+    monkeypatch.setattr(runtime, "get_db_service", lambda: service)
+    monkeypatch.setattr(runtime, "get_settings_service", lambda: SimpleNamespace(settings=SimpleNamespace()))
+    monkeypatch.setattr(runtime, "create_async_engine", create_async_engine)
+    monkeypatch.setattr(runtime, "_coordination_engines", {})
+
+    async with runtime._remote_lock(uuid4()):
+        pass
+    assert created["pool_pre_ping"] is True
