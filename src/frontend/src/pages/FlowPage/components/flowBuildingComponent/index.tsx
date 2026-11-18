@@ -170,8 +170,9 @@ export default function FlowBuildingComponent() {
                 )}
               </div>
               <div className="flex items-center gap-4">
+                {/* Animate only the position. A size animation scales the text, so it stretches when the width changes (for example "0.9s" to "1s"). */}
                 <motion.div
-                  layout
+                  layout="position"
                   transition={{ duration: 0.2, ease: "easeOut" }}
                   className="font-mono text-xs"
                 >

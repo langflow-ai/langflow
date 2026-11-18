@@ -13,7 +13,7 @@ jest.mock("framer-motion", () => {
       // The mock drops motion-only props that are not DOM attributes.
       div: React.forwardRef<
         HTMLDivElement,
-        ComponentProps<"div"> & { layout?: boolean }
+        ComponentProps<"div"> & { layout?: boolean | "position" }
       >(({ children, className, layout: _layout, ...props }, ref) => (
         <div ref={ref} className={className} {...props}>
           {children}
