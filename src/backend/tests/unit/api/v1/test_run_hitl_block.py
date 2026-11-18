@@ -47,3 +47,48 @@ class TestFlowRequiresHitl:
 
     def test_missing_keys_are_safe(self):
         assert flow_requires_hitl({}) is False
+
+
+def _group(group_id: str, nodes: list[dict], edges: list[dict]) -> dict:
+    return {
+        "id": group_id,
+        "data": {
+            "id": group_id,
+            "type": "GroupNode",
+            "node": {"template": {}, "flow": {"data": {"nodes": nodes, "edges": edges}}},
+        },
+    }
+
+
+def _wired_human_input() -> list[dict]:
+    return [_node("hi", "HumanInput"), _node("save", "SaveToFile")]
+
+
+class TestFlowRequiresHitlInGroups:
+    """The graph flattens group nodes before running, so the guard must see grouped HITL nodes."""
+
+    def test_human_input_inside_a_group_requires_hitl(self):
+        group = _group(
+            "g", [_node("hi", "HumanInput"), _node("save", "SaveToFile")], [{"source": "hi", "target": "save"}]
+        )
+        assert flow_requires_hitl({"nodes": [_node("chat", "ChatInput"), group], "edges": []}) is True
+
+    def test_human_input_inside_a_nested_group_requires_hitl(self):
+        inner = _group(
+            "inner", [_node("hi", "HumanInput"), _node("save", "SaveToFile")], [{"source": "hi", "target": "save"}]
+        )
+        outer = _group("outer", [inner], [])
+        assert flow_requires_hitl({"nodes": [outer], "edges": []}) is True
+
+    def test_approval_gated_tool_inside_a_group_requires_hitl(self):
+        template = {"tools_metadata": {"value": [{"name": "fetch_content", "approval_actions": ["approve"]}]}}
+        group = _group("g", [_node("url", "URLComponent", template)], [])
+        assert flow_requires_hitl({"nodes": [group], "edges": []}) is True
+
+    def test_isolated_human_input_inside_a_group_does_not(self):
+        group = _group("g", [_node("hi", "HumanInput")], [])
+        assert flow_requires_hitl({"nodes": [group], "edges": []}) is False
+
+    def test_malformed_group_does_not_raise(self):
+        broken = {"id": "g", "data": {"id": "g", "type": "GroupNode", "node": {"template": {}, "flow": {}}}}
+        assert flow_requires_hitl({"nodes": [broken], "edges": []}) is False

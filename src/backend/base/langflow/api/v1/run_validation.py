@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import contextlib
+
 from fastapi import HTTPException, status
+from lfx.graph.graph.utils import process_flow
 
 _HUMAN_INPUT_TYPE = "HumanInput"
 
@@ -20,6 +23,10 @@ def flow_requires_hitl(graph_data: dict) -> bool:
     skipped at runtime, so it is not blocking), or an approval-gated agent tool (a
     ``tools_metadata`` row carrying a non-empty ``approval_actions``).
     """
+    # The graph flattens group nodes before it runs, so check the flattened copy. A group
+    # too malformed to flatten falls back to the top-level nodes; the build reports it.
+    with contextlib.suppress(KeyError, TypeError, AttributeError, ValueError):
+        graph_data = process_flow(graph_data)
     nodes = graph_data.get("nodes") or []
     edges = graph_data.get("edges") or []
     edge_sources = {edge.get("source") for edge in edges}

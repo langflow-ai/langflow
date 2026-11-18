@@ -251,3 +251,64 @@ def test_malformed_graph_with_tweaks_is_left_to_run_validation():
     parsed = ParsedWorkflowRun(flow_id="flow", mode="stream", data={"edges": []}, tweaks={"Tool": {"x": 1}})
 
     _reject_hitl_outside_background(parsed, SimpleNamespace(data=None))
+
+
+@pytest.fixture
+async def grouped_approval_flow(approval_flow):
+    """The same flow with Human Input and both branches moved into a group node."""
+    async with session_scope() as session:
+        flow = await session.get(Flow, UUID(approval_flow))
+        data = json.loads(json.dumps(flow.data))
+        grouped_ids = {"Ask", "OutYes", "OutNo"}
+        inner_nodes = [node for node in data["nodes"] if node["id"] in grouped_ids]
+        inner_edges = [e for e in data["edges"] if e["source"] in grouped_ids and e["target"] in grouped_ids]
+        group = {
+            "id": "Group",
+            "type": "genericNode",
+            "position": {"x": 0, "y": 0},
+            "data": {
+                "id": "Group",
+                "type": "GroupNode",
+                "node": {
+                    "display_name": "Group",
+                    "template": {},
+                    "outputs": [],
+                    "flow": {"data": {"nodes": inner_nodes, "edges": inner_edges}},
+                },
+            },
+        }
+        flow.data = {
+            "nodes": [node for node in data["nodes"] if node["id"] not in grouped_ids] + [group],
+            "edges": [],
+            "viewport": data["viewport"],
+        }
+        session.add(flow)
+    return approval_flow
+
+
+async def test_sync_run_is_refused_when_human_input_is_inside_a_group(client, created_api_key, grouped_approval_flow):
+    before = await _branch_message_count()
+
+    response = await client.post(
+        "api/v2/workflows",
+        json={"flow_id": grouped_approval_flow, "input_value": "delete prod db?"},
+        headers={"x-api-key": created_api_key.api_key},
+    )
+
+    _assert_hitl_refused(response, grouped_approval_flow)
+    assert await _branch_message_count() == before
+
+
+async def test_public_run_is_refused_when_human_input_is_inside_a_group(client: AsyncClient, grouped_approval_flow):
+    before = await _branch_message_count()
+    client.cookies.clear()
+    client.cookies.set("client_id", "hitl-grouped-visitor")
+
+    response = await client.post(
+        "api/v2/workflows/public",
+        json={"flow_id": grouped_approval_flow, "input_value": "delete prod db?"},
+    )
+
+    assert response.status_code == codes.BAD_REQUEST, response.text
+    assert "Human-in-the-Loop" in response.json()["detail"]
+    assert await _branch_message_count() == before
