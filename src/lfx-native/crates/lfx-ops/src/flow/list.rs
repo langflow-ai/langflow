@@ -6,7 +6,7 @@
 
 use std::fmt;
 
-use crate::collection::hash_map::{HashMap, IndexSet, State};
+use crate::map::hash::{HashMap, IndexSet, State};
 use crate::json::FlowValue;
 
 use crate::flow::model::KeyedList;

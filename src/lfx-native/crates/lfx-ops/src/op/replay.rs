@@ -14,7 +14,7 @@
 //! [`apply`](crate::op::apply) makes the same checks, so its forward
 //! operations always replay to the same flow.
 
-use crate::collection::hash_map::IndexSet;
+use crate::map::hash::IndexSet;
 use crate::flow::edge::Edge;
 use crate::json::FlowValue;
 use crate::json::serialize::quoted;

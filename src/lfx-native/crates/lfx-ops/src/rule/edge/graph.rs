@@ -3,7 +3,7 @@
 
 use std::borrow::Cow;
 
-use crate::collection::hash_map::HashMap;
+use crate::map::hash::HashMap;
 use crate::flow::model::EntryExt;
 use crate::flow::node::NodeRef;
 use crate::json::{FlowObj, FlowValue};

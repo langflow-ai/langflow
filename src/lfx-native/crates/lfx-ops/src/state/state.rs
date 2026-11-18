@@ -11,8 +11,8 @@ use std::borrow::Cow;
 use std::sync::atomic::AtomicUsize;
 use std::sync::{Arc, Mutex, PoisonError, TryLockError};
 
-use crate::collection::hash_map::IndexMap;
-use crate::collection::pending_map::PendingMap;
+use crate::map::hash::IndexMap;
+use crate::map::pending::PendingMap;
 use crate::json::serialize::{self, Ascii};
 use crate::json::{FlowObj, FlowValue};
 

@@ -4,7 +4,7 @@
 //! into an input that accepts only one edge. The client chooses that fix.
 //! Repair runs only when a request asks for it.
 
-use crate::collection::hash_map::{HashMap, HashSet};
+use crate::map::hash::{HashMap, HashSet};
 use crate::flow_value;
 use crate::json::{FlowObj, FlowValue};
 use sha2::{Digest, Sha256};

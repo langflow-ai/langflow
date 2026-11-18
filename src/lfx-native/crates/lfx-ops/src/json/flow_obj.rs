@@ -1,6 +1,6 @@
 //! [`FlowObj`]: a JSON object in insertion order. Copies share it until a write.
 
-use crate::collection::hash_map::{IndexMap, State};
+use crate::map::hash::{IndexMap, State};
 use std::ops::Index;
 use std::sync::Arc;
 
@@ -157,8 +157,8 @@ impl FlowObj {
     pub fn get_mut(&mut self, key: &str) -> Option<&mut FlowValue> {
         match &mut self.entries {
             Entries::Small(v) => {
-                let slot = v.iter().position(|(k, _)| k.as_str() == key)?;
-                Some(&mut Arc::make_mut(v)[slot].1)
+                let index = v.iter().position(|(k, _)| k.as_str() == key)?;
+                Some(&mut Arc::make_mut(v)[index].1)
             }
             Entries::Indexed(v) => Arc::make_mut(v).get_mut(key),
         }
@@ -181,8 +181,8 @@ impl FlowObj {
             Entries::Small(v) => v,
             Entries::Indexed(v) => return Arc::make_mut(v).insert(key, value),
         };
-        if let Some(slot) = v.iter().position(|(k, _)| k.as_str() == key.as_str()) {
-            return Some(std::mem::replace(&mut Arc::make_mut(v)[slot].1, value));
+        if let Some(index) = v.iter().position(|(k, _)| k.as_str() == key.as_str()) {
+            return Some(std::mem::replace(&mut Arc::make_mut(v)[index].1, value));
         }
         let mut rows = take_rows(v);
         if rows.len() < SMALL_OBJECT_KEYS {
@@ -206,9 +206,9 @@ impl FlowObj {
     pub fn shift_remove(&mut self, key: &str) -> Option<FlowValue> {
         match &mut self.entries {
             Entries::Small(v) => {
-                let slot = v.iter().position(|(k, _)| k.as_str() == key)?;
+                let index = v.iter().position(|(k, _)| k.as_str() == key)?;
                 let mut rows = take_rows(v);
-                let removed = rows.remove(slot).1;
+                let removed = rows.remove(index).1;
                 *v = Arc::from(rows);
                 Some(removed)
             }
@@ -218,17 +218,17 @@ impl FlowObj {
 
     /// The value at `key`, added as `null` when it is missing.
     pub(crate) fn entry_or_null(&mut self, key: &str) -> &mut FlowValue {
-        let slot = match &self.entries {
+        let index = match &self.entries {
             Entries::Small(v) => v.iter().position(|(k, _)| k.as_str() == key),
             Entries::Indexed(v) => v.get_index_of(key),
         };
-        let slot = slot.unwrap_or_else(|| {
+        let index = index.unwrap_or_else(|| {
             self.insert_shared(key.into(), FlowValue::Null);
             self.len() - 1
         });
         match &mut self.entries {
-            Entries::Small(v) => &mut Arc::make_mut(v)[slot].1,
-            Entries::Indexed(v) => &mut Arc::make_mut(v)[slot],
+            Entries::Small(v) => &mut Arc::make_mut(v)[index].1,
+            Entries::Indexed(v) => &mut Arc::make_mut(v)[index],
         }
     }
 

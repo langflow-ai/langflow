@@ -7,7 +7,7 @@ use std::collections::VecDeque;
 use std::collections::hash_map::RandomState;
 use std::hash::{BuildHasher, Hash, Hasher};
 
-use crate::collection::hash_map::{HashMap, HashSet};
+use crate::map::hash::{HashMap, HashSet};
 use crate::json::FlowValue;
 
 use crate::compare::values_equal;

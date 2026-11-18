@@ -12,7 +12,7 @@
 
 mod field;
 
-use crate::collection::hash_map::IndexSet;
+use crate::map::hash::IndexSet;
 use crate::json::{FlowStr, FlowValue};
 
 use crate::flow::edge::Edge;

@@ -21,7 +21,7 @@
 
 use std::borrow::Cow;
 
-use crate::collection::hash_map::{HashSet, IndexMap, State};
+use crate::map::hash::{HashSet, IndexMap, State};
 use crate::json::{FlowObj, FlowValue};
 
 use crate::compare::{KnownEqual, graphs_equal_given, values_equal};

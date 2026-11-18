@@ -3,124 +3,11 @@
 //! A batch that succeeds commits its pending changes to the stored map. A batch that
 //! fails drops it, so nothing is undone.
 
-use crate::collection::hash_map::{HashMap, IndexMap};
+use super::ordered::OrderedMap;
+use crate::map::hash::IndexMap;
 
 /// The most pending changes a map keeps allocated between batches.
 pub(crate) const MAX_RETAINED_BATCH_ENTRIES: usize = 256;
-
-/// Entries by key in insertion order, as a Python `dict` keeps them.
-///
-/// A removal leaves its position empty, so no other value moves. A new value goes last.
-/// [`Self::pack_if_sparse`] packs the map when empty positions outnumber values.
-#[derive(Debug)]
-pub(crate) struct OrderedMap<V> {
-    entries: Vec<Option<(String, V)>>,
-    /// The position of each key.
-    index: HashMap<String, usize>,
-}
-
-impl<V> OrderedMap<V> {
-    fn new() -> Self {
-        Self {
-            entries: Vec::new(),
-            index: HashMap::default(),
-        }
-    }
-
-    /// The number of values.
-    pub fn len(&self) -> usize {
-        self.index.len()
-    }
-
-    /// The number of positions, empty ones included.
-    #[cfg(test)]
-    pub(crate) fn positions(&self) -> usize {
-        self.entries.len()
-    }
-
-    pub fn get(&self, key: &str) -> Option<&V> {
-        let position = *self.index.get(key)?;
-        self.entries[position].as_ref().map(|(_, value)| value)
-    }
-
-    pub fn get_mut(&mut self, key: &str) -> Option<&mut V> {
-        let position = *self.index.get(key)?;
-        self.entries[position].as_mut().map(|(_, value)| value)
-    }
-
-    pub fn contains_key(&self, key: &str) -> bool {
-        self.index.contains_key(key)
-    }
-
-    /// The position of `key`.
-    pub fn get_index_of(&self, key: &str) -> Option<usize> {
-        self.index.get(key).copied()
-    }
-
-    /// Replace the value of `key` in its position, or add it last.
-    pub fn insert(&mut self, key: String, value: V) {
-        if let Some(&position) = self.index.get(&key) {
-            if let Some((_, stored)) = &mut self.entries[position] {
-                *stored = value;
-            }
-            return;
-        }
-        self.index.insert(key.clone(), self.entries.len());
-        self.entries.push(Some((key, value)));
-    }
-
-    /// Remove `key`, and leave its position empty.
-    pub fn remove(&mut self, key: &str) -> Option<V> {
-        let position = self.index.remove(key)?;
-        self.entries[position].take().map(|(_, value)| value)
-    }
-
-    /// Pack the values when empty positions outnumber them. Returns whether it did.
-    fn pack_if_sparse(&mut self) -> bool {
-        if self.entries.len() - self.index.len() <= self.index.len() {
-            return false;
-        }
-        self.entries.retain(Option::is_some);
-        if self.entries.capacity() > 4 * self.entries.len().max(4) {
-            self.entries.shrink_to_fit();
-        }
-        for (position, (key, _)) in self.entries.iter().flatten().enumerate() {
-            *self.index.get_mut(key).expect("an entry is indexed") = position;
-        }
-        true
-    }
-
-    /// The keys and values, in order.
-    pub fn iter(&self) -> impl Iterator<Item = (&String, &V)> {
-        self.entries
-            .iter()
-            .flatten()
-            .map(|(key, value)| (key, value))
-    }
-
-    #[cfg(test)]
-    pub fn keys(&self) -> impl Iterator<Item = &String> {
-        self.iter().map(|(key, _)| key)
-    }
-
-    pub fn values(&self) -> impl Iterator<Item = &V> {
-        self.iter().map(|(_, value)| value)
-    }
-
-    fn into_values(self) -> impl Iterator<Item = V> {
-        self.entries.into_iter().flatten().map(|(_, value)| value)
-    }
-}
-
-impl<V> FromIterator<(String, V)> for OrderedMap<V> {
-    fn from_iter<I: IntoIterator<Item = (String, V)>>(entries: I) -> Self {
-        let mut positions = Self::new();
-        for (key, value) in entries {
-            positions.insert(key, value);
-        }
-        positions
-    }
-}
 
 /// A map whose batch changes stay pending until the batch commits.
 ///
@@ -210,8 +97,8 @@ impl<V: Clone> PendingMap<V> {
         existed
     }
 
-    /// Make the batch's changes part of the stored map. Returns whether the
-    /// positions packed ([`OrderedMap::pack_if_sparse`]).
+    /// Make the batch's changes part of the stored map. Returns whether empty
+    /// positions were pruned ([`OrderedMap::prune_garbage`]).
     pub fn commit(&mut self) -> bool {
         self.commit_into(&mut Vec::new())
     }
@@ -225,7 +112,7 @@ impl<V: Clone> PendingMap<V> {
             }
         }
         self.shrink_large_pending();
-        self.stored.pack_if_sparse()
+        self.stored.prune_garbage()
     }
 
     fn shrink_large_pending(&mut self) {
@@ -410,44 +297,5 @@ mod tests {
         assert!(!map.remove("x"));
         map.commit();
         assert_eq!(keys(&map), ["a"]);
-    }
-
-    #[test]
-    fn ordered_map_keeps_order_as_a_python_dict_does() {
-        // A plain list with shifting removal is the order a Python dict keeps.
-        let mut positions = OrderedMap::new();
-        let mut reference: Vec<(String, usize)> = Vec::new();
-        let mut seed = 0x9e37_79b9_7f4a_7c15_u64;
-        for step in 0..20_000 {
-            seed ^= seed << 13;
-            seed ^= seed >> 7;
-            seed ^= seed << 17;
-            let key = format!("k{}", seed % 97);
-            if seed.is_multiple_of(3) {
-                let removed = positions.remove(&key);
-                let position = reference.iter().position(|(k, _)| *k == key);
-                assert_eq!(removed, position.map(|at| reference.remove(at).1));
-            } else {
-                positions.insert(key.clone(), step);
-                match reference.iter_mut().find(|(k, _)| *k == key) {
-                    Some(entry) => entry.1 = step,
-                    None => reference.push((key, step)),
-                }
-            }
-            if seed.is_multiple_of(5) {
-                positions.pack_if_sparse();
-            }
-            assert_eq!(positions.len(), reference.len());
-            assert!(
-                positions.positions() - positions.len()
-                    <= positions.len() + reference.len().max(64)
-            );
-        }
-        let order: Vec<(String, usize)> = positions.iter().map(|(k, v)| (k.clone(), *v)).collect();
-        assert_eq!(order, reference);
-        for (key, value) in &reference {
-            assert_eq!(positions.get(key), Some(value));
-            assert_eq!(*positions.get(key).unwrap(), *value);
-        }
     }
 }

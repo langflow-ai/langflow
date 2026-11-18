@@ -4,8 +4,8 @@
 use std::borrow::Cow;
 use std::fmt;
 
-use crate::collection::hash_map::{HashMap, IndexSet};
-use crate::collection::pending_map::PendingMap;
+use crate::map::hash::{HashMap, IndexSet};
+use crate::map::pending::PendingMap;
 use crate::json::{FlowObj, FlowStr, FlowValue};
 
 use crate::flow::edge::Edge;

@@ -2,7 +2,7 @@
 
 use std::str::FromStr;
 
-use crate::collection::hash_map::HashSet;
+use crate::map::hash::HashSet;
 use crate::json::pointer::{PathPart, resolve};
 use crate::json::{FlowObj, FlowValue};
 

@@ -2,7 +2,7 @@
 //!
 //! An id does not depend on the contents of what it names. Do not parse an id.
 
-use crate::collection::hash_map::HashSet;
+use crate::map::hash::HashSet;
 
 /// The editor's id characters: short-unique-id's default alphanumeric dictionary.
 const ALPHANUMERIC: &[u8; 62] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";

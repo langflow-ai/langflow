@@ -1,6 +1,6 @@
 //! [`FlowStr`]: text that is inline when short and shared when long, and [`StringPool`].
 
-use crate::collection::hash_map::{HashSet, State};
+use crate::map::hash::{HashSet, State};
 use std::borrow::Borrow;
 use std::fmt;
 use std::sync::{Arc, OnceLock};
@@ -177,14 +177,14 @@ impl StringPool {
             strings.insert(shared.clone());
             return shared;
         }
-        for slot in &mut self.small {
-            if let Some(shared) = slot {
+        for entry in &mut self.small {
+            if let Some(shared) = entry {
                 if shared.as_str() == text {
                     return shared.clone();
                 }
             } else {
                 let shared = FlowStr::from(text);
-                *slot = Some(shared.clone());
+                *entry = Some(shared.clone());
                 return shared;
             }
         }

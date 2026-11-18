@@ -216,7 +216,7 @@ fn visible(map: &FlowObj, hidden: impl Fn(&str) -> bool) -> HashParts<'_> {
 /// Set a member: in its place when the object has it, last otherwise.
 fn set<'a>(parts: &mut HashParts<'a>, key: &'a str, part: HashPart<'a>) {
     match parts.iter_mut().find(|(at, _)| *at == key) {
-        Some(slot) => slot.1 = part,
+        Some(existing) => existing.1 = part,
         None => parts.push((key, part)),
     }
 }
@@ -244,7 +244,7 @@ fn ordered_items<'a>(keyed: &KeyedList, list: &'a FlowValue) -> HashPart<'a> {
     HashPart::Items(
         item_order(keyed, items)
             .into_iter()
-            .map(|slot| &items[slot])
+            .map(|index| &items[index])
             .collect(),
     )
 }
@@ -349,8 +349,8 @@ pub(super) fn write_part(part: HashPart<'_>, out: &mut HashWriter) -> Result<()>
                 .iter()
                 .map(|node| entry_order_id(node.as_object(), hidden))
                 .collect();
-            write_list(out, (b'[', b']'), id_order(&ids), |slot, out| {
-                write_part(node_part(&nodes[slot]), out)
+            write_list(out, (b'[', b']'), id_order(&ids), |index, out| {
+                write_part(node_part(&nodes[index]), out)
             })
         }
         HashPart::Edges(edges) => {
@@ -365,8 +365,8 @@ pub(super) fn write_part(part: HashPart<'_>, out: &mut HashWriter) -> Result<()>
                     entry_order_id(map, hidden)
                 })
                 .collect();
-            write_list(out, (b'[', b']'), id_order(&ids), |slot, out| {
-                write_part(edge_part(edges[slot]), out)
+            write_list(out, (b'[', b']'), id_order(&ids), |index, out| {
+                write_part(edge_part(edges[index]), out)
             })
         }
     }

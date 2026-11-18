@@ -13,8 +13,8 @@
 
 use std::borrow::Cow;
 
-use crate::collection::hash_map::{HashMap, IndexMap, State};
-use crate::collection::pending_map::MAX_RETAINED_BATCH_ENTRIES;
+use crate::map::hash::{HashMap, IndexMap, State};
+use crate::map::pending::MAX_RETAINED_BATCH_ENTRIES;
 use crate::json::FlowValue;
 
 use crate::flow::list::{ListIndex, find_item, remove_item};

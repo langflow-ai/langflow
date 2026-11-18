@@ -2,7 +2,7 @@
 //! An edge holds each handle twice, as an object in `data` and as a string
 //! where `œ` stands for `"`. The two forms must agree.
 
-use crate::collection::hash_map::IndexSet;
+use crate::map::hash::IndexSet;
 use crate::compare::{edge_data_with_type_sets, handle_with_type_sets, values_equal};
 use crate::flow::edge_handle::{HANDLE_KEYS, handle_spells, parse_handle};
 use crate::flow::model::FLOW_MODEL;

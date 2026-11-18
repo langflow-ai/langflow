@@ -1,5 +1,5 @@
 //! Each folder of `src` imports only from the folders before it:
-//! `collection`, `json`, `flow`, `compare`, `node_input`, `violation`,
+//! `map`, `json`, `flow`, `compare`, `node_input`, `violation`,
 //! `invariant`, `rule`, `validate.rs`, `snapshot`, `state`, `op`, then `api.rs`.
 //!
 //! Tests may import from any folder, so the check stops at `#[cfg(test)]`
@@ -9,7 +9,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 const LAYERS: [&str; 13] = [
-    "collection",
+    "map",
     "json",
     "flow",
     "compare",

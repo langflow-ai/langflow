@@ -3,7 +3,7 @@
 
 use std::borrow::Cow;
 
-use crate::collection::hash_map::{HashMap, HashSet, IndexMap};
+use crate::map::hash::{HashMap, HashSet, IndexMap};
 use crate::compare::values_equal;
 use crate::flow::model::EntryExt;
 use crate::flow::node::NodeRef;

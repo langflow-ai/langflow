@@ -6,14 +6,14 @@ use std::borrow::Cow;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use crate::collection::pending_map::PendingMap;
+use crate::map::pending::PendingMap;
 use crate::json::serialize::{self, Ascii};
 use crate::json::{FlowObj, FlowValue};
 
 use crate::compare;
 use crate::violation::error::Result;
 
-/// The committed nodes or edges, one per position of the map ([`OrderedMap`](crate::collection::pending_map::OrderedMap)): `None` where one was removed.
+/// The committed nodes or edges, one per position of the map ([`OrderedMap`](crate::map::ordered::OrderedMap)): `None` where one was removed.
 pub(crate) type SnapshotObjects = list::SnapshotList<Option<FlowObj>>;
 
 /// Commit the batch's pending changes to `entries`, and keep the snapshot list in step.

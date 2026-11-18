@@ -31,11 +31,11 @@ src/lfx-native/
 
 ## The crate
 
-Each folder of `src/` imports only from the folders before it: `collection`, `json`, `flow`, `compare`, `node_input`, `violation`, `invariant`, `rule`, `validate.rs`, `snapshot`, `state`, `op`, then `api.rs`. `tests/layers.rs` checks this. `lib.rs` re-exports the public API, such as `lfx_ops::GraphState` and `lfx_ops::apply_flow_operations`.
+Each folder of `src/` imports only from the folders before it: `map`, `json`, `flow`, `compare`, `node_input`, `violation`, `invariant`, `rule`, `validate.rs`, `snapshot`, `state`, `op`, then `api.rs`. `tests/layers.rs` checks this. `lib.rs` re-exports the public API, such as `lfx_ops::GraphState` and `lfx_ops::apply_flow_operations`.
 
 | Folder | What it holds |
 | --- | --- |
-| `collection/` | general-purpose containers: `hash_map` (ahash maps and sets), `pending_map` (`PendingMap`, a map whose batch changes stay pending until the batch commits, and `OrderedMap`) |
+| `map/` | maps: `hash` (ahash maps and sets), `ordered` (`OrderedMap`), `pending` (`PendingMap`, a map whose batch changes stay pending until the batch commits) |
 | `json/` | the JSON value and its text: `flow_value` (`FlowValue`), `flow_str` (`FlowStr`), `flow_obj` (`FlowObj`), `number` (`Number`, and numbers as JavaScript reads them), `serialize`, `deserialize`, `pointer` (a place in a value) |
 | `flow/` | what a flow looks like: `model` (`model.json`: view state and keyed lists), `node`, `edge`, `path`, `deserialize`, `list` (every keyed list: lookup by key and `__pos__` order), `edge_handle`, `id` |
 | `compare/` | when two flows are equal: `canonical_form`, `graph_hash` |

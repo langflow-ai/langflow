@@ -4,14 +4,14 @@
 //! Apply checks every rule on a new batch. Replay runs stored operations
 //! with no rule. A path names a list item by its key, never by its index.
 //!
-//! Each folder imports only from the folders before it: `collection`,
+//! Each folder imports only from the folders before it: `map`,
 //! `json`, `flow`, `compare`, `node_input`, `violation`, `invariant`,
 //! `rule`, `validate`, `snapshot`, `state`, `op`, then `api`, which the
 //! `api` feature turns on for the bindings.
 
 #[cfg(feature = "api")]
 pub mod api;
-mod collection;
+mod map;
 pub mod compare;
 pub mod flow;
 mod invariant;

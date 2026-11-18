@@ -3,7 +3,7 @@
 
 use std::fmt;
 
-use crate::collection::hash_map::HashSet;
+use crate::map::hash::HashSet;
 use crate::json::FlowValue;
 
 use crate::flow::edge::Edge;
