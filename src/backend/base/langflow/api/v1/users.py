@@ -532,7 +532,7 @@ async def patch_user(
                 detail="Only a superuser may modify another platform superuser",
                 headers=_SUPERUSER_REQUIRED_HEADERS,
             )
-        lifecycle_mutation: AuthorizationMutation | None = None
+        lifecycle_mutations: list[AuthorizationMutation] = []
         fields_changed = sorted(
             field
             for field in user_update.model_fields_set
@@ -542,39 +542,33 @@ async def patch_user(
         )
         next_is_active = user_db.is_active if user_update.is_active is None else user_update.is_active
         next_is_superuser = user_db.is_superuser if user_update.is_superuser is None else user_update.is_superuser
+        lifecycle_kinds_and_fields: list[tuple[AuthorizationMutationKind, str]] = []
         if not user_db.is_active and next_is_active:
-            lifecycle_kind = AuthorizationMutationKind.USER_ACTIVATED
-        elif user_db.is_active and not next_is_active:
-            lifecycle_kind = AuthorizationMutationKind.USER_DISABLED
-        elif user_db.is_superuser and not next_is_superuser:
-            lifecycle_kind = AuthorizationMutationKind.USER_SUPERUSER_DEMOTED
-        else:
-            lifecycle_kind = None
+            lifecycle_kinds_and_fields.append((AuthorizationMutationKind.USER_ACTIVATED, "is_active"))
+        if user_db.is_active and not next_is_active:
+            lifecycle_kinds_and_fields.append((AuthorizationMutationKind.USER_DISABLED, "is_active"))
+        if user_db.is_superuser and not next_is_superuser:
+            lifecycle_kinds_and_fields.append((AuthorizationMutationKind.USER_SUPERUSER_DEMOTED, "is_superuser"))
 
-        if lifecycle_kind is not None:
-            policy_relevant_fields = tuple(
-                field
-                for field, before, after in (
-                    ("is_active", user_db.is_active, next_is_active),
-                    ("is_superuser", user_db.is_superuser, next_is_superuser),
-                )
-                if before != after
-            )
+        before_snapshot = UserAuthorizationSnapshot(
+            is_active=user_db.is_active,
+            is_superuser=user_db.is_superuser,
+        )
+        after_snapshot = UserAuthorizationSnapshot(
+            is_active=next_is_active,
+            is_superuser=next_is_superuser,
+        )
+        for lifecycle_kind, policy_relevant_field in lifecycle_kinds_and_fields:
             lifecycle_mutation = AuthorizationMutation(
                 kind=lifecycle_kind,
                 entity_id=user_db.id,
                 actor_user_id=user.id,
                 affected_user_ids=(user_db.id,),
-                policy_relevant_fields=policy_relevant_fields,
-                user_before=UserAuthorizationSnapshot(
-                    is_active=user_db.is_active,
-                    is_superuser=user_db.is_superuser,
-                ),
-                user_after=UserAuthorizationSnapshot(
-                    is_active=next_is_active,
-                    is_superuser=next_is_superuser,
-                ),
+                policy_relevant_fields=(policy_relevant_field,),
+                user_before=before_snapshot,
+                user_after=after_snapshot,
             )
+            lifecycle_mutations.append(lifecycle_mutation)
             try:
                 await validate_identity_mutation(authorization_service, session, lifecycle_mutation)
             except AuthorizationMutationRejected as exc:
@@ -607,17 +601,18 @@ async def patch_user(
                 operation_id=operation_id,
             )
             raise
-        if lifecycle_mutation is not None:
-            await stage_identity_mutation(authorization_service, session, lifecycle_mutation)
-        audit_details = administration_audit_details(
-            {
+        try:
+            for lifecycle_mutation in lifecycle_mutations:
+                await stage_identity_mutation(authorization_service, session, lifecycle_mutation)
+            lifecycle_kind_values = [mutation.kind.value for mutation in lifecycle_mutations]
+            audit_payload = {
                 "event": AUDIT_EVENT_MUTATION,
                 "fields_changed": fields_changed,
-                "lifecycle_kind": lifecycle_mutation.kind.value if lifecycle_mutation is not None else None,
-            },
-            operation_id=operation_id,
-        )
-        try:
+                "lifecycle_kind": lifecycle_kind_values[0] if len(lifecycle_kind_values) == 1 else None,
+            }
+            if len(lifecycle_kind_values) > 1:
+                audit_payload["lifecycle_kinds"] = lifecycle_kind_values
+            audit_details = administration_audit_details(audit_payload, operation_id=operation_id)
             audit_staged = stage_audit_decision(
                 session=session,
                 user_id=user.id,
@@ -630,7 +625,7 @@ async def patch_user(
         except Exception:
             await session.rollback()
             raise
-        if lifecycle_mutation is not None:
+        for lifecycle_mutation in lifecycle_mutations:
             await safe_identity_mutation_committed(authorization_service, lifecycle_mutation)
         if not audit_staged:
             await audit_decision(

@@ -532,15 +532,79 @@ async def test_user_patch_lock_kind_is_advisory_before_state_read(monkeypatch):
 
     result = await users.patch_user(
         user_id=target.id,
-        user_update=UserUpdate(is_active=False, is_superuser=False),
+        user_update=UserUpdate(is_active=True, is_superuser=False),
         user=actor,
         session=session,
     )
 
     assert result is target
-    assert events == ["lock", "read", "validate", "mutate", "stage", "commit", "committed"]
-    assert service.lock_requests[0]["kind"] is AuthorizationMutationKind.USER_DISABLED
-    assert service.staged[0].kind is AuthorizationMutationKind.USER_SUPERUSER_DEMOTED
+    assert events == [
+        "lock",
+        "read",
+        "validate",
+        "validate",
+        "mutate",
+        "stage",
+        "stage",
+        "commit",
+        "committed",
+        "committed",
+    ]
+    assert service.lock_requests[0]["kind"] is AuthorizationMutationKind.USER_ACTIVATED
+    assert [mutation.kind for mutation in service.staged] == [
+        AuthorizationMutationKind.USER_ACTIVATED,
+        AuthorizationMutationKind.USER_SUPERUSER_DEMOTED,
+    ]
+    assert service.staged == service.committed
+
+
+@pytest.mark.asyncio
+async def test_combined_activation_and_demotion_rejection_prevents_mutation(monkeypatch):
+    from langflow.api.v1 import users
+    from langflow.services.database.models.user.model import UserUpdate
+
+    events: list[str] = []
+    service = _LifecycleService(events)
+    actor = SimpleNamespace(id=uuid4(), is_superuser=True)
+    target = SimpleNamespace(
+        id=uuid4(),
+        is_active=False,
+        is_superuser=True,
+        password="hashed",  # noqa: S106  # pragma: allowlist secret
+    )
+    session = AsyncMock()
+    update_user = AsyncMock()
+
+    async def reject_demotion(*, session, mutation):  # noqa: ARG001
+        events.append("validate")
+        service.validated.append(mutation)
+        if mutation.kind is AuthorizationMutationKind.USER_SUPERUSER_DEMOTED:
+            raise AuthorizationMutationRejected(_RECOVERY_DETAIL)
+
+    service.validate_identity_mutation = reject_demotion
+    monkeypatch.setattr(users, "get_user_by_id", AsyncMock(return_value=target))
+    monkeypatch.setattr(users, "update_user", update_user)
+    monkeypatch.setattr(users, "get_authorization_service", lambda: service)
+    monkeypatch.setattr(users, "audit_decision", AsyncMock())
+
+    with pytest.raises(HTTPException) as exc_info:
+        await users.patch_user(
+            user_id=target.id,
+            user_update=UserUpdate(is_active=True, is_superuser=False),
+            user=actor,
+            session=session,
+        )
+
+    assert exc_info.value.status_code == 409
+    assert exc_info.value.detail == _RECOVERY_DETAIL
+    assert [mutation.kind for mutation in service.validated] == [
+        AuthorizationMutationKind.USER_ACTIVATED,
+        AuthorizationMutationKind.USER_SUPERUSER_DEMOTED,
+    ]
+    update_user.assert_not_awaited()
+    session.commit.assert_not_awaited()
+    assert target.is_active is False
+    assert target.is_superuser is True
 
 
 @pytest.mark.asyncio
@@ -577,11 +641,22 @@ async def test_user_lifecycle_stage_failure_prevents_commit(monkeypatch):
 
     assert events == ["lock", "validate", "mutate", "stage"]
     session.commit.assert_not_awaited()
+    session.rollback.assert_awaited_once()
     assert service.committed == []
 
 
+@pytest.mark.parametrize(
+    ("initial_active", "initial_superuser", "update_kwargs", "rejected_kind"),
+    [
+        (True, True, {"is_active": False}, AuthorizationMutationKind.USER_DISABLED),
+        (False, False, {"is_active": True}, AuthorizationMutationKind.USER_ACTIVATED),
+        (True, True, {"is_superuser": False}, AuthorizationMutationKind.USER_SUPERUSER_DEMOTED),
+    ],
+)
 @pytest.mark.asyncio
-async def test_user_lifecycle_policy_rejection_is_409_without_mutation(monkeypatch):
+async def test_user_lifecycle_policy_rejection_is_409_without_mutation(
+    monkeypatch, initial_active, initial_superuser, update_kwargs, rejected_kind
+):
     from langflow.api.v1 import users
     from langflow.services.database.models.user.model import UserUpdate
 
@@ -590,8 +665,8 @@ async def test_user_lifecycle_policy_rejection_is_409_without_mutation(monkeypat
     actor = SimpleNamespace(id=uuid4(), is_superuser=True)
     target = SimpleNamespace(
         id=uuid4(),
-        is_active=True,
-        is_superuser=True,
+        is_active=initial_active,
+        is_superuser=initial_superuser,
         password="hashed",  # noqa: S106  # pragma: allowlist secret
     )
     session = AsyncMock()
@@ -600,6 +675,7 @@ async def test_user_lifecycle_policy_rejection_is_409_without_mutation(monkeypat
 
     async def reject(*, session, mutation):  # noqa: ARG001
         events.append("validate")
+        service.validated.append(mutation)
         raise AuthorizationMutationRejected(_RECOVERY_DETAIL)
 
     service.validate_identity_mutation = reject
@@ -611,7 +687,7 @@ async def test_user_lifecycle_policy_rejection_is_409_without_mutation(monkeypat
     with pytest.raises(HTTPException) as exc_info:
         await users.patch_user(
             user_id=target.id,
-            user_update=UserUpdate(is_active=False),
+            user_update=UserUpdate(**update_kwargs),
             user=actor,
             session=session,
         )
@@ -619,6 +695,7 @@ async def test_user_lifecycle_policy_rejection_is_409_without_mutation(monkeypat
     assert exc_info.value.status_code == 409
     assert exc_info.value.detail == _RECOVERY_DETAIL
     assert events == ["lock", "validate"]
+    assert service.validated[0].kind is rejected_kind
     update.assert_not_awaited()
     session.commit.assert_not_awaited()
     audit.assert_awaited_once()

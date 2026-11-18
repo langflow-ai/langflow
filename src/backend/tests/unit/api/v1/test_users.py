@@ -7,6 +7,7 @@ from fastapi import status
 from httpx import AsyncClient
 from langflow.services.database.models.connection import Connection, ConnectionSecret
 from langflow.services.database.models.connection.oauth import ConnectionOAuth
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import session_scope
 
 from tests.unit.erase_helpers import wait_for_erase
@@ -353,6 +354,45 @@ async def test_patch_user(client: AsyncClient, logged_in_headers_super_user):
     assert "updated_at" in result, "The result must have an 'updated_at' key"
     assert "username" in result, "The result must have an 'username' key"
     assert result["username"] == updated_name, "The username must be updated"
+
+
+async def test_patch_user_combined_activation_and_demotion_updates_both_fields(
+    client: AsyncClient, logged_in_headers_super_user
+):
+    """A single update must admit both policy lifecycle transitions before commit."""
+    target = User(
+        username=f"combined-lifecycle-{uuid4().hex}",
+        password="hashed",  # noqa: S106  # pragma: allowlist secret
+        is_active=False,
+        is_superuser=True,
+    )
+    async with session_scope() as session:
+        session.add(target)
+        await session.commit()
+        await session.refresh(target)
+
+    try:
+        response = await client.patch(
+            f"api/v1/users/{target.id}",
+            json={"is_active": True, "is_superuser": False},
+            headers=logged_in_headers_super_user,
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["is_active"] is True
+        assert response.json()["is_superuser"] is False
+
+        async with session_scope() as session:
+            persisted = await session.get(User, target.id)
+            assert persisted is not None
+            assert persisted.is_active is True
+            assert persisted.is_superuser is False
+    finally:
+        async with session_scope() as session:
+            persisted = await session.get(User, target.id)
+            if persisted is not None:
+                await session.delete(persisted)
+                await session.commit()
 
 
 async def test_patch_user_rejects_a_case_variant_of_an_existing_username(
