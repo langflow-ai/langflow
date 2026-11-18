@@ -297,7 +297,7 @@ jobs:
         if: steps.set-matrix.outputs.test_grep != ''
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-frontend-build
+          name: playwright-frontend-build-${{ runner.os }}
           path: src/frontend/build
           retention-days: 1
           if-no-files-found: error
@@ -411,7 +411,7 @@ jobs:
       - name: Download Frontend Build
         uses: actions/download-artifact@v8
         with:
-          name: playwright-frontend-build
+          name: playwright-frontend-build-${{ runner.os }}
           path: src/frontend/build
 
       - name: Execute Playwright Tests
