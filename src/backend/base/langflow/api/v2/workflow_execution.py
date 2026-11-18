@@ -60,7 +60,7 @@ from langflow.api.utils.execution_principal import (
     execution_principal_for,
     stamp_execution_principal,
 )
-from langflow.api.utils.flow_utils import get_authorized_legacy_flow_ids
+from langflow.api.utils.flow_utils import get_authorized_extra_file_scopes, get_authorized_legacy_flow_ids
 from langflow.api.v1.schemas import FlowDataRequest, RunResponse
 from langflow.api.v2.workflow_validation import _validate_output_ids
 from langflow.api.warm_graph import warm_deepcopy
@@ -925,6 +925,7 @@ async def execute_sync_workflow(
                     flow_name=flow.name,
                     context=context,
                     authorized_legacy_flow_ids=await get_authorized_legacy_flow_ids(flow.id),
+                    authorized_extra_file_scopes=await get_authorized_extra_file_scopes(flow.id, user_id),
                 )
         stamp_execution_principal(graph, execution_principal)
         # Serving-plane end-user scoping: an anonymous run is ephemeral, so mark the

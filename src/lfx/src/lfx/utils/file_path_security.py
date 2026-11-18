@@ -186,6 +186,18 @@ def component_authenticated_user_scope(component: object) -> str | None:
     return user_storage_scope(scope) if scope else None
 
 
+def authorized_extra_file_scopes(graph: object) -> tuple[str, ...]:
+    """Return the extra storage scopes the server stamped on a graph for its run user.
+
+    Only a ``frozenset`` counts, like ``authorized_legacy_flow_ids``: anything else (request data, a stray
+    object) never widens access. Empty unless a server-side provider answered for this run.
+    """
+    extra = getattr(graph, "authorized_extra_file_scopes", frozenset())
+    if not isinstance(extra, frozenset):
+        return ()
+    return tuple(sorted({str(scope).strip() for scope in extra if str(scope).strip()}))
+
+
 def component_file_access_scopes(component: object) -> tuple[str, ...]:
     """Return typed scopes plus legacy flow IDs authorized by the server.
 
@@ -203,6 +215,7 @@ def component_file_access_scopes(component: object) -> tuple[str, ...]:
         flow_storage_scope(flow_id) if flow_id is not None else None,
         flow_storage_scope(source_flow_id) if source_flow_id is not None else None,
         *sorted(str(candidate) for candidate in authorized_legacy),
+        *authorized_extra_file_scopes(graph),
     )
     scopes: list[str] = []
     for candidate in candidates:
