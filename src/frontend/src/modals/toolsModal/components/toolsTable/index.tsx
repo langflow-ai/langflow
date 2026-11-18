@@ -131,7 +131,6 @@ export default function ToolsTable({
       }
     });
 
-    agGrid.current.api.setGridOption("suppressRowClickSelection", false);
     setTimeout(() => {
       applyingSelection.current = false;
     }, 50);
