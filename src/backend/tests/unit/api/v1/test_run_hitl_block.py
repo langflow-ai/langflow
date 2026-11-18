@@ -60,10 +60,6 @@ def _group(group_id: str, nodes: list[dict], edges: list[dict]) -> dict:
     }
 
 
-def _wired_human_input() -> list[dict]:
-    return [_node("hi", "HumanInput"), _node("save", "SaveToFile")]
-
-
 class TestFlowRequiresHitlInGroups:
     """The graph flattens group nodes before running, so the guard must see grouped HITL nodes."""
 
@@ -90,5 +86,18 @@ class TestFlowRequiresHitlInGroups:
         assert flow_requires_hitl({"nodes": [group], "edges": []}) is False
 
     def test_malformed_group_does_not_raise(self):
-        broken = {"id": "g", "data": {"id": "g", "type": "GroupNode", "node": {"template": {}, "flow": {}}}}
+        broken = {
+            "id": "g",
+            "data": {"id": "g", "type": "GroupNode", "node": {"template": {}, "flow": {"data": {"edges": []}}}},
+        }
         assert flow_requires_hitl({"nodes": [broken], "edges": []}) is False
+
+    def test_grouped_human_input_is_still_found_when_another_group_cannot_be_flattened(self):
+        wired = _group(
+            "a", [_node("hi", "HumanInput"), _node("save", "SaveToFile")], [{"source": "hi", "target": "save"}]
+        )
+        broken = {
+            "id": "b",
+            "data": {"id": "b", "type": "GroupNode", "node": {"template": {}, "flow": {"data": {"edges": []}}}},
+        }
+        assert flow_requires_hitl({"nodes": [wired, broken], "edges": []}) is True

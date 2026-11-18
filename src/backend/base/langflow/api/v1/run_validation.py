@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-import contextlib
-
 from fastapi import HTTPException, status
-from lfx.graph.graph.utils import process_flow
 
 _HUMAN_INPUT_TYPE = "HumanInput"
 
@@ -23,10 +20,15 @@ def flow_requires_hitl(graph_data: dict) -> bool:
     skipped at runtime, so it is not blocking), or an approval-gated agent tool (a
     ``tools_metadata`` row carrying a non-empty ``approval_actions``).
     """
-    # The graph flattens group nodes before it runs, so check the flattened copy. A group
-    # too malformed to flatten falls back to the top-level nodes; the build reports it.
-    with contextlib.suppress(KeyError, TypeError, AttributeError, ValueError):
-        graph_data = process_flow(graph_data)
+    if any(_group_flow(node) is not None for node in graph_data.get("nodes") or []):
+        # The graph flattens group nodes before it runs, so check the flattened copy.
+        from lfx.graph.graph.utils import process_flow
+
+        try:
+            graph_data = process_flow(graph_data)
+        except (KeyError, TypeError, AttributeError, ValueError):
+            # Fail closed: a group that cannot be flattened still hides no HITL node.
+            return any(_pauses_anywhere(node) for node in graph_data.get("nodes") or [])
     nodes = graph_data.get("nodes") or []
     edges = graph_data.get("edges") or []
     edge_sources = {edge.get("source") for edge in edges}
@@ -40,6 +42,28 @@ def flow_requires_hitl(graph_data: dict) -> bool:
         if isinstance(rows, list) and any(isinstance(row, dict) and row.get("approval_actions") for row in rows):
             return True
     return False
+
+
+def _group_flow(node: object) -> dict | None:
+    """The nested flow data of a group node, or None for a plain node."""
+    if not isinstance(node, dict):
+        return None
+    flow = ((node.get("data") or {}).get("node") or {}).get("flow")
+    return flow.get("data") if isinstance(flow, dict) and isinstance(flow.get("data"), dict) else None
+
+
+def _pauses_anywhere(node: object) -> bool:
+    """True if this node, or any node nested in its groups, is a Human Input or approval-gated tool."""
+    if not isinstance(node, dict):
+        return False
+    node_data = node.get("data") or {}
+    if node_data.get("type") == _HUMAN_INPUT_TYPE:
+        return True
+    rows = (((node_data.get("node") or {}).get("template") or {}).get("tools_metadata") or {}).get("value")
+    if isinstance(rows, list) and any(isinstance(row, dict) and row.get("approval_actions") for row in rows):
+        return True
+    nested = _group_flow(node)
+    return bool(nested) and any(_pauses_anywhere(child) for child in nested.get("nodes") or [])
 
 
 def raise_if_hitl_unsupported(graph_data: dict) -> None:
