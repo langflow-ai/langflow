@@ -6,14 +6,14 @@
 //! faster than `json.dumps` and a parse. Building them is about 3 times faster
 //! than writing JSON and `json.loads`.
 //!
-//! An engine error raises [`EngineError`]. Each function calls `lfx_ops::api`.
+//! An engine error raises [`EngineError`]. Each function calls `lfx_ops::bindings`.
 //! Only large work releases the GIL. See `HELD_VALUES`.
 
 use std::collections::HashMap;
 use std::sync::mpsc::{SyncSender, TrySendError, sync_channel};
 use std::sync::{LazyLock, PoisonError, RwLock, RwLockWriteGuard, TryLockError};
 
-use lfx_ops::api::{self, ApiError, ApiResult, Input};
+use lfx_ops::bindings::{self, BindingError, BindingResult, Input};
 use lfx_ops::json::{FlowObj, FlowValue, Number, StringPool};
 use lfx_ops::{
     Applied, ApplyOptions, Change, Entry, Error, FieldUpdate, Operation, ReplayOptions, Segment,
@@ -33,7 +33,7 @@ create_exception!(
      `details` is the whole error as a dict."
 );
 
-fn engine_error(py: Python<'_>, error: impl Into<ApiError>) -> PyErr {
+fn engine_error(py: Python<'_>, error: impl Into<BindingError>) -> PyErr {
     let error = error.into();
     let raised = EngineError::new_err(error.message().to_owned());
     match describe(py, &raised, &error) {
@@ -43,7 +43,7 @@ fn engine_error(py: Python<'_>, error: impl Into<ApiError>) -> PyErr {
 }
 
 /// Set the error's `kind`, `code` and `details`.
-fn describe(py: Python<'_>, raised: &PyErr, error: &ApiError) -> PyResult<()> {
+fn describe(py: Python<'_>, raised: &PyErr, error: &BindingError) -> PyResult<()> {
     let value = raised.value(py);
     value.setattr("kind", error.kind())?;
     value.setattr("code", error.code())?;
@@ -423,7 +423,7 @@ impl std::ops::Add for Work {
 }
 
 /// Run engine work: with the GIL when it is small, without it when it is large.
-fn run<T: Send, E: Into<ApiError> + Send>(
+fn run<T: Send, E: Into<BindingError> + Send>(
     py: Python<'_>,
     work: Work,
     job: impl FnOnce() -> Result<T, E> + Send,
@@ -440,7 +440,7 @@ fn run<T: Send, E: Into<ApiError> + Send>(
 fn call(
     py: Python<'_>,
     work: Work,
-    job: impl FnOnce() -> ApiResult + Send,
+    job: impl FnOnce() -> BindingResult + Send,
 ) -> PyResult<Bound<'_, PyAny>> {
     finish(py, run(py, work, job)?)
 }
@@ -476,7 +476,7 @@ fn finish_applied(
     #[cfg(debug_assertions)]
     if let Ok(actual) = &result {
         // Compare with the generic builder on these operations, not a new engine call.
-        let generic = FlowValue::Object(api::applied_json(applied.clone(), options));
+        let generic = FlowValue::Object(bindings::applied_json(applied.clone(), options));
         let mut reference = Builder::new(py);
         let expected = reference.value(&generic)?;
         debug_assert_eq!(actual.repr()?.to_str()?, expected.repr()?.to_str()?);
@@ -487,7 +487,7 @@ fn finish_applied(
         let added = PyList::new(
             py,
             applied.forward.iter().map(|operation| {
-                api::write_operation_json(&mut text, operation);
+                bindings::write_operation_json(&mut text, operation);
                 PyBytes::new(py, &text)
             }),
         )
@@ -664,7 +664,7 @@ impl GraphState {
                 |_| work,
                 |state| {
                     let mut graph = unstaged(state)?;
-                    Ok(api::operations(operations).and_then(|operations| {
+                    Ok(bindings::operations(operations).and_then(|operations| {
                         let applied = if stage {
                             graph.stage(operations, options)
                         } else {
@@ -686,7 +686,7 @@ impl GraphState {
         let flow = input(flow)?;
         let work = Work::of_input(&flow);
         Ok(Self {
-            state: RwLock::new(run(py, work, || api::graph_state(flow))?),
+            state: RwLock::new(run(py, work, || bindings::graph_state(flow))?),
         })
     }
 
@@ -748,7 +748,7 @@ impl GraphState {
         let list = PyList::new(
             py,
             staged.forward.iter().map(|operation| {
-                api::write_operation_json(&mut text, operation);
+                bindings::write_operation_json(&mut text, operation);
                 PyBytes::new(py, &text)
             }),
         );
@@ -813,7 +813,13 @@ impl GraphState {
             .write(
                 py,
                 |_| work,
-                |state| Ok(api::replay_to(&mut *unstaged(state)?, operations, options)),
+                |state| {
+                    Ok(bindings::replay_to(
+                        &mut *unstaged(state)?,
+                        operations,
+                        options,
+                    ))
+                },
             )
             .map_err(refused)?;
         finish(py, replayed.map_err(|error| engine_error(py, error))?)
@@ -1024,7 +1030,7 @@ impl GraphPlain {
     fn new(py: Python<'_>, flow: &Bound<'_, PyAny>) -> PyResult<Self> {
         let flow = input(flow)?;
         let work = Work::of_input(&flow);
-        Ok(Self::wrap(run(py, work, || api::graph_plain(flow))?))
+        Ok(Self::wrap(run(py, work, || bindings::graph_plain(flow))?))
     }
 
     /// Every rule the graph breaks, as a list of violations.
@@ -1037,7 +1043,7 @@ impl GraphPlain {
     ) -> PyResult<Bound<'py, PyAny>> {
         let (base, base_work) = plain(base);
         call(py, self.work + base_work, || {
-            api::plain_validate(self.core(), base, check_values)
+            bindings::plain_validate(self.core(), base, check_values)
         })
     }
 
@@ -1050,7 +1056,7 @@ impl GraphPlain {
     ) -> PyResult<(Bound<'py, GraphPlain>, Bound<'py, PyAny>)> {
         let (base, base_work) = plain(base);
         let (repaired, fixes) = run(py, self.work + base_work, || {
-            api::plain_repair(self.core(), base)
+            bindings::plain_repair(self.core(), base)
         })?;
         // With no fixes, the repaired graph is this graph, so its work is known.
         let work = if fixes.as_array().is_some_and(<[_]>::is_empty) {
@@ -1091,13 +1097,13 @@ impl GraphPlain {
     ) -> PyResult<Bound<'py, PyAny>> {
         let target = target.get();
         call(py, self.work + target.work, || {
-            api::plain_ops_diff(self.core(), target.core())
+            bindings::plain_ops_diff(self.core(), target.core())
         })
     }
 
     /// The graph as JSON text.
     fn to_json(&self, py: Python<'_>) -> String {
-        let write = || api::json_text(self.core().as_value());
+        let write = || bindings::json_text(self.core().as_value());
         if self.work.is_large() {
             py.detach(write)
         } else {
@@ -1118,7 +1124,7 @@ impl GraphPlain {
 macro_rules! engine_functions {
     (@run $py:ident, $work:ident, $job:expr) => { call($py, $work, $job) };
     (@run $py:ident, $work:ident, $job:expr, $ret:ty) => {
-        run::<$ret, ApiError>($py, $work, $job)?.into_bound_py_any($py)
+        run::<$ret, BindingError>($py, $work, $job)?.into_bound_py_any($py)
     };
     ($(
         $(#[$attr:meta])*
@@ -1147,79 +1153,79 @@ engine_functions! {
     /// Apply operations to a graph, with every rule. Returns `{"flow_data", ...}`.
     #[pyo3(signature = (flow, operations, *, forward = true, backward = false))]
     fn apply(flow, operations; forward: bool, backward: bool) =>
-        api::apply(flow, operations, ApplyOptions { forward, backward });
+        bindings::apply(flow, operations, ApplyOptions { forward, backward });
 
     /// Replay stored operations on a graph, with no rule. Returns `{"flow_data", ...}`.
     #[pyo3(signature = (flow, operations, *, backward = false))]
     fn replay(flow, operations; backward: bool) =>
-        api::replay(flow, operations, ReplayOptions { backward });
+        bindings::replay(flow, operations, ReplayOptions { backward });
 
     /// The operations that turn `base` into `target`, checked by replay.
-    fn ops_diff(base, target) => api::ops_diff(base, target);
+    fn ops_diff(base, target) => bindings::ops_diff(base, target);
 
     /// Every rule a graph breaks, as a list of violations.
     #[pyo3(signature = (flow, base = None, *, check_values = true))]
-    fn validate(flow [base]; check_values: bool) => api::validate(flow, base, check_values);
+    fn validate(flow [base]; check_values: bool) => bindings::validate(flow, base, check_values);
 
     /// Repair what has one fix. Returns `{"flow_data", "fixes"}`.
     #[pyo3(signature = (flow, base = None))]
-    fn repair(flow [base]) => api::repair(flow, base);
+    fn repair(flow [base]) => bindings::repair(flow, base);
 
     /// The SHA-256 hex digest of a graph's canonical form.
-    fn graph_hash(flow) -> String => api::graph_hash(flow);
+    fn graph_hash(flow) -> String => bindings::graph_hash(flow);
 
     /// Whether two graphs are the same graph.
-    fn graphs_equal(left, right) -> bool => api::graphs_equal(left, right);
+    fn graphs_equal(left, right) -> bool => bindings::graphs_equal(left, right);
 
     /// Whether two JSON values are the same value.
-    fn values_equal(left, right) -> bool => api::values_equal(left, right);
+    fn values_equal(left, right) -> bool => bindings::values_equal(left, right);
 
     /// A JSON value in RFC 8785 canonical form, as text.
-    fn canonical_json(value) -> String => api::canonical_json(value);
+    fn canonical_json(value) -> String => bindings::canonical_json(value);
 
     /// A revision with a restore's fixes applied, after checking each one.
     fn apply_restore_fixes(revision, stored, fixes) =>
-        api::apply_restore_fixes(revision, stored, fixes);
+        bindings::apply_restore_fixes(revision, stored, fixes);
 
     /// The fixes that turn a revision's edges as read into the edges its preview shows.
-    fn edge_fixes(read, shown) => api::edge_fixes(read, shown);
+    fn edge_fixes(read, shown) => bindings::edge_fixes(read, shown);
 
     /// The part of the fixes that touches the given edges.
-    fn fixes_for_edges(fixes, edge_ids) => api::fixes_for_edges(fixes, edge_ids);
+    fn fixes_for_edges(fixes, edge_ids) => bindings::fixes_for_edges(fixes, edge_ids);
 
     /// Rows in order and without `__id__` and `__pos__`.
-    fn strip_row_keys(rows) => api::strip_row_keys(rows);
+    fn strip_row_keys(rows) => bindings::strip_row_keys(rows);
 
     /// Rows in order, by `(__pos__, __id__)`, or as stored for a legacy table.
-    fn ordered_rows(rows) => api::ordered_rows(rows);
+    fn ordered_rows(rows) => bindings::ordered_rows(rows);
 
     /// A flow whose top-level tables have their rows in order and without `__id__` and `__pos__`.
-    fn strip_flow_table_row_keys(flow) => api::strip_flow_table_row_keys(flow);
+    fn strip_flow_table_row_keys(flow) => bindings::strip_flow_table_row_keys(flow);
 
     /// Rows with the ids and positions a write needs.
     #[pyo3(signature = (rows, previous = None, *, editor = false))]
     fn assign_row_ids(rows [previous]; editor: bool) =>
-        api::assign_row_ids(rows, previous, editor);
+        bindings::assign_row_ids(rows, previous, editor);
 
     /// A node being added, with ids on every table.
     #[pyo3(signature = (node, *, editor = false))]
-    fn assign_table_row_ids(node; editor: bool) => api::assign_table_row_ids(node, editor);
+    fn assign_table_row_ids(node; editor: bool) => bindings::assign_table_row_ids(node, editor);
 
     /// `target` with ids on the tables it adds or changes relative to `base`.
     #[pyo3(signature = (base, target, *, editor = false))]
     fn assign_changed_table_row_ids(base, target; editor: bool) =>
-        api::assign_changed_table_row_ids(base, target, editor);
+        bindings::assign_changed_table_row_ids(base, target, editor);
 
     /// A node with ids on the tables it adds or changes relative to `previous`.
     #[pyo3(signature = (node, previous = None, *, editor = false))]
     fn assign_changed_node_table_row_ids(node [previous]; editor: bool) =>
-        api::assign_changed_node_table_row_ids(node, previous, editor);
+        bindings::assign_changed_node_table_row_ids(node, previous, editor);
 
     /// Rows with `new_rows` appended, each with a new id one position past the last.
-    fn append_table_rows(rows, new_rows) => api::append_table_rows(rows, new_rows);
+    fn append_table_rows(rows, new_rows) => bindings::append_table_rows(rows, new_rows);
 
     /// The names of a node's template fields whose value is a table.
-    fn table_fields(node) => api::table_fields(node);
+    fn table_fields(node) => bindings::table_fields(node);
 }
 
 /// The SHA-256 hex digest of `text`, a `str` (as UTF-8) or `bytes`. It equals
@@ -1234,7 +1240,7 @@ fn text_sha256(py: Python<'_>, text: &Bound<'_, PyAny>) -> PyResult<String> {
     } else {
         return Err(PyTypeError::new_err("text must be str or bytes"));
     };
-    let hash = || api::text_sha256(bytes);
+    let hash = || bindings::text_sha256(bytes);
     Ok(if Work(bytes.len() / TEXT_BYTES_PER_VALUE).is_large() {
         py.detach(hash)
     } else {

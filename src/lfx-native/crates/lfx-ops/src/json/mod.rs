@@ -8,7 +8,7 @@ mod number;
 pub(crate) mod pointer;
 pub(crate) mod serialize;
 
-#[cfg(feature = "api")]
+#[cfg(feature = "bindings")]
 pub(crate) use deserialize::{Builder, FiniteSeed};
 pub use deserialize::{FiniteFlowValue, NOT_FINITE};
 pub use flow_obj::FlowObj;

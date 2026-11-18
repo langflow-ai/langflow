@@ -163,7 +163,7 @@ pub fn graph_of(case: &FlowValue, key: &str) -> FlowValue {
 
 /// An engine error as fixtures record it.
 pub fn error_json(error: &lfx_ops::Error) -> FlowValue {
-    let error = lfx_ops::api::ApiError(error.clone());
+    let error = lfx_ops::bindings::BindingError(error.clone());
     flow_value!({"error": error.kind(), "code": error.code()})
 }
 

@@ -7,7 +7,7 @@ The server and the editor use the same engine, through two thin bindings:
 - `lfx-python`: the Python package `lfx-native` (`import lfx_native`).
 - `lfx-wasm`: the npm package `lfx-native`, a WebAssembly build for the editor and for Node.
 
-The bindings hold no rules. Each binding function calls one function of `lfx_ops::api`, which takes JSON text or an already read value and returns a value. The browser binding takes and returns JSON text. The Python binding takes Python values, with `bytes` as JSON text, and returns Python values.
+The bindings hold no rules. Each binding function calls one function of `lfx_ops::bindings`, which takes JSON text or an already read value and returns a value. The browser binding takes and returns JSON text. The Python binding takes Python values, with `bytes` as JSON text, and returns Python values.
 
 ## Layout
 
@@ -31,7 +31,7 @@ src/lfx-native/
 
 ## The crate
 
-Each folder of `src/` imports only from the folders before it: `map`, `json`, `flow`, `compare`, `node_input`, `violation`, `invariant`, `rule`, `validate.rs`, `snapshot`, `state`, `op`, then `api.rs`. `tests/layers.rs` checks this. `lib.rs` re-exports the public API, such as `lfx_ops::GraphState` and `lfx_ops::apply_flow_operations`.
+Each folder of `src/` imports only from the folders before it: `map`, `json`, `flow`, `compare`, `node_input`, `violation`, `invariant`, `rule`, `validate.rs`, `snapshot`, `state`, `op`, then `bindings.rs`. `tests/layers.rs` checks this. `lib.rs` re-exports the public API, such as `lfx_ops::GraphState` and `lfx_ops::apply_flow_operations`.
 
 | Folder | What it holds |
 | --- | --- |
@@ -47,9 +47,9 @@ Each folder of `src/` imports only from the folders before it: `map`, `json`, `f
 | `snapshot/` | `GraphSnapshot`, the committed flow that other threads read |
 | `state/` | the flow in memory: `GraphState`, its indexes, a batch's pending field writes, and `GraphPlain` |
 | `op/` | what you do to a flow: the operation types and their parser and dump, `apply`, `replay`, `field_update` (what apply and replay share), `diff`, `repair`, `restore` |
-| `api.rs` | the functions the bindings call: JSON text or values in, values out. It is behind the `api` feature, which both bindings turn on, so it is their one shared conversion layer. It turns an `Error` into an `ApiError`, with the Python exception class name and the error as JSON |
+| `bindings.rs` | the functions the bindings call: JSON text or values in, values out. It is behind the `bindings` feature, which both bindings turn on, so it is their one shared conversion layer. It turns an `Error` into a `BindingError`, with the Python exception class name and the error as JSON |
 
-The public modules are `api`, `json`, `flow`, `compare`, `node_input`, `validate`, `repair` and `restore`.
+The public modules are `bindings`, `json`, `flow`, `compare`, `node_input`, `validate`, `repair` and `restore`.
 
 Each folder raises its own errors: `json` a `NonFinite` number, `flow` a `DeserializeError` or a `ListError`, and `compare` and `node_input` only `NonFinite`. `violation` turns each of them into the one `Error` the bindings see.
 

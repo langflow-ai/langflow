@@ -1,6 +1,6 @@
 //! `apply_cases.json`, `merge_cases.json` and `property_cases.json`: applying operations.
 
-use lfx_ops::api::json_text;
+use lfx_ops::bindings::json_text;
 use lfx_ops::compare::{graph_hash, graphs_equal};
 use lfx_ops::flow::model::FLOW_MODEL;
 use lfx_ops::flow_value;

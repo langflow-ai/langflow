@@ -202,7 +202,7 @@ impl FieldUpdate {
 /// operation with its `type` first, and no repeated key. For any other text,
 /// or text that breaks a rule, it returns `None`, and the caller reads the
 /// text the general way, which gives the same operations or the exact error.
-#[cfg(feature = "api")]
+#[cfg(feature = "bindings")]
 pub(crate) fn operations_from_text(text: &str) -> Option<Vec<Operation>> {
     let mut builder = crate::json::Builder::<true>::default();
     let mut deserializer = serde_json::Deserializer::from_str(text);
@@ -213,7 +213,7 @@ pub(crate) fn operations_from_text(text: &str) -> Option<Vec<Operation>> {
     Some(operations)
 }
 
-#[cfg(feature = "api")]
+#[cfg(feature = "bindings")]
 mod text {
     use std::fmt;
 
@@ -625,7 +625,7 @@ mod tests {
             for operation in general(text).unwrap() {
                 let mut written = Vec::new();
                 operation.write_json(&mut written, crate::json::serialize::Ascii::Escape);
-                let expected = crate::api::json_text(&operation.to_value());
+                let expected = crate::bindings::json_text(&operation.to_value());
                 assert_eq!(String::from_utf8(written).unwrap(), expected);
             }
         }

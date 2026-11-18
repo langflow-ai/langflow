@@ -1,6 +1,6 @@
 //! Each folder of `src` imports only from the folders before it:
 //! `map`, `json`, `flow`, `compare`, `node_input`, `violation`,
-//! `invariant`, `rule`, `validate.rs`, `snapshot`, `state`, `op`, then `api.rs`.
+//! `invariant`, `rule`, `validate.rs`, `snapshot`, `state`, `op`, then `bindings.rs`.
 //!
 //! Tests may import from any folder, so the check stops at `#[cfg(test)]`
 //! and skips `tests.rs` files.
@@ -21,7 +21,7 @@ const LAYERS: [&str; 13] = [
     "snapshot",
     "state",
     "op",
-    "api",
+    "bindings",
 ];
 
 fn layer(name: &str) -> Option<usize> {

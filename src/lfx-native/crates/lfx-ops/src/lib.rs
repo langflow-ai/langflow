@@ -6,11 +6,11 @@
 //!
 //! Each folder imports only from the folders before it: `map`,
 //! `json`, `flow`, `compare`, `node_input`, `violation`, `invariant`,
-//! `rule`, `validate`, `snapshot`, `state`, `op`, then `api`, which the
-//! `api` feature turns on for the bindings.
+//! `rule`, `validate`, `snapshot`, `state`, `op`, then `bindings`, which the
+//! `bindings` feature turns on for the bindings.
 
-#[cfg(feature = "api")]
-pub mod api;
+#[cfg(feature = "bindings")]
+pub mod bindings;
 pub mod compare;
 pub mod flow;
 mod invariant;

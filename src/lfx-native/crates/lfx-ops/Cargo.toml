@@ -22,12 +22,12 @@ thiserror = "2"
 
 [features]
 # The functions the Python and browser bindings call, and the JSON they return.
-api = []
+bindings = []
 
 [dev-dependencies]
 libtest-mimic = "0.8"
-# The tests call the api module too.
-lfx-ops = { path = ".", features = ["api"] }
+# The tests call the bindings module too.
+lfx-ops = { path = ".", features = ["bindings"] }
 
 [[test]]
 name = "fixtures"

@@ -114,7 +114,7 @@ impl FieldUpdate {
     }
 }
 
-#[cfg(feature = "api")]
+#[cfg(feature = "bindings")]
 impl Operation {
     /// Write the operation as JSON text, as [`crate::json::serialize::write_value`]
     /// writes [`Self::to_value`], without building that value.
@@ -144,7 +144,7 @@ impl Operation {
     }
 }
 
-#[cfg(feature = "api")]
+#[cfg(feature = "bindings")]
 impl FieldUpdate {
     fn write_json(&self, out: &mut Vec<u8>, ascii: crate::json::serialize::Ascii) {
         use crate::json::serialize::{write_seq, write_str, write_value};

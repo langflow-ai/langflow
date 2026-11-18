@@ -8,16 +8,16 @@
 //! error as JSON text.
 
 use js_sys::{Error, Reflect};
-use lfx_ops::api::{self, ApiError, ApiResult, Input};
+use lfx_ops::bindings::{self, BindingError, BindingResult, Input};
 use lfx_ops::{ApplyOptions, ReplayOptions};
 use wasm_bindgen::prelude::*;
 
-fn thrown(error: &ApiError) -> JsValue {
+fn thrown(error: &BindingError) -> JsValue {
     let raised = Error::new(error.message());
     for (name, value) in [
         ("kind", error.kind().to_owned()),
         ("code", error.code().to_owned()),
-        ("details", api::json_text(&error.details())),
+        ("details", bindings::json_text(&error.details())),
     ] {
         // Setting a property on a fresh Error cannot fail.
         let _ = Reflect::set(
@@ -29,13 +29,13 @@ fn thrown(error: &ApiError) -> JsValue {
     raised.into()
 }
 
-fn run<T>(result: ApiResult<T>) -> Result<T, JsValue> {
+fn run<T>(result: BindingResult<T>) -> Result<T, JsValue> {
     result.map_err(|error| thrown(&error))
 }
 
 /// A result as JSON text, written as ASCII.
-fn text(result: ApiResult) -> Result<String, JsValue> {
-    run(result).map(|value| api::json_text(&value))
+fn text(result: BindingResult) -> Result<String, JsValue> {
+    run(result).map(|value| bindings::json_text(&value))
 }
 
 /// A boolean option of an options object, or `None` when it is not a boolean.
@@ -78,7 +78,7 @@ impl GraphState {
     #[wasm_bindgen(constructor)]
     pub fn new(flow: &str) -> Result<GraphState, JsValue> {
         Ok(Self {
-            state: run(api::graph_state(flow.into()))?,
+            state: run(bindings::graph_state(flow.into()))?,
         })
     }
 
@@ -89,7 +89,7 @@ impl GraphState {
     ///
     /// The operations do not parse, or the engine refuses the batch.
     pub fn apply(&mut self, operations: &str, options: &JsValue) -> Result<String, JsValue> {
-        text(api::apply_to(
+        text(bindings::apply_to(
             &mut self.state,
             operations.into(),
             apply_options(options, false),
@@ -103,7 +103,7 @@ impl GraphState {
     ///
     /// The operations do not parse, or an operation cannot be carried out.
     pub fn replay(&mut self, operations: &str, options: &JsValue) -> Result<String, JsValue> {
-        text(api::replay_to(
+        text(bindings::replay_to(
             &mut self.state,
             operations.into(),
             replay_options(options),
@@ -126,7 +126,7 @@ impl GraphState {
 /// The graph or the operations do not parse, or the engine refuses the batch.
 #[wasm_bindgen]
 pub fn apply(flow: &str, operations: &str, options: &JsValue) -> Result<String, JsValue> {
-    text(api::apply(
+    text(bindings::apply(
         flow.into(),
         operations.into(),
         apply_options(options, true),
@@ -141,7 +141,7 @@ pub fn apply(flow: &str, operations: &str, options: &JsValue) -> Result<String, 
 /// The input does not parse, the graph breaks a structural rule, or an operation fails.
 #[wasm_bindgen]
 pub fn replay(flow: &str, operations: &str, options: &JsValue) -> Result<String, JsValue> {
-    text(api::replay(
+    text(bindings::replay(
         flow.into(),
         operations.into(),
         replay_options(options),
@@ -183,72 +183,72 @@ macro_rules! engine_functions {
 
 engine_functions! {
     /// The operations that turn `base` into `target`, checked by replay.
-    fn ops_diff as opsDiff(base, target) => api::ops_diff(base, target);
+    fn ops_diff as opsDiff(base, target) => bindings::ops_diff(base, target);
 
     /// Every rule a graph breaks, as a JSON list of violations.
     fn validate as validate(flow [base]; check_values = true) =>
-        api::validate(flow, base, check_values);
+        bindings::validate(flow, base, check_values);
 
     /// Repair what has one fix. Returns `{"flow_data", "fixes"}`. It throws
     /// when a rule only the client can fix is broken.
-    fn repair as repair(flow [base]) => api::repair(flow, base);
+    fn repair as repair(flow [base]) => bindings::repair(flow, base);
 
     /// The SHA-256 hex digest of a graph's canonical form.
-    fn graph_hash as graphHash(flow) -> String => api::graph_hash(flow);
+    fn graph_hash as graphHash(flow) -> String => bindings::graph_hash(flow);
 
     /// Whether two graphs are the same graph.
-    fn graphs_equal as graphsEqual(left, right) -> bool => api::graphs_equal(left, right);
+    fn graphs_equal as graphsEqual(left, right) -> bool => bindings::graphs_equal(left, right);
 
     /// Whether two JSON values are the same value.
-    fn values_equal as valuesEqual(left, right) -> bool => api::values_equal(left, right);
+    fn values_equal as valuesEqual(left, right) -> bool => bindings::values_equal(left, right);
 
     /// A JSON value in RFC 8785 canonical form.
-    fn canonical_json as canonicalJson(value) -> String => api::canonical_json(value);
+    fn canonical_json as canonicalJson(value) -> String => bindings::canonical_json(value);
 
     /// A revision with a restore's fixes applied, after checking each one.
     fn apply_restore_fixes as applyRestoreFixes(revision_graph, stored, fixes) =>
-        api::apply_restore_fixes(revision_graph, stored, fixes);
+        bindings::apply_restore_fixes(revision_graph, stored, fixes);
 
     /// The fixes that turn a revision's edges as read into the edges its preview shows.
-    fn edge_fixes as edgeFixes(read, shown) => api::edge_fixes(read, shown);
+    fn edge_fixes as edgeFixes(read, shown) => bindings::edge_fixes(read, shown);
 
     /// The part of the fixes that touches the given edges.
-    fn fixes_for_edges as fixesForEdges(fixes, edge_ids) => api::fixes_for_edges(fixes, edge_ids);
+    fn fixes_for_edges as fixesForEdges(fixes, edge_ids) => bindings::fixes_for_edges(fixes, edge_ids);
 
     /// Rows in order, by `(__pos__, __id__)`, or as stored for a legacy table.
-    fn ordered_rows as orderedRows(rows) => api::ordered_rows(rows);
+    fn ordered_rows as orderedRows(rows) => bindings::ordered_rows(rows);
 
     /// Rows in order and without `__id__` and `__pos__`.
-    fn strip_row_keys as stripRowKeys(rows) => api::strip_row_keys(rows);
+    fn strip_row_keys as stripRowKeys(rows) => bindings::strip_row_keys(rows);
 
     /// A flow whose top-level tables have their rows in order and without `__id__` and `__pos__`.
     fn strip_flow_table_row_keys as stripFlowTableRowKeys(flow) =>
-        api::strip_flow_table_row_keys(flow);
+        bindings::strip_flow_table_row_keys(flow);
 
     /// Rows with the ids and positions a write needs. With `editor`, a gap with
     /// no room left renumbers the table.
     fn assign_row_ids as assignRowIds(rows [previous]; editor = true) =>
-        api::assign_row_ids(rows, previous, editor);
+        bindings::assign_row_ids(rows, previous, editor);
 
     /// A node being added, with ids on every table.
     fn assign_table_row_ids as assignTableRowIds(node; editor = true) =>
-        api::assign_table_row_ids(node, editor);
+        bindings::assign_table_row_ids(node, editor);
 
     /// `target` with ids on the tables it adds or changes relative to `base`.
     fn assign_changed_table_row_ids as assignChangedTableRowIds(base, target; editor = true) =>
-        api::assign_changed_table_row_ids(base, target, editor);
+        bindings::assign_changed_table_row_ids(base, target, editor);
 
     /// A node with ids on the tables it adds or changes relative to `previous`.
     fn assign_changed_node_table_row_ids as assignChangedNodeTableRowIds(
         node [previous]; editor = true
-    ) => api::assign_changed_node_table_row_ids(node, previous, editor);
+    ) => bindings::assign_changed_node_table_row_ids(node, previous, editor);
 
     /// Rows with `new_rows` appended, each with a new id one position past the last.
     fn append_table_rows as appendTableRows(rows, new_rows) =>
-        api::append_table_rows(rows, new_rows);
+        bindings::append_table_rows(rows, new_rows);
 
     /// The names of a node's template fields whose value is a table.
-    fn table_fields as tableFields(node) => api::table_fields(node);
+    fn table_fields as tableFields(node) => bindings::table_fields(node);
 }
 
 /// A new random edge id in the editor's format.

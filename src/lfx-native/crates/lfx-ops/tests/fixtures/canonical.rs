@@ -97,7 +97,7 @@ fn limit_trials() -> Vec<Trial> {
             trials.push(Trial::test(
                 format!("limit_cases::{section}::{name}"),
                 move || {
-                    let actual = match lfx_ops::api::canonical_json(
+                    let actual = match lfx_ops::bindings::canonical_json(
                         case["json"].as_str().unwrap_or_default().into(),
                     ) {
                         Ok(text) => flow_value!({"canonical": text}),

@@ -1,7 +1,7 @@
 //! The functions the Python and browser bindings call.
 //!
 //! Each function reads its [`Input`]s, calls the engine and returns a value.
-//! The bindings turn an [`ApiError`] into their language's exception.
+//! The bindings turn an [`BindingError`] into their language's exception.
 
 use crate::flow_value;
 use crate::json::serialize::{self, Ascii};
@@ -26,9 +26,9 @@ use crate::violation::error::{Error, ErrorKind, invalid};
 /// An engine error, as the bindings raise it. [`Self::details`] gives it as JSON.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 #[error(transparent)]
-pub struct ApiError(pub Error);
+pub struct BindingError(pub Error);
 
-impl ApiError {
+impl BindingError {
     /// The name of the matching Python exception class.
     #[must_use]
     pub fn kind(&self) -> &'static str {
@@ -71,20 +71,20 @@ impl ApiError {
     }
 }
 
-impl From<NonFinite> for ApiError {
+impl From<NonFinite> for BindingError {
     fn from(error: NonFinite) -> Self {
         Self(Error::from(error))
     }
 }
 
-impl From<Error> for ApiError {
+impl From<Error> for BindingError {
     fn from(error: Error) -> Self {
         Self(error)
     }
 }
 
 /// The result of a call, or the error.
-pub type ApiResult<T = FlowValue> = Result<T, ApiError>;
+pub type BindingResult<T = FlowValue> = Result<T, BindingError>;
 
 // --- Output --------------------------------------------------------------------------------
 
@@ -135,7 +135,7 @@ impl From<FlowValue> for Input<'_> {
 
 /// A graph, or any other value the engine reads as data. Text may hold a
 /// non-finite number, so validation can report it and repair can replace it.
-fn data(input: Input<'_>) -> ApiResult<FlowValue> {
+fn data(input: Input<'_>) -> BindingResult<FlowValue> {
     match input {
         Input::Text(text) => Ok(parse_json(text)?),
         Input::Value(value) => Ok(value),
@@ -144,7 +144,7 @@ fn data(input: Input<'_>) -> ApiResult<FlowValue> {
 
 /// A graph that the engine keeps or changes. Text with a non-finite number
 /// is refused.
-fn value(input: Input<'_>) -> ApiResult<FlowValue> {
+fn value(input: Input<'_>) -> BindingResult<FlowValue> {
     match input {
         Input::Text(text) => Ok(parse_finite_json(text)?),
         Input::Value(value) => Ok(value),
@@ -156,7 +156,7 @@ fn value(input: Input<'_>) -> ApiResult<FlowValue> {
 /// # Errors
 ///
 /// The operations do not parse.
-pub fn operations(input: Input<'_>) -> ApiResult<Vec<Operation>> {
+pub fn operations(input: Input<'_>) -> BindingResult<Vec<Operation>> {
     if let Input::Text(text) = input
         && let Some(operations) = crate::op::deserialize::operations_from_text(text)
     {
@@ -166,7 +166,7 @@ pub fn operations(input: Input<'_>) -> ApiResult<Vec<Operation>> {
         Input::Text(text) => serde_json::from_str(text)
             .map(|FiniteFlowValue(value)| value)
             .map_err(|error| {
-                ApiError::from(invalid!(
+                BindingError::from(invalid!(
                     "operations are not valid JSON: {}",
                     parse_problem(&error)
                 ))
@@ -176,13 +176,13 @@ pub fn operations(input: Input<'_>) -> ApiResult<Vec<Operation>> {
     Ok(Operation::list_from_value(value)?)
 }
 
-fn optional(input: Option<Input<'_>>) -> ApiResult<Option<FlowValue>> {
+fn optional(input: Option<Input<'_>>) -> BindingResult<Option<FlowValue>> {
     input.map(data).transpose()
 }
 
 /// A list argument, named in the error when it is not a list or an item
 /// has the wrong type: `rows: must be a list`.
-fn list<T: FromFlowValue>(input: Input<'_>, name: &str) -> ApiResult<Vec<T>> {
+fn list<T: FromFlowValue>(input: Input<'_>, name: &str) -> BindingResult<Vec<T>> {
     Ok(Vec::from_value(data(input)?).map_err(|error| error.into_error(name))?)
 }
 
@@ -232,7 +232,7 @@ pub fn apply(
     flow: Input<'_>,
     operations_in: Input<'_>,
     options: ApplyOptions,
-) -> ApiResult<FlowValue> {
+) -> BindingResult<FlowValue> {
     let (flow_data, applied) =
         apply_flow_operations(value(flow)?, operations(operations_in)?, options)?;
     let mut out = applied_json(applied, options);
@@ -245,7 +245,7 @@ pub fn apply(
 /// # Errors
 ///
 /// The graph does not parse, or breaks a structural rule.
-pub fn graph_state(flow: Input<'_>) -> ApiResult<GraphState> {
+pub fn graph_state(flow: Input<'_>) -> BindingResult<GraphState> {
     Ok(GraphState::new(value(flow)?)?)
 }
 
@@ -258,7 +258,7 @@ pub fn apply_to(
     state: &mut GraphState,
     operations_in: Input<'_>,
     options: ApplyOptions,
-) -> ApiResult<FlowValue> {
+) -> BindingResult<FlowValue> {
     let applied = state.apply(operations(operations_in)?, options)?;
     Ok(FlowValue::Object(applied_json(applied, options)))
 }
@@ -289,7 +289,7 @@ pub fn replay(
     flow: Input<'_>,
     operations_in: Input<'_>,
     options: ReplayOptions,
-) -> ApiResult<FlowValue> {
+) -> BindingResult<FlowValue> {
     let (flow_data, replayed) =
         replay_flow_operations(value(flow)?, operations(operations_in)?, options)?;
     let mut out = replayed_json(replayed, options);
@@ -307,7 +307,7 @@ pub fn replay_to(
     state: &mut GraphState,
     operations_in: Input<'_>,
     options: ReplayOptions,
-) -> ApiResult<FlowValue> {
+) -> BindingResult<FlowValue> {
     let replayed = state.replay(operations(operations_in)?, options)?;
     Ok(FlowValue::Object(replayed_json(replayed, options)))
 }
@@ -320,7 +320,7 @@ pub fn replay_to(
 /// # Errors
 ///
 /// A graph does not parse or breaks the rules, or the operations do not replay.
-pub fn ops_diff(base: Input<'_>, target: Input<'_>) -> ApiResult<FlowValue> {
+pub fn ops_diff(base: Input<'_>, target: Input<'_>) -> BindingResult<FlowValue> {
     let derived = derive_flow_operations(data(base)?, &data(target)?)?;
     Ok(operations_json(derived.operations))
 }
@@ -334,7 +334,7 @@ pub fn validate(
     flow: Input<'_>,
     base: Option<Input<'_>>,
     check_values: bool,
-) -> ApiResult<FlowValue> {
+) -> BindingResult<FlowValue> {
     let base = optional(base)?;
     let numbers = if check_values {
         Numbers::Check
@@ -353,7 +353,7 @@ pub fn validate(
 /// # Errors
 ///
 /// A graph does not parse, or a rule only the client can fix is broken.
-pub fn repair(flow: Input<'_>, base: Option<Input<'_>>) -> ApiResult<FlowValue> {
+pub fn repair(flow: Input<'_>, base: Option<Input<'_>>) -> BindingResult<FlowValue> {
     let base = optional(base)?;
     let repaired = repair_flow_data(&data(flow)?, base.as_ref())?;
     let fixes: Vec<FlowValue> = repaired.fixes.iter().map(Fix::to_value).collect();
@@ -370,7 +370,7 @@ pub fn repair(flow: Input<'_>, base: Option<Input<'_>>) -> ApiResult<FlowValue> 
 /// # Errors
 ///
 /// JSON text that does not parse, or holds a number that is not finite.
-pub fn graph_plain(flow: Input<'_>) -> ApiResult<GraphPlain> {
+pub fn graph_plain(flow: Input<'_>) -> BindingResult<GraphPlain> {
     Ok(GraphPlain::new(value(flow)?))
 }
 
@@ -383,7 +383,7 @@ pub fn plain_validate(
     flow: &GraphPlain,
     base: Option<&GraphPlain>,
     check_values: bool,
-) -> ApiResult<FlowValue> {
+) -> BindingResult<FlowValue> {
     let numbers = if check_values {
         Numbers::Check
     } else {
@@ -400,7 +400,7 @@ pub fn plain_validate(
 pub fn plain_repair(
     flow: &GraphPlain,
     base: Option<&GraphPlain>,
-) -> ApiResult<(GraphPlain, FlowValue)> {
+) -> BindingResult<(GraphPlain, FlowValue)> {
     let (repaired, fixes) = flow.repair(base)?;
     Ok((
         repaired,
@@ -413,7 +413,7 @@ pub fn plain_repair(
 /// # Errors
 ///
 /// A graph breaks the rules, or the operations do not replay.
-pub fn plain_ops_diff(base: &GraphPlain, target: &GraphPlain) -> ApiResult<FlowValue> {
+pub fn plain_ops_diff(base: &GraphPlain, target: &GraphPlain) -> BindingResult<FlowValue> {
     Ok(operations_json(base.ops_diff(target)?.operations))
 }
 
@@ -436,7 +436,7 @@ pub fn text_sha256(text: &[u8]) -> String {
 /// # Errors
 ///
 /// The graph does not parse, or holds a number that is not finite.
-pub fn graph_hash(flow: Input<'_>) -> ApiResult<String> {
+pub fn graph_hash(flow: Input<'_>) -> BindingResult<String> {
     Ok(compare::graph_hash(&data(flow)?)?)
 }
 
@@ -445,7 +445,7 @@ pub fn graph_hash(flow: Input<'_>) -> ApiResult<String> {
 /// # Errors
 ///
 /// A graph does not parse, or a compared number is not finite.
-pub fn graphs_equal(left: Input<'_>, right: Input<'_>) -> ApiResult<bool> {
+pub fn graphs_equal(left: Input<'_>, right: Input<'_>) -> BindingResult<bool> {
     Ok(compare::graphs_equal(&data(left)?, &data(right)?)?)
 }
 
@@ -454,7 +454,7 @@ pub fn graphs_equal(left: Input<'_>, right: Input<'_>) -> ApiResult<bool> {
 /// # Errors
 ///
 /// A value does not parse, or a compared number is not finite.
-pub fn values_equal(left: Input<'_>, right: Input<'_>) -> ApiResult<bool> {
+pub fn values_equal(left: Input<'_>, right: Input<'_>) -> BindingResult<bool> {
     Ok(compare::values_equal(&data(left)?, &data(right)?)?)
 }
 
@@ -463,7 +463,7 @@ pub fn values_equal(left: Input<'_>, right: Input<'_>) -> ApiResult<bool> {
 /// # Errors
 ///
 /// The value does not parse, or holds a number that is not finite.
-pub fn canonical_json(value: Input<'_>) -> ApiResult<String> {
+pub fn canonical_json(value: Input<'_>) -> BindingResult<String> {
     Ok(compare::canonical_json(&data(value)?)?)
 }
 
@@ -478,7 +478,7 @@ pub fn apply_restore_fixes(
     revision: Input<'_>,
     stored: Input<'_>,
     fixes: Input<'_>,
-) -> ApiResult<FlowValue> {
+) -> BindingResult<FlowValue> {
     Ok(restore::apply_restore_fixes(
         &data(revision)?,
         &data(stored)?,
@@ -491,7 +491,7 @@ pub fn apply_restore_fixes(
 /// # Errors
 ///
 /// The inputs do not parse, an input is not a list, or a handle holds a non-finite number.
-pub fn edge_fixes(read: Input<'_>, shown: Input<'_>) -> ApiResult<FlowValue> {
+pub fn edge_fixes(read: Input<'_>, shown: Input<'_>) -> BindingResult<FlowValue> {
     let fixes = restore::edge_fixes(&list(read, "read")?, &list(shown, "shown")?)?;
     Ok(operations_json(fixes))
 }
@@ -501,7 +501,7 @@ pub fn edge_fixes(read: Input<'_>, shown: Input<'_>) -> ApiResult<FlowValue> {
 /// # Errors
 ///
 /// The inputs do not parse, or `edge_ids` is not a list of strings.
-pub fn fixes_for_edges(fixes: Input<'_>, edge_ids: Input<'_>) -> ApiResult<FlowValue> {
+pub fn fixes_for_edges(fixes: Input<'_>, edge_ids: Input<'_>) -> BindingResult<FlowValue> {
     let ids: Vec<String> = list(edge_ids, "edge_ids")?;
     Ok(operations_json(restore::fixes_for_edges(
         &operations(fixes)?,
@@ -516,7 +516,7 @@ pub fn fixes_for_edges(fixes: Input<'_>, edge_ids: Input<'_>) -> ApiResult<FlowV
 /// # Errors
 ///
 /// The rows do not parse.
-pub fn strip_row_keys(rows: Input<'_>) -> ApiResult<FlowValue> {
+pub fn strip_row_keys(rows: Input<'_>) -> BindingResult<FlowValue> {
     Ok(table_input::strip_row_keys(&data(rows)?))
 }
 
@@ -525,7 +525,7 @@ pub fn strip_row_keys(rows: Input<'_>) -> ApiResult<FlowValue> {
 /// # Errors
 ///
 /// The flow does not parse.
-pub fn strip_flow_table_row_keys(flow: Input<'_>) -> ApiResult<FlowValue> {
+pub fn strip_flow_table_row_keys(flow: Input<'_>) -> BindingResult<FlowValue> {
     let mut flow = data(flow)?;
     table_input::strip_flow_table_row_keys(&mut flow);
     Ok(flow)
@@ -540,7 +540,7 @@ pub fn assign_row_ids(
     rows: Input<'_>,
     previous: Option<Input<'_>>,
     editor: bool,
-) -> ApiResult<FlowValue> {
+) -> BindingResult<FlowValue> {
     let mut rows = list(rows, "rows")?;
     table_input::assign_row_ids(&mut rows, optional(previous)?.as_ref(), renumber(editor))?;
     Ok(FlowValue::Array(rows))
@@ -551,7 +551,7 @@ pub fn assign_row_ids(
 /// # Errors
 ///
 /// The node does not parse, or a compared row holds a number that is not finite.
-pub fn assign_table_row_ids(node: Input<'_>, editor: bool) -> ApiResult<FlowValue> {
+pub fn assign_table_row_ids(node: Input<'_>, editor: bool) -> BindingResult<FlowValue> {
     let mut node = data(node)?;
     table_input::assign_table_row_ids(&mut node, renumber(editor))?;
     Ok(node)
@@ -566,7 +566,7 @@ pub fn assign_changed_table_row_ids(
     base: Input<'_>,
     target: Input<'_>,
     editor: bool,
-) -> ApiResult<FlowValue> {
+) -> BindingResult<FlowValue> {
     let mut target = data(target)?;
     table_input::assign_changed_table_row_ids(&data(base)?, &mut target, renumber(editor))?;
     Ok(target)
@@ -577,7 +577,7 @@ pub fn assign_changed_table_row_ids(
 /// # Errors
 ///
 /// The inputs do not parse, an input is not a list, or a row holds a non-finite number.
-pub fn append_table_rows(rows: Input<'_>, new_rows: Input<'_>) -> ApiResult<FlowValue> {
+pub fn append_table_rows(rows: Input<'_>, new_rows: Input<'_>) -> BindingResult<FlowValue> {
     let mut rows = list(rows, "rows")?;
     table_input::append_table_rows(&mut rows, &list(new_rows, "new_rows")?)?;
     Ok(FlowValue::Array(rows))
@@ -593,7 +593,7 @@ pub fn assign_changed_node_table_row_ids(
     node: Input<'_>,
     previous: Option<Input<'_>>,
     editor: bool,
-) -> ApiResult<FlowValue> {
+) -> BindingResult<FlowValue> {
     let mut node = data(node)?;
     table_input::assign_changed_node_table_row_ids(
         &mut node,
@@ -608,7 +608,7 @@ pub fn assign_changed_node_table_row_ids(
 /// # Errors
 ///
 /// The node does not parse.
-pub fn table_fields(node: Input<'_>) -> ApiResult<FlowValue> {
+pub fn table_fields(node: Input<'_>) -> BindingResult<FlowValue> {
     Ok(table_input::table_fields(&data(node)?)
         .into_iter()
         .collect())
@@ -619,7 +619,7 @@ pub fn table_fields(node: Input<'_>) -> ApiResult<FlowValue> {
 /// # Errors
 ///
 /// The rows do not parse, or are not a list.
-pub fn ordered_rows(rows: Input<'_>) -> ApiResult<FlowValue> {
+pub fn ordered_rows(rows: Input<'_>) -> BindingResult<FlowValue> {
     let rows: Vec<FlowValue> = list(rows, "rows")?;
     Ok(FlowValue::Array(
         table_input::ordered_rows(&rows)
@@ -665,7 +665,7 @@ fn parse_problem(error: &serde_json::Error) -> String {
 mod tests {
     use super::*;
 
-    fn refused(result: ApiResult) -> ApiError {
+    fn refused(result: BindingResult) -> BindingError {
         result.expect_err("a non-list argument must be refused")
     }
 

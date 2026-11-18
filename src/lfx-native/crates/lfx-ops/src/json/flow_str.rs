@@ -276,7 +276,9 @@ mod tests {
         let before = hash.hash_one(&a);
         let threads: Vec<_> = [a.clone(), b.clone()]
             .into_iter()
-            .map(|text| std::thread::spawn(move || crate::api::json_text(&FlowValue::String(text))))
+            .map(|text| {
+                std::thread::spawn(move || crate::bindings::json_text(&FlowValue::String(text)))
+            })
             .collect();
         for thread in threads {
             let encoded = thread.join().unwrap();
@@ -293,7 +295,7 @@ mod tests {
     fn unique_long_text_is_written_without_a_cache() {
         let text = FlowStr::from("unique \"text\"\n".repeat(100));
         let value = FlowValue::String(text);
-        let encoded = crate::api::json_text(&value);
+        let encoded = crate::bindings::json_text(&value);
         assert_eq!(serde_json::from_str::<FlowValue>(&encoded).unwrap(), value);
         let FlowValue::String(text) = value else {
             panic!("string");
