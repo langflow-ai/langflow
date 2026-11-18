@@ -97,6 +97,29 @@ def test_replacement_digest_preserves_legacy_no_dependency_shape() -> None:
     )
 
 
+def test_memory_preparation_is_explicit_and_bound_to_receipt() -> None:
+    base = ProjectReplacementRequest(description="digest", flows=[])
+    disabled = ProjectReplacementRequest(description="digest", flows=[], prepare_memory_bases=False)
+    enabled = ProjectReplacementRequest(description="digest", flows=[], prepare_memory_bases=True)
+    assert projects_module._replacement_request_digest(base) == projects_module._replacement_request_digest(disabled)
+    assert projects_module._replacement_request_digest(base) != projects_module._replacement_request_digest(enabled)
+
+
+async def test_memory_preparation_requires_capable_extension(monkeypatch) -> None:
+    from langflow.services.deployment_artifacts import activation
+
+    older_guard = AsyncMock()
+    monkeypatch.setattr(activation, "_extensions_loaded", True)
+    monkeypatch.setattr(activation, "_activation_guard", older_guard)
+    monkeypatch.setattr(activation, "_prepares_memory_bases", False)
+    with pytest.raises(HTTPException) as refused:
+        await activation.guard_project_activation(
+            request=ProjectReplacementRequest(description=None, flows=[], prepare_memory_bases=True)
+        )
+    assert refused.value.headers["X-Langflow-Error-Code"] == "memory_base_preparation_unavailable"
+    older_guard.assert_not_awaited()
+
+
 def test_replacement_variable_metadata_is_strict_and_bound_to_receipt() -> None:
     body = {"description": None, "flows": []}
     target = {"target_id": str(uuid4()), "declarations": [{"name": "KEY", "kind": "secret"}]}
@@ -127,12 +150,14 @@ async def test_activation_guard_failure_rolls_back_flows_variables_and_receipt(
         variable_id = variable.id
 
     async def refuse_after_variable_write(*, session, **_):
+        activation.register_activation_rollback_cleanup(cleanup)
         row = await session.get(Variable, variable_id)
         row.value = "new"
         session.add(row)
         await session.flush()
         raise HTTPException(status_code=409, detail="readiness failed")
 
+    cleanup = AsyncMock()
     monkeypatch.setattr(activation, "_activation_guard", refuse_after_variable_write)
     monkeypatch.setattr(activation, "_extensions_loaded", True)
     operation_id = uuid4()
@@ -142,6 +167,7 @@ async def test_activation_guard_failure_rolls_back_flows_variables_and_receipt(
         headers=logged_in_headers,
     )
     assert response.status_code == 409, response.text
+    cleanup.assert_awaited_once()
     async with session_scope() as session:
         assert (await session.get(Variable, variable_id)).value == "old"
         assert (await session.get(Flow, UUID(flow["id"]))).name == "keep-before-activation"

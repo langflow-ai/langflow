@@ -9,7 +9,12 @@ paths require a running NextPlaid and vLLM server and are covered by the
 end-to-end smoke test in the PR description.
 """
 
+import inspect
+from pathlib import Path
+
 import pytest
+from lfx.custom.custom_component.component import Component
+from lfx.custom.utils import build_custom_component_template
 from lfx_nextplaid import NextPlaidVectorStoreComponent, VllmMultivectorEmbeddingsComponent
 from lfx_nextplaid.components.nextplaid.vllm_multivector_impl import VllmMultivectorEmbeddings
 
@@ -31,6 +36,23 @@ def test_nextplaid_component_template_defaults():
     assert node["template"]["index_name"]["value"] == "langflow"
     # nbits is a dropdown that defaults to 4-bit quantization.
     assert node["template"]["nbits"]["value"] == "4"
+
+
+@pytest.mark.parametrize(
+    ("component_class", "input_name", "default_value"),
+    [
+        (NextPlaidVectorStoreComponent, "url", "http://localhost:8080"),
+        (VllmMultivectorEmbeddingsComponent, "api_base", "http://localhost:8000"),
+    ],
+)
+def test_component_source_builds_template_outside_its_package(component_class, input_name, default_value):
+    """Palette templates rebuild component source without its original package context."""
+    source = Path(inspect.getfile(component_class)).read_text(encoding="utf-8")
+
+    template, rebuilt = build_custom_component_template(Component(_code=source))
+
+    assert rebuilt.__class__.__name__ == component_class.__name__
+    assert template["template"][input_name]["value"] == default_value
 
 
 def test_vllm_multivector_embeddings_build(monkeypatch):

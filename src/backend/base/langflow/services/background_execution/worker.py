@@ -493,11 +493,15 @@ async def build_worker(*, owner: str | None = None):
     process-unique token the in-flight runner stamps on the job heartbeat.
     Returns ``(backend, runner, teardown)``.
     """
+    from lfx.interface.components import get_and_cache_all_types_dict
+
+    from langflow.main import load_bundles_with_error_handling
     from langflow.services.background_execution.db_backend import DBBackgroundQueue
     from langflow.services.background_execution.live_bus import InMemoryLiveBus
-    from langflow.services.deps import get_job_service, get_settings_service
+    from langflow.services.deps import get_job_service, get_settings_service, get_telemetry_service
 
-    settings = get_settings_service().settings
+    settings_service = get_settings_service()
+    settings = settings_service.settings
     job_service = get_job_service()
 
     backend = DBBackgroundQueue(
@@ -509,7 +513,15 @@ async def build_worker(*, owner: str | None = None):
     )
     runner = WorkerJobRunner(settings=settings, live_bus=InMemoryLiveBus(), owner=owner)
 
-    async def teardown() -> None:
-        """Nothing to close: the worker holds no broker connection."""
-
-    return backend, runner, teardown
+    # The worker has its own process-local registry. Load the same bundle paths
+    # as the API before accepting jobs that validate component source against it.
+    async with contextlib.AsyncExitStack() as resources:
+        temp_dirs, bundle_paths = await load_bundles_with_error_handling(components_only=True)
+        for temp_dir in temp_dirs:
+            resources.push_async_callback(asyncio.to_thread, temp_dir.cleanup)
+        for path in bundle_paths:
+            if path not in settings.components_path:
+                settings.components_path.append(path)
+                resources.callback(settings.components_path.remove, path)
+        await get_and_cache_all_types_dict(settings_service, get_telemetry_service())
+        return backend, runner, resources.pop_all().aclose

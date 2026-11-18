@@ -5,7 +5,7 @@ Preferred usage via the short alias::
     from langflow_sdk import Client
 
     client = Client("https://langflow.example.com", api_key="...")
-    flows  = client.list_flows()
+    flows  = client.list_flows(get_all=True)
     result = client.run_flow("my-endpoint", RunRequest(input_value="Hello"))
 
 The async counterpart lives in :mod:`langflow_sdk._async_client`.
@@ -63,7 +63,7 @@ class LangflowClient(_ClientCommon):
         from langflow_sdk import Client
 
         client = Client("https://langflow.example.com", api_key="...")
-        flows  = client.list_flows()
+        flows  = client.list_flows(get_all=True)
         result = client.run_flow("my-endpoint", RunRequest(input_value="Hello"))
     """
 
@@ -138,6 +138,17 @@ class LangflowClient(_ClientCommon):
         page: int = 1,
         size: int = 50,
     ) -> list[Flow]:
+        """Return one page of flows, or all flows when ``get_all=True``.
+
+        Unlike the server default, the SDK defaults to paginated requests with
+        page size 50. Set ``page`` and ``size`` subject to server limits.
+        Folder selection follows the server, normally its default folder when
+        ``folder_id`` is omitted. In all-mode the current server ignores
+        ``folder_id``, ``page``, and ``size`` for selection.
+
+        Return only the flow records, without pagination metadata. This method
+        makes one request and does not fetch subsequent pages automatically.
+        """
         resp = self._request(
             "GET",
             "/api/v1/flows/",
@@ -151,7 +162,7 @@ class LangflowClient(_ClientCommon):
                 size=size,
             ),
         )
-        return self._validate_model_list(Flow, resp.json())
+        return self._validate_flow_list(Flow, resp.json())
 
     def get_flow(self, flow_id: UUID | str) -> Flow:
         resp = self._request("GET", f"/api/v1/flows/{flow_id}")
@@ -404,7 +415,7 @@ class LangflowClient(_ClientCommon):
 #:
 #:     from langflow_sdk import Client
 #:     client = Client("https://langflow.example.com", api_key="...")
-#:     flows  = client.list_flows()
+#:     flows  = client.list_flows(get_all=True)
 #:     result = client.run_flow("my-endpoint", RunRequest(input_value="Hello"))
 Client = LangflowClient
 

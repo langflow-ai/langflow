@@ -886,6 +886,46 @@ class TestV2WorkflowDelegatedErrorPolicy:
 class TestAGUIStreaming:
     """mode=stream returns an AG-UI server-sent event stream."""
 
+    async def test_background_token_producer_waits_for_space_and_wakes_on_close(self):
+        from langflow.api.v2.workflow_execution import _WorkflowEventQueue
+        from lfx.events.event_manager import create_default_event_manager, emit_token
+
+        queue = _WorkflowEventQueue(maxsize=1, background_bursts=True)
+        manager = create_default_event_manager(queue, await_token_capacity=True)
+        await emit_token(manager.on_token, data={"chunk": "first"})
+        second = asyncio.create_task(emit_token(manager.on_token, data={"chunk": "second"}))
+        try:
+            await asyncio.sleep(0)
+            assert not second.done()
+            assert json.loads((await queue.get())[1])["data"]["chunk"] == "first"
+            await asyncio.wait_for(second, timeout=1)
+            third = asyncio.create_task(emit_token(manager.on_token, data={"chunk": "third"}))
+            await asyncio.sleep(0)
+            assert not third.done()
+            queue.close()
+            await asyncio.wait_for(third, timeout=1)
+        finally:
+            queue.close()
+            await queue.aclose()
+
+    async def test_background_callback_burst_has_a_byte_limit(self, monkeypatch):
+        from langflow.api.v2 import workflow_execution as wf_exec
+
+        monkeypatch.setattr(wf_exec, "_BACKGROUND_BURST_BYTES", 512)
+        queue = wf_exec._WorkflowEventQueue(maxsize=1, background_bursts=True)
+        event = ("token", b"{}", time.time())
+        try:
+            queue.put_nowait(event)
+            queue.put_nowait(event)
+            queue.put_nowait(("large", bytes(512), time.time()))
+            assert await queue.get() == event
+            assert await queue.get() == event
+            assert json.loads((await asyncio.wait_for(queue.get(), timeout=1))[1])["event"] == "error"
+            assert (await queue.get())[1] is None
+        finally:
+            queue.close()
+            await queue.aclose()
+
     async def test_stream_event_queue_ignores_late_sentinel_after_overflow(self):
         """A normal completion sentinel must not race ahead of the overflow error."""
         from langflow.api.v2 import workflow_execution as wf_exec

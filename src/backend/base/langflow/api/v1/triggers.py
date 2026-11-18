@@ -339,8 +339,8 @@ async def create_trigger(
     """Create a trigger on a flow the caller may write.
 
     The trigger is owned by the *flow owner*, not by whoever created it. The
-    execution-principal matrix classifies a trigger run as ``flow_owner``, and
-    flow-save reconciliation already creates rows that way; keying the API path
+    dispatcher uses that owner as the default run user. Flow-save
+    reconciliation already creates rows that way; keying the API path
     off the caller instead would give one flow two kinds of trigger identity
     depending on which surface armed it, and would let a collaborator with flow
     write silently schedule unattended runs under their own connections.
