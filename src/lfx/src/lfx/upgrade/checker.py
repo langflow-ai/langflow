@@ -192,6 +192,15 @@ def _holds_value(field: Mapping[str, Any]) -> bool:
     return field.get("value") not in (None, "", [], {})
 
 
+def can_replace_empty_field(saved: Mapping[str, Any], replacement: Mapping[str, Any]) -> bool:
+    """Allow a new default when a field changes type and neither declaration uses a reference."""
+    return (
+        saved.get("type") != replacement.get("type")
+        and not _holds_value(saved)
+        and not any(field.get("load_from_db") or field.get("file_path") for field in (saved, replacement))
+    )
+
+
 def retyped_field_keys(registry_template: Mapping[str, Any], flow_template: Mapping[str, Any]) -> set[str]:
     """Return the fields both sides have whose ``type`` changed.
 
