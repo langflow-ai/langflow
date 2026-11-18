@@ -102,6 +102,8 @@ export default defineConfig(({ command, mode }) => {
         include: "src/**/*",
         extension: [".ts", ".tsx", ".js", ".jsx"],
         requireEnv: false,
+        // The Playwright CI build sets this so the built bundle still reports coverage. Normal builds stay uninstrumented.
+        forceBuildInstrument: process.env.PW_FRONTEND_BUILD === "1",
       }),
     ],
     server: {

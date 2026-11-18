@@ -283,6 +283,26 @@ jobs:
           echo "matrix={\"include\":[$MATRIX_COMBINATIONS]}" >> "$GITHUB_OUTPUT"
           echo "shard_count=$SHARD_COUNT" >> "$GITHUB_OUTPUT"
 
+      # Build once here. Every shard downloads the same instrumented build.
+      - name: Build Instrumented Frontend
+        if: steps.set-matrix.outputs.test_grep != ''
+        working-directory: ./src/frontend
+        env:
+          PW_FRONTEND_BUILD: "1"
+          # Istanbul instrumentation plus sourcemaps needs more than the default heap.
+          NODE_OPTIONS: --max-old-space-size=14336
+        run: npx vite build
+
+      - name: Upload Frontend Build
+        if: steps.set-matrix.outputs.test_grep != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-frontend-build
+          path: src/frontend/build
+          retention-days: 1
+          if-no-files-found: error
+          overwrite: true
+
   setup-and-test:
     name: Playwright Tests - Shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
     runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-24.04' }}
@@ -388,10 +408,17 @@ jobs:
         shell: bash
         run: uvx --with 'mcp~=1.28' mcp-proxy --help > /dev/null
 
+      - name: Download Frontend Build
+        uses: actions/download-artifact@v8
+        with:
+          name: playwright-frontend-build
+          path: src/frontend/build
+
       - name: Execute Playwright Tests
         timeout-minutes: 18
         shell: bash
         env:
+          PW_FRONTEND_BUILD: "1"
           SERVER_LOG: playwright-server-${{ runner.os }}-${{ matrix.shardIndex }}-${{ github.run_attempt }}.log
           TESTS_FOLDER: ${{ inputs.tests_folder }}
           TEST_GREP: ${{ needs.determine-test-suite.outputs.test_grep }}
@@ -415,7 +442,7 @@ jobs:
             WORKERS=1
           fi
 
-          command=("${base_command[@]}" --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers "$WORKERS" --retries=1)
+          command=("${base_command[@]}" --trace retain-on-failure --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers "$WORKERS" --retries=1)
           printf 'Running:'
           printf ' %q' "${command[@]}"
           printf '\n'
