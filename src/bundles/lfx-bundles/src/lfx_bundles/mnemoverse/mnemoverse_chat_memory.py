@@ -90,7 +90,7 @@ class MnemoverseMemoryComponent(LCChatMemoryComponent):
         try:
             from mnemoverse import MnemoClient
         except ImportError as e:
-            msg = "Mnemoverse is not properly installed. Please install it with 'pip install \"mnemoverse>=0.5,<1\"'."
+            msg = "Mnemoverse is not installed. Install it with 'uv pip install \"lfx-bundles[mnemoverse]\"'."
             raise ImportError(msg) from e
 
         return MnemoClient(api_key=self.mnemoverse_api_key)
@@ -102,12 +102,14 @@ class MnemoverseMemoryComponent(LCChatMemoryComponent):
     def _release(client: Memory) -> None:
         """Closes the client's event loop and connection pool after a call.
 
-        Inside a running event loop the synchronous MnemoClient serves its calls
-        from a daemon thread that lives until close(). A long-running Langflow
-        server would keep one such thread per run, so every call is followed by
-        close(). The client stays usable afterwards: the next call opens a fresh
-        loop and connection, so a client passed on through the Memory output
-        keeps working.
+        Langflow runs synchronous output methods in a worker thread, where the
+        synchronous MnemoClient opens an event loop of its own and keeps it, with
+        its pooled connection, until close(). Called from inside a running loop
+        it uses a daemon thread instead, which also lives until close(). Every
+        call is therefore followed by close(), so a long-running server does not
+        accumulate open loops, sockets or threads. The client stays usable
+        afterwards: the next call opens a fresh loop and connection, so a client
+        passed on through the Memory output keeps working.
         """
         close = getattr(client, "close", None)
         if callable(close):
@@ -115,6 +117,14 @@ class MnemoverseMemoryComponent(LCChatMemoryComponent):
                 close()
             except Exception:  # noqa: BLE001
                 logger.debug("Closing the Mnemoverse client failed.", exc_info=True)
+
+    def _pre_run_setup(self) -> None:
+        # One build processes every connected output, and Search Results also
+        # calls ingest_data(), so the same message is stored once per build.
+        self._ingested_key = None
+
+    def _ingest_key(self) -> tuple[str, str, str]:
+        return (str(self.ingest_message), str(self.domain or ""), repr(self.metadata or {}))
 
     def ingest_data(self) -> Memory:
         """Stores a new message in Mnemoverse and returns the client."""
@@ -124,11 +134,14 @@ class MnemoverseMemoryComponent(LCChatMemoryComponent):
             logger.warning("Missing 'ingest_message'; nothing to store.")
             return mnemoverse
 
+        if getattr(self, "_ingested_key", None) == self._ingest_key():
+            return mnemoverse
+
         kwargs = self._domain_kwargs()
         if self.metadata:
             kwargs["metadata"] = self.metadata
 
-        logger.info("Storing message in Mnemoverse domain: %s", self.domain or "default")
+        logger.info("Storing message in Mnemoverse domain: %s", self.domain or "general")
 
         try:
             mnemoverse.write(self.ingest_message, **kwargs)
@@ -138,6 +151,7 @@ class MnemoverseMemoryComponent(LCChatMemoryComponent):
         finally:
             self._release(mnemoverse)
 
+        self._ingested_key = self._ingest_key()
         return mnemoverse
 
     def build_search_results(self) -> Data:
@@ -148,7 +162,7 @@ class MnemoverseMemoryComponent(LCChatMemoryComponent):
             logger.warning("Missing 'search_query'; returning no search results.")
             return Data(data={"results": []})
 
-        logger.info("Searching Mnemoverse domain: %s", self.domain or "default")
+        logger.info("Searching Mnemoverse domain: %s", self.domain or "all of the account's own domains")
 
         try:
             response = mnemoverse.read(

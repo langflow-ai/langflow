@@ -146,7 +146,7 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "agentql": [],  # httpx REST only (lfx core)
     "figranium": [],  # httpx REST only (lfx core); new in 1.13.0, never lived under lfx.components
     "keenable": [],  # httpx REST only (lfx core); new in 1.14.0, never lived under lfx.components
-    "mnemoverse": ["mnemoverse>=0.5.2,<1.0.0"],  # new in 1.14.0, never lived under lfx.components
+    "mnemoverse": ["mnemoverse>=0.5.2,<0.6.0"],  # new in 1.14.0, never lived under lfx.components
     "olostep": [],  # httpx REST only (lfx core); new in 1.14.0, never lived under lfx.components
     "socialscrape": [],  # httpx REST only (lfx core); new in 1.14.0, never lived under lfx.components
     # --- tranche 7: google family + agent SDKs (markers preserved from base) ---

@@ -10645,7 +10645,7 @@ requires-dist = [
     { name = "litellm", marker = "python_full_version < '3.14' and sys_platform != 'darwin' and extra == 'cuga'", specifier = ">=1.103.10,!=1.104.0rc1,<1.104.0,!=1.107.0" },
     { name = "markdown", marker = "extra == 'notion'", specifier = ">=3.8.0" },
     { name = "mem0ai", marker = "extra == 'mem0'", specifier = ">=2.0.18,<3.0.0" },
-    { name = "mnemoverse", marker = "extra == 'mnemoverse'", specifier = ">=0.5.2,<1.0.0" },
+    { name = "mnemoverse", marker = "extra == 'mnemoverse'", specifier = ">=0.5.2,<0.6.0" },
     { name = "mrscraper-sdk", marker = "extra == 'mrscraper'", specifier = ">=0.6.0,<0.7.0" },
     { name = "needle-python", marker = "extra == 'needle'", specifier = ">=0.4.0" },
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nvidia'", specifier = ">=26.1.0,<26.3.0" },

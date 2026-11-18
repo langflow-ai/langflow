@@ -169,3 +169,21 @@ class TestMnemoverseMemoryComponent:
         with pytest.raises(RuntimeError, match="boom"):
             component.ingest_data()
         client.close.assert_called_once_with()
+
+    async def test_one_build_stores_the_message_once(self):
+        """Building both outputs must not store the message twice."""
+        client = Mock()
+        client.read.return_value = _read_response()
+        component = MnemoverseMemoryComponent()
+        component.existing_memory = client
+        component.ingest_message = "Remember this."
+        component.search_query = "anything"
+        component.domain = ""
+        component.metadata = {}
+        component.top_k = 10
+        component.min_relevance = 0.3
+
+        await component._build_results()
+
+        assert client.write.call_count == 1
+        assert client.read.call_count == 1
