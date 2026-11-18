@@ -115,6 +115,16 @@ class TestPathSelectionLiteralKeys:
         component.set(data=Data(data={"items": [42]}), selected_key=".items[0]")
         assert component.as_data().data == {"result": 42}
 
+    def test_should_drop_the_saved_path_when_an_edit_removes_it(self, component_class):
+        component, _ = _path_selection(component_class, {})
+        build_config = dotdict({"selected_key": {"options": [".a"], "value": ".a", "show": True}})
+
+        options = component.update_build_config(build_config, '{"b": 2}', "mapped_json_display")["selected_key"][
+            "options"
+        ]
+
+        assert options == [".b"]
+
     def test_should_keep_the_dot_form_when_keys_are_identifiers(self, component_class):
         payload = {"user": {"tags": [{"_id2": 1}]}, "if": True}
 
@@ -1158,6 +1168,18 @@ class TestUpdateFrontendNodeRestoresVisibility:
             selected_key=template["selected_key"]["value"],
         )
         assert component.as_data().data == {"result": 42}
+
+    async def test_path_selection_drops_a_saved_path_the_saved_json_no_longer_has(self):
+        saved, _ = build_custom_component_template(OperationsComponent(), user_id="test-user")
+        fresh = copy.deepcopy(saved)
+        saved["template"]["input_type"]["value"] = "JSON"
+        saved["template"]["operation"]["value"] = [{"name": "Path Selection"}]
+        saved["template"]["mapped_json_display"]["value"] = '{"b": 2}'
+        saved["template"]["selected_key"]["value"] = ".a"
+
+        template = (await OperationsComponent().update_frontend_node(fresh, saved))["template"]
+
+        assert template["selected_key"]["options"] == [".b"]
 
     async def test_path_selection_with_invalid_saved_json_hides_selected_key(self):
         saved, _ = build_custom_component_template(OperationsComponent(), user_id="test-user")

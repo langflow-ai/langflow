@@ -708,7 +708,7 @@ class OperationsComponent(Component):
                 parsed_json = json.loads(field_value)
                 keys = self.extract_all_paths(parsed_json)
                 build_config["selected_key"]["options"] = self._keep_saved_path(
-                    keys, build_config["selected_key"].get("value")
+                    keys, build_config["selected_key"].get("value"), parsed_json
                 )
                 build_config["selected_key"]["show"] = True
             except (json.JSONDecodeError, TypeError, ValueError) as e:
@@ -820,8 +820,9 @@ class OperationsComponent(Component):
             mapped_json = template.get("mapped_json_display", {}).get("value")
             if mapped_json:
                 try:
+                    parsed_json = json.loads(mapped_json)
                     template["selected_key"]["options"] = self._keep_saved_path(
-                        self.extract_all_paths(json.loads(mapped_json)), template["selected_key"].get("value")
+                        self.extract_all_paths(parsed_json), template["selected_key"].get("value"), parsed_json
                     )
                 except (json.JSONDecodeError, TypeError, ValueError, RecursionError) as e:
                     logger.warning(f"Error parsing saved mapped JSON: {e}")
@@ -870,9 +871,26 @@ class OperationsComponent(Component):
     # JSON operations
     # ==================================================================
     @staticmethod
-    def _keep_saved_path(options: list[str], saved_path: object) -> list[str]:
-        """Keep the saved path selectable: one built under older path rules may still select data."""
-        if isinstance(saved_path, str) and saved_path and saved_path not in options:
+    def _unquoted_paths(obj, path: str = "") -> list[str]:
+        """Return the paths the picker offered before keys were quoted: every key written bare."""
+        paths = []
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                paths.append(f"{path}.{k}")
+                paths.extend(OperationsComponent._unquoted_paths(v, f"{path}.{k}"))
+        elif isinstance(obj, list) and obj:
+            paths.append(f"{path}[0]")
+            paths.extend(OperationsComponent._unquoted_paths(obj[0], f"{path}[0]"))
+        return paths
+
+    @staticmethod
+    def _keep_saved_path(options: list[str], saved_path: object, mapped_json: object) -> list[str]:
+        """Keep a saved path the old unquoted rule offered for this JSON; drop one an edit removed."""
+        if (
+            isinstance(saved_path, str)
+            and saved_path not in options
+            and saved_path in OperationsComponent._unquoted_paths(mapped_json)
+        ):
             return [*options, saved_path]
         return options
 
