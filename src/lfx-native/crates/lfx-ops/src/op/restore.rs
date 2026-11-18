@@ -4,8 +4,8 @@
 //! back with other handles. It may also delete any edge into an input that
 //! accepts only one edge.
 
-use crate::map::hash::{HashMap, HashSet};
 use crate::json::{FlowObj, FlowValue};
+use crate::map::hash::{HashMap, HashSet};
 
 use crate::compare::values_equal;
 use crate::flow::edge::Edge;

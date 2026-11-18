@@ -3,11 +3,11 @@
 
 use std::borrow::Cow;
 
-use crate::map::hash::{HashMap, HashSet, IndexMap};
 use crate::compare::values_equal;
 use crate::flow::model::EntryExt;
 use crate::flow::node::NodeRef;
 use crate::json::{FlowObj, FlowValue};
+use crate::map::hash::{HashMap, HashSet, IndexMap};
 use crate::violation::error::{ErrorCode, ErrorKind, Result};
 use crate::violation::{PathPart, Violation};
 

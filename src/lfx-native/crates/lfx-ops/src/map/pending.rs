@@ -4,7 +4,6 @@
 //! fails drops it, so nothing is undone.
 
 use super::ordered::OrderedMap;
-use crate::map::hash::IndexMap;
 
 /// The most pending changes a map keeps allocated between batches.
 pub(crate) const MAX_RETAINED_BATCH_ENTRIES: usize = 256;
@@ -17,19 +16,19 @@ pub(crate) const MAX_RETAINED_BATCH_ENTRIES: usize = 256;
 pub(crate) struct PendingMap<V> {
     pub(crate) stored: OrderedMap<V>,
     /// What the batch wrote, by key. `None` is a removed stored value.
-    pub(crate) layer: IndexMap<String, Option<V>>,
+    pub(crate) layer: OrderedMap<Option<V>>,
 }
 
 impl<V: Clone> PendingMap<V> {
     /// An empty map.
     pub fn new() -> Self {
-        Self::with_stored(IndexMap::default())
+        Self::with_stored(OrderedMap::new())
     }
 
-    pub(crate) fn with_stored(stored: IndexMap<String, V>) -> Self {
+    pub(crate) fn with_stored(stored: OrderedMap<V>) -> Self {
         Self {
-            stored: stored.into_iter().collect(),
-            layer: IndexMap::default(),
+            stored,
+            layer: OrderedMap::new(),
         }
     }
 
@@ -92,7 +91,7 @@ impl<V: Clone> PendingMap<V> {
         if self.stored.contains_key(key) {
             self.layer.insert(key.to_owned(), None);
         } else {
-            self.layer.shift_remove(key);
+            self.layer.remove(key);
         }
         existed
     }
@@ -105,7 +104,7 @@ impl<V: Clone> PendingMap<V> {
 
     /// [`Self::commit`], and move each removed value into `released`.
     pub fn commit_into(&mut self, released: &mut Vec<V>) -> bool {
-        for (key, written) in self.layer.drain(..) {
+        for (key, written) in self.layer.drain() {
             match written {
                 Some(value) => self.stored.insert(key, value),
                 None => released.extend(self.stored.remove(&key)),
@@ -219,7 +218,7 @@ mod tests {
     }
 
     fn keys(map: &PendingMap<u32>) -> Vec<&str> {
-        map.stored.keys().map(String::as_str).collect()
+        map.stored.iter().map(|(key, _)| key.as_str()).collect()
     }
 
     #[test]

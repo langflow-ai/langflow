@@ -6,9 +6,9 @@ use std::borrow::Cow;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use crate::map::pending::PendingMap;
 use crate::json::serialize::{self, Ascii};
 use crate::json::{FlowObj, FlowValue};
+use crate::map::pending::PendingMap;
 
 use crate::compare;
 use crate::violation::error::Result;
@@ -23,7 +23,7 @@ pub(crate) fn commit_with_snapshot<V: Clone>(
     released: &mut Vec<V>,
     object: impl Fn(&V) -> &FlowObj,
 ) {
-    for (id, written) in &entries.layer {
+    for (id, written) in entries.layer.iter() {
         match (written, entries.stored.get_index_of(id)) {
             (Some(value), Some(position)) => mirror.set(position, Some(object(value).clone())),
             (Some(value), None) => mirror.push_back(Some(object(value).clone())),

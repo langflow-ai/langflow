@@ -1,7 +1,7 @@
 //! The canonical form of a graph, and [`graphs_equal`], which compares two forms.
 
-use crate::map::hash::{HashMap, HashSet, State};
 use crate::json::{FlowObj, FlowValue};
+use crate::map::hash::{HashMap, HashSet, State};
 
 use crate::compare::Result;
 use crate::compare::graph_hash::canonical_json;

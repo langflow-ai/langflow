@@ -12,8 +12,8 @@
 
 mod field;
 
-use crate::map::hash::IndexSet;
 use crate::json::{FlowStr, FlowValue};
+use crate::map::hash::IndexSet;
 
 use crate::flow::edge::Edge;
 use crate::flow::node::Node;

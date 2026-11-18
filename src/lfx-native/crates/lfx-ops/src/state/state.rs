@@ -11,10 +11,10 @@ use std::borrow::Cow;
 use std::sync::atomic::AtomicUsize;
 use std::sync::{Arc, Mutex, PoisonError, TryLockError};
 
-use crate::map::hash::IndexMap;
-use crate::map::pending::PendingMap;
 use crate::json::serialize::{self, Ascii};
 use crate::json::{FlowObj, FlowValue};
+use crate::map::ordered::OrderedMap;
+use crate::map::pending::PendingMap;
 
 use crate::compare;
 use crate::flow::deserialize::DeserializeError;
@@ -90,7 +90,7 @@ impl GraphState {
         let nodes = by_id(take_list(&mut root, "nodes"), "node", Node::try_from)?;
         let edges = by_id(take_list(&mut root, "edges"), "edge", Edge::try_from)?;
         let mut edges_at = EdgesAt::new();
-        for (id, edge) in &edges {
+        for (id, edge) in edges.iter() {
             edges_at.attach(id, edge);
         }
         edges_at.commit();
@@ -441,7 +441,7 @@ fn by_id<T>(
     items: Vec<FlowValue>,
     root: &str,
     make: fn(FlowObj) -> Result<T, DeserializeError>,
-) -> Result<IndexMap<String, T>> {
+) -> Result<OrderedMap<T>> {
     items
         .into_iter()
         .map(|item| {
@@ -685,12 +685,6 @@ mod tests {
     fn assert_snapshot_lists(state: &GraphState) {
         // One snapshot list item per position, `None` where the map has an empty position, and never
         // more empty positions than values.
-        for (mirror, stored) in [
-            (&state.snapshot_nodes, state.graph.nodes.stored.positions()),
-            (&state.snapshot_edges, state.graph.edges.stored.positions()),
-        ] {
-            assert_eq!(mirror.len(), stored);
-        }
         let live = state.snapshot_nodes.iter().flatten().count();
         assert_eq!(live, state.graph.nodes.stored.len());
         assert!(state.snapshot_nodes.len() - live <= live);

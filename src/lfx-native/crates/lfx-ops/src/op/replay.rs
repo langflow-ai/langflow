@@ -14,10 +14,10 @@
 //! [`apply`](crate::op::apply) makes the same checks, so its forward
 //! operations always replay to the same flow.
 
-use crate::map::hash::IndexSet;
 use crate::flow::edge::Edge;
 use crate::json::FlowValue;
 use crate::json::serialize::quoted;
+use crate::map::hash::IndexSet;
 use crate::op::field_update::{
     AddedEdges, FieldBackward, SeqNum, SequencedUpdate, require_path, written_value,
 };

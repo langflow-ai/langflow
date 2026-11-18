@@ -1,7 +1,7 @@
 //! The graph structure every stored flow has: the flow, its nodes and its edges.
 
-use crate::map::hash::HashSet;
 use crate::json::{FlowObj, FlowValue};
+use crate::map::hash::HashSet;
 
 use crate::flow::model::EntryExt;
 use crate::flow::model::NODE_OBJECT_PATHS;

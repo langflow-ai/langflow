@@ -11,11 +11,11 @@
 
 #[cfg(feature = "api")]
 pub mod api;
-mod map;
 pub mod compare;
 pub mod flow;
 mod invariant;
 pub mod json;
+mod map;
 pub mod node_input;
 mod op;
 mod rule;

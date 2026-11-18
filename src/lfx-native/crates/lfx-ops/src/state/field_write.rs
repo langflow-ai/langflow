@@ -13,9 +13,9 @@
 
 use std::borrow::Cow;
 
+use crate::json::FlowValue;
 use crate::map::hash::{HashMap, IndexMap, State};
 use crate::map::pending::MAX_RETAINED_BATCH_ENTRIES;
-use crate::json::FlowValue;
 
 use crate::flow::list::{ListIndex, find_item, remove_item};
 use crate::flow::model::FLOW_MODEL;

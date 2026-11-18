@@ -2,9 +2,9 @@
 
 use std::str::FromStr;
 
-use crate::map::hash::HashSet;
 use crate::json::pointer::{PathPart, resolve};
 use crate::json::{FlowObj, FlowValue};
+use crate::map::hash::HashSet;
 
 use crate::flow::deserialize::{DeserializeError, FromFlowValue, missing, read, unexpected};
 use crate::flow::edge::Edge;

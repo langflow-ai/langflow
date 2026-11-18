@@ -1,11 +1,11 @@
 //! [`EdgeIndex`]: each edge's handles and each node's connections, kept
 //! between batches.
 
-use crate::map::hash::{HashMap, IndexSet};
-use crate::map::pending::PendingMap;
 use crate::flow::model::EntryExt;
 use crate::json::FlowObj;
 use crate::json::serialize::quoted;
+use crate::map::hash::{HashMap, IndexSet};
+use crate::map::pending::PendingMap;
 use crate::violation::error::{Result, invalid};
 
 use super::graph::{GraphRead, endpoint};

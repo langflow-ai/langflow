@@ -4,9 +4,9 @@
 use std::borrow::Cow;
 use std::fmt;
 
+use crate::json::{FlowObj, FlowStr, FlowValue};
 use crate::map::hash::{HashMap, IndexSet};
 use crate::map::pending::PendingMap;
-use crate::json::{FlowObj, FlowStr, FlowValue};
 
 use crate::flow::edge::Edge;
 use crate::flow::list::ListIndex;

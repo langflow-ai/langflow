@@ -296,6 +296,7 @@ dependencies = [
  "ahash",
  "compact_str",
  "getrandom",
+ "hashbrown",
  "indexmap",
  "lfx-ops",
  "libtest-mimic",

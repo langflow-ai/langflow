@@ -3,10 +3,10 @@
 
 use std::borrow::Cow;
 
-use crate::map::hash::HashMap;
 use crate::flow::model::EntryExt;
 use crate::flow::node::NodeRef;
 use crate::json::{FlowObj, FlowValue};
+use crate::map::hash::HashMap;
 use crate::violation::error::Result;
 
 /// Read access to an indexed graph, enough to check edges.

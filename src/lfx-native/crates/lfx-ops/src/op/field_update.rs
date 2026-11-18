@@ -3,8 +3,8 @@
 
 use std::fmt;
 
-use crate::map::hash::HashSet;
 use crate::json::FlowValue;
+use crate::map::hash::HashSet;
 
 use crate::flow::edge::Edge;
 use crate::flow::list::ListProblem;

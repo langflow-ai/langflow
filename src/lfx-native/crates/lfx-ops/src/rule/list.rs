@@ -1,7 +1,7 @@
 //! The rules for the table rows and keyed list positions a write adds or changes.
 
-use crate::map::hash::{HashMap, HashSet};
 use crate::json::{FlowObj, FlowValue};
+use crate::map::hash::{HashMap, HashSet};
 
 use crate::compare::values_equal;
 use crate::flow::model::EntryExt;
