@@ -143,6 +143,16 @@
       "resolved_version": "0.3.1"
     },
     {
+      "distribution": "lfx-sendblue",
+      "extras": [],
+      "providers": [
+        "lfx-sendblue"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-sendblue==0.1.0",
+      "resolved_version": "0.1.0"
+    },
+    {
       "distribution": "lfx-slack",
       "extras": [],
       "providers": [
@@ -180,7 +190,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:b4a4f6aba9c1fe2a",
+  "profile_digest": "sha256:20a05f0e6a78d791",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",
@@ -195,6 +205,7 @@
     "lfx-openai",
     "lfx-openai-compatible",
     "lfx-oracle",
+    "lfx-sendblue",
     "lfx-slack",
     "lfx-toolguard",
     "lfx-vllm"

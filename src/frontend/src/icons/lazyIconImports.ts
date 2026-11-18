@@ -419,6 +419,8 @@ export const lazyIconsMapping = {
     })),
   Pinecone: () =>
     import("@/icons/Pinecone").then((mod) => ({ default: mod.PineconeIcon })),
+  Sendblue: () =>
+    import("@/icons/Sendblue").then((mod) => ({ default: mod.SendblueIcon })),
   Plivo: () =>
     import("@/icons/Plivo").then((mod) => ({ default: mod.PlivoIcon })),
   Postgres: () =>
