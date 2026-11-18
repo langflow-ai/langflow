@@ -88,6 +88,7 @@ def test_fixed_dependencies_resolve_on_every_supported_python_line(python: str, 
         "nltk": "3.10.4",
         "pyasn1": "0.6.5",
         "pymongo": "4.18.3",
+        "python-multipart": "0.0.31",
         "setuptools": "84.1.0",
     }.items():
         assert Version(packages[name]) >= Version(minimum), name
@@ -95,7 +96,7 @@ def test_fixed_dependencies_resolve_on_every_supported_python_line(python: str, 
     # Upstream fixes require Python 3.11. Keep the 3.10 runtime installable;
     # these three findings remain open for that runtime.
     if python != "3.10":
-        for name, minimum in {"dnspython": "2.9.1", "locust": "2.47.0", "pyarrow": "26.0.1"}.items():
+        for name, minimum in {"dnspython": "2.9.2", "locust": "2.47.0", "pyarrow": "26.0.1"}.items():
             assert Version(packages[name]) >= Version(minimum), name
 
 
@@ -162,6 +163,7 @@ def test_published_base_requirements_reject_vulnerable_mako_without_workspace_ov
         ("src/bundles/toolguard/pyproject.toml", "litellm", "1.103.2", "1.103.10"),
         ("src/bundles/lfx-bundles/pyproject.toml", "litellm", "1.103.2", "1.103.10"),
         ("src/backend/base/pyproject.toml", "gitpython", "3.2.0", "3.2.1"),
+        ("src/backend/base/pyproject.toml", "python-multipart", "0.0.30", "0.0.31"),
         ("src/bundles/lfx-bundles/pyproject.toml", "gitpython", "3.2.0", "3.2.1"),
         ("src/backend/base/pyproject.toml", "fastmcp", "3.4.4", "3.4.10"),
         ("src/bundles/toolguard/pyproject.toml", "fastmcp", "3.4.4", "3.4.10"),
@@ -363,17 +365,23 @@ def test_duckduckgo_bundle_requirement_matches_the_current_release_line() -> Non
 
 @pytest.mark.parametrize(
     ("dependency", "affected", "patched", "next_major"),
-    [("dnspython", "2.9.0", "2.9.1", "3.0.0"), ("joserfc", "1.7.5", "1.7.6", "2.0.0")],
+    [("dnspython", "2.9.1", "2.9.2", "3.0.0"), ("joserfc", "1.7.5", "1.7.6", "2.0.0")],
 )
 @pytest.mark.parametrize("python", ["3.10", "3.11", "3.14"])
-def test_plain_base_requirements_protect_dns_and_jose_transitive_paths(
-    dependency: str, affected: str, patched: str, next_major: str, python: str
+@pytest.mark.parametrize("manifest", ["pyproject.toml", MANIFESTS[0]])
+def test_base_and_workspace_requirements_protect_dns_and_jose_transitive_paths(
+    dependency: str, affected: str, patched: str, next_major: str, python: str, manifest: str
 ) -> None:
-    """Publish mandatory-path security floors while preserving Python 3.10 support."""
-    project = tomllib.loads((ROOT / MANIFESTS[0]).read_text())["project"]
+    """Protect published and workspace requirements while preserving Python 3.10 support."""
+    metadata = tomllib.loads((ROOT / manifest).read_text())
+    declarations = (
+        metadata["tool"]["uv"]["constraint-dependencies"]
+        if manifest == "pyproject.toml"
+        else metadata["project"]["dependencies"]
+    )
     requirements = [
         requirement
-        for value in project["dependencies"]
+        for value in declarations
         if (requirement := Requirement(value)).name == dependency
         and (requirement.marker is None or requirement.marker.evaluate({"python_version": python}))
     ]
@@ -383,7 +391,8 @@ def test_plain_base_requirements_protect_dns_and_jose_transitive_paths(
         assert len(requirements) == 1
         assert affected not in requirements[0].specifier
         assert patched in requirements[0].specifier
-        assert next_major not in requirements[0].specifier
+        if manifest != "pyproject.toml":
+            assert next_major not in requirements[0].specifier
 
 
 @pytest.mark.parametrize("python", ["3.10", "3.11", "3.14"])

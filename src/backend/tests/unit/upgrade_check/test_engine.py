@@ -9,7 +9,6 @@ from __future__ import annotations
 import asyncio
 import copy
 import dataclasses
-import importlib.metadata
 import json
 import os
 import socket
@@ -136,12 +135,11 @@ def test_checks_every_flow_each_release_saved(release, target, tmp_path):
 def test_hard_flows_keep_their_expected_status(release, target):
     """The dry run agrees with every status pinned for the hard flows.
 
-    ``expected_statuses.json`` records ok and outdated_safe as ``no_action``. Its retired nodes need
-    lfx-bundles; without it they are missing types that name the bundle to install.
+    ``expected_statuses.json`` records ok and outdated_safe as ``no_action``. Retirement remains
+    visible whether the optional lfx-bundles package is installed or not.
     """
     expected = json.loads((COMPAT / "expected_statuses.json").read_text(encoding="utf-8"))[release]["hard_flows"]
-    bundles_installed = bool(importlib.metadata.entry_points(group="lfx.bundles"))
-    actual, missing_bundles = {}, {}
+    actual = {}
     for path in sorted((COMPAT / "hard_flows" / release).glob("*.json")):
         nodes, ok_nodes = check_nodes(_hard_flow(release, path.name), target, user_id=OWNER)
         keys = [key for key in expected if key.startswith(f"{path.name}::")]
@@ -162,14 +160,6 @@ def test_hard_flows_keep_their_expected_status(release, target):
                     for reason in node.reasons
                 )
                 expected = {**expected, key: "could_not_verify"}
-            if node is not None and node.status == "blocked":
-                missing_bundles[key] = (node.bundle, [reason["code"] for reason in node.reasons])
-
-    if not bundles_installed:
-        assert missing_bundles == {
-            key: (bundle, ["bundle_not_installed"]) for key, bundle in LFX_BUNDLES_NODES.items() if key in expected
-        }
-        actual.update(dict.fromkeys(missing_bundles, "retired"))
     assert actual == expected
 
 
@@ -207,6 +197,44 @@ def test_retired_bundle_components_with_lfx_bundles_installed(tmp_path):
         key: ["retired", bundle] for key, bundle in LFX_BUNDLES_NODES.items()
     }
     assert all(found[key][2] for key in LFX_BUNDLES_NODES)
+
+
+@pytest.mark.parametrize(("key", "bundle"), LFX_BUNDLES_NODES.items())
+def test_retired_components_without_their_optional_bundle(key, bundle):
+    filename, node_id = key.split("::", 1)
+    saved = _node(_hard_flow("v1.12.6", filename), node_id)
+    target = Target.from_registry({}, settings=TargetSettings(allow_custom_components=False))
+
+    [node], _ = check_nodes({"nodes": [saved], "edges": []}, target)
+
+    assert (node.status, node.bundle) == ("retired", bundle)
+    replacement = "models_and_agents.Agent" if bundle == "altk" else "files_and_knowledge.Knowledge"
+    assert node.replacement == [replacement]
+    assert node.reasons[0] == {
+        "code": "retired",
+        "field": None,
+        "message": f"retired in 1.13.0. Replace with {replacement}",
+    }
+    assert node.runs == "refused"
+    assert target.components.all_types_dict == {}
+
+
+@pytest.mark.parametrize(
+    "component_type",
+    [
+        "ChromaVectorStoreComponent",
+        "lfx.components.chroma.chroma.ChromaVectorStoreComponent",
+        "ext:chroma:ChromaVectorStoreComponent@official-pre-a",
+    ],
+)
+def test_retired_component_legacy_identities(component_type):
+    saved = _node(_hard_flow("v1.12.6", "chroma_legacy_type.json"), "Chroma-9e7b2")
+    saved["data"]["type"] = component_type
+
+    [node], _ = check_nodes({"nodes": [saved], "edges": []}, Target.from_registry({}))
+
+    assert node.status == "retired"
+    assert node.replacement == ["files_and_knowledge.Knowledge"]
 
 
 def test_dry_run_keeps_outputs_the_component_rebuilds(target):
@@ -466,14 +494,63 @@ def test_dry_run_time_limit(monkeypatch, target):
                 thread.join()
 
 
-def test_missing_custom_type(target):
+@pytest.mark.parametrize("component_type", ["CallsOut", "ext:qa_custom:CallsOut@extra"])
+@pytest.mark.parametrize("namespaced_id", [None, "ext:qa_custom:CallsOut@extra"])
+def test_missing_custom_type(target, component_type, namespaced_id):
     saved, _ = build_custom_component_template(Component(_code=CALLS_OUT.replace("PORT", "1")))
-    flow = {"nodes": [{"id": "CallsOut-1", "data": {"type": "CallsOut", "node": saved}}], "edges": []}
+    if namespaced_id:
+        saved["namespaced_id"] = namespaced_id
+    flow = {"nodes": [{"id": "CallsOut-1", "data": {"type": component_type, "node": saved}}], "edges": []}
 
     [node], _ = check_nodes(flow, target)
 
     assert (node.status, node.bundle) == ("blocked", None)
     assert [reason["code"] for reason in node.reasons] == ["custom_type_missing"]
+    assert "--components-path" in node.reasons[0]["message"]
+
+
+@pytest.mark.parametrize(
+    "component_type", ["ext:chroma:ChromaVectorStoreComponent@extra", "ext:qa_custom:Chroma@extra"]
+)
+def test_missing_custom_type_does_not_inherit_official_retirement(component_type):
+    saved, _ = build_custom_component_template(Component(_code=CALLS_OUT.replace("PORT", "1")))
+    saved["namespaced_id"] = "ext:qa_custom:Chroma@extra"
+    saved["retired_in"] = "9.9.9"
+    saved["replacement"] = ["untrusted.Replacement"]
+    flow = {"nodes": [{"id": "custom-1", "data": {"type": component_type, "node": saved}}], "edges": []}
+
+    [node], _ = check_nodes(flow, Target.from_registry({}))
+
+    assert (node.status, node.bundle, node.replacement) == ("blocked", None, None)
+    assert [reason["code"] for reason in node.reasons] == ["custom_type_missing"]
+
+
+@pytest.mark.parametrize(
+    ("component_type", "bundle"),
+    [("ext:qa_provider:CallsOut@official", "qa_provider"), ("TavilySearchComponent", "tavily")],
+)
+def test_missing_installable_bundle(component_type, bundle):
+    saved, _ = build_custom_component_template(Component(_code=CALLS_OUT.replace("PORT", "1")))
+    flow = {"nodes": [{"id": "provider-1", "data": {"type": component_type, "node": saved}}], "edges": []}
+
+    [node], _ = check_nodes(flow, Target.from_registry({}))
+
+    assert (node.status, node.bundle) == ("blocked", bundle)
+    assert [reason["code"] for reason in node.reasons] == ["bundle_not_installed"]
+
+
+def test_custom_component_is_found_when_its_folder_is_supplied(tmp_path):
+    bundle = tmp_path / "qa_custom"
+    bundle.mkdir()
+    (bundle / "custom.py").write_text(CALLS_OUT.replace("PORT", "1"))
+    component_type = "ext:qa_custom:CallsOut@extra"
+    all_types = load_upgrade_registry(components_path=[str(tmp_path)])
+    saved = all_types["qa_custom"][component_type]
+    flow = {"nodes": [{"id": "custom-1", "data": {"type": component_type, "node": saved}}], "edges": []}
+
+    [missing], _ = check_nodes(flow, Target.from_registry({}))
+    assert missing.reasons[0]["code"] == "custom_type_missing"
+    assert check_nodes(flow, Target.from_registry(all_types)) == ([], 1)
 
 
 def test_skips_starter_projects(target, tmp_path):

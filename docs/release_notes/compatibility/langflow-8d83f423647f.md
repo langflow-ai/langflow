@@ -1,4 +1,4 @@
-# Local DB retirement in lfx-bundles
+# Local DB retirement in langflow
 
 Saved component `ext:chroma:LocalDBComponent@official` is retired in the target contract. The compatibility identity remains available for inspection, while execution requires manual replacement.
 
@@ -6,8 +6,8 @@ Replace this saved node manually with a supported [Knowledge Base or remote vect
 
 Supported local Knowledge Base and Memory Base storage upgrades are separate from replacing standalone Chroma nodes. [Chroma Cloud requires administrator-led data migration](https://docs.langflow.org/troubleshoot#remote-source-requires-migration). Neither path automatically replaces this node. Installing the Chroma SDK does not re-enable the retired integration.
 
-Release comparison `lfx-bundles` 1.3.5 to 1.3.9.
+Release comparison `langflow` 1.13.3 to 1.14.0.
 
-- Break identity `a4a5a492cb95a988f0e13f22909e50919e3a3854a422318924e6563266a0f5b3`
+- Break identity `8d83f423647fca5f3a013027f8fc1097bd6d29666d20b1f38514b39415a0dcdf`
 - Previous contract `02f2cf302bcd204b65e3e2aaac44c8f5d7c6dd63c7e800411f69cb3cf0e9ab55`
 - Target contract `c5dec403563d038a2118640a7dc1c61ef9eda86e8a4cee8fe101bb4903fc0406`

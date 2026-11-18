@@ -42,15 +42,17 @@ from langflow.services.database.revision import (
     classify_revisions,
     read_revisions_before_startup,
     script_directory,
+    sqlite_database_target,
 )
 from langflow.services.database.session import NoopSession
 from langflow.services.database.utils import Result, TableResults
 from langflow.services.deps import get_settings_service
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Iterator, Mapping
 
     from lfx.services.settings.service import SettingsService
+    from sqlalchemy.engine import Connection
 
 
 class UnsupportedPostgreSQLVersionError(Exception):
@@ -272,6 +274,12 @@ def check_sqlite_database_path(database_url: str) -> None:
     raise ValueError(msg)
 
 
+def _is_sqlite_memory_database(database_url: str, connect_args: Mapping[str, object] | None = None) -> bool:
+    """Match SQLite's actual filename and URI options, including literal file names."""
+    target = sqlite_database_target(database_url, connect_args)
+    return target is not None and target.in_memory
+
+
 class DatabaseService(Service):
     name = "database_service"
 
@@ -418,6 +426,14 @@ class DatabaseService(Service):
         # if the user specifies an empty dict, we allow it.
         kwargs = self._build_connection_kwargs()
 
+        if _is_sqlite_memory_database(self.database_url, self._get_connect_args()):
+            # Keep the database alive on one connection. Queue settings are not
+            # accepted by StaticPool, and recycling would discard its contents.
+            kwargs["poolclass"] = "StaticPool"
+            kwargs["pool_recycle"] = -1
+            for key in ("pool_size", "max_overflow", "pool_timeout", "pool_use_lifo"):
+                kwargs.pop(key, None)
+
         poolclass_key = kwargs.get("poolclass")
         if poolclass_key is not None:
             pool_class = getattr(sa.pool, poolclass_key, None)
@@ -505,12 +521,9 @@ class DatabaseService(Service):
     @asynccontextmanager
     async def session_scope_for_sync_validation(self):
         """Keep temporary validation loops from borrowing the application's pool."""
-        url = self.engine.url
-        database = url.database or ""
-        in_memory = url.get_backend_name() == "sqlite" and (
-            database in {"", ":memory:"} or database.startswith("file::memory:") or url.query.get("mode") == "memory"
-        )
-        if self.settings_service.settings.use_noop_database or in_memory:
+        if self.settings_service.settings.use_noop_database or _is_sqlite_memory_database(
+            self.database_url, self._get_connect_args()
+        ):
             # A new SQLite memory connection would lose the existing database.
             async with self._with_session() as session:
                 yield session
@@ -561,12 +574,9 @@ class DatabaseService(Service):
         handlers. In-memory SQLite and the noop database fall back to the shared session: a second
         engine to ``:memory:`` would be a different, empty database.
         """
-        url = self.engine.url
-        database = url.database or ""
-        in_memory = url.get_backend_name() == "sqlite" and (
-            database in {"", ":memory:"} or database.startswith("file::memory:") or url.query.get("mode") == "memory"
-        )
-        if self.settings_service.settings.use_noop_database or in_memory:
+        if self.settings_service.settings.use_noop_database or _is_sqlite_memory_database(
+            self.database_url, self._get_connect_args()
+        ):
             async with self._with_session() as session:
                 try:
                     yield session
@@ -749,7 +759,7 @@ class DatabaseService(Service):
             )
             return nullcontext(sys.stdout)
 
-    def _run_migrations(self, should_initialize_alembic, fix) -> None:
+    def _run_migrations(self, should_initialize_alembic, fix, *, connection: Connection | None = None) -> None:
         # First we need to check if alembic has been initialized
         # If not, we need to initialize it
         # if not self.script_location.exists(): # this is not the correct way to check if alembic has been initialized
@@ -763,10 +773,16 @@ class DatabaseService(Service):
         # The advisory lock serialises concurrent migration runs across workers
         # so they do not race on CREATE TYPE / CREATE TABLE against a fresh PG.
         with _postgres_migration_lock(self.database_url), buffer_context as buffer:
-            state = classify_revisions(self._current_alembic_revisions(), script_directory(self.script_location))
+            revisions = (
+                self._read_alembic_revisions(connection)
+                if connection is not None
+                else self._current_alembic_revisions()
+            )
+            state = classify_revisions(revisions, script_directory(self.script_location))
             state.require_supported()
             alembic_cfg = Config(stdout=buffer)
-            # alembic_cfg.attributes["connection"] = session
+            if connection is not None:
+                alembic_cfg.attributes["connection"] = connection
             alembic_cfg.set_main_option("script_location", str(self.script_location))
             alembic_cfg.set_main_option("sqlalchemy.url", self.database_url.replace("%", "%%"))
 
@@ -810,11 +826,18 @@ class DatabaseService(Service):
         should_initialize_alembic = not state.revisions
         if should_initialize_alembic:
             await logger.adebug("Alembic not initialized")
+        if _is_sqlite_memory_database(self.database_url, self._get_connect_args()):
+            # A separate migration engine would create a different, empty DB.
+            async with self.engine.begin() as connection:
+                await connection.run_sync(
+                    lambda sync: self._run_migrations(should_initialize_alembic, fix, connection=sync)
+                )
+            return
         await asyncio.to_thread(self._run_migrations, should_initialize_alembic, fix)
 
     async def validate_database_revision(self) -> RevisionState:
         """Reject unsupported revisions before any application schema writes."""
-        revisions = await read_revisions_before_startup(self.engine)
+        revisions = await read_revisions_before_startup(self.engine, self._get_connect_args())
         state = classify_revisions(revisions, script_directory(self.script_location))
         state.require_supported()
         return state
@@ -824,11 +847,15 @@ class DatabaseService(Service):
         engine = sa.create_engine(_normalize_sync_postgres_url(self.database_url))
         try:
             with engine.connect() as connection:
-                if not sa.inspect(connection).has_table("alembic_version"):
-                    return set()
-                return set(connection.execute(sa.text("SELECT version_num FROM alembic_version")).scalars())
+                return self._read_alembic_revisions(connection)
         finally:
             engine.dispose()
+
+    @staticmethod
+    def _read_alembic_revisions(connection: Connection) -> set[str]:
+        if not sa.inspect(connection).has_table("alembic_version"):
+            return set()
+        return set(connection.execute(sa.text("SELECT version_num FROM alembic_version")).scalars())
 
     def _run_migration_downgrade(self, *, expected_current_revision: str, target_revision: str) -> None:
         """Downgrade the configured database only from one explicitly expected revision."""

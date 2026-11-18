@@ -25,6 +25,10 @@ class InProcessExecutor(Executor):
             # open_flow_span is for async_start, which the legacy path does not go through, and
             # _arun_legacy would reject the unexpected keyword.
             legacy_kwargs = {k: v for k, v in opts.items() if not k.startswith("_") and k != "open_flow_span"}
+            from lfx.graph.graph.base import Graph
+
+            if type(graph) is Graph and opts.get("_dag_max_concurrency") is not None:
+                legacy_kwargs["dag_max_concurrency"] = opts["_dag_max_concurrency"]
             outputs = await graph._arun_legacy(inputs=unit.inputs, **legacy_kwargs)  # noqa: SLF001
             yield RunComplete(outputs=list(outputs))
             return

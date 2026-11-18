@@ -78,16 +78,16 @@ class _FamilyRule:
 
 _FAMILY_RULES: dict[str, _FamilyRule] = {
     FAMILY_TRIGGER_PUSH: _FamilyRule(
-        kind="flow_owner",
+        kind="job_owner",
         interactive=False,
         allow_explicit_shares=False,
-        connection_resolution=RESOLUTION_OWNER_NON_INTERACTIVE_OPT_IN,
+        connection_resolution=RESOLUTION_JOB_OWNER_RERESOLVED_NON_INTERACTIVE_OPT_IN,
     ),
     FAMILY_TRIGGER_LISTENER: _FamilyRule(
-        kind="flow_owner",
+        kind="job_owner",
         interactive=False,
         allow_explicit_shares=False,
-        connection_resolution=RESOLUTION_OWNER_NON_INTERACTIVE_OPT_IN,
+        connection_resolution=RESOLUTION_JOB_OWNER_RERESOLVED_NON_INTERACTIVE_OPT_IN,
     ),
     FAMILY_INTERACTIVE_CHAT: _FamilyRule(
         kind="actor",

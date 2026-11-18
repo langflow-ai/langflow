@@ -83,7 +83,7 @@ constraints = [
     { name = "cramjam", marker = "python_full_version >= '3.15'", specifier = ">=2.13.0" },
     { name = "crc32c", marker = "python_full_version >= '3.15'", specifier = ">=2.9.post0" },
     { name = "datamodel-code-generator", specifier = ">=0.81.0" },
-    { name = "dnspython", marker = "python_full_version >= '3.11'", specifier = ">=2.9.1" },
+    { name = "dnspython", marker = "python_full_version >= '3.11'", specifier = ">=2.9.2" },
     { name = "duckdb", marker = "python_full_version >= '3.15'", specifier = ">=2.0.0" },
     { name = "fastavro", marker = "python_full_version >= '3.15'", specifier = ">=1.13.1" },
     { name = "fastmcp", specifier = ">=3.4.10,<4.0.0" },
@@ -125,7 +125,7 @@ constraints = [
     { name = "scipy", marker = "python_full_version >= '3.15'", specifier = ">=1.18.1" },
     { name = "setuptools", specifier = ">=84.1.0,<85.0.0" },
     { name = "tiktoken", marker = "python_full_version >= '3.15'", specifier = ">=0.14.0" },
-    { name = "tornado", marker = "python_full_version >= '3.11'", specifier = ">=6.6,<7.0.0" },
+    { name = "tornado", marker = "python_full_version >= '3.11'", specifier = ">=6.6.1,<7.0.0" },
     { name = "uuid-utils", marker = "python_full_version >= '3.15'", specifier = ">=0.18.0" },
     { name = "uvloop", marker = "python_full_version >= '3.15'", specifier = ">=0.23.0" },
     { name = "xxhash", marker = "python_full_version >= '3.15'", specifier = ">=4.0.1" },
@@ -3271,7 +3271,7 @@ dependencies = [
     { name = "langfuse" },
     { name = "langgraph" },
     { name = "litellm" },
-    { name = "loguru" },
+    { name = "loguru", version = "0.7.3", source = { registry = "https://pypi.org/simple" } },
     { name = "markdownify" },
     { name = "mcp", extra = ["cli"] },
     { name = "pgvector" },
@@ -3455,13 +3455,12 @@ wheels = [
 
 [[package]]
 name = "datasets"
-version = "5.0.1"
+version = "5.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "dill" },
     { name = "filelock" },
-    { name = "fsspec", extra = ["http"] },
-    { name = "httpx" },
+    { name = "fsspec" },
     { name = "huggingface-hub" },
     { name = "multiprocess" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
@@ -3471,14 +3470,13 @@ dependencies = [
     { name = "pandas" },
     { name = "pyarrow" },
     { name = "pyyaml" },
-    { name = "requests" },
     { name = "tqdm" },
     { name = "xxhash", version = "3.8.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.15'" },
     { name = "xxhash", version = "4.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.15'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0a/5b/836516269d4f618efe621661cfb6f9acc57e6f95265db3efaee48a5ffe04/datasets-5.0.1.tar.gz", hash = "sha256:ce22bb851efd7494f08aad33b940803784434f6e77763d00679a0dc45fcf686a", size = 641498, upload-time = "2026-07-28T11:09:12.016Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2b/fd/7d76cc5023b7cdb01e9ca026675392d2385df9f0b836a50c81123b84c514/datasets-5.2.0.tar.gz", hash = "sha256:f4290d4704dfbc99631a578b56912d66b22def53d3f61d246f6ccc129675490e", size = 695308, upload-time = "2026-11-09T21:37:47.386Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/44/0b/98fc6eb83333508ca5f44c52b3e287ea8137a0ad582714e2cbc67a02154b/datasets-5.0.1-py3-none-any.whl", hash = "sha256:9fbf73688f8c18f7529b4fe592abd04015f81d1e58001e4bac73ffb2b39d7cc4", size = 559079, upload-time = "2026-07-28T11:09:10.266Z" },
+    { url = "https://files.pythonhosted.org/packages/ae/22/c92c96de701dd7441f553adaaa480801ff3d37575486ef82df651a45f0ec/datasets-5.2.0-py3-none-any.whl", hash = "sha256:4be9e2882caaf5db13eadc39e93f3da2a995187b99acebac1595bf6c58dfa927", size = 608276, upload-time = "2026-11-09T21:37:45.527Z" },
 ]
 
 [[package]]
@@ -4746,7 +4744,7 @@ version = "0.9.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "huggingface-hub" },
-    { name = "loguru" },
+    { name = "loguru", version = "0.7.3", source = { registry = "https://pypi.org/simple" } },
     { name = "mmh3", version = "5.2.1", source = { registry = "https://pypi.org/simple" } },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" } },
     { name = "onnxruntime", version = "1.23.2", source = { registry = "https://pypi.org/simple" } },
@@ -5147,11 +5145,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/10/a1/ae4e3e5003468d6391d2c77b6fa1cd73bd5d13511d81c642d7b28ac90ed4/fsspec-2026.6.0.tar.gz", hash = "sha256:f5bac145310fe30e16e1471bd6840b2d990d609e872251d7e674241822abf01a", size = 313646, upload-time = "2026-06-16T01:57:28.105Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e5/22/4222d7ddf3da30f363edaa98e329c2bce6c65497c9cb2810931c8b2c0fbc/fsspec-2026.6.0-py3-none-any.whl", hash = "sha256:02e0b71817df9b2169dc30a16832045764def1191b43dcff5bb85bdee212d2a1", size = 203949, upload-time = "2026-06-16T01:57:26.358Z" },
-]
-
-[package.optional-dependencies]
-http = [
-    { name = "aiohttp" },
 ]
 
 [[package]]
@@ -6088,26 +6081,26 @@ wheels = [
 
 [[package]]
 name = "hf-xet"
-version = "1.5.2"
+version = "1.8.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/63/39/67be8d71f900d9a55761b6022821d6679fb56c64f1b6063d5af2c2606727/hf_xet-1.5.2.tar.gz", hash = "sha256:73044bd31bae33c984af832d19c752a0dffb67518fee9ddbd91d616e1101cf47", size = 903674, upload-time = "2026-07-16T17:29:56.833Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2f/18/d91c20f815df6cc496a5d0ad8db6d274dad5c0cfcd59babfa2440a9aba44/hf_xet-1.8.0.tar.gz", hash = "sha256:10ed23b51dacf7917d64f335c25048deb470efa755e9989b218fc0531386138e", size = 1013014, upload-time = "2026-10-30T10:04:33.741Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/29/be/525eabac5d1736b679c39e342ecd4292534012546a2d18f0043c8e3b6021/hf_xet-1.5.2-cp314-cp314t-macosx_10_12_x86_64.whl", hash = "sha256:4a5ecb9cda8512ba2aa8ee5d37c87a1422992165892d653098c7b90247481c3b", size = 4064284, upload-time = "2026-07-16T17:29:29.907Z" },
-    { url = "https://files.pythonhosted.org/packages/c5/3f/699749dd78442480eda4e4fca494284b0e3542e4063cc37654d5fdc929e6/hf_xet-1.5.2-cp314-cp314t-macosx_11_0_arm64.whl", hash = "sha256:8764488197c1d7b1378c8438c18d2eea902e150dbca0b0f0d2d32603fb9b5576", size = 3828537, upload-time = "2026-07-16T17:29:31.549Z" },
-    { url = "https://files.pythonhosted.org/packages/22/d7/2658ac0a5b9f4664ca27ce31bd015044fe9dea50ed455fb5197aba819c11/hf_xet-1.5.2-cp314-cp314t-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:8d7446f72abbf7e01ca5ff131786bc2e74a56393462c17a6bf1e303fbab81db4", size = 4417133, upload-time = "2026-07-16T17:29:33.391Z" },
-    { url = "https://files.pythonhosted.org/packages/d9/58/8343f3cb63c8fa058d576136df3871550f7d5214a8f048a7ea2eab6ac906/hf_xet-1.5.2-cp314-cp314t-manylinux_2_28_aarch64.whl", hash = "sha256:580e59e29bf37aece1f2b68537de1e3fb04f43a23d910dcf6f128280b5bfbba4", size = 4212613, upload-time = "2026-07-16T17:29:34.989Z" },
-    { url = "https://files.pythonhosted.org/packages/0c/33/a968f4e4535037b36941ec00714625fb60e026302407e7e26ca9f3e65f4e/hf_xet-1.5.2-cp314-cp314t-musllinux_1_2_aarch64.whl", hash = "sha256:bee28c619622d36968056532fd49cf2b35ca75099b1d616c31a618a893491380", size = 4412710, upload-time = "2026-07-16T17:29:36.646Z" },
-    { url = "https://files.pythonhosted.org/packages/7b/d9/9e33981173dbaf194ba0015202b02d467b624d44d4eba89e1bf06c0d2995/hf_xet-1.5.2-cp314-cp314t-musllinux_1_2_x86_64.whl", hash = "sha256:e396ab0faf6298199ad7a95305c3ca8498cb825978a6485be6d00587ee4ec577", size = 4628455, upload-time = "2026-07-16T17:29:38.352Z" },
-    { url = "https://files.pythonhosted.org/packages/e9/4b/cc682832de4264a03880a2d1b5ec3e1fab3bf307f508817250baafdb9996/hf_xet-1.5.2-cp314-cp314t-win_amd64.whl", hash = "sha256:fd3add255549e8ef58fa35b2e42dc016961c050600444e7d77d030ba6b57120e", size = 3979044, upload-time = "2026-07-16T17:29:40.329Z" },
-    { url = "https://files.pythonhosted.org/packages/ea/09/b2cdf2a0fb39a08af3222b96092a36bd3b40c54123eef07de4422e870971/hf_xet-1.5.2-cp314-cp314t-win_arm64.whl", hash = "sha256:d6f9c58549407b84b9a5383afd68db0acc42345326a3159990b36a5ca8a20e4e", size = 3808037, upload-time = "2026-07-16T17:29:42.357Z" },
-    { url = "https://files.pythonhosted.org/packages/de/ba/2b70603c7552db82baeb2623e2336898304a17328845151be4fe1f48d420/hf_xet-1.5.2-cp38-abi3-macosx_10_12_x86_64.whl", hash = "sha256:f922b8f5fb84f1dd3d7ab7a1316354a1bca9b1c73ecfc19c76e51a2a49d29799", size = 4033760, upload-time = "2026-07-16T17:29:43.884Z" },
-    { url = "https://files.pythonhosted.org/packages/60/ac/b097a86a1e4a6098f3a79382643ab09d5733d87ccc864877ad1e12b49b70/hf_xet-1.5.2-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:045f84440c55cdeb659cf1a1dd48c77bcd0d2e93632e2fea8f2c3bdee79f38ed", size = 3841438, upload-time = "2026-07-16T17:29:45.539Z" },
-    { url = "https://files.pythonhosted.org/packages/d3/35/db860aa3a0780660324a506ad4b3d322ddc6ecbba4b9340aed0942cbf21c/hf_xet-1.5.2-cp38-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:db78c39c83d6279daddc98e2238f373ab8980685556d42472b4ec51abcf03e8c", size = 4428006, upload-time = "2026-07-16T17:29:46.996Z" },
-    { url = "https://files.pythonhosted.org/packages/af/6b/832dd980af4b0c3ae0660e309285f2ffcdff2faa38129390dbb47aa4a3f9/hf_xet-1.5.2-cp38-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:7db73c810500c54c6760be8c39d4b2e476974de85424c50063efc22fdda13025", size = 4221099, upload-time = "2026-07-16T17:29:48.525Z" },
-    { url = "https://files.pythonhosted.org/packages/9e/05/ae50f0d34e3254e6c3e208beb2519f6b8673016fc4b3643badaf6450d186/hf_xet-1.5.2-cp38-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:6395cfe3c9cbead4f16b31808b0e67eac428b66c656f856e99636adaddea878f", size = 4420766, upload-time = "2026-07-16T17:29:50.092Z" },
-    { url = "https://files.pythonhosted.org/packages/07/a9/c050bc2743a2bcd68928bfee157b08681667a164a24ec95fbfcfcd717e08/hf_xet-1.5.2-cp38-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:cde8cd167126bb6109b2ceb19b844433a4988643e8f3e01dd9dd0e4a34535097", size = 4636716, upload-time = "2026-07-16T17:29:51.62Z" },
-    { url = "https://files.pythonhosted.org/packages/e9/f8/68b01c5c2edb56ac9a67b3d076ffddcb90867abaee923923eb34e7a14e76/hf_xet-1.5.2-cp38-abi3-win_amd64.whl", hash = "sha256:ecf63d1cb69a9a7319910f8f83fcf9b46e7a32dfcf4b8f8eeddb55f647306e65", size = 3988373, upload-time = "2026-07-16T17:29:53.395Z" },
-    { url = "https://files.pythonhosted.org/packages/39/c6/988383e9dc17294d536fcbcd6fd16eed882e411ad16c954984a53e47b09c/hf_xet-1.5.2-cp38-abi3-win_arm64.whl", hash = "sha256:1da28519496eb7c8094c11e4d25509b4a468457a0302d58136099db2fd9a671d", size = 3816957, upload-time = "2026-07-16T17:29:54.991Z" },
+    { url = "https://files.pythonhosted.org/packages/2c/18/db7ebc58820d82fd5506aa405a75611e7a4398f573dc436f7387603bf63d/hf_xet-1.8.0-cp314-cp314t-macosx_10_12_x86_64.whl", hash = "sha256:c74e3751cbcdae9222c5170e8d788e83201a03dc5e5f4308a20f17a5b6023b56", size = 3883873, upload-time = "2026-10-30T10:04:03.24Z" },
+    { url = "https://files.pythonhosted.org/packages/37/bd/6c9ed89aafbeb4a7ee0d76d6b7b9365221e3e7ee47958aeecdc2c60a0511/hf_xet-1.8.0-cp314-cp314t-macosx_11_0_arm64.whl", hash = "sha256:56735c2d4f416d7473fc986586b26a8756e067832ca4b7fdaad32a0d6f2ce740", size = 3594510, upload-time = "2026-10-30T10:04:05.364Z" },
+    { url = "https://files.pythonhosted.org/packages/0e/1f/c26154b3a053b637c0984db0db9fdacbbfc257bdc2e95e9bc0782b745b0c/hf_xet-1.8.0-cp314-cp314t-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:3ecfe2934448cca55a4c42732b60f985266aecb241905945219b3d388aceb7ba", size = 4281780, upload-time = "2026-10-30T10:04:07.35Z" },
+    { url = "https://files.pythonhosted.org/packages/e3/9e/d84c31f8e3acc286c9c6a4fd85f7f332e3db40636595f0de5ad776b69beb/hf_xet-1.8.0-cp314-cp314t-manylinux_2_28_aarch64.whl", hash = "sha256:7edeb21c5d381903ee5f4857fc746fa7b52a4b374035e8811ecfb67ee27add0c", size = 4060223, upload-time = "2026-10-30T10:04:09.029Z" },
+    { url = "https://files.pythonhosted.org/packages/a4/70/c142e4ad8a679ff6ffe40964a9d017fa0211aabca9ca4d3d547c3a2fc165/hf_xet-1.8.0-cp314-cp314t-musllinux_1_2_aarch64.whl", hash = "sha256:07a06d7481702616726c2d8578cfb00052a5b3f21beed6a674592bc837a10330", size = 4263619, upload-time = "2026-10-30T10:04:11.085Z" },
+    { url = "https://files.pythonhosted.org/packages/9d/08/92e03e3ac4eaeab046359093c447c03c8c30b577c2b1e1687dc747654f1c/hf_xet-1.8.0-cp314-cp314t-musllinux_1_2_x86_64.whl", hash = "sha256:f42940869572dc2b05dfe06f4cc398c6291503e086ddc4eddfb7a6ab9409ad01", size = 4493381, upload-time = "2026-10-30T10:04:13.022Z" },
+    { url = "https://files.pythonhosted.org/packages/61/63/a512b2906d0f92b5d325f58169d1fd8c3202a9ee61bd8405ec78c67e5315/hf_xet-1.8.0-cp314-cp314t-win_amd64.whl", hash = "sha256:23c262e9f5e137b18dadbce60becfeea84156b0d43119c320bffe260d32cd2fa", size = 3901344, upload-time = "2026-10-30T10:04:15.051Z" },
+    { url = "https://files.pythonhosted.org/packages/2d/5e/b453f82690cb36f176c4b01e64d6d32757fabbf34dbb9bcbdf747e429a79/hf_xet-1.8.0-cp314-cp314t-win_arm64.whl", hash = "sha256:62b056aedb89ac809f78940baf465fe553b70c8b25ee56890fbab3039fffec1b", size = 3731681, upload-time = "2026-10-30T10:04:16.855Z" },
+    { url = "https://files.pythonhosted.org/packages/97/74/d89d5235524bc14d8519e12ca8bc5204f45009ae83d63a410f52c29eb4a8/hf_xet-1.8.0-cp38-abi3-macosx_10_12_x86_64.whl", hash = "sha256:e00d8f60170cd3dd55d98306e41dbaf28b27ff1bcfefbfa84279d197221be83e", size = 3875002, upload-time = "2026-10-30T10:04:18.958Z" },
+    { url = "https://files.pythonhosted.org/packages/d4/f2/ef25e2085e92dcaeaa675331e443923aed2006f6fe2d984e15d8b8d40766/hf_xet-1.8.0-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:3e8934784425781f0f779b91044df441f3a7af4dab47375d7e3aeaecbb8eecb4", size = 3600947, upload-time = "2026-10-30T10:04:20.906Z" },
+    { url = "https://files.pythonhosted.org/packages/f8/1e/1e8ecc05ef034e9a95c18ed32d2ec07905a7cd2ca611a9d88e25ee1f4850/hf_xet-1.8.0-cp38-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:29dab7c904cd1914a0439c6e1306c12c7497c8bd32290fbe563ebf51ca4b6d6d", size = 4292483, upload-time = "2026-10-30T10:04:22.875Z" },
+    { url = "https://files.pythonhosted.org/packages/35/c4/127a1548df019ea4c80f06e685f263e146075143335a02e78a3c41dbc4eb/hf_xet-1.8.0-cp38-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:8800e3444770f2c630b361bc6d5c6ebb770b7830646cf632fbb79d0e5bbc9e7f", size = 4069340, upload-time = "2026-10-30T10:04:24.664Z" },
+    { url = "https://files.pythonhosted.org/packages/a5/d5/281cd82736c3e181e597588589d2204d3a5c388a464d4a2a8c546995bae9/hf_xet-1.8.0-cp38-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:a584a7b3268da62f23c3187cc7201ca01f7b610985a36b1b6119c66bccb0383c", size = 4272344, upload-time = "2026-10-30T10:04:26.519Z" },
+    { url = "https://files.pythonhosted.org/packages/48/77/886f09e91a5eadb054ce03b8855323cd2a72f20db76ab4119e0ecda65eef/hf_xet-1.8.0-cp38-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:1ebaf248c9bef8bb0c9d1d8d71db1fdf0cac14f922cc7a936a81adbf12eb5f01", size = 4500689, upload-time = "2026-10-30T10:04:28.394Z" },
+    { url = "https://files.pythonhosted.org/packages/97/4d/2c76a992b370ff77d0b5219275779f8c9a7dabb8ee649deb265dfed84d0f/hf_xet-1.8.0-cp38-abi3-win_amd64.whl", hash = "sha256:92188598dedc1e1f5609bd718d4db8687a6c89915553912571e2f587892eecec", size = 3911559, upload-time = "2026-10-30T10:04:30.165Z" },
+    { url = "https://files.pythonhosted.org/packages/87/91/fdb1454a43eff8011047d176ada2f0fb4926cf3d74b87357ff35793f6d98/hf_xet-1.8.0-cp38-abi3-win_arm64.whl", hash = "sha256:42b66fdc688eaa4ff3eb77dc9275e5a0f1258ecc9fdd083ddaf43bb49bec925b", size = 3738458, upload-time = "2026-10-30T10:04:31.882Z" },
 ]
 
 [[package]]
@@ -6364,7 +6357,7 @@ wheels = [
 
 [[package]]
 name = "huggingface-hub"
-version = "1.25.1"
+version = "1.33.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -6377,9 +6370,9 @@ dependencies = [
     { name = "tqdm" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4b/50/db3771a6e4fad4bd28fb055d4363b51cb0ae98c1aa504b79d41fdcab5483/huggingface_hub-1.25.1.tar.gz", hash = "sha256:21129595ca7a753be479b319913e22cc8808361ac118bd76cc413db831b28a99", size = 928426, upload-time = "2026-07-27T09:24:10.117Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/25/2a/484d112c0d8fc5f665d7b65137ac9cdb2953c982391598c3597968a12ee7/huggingface_hub-1.33.0.tar.gz", hash = "sha256:367be21a201db9523eddf8aeac7048f2602c1b308691c97640d5e72ed188007e", size = 1043548, upload-time = "2026-09-24T09:49:29.971Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f7/3f/21e816831c6d16f88a6c784974413fa0421ce8a5d04380c2666ed5b503e5/huggingface_hub-1.25.1-py3-none-any.whl", hash = "sha256:004d4e70350517e24c68a7dbb7dc5e40b2b6aefef8f94bf7a85f6f9835102ea5", size = 774909, upload-time = "2026-07-27T09:24:08.079Z" },
+    { url = "https://files.pythonhosted.org/packages/fc/16/963096d224b80909432dc16561a615fd33d2d13beef3ce4c63fa25e40867/huggingface_hub-1.33.0-py3-none-any.whl", hash = "sha256:04e434b06e100eddbce9a6e817d72693a7884b10a79bd67ab48080d5c07eb899", size = 846435, upload-time = "2026-09-24T09:49:28.059Z" },
 ]
 
 [[package]]
@@ -8744,7 +8737,8 @@ dependencies = [
     { name = "langwatch", marker = "python_full_version < '3.14'" },
     { name = "lfx", extra = ["sqlite"] },
     { name = "litellm" },
-    { name = "loguru" },
+    { name = "loguru", version = "0.7.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
+    { name = "loguru", version = "0.8.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14'" },
     { name = "mako" },
     { name = "mcp" },
     { name = "multiprocess" },
@@ -9216,10 +9210,11 @@ requires-dist = [
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2" },
     { name = "cuga", marker = "python_full_version < '3.14' and platform_machine == 'arm64' and sys_platform == 'darwin' and extra == 'cuga'", specifier = ">=0.2.20,<0.3.0" },
     { name = "cuga", marker = "python_full_version < '3.14' and sys_platform != 'darwin' and extra == 'cuga'", specifier = ">=0.2.20,<0.3.0" },
-    { name = "datasets", marker = "extra == 'datasets'", specifier = ">2.14.7,<6.0.0" },
+    { name = "datasets", marker = "python_full_version >= '3.11' and extra == 'datasets'", specifier = ">=5.2.0,<6.0.0" },
+    { name = "datasets", marker = "python_full_version < '3.11' and extra == 'datasets'", specifier = ">2.14.7,<6.0.0" },
     { name = "ddgs", marker = "extra == 'duckduckgo'", specifier = ">=9.0.0" },
     { name = "defusedxml", specifier = ">=0.7.1,<1.0.0" },
-    { name = "dnspython", marker = "python_full_version >= '3.11'", specifier = ">=2.9.1,<3.0.0" },
+    { name = "dnspython", marker = "python_full_version >= '3.11'", specifier = ">=2.9.2,<3.0.0" },
     { name = "docling-core", marker = "extra == 'docling'", specifier = ">=2.103.0,<3.0.0" },
     { name = "docling-core", extras = ["chunking"], marker = "extra == 'docling-chunking'", specifier = ">=2.103.0,<3.0.0" },
     { name = "docling-slim", extras = ["cli", "convert-core", "extract-core", "feat-ocr-rapidocr", "format-latex", "format-office", "format-pdf", "format-web", "models-local", "service-client"], marker = "(platform_machine != 'x86_64' and extra == 'docling') or (sys_platform != 'darwin' and extra == 'docling')", specifier = ">=2.132.0,<3.0.0" },
@@ -9320,7 +9315,8 @@ requires-dist = [
     { name = "litellm", marker = "python_full_version < '3.14' and platform_machine == 'arm64' and sys_platform == 'darwin' and extra == 'cuga'", specifier = ">=1.103.10,!=1.104.0rc1,<1.104.0,!=1.107.0" },
     { name = "litellm", marker = "python_full_version < '3.14' and sys_platform != 'darwin' and extra == 'cuga'", specifier = ">=1.103.10,!=1.104.0rc1,<1.104.0,!=1.107.0" },
     { name = "litellm", marker = "extra == 'litellm'", specifier = ">=1.103.10,!=1.104.0rc1,<1.104.0,!=1.107.0" },
-    { name = "loguru", specifier = ">=0.7.1,<1.0.0" },
+    { name = "loguru", marker = "python_full_version < '3.14'", specifier = ">=0.7.1,<1.0.0" },
+    { name = "loguru", marker = "python_full_version >= '3.14'", specifier = ">=0.8.0,<1.0.0" },
     { name = "mako", specifier = ">=1.4.2,<2.0.0" },
     { name = "markdown", marker = "extra == 'markdown'", specifier = ">=3.8.0" },
     { name = "markupsafe", marker = "python_full_version >= '3.15' and extra == 'markup'", specifier = "==3.0.4" },
@@ -9383,7 +9379,7 @@ requires-dist = [
     { name = "pyperclip", specifier = ">=1.8.2,<2.0.0" },
     { name = "python-docx", specifier = ">=1.1.0,<2.0.0" },
     { name = "python-docx", marker = "extra == 'docx'", specifier = ">=1.1.0" },
-    { name = "python-multipart", specifier = ">=0.0.12,<1.0.0" },
+    { name = "python-multipart", specifier = ">=0.0.31,<1.0.0" },
     { name = "pytube", marker = "extra == 'pytube'", specifier = "==15.0.0" },
     { name = "pyyaml", specifier = ">=6.0.2,<7.0.0" },
     { name = "qdrant-client", marker = "extra == 'qdrant'", specifier = ">=1.12.0,<2.0.0" },
@@ -9778,7 +9774,8 @@ dependencies = [
     { name = "langchain-classic" },
     { name = "langchain-core" },
     { name = "langflow-sdk" },
-    { name = "loguru" },
+    { name = "loguru", version = "0.7.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
+    { name = "loguru", version = "0.8.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14'" },
     { name = "markitdown", marker = "python_full_version < '3.15'" },
     { name = "mcp" },
     { name = "nanoid" },
@@ -9900,7 +9897,8 @@ requires-dist = [
     { name = "lfx-bundles", extras = ["all"], marker = "extra == 'bundles'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-datastax", marker = "extra == 'cassandra'", editable = "src/bundles/datastax" },
     { name = "lfx-toolguard", marker = "extra == 'toolguard'", editable = "src/bundles/toolguard" },
-    { name = "loguru", specifier = ">=0.7.3,<1.0.0" },
+    { name = "loguru", marker = "python_full_version < '3.14'", specifier = ">=0.7.3,<1.0.0" },
+    { name = "loguru", marker = "python_full_version >= '3.14'", specifier = ">=0.8.0,<1.0.0" },
     { name = "markitdown", marker = "python_full_version < '3.15'", specifier = ">=0.1.4,<2.0.0" },
     { name = "mcp", specifier = ">=1.30.0,<2.0.0" },
     { name = "nanoid", specifier = ">=2.0.0,<3.0.0" },
@@ -10036,7 +10034,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-bundles"
-version = "1.3.9"
+version = "1.3.10"
 source = { editable = "src/bundles/lfx-bundles" }
 dependencies = [
     { name = "lfx" },
@@ -10604,6 +10602,8 @@ requires-dist = [
     { name = "lfx-bundles", extras = ["searchapi"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["serpapi"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["serpapi"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["socialscrape"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["socialscrape"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["spider"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["spider"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["supabase"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
@@ -10680,7 +10680,7 @@ requires-dist = [
     { name = "youtube-transcript-api", marker = "extra == 'youtube'", specifier = ">=1.0.0,<2.0.0" },
     { name = "zep-python", marker = "extra == 'zep'", specifier = "==2.0.2" },
 ]
-provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "baidu", "bing", "chroma", "cleanlab", "clickhouse", "cloudflare", "codeagents", "cometapi", "composio", "confluence", "couchbase", "cuga", "deepseek", "elastic", "faiss", "figranium", "funasr", "git", "glean", "google", "groq", "homeassistant", "huggingface", "icosacomputing", "jigsawstack", "keenable", "langwatch", "litellm", "lmstudio", "maritalk", "mem0", "milvus", "mistral", "mongodb", "mrscraper", "needle", "notdiamond", "notion", "novita", "nvidia", "olivya", "ollama", "olostep", "openrouter", "orcarouter", "perplexity", "pgvector", "pinecone", "plivo", "popnow", "qdrant", "redis", "sambanova", "scrapegraph", "searchapi", "serpapi", "spider", "supabase", "tavily", "trustedrouter", "twelvelabs", "unstructured", "upstash", "vectara", "vertexai", "vlmrun", "weaviate", "wikipedia", "wolframalpha", "xai", "yahoosearch", "youtube", "zep", "all", "all-no-torch"]
+provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "baidu", "bing", "chroma", "cleanlab", "clickhouse", "cloudflare", "codeagents", "cometapi", "composio", "confluence", "couchbase", "cuga", "deepseek", "elastic", "faiss", "figranium", "funasr", "git", "glean", "google", "groq", "homeassistant", "huggingface", "icosacomputing", "jigsawstack", "keenable", "langwatch", "litellm", "lmstudio", "maritalk", "mem0", "milvus", "mistral", "mongodb", "mrscraper", "needle", "notdiamond", "notion", "novita", "nvidia", "olivya", "ollama", "olostep", "openrouter", "orcarouter", "perplexity", "pgvector", "pinecone", "plivo", "popnow", "qdrant", "redis", "sambanova", "scrapegraph", "searchapi", "serpapi", "socialscrape", "spider", "supabase", "tavily", "trustedrouter", "twelvelabs", "unstructured", "upstash", "vectara", "vertexai", "vlmrun", "weaviate", "wikipedia", "wolframalpha", "xai", "yahoosearch", "youtube", "zep", "all", "all-no-torch"]
 
 [[package]]
 name = "lfx-cohere"
@@ -11238,7 +11238,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-toolguard"
-version = "0.3.2"
+version = "0.3.3"
 source = { editable = "src/bundles/toolguard" }
 dependencies = [
     { name = "fastmcp" },
@@ -11719,6 +11719,20 @@ wheels = [
 name = "loguru"
 version = "0.7.3"
 source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version == '3.13.*' and sys_platform != 'darwin' and sys_platform != 'win32'",
+    "python_full_version == '3.13.*' and sys_platform == 'win32'",
+    "python_full_version == '3.13.*' and platform_machine == 'arm64' and sys_platform == 'darwin'",
+    "python_full_version == '3.13.*' and platform_machine != 'arm64' and sys_platform == 'darwin'",
+    "python_full_version == '3.12.*' and sys_platform != 'darwin' and sys_platform != 'win32'",
+    "python_full_version == '3.12.*' and sys_platform == 'win32'",
+    "python_full_version == '3.12.*' and platform_machine == 'arm64' and sys_platform == 'darwin'",
+    "python_full_version == '3.12.*' and platform_machine != 'arm64' and sys_platform == 'darwin'",
+    "python_full_version < '3.12' and sys_platform != 'darwin' and sys_platform != 'win32'",
+    "python_full_version < '3.12' and sys_platform == 'win32'",
+    "python_full_version < '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'",
+    "python_full_version < '3.12' and platform_machine != 'arm64' and sys_platform == 'darwin'",
+]
 dependencies = [
     { name = "colorama", marker = "sys_platform == 'win32'" },
     { name = "win32-setctime", marker = "sys_platform == 'win32'" },
@@ -11726,6 +11740,32 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/3a/05/a1dae3dffd1116099471c643b8924f5aa6524411dc6c63fdae648c4f1aca/loguru-0.7.3.tar.gz", hash = "sha256:19480589e77d47b8d85b2c827ad95d49bf31b0dcde16593892eb51dd18706eb6", size = 63559, upload-time = "2024-12-06T11:20:56.608Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/0c/29/0348de65b8cc732daa3e33e67806420b2ae89bdce2b04af740289c5c6c8c/loguru-0.7.3-py3-none-any.whl", hash = "sha256:31a33c10c8e1e10422bfd431aeb5d351c7cf7fa671e3c4df004162264b28220c", size = 61595, upload-time = "2024-12-06T11:20:54.538Z" },
+]
+
+[[package]]
+name = "loguru"
+version = "0.8.0"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
+    "python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
+    "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'darwin' and sys_platform != 'win32'",
+    "python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation != 'PyPy' and sys_platform == 'darwin'",
+    "(python_full_version >= '3.15' and implementation_name != 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'cygwin')",
+    "(python_full_version >= '3.15' and implementation_name == 'pypy' and platform_python_implementation == 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32') or (python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'cygwin')",
+    "python_full_version >= '3.15' and implementation_name != 'pypy' and sys_platform == 'win32'",
+    "python_full_version >= '3.15' and implementation_name == 'pypy' and sys_platform == 'win32'",
+    "python_full_version == '3.14.*' and sys_platform != 'darwin' and sys_platform != 'win32'",
+    "python_full_version == '3.14.*' and sys_platform == 'darwin'",
+    "python_full_version == '3.14.*' and sys_platform == 'win32'",
+]
+dependencies = [
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "win32-setctime", marker = "sys_platform == 'win32'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/61/ce/b5bb93d4d9fc7a067f69140b3bb3782f6ad6360bc76e99b6e3d386cb1320/loguru-0.8.0.tar.gz", hash = "sha256:fb3e4623288e37700a0577f6e0ce776cc1860b5d95c657d67f07a2476b304867", size = 71232, upload-time = "2026-11-11T18:50:26.248Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c8/00/9ee7c8da7342b1a5524bca9d036f89e7d1d1e5a6345c9623763eeeac941f/loguru-0.8.0-py3-none-any.whl", hash = "sha256:e0fba09d6f76ba2d2f4bd1757122942f5a670c702e988b5efaeab99dacba0069", size = 69409, upload-time = "2026-11-11T18:50:24.148Z" },
 ]
 
 [[package]]
@@ -20103,7 +20143,8 @@ fastapi = [
     { name = "fastapi" },
 ]
 loguru = [
-    { name = "loguru" },
+    { name = "loguru", version = "0.7.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
+    { name = "loguru", version = "0.8.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14'" },
 ]
 
 [[package]]
@@ -21070,7 +21111,8 @@ dependencies = [
     { name = "fastmcp" },
     { name = "langchain-core" },
     { name = "litellm" },
-    { name = "loguru" },
+    { name = "loguru", version = "0.7.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
+    { name = "loguru", version = "0.8.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14'" },
     { name = "markdown" },
     { name = "pydantic", version = "2.13.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.15'" },
     { name = "pydantic", version = "2.14.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.15'" },
@@ -22321,7 +22363,8 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cachetools" },
     { name = "ipython" },
-    { name = "loguru" },
+    { name = "loguru", version = "0.7.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
+    { name = "loguru", version = "0.8.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14'" },
     { name = "opencv-python" },
     { name = "pandas" },
     { name = "pillow" },
@@ -22360,7 +22403,8 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "annotated-types" },
     { name = "datamodel-code-generator" },
-    { name = "loguru" },
+    { name = "loguru", version = "0.7.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
+    { name = "loguru", version = "0.8.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14'" },
     { name = "pillow" },
     { name = "pydantic", version = "2.13.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.15'" },
     { name = "pydantic", version = "2.14.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.15'" },
