@@ -47,27 +47,26 @@ impl<V: Clone> PendingMap<V> {
     }
 
     /// Whether `key` had a value when the batch started.
-    pub fn in_base(&self, key: &str) -> bool {
+    pub fn is_stored(&self, key: &str) -> bool {
         self.stored.contains_key(key)
     }
 
-    /// Whether the batch added, replaced or removed the value of `key`.
+    /// Whether `key` has been written to.
     pub fn is_pending(&self, key: &str) -> bool {
         self.layer.contains_key(key)
     }
 
-    /// The stored value of `key`, to change in place between batches.
+    /// Get a mutable reference to the **stored** value of `key`
     pub fn stored_mut(&mut self, key: &str) -> Option<&mut V> {
         debug_assert!(self.layer.is_empty(), "write between batches only");
         self.stored.get_mut(key)
     }
 
-    /// The value of `key`, to change it. The first call in a batch copies a stored value.
+    /// Get a mutable reference to the value of `key`
     pub fn get_mut(&mut self, key: &str) -> Option<&mut V> {
-        if !self.layer.contains_key(key) {
-            // No value: leave the pending changes as they are.
+        if !self.is_pending(key) {
             let copy = self.stored.get(key)?.clone();
-            self.layer.insert(key.to_owned(), Some(copy));
+            self.layer.insert(key, Some(copy));
         }
         self.layer.get_mut(key)?.as_mut()
     }
@@ -75,14 +74,14 @@ impl<V: Clone> PendingMap<V> {
     /// The value of `key`, to change it, added by `new` when there is none.
     pub fn get_or_insert_with(&mut self, key: &str, new: impl FnOnce() -> V) -> &mut V {
         if !self.contains(key) {
-            self.insert(key.to_owned(), new());
+            self.insert(key, new());
         }
         self.get_mut(key)
             .expect("the entry exists or was just added")
     }
 
     /// Add a value, or replace the value of the same key.
-    pub fn insert(&mut self, key: String, value: V) {
+    pub fn insert<K: AsRef<str> + Into<String>>(&mut self, key: K, value: V) {
         self.layer.insert(key, Some(value));
     }
 
@@ -90,7 +89,7 @@ impl<V: Clone> PendingMap<V> {
     pub fn remove(&mut self, key: &str) -> bool {
         let existed = self.contains(key);
         if self.stored.contains_key(key) {
-            self.layer.insert(key.to_owned(), None);
+            self.layer.insert(key, None);
         } else {
             self.layer.remove(key);
         }
@@ -168,7 +167,7 @@ mod tests {
         let payload = Arc::new(());
         let weak = Arc::downgrade(&payload);
         let mut layer = PendingMap::new();
-        layer.insert("a".into(), payload);
+        layer.insert("a", payload);
         layer.commit();
         let capacity = layer.layer.capacity();
         assert!(capacity > 0);
@@ -178,7 +177,7 @@ mod tests {
         assert!(weak.upgrade().is_none());
         let refused = Arc::new(());
         let weak = Arc::downgrade(&refused);
-        layer.insert("refused".into(), refused);
+        layer.insert("refused", refused);
         layer.drop_pending();
         assert!(weak.upgrade().is_none());
     }
@@ -200,7 +199,7 @@ mod tests {
         assert_eq!(layer.stored.len(), 0);
         let payload = Arc::new(());
         let weak = Arc::downgrade(&payload);
-        layer.insert("refused".into(), payload);
+        layer.insert("refused", payload);
         for i in 0..=MAX_RETAINED_BATCH_ENTRIES {
             layer.insert(i.to_string(), Arc::new(()));
         }
@@ -227,12 +226,12 @@ mod tests {
         let mut map = stored(&["a", "b"]);
         *map.get_mut("a").unwrap() = 10;
         map.remove("b");
-        map.insert("c".into(), 3);
+        map.insert("c", 3);
         assert_eq!(map.get("a"), Some(&10));
         assert_eq!(map.get("b"), None);
         assert_eq!(map.get("c"), Some(&3));
         assert_eq!(map.stored.get("a"), Some(&1));
-        assert!(map.in_base("b") && !map.in_base("c"));
+        assert!(map.is_stored("b") && !map.is_stored("c"));
     }
 
     #[test]
@@ -240,7 +239,7 @@ mod tests {
         let mut map = stored(&["a", "b"]);
         *map.get_mut("a").unwrap() = 10;
         map.remove("b");
-        map.insert("c".into(), 3);
+        map.insert("c", 3);
         map.drop_pending();
         assert_eq!(keys(&map), ["a", "b"]);
         assert_eq!(map.get("a"), Some(&1));
@@ -250,10 +249,10 @@ mod tests {
     #[test]
     fn a_committed_batch_writes_its_changes_to_the_stored_map() {
         let mut map = stored(&["a", "b", "c"]);
-        map.insert("x".into(), 24);
+        map.insert("x", 24);
         *map.get_mut("a").unwrap() = 10;
         map.remove("b");
-        map.insert("b".into(), 20);
+        map.insert("b", 20);
         map.remove("c");
         map.commit();
         let entries: Vec<_> = map
@@ -272,9 +271,9 @@ mod tests {
         assert_eq!(keys(&map), ["a", "c", "d"]);
 
         let mut map = stored(&["a", "b", "c", "d", "e"]);
-        map.insert("x".into(), 24);
-        map.insert("y".into(), 25);
-        map.insert("z".into(), 26);
+        map.insert("x", 24);
+        map.insert("y", 25);
+        map.insert("z", 26);
         map.remove("x");
         map.remove("b");
         map.remove("d");
@@ -292,7 +291,7 @@ mod tests {
     #[test]
     fn an_entry_added_and_removed_in_one_batch_leaves_no_trace() {
         let mut map = stored(&["a"]);
-        map.insert("x".into(), 24);
+        map.insert("x", 24);
         assert!(map.remove("x"));
         assert!(!map.remove("x"));
         map.commit();

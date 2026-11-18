@@ -65,7 +65,7 @@ impl EdgeIndex {
             return Ok(handles.clone());
         }
         let handles = read_handles(edge)?;
-        self.handles.insert(id.to_owned(), handles.clone());
+        self.handles.insert(id, handles.clone());
         Ok(handles)
     }
 
@@ -80,7 +80,7 @@ impl EdgeIndex {
                 let handles = self.handles(edge)?;
                 connect(&mut connections, node_id, edge, &handles);
             }
-            self.connections.insert(node_id.to_owned(), connections);
+            self.connections.insert(node_id, connections);
         }
         Ok(self
             .connections

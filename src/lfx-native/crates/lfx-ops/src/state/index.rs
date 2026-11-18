@@ -97,7 +97,7 @@ impl Graph {
     /// Whether node `id` existed when the batch started and the batch did not
     /// replace it. Only a stored node's lists are indexed.
     pub fn is_stored_node(&self, id: &str) -> bool {
-        self.nodes.in_base(id) && !self.nodes.is_pending(id)
+        self.nodes.is_stored(id) && !self.nodes.is_pending(id)
     }
 
     /// Follow `path` in node `id` ([`field_write::read_through`]). `None` when there is no

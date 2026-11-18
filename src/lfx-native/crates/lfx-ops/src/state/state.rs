@@ -383,7 +383,7 @@ impl GraphState {
 
     /// Whether the node existed when the batch started.
     pub(crate) fn is_base_node(&self, id: &str) -> bool {
-        self.graph.nodes.in_base(id)
+        self.graph.nodes.is_stored(id)
     }
 
     // --- Changes -----------------------------------------------------------------------

@@ -107,12 +107,15 @@ impl<V> OrderedMap<V> {
     }
 
     /// Add the key value pair to the map.
-    /// Replaces the value of `key` if it already exists.
-    pub fn insert(&mut self, key: String, value: V) {
-        let hash = self.hash(&key);
+    /// Replaces the value of `key` if it already exists
+    ///
+    /// Note: if the key is owned, it will be consumed.
+    pub fn insert<K: AsRef<str> + Into<String>>(&mut self, key: K, value: V) {
+        let key_ref = key.as_ref();
+        let hash = self.hash(key_ref);
         match self
             .index
-            .entry(hash, has_key(&self.data, &key), hash_at(&self.data))
+            .entry(hash, has_key(&self.data, key_ref), hash_at(&self.data))
         {
             hash_table::Entry::Occupied(slot) => {
                 self.data[*slot.get()].value = Some(value);
@@ -120,8 +123,8 @@ impl<V> OrderedMap<V> {
             hash_table::Entry::Vacant(slot) => {
                 slot.insert(self.data.len());
                 self.data.push(Entry {
-                    hash,
-                    key,
+                    hash: hash,
+                    key: key.into(),
                     value: Some(value),
                 });
             }
@@ -224,7 +227,7 @@ mod tests {
                 let position = reference.iter().position(|(k, _)| *k == key);
                 assert_eq!(removed, position.map(|at| reference.remove(at).1));
             } else {
-                positions.insert(key.clone(), step);
+                positions.insert(&key, step);
                 match reference.iter_mut().find(|(k, _)| *k == key) {
                     Some(entry) => entry.1 = step,
                     None => reference.push((key, step)),
