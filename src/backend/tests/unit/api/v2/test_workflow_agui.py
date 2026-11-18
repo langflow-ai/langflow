@@ -1109,6 +1109,9 @@ class TestAGUIStreaming:
         assert "RUN_FINISHED" not in payload_types
         assert payload_types[-1] == "RUN_ERROR"
         assert "qa forced failure" in payloads[-1]["message"]
+        # The playground's chat error bubble still gets its mirror, just before RUN_ERROR.
+        assert payloads[-2]["name"] == "langflow.event"
+        assert payloads[-2]["value"]["event_type"] == "error"
 
     @pytest.mark.parametrize(("stream_protocol", "terminal_type"), [("agui", "RUN_ERROR"), ("langflow", "error")])
     async def test_stream_error_path_uses_fallback_when_producer_raises_before_on_error(

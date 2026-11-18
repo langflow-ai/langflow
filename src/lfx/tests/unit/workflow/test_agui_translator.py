@@ -1214,6 +1214,19 @@ def test_events_after_error_are_dropped():
     assert t.cancel("Workflow run cancelled.") == []
 
 
+def test_pause_after_error_still_emits_human_input_marker():
+    """A sibling branch can pause after another failed; the runners detect a suspend from this frame."""
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+    t.translate("error", {"error": "qa forced failure"})
+
+    out = t.translate("human_input_required", {"request_id": "req-1"})
+
+    assert len(out) == 1
+    assert isinstance(out[0], CustomEvent)
+    assert out[0].name == "langflow.human_input_required"
+
+
 def test_user_add_message_emits_no_text_message():
     """A user-sender add_message must emit no events (else AG-UI shows a stray empty bubble)."""
     t = AGUITranslator(run_id="r1", thread_id="t1")
