@@ -39,6 +39,13 @@ def _read_response():
 class TestMnemoverseMemoryComponent:
     """Test the Mnemoverse Chat Memory component with a mocked client."""
 
+    def test_memory_handle_type_is_provider_specific(self):
+        """The client handle must not share the generic Memory type of Message History and Store Message."""
+        node = MnemoverseMemoryComponent().to_frontend_node()["data"]["node"]
+        assert node["template"]["existing_memory"]["input_types"] == ["MnemoverseMemory"]
+        memory_output = next(output for output in node["outputs"] if output["name"] == "memory")
+        assert "Memory" not in memory_output["types"]
+
     def test_build_requires_api_key_even_if_env_is_set(self, monkeypatch):
         """The SDK reads MNEMOVERSE_API_KEY when no key is passed; the component must not rely on it."""
         monkeypatch.setenv("MNEMOVERSE_API_KEY", FAKE_KEY)

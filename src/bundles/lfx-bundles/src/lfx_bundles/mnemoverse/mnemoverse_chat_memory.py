@@ -14,7 +14,7 @@ from lfx.log.logger import logger
 from lfx.schema.data import Data
 
 
-class Memory(Protocol):
+class MnemoverseMemory(Protocol):
     def write(self, content: str, **kwargs: Any) -> Any: ...
 
     def read(self, query: str, **kwargs: Any) -> Any: ...
@@ -46,7 +46,7 @@ class MnemoverseMemoryComponent(LCChatMemoryComponent):
         HandleInput(
             name="existing_memory",
             display_name="Existing Memory Instance",
-            input_types=["Memory"],
+            input_types=["MnemoverseMemory"],
             info="Optional existing Mnemoverse client. If not provided, a new client will be created.",
         ),
         MessageTextInput(
@@ -81,7 +81,7 @@ class MnemoverseMemoryComponent(LCChatMemoryComponent):
         Output(name="search_results", display_name="Search Results", method="build_search_results"),
     ]
 
-    def build_mnemoverse(self) -> Memory:
+    def build_mnemoverse(self) -> MnemoverseMemory:
         """Initializes a Mnemoverse client with the provided API key."""
         if not self.mnemoverse_api_key:
             msg = "Mnemoverse API key is required."
@@ -99,7 +99,7 @@ class MnemoverseMemoryComponent(LCChatMemoryComponent):
         return {"domain": self.domain} if self.domain else {}
 
     @staticmethod
-    def _release(client: Memory) -> None:
+    def _release(client: MnemoverseMemory) -> None:
         """Closes the client's event loop and connection pool after a call.
 
         Langflow runs synchronous output methods in a worker thread, where the
@@ -126,7 +126,7 @@ class MnemoverseMemoryComponent(LCChatMemoryComponent):
     def _ingest_key(self) -> tuple[str, str, str]:
         return (str(self.ingest_message), str(self.domain or ""), repr(self.metadata or {}))
 
-    def ingest_data(self) -> Memory:
+    def ingest_data(self) -> MnemoverseMemory:
         """Stores a new message in Mnemoverse and returns the client."""
         mnemoverse = self.existing_memory or self.build_mnemoverse()
 
