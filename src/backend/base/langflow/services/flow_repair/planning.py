@@ -13,7 +13,13 @@ if TYPE_CHECKING:
 
 from lfx.graph.graph.utils import process_flow
 from lfx.upgrade.applier import apply_safe_upgrades
-from lfx.upgrade.checker import _canonical_types, build_registry_lookup, check_flow_compatibility, iter_flow_nodes
+from lfx.upgrade.checker import (
+    _canonical_types,
+    build_registry_lookup,
+    can_replace_empty_field,
+    check_flow_compatibility,
+    iter_flow_nodes,
+)
 
 
 @dataclass(frozen=True)
@@ -72,6 +78,8 @@ def _preserves_template_state(old_template: object, new_template: object) -> boo
         new_field = new_template.get(name)
         if not isinstance(new_field, dict):
             return False
+        if can_replace_empty_field(old_field, new_field):
+            continue
         for key in ("value", "load_from_db", "file_path"):
             if key in old_field and old_field[key] != new_field.get(key):
                 return False
