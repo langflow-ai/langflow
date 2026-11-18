@@ -272,15 +272,13 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
             rotate_legacy_default_password=True,
         )
         # An auth extension may roll back the caller transaction before returning
-        # the committed account. Re-run teardown for any restored default row under
-        # the lock; teardown itself preserves signed-in and already-retired accounts.
+        # the committed account. Re-run teardown under the lock so its lookup sees
+        # the post-lock state; it preserves signed-in and already-retired accounts.
         if user is not None and username.lower() != DEFAULT_SUPERUSER.lower():
-            default_superuser = await _get_superuser_by_username(session, DEFAULT_SUPERUSER)
-            if default_superuser is not None:
-                await acquire_identity_mutation_lock(
-                    authorization_service, session, kind=AuthorizationMutationKind.USER_CREATED
-                )
-                await teardown_superuser(settings_service, session)
+            await acquire_identity_mutation_lock(
+                authorization_service, session, kind=AuthorizationMutationKind.USER_CREATED
+            )
+            await teardown_superuser(settings_service, session)
         configured_superuser = user or await _get_superuser_by_username(session, username)
         if configured_superuser is not None:
             settings_service.auth_settings.SUPERUSER = configured_superuser.username

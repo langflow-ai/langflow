@@ -1012,9 +1012,32 @@ async def test_setup_retires_default_again_after_recovered_creator_rollback(serv
 
     async def recover_after_rollback(*, session, **_kwargs):
         await session.rollback()
+        events.append("recovered")
         return await session.get(User, winner_id)
 
+    from langflow.services import utils
+
+    events = []
+    real_lock = utils.acquire_identity_mutation_lock
+    real_lookup = utils._get_superuser_by_username
+    real_teardown = utils.teardown_superuser
+
+    async def record_lock(*args, **kwargs):
+        events.append("lock")
+        return await real_lock(*args, **kwargs)
+
+    async def record_lookup(*args, **kwargs):
+        events.append("lookup")
+        return await real_lookup(*args, **kwargs)
+
+    async def record_teardown(*args, **kwargs):
+        events.append("teardown")
+        return await real_teardown(*args, **kwargs)
+
     monkeypatch.setattr("langflow.services.utils.get_or_create_super_user", recover_after_rollback)
+    monkeypatch.setattr(utils, "acquire_identity_mutation_lock", record_lock)
+    monkeypatch.setattr(utils, "_get_superuser_by_username", record_lookup)
+    monkeypatch.setattr(utils, "teardown_superuser", record_teardown)
 
     async with session_scope() as session:
         assert await setup_superuser(settings, session) == SetupSuperuserResult.SUPERUSER_CREATED
@@ -1028,6 +1051,8 @@ async def test_setup_retires_default_again_after_recovered_creator_rollback(serv
     else:
         assert retired.is_active is True
         assert retired.retired_at is None
+    recovery_index = events.index("recovered")
+    assert events[recovery_index + 1 :] == ["lock", "teardown", "lookup"]
 
 
 @pytest.mark.asyncio
