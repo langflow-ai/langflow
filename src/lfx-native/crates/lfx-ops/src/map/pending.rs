@@ -97,7 +97,7 @@ impl<V: Clone> PendingMap<V> {
     }
 
     /// Make the batch's changes part of the stored map. Returns whether empty
-    /// positions were pruned ([`OrderedMap::prune_garbage`]).
+    /// positions were pruned ([`OrderedMap::clear_garbage`]).
     pub fn commit(&mut self) -> bool {
         self.commit_into(&mut Vec::new())
     }
@@ -111,7 +111,7 @@ impl<V: Clone> PendingMap<V> {
             }
         }
         self.shrink_large_pending();
-        self.stored.prune_garbage()
+        self.stored.clear_garbage()
     }
 
     fn shrink_large_pending(&mut self) {

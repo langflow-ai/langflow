@@ -1,39 +1,54 @@
 //! [`OrderedMap`]: a map that preserves insert order.
-//!
-//! Deleted keys stay in `data` and are pruned when they outnumber live keys.
 
 use hashbrown::HashTable;
-use hashbrown::hash_table::OccupiedEntry;
+use hashbrown::hash_table::{self, OccupiedEntry};
 
 use crate::map::hash::State;
 
 /// Map preserving insert order.
-/// deleted keys stay in `data` and are pruned
-/// when they outnumber non-deleted keys.
+/// Deleted entries are marked as `None`
+/// and stay in `data` until they
+/// outnumber non-deleted keys.
 #[derive(Debug)]
 pub(crate) struct OrderedMap<V> {
-    // actual data: (key, value) pairs
+    /// The map's actual data
     data: Vec<Entry<V>>,
-    // maps the key to its index in  `data`
+    /// This table stores values
+    /// by finding where the hashed
+    /// key points to and finding the
+    /// 'next' available slot.
+    /// The Values we store in
+    /// this table are `usize` integers
+    /// pointing to an index in `data`
+    /// where the actual value lives.
     index: HashTable<usize>,
+    /// The random state used to compute hashes.
     state: State,
 }
-
+/// key and value are the
+/// caller-supplied key and value.
+/// hash is the hash of the key.
+/// This hash is stored
+/// to avoid re-computing
+/// it in [`OrderedMap::clear_garbage`]
 #[derive(Debug)]
 struct Entry<V> {
-    // kept so the table never hashes the key again
+    /// The hash of the key.
     hash: u64,
+    /// The actual key
     key: String,
-    // None once removed
+    /// The actual value.
+    /// Set to None once deleted.
+    /// Cleaned up in [`OrderedMap::clear_garbage`].
     value: Option<V>,
 }
 
-/// The hash of the entry at a position, for the table to rehash.
+/// The hash of the entry at position `i`.
 fn hash_at<V>(data: &[Entry<V>]) -> impl Fn(&usize) -> u64 {
     move |&i| data[i].hash
 }
 
-/// Whether the entry at a position has `key`.
+/// Whether the entry at position `i` has `key`.
 fn has_key<'a, V>(data: &'a [Entry<V>], key: &'a str) -> impl Fn(&usize) -> bool {
     move |&i| data[i].key == key
 }
@@ -51,18 +66,15 @@ impl<V> OrderedMap<V> {
         self.state.hash_one(key)
     }
 
-    /// The index of `key`, whose hash is `hash`.
-    fn find(&self, hash: u64, key: &str) -> Option<&usize> {
-        self.index.find(hash, has_key(&self.data, key))
+    /// The position of `key` in `data`.
+    fn find(&self, key: &str) -> Option<usize> {
+        let hash = self.hash(key);
+        self.index.find(hash, has_key(&self.data, key)).copied()
     }
 
-    /// [`Self::find`], copied.
-    fn find_copied(&self, hash: u64, key: &str) -> Option<usize> {
-        self.find(hash, key).copied()
-    }
-
-    /// The table entry of `key`, whose hash is `hash`, to remove it.
-    fn find_mut(&mut self, hash: u64, key: &str) -> Option<OccupiedEntry<'_, usize>> {
+    /// The table entry of `key`, to remove it.
+    fn find_mut(&mut self, key: &str) -> Option<OccupiedEntry<'_, usize>> {
+        let hash = self.hash(key);
         self.index.find_entry(hash, has_key(&self.data, key)).ok()
     }
 
@@ -91,37 +103,43 @@ impl<V> OrderedMap<V> {
 
     /// The position of `key`.
     pub fn get_index_of(&self, key: &str) -> Option<usize> {
-        self.find_copied(self.hash(key), key)
+        self.find(key)
     }
 
-    /// Replace the value of `key` in its position, or add it last.
+    /// Add the key value pair to the map.
+    /// Replaces the value of `key` if it already exists.
     pub fn insert(&mut self, key: String, value: V) {
         let hash = self.hash(&key);
-        if let Some(&i) = self.find(hash, &key) {
-            self.data[i].value = Some(value);
-            return;
+        match self
+            .index
+            .entry(hash, has_key(&self.data, &key), hash_at(&self.data))
+        {
+            hash_table::Entry::Occupied(slot) => {
+                self.data[*slot.get()].value = Some(value);
+            }
+            hash_table::Entry::Vacant(slot) => {
+                slot.insert(self.data.len());
+                self.data.push(Entry {
+                    hash,
+                    key,
+                    value: Some(value),
+                });
+            }
         }
-        self.index
-            .insert_unique(hash, self.data.len(), hash_at(&self.data));
-        self.data.push(Entry {
-            hash,
-            key,
-            value: Some(value),
-        });
     }
 
     /// Remove `key`, and leave its position empty.
     pub fn remove(&mut self, key: &str) -> Option<V> {
-        let (i, _) = self.find_mut(self.hash(key), key)?.remove();
+        let (i, _) = self.find_mut(key)?.remove();
         self.data[i].value.take()
     }
 
-    /// Prune deleted entries in `data`
-    pub(super) fn prune_garbage(&mut self) -> bool {
+    /// Clear deleted entries in `data`
+    pub(super) fn clear_garbage(&mut self) -> bool {
         if self.data.len() - self.index.len() <= self.index.len() {
             return false;
         }
-        // prune
+        // clear the garbage
         self.data.retain(|entry| entry.value.is_some());
         // reduce allocated capacity if 4x larger than current number of stored items
         if self.data.capacity() > 4 * self.data.len().max(4) {
@@ -151,7 +169,7 @@ impl<V> OrderedMap<V> {
         self.data.into_iter().filter_map(|entry| entry.value)
     }
 
-    /// Remove every entry and return the values in order, keeping the allocations.
+    /// Remove every entry and consume the values in order.
     pub(super) fn drain(&mut self) -> impl Iterator<Item = (String, V)> {
         self.index.clear();
         self.data
@@ -159,13 +177,13 @@ impl<V> OrderedMap<V> {
             .filter_map(|entry| Some((entry.key, entry.value?)))
     }
 
-    /// Remove every entry, keeping the allocations.
+    /// Remove every entry. Does not reduce allocated capacity.
     pub(super) fn clear(&mut self) {
         self.index.clear();
         self.data.clear();
     }
 
-    /// The number of entries `data` holds without allocating.
+    /// The number of entries `data` can hold without re-allocating.
     pub(super) fn capacity(&self) -> usize {
         self.data.capacity()
     }
@@ -213,7 +231,7 @@ mod tests {
                 }
             }
             if seed.is_multiple_of(5) {
-                positions.prune_garbage();
+                positions.clear_garbage();
             }
             assert_eq!(positions.len(), reference.len());
             assert!(
