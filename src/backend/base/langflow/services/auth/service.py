@@ -59,7 +59,7 @@ from langflow.services.auth.user_admission import admit_user_creation
 from langflow.services.creation_hooks import (
     ERROR_CODE_TIER_LIMIT_REACHED,
     PreCreationDenied,
-    http_denial_error_code,
+    is_tier_limit_http_denial,
     pre_creation_denied_to_http,
 )
 from langflow.services.database.models.api_key.crud import authenticate_api_key
@@ -1056,7 +1056,7 @@ class AuthService(BaseAuthService):
             # denial here rather than at a FastAPI route boundary. Roll back the
             # request transaction before letting the response reach auth.
             await db.rollback()
-            if http_denial_error_code(denied) != ERROR_CODE_TIER_LIMIT_REACHED:
+            if not is_tier_limit_http_denial(denied):
                 raise
             profile = (await db.exec(profile_stmt)).first()
             if profile is not None:
@@ -1572,7 +1572,7 @@ class AuthService(BaseAuthService):
                 raise pre_creation_denied_to_http(denied) from denied
             except HTTPException as denied:
                 await db.rollback()
-                if http_denial_error_code(denied) != ERROR_CODE_TIER_LIMIT_REACHED:
+                if not is_tier_limit_http_denial(denied):
                     raise
                 if committed_user := await recover_committed_superuser():
                     return committed_user

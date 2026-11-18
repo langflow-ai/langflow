@@ -306,6 +306,39 @@ async def test_user_activation_validates_and_stages_in_transaction_order(monkeyp
 
 
 @pytest.mark.asyncio
+async def test_inactive_native_token_cannot_reactivate_itself_after_lock_refresh(monkeypatch):
+    from langflow.api.v1 import users
+    from langflow.services.database.models.user.model import UserUpdate
+
+    actor = SimpleNamespace(id=uuid4(), is_active=True, is_superuser=True)
+    target = SimpleNamespace(
+        id=actor.id,
+        is_active=True,
+        is_superuser=True,
+    )
+    session = AsyncMock()
+
+    async def refresh(row):
+        row.is_active = False
+
+    session.refresh.side_effect = refresh
+    monkeypatch.setattr(users, "get_user_by_id", AsyncMock(return_value=target))
+    monkeypatch.setattr(users, "audit_decision", AsyncMock())
+
+    with pytest.raises(HTTPException, match="User account is inactive") as exc_info:
+        await users.patch_user(
+            user_id=actor.id,
+            user_update=UserUpdate(is_active=True),
+            user=actor,
+            session=session,
+        )
+
+    assert exc_info.value.status_code == 403
+    session.refresh.assert_awaited_once_with(target)
+    session.commit.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_ordinary_user_patch_stages_audit_without_password_or_values(monkeypatch):
     from langflow.api.v1 import users
     from langflow.services.authorization.audit import AUDIT_EVENT_MUTATION

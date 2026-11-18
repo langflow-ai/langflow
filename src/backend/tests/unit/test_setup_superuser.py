@@ -523,6 +523,32 @@ async def test_create_super_user_preserves_arbitrary_http_denial(auth_service: A
 
 
 @pytest.mark.asyncio
+async def test_create_super_user_preserves_canonical_capacity_code_on_http_429(auth_service: AuthService):
+    """A non-403 capacity response is still the original denial, not recovery success."""
+    denial = HTTPException(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        detail={"error_code": "tier_limit_reached", "message": "capacity reached"},
+        headers={ERROR_CODE_HEADER: "tier_limit_reached"},
+    )
+    session = AsyncMock()
+    lookup = AsyncMock(side_effect=[None])
+
+    with (
+        patch("langflow.services.auth.service.get_user_by_username", new=lookup),
+        patch("langflow.services.auth.service.admit_user_creation", new=AsyncMock(side_effect=denial)),
+        pytest.raises(HTTPException) as exc_info,
+    ):
+        await auth_service.create_super_user("admin", "password", session)
+
+    assert exc_info.value is denial
+    assert exc_info.value.status_code == status.HTTP_429_TOO_MANY_REQUESTS
+    lookup.assert_awaited_once()
+    session.rollback.assert_awaited_once()
+    session.add.assert_not_called()
+    session.commit.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_create_super_user_preserves_denial_for_committed_non_superuser(auth_service: AuthService):
     """A same-name regular user cannot be returned as a configured superuser."""
     original_digest = "existing-hash"

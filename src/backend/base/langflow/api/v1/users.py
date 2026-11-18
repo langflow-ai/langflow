@@ -517,6 +517,22 @@ async def patch_user(
         )
 
     if user_db := await get_user_by_id(session, user_id):
+        # Authentication and the route share a session, so the target lookup
+        # may return the caller's identity-mapped object from before the
+        # lifecycle lock. Refresh it before deciding whether self-reactivation
+        # is allowed or which lifecycle mutation is actually being requested.
+        await session.refresh(user_db)
+        if user.id == user_id and not user_db.is_active:
+            await _audit_deny(
+                user_id=user.id,
+                action="user:update",
+                obj=f"user:{user_id}",
+                status_code=403,
+                reason="inactive_self_reactivation_forbidden",
+                operation_id=operation_id,
+                fields_changed=["is_active"],
+            )
+            raise HTTPException(status_code=403, detail="User account is inactive")
         if user_db.is_superuser and not user.is_superuser and user.id != user_id:
             await _audit_deny(
                 user_id=user.id,

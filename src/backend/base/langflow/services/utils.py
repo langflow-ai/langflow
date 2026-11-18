@@ -259,6 +259,16 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
             is_default=is_default,
             rotate_legacy_default_password=True,
         )
+        # ``create_super_user`` may have rolled back a tier/case-insensitive
+        # race before returning the committed winner. If that rollback restored
+        # an old, owned default account, re-apply its retirement in this
+        # transaction. Do not run this for a newly created configured default:
+        # it has no prior retirement to recover and could otherwise be deleted
+        # before its first piece of work is attached.
+        if user is not None and username.lower() != DEFAULT_SUPERUSER.lower():
+            default_superuser = await _get_superuser_by_username(session, DEFAULT_SUPERUSER)
+            if default_superuser is not None and default_superuser.is_active:
+                await teardown_superuser(settings_service, session)
         configured_superuser = user or await _get_superuser_by_username(session, username)
         if configured_superuser is not None:
             settings_service.auth_settings.SUPERUSER = configured_superuser.username

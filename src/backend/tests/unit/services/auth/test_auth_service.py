@@ -1681,7 +1681,11 @@ async def test_materialize_external_user_preserves_arbitrary_http_admission_deni
         {"sub": "permission-denied-subject", "preferred_username": "permission-denied"},
         auth_settings,
     )
-    denial = HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="permission denied")
+    denial = HTTPException(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        detail={"error_code": "tier_limit_reached", "message": "capacity reached"},
+        headers={"X-Langflow-Error-Code": "tier_limit_reached"},
+    )
     db = AsyncMock()
     db.exec = AsyncMock(side_effect=[SimpleNamespace(first=lambda: None)])
     get_user = AsyncMock()
@@ -1695,6 +1699,7 @@ async def test_materialize_external_user_preserves_arbitrary_http_admission_deni
         await auth_service._materialize_external_user(identity, db)
 
     assert exc_info.value is denial
+    assert exc_info.value.status_code == status.HTTP_429_TOO_MANY_REQUESTS
     db.rollback.assert_awaited_once()
     assert db.exec.await_count == 1
     get_user.assert_not_awaited()

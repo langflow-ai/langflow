@@ -932,6 +932,42 @@ async def test_configured_default_superuser_is_claimed_with_its_data(services_on
 
 @pytest.mark.asyncio
 @pytest.mark.timeout(60)
+async def test_setup_retires_default_again_after_recovered_creator_rollback(services_on, monkeypatch):  # noqa: ARG001
+    """A creator recovery rollback must not discard retirement of the old default account."""
+    settings = get_settings_service()
+    monkeypatch.setattr(settings.auth_settings, "SUPERUSER", "configured-admin")
+    monkeypatch.setattr(settings.auth_settings, "SUPERUSER_PASSWORD", SecretStr("configured-password"))
+
+    default_id = await _default_superuser_owning_work()
+    async with session_scope() as session:
+        winner = User(
+            username="configured-admin",
+            password=get_auth_service().get_password_hash("winner-password"),
+            is_superuser=True,
+            is_active=True,
+        )
+        session.add(winner)
+        await session.commit()
+        winner_id = winner.id
+
+    async def recover_after_rollback(*, session, **_kwargs):
+        await session.rollback()
+        return await session.get(User, winner_id)
+
+    monkeypatch.setattr("langflow.services.utils.get_or_create_super_user", recover_after_rollback)
+
+    async with session_scope() as session:
+        assert await setup_superuser(settings, session) == SetupSuperuserResult.SUPERUSER_CREATED
+
+    retired = await _default_superuser()
+    assert retired is not None
+    assert retired.id == default_id
+    assert retired.is_active is False
+    assert retired.retired_at is not None
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(60)
 async def test_default_superuser_that_owns_nothing_is_still_removed(services_on):  # noqa: ARG001
     await _default_superuser_owning_work(owns_work=False)
 
