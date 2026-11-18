@@ -6,12 +6,14 @@ from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
     from lfx.components.utilities.calculator_core import CalculatorComponent
+    from lfx.components.utilities.context_formatter import ContextFormatterComponent
     from lfx.components.utilities.current_date import CurrentDateComponent
     from lfx.components.utilities.id_generator import IDGeneratorComponent
     from lfx.components.utilities.python_repl_core import PythonREPLComponent
 
 _dynamic_imports = {
     "CalculatorComponent": "calculator_core",
+    "ContextFormatterComponent": "context_formatter",
     "CurrentDateComponent": "current_date",
     "IDGeneratorComponent": "id_generator",
     "PythonREPLComponent": "python_repl_core",
@@ -19,6 +21,7 @@ _dynamic_imports = {
 
 __all__ = [
     "CalculatorComponent",
+    "ContextFormatterComponent",
     "CurrentDateComponent",
     "IDGeneratorComponent",
     "PythonREPLComponent",

@@ -1,0 +1,14 @@
+{
+  "120b": {
+    "source_sha256": "edd26ec31d9004fc777c5a445d91135c130ed3c05f8a68ccd2a6b8f3b3310b48",
+    "attempts": 40
+  },
+  "20b": {
+    "source_sha256": "f2b02b679ab0a68fe5c90797a2da89b30b8b5ec954aff36e6d54b8c1cbb9c515",
+    "attempts": 40
+  },
+  "20b-formatting": {
+    "source_sha256": "9f72458baca68dcd3d52f9dc30d059327d5577fccf0679964de915f083f4f97e",
+    "attempts": 20
+  }
+}
