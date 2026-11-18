@@ -689,6 +689,47 @@ async def _default_superuser():
 
 
 @pytest.mark.asyncio
+async def test_bootstrap_keeps_default_retirement_when_admission_recovers_a_superuser(services_on, monkeypatch):  # noqa: ARG001
+    from langflow.services import utils
+    from langflow.services.creation_hooks import PreCreationDenied
+    from langflow.services.database.models.user import crud
+
+    await _default_superuser_owning_work()
+    settings = get_settings_service()
+    settings.auth_settings.SUPERUSER = "ADMIN"
+    settings.auth_settings.SUPERUSER_PASSWORD = SecretStr(token_urlsafe(24))
+    lookup = crud.get_user_by_username_case_insensitive
+
+    async def lookup_before_creation(session, username):
+        if username == "ADMIN":
+            return None
+        return await lookup(session, username)
+
+    lock = AsyncMock(wraps=utils.acquire_identity_mutation_lock)
+
+    async def retire(settings_service, session):
+        lock.assert_awaited_once()
+        await teardown_superuser(settings_service, session)
+
+    monkeypatch.setattr(crud, "get_user_by_username_case_insensitive", lookup_before_creation)
+    monkeypatch.setattr(utils, "acquire_identity_mutation_lock", lock)
+    monkeypatch.setattr(utils, "teardown_superuser", retire)
+    monkeypatch.setattr(
+        "langflow.services.auth.service.admit_user_creation",
+        AsyncMock(side_effect=PreCreationDenied("User limit reached")),
+    )
+
+    async with session_scope() as session:
+        assert await setup_superuser(settings, session) == SetupSuperuserResult.SUPERUSER_CREATED
+
+    retired = await _default_superuser()
+    assert retired is not None
+    assert retired.is_active is False
+    assert retired.retired_at is not None
+    assert settings.auth_settings.SUPERUSER == "admin"
+
+
+@pytest.mark.asyncio
 @pytest.mark.timeout(60)
 async def test_default_superuser_that_owns_work_is_kept_and_locked(services_on):  # noqa: ARG001
     """Another superuser is configured, so the old account keeps its data and loses its default password."""

@@ -1710,7 +1710,7 @@ async def test_materialize_external_user_preserves_arbitrary_http_admission_deni
 async def test_create_super_user_uses_active_user_admission(auth_service: AuthService):
     """Additional CLI superuser creation must use the shared active-user seam."""
     admission = AsyncMock()
-    session = AsyncMock()
+    session = AsyncMock(spec=AsyncSession)
 
     with (
         patch("langflow.services.auth.service.get_user_by_username", new=AsyncMock(return_value=None)),
@@ -1729,7 +1729,7 @@ async def test_create_super_user_reraises_unexpected_admission_failure(auth_serv
     """An unexpected admission failure must not return an unpersisted superuser."""
     admission_failure = RuntimeError("identity lock unavailable")
     admission = AsyncMock(side_effect=admission_failure)
-    session = AsyncMock()
+    session = AsyncMock(spec=AsyncSession)
 
     with (
         patch("langflow.services.auth.service.get_user_by_username", new=AsyncMock(return_value=None)),
@@ -1738,7 +1738,8 @@ async def test_create_super_user_reraises_unexpected_admission_failure(auth_serv
     ):
         await auth_service.create_super_user("new-admin", "not-a-real-password", session)
 
-    session.rollback.assert_awaited_once()
+    session.begin_nested.return_value.__aexit__.assert_awaited_once()
+    session.rollback.assert_not_awaited()
     session.add.assert_not_called()
     session.commit.assert_not_awaited()
 

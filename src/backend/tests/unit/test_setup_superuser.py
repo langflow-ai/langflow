@@ -12,6 +12,7 @@ from lfx.services.settings.constants import (
     DEFAULT_SUPERUSER_PASSWORD,
 )
 from sqlalchemy.exc import IntegrityError
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 
 @pytest.fixture
@@ -148,7 +149,7 @@ async def test_teardown_superuser_no_default_superuser():
 async def test_create_super_user_race_condition(auth_service: AuthService):
     """Test create_super_user handles race conditions gracefully when multiple workers try to create the same user."""
     # Mock the database session
-    mock_session = AsyncMock()
+    mock_session = AsyncMock(spec=AsyncSession)
     mock_session.add = MagicMock()
 
     # Create a mock user that will be "created" by the first worker
@@ -161,13 +162,13 @@ async def test_create_super_user_race_condition(auth_service: AuthService):
 
     # Set up the race condition scenario:
     # 1. First call to get_user_by_username returns None (user doesn't exist)
-    # 2. commit() raises IntegrityError (simulating race condition)
+    # 2. flush() raises IntegrityError (simulating race condition)
     # 3. After rollback, the case-insensitive lookup returns the existing user
     mock_get_user_by_username = AsyncMock()
     mock_get_user_by_username.return_value = None
     mock_get_user_by_username_case_insensitive = AsyncMock(return_value=mock_user)
 
-    mock_session.commit.side_effect = IntegrityError("statement", "params", Exception("orig"))
+    mock_session.flush.side_effect = IntegrityError("statement", "params", Exception("orig"))
     with (
         patch("langflow.services.auth.service.get_user_by_username", mock_get_user_by_username),
         patch(
@@ -185,8 +186,9 @@ async def test_create_super_user_race_condition(auth_service: AuthService):
     # Verify that the function handled the race condition correctly
     assert result == mock_user
     assert mock_session.add.call_count == 1  # User was added to session
-    assert mock_session.commit.call_count == 1  # Commit was attempted once (and failed)
-    assert mock_session.rollback.call_count == 1  # Session was rolled back after IntegrityError
+    mock_session.flush.assert_awaited_once()
+    mock_session.commit.assert_not_awaited()
+    mock_session.rollback.assert_not_awaited()
     assert mock_get_user_by_username.call_count == 1  # Initial exact lookup
     assert mock_get_user_by_username_case_insensitive.call_count == 1  # Case-insensitive recovery lookup
 
@@ -194,12 +196,12 @@ async def test_create_super_user_race_condition(auth_service: AuthService):
 @pytest.mark.asyncio
 async def test_create_super_user_integrity_error_recovers_case_variant_superuser(auth_service: AuthService):
     """A case-insensitive unique-index race returns the committed superuser."""
-    mock_session = AsyncMock()
+    mock_session = AsyncMock(spec=AsyncSession)
     mock_session.add = MagicMock()
     winner_digest = "winner-hash"
     mock_user = User(username="admin", password=winner_digest, is_active=True, is_superuser=True)
     integrity_error = IntegrityError("statement", "params", Exception("orig"))
-    mock_session.commit.side_effect = integrity_error
+    mock_session.flush.side_effect = integrity_error
     exact_lookup = AsyncMock(return_value=None)
     case_insensitive_lookup = AsyncMock(return_value=mock_user)
 
@@ -217,18 +219,18 @@ async def test_create_super_user_integrity_error_recovers_case_variant_superuser
     assert result.is_active is True
     exact_lookup.assert_awaited_once_with(mock_session, "ADMIN")
     case_insensitive_lookup.assert_awaited_once_with(mock_session, "ADMIN")
-    mock_session.rollback.assert_awaited_once()
+    mock_session.rollback.assert_not_awaited()
 
 
 @pytest.mark.asyncio
 async def test_create_super_user_integrity_error_preserves_regular_account_denial(auth_service: AuthService):
     """A case-insensitive unique-index race never returns a regular account as a superuser."""
-    mock_session = AsyncMock()
+    mock_session = AsyncMock(spec=AsyncSession)
     mock_session.add = MagicMock()
     regular_digest = "regular-hash"
     regular_user = User(username="admin", password=regular_digest, is_active=True, is_superuser=False)
     integrity_error = IntegrityError("statement", "params", Exception("orig"))
-    mock_session.commit.side_effect = integrity_error
+    mock_session.flush.side_effect = integrity_error
     exact_lookup = AsyncMock(return_value=None)
     case_insensitive_lookup = AsyncMock(return_value=regular_user)
 
@@ -245,14 +247,14 @@ async def test_create_super_user_integrity_error_preserves_regular_account_denia
     assert regular_user.password == regular_digest
     exact_lookup.assert_awaited_once_with(mock_session, "ADMIN")
     case_insensitive_lookup.assert_awaited_once_with(mock_session, "ADMIN")
-    mock_session.rollback.assert_awaited_once()
+    mock_session.rollback.assert_not_awaited()
 
 
 @pytest.mark.asyncio
 async def test_create_super_user_race_condition_no_user_found(auth_service: AuthService):
     """Test that create_super_user re-raises exception if no user is found after IntegrityError."""
     # Mock the database session
-    mock_session = AsyncMock()
+    mock_session = AsyncMock(spec=AsyncSession)
     mock_session.add = MagicMock()
 
     # Mock both lookups to return None (even after rollback)
@@ -266,7 +268,7 @@ async def test_create_super_user_race_condition_no_user_found(auth_service: Auth
 
     # Set up scenario where IntegrityError occurs but no user is found afterward
     integrity_error = IntegrityError("statement", "params", Exception("orig"))
-    mock_session.commit.side_effect = integrity_error
+    mock_session.flush.side_effect = integrity_error
 
     with (
         patch("langflow.services.auth.service.get_user_by_username", mock_get_user_by_username),
@@ -280,8 +282,8 @@ async def test_create_super_user_race_condition_no_user_found(auth_service: Auth
     ):
         await auth_service.create_super_user("testuser", "password", mock_session)
 
-    # Verify rollback was called but exception was re-raised
-    assert mock_session.rollback.call_count == 1
+    # Verify the savepoint rollback leaves the caller transaction available
+    mock_session.rollback.assert_not_awaited()
     assert mock_get_user_by_username.call_count == 1
     assert mock_get_user_by_username_case_insensitive.call_count == 1
 
@@ -292,8 +294,8 @@ async def test_create_super_user_concurrent_workers(auth_service: AuthService):
     # This would require a real database to properly test, but we can simulate
     # the behavior with mocks to verify the logic works correctly
 
-    mock_session1 = AsyncMock()
-    mock_session2 = AsyncMock()
+    mock_session1 = AsyncMock(spec=AsyncSession)
+    mock_session2 = AsyncMock(spec=AsyncSession)
     mock_session1.add = MagicMock()
     mock_session2.add = MagicMock()
 
@@ -307,7 +309,7 @@ async def test_create_super_user_concurrent_workers(auth_service: AuthService):
 
     # Worker 1 succeeds, Worker 2 gets IntegrityError then finds existing user
     mock_session1.commit.return_value = None  # Success
-    mock_session2.commit.side_effect = IntegrityError("statement", "params", Exception("orig"))  # Race condition
+    mock_session2.flush.side_effect = IntegrityError("statement", "params", Exception("orig"))  # Race condition
 
     with (
         patch("langflow.services.auth.service.get_user_by_username", mock_get_user_by_username),
@@ -327,8 +329,8 @@ async def test_create_super_user_concurrent_workers(auth_service: AuthService):
     assert result1 is not None
     assert result2 == mock_user
 
-    # Worker 2 should have rolled back and fetched existing user
-    assert mock_session2.rollback.call_count == 1
+    # Worker 2 rolls back its savepoint and fetches the existing user
+    mock_session2.rollback.assert_not_awaited()
     assert mock_get_user_by_username_case_insensitive.await_count == 1
 
 
@@ -346,7 +348,7 @@ async def test_create_super_user_recovers_committed_superuser_after_pre_creation
         "Your plan includes 1 builder.",
         details={"resource": "builders", "limit": 1, "current": 1, "tier": "essentials"},
     )
-    session = AsyncMock()
+    session = AsyncMock(spec=AsyncSession)
     exact_lookup = AsyncMock(return_value=None)
     case_insensitive_lookup = AsyncMock(return_value=existing_user)
 
@@ -363,7 +365,7 @@ async def test_create_super_user_recovers_committed_superuser_after_pre_creation
     assert result.is_active is True
     exact_lookup.assert_awaited_once_with(session, "ADMIN")
     case_insensitive_lookup.assert_awaited_once_with(session, "ADMIN")
-    session.rollback.assert_awaited_once()
+    session.rollback.assert_not_awaited()
     session.add.assert_not_called()
     session.commit.assert_not_awaited()
 
@@ -413,7 +415,7 @@ async def test_create_super_user_preserves_non_capacity_denial_with_committed_su
         error_code=ERROR_CODE_FEATURE_NOT_IN_TIER,
         details={"feature": "configured_superuser", "tier": "essentials"},
     )
-    session = AsyncMock()
+    session = AsyncMock(spec=AsyncSession)
     exact_lookup = AsyncMock(return_value=None)
     case_insensitive_lookup = AsyncMock(return_value=existing_user)
 
@@ -430,7 +432,7 @@ async def test_create_super_user_preserves_non_capacity_denial_with_committed_su
     assert exc_info.value.headers == {ERROR_CODE_HEADER: ERROR_CODE_FEATURE_NOT_IN_TIER}
     exact_lookup.assert_awaited_once_with(session, "ADMIN")
     case_insensitive_lookup.assert_not_awaited()
-    session.rollback.assert_awaited_once()
+    session.rollback.assert_not_awaited()
     session.add.assert_not_called()
     session.commit.assert_not_awaited()
 
@@ -450,7 +452,7 @@ async def test_create_super_user_recovers_committed_superuser_after_canonical_ht
         detail={"error_code": "tier_limit_reached", "message": "capacity reached"},
         headers={ERROR_CODE_HEADER: "tier_limit_reached"},
     )
-    session = AsyncMock()
+    session = AsyncMock(spec=AsyncSession)
     exact_lookup = AsyncMock(return_value=None)
     case_insensitive_lookup = AsyncMock(return_value=existing_user)
 
@@ -467,7 +469,7 @@ async def test_create_super_user_recovers_committed_superuser_after_canonical_ht
     assert result.is_active is True
     exact_lookup.assert_awaited_once_with(session, "admin")
     case_insensitive_lookup.assert_awaited_once_with(session, "admin")
-    session.rollback.assert_awaited_once()
+    session.rollback.assert_not_awaited()
     session.add.assert_not_called()
     session.commit.assert_not_awaited()
 
@@ -479,7 +481,7 @@ async def test_create_super_user_preserves_denial_when_no_user_committed(auth_se
         "Your plan includes 1 builder.",
         details={"resource": "builders", "limit": 1, "current": 1, "tier": "essentials"},
     )
-    session = AsyncMock()
+    session = AsyncMock(spec=AsyncSession)
     exact_lookup = AsyncMock(return_value=None)
     case_insensitive_lookup = AsyncMock(return_value=None)
 
@@ -496,7 +498,7 @@ async def test_create_super_user_preserves_denial_when_no_user_committed(auth_se
     assert exc_info.value.headers == {ERROR_CODE_HEADER: "tier_limit_reached"}
     exact_lookup.assert_awaited_once_with(session, "admin")
     case_insensitive_lookup.assert_awaited_once_with(session, "admin")
-    session.rollback.assert_awaited_once()
+    session.rollback.assert_not_awaited()
     session.add.assert_not_called()
     session.commit.assert_not_awaited()
 
@@ -505,7 +507,7 @@ async def test_create_super_user_preserves_denial_when_no_user_committed(auth_se
 async def test_create_super_user_preserves_arbitrary_http_denial(auth_service: AuthService):
     """An unrelated HTTP denial is not converted into an existing-user success."""
     denial = HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="permission denied")
-    session = AsyncMock()
+    session = AsyncMock(spec=AsyncSession)
     lookup = AsyncMock(side_effect=[None])
 
     with (
@@ -517,7 +519,7 @@ async def test_create_super_user_preserves_arbitrary_http_denial(auth_service: A
 
     assert exc_info.value is denial
     lookup.assert_awaited_once()
-    session.rollback.assert_awaited_once()
+    session.rollback.assert_not_awaited()
     session.add.assert_not_called()
     session.commit.assert_not_awaited()
 
@@ -530,7 +532,7 @@ async def test_create_super_user_preserves_canonical_capacity_code_on_http_429(a
         detail={"error_code": "tier_limit_reached", "message": "capacity reached"},
         headers={ERROR_CODE_HEADER: "tier_limit_reached"},
     )
-    session = AsyncMock()
+    session = AsyncMock(spec=AsyncSession)
     lookup = AsyncMock(side_effect=[None])
 
     with (
@@ -543,7 +545,7 @@ async def test_create_super_user_preserves_canonical_capacity_code_on_http_429(a
     assert exc_info.value is denial
     assert exc_info.value.status_code == status.HTTP_429_TOO_MANY_REQUESTS
     lookup.assert_awaited_once()
-    session.rollback.assert_awaited_once()
+    session.rollback.assert_not_awaited()
     session.add.assert_not_called()
     session.commit.assert_not_awaited()
 
@@ -559,7 +561,7 @@ async def test_create_super_user_preserves_denial_for_committed_non_superuser(au
         is_active=True,
     )
     denial = PreCreationDenied("capacity reached", details={"resource": "builders"})
-    session = AsyncMock()
+    session = AsyncMock(spec=AsyncSession)
     exact_lookup = AsyncMock(return_value=None)
     case_insensitive_lookup = AsyncMock(return_value=existing_user)
 
@@ -576,7 +578,7 @@ async def test_create_super_user_preserves_denial_for_committed_non_superuser(au
     assert existing_user.password == original_digest
     exact_lookup.assert_awaited_once_with(session, "admin")
     case_insensitive_lookup.assert_awaited_once_with(session, "admin")
-    session.rollback.assert_awaited_once()
+    session.rollback.assert_not_awaited()
     session.add.assert_not_called()
     session.commit.assert_not_awaited()
 
@@ -591,7 +593,7 @@ async def test_create_super_user_restart_is_idempotent_after_recovered_race(auth
         is_superuser=True,
         is_active=True,
     )
-    session = AsyncMock()
+    session = AsyncMock(spec=AsyncSession)
     lookup = AsyncMock(return_value=existing_user)
 
     with patch("langflow.services.auth.service.get_user_by_username", new=lookup):

@@ -185,7 +185,7 @@ async def test_user_disable_validates_and_stages_in_transaction_order(monkeypatc
 
     events: list[str] = []
     service = _LifecycleService(events)
-    actor = SimpleNamespace(id=uuid4(), is_superuser=True)
+    actor = SimpleNamespace(id=uuid4(), is_active=True, is_superuser=True)
     target = SimpleNamespace(
         id=uuid4(),
         is_active=True,
@@ -193,6 +193,7 @@ async def test_user_disable_validates_and_stages_in_transaction_order(monkeypatc
         password="hashed",  # noqa: S106  # pragma: allowlist secret
     )
     session = AsyncMock()
+    session.get.return_value = actor
 
     async def update_user(_target, _update, _session):
         events.append("mutate")
@@ -257,7 +258,7 @@ async def test_user_activation_validates_and_stages_in_transaction_order(monkeyp
 
     events: list[str] = []
     service = _LifecycleService(events)
-    actor = SimpleNamespace(id=uuid4(), is_superuser=True)
+    actor = SimpleNamespace(id=uuid4(), is_active=True, is_superuser=True)
     target = SimpleNamespace(
         id=uuid4(),
         is_active=False,
@@ -265,6 +266,7 @@ async def test_user_activation_validates_and_stages_in_transaction_order(monkeyp
         password="hashed",  # noqa: S106  # pragma: allowlist secret
     )
     session = AsyncMock()
+    session.get.return_value = actor
 
     async def update_user(_target, _update, _session):
         events.append("mutate")
@@ -317,6 +319,7 @@ async def test_inactive_native_token_cannot_reactivate_itself_after_lock_refresh
         is_superuser=True,
     )
     session = AsyncMock()
+    session.get.return_value = actor
 
     async def refresh(row):
         row.is_active = False
@@ -572,8 +575,9 @@ async def test_user_patch_business_denial_emits_access_audit(monkeypatch):
     from langflow.services.authorization.audit import AUDIT_EVENT_ACCESS
     from langflow.services.database.models.user.model import UserUpdate
 
-    actor = SimpleNamespace(id=uuid4(), is_superuser=True)
+    actor = SimpleNamespace(id=uuid4(), is_active=True, is_superuser=True)
     session = AsyncMock()
+    session.get.return_value = actor
     audit_calls = []
 
     async def audit(**kwargs):
@@ -650,7 +654,7 @@ async def test_user_patch_lock_kind_is_advisory_before_state_read(monkeypatch):
 
     events: list[str] = []
     service = _LifecycleService(events)
-    actor = SimpleNamespace(id=uuid4(), is_superuser=True)
+    actor = SimpleNamespace(id=uuid4(), is_active=True, is_superuser=True)
     target = SimpleNamespace(
         id=uuid4(),
         is_active=False,
@@ -658,6 +662,7 @@ async def test_user_patch_lock_kind_is_advisory_before_state_read(monkeypatch):
         password="hashed",  # noqa: S106  # pragma: allowlist secret
     )
     session = AsyncMock()
+    session.get.return_value = actor
 
     async def update_user(_target, _update, _session):
         events.append("mutate")
@@ -712,7 +717,7 @@ async def test_combined_activation_and_demotion_rejection_prevents_mutation(monk
 
     events: list[str] = []
     service = _LifecycleService(events)
-    actor = SimpleNamespace(id=uuid4(), is_superuser=True)
+    actor = SimpleNamespace(id=uuid4(), is_active=True, is_superuser=True)
     target = SimpleNamespace(
         id=uuid4(),
         is_active=False,
@@ -720,6 +725,7 @@ async def test_combined_activation_and_demotion_rejection_prevents_mutation(monk
         password="hashed",  # noqa: S106  # pragma: allowlist secret
     )
     session = AsyncMock()
+    session.get.return_value = actor
     update_user = AsyncMock()
 
     async def reject_demotion(*, session, mutation):  # noqa: ARG001
@@ -761,7 +767,7 @@ async def test_user_lifecycle_stage_failure_prevents_commit(monkeypatch):
 
     events: list[str] = []
     service = _LifecycleService(events, fail_stage=True)
-    actor = SimpleNamespace(id=uuid4(), is_superuser=True)
+    actor = SimpleNamespace(id=uuid4(), is_active=True, is_superuser=True)
     target = SimpleNamespace(
         id=uuid4(),
         is_active=True,
@@ -769,6 +775,7 @@ async def test_user_lifecycle_stage_failure_prevents_commit(monkeypatch):
         password="hashed",  # noqa: S106  # pragma: allowlist secret
     )
     session = AsyncMock()
+    session.get.return_value = actor
 
     async def update_user(_target, _update, _session):
         events.append("mutate")
@@ -809,7 +816,7 @@ async def test_user_lifecycle_policy_rejection_is_409_without_mutation(
 
     events: list[str] = []
     service = _LifecycleService(events)
-    actor = SimpleNamespace(id=uuid4(), is_superuser=True)
+    actor = SimpleNamespace(id=uuid4(), is_active=True, is_superuser=True)
     target = SimpleNamespace(
         id=uuid4(),
         is_active=initial_active,
@@ -817,6 +824,7 @@ async def test_user_lifecycle_policy_rejection_is_409_without_mutation(
         password="hashed",  # noqa: S106  # pragma: allowlist secret
     )
     session = AsyncMock()
+    session.get.return_value = actor
     update = AsyncMock()
     audit = AsyncMock()
 

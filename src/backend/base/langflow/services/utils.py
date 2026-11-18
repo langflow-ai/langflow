@@ -9,6 +9,7 @@ from secrets import token_urlsafe
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
+from lfx.services.authorization import AuthorizationMutationKind
 from lfx.services.settings.constants import (
     DEFAULT_SUPERUSER,
     LEGACY_DEFAULT_SUPERUSER_PASSWORD,
@@ -18,6 +19,7 @@ from sqlalchemy import delete
 from sqlalchemy import exc as sqlalchemy_exc
 from sqlmodel import col, select
 
+from langflow.services.authorization.lifecycle import acquire_identity_mutation_lock
 from langflow.services.cache.base import ExternalAsyncBaseCacheService
 from langflow.services.cache.factory import CacheServiceFactory
 from langflow.services.database.models.transactions.model import TransactionTable
@@ -25,7 +27,14 @@ from langflow.services.database.models.vertex_builds.model import VertexBuildTab
 from langflow.services.database.utils import initialize_database
 from langflow.services.schema import ServiceType
 
-from .deps import get_auth_service, get_db_service, get_service, get_settings_service, session_scope
+from .deps import (
+    get_auth_service,
+    get_authorization_service,
+    get_db_service,
+    get_service,
+    get_settings_service,
+    session_scope,
+)
 
 if TYPE_CHECKING:
     from lfx.services.settings.manager import SettingsService
@@ -225,7 +234,10 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
             return SetupSuperuserResult.AUTO_LOGIN_LOCK_TIMEOUT_SUPERUSER_PRESENT
         finally:
             settings_service.auth_settings.reset_credentials()
-    # Remove the default superuser if it exists
+    # Retirement can flush before the configured account is looked up.
+    # Take the identity lock before either operation touches a user row.
+    authorization_service = get_authorization_service()
+    await acquire_identity_mutation_lock(authorization_service, session, kind=AuthorizationMutationKind.USER_CREATED)
     await teardown_superuser(settings_service, session)
     # If AUTO_LOGIN is disabled, require configured credentials.
     username = settings_service.auth_settings.SUPERUSER or DEFAULT_SUPERUSER
@@ -259,15 +271,14 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
             is_default=is_default,
             rotate_legacy_default_password=True,
         )
-        # ``create_super_user`` may have rolled back a tier/case-insensitive
-        # race before returning the committed winner. If that rollback restored
-        # an old, owned default account, re-apply its retirement in this
-        # transaction. Do not run this for a newly created configured default:
-        # it has no prior retirement to recover and could otherwise be deleted
-        # before its first piece of work is attached.
+        # An auth extension may roll back the caller transaction before returning
+        # the committed account. Retire a restored default account under the lock.
         if user is not None and username.lower() != DEFAULT_SUPERUSER.lower():
             default_superuser = await _get_superuser_by_username(session, DEFAULT_SUPERUSER)
             if default_superuser is not None and default_superuser.is_active:
+                await acquire_identity_mutation_lock(
+                    authorization_service, session, kind=AuthorizationMutationKind.USER_CREATED
+                )
                 await teardown_superuser(settings_service, session)
         configured_superuser = user or await _get_superuser_by_username(session, username)
         if configured_superuser is not None:

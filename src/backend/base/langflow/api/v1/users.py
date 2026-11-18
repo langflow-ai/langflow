@@ -499,13 +499,13 @@ async def patch_user(
         )
         user_update.password = get_auth_service().get_password_hash(user_update.password)
 
-    # Pre-read lock hint; canonical user state may produce a different staged kind.
+    # The lock hint selects the user lock even for promotion, which has no staged event.
     possible_lifecycle_kind: AuthorizationMutationKind | None = None
     if user_update.is_active is False:
         possible_lifecycle_kind = AuthorizationMutationKind.USER_DISABLED
     elif user_update.is_active is True:
         possible_lifecycle_kind = AuthorizationMutationKind.USER_ACTIVATED
-    elif user_update.is_superuser is False:
+    elif user_update.is_superuser is not None:
         possible_lifecycle_kind = AuthorizationMutationKind.USER_SUPERUSER_DEMOTED
     if possible_lifecycle_kind is not None:
         affected_user_ids = tuple(dict.fromkeys((user_id, user.id)))
@@ -518,39 +518,49 @@ async def patch_user(
         )
 
     if user_db := await get_user_by_id(session, user_id):
-        # Authentication and the route share a session, so the target lookup
-        # may return the caller's identity-mapped object from before the
-        # lifecycle lock. Refresh the target and, for cross-user mutations, the
-        # caller before deciding which lifecycle mutation is actually requested.
-        await session.refresh(user_db)
-        if user.id != user_db.id:
-            await session.refresh(user)
-        if user.id == user_id and not user_db.is_active:
-            await _audit_deny(
-                user_id=user.id,
-                action="user:update",
-                obj=f"user:{user_id}",
-                status_code=403,
-                reason="inactive_self_reactivation_forbidden",
-                operation_id=operation_id,
-                fields_changed=["is_active"],
-            )
-            raise HTTPException(status_code=403, detail="User account is inactive")
-        if not user.is_superuser and user_update.is_superuser:
-            await _audit_deny(
-                user_id=user.id,
-                action="user:update",
-                obj=f"user:{user_id}",
-                status_code=403,
-                reason="superuser_required",
-                operation_id=operation_id,
-                fields_changed=["is_superuser"],
-            )
-            raise HTTPException(
-                status_code=403,
-                detail="Only a superuser may promote or demote platform superusers",
-                headers=_SUPERUSER_REQUIRED_HEADERS,
-            )
+        if possible_lifecycle_kind is not None:
+            await session.refresh(user_db)
+            # API-key authentication returns a read model that cannot be refreshed.
+            actor_id = user.id
+            actor = user_db if actor_id == user_id else await session.get(User, actor_id, populate_existing=True)
+            if actor is None or not actor.is_active:
+                await _audit_deny(
+                    user_id=actor_id,
+                    action="user:update",
+                    obj=f"user:{user_id}",
+                    status_code=403,
+                    reason="inactive_user",
+                    operation_id=operation_id,
+                )
+                raise HTTPException(status_code=403, detail="User account is inactive")
+            user = actor
+            if not user.is_superuser and user_update.is_superuser:
+                await _audit_deny(
+                    user_id=user.id,
+                    action="user:update",
+                    obj=f"user:{user_id}",
+                    status_code=403,
+                    reason="superuser_required",
+                    operation_id=operation_id,
+                    fields_changed=["is_superuser"],
+                )
+                raise HTTPException(
+                    status_code=403,
+                    detail="Only a superuser may promote or demote platform superusers",
+                    headers=_SUPERUSER_REQUIRED_HEADERS,
+                )
+            if (actor_id != user_id or update_password) and not await is_administrator(
+                user, resource="user", authorization_service=authorization_service
+            ):
+                await _audit_deny(
+                    user_id=actor_id,
+                    action="user:update",
+                    obj=f"user:{user_id}",
+                    status_code=403,
+                    reason="administration_required",
+                    operation_id=operation_id,
+                )
+                raise administration_denied(_PERMISSION_DENIED, resource="user")
         if user_db.is_superuser and not user.is_superuser and user.id != user_id:
             await _audit_deny(
                 user_id=user.id,

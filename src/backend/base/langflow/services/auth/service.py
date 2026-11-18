@@ -1551,42 +1551,37 @@ class AuthService(BaseAuthService):
                 committed_user = await get_user_by_username_case_insensitive(db, username)
                 return committed_user if committed_user is not None and committed_user.is_superuser else None
 
-            try:
-                from langflow.services.creation_hooks import PreCreationDenied, pre_creation_denied_to_http
-                from langflow.services.deps import get_authorization_service
+            from langflow.services.deps import get_authorization_service
 
-                await admit_user_creation(
-                    db,
-                    authorization_service=get_authorization_service(),
-                    candidate=super_user,
-                )
-                db.add(super_user)
-                await db.commit()
-                await db.refresh(super_user)
+            try:
+                # Keep caller-owned writes and locks when a concurrent creation wins.
+                async with db.begin_nested():
+                    await admit_user_creation(
+                        db,
+                        authorization_service=get_authorization_service(),
+                        candidate=super_user,
+                    )
+                    db.add(super_user)
+                    await db.flush()
             except PreCreationDenied as denied:
-                await db.rollback()
                 if denied.error_code != ERROR_CODE_TIER_LIMIT_REACHED:
                     raise pre_creation_denied_to_http(denied) from denied
                 if committed_user := await recover_committed_superuser():
                     return committed_user
                 raise pre_creation_denied_to_http(denied) from denied
             except HTTPException as denied:
-                await db.rollback()
                 if not is_tier_limit_http_denial(denied):
                     raise
                 if committed_user := await recover_committed_superuser():
                     return committed_user
                 raise
             except IntegrityError:
-                await db.rollback()
                 if committed_user := await recover_committed_superuser():
-                    super_user = committed_user
-                else:
-                    raise
-            except Exception:
-                await db.rollback()
-                logger.debug("Error creating superuser.", exc_info=True)
+                    return committed_user
                 raise
+            else:
+                await db.commit()
+                await db.refresh(super_user)
 
         return super_user
 
