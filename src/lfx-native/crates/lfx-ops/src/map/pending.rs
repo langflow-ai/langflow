@@ -1,30 +1,31 @@
-//! [`PendingMap`]: a map whose batch changes stay pending until the batch commits.
-//!
-//! A batch that succeeds commits its pending changes to the stored map. A batch that
-//! fails drops it, so nothing is undone.
+//! [`PendingMap`]:
 
 use super::ordered::OrderedMap;
 
 /// The most pending changes a map keeps allocated between batches.
 pub(crate) const MAX_RETAINED_BATCH_ENTRIES: usize = 256;
 
-/// A map whose batch changes stay pending until the batch commits.
-///
-/// Reads look at the pending changes first. The first write to a stored value copies it
-/// into the pending changes. Values keep their order ([`OrderedMap`]).
+/// A map that stages every write to it.
+/// Such writes are "pending".
+/// Every read of a key
+/// first looks up any pending write to it,
+/// and if there isn't one, it falls back
+/// to the actual stored value.
 #[derive(Debug)]
 pub(crate) struct PendingMap<V> {
     pub(crate) stored: OrderedMap<V>,
-    /// What the batch wrote, by key. `None` is a removed stored value.
+    /// Stores writes
     pub(crate) layer: OrderedMap<Option<V>>,
 }
 
 impl<V: Clone> PendingMap<V> {
-    /// An empty map.
     pub fn new() -> Self {
-        Self::with_stored(OrderedMap::new())
+        Self {
+            stored: OrderedMap::new(),
+            layer: OrderedMap::new()
+        }
     }
-
+    /// Create a [`PendingMap`] which takes ownership of `stored`
     pub(crate) fn with_stored(stored: OrderedMap<V>) -> Self {
         Self {
             stored,
@@ -40,7 +41,7 @@ impl<V: Clone> PendingMap<V> {
         }
     }
 
-    /// Whether `key` has a value.
+    /// Whether `self` contains `key`
     pub fn contains(&self, key: &str) -> bool {
         self.get(key).is_some()
     }
