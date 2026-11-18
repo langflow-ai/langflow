@@ -275,3 +275,22 @@ async def test_remote_lock_contention_has_bounded_wait(remote_engine, monkeypatc
             await asyncio.create_task(contender())
         assert remote_engine.active == 1
     assert remote_engine.active == 0
+
+
+async def test_remote_lock_pool_checks_connections_before_use(monkeypatch):
+    """A Postgres failover ends the pooled backends; the lock pool must not hand one out."""
+    created = {}
+
+    def create_async_engine(_url, **kwargs):
+        created.update(kwargs)
+        return FakeAdvisoryEngine()
+
+    service = SimpleNamespace(database_url="postgresql+psycopg://test/coordination", _get_connect_args=dict)
+    monkeypatch.setattr(runtime, "get_db_service", lambda: service)
+    monkeypatch.setattr(runtime, "get_settings_service", lambda: SimpleNamespace(settings=SimpleNamespace()))
+    monkeypatch.setattr(runtime, "create_async_engine", create_async_engine)
+    monkeypatch.setattr(runtime, "_coordination_engines", {})
+
+    async with runtime._remote_lock(uuid4()):
+        pass
+    assert created["pool_pre_ping"] is True
