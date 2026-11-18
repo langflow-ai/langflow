@@ -40,7 +40,6 @@ const markdownEsmPackages = [
 module.exports = {
   preset: "ts-jest",
   testEnvironment: "jsdom",
-  // istanbul matches the Playwright coverage (vite-plugin-istanbul) and runs much faster than v8 here.
   coverageProvider: "babel",
   injectGlobals: true,
   moduleNameMapper: {
