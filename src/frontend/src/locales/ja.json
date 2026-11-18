@@ -1117,6 +1117,7 @@
   "humanInput.required": "人の入力が必要です",
   "humanInput.resumeFailed": "再開に失敗しました",
   "humanInput.runFailed": "ワークフローの実行に失敗しました",
+  "humanInput.sharedPlaygroundUnsupported": "このフローには人による判断が必要なため、共有 Playground では実行できません。このフローを実行できるアカウントでサインインしてください。",
   "humanInput.superseded": "新しい実行に置き換えられました",
   "humanInput.waitingFallback": "処理が一時停止しており、続行する前にあなたの決定を待っています。",
   "humanInput.waitingForInput": "人間の操作を待機中",

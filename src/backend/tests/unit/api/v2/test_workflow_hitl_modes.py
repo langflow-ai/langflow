@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from types import SimpleNamespace
 from uuid import UUID, uuid4
 
 import pytest
@@ -198,3 +199,45 @@ async def test_background_run_of_hitl_flow_still_suspends(client, created_api_ke
     job_id = response.json()["job_id"]
     assert await _wait_for_status(job_id, {JobStatus.SUSPENDED, JobStatus.FAILED}) == JobStatus.SUSPENDED
     assert await _branch_message_count() == before
+
+
+def _tool_flow(approval_actions: list[str]) -> dict:
+    template = {"tools_metadata": {"value": [{"name": "fetch_content", "approval_actions": approval_actions}]}}
+    return {"nodes": [{"id": "Tool", "data": {"id": "Tool", "type": "URLComponent", "node": {"template": template}}}]}
+
+
+@pytest.mark.parametrize("mode", ["sync", "stream"])
+def test_tweak_that_adds_tool_approval_is_refused(mode):
+    """Tweaks are applied before the run, so the guard must see the tweaked graph."""
+    from fastapi import HTTPException
+    from langflow.api.v2.workflow_validation import _reject_hitl_outside_background
+    from lfx.workflow.converters import ParsedWorkflowRun
+
+    stored = _tool_flow([])
+    parsed = ParsedWorkflowRun(
+        flow_id="flow",
+        mode=mode,
+        tweaks={"Tool": {"tools_metadata": [{"name": "fetch_content", "approval_actions": ["approve"]}]}},
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        _reject_hitl_outside_background(parsed, SimpleNamespace(data=stored))
+
+    assert exc_info.value.detail["code"] == "HITL_REQUIRES_BACKGROUND"
+    assert stored == _tool_flow([]), "the guard must not mutate the stored graph"
+
+
+def test_refused_tweak_still_raises_tweak_refused_error(monkeypatch):
+    from langflow.api.v2.workflow_validation import _reject_hitl_outside_background
+    from lfx.exceptions.tweaks import TweakRefusedError
+    from lfx.processing import process
+    from lfx.workflow.converters import ParsedWorkflowRun
+
+    def _refuse(*_args, **_kwargs):
+        raise TweakRefusedError(["tools_metadata"], reason="protected")
+
+    monkeypatch.setattr(process, "process_tweaks", _refuse)
+    parsed = ParsedWorkflowRun(flow_id="flow", mode="sync", tweaks={"Tool": {"tools_metadata": []}})
+
+    with pytest.raises(TweakRefusedError):
+        _reject_hitl_outside_background(parsed, SimpleNamespace(data=_tool_flow([])))

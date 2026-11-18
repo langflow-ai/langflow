@@ -1117,6 +1117,7 @@
   "humanInput.required": "需要人工干预",
   "humanInput.resumeFailed": "恢复操作失败",
   "humanInput.runFailed": "工作流运行失败",
+  "humanInput.sharedPlaygroundUnsupported": "此流程需要人工决策，无法在共享 Playground 中运行。请使用可以运行此流程的账户登录。",
   "humanInput.superseded": "已被新版本取代",
   "humanInput.waitingFallback": "流程已暂停，正在等待您的决定后再继续。",
   "humanInput.waitingForInput": "等待人工干预",

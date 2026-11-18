@@ -86,7 +86,15 @@ function handleRunMessageEvent(
   data: unknown,
   opts: RunFlowOptions,
 ): void {
-  const message = data as Partial<Message> | null;
+  let message = data as Partial<Message> | null;
+  if (
+    opts.messageFlowId &&
+    message &&
+    typeof message === "object" &&
+    "flow_id" in message
+  ) {
+    message = { ...message, flow_id: opts.messageFlowId };
+  }
   if (
     eventType === "add_message" &&
     message?.sender === "User" &&
@@ -96,7 +104,7 @@ function handleRunMessageEvent(
   ) {
     opts.onUserMessage?.(message as Message);
   }
-  handleMessageEvent(eventType, data);
+  handleMessageEvent(eventType, message);
 }
 
 /**

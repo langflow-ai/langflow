@@ -2732,6 +2732,7 @@
   "knowledge.chunksMetadataValueLabel": "Metadata filter value",
   "humanInput.required": "Human input required",
   "humanInput.runFailed": "Workflow run failed",
+  "humanInput.sharedPlaygroundUnsupported": "This flow needs a human decision and can't run in a shared Playground. Sign in with an account that can run this flow.",
   "humanInput.waitingForInput": "Waiting for Human Input",
   "humanInput.waitingFallback": "The flow has paused and is waiting for your decision before continuing.",
   "humanInput.cannotResumeMissingJobId": "Cannot resume: missing job id",

@@ -8,10 +8,12 @@ route handlers can surface a structured error without running the graph.
 
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import replace
 
 from fastapi import HTTPException, status
 from lfx.log.logger import logger
+from lfx.processing import process
 from lfx.utils.flow_validation import (
     CatalogPolicyIdentityUnavailableError,
     CustomComponentValidationError,
@@ -109,6 +111,10 @@ def _reject_hitl_outside_background(parsed: ParsedWorkflowRun, flow: FlowRead) -
     seam stays disarmed and every branch after the Human Input runs on an empty value.
     """
     graph_data = parsed.data if parsed.data is not None else getattr(flow, "data", None)
+    if parsed.tweaks and graph_data:
+        # The run applies tweaks before building, so a tweak can add an approval gate.
+        # A refused tweak raises TweakRefusedError here, as it would at run time.
+        graph_data = process.process_tweaks(deepcopy(graph_data), parsed.tweaks, stream=False)
     if not flow_requires_hitl(graph_data or {}):
         return
     raise HTTPException(

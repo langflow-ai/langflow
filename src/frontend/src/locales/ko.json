@@ -2732,6 +2732,7 @@
   "knowledge.chunksMetadataValueLabel": "메타데이터 필터 값",
   "humanInput.required": "사람의 입력이 필요합니다",
   "humanInput.runFailed": "Flow를 실행하지 못했습니다",
+  "humanInput.sharedPlaygroundUnsupported": "이 플로우는 사람의 결정이 필요하므로 공유 Playground에서 실행할 수 없습니다. 이 플로우를 실행할 수 있는 계정으로 로그인하세요.",
   "humanInput.waitingForInput": "사람의 입력을 기다리는 중",
   "humanInput.waitingFallback": "Flow가 일시 중지되었습니다. 어떻게 할지 선택하면 이어서 실행합니다.",
   "humanInput.cannotResumeMissingJobId": "작업 ID가 없어 이어서 실행할 수 없습니다",

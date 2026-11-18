@@ -1117,6 +1117,7 @@
   "humanInput.required": "Intervention humaine requise",
   "humanInput.resumeFailed": "Échec de la reprise",
   "humanInput.runFailed": "Échec de l'exécution du workflow",
+  "humanInput.sharedPlaygroundUnsupported": "Ce flow nécessite une décision humaine et ne peut pas s'exécuter dans un Playground partagé. Connectez-vous avec un compte autorisé à exécuter ce flow.",
   "humanInput.superseded": "Remplacé par une nouvelle série",
   "humanInput.waitingFallback": "Le processus s'est interrompu et attend votre décision avant de reprendre.",
   "humanInput.waitingForInput": "En attente d'une intervention humaine",
