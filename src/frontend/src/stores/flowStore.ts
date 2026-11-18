@@ -1664,4 +1664,11 @@ export function syncNoteTranslations(
   useFlowStore.setState({ nodes: updatedNodes });
 }
 
+// Playwright helpers flush autosave through this hook. Only dev and the Playwright CI build set it.
+if (import.meta.env.DEV || import.meta.env.PW_FRONTEND_BUILD) {
+  (
+    window as unknown as { __LANGFLOW_FLOW_STORE__?: typeof useFlowStore }
+  ).__LANGFLOW_FLOW_STORE__ = useFlowStore;
+}
+
 export default useFlowStore;
