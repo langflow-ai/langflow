@@ -107,6 +107,9 @@ class AGUITranslator:
         # again (``build_start``/``end_vertex`` for it), so a re-activation in a
         # loop can re-emit ``inactive`` later.
         self._inactivated_nodes: set[str] = set()
+        # RUN_ERROR is terminal in AG-UI: once emitted, every later event
+        # (the build loop's trailing ``end``, a cancel, a second error) is dropped.
+        self._errored = False
 
     def start(self) -> list[BaseEvent]:
         """Open the run.
@@ -122,6 +125,8 @@ class AGUITranslator:
 
     def translate(self, event_type: str, data: dict) -> list[BaseEvent]:
         """Map one ``EventManager`` event to zero or more AG-UI events."""
+        if self._errored:
+            return []
         if event_type == "token":
             return self._translate_token(data)
         if event_type == "vertices_sorted":
@@ -182,6 +187,7 @@ class AGUITranslator:
                     if code is None and isinstance(content.get("code"), str):
                         code = content["code"]
             events.append(RunErrorEvent(message="\n\n".join(parts), code=code))
+            self._errored = True
             return events
         return []
 
@@ -193,6 +199,8 @@ class AGUITranslator:
         ``RUN_FINISHED`` rather than ``RUN_ERROR``, which clients read as a
         genuine failure.
         """
+        if self._errored:
+            return []
         events = self._drain_messages()
         events.append(CustomEvent(name="langflow.run.cancelled", value={"reason": reason}))
         events.append(RunFinishedEvent(run_id=self.run_id, thread_id=self.thread_id))

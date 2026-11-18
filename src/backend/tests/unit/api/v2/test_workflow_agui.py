@@ -1074,6 +1074,42 @@ class TestAGUIStreaming:
         assert event_types.count(terminal_type) == 1
         assert event_types[-1] == terminal_type
 
+    async def test_agui_stream_ends_at_run_error_when_build_loop_also_ends(self, monkeypatch: pytest.MonkeyPatch):
+        """A failed build reports ``error`` and then ``end``; the AG-UI stream must stop at RUN_ERROR."""
+        from langflow.api.v2 import workflow_execution as wf_exec
+        from lfx.workflow.adapters import StreamAdapterContext, get_stream_adapter
+        from lfx.workflow.converters import ParsedWorkflowRun
+
+        async def fake_generate_flow_events(**kwargs):
+            # The order the v1 build loop emits on a component failure.
+            kwargs["event_manager"].on_error(data={"error": "qa forced failure"})
+            kwargs["event_manager"].on_end(data={"build_duration": 0.1})
+            await kwargs["event_manager"].queue.put((None, None, time.time()))
+
+        monkeypatch.setattr(wf_exec, "generate_flow_events", fake_generate_flow_events)
+
+        adapter = get_stream_adapter("agui", StreamAdapterContext(run_id="run-1", thread_id="thread-1"))
+        frames = [
+            frame
+            async for frame, _event_type in wf_exec._stream_event_frames(
+                adapter=adapter,
+                flow_id=uuid4(),
+                flow_name="flow",
+                background_tasks=SimpleNamespace(add_task=lambda *_args, **_kwargs: None),
+                parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream"),
+                current_user=SimpleNamespace(id=uuid4()),
+                protocol="v2",
+                execution_family="workflow_v2",
+                expose_error_details=True,
+            )
+        ]
+
+        payloads = _sse_payloads(frames)
+        payload_types = [_sse_payload_type(payload) for payload in payloads]
+        assert "RUN_FINISHED" not in payload_types
+        assert payload_types[-1] == "RUN_ERROR"
+        assert "qa forced failure" in payloads[-1]["message"]
+
     @pytest.mark.parametrize(("stream_protocol", "terminal_type"), [("agui", "RUN_ERROR"), ("langflow", "error")])
     async def test_stream_error_path_uses_fallback_when_producer_raises_before_on_error(
         self,
@@ -1717,6 +1753,41 @@ class TestAGUIBackgroundReattach:
         event_ids = [line.removeprefix("id:").strip() for line in body.splitlines() if line.startswith("id:")]
         assert "0" not in event_ids
         assert "RUN_FINISHED" in body
+
+    async def test_reattach_to_failed_run_ends_at_run_error(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        chatbot_flow,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        """Re-attaching to a failed background run replays RUN_ERROR as the last event, with no RUN_FINISHED."""
+        from langflow.api.v2 import workflow_execution as wf_exec
+
+        async def failing_generate_flow_events(**kwargs):
+            # The order the v1 build loop emits on a component failure.
+            kwargs["event_manager"].on_error(data={"error": "qa forced failure"})
+            kwargs["event_manager"].on_end(data={"build_duration": 0.1})
+            await kwargs["event_manager"].queue.put((None, None, time.time()))
+
+        monkeypatch.setattr(wf_exec, "generate_flow_events", failing_generate_flow_events)
+        headers = {"x-api-key": created_api_key.api_key}
+        start = await client.post(
+            "api/v2/workflows",
+            json=_agui_body(chatbot_flow, mode="background"),
+            headers=headers,
+        )
+        assert start.status_code == 200
+        job_id = start.json()["job_id"]
+
+        response = await client.get(f"api/v2/workflows/{job_id}/events", headers=headers)
+
+        assert response.status_code == 200
+        payloads = _sse_payloads([response.content])
+        payload_types = [_sse_payload_type(payload) for payload in payloads]
+        assert "RUN_FINISHED" not in payload_types
+        assert payload_types[-1] == "RUN_ERROR"
+        assert "qa forced failure" in payloads[-1]["message"]
 
     async def test_reattach_unknown_job_returns_404(
         self,
