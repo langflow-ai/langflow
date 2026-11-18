@@ -24,6 +24,7 @@ class RuntimeVariable:
 _resolver: Callable[..., Awaitable[RuntimeVariable | None]] | None = None
 _bulk_resolver: Callable[..., Awaitable[dict[str, str] | None]] | None = None
 _mutation_guard: Callable[..., Awaitable[None]] | None = None
+_env_import_predicate: Callable[[UUID], Awaitable[bool]] | None = None
 
 
 def register_runtime_variable_resolver(resolver: Callable[..., Awaitable[RuntimeVariable | None]] | None) -> None:
@@ -42,6 +43,25 @@ def register_variable_mutation_guard(guard: Callable[..., Awaitable[None]] | Non
     """Coordinate ordinary writes with an extension's activation transaction."""
     global _mutation_guard  # noqa: PLW0603 - explicit process-wide extension registration
     _mutation_guard = guard
+
+
+def register_env_import_predicate(predicate: Callable[[UUID], Awaitable[bool]] | None) -> None:
+    """Let an extension keep some accounts out of the environment-variable import (never registered: all import)."""
+    global _env_import_predicate  # noqa: PLW0603 - explicit process-wide extension registration
+    _env_import_predicate = predicate
+
+
+async def env_import_allowed(user_id: UUID | str) -> bool:
+    """Whether this account gets the environment defaults. A failing predicate refuses: nothing is written."""
+    if _env_import_predicate is None:
+        return True
+    from lfx.log.logger import logger
+
+    try:
+        return bool(await _env_import_predicate(UUID(str(user_id))))
+    except Exception:  # noqa: BLE001 - refuse rather than copy secrets into an account the policy could not judge
+        await logger.aexception("Environment import predicate failed for user %s; skipping the import", user_id)
+        return False
 
 
 async def guard_variable_mutation(**context: Any) -> None:
