@@ -1666,6 +1666,16 @@ class Component(CustomComponent):
         from lfx.services.integration_policy import IntegrationPolicyPurpose
         from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
 
+        running_output = self.__dict__.get("_running_output")
+        if running_output is not None:
+            # Raised before the error-reporting block so the outer build reports it exactly once.
+            msg = (
+                f'Output "{running_output.name}" of "{self.display_name}" uses method "{running_output.method}", '
+                f'which runs the component again instead of returning a value. Define "{running_output.method}" '
+                "on the component."
+            )
+            raise RuntimeError(msg)
+
         self.require_model_provider_policy(ModelProviderPolicyPurpose.USE)
 
         if hasattr(self, "graph"):
@@ -1800,10 +1810,21 @@ class Component(CustomComponent):
             msg = f'Output "{output.name}" does not have a method defined.'
             raise ValueError(msg)
 
-        method = getattr(self, output.method)
+        try:
+            method = getattr(self, output.method)
+        except AttributeError as e:
+            if hasattr(type(self), output.method):
+                raise
+            msg = (
+                f'Output "{output.name}" of "{self.display_name}" uses method "{output.method}", '
+                "which the component does not define."
+            )
+            raise AttributeError(msg) from e
         # A sync output method that merely wraps a coroutine (``delegates_to``) is awaited
         # directly instead of running in a thread that would spin up its own event loop.
         async_method = async_delegate_target(self, output.method)
+        previous_running_output = self.__dict__.get("_running_output")
+        self._running_output = output
         try:
             if async_method is not None:
                 result = await async_method()
@@ -1814,6 +1835,8 @@ class Component(CustomComponent):
         except TypeError as e:
             msg = f'Error running method "{output.method}": {e}'
             raise TypeError(msg) from e
+        finally:
+            self._running_output = previous_running_output
 
         if (
             self._vertex is not None

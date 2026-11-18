@@ -257,9 +257,9 @@ class ComponentInputsPayload(BasePayload):
 
 
 class ExceptionPayload(BasePayload):
-    exception_type: str = Field(serialization_alias="exceptionType")
+    exception_type: str = Field(serialization_alias="objectType")
     exception_message: str = Field(serialization_alias="exceptionMessage")
-    exception_context: str = Field(serialization_alias="exceptionContext")  # "lifespan" or "handler"
+    exception_context: str = Field(serialization_alias="category")  # "lifespan" or "handler"
     stack_trace_hash: str | None = Field(None, serialization_alias="stackTraceHash")  # Hash for grouping
 
 
