@@ -14,6 +14,9 @@ FAMILY_TRIGGER_PUSH = "trigger_push"
 FAMILY_TRIGGER_LISTENER = "trigger_listener"
 TRIGGER_FAMILIES = frozenset({FAMILY_TRIGGER_PUSH, FAMILY_TRIGGER_LISTENER})
 
+#: Internal request field encrypted with the trigger event for durable replay.
+PINNED_TRIGGER_CANVAS = "pinned_trigger_canvas"
+
 #: The matrix ``actor`` word for a run nobody is waiting on.
 ACTOR_TRIGGER_DISPATCHER = "trigger_dispatcher"
 

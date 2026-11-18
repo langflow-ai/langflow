@@ -31,6 +31,7 @@ from langchain_core.documents import Document
 from langchain_core.vectorstores import VectorStore
 
 from lfx.base.knowledge_bases.backends.base import (
+    METADATA_KEY_JOB_ID,
     BackendConfigurationError,
     BackendType,
     BaseVectorStoreBackend,
@@ -139,6 +140,24 @@ def _drop_table_sql(table: str) -> str:
 def _iter_documents_sql(table: str, *, include_embeddings: bool) -> str:
     columns = "id, document, cmetadata" + (", embedding" if include_embeddings else "")
     return f"SELECT {columns} FROM {_validate_table_name(table)}"  # noqa: S608 — table name validated above
+
+
+def _count_job_sql(table: str) -> str:
+    return (
+        f"SELECT count(*) FROM {_validate_table_name(table)} "  # noqa: S608 — table name validated; :where is bound
+        "WHERE cmetadata @> CAST(:where AS jsonb)"
+    )
+
+
+def _job_documents_sql(table: str, *, by_job: bool, resume: bool) -> str:
+    conditions = [
+        condition
+        for condition, wanted in (("cmetadata @> CAST(:where AS jsonb)", by_job), ("id > :after_id", resume))
+        if wanted
+    ]
+    where = f" WHERE {' AND '.join(conditions)}" if conditions else ""
+    # Table name validated; conditions are fixed strings and values are bound.
+    return f"SELECT id, document, cmetadata, embedding FROM {_validate_table_name(table)}{where} ORDER BY id"  # noqa: S608
 
 
 def _parse_vector_dim(type_str: str | None) -> int | None:
@@ -736,6 +755,59 @@ class PostgresBackend(BaseVectorStoreBackend):
                     batch = []
             if batch:
                 yield batch
+
+    async def iter_job_documents(
+        self,
+        job_id: str | None,
+        *,
+        batch_size: int = 5000,
+        after_id: str | None = None,
+    ) -> AsyncIterator[list[IngestedDocument]]:
+        """Stream one job's chunks with vectors in id order, or every chunk when ``job_id`` is None."""
+        await self.ensure_ready()
+        from sqlalchemy import text
+
+        query = _job_documents_sql(self.table_name, by_job=job_id is not None, resume=after_id is not None)
+        params: dict[str, str] = {}
+        if job_id is not None:
+            params["where"] = json.dumps({METADATA_KEY_JOB_ID: str(job_id)})
+        if after_id is not None:
+            params["after_id"] = after_id
+        engine = self._ensure_async_engine()
+        async with engine.connect() as conn:
+            if not await self._table_exists(conn):
+                return
+            result = await conn.stream(text(query), params)
+            batch: list[IngestedDocument] = []
+            async for row in result:
+                batch.append(
+                    IngestedDocument(
+                        content=row[1] or "",
+                        metadata=dict(row[2] or {}),
+                        embedding=_coerce_embedding(row[3]),
+                        id=row[0],
+                    )
+                )
+                if len(batch) >= batch_size:
+                    yield batch
+                    batch = []
+            if batch:
+                yield batch
+
+    async def count_job(self, job_id: str) -> int:
+        """Count one job's chunks, treating an unprovisioned table as empty."""
+        await self.ensure_ready()
+        from sqlalchemy import text
+
+        engine = self._ensure_async_engine()
+        async with engine.connect() as conn:
+            if not await self._table_exists(conn):
+                return 0
+            value = await conn.scalar(
+                text(_count_job_sql(self.table_name)),
+                {"where": json.dumps({METADATA_KEY_JOB_ID: str(job_id)})},
+            )
+        return int(value or 0)
 
     async def delete_by(self, where: dict[str, Any]) -> None:
         """Delete chunks whose ``cmetadata`` contains ``where`` (JSONB @>)."""

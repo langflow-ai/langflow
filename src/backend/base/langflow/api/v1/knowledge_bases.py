@@ -1863,19 +1863,18 @@ async def list_ingestion_runs(
 ) -> PaginatedIngestionRunResponse:
     """Paginated list of ingestion runs for a KB (newest first).
 
-    Scoped to the requesting user so one account can't observe
-    another's run history. Returns counter-only rows; the UI fetches
-    the detail endpoint for the drill-down.
+    Readers of this KB can see its ingestion runs, including runs started by a collaborator.
     """
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.READ, kb_name=kb_name)
     # Verify the KB exists before exposing run history — otherwise a crafted
     # ``kb_name`` could be used to probe for other users' KBs by timing
     # list_runs_for_kb.
-    await _require_kb_record(kb_name, _kb_guard.owner_user, _kb_guard)
+    record = await _require_kb_record(kb_name, _kb_guard.owner_user, _kb_guard)
 
     rows, total = await ingestion_run_service.list_runs_for_kb(
         kb_name=kb_name,
         user_id=_kb_guard.owner_user.id,
+        authorized_kb_id=record.id,
         page=page,
         limit=limit,
     )
@@ -1898,9 +1897,9 @@ async def get_ingestion_run(
 ) -> IngestionRunDetail:
     """Full run detail including per-item breakdown + error messages."""
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.READ, kb_name=kb_name)
-    await _require_kb_record(kb_name, _kb_guard.owner_user, _kb_guard)
+    record = await _require_kb_record(kb_name, _kb_guard.owner_user, _kb_guard)
 
-    row = await ingestion_run_service.get_run(run_id, user_id=_kb_guard.owner_user.id)
+    row = await ingestion_run_service.get_run(run_id, user_id=_kb_guard.owner_user.id, authorized_kb_id=record.id)
     if row is None or row.kb_name != kb_name:
         raise HTTPException(status_code=404, detail="Ingestion run not found.")
 
