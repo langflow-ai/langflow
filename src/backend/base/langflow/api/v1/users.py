@@ -18,6 +18,7 @@ from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import PasswordResetRequest, UsersResponse
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.auth.context import current_auth_is_api_key, current_auth_is_restricted_api_key
+from langflow.services.auth.user_admission import admit_user_creation
 from langflow.services.auth.utils import get_current_user, get_current_user_optional
 from langflow.services.authorization.admin import (
     ADMINISTRATION_REQUIRED_REASON,
@@ -39,12 +40,9 @@ from langflow.services.authorization.lifecycle import (
 )
 from langflow.services.creation_hooks import (
     DENIED_STATUS_CODE,
-    RESOURCE_USER,
-    PreCreationContext,
     PreCreationDenied,
     http_denial_error_code,
     pre_creation_denied_to_http,
-    run_pre_creation_hooks,
 )
 from langflow.services.data_subjects import requests as request_service
 from langflow.services.data_subjects.errors import DataSubjectError
@@ -221,26 +219,17 @@ async def add_user(
     try:
         new_user.password = get_auth_service().get_password_hash(user.password)
         new_user.is_active = settings_service.auth_settings.NEW_USER_IS_ACTIVE
-        await acquire_identity_mutation_lock(
-            authorization_service,
-            session,
-            kind=AuthorizationMutationKind.USER_CREATED,
-            entity_id=new_user.id,
-            affected_user_ids=(new_user.id,),
-        )
         # Pre-creation hooks run inside the lock the authorization plugin just took (a no-op
         # on non-PostgreSQL backends), so a plugin that counts users sees a serialized
         # count-then-insert. Public signup and the admin "add user" flow share this route;
         # ``is_public_signup`` lets a plugin word its refusal differently.
         try:
-            await run_pre_creation_hooks(
-                PreCreationContext(
-                    resource=RESOURCE_USER,
-                    session=session,
-                    actor_user_id=actor_user_id,
-                    requested_name=new_user.username,
-                    is_public_signup=not is_admin_caller,
-                )
+            await admit_user_creation(
+                session,
+                authorization_service=authorization_service,
+                candidate=new_user,
+                actor_user_id=actor_user_id,
+                is_public_signup=not is_admin_caller,
             )
         except PreCreationDenied as denied:
             await session.rollback()
@@ -489,43 +478,92 @@ async def patch_user(
             detail="Only a superuser may promote or demote platform superusers",
             headers=_SUPERUSER_REQUIRED_HEADERS,
         )
-    if update_password:
-        if not is_user_administrator:
-            await _audit_deny(
-                user_id=user.id,
-                action="user:update",
-                obj=f"user:{user_id}",
-                status_code=400,
-                reason="password_update_forbidden",
-                operation_id=operation_id,
-                fields_changed=["password"],
-            )
-            raise HTTPException(status_code=400, detail="You can't change your password here")
-        await _ensure_local_credentials_allowed(
-            authorization_service=authorization_service,
-            session=session,
-            target_user_id=user_id,
-            actor_user_id=user.id,
-            operation_id=operation_id,
-        )
-        user_update.password = get_auth_service().get_password_hash(user_update.password)
-
-    # Pre-read lock hint; canonical user state may produce a different staged kind.
+    # The lock hint selects the user lock even for promotion, which has no staged event.
     possible_lifecycle_kind: AuthorizationMutationKind | None = None
     if user_update.is_active is False:
         possible_lifecycle_kind = AuthorizationMutationKind.USER_DISABLED
-    elif user_update.is_superuser is False:
+    elif user_update.is_active is True:
+        possible_lifecycle_kind = AuthorizationMutationKind.USER_ACTIVATED
+    elif user_update.is_superuser is not None:
         possible_lifecycle_kind = AuthorizationMutationKind.USER_SUPERUSER_DEMOTED
     if possible_lifecycle_kind is not None:
+        affected_user_ids = tuple(dict.fromkeys((user_id, user.id)))
         await acquire_identity_mutation_lock(
             authorization_service,
             session,
             kind=possible_lifecycle_kind,
             entity_id=user_id,
-            affected_user_ids=(user_id,),
+            affected_user_ids=affected_user_ids,
         )
 
     if user_db := await get_user_by_id(session, user_id):
+        if possible_lifecycle_kind is not None:
+            await session.refresh(user_db)
+            # API-key authentication returns a read model that cannot be refreshed.
+            actor_id = user.id
+            actor = user_db if actor_id == user_id else await session.get(User, actor_id, populate_existing=True)
+            if actor is None or not actor.is_active:
+                await _audit_deny(
+                    user_id=actor_id,
+                    action="user:update",
+                    obj=f"user:{user_id}",
+                    status_code=403,
+                    reason="inactive_user",
+                    operation_id=operation_id,
+                )
+                raise HTTPException(status_code=403, detail="User account is inactive")
+            user = actor
+            if not user.is_superuser and user_update.is_superuser:
+                await _audit_deny(
+                    user_id=user.id,
+                    action="user:update",
+                    obj=f"user:{user_id}",
+                    status_code=403,
+                    reason="superuser_required",
+                    operation_id=operation_id,
+                    fields_changed=["is_superuser"],
+                )
+                raise HTTPException(
+                    status_code=403,
+                    detail="Only a superuser may promote or demote platform superusers",
+                    headers=_SUPERUSER_REQUIRED_HEADERS,
+                )
+            if actor_id != user_id or update_password:
+                is_user_administrator = await is_administrator(
+                    user,
+                    resource="user",
+                    authorization_service=authorization_service,
+                )
+                if actor_id != user_id and not is_user_administrator:
+                    await _audit_deny(
+                        user_id=actor_id,
+                        action="user:update",
+                        obj=f"user:{user_id}",
+                        status_code=403,
+                        reason="administration_required",
+                        operation_id=operation_id,
+                    )
+                    raise administration_denied(_PERMISSION_DENIED, resource="user")
+        if update_password:
+            if not is_user_administrator:
+                await _audit_deny(
+                    user_id=user.id,
+                    action="user:update",
+                    obj=f"user:{user_id}",
+                    status_code=400,
+                    reason="password_update_forbidden",
+                    operation_id=operation_id,
+                    fields_changed=["password"],
+                )
+                raise HTTPException(status_code=400, detail="You can't change your password here")
+            await _ensure_local_credentials_allowed(
+                authorization_service=authorization_service,
+                session=session,
+                target_user_id=user_id,
+                actor_user_id=user.id,
+                operation_id=operation_id,
+            )
+            user_update.password = get_auth_service().get_password_hash(user_update.password)
         if user_db.is_superuser and not user.is_superuser and user.id != user_id:
             await _audit_deny(
                 user_id=user.id,
@@ -541,7 +579,7 @@ async def patch_user(
                 detail="Only a superuser may modify another platform superuser",
                 headers=_SUPERUSER_REQUIRED_HEADERS,
             )
-        lifecycle_mutation: AuthorizationMutation | None = None
+        lifecycle_mutations: list[AuthorizationMutation] = []
         fields_changed = sorted(
             field
             for field in user_update.model_fields_set
@@ -551,37 +589,33 @@ async def patch_user(
         )
         next_is_active = user_db.is_active if user_update.is_active is None else user_update.is_active
         next_is_superuser = user_db.is_superuser if user_update.is_superuser is None else user_update.is_superuser
+        lifecycle_kinds_and_fields: list[tuple[AuthorizationMutationKind, str]] = []
+        if not user_db.is_active and next_is_active:
+            lifecycle_kinds_and_fields.append((AuthorizationMutationKind.USER_ACTIVATED, "is_active"))
         if user_db.is_active and not next_is_active:
-            lifecycle_kind = AuthorizationMutationKind.USER_DISABLED
-        elif user_db.is_superuser and not next_is_superuser:
-            lifecycle_kind = AuthorizationMutationKind.USER_SUPERUSER_DEMOTED
-        else:
-            lifecycle_kind = None
+            lifecycle_kinds_and_fields.append((AuthorizationMutationKind.USER_DISABLED, "is_active"))
+        if user_db.is_superuser and not next_is_superuser:
+            lifecycle_kinds_and_fields.append((AuthorizationMutationKind.USER_SUPERUSER_DEMOTED, "is_superuser"))
 
-        if lifecycle_kind is not None:
-            policy_relevant_fields = tuple(
-                field
-                for field, before, after in (
-                    ("is_active", user_db.is_active, next_is_active),
-                    ("is_superuser", user_db.is_superuser, next_is_superuser),
-                )
-                if before != after
-            )
+        before_snapshot = UserAuthorizationSnapshot(
+            is_active=user_db.is_active,
+            is_superuser=user_db.is_superuser,
+        )
+        after_snapshot = UserAuthorizationSnapshot(
+            is_active=next_is_active,
+            is_superuser=next_is_superuser,
+        )
+        for lifecycle_kind, policy_relevant_field in lifecycle_kinds_and_fields:
             lifecycle_mutation = AuthorizationMutation(
                 kind=lifecycle_kind,
                 entity_id=user_db.id,
                 actor_user_id=user.id,
                 affected_user_ids=(user_db.id,),
-                policy_relevant_fields=policy_relevant_fields,
-                user_before=UserAuthorizationSnapshot(
-                    is_active=user_db.is_active,
-                    is_superuser=user_db.is_superuser,
-                ),
-                user_after=UserAuthorizationSnapshot(
-                    is_active=next_is_active,
-                    is_superuser=next_is_superuser,
-                ),
+                policy_relevant_fields=(policy_relevant_field,),
+                user_before=before_snapshot,
+                user_after=after_snapshot,
             )
+            lifecycle_mutations.append(lifecycle_mutation)
             try:
                 await validate_identity_mutation(authorization_service, session, lifecycle_mutation)
             except AuthorizationMutationRejected as exc:
@@ -614,17 +648,18 @@ async def patch_user(
                 operation_id=operation_id,
             )
             raise
-        if lifecycle_mutation is not None:
-            await stage_identity_mutation(authorization_service, session, lifecycle_mutation)
-        audit_details = administration_audit_details(
-            {
+        try:
+            for lifecycle_mutation in lifecycle_mutations:
+                await stage_identity_mutation(authorization_service, session, lifecycle_mutation)
+            lifecycle_kind_values = [mutation.kind.value for mutation in lifecycle_mutations]
+            audit_payload = {
                 "event": AUDIT_EVENT_MUTATION,
                 "fields_changed": fields_changed,
-                "lifecycle_kind": lifecycle_mutation.kind.value if lifecycle_mutation is not None else None,
-            },
-            operation_id=operation_id,
-        )
-        try:
+                "lifecycle_kind": lifecycle_kind_values[0] if len(lifecycle_kind_values) == 1 else None,
+            }
+            if len(lifecycle_kind_values) > 1:
+                audit_payload["lifecycle_kinds"] = lifecycle_kind_values
+            audit_details = administration_audit_details(audit_payload, operation_id=operation_id)
             audit_staged = stage_audit_decision(
                 session=session,
                 user_id=user.id,
@@ -637,7 +672,7 @@ async def patch_user(
         except Exception:
             await session.rollback()
             raise
-        if lifecycle_mutation is not None:
+        for lifecycle_mutation in lifecycle_mutations:
             await safe_identity_mutation_committed(authorization_service, lifecycle_mutation)
         if not audit_staged:
             await audit_decision(
