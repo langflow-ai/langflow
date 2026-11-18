@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { TextShimmer } from "@/components/ui/TextShimmer";
 import { BuildStatus } from "@/constants/enums";
 import useFlowStore from "@/stores/flowStore";
+import type { FlowStoreType } from "@/types/zustand/flow";
 import { cn } from "@/utils/utils";
 import { getRunningNodeLabel } from "./helpers/get-running-node-label";
 import {
@@ -20,6 +21,11 @@ import {
   STOP_BUTTON_VARIANTS,
 } from "./helpers/visual-variants";
 
+type BuildInfo = FlowStoreType["buildInfo"];
+
+const AUTO_DISMISS_MS = 2000;
+const EXIT_ANIMATION_MS = 500;
+
 export default function FlowBuildingComponent() {
   const { t } = useTranslation();
   const isBuilding = useFlowStore((state) => state.isBuilding);
@@ -29,7 +35,10 @@ export default function FlowBuildingComponent() {
   const stopButtonRef = useRef<HTMLDivElement>(null);
   const setBuildInfo = useFlowStore((state) => state.setBuildInfo);
   const [duration, setDuration] = useState(0);
-  const [dismissed, setDismissed] = useState(false);
+  // The result the user (or the auto-dismiss timer) dismissed.
+  // A newer result is a new object, so an old dismissal never hides it.
+  const [dismissedInfo, setDismissedInfo] = useState<BuildInfo>(null);
+  const dismissed = buildInfo !== null && buildInfo === dismissedInfo;
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
   const prevIsBuilding = useRef(isBuilding);
   const startTimeRef = useRef<number | null>(null);
@@ -52,7 +61,6 @@ export default function FlowBuildingComponent() {
     let intervalId: NodeJS.Timeout;
 
     if (isBuilding && !prevIsBuilding.current) {
-      setDismissed(false);
       setDuration(0);
       startTimeRef.current = Date.now();
     }
@@ -95,21 +103,32 @@ export default function FlowBuildingComponent() {
     );
   }, [isBuilding, statusBuilding]);
 
+  // Dismiss a successful result after a short delay.
+  // The cleanup cancels the timer when a newer result replaces this one.
   useEffect(() => {
-    if (buildInfo?.success) {
-      setTimeout(() => {
-        handleDismiss();
-      }, 2000);
-    }
-  }, [buildInfo?.success]);
+    if (!buildInfo?.success) return;
+    const timer = setTimeout(
+      () => setDismissedInfo(buildInfo),
+      AUTO_DISMISS_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [buildInfo]);
 
+  // Clear buildInfo after the exit animation, only while this result is still dismissed.
+  useEffect(() => {
+    if (!dismissed) return;
+    const timer = setTimeout(() => setBuildInfo(null), EXIT_ANIMATION_MS);
+    return () => clearTimeout(timer);
+  }, [dismissed, setBuildInfo]);
+
+  // Mark the current result as dismissed. The effect above clears it.
   const handleDismiss = () => {
-    setDismissed(true);
-    setTimeout(() => {
-      setBuildInfo(null);
-      setDismissed(false);
-    }, 500);
+    setDismissedInfo(buildInfo);
   };
+
+  // Show the panel while building, or while there is an undismissed result.
+  const hasResult = Boolean(buildInfo?.error || buildInfo?.success);
+  const showPanel = isBuilding || (hasResult && !dismissed);
 
   const handleStop = () => {
     stopBuilding();
@@ -123,7 +142,7 @@ export default function FlowBuildingComponent() {
 
   return (
     <AnimatePresence mode="wait">
-      {(isBuilding || buildInfo?.error || buildInfo?.success) && !dismissed && (
+      {showPanel && (
         <div className="absolute bottom-16 left-1/2 z-50 w-[530px] -translate-x-1/2">
           <motion.div
             initial="hidden"

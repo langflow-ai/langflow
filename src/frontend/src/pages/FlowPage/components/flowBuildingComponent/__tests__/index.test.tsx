@@ -368,4 +368,75 @@ describe("FlowBuildingComponent - Timer Tests", () => {
       expect(mockSetBuildInfo).toHaveBeenCalledWith(null);
     });
   });
+
+  describe("Consecutive builds", () => {
+    // Starts a new build, then finishes it with a new success result.
+    const runSecondBuild = (rerender: (ui: ReactNode) => void) => {
+      mockIsBuilding = true;
+      mockBuildInfo = null;
+      rerender(<FlowBuildingComponent />);
+      mockIsBuilding = false;
+      mockBuildInfo = { success: true };
+      rerender(<FlowBuildingComponent />);
+    };
+
+    it("keeps a second success visible past the first success deadline", () => {
+      mockBuildInfo = { success: true };
+      const { rerender } = render(<FlowBuildingComponent />);
+
+      act(() => {
+        jest.advanceTimersByTime(1500);
+      });
+      runSecondBuild(rerender);
+
+      // 2500 ms after the first result, 1000 ms after the second.
+      act(() => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(screen.getByText("Flow built successfully")).toBeInTheDocument();
+      expect(mockSetBuildInfo).not.toHaveBeenCalled();
+
+      // The second result's own 2000 + 500 ms pass. Use two acts so the
+      // dismiss re-render schedules the clear timer between them.
+      act(() => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(mockSetBuildInfo).not.toHaveBeenCalled();
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
+      expect(mockSetBuildInfo).toHaveBeenCalledWith(null);
+    });
+
+    it("keeps a result that arrives during the exit animation of the previous one", () => {
+      mockBuildInfo = { success: true };
+      const { rerender } = render(<FlowBuildingComponent />);
+
+      act(() => {
+        jest.advanceTimersByTime(2000);
+      });
+      act(() => {
+        jest.advanceTimersByTime(200);
+      });
+      runSecondBuild(rerender);
+
+      act(() => {
+        jest.advanceTimersByTime(400);
+      });
+      expect(screen.getByText("Flow built successfully")).toBeInTheDocument();
+      expect(mockSetBuildInfo).not.toHaveBeenCalled();
+    });
+
+    it("cancels pending timers on unmount", () => {
+      mockBuildInfo = { success: true };
+      const { unmount } = render(<FlowBuildingComponent />);
+
+      unmount();
+      act(() => {
+        jest.advanceTimersByTime(3000);
+      });
+
+      expect(mockSetBuildInfo).not.toHaveBeenCalled();
+    });
+  });
 });
