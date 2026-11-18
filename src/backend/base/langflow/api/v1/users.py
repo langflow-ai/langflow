@@ -478,27 +478,6 @@ async def patch_user(
             detail="Only a superuser may promote or demote platform superusers",
             headers=_SUPERUSER_REQUIRED_HEADERS,
         )
-    if update_password:
-        if not is_user_administrator:
-            await _audit_deny(
-                user_id=user.id,
-                action="user:update",
-                obj=f"user:{user_id}",
-                status_code=400,
-                reason="password_update_forbidden",
-                operation_id=operation_id,
-                fields_changed=["password"],
-            )
-            raise HTTPException(status_code=400, detail="You can't change your password here")
-        await _ensure_local_credentials_allowed(
-            authorization_service=authorization_service,
-            session=session,
-            target_user_id=user_id,
-            actor_user_id=user.id,
-            operation_id=operation_id,
-        )
-        user_update.password = get_auth_service().get_password_hash(user_update.password)
-
     # The lock hint selects the user lock even for promotion, which has no staged event.
     possible_lifecycle_kind: AuthorizationMutationKind | None = None
     if user_update.is_active is False:
@@ -549,18 +528,42 @@ async def patch_user(
                     detail="Only a superuser may promote or demote platform superusers",
                     headers=_SUPERUSER_REQUIRED_HEADERS,
                 )
-            if (actor_id != user_id or update_password) and not await is_administrator(
-                user, resource="user", authorization_service=authorization_service
-            ):
+            if actor_id != user_id or update_password:
+                is_user_administrator = await is_administrator(
+                    user,
+                    resource="user",
+                    authorization_service=authorization_service,
+                )
+                if actor_id != user_id and not is_user_administrator:
+                    await _audit_deny(
+                        user_id=actor_id,
+                        action="user:update",
+                        obj=f"user:{user_id}",
+                        status_code=403,
+                        reason="administration_required",
+                        operation_id=operation_id,
+                    )
+                    raise administration_denied(_PERMISSION_DENIED, resource="user")
+        if update_password:
+            if not is_user_administrator:
                 await _audit_deny(
-                    user_id=actor_id,
+                    user_id=user.id,
                     action="user:update",
                     obj=f"user:{user_id}",
-                    status_code=403,
-                    reason="administration_required",
+                    status_code=400,
+                    reason="password_update_forbidden",
                     operation_id=operation_id,
+                    fields_changed=["password"],
                 )
-                raise administration_denied(_PERMISSION_DENIED, resource="user")
+                raise HTTPException(status_code=400, detail="You can't change your password here")
+            await _ensure_local_credentials_allowed(
+                authorization_service=authorization_service,
+                session=session,
+                target_user_id=user_id,
+                actor_user_id=user.id,
+                operation_id=operation_id,
+            )
+            user_update.password = get_auth_service().get_password_hash(user_update.password)
         if user_db.is_superuser and not user.is_superuser and user.id != user_id:
             await _audit_deny(
                 user_id=user.id,
