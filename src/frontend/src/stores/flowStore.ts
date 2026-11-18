@@ -25,6 +25,7 @@ import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import { track, trackFlowBuild } from "@/customization/utils/analytics";
 import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavailable-fields";
 import type { GlobalVariable } from "@/types/global_variables";
+import type { Message } from "@/types/messages";
 import { nodeWithGroupValues, walkFlowNodes } from "@/utils/grouped-nodes";
 import { clearLoadRefreshes } from "@/utils/load-refreshes";
 import { brokenEdgeMessage } from "@/utils/utils";
@@ -922,6 +923,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     session,
     stream = true,
     eventDelivery = EventDeliveryType.STREAMING,
+    onUserMessage,
   }: {
     startNodeId?: string;
     stopNodeId?: string;
@@ -931,6 +933,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     session?: string;
     stream?: boolean;
     eventDelivery?: EventDeliveryType;
+    onUserMessage?: (message: Message) => void;
   }) => {
     // Running a flow whose save was refused executes a graph the server has already
     // moved past, and writes build results back into it — manufacturing new changes
@@ -1204,6 +1207,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       files,
       signal: buildController.signal,
       silent,
+      onUserMessage,
     };
     const canSuspend = get().nodes.some((node) => {
       if (node.data?.type === "HumanInput") return true;
@@ -1559,6 +1563,17 @@ export function syncNodeTranslations(): void {
             }),
           };
         }
+      }
+      // Option labels are never edited by the user, so they always follow the
+      // language; English sends none, which drops the old language's labels.
+      if (
+        freshField?.option_labels !== undefined ||
+        updatedTemplate[fieldName]?.option_labels !== undefined
+      ) {
+        updatedTemplate[fieldName] = {
+          ...updatedTemplate[fieldName],
+          option_labels: freshField?.option_labels,
+        };
       }
     }
 

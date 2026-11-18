@@ -56,6 +56,7 @@ class RepairResult(BaseModel):
     updated_nodes: int = 0
     recovery_version_id: UUID | None = None
     reason_codes: list[str] = Field(default_factory=list)
+    reason_detail: str | None = None
 
 
 class RepairBatchResult(BaseModel):

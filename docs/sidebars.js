@@ -410,6 +410,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Lfx/lfx-dependency-ready",
+          label: "Dependency-ready Python graphs"
+        },
+        {
+          type: "doc",
           id: "Lfx/lfx-serve",
           label: "Serve flows with LFX"
         },
@@ -633,6 +638,7 @@ module.exports = {
             "Components/bundles-serply",
             "Components/bundles-servicenow",
             "Components/bundles-slack",
+            "Components/bundles-socialscrape",
             "Components/bundles-supabase",
             "Components/bundles-telegram",
             "Components/bundles-upstash",

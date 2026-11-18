@@ -31,7 +31,6 @@ from .test_migration_execution import (  # noqa: F401
 
 OLD = importlib.import_module("langflow.alembic.versions.df1410b1eefa_add_audit_events")
 NEW = importlib.import_module("langflow.alembic.versions.7fd2c80e5a39_add_audit_identity_and_receipt_name")
-RECEIPT = importlib.import_module("langflow.alembic.versions.t194_atomic_project_replacement")
 
 
 def _upgrade(module, connection):
@@ -65,11 +64,11 @@ def _event(table, **identity):
 
 
 def test_alembic_upgrade_preserves_audits_and_replacement_receipts(db_url):  # noqa: F811
+    config = _make_alembic_cfg(db_url)
+    command.upgrade(config, NEW.down_revision)
     engine = sa.create_engine(_engine_url(db_url))
     try:
         with engine.connect() as conn:
-            _upgrade(OLD, conn)
-            _upgrade(RECEIPT, conn)
             audit = sa.Table("audit_events", sa.MetaData(), autoload_with=conn)
             receipts = sa.Table(
                 "project_replacement_operation",
@@ -91,8 +90,6 @@ def test_alembic_upgrade_preserves_audits_and_replacement_receipts(db_url):  # n
             )
             conn.commit()
 
-        config = _make_alembic_cfg(db_url)
-        command.stamp(config, NEW.down_revision)
         command.upgrade(config, "head")
         command.upgrade(config, "head")
         with engine.connect() as conn:
@@ -304,7 +301,6 @@ def test_postgres_upgrade_recovers_partial_constraint_and_index_builds(db_url): 
 def test_represented_identity_and_release_migrations_have_one_head():
     scripts = ScriptDirectory(str(Path(NEW.__file__).resolve().parents[1]))
     head = scripts.get_current_head()
-    assert head == NEW.revision
     assert NEW.down_revision == "310c015b3c92"  # pragma: allowlist secret
     revisions = {revision.revision for revision in scripts.iterate_revisions(head, "base")}
     assert {NEW.revision, "c6a81d3e9502", "f6a2c8e4b901"} <= revisions  # pragma: allowlist secret

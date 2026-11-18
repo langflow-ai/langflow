@@ -69,10 +69,16 @@ class ProjectReplacementRequest(SQLModel):
     description: str | None
     flows: list[ReplacementFlowCreate]
     project_name: str | None = None
-    # The Control Plane owns dependency validation and provisioning. The serving
-    # plane stores the manifest as opaque JSON alongside the committed receipt.
+    # The Control Plane validates the manifest. Serving stores it with the receipt;
+    # the activation extension may also prepare declared empty Memory Bases.
     dependencies: dict[str, Any] | None = None
     variables: ReplacementVariables | None = None
+    # Validated by registered replacement hooks (see langflow.services.replacement_hooks) and ignored otherwise.
+    # Part of the request digest, so a retry that names a different value is refused like any other changed body.
+    execution_principal_id: UUID | None = None
+    # Explicit capability requirement: older serving versions reject this field.
+    # The activation extension creates missing empty Memory Bases in this transaction.
+    prepare_memory_bases: bool = False
 
     @field_validator("project_name")
     @classmethod

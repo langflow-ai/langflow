@@ -242,6 +242,38 @@ class TestRunRowProjection:
         row = await ingestion_run_service.get_run(job_id, user_id=uuid.uuid4())
         assert row is None
 
+    async def test_owner_can_read_a_collaborators_run_only_on_its_kb(
+        self, active_user, user_two, client, logged_in_headers
+    ) -> None:
+        from langflow.api.utils import knowledge_base_service
+
+        kb = await knowledge_base_service.create_record(
+            user_id=active_user.id, name="shared_history", model_selection={"name": "model", "provider": "HuggingFace"}
+        )
+        run_id, other_id = uuid.uuid4(), uuid.uuid4()
+        async with session_scope() as session:
+            for job_id, asset_id in [(run_id, kb.id), (other_id, uuid.uuid4())]:
+                session.add(
+                    Job(
+                        job_id=job_id,
+                        flow_id=job_id,
+                        type=JobType.INGESTION,
+                        status=JobStatus.COMPLETED,
+                        user_id=user_two.id,
+                        asset_id=asset_id,
+                        asset_type="knowledge_base",
+                        job_metadata={"kind": "kb_ingestion", "kb_name": kb.name},
+                    )
+                )
+            await session.commit()
+
+        url = f"/api/v1/knowledge_bases/{kb.name}/runs"
+        history = await client.get(url, headers=logged_in_headers)
+        assert history.status_code == 200, history.text
+        assert [run["id"] for run in history.json()["runs"]] == [str(run_id)]
+        assert (await client.get(f"{url}/{run_id}", headers=logged_in_headers)).status_code == 200
+        assert (await client.get(f"{url}/{other_id}", headers=logged_in_headers)).status_code == 404
+
     async def test_get_run_filters_by_job_type(self, active_user) -> None:
         # A workflow job_id submitted to a KB-runs endpoint must 404.
         wf_job_id = uuid.uuid4()
