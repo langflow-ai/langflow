@@ -1222,8 +1222,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     } else if (!get().playgroundPage) {
       await runFlowHITL(runArgs);
     } else {
-      // The shareable playground has no public background run, so only a signed-in
-      // visitor who may run the flow can reach the pause. Everyone else is told why.
+      // The shareable playground has no public background run. Only the signed-in owner
+      // may use the authenticated one: a visitor's run would land in the owner's history.
       const refuse = () => {
         const message = i18n.t("humanInput.sharedPlaygroundUnsupported");
         get().setBuildInfo({ error: [message], success: false });
@@ -1231,7 +1231,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         // Not every playground chat renders buildInfo errors, so alert here too.
         useAlertStore.getState().setErrorData({ title: message });
       };
-      if (!useAuthStore.getState().isAuthenticated) {
+      const { isAuthenticated, userData } = useAuthStore.getState();
+      const isOwner =
+        isAuthenticated &&
+        !!userData?.id &&
+        userData.id === currentFlow?.user_id;
+      if (!isOwner) {
         refuse();
       } else {
         try {

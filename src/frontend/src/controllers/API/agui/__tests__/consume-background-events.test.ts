@@ -310,6 +310,14 @@ describe("consumeBackgroundEvents", () => {
         }),
         JSON.stringify({
           type: "CUSTOM",
+          name: "langflow.event",
+          value: {
+            event_type: "end",
+            data: { id: "m2", flow_id: "real-flow", sender: "Machine" },
+          },
+        }),
+        JSON.stringify({
+          type: "CUSTOM",
           name: "langflow.human_input_required",
           value: {
             request_id: "HI:job-5",
@@ -332,6 +340,10 @@ describe("consumeBackgroundEvents", () => {
     expect(handleMessageEvent).toHaveBeenCalledWith(
       "add_message",
       expect.objectContaining({ id: "m1", flow_id: "visitor-flow" }),
+    );
+    expect(handleMessageEvent).toHaveBeenCalledWith(
+      "end",
+      expect.objectContaining({ id: "m2", flow_id: "visitor-flow" }),
     );
     expect(updateMessageMock.mock.calls[0][0].flow_id).toBe("visitor-flow");
   });

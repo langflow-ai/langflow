@@ -613,7 +613,7 @@ export async function consumeBackgroundEvents(
       handleRunMessageEvent(eventType, data, opts),
     // The background replay routes 'end' through the same message handler (as before the
     // end/log split); logs aren't surfaced separately on the reattach path.
-    handleEndEvent: (data) => handleMessageEvent("end", data),
+    handleEndEvent: (data) => handleRunMessageEvent("end", data, opts),
     handleLogEvent: () => {},
     onWarning: showWorkflowWarning,
     onHumanInput: (payload) => {

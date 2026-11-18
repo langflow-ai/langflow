@@ -8,6 +8,7 @@ route handlers can surface a structured error without running the graph.
 
 from __future__ import annotations
 
+import contextlib
 from copy import deepcopy
 from dataclasses import replace
 
@@ -113,8 +114,10 @@ def _reject_hitl_outside_background(parsed: ParsedWorkflowRun, flow: FlowRead) -
     graph_data = parsed.data if parsed.data is not None else getattr(flow, "data", None)
     if parsed.tweaks and graph_data:
         # The run applies tweaks before building, so a tweak can add an approval gate.
-        # A refused tweak raises TweakRefusedError here, as it would at run time.
-        graph_data = process.process_tweaks(deepcopy(graph_data), parsed.tweaks, stream=False)
+        # A refused tweak raises TweakRefusedError here, as it would at run time; a graph
+        # process_tweaks cannot read is left for the run's own validation to report.
+        with contextlib.suppress(TypeError, ValueError):
+            graph_data = process.process_tweaks(deepcopy(graph_data), parsed.tweaks, stream=False)
     if not flow_requires_hitl(graph_data or {}):
         return
     raise HTTPException(

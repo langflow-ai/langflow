@@ -116,7 +116,7 @@ async function ask(page: Page, question: string) {
 }
 
 test(
-  "shareable playground: a signed-in visitor gets the Human Input decision and the chosen branch runs",
+  "shareable playground: the signed-in owner gets the Human Input decision and the chosen branch runs",
   { tag: ["@release", "@api"] },
   async ({ page }) => {
     await awaitBootstrapTest(page, { skipModal: true });

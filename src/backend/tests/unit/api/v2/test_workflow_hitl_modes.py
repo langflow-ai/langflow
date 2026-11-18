@@ -241,3 +241,13 @@ def test_refused_tweak_still_raises_tweak_refused_error(monkeypatch):
 
     with pytest.raises(TweakRefusedError):
         _reject_hitl_outside_background(parsed, SimpleNamespace(data=_tool_flow([])))
+
+
+def test_malformed_graph_with_tweaks_is_left_to_run_validation():
+    """The guard only inspects; a graph process_tweaks cannot read must not become a 500 here."""
+    from langflow.api.v2.workflow_validation import _reject_hitl_outside_background
+    from lfx.workflow.converters import ParsedWorkflowRun
+
+    parsed = ParsedWorkflowRun(flow_id="flow", mode="stream", data={"edges": []}, tweaks={"Tool": {"x": 1}})
+
+    _reject_hitl_outside_background(parsed, SimpleNamespace(data=None))

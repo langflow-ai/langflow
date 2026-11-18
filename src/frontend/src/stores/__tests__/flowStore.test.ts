@@ -2505,10 +2505,18 @@ describe("useFlowStore", () => {
       runFlowAGUI = bridge.runFlowAGUI;
       const flowsManager = jest.requireMock("../flowsManagerStore") as {
         default: {
-          __setCurrentFlow: (flow: { id: string; name: string }) => void;
+          __setCurrentFlow: (flow: {
+            id: string;
+            name: string;
+            user_id: string;
+          }) => void;
         };
       };
-      flowsManager.default.__setCurrentFlow({ id: "flow-abc", name: "HITL" });
+      flowsManager.default.__setCurrentFlow({
+        id: "flow-abc",
+        name: "HITL",
+        user_id: "owner-1",
+      });
     });
 
     beforeEach(() => {
@@ -2549,12 +2557,12 @@ describe("useFlowStore", () => {
       expect(useFlowStore.getState().isBuilding).toBe(false);
     });
 
-    it("runs a signed-in visitor through the background path, filing messages under the playground flow id", async () => {
-      const visitorFlowId = uuidv5("user:user-123_flow-abc", uuidv5.DNS);
+    it("runs the signed-in owner through the background path, filing messages under the playground flow id", async () => {
+      const visitorFlowId = uuidv5("user:owner-1_flow-abc", uuidv5.DNS);
       useAuthStore.setState({
         isAuthenticated: true,
         autoLogin: false,
-        userData: { id: "user-123" },
+        userData: { id: "owner-1" },
       });
 
       await useFlowStore.getState().buildFlow({ session: "s1" });
@@ -2568,11 +2576,27 @@ describe("useFlowStore", () => {
       );
     });
 
-    it("shows the same message when the signed-in visitor may not run the flow", async () => {
+    it("tells a signed-in visitor who is not the owner the flow cannot run, without a request", async () => {
       useAuthStore.setState({
         isAuthenticated: true,
         autoLogin: false,
         userData: { id: "user-456" },
+      });
+
+      await useFlowStore.getState().buildFlow({ session: "s1" });
+
+      expect(runFlowHITL).not.toHaveBeenCalled();
+      expect(useFlowStore.getState().buildInfo).toEqual({
+        success: false,
+        error: ["humanInput.sharedPlaygroundUnsupported"],
+      });
+    });
+
+    it("shows the same message when the owner's run is refused", async () => {
+      useAuthStore.setState({
+        isAuthenticated: true,
+        autoLogin: false,
+        userData: { id: "owner-1" },
       });
       runFlowHITL.mockRejectedValue({ response: { status: 404 } });
 
