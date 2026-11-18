@@ -496,7 +496,9 @@ async def _stream_event_frames(
             payload = json.loads(value.decode("utf-8"))
             event_type = payload.get("event", "")
             event_data = payload.get("data") or {}
-            if emit_side_channel and event_type in side_channel_events:
+            # Nothing may follow the terminal error on the wire, so the build
+            # loop's trailing ``end`` is not mirrored after RUN_ERROR.
+            if emit_side_channel and event_type in side_channel_events and not terminal_error_seen:
                 # The mirror forwards EventManager payloads verbatim, and a message
                 # names the component that produced it (an LLM's ``source.source``
                 # is the model name). A run without graph state must not leak that
