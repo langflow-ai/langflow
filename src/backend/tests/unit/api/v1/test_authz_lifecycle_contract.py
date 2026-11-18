@@ -339,6 +339,120 @@ async def test_inactive_native_token_cannot_reactivate_itself_after_lock_refresh
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("target_is_caller", [True, False])
+@pytest.mark.parametrize("demote_before_refresh", [False, True])
+async def test_user_promotion_rechecks_refreshed_caller_permission(
+    monkeypatch,
+    *,
+    target_is_caller: bool,
+    demote_before_refresh: bool,
+    tmp_path,
+):
+    """A promotion rechecks the caller after the target lifecycle lock refresh."""
+    from langflow.api.v1 import users
+    from langflow.services.auth.utils import get_password_hash
+    from langflow.services.database.models.user.model import User, UserUpdate
+    from sqlalchemy.ext.asyncio import create_async_engine
+    from sqlmodel import SQLModel
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
+    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'authz-race.db'}")
+    try:
+        async with engine.begin() as connection:
+            await connection.run_sync(SQLModel.metadata.create_all)
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            actor = User(
+                username="self-promotion",
+                password=get_password_hash(f"fixture-{uuid4().hex}"),
+                is_active=True,
+                is_superuser=True,
+            )
+            session.add(actor)
+            await session.commit()
+            await session.refresh(actor)
+            target = actor
+            if not target_is_caller:
+                target = User(
+                    username="promotion-target",
+                    password=get_password_hash(f"fixture-{uuid4().hex}"),
+                    is_active=True,
+                    is_superuser=False,
+                )
+                session.add(target)
+                await session.commit()
+                await session.refresh(target)
+
+            lock_calls = 0
+            lock_requests = []
+
+            async def demote_during_lock(*_args, **kwargs):
+                nonlocal lock_calls
+                lock_calls += 1
+                lock_requests.append(kwargs)
+                if not demote_before_refresh:
+                    return
+                async with AsyncSession(engine, expire_on_commit=False) as concurrent_session:
+                    concurrent_actor = await concurrent_session.get(User, actor.id)
+                    assert concurrent_actor is not None
+                    concurrent_actor.is_superuser = False
+                    await concurrent_session.commit()
+
+            authorization_service = SimpleNamespace()
+            target_rows = []
+            original_get_user_by_id = users.get_user_by_id
+
+            async def get_user_by_id(_session, user_id):
+                target = await original_get_user_by_id(_session, user_id)
+                target_rows.append(target)
+                return target
+
+            monkeypatch.setattr(users, "acquire_identity_mutation_lock", demote_during_lock)
+            monkeypatch.setattr(users, "get_user_by_id", get_user_by_id)
+            monkeypatch.setattr(users, "get_authorization_service", lambda: authorization_service)
+            monkeypatch.setattr(users, "is_administrator", AsyncMock(return_value=True))
+            monkeypatch.setattr(users, "validate_identity_mutation", AsyncMock())
+            monkeypatch.setattr(users, "stage_identity_mutation", AsyncMock())
+            monkeypatch.setattr(users, "safe_identity_mutation_committed", AsyncMock())
+            monkeypatch.setattr(users, "audit_decision", AsyncMock())
+            monkeypatch.setattr(users, "stage_audit_decision", Mock(return_value=True))
+
+            if demote_before_refresh:
+                with pytest.raises(HTTPException, match="Only a superuser may promote") as exc_info:
+                    await users.patch_user(
+                        user_id=target.id,
+                        user_update=UserUpdate(is_active=True, is_superuser=True),
+                        user=actor,
+                        session=session,
+                    )
+                assert exc_info.value.status_code == 403
+                assert lock_calls == 1
+                assert lock_requests[0]["affected_user_ids"] == tuple(dict.fromkeys((target.id, actor.id)))
+                assert target_rows == [target]
+                assert target is actor if target_is_caller else target is not actor
+                assert actor.is_superuser is False
+                assert target.is_superuser is False
+                await session.rollback()
+            else:
+                updated = await users.patch_user(
+                    user_id=target.id,
+                    user_update=UserUpdate(is_active=True, is_superuser=True),
+                    user=actor,
+                    session=session,
+                )
+                assert updated is target
+                assert lock_calls == 1
+                assert lock_requests[0]["affected_user_ids"] == tuple(dict.fromkeys((target.id, actor.id)))
+                assert target_rows == [target]
+                assert target is actor if target_is_caller else target is not actor
+                assert actor.is_superuser is True
+                assert updated.is_superuser is True
+    finally:
+        async with engine.begin() as connection:
+            await connection.run_sync(SQLModel.metadata.drop_all)
+        await engine.dispose()
+
+
+@pytest.mark.asyncio
 async def test_ordinary_user_patch_stages_audit_without_password_or_values(monkeypatch):
     from langflow.api.v1 import users
     from langflow.services.authorization.audit import AUDIT_EVENT_MUTATION

@@ -508,20 +508,23 @@ async def patch_user(
     elif user_update.is_superuser is False:
         possible_lifecycle_kind = AuthorizationMutationKind.USER_SUPERUSER_DEMOTED
     if possible_lifecycle_kind is not None:
+        affected_user_ids = tuple(dict.fromkeys((user_id, user.id)))
         await acquire_identity_mutation_lock(
             authorization_service,
             session,
             kind=possible_lifecycle_kind,
             entity_id=user_id,
-            affected_user_ids=(user_id,),
+            affected_user_ids=affected_user_ids,
         )
 
     if user_db := await get_user_by_id(session, user_id):
         # Authentication and the route share a session, so the target lookup
         # may return the caller's identity-mapped object from before the
-        # lifecycle lock. Refresh it before deciding whether self-reactivation
-        # is allowed or which lifecycle mutation is actually being requested.
+        # lifecycle lock. Refresh the target and, for cross-user mutations, the
+        # caller before deciding which lifecycle mutation is actually requested.
         await session.refresh(user_db)
+        if user.id != user_db.id:
+            await session.refresh(user)
         if user.id == user_id and not user_db.is_active:
             await _audit_deny(
                 user_id=user.id,
@@ -533,6 +536,21 @@ async def patch_user(
                 fields_changed=["is_active"],
             )
             raise HTTPException(status_code=403, detail="User account is inactive")
+        if not user.is_superuser and user_update.is_superuser:
+            await _audit_deny(
+                user_id=user.id,
+                action="user:update",
+                obj=f"user:{user_id}",
+                status_code=403,
+                reason="superuser_required",
+                operation_id=operation_id,
+                fields_changed=["is_superuser"],
+            )
+            raise HTTPException(
+                status_code=403,
+                detail="Only a superuser may promote or demote platform superusers",
+                headers=_SUPERUSER_REQUIRED_HEADERS,
+            )
         if user_db.is_superuser and not user.is_superuser and user.id != user_id:
             await _audit_deny(
                 user_id=user.id,

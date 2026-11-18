@@ -200,13 +200,15 @@ class TestSuperuserCommand:
         monkeypatch.setattr("langflow.__main__.initialize_services", AsyncMock())
         monkeypatch.setattr("langflow.__main__.get_settings_service", lambda: settings)
         monkeypatch.setattr("langflow.__main__.session_scope", fake_session_scope)
-        monkeypatch.setattr("langflow.__main__.get_or_create_default_folder", AsyncMock(return_value=object()))
+        get_or_create_default_folder = AsyncMock(return_value=object())
+        monkeypatch.setattr("langflow.__main__.get_or_create_default_folder", get_or_create_default_folder)
         monkeypatch.setattr("langflow.services.database.models.user.crud.get_all_superusers", no_superusers)
         monkeypatch.setattr("langflow.services.deps.get_auth_service", lambda: auth)
 
         await _create_superuser("Admin", "password", None)
 
         auth.create_super_user.assert_awaited_once_with("Admin", "password", db=sessions[1])
+        get_or_create_default_folder.assert_awaited_once_with(sessions[1], winner.id)
 
 
 def test_get_number_of_workers():
