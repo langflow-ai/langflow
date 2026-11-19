@@ -9,6 +9,7 @@ from sqlalchemy import JSON, Column, Index, event, inspect, text
 from sqlmodel import Field, Relationship, SQLModel
 
 from langflow.schema.serialize import UUIDstr
+from langflow.services.database.utils import skip_index_on_mysql
 
 if TYPE_CHECKING:
     from langflow.services.database.models.api_key.model import ApiKey
@@ -34,7 +35,9 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
     # Created by migration 1d28fd31a982. Declared here as well so autogenerate
     # (and the startup ``alembic check``) sees it: Postgres reflects expression
     # indexes, so an index missing from the model reads as a ``remove_index`` diff.
-    __table_args__ = (Index("ix_user_username_lower", text("lower(username)"), unique=True),)
+    # MariaDB has no expression indexes; the unique ``username`` index already
+    # compares case-insensitively there (default *_ci collation), so skip it.
+    __table_args__ = (skip_index_on_mysql(Index("ix_user_username_lower", text("lower(username)"), unique=True)),)
 
     id: UUIDstr = Field(default_factory=uuid4, primary_key=True, unique=True)
     username: str = Field(index=True, unique=True)

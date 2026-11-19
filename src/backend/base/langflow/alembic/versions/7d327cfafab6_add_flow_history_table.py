@@ -10,6 +10,7 @@ Phase: EXPAND
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+import sqlmodel
 from alembic import op
 from langflow.utils import migration
 
@@ -32,7 +33,7 @@ def upgrade() -> None:
             sa.Column("user_id", sa.Uuid(), nullable=True),
             sa.Column("data", sa.JSON(), nullable=True),
             sa.Column("version_number", sa.Integer(), nullable=False),
-            sa.Column("description", sa.String(), nullable=True),
+            sa.Column("description", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
             sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
             sa.ForeignKeyConstraint(["flow_id"], ["flow.id"], ondelete="CASCADE"),
             sa.ForeignKeyConstraint(["user_id"], ["user.id"], ondelete="SET NULL"),

@@ -134,6 +134,14 @@ def upgrade() -> None:
                 op.drop_index(index_name, table_name="file", schema=schema)
                 logger.info(f"PostgreSQL: Dropped unique index {index_name}")
         
+        elif db_dialect == "mysql":
+            # MySQL/MariaDB: a UNIQUE constraint is a unique index, so drop every
+            # single-column unique index on name and keep the composite one.
+            for index in inspector.get_indexes("file"):
+                if index.get("unique") and index.get("column_names") == ["name"]:
+                    op.drop_index(index["name"], table_name="file")
+                    logger.info("MySQL: Dropped unique index %s", index["name"])
+
         else:
             raise ValueError(f"Unsupported database dialect: {db_dialect}")
             
@@ -207,9 +215,9 @@ def downgrade() -> None:
             
             logger.info("SQLite: Restored single unique constraint on name column")
             
-        elif db_dialect == "postgresql":
-            # PostgreSQL: Add constraint back
-            schema = sa.inspect(conn).default_schema_name or "public"
+        elif db_dialect in {"postgresql", "mysql"}:
+            # PostgreSQL / MySQL: Add constraint back
+            schema = None if db_dialect == "mysql" else (sa.inspect(conn).default_schema_name or "public")
             op.create_unique_constraint("file_name_unique", "file", ["name"], schema=schema)
             logger.info("PostgreSQL: Added back single unique constraint on 'name' column")
             

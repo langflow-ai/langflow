@@ -61,6 +61,8 @@ _PG_VERSION_QUERY = sa.text("SELECT current_setting('server_version_num'), curre
 _MIGRATION_ADVISORY_LOCK_ID = 0x4C616E67666C6F77  # ASCII "Langflow"
 _MIGRATION_LOCK_DEFAULT_TIMEOUT_S = 300.0
 _MIGRATION_LOCK_POLL_INTERVAL_S = 2.0
+# MySQL/MariaDB counterpart of the advisory lock: a named lock held by the session.
+_MYSQL_MIGRATION_LOCK_NAME = "langflow_migrations"
 
 
 def _migration_lock_timeout_s() -> float:
@@ -78,7 +80,7 @@ def _migration_lock_timeout_s() -> float:
         return _MIGRATION_LOCK_DEFAULT_TIMEOUT_S
 
 
-def _acquire_migration_lock_or_raise(conn, lock_id: int) -> None:
+def _acquire_migration_lock_or_raise(conn, lock_id: int | str, try_lock_sql: str | None = None) -> None:
     """Acquire the advisory lock with a bounded wait, logging progress.
 
     Blocking ``pg_advisory_lock`` has no upper bound and ``lock_timeout`` does
@@ -87,7 +89,8 @@ def _acquire_migration_lock_or_raise(conn, lock_id: int) -> None:
     a configurable timeout and log when we're waiting, so operators see why
     boot is stuck.
     """
-    if conn.execute(sa.text(f"SELECT pg_try_advisory_lock({lock_id})")).scalar():
+    try_lock = sa.text(try_lock_sql or f"SELECT pg_try_advisory_lock({lock_id})")
+    if conn.execute(try_lock).scalar():
         return
 
     timeout = _migration_lock_timeout_s()
@@ -99,7 +102,7 @@ def _acquire_migration_lock_or_raise(conn, lock_id: int) -> None:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         time.sleep(_MIGRATION_LOCK_POLL_INTERVAL_S)
-        if conn.execute(sa.text(f"SELECT pg_try_advisory_lock({lock_id})")).scalar():
+        if conn.execute(try_lock).scalar():
             logger.info("Acquired migration advisory lock %s after waiting.", lock_id)
             return
 
@@ -127,7 +130,8 @@ def _normalize_sync_postgres_url(database_url: str) -> str:
         sync_url = "postgresql://" + sync_url.split("://", 1)[1]
     for async_driver in ("+asyncpg", "+aiosqlite"):
         sync_url = sync_url.replace(async_driver, "")
-    return sync_url
+    # MySQL/MariaDB: swap the async driver for its sync counterpart.
+    return sync_url.replace("mysql+aiomysql://", "mysql+pymysql://", 1)
 
 
 @contextmanager
@@ -142,26 +146,40 @@ def _postgres_migration_lock(database_url: str):
     here (bounded, with progress logging) and then find the schema already at
     head.
 
-    No-op for non-PostgreSQL URLs. SQLite has no advisory locks (and Langflow
-    runs single-process on it anyway).
+    MySQL/MariaDB get the same serialisation through the session-level named
+    lock ``GET_LOCK``; without it, workers sharing one schema race on the first
+    ``alembic_version`` write (error 1020) and the losers crash on boot.
+
+    No-op for other URLs. SQLite has no advisory locks (and Langflow runs
+    single-process on it anyway).
     """
-    if not database_url.startswith(("postgresql", "postgres")):
+    is_mysql = database_url.startswith(("mysql", "mariadb"))
+    if not (is_mysql or database_url.startswith(("postgresql", "postgres"))):
         yield
         return
+
+    if is_mysql:
+        lock_id: int | str = _MYSQL_MIGRATION_LOCK_NAME
+        try_lock_sql = f"SELECT GET_LOCK('{_MYSQL_MIGRATION_LOCK_NAME}', 0)"
+        unlock_sql = f"SELECT RELEASE_LOCK('{_MYSQL_MIGRATION_LOCK_NAME}')"
+    else:
+        lock_id = _MIGRATION_ADVISORY_LOCK_ID
+        try_lock_sql = f"SELECT pg_try_advisory_lock({_MIGRATION_ADVISORY_LOCK_ID})"
+        unlock_sql = f"SELECT pg_advisory_unlock({_MIGRATION_ADVISORY_LOCK_ID})"
 
     engine = sa.create_engine(_normalize_sync_postgres_url(database_url))
     try:
         with engine.connect() as conn:
-            logger.debug("Acquiring migration advisory lock %s", _MIGRATION_ADVISORY_LOCK_ID)
-            _acquire_migration_lock_or_raise(conn, _MIGRATION_ADVISORY_LOCK_ID)
+            logger.debug("Acquiring migration advisory lock %s", lock_id)
+            _acquire_migration_lock_or_raise(conn, lock_id, try_lock_sql)
             try:
                 yield
             finally:
-                logger.debug("Releasing migration advisory lock %s", _MIGRATION_ADVISORY_LOCK_ID)
+                logger.debug("Releasing migration advisory lock %s", lock_id)
                 # Session-level locks auto-release on connection close, but
                 # explicit unlock keeps the connection reusable if alembic
                 # internals ever hand us one back.
-                conn.execute(sa.text(f"SELECT pg_advisory_unlock({_MIGRATION_ADVISORY_LOCK_ID})"))
+                conn.execute(sa.text(unlock_sql))
     finally:
         engine.dispose()
 
@@ -363,6 +381,9 @@ class DatabaseService(Service):
                     "To avoid this warning, update the database URL."
                 )
             driver = "postgresql+psycopg"
+        elif driver in {"mysql", "mysql+pymysql", "mariadb"}:
+            # The engine is async, so MySQL/MariaDB need the aiomysql driver.
+            driver = "mysql+aiomysql"
 
         self.database_url = f"{driver}://{url_components[1]}"
 

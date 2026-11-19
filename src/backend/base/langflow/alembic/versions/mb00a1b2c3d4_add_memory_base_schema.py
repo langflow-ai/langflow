@@ -19,6 +19,7 @@ Create Date: 2026-04-14 00:00:00.000000
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+import sqlmodel
 from alembic import op
 from langflow.utils import migration
 
@@ -39,7 +40,7 @@ def upgrade() -> None:
     existing_job_indexes = {idx["name"] for idx in inspector.get_indexes("job")}
     with op.batch_alter_table("job", schema=None) as batch_op:
         if not migration.column_exists("job", "dedupe_key", conn):
-            batch_op.add_column(sa.Column("dedupe_key", sa.String(), nullable=True))
+            batch_op.add_column(sa.Column("dedupe_key", sqlmodel.sql.sqltypes.AutoString(), nullable=True))
         if "ix_job_dedupe_key" not in existing_job_indexes:
             batch_op.create_index(batch_op.f("ix_job_dedupe_key"), ["dedupe_key"], unique=False)
 
@@ -63,16 +64,18 @@ def upgrade() -> None:
         op.create_table(
             "memory_base",
             sa.Column("id", sa.Uuid(), nullable=False),
-            sa.Column("name", sa.String(), nullable=False),
+            sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
             sa.Column("flow_id", sa.Uuid(), nullable=False),
             sa.Column("user_id", sa.Uuid(), nullable=False),
             sa.Column("threshold", sa.Integer(), nullable=False, server_default=sa.text("50")),
             sa.Column("auto_capture", sa.Boolean(), nullable=False, server_default=sa.text("true")),
-            sa.Column("embedding_model", sa.String(), nullable=False, server_default=sa.text("''")),
+            sa.Column(
+                "embedding_model", sqlmodel.sql.sqltypes.AutoString(), nullable=False, server_default=sa.text("''")
+            ),
             sa.Column("preprocessing", sa.Boolean(), nullable=False, server_default=sa.text("false")),
-            sa.Column("preproc_model", sa.String(), nullable=True),
-            sa.Column("preproc_instructions", sa.String(), nullable=True),
-            sa.Column("kb_name", sa.String(), nullable=False),
+            sa.Column("preproc_model", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+            sa.Column("preproc_instructions", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+            sa.Column("kb_name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
             sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
             sa.PrimaryKeyConstraint("id"),
             sa.UniqueConstraint("user_id", "name", name="uq_memory_base_user_name"),
@@ -93,7 +96,7 @@ def upgrade() -> None:
                 sa.ForeignKey("memory_base.id", ondelete="CASCADE"),
                 nullable=False,
             ),
-            sa.Column("session_id", sa.String(), nullable=False),
+            sa.Column("session_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
             sa.Column("cursor_id", sa.Uuid(), nullable=True),
             sa.Column("total_processed", sa.Integer(), nullable=False, server_default=sa.text("0")),
             sa.Column("last_sync_at", sa.DateTime(timezone=True), nullable=True),
@@ -133,7 +136,7 @@ def upgrade() -> None:
                 sa.ForeignKey("job.job_id", ondelete="SET NULL"),
                 nullable=True,
             ),
-            sa.Column("session_id", sa.String(), nullable=False),
+            sa.Column("session_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
             sa.Column("ingested_at", sa.DateTime(timezone=True), nullable=False),
             sa.PrimaryKeyConstraint("id"),
             sa.UniqueConstraint(
@@ -164,7 +167,7 @@ def upgrade() -> None:
                 sa.ForeignKey("memory_base.id", ondelete="CASCADE"),
                 nullable=False,
             ),
-            sa.Column("session_id", sa.String(), nullable=False),
+            sa.Column("session_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
             sa.Column(
                 "workflow_job_id",
                 sa.Uuid(),

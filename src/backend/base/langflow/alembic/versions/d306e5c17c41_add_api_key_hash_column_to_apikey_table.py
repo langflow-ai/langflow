@@ -17,6 +17,7 @@ import hashlib
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+import sqlmodel
 from alembic import op
 from langflow.utils import migration
 
@@ -102,7 +103,7 @@ def upgrade() -> None:
 
     if not migration.column_exists(TABLE_NAME, COLUMN_NAME, conn):
         with op.batch_alter_table(TABLE_NAME, schema=None) as batch_op:
-            batch_op.add_column(sa.Column(COLUMN_NAME, sa.String(), nullable=True))
+            batch_op.add_column(sa.Column(COLUMN_NAME, sqlmodel.sql.sqltypes.AutoString(), nullable=True))
             batch_op.create_index(INDEX_NAME, [COLUMN_NAME])
 
     try:

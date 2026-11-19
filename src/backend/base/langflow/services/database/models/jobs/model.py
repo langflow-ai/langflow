@@ -3,10 +3,11 @@ from enum import Enum
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import JSON, BigInteger, Column, DateTime, Index, Integer, String, Text, UniqueConstraint, text
+from sqlalchemy import JSON, BigInteger, Column, DateTime, Index, Integer, Text, UniqueConstraint, text
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
+from sqlmodel.sql.sqltypes import AutoString
 
 # JSONB on Postgres (GIN-indexable), JSON elsewhere — same variant as other JSON columns.
 JsonVariant = JSON().with_variant(JSONB(), "postgresql")
@@ -136,7 +137,7 @@ class JobEvent(SQLModel, table=True):  # type: ignore[call-arg]
     id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
     job_id: UUID = Field(index=True, nullable=False)
     seq: int = Field(sa_column=Column(Integer, nullable=False))
-    event_type: str = Field(sa_column=Column(String, nullable=False))
+    event_type: str = Field(sa_column=Column(AutoString(), nullable=False))
     payload: dict[str, Any] | None = Field(
         default=None,
         sa_column=Column(JsonVariant, nullable=True),
@@ -204,7 +205,7 @@ class JobCheckpoint(SQLModel, table=True):  # type: ignore[call-arg]
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     job_id: UUID = Field(index=True, nullable=False)
-    kind: str = Field(sa_column=Column(String, nullable=False))
+    kind: str = Field(sa_column=Column(AutoString(), nullable=False))
     blob: str = Field(sa_column=Column(Text, nullable=False))
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),

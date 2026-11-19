@@ -6,6 +6,7 @@ Phase: EXPAND. No vector data is read by Alembic.
 """
 
 import sqlalchemy as sa
+import sqlmodel
 from alembic import op
 from sqlalchemy.dialects.postgresql import JSONB
 
@@ -24,7 +25,9 @@ def upgrade() -> None:
         if "storage_generation" not in columns:
             batch.add_column(sa.Column("storage_generation", sa.Integer(), nullable=False, server_default="1"))
         if "storage_state" not in columns:
-            batch.add_column(sa.Column("storage_state", sa.String(), nullable=False, server_default="ready"))
+            batch.add_column(
+                sa.Column("storage_state", sqlmodel.sql.sqltypes.AutoString(), nullable=False, server_default="ready")
+            )
         if "active_migration_id" not in columns:
             batch.add_column(sa.Column("active_migration_id", sa.Uuid(), nullable=True))
     indexes = {index["name"] for index in sa.inspect(connection).get_indexes("knowledge_base")}
@@ -35,16 +38,16 @@ def upgrade() -> None:
             "knowledge_base_storage_migration",
             sa.Column("id", sa.Uuid(), primary_key=True),
             sa.Column("kb_id", sa.Uuid(), sa.ForeignKey("knowledge_base.id", ondelete="CASCADE"), nullable=False),
-            sa.Column("source_backend", sa.String(), nullable=False),
+            sa.Column("source_backend", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
             sa.Column("source_generation", sa.Integer(), nullable=False),
             sa.Column("target_generation", sa.Integer(), nullable=False),
-            sa.Column("source_fingerprint", sa.String(), nullable=True),
-            sa.Column("source_identity", sa.String(), nullable=True),
-            sa.Column("source_version", sa.String(), nullable=True),
-            sa.Column("phase", sa.String(), nullable=False),
+            sa.Column("source_fingerprint", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+            sa.Column("source_identity", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+            sa.Column("source_version", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+            sa.Column("phase", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
             sa.Column("attempts", sa.Integer(), nullable=False),
-            sa.Column("error_code", sa.String(), nullable=True),
-            sa.Column("coordinator", sa.String(), nullable=True),
+            sa.Column("error_code", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+            sa.Column("coordinator", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
             sa.Column("validation", sa.JSON().with_variant(JSONB(), "postgresql"), nullable=False),
             sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
             sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),

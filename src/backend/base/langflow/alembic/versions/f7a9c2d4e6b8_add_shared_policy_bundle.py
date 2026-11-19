@@ -201,7 +201,8 @@ def _seed_active_bundle(conn: sa.Connection) -> None:
 def _create_revision_table() -> None:
     op.create_table(
         REVISION_TABLE,
-        sa.Column("revision", sa.Integer(), nullable=False),
+        # Application-assigned; AUTO_INCREMENT next to a CHECK is rejected by MariaDB.
+        sa.Column("revision", sa.Integer(), nullable=False, autoincrement=False),
         sa.Column("initialized", sa.Boolean(), nullable=False),
         sa.Column("approved_provider_ids", sa.JSON(), nullable=False),
         sa.Column("blocked_component_keys", sa.JSON(), nullable=False),

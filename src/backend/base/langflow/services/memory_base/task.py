@@ -48,6 +48,7 @@ from langflow.services.database.models.memory_base.model import (
     MemoryBaseWorkflowRun,
 )
 from langflow.services.database.models.message.model import MessageTable
+from langflow.services.database.utils import insert_ignoring_conflicts
 from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.knowledge_base_storage.runtime import StorageUnavailableError, operation, resolve_record
 from langflow.services.memory_base.document_builders import (
@@ -738,14 +739,7 @@ async def _mark_messages_ingested(
         for msg in messages
     ]
     conn = await db.connection()
-    if conn.dialect.name == "postgresql":
-        from sqlalchemy.dialects.postgresql import insert as pg_insert
-
-        stmt = pg_insert(MessageIngestionRecord).values(rows).on_conflict_do_nothing()
-    else:
-        from sqlalchemy.dialects.sqlite import insert as sqlite_insert
-
-        stmt = sqlite_insert(MessageIngestionRecord).values(rows).on_conflict_do_nothing()
+    stmt = insert_ignoring_conflicts(conn.dialect.name, MessageIngestionRecord, rows)
     await db.exec(stmt)  # type: ignore[call-overload]
 
 

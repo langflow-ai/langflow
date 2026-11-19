@@ -9,6 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+import sqlmodel
 
 
 # revision identifiers, used by Alembic.
@@ -26,7 +27,7 @@ def upgrade() -> None:
     
     # Add context_id column if it does not exist
     if 'context_id' not in columns:
-        op.add_column('message', sa.Column('context_id', sa.String(), nullable=True))
+        op.add_column('message', sa.Column('context_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True))
 
 
 def downgrade() -> None:

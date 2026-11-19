@@ -48,9 +48,10 @@ INDEX_NAME = "ix_user_username_lower"
 
 
 def _existing_case_insensitive_collisions(conn) -> list[str]:
+    user_table = conn.dialect.identifier_preparer.quote_identifier("user")
     rows = conn.execute(
         sa.text(
-            'SELECT lower(username) AS normalized, count(*) AS total FROM "user" '
+            f"SELECT lower(username) AS normalized, count(*) AS total FROM {user_table} "  # noqa: S608
             "GROUP BY normalized HAVING count(*) > 1"
         )
     ).fetchall()
@@ -69,6 +70,11 @@ def upgrade() -> None:
             f"upgrading: {sorted(collisions)}"
         )
         raise RuntimeError(msg)
+    if conn.dialect.name == "mysql":
+        # MariaDB has no expression indexes. There the unique index on
+        # user.username already compares case-insensitively under the default
+        # *_ci collations, which gives the same guarantee.
+        return
     op.create_index(
         INDEX_NAME,
         "user",

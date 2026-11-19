@@ -91,11 +91,14 @@ _POSTGRES_CAST_PATTERN = re.compile(
     r"::\s*(?:character\s+varying|varchar|text)(?:\s*\[\s*\])?",
     flags=re.IGNORECASE,
 )
-_SQL_QUOTED_SEGMENT_PATTERN = re.compile(r"""('(?:''|[^'])*'|"(?:""|[^"])*")""")
+_MYSQL_AUTOSTRING_LENGTH = AutoString.mysql_default_length
+_MYSQL_UUID_LENGTH = 32
+_SQL_QUOTED_SEGMENT_PATTERN = re.compile(r"""('(?:''|[^'])*'|"(?:""|[^"])*"|`(?:``|[^`])*`)""")
 _CHECK_TOKEN_PATTERN = re.compile(
     r"""
     (?P<string>'(?:''|[^'])*')
     |(?P<quoted_identifier>"(?:""|[^"])*")
+    |(?P<backtick_identifier>`(?:``|[^`])*`)
     |(?P<identifier>[a-z_][a-z0-9_]*)
     |(?P<left_parenthesis>\()
     |(?P<right_parenthesis>\))
@@ -167,6 +170,13 @@ def _column_type_signature(column_type: object, *, dialect_name: str) -> str:
         and getattr(column_type, "length", None) == _SQLITE_UUID_LENGTH
     ):
         return "uuid"
+    if (
+        dialect_name == "mysql"
+        and isinstance(column_type, sa.CHAR)
+        and getattr(column_type, "length", None) == _MYSQL_UUID_LENGTH
+    ):
+        # sa.Uuid is stored as CHAR(32) on MySQL/MariaDB.
+        return "uuid"
     if isinstance(column_type, sa.DateTime):
         if dialect_name == "postgresql" and bool(getattr(column_type, "timezone", False)):
             return "datetime:tz"
@@ -180,6 +190,9 @@ def _column_type_signature(column_type: object, *, dialect_name: str) -> str:
         collation = getattr(column_type, "collation", None)
         if collation is not None and str(collation).lower() not in {"binary", "default"}:
             return f"string:collation:{str(collation).lower()}"
+        if dialect_name == "mysql" and length == _MYSQL_AUTOSTRING_LENGTH:
+            # AutoString (no length) is emitted as VARCHAR(255) on MySQL/MariaDB.
+            length = None
         return "string" if length is None else f"string:{length}"
     return f"{type(column_type).__module__}.{type(column_type).__qualname__}"
 
@@ -187,7 +200,12 @@ def _column_type_signature(column_type: object, *, dialect_name: str) -> str:
 def _column_default_signature(column_name: str, value: object | None) -> str | None:
     """Normalize ordinary literals and SQLAlchemy's dialect-specific now()."""
     signature = _default_signature(value)
-    if column_name in {"created_at", "updated_at"} and signature in {"current_timestamp", "now()"}:
+    # MariaDB reflects CURRENT_TIMESTAMP as ``current_timestamp()``.
+    if column_name in {"created_at", "updated_at"} and signature in {
+        "current_timestamp",
+        "current_timestamp()",
+        "now()",
+    }:
         return "timestamp"
     return signature
 
@@ -210,6 +228,10 @@ def _check_tokens(value: object) -> list[tuple[str, str]]:
         if kind == "quoted_identifier":
             kind = "identifier"
             lexeme = lexeme[1:-1].replace('""', '"')
+        elif kind == "backtick_identifier":
+            # MySQL/MariaDB reflect CHECK expressions with backtick-quoted identifiers.
+            kind = "identifier"
+            lexeme = lexeme[1:-1].replace("``", "`")
         elif kind == "identifier":
             lexeme = lexeme.lower()
         tokens.append((kind, lexeme))
@@ -732,11 +754,22 @@ def _current_unique_constraint_contracts() -> frozenset[tuple[str | None, tuple[
     )
 
 
+def _without_predicates(
+    contracts: Mapping[str | None, tuple[tuple[str, ...], tuple[object, ...] | None]],
+) -> dict[str | None, tuple[tuple[str, ...], tuple[object, ...] | None]]:
+    """Drop partial-index predicates, which MySQL/MariaDB do not support or reflect."""
+    return {name: (columns, None) for name, (columns, _predicate) in contracts.items()}
+
+
 def _validate_unique_contracts(inspector: Inspector, indexes: list[dict[str, object]]) -> None:
     """Reject uniqueness beyond the frozen or current complete model contract."""
+    is_mysql = inspector.dialect.name == "mysql"
     reflected_indexes = _reflected_unique_index_contracts(indexes)
     baseline_indexes = _baseline_unique_index_contracts()
     current_indexes = _current_unique_index_contracts()
+    if is_mysql:
+        baseline_indexes = _without_predicates(baseline_indexes)
+        current_indexes = _without_predicates(current_indexes)
     if not (
         _matches_repairable_index_contract(reflected_indexes, baseline_indexes)
         or _matches_repairable_index_contract(reflected_indexes, current_indexes)
@@ -750,6 +783,8 @@ def _validate_unique_contracts(inspector: Inspector, indexes: list[dict[str, obj
             tuple(str(column) for column in (constraint.get("column_names") or ())),
         )
         for constraint in inspector.get_unique_constraints(TABLE_NAME)
+        # MySQL/MariaDB report every unique index again as a unique constraint.
+        if not (is_mysql and constraint.get("duplicates_index"))
     )
     if reflected_constraints not in {frozenset(), _current_unique_constraint_contracts()}:
         detail = f"{TABLE_NAME} has an incompatible unique constraint contract"
@@ -777,6 +812,8 @@ def _create_missing_indexes(conn: sa.Connection) -> None:
             _index_contract(expected_columns, expected_predicate),
             current_indexes.get(index_name),
         }
+        if conn.dialect.name == "mysql":
+            allowed_contracts = {(contract[0], None) for contract in allowed_contracts if contract is not None}
         if not bool(index.get("unique")) or reflected_contract not in allowed_contracts:
             detail = f"{TABLE_NAME}.{index_name} has an incompatible definition"
             _raise_schema_error(detail)

@@ -9,10 +9,10 @@ if TYPE_CHECKING:
 
     from sqlmodel.ext.asyncio.session import AsyncSession
 
-from sqlalchemy import update
 from sqlmodel import col, or_, select
 
 from langflow.services.database.models.jobs.model import Job, JobStatus
+from langflow.services.database.utils import update_returning
 
 
 async def get_jobs_by_flow_id(db: AsyncSession, flow_id: UUID, page: int = 1, size: int = 10) -> list[Job]:
@@ -80,17 +80,11 @@ async def update_job_status(
     if finished_timestamp is not None:
         values["finished_timestamp"] = finished_timestamp
 
-    # RETURNING hands back the updated row in the same round trip, so a status
-    # change does not pay for a second SELECT. populate_existing refreshes a Job
-    # the caller's session already holds.
-    result = await db.exec(
-        update(Job)
-        .where(Job.job_id == job_id)
-        .values(**values)
-        .returning(Job)
-        .execution_options(synchronize_session=False, populate_existing=True)
-    )
-    return result.scalar_one_or_none()
+    # RETURNING hands back the updated row in the same round trip where the
+    # database supports it, so a status change does not pay for a second SELECT.
+    # The refreshed row replaces a Job the caller's session already holds.
+    rows = await update_returning(db, Job, Job.job_id == job_id, values=values)
+    return rows[0] if rows else None
 
 
 async def get_latest_jobs_by_asset_ids(db: AsyncSession, asset_ids: Sequence[UUID]) -> dict[UUID, Job]:

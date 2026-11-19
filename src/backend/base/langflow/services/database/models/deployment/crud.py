@@ -15,7 +15,7 @@ from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.flow_version_deployment_attachment.model import (
     FlowVersionDeploymentAttachment,
 )
-from langflow.services.database.utils import parse_uuid
+from langflow.services.database.utils import parse_uuid, update_returning
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -257,23 +257,20 @@ async def update_deployment_metadata(
     if not _deployment_metadata_has_changed(update_item):
         return deployment
 
-    stmt = (
-        update(Deployment)
-        .where(
-            Deployment.user_id == owner_id,
-            Deployment.id == deployment.id,
-        )
-        .values(
-            display_name=update_item.display_name,
-            description=update_item.description,
+    # The refreshed rows replace the loaded Deployment instance.
+    updated = await update_returning(
+        db,
+        Deployment,
+        Deployment.user_id == owner_id,
+        Deployment.id == deployment.id,
+        values={
+            "display_name": update_item.display_name,
+            "description": update_item.description,
             # Provider metadata sync should not look like a local edit.
-            updated_at=Deployment.updated_at,
-        )
-        .returning(Deployment)
-        .execution_options(populate_existing=True)
+            "updated_at": Deployment.updated_at,
+        },
     )
-    # Consume RETURNING rows so populate_existing refreshes the loaded Deployment instance.
-    if (await db.exec(stmt)).first() is None:
+    if not updated:
         msg = f"Deployment not found. (id={deployment.id})"
         raise ValueError(msg)
     return deployment
@@ -330,6 +327,23 @@ async def update_deployment_metadata_batch(
     """
     updates = [item for item in deployment_updates if _deployment_metadata_has_changed(item)]
     if not updates:
+        return
+
+    if not db.get_bind().dialect.update_returning:
+        # MySQL/MariaDB support neither UPDATE ... RETURNING nor an UPDATE driven by
+        # a VALUES CTE, so apply the same per-row update one deployment at a time.
+        for item in updates:
+            await update_returning(
+                db,
+                Deployment,
+                Deployment.id == item.langflow_db_row.id,
+                Deployment.user_id == item.langflow_db_row.user_id,
+                values={
+                    "display_name": item.display_name,
+                    "description": item.description,
+                    "updated_at": Deployment.updated_at,
+                },
+            )
         return
 
     metadata_updates = _deployment_metadata_updates_cte(updates)

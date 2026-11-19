@@ -16,6 +16,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
+import sqlmodel
 from alembic import op
 from langflow.utils import migration
 
@@ -38,7 +39,7 @@ def upgrade() -> None:
         TABLE_NAME,
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("user_id", sa.Uuid(), nullable=False),
-        sa.Column("resource_type", sa.String(), nullable=False),
+        sa.Column("resource_type", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("resource_id", sa.Uuid(), nullable=False),
         sa.Column("created_by", sa.Uuid(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
