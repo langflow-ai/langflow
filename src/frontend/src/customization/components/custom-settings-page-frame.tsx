@@ -35,6 +35,7 @@ export default function CustomSettingsPageFrame({
       >
         <nav aria-label={t("settings.nav.label")} className="sm:hidden">
           <select
+            data-testid="settings-mobile-navigation"
             aria-label={t("settings.nav.label")}
             value={selected?.href ?? ""}
             onChange={(event) =>

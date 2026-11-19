@@ -92,9 +92,11 @@ test(
     await search.focus();
     await page.keyboard.press("Tab");
     await expect(filter).toBeFocused();
-    await expect(
-      page.getByRole("combobox", { name: "Settings navigation" }),
-    ).toBeVisible();
+    const settingsNavigation = page.getByTestId("settings-mobile-navigation");
+    await expect(settingsNavigation).toBeVisible();
+    await expect(settingsNavigation).toHaveAccessibleName(
+      "Settings navigation",
+    );
     const searchBox = await search.boundingBox();
     const filterBox = await filter.boundingBox();
     expect(searchBox!.width).toBeGreaterThan(140);
