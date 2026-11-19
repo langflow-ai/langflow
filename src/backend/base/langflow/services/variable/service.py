@@ -598,6 +598,7 @@ class DatabaseVariableService(VariableService, Service):
         """Count owned rows for the requested names, including empty placeholders."""
         if not names:
             return {}
+        user_id = UUID(user_id) if isinstance(user_id, str) else user_id
         stmt = (
             select(Variable.name, func.count())
             .where(Variable.user_id == user_id, col(Variable.name).in_(list(names)))

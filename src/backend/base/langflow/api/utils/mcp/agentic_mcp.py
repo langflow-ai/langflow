@@ -7,7 +7,6 @@ key instead of a per-user auto-registered stdio entry.
 
 from __future__ import annotations
 
-import hashlib
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -15,10 +14,11 @@ from fastapi import HTTPException
 from lfx.log.logger import logger
 from lfx.services.deps import get_settings_service
 from lfx.services.settings.constants import AGENTIC_VARIABLES, DEFAULT_AGENTIC_VARIABLE_VALUE
-from sqlalchemy import false, func, update
+from sqlalchemy import false, update
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlmodel import select
 
+from langflow.services.database.models.user.model import User
 from langflow.services.database.models.variable.model import Variable
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
@@ -38,38 +38,29 @@ _STARTUP_AGENTIC_PLACEHOLDERS = {
 
 
 async def _use_read_committed_if_possible(session: AsyncSession) -> None:
-    """Prefer READ COMMITTED so a waiting worker sees rows committed under the lock.
-
-    Isolation cannot be changed mid-transaction; callers that already started a
-    REPEATABLE READ transaction still serialize on the per-user lock, but may not
-    observe concurrent inserts until their next transaction.
-    """
+    """Use a fresh READ COMMITTED snapshot without ending caller-owned work."""
     if session.get_bind().dialect.name != "postgresql":
         return
-    if session.in_transaction():
-        return
-    await session.connection(execution_options={"isolation_level": "READ COMMITTED"})
+    if not session.in_transaction():
+        await session.connection(execution_options={"isolation_level": "READ COMMITTED"})
+    else:
+        connection = await session.connection()
+        if await connection.get_isolation_level() != "READ COMMITTED":
+            msg = "Agentic variable initialization needs READ COMMITTED; call it before starting a transaction"
+            raise RuntimeError(msg)
 
 
 async def _serialize_agentic_variable_initialization(session: AsyncSession, user_id: UUID | str) -> None:
-    """Serialize placeholder creation for one user across concurrent workers.
+    """Reserve the user before checking placeholders, matching environment imports.
 
-    PostgreSQL uses a transaction-scoped advisory lock. SQLite has no row-level
-    equivalent, so this reserves the writer before the existence check. Historical
-    duplicate rows are never deleted; without a unique constraint, a worker can
-    only avoid creating *additional* copies after it can see existing rows.
+    Row locks avoid an advisory-lock entry per user during a startup sweep. The
+    caller owns the transaction and therefore the lifetime of these reservations.
     """
     dialect = session.get_bind().dialect.name
     if dialect == "postgresql":
-        lock_key = int.from_bytes(
-            hashlib.sha256(f"langflow.agentic.variables:{user_id}".encode()).digest()[:8],
-            "big",
-            signed=True,
-        )
-        await session.exec(select(func.pg_advisory_xact_lock(lock_key)))
+        await session.exec(select(User.id).where(User.id == UUID(str(user_id))).with_for_update())
     elif dialect == "sqlite":
-        # Reserve SQLite's writer before reading. No rows change, but the
-        # reservation prevents another creator from passing the same check.
+        # Reserve SQLite's writer before reading, without changing any rows.
         await session.exec(update(Variable).where(false()).values(name=Variable.name))
 
 
@@ -120,13 +111,24 @@ async def _create_missing_agentic_variables(
             created += 1
             existing_counts[var_name] = 1
             await logger.adebug(f"Created agentic variable {var_name} for user {user_label}")
-        except IntegrityError:
-            skipped += 1
-            await logger.adebug(
-                "Agentic variable %s already exists for user %s after a concurrent insert, skipping",
-                var_name,
-                user_label,
-            )
+        except IntegrityError as e:
+            if not session.is_active or e.connection_invalidated:
+                raise
+            counts = await variable_service.existing_variable_name_counts(user_id, [var_name], session=session)
+            if counts.get(var_name):
+                skipped += 1
+                existing_counts[var_name] = counts[var_name]
+                await logger.adebug(
+                    "Agentic variable %s already exists for user %s after a concurrent insert, skipping",
+                    var_name,
+                    user_label,
+                )
+            else:
+                await logger.aexception(f"Error creating agentic variable {var_name} for user {user_label}: {e}")
+        except SQLAlchemyError as e:
+            if not session.is_active or getattr(e, "connection_invalidated", False):
+                raise
+            await logger.aexception(f"Error creating agentic variable {var_name} for user {user_label}: {e}")
         except (
             HTTPException,
             OSError,
@@ -166,12 +168,10 @@ async def initialize_agentic_global_variables(session: AsyncSession) -> None:
     await logger.ainfo("Initializing agentic global variables for all users...")
 
     try:
-        from langflow.services.database.models.user.model import User
-
         await _use_read_committed_if_possible(session)
 
         # Get all users in the system
-        users = (await session.exec(select(User))).all()
+        users = (await session.exec(select(User).order_by(User.id))).all()
         await logger.adebug(f"Found {len(users)} users for agentic variables initialization")
 
         if not users:
@@ -197,7 +197,6 @@ async def initialize_agentic_global_variables(session: AsyncSession) -> None:
 
             except (
                 HTTPException,
-                SQLAlchemyError,
                 OSError,
                 PermissionError,
                 FileNotFoundError,
@@ -214,7 +213,6 @@ async def initialize_agentic_global_variables(session: AsyncSession) -> None:
 
     except (
         HTTPException,
-        SQLAlchemyError,
         OSError,
         PermissionError,
         FileNotFoundError,
@@ -258,7 +256,6 @@ async def initialize_agentic_user_variables(user_id: UUID | str, session: AsyncS
 
     except (
         HTTPException,
-        SQLAlchemyError,
         OSError,
         PermissionError,
         FileNotFoundError,

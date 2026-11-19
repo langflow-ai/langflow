@@ -247,3 +247,18 @@ async def test_caller_rollback_discards_uncommitted_placeholders(async_session):
     await async_session.rollback()
 
     assert await _variable_names(async_session, user_id) == []
+
+
+@pytest.mark.asyncio
+async def test_existence_counts_accept_string_user_ids(async_session):
+    """The count API accepts the same string UUIDs as other variable service reads."""
+    from langflow.services.deps import get_variable_service
+
+    user = await _seed_user(async_session)
+    async_session.add(Variable(user_id=user.id, name="FLOW_ID", value="", type=GENERIC_TYPE, default_fields=[]))
+    await async_session.commit()
+
+    counts = await get_variable_service().existing_variable_name_counts(
+        str(user.id), ["FLOW_ID", "FIELD_NAME"], session=async_session
+    )
+    assert counts == {"FLOW_ID": 1}
