@@ -1,0 +1,79 @@
+---
+title: Clawifi
+slug: /bundles-clawifi
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Clawifi** bundle.
+
+[Clawifi](https://clawifi.dev) is web access for AI agents.
+It searches many engines as one, reads pages and PDFs, and can return only the passages of a page that answer a question.
+
+Both components need a Clawifi API key.
+[Sign up](https://clawifi.dev/signup) to get one, then enter it in the **Clawifi API Key** field, or store it in a [global variable](/configuration-global-variables) named `CLAWIFI_API_KEY`.
+Calls use Clawifi credits; see [Pricing and credits](https://clawifi.dev/docs/pricing-and-credits).
+
+Clawifi reads every page on its own servers, so Langflow only sends requests to `api.clawifi.dev`.
+
+For more information, see the [Clawifi documentation](https://clawifi.dev/docs).
+
+## Clawifi Search
+
+This component searches the web with Clawifi.
+
+It returns the results as a [`Table`](/data-types#table), with one row per result.
+Each row has the result's `url`, `title`, `snippet`, and `rank`, and `published_at` when the search engine gives a date.
+The snippet is a short passage, not the page. To read a result, pass its URL to **Clawifi Fetch**.
+
+When the component is used as a [tool](/agents-tools), the agent can set the search query, the domains to include or exclude, and the time range.
+
+### Clawifi Search parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| Clawifi API Key (`api_key`) | SecretString | Input parameter. Your Clawifi API key. |
+| Search Query (`query`) | String | Input parameter. The query to search the web for. |
+| Max Results (`max_results`) | Integer | Input parameter. The number of results to return. Default: `5`. |
+| Include Domains (`include_domains`) | String | Input parameter. Only return results from these domains, comma-separated, such as `docs.python.org`. |
+| Exclude Domains (`exclude_domains`) | String | Input parameter. Never return results from these domains, comma-separated. |
+| Time Range (`time_range`) | String | Input parameter. Only return results from the last `day`, `week`, `month`, or `year`. Default: `any`. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for Clawifi to answer. Default: `60`. |
+
+## Clawifi Fetch
+
+This component reads one web page or PDF and returns its main content as markdown.
+If you enter a **Query**, it returns only the passages of the page that answer it.
+
+It outputs a [`Data`](/data-types#json) object with the page's `url`, `title`, `content_markdown`, and `content_status`, and the `excerpt`, `language`, `published_at`, and `modified_at` when the page gives them.
+`content_status` is `ok`, or `thin` when little more than the title came back.
+When the page is blocked, needs JavaScript, or is not found, the component returns an error instead.
+Some URLs, such as papers or code repositories, are read through an official API. For those, `entity_type` names the record type, and the data has that record's own fields.
+
+When the component is used as a [tool](/agents-tools), the agent can set the URL and the query.
+
+### Clawifi Fetch parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Clawifi API Key (`api_key`) | SecretString | Input parameter. Your Clawifi API key. |
+| URL (`url`) | String | Input parameter. The `http://` or `https://` URL of the page or PDF to read. |
+| Query (`query`) | String | Input parameter. Optional. A question about the page. When set, only the passages that answer it are returned. At most 500 characters. |
+| Passages (`top_k`) | Integer | Input parameter. How many passages to return when a query is set, from 1 to 20. Default: `5`. |
+| Render (`render`) | String | Input parameter. Read the page in a browser: `never`, `auto` (only when the page needs JavaScript), or `always`. A browser read uses more credits than a plain read. Default: `never`. |
+| Content Scope (`content_scope`) | String | Input parameter. `main` returns the page's main content, and `full` returns the whole page text. Default: `main`. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for Clawifi to answer. Default: `60`. |
+
+## See also
+
+* [**Web Search** component](/web-search)
+* [**Keenable** bundle](./bundles-keenable)
+* [**Olostep** bundle](./bundles-olostep)
