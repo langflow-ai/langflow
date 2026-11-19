@@ -556,12 +556,16 @@ class TestSharedChildFlow:
             patch("langflow.services.deps.get_authorization_service", return_value=authz),
         ):
             scope.return_value.__aenter__ = AsyncMock(return_value=session)
-            scope.return_value.__aexit__ = AsyncMock()
+            # False: an error inside the lookup must fail the test, not be swallowed by the context manager.
+            scope.return_value.__aexit__ = AsyncMock(return_value=False)
             return await get_flow_by_id_or_name(user_id=str(uuid4()), flow_id=str(uuid4()))
 
     @pytest.fixture
     def shared_flow(self):
         flow = MagicMock(spec=Flow)
+        flow.workspace_id = None
+        flow.folder_id = uuid4()
+        flow.user_id = uuid4()
         flow.to_data = MagicMock(return_value=Data(data={"name": "child"}))
         return flow
 
@@ -573,6 +577,18 @@ class TestSharedChildFlow:
         assert authz.enforce.await_args.kwargs["obj"].startswith("flow:")
         assert authz.enforce.await_args.kwargs["act"] == "execute"
         assert authz.enforce.await_args.kwargs["context"]["is_superuser"] is False
+
+    @pytest.mark.asyncio
+    async def test_a_grant_scoped_to_the_flows_project_counts(self, shared_flow):
+        authz = self._authz()
+
+        async def enforce(**kwargs):
+            return kwargs["domain"] == f"project:{shared_flow.folder_id}"
+
+        authz.enforce = AsyncMock(side_effect=enforce)
+        result = await self._lookup(self._session(None, shared_flow), authz)
+        assert result.data["name"] == "child"
+        assert authz.enforce.await_args.kwargs["context"]["folder_id"] == shared_flow.folder_id
 
     @pytest.mark.asyncio
     async def test_a_flow_authorization_refuses_is_not_returned(self, shared_flow):

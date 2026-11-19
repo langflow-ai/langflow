@@ -184,6 +184,7 @@ async def _flow_shared_for_run(session, user_id: UUID, flow_id: UUID) -> Flow | 
     a service account and its flows belong to the deployer; the deploy shares each of them to the account.
     """
     from langflow.services.auth.context import current_auth_context_for_authz
+    from langflow.services.authorization.guards import _resolve_authz_domain
     from langflow.services.deps import get_authorization_service
 
     authz = get_authorization_service()
@@ -192,12 +193,19 @@ async def _flow_shared_for_run(session, user_id: UUID, flow_id: UUID) -> Flow | 
     flow = await session.get(Flow, flow_id)
     if flow is None:
         return None
+    # Ask in the flow's own project or workspace, as every other flow check does, so a grant scoped there counts.
     allowed = await authz.enforce(
         user_id=user_id,
-        domain="*",
+        domain=_resolve_authz_domain(flow.workspace_id, flow.folder_id),
         obj=f"flow:{flow_id}",
         act="execute",
-        context={**current_auth_context_for_authz(), "is_superuser": False},
+        context={
+            **current_auth_context_for_authz(),
+            "is_superuser": False,
+            "flow_user_id": flow.user_id,
+            "workspace_id": flow.workspace_id,
+            "folder_id": flow.folder_id,
+        },
     )
     return flow if allowed else None
 
