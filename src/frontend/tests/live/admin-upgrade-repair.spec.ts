@@ -32,6 +32,11 @@ test(
       "usage_is_flow_level_not_version_specific",
     ];
     flow.usage!.serving = structuredClone(flow.usage!.editor);
+    report.document.source.identity = {
+      kind: "sqlite",
+      locator: { path: "/backups/support.db" },
+      sha256: "b".repeat(64),
+    };
     const another = { ...report, id: "ba9a4c6e-c2d1-4810-a792-48c86f591dd9" };
     await page.route("**/api/v1/upgrade-reports**", async (route) => {
       const pathname = new URL(route.request().url()).pathname;
@@ -42,7 +47,16 @@ test(
             ? report
             : pathname.endsWith(another.id)
               ? another
-              : { items: [report, another], total: 2, offset: 0, limit: 20 },
+              : {
+                  items: [report, another].map((item) => ({
+                    ...item,
+                    source_database: "/backups/support.db",
+                    incomplete: true,
+                  })),
+                  total: 2,
+                  offset: 0,
+                  limit: 20,
+                },
       });
     });
     await awaitBootstrapTest(page, { skipModal: true, seedFlowIfEmpty: false });
@@ -53,6 +67,7 @@ test(
       .locator("option:not([disabled])")
       .allTextContents();
     expect(imports[0]).not.toBe(imports[1]);
+    expect(imports[0]).toContain("support.db · Assessment incomplete");
     expect(imports[0]).toContain(report.id);
     expect(imports[1]).toContain(another.id);
     await expect(page.getByText(/2 weeks ago/)).toBeVisible({
@@ -71,6 +86,29 @@ test(
     await expect(
       page.getByText("Deployments and triggers None", { exact: true }),
     ).toBeVisible({ timeout: TIMEOUTS.standard });
+    await page.setViewportSize({ width: 320, height: 800 });
+    const search = page.getByRole("textbox", { name: /Search names/ });
+    const filter = page.getByLabel("Filter by result");
+    await search.focus();
+    await page.keyboard.press("Tab");
+    await expect(filter).toBeFocused();
+    const settingsNavigation = page.getByTestId("settings-mobile-navigation");
+    await expect(settingsNavigation).toBeVisible();
+    await expect(settingsNavigation).toHaveAccessibleName(
+      "Settings navigation",
+    );
+    const searchBox = await search.boundingBox();
+    const filterBox = await filter.boundingBox();
+    expect(searchBox!.width).toBeGreaterThan(140);
+    expect(searchBox!.y + searchBox!.height).toBeLessThan(filterBox!.y);
+    await page.screenshot({
+      path: test.info().outputPath("upgrade-report-320.png"),
+      fullPage: true,
+    });
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page
+      .getByTestId("settings-content-scroll")
+      .evaluate((element) => element.scrollTo(0, 0));
     await page.screenshot({
       path: test.info().outputPath("upgrade-report-qa-details.png"),
       fullPage: true,
@@ -480,6 +518,61 @@ test(
         (
           await page.request.delete(`/api/v1/flows/${flow.id}`, { headers })
         ).ok(),
+      ).toBeTruthy();
+    }
+  },
+);
+
+test(
+  "shows retirement guidance on the canvas without the Chroma bundle",
+  { tag: ["@release", "@database"] },
+  async ({ page }) => {
+    const login = await page.request.get("/api/v1/auto_login");
+    expect(login.ok()).toBeTruthy();
+    const headers = {
+      Authorization: `Bearer ${(await login.json()).access_token}`,
+    };
+    const historical = JSON.parse(
+      await readFile(
+        path.resolve(
+          __dirname,
+          "../../../lfx/tests/data/component_compat/hard_flows/v1.12.6/chroma_legacy_type.json",
+        ),
+        "utf8",
+      ),
+    );
+    const chroma = historical.data.nodes.find(
+      (node: { data: { type: string } }) => node.data.type === "Chroma",
+    );
+    const created = await page.request.post("/api/v1/flows/", {
+      headers,
+      data: {
+        name: `Retired Chroma QA ${Date.now()}`,
+        data: { nodes: [chroma], edges: [] },
+      },
+    });
+    expect(created.ok()).toBeTruthy();
+    const { id } = await created.json();
+    try {
+      await awaitBootstrapTest(page, {
+        skipModal: true,
+        seedFlowIfEmpty: false,
+      });
+      await page.goto(`/flow/${id}`);
+      await expect(page.getByTestId("retired-component-bar")).toContainText(
+        "Retired in 1.13.0",
+        { timeout: TIMEOUTS.standard },
+      );
+      await expect(
+        page.getByRole("button", { name: "Knowledge", exact: true }),
+      ).toBeVisible();
+      await expect(page.getByTestId("dismiss-warning-bar")).toHaveCount(0);
+      await expect(
+        page.getByRole("button", { name: /^Update all$/i }),
+      ).toHaveCount(0);
+    } finally {
+      expect(
+        (await page.request.delete(`/api/v1/flows/${id}`, { headers })).ok(),
       ).toBeTruthy();
     }
   },
