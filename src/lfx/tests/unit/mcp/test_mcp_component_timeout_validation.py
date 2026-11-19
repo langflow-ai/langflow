@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 import pytest
 from lfx.components.models_and_agents.mcp_component import MCPToolsComponent
 
@@ -29,10 +31,14 @@ def test_normalize_tool_execution_timeout_rejects_negative_value_with_field_spec
 
 def test_mcp_servers_cache_key_clamps_negative_timeout_to_zero():
     component = MCPToolsComponent()
+    component.set_vertex(SimpleNamespace(graph=SimpleNamespace(session_id="chat")))
     component.tool_execution_timeout = -1
 
     cache_key = component._mcp_servers_cache_key("demo-server")
-    assert "demo-server" in cache_key
+    component.tool_execution_timeout = 0.0
+
+    assert cache_key.startswith("demo-server:")
+    assert cache_key == component._mcp_servers_cache_key("demo-server")
 
 
 @pytest.mark.asyncio

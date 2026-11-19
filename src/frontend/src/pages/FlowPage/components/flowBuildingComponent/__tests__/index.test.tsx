@@ -10,13 +10,15 @@ jest.mock("framer-motion", () => {
       <div>{children}</div>
     ),
     motion: {
-      div: React.forwardRef<HTMLDivElement, ComponentProps<"div">>(
-        ({ children, className, ...props }, ref) => (
-          <div ref={ref} className={className} {...props}>
-            {children}
-          </div>
-        ),
-      ),
+      // The mock drops motion-only props that are not DOM attributes.
+      div: React.forwardRef<
+        HTMLDivElement,
+        ComponentProps<"div"> & { layout?: boolean | "position" }
+      >(({ children, className, layout: _layout, ...props }, ref) => (
+        <div ref={ref} className={className} {...props}>
+          {children}
+        </div>
+      )),
     },
   };
 });
@@ -30,13 +32,6 @@ jest.mock("remark-gfm", () => ({
   __esModule: true,
   default: () => {},
 }));
-
-jest.mock(
-  "@/CustomNodes/GenericNode/components/NodeStatus/utils/format-run-time",
-  () => ({
-    normalizeTimeString: (timeStr: string) => timeStr,
-  }),
-);
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
@@ -92,20 +87,24 @@ let mockFlowBuildStatus = {};
 let mockBuildInfo: { error?: string[]; success?: boolean } | null = null;
 let mockPastBuildFlowParams: Record<string, unknown> | null = null;
 
+// Build the store state from the current mock values.
+const mockGetState = () => ({
+  isBuilding: mockIsBuilding,
+  flowBuildStatus: mockFlowBuildStatus,
+  buildInfo: mockBuildInfo,
+  setBuildInfo: mockSetBuildInfo,
+  stopBuilding: mockStopBuilding,
+  pastBuildFlowParams: mockPastBuildFlowParams,
+  buildFlow: mockBuildFlow,
+});
+
 jest.mock("@/stores/flowStore", () => ({
   __esModule: true,
-  default: (selector: (state: Record<string, unknown>) => unknown) => {
-    const state = {
-      isBuilding: mockIsBuilding,
-      flowBuildStatus: mockFlowBuildStatus,
-      buildInfo: mockBuildInfo,
-      setBuildInfo: mockSetBuildInfo,
-      stopBuilding: mockStopBuilding,
-      pastBuildFlowParams: mockPastBuildFlowParams,
-      buildFlow: mockBuildFlow,
-    };
-    return selector(state);
-  },
+  default: Object.assign(
+    (selector: (state: Record<string, unknown>) => unknown) =>
+      selector(mockGetState()),
+    { getState: () => mockGetState() },
+  ),
 }));
 
 describe("FlowBuildingComponent - Timer Tests", () => {
@@ -134,7 +133,7 @@ describe("FlowBuildingComponent - Timer Tests", () => {
       render(<FlowBuildingComponent />);
 
       // Verify initial state
-      expect(screen.getByText(/0\.0seconds/)).toBeInTheDocument();
+      expect(screen.getByText("0.0s")).toBeInTheDocument();
 
       // Component should be in building state with timer mechanism active
       expect(screen.getByTestId("border-trail")).toBeInTheDocument();
@@ -167,7 +166,7 @@ describe("FlowBuildingComponent - Timer Tests", () => {
       render(<FlowBuildingComponent />);
 
       // At the start, should show 0.0s
-      expect(screen.getByText(/0\.0seconds/)).toBeInTheDocument();
+      expect(screen.getByText("0.0s")).toBeInTheDocument();
     });
 
     it("should update timer display when time passes", async () => {
@@ -176,7 +175,7 @@ describe("FlowBuildingComponent - Timer Tests", () => {
       render(<FlowBuildingComponent />);
 
       // Initial state
-      expect(screen.getByText(/0\.0seconds/)).toBeInTheDocument();
+      expect(screen.getByText("0.0s")).toBeInTheDocument();
 
       // The timer should update as time passes
       // We're testing that the mechanism is in place
@@ -195,7 +194,7 @@ describe("FlowBuildingComponent - Timer Tests", () => {
       expect(screen.getByText("Flow built successfully")).toBeInTheDocument();
 
       // Timer should still be visible showing the final time
-      expect(screen.getByText(/\d+\.\d+seconds/)).toBeInTheDocument();
+      expect(screen.getByText(/^\d+\.\d+s$/)).toBeInTheDocument();
     });
 
     it("should reset timer when building restarts", async () => {
@@ -221,7 +220,7 @@ describe("FlowBuildingComponent - Timer Tests", () => {
       rerender(<FlowBuildingComponent />);
 
       // Should reset to 0
-      expect(screen.getByText(/0\.\d+seconds/)).toBeInTheDocument();
+      expect(screen.getByText(/^0\.\d+s$/)).toBeInTheDocument();
 
       // Advance 1 second
       await act(async () => {
@@ -231,7 +230,7 @@ describe("FlowBuildingComponent - Timer Tests", () => {
       rerender(<FlowBuildingComponent />);
 
       // Should show 1 second, not 3 seconds
-      expect(screen.getByText(/1\.\d+seconds/)).toBeInTheDocument();
+      expect(screen.getByText(/^1\.\d+s$/)).toBeInTheDocument();
     });
   });
 
@@ -366,6 +365,152 @@ describe("FlowBuildingComponent - Timer Tests", () => {
       });
 
       expect(mockSetBuildInfo).toHaveBeenCalledWith(null);
+    });
+  });
+
+  describe("Consecutive builds", () => {
+    // Starts a new build, then finishes it with a new success result.
+    const runSecondBuild = (rerender: (ui: ReactNode) => void) => {
+      mockIsBuilding = true;
+      mockBuildInfo = null;
+      rerender(<FlowBuildingComponent />);
+      mockIsBuilding = false;
+      mockBuildInfo = { success: true };
+      rerender(<FlowBuildingComponent />);
+    };
+
+    it("keeps a second success visible past the first success deadline", () => {
+      mockBuildInfo = { success: true };
+      const { rerender } = render(<FlowBuildingComponent />);
+
+      act(() => {
+        jest.advanceTimersByTime(1500);
+      });
+      runSecondBuild(rerender);
+
+      // 2500 ms after the first result, 1000 ms after the second.
+      act(() => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(screen.getByText("Flow built successfully")).toBeInTheDocument();
+      expect(mockSetBuildInfo).not.toHaveBeenCalled();
+
+      // The second result's own 2000 + 500 ms pass. Use two acts so the
+      // dismiss re-render schedules the clear timer between them.
+      act(() => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(mockSetBuildInfo).not.toHaveBeenCalled();
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
+      expect(mockSetBuildInfo).toHaveBeenCalledWith(null);
+    });
+
+    it("keeps a result that arrives during the exit animation of the previous one", () => {
+      mockBuildInfo = { success: true };
+      const { rerender } = render(<FlowBuildingComponent />);
+
+      act(() => {
+        jest.advanceTimersByTime(2000);
+      });
+      act(() => {
+        jest.advanceTimersByTime(200);
+      });
+      runSecondBuild(rerender);
+
+      act(() => {
+        jest.advanceTimersByTime(400);
+      });
+      expect(screen.getByText("Flow built successfully")).toBeInTheDocument();
+      expect(mockSetBuildInfo).not.toHaveBeenCalled();
+    });
+
+    it("cancels pending timers on unmount", () => {
+      mockBuildInfo = { success: true };
+      const { unmount } = render(<FlowBuildingComponent />);
+
+      unmount();
+      act(() => {
+        jest.advanceTimersByTime(3000);
+      });
+
+      expect(mockSetBuildInfo).not.toHaveBeenCalled();
+    });
+
+    it("clears a dismissed result at once when the component unmounts", async () => {
+      mockBuildInfo = { error: ["Test error"] };
+      const { unmount } = render(<FlowBuildingComponent />);
+
+      await act(async () => {
+        screen.getByText("Dismiss").click();
+      });
+      expect(mockSetBuildInfo).not.toHaveBeenCalled();
+
+      unmount();
+      expect(mockSetBuildInfo).toHaveBeenCalledWith(null);
+    });
+
+    it("does not clear a newer result that the store already holds", async () => {
+      mockBuildInfo = { error: ["Test error"] };
+      render(<FlowBuildingComponent />);
+
+      await act(async () => {
+        screen.getByText("Dismiss").click();
+      });
+
+      // The store holds result B before the clear timer of result A fires.
+      mockBuildInfo = { success: true };
+      await act(async () => {
+        jest.advanceTimersByTime(600);
+      });
+
+      expect(mockSetBuildInfo).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Duration counter", () => {
+    it("starts the counter when the component mounts during a build", async () => {
+      mockIsBuilding = true;
+      render(<FlowBuildingComponent />);
+
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+
+      expect(screen.getByText("1.0s")).toBeInTheDocument();
+    });
+
+    it("always shows one decimal so the label width stays stable", async () => {
+      mockIsBuilding = true;
+      render(<FlowBuildingComponent />);
+
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(screen.getByText("1.0s")).toBeInTheDocument();
+      expect(screen.queryByText("1s")).not.toBeInTheDocument();
+
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(screen.getByText("2.0s")).toBeInTheDocument();
+    });
+
+    it("keeps the duration visible on the success result", async () => {
+      mockIsBuilding = true;
+      const { rerender } = render(<FlowBuildingComponent />);
+
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+
+      mockIsBuilding = false;
+      mockBuildInfo = { success: true };
+      rerender(<FlowBuildingComponent />);
+
+      expect(screen.getByText("Flow built successfully")).toBeInTheDocument();
+      expect(screen.getByText("1.0s")).toBeInTheDocument();
     });
   });
 });
