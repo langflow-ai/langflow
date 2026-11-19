@@ -548,6 +548,9 @@ jobs:
       # jobs" only re-runs the shards that failed, so the shards that passed
       # first time around keep their earlier attempt-N artifact names. Filtering
       # to github.run_attempt would leave the gate permanently short.
+      # skip-decompress keeps each artifact as its raw ZIP. The action's
+      # streaming unzip fails on some valid archives ("unexpected end of
+      # file"), so the next step extracts the chosen ZIPs with unzip instead.
       - name: Download blob reports
         id: download
         continue-on-error: true
@@ -555,6 +558,7 @@ jobs:
         with:
           path: all-blob-reports-raw
           pattern: blob-report-${{ runner.os }}-*-of-${{ needs.determine-test-suite.outputs.shard_count }}-attempt-*
+          skip-decompress: true
 
       - name: Check report count, merge, and validate
         id: validate
@@ -587,13 +591,13 @@ jobs:
           # descending, and keep the first row per shard so the newest attempt
           # wins. Avoids associative arrays, which need bash 4+ (macOS ships 3.2).
           manifest=$(mktemp)
-          zip_count=$(find "$raw_dir" -type f -name '*.zip' | wc -l | tr -d ' ')
-          find "$raw_dir" -type f -name '*.zip' -print | while IFS= read -r zip; do
+          zip_count=$(find "$raw_dir" -type f | wc -l | tr -d ' ')
+          find "$raw_dir" -type f -print | while IFS= read -r zip; do
             artifact=$(basename "$(dirname "$zip")")
             fields=$(printf '%s\n' "$artifact" \
               | sed -nE 's/.*-([0-9]+)-of-[0-9]+-attempt-([0-9]+)$/\1 \2/p')
             # download-artifact flattens a single matching artifact. Its pattern
-            # above fixes the total; accept only the sole ZIP for a one-shard run.
+            # above fixes the total; accept only the sole file for a one-shard run.
             if [[ -z "$fields" && "$EXPECTED_REPORTS" == "1" && "$zip_count" == "1" && "$(dirname "$zip")" == "$raw_dir" ]]; then
               fields="1 0"
             fi
@@ -626,7 +630,7 @@ jobs:
             else
               echo "Shard $shard <- attempt $attempt"
             fi
-            cp "$zip" "$report_dir/"
+            unzip -q -o "$zip" -d "$report_dir"
           done < "$manifest"
 
           npx playwright@"${PLAYWRIGHT_VERSION}" merge-reports --reporter json "$report_dir"
