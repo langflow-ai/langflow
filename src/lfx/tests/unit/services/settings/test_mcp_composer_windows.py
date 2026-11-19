@@ -373,6 +373,132 @@ class TestWindowsTempFileHandling:
                 assert popen_call[1]["stderr"] == subprocess.PIPE
 
 
+class TestWindowsTempLogCleanupOnAbort:
+    """Temp log files must be closed and deleted on every exit after they are created."""
+
+    @pytest.fixture
+    def created_logs(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(tempfile, "tempdir", str(tmp_path))
+        real_named_temporary_file = tempfile.NamedTemporaryFile
+        handles = []
+
+        def spy(*args, **kwargs):
+            handle = real_named_temporary_file(*args, **kwargs)
+            handles.append(handle)
+            return handle
+
+        monkeypatch.setattr(tempfile, "NamedTemporaryFile", spy)
+        return tmp_path, handles
+
+    @staticmethod
+    def _assert_logs_cleaned(tmp_path, handles):
+        assert len(handles) == 2
+        assert all(handle.closed for handle in handles)
+        assert list(tmp_path.glob("mcp_composer_*_stdout_*.log")) == []
+        assert list(tmp_path.glob("mcp_composer_*_stderr_*.log")) == []
+
+    @staticmethod
+    def _running_process():
+        process = MagicMock()
+        process.pid = 12345
+        process.poll.return_value = None
+        process.wait.return_value = 0
+        return process
+
+    @pytest.mark.asyncio
+    async def test_should_remove_temp_logs_when_popen_fails(self, mcp_service, created_logs):
+        tmp_path, handles = created_logs
+
+        with (
+            patch("platform.system", return_value="Windows"),
+            patch("subprocess.Popen", side_effect=FileNotFoundError("uvx not found")),
+            pytest.raises(FileNotFoundError),
+        ):
+            await mcp_service._start_project_composer_process(
+                project_id="test-project",
+                host="localhost",
+                port=2000,
+                streamable_http_url="http://test",
+                max_startup_checks=1,
+                startup_delay=0.01,
+            )
+
+        self._assert_logs_cleaned(tmp_path, handles)
+
+    @pytest.mark.asyncio
+    async def test_should_remove_temp_logs_when_startup_is_cancelled(self, mcp_service, created_logs):
+        tmp_path, handles = created_logs
+        process = self._running_process()
+        waiting_for_port = asyncio.Event()
+
+        def poll():
+            waiting_for_port.set()
+
+        process.poll.side_effect = poll
+
+        with (
+            patch("platform.system", return_value="Windows"),
+            patch("subprocess.Popen", return_value=process),
+            patch.object(mcp_service, "_is_port_available", return_value=True),
+        ):
+            task = asyncio.create_task(
+                mcp_service._start_project_composer_process(
+                    project_id="test-project",
+                    host="localhost",
+                    port=2000,
+                    streamable_http_url="http://test",
+                    max_startup_checks=1000,
+                    startup_delay=0.01,
+                )
+            )
+            await asyncio.wait_for(waiting_for_port.wait(), timeout=5)
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+
+        process.terminate.assert_called_once()
+        self._assert_logs_cleaned(tmp_path, handles)
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("scenario", ["process_exited", "port_never_bound", "success"])
+    async def test_should_clean_temp_logs_once_without_error_on_existing_paths(
+        self, mcp_service, created_logs, scenario
+    ):
+        tmp_path, handles = created_logs
+        process = self._running_process()
+        if scenario == "process_exited":
+            process.poll.return_value = 1
+        port_available = scenario != "success"
+
+        with (
+            patch("platform.system", return_value="Windows"),
+            patch("subprocess.Popen", return_value=process),
+            patch.object(mcp_service, "_is_port_available", return_value=port_available),
+        ):
+            if scenario == "success":
+                result = await mcp_service._start_project_composer_process(
+                    project_id="test-project",
+                    host="localhost",
+                    port=2000,
+                    streamable_http_url="http://test",
+                    max_startup_checks=1,
+                    startup_delay=0.01,
+                )
+                assert result is process
+            else:
+                with pytest.raises(MCPComposerStartupError):
+                    await mcp_service._start_project_composer_process(
+                        project_id="test-project",
+                        host="localhost",
+                        port=2000,
+                        streamable_http_url="http://test",
+                        max_startup_checks=1,
+                        startup_delay=0.01,
+                    )
+
+        self._assert_logs_cleaned(tmp_path, handles)
+
+
 class TestIncreasedStartupTimeout:
     """Test that startup timeout was increased for Windows."""
 
