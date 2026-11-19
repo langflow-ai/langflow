@@ -75,7 +75,10 @@ export type ReportEntry = {
   failing_count: number;
 };
 export type ReportHistory = {
-  items: ReportEntry[];
+  items: (ReportEntry & {
+    source_database?: string | null;
+    incomplete?: boolean;
+  })[];
   total: number;
   offset: number;
   limit: number;

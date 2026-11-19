@@ -9,6 +9,7 @@ import type { Users } from "@/types/api";
 import { axe } from "@/utils/a11y-test";
 import UpgradeReportsPage from "..";
 import FlowList from "../FlowList";
+import { reportReason } from "../format";
 import { history, preview, report } from "./fixture";
 
 function open(admin: boolean | null = true) {
@@ -71,13 +72,27 @@ beforeEach(() => {
 });
 afterEach(() => jest.restoreAllMocks());
 
+it("shows the palette label in archived retirement findings and preserves other text", () => {
+  const message =
+    "retired in 1.13.0. Replace with files_and_knowledge.Knowledge";
+  expect(reportReason({ code: "retired", message })).toBe(
+    "retired in 1.13.0. Replace with Knowledge",
+  );
+  expect(reportReason({ code: "customized", message })).toBe(message);
+});
+
 it("distinguishes repeated imports of the same report even in the same minute", async () => {
   const repeated = {
     ...history,
     total: 3,
     items: [
       report,
-      { ...report, id: "import-two" },
+      {
+        ...report,
+        id: "import-two",
+        source_database: "qa_prod",
+        incomplete: true,
+      },
       { ...report, id: "import-three" },
     ],
   };
@@ -96,6 +111,7 @@ it("distinguishes repeated imports of the same report even in the same minute", 
     .filter((option) => option.getAttribute("value"))
     .map((option) => option.textContent);
 
+  expect(labels[1]).toContain("qa_prod · Assessment incomplete");
   expect(new Set(labels).size).toBe(3);
   expect(labels.every((label) => label?.includes("Imported"))).toBe(true);
 });
@@ -283,9 +299,8 @@ it("redirects non-admins without reading reports", async () => {
 
 it("explains the first action and keeps incomplete checks distinct from success", async () => {
   open();
-  expect(
-    screen.getByRole("heading", { name: "Start an upgrade review" }),
-  ).toBeVisible();
+  await screen.findByRole("heading", { name: "Assessment incomplete" });
+  await userEvent.click(screen.getByText("Start an upgrade review"));
   expect(
     screen.getByText(/Importing a report does not change any flows/),
   ).toBeVisible();
@@ -713,4 +728,69 @@ it("explains an unsupported imported format", async () => {
       /This report format is not supported by this server/,
     ),
   ).toBeVisible();
+});
+
+it("explains the migration pause when preview is refused", async () => {
+  jest.spyOn(api, "post").mockRejectedValue({
+    isAxiosError: true,
+    response: {
+      status: 503,
+      data: { detail: "The instance migration pause does not permit repairs" },
+    },
+  });
+  open();
+  await userEvent.click(
+    await screen.findByRole("checkbox", {
+      name: "Select Customer support for preview",
+    }),
+  );
+  await userEvent.click(
+    screen.getByRole("button", { name: "Preview selected updates" }),
+  );
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "The instance migration pause is on",
+  );
+});
+
+it("does not offer an editor link for a deleted flow", async () => {
+  jest.spyOn(api, "post").mockResolvedValue({
+    data: {
+      ...preview,
+      results: [
+        {
+          ...preview.results[0],
+          status: "not_found",
+          reason_codes: ["flow_not_found"],
+        },
+      ],
+    },
+  });
+  open();
+  await userEvent.click(
+    await screen.findByRole("checkbox", {
+      name: "Select Customer support for preview",
+    }),
+  );
+  await userEvent.click(
+    screen.getByRole("button", { name: "Preview selected updates" }),
+  );
+  expect(
+    await screen.findByText(
+      "This flow was deleted or is missing from this instance.",
+    ),
+  ).toBeVisible();
+  expect(
+    screen.queryByRole("link", { name: /open Customer support/i }),
+  ).not.toBeInTheDocument();
+});
+
+it("shows the row range when moving to a partial last page", async () => {
+  const flows = Array.from({ length: 25 }, (_, index) => ({
+    ...report.document.flows[0],
+    id: String(index),
+  }));
+  render(<FlowList flows={flows} selected={new Set()} onSelect={jest.fn()} />);
+  expect(screen.getByText("Rows 1–20 of 25")).toBeVisible();
+  await userEvent.click(screen.getByRole("button", { name: "Next" }));
+  expect(screen.getByText("Rows 21–25 of 25")).toBeVisible();
 });
