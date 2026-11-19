@@ -68,6 +68,7 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   hideGettingStartedProgress: false,
   setHideGettingStartedProgress: (hideGettingStartedProgress: boolean) =>
     set({ hideGettingStartedProgress }),
+  retiredComponents: {},
   allowCustomComponents: true,
   setAllowCustomComponents: (allowCustomComponents: boolean) =>
     set({ allowCustomComponents }),

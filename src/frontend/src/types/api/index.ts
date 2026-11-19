@@ -47,6 +47,10 @@ export type ComponentUpdateWarning = {
   outputs_unverified?: boolean;
 };
 
+export type ComponentRetirement = Required<
+  Pick<APIClassType, "retired_in" | "replacement">
+>;
+
 export type APIClassType = {
   base_classes?: Array<string>;
   description: string;
