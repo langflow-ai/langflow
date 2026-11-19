@@ -66,15 +66,12 @@ async def orchestrate_structured_output(
     input_value: str,
     run_prompt_fallback: Callable[[str], Awaitable[str]],
     prefer_native: bool = True,
-    on_native: Callable[[], Awaitable[None]] | None = None,
     config: RunnableConfig | None = None,
 ) -> Data:
     """Run structured output via native LLM API when available, otherwise via prompt fallback.
 
     Set prefer_native=False to force the prompt fallback even when the LLM supports
     with_structured_output (e.g. when the agent has tools that must execute first).
-    `on_native` is awaited just before the native call is made, so a caller can drop work only the
-    prompt fallback needs.
     """
     if not output_schema:
         await logger.adebug(
@@ -93,8 +90,6 @@ async def orchestrate_structured_output(
             "structured_output.native_invoked",
             extra={"strategy": "native"},
         )
-        if on_native is not None:
-            await on_native()
         try:
             payload = await invoke_with_native_structured_output(
                 llm=llm,

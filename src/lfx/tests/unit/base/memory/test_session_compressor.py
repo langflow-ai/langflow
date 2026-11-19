@@ -136,11 +136,12 @@ async def test_storage_error_degrades_to_window_and_logs_only_the_error_type():
 
 async def test_fold_batch_saves_cursor_with_compare_and_swap_version():
     batch = _msgs(FOLD_THRESHOLD)
+    state_id = uuid.uuid4()
     summarize = AsyncMock(return_value="NEW SUMMARY")
     with patch.object(sc, "asave_session_memory_state", new=AsyncMock(return_value=None)) as save:
         await fold_batch(
             scope=SCOPE,
-            state=SessionMemoryState(summary="OLD", version=3),
+            state=SessionMemoryState(id=state_id, summary="OLD", version=3),
             batch=batch,
             summarize=summarize,
             summary_model="m",
@@ -153,7 +154,7 @@ async def test_fold_batch_saves_cursor_with_compare_and_swap_version():
     assert kwargs["expected_version"] == 3
     assert kwargs["batch_snapshot"] == {m.id: summary_snapshot(m) for m in batch}
     assert kwargs["batch_snapshot"][batch[0].id]["text"] == "m0"
-    assert kwargs["expected_state_id"] is None
+    assert kwargs["expected_state_id"] == state_id
     assert kwargs["summary_model"] == "m"
     assert kwargs["flow_id"] == "f"
 
@@ -241,7 +242,17 @@ async def test_fold_batch_is_cut_to_the_prompt_character_budget():
     assert loaded.fold_batch == gap[: len(loaded.fold_batch)]  # the cursor follows the last kept message
     sent = sum(len(m.text) for m in loaded.fold_batch)
     assert sent <= sc.FOLD_PROMPT_MAX_CHARS
-    assert loaded.history == gap + window  # the read path still sends the whole gap
+    assert loaded.history == window  # the gap is too big to send; the fold drains it
+
+
+async def test_gap_of_long_messages_is_dropped_but_the_fold_is_still_offered():
+    gap = [Message(text="x" * 5000, sender=MESSAGE_SENDER_USER, id=uuid.uuid4()) for _ in range(FOLD_THRESHOLD)]
+    window = _msgs(4)
+    loaded, _ = await _load(window, state=SessionMemoryState(summary="OLD", version=1), gap=gap)
+    assert loaded.history[0].text.endswith("OLD")
+    assert loaded.history[1:] == window
+    assert loaded.fold_batch == gap[: len(loaded.fold_batch)]
+    assert loaded.fold_batch
 
 
 async def test_one_message_over_the_budget_still_forms_a_batch():

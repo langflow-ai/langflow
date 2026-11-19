@@ -167,9 +167,10 @@ async def load_history_with_summary(
 
     `scope` holds flow_id, user_id, session_id and context_id. The gap is the stored messages after the
     summary cursor and before the window (before the current input when the window is empty, as with a
-    window of one message). A gap over `FOLD_MAX` is a backlog: it is dropped, so the history is never worse
-    than the plain window. A gap of `FOLD_THRESHOLD` or more, with no recent failure, is returned as
-    `fold_batch`: its oldest messages, up to `FOLD_MAX` and `FOLD_PROMPT_MAX_CHARS` of prompt text.
+    window of one message). The gap is dropped when it is a backlog (over `FOLD_MAX` messages) or holds
+    more than `FOLD_PROMPT_MAX_CHARS` of text, so the history is then just `[summary, *window]`.
+    A gap of `FOLD_THRESHOLD` or more, with no recent failure, is returned as `fold_batch`: its oldest
+    messages, up to `FOLD_MAX` and `FOLD_PROMPT_MAX_CHARS` of prompt text.
     Never raises: storage errors degrade to the plain window.
     """
     try:
@@ -196,8 +197,9 @@ async def load_history_with_summary(
                 await logger.adebug(f"session_summary_fold_skipped reason=cooldown pending={len(gap)}")
             else:
                 batch = _fit_prompt_budget(gap)
-        if backlog:
-            await logger.adebug(f"session_summary_backlog limit={FOLD_MAX}")
+        # A backlog, or a gap of long messages (sent unclipped), is left out until later folds drain it.
+        if backlog or sum(len(m.text or "") for m in gap) > FOLD_PROMPT_MAX_CHARS:
+            await logger.adebug(f"session_summary_gap_dropped backlog={backlog}")
             gap = []
         history = _prefix(state, session_id) + gap + window
         await logger.adebug(f"session_summary_history messages={len(history)} fold_pending={len(batch)}")

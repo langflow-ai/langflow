@@ -941,6 +941,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
     async def message_response(self) -> Message:
         async def _run_once() -> Message:
             llm_model, self.chat_history, self.tools = await self.get_agent_requirements()
+            self._start_fold()
             self.set(
                 llm=llm_model,
                 tools=self.tools or [],
@@ -1001,6 +1002,8 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
                     first_attempt = False
                 else:
                     llm_model, self.chat_history, self.tools = await self.get_agent_requirements()
+                # The native structured-output path ignores history; only this fallback run uses it.
+                self._start_fold()
                 self.set(
                     llm=llm_model,
                     tools=self.tools or [],
@@ -1025,8 +1028,6 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
                 input_value=_extract_text_content(self.input_value),
                 run_prompt_fallback=_run_agent_for_fallback,
                 prefer_native=not has_tools,
-                # The native path ignores chat history, so a summary fold would be wasted cost.
-                on_native=lambda: self._settle_fold(cancel=True),
                 config={"callbacks": self.get_langchain_callbacks()},
             )
         except (
@@ -1076,29 +1077,35 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         loaded = await load_history_with_summary(
             window=window, n_messages=self.n_messages, scope=scope, current_input_id=input_id
         )
-        if loaded.fold_batch and getattr(self, "_fold_task", None) is None:
-            # One fold per run, running beside the answer. The run waits for it at the end (see `_settle_fold`),
-            # so a turn that summarizes can finish a little later.
-            self._fold_usage_handler = TokenUsageCallbackHandler()
-            self._fold_task = asyncio.create_task(
-                fold_batch(
-                    scope=scope,
-                    state=loaded.state,
-                    batch=loaded.fold_batch,
-                    summarize=self._summarize_history,
-                    summary_model=self._get_resolved_model_name(),
-                )
-            )
+        # Staged, not started: `_start_fold` runs it where the Agent really uses the history.
+        self._staged_fold = (
+            {"scope": scope, "state": loaded.state, "batch": loaded.fold_batch} if loaded.fold_batch else None
+        )
         if input_id is not None:
             self._summary_history_memo = (input_id, loaded.history)
         return loaded.history
 
+    def _start_fold(self) -> None:
+        """Start the staged summary fold beside the run. No-op if none is staged or one is already pending.
+
+        The run waits for it at the end (see `_settle_fold`), so a turn that summarizes can finish a little later.
+        """
+        staged = getattr(self, "_staged_fold", None)
+        if staged is None or getattr(self, "_fold_task", None) is not None:
+            return
+        self._staged_fold = None
+        self._fold_usage_handler = TokenUsageCallbackHandler()
+        self._fold_task = asyncio.create_task(
+            fold_batch(**staged, summarize=self._summarize_history, summary_model=self._get_resolved_model_name())
+        )
+
     async def _settle_fold(self, *, cancel: bool = False) -> None:
         """Wait for the background summary fold (or cancel it) and add its token usage to this run.
 
-        Also ends the run's history memo, which only serves retries inside one run.
+        Also ends the run's history memo, which only serves retries inside one run, and drops a staged fold.
         """
         self._summary_history_memo = None
+        self._staged_fold = None
         task = getattr(self, "_fold_task", None)
         if task is None:
             return

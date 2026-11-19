@@ -87,11 +87,11 @@ async def erase_messages(session: AsyncSession, ctx: EraseContext) -> int:
 
 
 async def erase_session_summaries(session: AsyncSession, ctx: EraseContext) -> int:
+    # No session predicate: the owner id is unique to the end user, so a renamed session is still found.
     return await delete_batch(
         session,
         SessionMemoryStateTable,
         SessionMemoryStateTable.user_id == _keys(ctx).message_owner_id,
-        _session_matches(SessionMemoryStateTable.session_id, ctx),
         _in_scope(SessionMemoryStateTable.flow_id, ctx),
     )
 

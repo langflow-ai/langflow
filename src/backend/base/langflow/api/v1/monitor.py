@@ -234,7 +234,7 @@ async def _purge_memory_base_session_data(user_id: UUID, session_ids: list[str],
 
 async def _delete_session_summaries(db, user_id: UUID, session_ids: list[str]) -> None:
     """Drop rolling chat summaries for these sessions in flows owned by the user, in the caller's transaction."""
-    owned_flows = select(Flow.id).where(Flow.user_id == user_id)
+    owned_flows = select(Flow.id).where(Flow.user_id == user_id, persisted_flow_history_filter())
     await db.exec(
         delete(SessionMemoryStateTable).where(
             col(SessionMemoryStateTable.flow_id).in_(owned_flows),

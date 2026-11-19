@@ -154,9 +154,10 @@ The agent uses only the latest messages, as before, in these cases:
 
 * The flow runs without a Langflow database, for example with standalone `lfx`.
 * The run doesn't store messages in chat history.
-* **Number of Chat History Messages** is `0`.
 
-When a summary call fails or times out, the agent keeps the existing summary and makes no new summary call for that chat for ten minutes.
+When **Number of Chat History Messages** is `0`, the agent sends no chat history and no summary.
+
+When a summary call fails or times out, the agent keeps the existing summary and makes no new summary call for that chat for ten minutes. Each Langflow server process keeps this pause on its own.
 
 For more information, see [Store chat memory](/memory#store-chat-memory) and [**Message History** component](/message-history).
 

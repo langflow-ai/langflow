@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from langflow.api.utils.flow_utils import cascade_delete_flow, compute_virtual_flow_id
+from langflow.api.v1.monitor import _delete_session_summaries
 from langflow.memory import (
     adelete_messages,
     aget_messages,
@@ -14,6 +15,8 @@ from langflow.memory import (
     asave_session_memory_state,
     aupdate_messages,
     delete_message,
+    rename_session_memory,
+    reset_folded_memory_for_update,
 )
 from langflow.schema.message import Message
 from langflow.services.database.models.flow.model import Flow
@@ -621,7 +624,8 @@ async def test_should_reject_a_stale_save_after_the_state_row_was_reset_and_re_c
     assert (await aget_session_memory_state(**scope)).summary == "fresh"
 
 
-async def test_should_reset_a_folded_edit_with_a_single_indexed_statement(client):  # noqa: ARG001
+async def test_should_reset_a_folded_text_edit_with_three_indexed_statements(client):  # noqa: ARG001
+    """A streamed text update costs two key reads and one DELETE, none of them a table scan."""
     from langflow.memory import reset_folded_memory_for_update
     from sqlalchemy import event
 
@@ -633,8 +637,7 @@ async def test_should_reset_a_folded_edit_with_a_single_indexed_statement(client
         message = await session.get(MessageTable, ids[0])
 
         def capture(_conn, _cursor, statement, parameters, _context, _executemany):
-            if "session_memory_state" in statement:
-                captured.append((statement, parameters))
+            captured.append((statement, parameters))
 
         event.listen(engine, "before_cursor_execute", capture)
         try:
@@ -642,16 +645,50 @@ async def test_should_reset_a_folded_edit_with_a_single_indexed_statement(client
                 message.text = "edited"
         finally:
             event.remove(engine, "before_cursor_execute", capture)
-        assert len(captured) == 1  # one statement on the state table, and no reads
-        statement, parameters = captured[0]
-        assert statement.startswith("DELETE FROM session_memory_state")
+        extra = [(sql, params) for sql, params in captured if not sql.startswith("UPDATE message")]
+        assert [sql.split()[0] for sql, _ in extra] == ["SELECT", "SELECT", "DELETE"], extra
         if engine.dialect.name == "sqlite":
-            plan = await session.run_sync(
-                lambda sync_session: list(
-                    sync_session.connection().exec_driver_sql(f"EXPLAIN QUERY PLAN {statement}", parameters)
+            for sql, params in extra:
+                plan = await session.run_sync(
+                    lambda sync_session, sql=sql, params=params: list(
+                        sync_session.connection().exec_driver_sql(f"EXPLAIN QUERY PLAN {sql}", params)
+                    )
                 )
-            )
-            details = " | ".join(row[3] for row in plan)
-            assert details.startswith("SEARCH session_memory_state USING INDEX"), details
-            assert "SCAN" not in details, details
+                details = " | ".join(row[3] for row in plan)
+                assert details.startswith("SEARCH"), details
+                assert "SCAN" not in details, details
     assert not await _has_state(flow_id, user_id)
+
+
+async def test_should_reset_the_new_session_when_an_edit_races_a_rename(client):  # noqa: ARG001
+    flow_id, user_id = uuid4(), uuid4()
+    ids = await _three_messages_with_state(flow_id, user_id, "A")
+    async with session_scope() as edit_session:
+        message = await edit_session.get(MessageTable, ids[0])  # the edit request loads the row in session A
+        async with session_scope() as rename_session:  # a rename commits: messages and summary move to B
+            rows = (await rename_session.exec(select(MessageTable).where(MessageTable.session_id == "A"))).all()
+            async with rename_session_memory(rename_session, rows, "B"):
+                for row in rows:
+                    row.session_id = "B"
+                rename_session.add_all(rows)
+        assert await _has_state(flow_id, user_id, "B")
+        updates = {"text": "edited"}
+        async with reset_folded_memory_for_update(edit_session, message, updates):
+            message.sqlmodel_update(updates)
+            edit_session.add(message)
+
+    assert not await _has_state(flow_id, user_id, "B")
+    assert not await _has_state(flow_id, user_id, "A")
+
+
+async def test_should_not_delete_state_of_a_virtual_flow_owned_by_a_legacy_row(client, active_user):  # noqa: ARG001
+    victim = uuid4()
+    virtual_flow_id = compute_virtual_flow_id(victim, uuid4(), principal_type="user")
+    async with session_scope() as session:
+        # A legacy flow row in the virtual id range, owned by someone else.
+        session.add(Flow(id=virtual_flow_id, name=f"legacy-{virtual_flow_id}", user_id=active_user.id, data={}))
+        session.add(SessionMemoryStateTable(flow_id=virtual_flow_id, user_id=victim, session_id="s", summary="v"))
+    async with session_scope() as session:
+        await _delete_session_summaries(session, active_user.id, ["s"])
+
+    assert await _state_session_ids(virtual_flow_id) == {"s"}

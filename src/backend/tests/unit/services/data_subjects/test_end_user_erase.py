@@ -112,7 +112,7 @@ async def test_should_erase_only_that_end_user_when_others_share_the_flow():
 
 
 @pytest.mark.usefixtures("client")
-async def test_should_erase_only_that_end_users_session_summaries():
+async def test_should_erase_only_that_end_users_session_summaries_even_when_renamed():
     admin = await create_user("dsr-eu-admin-3", superuser=True)
     _, flow_id, _ = await _seed_end_users()
     async with session_scope() as session:
@@ -127,6 +127,16 @@ async def test_should_erase_only_that_end_users_session_summaries():
                 )
                 for end_user in ("alice", "bob")
             ]
+        )
+        # A builder renamed one of alice's sessions: it no longer carries her prefix.
+        session.add(
+            SessionMemoryStateTable(
+                flow_id=flow_id,
+                user_id=derive_message_owner_uuid("alice"),
+                session_id="renamed-by-builder",
+                created_at=_now(),
+                updated_at=_now(),
+            )
         )
 
     _, status = await _erase("alice", admin)

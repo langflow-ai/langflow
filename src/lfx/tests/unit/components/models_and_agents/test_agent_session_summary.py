@@ -13,7 +13,6 @@ from lfx.base.memory.session_compressor import SummaryHistory, build_summary_mes
 from lfx.components.models_and_agents import agent as agent_module
 from lfx.components.models_and_agents.agent import AgentComponent
 from lfx.components.models_and_agents.agent_helpers.messages_input_builder import build_initial_messages
-from lfx.schema.data import Data
 from lfx.schema.message import Message
 from lfx.schema.properties import Usage
 from lfx.utils.constants import MESSAGE_SENDER_USER
@@ -109,6 +108,11 @@ async def test_fold_starts_in_the_background_once_and_does_not_block_the_history
     with patch.object(agent_module, "fold_batch", new=slow_fold):
         result, _ = await _memory_data(component, history, loaded)
         await component.get_memory_data()  # memo hit: no second fold
+        assert (
+            getattr(component, "_fold_task", None) is None
+        )  # staged, not started: `_start_fold` starts it where the history is used
+        component._start_fold()
+        component._start_fold()  # no-op while pending
         await asyncio.sleep(0)
         assert result == history[:1]
         assert started == [batch]
@@ -242,8 +246,10 @@ async def test_no_second_fold_starts_while_one_is_pending_even_without_an_input_
 
     with patch.object(agent_module, "fold_batch", new=slow_fold):
         await _memory_data(component, history, loaded)
+        component._start_fold()
         first = component._fold_task
         await _memory_data(component, history, loaded)
+        component._start_fold()
         await asyncio.sleep(0)
         assert component._fold_task is first
         assert len(started) == 1
@@ -278,44 +284,84 @@ async def test_settle_ends_the_history_memo():
     assert component._summary_history_memo is None
 
 
-async def _json_response(component, *, takes_native_path: bool):
-    """Run `json_response` with a stubbed orchestrator that takes the native path or the fallback."""
-    fold_done = []
+class _NoNativeLLM:
+    """A model that inherits `with_structured_output` but raises NotImplementedError when it is used."""
 
-    async def fold():
-        try:
-            await asyncio.sleep(0.05)
-        finally:
-            fold_done.append(True)
-
-    component._fold_task = task = asyncio.create_task(fold())
-    component.set_attributes({"output_schema": [{"name": "a"}]})
-
-    async def orchestrator(**kwargs):
-        if takes_native_path:
-            await kwargs["on_native"]()
-        return Data(data={"ok": True})
-
-    requirements = AsyncMock(return_value=(MagicMock(), [], []))
-    with (
-        patch.object(AgentComponent, "get_agent_requirements", new=requirements),
-        patch(f"{ORCHESTRATOR}.orchestrate_structured_output", new=orchestrator),
-    ):
-        await component.json_response()
-    return task
+    def with_structured_output(self, *_args, **_kwargs):
+        raise NotImplementedError
 
 
-ORCHESTRATOR = "lfx.components.models_and_agents.structured_output.structured_output_orchestrator"
+class _NativeLLM:
+    def with_structured_output(self, *_args, **_kwargs):
+        return MagicMock(ainvoke=AsyncMock(return_value={"a": "1"}))
 
 
-async def test_json_response_cancels_the_fold_when_the_native_path_runs():
-    task = await _json_response(_component(summarize=True), takes_native_path=True)
-    assert task.cancelled()
-
-
-async def test_json_response_awaits_the_fold_when_the_fallback_path_runs():
+async def _json_response_with_staged_fold(llm, output_schema) -> list:
+    """Run `json_response` with the real orchestrator and a staged fold; return the folds that started."""
     component = _component(summarize=True)
-    task = await _json_response(component, takes_native_path=False)
-    assert task.done()
-    assert not task.cancelled()
-    assert component._fold_task is None
+    component.set_attributes({"output_schema": output_schema})
+    component._staged_fold = {"scope": {}, "state": None, "batch": []}
+    started = []
+
+    async def fold(**kwargs):
+        await asyncio.sleep(0)
+        started.append(kwargs)
+
+    run_agent = AsyncMock(return_value=Message(text='{"a": "1"}'))
+
+    async def remediation(_self, run_once):
+        return await run_once()
+
+    with (
+        patch.object(AgentComponent, "get_agent_requirements", new=AsyncMock(return_value=(llm, [], []))),
+        patch.object(AgentComponent, "_run_agent_with_model_remediation", new=remediation),
+        patch.object(AgentComponent, "create_agent_runnable", new=MagicMock()),
+        patch.object(AgentComponent, "run_agent", new=run_agent),
+        patch.object(agent_module, "fold_batch", new=fold),
+    ):
+        result = await component.json_response()
+    assert "error" not in result.data, result.data
+    assert getattr(component, "_fold_task", None) is None
+    assert component._staged_fold is None
+    return started
+
+
+SCHEMA = [{"name": "a", "type": "str"}]
+
+
+async def test_json_response_starts_one_fold_when_native_output_falls_back_to_the_prompt_path():
+    assert len(await _json_response_with_staged_fold(_NoNativeLLM(), SCHEMA)) == 1
+
+
+async def test_json_response_starts_no_fold_when_the_native_path_succeeds():
+    assert await _json_response_with_staged_fold(_NativeLLM(), SCHEMA) == []
+
+
+async def test_json_response_starts_no_fold_for_an_empty_schema():
+    assert await _json_response_with_staged_fold(_NoNativeLLM(), []) == []
+
+
+async def test_message_response_starts_the_staged_fold_once_and_settles_it():
+    component = _component(summarize=True)
+    component._staged_fold = {"scope": {}, "state": None, "batch": []}
+    started = []
+
+    async def fold(**kwargs):
+        await asyncio.sleep(0)
+        started.append(kwargs)
+
+    async def remediation(_self, run_once):
+        return await run_once()
+
+    with (
+        patch.object(AgentComponent, "get_agent_requirements", new=AsyncMock(return_value=(MagicMock(), [], []))),
+        patch.object(AgentComponent, "_run_agent_with_model_remediation", new=remediation),
+        patch.object(AgentComponent, "create_agent_runnable", new=MagicMock()),
+        patch.object(AgentComponent, "run_agent", new=AsyncMock(return_value=Message(text="reply"))),
+        patch.object(agent_module, "fold_batch", new=fold),
+    ):
+        await component.message_response()
+
+    assert len(started) == 1
+    assert getattr(component, "_fold_task", None) is None
+    assert component._staged_fold is None

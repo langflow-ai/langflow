@@ -882,7 +882,11 @@ async def aget_messages_between(
 
 def message_update_changes_summary(message: MessageTable, updates: dict) -> bool:
     """Whether applying ``updates`` to the stored ``message`` changes content or scope a fold depends on."""
-    return any(key in updates and updates[key] != getattr(message, key, None) for key in SUMMARY_FIELDS)
+    # str(): an update may hold a flow or owner id as a string, the row as a UUID.
+    return any(
+        key in updates and str(updates[key]) != str(getattr(message, key, None))
+        for key in (*SUMMARY_FIELDS, "flow_id", "user_id")
+    )
 
 
 async def _message_groups(db: AsyncSession, *message_filters) -> list[tuple]:
@@ -902,7 +906,7 @@ async def _message_groups(db: AsyncSession, *message_filters) -> list[tuple]:
 
 @asynccontextmanager
 async def reset_folded_session_memory(db: AsyncSession, *message_filters):
-    """Wrap a move or delete of the messages matched by ``message_filters``, in the caller's transaction.
+    """Wrap an edit, move or delete of the messages matched by ``message_filters``, in the caller's transaction.
 
     Summary state that already folded any of them is deleted, so the next turn re-folds from the start. A row
     goes when its cursor is at or after the oldest matched message of its session (equal timestamps count
@@ -915,38 +919,22 @@ async def reset_folded_session_memory(db: AsyncSession, *message_filters):
     await db.flush()
     after = await _message_groups(db, *message_filters)
     for flow_id, user_id, session_id, oldest in dict.fromkeys(before + after):
-        await db.exec(_folded_state_delete(flow_id, user_id, session_id, oldest))
-
-
-def _folded_state_delete(flow_id, user_id, session_id, oldest):
-    """DELETE of the session's state rows whose cursor is at or after ``oldest`` (uses the flow/session index)."""
-    return (
-        delete(SessionMemoryStateTable)
-        .where(
-            SessionMemoryStateTable.flow_id == flow_id,
-            SessionMemoryStateTable.user_id == user_id,
-            SessionMemoryStateTable.session_id == session_id,
-            col(SessionMemoryStateTable.cursor_timestamp) >= oldest,
+        await db.exec(
+            delete(SessionMemoryStateTable)
+            .where(
+                SessionMemoryStateTable.flow_id == flow_id,
+                SessionMemoryStateTable.user_id == user_id,
+                SessionMemoryStateTable.session_id == session_id,
+                col(SessionMemoryStateTable.cursor_timestamp) >= oldest,
+            )
+            .execution_options(synchronize_session=False)
         )
-        .execution_options(synchronize_session=False)
-    )
-
-
-@asynccontextmanager
-async def _reset_after_edit(db: AsyncSession, message: MessageTable):
-    """Wrap an edit that keeps ``message`` in its session: one DELETE from the values already loaded, no reads."""
-    flow_id, user_id, session_id, timestamp = message.flow_id, message.user_id, message.session_id, message.timestamp
-    yield
-    await db.flush()
-    await db.exec(_folded_state_delete(flow_id, user_id, session_id, timestamp))
 
 
 def reset_folded_memory_for_update(db: AsyncSession, message: MessageTable, updates: dict):
     """Context manager to wrap applying ``updates`` to a stored ``message``: resets summary state only if needed."""
     if not message_update_changes_summary(message, updates):
         return nullcontext()
-    if updates.get("session_id") in (None, message.session_id):
-        return _reset_after_edit(db, message)
     return reset_folded_session_memory(db, MessageTable.id == message.id)
 
 
