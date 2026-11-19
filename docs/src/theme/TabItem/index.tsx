@@ -21,7 +21,7 @@ function TabItemPanel({
   hidden,
   label,
   value,
-}: Props): ReactNode {
+}: Props & { hidden: boolean }): ReactNode {
   return (
     <div
       role="tabpanel"
