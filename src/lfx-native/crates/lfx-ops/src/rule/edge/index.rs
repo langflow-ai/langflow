@@ -98,9 +98,8 @@ impl EdgeIndex {
         match self.handles(edge) {
             Ok(handles) => {
                 for end in ends {
-                    if let Some(connections) = self.connections.get_mut(end) {
-                        connect(connections, end, edge, &handles);
-                    }
+                    self.connections
+                        .update(end, |connections| connect(connections, end, edge, &handles));
                 }
             }
             Err(_) => {
@@ -119,9 +118,11 @@ impl EdgeIndex {
         };
         self.handles.remove(id);
         for end in [endpoint(edge, "source"), endpoint(edge, "target")] {
-            if let Some(connections) = self.connections.get_mut(end) {
-                disconnect(connections, end, edge, &handles);
-            }
+            self.connections.update_if(
+                end,
+                |connections| is_connected(connections, end, edge, &handles),
+                |connections| disconnect(connections, end, edge, &handles),
+            );
         }
     }
 
@@ -165,6 +166,19 @@ fn connect(connections: &mut Connections, node_id: &str, edge: &FlowObj, handles
             .or_default()
             .insert(id);
     }
+}
+
+/// Whether [`disconnect`] would remove the edge from `connections`.
+fn is_connected(
+    connections: &Connections,
+    node_id: &str,
+    edge: &FlowObj,
+    handles: &Handles,
+) -> bool {
+    let id = edge.id();
+    let has = |ids: Option<&IndexSet<String>>| ids.is_some_and(|ids| ids.contains(id));
+    (endpoint(edge, "target") == node_id && has(connections.inputs.get(&handles.input)))
+        || (endpoint(edge, "source") == node_id && has(connections.outputs.get(&handles.output)))
 }
 
 fn disconnect(connections: &mut Connections, node_id: &str, edge: &FlowObj, handles: &Handles) {

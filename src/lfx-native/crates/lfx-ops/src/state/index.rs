@@ -40,19 +40,23 @@ impl EdgesAt {
         };
         debug_assert_eq!(id, key.as_str());
         for end in ends(edge) {
-            self.by_node
-                .get_or_insert_with(end, IndexSet::default)
-                .insert(key.clone());
+            self.by_node.get_or_insert_with(end, IndexSet::default);
+            self.by_node.update(end, |ids| ids.insert(key.clone()));
         }
     }
 
     pub(super) fn detach(&mut self, id: &str, edge: &Edge) {
         for end in ends(edge) {
-            if let Some(ids) = self.by_node.get_mut(end) {
-                ids.shift_remove(id);
-                if ids.is_empty() {
-                    self.by_node.remove(end);
-                }
+            // Remove the last id with its key, without copying the set.
+            let kept = self.by_node.update_if(
+                end,
+                |ids| ids.len() > 1,
+                |ids| {
+                    ids.shift_remove(id);
+                },
+            );
+            if !kept {
+                self.by_node.remove(end);
             }
         }
     }
@@ -97,7 +101,7 @@ impl Graph {
     /// Whether node `id` existed when the batch started and the batch did not
     /// replace it. Only a stored node's lists are indexed.
     pub fn is_stored_node(&self, id: &str) -> bool {
-        self.nodes.is_stored(id) && !self.nodes.is_pending(id)
+        self.nodes.is_based(id) && !self.nodes.is_pending(id)
     }
 
     /// Follow `path` in node `id` ([`field_write::read_through`]). `None` when there is no

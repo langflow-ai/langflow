@@ -1,43 +1,92 @@
 //! [`PendingMap`]:
 
+use std::clone;
+
 use super::ordered::OrderedMap;
 
 /// The most pending changes a map keeps allocated between batches.
 pub(crate) const MAX_RETAINED_BATCH_ENTRIES: usize = 256;
 
-/// A map that stages every write to it.
+/// A map that stages every
+/// write to its stored values.
 /// Such writes are "pending".
-/// Every read of a key
-/// first looks up any pending write to it,
-/// and if there isn't one, it falls back
-/// to the actual stored value.
+/// Every read to a key
+/// first looks up its pending
+/// write, and falls back to
+/// its original "base" value
+/// if there isn't one.
 #[derive(Debug)]
 pub(crate) struct PendingMap<V> {
-    pub(crate) stored: OrderedMap<V>,
-    /// Stores writes
-    pub(crate) layer: OrderedMap<Option<V>>,
+    /// original base values
+    base: OrderedMap<V>,
+    /// pending writes
+    pending: OrderedMap<Write<V>>,
+}
+
+/// A pending write to a key.
+#[derive(Debug)]
+pub(crate) enum Write<V> {
+    /// The key was created,
+    /// or its value was updated.
+    Set(V),
+    /// The key was removed.
+    Delete,
+}
+impl<V> Write<V> {
+    pub(crate) fn get(&self) -> Option<&V> {
+        match self {
+            Self::Set(value) => Some(value),
+            Self::Delete => None,
+        }
+    }
+
+    fn get_mut(&mut self) -> Option<&mut V> {
+        match self {
+            Self::Set(value) => Some(value),
+            Self::Delete => None,
+        }
+    }
+
+}
+
+
+impl<V> PendingMap<V> {
+    /// The base values, without the pending writes.
+    pub(crate) fn values(&self) -> impl Iterator<Item = &V> {
+        self.base.values()
+    }
+
+    /// The base map, to read.
+    pub(crate) fn base(&self) -> &OrderedMap<V> {
+        &self.base
+    }
+
+    /// The pending writes, in the order they were first made.
+    pub(crate) fn writes(&self) -> impl Iterator<Item = (&String, &Write<V>)> {
+        self.pending.iter()
+    }
 }
 
 impl<V: Clone> PendingMap<V> {
     pub fn new() -> Self {
         Self {
-            stored: OrderedMap::new(),
-            layer: OrderedMap::new()
+            base: OrderedMap::new(),
+            pending: OrderedMap::new()
         }
     }
-    /// Create a [`PendingMap`] which takes ownership of `stored`
-    pub(crate) fn with_stored(stored: OrderedMap<V>) -> Self {
+    /// Create a [`PendingMap`] which takes ownership of `base`
+    pub(crate) fn with_base(base: OrderedMap<V>) -> Self {
         Self {
-            stored,
-            layer: OrderedMap::new(),
+            base,
+            pending: OrderedMap::new(),
         }
     }
 
     /// The value of `key`.
     pub fn get(&self, key: &str) -> Option<&V> {
-        match self.layer.get(key) {
-            Some(written) => written.as_ref(),
-            None => self.stored.get(key),
+        match self.pending.get(key) {
+            Some(write) => write.get(),
+            None => self.base.get(key),
         }
     }
 
@@ -46,57 +95,76 @@ impl<V: Clone> PendingMap<V> {
         self.get(key).is_some()
     }
 
-    /// Whether `key` had a value when the batch started.
-    pub fn is_stored(&self, key: &str) -> bool {
-        self.stored.contains_key(key)
+    /// Whether `key` exists in the original base map
+    pub fn is_based(&self, key: &str) -> bool {
+        self.base.contains_key(key)
     }
 
     /// Whether `key` has been written to.
     pub fn is_pending(&self, key: &str) -> bool {
-        self.layer.contains_key(key)
+        self.pending.contains_key(key)
     }
 
-    /// Get a mutable reference to the **stored** value of `key`
-    pub fn stored_mut(&mut self, key: &str) -> Option<&mut V> {
-        debug_assert!(self.layer.is_empty(), "write between batches only");
-        self.stored.get_mut(key)
+    /// Get a mutable reference to the **base** value of `key`
+    pub fn base_mut(&mut self, key: &str) -> Option<&mut V> {
+        debug_assert!(self.pending.is_empty(), "write between batches only");
+        self.base.get_mut(key)
     }
 
-    /// Get a mutable reference to the value of `key`
-    pub fn get_mut(&mut self, key: &str) -> Option<&mut V> {
+    /// Set the value of `key` through
+    /// the `writer` function.
+    /// Returns `None` of `key` is not found.
+    pub fn update<R>(
+        &mut self,
+        key: &str,
+        writer: impl FnOnce(&mut V) -> R
+    ) -> Option<R> {
         if !self.is_pending(key) {
-            let copy = self.stored.get(key)?.clone();
-            self.layer.insert(key, Some(copy));
+            let copy = self.base.get(key)?.clone();
+            self.pending.insert(key, Write::Set(copy));
         }
-        self.layer.get_mut(key)?.as_mut()
+        // if the second get_mut returns None
+        // it means the key was deleted.
+        // so the map does not run `writer`,
+        // which is intended since
+        // we want to return None if not found.
+        self.pending.get_mut(key)?.get_mut().map(writer)
+    }
+    /// [`Self::update`] only if `cond` holds for the value of `key`.
+    /// Returns whether `f` ran.
+    pub fn update_if(
+        &mut self,
+        key: &str,
+        cond: impl FnOnce(&V) -> bool,
+        writer: impl FnOnce(&mut V),
+    ) -> bool {
+        self.get(key).is_some_and(cond) && self.update(key, writer).is_some()
     }
 
-    /// The value of `key`, to change it, added by `new` when there is none.
-    pub fn get_or_insert_with(&mut self, key: &str, new: impl FnOnce() -> V) -> &mut V {
+    /// Add the value from `new` if `key` has none.
+    pub fn get_or_insert_with(&mut self, key: &str, new: impl FnOnce() -> V) {
         if !self.contains(key) {
             self.insert(key, new());
         }
-        self.get_mut(key)
-            .expect("the entry exists or was just added")
     }
 
     /// Add a value, or replace the value of the same key.
     pub fn insert<K: AsRef<str> + Into<String>>(&mut self, key: K, value: V) {
-        self.layer.insert(key, Some(value));
+        self.pending.insert(key, Write::Set(value));
     }
 
     /// Remove `key`. Returns whether it had a value.
     pub fn remove(&mut self, key: &str) -> bool {
         let existed = self.contains(key);
-        if self.stored.contains_key(key) {
-            self.layer.insert(key, None);
+        if self.base.contains_key(key) {
+            self.pending.insert(key, Write::Delete);
         } else {
-            self.layer.remove(key);
+            self.pending.remove(key);
         }
         existed
     }
 
-    /// Make the batch's changes part of the stored map. Returns whether empty
+    /// Make the batch's changes part of the base map. Returns whether empty
     /// positions were pruned ([`OrderedMap::clear_garbage`]).
     pub fn commit(&mut self) -> bool {
         self.commit_into(&mut Vec::new())
@@ -104,55 +172,50 @@ impl<V: Clone> PendingMap<V> {
 
     /// [`Self::commit`], and move each removed value into `released`.
     pub fn commit_into(&mut self, released: &mut Vec<V>) -> bool {
-        for (key, written) in self.layer.drain() {
+        for (key, written) in self.pending.drain() {
             match written {
-                Some(value) => self.stored.insert(key, value),
-                None => released.extend(self.stored.remove(&key)),
+                Write::Set(value) => self.base.insert(key, value),
+                Write::Delete => released.extend(self.base.remove(&key)),
             }
         }
         self.shrink_large_pending();
-        self.stored.clear_garbage()
+        self.base.clear_garbage()
     }
 
     fn shrink_large_pending(&mut self) {
-        if self.layer.capacity() > MAX_RETAINED_BATCH_ENTRIES {
-            self.layer.shrink_to_fit();
+        if self.pending.capacity() > MAX_RETAINED_BATCH_ENTRIES {
+            self.pending.shrink_to_fit();
         }
     }
 
     /// Drop the batch's changes.
     pub fn drop_pending(&mut self) {
-        self.layer.clear();
+        self.pending.clear();
         self.shrink_large_pending();
     }
 
-    /// The stored values, without a staged batch's pending changes.
-    pub(crate) fn values(&self) -> impl Iterator<Item = &V> {
-        self.stored.values()
-    }
-
-    /// The keys and values with a staged batch's pending changes, in the order [`Self::commit`]
+    /// The keys and values with the pending writes, in the order [`Self::commit`]
     /// gives them.
-    pub(crate) fn staged_entries(&self) -> impl Iterator<Item = (&String, &V)> {
+    pub(crate) fn pending_entries(&self) -> impl Iterator<Item = (&String, &V)> {
         let kept = self
-            .stored
+            .base
             .iter()
-            .filter_map(|(key, value)| match self.layer.get(key) {
-                Some(written) => written.as_ref().map(|written| (key, written)),
+            .filter_map(|(key, value)| match self.pending.get(key) {
+                Some(written) => written.get().map(|written| (key, written)),
                 None => Some((key, value)),
             });
         let added = self
-            .layer
+            .pending
             .iter()
-            .filter(|(key, _)| !self.stored.contains_key(key))
-            .filter_map(|(key, written)| written.as_ref().map(|value| (key, value)));
+            .filter(|(key, _)| !self.base.contains_key(key))
+            .filter_map(|(key, written)| written.get().map(|value| (key, value)));
         kept.chain(added)
     }
 
     /// The values, without copying them. Only between batches.
     pub(crate) fn into_values(self) -> impl Iterator<Item = V> {
-        debug_assert!(self.layer.is_empty(), "read between batches only");
-        self.stored.into_values()
+        debug_assert!(self.pending.is_empty(), "read between batches only");
+        self.base.into_values()
     }
 }
 
@@ -169,11 +232,11 @@ mod tests {
         let mut layer = PendingMap::new();
         layer.insert("a", payload);
         layer.commit();
-        let capacity = layer.layer.capacity();
+        let capacity = layer.pending.capacity();
         assert!(capacity > 0);
         layer.remove("a");
         layer.commit();
-        assert_eq!(layer.layer.capacity(), capacity);
+        assert_eq!(layer.pending.capacity(), capacity);
         assert!(weak.upgrade().is_none());
         let refused = Arc::new(());
         let weak = Arc::downgrade(&refused);
@@ -189,14 +252,14 @@ mod tests {
             layer.insert(i.to_string(), Arc::new(()));
         }
         layer.commit();
-        assert_eq!(layer.layer.capacity(), 0);
-        assert_eq!(layer.stored.len(), MAX_RETAINED_BATCH_ENTRIES + 1);
+        assert_eq!(layer.pending.capacity(), 0);
+        assert_eq!(layer.base.len(), MAX_RETAINED_BATCH_ENTRIES + 1);
         for i in 0..=MAX_RETAINED_BATCH_ENTRIES {
             layer.remove(&i.to_string());
         }
         layer.commit();
-        assert_eq!(layer.layer.capacity(), 0);
-        assert_eq!(layer.stored.len(), 0);
+        assert_eq!(layer.pending.capacity(), 0);
+        assert_eq!(layer.base.len(), 0);
         let payload = Arc::new(());
         let weak = Arc::downgrade(&payload);
         layer.insert("refused", payload);
@@ -204,40 +267,40 @@ mod tests {
             layer.insert(i.to_string(), Arc::new(()));
         }
         layer.drop_pending();
-        assert_eq!(layer.layer.capacity(), 0);
+        assert_eq!(layer.pending.capacity(), 0);
         assert!(weak.upgrade().is_none());
     }
 
-    fn stored(keys: &[&str]) -> PendingMap<u32> {
+    fn base(keys: &[&str]) -> PendingMap<u32> {
         let map = keys
             .iter()
             .zip(1..)
             .map(|(key, value)| ((*key).to_owned(), value))
             .collect();
-        PendingMap::with_stored(map)
+        PendingMap::with_base(map)
     }
 
     fn keys(map: &PendingMap<u32>) -> Vec<&str> {
-        map.stored.iter().map(|(key, _)| key.as_str()).collect()
+        map.base.iter().map(|(key, _)| key.as_str()).collect()
     }
 
     #[test]
-    fn a_batch_reads_its_own_writes_and_leaves_the_stored_map_alone() {
-        let mut map = stored(&["a", "b"]);
-        *map.get_mut("a").unwrap() = 10;
+    fn a_batch_reads_its_own_writes_and_leaves_the_base_map_alone() {
+        let mut map = base(&["a", "b"]);
+        map.update("a", |value| *value = 10).unwrap();
         map.remove("b");
         map.insert("c", 3);
         assert_eq!(map.get("a"), Some(&10));
         assert_eq!(map.get("b"), None);
         assert_eq!(map.get("c"), Some(&3));
-        assert_eq!(map.stored.get("a"), Some(&1));
-        assert!(map.is_stored("b") && !map.is_stored("c"));
+        assert_eq!(map.base.get("a"), Some(&1));
+        assert!(map.is_based("b") && !map.is_based("c"));
     }
 
     #[test]
     fn a_dropped_batch_leaves_nothing_behind() {
-        let mut map = stored(&["a", "b"]);
-        *map.get_mut("a").unwrap() = 10;
+        let mut map = base(&["a", "b"]);
+        map.update("a", |value| *value = 10).unwrap();
         map.remove("b");
         map.insert("c", 3);
         map.drop_pending();
@@ -247,16 +310,16 @@ mod tests {
     }
 
     #[test]
-    fn a_committed_batch_writes_its_changes_to_the_stored_map() {
-        let mut map = stored(&["a", "b", "c"]);
+    fn a_committed_batch_writes_its_changes_to_the_base_map() {
+        let mut map = base(&["a", "b", "c"]);
         map.insert("x", 24);
-        *map.get_mut("a").unwrap() = 10;
+        map.update("a", |value| *value = 10).unwrap();
         map.remove("b");
         map.insert("b", 20);
         map.remove("c");
         map.commit();
         let entries: Vec<_> = map
-            .stored
+            .base
             .iter()
             .map(|(key, value)| (key.as_str(), *value))
             .collect();
@@ -265,12 +328,12 @@ mod tests {
 
     #[test]
     fn removals_keep_the_order_of_the_other_entries() {
-        let mut map = stored(&["a", "b", "c", "d"]);
+        let mut map = base(&["a", "b", "c", "d"]);
         map.remove("b");
         map.commit();
         assert_eq!(keys(&map), ["a", "c", "d"]);
 
-        let mut map = stored(&["a", "b", "c", "d", "e"]);
+        let mut map = base(&["a", "b", "c", "d", "e"]);
         map.insert("x", 24);
         map.insert("y", 25);
         map.insert("z", 26);
@@ -281,7 +344,7 @@ mod tests {
         assert_eq!(keys(&map), ["a", "c", "e", "y", "z"]);
 
         // Entries near the end are removed one by one.
-        let mut map = stored(&["a", "b", "c", "d", "e"]);
+        let mut map = base(&["a", "b", "c", "d", "e"]);
         map.remove("e");
         map.remove("c");
         map.commit();
@@ -290,7 +353,7 @@ mod tests {
 
     #[test]
     fn an_entry_added_and_removed_in_one_batch_leaves_no_trace() {
-        let mut map = stored(&["a"]);
+        let mut map = base(&["a"]);
         map.insert("x", 24);
         assert!(map.remove("x"));
         assert!(!map.remove("x"));

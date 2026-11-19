@@ -8,7 +8,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use crate::json::serialize::{self, Ascii};
 use crate::json::{FlowObj, FlowValue};
-use crate::map::pending::PendingMap;
+use crate::map::pending::{PendingMap, Write};
 
 use crate::compare;
 use crate::violation::error::Result;
@@ -23,12 +23,14 @@ pub(crate) fn commit_with_snapshot<V: Clone>(
     released: &mut Vec<V>,
     object: impl Fn(&V) -> &FlowObj,
 ) {
-    for (id, written) in entries.layer.iter() {
-        match (written, entries.stored.get_index_of(id)) {
-            (Some(value), Some(position)) => mirror.set(position, Some(object(value).clone())),
-            (Some(value), None) => mirror.push_back(Some(object(value).clone())),
-            (None, Some(position)) => mirror.set(position, None),
-            (None, None) => {}
+    for (id, written) in entries.writes() {
+        match (written, entries.base().get_index_of(id)) {
+            (Write::Set(value), Some(position)) => {
+                mirror.set(position, Some(object(value).clone()));
+            }
+            (Write::Set(value), None) => mirror.push_back(Some(object(value).clone())),
+            (Write::Delete, Some(position)) => mirror.set(position, None),
+            (Write::Delete, None) => {}
         }
     }
     if entries.commit_into(released) {
@@ -42,7 +44,6 @@ pub(crate) fn snapshot_objects_of<V>(
     object: impl Fn(&V) -> &FlowObj,
 ) -> SnapshotObjects {
     entries
-        .stored
         .values()
         .map(|value| Some(object(value).clone()))
         .collect()

@@ -94,8 +94,8 @@ impl GraphState {
             edges_at.attach(id, edge);
         }
         edges_at.commit();
-        let nodes = PendingMap::with_stored(nodes);
-        let edges = PendingMap::with_stored(edges);
+        let nodes = PendingMap::with_base(nodes);
+        let edges = PendingMap::with_base(edges);
         Ok(Self {
             root,
             snapshot_nodes: snapshot_objects_of(&nodes, Node::as_map),
@@ -119,7 +119,7 @@ impl GraphState {
     /// cost of whole-graph work, such as [`Self::to_json`].
     #[must_use]
     pub fn item_count(&self) -> usize {
-        self.graph.nodes.stored.len() + self.graph.edges.stored.len()
+        self.graph.nodes.base().len() + self.graph.edges.base().len()
     }
 
     /// The graph as a JSON value.
@@ -177,7 +177,7 @@ impl GraphState {
                 self.staged_nodes(),
                 self.graph
                     .edges
-                    .staged_entries()
+                    .pending_entries()
                     .map(|(_, edge)| edge.as_map()),
                 |out, node| serialize::write_value(out, &node, Ascii::Escape),
             );
@@ -190,7 +190,7 @@ impl GraphState {
         let graph = &self.graph;
         graph
             .nodes
-            .staged_entries()
+            .pending_entries()
             .map(|(id, node)| match graph.fields.node(id) {
                 Some(writes) => {
                     let mut value = node.as_value().clone();
@@ -233,7 +233,7 @@ impl GraphState {
         let nodes = self.staged_nodes().collect();
         let edges = graph
             .edges
-            .staged_entries()
+            .pending_entries()
             .map(|(_, edge)| edge.as_map())
             .collect();
         Some(compare::loaded_graph_hash(&self.root, nodes, edges).map_err(Error::from))
@@ -304,7 +304,7 @@ impl GraphState {
         for (id, writes) in graph.fields.drain() {
             let position = graph
                 .nodes
-                .stored
+                .base()
                 .get_index_of(&id)
                 .expect("a field write's node exists");
             // A snapshot list that is the only owner must release its reference before the in-place write.
@@ -316,7 +316,7 @@ impl GraphState {
             drop(previous);
             let node = graph
                 .nodes
-                .stored_mut(&id)
+                .base_mut(&id)
                 .expect("a field write's node exists");
             // A node with no built index is written as a copy is.
             if self.lists.by_node.contains_key(&id) {
@@ -383,7 +383,7 @@ impl GraphState {
 
     /// Whether the node existed when the batch started.
     pub(crate) fn is_base_node(&self, id: &str) -> bool {
-        self.graph.nodes.is_stored(id)
+        self.graph.nodes.is_based(id)
     }
 
     // --- Changes -----------------------------------------------------------------------
@@ -686,10 +686,10 @@ mod tests {
         // One snapshot list item per position, `None` where the map has an empty position, and never
         // more empty positions than values.
         let live = state.snapshot_nodes.iter().flatten().count();
-        assert_eq!(live, state.graph.nodes.stored.len());
+        assert_eq!(live, state.graph.nodes.base().len());
         assert!(state.snapshot_nodes.len() - live <= live);
         let live = state.snapshot_edges.iter().flatten().count();
-        assert_eq!(live, state.graph.edges.stored.len());
+        assert_eq!(live, state.graph.edges.base().len());
         assert!(state.snapshot_edges.len() - live <= live);
         assert_eq!(state.snapshot().to_json(), state.to_json());
     }
@@ -716,7 +716,7 @@ mod tests {
             state.drop_pending();
             assert_snapshot_lists(&state);
         }
-        assert_eq!(state.graph.nodes.stored.len(), 128);
+        assert_eq!(state.graph.nodes.base().len(), 128);
         assert_eq!(before.to_json(), text);
     }
 
@@ -731,7 +731,7 @@ mod tests {
             state
                 .graph
                 .nodes
-                .stored
+                .base()
                 .get("n0")
                 .unwrap()
                 .as_map()
@@ -746,7 +746,7 @@ mod tests {
             state
                 .graph
                 .nodes
-                .stored
+                .base()
                 .get("n0")
                 .unwrap()
                 .as_map()
@@ -762,12 +762,12 @@ mod tests {
         let mut state = GraphState::new(crate::flow_value!({"nodes":[snapshot_node("a").into_value(),snapshot_node("b").into_value()],"edges":[]})).unwrap();
         // A cached snapshot must not keep a deleted node either.
         drop(state.snapshot());
-        let deleted = state.graph.nodes.stored.get("a").unwrap().as_map().clone();
+        let deleted = state.graph.nodes.base().get("a").unwrap().as_map().clone();
         state.remove_node("a");
         state.commit();
         drop(state.take_released());
         assert!(deleted.into_unshared_entries().is_some());
-        let replaced = state.graph.nodes.stored.get("b").unwrap().as_map().clone();
+        let replaced = state.graph.nodes.base().get("b").unwrap().as_map().clone();
         state.remove_node("b");
         state.insert_node(snapshot_node("b"));
         state.commit();
