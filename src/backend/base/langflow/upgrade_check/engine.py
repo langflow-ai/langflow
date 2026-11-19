@@ -40,7 +40,7 @@ from lfx.upgrade.checker import (
     iter_flow_nodes,
 )
 from lfx.upgrade.registry import UpgradeRegistryError
-from lfx.upgrade.retired import retired_component_metadata
+from lfx.upgrade.retired import replacement_label, retirement_lookup
 from lfx.utils.flow_code import normalize_code_for_import
 from lfx.utils.flow_validation import (
     CustomComponentValidationError,
@@ -160,7 +160,7 @@ class TargetSettings:
     allow_custom_components: bool = True
     substitute_outdated_component_code: bool = True
     block_code_interpreter_components: bool = False
-    custom_component_admin_only: bool = False
+    custom_component_admin_only: bool = True
     allow_components_paths_override: bool = True
     components_path: tuple[str, ...] = ()
 
@@ -313,7 +313,7 @@ def target_lookup(all_types: Mapping[str, Any]) -> dict[str, dict]:
     lookup = build_registry_lookup(all_types)
     # Retirement guidance must survive removal of an optional bundle. These entries are only
     # for reporting: Target.components still contains exactly what the runtime can discover.
-    for component_type, entry in build_registry_lookup(retired_component_metadata()).items():
+    for component_type, entry in retirement_lookup().items():
         lookup.setdefault(component_type, entry)
     for entry in _migration_table().entries:
         if entry.target in lookup:
@@ -338,6 +338,17 @@ def check_nodes(
         if status is None:
             continue
         runs, refusal = _runs(node, target, is_superuser=is_superuser)
+        # Inline components have no editor update prompt. Their implementation still
+        # matters when the target substitutes its own code for the saved class.
+        if status.component_type == "CustomComponent" and runs != "saved_code":
+            saved = node["data"]["node"]
+            trusted = target.lookup.get(status.component_type, {})
+            trusted_code = trusted.get("template", {}).get("code", {}).get("value")
+            trusted_methods = {output.get("method") for output in trusted.get("outputs", [])}
+            if saved["template"]["code"]["value"] != trusted_code or any(
+                output.get("method") and output["method"] not in trusted_methods for output in saved.get("outputs", [])
+            ):
+                status.status = "customized"
         if status.status == "ok" and refusal is None:
             ok_nodes += 1
             continue
@@ -389,7 +400,9 @@ def _node_result(
         ]
     elif status.status == "retired":
         result.replacement = status.replacement or None
-        replacement = f". Replace with {', '.join(result.replacement)}" if result.replacement else ""
+        replacement = (
+            f". Replace with {', '.join(map(replacement_label, result.replacement))}" if result.replacement else ""
+        )
         result.reasons = [_reason("retired", None, f"retired in {status.retired_in}{replacement}")]
     elif status.status == "customized":
         result.reasons = [_reason("customized", None, "the saved code was edited")]

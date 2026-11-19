@@ -554,3 +554,24 @@ describe("checkCodeValidity", () => {
     });
   });
 });
+
+it("marks an uninstalled retired component using release metadata", () => {
+  const saved = {
+    id: "chroma",
+    type: "Chroma",
+    node: sharedCases.find(
+      (fixture) => fixture.saved_node.template.code?.value,
+    )!.saved_node,
+  } as CheckArgs[0];
+  expect(
+    checkCodeValidity(saved, {}, true, undefined, {
+      retired_in: "1.13.0",
+      replacement: ["files_and_knowledge.Knowledge"],
+    }),
+  ).toMatchObject({
+    retired: true,
+    retiredIn: "1.13.0",
+    blocked: false,
+    outdated: false,
+  });
+});

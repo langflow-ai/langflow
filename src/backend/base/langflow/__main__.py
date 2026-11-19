@@ -1890,7 +1890,7 @@ def upgrade_check(
         default=False, help=_SERVER_SETTING_HELP.format("block_code_interpreter_components")
     ),
     custom_component_admin_only: bool = typer.Option(  # noqa: FBT001
-        default=False, help=_SERVER_SETTING_HELP.format("custom_component_admin_only")
+        default=True, help=_SERVER_SETTING_HELP.format("custom_component_admin_only")
     ),
     allow_components_paths_override: bool = typer.Option(  # noqa: FBT001
         default=True, help=_SERVER_SETTING_HELP.format("allow_components_paths_override")

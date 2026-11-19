@@ -12,6 +12,7 @@ from sqlmodel import col, func, select
 
 from langflow.services.database.models.upgrade_report import UpgradeReport, UpgradeReportRepair
 from langflow.services.upgrade_reports.schema import (
+    ReportHistorySummary,
     UpgradeReportDocument,
     UpgradeReportMetadata,
     parse_report_timestamp,
@@ -74,17 +75,33 @@ async def store_report(session: AsyncSession, content: bytes, actor_id: UUID) ->
 
 async def list_reports(
     session: AsyncSession, *, offset: int, limit: int, target_version: str | None = None
-) -> tuple[list[UpgradeReportMetadata], int]:
+) -> tuple[list[ReportHistorySummary], int]:
     filters = [UpgradeReport.target_version == target_version] if target_version else []
     count = (await session.exec(select(func.count()).select_from(UpgradeReport).where(*filters))).one()
+    # Return only the locator and assessment for each page, including older imports.
+    # Casting TEXT to JSON on SQLite would return zero instead of a JSON document.
+    archive = UpgradeReport.document_json
+    document = (
+        sa.cast(archive, sa.JSON)
+        if session.get_bind().dialect.name == "postgresql"
+        else sa.type_coerce(archive, sa.JSON)
+    )
+    locator = document["source"]["identity"]["locator"]
     rows = await session.execute(
-        sa.select(*(getattr(UpgradeReport, name) for name in UpgradeReportMetadata.model_fields))
+        sa.select(
+            *(getattr(UpgradeReport, name) for name in UpgradeReportMetadata.model_fields),
+            func.coalesce(locator["database"].as_string(), locator["path"].as_string()).label("source_database"),
+            sa.or_(
+                func.json_array_length(document["errors"]) > 0,
+                func.json_array_length(document["flows"]) < UpgradeReport.flow_count,
+            ).label("incomplete"),
+        )
         .where(*filters)
         .order_by(col(UpgradeReport.created_at).desc(), col(UpgradeReport.id).desc())
         .offset(offset)
         .limit(limit)
     )
-    return [UpgradeReportMetadata.model_validate(row) for row in rows.mappings()], count
+    return [ReportHistorySummary.model_validate(row) for row in rows.mappings()], count
 
 
 async def require_report(session: AsyncSession, report_id: UUID | None) -> None:
