@@ -4,7 +4,7 @@ from copy import deepcopy
 
 import pytest
 from langflow.services.flow_repair.planning import plan_flow_repair
-from langflow.upgrade_check.engine import Target, check_nodes, flow_status
+from langflow.upgrade_check.engine import Target, TargetSettings, check_nodes, flow_status
 from lfx.custom import Component
 from lfx.custom.utils import build_custom_component_template
 from lfx.graph.graph.utils import process_flow
@@ -58,7 +58,8 @@ def test_retyping_a_group_input_preserves_saved_state(depth, group_state, repair
     original = deepcopy(flow)
 
     registry = {"Test": {"SavedValueComponent": current}}
-    results, _ = check_nodes(flow, Target.from_registry(registry))
+    target = Target.from_registry(registry, TargetSettings(custom_component_admin_only=False))
+    results, _ = check_nodes(flow, target)
     plan = plan_flow_repair(flow, registry)
 
     assert flow == original
