@@ -81,23 +81,23 @@ Now that you've run your first flow, try these next steps:
 
 ## Run your flows from external applications
 
+:::tip Langflow 1.13 and earlier
+As of Langflow 1.14, this quickstart demonstrates the **v2** API commands.
+To copy the v1 `/api/v1/run` snippets instead, in the **API access** pane,select **v1**.
+:::
+
 Langflow is an IDE, but it's also a runtime you can call through the [Langflow API](/api-reference-api-examples) with Python, JavaScript, or HTTP.
 
 When you start Langflow locally, you can send requests to the local Langflow server.
 For production applications, you need to [deploy a stable Langflow instance](/deployment-overview) to handle API calls.
 
-Call the flow with `POST /api/v2/workflows`. Omit `mode`, or set it to `"sync"`, to wait for one JSON response. The text reply is in `output.text`.
-
+Call the flow with `POST /api/v2/workflows`.
 Langflow provides code snippets for this call.
 
 1. When editing a flow, click **Share**, and then click **API access**.
 
-    The pane opens on **v2**. Copy **Get the full result**. **Stream the result as it runs** is the same call with `"mode": "stream"`. Scroll the snippet list to copy it. This page uses the full-result call. For stream and background runs, see the [Workflow API quickstart](/workflow-api-quickstart).
-
-    The snippet fills in the Langflow server URL and the flow UUID.
-    `flow_id` is that UUID. You can set **Endpoint Name** while the pane is on **v2**, but that alias is used only by the **v1** `/api/v1/run` snippets, and **v2** still sends the flow UUID as `flow_id`.
-    In the examples below, replace `LANGFLOW_SERVER_ADDRESS` and `FLOW_ID`. Python reads `os.environ["LANGFLOW_API_KEY"]`, JavaScript reads `process.env.LANGFLOW_API_KEY`, and curl expands `$LANGFLOW_API_KEY`. Set that variable in the terminal where you run the snippet.
-    The default Langflow server address is `http://localhost:7860`.
+   The default code in the API access pane constructs a request with the Langflow server url, headers, and a payload of request data. The code snippets automatically include the `LANGFLOW_SERVER_ADDRESS` and `FLOW_ID` values for the flow, and a script to include your `LANGFLOW_API_KEY` if you've set it as an environment variable in your terminal session.
+   Replace these values if you're using the code for a different server or flow. The default Langflow server address is http://localhost:7860.
 
     <Tabs>
     <TabItem value="Python" label="Python" default>
@@ -164,7 +164,7 @@ Langflow provides code snippets for this call.
     </TabItem>
     </Tabs>
 
-2. Copy **Get the full result**, paste it in a script file, and then run the script.
+2. Copy the code from **Get the full result**, paste it in a script file, and then run the script.
 If you are using the curl snippet, run the command in your terminal.
 
 A completed run returns one JSON object. Read `output.text` for the reply. Pass `session_id` on the next request to continue the same chat. When `output.text` is `null`, `output.reason` says why, and the per-component results are in `outputs`.
