@@ -51,7 +51,8 @@ def all_types():
 
 @pytest.fixture(scope="module")
 def target(all_types):
-    return Target.from_registry(all_types)
+    # These tests exercise saved code and field preservation with custom code enabled.
+    return Target.from_registry(all_types, TargetSettings(custom_component_admin_only=False))
 
 
 def _with(target: Target, entries: dict) -> Target:
@@ -213,7 +214,9 @@ def test_retired_components_without_their_optional_bundle(key, bundle):
     assert node.reasons[0] == {
         "code": "retired",
         "field": None,
-        "message": f"retired in 1.13.0. Replace with {replacement}",
+        "message": "retired in 1.13.0. Replace with Agent"
+        if bundle == "altk"
+        else "retired in 1.13.0. Replace with Knowledge",
     }
     assert node.runs == "refused"
     assert target.components.all_types_dict == {}
@@ -287,7 +290,9 @@ def _saved_state_flow(mutation="pass", *, input_declaration='StrInput(name="text
     saved["template"]["code"]["value"] += "\n# previous release\n"
     saved["template"]["text"].update(value="saved selection", load_from_db=False)
     flow = {"nodes": [{"id": "saved-state", "data": {"type": "SavedStateFixture", "node": saved}}], "edges": []}
-    return flow, Target.from_registry({"fixtures": {"SavedStateFixture": entry}})
+    return flow, Target.from_registry(
+        {"fixtures": {"SavedStateFixture": entry}}, TargetSettings(custom_component_admin_only=False)
+    )
 
 
 def test_dry_run_cannot_claim_preservation_when_an_uploaded_file_is_unavailable():
@@ -519,7 +524,7 @@ def test_missing_custom_type_does_not_inherit_official_retirement(component_type
     saved["replacement"] = ["untrusted.Replacement"]
     flow = {"nodes": [{"id": "custom-1", "data": {"type": component_type, "node": saved}}], "edges": []}
 
-    [node], _ = check_nodes(flow, Target.from_registry({}))
+    [node], _ = check_nodes(flow, Target.from_registry({}, TargetSettings(custom_component_admin_only=False)))
 
     assert (node.status, node.bundle, node.replacement) == ("blocked", None, None)
     assert [reason["code"] for reason in node.reasons] == ["custom_type_missing"]
@@ -533,7 +538,7 @@ def test_missing_installable_bundle(component_type, bundle):
     saved, _ = build_custom_component_template(Component(_code=CALLS_OUT.replace("PORT", "1")))
     flow = {"nodes": [{"id": "provider-1", "data": {"type": component_type, "node": saved}}], "edges": []}
 
-    [node], _ = check_nodes(flow, Target.from_registry({}))
+    [node], _ = check_nodes(flow, Target.from_registry({}, TargetSettings(custom_component_admin_only=False)))
 
     assert (node.status, node.bundle) == ("blocked", bundle)
     assert [reason["code"] for reason in node.reasons] == ["bundle_not_installed"]
@@ -548,9 +553,12 @@ def test_custom_component_is_found_when_its_folder_is_supplied(tmp_path):
     saved = all_types["qa_custom"][component_type]
     flow = {"nodes": [{"id": "custom-1", "data": {"type": component_type, "node": saved}}], "edges": []}
 
-    [missing], _ = check_nodes(flow, Target.from_registry({}))
+    [missing], _ = check_nodes(flow, Target.from_registry({}, TargetSettings(custom_component_admin_only=False)))
     assert missing.reasons[0]["code"] == "custom_type_missing"
-    assert check_nodes(flow, Target.from_registry(all_types)) == ([], 1)
+    assert check_nodes(flow, Target.from_registry(all_types, TargetSettings(custom_component_admin_only=False))) == (
+        [],
+        1,
+    )
 
 
 def test_skips_starter_projects(target, tmp_path):
@@ -908,7 +916,10 @@ def _saved_node(release: str, flow_name: str, node_id: str) -> dict:
 # What each node runs under each setting, for the nodes listed: a node that is ok and runs is not.
 RUNS = [
     pytest.param(
-        {}, False, {"outdated": "saved_code", "customized": "saved_code", "custom": "saved_code"}, id="default"
+        {"custom_component_admin_only": False},
+        False,
+        {"outdated": "saved_code", "customized": "saved_code", "custom": "saved_code"},
+        id="custom code allowed for all owners",
     ),
     pytest.param(
         {"allow_custom_components": False},
@@ -924,13 +935,13 @@ RUNS = [
         id="custom code blocked, no substitution",
     ),
     pytest.param(
-        {"block_code_interpreter_components": True},
+        {"block_code_interpreter_components": True, "custom_component_admin_only": False},
         False,
         {"outdated": "saved_code", "customized": "saved_code", "custom": "saved_code", "interpreter": "refused"},
         id="interpreters blocked",
     ),
     pytest.param(
-        {"custom_component_admin_only": True},
+        {},
         False,
         {"outdated": "refused", "customized": "refused", "custom": "refused", "interpreter": "refused"},
         id="admin only, regular owner",
@@ -1034,7 +1045,9 @@ def test_admin_only_judges_each_flow_by_its_owner(tmp_path):
 @pytest.mark.parametrize(
     ("settings", "runs", "message", "status"),
     [
-        pytest.param({}, "saved_code", "the saved code was edited", "warn", id="edits run"),
+        pytest.param(
+            {"custom_component_admin_only": False}, "saved_code", "the saved code was edited", "warn", id="edits run"
+        ),
         pytest.param(
             {"allow_custom_components": False},
             "server_code",
@@ -1096,3 +1109,23 @@ def test_later_dry_run_does_not_inherit_a_timed_out_nodes_refusal(monkeypatch):
         for thread in threading.enumerate():
             if thread.name == "upgrade-check-dry-run":
                 thread.join(timeout=3)
+
+
+def test_inline_custom_component_refusal_reports_the_edited_class(all_types):
+    entry, _ = build_custom_component_template(Component(_code=CALLS_OUT.replace("PORT", "1")))
+    flow = {"nodes": [{"id": "CustomComponent-1487a", "data": {"type": "CustomComponent", "node": entry}}], "edges": []}
+    target = Target.from_registry(all_types, TargetSettings(allow_custom_components=False))
+    [result], _ = check_nodes(flow, target, is_superuser=True)
+    assert (result.status, result.runs, flow_status([result])) == ("customized", "refused", "fail")
+    assert [reason["code"] for reason in result.reasons] == ["customized", "refused"]
+    assert "Calls Out" in result.reasons[1]["message"]
+
+
+def test_restricted_inline_output_method_missing_from_the_server_class(all_types):
+    target = Target.from_registry(all_types, TargetSettings(allow_custom_components=False))
+    saved = copy.deepcopy(target.lookup["CustomComponent"])
+    saved["outputs"] = [{"name": "answer", "method": "run_it", "types": ["Message"]}]
+    flow = {"nodes": [{"id": "CustomComponent-1487a", "data": {"type": "CustomComponent", "node": saved}}], "edges": []}
+    [result], _ = check_nodes(flow, target, is_superuser=True)
+    assert (result.status, result.runs, flow_status([result])) == ("customized", "server_code", "fail")
+    assert result.reasons == [{"code": "customized", "field": None, "message": engine._EDITS_DO_NOT_RUN}]

@@ -289,6 +289,7 @@ describe("useFlowStore", () => {
       useUtilityStore.setState({
         blockedComponentTypes: new Set<string>(),
         allowCustomComponents: true,
+        retiredComponents: {},
         substituteOutdatedComponentCode: true,
       });
       useFlowStore.setState({
@@ -1113,7 +1114,11 @@ describe("useFlowStore", () => {
       ]);
     });
 
-    it("updateComponentsToUpdate should pass the custom-component policy flag into code validation", () => {
+    it("passes the custom-component policy and release retirement metadata into code validation", () => {
+      const retirement = {
+        retired_in: "1.13.0",
+        replacement: ["files_and_knowledge.Knowledge"],
+      };
       const { result } = renderHook(() => useFlowStore());
       const mockedCheckCodeValidity = checkCodeValidity as jest.Mock;
 
@@ -1125,7 +1130,10 @@ describe("useFlowStore", () => {
       });
 
       act(() => {
-        useUtilityStore.setState({ allowCustomComponents: false });
+        useUtilityStore.setState({
+          allowCustomComponents: false,
+          retiredComponents: { [updatedNode.data.type]: retirement },
+        });
         useFlowStore.setState({
           nodes: [updatedNode],
           componentsToUpdate: [],
@@ -1141,6 +1149,7 @@ describe("useFlowStore", () => {
         {},
         false,
         new Set(),
+        retirement,
       );
     });
 
@@ -1334,6 +1343,7 @@ describe("useFlowStore", () => {
         {},
         true,
         new Set(),
+        undefined,
       );
       expect(useFlowStore.getState().componentsToUpdate).toEqual([]);
     });
