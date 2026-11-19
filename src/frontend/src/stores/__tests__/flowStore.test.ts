@@ -153,6 +153,7 @@ jest.mock("@/utils/utils", () => ({
 // without touching the network.
 jest.mock("@/controllers/API/agui/run-flow-bridge", () => ({
   runFlowAGUI: jest.fn(),
+  runFlowHITL: jest.fn(),
 }));
 
 // Keep reactflowUtils' real behaviour for the rest of the suite; only flip
@@ -2484,6 +2485,128 @@ describe("useFlowStore", () => {
           threadId: "session-123",
         }),
       );
+    });
+  });
+
+  describe("buildFlow — Human Input flow in the shareable playground", () => {
+    const humanInputNode = {
+      ...mockNode,
+      id: "HumanInput-1",
+      data: { ...mockNode.data, id: "HumanInput-1", type: "HumanInput" },
+    } as AllNodeType;
+    let runFlowHITL: jest.Mock;
+    let runFlowAGUI: jest.Mock;
+
+    beforeAll(() => {
+      const bridge = jest.requireMock(
+        "@/controllers/API/agui/run-flow-bridge",
+      ) as { runFlowAGUI: jest.Mock; runFlowHITL: jest.Mock };
+      runFlowHITL = bridge.runFlowHITL;
+      runFlowAGUI = bridge.runFlowAGUI;
+      const flowsManager = jest.requireMock("../flowsManagerStore") as {
+        default: {
+          __setCurrentFlow: (flow: {
+            id: string;
+            name: string;
+            user_id: string;
+          }) => void;
+        };
+      };
+      flowsManager.default.__setCurrentFlow({
+        id: "flow-abc",
+        name: "HITL",
+        user_id: "owner-1",
+      });
+    });
+
+    beforeEach(() => {
+      runFlowHITL.mockReset();
+      runFlowAGUI.mockReset();
+      act(() => {
+        useFlowStore.setState({
+          nodes: [humanInputNode],
+          edges: [],
+          buildInfo: null,
+          flowBuildStatus: {},
+          isBuilding: false,
+          componentsToUpdate: [],
+          playgroundPage: true,
+        });
+      });
+    });
+
+    it("tells an anonymous visitor the flow cannot run instead of failing silently", async () => {
+      useUtilityStore.setState({ clientId: "client-123" });
+      useAuthStore.setState({
+        isAuthenticated: false,
+        autoLogin: false,
+        userData: null,
+      });
+
+      await useFlowStore.getState().buildFlow({ session: "s1" });
+
+      expect(runFlowHITL).not.toHaveBeenCalled();
+      expect(runFlowAGUI).not.toHaveBeenCalled();
+      expect(mockSetErrorData).toHaveBeenCalledWith({
+        title: "humanInput.sharedPlaygroundUnsupported",
+      });
+      expect(useFlowStore.getState().buildInfo).toEqual({
+        success: false,
+        error: ["humanInput.sharedPlaygroundUnsupported"],
+      });
+      expect(useFlowStore.getState().isBuilding).toBe(false);
+    });
+
+    it("runs the signed-in owner through the background path, filing messages under the playground flow id", async () => {
+      const visitorFlowId = uuidv5("user:owner-1_flow-abc", uuidv5.DNS);
+      useAuthStore.setState({
+        isAuthenticated: true,
+        autoLogin: false,
+        userData: { id: "owner-1" },
+      });
+
+      await useFlowStore.getState().buildFlow({ session: "s1" });
+
+      expect(runFlowHITL).toHaveBeenCalledWith(
+        expect.objectContaining({
+          flowId: "flow-abc",
+          threadId: "s1",
+          messageFlowId: visitorFlowId,
+        }),
+      );
+    });
+
+    it("tells a signed-in visitor who is not the owner the flow cannot run, without a request", async () => {
+      useAuthStore.setState({
+        isAuthenticated: true,
+        autoLogin: false,
+        userData: { id: "user-456" },
+      });
+
+      await useFlowStore.getState().buildFlow({ session: "s1" });
+
+      expect(runFlowHITL).not.toHaveBeenCalled();
+      expect(useFlowStore.getState().buildInfo).toEqual({
+        success: false,
+        error: ["humanInput.sharedPlaygroundUnsupported"],
+      });
+    });
+
+    it("shows the same message when the owner's run is refused", async () => {
+      useAuthStore.setState({
+        isAuthenticated: true,
+        autoLogin: false,
+        userData: { id: "owner-1" },
+      });
+      runFlowHITL.mockRejectedValue({ response: { status: 404 } });
+
+      await useFlowStore.getState().buildFlow({ session: "s1" });
+
+      expect(useFlowStore.getState().buildInfo).toEqual({
+        success: false,
+        error: ["humanInput.sharedPlaygroundUnsupported"],
+      });
+      expect(useFlowStore.getState().isBuilding).toBe(false);
     });
   });
 

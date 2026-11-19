@@ -86,7 +86,8 @@ class AGUIAdapter:
     def cancel_events(self, reason: str) -> Iterable[StreamEvent]:
         # AG-UI has no cancel primitive: close any open text lifecycle, emit a
         # CUSTOM cancel marker, then RUN_FINISHED. A user-stop must not replay as
-        # RUN_ERROR, which clients read as a genuine failure.
+        # RUN_ERROR, which clients read as a genuine failure. After RUN_ERROR the
+        # run is already closed, so this emits nothing.
         return [_to_stream_event(e) for e in self._translator.cancel(reason)]
 
     @property

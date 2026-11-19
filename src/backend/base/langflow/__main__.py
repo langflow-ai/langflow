@@ -1180,13 +1180,10 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
         from langflow.services.deps import get_auth_service
 
         auth = get_auth_service()
-        if await auth.create_super_user(username, password, db=session):
+        created_user = await auth.create_super_user(username, password, db=session)
+        if created_user:
             # Verify that the superuser was created
-            from langflow.services.database.models.user.model import User
-
-            stmt = select(User).where(User.username == username)
-            created_user: User = (await session.exec(stmt)).first()
-            if created_user is None or not created_user.is_superuser:
+            if not created_user.is_superuser:
                 typer.echo("Superuser creation failed.")
                 return
             # Now create the first folder for the user

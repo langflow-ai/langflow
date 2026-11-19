@@ -77,6 +77,7 @@ from langflow.api.v2.workflow_reconstruction import reconstruct_workflow_respons
 from langflow.api.v2.workflow_validation import (
     _apply_flow_data_override_policy,
     _flow_not_found_privacy_exception,
+    _reject_hitl_outside_background,
     _reject_sync_only_fields,
     _reject_unsupported_sync_fields,
     _validate_flow_data_for_execution,
@@ -352,6 +353,7 @@ async def run_sync_with_mapping(
 ) -> WorkflowExecutionResponse:
     """Inline sync run with the langflow timeout/validation error mapping."""
     parsed = _apply_execution_gates(parsed, flow, current_user)
+    _reject_hitl_outside_background(parsed, flow)
     job_id = uuid4()
     try:
         return await execute_sync_workflow_with_timeout(
@@ -429,6 +431,7 @@ def build_stream_response(
     before the response is constructed so a bad request fails before streaming.
     """
     parsed = _apply_execution_gates(parsed, flow, current_user)
+    _reject_hitl_outside_background(parsed, flow)
     run_id = str(uuid4())
     adapter = get_stream_adapter(
         stream_protocol,

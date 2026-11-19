@@ -165,6 +165,8 @@ class Graph:
         # Server-set provenance for a public flow whose execution uses a virtual
         # flow_id. Request data must never populate this storage scope.
         self.source_flow_id: str | None = None
+        # False for a shipped flow run under another flow's id: no stored copy holds its tool settings.
+        self.runs_stored_flow = True
         self.authorized_legacy_flow_ids = frozenset(authorized_legacy_flow_ids or ())
         # Server-stamped extra storage scopes for THIS run's user (for example a deployer's folder a service
         # account may read). Never taken from request data; a run copy gets its own, never the template's.
@@ -1740,6 +1742,7 @@ class Graph:
             "edges": self.edges,
             "flow_id": self.flow_id,
             "source_flow_id": self.source_flow_id,
+            "runs_stored_flow": self.runs_stored_flow,
             "authorized_legacy_flow_ids": self.authorized_legacy_flow_ids,
             "authorized_extra_file_scopes": self.authorized_extra_file_scopes,
             "flow_name": self.flow_name,
@@ -1863,6 +1866,7 @@ class Graph:
 
         new_graph.requires_extension_event_replay = self.requires_extension_event_replay
         new_graph.execution_principal = self.execution_principal
+        new_graph.runs_stored_flow = self.runs_stored_flow
         if user_id == self.user_id:
             new_graph._headless_filesystem_user_id = self._headless_filesystem_user_id  # noqa: SLF001
 
@@ -1917,6 +1921,7 @@ class Graph:
         # Graphs cached before source-flow provenance was introduced remain
         # loadable and simply have no additional trusted storage namespace.
         state.setdefault("source_flow_id", None)
+        state.setdefault("runs_stored_flow", True)
         state.setdefault("authorized_legacy_flow_ids", frozenset())
         state.setdefault("authorized_extra_file_scopes", frozenset())
         state.setdefault("execution_principal", ExecutionPrincipal.unknown())
@@ -3498,6 +3503,7 @@ class Graph:
         # the identity carrier propagates down (memory scopes to the same end user).
         subgraph.end_user_id = self.end_user_id
         subgraph.source_flow_id = self.source_flow_id
+        subgraph.runs_stored_flow = self.runs_stored_flow
         subgraph._is_subgraph = True
 
         # Add the filtered nodes and edges

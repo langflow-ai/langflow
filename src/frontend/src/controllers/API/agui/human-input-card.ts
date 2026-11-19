@@ -258,7 +258,7 @@ export function injectHumanInputCard(
     component: "HumanInput",
   };
   const message: Message = {
-    flow_id: opts.flowId,
+    flow_id: opts.messageFlowId ?? opts.flowId,
     text: "",
     sender: "Machine",
     sender_name: "AI",

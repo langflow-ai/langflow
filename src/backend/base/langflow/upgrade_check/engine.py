@@ -32,7 +32,13 @@ from lfx.extension.migration import migrate_flow_payload
 from lfx.extension.migration.loader import load_migration_table
 from lfx.interface.components import ComponentCache
 from lfx.services.catalog_policy import CatalogPolicySnapshot
-from lfx.upgrade.checker import breaking_reasons, build_registry_lookup, classify_node, iter_flow_nodes
+from lfx.upgrade.checker import (
+    breaking_reasons,
+    build_registry_lookup,
+    can_replace_empty_field,
+    classify_node,
+    iter_flow_nodes,
+)
 from lfx.upgrade.registry import UpgradeRegistryError
 from lfx.upgrade.retired import retired_component_metadata
 from lfx.utils.flow_code import normalize_code_for_import
@@ -453,18 +459,16 @@ def _saved_value_reasons(rebuilt_node: dict, saved_node: dict) -> list[dict[str,
         if name == "code" or not isinstance(saved_field, dict) or not isinstance(rebuilt_field, dict):
             # The structural rule already reports fields the update removes.
             continue
+        if can_replace_empty_field(saved_field, rebuilt_field):
+            continue
         if saved_field.get("file_path") and saved_field["file_path"] != rebuilt_field.get("file_path"):
             # The isolated checker cannot prove whether the source installation's upload exists.
             reasons.append(
                 _reason("could_not_verify", name, f"the update could not verify {name}'s saved file reference")
             )
-        elif (
-            "value" in saved_field
-            and saved_field["value"] is not None
-            and (
-                saved_field["value"] != rebuilt_field.get("value")
-                or bool(saved_field.get("load_from_db")) != bool(rebuilt_field.get("load_from_db"))
-            )
+        elif (saved_field.get("value") is not None or saved_field.get("type") != rebuilt_field.get("type")) and (
+            saved_field.get("value") != rebuilt_field.get("value")
+            or bool(saved_field.get("load_from_db")) != bool(rebuilt_field.get("load_from_db"))
         ):
             reasons.append(
                 _reason("value_dropped", name, f"the update does not preserve {name}'s saved value or reference")
