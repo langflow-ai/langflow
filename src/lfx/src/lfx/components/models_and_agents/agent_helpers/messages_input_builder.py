@@ -9,6 +9,7 @@ from collections.abc import Iterable
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 
+from lfx.base.memory.session_compressor import is_summary_text
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.message import Message
@@ -38,7 +39,28 @@ def build_initial_messages(
         # AIMessage makes providers fail or silently re-run earlier tool calls.
         messages.append(HumanMessage(content=CONTINUE_MESSAGE))
 
+    _merge_summary_into_next_user_message(messages)
     return messages
+
+
+def _merge_summary_into_next_user_message(messages: list[BaseMessage]) -> None:
+    """Fold a leading history summary into the user message after it, so two user turns never touch.
+
+    Some providers (Bedrock Converse, older Gemini and Anthropic paths) reject adjacent user turns.
+    The next message is replaced by a copy; the stored message is not changed.
+    """
+    if len(messages) < 2:  # noqa: PLR2004
+        return
+    summary, following = messages[0], messages[1]
+    if not (
+        isinstance(summary, HumanMessage) and isinstance(following, HumanMessage) and is_summary_text(summary.content)
+    ):
+        return
+    if isinstance(following.content, str):
+        content: str | list = f"{summary.content}\n\n{following.content}"
+    else:
+        content = [{"type": "text", "text": f"{summary.content}\n\n"}, *following.content]
+    messages[:2] = [following.model_copy(update={"content": content})]
 
 
 def _has_blank_text(item: Data | Message) -> bool:

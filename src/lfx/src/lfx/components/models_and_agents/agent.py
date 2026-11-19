@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import uuid
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, cast
@@ -44,6 +45,13 @@ from lfx.base.agents.events import AgentPausedError, ExceptionWithMessageError, 
 from lfx.base.agents.token_callback import TokenUsageCallbackHandler
 from lfx.base.agents.utils import get_chat_output_sender_name
 from lfx.base.constants import STREAM_INFO_TEXT
+from lfx.base.memory.session_compressor import (
+    FOLD_TIMEOUT_SECONDS,
+    clip_words,
+    fold_batch,
+    format_fold_prompt,
+    load_history_with_summary,
+)
 from lfx.base.models.unified_models import (
     get_language_model_options,
     get_llm,
@@ -60,9 +68,11 @@ from lfx.inputs.inputs import BoolInput, DropdownInput, ModelInput, StrInput
 from lfx.io import IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput, TableInput
 from lfx.log.logger import logger
 from lfx.memory import delete_message
+from lfx.memory.flow_context import is_evals_memory_isolated, should_persist_messages
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
+from lfx.schema.properties import Usage
 from lfx.schema.table import EditMode
 from lfx.utils.constants import MESSAGE_SENDER_AI
 
@@ -221,6 +231,14 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             info="Number of chat history messages to retrieve.",
             advanced=True,
             show=True,
+        ),
+        BoolInput(
+            name="summarize_older_messages",
+            display_name="Summarize Older Messages",
+            info="Keep a running summary of messages older than the chat history window, "
+            "so early context survives when the window is small.",
+            value=False,
+            advanced=True,
         ),
         IntInput(
             name="max_tokens",
@@ -409,7 +427,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             return None
         return val
 
-    def _get_llm(self):
+    def _get_llm(self, *, stream: bool = True):
         """Override parent to include max_tokens from the Agent's input field.
 
         Streaming is mandatory for AgentComponent: ``runnable.astream_events(v2)`` only
@@ -420,12 +438,13 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         Without ``stream=True``, the chat model accumulates the whole response and
         only emits ``on_chat_model_end``, silently disabling the Playground's live-
         typing view and breaking the streaming contract on the /events surface.
+        Internal one-shot calls (e.g. history summarization) pass ``stream=False``.
         """
         return get_llm(
             model=self.model,
             user_id=self.user_id,
             api_key=getattr(self, "api_key", None),
-            stream=True,
+            stream=stream,
             max_tokens=self._get_max_tokens_value(),
             watsonx_url=getattr(self, "base_url_ibm_watsonx", None),
             watsonx_project_id=getattr(self, "project_id", None),
@@ -932,11 +951,26 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             agent = self.create_agent_runnable()
             return await self.run_agent(agent)
 
-        result = await self._run_agent_with_model_remediation(_run_once)
+        try:
+            result = await self._run_agent_with_model_remediation(_run_once)
+        except BaseException:
+            await self._settle_fold(cancel=True)
+            raise
+        await self._settle_fold()
         self._agent_result = result
         return result
 
     async def json_response(self) -> Data:
+        """Structured output; see `_json_response`. Also settles the background summary fold."""
+        try:
+            result = await self._json_response()
+        except BaseException:
+            await self._settle_fold(cancel=True)
+            raise
+        await self._settle_fold()
+        return result
+
+    async def _json_response(self) -> Data:
         """Produce structured Data via native LLM structured output, with prompt-based fallback.
 
         Native path (no tools, llm has with_structured_output) bypasses the agent loop and
@@ -991,6 +1025,8 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
                 input_value=_extract_text_content(self.input_value),
                 run_prompt_fallback=_run_agent_for_fallback,
                 prefer_native=not has_tools,
+                # The native path ignores chat history, so a summary fold would be wasted cost.
+                on_native=lambda: self._settle_fold(cancel=True),
                 config={"callbacks": self.get_langchain_callbacks()},
             )
         except (
@@ -1015,9 +1051,103 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             n_messages=self.n_messages,
             user_id=_safe_graph_user_id(self),
         )
-        return [
+        window = [
             message for message in messages if getattr(message, "id", None) != getattr(self.input_value, "id", None)
         ]
+        if not (
+            getattr(self, "summarize_older_messages", False)
+            and self.n_messages
+            and should_persist_messages()
+            and not is_evals_memory_isolated()
+        ):
+            return window
+
+        # get_agent_requirements() re-runs on remediation retries and in json_response; load once per turn.
+        input_id = getattr(self.input_value, "id", None)
+        cached = getattr(self, "_summary_history_memo", None)
+        if input_id is not None and cached is not None and cached[0] == input_id:
+            return cached[1]
+        scope = {
+            "flow_id": getattr(self.graph, "flow_id", None),
+            "user_id": _safe_graph_user_id(self),
+            "session_id": self.graph.session_id,
+            "context_id": self.context_id,
+        }
+        loaded = await load_history_with_summary(
+            window=window, n_messages=self.n_messages, scope=scope, current_input_id=input_id
+        )
+        if loaded.fold_batch and getattr(self, "_fold_task", None) is None:
+            # One fold per run, running beside the answer. The run waits for it at the end (see `_settle_fold`),
+            # so a turn that summarizes can finish a little later.
+            self._fold_usage_handler = TokenUsageCallbackHandler()
+            self._fold_task = asyncio.create_task(
+                fold_batch(
+                    scope=scope,
+                    state=loaded.state,
+                    batch=loaded.fold_batch,
+                    summarize=self._summarize_history,
+                    summary_model=self._get_resolved_model_name(),
+                )
+            )
+        if input_id is not None:
+            self._summary_history_memo = (input_id, loaded.history)
+        return loaded.history
+
+    async def _settle_fold(self, *, cancel: bool = False) -> None:
+        """Wait for the background summary fold (or cancel it) and add its token usage to this run.
+
+        Also ends the run's history memo, which only serves retries inside one run.
+        """
+        self._summary_history_memo = None
+        task = getattr(self, "_fold_task", None)
+        if task is None:
+            return
+        self._fold_task = None
+        if cancel:
+            task.cancel()
+        try:
+            # `wait` does not raise for the fold's own cancellation, but it does propagate ours (Stop).
+            await asyncio.wait({task})
+        except asyncio.CancelledError:
+            task.cancel()
+            raise
+        if not task.cancelled():
+            task.exception()  # mark as retrieved; the fold logs its own failures
+        handler = getattr(self, "_fold_usage_handler", None)
+        fold_usage = handler.get_usage() if handler else None
+        if fold_usage:
+            own = self._token_usage
+            # Plain addition: `accumulate_usage` takes the max, which would hide the fold calls.
+            self._token_usage = Usage(
+                input_tokens=(own.input_tokens or 0 if own else 0) + (fold_usage.input_tokens or 0),
+                output_tokens=(own.output_tokens or 0 if own else 0) + (fold_usage.output_tokens or 0),
+                total_tokens=(own.total_tokens or 0 if own else 0) + (fold_usage.total_tokens or 0),
+            )
+
+    async def _summarize_history(self, previous_summary: str, messages: Sequence[Message]) -> str | None:
+        """Fold `messages` into `previous_summary` with a non-streaming LLM call; None on any failure."""
+        try:
+            llm = self._get_llm(stream=False)
+            usage_handler = getattr(self, "_fold_usage_handler", None)
+            callbacks = ([usage_handler] if usage_handler else []) + self._get_shared_callbacks()
+            response = await asyncio.wait_for(
+                llm.ainvoke(
+                    format_fold_prompt(previous_summary, messages),
+                    config={"callbacks": callbacks},
+                ),
+                FOLD_TIMEOUT_SECONDS,
+            )
+            content = response.content
+            if isinstance(content, list):
+                content = "".join(
+                    block if isinstance(block, str) else block.get("text", "")
+                    for block in content
+                    if isinstance(block, str) or (isinstance(block, dict) and block.get("type", "text") == "text")
+                )
+            return clip_words(str(content).strip()) or None
+        except Exception as exc:  # noqa: BLE001
+            await logger.awarning(f"session_summary_fold_failed: {type(exc).__name__}")
+            return None
 
     def update_input_types(self, build_config: dotdict) -> dotdict:
         """Update input types for all fields in build_config."""
