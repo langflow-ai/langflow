@@ -178,8 +178,8 @@ export default function FlowBuildingComponent() {
                 >
                   {formatBuildTime(duration)}
                 </motion.div>
-                {/* popLayout takes the exiting buttons out of the flex flow, so the time label slides instead of jumping. */}
-                <AnimatePresence mode="popLayout">
+                {/* wait lets the old buttons fade out in place first, so the time label never overlaps them. Then the label slides once to its new place. */}
+                <AnimatePresence mode="wait">
                   {!buildInfo?.success &&
                     (buildInfo?.error ? (
                       <motion.div
