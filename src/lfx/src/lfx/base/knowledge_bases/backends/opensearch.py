@@ -1015,7 +1015,23 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         if missing.get("_shards", {}).get("failed"):
             msg = "OpenSearch count did not complete on all shards."
             raise RuntimeError(msg)
-        return CHUNK_ID_SORT_FIELD if missing.get("count") == 0 else "_id"
+        if missing.get("count") != 0:
+            return "_id"
+        # Chunks sharing one id (an index edited by hand, QA L9) tie on it, and ``search_after``
+        # skips the rest of a tie, so the read came up short. ``_id`` is unique. A tie split across
+        # shards can go unseen here; the copy's count check still refuses that read.
+        ties = await _drained_worker(
+            client.search,
+            index=self._os_index,
+            body={
+                "query": query,
+                "size": 0,
+                "aggs": {"tie": {"terms": {"field": CHUNK_ID_SORT_FIELD, "min_doc_count": 2, "size": 1}}},
+            },
+        )
+        if ((ties.get("aggregations") or {}).get("tie") or {}).get("buckets"):
+            return "_id"
+        return CHUNK_ID_SORT_FIELD
 
     async def iter_job_documents(
         self,
@@ -1244,7 +1260,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         only upserts again, so a deploy that was cut here finishes on its retry. Always a slice of
         at most ``MERGE_SLICE_MAX`` (fewer with ``limit``), copied and then removed from staging:
         this runs under the knowledge base's exclusive lease, and one unbounded reindex held it
-        past the 30 s that serving's reads wait for it. The caller repeats until it returns 0.
+        past the 30 s that serving's reads wait for it. The caller repeats until staging is empty.
         """
         if limit is not None and limit < 1:
             # A slice of nothing would never empty staging, and a caller looping until 0 would stop early.
@@ -1268,6 +1284,10 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         await _drained_worker(client.indices.refresh, index=source)
         found = await _drained_worker(client.search, index=source, body={"query": {"match_all": {}}, "size": limit})
         hits = found["hits"]["hits"]
+        total = found["hits"].get("total")
+        # This slice takes the last of staging: callers stop at ``remaining == 0`` and never send the
+        # empty call, so a staged multiple of the slice size left an empty index behind (QA OSIDX).
+        last = isinstance(total, dict) and total.get("relation") == "eq" and total.get("value", 0) <= len(hits)
         if hits:
             # Index before delete: a cut between the two leaves the chunks in both, and the rerun re-upserts them.
             actions: list[dict[str, Any]] = []
@@ -1276,7 +1296,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             await _bulk_or_raise(client, actions, refresh=True)
             deletes = [{"delete": {"_index": source, "_id": hit["_id"]}} for hit in hits]
             await _bulk_or_raise(client, deletes, refresh=True)
-        if len(hits) < limit:
+        if len(hits) < limit or last:
             await _drained_worker(client.indices.delete, index=source, ignore_unavailable=True)
         return len(hits)
 

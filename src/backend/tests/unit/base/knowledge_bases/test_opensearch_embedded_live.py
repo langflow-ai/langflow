@@ -303,12 +303,14 @@ async def test_a_never_created_index_has_no_job_chunks(tmp_path: Path) -> None:
 
 
 def _sorts_used(backend) -> list:
-    """Record the sort of every search the backend sends."""
+    """Record the sort of every page read the backend sends (not the tie check, which sorts nothing)."""
     client, seen = backend._os_client, []
     search = client.search
 
     def spy(*args, **kwargs):
-        seen.append((kwargs.get("body") or {}).get("sort"))
+        body = kwargs.get("body") or {}
+        if "aggs" not in body:
+            seen.append(body.get("sort"))
         return search(*args, **kwargs)
 
     client.search = spy
@@ -409,6 +411,27 @@ async def test_erasing_an_end_user_whose_id_looks_like_a_date(tmp_path: Path) ->
 
         left = [doc.id async for batch in backend.iter_documents(batch_size=50) for doc in batch]
         assert sorted(left) == ["2024-06-02-0", "2024-06-02-1"]
+    finally:
+        await backend.delete_collection()
+        await backend.teardown()
+
+
+async def test_chunks_that_share_one_chunk_id_are_all_read(tmp_path: Path) -> None:
+    """Chunks that share one kb_chunk_id are all read (QA L9).
+
+    Set to one value by hand, they read 500 of 1,500, because ``search_after`` skips the rest of
+    a tie on the sort field.
+    """
+    _require_live_opensearch()
+    backend = await _seed_two_jobs(tmp_path)
+    try:
+        backend._os_client.update_by_query(
+            index=backend._os_index,
+            body={"script": {"source": "ctx._source.metadata.kb_chunk_id = 'same'"}, "query": {"match_all": {}}},
+            refresh=True,
+        )
+        assert sorted(doc.id for doc in await _read_job(backend, _JOB_A, batch_size=2)) == [f"a-{i}" for i in range(5)]
+        assert len(await _read_job(backend, None, batch_size=2)) == 9
     finally:
         await backend.delete_collection()
         await backend.teardown()

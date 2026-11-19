@@ -136,6 +136,35 @@ async def test_a_sliced_merge_moves_at_most_limit_per_call_until_staging_is_gone
 
 
 @pytest.mark.api_key_required
+async def test_a_staged_multiple_of_the_slice_leaves_no_staging_index() -> None:
+    """A staged multiple of the slice size leaves no empty staging index behind (QA OSIDX).
+
+    The index was dropped only by a slice shorter than the limit, and a caller stops at
+    ``remaining == 0``, so 2,000 staged chunks in slices of 1,000 left one.
+    """
+    config = _live("opensearch")
+    live = create_backend(
+        "opensearch", kb_name=f"kb_{uuid.uuid4().hex[:8]}", kb_path=None, backend_config=config, user_id=uuid.uuid4()
+    )
+    staged = live.staging(f"op-{uuid.uuid4().hex[:8]}")
+    try:
+        await live.ensure_ready()
+        await staged.ensure_ready()
+        await staged.add_embedded_documents(_docs(range(4), text="v2"))
+        index = staged._resolve_index_name()
+
+        assert [await live.merge_staging(staged.staging_token, limit=2) for _ in range(2)] == [2, 2]
+
+        assert not live._os_client.indices.exists(index=index)
+        assert set(await _ids(live)) == {f"c{i}" for i in range(4)}
+    finally:
+        await staged.delete_collection()
+        await live.delete_collection()
+        await staged.teardown()
+        await live.teardown()
+
+
+@pytest.mark.api_key_required
 async def test_a_postgres_staging_store_opens_no_connection_pool_of_its_own() -> None:
     """Battle test: a pool per staging copy ran serving's Postgres out of connections under four pods."""
     live = create_backend(

@@ -1125,7 +1125,9 @@ class TestJobReadSortField:
     """Which field the per-job read sorts on, without a live cluster."""
 
     @staticmethod
-    def _backend(tmp_path, *, mapped: bool, missing: int = 0, mapping_error: Exception | None = None):
+    def _backend(
+        tmp_path, *, mapped: bool, missing: int = 0, mapping_error: Exception | None = None, tied: bool = False
+    ):
         from lfx.base.knowledge_bases.backends.opensearch import CHUNK_ID_SORT_FIELD
 
         backend = _make_backend(tmp_path)
@@ -1138,6 +1140,9 @@ class TestJobReadSortField:
                 "test_index": {"mappings": {CHUNK_ID_SORT_FIELD: {"mapping": {}}} if mapped else {}}
             }
         client.count.return_value = {"count": missing}
+        client.search.return_value = {
+            "aggregations": {"tie": {"buckets": [{"key": "c1", "doc_count": 3}] if tied else []}}
+        }
         return backend, client
 
     async def test_every_chunk_carrying_the_field_sorts_on_it(self, tmp_path):
@@ -1145,6 +1150,11 @@ class TestJobReadSortField:
 
         backend, client = self._backend(tmp_path, mapped=True)
         assert await backend._job_sort_field(client, {"match_all": {}}) == CHUNK_ID_SORT_FIELD
+
+    async def test_chunks_sharing_one_id_sort_on_the_unique_id(self, tmp_path):
+        # QA L9: 1,500 chunks with one kb_chunk_id read 500, because search_after skipped the tie.
+        backend, client = self._backend(tmp_path, mapped=True, tied=True)
+        assert await backend._job_sort_field(client, {"match_all": {}}) == "_id"
 
     async def test_a_chunk_without_the_field_keeps_the_id_sort(self, tmp_path):
         backend, client = self._backend(tmp_path, mapped=True, missing=3)
