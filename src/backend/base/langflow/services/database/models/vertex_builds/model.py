@@ -69,11 +69,11 @@ class VertexBuildBase(SQLModel):
 class VertexBuildTable(VertexBuildBase, table=True):  # type: ignore[call-arg]
     __tablename__ = "vertex_build"
     __table_args__ = (
-        # Flow-scoped build reads and the per-vertex trim both filter on
-        # ``flow_id`` and ``id`` and then order by ``timestamp``. Without this
-        # the whole table is scanned and sorted, on every read and on every
-        # logged build. ``timestamp`` trails the two equality columns so the
-        # planner walks the index in order instead of sorting the matched rows.
+        # Flow-scoped build reads and the per-vertex trim both filter on ``flow_id``
+        # (and ``id`` for the trim). Without this index each runs a full table scan on
+        # every read and every logged build. ``flow_id`` narrows the scan to one flow,
+        # ``id`` groups and looks up rows per vertex, and ``timestamp`` last lets the
+        # trim read one vertex's builds in timestamp order.
         Index("ix_vertex_build_flow_id_id_timestamp", "flow_id", "id", "timestamp"),
     )
     build_id: UUID | None = Field(default_factory=uuid4, primary_key=True)

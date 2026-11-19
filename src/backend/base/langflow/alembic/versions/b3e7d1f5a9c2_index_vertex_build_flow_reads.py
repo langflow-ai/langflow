@@ -18,10 +18,10 @@ down_revision: str | None = "7a4c2e9b6d15"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
-# ``timestamp`` trails the two equality columns: both the flow-scoped read and
-# the per-vertex trim match on ``flow_id`` and ``id`` and then order by
-# ``timestamp``, so with it last the planner walks the index in order instead of
-# sorting the matched rows.
+# ``flow_id`` narrows the flow-scoped read and the per-vertex trim to one flow,
+# ``id`` lets them group and look up rows per vertex, and ``timestamp`` last
+# lets the trim read one vertex's builds in timestamp order. The ``build_id``
+# tie-break in the trim is still sorted.
 _INDEX_NAME = "ix_vertex_build_flow_id_id_timestamp"
 _INDEX_COLUMNS = ["flow_id", "id", "timestamp"]
 

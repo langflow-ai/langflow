@@ -5,10 +5,13 @@
 The `vertex_build` table carries a composite index on `(flow_id, id, timestamp)`,
 named `ix_vertex_build_flow_id_id_timestamp`.
 
-The flow-scoped read filters on `flow_id`, groups by `id`, and joins back on
-`(id, timestamp)`. The per-vertex trim filters on `flow_id` and `id` and orders
-by `timestamp`. With the columns in this order, the planner walks the index in
-order instead of sorting the rows it matched.
+With `flow_id` first, the index narrows both queries to one flow's rows without
+scanning the table. `id` second lets the flow-scoped read group by vertex id in
+index order and look up each vertex's newest row by `(flow_id, id, timestamp)`,
+and lets the per-vertex trim read one vertex's builds directly. The flow-scoped
+read still sorts its small result by `timestamp` across vertex ids. The
+per-vertex trim reads rows in `timestamp` order, and an incremental sort handles
+the `build_id` tie-break.
 
 Before this change the table carried only its primary key on `build_id` and
 `ix_vertex_build_job_id` on `job_id`. Neither `flow_id` nor `id` was indexed.
