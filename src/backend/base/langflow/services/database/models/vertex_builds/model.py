@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, field_serializer, field_validator
-from sqlalchemy import Text
+from sqlalchemy import Index, Text
 from sqlmodel import JSON, Column, Field, SQLModel
 
 from langflow.serialization.serialization import get_max_items_length, get_max_text_length, serialize
@@ -68,6 +68,14 @@ class VertexBuildBase(SQLModel):
 
 class VertexBuildTable(VertexBuildBase, table=True):  # type: ignore[call-arg]
     __tablename__ = "vertex_build"
+    __table_args__ = (
+        # Flow-scoped build reads and the per-vertex trim both filter on
+        # ``flow_id`` and ``id`` and then order by ``timestamp``. Without this
+        # the whole table is scanned and sorted, on every read and on every
+        # logged build. ``timestamp`` trails the two equality columns so the
+        # planner walks the index in order instead of sorting the matched rows.
+        Index("ix_vertex_build_flow_id_id_timestamp", "flow_id", "id", "timestamp"),
+    )
     build_id: UUID | None = Field(default_factory=uuid4, primary_key=True)
 
 
