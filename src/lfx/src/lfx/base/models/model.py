@@ -166,8 +166,10 @@ class LCModelComponent(Component):
             inner_openai_keys = ["completion_tokens", "prompt_tokens", "total_tokens"]
             anthropic_keys = ["model", "usage", "stop_reason"]
             inner_anthropic_keys = ["input_tokens", "output_tokens"]
-            if all(key in response_metadata for key in openai_keys) and all(
-                key in response_metadata["token_usage"] for key in inner_openai_keys
+            if (
+                all(key in response_metadata for key in openai_keys)
+                and isinstance(response_metadata["token_usage"], dict)
+                and all(key in response_metadata["token_usage"] for key in inner_openai_keys)
             ):
                 token_usage = response_metadata["token_usage"]
                 status_message = {
@@ -180,8 +182,10 @@ class LCModelComponent(Component):
                     }
                 }
 
-            elif all(key in response_metadata for key in anthropic_keys) and all(
-                key in response_metadata["usage"] for key in inner_anthropic_keys
+            elif (
+                all(key in response_metadata for key in anthropic_keys)
+                and isinstance(response_metadata["usage"], dict)
+                and all(key in response_metadata["usage"] for key in inner_anthropic_keys)
             ):
                 usage = response_metadata["usage"]
                 status_message = {
