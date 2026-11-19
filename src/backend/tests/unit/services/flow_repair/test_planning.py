@@ -371,3 +371,13 @@ def test_an_applier_that_loses_saved_output_state_is_refused(monkeypatch, lost):
 
     assert plan.data is None
     assert plan.reason_codes == ["preservation_failed"]
+
+
+def test_preview_names_the_retired_chroma_replacement_without_the_bundle():
+    chroma = node("Chroma-1")
+    chroma["data"]["type"] = "Chroma"
+    chroma["data"]["node"]["display_name"] = "Chroma DB"
+    plan = plan_flow_repair(graph(chroma), registry())
+    assert plan.data is None
+    assert plan.reason_codes == ["retired"]
+    assert plan.reason_detail == "Chroma DB was retired in 1.13.0. Replace with Knowledge."
