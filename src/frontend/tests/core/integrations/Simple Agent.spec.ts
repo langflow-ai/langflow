@@ -31,10 +31,7 @@ withEventDeliveryModes(
 
     const textContents = await page.getByTestId("div-chat-message").innerText();
 
-    expect(await page.getByTestId("header-icon").last().isVisible());
-    expect(await page.getByTestId("duration-display").last().isVisible());
-    expect(await page.getByTestId("icon-check").nth(0).isVisible());
-    expect(await page.getByTestId("icon-Check").nth(0).isVisible());
+    await expect(page.getByTestId("icon-Check").first()).toBeVisible();
     expect(textContents.length).toBeGreaterThan(30);
   },
 );

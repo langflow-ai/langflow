@@ -43,9 +43,9 @@ test(
 
     await page.getByTestId("icon-TextSearchIcon").nth(2).click();
 
-    await page.getByText("Sender", { exact: true }).isVisible();
-    await page.getByText("Type", { exact: true }).isVisible();
-    await page.getByText("User", { exact: true }).last().isVisible();
+    await expect(
+      page.getByText(TEXTS.componentOutput, { exact: true }),
+    ).toBeVisible();
   },
 );
 
@@ -223,12 +223,6 @@ test(
       exact: true,
     });
 
-    const closeButton = await page
-      .getByText(TEXTS.close, {
-        exact: true,
-      })
-      .count();
-
-    expect(closeButton).toBeGreaterThanOrEqual(0);
+    await expect(page.getByTestId("btn-close-modal")).toBeVisible();
   },
 );

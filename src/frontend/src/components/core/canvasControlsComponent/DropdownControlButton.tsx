@@ -78,7 +78,7 @@ const DropdownControlButton: React.FC<DropdownControlButtonProps> = ({
       <DropdownMenuCheckboxItem
         data-testid={testId}
         className={cn(
-          "group flex items-center justify-center !py-1.5 !px-2 hover:bg-accent h-full rounded-none",
+          "group flex items-center justify-center !py-1.5 !px-2 hover:bg-accent h-full rounded-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
           disabled && "cursor-not-allowed opacity-50",
         )}
         checked={toggleValue}
@@ -97,7 +97,7 @@ const DropdownControlButton: React.FC<DropdownControlButtonProps> = ({
     <DropdownMenuItem
       data-testid={testId}
       className={cn(
-        "group flex items-center justify-center !py-1.5 !px-2 hover:bg-accent h-full rounded-none",
+        "group flex items-center justify-center !py-1.5 !px-2 hover:bg-accent h-full rounded-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
         disabled && "cursor-not-allowed opacity-50",
       )}
       onClick={onClick}

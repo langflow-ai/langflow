@@ -46,9 +46,7 @@ test.describe("ModelProviderModal", () => {
 
       // Provider list should be visible
       const providerList = page.getByTestId("provider-list");
-      if (await providerList.isVisible({ timeout: 3000 })) {
-        await expect(providerList).toBeVisible();
-      }
+      await expect(providerList).toBeVisible({ timeout: 3000 });
     },
   );
 
@@ -70,21 +68,15 @@ test.describe("ModelProviderModal", () => {
       // Wait for provider list to load
       await page.waitForTimeout(1000);
 
-      // Click on a provider if available
+      // Click the first provider
       const providerItem = page
         .locator('[data-testid^="provider-item-"]')
         .first();
-      if (await providerItem.isVisible({ timeout: 2000 })) {
-        await providerItem.click();
+      await expect(providerItem).toBeVisible({ timeout: 2000 });
+      await providerItem.click();
 
-        // Should show API Key section or model selection
-        await page.waitForTimeout(500);
-
-        // The page content should be visible
-        await expect(
-          page.locator('[data-testid^="provider-item-"]').first(),
-        ).toBeVisible();
-      }
+      // The provider becomes the selected one
+      await expect(providerItem).toHaveAttribute("aria-pressed", "true");
     },
   );
 
@@ -132,24 +124,13 @@ test.describe("ModelProviderModal", () => {
 
       await page.waitForTimeout(1000);
 
-      // Find an enabled provider (has check icon) and click it
-      const providerItems = page.locator('[data-testid^="provider-item-"]');
-      const count = await providerItems.count();
+      // Click the first provider
+      await page.locator('[data-testid^="provider-item-"]').first().click();
 
-      for (let i = 0; i < count; i++) {
-        const item = providerItems.nth(i);
-        if (await item.isVisible()) {
-          await item.click();
-          await page.waitForTimeout(500);
-
-          // Check if model selection section appears
-          const modelSelection = page.getByTestId("model-provider-selection");
-          if (await modelSelection.isVisible({ timeout: 2000 })) {
-            await expect(modelSelection).toBeVisible();
-            break;
-          }
-        }
-      }
+      // The model selection section appears
+      await expect(page.getByTestId("model-provider-selection")).toBeVisible({
+        timeout: 2000,
+      });
     },
   );
 

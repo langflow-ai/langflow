@@ -261,7 +261,9 @@ test(
           buffer: fileContent,
         },
       ]);
-      await page.getByText(`${sourceFileName}.txt`).isVisible();
+      await expect(
+        page.getByText(`${sourceFileName}.txt`).first(),
+      ).toBeVisible();
     }
 
     await page.getByTestId("sidebar-search-input").click();

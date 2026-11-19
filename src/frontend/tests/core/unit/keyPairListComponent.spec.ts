@@ -71,52 +71,28 @@ test(
     await page.locator('//*[@id="keypair0"]').fill("testtesttesttest1");
     await page.getByTestId("div-generic-node").click();
 
-    const keyPairVerification = page.locator('//*[@id="keypair100"]');
-    const elementKeyCount = await keyPairVerification?.count();
-
-    if (elementKeyCount === 1) {
-      expect(true).toBeTruthy();
-    } else {
-      expect(false).toBeTruthy();
-    }
+    await expect(page.locator('//*[@id="keypair100"]')).toHaveCount(1);
 
     await openParametersPanel(page);
 
     await closeParametersPanel(page);
 
-    const plusButtonLocator = page.locator('//*[@id="plusbtn0"]');
-    const elementCount = await plusButtonLocator?.count();
-    if (elementCount === 1) {
-      expect(true).toBeTruthy();
-      await page.getByTestId("div-generic-node").click();
+    await expect(page.locator('//*[@id="plusbtn0"]')).toHaveCount(1);
+    await page.getByTestId("div-generic-node").click();
 
-      // LE-1810: values are edited on the node, not in the panel
-      await page.locator('//*[@id="keypair0"]').click();
-      await page.locator('//*[@id="keypair0"]').fill("testtesttesttest");
+    // LE-1810: values are edited on the node, not in the panel
+    await page.locator('//*[@id="keypair0"]').click();
+    await page.locator('//*[@id="keypair0"]').fill("testtesttesttest");
 
-      const keyPairVerification = page.locator('//*[@id="keypair0"]');
-      const elementKeyCount = await keyPairVerification?.count();
+    await expect(page.locator('//*[@id="keypair0"]')).toHaveCount(1);
+    await page.getByTestId("div-generic-node").click();
 
-      if (elementKeyCount === 1) {
-        await page.getByTestId("div-generic-node").click();
-
-        const key1 = await page.locator('//*[@id="keypair0"]').inputValue();
-        const value1 = await page.locator('//*[@id="keypair100"]').inputValue();
-        await page.getByTestId("div-generic-node").click();
-
-        if (
-          key1 === "testtesttesttest" &&
-          value1 === "test test test test test test"
-        ) {
-          expect(true).toBeTruthy();
-        } else {
-          expect(false).toBeTruthy();
-        }
-      } else {
-        expect(false).toBeTruthy();
-      }
-    } else {
-      expect(false).toBeTruthy();
-    }
+    await expect(page.locator('//*[@id="keypair0"]')).toHaveValue(
+      "testtesttesttest",
+    );
+    await expect(page.locator('//*[@id="keypair100"]')).toHaveValue(
+      "test test test test test test",
+    );
+    await page.getByTestId("div-generic-node").click();
   },
 );
