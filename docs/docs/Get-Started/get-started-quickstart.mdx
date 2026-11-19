@@ -83,7 +83,7 @@ Now that you've run your first flow, try these next steps:
 
 :::tip Langflow 1.13 and earlier
 As of Langflow 1.14, this quickstart demonstrates the **v2** API commands.
-To copy the v1 `/api/v1/run` snippets instead, in the **API access** pane,select **v1**.
+To copy the v1 `/api/v1/run` snippets instead, in the **API access** pane, select **v1**.
 :::
 
 Langflow is an IDE, but it's also a runtime you can call through the [Langflow API](/api-reference-api-examples) with Python, JavaScript, or HTTP.
@@ -92,12 +92,12 @@ When you start Langflow locally, you can send requests to the local Langflow ser
 For production applications, you need to [deploy a stable Langflow instance](/deployment-overview) to handle API calls.
 
 Call the flow with `POST /api/v2/workflows`.
-Langflow provides code snippets for this call.
+Langflow provides code snippets for this call in the **API access** pane.
 
 1. When editing a flow, click **Share**, and then click **API access**.
 
-   The default code in the API access pane constructs a request with the Langflow server url, headers, and a payload of request data. The code snippets automatically include the `LANGFLOW_SERVER_ADDRESS` and `FLOW_ID` values for the flow, and a script to include your `LANGFLOW_API_KEY` if you've set it as an environment variable in your terminal session.
-   Replace these values if you're using the code for a different server or flow. The default Langflow server address is http://localhost:7860.
+   The default code in the API access pane constructs a request with the Langflow server `url`, `headers`, and a `payload` of request data. The code snippets automatically include the `LANGFLOW_SERVER_ADDRESS` and `FLOW_ID` values for the flow, and a script to include your `LANGFLOW_API_KEY` if you've set it as an environment variable in your terminal session.
+   Replace these values if you're using the code for a different server or flow. The default Langflow server address is `http://localhost:7860`.
 
     <Tabs>
     <TabItem value="Python" label="Python" default>
@@ -167,9 +167,12 @@ Langflow provides code snippets for this call.
 2. Copy the code from **Get the full result**, paste it in a script file, and then run the script.
 If you are using the curl snippet, run the command in your terminal.
 
-A completed run returns one JSON object. Read `output.text` for the reply. Pass `session_id` on the next request to continue the same chat. When `output.text` is `null`, `output.reason` says why, and the per-component results are in `outputs`.
+A completed run returns one JSON object. Read `output.text` for the reply.
+Pass `session_id` on the next request to continue the same chat.
+When `output.text` is `null`, `output.reason` says why.
+Per-component results are in `outputs`.
 
-The following is an example of a sync response:
+The following is an example of a `sync` response:
 
 <details>
 <summary>Result</summary>
