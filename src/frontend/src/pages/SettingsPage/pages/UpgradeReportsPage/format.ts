@@ -1,3 +1,14 @@
+export function reportAssessment(
+  incomplete: boolean,
+  failures: number,
+  warnings: number,
+) {
+  if (incomplete) return "incomplete";
+  if (failures) return "blocked";
+  if (warnings) return "review";
+  return "clear";
+}
+
 export function reportTime(
   value: string | null | undefined,
   locale: string,
@@ -44,4 +55,24 @@ export function downloadReport(id: string, blob: Blob): void {
   link.download = `upgrade-report-${id}.json`;
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+const archivedReplacements: Record<string, string> = {
+  "files_and_knowledge.Knowledge": "Knowledge",
+  "models_and_agents.Agent": "Agent",
+  "mrscraper.MrscraperFetchHtml": "MrScraper Scraper API",
+};
+
+export function reportReason({
+  code,
+  message,
+}: {
+  code: string;
+  message: string | null;
+}): string {
+  if (code !== "retired" || !message) return message ?? code;
+  return message.replace(
+    /[\w]+\.[\w]+/g,
+    (reference) => archivedReplacements[reference] ?? reference,
+  );
 }

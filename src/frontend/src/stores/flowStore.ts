@@ -191,8 +191,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   updateComponentsToUpdate: (nodes, edges = get().edges) => {
     const outdatedNodes: ComponentsToUpdateType[] = [];
     const templates = useTypesStore.getState().templates;
-    const allowCustomComponents =
-      useUtilityStore.getState().allowCustomComponents;
+    const { allowCustomComponents, retiredComponents } =
+      useUtilityStore.getState();
     const fieldsByEdges = new Map<
       EdgeType[],
       ReturnType<typeof connectedFieldsByNode>
@@ -216,6 +216,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           connectedFields && fields !== null
             ? (fields ?? new Set())
             : undefined,
+          retiredComponents?.[node.data.type],
         );
         if (
           codeValidity &&

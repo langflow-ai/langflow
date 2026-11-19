@@ -9,7 +9,9 @@ from typing import TYPE_CHECKING, Any, Literal
 from uuid import UUID, uuid4
 
 from fastapi import HTTPException
+from lfx.base.models.provider_registry import provider_name_for_id
 from lfx.log import logger
+from lfx.services.model_provider_policy import ModelProviderPolicyError
 from lfx.utils.flow_validation import CustomComponentValidationError
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import col, select, update
@@ -104,6 +106,7 @@ async def _plan_selected(
         result.data_sha256 = data_digest(flow.data)
         plan = plan_flow_repair(flow.data, all_types)
         result.reason_codes = plan.reason_codes
+        result.reason_detail = plan.reason_detail
         if plan.data is not None:
             await validate_owner_policy(flow, owner, plan.data, all_types)
             result.updated_nodes = plan.updated_nodes
@@ -126,6 +129,14 @@ def _failed_result(flow_id: UUID, exc: Exception) -> RepairResult:
         return RepairResult(flow_id=flow_id, status="failed", reason_codes=["repair_prerequisite_unavailable"])
     if isinstance(exc, ProviderSelectionUnverifiableError):
         return RepairResult(flow_id=flow_id, status="manual", reason_codes=["provider_selection_unverifiable"])
+    if isinstance(exc, ModelProviderPolicyError):
+        provider = provider_name_for_id(exc.provider_id) or exc.provider_id
+        return RepairResult(
+            flow_id=flow_id,
+            status="manual",
+            reason_codes=["owner_policy_denied"],
+            reason_detail=f"The flow owner's model provider policy does not allow {provider}.",
+        )
     if isinstance(exc, PermissionError | CustomComponentValidationError):
         return RepairResult(
             flow_id=flow_id,

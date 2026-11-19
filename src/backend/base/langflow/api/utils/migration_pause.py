@@ -423,7 +423,7 @@ def _passes_while_paused(scope) -> bool:
     if scope.get("method") in _READ_METHODS:
         return True
     path = _path(scope)
-    if scope.get("method") == "POST" and path in _REPAIR_PATHS:
+    if scope.get("method") == "POST" and (path in _REPAIR_PATHS or path == "/api/v1/upgrade-reports"):
         return True
     return path in _ALLOWED_PATHS or f"{path}/".startswith(_ALLOWED_PREFIX)
 
