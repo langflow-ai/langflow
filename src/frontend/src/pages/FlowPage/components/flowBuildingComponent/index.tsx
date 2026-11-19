@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { normalizeTimeString } from "@/CustomNodes/GenericNode/components/NodeStatus/utils/format-run-time";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { BorderTrail } from "@/components/core/border-trail";
 import { Button } from "@/components/ui/button";
@@ -26,6 +25,12 @@ const AUTO_DISMISS_MS = 2000;
 const EXIT_ANIMATION_MS = 500;
 // The time label shows tenths of a second.
 const TICK_MS = 100;
+
+// Format the build time with one decimal.
+// A fixed decimal keeps the label width stable while it ticks.
+function formatBuildTime(ms: number): string {
+  return `${(ms / 1000).toFixed(1)}s`;
+}
 
 export default function FlowBuildingComponent() {
   const { t } = useTranslation();
@@ -61,11 +66,6 @@ export default function FlowBuildingComponent() {
     const timer = setInterval(() => setDuration(Date.now() - start), TICK_MS);
     return () => clearInterval(timer);
   }, [isBuilding]);
-
-  const secondsValue = duration / 1000;
-  const humanizedTime =
-    normalizeTimeString(`${secondsValue.toFixed(1)}seconds`) ??
-    `${secondsValue.toFixed(1)}s`;
 
   // The text shown while a build runs.
   const buildingContent = isBuilding ? (
@@ -174,9 +174,9 @@ export default function FlowBuildingComponent() {
                 <motion.div
                   layout="position"
                   transition={{ duration: 0.2, ease: "easeOut" }}
-                  className="font-mono text-xs"
+                  className="font-mono text-xs tabular-nums"
                 >
-                  {humanizedTime}
+                  {formatBuildTime(duration)}
                 </motion.div>
                 {/* popLayout takes the exiting buttons out of the flex flow, so the time label slides instead of jumping. */}
                 <AnimatePresence mode="popLayout">

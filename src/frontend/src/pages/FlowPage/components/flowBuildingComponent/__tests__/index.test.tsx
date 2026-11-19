@@ -33,13 +33,6 @@ jest.mock("remark-gfm", () => ({
   default: () => {},
 }));
 
-jest.mock(
-  "@/CustomNodes/GenericNode/components/NodeStatus/utils/format-run-time",
-  () => ({
-    normalizeTimeString: (timeStr: string) => timeStr,
-  }),
-);
-
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
   default: ({ name, className }: { name: string; className?: string }) => (
@@ -140,7 +133,7 @@ describe("FlowBuildingComponent - Timer Tests", () => {
       render(<FlowBuildingComponent />);
 
       // Verify initial state
-      expect(screen.getByText(/0\.0seconds/)).toBeInTheDocument();
+      expect(screen.getByText("0.0s")).toBeInTheDocument();
 
       // Component should be in building state with timer mechanism active
       expect(screen.getByTestId("border-trail")).toBeInTheDocument();
@@ -173,7 +166,7 @@ describe("FlowBuildingComponent - Timer Tests", () => {
       render(<FlowBuildingComponent />);
 
       // At the start, should show 0.0s
-      expect(screen.getByText(/0\.0seconds/)).toBeInTheDocument();
+      expect(screen.getByText("0.0s")).toBeInTheDocument();
     });
 
     it("should update timer display when time passes", async () => {
@@ -182,7 +175,7 @@ describe("FlowBuildingComponent - Timer Tests", () => {
       render(<FlowBuildingComponent />);
 
       // Initial state
-      expect(screen.getByText(/0\.0seconds/)).toBeInTheDocument();
+      expect(screen.getByText("0.0s")).toBeInTheDocument();
 
       // The timer should update as time passes
       // We're testing that the mechanism is in place
@@ -201,7 +194,7 @@ describe("FlowBuildingComponent - Timer Tests", () => {
       expect(screen.getByText("Flow built successfully")).toBeInTheDocument();
 
       // Timer should still be visible showing the final time
-      expect(screen.getByText(/\d+\.\d+seconds/)).toBeInTheDocument();
+      expect(screen.getByText(/^\d+\.\d+s$/)).toBeInTheDocument();
     });
 
     it("should reset timer when building restarts", async () => {
@@ -227,7 +220,7 @@ describe("FlowBuildingComponent - Timer Tests", () => {
       rerender(<FlowBuildingComponent />);
 
       // Should reset to 0
-      expect(screen.getByText(/0\.\d+seconds/)).toBeInTheDocument();
+      expect(screen.getByText(/^0\.\d+s$/)).toBeInTheDocument();
 
       // Advance 1 second
       await act(async () => {
@@ -237,7 +230,7 @@ describe("FlowBuildingComponent - Timer Tests", () => {
       rerender(<FlowBuildingComponent />);
 
       // Should show 1 second, not 3 seconds
-      expect(screen.getByText(/1\.\d+seconds/)).toBeInTheDocument();
+      expect(screen.getByText(/^1\.\d+s$/)).toBeInTheDocument();
     });
   });
 
@@ -485,7 +478,23 @@ describe("FlowBuildingComponent - Timer Tests", () => {
         jest.advanceTimersByTime(1000);
       });
 
-      expect(screen.getByText(/1\.0seconds/)).toBeInTheDocument();
+      expect(screen.getByText("1.0s")).toBeInTheDocument();
+    });
+
+    it("always shows one decimal so the label width stays stable", async () => {
+      mockIsBuilding = true;
+      render(<FlowBuildingComponent />);
+
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(screen.getByText("1.0s")).toBeInTheDocument();
+      expect(screen.queryByText("1s")).not.toBeInTheDocument();
+
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(screen.getByText("2.0s")).toBeInTheDocument();
     });
 
     it("keeps the duration visible on the success result", async () => {
@@ -501,7 +510,7 @@ describe("FlowBuildingComponent - Timer Tests", () => {
       rerender(<FlowBuildingComponent />);
 
       expect(screen.getByText("Flow built successfully")).toBeInTheDocument();
-      expect(screen.getByText(/1\.0seconds/)).toBeInTheDocument();
+      expect(screen.getByText("1.0s")).toBeInTheDocument();
     });
   });
 });
