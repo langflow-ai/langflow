@@ -64,6 +64,33 @@ class TestExtractUsageFromMessage:
         assert result.output_tokens == 300
         assert result.total_tokens == 500
 
+    def test_returns_none_when_token_usage_is_none(self):
+        # OpenAI-compatible endpoints that omit `usage` on the wire can surface
+        # as response_metadata["token_usage"] = None (GH-16512); usage info is
+        # simply unavailable, not a crash.
+        message = AIMessage(
+            content="hi",
+            response_metadata={
+                "model_name": "agent/sample",
+                "finish_reason": "stop",
+                "token_usage": None,
+            },
+        )
+
+        result = extract_usage_from_message(message)
+
+        assert result is None
+
+    def test_returns_none_when_anthropic_usage_is_none(self):
+        message = AIMessage(
+            content="hi",
+            response_metadata={"model": "claude", "stop_reason": "stop", "usage": None},
+        )
+
+        result = extract_usage_from_message(message)
+
+        assert result is None
+
     def test_returns_none_for_no_metadata(self):
         message = AIMessage(content="hi")
 
