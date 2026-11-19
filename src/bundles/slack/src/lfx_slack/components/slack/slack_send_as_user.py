@@ -32,18 +32,21 @@ class SlackSendAsUserComponent(SlackBaseComponent):
             display_name="Channel",
             required=True,
             info="Conversation ID or channel name the connected user can post to.",
+            tool_mode=True,
         ),
         MultilineInput(
             name="text",
             display_name="Text",
             required=True,
             info="Message body. Slack truncates above 40,000 characters.",
+            tool_mode=True,
         ),
         StrInput(
             name="thread_ts",
             display_name="Thread timestamp",
             info="Reply inside this thread instead of posting to the channel.",
             advanced=True,
+            tool_mode=True,
         ),
         DataInput(
             name="blocks",
@@ -51,12 +54,14 @@ class SlackSendAsUserComponent(SlackBaseComponent):
             is_list=True,
             info="Optional Block Kit blocks, as Data objects.",
             advanced=True,
+            tool_mode=True,
         ),
         BoolInput(
             name="unfurl_links",
             display_name="Unfurl links",
             value=True,
             advanced=True,
+            tool_mode=True,
         ),
     ]
 

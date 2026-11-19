@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import sys
 from datetime import datetime, timezone
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
@@ -334,6 +335,38 @@ async def test_a_listener_warns_at_startup_about_registrations_it_cannot_see(
     )
     assert await warn_on_unrefreshable_connections() == []
     assert len(warnings) == 1, "a correctly configured listener says nothing"
+
+
+async def test_a_listener_starts_when_saved_registration_loading_fails(monkeypatch):
+    """An unavailable registration store must not stop unrelated listeners."""
+    from langflow.services import utils
+    from langflow.services.connection.oauth import stored_registrations
+    from langflow.services.triggers.listeners import runtime
+
+    load = AsyncMock(side_effect=RuntimeError("database temporarily unavailable"))
+    supervisor = MagicMock(holder="listener-test", stop=AsyncMock())
+    health = MagicMock(start=AsyncMock(), stop=AsyncMock())
+    logger = AsyncMock()
+    monkeypatch.setattr(guard, "_IS_LISTENER_PROCESS", False)
+    monkeypatch.setattr(runtime, "assert_no_http_app", lambda: None)
+    monkeypatch.setattr(runtime, "boot_services", AsyncMock())
+    monkeypatch.setattr(runtime, "warn_on_unrefreshable_connections", AsyncMock(return_value=[]))
+    monkeypatch.setattr(runtime, "ListenerSupervisor", lambda: supervisor)
+    monkeypatch.setattr(runtime, "ListenerHealthServer", lambda _supervisor: health)
+    monkeypatch.setattr(runtime, "logger", logger)
+    monkeypatch.setattr(stored_registrations, "load_stored_oauth_registrations", load)
+    monkeypatch.setattr(utils, "teardown_services", AsyncMock())
+    stopping = asyncio.Event()
+    stopping.set()
+
+    await asyncio.wait_for(runtime.run_listeners(stop_event=stopping), timeout=1)
+
+    load.assert_awaited_once()
+    logger.aexception.assert_awaited_once()
+    supervisor.start.assert_called_once()
+    health.start.assert_awaited_once()
+    health.stop.assert_awaited_once()
+    supervisor.stop.assert_awaited_once()
 
 
 # --------------------------------------------------------------------------- #

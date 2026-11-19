@@ -639,7 +639,7 @@ class TestMCPComponentConfigPriority:
             patch("lfx.components.models_and_agents.mcp_component.session_scope"),
             patch.object(component.stdio_client, "connect_to_server") as mock_connect,
         ):
-            mock_get_user.return_value = MagicMock(id="test_user_123")
+            mock_get_user.return_value = SimpleNamespace(id="test_user_123", is_superuser=True)
             mock_get_server.return_value = db_config
             mock_connect.return_value = []
 
@@ -675,7 +675,7 @@ class TestMCPComponentConfigPriority:
             patch("lfx.components.models_and_agents.mcp_component.session_scope"),
             patch.object(component.stdio_client, "connect_to_server") as mock_connect,
         ):
-            mock_get_user.return_value = MagicMock(id="test_user_123")
+            mock_get_user.return_value = SimpleNamespace(id="test_user_123", is_superuser=True)
             mock_get_server.return_value = db_config
             mock_connect.return_value = []
 
@@ -705,7 +705,7 @@ class TestMCPComponentConfigPriority:
             patch("lfx.components.models_and_agents.mcp_component.session_scope"),
             patch.object(component.stdio_client, "connect_to_server") as mock_connect,
         ):
-            mock_get_user.return_value = MagicMock(id="test_user_123")
+            mock_get_user.return_value = SimpleNamespace(id="test_user_123", is_superuser=True)
             # Database returns None (server not found)
             mock_get_server.return_value = None
             mock_connect.return_value = []
@@ -731,7 +731,7 @@ class TestMCPComponentConfigPriority:
             patch("lfx.components.models_and_agents.mcp_component.session_scope"),
             patch("lfx.components.models_and_agents.mcp_component.update_tools") as mock_update_tools,
         ):
-            mock_get_user.return_value = MagicMock(id="test_user_123")
+            mock_get_user.return_value = SimpleNamespace(id="test_user_123", is_superuser=True)
             mock_get_server.return_value = None
 
             with pytest.raises(
@@ -829,7 +829,7 @@ class TestMCPComponentConfigPriority:
             patch("lfx.components.models_and_agents.mcp_component.session_scope"),
             patch.object(component.stdio_client, "connect_to_server") as mock_connect,
         ):
-            mock_get_user.return_value = MagicMock(id="test_user_123")
+            mock_get_user.return_value = SimpleNamespace(id="test_user_123", is_superuser=True)
             mock_get_server.return_value = None
 
             with pytest.raises(ValueError, match="Command 'curl' is not allowed"):
@@ -855,7 +855,7 @@ class TestMCPComponentConfigPriority:
             patch("lfx.components.models_and_agents.mcp_component.session_scope"),
             patch.object(component.stdio_client, "connect_to_server") as mock_connect,
         ):
-            mock_get_user.return_value = MagicMock(id="api_user_456")
+            mock_get_user.return_value = SimpleNamespace(id="api_user_456", is_superuser=True)
             # Database returns None (server not in database yet)
             mock_get_server.return_value = None
             mock_connect.return_value = []
@@ -1073,7 +1073,82 @@ class TestMCPComponentGlobalVariableResolution:
     }
     DB_VARIABLES = {"AUTH-VAR1": "var1-placeholder", "AUTH-VAR2": "my-api-key"}
 
-    async def _run(self, context_variables, server_config=None, *, variable_service=None, revoke_after_first=False):
+    @pytest.fixture(autouse=True)
+    def mcp_settings_service(self):
+        return get_settings_service()
+
+    @pytest.mark.parametrize(
+        ("method", "use_cache", "legacy_cache"),
+        [
+            ("update_tool_list", True, False),
+            ("_get_tools", False, False),
+            ("_get_tools", True, False),
+            ("update_tool_list", True, True),
+        ],
+    )
+    @pytest.mark.asyncio
+    async def test_deleted_header_variable_cannot_reuse_cached_tools(self, method, use_cache, legacy_cache):
+        """Recheck stored credentials after deletion through both component cache paths."""
+        from uuid import uuid4
+
+        from lfx.base.agents.utils import safe_cache_set
+        from lfx.services.variable.exceptions import RuntimeVariableError
+        from mcp.types import Tool
+
+        variables = {"QA2873_C_SEC": "opaque-{{NOT_A_REFERENCE}}"}
+
+        class UnmanagedService:
+            async def get_account_bound_variables(self, **_kwargs):
+                return None
+
+            async def get_all_decrypted_variables(self, **_kwargs):
+                return dict(variables)
+
+        component = MCPToolsComponent()
+        component.mcp_server = "test_server"
+        component._user_id = str(uuid4())
+        component.use_cache = use_cache
+        component.streamable_http_client._connected = True
+        config = {"url": "https://echo.invalid/mcp", "headers": {"Authorization": "{{QA2873_C_SEC}}"}}
+        if legacy_cache:
+            safe_cache_set(
+                component._shared_component_cache,
+                "servers",
+                {
+                    component._mcp_servers_cache_key("test_server"): {
+                        "tools": [MagicMock(name="stale-tool")],
+                        "config": config,
+                        "tool_cache": {},
+                    }
+                },
+            )
+        connect = AsyncMock(return_value=[Tool(name="echo", inputSchema={"type": "object", "properties": {}})])
+        with (
+            patch("langflow.api.v2.mcp.get_server", new=AsyncMock(return_value=config)),
+            patch(
+                "langflow.services.database.models.user.crud.get_user_by_id", new=AsyncMock(return_value=MagicMock())
+            ),
+            patch("lfx.components.models_and_agents.mcp_component.session_scope"),
+            patch("lfx.services.deps.get_variable_service", return_value=UnmanagedService()),
+            patch("lfx.base.mcp.util.validate_strict_url_for_ssrf_or_raise"),
+            patch.object(component.streamable_http_client, "connect_to_server", new=connect),
+        ):
+            assert await getattr(component, method)()
+            assert connect.call_args.kwargs["headers"] == {"authorization": "opaque-{{NOT_A_REFERENCE}}"}
+            variables.clear()
+            with pytest.raises(RuntimeVariableError, match="QA2873_C_SEC"):
+                await getattr(component, method)()
+            assert connect.await_count == 1
+
+    async def _run(
+        self,
+        context_variables,
+        server_config=None,
+        *,
+        variable_service=None,
+        revoke_after_first=False,
+        expect_strict=False,
+    ):
         """Drive update_tool_list and return (request_variables passed on, variable_service)."""
         component = MCPToolsComponent()
         component.mcp_server = "test_server"
@@ -1122,6 +1197,7 @@ class TestMCPComponentGlobalVariableResolution:
                     await component._get_tools()
                 assert mock_update_tools.await_count == 1
 
+        assert mock_update_tools.call_args.kwargs["strict_variables"] is expect_strict
         return mock_update_tools.call_args.kwargs["request_variables"], variable_service
 
     @pytest.mark.asyncio
@@ -1157,6 +1233,7 @@ class TestMCPComponentGlobalVariableResolution:
 
     @pytest.mark.asyncio
     async def test_bound_account_ignores_request_overrides_and_rechecks_cached_tools(self):
+        """Approved account variables override callers and remain subject to revocation."""
         from lfx.services.variable.exceptions import RuntimeVariableError
 
         approved = dict(self.DB_VARIABLES)
@@ -1165,6 +1242,7 @@ class TestMCPComponentGlobalVariableResolution:
             revoked = False
 
             async def get_account_bound_variables(self, **_kwargs):
+                """Return approved values until the account approval is revoked."""
                 if self.revoked:
                     msg = "Approval revoked"
                     raise RuntimeVariableError(msg, reason="variable_not_approved")
@@ -1174,11 +1252,45 @@ class TestMCPComponentGlobalVariableResolution:
             {"AUTH-VAR1": "caller-replacement", "UNAPPROVED": "caller-only"},
             variable_service=BoundService(),
             revoke_after_first=True,
+            expect_strict=True,
         )
         assert resolved == approved
 
     @pytest.mark.asyncio
+    async def test_unmanaged_account_does_not_enable_strict_variables(self):
+        """An unmanaged account keeps legacy resolution even when the method exists."""
+
+        class UnmanagedService:
+            async def get_account_bound_variables(self, **_kwargs):
+                """Leave this account outside deployment variable management."""
+
+        variable_service = UnmanagedService()
+        variable_service.get_all_decrypted_variables = AsyncMock(return_value=dict(self.DB_VARIABLES))
+        resolved, _ = await self._run(None, variable_service=variable_service)
+
+        assert resolved == self.DB_VARIABLES
+
+    @pytest.mark.asyncio
+    async def test_empty_bound_account_still_enables_strict_variables(self):
+        """An authoritative empty map never falls back to stored or caller values."""
+
+        class BoundService:
+            async def get_account_bound_variables(self, **_kwargs):
+                """Return an authoritative map without approved variables."""
+                return {}
+
+        variable_service = BoundService()
+        variable_service.get_all_decrypted_variables = AsyncMock(return_value=dict(self.DB_VARIABLES))
+        resolved, _ = await self._run(
+            {"AUTH-VAR1": "caller-only"}, variable_service=variable_service, expect_strict=True
+        )
+
+        assert resolved == {}
+        variable_service.get_all_decrypted_variables.assert_not_called()
+
+    @pytest.mark.asyncio
     async def test_authoritative_bulk_failure_cannot_continue_with_request_only_values(self):
+        """A failed account policy must stop discovery before caller values can be used."""
         from lfx.services.variable.exceptions import RuntimeVariableError
 
         variable_service = MagicMock()
@@ -1271,7 +1383,7 @@ async def test_config_priority_with_fixtures(mock_db_session_with_servers):
         ),
         patch.object(component.stdio_client, "connect_to_server", return_value=[]),
     ):
-        mock_get_user.return_value = MagicMock(id="test_user")
+        mock_get_user.return_value = SimpleNamespace(id="test_user", is_superuser=True)
         mock_get_server.return_value = {"command": "uvx", "args": ["test"]}
 
         _tools, server_info = await component.update_tool_list()

@@ -29,7 +29,7 @@ To give Langflow Assistant context for a different flow, switch to that flow in 
 
 * Custom component creation must be enabled and permitted for your user role:
   * `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` must be `true` (default).
-   * `LANGFLOW_CUSTOM_COMPONENT_ADMIN_ONLY` must be `false` (default) for non-superusers. For superusers, this option is irrelevant.
+   * `LANGFLOW_CUSTOM_COMPONENT_ADMIN_ONLY` must be explicitly set to `false` for non-superusers. The default is `true`. For superusers, this option is irrelevant.
 
   For more information, see [Restrict custom component creation to superusers](/deployment-block-custom-components).
 

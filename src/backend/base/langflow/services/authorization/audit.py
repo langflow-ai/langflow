@@ -467,7 +467,12 @@ async def _audit_writer_loop() -> None:
 
 
 async def _flush_audit_batch(batch: list[_AuditEntry]) -> None:
-    """Insert a batch of ``_AuditEntry`` rows in a single session."""
+    """Commit security events even during database maintenance.
+
+    Audit logging is an explicit maintenance exception. Pausing this writer
+    would leave durable read authorizations waiting for an uncommitted event.
+    Operators stop traffic and drain this pipeline before the final backup.
+    """
     if not batch:
         return
     from langflow.services.deps import session_scope

@@ -18,6 +18,7 @@ import pytest
 from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.database.models.trigger.schemas import TriggerAction, TriggerReason
 from langflow.services.triggers.capabilities import TriggerCaller, trigger_capabilities, trigger_reason
+from langflow.services.triggers.error_codes import INVALID_CRON_ERROR
 from langflow.services.triggers.reconciliation import NODE_REMOVED_ERROR, SOURCE_SETTINGS_CHANGED_ERROR
 
 FULL = TriggerCaller(can_write=True, can_execute=True, owns_connection=True)
@@ -27,13 +28,18 @@ A = TriggerAction
 R = TriggerReason
 
 
-def _row(state: str = "active", *, kind: str = "schedule", **fields) -> Trigger:
+VALID_SCHEDULE = {"cron": "*/5 * * * *", "timezone": "UTC"}
+
+
+def _row(state: str = "active", *, kind: str = "schedule", config: dict | None = None, **fields) -> Trigger:
+    if config is None:
+        config = dict(VALID_SCHEDULE) if kind == "schedule" else {}
     return Trigger(
         flow_id=uuid4(),
         user_id=uuid4(),
         name="trigger",
         kind=kind,
-        config={},
+        config=config,
         provider_state={},
         state=state,
         concurrency_limit=1,
@@ -133,6 +139,16 @@ def test_every_state_maps_to_one_stable_reason(state, last_error, expected) -> N
     assert trigger_reason(_row(state, last_error=last_error)) is expected
 
 
+def test_whatsapp_waiting_for_manual_resume_is_not_a_pending_subscription() -> None:
+    row = _row("pending", kind="whatsapp.event", public_id="saved-before-resume")
+    caps = trigger_capabilities(row, caller=FULL)
+    assert caps.reason is R.READY_TO_RESUME
+    assert A.RESUME in caps.allowed_actions
+    assert trigger_reason(_row("pending", kind="whatsapp.event", last_error="invalid sender")) is R.CONFIG_INVALID
+    row.signing_secret_encrypted = "encrypted-activation-proof"  # noqa: S105  # pragma: allowlist secret
+    assert trigger_reason(row) is R.PENDING
+
+
 def test_missing_consent_routes_to_reconnect_not_an_oauth_loop() -> None:
     """``consent_required`` tells the UI to open the background-runs switch (B9)."""
     caps = trigger_capabilities(_slack("needs_reconnect", last_error="connection_not_authorized"), caller=FULL)
@@ -222,3 +238,52 @@ def test_a_state_reason_wins_over_a_permission_reason() -> None:
 
     assert caps.blocked_actions[A.TEST] is R.DEAD
     assert caps.blocked_actions[A.DELETE] is R.INSUFFICIENT_PERMISSION
+
+
+def test_a_schedule_with_an_invalid_cron_cannot_be_resumed() -> None:
+    """The enable route refuses the cron, so resume is blocked rather than offered."""
+    row = _row("pending", config={"cron": "not a cron", "timezone": "UTC"}, last_error=INVALID_CRON_ERROR)
+
+    caps = trigger_capabilities(row, caller=FULL)
+
+    assert caps.reason is R.CONFIG_INVALID
+    assert caps.allowed_actions == (A.PAUSE, A.TEST, A.REPLAY, A.DELETE)
+    assert caps.blocked_actions == {A.RESUME: R.CONFIG_INVALID}
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        pytest.param({"cron": "not a cron", "timezone": "UTC"}, id="invalid-cron"),
+        pytest.param({"cron": "0 0 31 2 *", "timezone": "UTC"}, id="cron-never-matches"),
+        pytest.param({"cron": "*/5 * * * *", "timezone": "Mars/Olympus"}, id="unknown-timezone"),
+        pytest.param({"cron": "", "timezone": "UTC"}, id="unusable-pick"),
+        pytest.param({"run_at": "2020-01-01T08:00", "timezone": "UTC"}, id="run-at-passed"),
+        pytest.param({"run_at": "9999-12-31T23:59", "timezone": "America/New_York"}, id="run-at-out-of-range"),
+    ],
+)
+def test_resume_is_blocked_whenever_enable_would_refuse_the_schedule(config) -> None:
+    """Pausing clears the stored reason, so the schedule itself is what decides, not ``last_error``."""
+    caps = trigger_capabilities(_row("paused", config=config), caller=FULL)
+
+    assert caps.blocked_actions[A.RESUME] is R.CONFIG_INVALID
+    assert A.RESUME not in caps.allowed_actions
+
+
+def test_a_future_run_once_schedule_can_be_resumed() -> None:
+    caps = trigger_capabilities(_row("paused", config={"run_at": "2999-01-01T08:00", "timezone": "UTC"}), caller=FULL)
+
+    assert A.RESUME in caps.allowed_actions
+
+
+def test_a_reader_is_told_the_schedule_is_invalid_not_that_they_lack_permission() -> None:
+    caps = trigger_capabilities(_row("paused", config={"cron": "not a cron", "timezone": "UTC"}), caller=READER)
+
+    assert caps.blocked_actions[A.RESUME] is R.CONFIG_INVALID
+
+
+def test_a_removed_node_still_explains_a_blocked_resume_before_the_schedule() -> None:
+    """The route checks the node first, so its reason is the one shown."""
+    row = _row("paused", config={"cron": "not a cron", "timezone": "UTC"}, last_error=NODE_REMOVED_ERROR)
+
+    assert trigger_capabilities(row, caller=FULL).blocked_actions[A.RESUME] is R.NODE_REMOVED

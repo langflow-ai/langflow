@@ -23,6 +23,7 @@ from alembic.operations import Operations
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
 from langflow.services.database.models.knowledge_base_storage_migration import KnowledgeBaseStorageMigration
+from langflow.services.database.models.maintenance import MaintenanceState
 from langflow.services.database.models.memory_base.model import MemoryBase, MemoryBaseSession
 from langflow.services.database.models.user.model import User
 from langflow.services.knowledge_base_storage import application_backup, coordinator, maintenance, runtime
@@ -49,6 +50,7 @@ async def database(tmp_path, monkeypatch):
         KnowledgeBaseStorageMigration.__table__,
         MemoryBase.__table__,
         MemoryBaseSession.__table__,
+        MaintenanceState.__table__,
     ]
     async with engine.begin() as connection:
         await connection.run_sync(lambda sync: SQLModel.metadata.create_all(sync, tables=tables))
@@ -59,8 +61,12 @@ async def database(tmp_path, monkeypatch):
         async with AsyncSession(engine, expire_on_commit=False) as session:
             yield session
 
-    settings = SimpleNamespace(settings=SimpleNamespace(knowledge_bases_dir=str(root)))
+    settings = SimpleNamespace(settings=SimpleNamespace(knowledge_bases_dir=str(root), kb_disk_reconcile_enabled=False))
     service = SimpleNamespace(database_url=f"sqlite+aiosqlite:///{path}", engine=engine)
+    from langflow.api.utils import knowledge_base_service, migration_pause
+
+    monkeypatch.setattr(migration_pause, "session_scope_readonly", sessions)
+    monkeypatch.setattr(knowledge_base_service, "session_scope", sessions)
     monkeypatch.setattr(runtime, "session_scope", sessions)
     monkeypatch.setattr(coordinator, "session_scope", sessions)
     monkeypatch.setattr(runtime, "get_settings_service", lambda: settings)
@@ -78,7 +84,7 @@ async def database(tmp_path, monkeypatch):
     monkeypatch.delenv("LANGFLOW_KB_UPGRADE_RECEIPT", raising=False)
     user = User(username="owner", password=uuid4().hex, is_active=True)
     async with sessions() as session:
-        session.add(user)
+        session.add_all([user, MaintenanceState(enabled=False)])
         await session.commit()
     yield SimpleNamespace(root=root, path=path, sessions=sessions, user=user, settings=settings)
     await engine.dispose()
@@ -725,6 +731,43 @@ async def test_background_copy_keeps_other_bases_usable_and_resumes_on_restart(d
     assert resumed.chunks == 239
     assert maintenance.tree_fingerprint(source) == fingerprint
     await backend.teardown()
+
+
+async def test_background_upgrade_waits_for_database_maintenance_to_end(database):
+    """Resume the real storage conversion after a persisted maintenance freeze ends."""
+    source = native_source(database)
+    fingerprint = maintenance.tree_fingerprint(source)
+    row = KnowledgeBaseRecord(user_id=database.user.id, name="fixture-l2", backend_type="chroma")
+    async with database.sessions() as session:
+        state = await session.get(MaintenanceState, 1)
+        state.enabled = True
+        session.add_all([state, row])
+        await session.commit()
+    task = coordinator.schedule_upgrade()
+    try:
+        with pytest.raises(TimeoutError):
+            await asyncio.wait_for(asyncio.shield(task), timeout=0.2)
+        frozen = await read_kb(database, row.id)
+        assert frozen.backend_type == "chroma"
+        assert frozen.storage_generation == 1
+        assert maintenance.tree_fingerprint(source) == fingerprint
+        async with database.sessions() as session:
+            state = await session.get(MaintenanceState, 1)
+            state.enabled = False
+            session.add(state)
+            await session.commit()
+        await asyncio.wait_for(task, timeout=10)
+        resumed = await read_kb(database, row.id)
+        assert resumed.backend_type == "sqlite"
+        assert resumed.storage_state == "ready"
+        assert resumed.storage_generation == 2
+        assert resumed.chunks == 239
+        assert maintenance.tree_fingerprint(source) == fingerprint
+    finally:
+        if not task.done():
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
 
 
 async def test_multi_worker_upgrade_retains_source_and_reports_recovery(database, monkeypatch):

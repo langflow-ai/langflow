@@ -8,13 +8,14 @@ the real ledger, and the real unique index.
 
 from __future__ import annotations
 
+import base64
 import json
 import time
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 import pytest
-from langflow.services.database.models.trigger.model import Trigger, TriggerEvent
+from langflow.services.database.models.trigger.model import Trigger, TriggerEvent, TriggerSubscription
 from langflow.services.deps import session_scope
 from langflow.services.triggers.ingress.verifiers import sign_webhook_payload
 from sqlmodel import select
@@ -106,6 +107,49 @@ async def test_a_signed_webhook_delivery_becomes_a_ledger_row(
     rows = await _events(trigger_id)
     assert len(rows) == 1
     assert rows[0].payload["delivery"] == {"order": 42}
+
+
+@pytest.mark.parametrize("history_id", [4216989, "4216989"])
+async def test_gmail_pubsub_retry_records_one_normalized_hint(client, active_user, flow, monkeypatch, history_id):
+    from google.oauth2 import id_token
+
+    monkeypatch.setattr(
+        id_token,
+        "verify_oauth2_token",
+        lambda *_args: {"email": "push@example.iam.gserviceaccount.com", "email_verified": True},
+    )
+    public_id = uuid4().hex
+    url = f"api/v1/triggers/ingress/google/{public_id}"
+    trigger = await _arm_trigger(
+        flow.id,
+        active_user.id,
+        kind="google.gmail",
+        provider="google",
+        public_id=public_id,
+    )
+    async with session_scope() as session:
+        session.add(
+            TriggerSubscription(
+                trigger_id=trigger.id,
+                provider="google",
+                provider_subscription_id="gmail-watch",
+                state="active",
+                provider_state={"pubsub_service_account": "push@example.iam.gserviceaccount.com", "audience": url},
+            )
+        )
+    data = base64.b64encode(
+        json.dumps({"emailAddress": "owner@example.com", "historyId": history_id}).encode()
+    ).decode()
+    for _ in range(2):
+        response = await client.post(
+            url,
+            json={"message": {"messageId": "delivery-1", "data": data}},
+            headers={"Authorization": "Bearer signed-id-token"},
+        )
+        assert response.status_code == 202, response.text
+    rows = await _events(trigger.id)
+    assert len(rows) == 1
+    assert rows[0].payload == {"provider": "google", "delivery": {"history_id": "4216989"}, "_source_hint": True}
 
 
 async def test_rotating_the_secret_invalidates_the_old_one_immediately(

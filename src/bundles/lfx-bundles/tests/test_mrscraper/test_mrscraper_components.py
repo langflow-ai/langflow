@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import builtins
+import importlib.abc
 import inspect
 import json
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from unittest.mock import patch
@@ -23,6 +25,15 @@ if TYPE_CHECKING:
 
 MOCK_MR_API_TOKEN = "test-mrscraper-sdk-token-placeholder"  # noqa: S105
 COMPONENTS = [(MrscraperAccount, "get_account"), (MrscraperFetchHtml, "fetch"), (MrscraperWebSearch, "search")]
+RETIRED = {
+    "MrscraperAiScraper",
+    "MrscraperBatchScrape",
+    "MrscraperCrawlWebsite",
+    "MrscraperGetResult",
+    "MrscraperGetResults",
+    "MrscraperRunAiScraper",
+    "MrscraperRunManualScraper",
+}
 
 
 def real_sdk():
@@ -62,13 +73,13 @@ def configure(component_class: type[Component], **values: Any) -> Component:
 
 
 @pytest.mark.unit
-def test_exactly_three_components_are_exported_and_discoverable():
-    """Both lazy exports and bundle folder discovery expose the same three tools."""
+def test_three_tools_and_the_retired_components_are_exported_and_discoverable():
+    """Lazy exports and bundle folder discovery expose the three tools and the seven retired components."""
     from lfx.extension.loader._detection import collect_component_classes
     from lfx.extension.loader._discovery import import_bundle_module, iter_bundle_python_files
 
     expected = {"MrscraperAccount", "MrscraperFetchHtml", "MrscraperWebSearch"}
-    assert set(components.__all__) == expected
+    assert set(components.__all__) == expected | RETIRED
     bundle = Path(components.__file__).parent
     discovered = set()
     for path in iter_bundle_python_files(bundle):
@@ -76,13 +87,42 @@ def test_exactly_three_components_are_exported_and_discoverable():
         module, error, _cause = import_bundle_module(module_name, path)
         assert error is None
         discovered.update(item.__name__ for item in collect_component_classes(module))
-    assert discovered == expected
+    assert discovered == expected | RETIRED
+    assert {name for name in discovered if getattr(getattr(components, name), "retired_in", None)} == RETIRED
     assert MrscraperFetchHtml.name == "MrscraperFetchHtml"
     assert {getattr(components, name).display_name for name in expected} == {
         "MrScraper Account",
         "MrScraper Scraper API",
         "MrScraper Web Search",
     }
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("name", sorted(RETIRED))
+@pytest.mark.asyncio
+async def test_retired_component_names_its_replacement_without_the_sdk(monkeypatch, name):
+    """The registry marks a retired component, and each output fails with the retired message."""
+    from lfx.custom.utils import create_component_template
+
+    class RejectMrscraperImports(importlib.abc.MetaPathFinder):
+        def find_spec(self, fullname, path=None, target=None):  # noqa: ARG002 - import hook interface
+            if fullname.split(".", 1)[0] == "mrscraper":
+                pytest.fail(f"A retired component imported the SDK: {fullname}")
+
+    monkeypatch.delitem(sys.modules, "mrscraper", raising=False)
+    monkeypatch.setattr(sys, "meta_path", [RejectMrscraperImports(), *sys.meta_path])
+    component_class = getattr(components, name)
+    template = create_component_template(component_extractor=component_class())[0]
+
+    assert template["legacy"] is True
+    assert template["retired_in"] == "1.13.0"
+    assert template["replacement"] == ["mrscraper.MrscraperFetchHtml"]
+    component = configure(component_class)
+    for output in component.outputs:
+        with pytest.raises(
+            RuntimeError, match=r"retired in Langflow 1\.13\.0\. Replace this node with MrScraper Scraper API"
+        ):
+            await getattr(component, output.method)()
 
 
 @pytest.mark.unit
@@ -181,7 +221,7 @@ async def test_scraper_api_maps_all_options_without_losing_false_or_zero(http_tr
         max_retries=0,
         token_cap="0",  # noqa: S106
         stream="Disabled",
-        discard_token_secret="discard-test-value",  # noqa: S106
+        discard_token_secret="discard-test-value",  # noqa: S106  # pragma: allowlist secret
     )
     output = await component.fetch()
     request = requests[0]
@@ -208,7 +248,7 @@ async def test_scraper_api_maps_all_options_without_losing_false_or_zero(http_tr
         "headers": '{"accept-language": "en-US"}',
         "stream": "false",
     }
-    assert request.headers["x-discard-token-secret"] == "discard-test-value"
+    assert request.headers["x-discard-token-secret"] == "discard-test-value"  # pragma: allowlist secret
     assert request.headers["authorization"] == f"Bearer {MOCK_MR_API_TOKEN}"
     assert request.extensions["timeout"]["read"] == 75
     assert output.data == expected
@@ -370,7 +410,7 @@ async def test_network_errors_redact_all_configured_secret_variants(http_transpo
     values = {
         "proxy": "user:private-proxy value@proxy.example:8000",
         "cookie_jar": "domain=example.com&cookie=private-cookie value",
-        "discard_token_secret": "private-discard/value",
+        "discard_token_secret": "private-discard/value",  # pragma: allowlist secret
         "headers": json.dumps({"Authorization": 'Bearer private-header "válue"', "X-Session": "private-session/value"}),
     }
     secrets = [MOCK_MR_API_TOKEN, *values.values(), *json.loads(values["headers"]).values()]

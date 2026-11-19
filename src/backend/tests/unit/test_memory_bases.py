@@ -21,6 +21,7 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from langflow.api.utils.kb_helpers import DocumentWriteResult
 from langflow.services.database.models.memory_base.model import (
     MemoryBase,
     MemoryBaseCreate,
@@ -532,6 +533,82 @@ class TestMemoryBaseCreateFlowOwnership:
             )
 
         assert exc_info.value.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_create_endpoint_runs_post_creation_hooks_after_the_service_commits(self):
+        from langflow.api.v1.memories import create_memory_base
+        from langflow.services import creation_hooks
+        from langflow.services.database.models.user.model import User
+
+        fake_user = User(id=uuid.uuid4(), username="alice")
+        created = MagicMock(id=uuid.uuid4(), kb_name="mb_1234abcd")
+        mock_service = MagicMock()
+        mock_service.create = AsyncMock(return_value=created)
+        seen = []
+
+        async def hook(context):
+            # Runs after ``create`` returned, so the rows are committed by the service's own sessions.
+            seen.append((context, mock_service.create.await_count))
+
+        saved = {resource: list(hooks) for resource, hooks in creation_hooks._post_creation_hooks.items()}
+        creation_hooks.register_post_creation_hook(creation_hooks.RESOURCE_MEMORY_BASE, hook)
+        try:
+            with (
+                patch("langflow.api.v1.memories.get_memory_base_service", return_value=mock_service),
+                patch("langflow.api.v1.memories.MemoryBaseRead", MagicMock()),
+                patch(
+                    "langflow.api.v1.memories.knowledge_base_service.get_backends_for_names", AsyncMock(return_value={})
+                ),
+                patch("langflow.api.v1.memories._storage_availability", AsyncMock()),
+            ):
+                await create_memory_base(
+                    current_user=fake_user, payload=MemoryBaseCreate(name="mb", flow_id=uuid.uuid4())
+                )
+        finally:
+            for resource, hooks in saved.items():
+                creation_hooks._post_creation_hooks[resource][:] = hooks
+
+        assert len(seen) == 1
+        context, creates_before_hook = seen[0]
+        assert creates_before_hook == 1
+        assert (context.resource, context.resource_id, context.owner_id, context.name) == (
+            "memory_base",
+            created.id,
+            fake_user.id,
+            "mb",
+        )
+
+    @pytest.mark.asyncio
+    async def test_create_endpoint_fails_the_request_when_a_hook_does_and_nothing_is_undone(self):
+        from fastapi import HTTPException
+        from langflow.api.v1.memories import create_memory_base
+        from langflow.services import creation_hooks
+        from langflow.services.database.models.user.model import User
+
+        fake_user = User(id=uuid.uuid4(), username="alice")
+        mock_service = MagicMock()
+        mock_service.create = AsyncMock(return_value=MagicMock(id=uuid.uuid4(), kb_name="mb_1234abcd"))
+        mock_service.delete = AsyncMock()
+
+        async def hook(_context):
+            raise HTTPException(status_code=500, detail="follow-up failed")
+
+        saved = {resource: list(hooks) for resource, hooks in creation_hooks._post_creation_hooks.items()}
+        creation_hooks.register_post_creation_hook(creation_hooks.RESOURCE_MEMORY_BASE, hook)
+        try:
+            with (
+                patch("langflow.api.v1.memories.get_memory_base_service", return_value=mock_service),
+                pytest.raises(HTTPException) as exc_info,
+            ):
+                await create_memory_base(
+                    current_user=fake_user, payload=MemoryBaseCreate(name="mb", flow_id=uuid.uuid4())
+                )
+        finally:
+            for resource, hooks in saved.items():
+                creation_hooks._post_creation_hooks[resource][:] = hooks
+
+        assert exc_info.value.detail == "follow-up failed"
+        mock_service.delete.assert_not_awaited()
 
 
 class TestMemoryBaseProviderPolicy:
@@ -2173,7 +2250,7 @@ class TestIngestMemoryTask:
             ),
             patch(
                 "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_backend",
-                AsyncMock(return_value=1),
+                AsyncMock(return_value=DocumentWriteResult(processed=1, created=1)),
             ),
             patch("langflow.services.memory_base.task.sync_kb_stats_to_record", side_effect=fake_sync_kb_stats),
             patch("langflow.services.memory_base.task._mark_messages_ingested", AsyncMock()),
@@ -2252,7 +2329,7 @@ class TestIngestMemoryTask:
             # write_documents_to_backend returns fewer docs than sent → cancelled
             patch(
                 "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_backend",
-                AsyncMock(return_value=0),
+                AsyncMock(return_value=DocumentWriteResult(processed=0, created=0)),
             ),
             patch("langflow.services.memory_base.task.sync_kb_stats_to_record", side_effect=fake_sync),
             patch("langflow.services.memory_base.task._advance_cursor", AsyncMock()),
@@ -2328,7 +2405,7 @@ class TestIngestMemoryTask:
             ),
             patch(
                 "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_backend",
-                AsyncMock(return_value=1),
+                AsyncMock(return_value=DocumentWriteResult(processed=1, created=1)),
             ),
             patch("langflow.services.memory_base.task.sync_kb_stats_to_record", AsyncMock()),
             patch("langflow.services.memory_base.task._mark_messages_ingested", AsyncMock()),
@@ -3920,7 +3997,8 @@ class TestMemoryBaseDBDriven:
         assert model == "text-embedding-3-small"
 
     @pytest.mark.asyncio
-    async def test_backfill_creates_row_for_orphan_memory_base(self):
+    @pytest.mark.parametrize("paused", [False, True])
+    async def test_backfill_creates_row_for_orphan_memory_base(self, paused):
         """Startup backfill creates a knowledge_base row from the memory_base table."""
         from langflow.api.utils import knowledge_base_service
 
@@ -3935,12 +4013,20 @@ class TestMemoryBaseDBDriven:
         mock_session.exec = AsyncMock(return_value=exec_result)
 
         create_row = AsyncMock()
+        # This backfill test owns a fake data session; it must also own the
+        # admission decision rather than consult an unrelated global database.
         with (
+            patch("langflow.api.utils.migration_pause.writes_paused", AsyncMock(return_value=paused)),
             patch("langflow.api.utils.knowledge_base_service.session_scope", self._fake_scope(mock_session)),
             patch("langflow.api.utils.knowledge_base_service.create_record", create_row),
         ):
             inserted = await knowledge_base_service.backfill_memory_base_rows()
 
+        if paused:
+            assert inserted == 0
+            mock_session.exec.assert_not_awaited()
+            create_row.assert_not_awaited()
+            return
         assert inserted == 1
         create_row.assert_awaited_once()
         kwargs = create_row.await_args.kwargs
@@ -3949,6 +4035,22 @@ class TestMemoryBaseDBDriven:
         assert kwargs["backend_type"] == "chroma"
         assert kwargs["source_types"] == ["memory"]
         assert kwargs["model_selection"]["name"] == "text-embedding-3-small"
+
+    @pytest.mark.asyncio
+    async def test_backfill_skips_memory_bases_when_writes_are_paused(self):
+        """Maintenance prevents even the orphan lookup from running."""
+        from langflow.api.utils import knowledge_base_service
+
+        with (
+            patch("langflow.api.utils.migration_pause.writes_paused", AsyncMock(return_value=True)),
+            patch("langflow.api.utils.knowledge_base_service.session_scope") as session,
+            patch("langflow.api.utils.knowledge_base_service.create_record", AsyncMock()) as create_row,
+        ):
+            inserted = await knowledge_base_service.backfill_memory_base_rows()
+
+        assert inserted == 0
+        session.assert_not_called()
+        create_row.assert_not_awaited()
 
 
 class TestSelectEmbeddingProvider:

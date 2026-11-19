@@ -31,10 +31,11 @@ _ENDPOINTS = "langflow.api.v1.endpoints"
 
 
 @pytest.fixture
-def _agentic_enabled(monkeypatch):
+def _agentic_enabled(client, monkeypatch):  # noqa: ARG001
     from langflow.services.deps import get_settings_service
 
     monkeypatch.setattr(get_settings_service().settings, "agentic_experience", True)
+    monkeypatch.setattr(get_settings_service().settings, "custom_component_admin_only", False)
 
 
 def _ctx_stub() -> _AssistantContext:

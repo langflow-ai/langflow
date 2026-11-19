@@ -16,12 +16,14 @@ from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 from langflow.api.utils import CurrentActiveMCPUser, raise_error_if_astra_cloud_env
 from langflow.api.v1.mcp_utils import (
     authenticated_caller_ctx,
+    bind_mcp_operation_context,
     current_user_ctx,
     handle_call_tool,
     handle_list_resources,
     handle_list_tools,
     handle_mcp_errors,
     handle_read_resource,
+    protect_mcp_operation_handlers,
     raise_if_sse_disabled,
 )
 
@@ -128,6 +130,9 @@ async def handle_global_call_tool(name: str, arguments: dict) -> list[types.Text
     return await handle_call_tool(name, arguments, server)
 
 
+protect_mcp_operation_handlers(server)
+
+
 # The MCP transports emit the full ASGI response themselves; returning a real
 # Response would start the stream twice, so this no-op satisfies FastAPI instead.
 class ResponseNoOp(Response):
@@ -156,7 +161,16 @@ def _bind_mcp_transport_user(request: Request, current_user: CurrentActiveMCPUse
     the transport instead of leaving both requests anonymous at the ASGI layer.
     """
     user_id = str(current_user.id)
-    request.scope["user"] = AuthenticatedUser(AccessToken(token="", client_id=user_id, scopes=[], subject=user_id))
+    from langflow.services.auth.context import get_current_auth_context
+
+    credential = get_current_auth_context()
+    client_id = (
+        f"{user_id}:api_key:{credential.api_key_id or credential.api_key_source}"
+        if credential is not None and credential.method == "api_key"
+        else user_id
+    )
+    request.scope["user"] = AuthenticatedUser(AccessToken(token="", client_id=client_id, scopes=[], subject=user_id))
+    bind_mcp_operation_context(request, current_user, caller_user_id=current_user.id)
 
 
 @router.head(
@@ -355,6 +369,7 @@ async def _dispatch_streamable_http(
 
     authenticated_caller_ctx.set(current_user.id)
     context_token = current_user_ctx.set(current_user)
+    _bind_mcp_transport_user(request, current_user)
     try:
         manager = get_streamable_http_manager()
         await manager.handle_request(request.scope, request.receive, request._send)  # noqa: SLF001

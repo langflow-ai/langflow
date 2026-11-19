@@ -174,6 +174,8 @@ def _detect_encoding_with_fallbacks(raw_data: bytes) -> list[str]:
         encodings: list[str] = ["utf-8"]
         if re.search(rb"[\x81-\xfe][0-9][\x81-\xfe][0-9]", raw_data[: _CHARDET_SAMPLE_BYTES + 3]):
             encodings.append("gb18030")
+        if detected_encoding == "Windows-1254":
+            encodings.append("cp1254")
         # Otherwise cp1252 must precede gb18030, which accepts some Windows
         # punctuation as CJK characters. Both readers validate each candidate.
         encodings.append("cp1252")
@@ -383,6 +385,15 @@ def parse_text_file_to_data(file_path: str, *, silent_errors: bool, encoding: st
             parse_text_file_to_data_async(file_path, silent_errors=silent_errors, encoding=encoding)
         )
 
+    return parse_local_text_file_to_data(file_path, silent_errors=silent_errors, encoding=encoding)
+
+
+def parse_local_text_file_to_data(file_path: str, *, silent_errors: bool, encoding: str | None = None) -> Data | None:
+    """Parse a file on the local disk to Data, whatever the storage backend.
+
+    This is the local-storage branch of ``parse_text_file_to_data``. It reads ``file_path``
+    directly and applies no containment, so callers must confine the path first.
+    """
     metadata = {}
     try:
         if file_path.endswith(".pdf"):

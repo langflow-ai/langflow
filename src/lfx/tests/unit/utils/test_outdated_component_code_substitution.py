@@ -106,8 +106,8 @@ def _enable(monkeypatch, *, allow_custom=False, substitute=True, lookups=_lookup
         lambda: _settings(allow_custom=allow_custom, substitute=substitute),
     )
     type_to_hash, type_to_code = lookups()
-    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda: type_to_hash)
-    monkeypatch.setattr(fv, "get_component_code_lookups_for_validation", lambda: type_to_code)
+    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda _cache=None: type_to_hash)
+    monkeypatch.setattr(fv, "get_component_code_lookups_for_validation", lambda _cache=None: type_to_code)
 
 
 # --- _substitute_outdated_node_code ------------------------------------------------
@@ -246,6 +246,27 @@ def test_mismatched_trusted_code_is_neither_substituted_nor_exempted():
         )
 
 
+def test_authored_custom_component_is_not_swapped_for_the_template():
+    """User-authored components share the template's type; their code must be refused, not replaced."""
+    template_code = "# Custom Component template"
+    type_to_hash = {"CustomComponent": {_hash(template_code)}}
+    type_to_code = {"CustomComponent": template_code}
+    substitutable_types = SubstitutableComponentTypes(type_to_hash, type_to_code)
+    nodes = [_node("a", "CustomComponent", "class FormatAnswer(Component): ...", display_name="Format Answer")]
+
+    assert "CustomComponent" not in substitutable_types
+    assert fv._substitute_outdated_node_code(nodes, type_to_code, substitutable_types) == []
+    assert _code_of(nodes[0]) == "class FormatAnswer(Component): ..."
+
+    with pytest.raises(CustomComponentValidationError):
+        check_flow_and_raise(
+            {"nodes": nodes},
+            allow_custom_components=False,
+            type_to_current_hash=type_to_hash,
+            substitutable_types=substitutable_types,
+        )
+
+
 # --- substitute_outdated_component_code_in_place (settings-aware) -------------------
 
 
@@ -312,11 +333,11 @@ def test_substitution_lookups_are_captured_under_one_cache_lock(monkeypatch):
     monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: _settings())
     type_to_hash, type_to_code = _lookups()
 
-    def get_hashes():
+    def get_hashes(_cache=None):
         assert lock.active
         return type_to_hash
 
-    def get_code():
+    def get_code(_cache=None):
         assert lock.active
         return type_to_code
 
@@ -422,11 +443,11 @@ def test_validator_uses_hashes_from_the_same_snapshot_as_substitution(monkeypatc
     )
     type_to_hash, type_to_code = _lookups()
     lookups = type_to_code, SubstitutableComponentTypes(type_to_hash, type_to_code)
-    monkeypatch.setattr(fv, "get_outdated_code_substitution_lookups", lambda: lookups)
+    monkeypatch.setattr(fv, "get_outdated_code_substitution_lookups", lambda _settings=None, _cache=None: lookups)
     monkeypatch.setattr(
         fv,
         "get_component_hash_lookups_for_validation",
-        lambda: pytest.fail("standalone hash lookup would create a mixed registry snapshot"),
+        lambda _cache=None: pytest.fail("standalone hash lookup would create a mixed registry snapshot"),
     )
 
     validate_flow_for_current_settings({"nodes": [_node("a", "ChatInput", STORED_CHAT_INPUT)]})

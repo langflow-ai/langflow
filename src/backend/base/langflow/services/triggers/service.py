@@ -14,8 +14,9 @@ next to the route it protects.
 from __future__ import annotations
 
 import secrets
+from copy import deepcopy
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlmodel import col, select
 
@@ -41,16 +42,25 @@ from langflow.services.triggers.providers.registry import canvas_only_kinds, pus
 from langflow.services.triggers.reconciliation import (
     NODE_REMOVED_ERROR,
     apply_config_verdict,
+    schedule_pick_error,
     sync_display_name,
     trigger_node_on_canvas,
     validate_single_trigger_per_flow,
 )
-from langflow.services.triggers.schedule_config import schedule_timing_changed, validate_schedule_config
+from langflow.services.triggers.schedule_config import (
+    InvalidScheduleError,
+    has_timing,
+    run_at_instant,
+    schedule_timing_changed,
+    validate_schedule_config,
+)
 
 if TYPE_CHECKING:
     from uuid import UUID
 
     from sqlmodel.ext.asyncio.session import AsyncSession
+
+    from langflow.services.triggers.policy import TriggerPolicyContext
 
 #: Bytes of entropy behind a trigger's public ingress address. The address is
 #: unauthenticated and guessable-by-brute-force is the failure to avoid, so it
@@ -95,6 +105,23 @@ def _reject_mechanism(config: dict | None) -> None:
         raise ValueError(msg)
 
 
+def _check_schedule_can_arm(row: Trigger, flow_data: dict[str, Any] | None) -> None:
+    """Refuse a schedule that would never fire, saying what to fix."""
+    try:
+        config = validate_schedule_config(row.config or {})
+    except InvalidScheduleError as exc:
+        # An unusable pick blanks the timing, and the user cannot see the cron
+        # field: refuse with the picker's reason. Pausing clears the reason the
+        # reconciler kept, so ask the saved node first.
+        reason = schedule_pick_error(row, flow_data) or row.last_error
+        if reason and not has_timing(row.config or {}):
+            raise InvalidScheduleError(reason) from exc
+        raise
+    if "run_at" in config and run_at_instant(config) <= datetime.now(timezone.utc):
+        msg = "The date and time to run at has already passed. Pick a later one."
+        raise InvalidScheduleError(msg)
+
+
 async def _arm_slack(session: AsyncSession, row: Trigger, *, connection_ids: frozenset[UUID]) -> None:
     """Re-check a Slack trigger's filters, re-derive its connection and transport, and check it may run unattended.
 
@@ -132,6 +159,26 @@ class TriggerService(Service):
 
     def __init__(self) -> None:
         self.set_ready()
+
+    async def resolve_run_user_id(self, session: AsyncSession, *, flow_id: UUID, trigger_owner_id: UUID) -> UUID | None:
+        """Return the user who will own the background job. OSS uses the trigger owner.
+
+        An override can look up the flow's deployment binding using the supplied
+        session. Return None to refuse a run, or raise to retry a failed lookup.
+        This hook applies only to flow execution. Source connections belong to
+        the trigger owner.
+        """
+        _ = session, flow_id
+        return trigger_owner_id
+
+    async def authorize_trigger(self, *, context: TriggerPolicyContext) -> None:
+        """Enterprise approval/quota hook; OSS adds no restrictions.
+
+        Raise TriggerPolicyError to refuse. Discovery is read-only. Dispatch
+        retries carry one stable event id for idempotent quota checks. The
+        shared provider/kind ceiling runs first and cannot be widened here.
+        """
+        _ = context
 
     async def get(self, session: AsyncSession, trigger_id: UUID) -> Trigger:
         row = await session.get(Trigger, trigger_id)
@@ -190,6 +237,18 @@ class TriggerService(Service):
             msg = f"A {payload.kind!r} trigger is created by adding its component to the flow, not through this API."
             raise ValueError(msg)
         if payload.state is TriggerState.ACTIVE:
+            from langflow.services.triggers.policy import (
+                TriggerPolicyContext,
+                TriggerPolicyPurpose,
+                require_trigger_allowed,
+            )
+
+            await require_trigger_allowed(
+                TriggerPolicyContext(
+                    user_id=owner_id, flow_id=payload.flow_id, kind=payload.kind, purpose=TriggerPolicyPurpose.ENABLE
+                ),
+                service=self,
+            )
             await self._validate_saved_canvas(session, payload.flow_id)
         _reject_mechanism(payload.config)
         await self._validate_flow_version(session, flow_id=payload.flow_id, flow_version_id=payload.flow_version_id)
@@ -276,6 +335,18 @@ class TriggerService(Service):
         if row.state not in _ENABLEABLE_STATES:
             msg = f"Trigger in state {row.state!r} cannot be enabled."
             raise ValueError(msg)
+        from langflow.services.triggers.policy import (
+            TriggerPolicyContext,
+            TriggerPolicyPurpose,
+            require_trigger_allowed,
+        )
+
+        await require_trigger_allowed(
+            TriggerPolicyContext(
+                user_id=row.user_id, flow_id=row.flow_id, kind=row.kind, purpose=TriggerPolicyPurpose.ENABLE
+            ),
+            service=self,
+        )
         flow = await self._validate_saved_canvas(session, row.flow_id)
         # Arming a trigger whose node is gone runs a flow with no trigger in it,
         # so every event fails. Removing a node pauses its trigger, so only a
@@ -290,7 +361,7 @@ class TriggerService(Service):
             msg = "This trigger provider is unavailable. Install its integration bundle before enabling it."
             raise ValueError(msg)
         if row.kind == "schedule":
-            validate_schedule_config(row.config or {})
+            _check_schedule_can_arm(row, flow.data if flow else None)
         if row.kind in SLACK_TRIGGER_KINDS:
             await _arm_slack(session, row, connection_ids=connection_ids)
         if row.kind in source_kinds():
@@ -330,7 +401,7 @@ class TriggerService(Service):
                         row.signing_secret_encrypted = encrypt_api_key(mint_signing_secret())
                 if extension.prepare is not None:
                     await extension.prepare(session, row)
-            if arming.mechanism_id in push_mechanisms():
+            if arming.mechanism_id in push_mechanisms() or (extension is not None and extension.validate_source):
                 if not row.public_id:
                     row.public_id = mint_public_id()
                 # The route commits this intent before any provider I/O. The
@@ -352,7 +423,36 @@ class TriggerService(Service):
         This commits ``session``. Raises ``ValueError`` with an owner-facing
         reason when the trigger cannot be enabled.
         """
-        return await self.activate_push_source(session, row=await self.enable(session, row=row))
+        from langflow.services.triggers.source_errors import SourceConfigurationError
+
+        identifier = row.id
+        observed = (row.user_id, row.flow_id, row.provider, row.kind, deepcopy(row.config), row.state)
+        if row.provider == "whatsapp" and row.state in _ENABLEABLE_STATES:
+            from langflow.services.triggers.providers.whatsapp.lifecycle import finish_pending_cleanup
+
+            # Provider cleanup uses independent leased transactions, like activation.
+            await session.commit()
+            await finish_pending_cleanup(identifier)
+        try:
+            return await self.activate_push_source(session, row=await self.enable(session, row=row))
+        except SourceConfigurationError as exc:
+            if observed[2] != "whatsapp":
+                raise
+            await session.rollback()
+            current = await lock_trigger(session, identifier)
+            if (
+                current is not None
+                and (current.user_id, current.flow_id, current.provider, current.kind, current.config, current.state)
+                == observed
+            ):
+                current.state = TriggerState.ERROR.value
+                current.last_error = (
+                    f"Source activation failed: {str(exc).removesuffix('.')}. Enable the trigger to retry."
+                )
+                current.updated_at = datetime.now(timezone.utc)
+                session.add(current)
+                await session.commit()
+            raise
 
     async def activate_push_source(self, session: AsyncSession, *, row: Trigger) -> Trigger:
         """Finish a push source's activation after :meth:`enable`; any other trigger is returned as is.
@@ -360,10 +460,16 @@ class TriggerService(Service):
         Commits ``session`` first, so callers must not hold a savepoint open
         across this call.
         """
+        from langflow.services.triggers.providers.registry import get_provider
+
+        extension = get_provider(row.provider or "")
         if (
             row.state != TriggerState.PENDING.value
             or row.kind not in source_kinds()
-            or (row.config or {}).get("mechanism_id") not in push_mechanisms()
+            or (
+                (row.config or {}).get("mechanism_id") not in push_mechanisms()
+                and (extension is None or extension.validate_source is None)
+            )
         ):
             return row
         from langflow.services.triggers.source_runtime import initialize_source

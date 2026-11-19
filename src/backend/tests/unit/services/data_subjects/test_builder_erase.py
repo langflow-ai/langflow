@@ -1,6 +1,7 @@
 from uuid import uuid4
 
 import pytest
+from fastapi import HTTPException
 from langflow.services.data_subjects.engine import run_request
 from langflow.services.data_subjects.errors import InvalidTransitionError, LastAdministratorError
 from langflow.services.data_subjects.requests import approve, create_builder_request, refuse, withdraw
@@ -23,6 +24,7 @@ from langflow.services.database.models.user.model import User
 from langflow.services.database.models.variable.model import Variable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.deps import get_storage_service, session_scope
+from langflow.services.maintenance.state import maintenance_status, set_maintenance
 from sqlalchemy import func
 from sqlmodel import col, select
 
@@ -42,6 +44,38 @@ async def _request_and_approve(subject_id, admin_id):
         assert created
         await approve(session, request, admin_id)
         return request.id
+
+
+@pytest.mark.usefixtures("client")
+async def test_should_erase_refresh_sessions_and_preserve_other_builders_logins():
+    from langflow.services.auth.refresh_tokens import revoke_refresh_token
+    from langflow.services.database.models.auth.refresh_token import RefreshTokenSession
+    from langflow.services.deps import get_auth_service, get_settings_service
+
+    subject_id = await create_user("session-erase-subject")
+    other_id = await create_user("session-erase-other")
+    admin_id = await create_user("session-erase-admin", superuser=True)
+    auth = get_auth_service()
+    async with session_scope() as session:
+        await auth.create_user_tokens(subject_id, session)
+        revoked = await auth.create_user_tokens(subject_id, session)
+        await revoke_refresh_token(revoked["refresh_token"], session, get_settings_service())
+        other_tokens = await auth.create_user_tokens(other_id, session)
+
+    request_id = await _request_and_approve(subject_id, admin_id)
+    async with session_scope() as session:
+        assert (await session.get(User, subject_id)).is_active is False
+        with pytest.raises(HTTPException) as exc:
+            await auth.create_user_tokens(subject_id, session, update_last_login=True)
+        assert exc.value.status_code == 401
+    assert await run_request(request_id) == DataSubjectRequestStatus.DONE.value
+
+    async with session_scope() as session:
+        assert await session.get(User, subject_id) is None
+        sessions = (await session.exec(select(RefreshTokenSession))).all()
+        assert len(sessions) == 1
+        assert sessions[0].user_id == other_id
+        assert (await auth.create_refresh_token(other_tokens["refresh_token"], session))["access_token"]
 
 
 @pytest.mark.usefixtures("client")
@@ -157,6 +191,28 @@ async def test_should_delete_access_exceptions_naming_the_builder_and_keep_ones_
 
 
 @pytest.mark.usefixtures("client")
+@pytest.mark.parametrize("erase_setter", [True, False], ids=["setter", "other-account"])
+async def test_should_clear_erased_maintenance_setter_and_preserve_active_maintenance(erase_setter):
+    setter_id = await create_user("maintenance-setter", superuser=True)
+    admin_id = await create_user("maintenance-erase-admin", superuser=True)
+    subject_id = setter_id if erase_setter else await create_user("maintenance-erase-other")
+    async with session_scope() as session:
+        await set_maintenance(session, enabled=True, reason="Database backup", actor_id=setter_id)
+        before = await maintenance_status(session)
+        assert before.set_by == setter_id
+
+    assert await run_request(await _request_and_approve(subject_id, admin_id)) == DataSubjectRequestStatus.DONE.value
+
+    async with session_scope() as session:
+        assert await session.get(User, subject_id) is None
+        after = await maintenance_status(session)
+        assert after.maintenance is True
+        assert after.set_by == (None if erase_setter else setter_id)
+        assert after.reason == before.reason
+        assert after.set_at == before.set_at
+
+
+@pytest.mark.usefixtures("client")
 async def test_should_redact_audit_rows_and_record_dsar_events_when_builder_is_erased():
     seeded = await seed_builder("joana")
     admin_id = await create_user("dsr-admin-2", superuser=True)
@@ -266,3 +322,74 @@ async def test_should_only_let_the_requester_withdraw_a_pending_request():
         assert request.subject_label is not None
         with pytest.raises(InvalidTransitionError):
             await refuse(session, request, other, "too late")
+
+
+@pytest.mark.usefixtures("client")
+@pytest.mark.parametrize("enabled", [False, True])
+@pytest.mark.parametrize("actor_matches_subject", [False, True])
+async def test_should_clear_erased_maintenance_actor_without_changing_instance_state(enabled, actor_matches_subject):
+    from langflow.services.database.models.maintenance import MAINTENANCE_ID, MaintenanceState
+    from langflow.services.maintenance.state import set_maintenance
+
+    subject_id = await create_user("maintenance-subject", superuser=True)
+    admin_id = await create_user("maintenance-approver", superuser=True)
+    actor_id = subject_id if actor_matches_subject else admin_id
+    async with session_scope() as session:
+        await set_maintenance(session, enabled=enabled, reason="Upgrade rehearsal", actor_id=actor_id)
+        state = await session.get(MaintenanceState, MAINTENANCE_ID, populate_existing=True)
+        retained_state = state.model_dump(exclude={"set_by"})
+
+    status = await run_request(await _request_and_approve(subject_id, admin_id))
+
+    assert status == DataSubjectRequestStatus.DONE.value
+    async with session_scope() as session:
+        assert await session.get(User, subject_id) is None
+        assert await session.get(User, admin_id) is not None
+        state = await session.get(MaintenanceState, MAINTENANCE_ID)
+        assert state is not None
+        assert state.set_by == (None if actor_matches_subject else admin_id)
+        assert state.model_dump(exclude={"set_by"}) == retained_state
+
+
+@pytest.mark.usefixtures("client")
+async def test_should_keep_a_replacement_maintenance_actor():
+    from langflow.services.data_subjects.builder_account_steps import BUILDER_ACCOUNT_STEPS
+    from langflow.services.data_subjects.context import EraseContext
+    from langflow.services.database.models.maintenance import MAINTENANCE_ID, MaintenanceState
+    from langflow.services.deps import get_db_service
+    from langflow.services.maintenance.state import set_maintenance
+    from sqlalchemy import event, update
+
+    subject_id = await create_user("maintenance-race-subject")
+    replacement_id = await create_user("maintenance-race-admin", superuser=True)
+    async with session_scope() as session:
+        await set_maintenance(session, enabled=True, reason="Upgrade rehearsal", actor_id=subject_id)
+
+    replaced = False
+
+    def replace_actor_before_scrub(connection, _cursor, statement, _parameters, _context, _executemany):
+        nonlocal replaced
+        if replaced or not statement.startswith("UPDATE maintenance_state SET set_by="):
+            return
+        replaced = True
+        connection.execute(
+            update(MaintenanceState).where(MaintenanceState.id == MAINTENANCE_ID).values(set_by=replacement_id)
+        )
+
+    engine = get_db_service().engine.sync_engine
+    event.listen(engine, "before_cursor_execute", replace_actor_before_scrub)
+    try:
+        async with session_scope() as session:
+            step = dict(BUILDER_ACCOUNT_STEPS)["maintenance_setter"]
+            cleared = await step(session, EraseContext(request_id=uuid4(), subject_user_id=subject_id))
+    finally:
+        event.remove(engine, "before_cursor_execute", replace_actor_before_scrub)
+
+    assert replaced
+    assert cleared == 0
+    async with session_scope() as session:
+        state = await session.get(MaintenanceState, MAINTENANCE_ID)
+        assert state is not None
+        assert state.set_by == replacement_id
+        assert state.enabled is True
+        assert state.reason == "Upgrade rehearsal"

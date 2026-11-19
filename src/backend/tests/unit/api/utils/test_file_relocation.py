@@ -334,13 +334,15 @@ class TestLargeFiles:
         import hashlib
 
         mib = 1024 * 1024
-        small, _ = await self._peak_while_copying(storage_dir, active_user.id, bucket, name="small.bin", size=16 * mib)
+        # Both sizes fill every in-flight slot, so a copy that streams peaks the same for each;
+        # below that, the larger file has more parts in flight and peaks higher with no bug.
+        small, _ = await self._peak_while_copying(storage_dir, active_user.id, bucket, name="small.bin", size=48 * mib)
         large, large_md5 = await self._peak_while_copying(
-            storage_dir, active_user.id, bucket, name="large.bin", size=80 * mib
+            storage_dir, active_user.id, bucket, name="large.bin", size=112 * mib
         )
 
         # A copy that held the file would peak at least 64 MiB higher for the larger one.
-        assert large - small < 16 * mib, f"peak {small} bytes for 16 MiB, {large} bytes for 80 MiB"
+        assert large - small < 16 * mib, f"peak {small} bytes for 48 MiB, {large} bytes for 112 MiB"
         from aiobotocore.session import get_session
 
         async with get_session().create_client("s3") as s3:

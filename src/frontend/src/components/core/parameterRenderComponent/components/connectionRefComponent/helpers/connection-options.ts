@@ -94,7 +94,6 @@ function unusableReason(
   ownershipMode: string | undefined,
   ownerId: string | undefined,
 ): ConnectionOption["unusableReason"] {
-  if (connection.status !== "ready") return "status";
   if (
     ownershipMode === "user" &&
     (connection.ownership_mode !== "user" || connection.owner_id !== ownerId)
@@ -107,6 +106,7 @@ function unusableReason(
   ) {
     return "instanceOwnedRequired";
   }
+  if (connection.status !== "ready") return "status";
   if (!identityMatches(connection, identityKind)) {
     return identityKind === "user" ? "userRequired" : "instanceRequired";
   }

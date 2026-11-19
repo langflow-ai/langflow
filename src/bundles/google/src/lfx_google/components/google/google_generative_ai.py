@@ -2,7 +2,10 @@ from typing import Any
 
 import requests
 from google import genai
-from lfx.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS
+from lfx.base.models.google_generative_ai_constants import (
+    GOOGLE_GENERATIVE_AI_MODELS,
+    GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
+)
 from lfx.base.models.google_generative_ai_model import ChatGoogleGenerativeAIFixed
 from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import LanguageModel
@@ -11,6 +14,11 @@ from lfx.inputs.inputs import BoolInput, DropdownInput, FloatInput, IntInput, Se
 from lfx.log.logger import logger
 from lfx.schema.dotdict import dotdict
 from pydantic.v1 import SecretStr
+
+# Models Langflow marks as unable to call tools; this exclusion wins over the profile and the probe.
+_NO_TOOL_CALLING_MODELS = frozenset(
+    metadata["name"] for metadata in GOOGLE_GENERATIVE_AI_MODELS_DETAILED if not metadata["tool_calling"]
+)
 
 
 class GoogleGenerativeAIComponent(LCModelComponent):
@@ -108,31 +116,38 @@ class GoogleGenerativeAIComponent(LCModelComponent):
             logger.exception(f"Error getting model names: {e}")
             model_ids = GOOGLE_GENERATIVE_AI_MODELS
         if tool_model_enabled:
-            try:
-                from langchain_google_genai.chat_models import ChatGoogleGenerativeAI
-            except ImportError as e:
-                msg = "langchain_google_genai is not installed."
-                raise ImportError(msg) from e
-            model_ids = [
-                model
-                for model in model_ids
-                if self.supports_tool_calling(ChatGoogleGenerativeAI(model=model, google_api_key=self.api_key))
-            ]
+            model_ids = [model for model in model_ids if self._calls_tools(model)]
         return model_ids
+
+    def _calls_tools(self, model: str) -> bool:
+        if model in _NO_TOOL_CALLING_MODELS:
+            return False
+        try:
+            from langchain_google_genai.chat_models import ChatGoogleGenerativeAI
+        except ImportError as e:
+            msg = "langchain_google_genai is not installed."
+            raise ImportError(msg) from e
+        return self.supports_tool_calling(ChatGoogleGenerativeAI(model=model, google_api_key=self.api_key))
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         if field_name in {"base_url", "model_name", "tool_model_enabled", "api_key"} and field_value:
             try:
+                tool_filtered = False
                 if len(self.api_key) == 0:
                     ids = GOOGLE_GENERATIVE_AI_MODELS
                 else:
                     try:
                         ids = self.get_models(tool_model_enabled=self.tool_model_enabled)
+                        tool_filtered = bool(self.tool_model_enabled)
                     except (ImportError, ValueError, requests.exceptions.RequestException) as e:
                         logger.exception(f"Error getting model names: {e}")
                         ids = GOOGLE_GENERATIVE_AI_MODELS
                 build_config.setdefault("model_name", {})
                 build_config["model_name"]["options"] = ids
+                selected = build_config["model_name"].get("value")
+                # A custom model the filter cannot judge stays selected; only a rejected one is cleared.
+                if tool_filtered and selected and selected not in ids and not self._calls_tools(selected):
+                    build_config["model_name"].pop("value")
                 if ids:
                     build_config["model_name"].setdefault("value", ids[0])
                 else:

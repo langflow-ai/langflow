@@ -60,6 +60,16 @@ async def check_api_key_issuance(session: AsyncSession, user_id: UUID) -> None:
     check runs before anything is staged on ``session``, so a refusal leaves
     the caller's transaction exactly as it found it.
     """
+    ensure_api_key_management_allowed()
     if _policy is None:
         return
     await _policy(session, user_id)
+
+
+def ensure_api_key_management_allowed() -> None:
+    """Prevent restricted credentials from obtaining or changing broader credentials."""
+    from langflow.services.auth.context import current_auth_is_restricted_api_key
+
+    if current_auth_is_restricted_api_key():
+        msg = "Restricted API keys cannot manage credentials"
+        raise ApiKeyIssuanceDeniedError(msg)

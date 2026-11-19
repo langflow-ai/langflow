@@ -14,6 +14,7 @@ from lfx.log.logger import logger
 from lfx.services.mcp_composer.service import MCPComposerService
 
 from langflow.api.utils.mcp.config_utils import (
+    mcp_server_config_has_project_api_key,
     mcp_server_config_uses_current_uvx_constraint,
     validate_mcp_server_for_project,
 )
@@ -58,14 +59,6 @@ def _server_config_uses_streamable_http(args: list[Any], streamable_http_url: st
     )
 
 
-def _server_config_has_project_api_key(args: list[Any]) -> bool:
-    """Return whether the server args include the generated Langflow API key header."""
-    return any(
-        arg == "--headers" and index + 2 < len(args) and args[index + 1] == "x-api-key"
-        for index, arg in enumerate(args)
-    )
-
-
 def _server_config_matches_project_auth(
     existing_config: dict[str, Any] | None,
     auth_type: str,
@@ -83,7 +76,7 @@ def _server_config_matches_project_auth(
     ):
         return False
 
-    has_project_api_key = _server_config_has_project_api_key(args)
+    has_project_api_key = mcp_server_config_has_project_api_key(args)
     if auth_type == "apikey":
         return has_project_api_key
     if auth_type == "none":

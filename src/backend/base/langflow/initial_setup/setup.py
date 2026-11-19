@@ -38,7 +38,7 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.api.utils.migration_pause import writing
+from langflow.api.utils.migration_pause import async_writing
 from langflow.initial_setup.constants import (
     ASSISTANT_FOLDER_DESCRIPTION,
     ASSISTANT_FOLDER_NAME,
@@ -1039,6 +1039,28 @@ def _is_valid_uuid(val):
     return str(uuid_obj) == val
 
 
+async def _get_flow_import_superuser(session: AsyncSession):
+    from langflow.services.database.models.user.crud import get_user_by_username_case_insensitive
+    from langflow.services.database.models.user.model import User
+
+    username = get_settings_service().auth_settings.SUPERUSER
+    user = await get_user_by_username_case_insensitive(session, username)
+    if user is not None and user.is_superuser and user.is_active:
+        return user
+
+    stmt = (
+        select(User)
+        .where(User.is_superuser == True, User.is_active == True)  # noqa: E712
+        .order_by(col(User.username), col(User.id))
+        .limit(1)
+    )
+    user = (await session.exec(stmt)).first()
+    if user is None:
+        msg = "No active superuser found in the database"
+        raise NoResultFound(msg)
+    return user
+
+
 async def load_flows_from_directory() -> None:
     """On langflow startup, this loads all flows from the directory specified in the settings.
 
@@ -1050,15 +1072,7 @@ async def load_flows_from_directory() -> None:
         return
 
     async with session_scope() as session:
-        # Find superuser by role instead of username to avoid issues with credential reset
-        from langflow.services.database.models.user.model import User
-
-        stmt = select(User).where(User.is_superuser == True)  # noqa: E712
-        result = await session.exec(stmt)
-        user = result.first()
-        if user is None:
-            msg = "No superuser found in the database"
-            raise NoResultFound(msg)
+        user = await _get_flow_import_superuser(session)
 
         # Ensure that the default folder exists for this user
         _ = await get_or_create_default_folder(session, user.id)
@@ -1103,7 +1117,7 @@ async def detect_github_url(url: str) -> str:
     return url
 
 
-async def load_bundles_from_urls() -> tuple[list[TemporaryDirectory], list[str]]:
+async def load_bundles_from_urls(*, components_only: bool = False) -> tuple[list[TemporaryDirectory], list[str]]:
     component_paths: set[str] = set()
     temp_dirs = []
     settings_service = get_settings_service()
@@ -1112,16 +1126,7 @@ async def load_bundles_from_urls() -> tuple[list[TemporaryDirectory], list[str]]
         return [], []
 
     async with session_scope() as session:
-        # Find superuser by role instead of username to avoid issues with credential reset
-        from langflow.services.database.models.user.model import User
-
-        stmt = select(User).where(User.is_superuser == True)  # noqa: E712
-        result = await session.exec(stmt)
-        user = result.first()
-        if user is None:
-            msg = "No superuser found in the database"
-            raise NoResultFound(msg)
-        user_id = user.id
+        user_id = None if components_only else (await _get_flow_import_superuser(session)).id
 
         for url in bundle_urls:
             url_ = await detect_github_url(url)
@@ -1136,7 +1141,7 @@ async def load_bundles_from_urls() -> tuple[list[TemporaryDirectory], list[str]]
                 for filename in zfile.namelist():
                     path = Path(filename)
                     for dir_name in dir_names:
-                        if path.is_relative_to(f"{dir_name}flows/") and path.suffix == ".json":
+                        if user_id is not None and path.is_relative_to(f"{dir_name}flows/") and path.suffix == ".json":
                             file_content = zfile.read(filename)
                             await upsert_flow_from_file(file_content, path.stem, session, user_id)
                         elif path.is_relative_to(f"{dir_name}components/"):
@@ -1489,7 +1494,7 @@ async def initialize_auto_login_default_superuser() -> None:
     # provided one; otherwise generate an unknown password for the default user.
     from lfx.services.settings.constants import DEFAULT_SUPERUSER
 
-    from langflow.services.database.models.user.crud import get_user_by_username
+    from langflow.services.database.models.user.crud import get_user_by_username_case_insensitive
     from langflow.services.utils import get_auto_login_superuser_password, get_or_create_super_user
 
     username = settings_service.auth_settings.SUPERUSER or DEFAULT_SUPERUSER
@@ -1504,10 +1509,11 @@ async def initialize_auto_login_default_superuser() -> None:
             rotate_legacy_default_password=True,
         )
         if super_user is None:
-            super_user = await get_user_by_username(async_session, username)
+            super_user = await get_user_by_username_case_insensitive(async_session, username)
         if super_user is None or not super_user.is_superuser:
             msg = "Auto-login superuser was not initialized."
             raise RuntimeError(msg)
+        settings_service.auth_settings.SUPERUSER = super_user.username
         await get_variable_service().initialize_user_variables(super_user.id, async_session)
         # Initialize agentic variables if agentic experience is enabled
         from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_user_variables
@@ -1623,10 +1629,10 @@ async def sync_flows_from_fs():
             # A paused instance takes no change from disk. A file that changed is read once the pause ends.
             # A pass holds a place among the changes a pause waits for, so one that began just before
             # a pause is waited for and does not write after it.
-            place = contextlib.ExitStack()
+            place = contextlib.AsyncExitStack()
             try:
-                if not place.enter_context(writing(name="flow_sync")):
-                    place.close()
+                if not await place.enter_async_context(async_writing(name="flow_sync")):
+                    await place.aclose()
                     await asyncio.sleep(fs_flows_polling_interval)
                     continue
                 async with session_scope() as session:
@@ -1686,7 +1692,7 @@ async def sync_flows_from_fs():
                 await logger.aexception("Error while syncing flows from database")
                 break
             finally:
-                place.close()
+                await place.aclose()
 
             await asyncio.sleep(fs_flows_polling_interval)
     except asyncio.CancelledError:

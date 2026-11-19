@@ -2,8 +2,10 @@
 
 Both ``lfx run`` and ``lfx serve`` accept ``--upgrade-flow`` with identical semantics:
 
-  - ``check``: refuse to run if any component is outdated or blocked.
-  - ``safe``:  auto-apply safe upgrades, but abort on breaking or blocked components.
+  - ``check``: refuse to run if any component is not up to date, customized ones included.
+  - ``safe``:  auto-apply safe upgrades, but abort on breaking, blocked, or retired components.
+    A customized component runs as saved. With custom components blocked
+    (``allow_custom_components=False``) its edited code cannot run, so ``safe`` aborts on it too.
 
 This module is the single source of truth for that behavior so the two entry points can
 never diverge. Callers translate :class:`UpgradeFlowError` into their own error channel
@@ -57,6 +59,17 @@ def _load_bundled_registry() -> dict[str, Any]:
         raise UpgradeFlowError(str(exc)) from exc
 
 
+def _custom_components_allowed() -> bool:
+    """Read the active policy without allowing customized code when settings are unavailable."""
+    from lfx.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    if settings_service is None:
+        msg = "component settings are unavailable; customized code cannot be authorized"
+        raise UpgradeFlowError(msg)
+    return settings_service.settings.allow_custom_components
+
+
 def apply_upgrade_gate(
     flow_dict: dict,
     all_types_dict: Mapping[str, Any] | None = None,
@@ -76,9 +89,10 @@ def apply_upgrade_gate(
         mode: ``"check"`` or ``"safe"`` (accepts the :class:`UpgradeFlowMode` enum too).
 
     Raises:
-        UpgradeFlowError: if ``check`` finds anything not ``ok``, if ``safe`` hits a breaking
-            or blocked component, if the bundled registry is unavailable, or if ``mode`` is not
-            a recognized value.
+        UpgradeFlowError: if ``check`` finds anything not ``ok``, if ``safe`` hits a breaking,
+            blocked, or retired component (or a customized one while custom components are
+            blocked), if the bundled registry is unavailable, or if ``mode`` is not a recognized
+            value.
     """
     # Validate the mode before any registry work so a typo fails fast and cheaply.
     if mode not in (UpgradeFlowMode.CHECK, UpgradeFlowMode.SAFE):
@@ -95,16 +109,33 @@ def apply_upgrade_gate(
     if mode == UpgradeFlowMode.CHECK:
         if not report.is_clean:
             names = ", ".join(f"{n.display_name} ({n.status})" for n in report.nodes if n.status != "ok")
-            msg = f"flow has incompatible components (--upgrade-flow=check): {names}"
+            msg = f"flow has components requiring attention (--upgrade-flow=check): {names}"
+            if report.has_customized:
+                msg += (
+                    ". For customized components, use --upgrade-flow=safe to run the saved code when custom "
+                    "components are allowed, or update the node in the visual editor."
+                )
+            if report.has_retired:
+                msg += ". Replace retired components with supported components."
             raise UpgradeFlowError(msg)
         return flow_dict, 0
 
     # mode is SAFE.
-    if report.has_blocked or report.has_breaking:
+    if report.has_blocked or report.has_breaking or report.has_retired:
         names = ", ".join(
-            f"{n.display_name} ({n.status})" for n in report.nodes if n.status in ("blocked", "outdated_breaking")
+            f"{n.display_name} ({n.status})"
+            for n in report.nodes
+            if n.status in ("blocked", "outdated_breaking", "retired")
         )
         msg = f"flow has components that cannot be auto-upgraded: {names}"
+        raise UpgradeFlowError(msg)
+    if report.has_customized and not _custom_components_allowed():
+        names = ", ".join(n.display_name for n in report.nodes if n.status == "customized")
+        msg = (
+            "flow has customized components whose edited code cannot run while custom components "
+            f"are blocked (LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false): {names}. Allow custom components, "
+            "or update them in the visual editor to use the current code (this discards the edits)."
+        )
         raise UpgradeFlowError(msg)
     if report.has_safe_updates:
         return apply_safe_upgrades(flow_dict, all_types_dict, report, return_count=True, registry=registry)

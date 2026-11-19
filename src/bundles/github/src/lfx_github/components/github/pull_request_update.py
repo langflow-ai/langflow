@@ -22,16 +22,23 @@ class GitHubUpdatePullRequestComponent(GitHubActionComponent):
     inputs = [
         connection_input("github.pull_request_update"),
         repository_input(),
-        IntInput(name="number", display_name="Issue or Pull Request Number", required=True, value=1),
-        StrInput(name="title", display_name="Title", value="", info="Leave empty to keep the existing title."),
+        IntInput(name="number", display_name="Issue or Pull Request Number", required=True, value=1, tool_mode=True),
+        StrInput(
+            name="title", display_name="Title", value="", info="Leave empty to keep the existing title.", tool_mode=True
+        ),
         MultilineInput(
             name="body",
             display_name="Body",
             value="",
             info="Leave empty to keep the existing body. Nonempty text is limited to 60,000 UTF-8 bytes.",
+            tool_mode=True,
         ),
         DropdownInput(
-            name="state", display_name="State Change", options=["unchanged", "open", "closed"], value="unchanged"
+            name="state",
+            display_name="State Change",
+            options=["unchanged", "open", "closed"],
+            value="unchanged",
+            tool_mode=True,
         ),
     ]
     outputs = [Output(display_name="Result", name="result", method="build_result")]

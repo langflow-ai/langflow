@@ -92,7 +92,11 @@ def trigger_reason(row: Trigger, *, recovery_reason: TriggerReason | None = None
     if state == TriggerState.ACTIVE.value:
         return TriggerReason.DEGRADED if row.last_error else None
     if state == TriggerState.PENDING.value:
-        return TriggerReason.CONFIG_INVALID if row.last_error else TriggerReason.PENDING
+        if row.last_error:
+            return TriggerReason.CONFIG_INVALID
+        if row.kind == "whatsapp.event" and not row.signing_secret_encrypted:
+            return TriggerReason.READY_TO_RESUME
+        return TriggerReason.PENDING
     if state == TriggerState.PAUSED.value:
         return _paused_reason(row)
     if state == TriggerState.NEEDS_RECONNECT.value:
@@ -114,6 +118,24 @@ def _uses_connection(row: Trigger) -> bool:
     return row.connection_id is not None or row.provider in _CONNECTION_PROVIDERS or get_kind(row.kind) is not None
 
 
+def _schedule_can_arm(row: Trigger) -> bool:
+    """Whether the enable route would accept ``row``'s schedule.
+
+    Asks the route's own check without the saved canvas: the canvas only
+    changes the refusal's wording, not whether there is one, so a list
+    response does not load every flow.
+    """
+    from langflow.services.triggers.schedule_config import InvalidScheduleError
+    from langflow.services.triggers.service import _check_schedule_can_arm
+
+    try:
+        _check_schedule_can_arm(row, None)
+    # A run_at near year 9999 can overflow on its way to UTC; the route cannot arm it either.
+    except (InvalidScheduleError, OverflowError):
+        return False
+    return True
+
+
 def _decide(
     row: Trigger, reason: TriggerReason | None, caller: TriggerCaller
 ) -> dict[TriggerAction, TriggerReason | None]:
@@ -133,6 +155,8 @@ def _decide(
             decisions[TriggerAction.RESUME] = write or reason
         if reason is TriggerReason.NODE_REMOVED:
             decisions[TriggerAction.RESUME] = reason
+        elif not dead and row.kind == "schedule" and not _schedule_can_arm(row):
+            decisions[TriggerAction.RESUME] = TriggerReason.CONFIG_INVALID
     decisions[TriggerAction.TEST] = run_block
     if _uses_connection(row):
         if state != TriggerState.NEEDS_RECONNECT.value or reason is TriggerReason.READY_TO_RESUME:

@@ -7,7 +7,7 @@ import subprocess
 import sys
 import time
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 import typer
@@ -173,6 +173,42 @@ class TestSuperuserCommand:
                 await _create_superuser("newuser", "newpass", "invalid-token")
 
             assert exc_info.value.exit_code == 1
+
+    @pytest.mark.asyncio
+    async def test_case_variant_recovered_superuser_identity_creates_default_folder(self, monkeypatch):
+        """CLI setup uses the committed identity returned by recovery."""
+        from contextlib import asynccontextmanager
+
+        from langflow.services.database.models.user.model import User
+
+        settings = SimpleNamespace(
+            auth_settings=SimpleNamespace(ENABLE_SUPERUSER_CLI=True, AUTO_LOGIN=False, SUPERUSER="")
+        )
+        winner = User(username="admin", password="winner-hash", is_superuser=True, is_active=True)  # noqa: S106
+        auth = SimpleNamespace(create_super_user=AsyncMock(return_value=winner))
+        sessions = []
+
+        @asynccontextmanager
+        async def fake_session_scope():
+            session = SimpleNamespace()
+            sessions.append(session)
+            yield session
+
+        async def no_superusers(_session):
+            return []
+
+        monkeypatch.setattr("langflow.__main__.initialize_services", AsyncMock())
+        monkeypatch.setattr("langflow.__main__.get_settings_service", lambda: settings)
+        monkeypatch.setattr("langflow.__main__.session_scope", fake_session_scope)
+        get_or_create_default_folder = AsyncMock(return_value=object())
+        monkeypatch.setattr("langflow.__main__.get_or_create_default_folder", get_or_create_default_folder)
+        monkeypatch.setattr("langflow.services.database.models.user.crud.get_all_superusers", no_superusers)
+        monkeypatch.setattr("langflow.services.deps.get_auth_service", lambda: auth)
+
+        await _create_superuser("Admin", "password", None)
+
+        auth.create_super_user.assert_awaited_once_with("Admin", "password", db=sessions[1])
+        get_or_create_default_folder.assert_awaited_once_with(sessions[1], winner.id)
 
 
 def test_get_number_of_workers():
@@ -575,6 +611,8 @@ def _stop_midway(tmp_path, command: str, *args: str, signum: int) -> subprocess.
         source = f"sqlite:///{tmp_path / 'langflow.db'}"
         upgrade_to_head(source)
         args = (*args, "--source", source, "--target", silent)
+    elif command == "upgrade-check":
+        args = (*args, "--database-url", silent)
     else:
         env["LANGFLOW_DATABASE_URL"] = silent
     child = subprocess.Popen(  # noqa: S603 - the interpreter running the tests, fixed arguments
@@ -610,6 +648,7 @@ def _stop_midway(tmp_path, command: str, *args: str, signum: int) -> subprocess.
         ("convert-sqlite-to-postgres", [], signal.SIGINT),
         ("check-integrity", [], signal.SIGTERM),
         ("migration-preflight", [], signal.SIGINT),
+        ("upgrade-check", [], signal.SIGTERM),
     ],
 )
 def test_a_migration_command_stopped_by_a_signal_ends_its_stream_with_an_error(tmp_path, command, args, signum):

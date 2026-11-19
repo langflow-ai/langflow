@@ -707,7 +707,9 @@ class OperationsComponent(Component):
             try:
                 parsed_json = json.loads(field_value)
                 keys = self.extract_all_paths(parsed_json)
-                build_config["selected_key"]["options"] = keys
+                build_config["selected_key"]["options"] = self._keep_saved_path(
+                    keys, build_config["selected_key"].get("value"), parsed_json
+                )
                 build_config["selected_key"]["show"] = True
             except (json.JSONDecodeError, TypeError, ValueError) as e:
                 logger.error(f"Error parsing mapped JSON: {e}")
@@ -818,7 +820,10 @@ class OperationsComponent(Component):
             mapped_json = template.get("mapped_json_display", {}).get("value")
             if mapped_json:
                 try:
-                    template["selected_key"]["options"] = self.extract_all_paths(json.loads(mapped_json))
+                    parsed_json = json.loads(mapped_json)
+                    template["selected_key"]["options"] = self._keep_saved_path(
+                        self.extract_all_paths(parsed_json), template["selected_key"].get("value"), parsed_json
+                    )
                 except (json.JSONDecodeError, TypeError, ValueError, RecursionError) as e:
                     logger.warning(f"Error parsing saved mapped JSON: {e}")
                     template["selected_key"]["show"] = False
@@ -866,11 +871,37 @@ class OperationsComponent(Component):
     # JSON operations
     # ==================================================================
     @staticmethod
+    def _unquoted_paths(obj, path: str = "") -> list[str]:
+        """Return the paths the picker offered before keys were quoted: every key written bare."""
+        paths = []
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                paths.append(f"{path}.{k}")
+                paths.extend(OperationsComponent._unquoted_paths(v, f"{path}.{k}"))
+        elif isinstance(obj, list) and obj:
+            paths.append(f"{path}[0]")
+            paths.extend(OperationsComponent._unquoted_paths(obj[0], f"{path}[0]"))
+        return paths
+
+    @staticmethod
+    def _keep_saved_path(options: list[str], saved_path: object, mapped_json: object) -> list[str]:
+        """Keep a saved path the old unquoted rule offered for this JSON; drop one an edit removed."""
+        if (
+            isinstance(saved_path, str)
+            and saved_path not in options
+            and saved_path in OperationsComponent._unquoted_paths(mapped_json)
+        ):
+            return [*options, saved_path]
+        return options
+
+    @staticmethod
     def extract_all_paths(obj, path=""):
         paths = []
         if isinstance(obj, dict):
             for k, v in obj.items():
-                new_path = f"{path}.{k}" if path else f".{k}"
+                # jq reads only ASCII identifiers bare; any other key must be a quoted string.
+                field = k if k.isascii() and k.isidentifier() else json.dumps(k, ensure_ascii=False)
+                new_path = f"{path}.{field}"
                 paths.append(new_path)
                 paths.extend(OperationsComponent.extract_all_paths(v, new_path))
         elif isinstance(obj, list) and obj:
@@ -1138,13 +1169,19 @@ class OperationsComponent(Component):
 
     @staticmethod
     def _comparable_filter_value(column: pd.Series, filter_value: Any) -> Any:
-        """Return a text input as a number when the column is numeric.
+        """Convert a text input to match a numeric or boolean column.
 
         Filter and Replace Value inputs arrive as text, and ``30 == "30"`` never matches in pandas.
         A blank input stays text: ``pd.to_numeric("")`` is NaN, which would match missing cells.
+        Boolean columns accept only the true/false spellings, ignoring case and surrounding whitespace.
+        A missing cell leaves a CSV boolean column as ``object``, so booleans are detected from the values.
         """
         if filter_value in (None, ""):
             return filter_value
+        if isinstance(filter_value, str) and pd.api.types.infer_dtype(column, skipna=True) == "boolean":
+            boolean_value = filter_value.strip().lower()
+            if boolean_value in ("true", "false"):
+                return boolean_value == "true"
         if pd.api.types.is_numeric_dtype(column) and not pd.api.types.is_bool_dtype(column):
             try:
                 return pd.to_numeric(filter_value)

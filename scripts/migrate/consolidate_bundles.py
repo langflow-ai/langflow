@@ -49,7 +49,9 @@ MIGRATION_RELEASE = "1.11.0"
 # that introduced them (one ``bare_class_name`` row per component).  They stay in
 # ``PROVIDER_DEPS`` so re-running the script keeps their extras managed, but the
 # move + migration-discovery steps are skipped for them.
-PRE_CONSOLIDATED_PROVIDERS: frozenset[str] = frozenset({"bhived", "figranium", "keenable", "mrscraper"})
+PRE_CONSOLIDATED_PROVIDERS: frozenset[str] = frozenset(
+    {"bhived", "figranium", "keenable", "mrscraper", "olostep", "socialscrape"}
+)
 
 # Shared spec for providers whose components go through langchain_community
 # wrappers (the wrapper itself; whatever SDK the wrapper lazy-imports at
@@ -99,7 +101,7 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "bhived": ["bhived>=0.1.0,<0.2"],  # new in 1.14.0, never lived under lfx.components
     "confluence": ["atlassian-python-api==3.41.16", _LC_COMMUNITY],
     "firecrawl": ["firecrawl-py>=1.0.16,<2.0.0"],
-    "git": ["GitPython>=3.1.58", _LC_COMMUNITY],
+    "git": ["GitPython>=3.2.1", _LC_COMMUNITY],
     "glean": [],  # httpx + pydantic only (lfx core)
     "icosacomputing": ["requests>=2.32.0"],
     "mem0": ["mem0ai>=2.0.18,<3.0.0"],
@@ -122,7 +124,7 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     # client; it does not import the `litellm` package (langflow-base's
     # litellm extra serves other consumers and stays put).
     "litellm": ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"],
-    "lmstudio": ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "langchain-nvidia-ai-endpoints~=1.0.0"],
+    "lmstudio": ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "langchain-nvidia-ai-endpoints>=1.5.0,<2.0.0"],
     "novita": ["langchain-openai>=1.1.6", "requests>=2.32.0"],
     "openrouter": ["langchain-openai>=1.1.6"],
     "xai": ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "requests>=2.32.0"],
@@ -145,6 +147,8 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "agentql": [],  # httpx REST only (lfx core)
     "figranium": [],  # httpx REST only (lfx core); new in 1.13.0, never lived under lfx.components
     "keenable": [],  # httpx REST only (lfx core); new in 1.14.0, never lived under lfx.components
+    "olostep": [],  # httpx REST only (lfx core); new in 1.14.0, never lived under lfx.components
+    "socialscrape": [],  # httpx REST only (lfx core); new in 1.14.0, never lived under lfx.components
     # --- tranche 7: google family + agent SDKs (markers preserved from base) ---
     # "google" graduated to the standalone lfx-google bundle so Gemini is
     # available in every default Langflow install.
@@ -163,18 +167,20 @@ PROVIDER_DEPS: dict[str, list[str]] = {
         _LC_COMMUNITY,
     ],
     "nvidia": [
-        "langchain-nvidia-ai-endpoints~=1.0.0",
+        "langchain-nvidia-ai-endpoints>=1.5.0,<2.0.0",
         "nv-ingest-client>=26.1.0,<26.3.0 ; python_version >= '3.12'",
         "gassist>=0.0.1; sys_platform == 'win32'",
     ],
     "cuga": [
         "cuga>=0.2.20,<0.3.0; sys_platform != 'darwin' and python_version < '3.14'",
+        "fastmcp>=3.4.10,<4.0.0; sys_platform != 'darwin' and python_version < '3.14'",
         "cuga>=0.2.20,<0.3.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",
+        "fastmcp>=3.4.10,<4.0.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",
         # Temporary compatibility valve: newer releases require cryptography<49.
         "langchain-litellm==0.5.1; sys_platform != 'darwin' and python_version < '3.14'",
         "langchain-litellm==0.5.1; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",  # noqa: E501
-        "litellm>=1.103.1,<2.0.0,!=1.104.0rc1,!=1.107.0; sys_platform != 'darwin' and python_version < '3.14'",
-        "litellm>=1.103.1,<2.0.0,!=1.104.0rc1,!=1.107.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",  # noqa: E501
+        "litellm>=1.103.10,<1.104.0,!=1.104.0rc1,!=1.107.0; sys_platform != 'darwin' and python_version < '3.14'",
+        "litellm>=1.103.10,<1.104.0,!=1.104.0rc1,!=1.107.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",  # noqa: E501
     ],
     # --- tranche 9: langwatch evaluator (pure httpx REST; the langwatch SDK extra
     # is for the tracing service, not this component) ---
@@ -208,7 +214,7 @@ TORCH_EXTRAS = frozenset({"cuga", "codeagents"})
 # generated aggregate extras because Langflow already installs them directly.
 COMPATIBILITY_EXTRAS = {
     "azure": ["lfx-azure>=0.1.0,<1.0.0"],
-    "google": ["lfx-google>=0.2.5,<1.0.0"],
+    "google": ["lfx-google>=0.4.1,<1.0.0"],
     "ollama": ["lfx-ollama>=0.1.0,<1.0.0"],
 }
 

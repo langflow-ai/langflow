@@ -93,6 +93,17 @@ describe("lastErrorText", () => {
 });
 
 describe("triggerRefusalText", () => {
+  it("translates a trigger policy refusal", () => {
+    expect(
+      triggerRefusalText(
+        refusal({
+          code: "policy_blocked",
+          message: "Blocked by trigger policy.",
+        }),
+        t,
+      ),
+    ).toBe("t:triggers.serverError.policy_blocked");
+  });
   it("translates a refusal for multiple canvas triggers", () => {
     expect(
       triggerRefusalText(

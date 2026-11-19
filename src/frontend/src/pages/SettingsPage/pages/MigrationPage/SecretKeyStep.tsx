@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import {
 
 // Prints the first 12 characters of the key's SHA-256, which the server compares with its own key's.
 const FINGERPRINT_COMMAND = `printf '%s' "$LANGFLOW_SECRET_KEY" | sha256sum | cut -c1-12`;
+const EMPTY_KEY_FINGERPRINT = "e3b0c44298fc"; // pragma: allowlist secret -- SHA-256 prefix of empty input.
 const FIELD = "migration-key-fingerprint";
 
 /**
@@ -26,6 +28,7 @@ export function SecretKeyStep({
 }) {
   const { t } = useTranslation();
   const verify = useVerifySecretKeyMutation();
+  const [emptyKey, setEmptyKey] = useState(false);
   const key = migration.instance.secret_key;
   const refusal = verify.error?.response?.data?.detail?.code;
   // A request that failed says nothing about the key, so the last answer is not shown as its outcome.
@@ -41,8 +44,16 @@ export function SecretKeyStep({
       className="flex flex-col gap-4"
       onSubmit={(event) => {
         event.preventDefault();
-        const pasted = new FormData(event.currentTarget).get("fingerprint");
-        verify.mutate(String(pasted));
+        const pasted = String(
+          new FormData(event.currentTarget).get("fingerprint"),
+        );
+        const empty = pasted.trim().toLowerCase() === EMPTY_KEY_FINGERPRINT;
+        setEmptyKey(empty);
+        if (empty) {
+          verify.reset();
+          return;
+        }
+        verify.mutate(pasted);
       }}
     >
       <Alert variant="destructive" role="note">
@@ -82,8 +93,11 @@ export function SecretKeyStep({
               required
               // No room for a pasted key.
               maxLength={12}
-              aria-invalid={mismatch}
-              aria-describedby={mismatch ? `${FIELD}-error` : undefined}
+              onChange={() => setEmptyKey(false)}
+              aria-invalid={emptyKey || mismatch}
+              aria-describedby={
+                emptyKey || mismatch ? `${FIELD}-error` : undefined
+              }
             />
           </div>
           <Button
@@ -95,15 +109,17 @@ export function SecretKeyStep({
             {t("settings.migration.key.action")}
           </Button>
         </div>
-        {failed || mismatch ? (
+        {emptyKey || failed || mismatch ? (
           <p
             id={`${FIELD}-error`}
             role="alert"
             className="text-sm text-destructive"
           >
-            {mismatch
-              ? t("settings.migration.key.mismatch")
-              : t("settings.migration.failed")}
+            {emptyKey
+              ? t("settings.migration.key.empty")
+              : mismatch
+                ? t("settings.migration.key.mismatch")
+                : t("settings.migration.failed")}
           </p>
         ) : null}
       </div>

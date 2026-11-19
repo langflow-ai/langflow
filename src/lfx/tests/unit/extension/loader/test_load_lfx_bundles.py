@@ -124,7 +124,14 @@ def test_root_registers_each_provider_at_official(tmp_path: Path) -> None:
             "mrscraper",
             {
                 "MrscraperAccount",
+                "MrscraperAiScraper",
+                "MrscraperBatchScrape",
+                "MrscraperCrawlWebsite",
                 "MrscraperFetchHtml",
+                "MrscraperGetResult",
+                "MrscraperGetResults",
+                "MrscraperRunAiScraper",
+                "MrscraperRunManualScraper",
                 "MrscraperWebSearch",
             },
         ),
@@ -141,6 +148,24 @@ def test_root_registers_each_provider_at_official(tmp_path: Path) -> None:
             {
                 "KeenableFetchComponent",
                 "KeenableSearchComponent",
+            },
+        ),
+        (
+            "olostep",
+            {
+                "OlostepAnswerComponent",
+                "OlostepCrawlComponent",
+                "OlostepMapComponent",
+                "OlostepScrapeComponent",
+                "OlostepSearchComponent",
+            },
+        ),
+        (
+            "socialscrape",
+            {
+                "SocialScrapePostsComponent",
+                "SocialScrapeProfileComponent",
+                "SocialScrapeTranscriptComponent",
             },
         ),
         pytest.param(

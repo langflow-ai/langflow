@@ -33,9 +33,9 @@ class TestExceptionTelemetry:
         data = payload.model_dump(by_alias=True, exclude_none=True)
 
         expected_fields = {
-            "exceptionType": "ValueError",
+            "objectType": "ValueError",
             "exceptionMessage": "Test error message",
-            "exceptionContext": "handler",
+            "category": "handler",
             "stackTraceHash": "abc123def456",  # pragma: allowlist secret
         }
 
@@ -93,9 +93,8 @@ class TestExceptionTelemetry:
         telemetry_service.client_type = "oss"
         telemetry_service.edition = "opensource"
         telemetry_service.common_telemetry_fields = {
-            "langflow_version": "1.0.0",
-            "platform": "python_package",
-            "os": "linux",
+            "productVersion": "1.0.0",
+            "osName": "linux",
         }
 
         # Mock HTTP client
@@ -129,14 +128,13 @@ class TestExceptionTelemetry:
         assert body["userId"] == user_id
         assert body["event"] == "Ended Process"
         assert body["messageId"]
-        assert body["properties"]["exceptionType"] == "ValueError"
+        assert body["properties"]["objectType"] == "ValueError"
         assert "exceptionMessage" not in body["properties"]
-        assert body["properties"]["exceptionContext"] == "handler"
+        assert body["properties"]["category"] == "handler"
         assert body["properties"]["stackTraceHash"] == "abc123"
-        assert body["properties"]["clientType"] == "oss"
-        assert body["properties"]["langflow_version"] == "1.0.0"
-        assert body["properties"]["platform"] == "python_package"
-        assert body["properties"]["os"] == "linux"
+        assert body["properties"]["subProductTitle"] == "oss"
+        assert body["properties"]["productVersion"] == "1.0.0"
+        assert body["properties"]["osName"] == "linux"
         assert body["properties"]["UT30"] == "30AS5"
         assert body["properties"]["productCode"] == "WW3151"
         assert body["properties"]["productCodeType"] == "WWPC"
@@ -184,7 +182,7 @@ class TestExceptionTelemetry:
                 RunPayload(run_seconds=1, run_success=False, run_error_message="user input"),
                 "run",
                 "runErrorMessage",
-                "runSuccess",
+                "successFlag",
             ),
             (
                 DeploymentPayload(
@@ -229,7 +227,7 @@ class TestExceptionTelemetry:
                 ),
                 "exception",
                 "exceptionMessage",
-                "exceptionType",
+                "objectType",
             ),
         ],
     )
@@ -261,9 +259,8 @@ class TestExceptionTelemetry:
         telemetry_service.client_type = "oss"
         telemetry_service.edition = "opensource"
         telemetry_service.common_telemetry_fields = {
-            "langflow_version": "1.0.0",
-            "platform": "python_package",
-            "os": "linux",
+            "productVersion": "1.0.0",
+            "osName": "linux",
         }
 
         # Mock HTTP client
@@ -336,9 +333,8 @@ class TestExceptionTelemetry:
         telemetry_service.client_type = "oss"
         telemetry_service.edition = "opensource"
         telemetry_service.common_telemetry_fields = {
-            "langflow_version": "1.0.0",
-            "platform": "python_package",
-            "os": "linux",
+            "productVersion": "1.0.0",
+            "osName": "linux",
         }
 
         # Create payload with potentially sensitive data

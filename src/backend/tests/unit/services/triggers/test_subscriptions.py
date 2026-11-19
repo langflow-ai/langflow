@@ -12,12 +12,13 @@ from uuid import uuid4
 
 import pytest
 from langflow.services.database.models.connection.model import Connection
-from langflow.services.database.models.trigger.model import Trigger, TriggerSubscription
+from langflow.services.database.models.trigger.model import Trigger, TriggerRenewalObservation, TriggerSubscription
 from langflow.services.database.models.trigger.schemas import TriggerState, TriggerSubscriptionState
 from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.triggers import leases, subscriptions
 from langflow.services.triggers.constants import SUBSCRIPTION_LEASE_NAME
 from langflow.services.triggers.ingress.verifiers import state_digest
+from sqlmodel import select
 
 pytestmark = pytest.mark.no_blockbuster
 
@@ -638,3 +639,216 @@ async def test_a_renewal_pass_completes_with_durable_audit_on(make_subscription,
 
     assert renewed == 1
     assert (await _subscription(subscription_id)).expires_at.replace(tzinfo=timezone.utc) > _now() + timedelta(days=6)
+
+
+@pytest.mark.parametrize("durable", [False, True], ids=["best-effort", "durable"])
+async def test_subscription_creation_is_audited_once_and_updates_are_not(make_subscription, monkeypatch, durable):
+    from langflow.services.authorization.audit import drain_pending_audit_writes, get_audit_producer_health
+    from langflow.services.database.models.auth import AuthzAuditLog
+
+    settings = get_settings_service().auth_settings
+    monkeypatch.setattr(settings, "AUTHZ_AUDIT_ENABLED", True)
+    monkeypatch.setattr(settings, "AUTHZ_AUDIT_DURABLE", durable)
+    submitted_before = get_audit_producer_health()["submitted_count"]
+    trigger_id, connection_id, subscription_id, external_id = await make_subscription()
+    async with session_scope() as session:
+        updated = await subscriptions.upsert_subscription(
+            session,
+            trigger_id=trigger_id,
+            connection_id=connection_id,
+            provider=PROVIDER,
+            provider_subscription_id=external_id,
+            client_state_digest=state_digest("updated-client-state"),
+            expires_at=_now() + timedelta(days=8),
+            provider_state={"private": "provider-detail"},
+        )
+        assert updated.id == subscription_id
+    await drain_pending_audit_writes()
+    assert get_audit_producer_health()["submitted_count"] == submitted_before
+    async with session_scope() as session:
+        rows = (
+            await session.exec(
+                select(AuthzAuditLog).where(
+                    AuthzAuditLog.resource_id == trigger_id, AuthzAuditLog.action == "trigger_subscription:create"
+                )
+            )
+        ).all()
+        assert len(rows) == 1
+        assert rows[0].details["subscriptions"] == 1
+        assert "provider-detail" not in str(rows[0].details)
+        assert "updated-client-state" not in str(rows[0].details)
+
+
+@pytest.mark.usefixtures("fake_renewer")
+async def test_renewal_records_the_previous_expiry_and_observed_gap(make_subscription):
+    trigger_id, _connection_id, subscription_id, _external = await make_subscription(lifetime=timedelta(seconds=-5))
+    previous = (await _subscription(subscription_id)).expires_at
+    await subscriptions.run_renewal_pass(owner="interval-metrics")
+    async with session_scope() as session:
+        evidence = (
+            await session.exec(
+                select(TriggerRenewalObservation).where(TriggerRenewalObservation.trigger_id == trigger_id)
+            )
+        ).one()
+        current = await session.get(TriggerSubscription, subscription_id)
+        assert evidence.previous_expires_at.replace(tzinfo=None) == previous.replace(tzinfo=None)
+        assert evidence.expires_at == current.expires_at
+        assert evidence.outcome == "renewed"
+        assert evidence.gap_seconds >= 5
+
+
+@pytest.mark.usefixtures("fake_renewer")
+async def test_renewal_observation_rolls_back_with_the_subscription(make_subscription):
+    trigger_id, _connection_id, subscription_id, _external = await make_subscription()
+    async with session_scope() as session:
+        row = await session.get(TriggerSubscription, subscription_id)
+        row.lease_owner = "rollback-test"
+        row.lease_until = _now() + timedelta(minutes=1)
+        session.add(row)
+    async with session_scope() as session:
+        assert await subscriptions.renew_one(session, subscription_id=subscription_id, owner="rollback-test")
+        await session.rollback()
+    async with session_scope() as session:
+        assert (
+            await session.exec(
+                select(TriggerRenewalObservation).where(TriggerRenewalObservation.trigger_id == trigger_id)
+            )
+        ).all() == []
+
+
+async def test_subscription_creation_and_its_durable_audit_roll_back_together(make_trigger, monkeypatch):
+    from langflow.services.authorization import audit
+    from langflow.services.database.models.auth import AuthzAuditLog
+
+    settings = get_settings_service().auth_settings
+    monkeypatch.setattr(settings, "AUTHZ_AUDIT_ENABLED", True)
+    monkeypatch.setattr(settings, "AUTHZ_AUDIT_DURABLE", True)
+    trigger_id = await make_trigger()
+
+    def fail_stage(*_args, **_kwargs):
+        message = "audit unavailable"
+        raise RuntimeError(message)
+
+    monkeypatch.setattr(audit, "_stage_audit_entries", fail_stage)
+    with pytest.raises(audit.AuditPersistenceError):
+        async with session_scope() as session:
+            await subscriptions.upsert_subscription(
+                session,
+                trigger_id=trigger_id,
+                connection_id=None,
+                provider=PROVIDER,
+                provider_subscription_id="new-subscription",
+                client_state_digest=None,
+                expires_at=_now() + timedelta(days=7),
+            )
+    async with session_scope() as session:
+        assert (
+            await session.exec(select(TriggerSubscription).where(TriggerSubscription.trigger_id == trigger_id))
+        ).all() == []
+        assert (await session.exec(select(AuthzAuditLog).where(AuthzAuditLog.resource_id == trigger_id))).all() == []
+
+
+@pytest.mark.parametrize("nested", [False, True], ids=["outer-rollback", "savepoint-rollback"])
+async def test_best_effort_creation_audit_does_not_survive_rollback(make_trigger, monkeypatch, nested):
+    from langflow.services.authorization.audit import drain_pending_audit_writes
+    from langflow.services.database.models.auth import AuthzAuditLog
+
+    trigger_id = await make_trigger()
+    settings = get_settings_service().auth_settings
+    monkeypatch.setattr(settings, "AUTHZ_AUDIT_ENABLED", True)
+    monkeypatch.setattr(settings, "AUTHZ_AUDIT_DURABLE", False)
+    async with session_scope() as session:
+        savepoint = await session.begin_nested() if nested else None
+        await subscriptions.upsert_subscription(
+            session,
+            trigger_id=trigger_id,
+            connection_id=None,
+            provider=PROVIDER,
+            provider_subscription_id=f"rolled-back-{uuid4()}",
+            client_state_digest=None,
+            expires_at=_now() + timedelta(days=7),
+        )
+        if savepoint is not None:
+            await savepoint.rollback()
+        else:
+            await session.rollback()
+    await drain_pending_audit_writes()
+    async with session_scope() as session:
+        assert (
+            await session.exec(select(TriggerSubscription).where(TriggerSubscription.trigger_id == trigger_id))
+        ).all() == []
+        rows = (
+            await session.exec(
+                select(AuthzAuditLog).where(
+                    AuthzAuditLog.resource_id == trigger_id, AuthzAuditLog.action == "trigger_subscription:create"
+                )
+            )
+        ).all()
+        assert rows == []
+
+
+@pytest.mark.parametrize("failure", ["callback", "constraint"])
+async def test_best_effort_audit_insert_failure_preserves_new_subscription(make_trigger, monkeypatch, caplog, failure):
+    from langflow.services.authorization.audit import drain_pending_audit_writes, get_audit_producer_health
+    from langflow.services.database.models.auth import AuthzAuditLog
+    from sqlalchemy import event
+
+    trigger_id = await make_trigger()
+    settings = get_settings_service().auth_settings
+    monkeypatch.setattr(settings, "AUTHZ_AUDIT_ENABLED", True)
+    monkeypatch.setattr(settings, "AUTHZ_AUDIT_DURABLE", False)
+    submitted_before = get_audit_producer_health()["submitted_count"]
+    private_message = "private-provider-audit-detail"
+
+    def fail_insert(_mapper, _connection, target):
+        if failure == "constraint":
+            target.result = private_message
+            return
+        raise ValueError(private_message)
+
+    event.listen(AuthzAuditLog, "before_insert", fail_insert)
+    try:
+        async with session_scope() as session:
+            subscription = await subscriptions.upsert_subscription(
+                session,
+                trigger_id=trigger_id,
+                connection_id=None,
+                provider=PROVIDER,
+                provider_subscription_id=f"audit-unavailable-{uuid4()}",
+                client_state_digest=None,
+                expires_at=_now() + timedelta(days=7),
+            )
+            subscription_id = subscription.id
+        await drain_pending_audit_writes()
+    finally:
+        event.remove(AuthzAuditLog, "before_insert", fail_insert)
+    async with session_scope() as session:
+        assert (await session.get(TriggerSubscription, subscription_id)).trigger_id == trigger_id
+        assert (await session.exec(select(AuthzAuditLog).where(AuthzAuditLog.resource_id == trigger_id))).all() == []
+    assert get_audit_producer_health()["submitted_count"] == submitted_before
+    assert private_message not in caplog.text
+
+
+@pytest.mark.parametrize("durable", [False, True])
+async def test_disabled_audit_does_not_stage_subscription_creation(make_trigger, monkeypatch, durable):
+    from langflow.services.authorization.audit import get_audit_producer_health
+    from langflow.services.database.models.auth import AuthzAuditLog
+
+    trigger_id = await make_trigger()
+    settings = get_settings_service().auth_settings
+    monkeypatch.setattr(settings, "AUTHZ_AUDIT_ENABLED", False)
+    monkeypatch.setattr(settings, "AUTHZ_AUDIT_DURABLE", durable)
+    submitted_before = get_audit_producer_health()["submitted_count"]
+    async with session_scope() as session:
+        await subscriptions.upsert_subscription(
+            session,
+            trigger_id=trigger_id,
+            connection_id=None,
+            provider=PROVIDER,
+            provider_subscription_id=f"audit-disabled-{uuid4()}",
+            client_state_digest=None,
+            expires_at=_now() + timedelta(days=7),
+        )
+    async with session_scope() as session:
+        assert (await session.exec(select(AuthzAuditLog).where(AuthzAuditLog.resource_id == trigger_id))).all() == []
+    assert get_audit_producer_health()["submitted_count"] == submitted_before

@@ -93,3 +93,34 @@ it("keeps connection scopes checked and explains that they are required", () => 
   fireEvent.click(scope);
   expect(toggle).not.toHaveBeenCalled();
 });
+
+it("describes ServiceNow permissions while keeping identifiers secondary", () => {
+  const toggle = jest.fn();
+  render(
+    <ScopeChecklist
+      providerId="servicenow"
+      scopes={["langflow_table_read", "langflow_table_write"]}
+      selected={new Set()}
+      requiredScopes={["langflow_table_read"]}
+      onToggle={toggle}
+      requirements={[]}
+    />,
+  );
+
+  const read = screen.getByTestId("connection-scope-langflow_table_read");
+  const readRow = within(read.closest("label")!);
+  expect(read).toBeChecked();
+  expect(read).toBeDisabled();
+  expect(readRow.getByText("Read tickets")).toBeVisible();
+  expect(readRow.getByText("Required for this connection")).toBeVisible();
+  expect(readRow.getByText("langflow_table_read")).toHaveClass("font-mono");
+
+  const write = screen.getByTestId("connection-scope-langflow_table_write");
+  const writeRow = within(write.closest("label")!);
+  expect(write).not.toBeChecked();
+  expect(write).toBeEnabled();
+  expect(writeRow.getByText("Create and update tickets")).toBeVisible();
+  expect(writeRow.getByText("langflow_table_write")).toHaveClass("font-mono");
+  fireEvent.click(write);
+  expect(toggle).toHaveBeenCalledWith("langflow_table_write", true);
+});

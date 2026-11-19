@@ -1,0 +1,80 @@
+---
+title: Check component compatibility
+slug: /contributing-component-compatibility
+---
+
+Run the same contract gate that checks pull requests before acknowledging a component break.
+It compares the complete current registry with published application and bundle releases.
+It also runs source-reader and update-preservation tests.
+Upgrade and restore certification remains a separate release requirement.
+
+```bash
+uv run python scripts/ci/component_release_plan.py \
+  --base-sha "$(git rev-parse origin/release-1.14.0)" \
+  --output compatibility-evidence/plan.json
+uv run python scripts/ci/run_component_compatibility.py \
+  --plan compatibility-evidence/plan.json \
+  --output-dir compatibility-evidence
+```
+
+The current environment must contain the full Langflow distribution and its installed bundles.
+The exporter uses each installed runtime's loader in a separate process with network access blocked.
+It clears inherited credentials and PATH, uses the OS default system search path, and sets temporary home and configuration directories before importing runtime code.
+Both exports set LiteLLM's supported `LITELLM_LOCAL_MODEL_COST_MAP=True` mode to inspect its packaged pricing table without an import-time HTTP refresh.
+This does not discover live provider models or make unavailable dynamic fields verifiable.
+The process guard permits only `git version` through the canonical system `/usr/bin/git` and croniter's `platform.architecture()` probe through `/usr/bin/file`, limited to `-b` and the resolved current Python interpreter.
+Each probe verifies the executable selected by its supplied environment and PATH before allowing it.
+Other executables, targets, extra arguments, and PATH lookalikes are refused.
+A refused operation invalidates the entire snapshot even if component code catches the exception and returns a fallback contract.
+A missing index, failed module import, or skipped template fails the export.
+It cannot produce complete evidence by silently omitting a failed bundle.
+The retained snapshots identify the installed distribution versions and each component's package.
+
+Each package uses its base-branch version as the ceiling for selecting a published baseline.
+The selector includes an equal published version so a code change without a version bump is checked.
+It excludes prereleases, development versions, local versions, and yanked releases.
+A patch branch therefore stays on its own release line instead of selecting a newer global release.
+Each bundle selects its own baseline independently of the application version.
+A package with no published predecessor is recorded explicitly in the plan.
+
+The comparison calls the shared compatibility rule even when implementation code is unchanged.
+It checks old handles and possible saved values, component removals, new required inputs, and retirement.
+The current registry includes installed bundles and resolves the runtime's legacy component aliases.
+Provider-only bundles contribute projections of the real Language Model fields through the runtime's provider configuration helper.
+Those projections use the same component compatibility rule and preserve each provider's distribution provenance.
+They check provider removal and saved model field contracts without calling live discovery or certifying SDK behavior.
+
+## Review an intended break
+
+An unacknowledged break fails CI and writes its exact identity to `comparison.json`.
+The retained `candidate-breaks.md` links its old and new snapshots and suggests a release-note path for review.
+An unavailable baseline remains `could_not_verify` and fails the gate while the other package comparisons continue.
+The preservation checks still run when the comparison fails.
+Add an entry to `scripts/ci/component_breaks.json` only after reviewing the intended behavior.
+The entry must contain its `id`, a nonempty `reason`, and a `release_note` path.
+Write that Markdown file under `docs/release_notes/compatibility/` and include the component name and exact break identity.
+Explain the behavior change and the manual action that saved flows need.
+
+The break identity binds the package versions, component, old and new contracts, and reasons.
+A stale, unknown, duplicated, or incomplete acknowledgment fails CI.
+The workflow renders the acknowledged text into `release-notes.md`.
+Release publication waits for this gate and includes that text before the generated release notes.
+The comparison report, snapshots, plan, and rendered notes remain downloadable CI artifacts.
+
+## Preserve historical coverage
+
+The required tests cover shared Python/editor rule cases, removed components and handles, customized nodes, hidden-field edges, retained values, and stale author saves.
+SQLite and PostgreSQL reader fixtures prove that source data remains unchanged.
+The original historical expectations stay in `src/lfx/tests/data/component_compat/expected_statuses.json`.
+
+Two historical MCP Tools nodes currently have generated fields without provenance.
+The older static rule reports them as breaking when their code changes.
+The separate isolated checker reports unavailable dynamic discovery as `could_not_verify`.
+These are distinct behaviors.
+The reviewed static limitation ledger binds exactly those two saved fixtures and the target MCP contract digest.
+Every other historical delta fails the gate.
+A changed fixture, changed target contract, or unused limitation also fails and requires review.
+The gate prints each accepted limitation in its retained evidence.
+
+Do not regenerate all expected statuses or exempt dynamic components to make a failure pass.
+The original pinned-status test remains available for direct diagnosis.

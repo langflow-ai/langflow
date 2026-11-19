@@ -217,11 +217,31 @@ def test_init(opentelemetry_instance):
     expected_bg_metrics = {
         "langflow_bg_jobs": MetricType.OBSERVABLE_GAUGE,
         "langflow_bg_oldest_queued_seconds": MetricType.OBSERVABLE_GAUGE,
+        "langflow_bg_workers_online": MetricType.OBSERVABLE_GAUGE,
+        "langflow_bg_workers": MetricType.OBSERVABLE_GAUGE,
         "langflow_bg_jobs_started_total": MetricType.OBSERVABLE_COUNTER,
         "langflow_bg_jobs_completed_total": MetricType.OBSERVABLE_COUNTER,
         "langflow_bg_jobs_failed_total": MetricType.OBSERVABLE_COUNTER,
         "langflow_bg_job_duration_p50_seconds": MetricType.OBSERVABLE_GAUGE,
         "langflow_bg_job_duration_p95_seconds": MetricType.OBSERVABLE_GAUGE,
+    }
+    expected_trigger_metrics = {
+        "langflow_trigger_events": {"backend": True, "origin": True, "state": True},
+        "langflow_trigger_renewals": {"backend": True, "outcome": True},
+        **{
+            name: {"backend": True}
+            for name in (
+                "langflow_trigger_metrics_window_seconds",
+                "langflow_trigger_dispatch_latency_p50_seconds",
+                "langflow_trigger_dispatch_latency_p95_seconds",
+                "langflow_trigger_dispatch_latency_samples",
+                "langflow_trigger_missing_first_starts",
+                "langflow_trigger_oldest_pending_seconds",
+                "langflow_trigger_renewals_with_gap",
+                "langflow_trigger_renewal_gap_seconds",
+                "langflow_trigger_expired_subscriptions",
+            )
+        },
     }
     expected_metrics = {
         "file_uploads",
@@ -229,6 +249,7 @@ def test_init(opentelemetry_instance):
         "langflow_job_queue_cancel_events_total",
         "langflow_job_queue_active_jobs",
         *expected_bg_metrics,
+        *expected_trigger_metrics,
     }
 
     assert isinstance(opentelemetry_instance, OpenTelemetry)
@@ -246,6 +267,10 @@ def test_init(opentelemetry_instance):
         # Every background metric is per-backend, so a deployment running more than one can
         # tell them apart rather than reading one summed series.
         assert registered.labels.get("backend") is True, f"{name} must carry a mandatory backend label"
+    for name, labels in expected_trigger_metrics.items():
+        registered = opentelemetry_instance._metrics_registry[name]
+        assert registered.type is MetricType.OBSERVABLE_GAUGE
+        assert registered.labels == labels
 
 
 def test_prometheus_exports_job_queue_metrics():
@@ -262,6 +287,19 @@ gauges = {
     "langflow_bg_oldest_queued_seconds": ({"backend": "default"}, 3),
     "langflow_bg_job_duration_p50_seconds": ({"backend": "default"}, 10),
     "langflow_bg_job_duration_p95_seconds": ({"backend": "default"}, 20),
+    "langflow_bg_workers_online": ({"backend": "default"}, 3),
+    "langflow_bg_workers": ({"backend": "default", "state": "idle"}, 2),
+    "langflow_trigger_events": ({"backend": "default", "origin": "source", "state": "completed"}, 2),
+    "langflow_trigger_renewals": ({"backend": "default", "outcome": "renewed"}, 3),
+    "langflow_trigger_metrics_window_seconds": ({"backend": "default"}, 300),
+    "langflow_trigger_dispatch_latency_p50_seconds": ({"backend": "default"}, 2),
+    "langflow_trigger_dispatch_latency_p95_seconds": ({"backend": "default"}, 4),
+    "langflow_trigger_dispatch_latency_samples": ({"backend": "default"}, 5),
+    "langflow_trigger_missing_first_starts": ({"backend": "default"}, 1),
+    "langflow_trigger_oldest_pending_seconds": ({"backend": "default"}, 6),
+    "langflow_trigger_renewals_with_gap": ({"backend": "default"}, 7),
+    "langflow_trigger_renewal_gap_seconds": ({"backend": "default"}, 8),
+    "langflow_trigger_expired_subscriptions": ({"backend": "default"}, 9),
 }
 counters = {
     "langflow_bg_jobs_started_total": ({"backend": "default"}, 10),
@@ -283,7 +321,7 @@ for _ in range(2):
         sample.name: sample
         for family in text_string_to_metric_families(snapshot)
         for sample in family.samples
-        if sample.name.startswith("langflow_bg_")
+        if sample.name.startswith(("langflow_bg_", "langflow_trigger_"))
     }
     assert set(samples) == gauges.keys() | counters.keys(), samples
     for name, (labels, value) in (gauges | counters).items():

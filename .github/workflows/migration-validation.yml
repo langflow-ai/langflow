@@ -21,6 +21,9 @@ on:
       - 'src/backend/tests/unit/services/database/models/flow_version/**'
       - 'src/backend/tests/unit/services/jobs/**'
 
+permissions:
+  contents: read
+
 jobs:
   model-migration-consistency:
     name: Model/Migration Consistency
@@ -71,6 +74,14 @@ jobs:
             src/backend/tests/unit/alembic/test_migration_execution.py \
             src/backend/tests/unit/alembic/test_message_history_index_migration.py -x -v
 
+      - name: Check transaction flow indexes and retention on PostgreSQL
+        env:
+          LANGFLOW_TEST_DATABASE_URI: "postgresql://langflow:langflow@localhost:5432/langflow"  # pragma: allowlist secret
+        run: |
+          uv run pytest \
+            src/backend/tests/unit/alembic/test_transaction_flow_index_migration.py \
+            src/backend/tests/unit/alembic/test_transaction_flow_index_parity.py -x -v
+
       - name: Check flow version deletion and attachment concurrency
         env:
           LANGFLOW_TEST_DATABASE_URI: "postgresql://langflow:langflow@localhost:5432/langflow"  # pragma: allowlist secret
@@ -107,8 +118,10 @@ jobs:
           uv run pytest src/backend/tests/unit/services/database/test_sqlite_to_postgres.py -x -v
 
   background-real-service:
-    name: Background Execution Real-Service Tests (real Postgres + Redis)
+    name: Background Execution Real-Service Tests (real Postgres)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     services:
       postgres:
@@ -121,15 +134,6 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd="pg_isready -U langflow"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-      redis:
-        image: redis:7
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd="redis-cli ping"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
@@ -157,9 +161,15 @@ jobs:
       - name: Run real-service tests
         env:
           LANGFLOW_TEST_DATABASE_URI: "postgresql://langflow:langflow@localhost:5432/langflow"  # pragma: allowlist secret
-          LANGFLOW_TEST_REDIS_URL: "redis://localhost:6379/0"
+          # Headroom over the suite's default 90s/120s watchdogs: these tests run
+          # real sweeps and restarts against the service Postgres, and contended
+          # shared runners have twice pushed a locally-seconds test past 90s.
+          LANGFLOW_TEST_HARD_TIMEOUT: "200"
         run: |
-          uv run pytest src/backend/tests/unit/background_execution -m real_services -x -v
+          uv run pytest \
+            src/backend/tests/unit/background_execution \
+            src/backend/tests/unit/services/background_execution \
+            -m real_services -x -v --timeout=180
 
   validate-migration:
     name: Migration Pattern Validation

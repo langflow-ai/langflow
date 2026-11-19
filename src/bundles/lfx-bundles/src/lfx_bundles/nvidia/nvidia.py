@@ -23,31 +23,16 @@ _REDIRECT_POLICY_INSTALLED = "_lfx_redirect_policy_installed"
 
 
 def _install_redirect_policy() -> None:
-    """Make every NVIDIA SDK session refuse redirects, before the SDK issues its first request.
+    """Protect both SDK clients before ChatNVIDIA can discover models or send prompts.
 
-    Installed on the ``_NVIDIAClient`` class rather than on a constructed model, because a
-    hook applied to the returned object is already too late: ``ChatNVIDIA(base_url=..., ...)``
-    resolves ``available_models`` *during* construction whenever no model name is supplied, so
-    the ``/v1/models`` discovery request has been sent -- and may have followed a redirect to a
-    host the endpoint guard never saw -- before the caller gets the object back.
+    The pinned SDK builds separate sync and async clients. The base class owns the
+    requests session factory; the async subclass owns the aiohttp factory. Harden both
+    before ChatNVIDIA constructs them, since its sync-client finalization can discover
+    models before ChatNVIDIA returns. Seed the session fields before each constructor
+    runs as well, preserving the SDK factories' TLS and connector configuration.
 
-    Two seams, because the SDK uses two:
-
-    * ``_create_session`` / ``_create_async_session`` are wrapped, so every request issued
-      after construction is redirect-refusing. The async one matters on its own: ``_agenerate``
-      and ``_astream`` go through ``get_async_session_fn`` (``aiohttp``), which a sync-only
-      hook leaves untouched, and an unfollowed-but-unblocked redirect there forwards the
-      prompt body to the redirect target.
-    * ``__init__`` is wrapped to pass those same wrapped creators as the ``get_session_fn`` /
-      ``get_async_session_fn`` field values. The SDK only assigns them on its *last* line, so
-      until then the fields hold their plain ``requests.Session`` / ``aiohttp.ClientSession``
-      defaults -- which is exactly what constructor-time discovery would have used. Passing
-      the bound creators in preserves the SDK's own TLS (``verify_ssl``) and connector setup;
-      the only difference from what it assigns later is the redirect refusal.
-
-    Fails closed. These attributes are private to the pinned ``langchain-nvidia-ai-endpoints``,
-    so a future release may move them; this raises rather than quietly running a client that
-    can follow a redirect with the operator's key attached.
+    These SDK attributes are private, so validate both clients before changing either
+    one and refuse to build if a future SDK moves a required factory.
     """
     try:
         from langchain_nvidia_ai_endpoints import _common
@@ -55,48 +40,54 @@ def _install_redirect_policy() -> None:
         msg = "Please install langchain-nvidia-ai-endpoints to use the NVIDIA model."
         raise ImportError(msg) from e
 
-    client_cls = getattr(_common, "_NVIDIAClient", None)
-    if client_cls is None or getattr(client_cls, _REDIRECT_POLICY_INSTALLED, False):
+    client_specs = (
+        ("_NVIDIABaseClient", "_create_session", "get_session_fn", refuse_redirects),
+        ("_NVIDIAAsyncClient", "_create_async_session", "get_async_session_fn", refuse_aiohttp_redirects),
+    )
+    clients = []
+    for class_name, factory_name, field_name, protect_session in client_specs:
+        client_cls = getattr(_common, class_name, None)
         if client_cls is None:
             msg = (
                 "Refusing to build an NVIDIA client: langchain-nvidia-ai-endpoints no longer "
-                "exposes '_NVIDIAClient', so redirect following cannot be disabled and a "
+                f"exposes '{class_name}', so redirect following cannot be disabled and a "
                 "redirect from the endpoint could forward the API key and prompt to an "
                 "unvalidated destination."
             )
             raise ValueError(msg)
-        return
+        if not all(callable(getattr(client_cls, name, None)) for name in ("__init__", factory_name)):
+            msg = (
+                "Refusing to build an NVIDIA client: langchain-nvidia-ai-endpoints no longer "
+                "exposes its session factories, so redirect following cannot be disabled and a "
+                "redirect from the endpoint could forward the API key and prompt to an "
+                "unvalidated destination."
+            )
+            raise ValueError(msg)
+        clients.append((client_cls, factory_name, field_name, protect_session))
 
-    original_init = getattr(client_cls, "__init__", None)
-    original_create_session = getattr(client_cls, "_create_session", None)
-    original_create_async_session = getattr(client_cls, "_create_async_session", None)
-    if not all(callable(attr) for attr in (original_init, original_create_session, original_create_async_session)):
-        msg = (
-            "Refusing to build an NVIDIA client: langchain-nvidia-ai-endpoints no longer "
-            "exposes its session factories, so redirect following cannot be disabled and a "
-            "redirect from the endpoint could forward the API key and prompt to an "
-            "unvalidated destination."
-        )
-        raise ValueError(msg)
+    def install_client_policy(client_cls: Any, factory_name: str, field_name: str, protect_session: Any) -> None:
+        # An inherited base-class marker must not skip the async subclass's factory.
+        """Wrap each SDK client once with its own redirect protection."""
+        if client_cls.__dict__.get(_REDIRECT_POLICY_INSTALLED, False):
+            return
+        original_init = client_cls.__init__
+        original_create_session = getattr(client_cls, factory_name)
 
-    def create_session(self: Any) -> Any:
-        return refuse_redirects(original_create_session(self))
+        def create_session(self: Any) -> Any:
+            """Protect the session returned by the original SDK factory."""
+            return protect_session(original_create_session(self))
 
-    def create_async_session(self: Any) -> Any:
-        return refuse_aiohttp_redirects(original_create_async_session(self))
+        def guarded_init(self: Any, **kwargs: Any) -> None:
+            """Provide the protected factory before constructor-time model discovery."""
+            kwargs.setdefault(field_name, getattr(self, factory_name))
+            original_init(self, **kwargs)
 
-    def guarded_init(self: Any, **kwargs: Any) -> None:
-        # Seed the declared fields the constructor reads before it reaches its own
-        # assignment, so constructor-time model discovery cannot follow a redirect.
-        kwargs.setdefault("get_session_fn", self._create_session)
-        kwargs.setdefault("get_async_session_fn", self._create_async_session)
-        original_init(self, **kwargs)
+        setattr(client_cls, factory_name, create_session)
+        client_cls.__init__ = guarded_init
+        setattr(client_cls, _REDIRECT_POLICY_INSTALLED, True)
 
-    # The SDK's session factories are private; hardening them is the whole point here.
-    client_cls._create_session = create_session  # noqa: SLF001
-    client_cls._create_async_session = create_async_session  # noqa: SLF001
-    client_cls.__init__ = guarded_init
-    setattr(client_cls, _REDIRECT_POLICY_INSTALLED, True)
+    for client in clients:
+        install_client_policy(*client)
 
 
 class NVIDIAModelComponent(LCModelComponent):
@@ -171,6 +162,7 @@ class NVIDIAModelComponent(LCModelComponent):
         # Note: don't include the previous model, as it may not exist in available models from the new base url
         # The key sent below may resolve to the operator's environment-provisioned
         # credential; refuse to forward it to a tenant-chosen endpoint.
+        """List models only after validating credentials and protecting SDK redirects."""
         ensure_credential_endpoint_allowed(
             self.api_key or None,
             self.base_url,
@@ -193,8 +185,8 @@ class NVIDIAModelComponent(LCModelComponent):
         # it only rejected the same URLs sooner, with a weaker message and a second lookup.
         #
         # Residual: this is validate-then-connect, not connection-time pinning.
-        # langchain-nvidia-ai-endpoints ~=1.0 builds its own requests.Session in
-        # _NVIDIAClient._create_session, so there is no supported hook to dial a
+        # langchain-nvidia-ai-endpoints 1.5 builds its own requests.Session in
+        # _NVIDIABaseClient._create_session, so there is no supported hook to dial a
         # pre-resolved IP while keeping TLS SNI and certificate verification --
         # _install_redirect_policy below wraps that factory, which stops a redirect but does
         # not pin an address. A hostname whose DNS answer changes between this check and the

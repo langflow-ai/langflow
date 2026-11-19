@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 from langchain_core.documents import Document
 from lfx.log.logger import logger
 
-from langflow.api.utils.kb_helpers import KBAnalysisHelper, chunk_text_for_ingestion
+from langflow.api.utils.kb_helpers import KBAnalysisHelper, chunk_text_for_ingestion, stable_document_id
 
 if TYPE_CHECKING:
     import uuid
@@ -111,7 +111,13 @@ def build_documents_from_messages(
             # and the retrieval exact-match filter never falsely excludes them.
             if end_user_id:
                 metadata["end_user_id"] = end_user_id
-            docs.append(Document(page_content=chunk, metadata=metadata))
+            docs.append(
+                Document(
+                    id=stable_document_id("memory", flow_id, session_id, str(msg.id), i, chunk),
+                    page_content=chunk,
+                    metadata=metadata,
+                )
+            )
     return docs
 
 
@@ -165,7 +171,13 @@ def build_preprocessed_document(
         }
         if end_user_id:
             metadata["end_user_id"] = end_user_id
-        docs.append(Document(page_content=chunk, metadata=metadata))
+        docs.append(
+            Document(
+                id=stable_document_id("memory_preprocessed", flow_id, session_id, preproc_output_id, i, chunk),
+                page_content=chunk,
+                metadata=metadata,
+            )
+        )
     return docs
 
 

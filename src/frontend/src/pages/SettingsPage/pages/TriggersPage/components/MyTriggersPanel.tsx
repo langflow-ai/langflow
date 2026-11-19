@@ -1,9 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  filterTriggers,
-  type TriggerStateFilter,
-} from "@/components/core/triggers/helpers/filter-triggers";
+import { filterTriggers } from "@/components/core/triggers/helpers/filter-triggers";
 import { needsAttention } from "@/components/core/triggers/helpers/trigger-presentation";
 import type { TriggerUiAction } from "@/components/core/triggers/hooks/use-trigger-action-runner";
 import TriggerActionMenu from "@/components/core/triggers/TriggerActionMenu";
@@ -15,18 +12,21 @@ import {
 } from "@/controllers/API/queries/triggers";
 import TriggersListState from "./TriggersListState";
 import TriggersTable from "./TriggersTable";
-import TriggersToolbar from "./TriggersToolbar";
+import TriggersToolbar, { type TriggersFiltersProps } from "./TriggersToolbar";
 
-export interface MyTriggersPanelProps {
+export interface MyTriggersPanelProps extends TriggersFiltersProps {
   busyId: string | null;
   onAction: (trigger: TriggerRead, action: TriggerUiAction) => void;
 }
 
 /** B2: triggers on every flow the caller can read. */
-export function MyTriggersPanel({ busyId, onAction }: MyTriggersPanelProps) {
+export function MyTriggersPanel({
+  busyId,
+  onAction,
+  ...filters
+}: MyTriggersPanelProps) {
   const { t } = useTranslation();
-  const [search, setSearch] = useState("");
-  const [state, setState] = useState<TriggerStateFilter>("all");
+  const { search, state } = filters;
 
   const query = useTriggersQuery({}, { allPages: true });
   const connections = useGetConnections({});
@@ -46,10 +46,7 @@ export function MyTriggersPanel({ busyId, onAction }: MyTriggersPanelProps) {
   return (
     <div className="flex flex-col gap-4">
       <TriggersToolbar
-        search={search}
-        onSearchChange={setSearch}
-        state={state}
-        onStateChange={setState}
+        {...filters}
         attentionCount={triggers.filter(needsAttention).length}
         searchPlaceholderKey="triggers.search"
       />

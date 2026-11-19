@@ -18,7 +18,7 @@ from lfx.services.policy_bundle import PolicyBundleService, PolicyBundleSnapshot
 
 
 @pytest.mark.parametrize("model_ceiling", [frozenset(), frozenset({"openai"})])
-@pytest.mark.parametrize("integration_ceiling", [frozenset(), frozenset({"google"})])
+@pytest.mark.parametrize("integration_ceiling", [None, frozenset({"google"})])
 async def test_refresh_failure_invalidates_integration_allows(monkeypatch, model_ceiling, integration_ceiling):
     bundle = PolicyBundleService()
     bundle.publish(

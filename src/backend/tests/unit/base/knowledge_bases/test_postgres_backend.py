@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from lfx.base.knowledge_bases.backends import create_backend
+from lfx.base.knowledge_bases.backends.base import IngestedDocument
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -282,3 +283,112 @@ class TestPostgresEmbeddedDocumentsLive:
                 with contextlib.suppress(Exception):
                     await backend.delete_collection()
                 await backend.teardown()
+
+
+class TestPostgresJobReadsLive:
+    """Read one ingestion job's chunks, the path a deploy copy uses."""
+
+    @staticmethod
+    async def _seeded(tmp_path: Path):
+        backend = create_backend(
+            "postgres",
+            kb_name=f"kb_job_{uuid.uuid4().hex[:8]}",
+            kb_path=tmp_path,
+            backend_config={},
+            user_id=uuid.uuid4(),
+        )
+        docs = [
+            IngestedDocument(id=f"a-{i}", content=f"a {i}", metadata={"job_id": "job-a"}, embedding=[i / 10, 1.0])
+            for i in range(5)
+        ] + [
+            IngestedDocument(id=f"b-{i}", content=f"b {i}", metadata={"job_id": "job-b"}, embedding=[i / 10, 2.0])
+            for i in range(3)
+        ]
+        await backend.add_embedded_documents([*docs, IngestedDocument(id="c", content="old", embedding=[0.5, 3.0])])
+        return backend
+
+    @staticmethod
+    async def _read(backend, job_id, **kwargs):
+        return [doc async for batch in backend.iter_job_documents(job_id, **kwargs) for doc in batch]
+
+    async def test_two_jobs_read_back_apart_with_ids_and_vectors(self, tmp_path: Path) -> None:
+        _require_live_pgvector()
+        backend = await self._seeded(tmp_path)
+        try:
+            job_a = await self._read(backend, "job-a", batch_size=2)
+            assert [doc.id for doc in job_a] == [f"a-{i}" for i in range(5)]
+            assert job_a[3].embedding == pytest.approx([0.3, 1.0])
+            assert job_a[3].content == "a 3"
+            assert await backend.count_job("job-a") == 5
+            assert await backend.count_job("job-b") == 3
+            assert await backend.count_job("job-missing") == 0
+        finally:
+            await backend.delete_collection()
+            await backend.teardown()
+
+    async def test_resuming_returns_only_what_is_left(self, tmp_path: Path) -> None:
+        _require_live_pgvector()
+        backend = await self._seeded(tmp_path)
+        try:
+            rest = await self._read(backend, "job-a", after_id="a-2")
+            assert [doc.id for doc in rest] == ["a-3", "a-4"]
+        finally:
+            await backend.delete_collection()
+            await backend.teardown()
+
+    async def test_no_job_id_reads_every_chunk_including_unlabelled(self, tmp_path: Path) -> None:
+        _require_live_pgvector()
+        backend = await self._seeded(tmp_path)
+        try:
+            assert [doc.id for doc in await self._read(backend, None, after_id="b-2")] == ["c"]
+            assert len(await self._read(backend, None)) == 9
+        finally:
+            await backend.delete_collection()
+            await backend.teardown()
+
+    async def test_a_kb_with_no_table_has_no_job_chunks(self, tmp_path: Path) -> None:
+        _require_live_pgvector()
+        backend = create_backend(
+            "postgres",
+            kb_name=f"kb_job_{uuid.uuid4().hex[:8]}",
+            kb_path=tmp_path,
+            backend_config={},
+            user_id=uuid.uuid4(),
+        )
+        try:
+            assert await self._read(backend, "job-a") == []
+            assert await backend.count_job("job-a") == 0
+        finally:
+            await backend.teardown()
+
+    async def test_reading_one_job_uses_the_metadata_index(self, tmp_path: Path) -> None:
+        _require_live_pgvector()
+        from lfx.base.knowledge_bases.backends.postgres import _job_documents_sql
+        from sqlalchemy import text
+
+        backend = await self._seeded(tmp_path)
+        try:
+            # A large KB with one small job: the read must not scan every chunk.
+            await backend.add_embedded_documents(
+                [
+                    IngestedDocument(id=f"z-{i:05}", content="z", metadata={"job_id": f"job-{i}"}, embedding=[0.1, 0.2])
+                    for i in range(5000)
+                ]
+            )
+            engine = backend._ensure_async_engine()
+            async with engine.begin() as conn:
+                await conn.execute(text(f'ANALYZE "{backend.table_name}"'))
+                plan_rows = (
+                    (
+                        await conn.execute(
+                            text("EXPLAIN " + _job_documents_sql(backend.table_name, by_job=True, resume=True)),
+                            {"where": '{"job_id": "job-a"}', "after_id": "a-2"},
+                        )
+                    )
+                    .scalars()
+                    .all()
+                )
+            assert "_cmeta_gin" in "\n".join(plan_rows), plan_rows
+        finally:
+            await backend.delete_collection()
+            await backend.teardown()

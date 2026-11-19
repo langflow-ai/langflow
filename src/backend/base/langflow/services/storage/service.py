@@ -103,18 +103,36 @@ class StorageService(Service):
     async def save_file(self, flow_id: str, file_name: str, data: bytes, *, append: bool = False) -> None:
         raise NotImplementedError
 
+    async def save_upload_stream(self, flow_id: str, file_name: str, chunks: AsyncIterator[bytes]) -> int:
+        """Save an upload from a stream of chunks, replacing any file there, and return its size.
+
+        Holds one chunk in memory at a time, so a large upload does not need that much memory.
+        """
+        written = 0
+        append = False
+        async for chunk in chunks:
+            await self.save_file(flow_id, file_name, chunk, append=append)
+            append = True
+            written += len(chunk)
+        if not append:  # an empty upload is still a file
+            await self.save_file(flow_id, file_name, b"")
+        return written
+
     @abstractmethod
     async def get_file(self, flow_id: str, file_name: str) -> bytes:
         raise NotImplementedError
 
     @abstractmethod
-    def get_file_stream(self, flow_id: str, file_name: str, chunk_size: int = 8192) -> AsyncIterator[bytes]:
+    def get_file_stream(
+        self, flow_id: str, file_name: str, chunk_size: int = 8192, *, offset: int = 0
+    ) -> AsyncIterator[bytes]:
         """Retrieve a file as a stream of chunks.
 
         Args:
             flow_id: The flow/user identifier for namespacing
             file_name: The name of the file to retrieve
             chunk_size: Size of chunks to yield (default: 8192 bytes)
+            offset: Where in the file to start, without reading what comes before it
 
         Yields:
             bytes: Chunks of the file content

@@ -22,6 +22,8 @@ import sqlalchemy as sa
 from cryptography.fernet import InvalidToken
 from sqlmodel import func, select
 
+from langflow.services.database.revision import classify_revisions, script_directory
+
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
     from uuid import UUID
@@ -140,6 +142,15 @@ async def check_schema(session: AsyncSession) -> CheckResult:
         )
     if revisions == heads:
         return CheckResult("schema", "ok", f"database at revision {', '.join(sorted(revisions))}")
+    state = classify_revisions(revisions, script_directory())
+    if state.kind == "unknown":
+        return CheckResult("schema", "fail", state.message)
+    if state.kind == "legacy":
+        return CheckResult(
+            "schema",
+            "fail",
+            f"{state.message}. Back up the database, start this Langflow once to migrate it, then run the check again",
+        )
     found = ", ".join(sorted(revisions)) or "no recorded revision"
     return CheckResult(
         "schema",
@@ -165,20 +176,6 @@ async def recorded_revisions(session: AsyncSession) -> set[str]:
     if not await connection.run_sync(lambda sync: sa.inspect(sync).has_table("alembic_version")):
         return set()
     return {row[0] for row in await session.exec(sa.text("SELECT version_num FROM alembic_version"))}
-
-
-def script_directory():
-    """This Langflow's migration scripts, to read the revision it expects."""
-    import pathlib
-
-    from alembic.config import Config
-    from alembic.script import ScriptDirectory
-
-    import langflow
-
-    config = Config()
-    config.set_main_option("script_location", str(pathlib.Path(langflow.__file__).parent / "alembic"))
-    return ScriptDirectory.from_config(config)
 
 
 def _result(name: str, problems: list[str], ok_summary: str, fail_summary: str) -> CheckResult:

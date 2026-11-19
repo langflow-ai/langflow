@@ -115,6 +115,18 @@ describe("SIDEBAR_BUNDLES", () => {
     );
   });
 
+  it("classifies Olostep as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "Olostep",
+          icon: "Olostep",
+          name: "olostep",
+        }),
+      ]),
+    );
+  });
+
   it("classifies bhived as a sidebar bundle", () => {
     expect(SIDEBAR_BUNDLES).toEqual(
       expect.arrayContaining([
@@ -125,5 +137,69 @@ describe("SIDEBAR_BUNDLES", () => {
         }),
       ]),
     );
+  });
+});
+
+it("uses the Salesforce logo for its integration palette group", () => {
+  expect(SIDEBAR_BUNDLES).toContainEqual({
+    display_name: "Salesforce",
+    name: "salesforce",
+    icon: "Salesforce",
+  });
+});
+
+it("uses the WhatsApp logo for its integration palette group", () => {
+  expect(SIDEBAR_BUNDLES).toContainEqual({
+    display_name: "WhatsApp",
+    name: "whatsapp",
+    icon: "WhatsApp",
+  });
+});
+
+it("uses the GitLab logo for its integration palette group", () => {
+  expect(SIDEBAR_BUNDLES).toContainEqual({
+    display_name: "GitLab",
+    name: "gitlab",
+    icon: "Gitlab",
+  });
+});
+
+it("uses the Confluence logo for its integration palette group", () => {
+  expect(SIDEBAR_BUNDLES).toContainEqual({
+    display_name: "Confluence",
+    name: "confluence_integrations",
+    icon: "Confluence",
+  });
+});
+
+it("uses the ServiceNow logo for its integration palette group", () => {
+  expect(SIDEBAR_BUNDLES).toContainEqual({
+    display_name: "ServiceNow",
+    name: "servicenow",
+    icon: "ServiceNow",
+  });
+});
+
+it("uses the Telegram logo for its integration palette group", () => {
+  expect(SIDEBAR_BUNDLES).toContainEqual({
+    display_name: "Telegram",
+    name: "telegram",
+    icon: "Telegram",
+  });
+});
+
+it("uses the Discord logo for its integration palette group", () => {
+  expect(SIDEBAR_BUNDLES).toContainEqual({
+    display_name: "Discord",
+    name: "discord",
+    icon: "discord",
+  });
+});
+
+it("classifies SocialScrape as a sidebar bundle", () => {
+  expect(SIDEBAR_BUNDLES).toContainEqual({
+    display_name: "SocialScrape",
+    name: "socialscrape",
+    icon: "Share2",
   });
 });

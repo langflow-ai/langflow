@@ -90,12 +90,14 @@ class TestEventManagerPropagation:
         try:
             mock_event_manager = MagicMock()
             seen: list = []
+            seen_user_ids: list = []
 
             class _Recorder(Executor):
                 kind = "in-process"
 
                 async def execute(self, unit):
                     seen.append(unit.runtime_options.get("event_manager"))
+                    seen_user_ids.append(unit.runtime_options.get("user_id"))
                     yield RunComplete(outputs=[])
 
             registry = ExecutorRegistry()
@@ -120,12 +122,30 @@ class TestEventManagerPropagation:
                 start_edge=MagicMock(target_handle=MagicMock(field_name="data")),
                 end_vertex_id="vertex1",
                 event_manager=mock_event_manager,
+                user_id="caller",
             )
 
             assert len(seen) == 1
             assert seen[0] is mock_event_manager
+            assert seen_user_ids == ["caller"]
         finally:
             reset_default_coordinator()
+
+    @pytest.mark.asyncio
+    async def test_loop_body_receives_component_caller_instead_of_graph_owner(self):
+        loop = LoopComponent(_user_id="caller")
+        loop._vertex = MagicMock()
+        loop._vertex.graph.user_id = "stale-user"
+        loop._vertex.outgoing_edges = []
+        loop._vertex.incoming_edges = []
+
+        with (
+            patch.object(loop, "get_loop_body_vertices", return_value=set()),
+            patch("lfx.components.flow_controls.loop.execute_loop_body", new_callable=AsyncMock) as execute,
+        ):
+            await loop.execute_loop_body([])
+
+        assert execute.call_args.kwargs["user_id"] == "caller"
 
     @pytest.mark.asyncio
     async def test_event_manager_passed_for_each_iteration(self):

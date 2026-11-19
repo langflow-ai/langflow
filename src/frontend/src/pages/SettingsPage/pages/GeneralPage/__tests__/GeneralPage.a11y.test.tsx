@@ -3,6 +3,9 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { AuthContext } from "@/contexts/authContext";
+import { useGetProfilePicturesQuery } from "@/controllers/API/queries/files";
+import CustomSettingsGeneralSection from "@/customization/components/custom-settings-general-section";
+import CustomSettingsProfilePictureFormGate from "@/customization/components/custom-settings-profile-picture-form-gate";
 import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import type { AuthContextType } from "@/types/contexts/auth";
@@ -44,12 +47,33 @@ const PROFILE_PICTURES = {
 };
 
 jest.mock("@/controllers/API/queries/files", () => ({
-  useGetProfilePicturesQuery: () => ({
+  useGetProfilePicturesQuery: jest.fn(() => ({
     isLoading: false,
     isFetching: false,
     data: PROFILE_PICTURES,
-  }),
+  })),
 }));
+
+jest.mock("@/customization/components/custom-settings-general-section", () => ({
+  __esModule: true,
+  default: jest.fn(
+    jest.requireActual(
+      "@/customization/components/custom-settings-general-section",
+    ).default,
+  ),
+}));
+
+jest.mock(
+  "@/customization/components/custom-settings-profile-picture-form-gate",
+  () => ({
+    __esModule: true,
+    default: jest.fn(
+      jest.requireActual(
+        "@/customization/components/custom-settings-profile-picture-form-gate",
+      ).default,
+    ),
+  }),
+);
 
 jest.mock(
   "@/pages/SettingsPage/pages/GeneralPage/components/ProfilePictureForm/components/profilePictureChooserComponent/hooks/use-preload-images",
@@ -118,6 +142,20 @@ describe("GeneralPage accessibility", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    jest
+      .mocked(CustomSettingsGeneralSection)
+      .mockImplementation(
+        jest.requireActual(
+          "@/customization/components/custom-settings-general-section",
+        ).default,
+      );
+    jest
+      .mocked(CustomSettingsProfilePictureFormGate)
+      .mockImplementation(
+        jest.requireActual(
+          "@/customization/components/custom-settings-profile-picture-form-gate",
+        ).default,
+      );
     useAlertStore.setState({
       notificationList: [],
       tempNotificationList: [],
@@ -162,6 +200,41 @@ describe("GeneralPage accessibility", () => {
     expect(
       screen.getByRole("form", { name: "Profile Picture" }),
     ).toBeInTheDocument();
+  });
+
+  it("should render a custom General section alongside the default settings", () => {
+    jest
+      .mocked(CustomSettingsGeneralSection)
+      .mockImplementation(() => (
+        <section aria-label="Connected accounts">Account connections</section>
+      ));
+
+    renderGeneralPage();
+
+    expect(
+      screen.getByRole("region", { name: "Connected accounts" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("form", { name: "Password" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("form", { name: "Profile Picture" }),
+    ).toBeInTheDocument();
+  });
+
+  it("should skip the profile picture gallery request when the custom gate hides it", () => {
+    jest
+      .mocked(CustomSettingsProfilePictureFormGate)
+      .mockImplementation(() => null);
+
+    renderGeneralPage();
+
+    expect(
+      screen.queryByRole("form", { name: "Profile Picture" }),
+    ).not.toBeInTheDocument();
+    expect(useGetProfilePicturesQuery).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("combobox", { name: "Select language" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("form", { name: "Password" })).toBeInTheDocument();
   });
 
   it("should_have_no_axe_violations_with_the_language_popover_open", async () => {

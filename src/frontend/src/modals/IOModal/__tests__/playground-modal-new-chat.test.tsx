@@ -215,6 +215,7 @@ function receiveMessage(sessionId: string) {
 describe("IOModal (playground) new chat", () => {
   afterEach(() => {
     flowState.newChatOnPlayground = false;
+    flowState.isBuilding = false;
     act(() => useMessagesStore.getState().setMessages([]));
     sessionsQueryResult.data = refetchedSessions;
     sessionsQueryResult.refetch.mockClear();
@@ -248,6 +249,29 @@ describe("IOModal (playground) new chat", () => {
       ),
     );
     expect(sessionsQueryResult.refetch).toHaveBeenCalled();
+  });
+
+  it("selects the new chat on its first message while the flow still builds", async () => {
+    renderModal(true);
+    fireEvent.click(screen.getByRole("button", { name: "new chat" }));
+    const storedSessionId =
+      screen.getByTestId("send-session").textContent ?? "";
+    sessionsQueryResult.data = [
+      "test-flow-id",
+      storedSessionId,
+      ...refetchedSessions.slice(1),
+    ];
+
+    // The chat hides messages until a session is visible, so waiting for the
+    // build would leave the question blank for the whole run.
+    flowState.isBuilding = true;
+    receiveMessage(storedSessionId);
+
+    await waitFor(() =>
+      expect(screen.getByTestId("visible-session")).toHaveTextContent(
+        storedSessionId,
+      ),
+    );
   });
 
   it("keeps the new session unprefixed outside the playground page", () => {

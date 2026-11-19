@@ -69,6 +69,8 @@ export interface SpanNodeProps {
 
 export interface SpanDetailProps {
   span: Span | null;
+  /** The run summary aggregates every component, so it shows no single decision. */
+  isRunSummary?: boolean;
 }
 
 export interface TraceViewProps {

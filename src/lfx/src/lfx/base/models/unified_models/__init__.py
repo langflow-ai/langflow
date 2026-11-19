@@ -30,6 +30,7 @@ from .model_catalog import (
     get_embedding_model_options,
     get_language_model_options,
     get_unified_models_detailed,
+    is_decision_model_switched_off,
     normalize_model_names_to_dicts,
 )
 from .provider_queries import (
@@ -78,6 +79,7 @@ __all__ = [
     "get_provider_secret_variable_key",
     "get_unified_models_detailed",
     "handle_model_input_update",
+    "is_decision_model_switched_off",
     "is_known_model_provider",
     "is_required_provider_variable",
     "model_provider_metadata",

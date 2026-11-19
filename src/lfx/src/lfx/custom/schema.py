@@ -1,6 +1,16 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
+from typing_extensions import TypedDict
+
+
+class ComponentUpdateWarning(TypedDict):
+    code: Literal["generated_fields_not_restored"]
+    fields: list[str]
+    refresh_fields: list[str]
+    unverified: bool
+    inputs_unverified: bool
+    outputs_unverified: bool
 
 
 class ClassCodeDetails(BaseModel):

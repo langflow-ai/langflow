@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import {
   filterTriggers,
   providersOf,
-  type TriggerStateFilter,
 } from "@/components/core/triggers/helpers/filter-triggers";
 import { needsAttention } from "@/components/core/triggers/helpers/trigger-presentation";
 import { Button } from "@/components/ui/button";
@@ -19,17 +18,16 @@ import BulkTriggersDialog from "./BulkTriggersDialog";
 import OperatorRowMenu from "./OperatorRowMenu";
 import TriggersListState from "./TriggersListState";
 import TriggersTable from "./TriggersTable";
-import TriggersToolbar from "./TriggersToolbar";
+import TriggersToolbar, { type TriggersFiltersProps } from "./TriggersToolbar";
 
 const NO_CONNECTION_NAMES = new Map<string, string>();
 
 /** B3: every user's triggers, a provider filter, and bulk pause or resume. */
-export function OperatorTriggersPanel() {
+export function OperatorTriggersPanel(filters: TriggersFiltersProps) {
   const { t } = useTranslation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  const [search, setSearch] = useState("");
-  const [state, setState] = useState<TriggerStateFilter>("all");
+  const { search, state } = filters;
   const [provider, setProvider] = useState<string | undefined>();
   const [bulkAction, setBulkAction] = useState<TriggerBulkAction | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -88,10 +86,7 @@ export function OperatorTriggersPanel() {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <TriggersToolbar
-          search={search}
-          onSearchChange={setSearch}
-          state={state}
-          onStateChange={setState}
+          {...filters}
           attentionCount={triggers.filter(needsAttention).length}
           providers={providers}
           provider={provider}

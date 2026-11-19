@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any, Optional
 import orjson
 
 from lfx.constants import BASE_COMPONENTS_PATH
+from lfx.custom.class_cache import clear_component_class_cache
 from lfx.custom.utils import abuild_custom_components, create_component_template
 from lfx.extension import (
     SLOT_EXTRA,
@@ -84,6 +85,9 @@ class ComponentCache:
         # Collision-aware canonical registry identity lookup used by catalog
         # palette and runtime policy enforcement.
         self.component_identity_index: ComponentIdentityIndex | None = None
+        # The upgrade lookup belongs to an exact published registry object.
+        # Reloads publish a replacement, so readers rebuild lazily on identity change.
+        self.upgrade_registry: tuple[dict[str, Any], dict[str, dict]] | None = None
         # Registry publication and every process-wide derived lookup share one
         # lock. Hot reload builds templates outside the lock, then swaps the
         # registry and invalidates its derived indexes atomically.
@@ -114,6 +118,7 @@ def _post_reload_refresh_cache(record: BundleRecord) -> None:
     forward reference is fine; the hook is fired only after first cache
     build).
     """
+    clear_component_class_cache()
     refresh_bundle_cache_from_record(record)
 
 
@@ -873,8 +878,8 @@ def get_component_identity_index(
     return build_component_identity_index(all_types_dict)
 
 
-def _components_path_extension_paths(settings_service: "SettingsService") -> list[Path]:
-    """Inline-bundle parent paths derived from settings.components_path.
+def _components_path_extension_paths(components_path: list[str]) -> list[Path]:
+    """Inline-bundle parent paths derived from the components_path setting.
 
     Each entry in components_path is treated as a parent directory whose
     immediate subfolders are inline bundles at the @extra slot. The base
@@ -887,7 +892,7 @@ def _components_path_extension_paths(settings_service: "SettingsService") -> lis
     """
     base_resolved = _resolved_component_path(BASE_COMPONENTS_PATH)
     paths: list[Path] = []
-    for raw in settings_service.settings.components_path or []:
+    for raw in components_path or []:
         candidate = Path(raw)
         candidate_resolved = _resolved_component_path(candidate)
         if candidate_resolved == base_resolved:
@@ -1128,7 +1133,9 @@ def _resolve_bundle_shadowing(
 
 
 async def import_extension_components(
-    settings_service: "SettingsService",
+    settings_service: "SettingsService | None" = None,
+    *,
+    components_path: list[str] | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Build templates for every Component loaded via the Extension System.
 
@@ -1151,7 +1158,13 @@ async def import_extension_components(
 
     Components whose class fails to instantiate or template are skipped
     with a logged warning -- one bad bundle must not abort the cache build.
+
+    ``components_path`` replaces ``settings_service.settings.components_path``,
+    so a caller that must not build Langflow's settings (the upgrade check)
+    discovers the same bundles.
     """
+    if components_path is None:
+        components_path = settings_service.settings.components_path if settings_service else []
     extension_results = load_installed_extensions()
     # Seed-directory bundles are the second @official-slot production-install
     # source documented in deployment-extensions-production.mdx: a Docker
@@ -1190,7 +1203,7 @@ async def import_extension_components(
     # which silently fell back to legacy custom-component loading without
     # extension metadata.
     dev_results = load_dev_extensions()
-    inline_results = discover_inline_bundles(_components_path_extension_paths(settings_service))
+    inline_results = discover_inline_bundles(_components_path_extension_paths(components_path))
 
     # Resolve cross-source bundle-name shadowing in a single pass.  Discovery
     # surfaces five sources -- installed (pip) > seed (filesystem-staged) >
@@ -1329,6 +1342,7 @@ def _publish_bundle_cache(bundle: str, bundle_dict: dict[str, Any]) -> bool:
         component_cache.code_by_hash = None
         component_cache.type_to_code = None
         component_cache.component_identity_index = None
+        component_cache.upgrade_registry = None
         return True
 
 
@@ -1546,6 +1560,7 @@ async def _initialize_component_cache(
                     cache.pending_bundle_updates.clear()
                 else:
                     type_to_hash, all_hashes, code_by_hash, type_to_code, identity_index = lookups
+                    clear_component_class_cache()
                     cache.all_types_dict = merged_types
                     cache.all_types_ready = True
                     cache.type_to_current_hash = type_to_hash
@@ -1553,6 +1568,7 @@ async def _initialize_component_cache(
                     cache.code_by_hash = code_by_hash
                     cache.type_to_code = type_to_code
                     cache.component_identity_index = identity_index
+                    cache.upgrade_registry = None
                     cache.initialization_future = None
                     cache.initialization_task = None
                     initialization_future.set_result(merged_types)
@@ -1614,6 +1630,7 @@ async def get_and_cache_all_types_dict(
             cache.code_by_hash = None
             cache.type_to_code = None
             cache.component_identity_index = None
+            cache.upgrade_registry = None
             initialization_task = asyncio.create_task(
                 _initialize_component_cache(cache, settings_service, telemetry_service, initialization_future),
                 name="lfx-component-cache-initialization",
@@ -1793,14 +1810,11 @@ async def ensure_component_loaded(component_type: str, component_name: str, sett
         )
 
         if full_component:
-            # Replace the stub with the fully loaded component
-            registry[component_type][component_name] = full_component
-            # Remove lazy_loaded flag if it exists
-            if "lazy_loaded" in registry[component_type][component_name]:
-                del registry[component_type][component_name]["lazy_loaded"]
-
-            # Mark as fully loaded
-            component_cache.fully_loaded_components[component_key] = True
+            with component_cache.state_lock:
+                registry[component_type][component_name] = full_component
+                registry[component_type][component_name].pop("lazy_loaded", None)
+                component_cache.upgrade_registry = None
+                component_cache.fully_loaded_components[component_key] = True
             await logger.adebug(f"Component {component_type}:{component_name} fully loaded")
         else:
             await logger.awarning(f"Failed to fully load component {component_type}:{component_name}")

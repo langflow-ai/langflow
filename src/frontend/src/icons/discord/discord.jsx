@@ -4,6 +4,7 @@ const Icon = (props) => (
     viewBox="0 0 48 48"
     width="19px"
     height="19px"
+    {...props}
   >
     <path
       fill="#536dfe"

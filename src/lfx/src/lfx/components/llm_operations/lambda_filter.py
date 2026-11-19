@@ -263,7 +263,7 @@ class LambdaFilterComponent(Component):
             prompt = self._build_data_prompt(data)
 
         llm = get_llm(model=self.model, user_id=self.user_id, api_key=self.api_key)
-        response = await llm.ainvoke(prompt)
+        response = await llm.ainvoke(prompt, config={"callbacks": self.get_langchain_callbacks()})
         self._token_usage = extract_usage_from_message(response)
         response_text = response.content if hasattr(response, "content") else str(response)
 

@@ -33,6 +33,7 @@ from sqlmodel import select, update
 
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.user.model import User
+from langflow.services.flow_repair.retention import requires_reviewed_graph_save
 
 if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -100,6 +101,20 @@ def build_conflict_detail(
     }
 
 
+async def _require_repaired_flow_token(session: AsyncSession, db_flow: Flow, expected: UUID | None) -> None:
+    if (expected is None or db_flow.version_token is None) and await requires_reviewed_graph_save(session, db_flow.id):
+        raise HTTPException(
+            status_code=428,
+            detail={
+                "code": "flow_version_required",
+                "message": (
+                    "This flow was repaired. Reload it and send its current If-Match token before saving the graph."
+                ),
+                "flow_id": str(db_flow.id),
+            },
+        )
+
+
 async def ensure_version_precondition(
     session: AsyncSession,
     db_flow: Flow,
@@ -112,6 +127,7 @@ async def ensure_version_precondition(
     legacy row must not become unsaveable just because the client learned to
     send a precondition.
     """
+    await _require_repaired_flow_token(session, db_flow, expected)
     if expected is None or db_flow.version_token is None:
         return
     if db_flow.version_token == expected:
@@ -171,6 +187,7 @@ async def claim_version_token(
     Returns the newly claimed token, or None when there was nothing to claim
     (no precondition sent, or a legacy row that has no token to compare).
     """
+    await _require_repaired_flow_token(session, db_flow, expected)
     if expected is None or db_flow.version_token is None:
         return None
 

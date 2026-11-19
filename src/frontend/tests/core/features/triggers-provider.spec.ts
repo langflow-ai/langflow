@@ -43,7 +43,10 @@ test.describe("Provider trigger (mocked Slack)", () => {
       await openTriggersSettings(page);
       await page.getByTestId("triggers-search").fill("Older Gmail");
       await expect(page.getByTestId("trigger-row-older-google")).toBeVisible();
-      await page.getByRole("tab", { name: "All triggers" }).click();
+      await page.getByRole("combobox", { name: "Scope", exact: true }).click();
+      await page
+        .getByRole("option", { name: "All triggers", exact: true })
+        .click();
       await page.getByTestId("triggers-provider-filter").click();
       await page.getByRole("option", { name: "Google", exact: true }).click();
       await expect(page.getByTestId("trigger-row-older-google")).toBeVisible();
@@ -198,7 +201,10 @@ test.describe("Provider trigger (mocked Slack)", () => {
         ],
       });
       await openTriggersSettings(page);
-      await page.getByRole("tab", { name: "All triggers" }).click();
+      await page.getByRole("combobox", { name: "Scope", exact: true }).click();
+      await page
+        .getByRole("option", { name: "All triggers", exact: true })
+        .click();
       await expect(page.getByTestId("triggers-table-all")).toContainText("ana");
 
       // Bulk actions need a provider: nothing instance-wide by accident.

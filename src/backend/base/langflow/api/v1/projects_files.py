@@ -17,6 +17,7 @@ from pydantic import ValidationError
 from sqlmodel import select
 
 from langflow.api.utils import (
+    EMPTY_FILE_DETAIL,
     CurrentActiveUser,
     DbSession,
     build_content_disposition,
@@ -24,6 +25,7 @@ from langflow.api.utils import (
     strip_flow_secrets,
 )
 from langflow.api.utils.zip_utils import extract_flows_from_zip
+from langflow.api.v1.auth_helpers import get_default_project_auth_settings
 from langflow.api.v1.flow_validation import flow_validation_error
 from langflow.api.v1.flows import create_flows
 from langflow.api.v1.flows_helpers import _export_variable_names, _sanitize_flow_filename
@@ -137,7 +139,7 @@ async def upload_project_flows(
     contents = await file.read()
 
     if not contents:
-        raise HTTPException(status_code=400, detail="The uploaded file is empty")
+        raise HTTPException(status_code=400, detail=EMPTY_FILE_DETAIL)
 
     # Detect ZIP files and extract flow data
     if zipfile.is_zipfile(io.BytesIO(contents)):
@@ -211,12 +213,11 @@ async def upload_project_flows(
 
     settings_service = get_settings_service()
 
-    # If AUTO_LOGIN is false, automatically enable API key authentication
-    if not settings_service.auth_settings.AUTO_LOGIN and not new_project.auth_settings:
-        default_auth = {"auth_type": "apikey"}
+    default_auth = get_default_project_auth_settings(settings_service.auth_settings, current_user)
+    if default_auth["auth_type"] == "apikey" and not new_project.auth_settings:
         new_project.auth_settings = encrypt_auth_settings(default_auth)
         await logger.adebug(
-            "Auto-enabled API key authentication for uploaded project %s (%s) due to AUTO_LOGIN=false",
+            "Auto-enabled API key authentication for uploaded project %s (%s) to match MCP authentication requirements",
             new_project.name,
             new_project.id,
         )

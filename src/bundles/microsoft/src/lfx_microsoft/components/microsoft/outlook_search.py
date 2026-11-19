@@ -33,23 +33,27 @@ class OutlookSearchComponent(MicrosoftGraphComponent):
             name="search",
             display_name="Search",
             info="Free-text $search expression. Graph rejects $search combined with $filter.",
+            tool_mode=True,
         ),
         MessageTextInput(
             name="filter",
             display_name="Filter",
             info="OData $filter expression, for example isRead eq false.",
+            tool_mode=True,
         ),
         MessageTextInput(
             name="folder_id",
             display_name="Mail Folder ID",
             info="Restrict the search to one mailFolders/{id}. Defaults to the whole mailbox.",
             advanced=True,
+            tool_mode=True,
         ),
         IntInput(
             name="top",
             display_name="Result Budget",
             info="Stop after a complete page reaches this count; results can exceed it by part of a page.",
             value=DEFAULT_TOP,
+            tool_mode=True,
         ),
         MessageTextInput(
             name="select",
@@ -57,12 +61,15 @@ class OutlookSearchComponent(MicrosoftGraphComponent):
             info="Message properties to return.",
             is_list=True,
             advanced=True,
+            tool_mode=True,
+            value=[],
         ),
         BoolInput(
             name="include_body",
             display_name="Include Body",
             info="Return message bodies as plain text. Requires Mail.Read.",
             value=False,
+            tool_mode=True,
         ),
     ]
 

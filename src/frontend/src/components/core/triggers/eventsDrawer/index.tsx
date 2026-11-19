@@ -152,7 +152,7 @@ export function TriggerEventsDrawer({
               <div
                 role="group"
                 aria-label={t("triggers.events.filterLabel")}
-                className="flex gap-1 rounded-lg bg-muted p-1"
+                className="flex flex-wrap gap-1 rounded-lg bg-muted p-1"
               >
                 {TRIGGER_EVENT_FILTERS.map((option) => (
                   <button

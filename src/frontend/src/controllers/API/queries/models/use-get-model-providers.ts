@@ -23,6 +23,7 @@ export interface ModelProviderInfo {
   /** True when the model list is discovered from the provider's endpoint
    *  after credentials are configured (e.g. IBM WatsonX, OpenRouter, vLLM). */
   live_discovery?: boolean;
+  discovery_error?: string;
 }
 
 export interface ModelProviderWithStatus extends ModelProviderInfo {

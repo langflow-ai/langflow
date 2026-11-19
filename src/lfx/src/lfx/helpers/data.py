@@ -9,6 +9,7 @@ from langchain_core.documents import Document
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
+from lfx.serialization.constants import NUMPY_ENCODERS
 
 
 def docs_to_data(documents: list[Document]) -> list[Data]:
@@ -33,7 +34,7 @@ def clean_string(s):
 def _serialize_data(data: Data) -> str:
     """Serialize Data object to JSON string."""
     # Convert data.data to JSON-serializable format
-    serializable_data = jsonable_encoder(data.data)
+    serializable_data = jsonable_encoder(data.data, custom_encoder=NUMPY_ENCODERS)
     # Serialize with orjson, enabling pretty printing with indentation
     json_bytes = orjson.dumps(serializable_data, option=orjson.OPT_INDENT_2)
     # Convert bytes to string and wrap in Markdown code blocks
@@ -66,7 +67,8 @@ def safe_convert(data: Any, *, clean_data: bool = False) -> str:
             # Replace pipe characters to avoid markdown table issues
             processed_data = data.replace(r"\|", r"\\|", regex=True)
 
-            return processed_data.to_markdown(index=False)
+            # Preserve integer cells when pandas exposes mixed numeric rows to tabulate.
+            return processed_data.astype(object).to_markdown(index=False)
 
         return clean_string(str(data))
     except (ValueError, TypeError, AttributeError) as e:

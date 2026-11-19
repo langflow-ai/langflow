@@ -149,6 +149,7 @@ class AuthorizationMutationKind(str, Enum):
     """Canonical policy-relevant lifecycle mutations emitted by Langflow."""
 
     USER_CREATED = "user.created"
+    USER_ACTIVATED = "user.activated"
     USER_DISABLED = "user.disabled"
     USER_SUPERUSER_DEMOTED = "user.superuser_demoted"
     USER_DELETED = "user.deleted"
@@ -164,6 +165,7 @@ class AuthorizationMutationKind(str, Enum):
     TEAM_MEMBER_REMOVED = "team_member.removed"
     API_KEY_CREATED = "api_key.created"  # pragma: allowlist secret
     API_KEY_DELETED = "api_key.deleted"  # pragma: allowlist secret
+    API_KEY_PERMISSIONS_UPDATED = "api_key.permissions_updated"  # pragma: allowlist secret
 
 
 class DirectoryMembershipClaimState(str, Enum):
@@ -315,6 +317,8 @@ class ResourceVisibilityScope:
     excluded_global_project_ids: tuple[UUID, ...] = ()
     exclude_personal_projects: bool = False
     excluded_resource_ids: tuple[UUID, ...] = ()
+    # Each additional scope is a ceiling over both ownership and grants.
+    intersections: tuple[ResourceVisibilityScope, ...] = ()
 
     @property
     def has_cross_user_access(self) -> bool:
@@ -355,6 +359,17 @@ class BaseAuthorizationService(Service, abc.ABC):
     async def supports_api_key_scopes(self) -> bool:
         """Return True when API-key requests should be enforced even for owners."""
         return self.SUPPORTS_API_KEY_SCOPES
+
+    async def validate_api_key_permissions(self, *, session: Any, user_id: UUID, permissions: dict[str, Any]) -> None:
+        """Validate a proposed key ceiling against the owner's selectable resources."""
+        _ = (session, user_id, permissions)
+        msg = "Scoped API keys require a supporting authorization service"
+        raise PermissionError(msg)
+
+    async def get_api_key_permission_options(self, *, user_id: UUID) -> dict[str, Any]:
+        """Return the owner's selectable role templates and permission vocabulary."""
+        _ = user_id
+        return {"supported": False, "roles": [], "resource_actions": {}, "scope_types": {}}
 
     async def supports_incomplete_directory_membership_snapshots(self) -> bool:
         """Return whether this service accepts sanitized incomplete claim states."""
@@ -584,6 +599,30 @@ class BaseAuthorizationService(Service, abc.ABC):
         """Remove policy derived from a deleted share snapshot. Plugin override; OSS no-op."""
         _ = snapshot
 
+    async def validate_share_write(
+        self,
+        *,
+        actor: Any,
+        resource_type: str,
+        resource_id: _UUID,
+        owner_id: _UUID | None,
+        scope: str,
+        target_id: _UUID | None,
+        permission_level: str,
+        operation: str,
+    ) -> None:
+        """Veto a share before it is written. Plugin override; OSS no-op.
+
+        Called by ``POST /authz/shares`` (``operation="create"``) and ``PATCH /authz/shares/{id}``
+        (``operation="update"``) after the caller's own permission checks and before the row is written, for
+        every caller including a superuser and the resource owner (the owner skips ``enforce``, so this is the
+        only place a plugin sees an owner's share). ``owner_id`` is the resource's owner; for an update,
+        ``scope`` and ``target_id`` are those of the stored share and ``permission_level`` is the new level.
+        Raise ``HTTPException(403)`` to refuse: the route answers 404 like any other refused share. Any other
+        exception fails the request; it is never read as permission. Not called when a share is deleted.
+        """
+        _ = (actor, resource_type, resource_id, owner_id, scope, target_id, permission_level, operation)
+
     def stage_audit_events(
         self,
         *,
@@ -666,6 +705,7 @@ class BaseAuthorizationService(Service, abc.ABC):
         }
         user_kinds = {
             AuthorizationMutationKind.USER_CREATED,
+            AuthorizationMutationKind.USER_ACTIVATED,
             AuthorizationMutationKind.USER_DISABLED,
             AuthorizationMutationKind.USER_SUPERUSER_DEMOTED,
             AuthorizationMutationKind.USER_DELETED,
@@ -675,6 +715,7 @@ class BaseAuthorizationService(Service, abc.ABC):
             AuthorizationMutationKind.TEAM_MEMBER_REMOVED,
             AuthorizationMutationKind.API_KEY_CREATED,
             AuthorizationMutationKind.API_KEY_DELETED,
+            AuthorizationMutationKind.API_KEY_PERMISSIONS_UPDATED,
         }
 
         if event.kind is AuthorizationMutationKind.ROLE_CREATED:

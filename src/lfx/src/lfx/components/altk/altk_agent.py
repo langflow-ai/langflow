@@ -5,6 +5,7 @@ from lfx.base.models.model_input_constants import MODEL_PROVIDERS_DICT, MODELS_M
 from lfx.components.models_and_agents.memory import MemoryComponent
 from lfx.inputs.inputs import BoolInput
 from lfx.io import DropdownInput, IntInput, Output
+from lfx.upgrade.retired import ALTK_REPLACEMENT, ALTK_RETIRED_IN
 
 
 def set_advanced_true(component_input):
@@ -78,7 +79,8 @@ class ALTKAgentComponent(ALTKBaseAgentComponent):
     beta = True
     name = "ALTK Agent"
     legacy = True
-    replacement = ["models_and_agents.Agent"]
+    retired_in = ALTK_RETIRED_IN
+    replacement = list(ALTK_REPLACEMENT)
 
     memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]
 

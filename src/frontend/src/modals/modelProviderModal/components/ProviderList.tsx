@@ -54,6 +54,7 @@ const ProviderList = ({
             provider?.models,
             modelType,
             provider?.live_discovery,
+            provider.provider,
           ),
       )
       .map((provider) => {
@@ -71,6 +72,7 @@ const ProviderList = ({
           models: matchingModels,
           api_docs_url: provider.api_docs_url,
           live_discovery: provider.live_discovery,
+          discovery_error: provider.discovery_error,
         };
       });
   }, [rawProviders, modelType, trimmedQuery]);

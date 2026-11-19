@@ -648,6 +648,37 @@ async def test_get_variable_fails_closed_for_domain_only_runtime_scope(service, 
     authz.list_visible_resource_ids.assert_not_awaited()
 
 
+@pytest.mark.parametrize("global_grant", [False, True])
+@pytest.mark.parametrize("allow_one", [False, True])
+async def test_get_variable_intersects_shared_runtime_visibility(
+    service, session: AsyncSession, global_grant, allow_one
+):
+    actor_id = uuid4()
+    allowed = await service.create_variable(
+        uuid4(), "SCOPED_SHARED_VALUE", "allowed-value", type_=GENERIC_TYPE, session=session
+    )
+    denied = await service.create_variable(
+        uuid4(), "SCOPED_SHARED_VALUE", "denied-value", type_=GENERIC_TYPE, session=session
+    )
+    authz = MagicMock()
+    authz.is_enabled = AsyncMock(return_value=True)
+    authz.supports_cross_user_fetch = AsyncMock(return_value=True)
+    authz.get_resource_visibility = AsyncMock(
+        return_value=ResourceVisibilityScope(
+            all_resources=global_grant,
+            resource_ids=() if global_grant else (allowed.id, denied.id),
+            intersections=(ResourceVisibilityScope(resource_ids=(allowed.id,) if allow_one else ()),),
+        )
+    )
+
+    with patch("langflow.services.deps.get_authorization_service", return_value=authz):
+        if allow_one:
+            assert await service.get_variable(actor_id, "SCOPED_SHARED_VALUE", "", session=session) == "allowed-value"
+        else:
+            with pytest.raises(VariableNotFoundError, match="SCOPED_SHARED_VALUE variable not found"):
+                await service.get_variable(actor_id, "SCOPED_SHARED_VALUE", "", session=session)
+
+
 async def test_get_all_redacts_shared_generic_values(service, session: AsyncSession):
     owner_id = uuid4()
     actor_id = uuid4()
