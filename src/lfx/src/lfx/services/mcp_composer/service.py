@@ -1446,23 +1446,25 @@ class MCPComposerService(Service):
         stdout_path: Path | None = None
         stderr_path: Path | None = None
 
-        if platform.system() == "Windows":
-            # Create temp files for stdout/stderr on Windows to avoid pipe deadlocks
-            # Note: We intentionally don't use context manager as we need files to persist
-            # for the subprocess and be cleaned up manually later
-            stdout_file = tempfile.NamedTemporaryFile(  # noqa: SIM115
-                mode="w+b", delete=False, prefix=f"mcp_composer_{project_id}_stdout_", suffix=".log"
-            )
-            stderr_file = tempfile.NamedTemporaryFile(  # noqa: SIM115
-                mode="w+b", delete=False, prefix=f"mcp_composer_{project_id}_stderr_", suffix=".log"
-            )
-            stdout_handle = stdout_file
-            stderr_handle = stderr_file
-            stdout_path = Path(stdout_file.name)
-            stderr_path = Path(stderr_file.name)
-            await logger.adebug(f"Using temp files for MCP Composer logs: stdout={stdout_path}, stderr={stderr_path}")
-
         try:
+            if platform.system() == "Windows":
+                # Create temp files for stdout/stderr on Windows to avoid pipe deadlocks
+                # Note: We intentionally don't use context manager as we need files to persist
+                # for the subprocess and be cleaned up manually later
+                stdout_file = tempfile.NamedTemporaryFile(  # noqa: SIM115
+                    mode="w+b", delete=False, prefix=f"mcp_composer_{project_id}_stdout_", suffix=".log"
+                )
+                stderr_file = tempfile.NamedTemporaryFile(  # noqa: SIM115
+                    mode="w+b", delete=False, prefix=f"mcp_composer_{project_id}_stderr_", suffix=".log"
+                )
+                stdout_handle = stdout_file
+                stderr_handle = stderr_file
+                stdout_path = Path(stdout_file.name)
+                stderr_path = Path(stderr_file.name)
+                await logger.adebug(
+                    f"Using temp files for MCP Composer logs: stdout={stdout_path}, stderr={stderr_path}"
+                )
+
             process = subprocess.Popen(cmd, env=env, stdout=stdout_handle, stderr=stderr_handle)  # noqa: ASYNC220, S603
 
             # Monitor the process startup with multiple checks
@@ -1592,6 +1594,15 @@ class MCPComposerService(Service):
                     backend_auth_config_path.unlink(missing_ok=True)
                 except Exception as e:  # noqa: BLE001
                     await logger.adebug(f"Error cleaning up MCP Composer config file: {e}")
+            # Close before unlink: Windows cannot delete a file that is still open.
+            for temp_file in (stdout_file, stderr_file):
+                if temp_file is None:
+                    continue
+                try:
+                    temp_file.close()
+                    Path(temp_file.name).unlink(missing_ok=True)
+                except Exception as e:  # noqa: BLE001
+                    await logger.adebug(f"Error cleaning up MCP Composer temp log {temp_file.name}: {e}")
 
     @require_composer_enabled
     def get_project_composer_port(self, project_id: str) -> int | None:
