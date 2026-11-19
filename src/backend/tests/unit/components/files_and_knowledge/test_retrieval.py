@@ -470,13 +470,18 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
             patch(
                 "langflow.api.utils.kb_helpers.backend_for_name",
                 return_value=backend_instance,
-            ),
+            ) as open_backend,
+            patch.object(component, "_find_record", wraps=component._find_record) as lookup,
         ):
             mock_session_scope.return_value.__aenter__ = AsyncMock(return_value=AsyncMock())
             mock_session_scope.return_value.__aexit__ = AsyncMock(return_value=False)
 
             result = await component.retrieve_data()
 
+        lookup.assert_awaited_once_with()
+        authorized_record = open_backend.await_args.kwargs["expected_record"]
+        assert authorized_record.user_id == active_user.id
+        assert authorized_record.name == default_kwargs["knowledge_base"]
         # similarity_search was called with_scores=True because
         # search_query is truthy.
         call_kwargs = backend_instance.similarity_search.await_args.kwargs

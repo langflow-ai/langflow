@@ -5,7 +5,7 @@ import type {
   JobUsage,
   ReportFlow,
 } from "@/controllers/API/queries/upgrade-reports";
-import { reportTime } from "./format";
+import { reportReason, reportTime } from "./format";
 import { usageReasonKey } from "./reasons";
 
 export function Usage({ usage }: { usage?: JobUsage }) {
@@ -118,7 +118,7 @@ export default function FlowList({
       <h3 id="upgrade-flows-title" className="font-medium">
         {t("settings.upgrade.flows")}
       </h3>
-      <div className="flex flex-wrap items-end gap-3">
+      <div className="grid min-w-0 grid-cols-1 items-end gap-3 rounded-lg bg-muted/50 p-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <label className="flex min-w-0 flex-1 flex-col gap-1">
           {t("settings.upgrade.search")}
           <input
@@ -130,7 +130,7 @@ export default function FlowList({
             }}
           />
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="flex min-w-0 flex-col gap-1">
           {t("settings.upgrade.status")}
           <select
             className="rounded border border-control bg-background p-2"
@@ -147,7 +147,7 @@ export default function FlowList({
             ))}
           </select>
         </label>
-        <label className="flex items-center gap-2">
+        <label className="flex items-center gap-2 text-sm sm:col-span-2">
           <input
             type="checkbox"
             checked={unknownEdit}
@@ -159,9 +159,7 @@ export default function FlowList({
           {t("settings.upgrade.unknownEditOnly")}
         </label>
       </div>
-      <p role="status">
-        {t("settings.upgrade.matching", { count: filtered.length })}
-      </p>
+
       {filtered.slice(currentPage * 20, currentPage * 20 + 20).map((flow) => (
         <article
           key={`${flow.kind}-${flow.id}`}
@@ -179,8 +177,12 @@ export default function FlowList({
                 onChange={(event) => onSelect(flow.id, event.target.checked)}
               />
             )}
-            <h4 className="font-medium">{flow.name ?? unknown}</h4>
-            <span>{t(`settings.upgrade.status.${flow.status}`)}</span>
+            <h4 className="min-w-0 flex-1 font-medium">
+              {flow.name ?? unknown}
+            </h4>
+            <span className="rounded bg-muted px-2 py-0.5 text-xs font-medium">
+              {t(`settings.upgrade.status.${flow.status}`)}
+            </span>
           </div>
           <dl className="grid grid-cols-1 gap-x-4 gap-y-1 text-sm sm:grid-cols-2">
             <div>
@@ -224,26 +226,6 @@ export default function FlowList({
             <summary className="cursor-pointer">
               {t("settings.upgrade.flowDetails")}
             </summary>
-            <p className="mt-2">
-              {t("settings.upgrade.flowId", { id: flow.flow_id ?? flow.id })}
-            </p>
-            <p>
-              {t("settings.upgrade.deployments", {
-                deployments: flow.used_by
-                  ? Object.entries(flow.used_by)
-                      .map(([kind, ids]) => `${kind} ${ids.join(", ")}`)
-                      .join(" · ") || t("settings.upgrade.none")
-                  : unknown,
-              })}
-            </p>
-            <h5 className="mt-2 font-medium">
-              {t("settings.upgrade.editorUsage")}
-            </h5>
-            <Usage usage={flow.usage?.editor} />
-            <h5 className="mt-2 font-medium">
-              {t("settings.upgrade.servingUsage")}
-            </h5>
-            <Usage usage={flow.usage?.serving} />
             {flow.error && <p>{flow.error}</p>}
             <ul className="mt-2 space-y-2">
               {flow.nodes.map((node) => (
@@ -256,16 +238,54 @@ export default function FlowList({
                   </p>
                   {node.reasons.map((reason, index) => (
                     <p key={`${reason.code}-${index}`}>
-                      {reason.message ?? reason.code}
+                      {reportReason(reason)}
                     </p>
                   ))}
                 </li>
               ))}
             </ul>
+            <p className="mt-2">
+              {t("settings.upgrade.flowId", { id: flow.flow_id ?? flow.id })}
+            </p>
+            <p>
+              {t("settings.upgrade.deployments", {
+                deployments: flow.used_by
+                  ? ["deployments", "triggers"]
+                      .flatMap((kind) => {
+                        const ids = flow.used_by?.[kind];
+                        return ids?.length
+                          ? [
+                              t(`settings.upgrade.usedBy.${kind}`, {
+                                ids: ids.join(", "),
+                              }),
+                            ]
+                          : [];
+                      })
+                      .join(" · ") || t("settings.upgrade.none")
+                  : unknown,
+              })}
+            </p>
+            <h5 className="mt-2 font-medium">
+              {t("settings.upgrade.editorUsage")}
+            </h5>
+            <Usage usage={flow.usage?.editor} />
+            <h5 className="mt-2 font-medium">
+              {t("settings.upgrade.servingUsage")}
+            </h5>
+            <Usage usage={flow.usage?.serving} />
           </details>
         </article>
       ))}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <p role="status" className="mr-auto text-sm text-muted-foreground">
+          {filtered.length
+            ? t("settings.upgrade.rowRange", {
+                first: currentPage * 20 + 1,
+                last: Math.min((currentPage + 1) * 20, filtered.length),
+                total: filtered.length,
+              })
+            : t("settings.upgrade.matching", { count: 0 })}
+        </p>
         <Button
           variant="outline"
           disabled={currentPage === 0}

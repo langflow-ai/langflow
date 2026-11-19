@@ -256,7 +256,7 @@ Before rolling back, stop Langflow and restore the database and application file
 Installing older packages does not undo database migrations.
 Keep a backup of the current installation before restoring the earlier backup.
 
-##### Restore before rolling back
+##### Restore before rolling back {#restore-before-rolling-back}
 
 Langflow 1.14 refuses to start when the database records an unknown migration revision or overlapping revisions.
 This can happen when an older release starts on a database that a newer release migrated.

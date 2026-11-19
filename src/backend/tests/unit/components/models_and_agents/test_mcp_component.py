@@ -780,9 +780,10 @@ class TestMCPComponentConfigPriority:
         cached_tool = SimpleNamespace(name="cached-tool")
         component.mcp_server = {"name": server_name, "config": server_config}
         component._user_id = "test_user_123"
+        component._vertex = SimpleNamespace(graph=SimpleNamespace(session_id="test-session"))
         component.use_cache = True
 
-        cache_key = component._mcp_servers_cache_key(server_name)
+        cache_key = component._mcp_servers_cache_key(server_name, server_config)
         servers_cache = {
             cache_key: {
                 "tools": [cached_tool],
@@ -1108,6 +1109,7 @@ class TestMCPComponentGlobalVariableResolution:
         component.mcp_server = "test_server"
         component._user_id = str(uuid4())
         component.use_cache = use_cache
+        component._vertex = SimpleNamespace(graph=SimpleNamespace(session_id="test-session", context={}))
         component.streamable_http_client._connected = True
         config = {"url": "https://echo.invalid/mcp", "headers": {"Authorization": "{{QA2873_C_SEC}}"}}
         if legacy_cache:
@@ -1156,7 +1158,9 @@ class TestMCPComponentGlobalVariableResolution:
         component.use_cache = revoke_after_first
         if context_variables is not None:
             # ``graph`` is a read-only property backed by ``_vertex.graph``.
-            component._vertex = SimpleNamespace(graph=SimpleNamespace(context={"request_variables": context_variables}))
+            component._vertex = SimpleNamespace(
+                graph=SimpleNamespace(session_id="test-session", context={"request_variables": context_variables})
+            )
 
         if variable_service is None:
             variable_service = MagicMock()
@@ -1189,6 +1193,7 @@ class TestMCPComponentGlobalVariableResolution:
                 component._ttl_tool_cache[component._mcp_servers_cache_key("test_server")] = (
                     time.monotonic(),
                     ["stale-tool"],
+                    self.SERVER_CONFIG,
                 )
                 variable_service.revoked = True
                 with pytest.raises(RuntimeVariableError, match="revoked"):

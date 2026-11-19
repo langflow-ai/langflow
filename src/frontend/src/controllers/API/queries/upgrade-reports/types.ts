@@ -75,7 +75,10 @@ export type ReportEntry = {
   failing_count: number;
 };
 export type ReportHistory = {
-  items: ReportEntry[];
+  items: (ReportEntry & {
+    source_database?: string | null;
+    incomplete?: boolean;
+  })[];
   total: number;
   offset: number;
   limit: number;
@@ -98,6 +101,7 @@ export type RepairResult = {
   updated_nodes: number;
   recovery_version_id: string | null;
   reason_codes: string[];
+  reason_detail?: string | null;
 };
 export type RepairPreview = {
   target_sha256: string;

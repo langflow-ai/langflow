@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 registry.access.redhat.com/ubi10/python-314-minimal
+FROM --platform=linux/amd64 registry.access.redhat.com/ubi10/python-314-minimal:10.3-1793860470
 USER root
 WORKDIR /app
 

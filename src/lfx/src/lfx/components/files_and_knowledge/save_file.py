@@ -1,6 +1,10 @@
 import contextlib
+import csv
 import json
+import os
 from collections.abc import AsyncIterator, Iterator
+from io import StringIO
+from itertools import islice
 from pathlib import Path, PurePath, PureWindowsPath
 from typing import Any
 
@@ -427,7 +431,7 @@ class SaveToFileComponent(Component):
         plain_text_formats = ["txt", "json", "markdown", "md", "csv", "xml", "html", "yaml", "log", "tsv", "jsonl"]
         return fmt.lower() in plain_text_formats
 
-    async def _upload_file(self, file_path: Path) -> Any:
+    async def _upload_file(self, file_path: Path, *, appended: bool = False) -> Any:
         """Upload the saved file using the upload_user_file service.
 
         Returns the ``UploadFileResponse`` (with the durable storage ``path`` and
@@ -436,6 +440,13 @@ class SaveToFileComponent(Component):
         """
         from langflow.api.v2.files import upload_user_file
         from langflow.services.database.models.user.crud import get_user_by_id
+
+        record_appended = None
+        if appended:
+            try:
+                from langflow.api.v2.file_replace import record_appended_user_file as record_appended
+            except ImportError:  # an older langflow-base: upload a copy as before
+                record_appended = None
 
         # Ensure the file exists
         if not file_path.exists():
@@ -450,15 +461,94 @@ class SaveToFileComponent(Component):
                     msg = "User ID is required for file saving."
                     raise ValueError(msg)
                 current_user = await get_user_by_id(db, self.user_id)
+                storage_service = get_storage_service()
+
+                # An append to the file My Files already stores updates that entry
+                # instead of adding a numbered copy on every run.
+                if record_appended is not None:
+                    recorded = await record_appended(file_path, db, current_user, storage_service)
+                    if recorded is not None:
+                        return recorded
 
                 return await upload_user_file(
                     file=UploadFile(filename=file_path.name, file=f, size=file_path.stat().st_size),
                     session=db,
                     current_user=current_user,
-                    storage_service=get_storage_service(),
+                    storage_service=storage_service,
                     settings_service=get_settings_service(),
                     append=False,
                 )
+
+    async def _ensure_append_in_place_allowed(self, file_path: Path) -> None:
+        """Refuse an append to a My Files entry the user may not write, before the file changes."""
+        try:
+            from langflow.api.v2.file_replace import ensure_appended_user_file_writable
+        except ImportError:  # an older langflow-base records no entry in place
+            return
+        from langflow.services.database.models.user.crud import get_user_by_id
+
+        if not self.user_id:
+            msg = "User ID is required for file saving."
+            raise ValueError(msg)
+        async with session_scope() as db:
+            current_user = await get_user_by_id(db, self.user_id)
+            await ensure_appended_user_file_writable(file_path, db, current_user, get_storage_service())
+
+    def _write_csv(self, frame: pd.DataFrame, path: Path, *, append: bool) -> None:
+        """Write CSV rows; an append to a non-empty file follows the file's own header."""
+        if append and frame.empty:
+            return
+        if not append or path.stat().st_size == 0:
+            frame.to_csv(path, index=False)
+            return
+        frame = self._align_to_csv_header(frame, path)
+        newline = self._end_last_csv_record(path)
+        frame.to_csv(path, index=False, mode="a", header=False, lineterminator=newline)
+
+    @staticmethod
+    def _end_last_csv_record(path: Path) -> str:
+        """Terminate a last record that has no newline; return the file's own line ending."""
+        with path.open("rb") as stream:
+            first_line = stream.readline()
+            stream.seek(-1, os.SEEK_END)
+            ended = stream.read(1) in (b"\n", b"\r")
+        newline = "\r\n" if first_line.endswith(b"\r\n") else "\n" if first_line.endswith(b"\n") else os.linesep
+        if not ended:
+            with path.open("a", encoding="ascii", newline="") as stream:
+                stream.write(newline)
+        return newline
+
+    @staticmethod
+    def _align_to_csv_header(frame: pd.DataFrame, path: Path) -> pd.DataFrame:
+        """Reorder columns to the existing header, or refuse before the file is touched."""
+        new_header = list(csv.reader(StringIO(frame.iloc[:0].to_csv(index=False))))
+        # A header that cannot be decoded or parsed only has to fail the comparison.
+        # Later rows may hold any bytes; only undecodable header bytes are refused.
+        with path.open(encoding="utf-8-sig", errors="surrogateescape", newline="") as stream:
+            try:
+                existing_header = list(islice(csv.reader(stream, strict=True), len(new_header)))
+            except csv.Error:
+                existing_header = []
+        if any("\udc80" <= char <= "\udcff" for row in existing_header for field in row for char in field):
+            existing_header = []
+        if existing_header == new_header:
+            return frame
+        new_columns = new_header[0]
+        existing_columns = existing_header[0] if existing_header else []
+        # Only a single header row of distinct names can be matched up by name.
+        if (
+            len(new_header) != 1
+            or len(set(new_columns)) != len(new_columns)
+            or sorted(new_columns) != sorted(existing_columns)
+        ):
+            msg = (
+                f"Cannot append to '{path.name}': the columns {new_columns} do not match "
+                f"the columns of the existing CSV file {existing_columns}. "
+                "Send the same columns, or write to a new file."
+            )
+            raise ValueError(msg)
+        positions = {column: index for index, column in enumerate(new_columns)}
+        return frame.iloc[:, [positions[column] for column in existing_columns]]
 
     def _save_dataframe(self, dataframe: DataFrame, path: Path, fmt: str) -> str:
         """Save a DataFrame to the specified file format."""
@@ -466,7 +556,7 @@ class SaveToFileComponent(Component):
         should_append = append_mode and path.exists() and self._is_plain_text_format(fmt)
 
         if fmt == "csv":
-            dataframe.to_csv(path, index=False, mode="a" if should_append else "w", header=not should_append)
+            self._write_csv(dataframe, path, append=should_append)
         elif fmt == "excel":
             dataframe.to_excel(path, index=False, engine="openpyxl")
         elif fmt == "json":
@@ -512,12 +602,7 @@ class SaveToFileComponent(Component):
         should_append = append_mode and path.exists() and self._is_plain_text_format(fmt)
 
         if fmt == "csv":
-            pd.DataFrame(data.data).to_csv(
-                path,
-                index=False,
-                mode="a" if should_append else "w",
-                header=not should_append,
-            )
+            self._write_csv(pd.DataFrame(data.data), path, append=should_append)
         elif fmt == "excel":
             pd.DataFrame(data.data).to_excel(path, index=False, engine="openpyxl")
         elif fmt == "json":
@@ -702,6 +787,12 @@ class SaveToFileComponent(Component):
         if not file_path.parent.exists():
             file_path.parent.mkdir(parents=True, exist_ok=True)
 
+        appends_in_place = (
+            getattr(self, "append_mode", False) and file_path.exists() and self._is_plain_text_format(file_format)
+        )
+        if appends_in_place:
+            await self._ensure_append_in_place_allowed(file_path)
+
         # Save the input to file based on type
         if self._get_input_type() == "DataFrame":
             confirmation = self._save_dataframe(self.input, file_path, file_format)
@@ -714,7 +805,7 @@ class SaveToFileComponent(Component):
             raise ValueError(msg)
 
         # Upload the saved file into the configured storage backend.
-        upload_result = await self._upload_file(file_path)
+        upload_result = await self._upload_file(file_path, appended=appends_in_place)
 
         # When the backend is remote (e.g. S3) the local file was only a
         # serialization staging area — the durable copy now lives in the storage

@@ -27,12 +27,20 @@ from typing import TYPE_CHECKING, Any
 
 from lfx.custom import Component
 from lfx.custom.utils import build_custom_component_template, update_rebuilt_node
+from lfx.extension.loader import SLOT_EXTRA
 from lfx.extension.migration import migrate_flow_payload
 from lfx.extension.migration.loader import load_migration_table
 from lfx.interface.components import ComponentCache
 from lfx.services.catalog_policy import CatalogPolicySnapshot
-from lfx.upgrade.checker import breaking_reasons, build_registry_lookup, classify_node, iter_flow_nodes
+from lfx.upgrade.checker import (
+    breaking_reasons,
+    build_registry_lookup,
+    can_replace_empty_field,
+    classify_node,
+    iter_flow_nodes,
+)
 from lfx.upgrade.registry import UpgradeRegistryError
+from lfx.upgrade.retired import replacement_label, retirement_lookup
 from lfx.utils.flow_code import normalize_code_for_import
 from lfx.utils.flow_validation import (
     CustomComponentValidationError,
@@ -56,7 +64,7 @@ if TYPE_CHECKING:
     from langflow.upgrade_check.usage import FlowUsage
 
 DRY_RUN_SECONDS = 30.0
-REGISTRY_SECONDS = 30.0
+REGISTRY_SECONDS = 300.0
 
 # A node in one of these states makes its flow fail.
 _FAILING = frozenset({"outdated_breaking", "retired", "blocked"})
@@ -102,8 +110,9 @@ class ComponentDiscoveryError(RuntimeError):
     """The complete target registry could not be discovered offline."""
 
 
-def discover_offline(callback: Callable[[], dict[str, Any]]) -> dict[str, Any]:
+def discover_offline(callback: Callable[[], dict[str, Any]], *, timeout_seconds: float | None = None) -> dict[str, Any]:
     """Bound discovery and reject partial registries after a refused network callback."""
+    timeout_seconds = REGISTRY_SECONDS if timeout_seconds is None else timeout_seconds
     _install_network_guard()
     outcome: dict[str, Any] = {}
     _refused_calls.clear()
@@ -119,9 +128,12 @@ def discover_offline(callback: Callable[[], dict[str, Any]]) -> dict[str, Any]:
 
     worker = threading.Thread(target=run, name="upgrade-check-registry", daemon=True)
     worker.start()
-    worker.join(REGISTRY_SECONDS)
+    worker.join(timeout_seconds)
     if worker.is_alive():
-        msg = f"component discovery did not finish in {REGISTRY_SECONDS:g} seconds"
+        msg = (
+            f"component discovery did not finish in {timeout_seconds:g} seconds. "
+            "On a busy machine or with many installed components, rerun with a larger --discovery-timeout."
+        )
         raise ComponentDiscoveryError(msg)
     if _refused_calls:
         msg = (
@@ -148,7 +160,7 @@ class TargetSettings:
     allow_custom_components: bool = True
     substitute_outdated_component_code: bool = True
     block_code_interpreter_components: bool = False
-    custom_component_admin_only: bool = False
+    custom_component_admin_only: bool = True
     allow_components_paths_override: bool = True
     components_path: tuple[str, ...] = ()
 
@@ -299,6 +311,10 @@ def target_lookup(all_types: Mapping[str, Any]) -> dict[str, dict]:
     table rewrites when a flow loads finds the component it is rewritten to, when that is installed.
     """
     lookup = build_registry_lookup(all_types)
+    # Retirement guidance must survive removal of an optional bundle. These entries are only
+    # for reporting: Target.components still contains exactly what the runtime can discover.
+    for component_type, entry in retirement_lookup().items():
+        lookup.setdefault(component_type, entry)
     for entry in _migration_table().entries:
         if entry.target in lookup:
             lookup.setdefault(entry.legacy_value, lookup[entry.target])
@@ -322,6 +338,17 @@ def check_nodes(
         if status is None:
             continue
         runs, refusal = _runs(node, target, is_superuser=is_superuser)
+        # Inline components have no editor update prompt. Their implementation still
+        # matters when the target substitutes its own code for the saved class.
+        if status.component_type == "CustomComponent" and runs != "saved_code":
+            saved = node["data"]["node"]
+            trusted = target.lookup.get(status.component_type, {})
+            trusted_code = trusted.get("template", {}).get("code", {}).get("value")
+            trusted_methods = {output.get("method") for output in trusted.get("outputs", [])}
+            if saved["template"]["code"]["value"] != trusted_code or any(
+                output.get("method") and output["method"] not in trusted_methods for output in saved.get("outputs", [])
+            ):
+                status.status = "customized"
         if status.status == "ok" and refusal is None:
             ok_nodes += 1
             continue
@@ -365,11 +392,18 @@ def _node_result(
         result.reasons = [
             _reason("bundle_not_installed", None, f"the {result.bundle} bundle is not installed")
             if result.bundle
-            else _reason("custom_type_missing", None, f"{status.component_type} is not a component of this release")
+            else _reason(
+                "custom_type_missing",
+                None,
+                f"{status.component_type} is a missing custom component; pass its folder with --components-path",
+            )
         ]
     elif status.status == "retired":
         result.replacement = status.replacement or None
-        result.reasons = [_reason("retired", None, f"retired in {status.retired_in}")]
+        replacement = (
+            f". Replace with {', '.join(map(replacement_label, result.replacement))}" if result.replacement else ""
+        )
+        result.reasons = [_reason("retired", None, f"retired in {status.retired_in}{replacement}")]
     elif status.status == "customized":
         result.reasons = [_reason("customized", None, "the saved code was edited")]
     elif status.status != "ok":
@@ -438,18 +472,16 @@ def _saved_value_reasons(rebuilt_node: dict, saved_node: dict) -> list[dict[str,
         if name == "code" or not isinstance(saved_field, dict) or not isinstance(rebuilt_field, dict):
             # The structural rule already reports fields the update removes.
             continue
+        if can_replace_empty_field(saved_field, rebuilt_field):
+            continue
         if saved_field.get("file_path") and saved_field["file_path"] != rebuilt_field.get("file_path"):
             # The isolated checker cannot prove whether the source installation's upload exists.
             reasons.append(
                 _reason("could_not_verify", name, f"the update could not verify {name}'s saved file reference")
             )
-        elif (
-            "value" in saved_field
-            and saved_field["value"] is not None
-            and (
-                saved_field["value"] != rebuilt_field.get("value")
-                or bool(saved_field.get("load_from_db")) != bool(rebuilt_field.get("load_from_db"))
-            )
+        elif (saved_field.get("value") is not None or saved_field.get("type") != rebuilt_field.get("type")) and (
+            saved_field.get("value") != rebuilt_field.get("value")
+            or bool(saved_field.get("load_from_db")) != bool(rebuilt_field.get("load_from_db"))
         ):
             reasons.append(
                 _reason("value_dropped", name, f"the update does not preserve {name}'s saved value or reference")
@@ -613,7 +645,13 @@ def _missing_bundle(component_type: str, node_info: Mapping[str, Any]) -> str | 
     table = _migration_table()
     metadata = node_info.get("metadata")
     module = metadata.get("module") if isinstance(metadata, dict) else None
-    for value in (component_type, node_info.get("namespaced_id"), module):
+    values = (component_type, node_info.get("namespaced_id"), module)
+    # A saved canonical address takes precedence over a legacy class name. In particular,
+    # @extra means a loose custom folder, even if its class name matches a shipped bundle.
+    for value in values:
+        if isinstance(value, str) and value.startswith("ext:"):
+            return None if _is_custom_address(value) else value.split(":")[1]
+    for value in values:
         if not isinstance(value, str):
             continue
         entry = table.lookup_bare(value) or table.lookup_import_path(value) or table.lookup_legacy_slot(value)
@@ -621,6 +659,13 @@ def _missing_bundle(component_type: str, node_info: Mapping[str, Any]) -> str | 
         if address.startswith("ext:"):
             return address.split(":")[1]
     return None
+
+
+def _is_custom_address(value: Any) -> bool:
+    if not isinstance(value, str) or not value.startswith("ext:"):
+        return False
+    slot = value.rpartition("@")[2]
+    return slot == SLOT_EXTRA or slot.startswith(f"{SLOT_EXTRA}-")
 
 
 def _migration_table() -> MigrationTable:

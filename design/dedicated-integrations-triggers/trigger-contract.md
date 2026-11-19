@@ -173,12 +173,12 @@ Two new families join `scripts/ci/execution_principal_matrix.json`, using the sa
 
 | Family | Source | Executes as | Interactive | Notes |
 |---|---|---|---|---|
-| `trigger_push` | `api/v1/trigger_ingress.py` (TRG-4, and TRG-5's per-app Slack route) | `flow_owner` | no | provider-signed edge; the request never executes a flow. The dispatcher stamps this family on any run whose trigger's mechanism is pushed (`principal.family_for`) |
-| `trigger_listener` | `services/triggers/dispatcher.py` and the listener adapters | `flow_owner` | no | every other trigger run (listener sources, schedules) |
+| `trigger_push` | `api/v1/trigger_ingress.py` (TRG-4, and TRG-5's per-app Slack route) | `job_owner` | no | The provider-signed request records an event. The dispatcher submits the run. |
+| `trigger_listener` | `services/triggers/dispatcher.py` and the listener adapters | `job_owner` | no | Listener sources and schedules. |
 
-The dispatcher stamps `ExecutionPrincipal(kind="flow_owner", interactive=False, family=...)` with actor
-`trigger_dispatcher` on every submitted run, through its own frame source, so the warm-graph path cannot substitute a
-different principal. Because the run is non-interactive, the INT-2 rule applies verbatim: a user connection resolves
+The dispatcher records the account selected by `TriggerService.resolve_run_user_id` as the job owner.
+OSS selects the trigger owner. The worker uses the stored job owner for the graph and its connections,
+including on resume. The event ledger links the trigger to that job. Because the run is non-interactive, a user connection resolves
 only with the per-connection `allow_non_interactive` opt-in, an instance connection resolves under the INT-6 policy
 floor, and an anonymous or unknown principal never resolves anything. A trigger whose connection lacks the opt-in
 fails closed with a typed `IntegrationError` and moves to `needs_reconnect`; it does not run without credentials.

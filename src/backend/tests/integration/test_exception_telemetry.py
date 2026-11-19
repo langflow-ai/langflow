@@ -75,9 +75,9 @@ class TestExceptionTelemetryIntegration:
         assert body["anonymousId"] == "test-installation"
         assert body["event"] == "Ended Process"
         assert body["messageId"]
-        assert body["properties"]["exceptionType"] == "ValueError"
+        assert body["properties"]["objectType"] == "ValueError"
         assert "exceptionMessage" not in body["properties"]
-        assert body["properties"]["exceptionContext"] == "lifespan"
+        assert body["properties"]["category"] == "lifespan"
         assert len(body["properties"]["stackTraceHash"]) == 16
         assert "timestamp" in body
 
@@ -127,9 +127,9 @@ class TestExceptionTelemetryIntegration:
 
         assert call["url"] == "https://mock-telemetry.example.com/exception"
         assert call["path"] == "exception"
-        assert call["payload"]["exceptionType"] == "RuntimeError"
+        assert call["payload"]["objectType"] == "RuntimeError"
         assert call["payload"]["exceptionMessage"] == "Service integration test"
-        assert call["payload"]["exceptionContext"] == "handler"
+        assert call["payload"]["category"] == "handler"
         assert "stackTraceHash" in call["payload"]
 
 
@@ -370,9 +370,9 @@ class TestTelemetryPayloadValidation:
 
         serialized = payload.model_dump(by_alias=True)
         expected = {
-            "exceptionType": "ValueError",
+            "objectType": "ValueError",
             "exceptionMessage": "Invalid input parameter",
-            "exceptionContext": "handler",
+            "category": "handler",
             "stackTraceHash": "abc123def456",  # pragma: allowlist secret
             "subProductTitle": "oss",
         }
@@ -390,9 +390,9 @@ class TestTelemetryPayloadValidation:
         # Test serialization excludes None values
         serialized = payload.model_dump(by_alias=True, exclude_none=True)
         expected = {
-            "exceptionType": "RuntimeError",
+            "objectType": "RuntimeError",
             "exceptionMessage": "Service unavailable",
-            "exceptionContext": "lifespan",
+            "category": "lifespan",
         }
         assert serialized == expected
 
