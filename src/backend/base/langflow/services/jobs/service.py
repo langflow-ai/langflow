@@ -127,6 +127,21 @@ class JobService(Service):
         self._append_queue: list[_PendingAppend] = []
         self._append_lock: asyncio.Lock | None = None
         self._append_lock_loop: asyncio.AbstractEventLoop | None = None
+        self._metadata_lock: asyncio.Lock | None = None
+        self._metadata_lock_loop: asyncio.AbstractEventLoop | None = None
+
+    def _metadata_write_guard(self) -> asyncio.Lock:
+        """Serialize this process's ``job_metadata`` read-modify-write, commit included.
+
+        PostgreSQL also gets ``SELECT ... FOR UPDATE`` on the read, which covers other processes. SQLite ignores
+        FOR UPDATE, and a SQLite deployment is one process, so this lock is what keeps a stale snapshot from being
+        written over a newer one there. Rebound if the running loop changed, as the append lock is.
+        """
+        loop = asyncio.get_running_loop()
+        if self._metadata_lock is None or self._metadata_lock_loop is not loop:
+            self._metadata_lock = asyncio.Lock()
+            self._metadata_lock_loop = loop
+        return self._metadata_lock
 
     def _bind_append_lock(self) -> asyncio.Lock:
         """Return the append lock, rebinding it to the currently running loop if needed.
@@ -383,13 +398,32 @@ class JobService(Service):
         Returns:
             The updated Job, or ``None`` if the row does not exist.
         """
-        async with session_scope() as session:
-            job = await session.get(Job, job_id)
+        # Locked read: ``suspend_job`` rewrites the same column, and a stale snapshot written last would undo it.
+        async with self._metadata_write_guard(), session_scope() as session:
+            job = await session.get(Job, job_id, with_for_update=True)
             if job is None:
                 return None
             from langflow.services.jobs.api_key_authorization import preserve_api_key_job_authorization
 
             job.job_metadata = preserve_api_key_job_authorization(job.job_metadata, patch, replace=replace)
+            session.add(job)
+            await session.flush()
+            return job
+
+    async def append_job_metadata_item(self, job_id: UUID, key: str, item: dict) -> Job | None:
+        """Append ``item`` to the list at ``job.job_metadata[key]``, reading and writing under one row lock.
+
+        Two overlapping appends, or an append racing ``suspend_job``, each see the other's change instead of
+        replacing it from a stale read. Returns the updated Job, or ``None`` if the row does not exist.
+        """
+        from langflow.services.jobs.api_key_authorization import preserve_api_key_job_authorization
+
+        async with self._metadata_write_guard(), session_scope() as session:
+            job = await session.get(Job, job_id, with_for_update=True)
+            if job is None:
+                return None
+            current = (job.job_metadata or {}).get(key) or []
+            job.job_metadata = preserve_api_key_job_authorization(job.job_metadata, {key: [*current, item]})
             session.add(job)
             await session.flush()
             return job
@@ -416,8 +450,9 @@ class JobService(Service):
         last_exc: Exception | None = None
         for attempt in range(_APPEND_EVENT_MAX_RETRIES):
             try:
-                async with session_scope() as session:
-                    job = await session.get(Job, job_id)
+                async with self._metadata_write_guard(), session_scope() as session:
+                    # Locked read, as in ``update_job_metadata``: the pause metadata is merged into what is stored now.
+                    job = await session.get(Job, job_id, with_for_update=True)
                     if job is None:
                         return None
                     merged = preserve_api_key_job_authorization(job.job_metadata, metadata)

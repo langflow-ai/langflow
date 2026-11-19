@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from uuid import uuid4
 
 import pytest
@@ -336,3 +337,23 @@ async def test_fail_in_progress_job_leaves_non_in_progress_rows_untouched():
     job = await service.get_job_by_job_id(job_id)
     assert job.status == JobStatus.QUEUED
     assert job.error is None
+
+
+@pytest.mark.usefixtures("client")
+async def test_append_job_metadata_item_keeps_every_item_and_the_other_keys():
+    service = JobService()
+    job_id = uuid4()
+    await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4(), end_user_id="alice")
+    await service.update_job_metadata(job_id, {"pending_request_id": "req-2"})
+
+    await asyncio.gather(*(service.append_job_metadata_item(job_id, "resume_decisions", {"n": n}) for n in range(5)))
+
+    meta = (await service.get_job_by_job_id(job_id)).job_metadata
+    assert sorted(item["n"] for item in meta["resume_decisions"]) == [0, 1, 2, 3, 4]
+    assert meta["pending_request_id"] == "req-2"
+    assert meta["end_user_id"] == "alice"
+
+
+@pytest.mark.usefixtures("client")
+async def test_append_job_metadata_item_on_a_missing_job_is_none():
+    assert await JobService().append_job_metadata_item(uuid4(), "resume_decisions", {"n": 1}) is None

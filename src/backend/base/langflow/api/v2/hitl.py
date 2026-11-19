@@ -259,8 +259,6 @@ async def record_resume_decision(
     try:
         auth = get_current_auth_context()
         job_service = get_job_service()
-        job = await job_service.get_job_by_job_id(job_id)
-        prior = (job.job_metadata or {}).get("resume_decisions") if job else None
         record = {
             "request_id": request_id,
             "action_id": decision.get("action_id"),
@@ -269,7 +267,7 @@ async def record_resume_decision(
             "api_key_id": str(auth.api_key_id) if auth is not None and auth.api_key_id is not None else None,
             "at": datetime.now(timezone.utc).isoformat(),
         }
-        await job_service.update_job_metadata(job_id, {"resume_decisions": [*(prior or []), record]})
+        await job_service.append_job_metadata_item(job_id, "resume_decisions", record)
     except Exception as _e:  # noqa: BLE001
         await logger.awarning("Failed to record the resume decision for job %s: %r", job_id, _e)
 
