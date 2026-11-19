@@ -10,7 +10,12 @@ from fastapi import HTTPException
 from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
 from lfx.services.deps import session_scope
-from lfx.utils.file_path_security import FLOW_STORAGE_SCOPE_PREFIX
+from lfx.utils.file_path_security import (
+    FLOW_STORAGE_SCOPE_PREFIX,
+    USER_STORAGE_SCOPE_PREFIX,
+    is_valid_scope_name,
+    storage_scope_id,
+)
 from sqlalchemy import delete
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -80,6 +85,13 @@ def register_file_scope_provider(provider: Callable[[uuid.UUID | str, str], Awai
     _file_scope_provider = provider
 
 
+def _is_valid_extra_scope(scope: str) -> bool:
+    """The same rule ``_scope_roots`` applies: the scope, and for ``user-<id>`` the id too, must name one folder."""
+    if not is_valid_scope_name(scope):
+        return False
+    return not scope.startswith(USER_STORAGE_SCOPE_PREFIX) or is_valid_scope_name(storage_scope_id(scope))
+
+
 async def get_authorized_extra_file_scopes(flow_id: uuid.UUID | str, user_id: object | None) -> frozenset[str]:
     """Ask the registered provider for this run's extra storage scopes; fail closed on any problem."""
     if _file_scope_provider is None or not user_id:
@@ -91,7 +103,13 @@ async def get_authorized_extra_file_scopes(flow_id: uuid.UUID | str, user_id: ob
         return frozenset()
     if not isinstance(answer, (set, frozenset, list, tuple)):
         return frozenset()
-    return frozenset(scope for scope in (str(item).strip() for item in answer) if scope)
+    scopes = frozenset(scope for scope in (str(item).strip() for item in answer) if scope)
+    # One member that cannot name a storage folder makes the whole answer invalid: passing it on would fail every
+    # file read of the run in restricted local-file mode, including the run's own.
+    if not all(_is_valid_extra_scope(scope) for scope in scopes):
+        await logger.awarning("File scope provider returned an invalid scope for flow %s; granting none", flow_id)
+        return frozenset()
+    return scopes
 
 
 async def build_graph_from_data(flow_id: uuid.UUID | str, payload: dict, **kwargs):

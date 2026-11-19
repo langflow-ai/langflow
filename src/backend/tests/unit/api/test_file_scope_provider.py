@@ -55,6 +55,16 @@ async def test_a_malformed_provider_answer_grants_nothing(answer) -> None:
     assert await get_authorized_extra_file_scopes(uuid4(), str(uuid4())) == frozenset()
 
 
+@pytest.mark.parametrize("bad", ["../bad", "..", ".", "a/b", "a\\b", "a\x00b", "user-", "user-../x", "user-a/b"])
+async def test_one_invalid_member_voids_the_whole_answer(bad) -> None:
+    async def provider(_flow_id, _user_id):
+        return {"user-owner", bad}
+
+    register_file_scope_provider(provider)
+
+    assert await get_authorized_extra_file_scopes(uuid4(), str(uuid4())) == frozenset()
+
+
 async def test_a_failing_provider_fails_closed() -> None:
     async def provider(_flow_id, _user_id):
         msg = "boom"
